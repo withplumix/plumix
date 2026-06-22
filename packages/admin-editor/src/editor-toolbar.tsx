@@ -5,7 +5,6 @@ import { Trans, useLingui } from "@lingui/react";
 import { Button } from "@plumix/admin-ui/button";
 import {
   Monitor,
-  Share2,
   Smartphone,
   Tablet,
   ZoomIn,
@@ -15,7 +14,6 @@ import { SidebarTrigger } from "@plumix/admin-ui/sidebar";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 
 import type { EditorDevice } from "./store.js";
-import { canRedo, canUndo } from "./history.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
 
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
@@ -51,59 +49,29 @@ export interface PublishActions {
   readonly draftMode?: DraftMode;
 }
 
-/** Top toolbar: an inline inserter slot, undo/redo, plus the host-wired
- *  publish / draft actions. */
+/** Canvas toolbar above the iframe: the rails toggle + inline inserter on the
+ *  left, and the device/zoom controls centered over the canvas. Title, undo/
+ *  redo, preview and publish live in the full-width header instead. */
 export function EditorToolbar({
-  publish,
   inserter,
-  previewLink,
 }: {
-  readonly publish?: PublishActions;
   readonly inserter?: ReactNode;
-  /** A shareable `?preview=…` URL; when set, a copy-to-clipboard action shows. */
-  readonly previewLink?: string;
 }): ReactElement {
-  const undoAvailable = useEditorStore((s) => canUndo(s.history));
-  const redoAvailable = useEditorStore((s) => canRedo(s.history));
-  const undo = useEditorStore((s) => s.undo);
-  const redo = useEditorStore((s) => s.redo);
-
   return (
     <header
-      className="bg-background flex items-center gap-1 border-b p-2"
+      className="bg-background flex items-center gap-2 border-b p-2"
       data-testid="plumix-editor-toolbar"
     >
-      {/* Left controls take the flexible, scrollable space; the publish action
-          is pinned outside it so it always sits at the inset's right edge and
-          never overflows under the right rail at narrow widths. */}
-      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+      <div className="flex shrink-0 items-center gap-1">
         {/* Collapses both rails for a focused canvas (also Cmd/Ctrl+B). */}
         <SidebarTrigger data-testid="plumix-rails-toggle" />
         {inserter}
-        <DeviceZoomControls />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          data-testid="plumix-undo"
-          disabled={!undoAvailable}
-          onClick={undo}
-        >
-          <Trans id="editor.toolbar.undo" message="Undo" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          data-testid="plumix-redo"
-          disabled={!redoAvailable}
-          onClick={redo}
-        >
-          <Trans id="editor.toolbar.redo" message="Redo" />
-        </Button>
-        {previewLink ? <CopyPreviewLink url={previewLink} /> : null}
       </div>
-      {publish ? <PublishControls publish={publish} /> : null}
+      <div className="flex flex-1 justify-center">
+        <DeviceZoomControls />
+      </div>
+      {/* Balances the left group so the device/zoom cluster reads as centered. */}
+      <div className="w-8 shrink-0" aria-hidden />
     </header>
   );
 }
@@ -154,8 +122,7 @@ function DeviceZoomControls(): ReactElement {
       <Button
         type="button"
         variant="ghost"
-        size="sm"
-        className="size-8 p-0"
+        size="icon-sm"
         data-testid="plumix-zoom-out"
         onClick={zoomOut}
         aria-label={i18n._({
@@ -180,8 +147,7 @@ function DeviceZoomControls(): ReactElement {
       <Button
         type="button"
         variant="ghost"
-        size="sm"
-        className="size-8 p-0"
+        size="icon-sm"
         data-testid="plumix-zoom-in"
         onClick={zoomIn}
         aria-label={i18n._({ id: "editor.toolbar.zoomIn", message: "Zoom in" })}
@@ -192,24 +158,7 @@ function DeviceZoomControls(): ReactElement {
   );
 }
 
-/** Copies the shareable preview URL to the clipboard. The host mints the URL
- *  (a `?preview=<token>` link); this only surfaces the copy action. */
-function CopyPreviewLink({ url }: { readonly url: string }): ReactElement {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      data-testid="plumix-copy-preview-link"
-      onClick={() => void navigator.clipboard.writeText(url)}
-    >
-      <Share2 />
-      <Trans id="editor.toolbar.copyPreviewLink" message="Copy preview link" />
-    </Button>
-  );
-}
-
-function PublishControls({
+export function PublishControls({
   publish,
 }: {
   readonly publish: PublishActions;
