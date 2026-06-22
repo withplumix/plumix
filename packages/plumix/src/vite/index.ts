@@ -424,7 +424,6 @@ async function computeManifestAndRegistry(
       .map((p) => p.id),
   );
   if (adminBundledPluginIds.size > 0) {
-    // eslint-disable-next-line no-console -- build-time dev signal
     console.info(
       `[plumix] skipping pluginI18n URLs for workspace-bundled plugins (admin's import.meta.glob is expected to cover): ${Array.from(adminBundledPluginIds).join(", ")}`,
     );

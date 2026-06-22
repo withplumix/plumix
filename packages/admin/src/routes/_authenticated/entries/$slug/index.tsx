@@ -55,7 +55,7 @@ import {
 } from "@plumix/admin-ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 
-import { EntriesBulkBar } from "./entries-bulk-bar.js";
+import { EntriesBulkBar } from "./-entries-bulk-bar.js";
 
 const PAGE_SIZE = 20;
 
@@ -608,7 +608,9 @@ function ContentListRoute(): ReactNode {
   const { setStatus, setPage, setSearch, setAuthor, setTermFilter, setSort } =
     useEntriesListNavActions();
 
-  const rows: readonly Entry[] = query.data ?? [];
+  // `query.data ?? []` allocates a fresh array on every render while data is
+  // undefined; memoize so the `selectedIds` useMemo below keeps a stable dep.
+  const rows: readonly Entry[] = useMemo(() => query.data ?? [], [query.data]);
   const canPrev = search.page > 1;
   // Heuristic "next exists": a full page came back. Imprecise when total is an
   // exact multiple of PAGE_SIZE — the user sees an extra empty page. `entry.list`

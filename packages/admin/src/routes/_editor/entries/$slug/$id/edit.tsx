@@ -53,7 +53,7 @@ import {
 } from "@plumix/blocks";
 import { idPathParam } from "@plumix/core/validation";
 
-import { PlainFormRouteInner } from "./plain-form-route.js";
+import { PlainFormRouteInner } from "./-plain-form-route.js";
 
 const M = {
   published: defineMessage({

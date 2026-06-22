@@ -17,7 +17,15 @@ export const NO_THROW_NEW_ERROR_SELECTOR = {
 
 export const baseConfig = defineConfig(
   includeIgnoreFile(path.join(import.meta.dirname, "../../.gitignore")),
-  { ignores: ["**/*.config.*"] },
+  // The root .gitignore patterns are anchored to the repo root, but ESLint
+  // runs per-package (cwd = the package dir), so `includeIgnoreFile` can't
+  // exclude these generated outputs. Re-state them as cwd-relative globs:
+  //   - `**/*.config.*`        — Vite/lingui/etc. config files
+  //   - `**/locales/*.mjs`     — Lingui-compiled message catalogs
+  //   - `**/locales/*.d.mts`   — their generated type declarations
+  // The compiled catalogs carry a `/*eslint-disable*/` header that otherwise
+  // trips `reportUnusedDisableDirectives` once linted.
+  { ignores: ["**/*.config.*", "**/locales/*.mjs", "**/locales/*.d.mts"] },
   {
     files: ["**/*.js", "**/*.ts", "**/*.tsx"],
     plugins: {
