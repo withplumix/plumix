@@ -21,9 +21,11 @@ import {
   getPatterns,
   getThemeBreakpoints,
   getThemeTokens,
+  visibleTermTaxonomies,
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
+import { buildEditorTermOptions } from "@/lib/terms.js";
 import { toastError, toastSuccess } from "@/lib/toast.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -32,6 +34,7 @@ import { Trans } from "@lingui/react";
 import { ORPCError } from "@orpc/client";
 import {
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
   useSuspenseQuery,
@@ -243,6 +246,7 @@ interface BespokeEditorProps {
 
 // Persistence lives inline in the component (not a custom hook) so the React
 // Compiler can optimize it.
+
 // Content + excerpt + meta ride one debounced autosave-row write; slug + parent
 // ride a second debouncer that writes the live row (`saveAs: "live"`). Both
 // share one optimistic-concurrency token, refreshed on a stale conflict.
@@ -286,11 +290,34 @@ function BespokeEditor({
   const lastSavedTitleRef = useRef<string>(entry.title);
   const lastSavedSlugRef = useRef<string>(entry.slug);
   const lastSavedParentRef = useRef<number | null>(entry.parentId);
+  // Taxonomies registered against this entry type that the user can assign to
+  // (the editor picker writes assignments, so `:assign` — not just `:read` — is
+  // the gate; an unassignable taxonomy would only fail the save). Selections are
+  // kept as string ids (the MultiSelect's value form), mirrored into `termsRef`.
+  const taxonomies = useMemo(() => {
+    const allowed = new Set(entryType?.termTaxonomies ?? []);
+    return visibleTermTaxonomies(capabilities).filter(
+      (t) => allowed.has(t.name) && capabilitySet.has(`term:${t.name}:assign`),
+    );
+  }, [entryType, capabilities, capabilitySet]);
+  const [termSelections, setTermSelections] = useState<
+    Record<string, string[]>
+  >(() =>
+    Object.fromEntries(
+      taxonomies.map((t) => [t.name, (entry.terms[t.name] ?? []).map(String)]),
+    ),
+  );
+  const termsRef = useRef<Record<string, string[]>>(termSelections);
+  // Last-saved selection per taxonomy, so the debouncer can send ONLY the
+  // taxonomies that changed (the patch replaces per-taxonomy; sending unchanged
+  // ones would needlessly delete+reinsert their rows).
+  const lastSavedTermsRef = useRef<Record<string, string[]>>(termSelections);
   useEffect(() => {
     excerptRef.current = excerpt;
     titleRef.current = titleValue;
     slugRef.current = slugValue;
     parentRef.current = parentValue;
+    termsRef.current = termSelections;
   });
 
   /* eslint-disable react-hooks/refs -- callbacks fire post-keystroke, not during render */
@@ -340,18 +367,35 @@ function BespokeEditor({
         const nextTitle = titleRef.current.trim();
         const nextSlug = slugRef.current.trim();
         const nextParent = parentRef.current;
+        const nextTerms = termsRef.current;
+        const savedTerms = lastSavedTermsRef.current;
+        const changedTaxonomies = Object.keys(nextTerms).filter(
+          (tax) =>
+            JSON.stringify(nextTerms[tax]) !==
+            JSON.stringify(savedTerms[tax] ?? []),
+        );
         const titleChanged =
           nextTitle.length > 0 && nextTitle !== lastSavedTitleRef.current;
         const slugChanged =
           nextSlug.length > 0 && nextSlug !== lastSavedSlugRef.current;
         const parentChanged = nextParent !== lastSavedParentRef.current;
-        if (!titleChanged && !slugChanged && !parentChanged) return;
+        const termsChanged = changedTaxonomies.length > 0;
+        if (!titleChanged && !slugChanged && !parentChanged && !termsChanged) {
+          return;
+        }
+        const termsPatch = Object.fromEntries(
+          changedTaxonomies.map((tax) => [
+            tax,
+            (nextTerms[tax] ?? []).map(Number),
+          ]),
+        );
         try {
           const updated = await orpc.entry.update.call({
             id,
             ...(titleChanged ? { title: nextTitle } : {}),
             ...(slugChanged ? { slug: nextSlug } : {}),
             ...(parentChanged ? { parentId: nextParent } : {}),
+            ...(termsChanged ? { terms: termsPatch } : {}),
             saveAs: "live",
             expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
@@ -359,6 +403,14 @@ function BespokeEditor({
           if (titleChanged) lastSavedTitleRef.current = updated.title;
           if (slugChanged) lastSavedSlugRef.current = updated.slug;
           if (parentChanged) lastSavedParentRef.current = updated.parentId;
+          if (termsChanged) {
+            lastSavedTermsRef.current = {
+              ...savedTerms,
+              ...Object.fromEntries(
+                changedTaxonomies.map((tax) => [tax, nextTerms[tax] ?? []]),
+              ),
+            };
+          }
         } catch (err) {
           const fresh = await freshLiveUpdatedAt(err, queryClient, id);
           if (fresh) liveUpdatedAtRef.current = fresh;
@@ -402,6 +454,13 @@ function BespokeEditor({
       structuralDebouncer.call();
     },
     [structuralDebouncer, setParentValue],
+  );
+  const handleTermsChange = useCallback(
+    (taxonomy: string, next: readonly string[]): void => {
+      setTermSelections((prev) => ({ ...prev, [taxonomy]: [...next] }));
+      structuralDebouncer.call();
+    },
+    [structuralDebouncer, setTermSelections],
   );
   const handleExcerptChange = useCallback(
     (next: string): void => {
@@ -453,6 +512,29 @@ function BespokeEditor({
         .map((candidate) => ({ id: candidate.id, title: candidate.title })),
     [parentCandidates.data, id],
   );
+  // One batched fetch per taxonomy (useQueries, not a per-item useQuery loop).
+  const termQueries = useQueries({
+    queries: taxonomies.map((taxonomy) => ({
+      ...orpc.term.list.queryOptions({
+        input: { taxonomy: taxonomy.name, limit: 200 },
+      }),
+    })),
+  });
+  const taxonomyPickers = useMemo(
+    () =>
+      taxonomies.map((taxonomy, index) => ({
+        name: taxonomy.name,
+        label: renderLabel(taxonomy.label),
+        options: buildEditorTermOptions(
+          termQueries[index]?.data ?? [],
+          taxonomy.isHierarchical === true,
+        ),
+        value: termSelections[taxonomy.name] ?? [],
+        onChange: (next: readonly string[]): void =>
+          handleTermsChange(taxonomy.name, next),
+      })),
+    [taxonomies, termQueries, termSelections, handleTermsChange, renderLabel],
+  );
   const documentPanel = useMemo(
     () => (
       <DocumentSettingsPanel
@@ -473,6 +555,7 @@ function BespokeEditor({
               }
             : undefined
         }
+        taxonomies={taxonomyPickers.length > 0 ? taxonomyPickers : undefined}
         metaBoxes={
           metaBoxes.length > 0
             ? {
@@ -494,6 +577,7 @@ function BespokeEditor({
       parentValue,
       parentOptions,
       handleParentChange,
+      taxonomyPickers,
       metaBoxes,
       entry.meta,
       handleMetaChange,

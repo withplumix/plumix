@@ -1,6 +1,8 @@
+import type { MultiSelectOption } from "@/components/form/multi-select.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
+import { MultiSelect } from "@/components/form/multi-select.js";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -46,6 +48,14 @@ interface DocumentSettingsPanelProps {
     readonly options: readonly DocumentParentOption[];
     readonly onChange: (next: number | null) => void;
   };
+  /** Term pickers for the taxonomies registered against this entry type. */
+  readonly taxonomies?: readonly {
+    readonly name: string;
+    readonly label: string;
+    readonly options: readonly MultiSelectOption[];
+    readonly value: readonly string[];
+    readonly onChange: (next: readonly string[]) => void;
+  }[];
   /** Capability-filtered metaboxes for this entry type, if any. */
   readonly metaBoxes?: {
     readonly boxes: readonly EntryMetaBoxManifestEntry[];
@@ -112,6 +122,7 @@ export function DocumentSettingsPanel({
   onSlugChange,
   excerpt,
   parent,
+  taxonomies,
   metaBoxes,
 }: DocumentSettingsPanelProps): ReactElement {
   const renderLabel = useLabel();
@@ -168,6 +179,17 @@ export function DocumentSettingsPanel({
           </select>
         </div>
       ) : null}
+      {taxonomies?.map((taxonomy) => (
+        <div key={taxonomy.name} className="flex flex-col gap-1.5">
+          <Label>{taxonomy.label}</Label>
+          <MultiSelect
+            options={taxonomy.options}
+            value={taxonomy.value}
+            onChange={taxonomy.onChange}
+            testId={`entry-taxonomy-${taxonomy.name}`}
+          />
+        </div>
+      ))}
       {excerpt ? (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="entry-excerpt-input">{renderLabel(M.excerpt)}</Label>
