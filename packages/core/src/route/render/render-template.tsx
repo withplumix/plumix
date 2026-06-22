@@ -366,14 +366,20 @@ function renderTree({
         imageRemotePatterns: ctx.imageRemotePatterns,
       },
     },
-    createElement(PlumixAdminBar, {
-      hooks: ctx.hooks,
-      request: ctx.request,
-      siteName: ctx.siteName ?? "Site",
-      auth: ctx.auth,
-      queriedEntryDetails,
-      entryTypes: ctx.plugins.entryTypes,
-    }),
+    // Edit mode drops the front-end admin bar: redundant under the editor's
+    // own toolbar, and its injected `body { padding-top }` ratchets the
+    // auto-sized canvas iframe against the theme's `min-h-screen` into a
+    // runaway height loop. Live/preview renders keep it.
+    editMode.mode === "edit"
+      ? null
+      : createElement(PlumixAdminBar, {
+          hooks: ctx.hooks,
+          request: ctx.request,
+          siteName: ctx.siteName ?? "Site",
+          auth: ctx.auth,
+          queriedEntryDetails,
+          entryTypes: ctx.plugins.entryTypes,
+        }),
     createElement(TemplateAdapter),
   );
   const rendered = renderToString(templateTree);

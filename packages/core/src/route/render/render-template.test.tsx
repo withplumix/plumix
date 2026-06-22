@@ -745,6 +745,41 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain('data-testid="plumix-admin-bar"');
   });
 
+  test("edit-mode render does NOT carry the PlumixAdminBar", async () => {
+    const theme = defineTheme({
+      templates: {
+        index: () => null,
+        single: ({ data }) => <article>{data.entry.title}</article>,
+      },
+    });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "public",
+      title: "Public",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    // The editor canvas loads the real route with `?plumix.edit`. The author
+    // is authenticated (so the bar would otherwise render), but inside the
+    // canvas the front-end admin bar is redundant chrome — and its injected
+    // `body { padding-top }` drives a runaway height loop against the theme's
+    // `min-h-screen`. It must be suppressed in edit mode.
+    const request = await h.authenticateRequest(
+      new Request("https://cms.example/post/public?plumix.edit"),
+      author.id,
+    );
+    const response = await h.dispatch(request);
+    const body = await response.text();
+
+    expect(body).toContain('data-plumix-mode="edit"');
+    expect(body).not.toContain('data-testid="plumix-admin-bar"');
+  });
+
   test("anonymous public render does NOT carry the PlumixAdminBar", async () => {
     const theme = defineTheme({
       templates: {
