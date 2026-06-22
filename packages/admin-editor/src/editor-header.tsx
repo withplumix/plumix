@@ -8,7 +8,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@plumix/admin-ui/dropdown-menu";
-import { ArrowLeft, Code2, Eye, Redo2, Undo2 } from "@plumix/admin-ui/icons";
+import {
+  ArrowLeft,
+  Code2,
+  Eye,
+  Pencil,
+  Play,
+  Redo2,
+  Undo2,
+} from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 
 import type { PublishActions } from "./editor-toolbar.js";
@@ -210,6 +218,7 @@ function PreviewMenu({
           disabled={!previewLink}
           onSelect={() => previewLink && open(previewLink)}
         >
+          <Pencil />
           <Trans id="editor.header.viewDraft" message="View current draft" />
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -217,6 +226,7 @@ function PreviewMenu({
           disabled={!liveUrl}
           onSelect={() => liveUrl && open(liveUrl)}
         >
+          <Play />
           <Trans id="editor.header.viewLive" message="View live entry" />
         </DropdownMenuItem>
       </DropdownMenuContent>

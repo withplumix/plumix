@@ -31,8 +31,8 @@
       "default": "./dist/fields.js"
     },
     "./blocks": {
-      "types": "./dist/media-blocks.d.ts",
-      "default": "./dist/media-blocks.js"
+      "types": "./dist/blocks.d.ts",
+      "default": "./dist/blocks.js"
     },
     "./package.json": "./package.json"
   },

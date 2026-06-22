@@ -136,6 +136,7 @@ export function SelectionToolbar({
           icon={<Trash2 className="size-4" />}
           onClick={act(() => state.removeSelected())}
           label={<Trans id="editor.selection.delete" message="Delete" />}
+          className="text-destructive hover:text-destructive"
         />
       </div>
     </TooltipProvider>
@@ -149,12 +150,14 @@ function IconAction({
   label,
   disabled,
   onClick,
+  className,
 }: {
   readonly testId: string;
   readonly icon: ReactNode;
   readonly label: ReactNode;
   readonly disabled?: boolean;
   readonly onClick: () => void;
+  readonly className?: string;
 }): ReactElement {
   return (
     <Tooltip>
@@ -166,6 +169,7 @@ function IconAction({
           data-testid={testId}
           disabled={disabled}
           onClick={onClick}
+          className={className}
         >
           {icon}
         </Button>

@@ -18,7 +18,6 @@ import {
   Strikethrough,
   Underline,
 } from "@plumix/admin-ui/icons";
-import { Toggle } from "@plumix/admin-ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import { normalizeStyleValue } from "@plumix/blocks";
 
@@ -223,23 +222,36 @@ function TextStyleControls({
       className="flex items-center justify-between gap-1"
       data-testid="style-text-controls"
     >
-      <div className="flex items-center gap-0.5">
+      <ToggleGroup
+        type="multiple"
+        variant="outline"
+        size="sm"
+        value={TEXT_MARKS.filter((m) => rawValue(m.property) === m.on).map(
+          (m) => m.id,
+        )}
+        onValueChange={(next) => {
+          // Radix hands back the full pressed set; write only the mark whose
+          // state flipped (exactly one per click).
+          for (const mark of TEXT_MARKS) {
+            const on = rawValue(mark.property) === mark.on;
+            const wantOn = next.includes(mark.id);
+            if (on !== wantOn) {
+              setter(mark.property)(wantOn ? { raw: mark.on } : null);
+            }
+          }
+        }}
+      >
         {TEXT_MARKS.map((mark) => (
-          <Toggle
+          <ToggleGroupItem
             key={mark.id}
-            size="sm"
-            variant="outline"
-            pressed={rawValue(mark.property) === mark.on}
+            value={mark.id}
             data-testid={`style-mark-${mark.id}`}
             aria-label={markLabel(i18n, mark.id)}
-            onPressedChange={(next) =>
-              setter(mark.property)(next ? { raw: mark.on } : null)
-            }
           >
             <mark.Icon />
-          </Toggle>
+          </ToggleGroupItem>
         ))}
-      </div>
+      </ToggleGroup>
       <ToggleGroup
         type="single"
         variant="outline"

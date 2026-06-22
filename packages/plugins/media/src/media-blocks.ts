@@ -18,7 +18,3 @@ export const mediaBlocks: readonly BlockSpec[] = Object.freeze([
   fileBlock,
   embedBlock,
 ]);
-
-// Default export is the `editorBlocksModule` contract: the vite plugin imports
-// it into the generated editor entry so the canvas can render media blocks.
-export default mediaBlocks;
