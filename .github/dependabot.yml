@@ -47,6 +47,9 @@ updates:
       fontsource:
         patterns:
           - "@fontsource*/*"
+      lingui:
+        patterns:
+          - "@lingui/*"
     ignore:
       # @types/node major version must match .nvmrc — bump manually with Node upgrades
       - dependency-name: "@types/node"
