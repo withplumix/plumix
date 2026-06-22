@@ -100,6 +100,11 @@ describe("@plumix/plugin-media — registration", () => {
     );
   });
 
+  test("declares the editorBlocksModule the canvas imports its blocks from", () => {
+    const descriptor = media();
+    expect(descriptor.editorBlocksModule).toBe("@plumix/plugin-media/blocks");
+  });
+
   test("DEFAULT_ACCEPTED_TYPES covers the headline file kinds, excludes SVG by default", () => {
     for (const mime of [
       "image/jpeg",

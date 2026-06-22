@@ -54,6 +54,15 @@ export interface PluginDescriptor<TConfig = undefined> {
   readonly adminChunk?: string;
   readonly adminCss?: string;
   readonly adminPeerVersion?: string;
+  /**
+   * Browser-safe module specifier whose **default export** is the plugin's
+   * `readonly BlockSpec[]` (the same specs `setup` registers). The plumix vite
+   * plugin imports every declared module into the generated editor entry so the
+   * iframe canvas can render — and edit — this plugin's blocks. The module must
+   * not pull server-only code (RPC routes, upload handlers, `definePlugin`); a
+   * dedicated `"<package>/blocks"` subpath is the convention.
+   */
+  readonly editorBlocksModule?: string;
 }
 
 export interface DefinePluginOptions {
@@ -64,6 +73,7 @@ export interface DefinePluginOptions {
   readonly adminChunk?: string;
   readonly adminCss?: string;
   readonly adminPeerVersion?: string;
+  readonly editorBlocksModule?: string;
   readonly i18n?: PluginI18nSlot;
 }
 
@@ -119,6 +129,7 @@ export function definePlugin<TConfig = undefined>(
       adminChunk: legacyOptions?.adminChunk,
       adminCss: legacyOptions?.adminCss,
       adminPeerVersion: legacyOptions?.adminPeerVersion,
+      editorBlocksModule: legacyOptions?.editorBlocksModule,
       i18n: legacyOptions?.i18n,
     };
   }
@@ -137,6 +148,7 @@ export function definePlugin<TConfig = undefined>(
     adminChunk: setupOrInput.adminChunk,
     adminCss: setupOrInput.adminCss,
     adminPeerVersion: setupOrInput.adminPeerVersion,
+    editorBlocksModule: setupOrInput.editorBlocksModule,
     i18n: setupOrInput.i18n,
   };
 }

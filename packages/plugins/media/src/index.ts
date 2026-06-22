@@ -250,6 +250,9 @@ export function media(
     },
     {
       adminEntry: ADMIN_ENTRY_PATH,
+      // Browser-safe block specs for the editor canvas (the iframe ships no
+      // server code). Mirrors the `ctx.registerBlock` calls above.
+      editorBlocksModule: "@plumix/plugin-media/blocks",
       i18n: {
         sourceLocale: "en",
         locales: ["en"],
