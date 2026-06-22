@@ -1,12 +1,17 @@
 import { useEffect } from "react";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import {
+  cleanup,
+  findByTestId,
+  fireEvent,
+  render,
+} from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { BlockNode } from "@plumix/blocks";
 
-import { JsonInspector } from "./json-inspector.js";
+import { JsonInspector, JsonSourceDialog } from "./json-inspector.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 
 beforeAll(() => {
@@ -62,5 +67,30 @@ describe("JsonInspector", () => {
     fireEvent.click(getByTestId("json-inspector-toggle-block"));
     expect(getByTestId("json-inspector-empty")).toBeDefined();
     expect(queryByTestId("json-inspector-output")).toBeNull();
+  });
+});
+
+// Opens the source dialog on mount so its (portalled) content renders.
+function Opener(): null {
+  const api = useEditorStoreApi();
+  useEffect(() => {
+    api.getState().setJsonOpen(true);
+  }, [api]);
+  return null;
+}
+
+describe("JsonSourceDialog", () => {
+  test("renders the page tree once the store opens it", async () => {
+    render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={TREE}>
+          <Opener />
+          <JsonSourceDialog />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+    // Dialog content is portalled to the body, not the render container.
+    const output = await findByTestId(document.body, "json-inspector-output");
+    expect(output.textContent).toContain('"h1"');
   });
 });

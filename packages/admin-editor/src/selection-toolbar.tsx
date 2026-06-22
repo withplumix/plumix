@@ -1,8 +1,21 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Trans } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
-import { GripVertical } from "@plumix/admin-ui/icons";
+import {
+  ArrowDown,
+  ArrowUp,
+  Copy,
+  CornerLeftUp,
+  GripVertical,
+  Trash2,
+} from "@plumix/admin-ui/icons";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@plumix/admin-ui/tooltip";
 
 import type { OverlayBox } from "./overlay.js";
 import { findParentId } from "./block-tree-ops.js";
@@ -39,96 +52,129 @@ export function SelectionToolbar({
   const multi = selectedCount > 1;
 
   return (
-    <div
-      data-testid="plumix-selection-toolbar"
-      className="bg-background flex items-center gap-0.5 rounded-md border p-0.5 shadow-sm"
-      style={{
-        position: "absolute",
-        left: Math.max(0, box.left),
-        top: Math.max(0, box.top - 36 - TOOLBAR_GAP),
-        // The enclosing clip layer is pointer-events:none (so overlays don't
-        // eat canvas clicks); the toolbar opts back in so its buttons work.
-        pointerEvents: "auto",
-        zIndex: 30,
-      }}
-    >
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        data-testid="selection-toolbar-drag"
-        aria-label="Drag to move"
-        disabled={multi}
-        // Pointerdown (not click) starts the move; preventDefault stops the
-        // browser's text-selection drag from hijacking it.
-        onPointerDown={(e) => {
-          e.preventDefault();
-          state.startMove(activeId);
+    <TooltipProvider delayDuration={300}>
+      <div
+        data-testid="plumix-selection-toolbar"
+        className="bg-background flex items-center gap-0.5 rounded-md border p-0.5 shadow-sm"
+        style={{
+          position: "absolute",
+          left: Math.max(0, box.left),
+          top: Math.max(0, box.top - 36 - TOOLBAR_GAP),
+          // The enclosing clip layer is pointer-events:none (so overlays don't
+          // eat canvas clicks); the toolbar opts back in so its buttons work.
+          pointerEvents: "auto",
+          zIndex: 30,
         }}
-        className="cursor-grab active:cursor-grabbing"
       >
-        <GripVertical className="size-4" />
-      </Button>
-      {selectedCount > 1 ? (
-        <span
-          data-testid="selection-toolbar-count"
-          className="text-muted-foreground px-1.5 text-xs tabular-nums"
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              data-testid="selection-toolbar-drag"
+              aria-label="Drag to move"
+              disabled={multi}
+              // Pointerdown (not click) starts the move; preventDefault stops
+              // the browser's text-selection drag from hijacking it.
+              onPointerDown={(e) => {
+                e.preventDefault();
+                state.startMove(activeId);
+              }}
+              className="cursor-grab active:cursor-grabbing"
+            >
+              <GripVertical className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <Trans id="editor.selection.drag" message="Drag to move" />
+          </TooltipContent>
+        </Tooltip>
+        {selectedCount > 1 ? (
+          <span
+            data-testid="selection-toolbar-count"
+            className="text-muted-foreground px-1.5 text-xs tabular-nums"
+          >
+            <Trans
+              id="editor.selection.count"
+              message="{count} selected"
+              values={{ count: selectedCount }}
+            />
+          </span>
+        ) : null}
+        <IconAction
+          testId="selection-toolbar-select-parent"
+          icon={<CornerLeftUp className="size-4" />}
+          disabled={!hasParent || multi}
+          onClick={act(() => state.selectParent())}
+          label={
+            <Trans id="editor.selection.selectParent" message="Select parent" />
+          }
+        />
+        <IconAction
+          testId="selection-toolbar-move-up"
+          icon={<ArrowUp className="size-4" />}
+          disabled={multi}
+          onClick={act(() => state.moveSelectedBy(-1))}
+          label={<Trans id="editor.selection.moveUp" message="Move up" />}
+        />
+        <IconAction
+          testId="selection-toolbar-move-down"
+          icon={<ArrowDown className="size-4" />}
+          disabled={multi}
+          onClick={act(() => state.moveSelectedBy(1))}
+          label={<Trans id="editor.selection.moveDown" message="Move down" />}
+        />
+        <IconAction
+          testId="selection-toolbar-duplicate"
+          icon={<Copy className="size-4" />}
+          onClick={act(() => state.duplicateSelected())}
+          label={<Trans id="editor.selection.duplicate" message="Duplicate" />}
+        />
+        <IconAction
+          testId="selection-toolbar-delete"
+          icon={<Trash2 className="size-4" />}
+          onClick={act(() => state.removeSelected())}
+          label={<Trans id="editor.selection.delete" message="Delete" />}
+          className="text-destructive hover:text-destructive"
+        />
+      </div>
+    </TooltipProvider>
+  );
+}
+
+/** A ghost icon button with a tooltip describing the action. */
+function IconAction({
+  testId,
+  icon,
+  label,
+  disabled,
+  onClick,
+  className,
+}: {
+  readonly testId: string;
+  readonly icon: ReactNode;
+  readonly label: ReactNode;
+  readonly disabled?: boolean;
+  readonly onClick: () => void;
+  readonly className?: string;
+}): ReactElement {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          data-testid={testId}
+          disabled={disabled}
+          onClick={onClick}
+          className={className}
         >
-          <Trans
-            id="editor.selection.count"
-            message="{count} selected"
-            values={{ count: selectedCount }}
-          />
-        </span>
-      ) : null}
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        data-testid="selection-toolbar-select-parent"
-        disabled={!hasParent || multi}
-        onClick={act(() => state.selectParent())}
-      >
-        <Trans id="editor.selection.selectParent" message="Select parent" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        data-testid="selection-toolbar-move-up"
-        disabled={multi}
-        onClick={act(() => state.moveSelectedBy(-1))}
-      >
-        <Trans id="editor.selection.moveUp" message="Move up" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        data-testid="selection-toolbar-move-down"
-        disabled={multi}
-        onClick={act(() => state.moveSelectedBy(1))}
-      >
-        <Trans id="editor.selection.moveDown" message="Move down" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        data-testid="selection-toolbar-duplicate"
-        onClick={act(() => state.duplicateSelected())}
-      >
-        <Trans id="editor.selection.duplicate" message="Duplicate" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        data-testid="selection-toolbar-delete"
-        onClick={act(() => state.removeSelected())}
-      >
-        <Trans id="editor.selection.delete" message="Delete" />
-      </Button>
-    </div>
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }

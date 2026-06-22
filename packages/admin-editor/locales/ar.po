@@ -14,6 +14,36 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/block-inserter.tsx
+#~ msgid "editor.toolbar.addBlock"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+#~ msgid "editor.toolbar.copyPreviewLink"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+#~ msgid "editor.toolbar.discard"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+#~ msgid "editor.toolbar.saveDraft"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+#~ msgid "editor.toolbar.unpublished"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+#~ msgid "editor.tab.json"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr ""
@@ -24,8 +54,23 @@ msgid "editor.canvas.addBlock"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/block-inserter.tsx
-msgid "editor.toolbar.addBlock"
+#: src/styles-tab.tsx
+msgid "editor.styles.align.center"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.align.left"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.align.right"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.header.back"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -44,8 +89,8 @@ msgid "editor.tab.blocks"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
-msgid "editor.toolbar.copyPreviewLink"
+#: src/styles-tab.tsx
+msgid "editor.styles.mark.bold"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -60,7 +105,12 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
-msgid "editor.toolbar.discard"
+msgid "editor.toolbar.device.desktop"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.drag"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -84,8 +134,8 @@ msgid "editor.richtext.hint"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/plumix-editor.tsx
-msgid "editor.tab.json"
+#: src/styles-tab.tsx
+msgid "editor.styles.mark.italic"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -96,6 +146,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.margin"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.device.mobile"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -144,23 +199,23 @@ msgid "editor.catalog.patterns"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
+#: src/editor-header.tsx
+msgid "editor.header.preview"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
 msgid "editor.toolbar.publish"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
+#: src/editor-header.tsx
 msgid "editor.toolbar.redo"
 msgstr ""
 
 #. js-lingui-explicit-id
 #: src/block-inspector.tsx
 msgid "editor.inspector.refreshData"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
-msgid "editor.toolbar.saveDraft"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -189,8 +244,18 @@ msgid "editor.selection.selectParent"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/json-inspector.tsx
+msgid "editor.json.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.spacing"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.mark.strikethrough"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -199,18 +264,48 @@ msgid "editor.tab.styles"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.device.tablet"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.header.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/style-control.tsx
 msgid "editor.styles.mode.token"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
+#: src/styles-tab.tsx
+msgid "editor.styles.mark.underline"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
 msgid "editor.toolbar.undo"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
-msgid "editor.toolbar.unpublished"
+#: src/editor-header.tsx
+msgid "editor.header.untitled"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.header.viewDraft"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.header.viewLive"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.header.source"
 msgstr ""
 
 #. js-lingui-explicit-id

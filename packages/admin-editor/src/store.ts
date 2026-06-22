@@ -61,6 +61,9 @@ export const MAX_ZOOM = 2;
 const clampZoom = (zoom: number): number =>
   Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 
+/** The active tab in the right inspector rail. */
+export type RightPanel = "block" | "styles" | "page";
+
 export interface EditorState {
   /** Canonical block tree — the single source of truth pushed to the canvas. */
   readonly tree: readonly BlockNode[];
@@ -81,6 +84,11 @@ export interface EditorState {
   readonly movingId: string | null;
   /** Snapshot history of the tree, driving undo/redo. */
   readonly history: TreeHistory;
+  /** Active tab in the right inspector rail. */
+  readonly rightPanel: RightPanel;
+  /** Whether the read-only JSON source dialog is open (header's source-code
+   *  action opens it). */
+  readonly jsonOpen: boolean;
 }
 
 export interface EditorActions {
@@ -130,6 +138,10 @@ export interface EditorActions {
   setHover: (id: string | null) => void;
   /** Switch device; re-enables fit-to-width so the new width fits the viewport. */
   setDevice: (device: EditorDevice) => void;
+  setRightPanel: (panel: RightPanel) => void;
+  setJsonOpen: (open: boolean) => void;
+  /** Set (or clear, with an empty string) a block's Layers-tree instance name. */
+  setBlockLabel: (id: string, label: string) => void;
   /** Manual zoom — pins the level and turns off fit-to-width. */
   setZoom: (zoom: number) => void;
   /** Apply a computed fit-to-width zoom without leaving fit mode (canvas-driven). */
@@ -226,6 +238,8 @@ export function createEditorStore(
     dragSpec: null,
     movingId: null,
     history: initHistory(initial?.tree ?? []),
+    rightPanel: "block",
+    jsonOpen: false,
 
     // Raw seed/programmatic setter — intentionally does not record history
     // (user edits go through insert/move/updateBlockAttrs).
@@ -289,6 +303,20 @@ export function createEditorStore(
         // Coalesce a typing burst on one field into a single undo step.
         const key = `attr:${id}:${Object.keys(patch).sort().join(",")}`;
         return { tree, history: recordHistory(state.history, tree, key) };
+      }),
+    setBlockLabel: (id, rawLabel) =>
+      set((state) => {
+        const label = rawLabel.trim() || undefined;
+        const tree = mapNodeById(state.tree, id, (node) => ({
+          ...node,
+          label,
+        }));
+        if (tree === state.tree) return {};
+        // Coalesce a rename's keystrokes into one undo step.
+        return {
+          tree,
+          history: recordHistory(state.history, tree, `label:${id}`),
+        };
       }),
     updateBlockStyle: (id, bucket, property, value) =>
       set((state) => {
@@ -365,6 +393,8 @@ export function createEditorStore(
       }),
     setHover: (hoverId) => set({ hoverId }),
     setDevice: (device) => set({ device, zoomFit: true }),
+    setRightPanel: (rightPanel) => set({ rightPanel }),
+    setJsonOpen: (jsonOpen) => set({ jsonOpen }),
     setZoom: (zoom) => set({ zoom: clampZoom(zoom), zoomFit: false }),
     applyFitZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
     enableZoomFit: () => set({ zoomFit: true }),

@@ -14,6 +14,36 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/block-inserter.tsx
+#~ msgid "editor.toolbar.addBlock"
+#~ msgstr "Add Block"
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+#~ msgid "editor.toolbar.copyPreviewLink"
+#~ msgstr "Copy preview link"
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+#~ msgid "editor.toolbar.discard"
+#~ msgstr "Discard"
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+#~ msgid "editor.toolbar.saveDraft"
+#~ msgstr "Save draft"
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+#~ msgid "editor.toolbar.unpublished"
+#~ msgstr "Unpublished changes"
+
+#. js-lingui-explicit-id
+#: src/plumix-editor.tsx
+#~ msgid "editor.tab.json"
+#~ msgstr "JSON"
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr "{count} selected"
@@ -24,9 +54,24 @@ msgid "editor.canvas.addBlock"
 msgstr "Add a block"
 
 #. js-lingui-explicit-id
-#: src/block-inserter.tsx
-msgid "editor.toolbar.addBlock"
-msgstr "Add Block"
+#: src/styles-tab.tsx
+msgid "editor.styles.align.center"
+msgstr "Align center"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.align.left"
+msgstr "Align left"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.align.right"
+msgstr "Align right"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.header.back"
+msgstr "Back"
 
 #. js-lingui-explicit-id
 #: src/json-inspector.tsx
@@ -44,9 +89,9 @@ msgid "editor.tab.blocks"
 msgstr "Blocks"
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
-msgid "editor.toolbar.copyPreviewLink"
-msgstr "Copy preview link"
+#: src/styles-tab.tsx
+msgid "editor.styles.mark.bold"
+msgstr "Bold"
 
 #. js-lingui-explicit-id
 #: src/style-control.tsx
@@ -60,8 +105,13 @@ msgstr "Delete"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
-msgid "editor.toolbar.discard"
-msgstr "Discard"
+msgid "editor.toolbar.device.desktop"
+msgstr "Desktop"
+
+#. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.drag"
+msgstr "Drag to move"
 
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
@@ -84,9 +134,9 @@ msgid "editor.richtext.hint"
 msgstr "Formatting applies to the selected text."
 
 #. js-lingui-explicit-id
-#: src/plumix-editor.tsx
-msgid "editor.tab.json"
-msgstr "JSON"
+#: src/styles-tab.tsx
+msgid "editor.styles.mark.italic"
+msgstr "Italic"
 
 #. js-lingui-explicit-id
 #: src/plumix-editor.tsx
@@ -97,6 +147,11 @@ msgstr "Layers"
 #: src/styles-tab.tsx
 msgid "editor.styles.margin"
 msgstr "Margin"
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.device.mobile"
+msgstr "Mobile"
 
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
@@ -144,12 +199,17 @@ msgid "editor.catalog.patterns"
 msgstr "Patterns"
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
+#: src/editor-header.tsx
+msgid "editor.header.preview"
+msgstr "Preview"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
 msgid "editor.toolbar.publish"
 msgstr "Publish"
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
+#: src/editor-header.tsx
 msgid "editor.toolbar.redo"
 msgstr "Redo"
 
@@ -157,11 +217,6 @@ msgstr "Redo"
 #: src/block-inspector.tsx
 msgid "editor.inspector.refreshData"
 msgstr "Refresh data"
-
-#. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
-msgid "editor.toolbar.saveDraft"
-msgstr "Save draft"
 
 #. js-lingui-explicit-id
 #: src/block-catalog-tab.tsx
@@ -189,9 +244,19 @@ msgid "editor.selection.selectParent"
 msgstr "Select parent"
 
 #. js-lingui-explicit-id
+#: src/json-inspector.tsx
+msgid "editor.json.title"
+msgstr "Source"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.spacing"
 msgstr "Spacing"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.mark.strikethrough"
+msgstr "Strikethrough"
 
 #. js-lingui-explicit-id
 #: src/plumix-editor.tsx
@@ -199,19 +264,49 @@ msgid "editor.tab.styles"
 msgstr "Styles"
 
 #. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.device.tablet"
+msgstr "Tablet"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.header.title"
+msgstr "Title"
+
+#. js-lingui-explicit-id
 #: src/style-control.tsx
 msgid "editor.styles.mode.token"
 msgstr "Token"
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
+#: src/styles-tab.tsx
+msgid "editor.styles.mark.underline"
+msgstr "Underline"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
 msgid "editor.toolbar.undo"
 msgstr "Undo"
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
-msgid "editor.toolbar.unpublished"
-msgstr "Unpublished changes"
+#: src/editor-header.tsx
+msgid "editor.header.untitled"
+msgstr "Untitled"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.header.viewDraft"
+msgstr "View current draft"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.header.viewLive"
+msgstr "View live entry"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.header.source"
+msgstr "View source"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx

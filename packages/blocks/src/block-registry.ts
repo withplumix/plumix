@@ -21,6 +21,14 @@ export interface BlockInput {
    * children. Mirrors Gutenberg's `allowedBlocks`.
    */
   readonly allowedBlocks?: readonly string[];
+  /**
+   * Slot inputs only: render children directly, without the editor's
+   * `display:contents` drop-target wrapper. Required where that wrapper would be
+   * invalid HTML — a `<div>` inside `<table>`/`<tr>` — at the cost of canvas
+   * nested-drop targeting for this slot (its children stay individually
+   * selectable via their own seam).
+   */
+  readonly rawSlot?: boolean;
 }
 
 export type BlockVariationScope = "inserter" | "block" | "transform";
@@ -120,6 +128,15 @@ export interface BlockSpec<
     readonly error: unknown;
   }) => ReactNode;
   readonly inline?: boolean;
+  // The block spreads the render-supplied `blockProps` (`data-plumix-id`,
+  // `data-plumix-block`, style `className`) onto its own root element instead
+  // of receiving an external wrapper `<div>`. Required for elements a div can't
+  // wrap (`<td>`, `<tr>`) and to make a style class beat the theme's element
+  // styles (e.g. text color on a heading). The block MUST spread `blockProps`
+  // onto a single host element — a Fragment/string return silently drops the
+  // seam. A styled table-row block emits its `<style>` inside `<tbody>` (invalid
+  // but browser-tolerated); `errorFallback` is not handed `blockProps`.
+  readonly selfSeam?: boolean;
   // `NoInfer` keeps `defaults` from driving `Attrs` inference at
   // `defineBlock` — without it, `{ defaults: { text: "" } }` would
   // narrow `Attrs` to `{ text: string }` even when `render` reads other

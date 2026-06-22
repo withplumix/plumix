@@ -6,6 +6,7 @@ import { formatSize, sanitizeHref } from "./normalize.js";
 export const fileBlock = defineBlock({
   name: "media/file",
   title: "File",
+  icon: "File",
   category: "media",
   description: "Downloadable file with size + MIME label.",
   keywords: ["download", "attachment"],

@@ -29,22 +29,24 @@ describe("core/table family", () => {
     expect(html).toContain('data-bordered="true"');
   });
 
-  test("renders <th scope=col> for header-cell with align attr, no universal wrapper (inline)", () => {
+  test("renders <th scope=col> for header-cell, seam on the <th> (selfSeam)", () => {
     const html = renderBlockSpecToHtml(tableHeaderCellBlock, {
       text: "Name",
       align: "center",
     });
 
-    expect(html).toBe('<th scope="col" data-align="center">Name</th>');
+    expect(html).toBe(
+      '<th scope="col" data-align="center" data-plumix-block="core/table-header-cell">Name</th>',
+    );
   });
 
-  test("renders <td> for body cells, no universal wrapper (inline)", () => {
+  test("renders <td> for body cells, seam on the <td> (selfSeam)", () => {
     const html = renderBlockSpecToHtml(tableCellBlock, { text: "v1" });
 
-    expect(html).toBe("<td>v1</td>");
+    expect(html).toBe('<td data-plumix-block="core/table-cell">v1</td>');
   });
 
-  test("th/td nest as direct children of <tr>, <tr> as direct children of <table> (preserves HTML content model)", () => {
+  test("th/td nest as direct children of <tr>, rows inside a <tbody> (valid HTML content model)", () => {
     const tree: readonly BlockNode[] = [
       {
         id: "t1",
@@ -93,9 +95,14 @@ describe("core/table family", () => {
       tree,
     );
 
+    // The rows/cells nest directly (selfSeam → no wrapper divs between them);
+    // only the per-block seam attribute rides on each element. Rows sit in a
+    // <tbody> so `<tr>` is never a direct child of `<table>` (invalid HTML).
     expect(html).toContain(
-      '<table><tr data-header=""><th scope="col">Col 1</th></tr>' +
-        "<tr><td>val 1</td></tr></table>",
+      '<table><tbody><tr data-header="" data-plumix-block="core/table-header-row">' +
+        '<th scope="col" data-plumix-block="core/table-header-cell">Col 1</th></tr>' +
+        '<tr data-plumix-block="core/table-body-row">' +
+        '<td data-plumix-block="core/table-cell">val 1</td></tr></tbody></table>',
     );
   });
 });

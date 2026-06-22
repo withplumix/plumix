@@ -23,6 +23,7 @@ export const tableBlock = defineBlock({
       name: "rows",
       type: "slot",
       label: "Rows",
+      rawSlot: true,
       allowedBlocks: ["core/table-header-row", "core/table-body-row"],
     },
   ],
@@ -31,9 +32,13 @@ export const tableBlock = defineBlock({
     const striped = attrs.striped === true || undefined;
     const bordered = attrs.bordered === true || undefined;
     const Rows = attrs.rows as (() => ReactNode) | undefined;
+    // Rows render straight into a <tbody> — browsers inject one anyway, so
+    // emitting it ourselves keeps the DOM React hydrates against valid (no
+    // <tr> directly under <table>). Header rows live here too; `scope="col"`
+    // on their cells is what marks them as headers.
     return (
       <table data-striped={striped} data-bordered={bordered}>
-        {Rows ? <Rows /> : null}
+        <tbody>{Rows ? <Rows /> : null}</tbody>
       </table>
     );
   },
@@ -44,20 +49,25 @@ export const tableHeaderRowBlock = defineBlock({
   title: "Header Row",
   icon: "Rows",
   category: "text",
-  inline: true,
+  selfSeam: true,
   inserter: false,
   inputs: [
     {
       name: "cells",
       type: "slot",
       label: "Cells",
+      rawSlot: true,
       allowedBlocks: ["core/table-header-cell"],
     },
   ],
   defaults: {},
-  render: ({ attrs }): ReactNode => {
+  render: ({ attrs, blockProps }): ReactNode => {
     const Cells = attrs.cells as (() => ReactNode) | undefined;
-    return <tr data-header="">{Cells ? <Cells /> : null}</tr>;
+    return (
+      <tr data-header="" {...blockProps}>
+        {Cells ? <Cells /> : null}
+      </tr>
+    );
   },
 });
 
@@ -66,20 +76,21 @@ export const tableBodyRowBlock = defineBlock({
   title: "Body Row",
   icon: "Rows",
   category: "text",
-  inline: true,
+  selfSeam: true,
   inserter: false,
   inputs: [
     {
       name: "cells",
       type: "slot",
       label: "Cells",
+      rawSlot: true,
       allowedBlocks: ["core/table-cell"],
     },
   ],
   defaults: {},
-  render: ({ attrs }): ReactNode => {
+  render: ({ attrs, blockProps }): ReactNode => {
     const Cells = attrs.cells as (() => ReactNode) | undefined;
-    return <tr>{Cells ? <Cells /> : null}</tr>;
+    return <tr {...blockProps}>{Cells ? <Cells /> : null}</tr>;
   },
 });
 
@@ -88,7 +99,7 @@ export const tableHeaderCellBlock = defineBlock({
   title: "Header Cell",
   icon: "AlignLeft",
   category: "text",
-  inline: true,
+  selfSeam: true,
   inserter: false,
   inputs: [
     { name: "text", type: "text", label: "Text" },
@@ -100,11 +111,11 @@ export const tableHeaderCellBlock = defineBlock({
     },
   ],
   defaults: { text: "" },
-  render: ({ attrs }): ReactNode => {
+  render: ({ attrs, blockProps }): ReactNode => {
     const { text = "" } = attrs as { readonly text?: string };
     const align = pickAlign(attrs.align);
     return (
-      <th scope="col" data-align={align}>
+      <th scope="col" data-align={align} {...blockProps}>
         {text}
       </th>
     );
@@ -116,7 +127,7 @@ export const tableCellBlock = defineBlock({
   title: "Cell",
   icon: "AlignLeft",
   category: "text",
-  inline: true,
+  selfSeam: true,
   inserter: false,
   inputs: [
     { name: "text", type: "text", label: "Text" },
@@ -128,9 +139,13 @@ export const tableCellBlock = defineBlock({
     },
   ],
   defaults: { text: "" },
-  render: ({ attrs }): ReactNode => {
+  render: ({ attrs, blockProps }): ReactNode => {
     const { text = "" } = attrs as { readonly text?: string };
     const align = pickAlign(attrs.align);
-    return <td data-align={align}>{text}</td>;
+    return (
+      <td data-align={align} {...blockProps}>
+        {text}
+      </td>
+    );
   },
 });

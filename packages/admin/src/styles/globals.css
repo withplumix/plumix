@@ -19,6 +19,10 @@
    carry every shared-component class, so plugin chunks rendering those
    components need emit none of their own. */
 @source "../../../admin-ui/src";
+/* Same rationale for the bespoke editor: its classes only live in
+   @plumix/admin-editor, so the shell must scan that source to emit them
+   (without this, editor-only utilities silently never generate). */
+@source "../../../admin-editor/src";
 
 @custom-variant dark (&:is(.dark *));
 

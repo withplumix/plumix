@@ -7,9 +7,6 @@ import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { Button } from "@plumix/admin-ui/button";
 import {
   Bold,
-  Heading2,
-  Heading3,
-  Heading4,
   Highlighter,
   Italic,
   Link2,
@@ -21,7 +18,7 @@ import {
 } from "@plumix/admin-ui/icons";
 import { Toggle } from "@plumix/admin-ui/toggle";
 
-import { HEADING_LEVELS, richTextExtensions } from "./rich-text-extensions.js";
+import { richTextExtensions } from "./rich-text-extensions.js";
 
 interface RichTextFieldProps {
   /** The block's body as an HTML string. */
@@ -50,14 +47,7 @@ interface ActiveState {
   readonly link: boolean;
   readonly bulletList: boolean;
   readonly orderedList: boolean;
-  readonly headings: Readonly<Record<number, boolean>>;
 }
-
-const HEADING_ICON: Record<number, typeof Heading2> = {
-  2: Heading2,
-  3: Heading3,
-  4: Heading4,
-};
 
 /**
  * Right-rail rich-text editor: a Tiptap instance over StarterKit nodes + the
@@ -113,12 +103,6 @@ export function RichTextField({
             link: editor.isActive("link"),
             bulletList: editor.isActive("bulletList"),
             orderedList: editor.isActive("orderedList"),
-            headings: Object.fromEntries(
-              HEADING_LEVELS.map((level) => [
-                level,
-                editor.isActive("heading", { level }),
-              ]),
-            ),
           }
         : null,
   });
@@ -126,22 +110,6 @@ export function RichTextField({
   return (
     <div className="flex flex-col gap-1.5" data-testid={testId}>
       <div className="flex flex-wrap items-center gap-0.5" role="toolbar">
-        {HEADING_LEVELS.map((level) => {
-          const Icon = HEADING_ICON[level] ?? Heading2;
-          return (
-            <ToolbarToggle
-              key={level}
-              testId={`${testId}-h${String(level)}`}
-              pressed={active?.headings[level] ?? false}
-              disabled={!editor}
-              onToggle={() =>
-                editor?.chain().focus().toggleHeading({ level }).run()
-              }
-            >
-              <Icon />
-            </ToolbarToggle>
-          );
-        })}
         {MARKS.map(({ name, icon: Icon, testId: suffix }) => (
           <ToolbarToggle
             key={name}

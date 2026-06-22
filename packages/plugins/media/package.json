@@ -30,6 +30,10 @@
       "types": "./dist/fields.d.ts",
       "default": "./dist/fields.js"
     },
+    "./blocks": {
+      "types": "./dist/blocks.d.ts",
+      "default": "./dist/blocks.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [

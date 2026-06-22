@@ -7,14 +7,8 @@ import type {
   BlockRegistry,
   InsertableBlockEntry,
 } from "@plumix/blocks";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@plumix/admin-ui/command";
+import { Search } from "@plumix/admin-ui/icons";
+import { Input } from "@plumix/admin-ui/input";
 import { resolveLabel } from "@plumix/core/i18n";
 
 import type { InserterPattern } from "./block-catalog.js";
@@ -24,6 +18,7 @@ import {
   filterPatterns,
   groupInsertables,
 } from "./block-catalog.js";
+import { BlockIcon } from "./block-icon.js";
 import { useEditorStore } from "./provider.js";
 
 interface BlockCatalogProps {
@@ -36,12 +31,10 @@ interface BlockCatalogProps {
 }
 
 /**
- * Left-rail inserter built on shadcn's Command: a searchable list of blocks
- * (and their inserter variations) grouped by category, plus a patterns group.
- * Selecting a block appends it; pressing on one starts a drag the canvas
- * resolves to a positional drop. Patterns are click-insert only (their whole
- * composition appends). Filtering is ours (capabilities + variation expansion),
- * so Command runs with `shouldFilter={false}`.
+ * Left-rail inserter: a searchable grid of square icon cards grouped by
+ * category, plus a patterns group. Clicking a card appends the block; pressing
+ * on one starts a drag the canvas resolves to a positional drop. Patterns are
+ * click-insert only (their whole composition appends).
  */
 export function BlockCatalog({
   registry,
@@ -74,71 +67,124 @@ export function BlockCatalog({
     onInsert?.();
   };
 
+  const empty = groups.length === 0 && matchedPatterns.length === 0;
+
   return (
-    <Command
-      shouldFilter={false}
-      className="bg-transparent"
-      data-testid="block-catalog"
-    >
-      <CommandInput
-        value={query}
-        onValueChange={setQuery}
-        aria-label={i18n._({
-          id: "editor.catalog.searchLabel",
-          message: "Search blocks",
-        })}
-        data-testid="block-catalog-search"
-      />
-      <CommandList className="max-h-none">
-        <CommandEmpty data-testid="block-catalog-empty">
+    <div className="flex flex-col gap-3 p-2" data-testid="block-catalog">
+      <div className="relative">
+        <Search className="text-muted-foreground absolute start-2.5 top-1/2 size-4 -translate-y-1/2" />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={i18n._({
+            id: "editor.catalog.searchLabel",
+            message: "Search blocks",
+          })}
+          className="h-9 ps-8"
+          data-testid="block-catalog-search"
+        />
+      </div>
+
+      {empty ? (
+        <p
+          className="text-muted-foreground px-1 py-4 text-sm"
+          data-testid="block-catalog-empty"
+        >
           {i18n._({
             id: "editor.catalog.noResults",
             message: "No blocks match your search.",
           })}
-        </CommandEmpty>
-        {groups.map((group) => (
-          <CommandGroup
-            key={group.category}
-            heading={group.category}
-            data-testid={`block-catalog-group-${group.category}`}
-          >
-            {group.entries.map((entry) => (
-              <CommandItem
-                key={entryKey(entry)}
-                value={entryKey(entry)}
-                data-testid={`block-catalog-item-${entryKey(entry)}`}
-                onPointerDown={() => startBlockDrag(entry)}
-                onSelect={() =>
-                  insertEntry(createNodeFromEntry(registry, entry))
-                }
-              >
-                {resolveLabel(entry.title, i18n)}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        ))}
-        {matchedPatterns.length > 0 && (
-          <CommandGroup
-            heading={i18n._({
-              id: "editor.catalog.patterns",
-              message: "Patterns",
-            })}
-            data-testid="block-catalog-patterns"
-          >
-            {matchedPatterns.map((pattern) => (
-              <CommandItem
-                key={pattern.name}
-                value={`pattern:${pattern.name}`}
-                data-testid={`block-catalog-pattern-${pattern.name}`}
-                onSelect={() => insertPattern(expandPattern(pattern))}
-              >
-                {resolveLabel(pattern.title, i18n)}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
-      </CommandList>
-    </Command>
+        </p>
+      ) : null}
+
+      {groups.map((group) => (
+        <CatalogGroup
+          key={group.category}
+          heading={group.category}
+          testId={`block-catalog-group-${group.category}`}
+        >
+          {group.entries.map((entry) => (
+            <CatalogCard
+              key={entryKey(entry)}
+              testId={`block-catalog-item-${entryKey(entry)}`}
+              icon={entry.icon}
+              label={resolveLabel(entry.title, i18n)}
+              onPointerDown={() => startBlockDrag(entry)}
+              onClick={() => insertEntry(createNodeFromEntry(registry, entry))}
+            />
+          ))}
+        </CatalogGroup>
+      ))}
+
+      {matchedPatterns.length > 0 ? (
+        <CatalogGroup
+          heading={i18n._({
+            id: "editor.catalog.patterns",
+            message: "Patterns",
+          })}
+          testId="block-catalog-patterns"
+        >
+          {matchedPatterns.map((pattern) => (
+            <CatalogCard
+              key={pattern.name}
+              testId={`block-catalog-pattern-${pattern.name}`}
+              label={resolveLabel(pattern.title, i18n)}
+              onClick={() => insertPattern(expandPattern(pattern))}
+            />
+          ))}
+        </CatalogGroup>
+      ) : null}
+    </div>
+  );
+}
+
+function CatalogGroup({
+  heading,
+  testId,
+  children,
+}: {
+  readonly heading: string;
+  readonly testId: string;
+  readonly children: ReactElement[];
+}): ReactElement {
+  return (
+    <div data-testid={testId}>
+      <p className="text-muted-foreground mb-1.5 px-1 text-xs font-medium capitalize">
+        {heading}
+      </p>
+      <div className="grid grid-cols-3 gap-2">{children}</div>
+    </div>
+  );
+}
+
+/** A square icon card: glyph on top, label below. */
+function CatalogCard({
+  testId,
+  icon,
+  label,
+  onClick,
+  onPointerDown,
+}: {
+  readonly testId: string;
+  readonly icon?: string;
+  readonly label: string;
+  readonly onClick: () => void;
+  readonly onPointerDown?: () => void;
+}): ReactElement {
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      onClick={onClick}
+      onPointerDown={onPointerDown}
+      title={label}
+      className="border-border hover:bg-accent hover:border-accent-foreground/20 flex aspect-square flex-col items-center justify-center gap-1.5 rounded-md border p-2 text-center"
+    >
+      <BlockIcon name={icon} className="text-muted-foreground size-5" />
+      <span className="text-foreground w-full truncate text-[11px] leading-tight">
+        {label}
+      </span>
+    </button>
   );
 }
 

@@ -1,11 +1,11 @@
-import type { ReactElement, ReactNode } from "react";
+import type { I18n } from "@lingui/core";
+import type { ReactElement } from "react";
 import { useEffect } from "react";
-import { Trans, useLingui } from "@lingui/react";
+import { useLingui } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
   Monitor,
-  Share2,
   Smartphone,
   Tablet,
   ZoomIn,
@@ -15,7 +15,6 @@ import { SidebarTrigger } from "@plumix/admin-ui/sidebar";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 
 import type { EditorDevice } from "./store.js";
-import { canRedo, canUndo } from "./history.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
 
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
@@ -28,6 +27,21 @@ const DEVICES: readonly {
   { value: "tablet", Icon: Tablet },
   { value: "mobile", Icon: Smartphone },
 ];
+
+// Static ids (a switch, not a template literal) so the extractor catalogs them.
+function deviceLabel(i18n: I18n, value: EditorDevice): string {
+  switch (value) {
+    case "tablet":
+      return i18n._({ id: "editor.toolbar.device.tablet", message: "Tablet" });
+    case "mobile":
+      return i18n._({ id: "editor.toolbar.device.mobile", message: "Mobile" });
+    default:
+      return i18n._({
+        id: "editor.toolbar.device.desktop",
+        message: "Desktop",
+      });
+  }
+}
 
 /** Draft-mode actions for a published entry with a pending autosave. The host
  *  owns the mutations; the toolbar only renders the buttons and their state. */
@@ -51,59 +65,22 @@ export interface PublishActions {
   readonly draftMode?: DraftMode;
 }
 
-/** Top toolbar: an inline inserter slot, undo/redo, plus the host-wired
- *  publish / draft actions. */
-export function EditorToolbar({
-  publish,
-  inserter,
-  previewLink,
-}: {
-  readonly publish?: PublishActions;
-  readonly inserter?: ReactNode;
-  /** A shareable `?preview=…` URL; when set, a copy-to-clipboard action shows. */
-  readonly previewLink?: string;
-}): ReactElement {
-  const undoAvailable = useEditorStore((s) => canUndo(s.history));
-  const redoAvailable = useEditorStore((s) => canRedo(s.history));
-  const undo = useEditorStore((s) => s.undo);
-  const redo = useEditorStore((s) => s.redo);
-
+/** Canvas toolbar above the iframe: the rails toggle on the left, and the
+ *  device/zoom controls centered over the canvas. Title, undo/redo, preview and
+ *  publish live in the full-width header; blocks are added from the left rail. */
+export function EditorToolbar(): ReactElement {
   return (
     <header
-      className="bg-background flex items-center gap-1 border-b p-2"
+      className="bg-background flex items-center gap-2 border-b p-2"
       data-testid="plumix-editor-toolbar"
     >
-      {/* Left controls take the flexible, scrollable space; the publish action
-          is pinned outside it so it always sits at the inset's right edge and
-          never overflows under the right rail at narrow widths. */}
-      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-        {/* Collapses both rails for a focused canvas (also Cmd/Ctrl+B). */}
-        <SidebarTrigger data-testid="plumix-rails-toggle" />
-        {inserter}
+      {/* Collapses both rails for a focused canvas (also Cmd/Ctrl+B). */}
+      <SidebarTrigger data-testid="plumix-rails-toggle" className="shrink-0" />
+      <div className="flex flex-1 justify-center">
         <DeviceZoomControls />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          data-testid="plumix-undo"
-          disabled={!undoAvailable}
-          onClick={undo}
-        >
-          <Trans id="editor.toolbar.undo" message="Undo" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          data-testid="plumix-redo"
-          disabled={!redoAvailable}
-          onClick={redo}
-        >
-          <Trans id="editor.toolbar.redo" message="Redo" />
-        </Button>
-        {previewLink ? <CopyPreviewLink url={previewLink} /> : null}
       </div>
-      {publish ? <PublishControls publish={publish} /> : null}
+      {/* Balances the rails toggle so the device/zoom cluster reads as centered. */}
+      <div className="w-7 shrink-0" aria-hidden />
     </header>
   );
 }
@@ -142,10 +119,7 @@ function DeviceZoomControls(): ReactElement {
             key={value}
             value={value}
             data-testid={`plumix-device-${value}`}
-            aria-label={i18n._({
-              id: `editor.toolbar.device.${value}`,
-              message: value,
-            })}
+            aria-label={deviceLabel(i18n, value)}
           >
             <Icon />
           </ToggleGroupItem>
@@ -154,8 +128,7 @@ function DeviceZoomControls(): ReactElement {
       <Button
         type="button"
         variant="ghost"
-        size="sm"
-        className="size-8 p-0"
+        size="icon-sm"
         data-testid="plumix-zoom-out"
         onClick={zoomOut}
         aria-label={i18n._({
@@ -180,100 +153,12 @@ function DeviceZoomControls(): ReactElement {
       <Button
         type="button"
         variant="ghost"
-        size="sm"
-        className="size-8 p-0"
+        size="icon-sm"
         data-testid="plumix-zoom-in"
         onClick={zoomIn}
         aria-label={i18n._({ id: "editor.toolbar.zoomIn", message: "Zoom in" })}
       >
         <ZoomIn />
-      </Button>
-    </div>
-  );
-}
-
-/** Copies the shareable preview URL to the clipboard. The host mints the URL
- *  (a `?preview=<token>` link); this only surfaces the copy action. */
-function CopyPreviewLink({ url }: { readonly url: string }): ReactElement {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      data-testid="plumix-copy-preview-link"
-      onClick={() => void navigator.clipboard.writeText(url)}
-    >
-      <Share2 />
-      <Trans id="editor.toolbar.copyPreviewLink" message="Copy preview link" />
-    </Button>
-  );
-}
-
-function PublishControls({
-  publish,
-}: {
-  readonly publish: PublishActions;
-}): ReactElement {
-  const { draftMode } = publish;
-  if (draftMode) {
-    const busy =
-      draftMode.isSaving || draftMode.isPublishing || draftMode.isDiscarding;
-    return (
-      <div className="flex shrink-0 items-center gap-2">
-        {draftMode.hasPendingDraft ? (
-          <span
-            className="text-muted-foreground text-xs"
-            data-testid="unpublished-changes-banner"
-          >
-            <Trans
-              id="editor.toolbar.unpublished"
-              message="Unpublished changes"
-            />
-          </span>
-        ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          data-testid="editor-draft-discard"
-          disabled={busy || !draftMode.hasPendingDraft}
-          onClick={draftMode.onDiscardDraft}
-        >
-          <Trans id="editor.toolbar.discard" message="Discard" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          data-testid="editor-draft-save"
-          disabled={busy}
-          onClick={draftMode.onSaveDraft}
-        >
-          <Trans id="editor.toolbar.saveDraft" message="Save draft" />
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          data-testid="editor-draft-publish"
-          disabled={busy || !draftMode.hasPendingDraft}
-          onClick={draftMode.onPublishDraft}
-        >
-          <Trans id="editor.toolbar.publish" message="Publish" />
-        </Button>
-      </div>
-    );
-  }
-  const { isPublishing = false, isPublished = false } = publish;
-  return (
-    <div className="shrink-0">
-      <Button
-        type="button"
-        size="sm"
-        data-testid="plumix-editor-publish-button"
-        disabled={isPublishing || isPublished}
-        onClick={publish.onPublish}
-      >
-        <Trans id="editor.toolbar.publish" message="Publish" />
       </Button>
     </div>
   );

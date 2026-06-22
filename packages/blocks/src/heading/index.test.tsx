@@ -7,7 +7,7 @@ import { renderBlockTree } from "../render-block-tree.js";
 import { headingBlock } from "./index.js";
 
 describe("core/heading end-to-end through new defineBlock + flat registry + walker", () => {
-  test("renders the heading tag at the declared level with the wrapper", () => {
+  test("renders the heading tag at the declared level, seam on the element", () => {
     const registry = createBlockRegistry([headingBlock]);
     const tree: readonly BlockNode[] = [
       {
@@ -19,8 +19,9 @@ describe("core/heading end-to-end through new defineBlock + flat registry + walk
 
     const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
+    // selfSeam: the seam rides on the <h2> itself, no wrapper <div>.
     expect(html).toBe(
-      '<div data-plumix-block="core/heading"><h2>Section title</h2></div>',
+      '<h2 data-plumix-block="core/heading">Section title</h2>',
     );
   });
 
@@ -36,6 +37,8 @@ describe("core/heading end-to-end through new defineBlock + flat registry + walk
 
     const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
-    expect(html).toContain("<h2>Defaulted</h2>");
+    expect(html).toContain(
+      '<h2 data-plumix-block="core/heading">Defaulted</h2>',
+    );
   });
 });

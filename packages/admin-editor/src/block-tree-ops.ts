@@ -42,6 +42,8 @@ export function findParentId(
 export interface FlatNode {
   readonly id: string;
   readonly name: string;
+  /** Author-given instance label, or undefined to fall back to the type title. */
+  readonly label?: string;
   /** Nesting depth; 0 for top-level blocks. */
   readonly depth: number;
   /** The slot-owning block's id, or null at the top level. */
@@ -69,6 +71,7 @@ export function flattenTree(tree: readonly BlockNode[]): readonly FlatNode[] {
       out.push({
         id: node.id,
         name: node.name,
+        label: node.label,
         depth,
         parentId,
         hasSlot: key !== null,

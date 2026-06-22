@@ -390,21 +390,41 @@ export function CanvasFrame({
     <div
       ref={containerRef}
       data-testid="plumix-canvas-frame"
-      style={{ position: "relative", flex: 1, overflow: "auto" }}
+      // A neutral surface (not the shell's near-black) shows around the framed
+      // page — the device width is narrower than the column and a short page
+      // ends above the fold. `var(--muted)` reads as canvas, not a void.
+      style={{
+        position: "relative",
+        flex: 1,
+        overflow: "auto",
+        background: "var(--muted)",
+      }}
     >
-      <iframe
-        ref={iframeRef}
-        src={previewUrl}
-        title="plumix-editor-canvas"
-        onLoad={measureContent}
+      {/* `transform: scale()` shrinks the iframe visually but not its layout
+          box, so a wrapper sized to the SCALED dimensions keeps the scroll area
+          flush with the page — otherwise the surface shows below/right of the
+          zoomed-out frame as dead space. */}
+      <div
         style={{
-          width: frameWidth,
-          height: contentHeight ?? CANVAS_HEIGHT,
-          border: 0,
-          transform: `scale(${String(zoom)})`,
-          transformOrigin: "top left",
+          width: frameWidth * zoom,
+          height: (contentHeight ?? CANVAS_HEIGHT) * zoom,
         }}
-      />
+      >
+        <iframe
+          ref={iframeRef}
+          src={previewUrl}
+          title="plumix-editor-canvas"
+          onLoad={measureContent}
+          style={{
+            display: "block",
+            width: frameWidth,
+            height: contentHeight ?? CANVAS_HEIGHT,
+            border: 0,
+            transform: `scale(${String(zoom)})`,
+            transformOrigin: "top left",
+          }}
+        />
+      </div>
       {/* Clip layer pinned over the visible canvas column. Its overflow:hidden
           keeps the absolutely-positioned overlays + toolbar from spilling onto
           the side rails when the iframe renders wider than the column. */}

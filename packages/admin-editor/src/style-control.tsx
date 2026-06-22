@@ -7,6 +7,10 @@ import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
 import { cn } from "@plumix/admin-ui/utils";
 
+// Native `<input type="color">` only round-trips 6-digit hex; anything else
+// (a token-ish string, `transparent`, rgba) leaves the swatch on a safe default.
+const HEX6 = /^#[0-9a-fA-F]{6}$/;
+
 interface StyleControlProps {
   readonly label: string;
   /** CSS property (camelCase), used for ids and the store write. */
@@ -35,7 +39,9 @@ export function StyleControl({
   const testId = `style-control-${property}`;
   const [custom, setCustom] = useState(value !== undefined && "raw" in value);
   const isCustom = category === undefined || custom;
+  const isColor = category === "colors";
   const group = category ? (tokens[category] ?? {}) : {};
+  const raw = value && "raw" in value ? value.raw : "";
 
   return (
     <div className="flex flex-col gap-1" data-testid={testId}>
@@ -61,13 +67,25 @@ export function StyleControl({
         ) : null}
       </div>
       {isCustom ? (
-        <Input
-          data-testid={`${testId}-custom`}
-          value={value && "raw" in value ? value.raw : ""}
-          onChange={(e) =>
-            onChange(e.target.value === "" ? null : { raw: e.target.value })
-          }
-        />
+        <div className="flex gap-1">
+          {isColor ? (
+            <input
+              type="color"
+              data-testid={`${testId}-swatch`}
+              aria-label={`${label} color`}
+              value={HEX6.test(raw) ? raw : "#000000"}
+              onChange={(e) => onChange({ raw: e.target.value })}
+              className="border-input size-9 shrink-0 cursor-pointer rounded-md border bg-transparent p-1"
+            />
+          ) : null}
+          <Input
+            data-testid={`${testId}-custom`}
+            value={raw}
+            onChange={(e) =>
+              onChange(e.target.value === "" ? null : { raw: e.target.value })
+            }
+          />
+        </div>
       ) : (
         <select
           data-testid={`${testId}-token`}

@@ -4,6 +4,7 @@ import { defineBlock } from "plumix/blocks";
 export const videoBlock = defineBlock({
   name: "media/video",
   title: "Video",
+  icon: "Video",
   category: "media",
   description: "HTML <video> with browser controls.",
   keywords: ["movie", "clip", "media"],

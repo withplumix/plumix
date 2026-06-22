@@ -179,7 +179,7 @@ test.describe("bespoke editor route", () => {
     await expect(page.getByTestId("plumix-redo")).toBeEnabled();
   });
 
-  test("the Page tab shows document settings and the JSON tab shows the tree", async ({
+  test("the Page tab shows document settings and the source dialog shows the tree", async ({
     page,
   }) => {
     await mockRpc(page, {
@@ -200,14 +200,15 @@ test.describe("bespoke editor route", () => {
     await page.getByTestId("plumix-tab-page").click();
     await expect(page.getByTestId("entry-slug-input")).toHaveValue("entry-1");
 
-    // JSON tab renders the whole-page tree.
-    await page.getByTestId("plumix-tab-json").click();
+    // The header's source-code action opens a modal with the whole-page tree.
+    await page.getByTestId("plumix-view-source").click();
+    await expect(page.getByTestId("json-source-dialog")).toBeVisible();
     await expect(page.getByTestId("json-inspector-output")).toContainText(
       '"h1"',
     );
   });
 
-  test("a published autosave-type entry shows draft save/publish/discard", async ({
+  test("a published autosave-type entry with a pending draft enables Publish", async ({
     page,
   }) => {
     await mockManifest(page, {
@@ -239,15 +240,14 @@ test.describe("bespoke editor route", () => {
 
     await page.goto("entries/posts/1/edit");
 
-    // Draft mode: the live Publish button is replaced by the draft trio, and
-    // the pending autosave enables Publish/Discard + shows the banner.
+    // Draft mode: the header shows just Publish (staging is via autosave, so
+    // there's no separate save/discard); a pending autosave enables it.
     await expect(page.getByTestId("plumix-editor-publish-button")).toHaveCount(
       0,
     );
-    await expect(page.getByTestId("editor-draft-save")).toBeVisible();
     await expect(page.getByTestId("editor-draft-publish")).toBeEnabled();
-    await expect(page.getByTestId("editor-draft-discard")).toBeEnabled();
-    await expect(page.getByTestId("unpublished-changes-banner")).toBeVisible();
+    await expect(page.getByTestId("editor-draft-save")).toHaveCount(0);
+    await expect(page.getByTestId("editor-draft-discard")).toHaveCount(0);
   });
 
   test("a failed preview mint surfaces the error placeholder, not a dead canvas", async ({
@@ -575,8 +575,8 @@ test.describe("editor document tab", () => {
     });
 
     await page.goto("entries/posts/1/edit");
-    await page.getByTestId("plumix-tab-page").click();
 
+    // The title lives in the always-visible header now, not the Page tab.
     const title = page.getByTestId("plumix-editor-title-input");
     await expect(title).toHaveValue("Untitled");
     await title.fill("Hello world");
@@ -715,14 +715,11 @@ test.describe("editor document tab", () => {
   });
 });
 
-// Ported from "editor preview". The bespoke toolbar surfaces only the
-// copy-preview-link affordance (the host mints the URL in the loader and feeds
-// it in as `previewLink`). The Puck "primary Preview button opens a new tab"
-// assertion is dropped — the bespoke shell has no open-in-new-tab button.
+// The header's preview menu (eye icon) offers the current draft and the live
+// entry. The host mints the draft URL in the loader and feeds it in as
+// `previewLink`; "View live entry" stays disabled until the entry is published.
 test.describe("editor preview", () => {
-  test.use({ permissions: ["clipboard-read", "clipboard-write"] });
-
-  test("the toolbar copies the absolute preview url to the clipboard", async ({
+  test("the preview menu offers the draft and live-entry options", async ({
     page,
   }) => {
     await mockRpc(page, {
@@ -732,14 +729,11 @@ test.describe("editor preview", () => {
     });
     await page.goto("entries/posts/1/edit");
 
-    await page.getByTestId("plumix-copy-preview-link").click();
+    await page.getByTestId("plumix-preview-menu").click();
 
-    const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-    expect(clipboard).toContain("/post/hello?preview=tok123");
-    // The host resolves the site-relative mint against the admin origin before
-    // surfacing it, so the copied link is absolute and the edit flag is absent.
-    expect(clipboard).toMatch(/^https?:\/\//);
-    expect(clipboard).not.toContain("plumix.edit");
+    // The draft link is always available; the live entry is gated on publish.
+    await expect(page.getByTestId("plumix-preview-draft")).toBeVisible();
+    await expect(page.getByTestId("plumix-preview-live")).toBeVisible();
   });
 });
 
@@ -882,72 +876,19 @@ test.describe("editor draft of a published entry", () => {
     );
   }
 
-  test("published entry without an autosave: three-button header, no banner, Publish + Discard disabled", async ({
+  test("published entry without an autosave: Publish disabled, no save/discard", async ({
     page,
   }) => {
     await mockPublishedEntry(page, { autosaveUpdatedAt: null });
 
     await page.goto("entries/posts/1/edit");
-    await expect(page.getByTestId("editor-draft-save")).toBeVisible();
+    // No pending draft → Publish is disabled; no separate save/discard exist.
     await expect(page.getByTestId("editor-draft-publish")).toBeDisabled();
-    await expect(page.getByTestId("editor-draft-discard")).toBeDisabled();
-    await expect(page.getByTestId("unpublished-changes-banner")).toHaveCount(0);
-    // The single Publish button is gone in draft mode.
+    await expect(page.getByTestId("editor-draft-save")).toHaveCount(0);
+    await expect(page.getByTestId("editor-draft-discard")).toHaveCount(0);
     await expect(page.getByTestId("plumix-editor-publish-button")).toHaveCount(
       0,
     );
-  });
-
-  test("draft discard fires entry.discardDraft and toasts success", async ({
-    page,
-  }) => {
-    let discarded = false;
-    await page.route("**/_plumix/rpc/**", (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/entry/discardDraft")) {
-        discarded = true;
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ json: { discarded: true }, meta: [] }),
-        });
-      }
-      if (url.endsWith("/entry/createPreviewLink")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ json: PREVIEW_LINK, meta: [] }),
-        });
-      }
-      if (url.endsWith("/entry/get")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: publishedEntryRpcBody(
-            publishedEntry({ autosaveUpdatedAt: T0 }),
-          ),
-        });
-      }
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
-    });
-
-    await page.goto("entries/posts/1/edit");
-    // Collapse the rails so the trailing draft controls aren't under the right
-    // rail (see the published-status spec).
-    await page.getByTestId("plumix-rails-toggle").click();
-    const discard = page.getByTestId("editor-draft-discard");
-    await expect(discard).toBeEnabled();
-
-    await discard.click();
-    await expect.poll(() => discarded).toBe(true);
-    await expect(page.getByTestId("toast-success")).toBeVisible();
   });
 
   test("draft publish: a 409 surfaces an error toast, the retry a success toast", async ({
