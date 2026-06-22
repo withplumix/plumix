@@ -5,6 +5,7 @@ import { describe, expect, test } from "vitest";
 import {
   EMPTY_CATALOG_CONTEXT,
   loadCatalogContext,
+  parseNamedCatalogs,
   parseWorkspaceCatalog,
   resolveDeps,
 } from "./catalog.js";
@@ -56,10 +57,29 @@ describe("resolveDeps", () => {
     expect(result?.typescript).toBe("^6.0.3");
   });
 
+  test("resolves a named `catalog:<name>` dep against that catalog", () => {
+    expect(
+      resolveDeps(
+        { react: "catalog:react", "@types/react": "catalog:react" },
+        {
+          catalog: {},
+          catalogs: { react: { react: "^19.2.7", "@types/react": "^19.2.17" } },
+          workspaceVersions: {},
+        },
+      ),
+    ).toEqual({ react: "^19.2.7", "@types/react": "^19.2.17" });
+  });
+
   test("throws on a `catalog:` dep absent from the catalog", () => {
     expect(() =>
       resolveDeps({ "future-dep": "catalog:" }, EMPTY_CATALOG_CONTEXT),
     ).toThrow(/future-dep/);
+  });
+
+  test("throws on a named `catalog:<name>` dep with no matching catalog", () => {
+    expect(() =>
+      resolveDeps({ react: "catalog:react" }, EMPTY_CATALOG_CONTEXT),
+    ).toThrow(/react/);
   });
 
   test("throws on a `workspace:` dep whose version can't be found", () => {
@@ -92,6 +112,30 @@ describe("parseWorkspaceCatalog", () => {
       "@types/node": "^24.13.1",
       typescript: "^6.0.3",
       wrangler: "^4.98.0",
+    });
+  });
+});
+
+describe("parseNamedCatalogs", () => {
+  test("reads each named catalog under the `catalogs:` block", () => {
+    const yaml = [
+      "catalog:",
+      "  typescript: ^6.0.3",
+      "",
+      "catalogs:",
+      "  react:",
+      '    "@types/react": ^19.2.17',
+      "    react: ^19.2.7",
+      "  tailwind:",
+      "    tailwindcss: ^4.3.1",
+      "",
+      "publicHoistPattern:",
+      "  - prettier-plugin-tailwindcss",
+    ].join("\n");
+
+    expect(parseNamedCatalogs(yaml)).toEqual({
+      react: { "@types/react": "^19.2.17", react: "^19.2.7" },
+      tailwind: { tailwindcss: "^4.3.1" },
     });
   });
 });

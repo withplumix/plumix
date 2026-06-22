@@ -66,7 +66,7 @@
   "peerDependencies": {
     "@tanstack/react-query": "^5.100.14",
     "plumix": "workspace:*",
-    "react": "catalog:"
+    "react": "catalog:react"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
@@ -84,8 +84,8 @@
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/node": "catalog:",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
+    "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
     "@vitest/coverage-v8": "catalog:",
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
@@ -94,8 +94,8 @@
     "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",
-    "react": "catalog:",
-    "react-dom": "catalog:",
+    "react": "catalog:react",
+    "react-dom": "catalog:react",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },

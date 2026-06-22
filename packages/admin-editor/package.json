@@ -39,8 +39,8 @@
   "peerDependencies": {
     "@lingui/core": "catalog:lingui",
     "@lingui/react": "catalog:lingui",
-    "react": "catalog:",
-    "react-dom": "catalog:"
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
   },
   "devDependencies": {
     "@lingui/cli": "catalog:lingui",
@@ -55,15 +55,15 @@
     "@tailwindcss/vite": "catalog:tailwind",
     "@testing-library/react": "catalog:",
     "@types/node": "catalog:",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
+    "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
     "@vitejs/plugin-react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
     "jsdom": "catalog:",
     "prettier": "catalog:",
-    "react": "catalog:",
-    "react-dom": "catalog:",
+    "react": "catalog:react",
+    "react-dom": "catalog:react",
     "tailwindcss": "catalog:tailwind",
     "typescript": "catalog:",
     "vite": "catalog:",

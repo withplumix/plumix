@@ -201,6 +201,9 @@ const SHIMS: readonly ShimSpec[] = [
       "pick",
       "preloadWarning",
       "processRouteTree",
+      // react-router's internal re-export of React's `use` hook — plugins
+      // get `use` from the React shim, so the router copy is redundant.
+      "reactUse",
       "removeBasepath",
       "removeTrailingSlash",
       "replaceEqualDeep",
