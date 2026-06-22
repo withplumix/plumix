@@ -55,7 +55,7 @@
     "@cloudflare/vite-plugin": "^1.40.0",
     "jose": "^6.2.3",
     "jsonc-parser": "^3.3.1",
-    "smol-toml": "^1.6.1",
+    "smol-toml": "^1.7.0",
     "vite": "catalog:"
   },
   "peerDependencies": {
