@@ -575,8 +575,8 @@ test.describe("editor document tab", () => {
     });
 
     await page.goto("entries/posts/1/edit");
-    await page.getByTestId("plumix-tab-page").click();
 
+    // The title lives in the always-visible header now, not the Page tab.
     const title = page.getByTestId("plumix-editor-title-input");
     await expect(title).toHaveValue("Untitled");
     await title.fill("Hello world");
@@ -715,14 +715,11 @@ test.describe("editor document tab", () => {
   });
 });
 
-// Ported from "editor preview". The bespoke toolbar surfaces only the
-// copy-preview-link affordance (the host mints the URL in the loader and feeds
-// it in as `previewLink`). The Puck "primary Preview button opens a new tab"
-// assertion is dropped — the bespoke shell has no open-in-new-tab button.
+// The header's preview menu (eye icon) offers the current draft and the live
+// entry. The host mints the draft URL in the loader and feeds it in as
+// `previewLink`; "View live entry" stays disabled until the entry is published.
 test.describe("editor preview", () => {
-  test.use({ permissions: ["clipboard-read", "clipboard-write"] });
-
-  test("the toolbar copies the absolute preview url to the clipboard", async ({
+  test("the preview menu offers the draft and live-entry options", async ({
     page,
   }) => {
     await mockRpc(page, {
@@ -732,14 +729,11 @@ test.describe("editor preview", () => {
     });
     await page.goto("entries/posts/1/edit");
 
-    await page.getByTestId("plumix-copy-preview-link").click();
+    await page.getByTestId("plumix-preview-menu").click();
 
-    const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-    expect(clipboard).toContain("/post/hello?preview=tok123");
-    // The host resolves the site-relative mint against the admin origin before
-    // surfacing it, so the copied link is absolute and the edit flag is absent.
-    expect(clipboard).toMatch(/^https?:\/\//);
-    expect(clipboard).not.toContain("plumix.edit");
+    // The draft link is always available; the live entry is gated on publish.
+    await expect(page.getByTestId("plumix-preview-draft")).toBeVisible();
+    await expect(page.getByTestId("plumix-preview-live")).toBeVisible();
   });
 });
 

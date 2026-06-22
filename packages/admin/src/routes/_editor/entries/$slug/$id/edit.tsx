@@ -21,6 +21,7 @@ import {
   getThemeBreakpoints,
   getThemeTokens,
 } from "@/lib/manifest.js";
+import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
 import { toastError, toastSuccess } from "@/lib/toast.js";
@@ -35,7 +36,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import * as v from "valibot";
 
 import type { EntryContent } from "@plumix/blocks";
@@ -251,7 +252,8 @@ function BespokeEditor({
   userId,
   onReseed,
 }: BespokeEditorProps): ReactNode {
-  const { id } = Route.useParams();
+  const { slug, id } = Route.useParams();
+  const navigate = useNavigate();
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id, preview: true } }),
   );
@@ -454,11 +456,7 @@ function BespokeEditor({
   const documentPanel = useMemo(
     () => (
       <DocumentSettingsPanel
-        title={
-          supportsTitle
-            ? { value: titleValue, onChange: handleTitleChange }
-            : undefined
-        }
+        // Title now lives in the editor header, not the Page tab.
         slug={slugValue}
         onSlugChange={handleSlugChange}
         excerpt={
@@ -487,9 +485,6 @@ function BespokeEditor({
       />
     ),
     [
-      supportsTitle,
-      titleValue,
-      handleTitleChange,
       slugValue,
       handleSlugChange,
       supportsExcerpt,
@@ -696,6 +691,12 @@ function BespokeEditor({
   const shareUrl = target.toString();
   target.searchParams.set("plumix.edit", "");
 
+  // The published page is the preview URL without the draft token; surfaced as
+  // "View live entry" only once the entry has actually been published.
+  const liveTarget = new URL(previewLink.url, window.location.origin);
+  liveTarget.search = "";
+  const liveUrl = isPublished ? liveTarget.toString() : undefined;
+
   return (
     <PlumixEditor
       previewUrl={target.toString()}
@@ -707,6 +708,16 @@ function BespokeEditor({
       breakpoints={breakpoints}
       tokens={themeTokens}
       previewLink={shareUrl}
+      liveUrl={liveUrl}
+      title={supportsTitle ? titleValue : undefined}
+      onTitleChange={supportsTitle ? handleTitleChange : undefined}
+      onBack={() =>
+        void navigate({
+          to: "/entries/$slug",
+          params: { slug },
+          search: ENTRIES_LIST_DEFAULT_SEARCH,
+        })
+      }
       onChange={handleChange}
       documentPanel={documentPanel}
       publish={publishActions}

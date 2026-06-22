@@ -30,6 +30,7 @@ import { BlockCatalog } from "./block-catalog-tab.js";
 import { BlockInserterPopover } from "./block-inserter.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
+import { EditorHeader } from "./editor-header.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
 import { JsonInspector } from "./json-inspector.js";
 import { LayersTab } from "./layers-tab.js";
@@ -60,8 +61,16 @@ interface PlumixEditorProps {
   readonly readOnly?: boolean;
   /** Banner shown above the canvas in preview mode (e.g. revision + restore). */
   readonly previewBanner?: ReactNode;
-  /** A shareable `?preview=…` URL; surfaces a copy-link action in the toolbar. */
+  /** A shareable `?preview=…` URL; surfaces "View current draft" in the header. */
   readonly previewLink?: string;
+  /** Public permalink for "View live entry"; absent until first published. */
+  readonly liveUrl?: string;
+  /** Entry title, shown and edited inline in the header. */
+  readonly title?: string;
+  /** Persists a header title edit (host owns persistence). */
+  readonly onTitleChange?: (title: string) => void;
+  /** Returns to the entry list from the header's back button. */
+  readonly onBack?: () => void;
   /** Fires with the full content envelope whenever the tree changes. The host
    *  debounces + persists (orpc lives in the app, never in this package). */
   readonly onChange?: (content: EntryContent) => void;
@@ -97,6 +106,10 @@ export function PlumixEditor({
   readOnly = false,
   previewBanner,
   previewLink,
+  liveUrl,
+  title,
+  onTitleChange,
+  onBack,
   onChange,
   documentPanel,
   publish,
@@ -131,109 +144,130 @@ export function PlumixEditor({
       initialTree={defaultValue?.blocks}
       breakpoints={breakpoints}
     >
-      <SidebarProvider
-        className="h-full min-h-0"
-        style={{ "--sidebar-width": "18rem" } as CSSProperties}
-        data-testid="plumix-editor-layout"
-      >
-        <Sidebar
-          side="left"
-          collapsible="offcanvas"
-          data-testid="plumix-editor-left"
+      <div className="flex h-full min-h-0 flex-col">
+        <EditorHeader
+          title={title}
+          onTitleChange={onTitleChange}
+          onBack={onBack}
+          publish={publish}
+          previewLink={previewLink}
+          liveUrl={liveUrl}
+        />
+        {/* The `transform` makes this a containing block for the offcanvas
+            rails' `position: fixed`, so they span the area below the header
+            instead of the whole viewport (which would overlap it). Inline, not
+            a Tailwind class — the admin's content scan misses classes that only
+            appear in the bundled admin-editor. */}
+        <SidebarProvider
+          className="min-h-0 flex-1"
+          style={
+            {
+              "--sidebar-width": "18rem",
+              transform: "translateZ(0)",
+            } as CSSProperties
+          }
+          data-testid="plumix-editor-layout"
         >
-          <Tabs defaultValue="blocks" className="flex h-full min-h-0 flex-col">
-            <SidebarHeader>
-              <TabsList>
-                <TabsTrigger value="blocks" data-testid="plumix-tab-blocks">
-                  <Trans id="editor.tab.blocks" message="Blocks" />
-                </TabsTrigger>
-                <TabsTrigger value="layers" data-testid="plumix-tab-layers">
-                  <Trans id="editor.tab.layers" message="Layers" />
-                </TabsTrigger>
-              </TabsList>
-            </SidebarHeader>
-            <SidebarContent>
-              <TabsContent value="blocks">
-                <BlockCatalog
+          <Sidebar
+            side="left"
+            collapsible="offcanvas"
+            data-testid="plumix-editor-left"
+          >
+            <Tabs
+              defaultValue="blocks"
+              className="flex h-full min-h-0 flex-col"
+            >
+              <SidebarHeader>
+                <TabsList>
+                  <TabsTrigger value="blocks" data-testid="plumix-tab-blocks">
+                    <Trans id="editor.tab.blocks" message="Blocks" />
+                  </TabsTrigger>
+                  <TabsTrigger value="layers" data-testid="plumix-tab-layers">
+                    <Trans id="editor.tab.layers" message="Layers" />
+                  </TabsTrigger>
+                </TabsList>
+              </SidebarHeader>
+              <SidebarContent>
+                <TabsContent value="blocks">
+                  <BlockCatalog
+                    registry={registry}
+                    capabilities={capabilities}
+                    patterns={patterns}
+                  />
+                </TabsContent>
+                <TabsContent value="layers">
+                  <LayersTab registry={registry} />
+                </TabsContent>
+              </SidebarContent>
+            </Tabs>
+          </Sidebar>
+          <SidebarInset className="min-w-0">
+            <EditorToolbar
+              inserter={
+                <BlockInserterPopover
                   registry={registry}
                   capabilities={capabilities}
                   patterns={patterns}
                 />
-              </TabsContent>
-              <TabsContent value="layers">
-                <LayersTab registry={registry} />
-              </TabsContent>
-            </SidebarContent>
-          </Tabs>
-        </Sidebar>
-        <SidebarInset className="min-w-0">
-          <EditorToolbar
-            publish={publish}
-            previewLink={previewLink}
-            inserter={
-              <BlockInserterPopover
-                registry={registry}
-                capabilities={capabilities}
-                patterns={patterns}
-              />
-            }
-          />
-          <CanvasFrame
-            previewUrl={previewUrl}
-            origin={origin}
-            registry={registry}
-            capabilities={capabilities}
-          />
-        </SidebarInset>
-        <Sidebar
-          side="right"
-          collapsible="offcanvas"
-          data-testid="plumix-editor-right"
-        >
-          <Tabs defaultValue="block" className="flex h-full min-h-0 flex-col">
-            <SidebarHeader>
-              <TabsList>
-                <TabsTrigger value="block" data-testid="plumix-tab-block">
-                  <Trans id="editor.tab.block" message="Block" />
-                </TabsTrigger>
-                <TabsTrigger value="styles" data-testid="plumix-tab-styles">
-                  <Trans id="editor.tab.styles" message="Styles" />
-                </TabsTrigger>
-                <TabsTrigger value="page" data-testid="plumix-tab-page">
-                  <Trans id="editor.tab.page" message="Page" />
-                </TabsTrigger>
-                <TabsTrigger value="json" data-testid="plumix-tab-json">
-                  <Trans id="editor.tab.json" message="JSON" />
-                </TabsTrigger>
-              </TabsList>
-            </SidebarHeader>
-            <SidebarContent>
-              <TabsContent value="block">
-                <BlockInspector
-                  registry={registry}
-                  onRefreshBlockLoader={onRefreshBlockLoader}
-                />
-              </TabsContent>
-              <TabsContent value="styles">
-                <StylesTab tokens={tokens ?? {}} />
-              </TabsContent>
-              <TabsContent value="page" data-testid="plumix-page-panel">
-                {documentPanel ?? (
-                  <p className="text-muted-foreground p-4 text-sm">
-                    <Trans
-                      id="editor.page.empty"
-                      message="No document settings."
-                    />
-                  </p>
-                )}
-              </TabsContent>
-              <TabsContent value="json">
-                <JsonInspector />
-              </TabsContent>
-            </SidebarContent>
-          </Tabs>
-        </Sidebar>
-      </SidebarProvider>
+              }
+            />
+            <CanvasFrame
+              previewUrl={previewUrl}
+              origin={origin}
+              registry={registry}
+              capabilities={capabilities}
+            />
+          </SidebarInset>
+          <Sidebar
+            side="right"
+            collapsible="offcanvas"
+            data-testid="plumix-editor-right"
+          >
+            <Tabs defaultValue="block" className="flex h-full min-h-0 flex-col">
+              <SidebarHeader>
+                <TabsList>
+                  <TabsTrigger value="block" data-testid="plumix-tab-block">
+                    <Trans id="editor.tab.block" message="Block" />
+                  </TabsTrigger>
+                  <TabsTrigger value="styles" data-testid="plumix-tab-styles">
+                    <Trans id="editor.tab.styles" message="Styles" />
+                  </TabsTrigger>
+                  <TabsTrigger value="page" data-testid="plumix-tab-page">
+                    <Trans id="editor.tab.page" message="Page" />
+                  </TabsTrigger>
+                  <TabsTrigger value="json" data-testid="plumix-tab-json">
+                    <Trans id="editor.tab.json" message="JSON" />
+                  </TabsTrigger>
+                </TabsList>
+              </SidebarHeader>
+              <SidebarContent>
+                <TabsContent value="block">
+                  <BlockInspector
+                    registry={registry}
+                    onRefreshBlockLoader={onRefreshBlockLoader}
+                  />
+                </TabsContent>
+                <TabsContent value="styles">
+                  <StylesTab tokens={tokens ?? {}} />
+                </TabsContent>
+                <TabsContent value="page" data-testid="plumix-page-panel">
+                  {documentPanel ?? (
+                    <p className="text-muted-foreground p-4 text-sm">
+                      <Trans
+                        id="editor.page.empty"
+                        message="No document settings."
+                      />
+                    </p>
+                  )}
+                </TabsContent>
+                <TabsContent value="json">
+                  <JsonInspector />
+                </TabsContent>
+              </SidebarContent>
+            </Tabs>
+          </Sidebar>
+        </SidebarProvider>
+      </div>
       <EditorShortcuts />
       {overlay}
       {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}
