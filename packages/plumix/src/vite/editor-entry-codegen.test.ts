@@ -19,7 +19,7 @@ describe("generateEditorEntrySource", () => {
     ]);
     expect(source).toContain('import pb0 from "@plumix/plugin-media/blocks";');
     expect(source).toContain('import pb1 from "@acme/widgets/blocks";');
-    expect(source).toContain("bootEditor([...pb0, ...pb1]);");
+    expect(source).toContain("bootEditor([...(pb0 ?? []), ...(pb1 ?? [])]);");
   });
 
   test("dedups a module declared by more than one plugin", () => {
@@ -29,7 +29,7 @@ describe("generateEditorEntrySource", () => {
     ]);
     expect(source).toContain('import pb0 from "@plumix/plugin-media/blocks";');
     expect(source).not.toContain("pb1");
-    expect(source).toContain("bootEditor([...pb0]);");
+    expect(source).toContain("bootEditor([...(pb0 ?? [])]);");
   });
 
   test("quotes specifiers via JSON.stringify", () => {

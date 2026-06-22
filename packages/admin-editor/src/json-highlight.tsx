@@ -26,15 +26,14 @@ function tokenClass(token: string): string {
 export default function JsonHighlight({
   json,
   testId,
+  className,
 }: {
   readonly json: string;
   readonly testId: string;
+  readonly className?: string;
 }): ReactElement {
   return (
-    <pre
-      className="bg-muted max-h-[70vh] overflow-auto rounded p-3 text-xs leading-relaxed"
-      data-testid={testId}
-    >
+    <pre className={className} data-testid={testId}>
       {json.split(TOKEN).map((part, i) =>
         i % 2 === 1 ? (
           <span key={i} className={tokenClass(part)}>

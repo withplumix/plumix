@@ -19,6 +19,12 @@ type JsonScope = "page" | "block";
 
 const OUTPUT_TESTID = "json-inspector-output";
 
+// Shared by the highlighted output and its plain-text Suspense fallback so the
+// two can't drift. Lives here (the eager module) and passes down as a prop —
+// importing it from the lazy `json-highlight` chunk would defeat the split.
+const JSON_PRE_CLASS =
+  "bg-muted max-h-[70vh] overflow-auto rounded p-3 text-xs leading-relaxed";
+
 /**
  * Read-only JSON view of the canonical tree, switchable between the selected
  * block and the whole page. A debugging/escape-hatch surface — it never
@@ -71,15 +77,16 @@ function JsonCode({ json }: { readonly json: string }): ReactElement {
   return (
     <Suspense
       fallback={
-        <pre
-          className="bg-muted max-h-[70vh] overflow-auto rounded p-3 text-xs leading-relaxed"
-          data-testid={OUTPUT_TESTID}
-        >
+        <pre className={JSON_PRE_CLASS} data-testid={OUTPUT_TESTID}>
           {json}
         </pre>
       }
     >
-      <JsonHighlight json={json} testId={OUTPUT_TESTID} />
+      <JsonHighlight
+        json={json}
+        testId={OUTPUT_TESTID}
+        className={JSON_PRE_CLASS}
+      />
     </Suspense>
   );
 }

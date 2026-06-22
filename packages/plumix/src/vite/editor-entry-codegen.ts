@@ -18,6 +18,9 @@ export function generateEditorEntrySource(
   const imports = modules
     .map((mod, i) => `import pb${i} from ${JSON.stringify(mod)};\n`)
     .join("");
-  const spread = modules.map((_, i) => `...pb${i}`).join(", ");
+  // `?? []` so a plugin whose module forgot its default `BlockSpec[]` export
+  // just loses its own blocks (back to the "Unregistered" warning) instead of
+  // throwing "not iterable" and taking the whole canvas down at boot.
+  const spread = modules.map((_, i) => `...(pb${i} ?? [])`).join(", ");
   return `${header}${boot}${imports}bootEditor([${spread}]);\n`;
 }
