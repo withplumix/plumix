@@ -137,6 +137,8 @@ export interface EditorActions {
   /** Switch device; re-enables fit-to-width so the new width fits the viewport. */
   setDevice: (device: EditorDevice) => void;
   setRightPanel: (panel: RightPanel) => void;
+  /** Set (or clear, with an empty string) a block's Layers-tree instance name. */
+  setBlockLabel: (id: string, label: string) => void;
   /** Manual zoom — pins the level and turns off fit-to-width. */
   setZoom: (zoom: number) => void;
   /** Apply a computed fit-to-width zoom without leaving fit mode (canvas-driven). */
@@ -297,6 +299,20 @@ export function createEditorStore(
         // Coalesce a typing burst on one field into a single undo step.
         const key = `attr:${id}:${Object.keys(patch).sort().join(",")}`;
         return { tree, history: recordHistory(state.history, tree, key) };
+      }),
+    setBlockLabel: (id, rawLabel) =>
+      set((state) => {
+        const label = rawLabel.trim() || undefined;
+        const tree = mapNodeById(state.tree, id, (node) => ({
+          ...node,
+          label,
+        }));
+        if (tree === state.tree) return {};
+        // Coalesce a rename's keystrokes into one undo step.
+        return {
+          tree,
+          history: recordHistory(state.history, tree, `label:${id}`),
+        };
       }),
     updateBlockStyle: (id, bucket, property, value) =>
       set((state) => {

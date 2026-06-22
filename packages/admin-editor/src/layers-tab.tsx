@@ -1,6 +1,6 @@
 import type { DragEndEvent } from "@dnd-kit/core";
-import type { ReactElement } from "react";
-import { useMemo } from "react";
+import type { KeyboardEvent, ReactElement } from "react";
+import { useMemo, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -20,6 +20,7 @@ import type { BlockRegistry } from "@plumix/blocks";
 import { resolveLabel } from "@plumix/core/i18n";
 
 import type { FlatNode } from "./block-tree-ops.js";
+import { BlockIcon } from "./block-icon.js";
 import { flattenTree, projectMove } from "./block-tree-ops.js";
 import { useEditorStore } from "./provider.js";
 
@@ -42,12 +43,14 @@ export function LayersTab({ registry }: LayersTabProps): ReactElement {
   const activeId = useEditorStore((s) => s.activeId);
   const select = useEditorStore((s) => s.select);
   const moveBlock = useEditorStore((s) => s.moveBlock);
+  const setBlockLabel = useEditorStore((s) => s.setBlockLabel);
   const items = useMemo(() => flattenTree(tree), [tree]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
-  const label = (name: string): string => {
+  // The block type's display name, the fallback when a node has no instance label.
+  const typeLabel = (name: string): string => {
     const spec = registry.get(name);
     return spec?.title != null ? resolveLabel(spec.title, i18n) : name;
   };
@@ -94,9 +97,11 @@ export function LayersTab({ registry }: LayersTabProps): ReactElement {
             <LayerRow
               key={item.id}
               item={item}
-              label={label(item.name)}
+              icon={registry.get(item.name)?.icon}
+              label={item.label ?? typeLabel(item.name)}
               active={item.id === activeId}
               onSelect={() => select(item.id)}
+              onRename={(value) => setBlockLabel(item.id, value)}
             />
           ))}
         </SortableContext>
@@ -107,19 +112,40 @@ export function LayersTab({ registry }: LayersTabProps): ReactElement {
 
 interface LayerRowProps {
   readonly item: FlatNode;
+  readonly icon?: string;
   readonly label: string;
   readonly active: boolean;
   readonly onSelect: () => void;
+  /** Commits a new instance label (empty string clears it). */
+  readonly onRename: (label: string) => void;
 }
 
 function LayerRow({
   item,
+  icon,
   label,
   active,
   onSelect,
+  onRename,
 }: LayerRowProps): ReactElement {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: item.id });
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(label);
+
+  const startEditing = (): void => {
+    setDraft(item.label ?? "");
+    setEditing(true);
+  };
+  const commit = (): void => {
+    setEditing(false);
+    onRename(draft);
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key === "Enter") commit();
+    if (event.key === "Escape") setEditing(false);
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -129,17 +155,35 @@ function LayerRow({
         paddingInlineStart: item.depth * INDENT_WIDTH,
       }}
     >
-      <button
-        type="button"
-        data-testid={`layer-${item.id}`}
-        aria-current={active ? "true" : undefined}
-        onClick={onSelect}
-        className="hover:bg-accent aria-[current]:bg-accent w-full truncate rounded p-1.5 text-start text-sm"
-        {...attributes}
-        {...listeners}
-      >
-        {label}
-      </button>
+      {editing ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commit}
+          onKeyDown={onKeyDown}
+          data-testid={`layer-rename-${item.id}`}
+          placeholder={label}
+          className="border-input bg-background w-full rounded border p-1 text-sm"
+        />
+      ) : (
+        <button
+          type="button"
+          data-testid={`layer-${item.id}`}
+          aria-current={active ? "true" : undefined}
+          onClick={onSelect}
+          onDoubleClick={startEditing}
+          className="hover:bg-accent aria-[current]:bg-accent flex w-full items-center gap-1.5 rounded p-1.5 text-start text-sm"
+          {...attributes}
+          {...listeners}
+        >
+          <BlockIcon
+            name={icon}
+            className="text-muted-foreground size-4 shrink-0"
+          />
+          <span className="truncate">{label}</span>
+        </button>
+      )}
     </div>
   );
 }

@@ -45,6 +45,9 @@ export interface BlockNode {
   readonly name: string;
   readonly attrs?: Readonly<Record<string, unknown>>;
   readonly style?: ResponsiveStyleSlot;
+  /** Author-given instance name shown in the Layers tree; falls back to the
+   *  block type's title when absent. Editor-only metadata, ignored at render. */
+  readonly label?: string;
 }
 
 /**
