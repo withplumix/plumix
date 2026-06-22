@@ -64,7 +64,7 @@ catalogs:
     "@lingui/cli": ^6.3.0
     "@lingui/core": ^6.3.0
     "@lingui/format-po": ^6.3.0
-    "@lingui/react": ^6.3.0
+    "@lingui/react": ^6.4.0
   tailwind:
     "@tailwindcss/node": ^4.3.1
     "@tailwindcss/oxide": ^4.3.1
