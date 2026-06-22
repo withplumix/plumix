@@ -61,6 +61,9 @@ export const MAX_ZOOM = 2;
 const clampZoom = (zoom: number): number =>
   Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 
+/** The active tab in the right inspector rail. */
+export type RightPanel = "block" | "styles" | "page" | "json";
+
 export interface EditorState {
   /** Canonical block tree — the single source of truth pushed to the canvas. */
   readonly tree: readonly BlockNode[];
@@ -81,6 +84,9 @@ export interface EditorState {
   readonly movingId: string | null;
   /** Snapshot history of the tree, driving undo/redo. */
   readonly history: TreeHistory;
+  /** Active tab in the right inspector rail (header's source-code action
+   *  flips it to JSON). */
+  readonly rightPanel: RightPanel;
 }
 
 export interface EditorActions {
@@ -130,6 +136,7 @@ export interface EditorActions {
   setHover: (id: string | null) => void;
   /** Switch device; re-enables fit-to-width so the new width fits the viewport. */
   setDevice: (device: EditorDevice) => void;
+  setRightPanel: (panel: RightPanel) => void;
   /** Manual zoom — pins the level and turns off fit-to-width. */
   setZoom: (zoom: number) => void;
   /** Apply a computed fit-to-width zoom without leaving fit mode (canvas-driven). */
@@ -226,6 +233,7 @@ export function createEditorStore(
     dragSpec: null,
     movingId: null,
     history: initHistory(initial?.tree ?? []),
+    rightPanel: "block",
 
     // Raw seed/programmatic setter — intentionally does not record history
     // (user edits go through insert/move/updateBlockAttrs).
@@ -365,6 +373,7 @@ export function createEditorStore(
       }),
     setHover: (hoverId) => set({ hoverId }),
     setDevice: (device) => set({ device, zoomFit: true }),
+    setRightPanel: (rightPanel) => set({ rightPanel }),
     setZoom: (zoom) => set({ zoom: clampZoom(zoom), zoomFit: false }),
     applyFitZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
     enableZoomFit: () => set({ zoomFit: true }),

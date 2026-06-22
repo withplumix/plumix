@@ -26,6 +26,7 @@ import { defineEntryContent } from "@plumix/blocks";
 
 import type { InserterPattern } from "./block-catalog.js";
 import type { PublishActions } from "./editor-toolbar.js";
+import type { RightPanel } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
 import { BlockInserterPopover } from "./block-inserter.js";
 import { BlockInspector } from "./block-inspector.js";
@@ -34,7 +35,11 @@ import { EditorHeader } from "./editor-header.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
 import { JsonInspector } from "./json-inspector.js";
 import { LayersTab } from "./layers-tab.js";
-import { EditorProvider, useEditorStoreApi } from "./provider.js";
+import {
+  EditorProvider,
+  useEditorStore,
+  useEditorStoreApi,
+} from "./provider.js";
 import { StylesTab } from "./styles-tab.js";
 
 const NO_CAPABILITIES: ReadonlySet<string> = new Set();
@@ -217,61 +222,91 @@ export function PlumixEditor({
               capabilities={capabilities}
             />
           </SidebarInset>
-          <Sidebar
-            side="right"
-            collapsible="offcanvas"
-            className="top-(--header-height) !h-[calc(100svh-var(--header-height))]"
-            data-testid="plumix-editor-right"
-          >
-            <Tabs defaultValue="block" className="flex h-full min-h-0 flex-col">
-              <SidebarHeader>
-                <TabsList>
-                  <TabsTrigger value="block" data-testid="plumix-tab-block">
-                    <Trans id="editor.tab.block" message="Block" />
-                  </TabsTrigger>
-                  <TabsTrigger value="styles" data-testid="plumix-tab-styles">
-                    <Trans id="editor.tab.styles" message="Styles" />
-                  </TabsTrigger>
-                  <TabsTrigger value="page" data-testid="plumix-tab-page">
-                    <Trans id="editor.tab.page" message="Page" />
-                  </TabsTrigger>
-                  <TabsTrigger value="json" data-testid="plumix-tab-json">
-                    <Trans id="editor.tab.json" message="JSON" />
-                  </TabsTrigger>
-                </TabsList>
-              </SidebarHeader>
-              <SidebarContent>
-                <TabsContent value="block">
-                  <BlockInspector
-                    registry={registry}
-                    onRefreshBlockLoader={onRefreshBlockLoader}
-                  />
-                </TabsContent>
-                <TabsContent value="styles">
-                  <StylesTab tokens={tokens ?? {}} />
-                </TabsContent>
-                <TabsContent value="page" data-testid="plumix-page-panel">
-                  {documentPanel ?? (
-                    <p className="text-muted-foreground p-4 text-sm">
-                      <Trans
-                        id="editor.page.empty"
-                        message="No document settings."
-                      />
-                    </p>
-                  )}
-                </TabsContent>
-                <TabsContent value="json">
-                  <JsonInspector />
-                </TabsContent>
-              </SidebarContent>
-            </Tabs>
-          </Sidebar>
+          <RightRail
+            registry={registry}
+            tokens={tokens}
+            documentPanel={documentPanel}
+            onRefreshBlockLoader={onRefreshBlockLoader}
+          />
         </div>
       </SidebarProvider>
       <EditorShortcuts />
       {overlay}
       {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}
     </EditorProvider>
+  );
+}
+
+/**
+ * The right inspector rail. Its tab is store-controlled so the header's
+ * source-code action can flip it to the JSON view.
+ */
+function RightRail({
+  registry,
+  tokens,
+  documentPanel,
+  onRefreshBlockLoader,
+}: {
+  readonly registry: BlockRegistry;
+  readonly tokens?: ThemeTokens;
+  readonly documentPanel?: ReactNode;
+  readonly onRefreshBlockLoader?: (
+    blockId: string,
+  ) => Promise<SerializedLoaderData>;
+}): ReactElement {
+  const rightPanel = useEditorStore((s) => s.rightPanel);
+  const setRightPanel = useEditorStore((s) => s.setRightPanel);
+  return (
+    <Sidebar
+      side="right"
+      collapsible="offcanvas"
+      className="top-(--header-height) !h-[calc(100svh-var(--header-height))]"
+      data-testid="plumix-editor-right"
+    >
+      <Tabs
+        value={rightPanel}
+        onValueChange={(value) => setRightPanel(value as RightPanel)}
+        className="flex h-full min-h-0 flex-col"
+      >
+        <SidebarHeader>
+          <TabsList>
+            <TabsTrigger value="block" data-testid="plumix-tab-block">
+              <Trans id="editor.tab.block" message="Block" />
+            </TabsTrigger>
+            <TabsTrigger value="styles" data-testid="plumix-tab-styles">
+              <Trans id="editor.tab.styles" message="Styles" />
+            </TabsTrigger>
+            <TabsTrigger value="page" data-testid="plumix-tab-page">
+              <Trans id="editor.tab.page" message="Page" />
+            </TabsTrigger>
+            <TabsTrigger value="json" data-testid="plumix-tab-json">
+              <Trans id="editor.tab.json" message="JSON" />
+            </TabsTrigger>
+          </TabsList>
+        </SidebarHeader>
+        <SidebarContent>
+          <TabsContent value="block">
+            <BlockInspector
+              registry={registry}
+              onRefreshBlockLoader={onRefreshBlockLoader}
+            />
+          </TabsContent>
+          <TabsContent value="styles">
+            <StylesTab tokens={tokens ?? {}} />
+          </TabsContent>
+          <TabsContent value="page" data-testid="plumix-page-panel">
+            {documentPanel ?? (
+              <p className="text-muted-foreground p-4 text-sm">
+                <Trans id="editor.page.empty" message="No document settings." />
+              </p>
+            )}
+          </TabsContent>
+          <TabsContent value="json">
+            <JsonInspector />
+          </TabsContent>
+        </SidebarContent>
+      </Tabs>
+    </Sidebar>
   );
 }
 

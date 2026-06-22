@@ -8,11 +8,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@plumix/admin-ui/dropdown-menu";
-import { ArrowLeft, Eye, Redo2, Undo2 } from "@plumix/admin-ui/icons";
+import { ArrowLeft, Code2, Eye, Redo2, Undo2 } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 
 import type { PublishActions } from "./editor-toolbar.js";
-import { PublishControls } from "./editor-toolbar.js";
 import { canRedo, canUndo } from "./history.js";
 import { useEditorStore } from "./provider.js";
 
@@ -49,6 +48,7 @@ export function EditorHeader({
   const redoAvailable = useEditorStore((s) => canRedo(s.history));
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
+  const setRightPanel = useEditorStore((s) => s.setRightPanel);
 
   return (
     <header
@@ -118,10 +118,60 @@ export function EditorHeader({
         >
           <Redo2 />
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          data-testid="plumix-view-source"
+          onClick={() => setRightPanel("json")}
+          aria-label={i18n._({
+            id: "editor.header.source",
+            message: "View source",
+          })}
+        >
+          <Code2 />
+        </Button>
         <PreviewMenu previewLink={previewLink} liveUrl={liveUrl} />
-        {publish ? <PublishControls publish={publish} /> : null}
+        {publish ? <HeaderPublish publish={publish} /> : null}
       </div>
     </header>
+  );
+}
+
+/** A single Publish button. Drafts of an already-published entry stage via
+ *  autosave, so the header shows no separate save/discard — just Publish. */
+function HeaderPublish({
+  publish,
+}: {
+  readonly publish: PublishActions;
+}): ReactElement {
+  const { draftMode } = publish;
+  if (draftMode) {
+    const busy =
+      draftMode.isSaving || draftMode.isPublishing || draftMode.isDiscarding;
+    return (
+      <Button
+        type="button"
+        size="sm"
+        data-testid="editor-draft-publish"
+        disabled={busy || !draftMode.hasPendingDraft}
+        onClick={draftMode.onPublishDraft}
+      >
+        <Trans id="editor.toolbar.publish" message="Publish" />
+      </Button>
+    );
+  }
+  const { isPublishing = false, isPublished = false } = publish;
+  return (
+    <Button
+      type="button"
+      size="sm"
+      data-testid="plumix-editor-publish-button"
+      disabled={isPublishing || isPublished}
+      onClick={publish.onPublish}
+    >
+      <Trans id="editor.toolbar.publish" message="Publish" />
+    </Button>
   );
 }
 

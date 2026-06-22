@@ -207,7 +207,7 @@ test.describe("bespoke editor route", () => {
     );
   });
 
-  test("a published autosave-type entry shows draft save/publish/discard", async ({
+  test("a published autosave-type entry with a pending draft enables Publish", async ({
     page,
   }) => {
     await mockManifest(page, {
@@ -239,15 +239,14 @@ test.describe("bespoke editor route", () => {
 
     await page.goto("entries/posts/1/edit");
 
-    // Draft mode: the live Publish button is replaced by the draft trio, and
-    // the pending autosave enables Publish/Discard + shows the banner.
+    // Draft mode: the header shows just Publish (staging is via autosave, so
+    // there's no separate save/discard); a pending autosave enables it.
     await expect(page.getByTestId("plumix-editor-publish-button")).toHaveCount(
       0,
     );
-    await expect(page.getByTestId("editor-draft-save")).toBeVisible();
     await expect(page.getByTestId("editor-draft-publish")).toBeEnabled();
-    await expect(page.getByTestId("editor-draft-discard")).toBeEnabled();
-    await expect(page.getByTestId("unpublished-changes-banner")).toBeVisible();
+    await expect(page.getByTestId("editor-draft-save")).toHaveCount(0);
+    await expect(page.getByTestId("editor-draft-discard")).toHaveCount(0);
   });
 
   test("a failed preview mint surfaces the error placeholder, not a dead canvas", async ({
@@ -876,72 +875,19 @@ test.describe("editor draft of a published entry", () => {
     );
   }
 
-  test("published entry without an autosave: three-button header, no banner, Publish + Discard disabled", async ({
+  test("published entry without an autosave: Publish disabled, no save/discard", async ({
     page,
   }) => {
     await mockPublishedEntry(page, { autosaveUpdatedAt: null });
 
     await page.goto("entries/posts/1/edit");
-    await expect(page.getByTestId("editor-draft-save")).toBeVisible();
+    // No pending draft → Publish is disabled; no separate save/discard exist.
     await expect(page.getByTestId("editor-draft-publish")).toBeDisabled();
-    await expect(page.getByTestId("editor-draft-discard")).toBeDisabled();
-    await expect(page.getByTestId("unpublished-changes-banner")).toHaveCount(0);
-    // The single Publish button is gone in draft mode.
+    await expect(page.getByTestId("editor-draft-save")).toHaveCount(0);
+    await expect(page.getByTestId("editor-draft-discard")).toHaveCount(0);
     await expect(page.getByTestId("plumix-editor-publish-button")).toHaveCount(
       0,
     );
-  });
-
-  test("draft discard fires entry.discardDraft and toasts success", async ({
-    page,
-  }) => {
-    let discarded = false;
-    await page.route("**/_plumix/rpc/**", (route) => {
-      const url = route.request().url();
-      if (url.endsWith("/entry/discardDraft")) {
-        discarded = true;
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ json: { discarded: true }, meta: [] }),
-        });
-      }
-      if (url.endsWith("/entry/createPreviewLink")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ json: PREVIEW_LINK, meta: [] }),
-        });
-      }
-      if (url.endsWith("/entry/get")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: publishedEntryRpcBody(
-            publishedEntry({ autosaveUpdatedAt: T0 }),
-          ),
-        });
-      }
-      if (url.endsWith("/auth/session")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ json: AUTHED_ADMIN, meta: [] }),
-        });
-      }
-      return route.fulfill({ status: 404, body: "not-mocked" });
-    });
-
-    await page.goto("entries/posts/1/edit");
-    // Collapse the rails so the trailing draft controls aren't under the right
-    // rail (see the published-status spec).
-    await page.getByTestId("plumix-rails-toggle").click();
-    const discard = page.getByTestId("editor-draft-discard");
-    await expect(discard).toBeEnabled();
-
-    await discard.click();
-    await expect.poll(() => discarded).toBe(true);
-    await expect(page.getByTestId("toast-success")).toBeVisible();
   });
 
   test("draft publish: a 409 surfaces an error toast, the retry a success toast", async ({

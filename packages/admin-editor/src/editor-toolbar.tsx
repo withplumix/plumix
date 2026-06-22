@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import { useEffect } from "react";
-import { Trans, useLingui } from "@lingui/react";
+import { useLingui } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -153,76 +153,6 @@ function DeviceZoomControls(): ReactElement {
         aria-label={i18n._({ id: "editor.toolbar.zoomIn", message: "Zoom in" })}
       >
         <ZoomIn />
-      </Button>
-    </div>
-  );
-}
-
-export function PublishControls({
-  publish,
-}: {
-  readonly publish: PublishActions;
-}): ReactElement {
-  const { draftMode } = publish;
-  if (draftMode) {
-    const busy =
-      draftMode.isSaving || draftMode.isPublishing || draftMode.isDiscarding;
-    return (
-      <div className="flex shrink-0 items-center gap-2">
-        {draftMode.hasPendingDraft ? (
-          <span
-            className="text-muted-foreground text-xs"
-            data-testid="unpublished-changes-banner"
-          >
-            <Trans
-              id="editor.toolbar.unpublished"
-              message="Unpublished changes"
-            />
-          </span>
-        ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          data-testid="editor-draft-discard"
-          disabled={busy || !draftMode.hasPendingDraft}
-          onClick={draftMode.onDiscardDraft}
-        >
-          <Trans id="editor.toolbar.discard" message="Discard" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          data-testid="editor-draft-save"
-          disabled={busy}
-          onClick={draftMode.onSaveDraft}
-        >
-          <Trans id="editor.toolbar.saveDraft" message="Save draft" />
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          data-testid="editor-draft-publish"
-          disabled={busy || !draftMode.hasPendingDraft}
-          onClick={draftMode.onPublishDraft}
-        >
-          <Trans id="editor.toolbar.publish" message="Publish" />
-        </Button>
-      </div>
-    );
-  }
-  const { isPublishing = false, isPublished = false } = publish;
-  return (
-    <div className="shrink-0">
-      <Button
-        type="button"
-        size="sm"
-        data-testid="plumix-editor-publish-button"
-        disabled={isPublishing || isPublished}
-        onClick={publish.onPublish}
-      >
-        <Trans id="editor.toolbar.publish" message="Publish" />
       </Button>
     </div>
   );
