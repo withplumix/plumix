@@ -52,9 +52,13 @@ const SECTIONS: readonly {
     label: "Typography",
     controls: [
       { property: "color", label: "Text color", category: "colors" },
-      { property: "fontSize", label: "Font size", category: "typography" },
-      { property: "fontWeight", label: "Font weight", category: "typography" },
-      { property: "lineHeight", label: "Line height", category: "typography" },
+      // Only font-family draws from the typography tokens (the theme's named
+      // font presets). Size/weight/line-height have no token scale, so they're
+      // custom-only — otherwise they'd wrongly offer font-family names.
+      { property: "fontFamily", label: "Font family", category: "typography" },
+      { property: "fontSize", label: "Font size" },
+      { property: "fontWeight", label: "Font weight" },
+      { property: "lineHeight", label: "Line height" },
     ],
   },
   {

@@ -51,12 +51,14 @@ describe("StylesTab", () => {
   test("writes a token style to the active desktop bucket", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
-    fireEvent.change(getByTestId("style-control-fontSize-token"), {
+    // Font family is the typography-token control (size/weight/line-height are
+    // custom-only, since the theme has no scale for them).
+    fireEvent.change(getByTestId("style-control-fontFamily-token"), {
       target: { value: "lg" },
     });
 
     expect(getByTestId("style-probe").textContent).toContain(
-      '"large":{"fontSize":{"token":"lg"}}',
+      '"large":{"fontFamily":{"token":"lg"}}',
     );
   });
 

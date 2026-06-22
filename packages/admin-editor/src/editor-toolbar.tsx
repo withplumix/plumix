@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from "react";
+import type { ReactElement } from "react";
 import { useEffect } from "react";
 import { useLingui } from "@lingui/react";
 
@@ -49,29 +49,22 @@ export interface PublishActions {
   readonly draftMode?: DraftMode;
 }
 
-/** Canvas toolbar above the iframe: the rails toggle + inline inserter on the
- *  left, and the device/zoom controls centered over the canvas. Title, undo/
- *  redo, preview and publish live in the full-width header instead. */
-export function EditorToolbar({
-  inserter,
-}: {
-  readonly inserter?: ReactNode;
-}): ReactElement {
+/** Canvas toolbar above the iframe: the rails toggle on the left, and the
+ *  device/zoom controls centered over the canvas. Title, undo/redo, preview and
+ *  publish live in the full-width header; blocks are added from the left rail. */
+export function EditorToolbar(): ReactElement {
   return (
     <header
       className="bg-background flex items-center gap-2 border-b p-2"
       data-testid="plumix-editor-toolbar"
     >
-      <div className="flex shrink-0 items-center gap-1">
-        {/* Collapses both rails for a focused canvas (also Cmd/Ctrl+B). */}
-        <SidebarTrigger data-testid="plumix-rails-toggle" />
-        {inserter}
-      </div>
+      {/* Collapses both rails for a focused canvas (also Cmd/Ctrl+B). */}
+      <SidebarTrigger data-testid="plumix-rails-toggle" className="shrink-0" />
       <div className="flex flex-1 justify-center">
         <DeviceZoomControls />
       </div>
-      {/* Balances the left group so the device/zoom cluster reads as centered. */}
-      <div className="w-8 shrink-0" aria-hidden />
+      {/* Balances the rails toggle so the device/zoom cluster reads as centered. */}
+      <div className="w-7 shrink-0" aria-hidden />
     </header>
   );
 }

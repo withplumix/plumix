@@ -28,7 +28,6 @@ import type { InserterPattern } from "./block-catalog.js";
 import type { PublishActions } from "./editor-toolbar.js";
 import type { RightPanel } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
-import { BlockInserterPopover } from "./block-inserter.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
 import { EditorHeader } from "./editor-header.js";
@@ -206,15 +205,7 @@ export function PlumixEditor({
             </Tabs>
           </Sidebar>
           <SidebarInset className="min-w-0">
-            <EditorToolbar
-              inserter={
-                <BlockInserterPopover
-                  registry={registry}
-                  capabilities={capabilities}
-                  patterns={patterns}
-                />
-              }
-            />
+            <EditorToolbar />
             <CanvasFrame
               previewUrl={previewUrl}
               origin={origin}
