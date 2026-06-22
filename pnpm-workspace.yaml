@@ -14,7 +14,7 @@ packages:
 
 catalog:
   "@arethetypeswrong/cli": ^0.18.3
-  "@cloudflare/workers-types": ^4.20260526.1
+  "@cloudflare/workers-types": ^4.20260621.1
   "@dnd-kit/core": ^6.3.1
   "@dnd-kit/sortable": ^10.0.0
   "@dnd-kit/utilities": ^3.2.2
@@ -40,12 +40,12 @@ catalog:
   drizzle-kit: ^0.31.10
   drizzle-orm: ^0.45.2
   drizzle-valibot: ^0.4.2
-  esbuild: ^0.27.7
+  esbuild: ^0.28.1
   eslint: ^10.5.0
   fishery: ^2.4.0
   jsdom: ^29.1.1
   lucide-react: ^1.16.0
-  prettier: ^3.8.3
+  prettier: ^3.8.4
   publint: ^0.3.21
   radix-ui: ^1.5.0
   react: ^19.2.7
@@ -64,7 +64,7 @@ catalogs:
     "@lingui/cli": ^6.3.0
     "@lingui/core": ^6.3.0
     "@lingui/format-po": ^6.3.0
-    "@lingui/react": ^6.3.0
+    "@lingui/react": ^6.4.0
   tailwind:
     "@tailwindcss/node": ^4.3.1
     "@tailwindcss/oxide": ^4.3.1
