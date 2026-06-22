@@ -65,13 +65,13 @@
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
     "@types/node": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
+    "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
     "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:vitest"
   },
   "prettier": "@plumix/prettier-config"
 }

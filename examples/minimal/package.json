@@ -16,10 +16,10 @@
     "plumix": "workspace:*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "catalog:",
+    "@cloudflare/workers-types": "catalog:cloudflare",
     "@plumix/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:",
-    "wrangler": "catalog:"
+    "wrangler": "catalog:cloudflare"
   }
 }

@@ -19,11 +19,11 @@
     "react": "catalog:react"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "catalog:",
+    "@cloudflare/workers-types": "catalog:cloudflare",
     "@plumix/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "typescript": "catalog:",
-    "wrangler": "catalog:"
+    "wrangler": "catalog:cloudflare"
   }
 }

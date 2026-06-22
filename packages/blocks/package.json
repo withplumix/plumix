@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@tiptap/core": "catalog:",
+    "@tiptap/core": "catalog:tiptap",
     "sanitize-html": "^2.17.5"
   },
   "peerDependencies": {
@@ -50,14 +50,14 @@
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
     "@types/sanitize-html": "^2.16.1",
-    "@vitest/coverage-v8": "catalog:",
+    "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
     "jsdom": "catalog:",
     "prettier": "catalog:",
     "react": "catalog:react",
     "react-dom": "catalog:react",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:vitest"
   },
   "prettier": "@plumix/prettier-config"
 }

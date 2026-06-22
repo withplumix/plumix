@@ -56,21 +56,21 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@dnd-kit/core": "catalog:",
-    "@dnd-kit/sortable": "catalog:",
-    "@dnd-kit/utilities": "catalog:",
-    "drizzle-orm": "catalog:",
+    "@dnd-kit/core": "catalog:dnd-kit",
+    "@dnd-kit/sortable": "catalog:dnd-kit",
+    "@dnd-kit/utilities": "catalog:dnd-kit",
+    "drizzle-orm": "catalog:drizzle",
     "valibot": "catalog:"
   },
   "peerDependencies": {
-    "@tanstack/react-query": "^5.100.14",
+    "@tanstack/react-query": "catalog:tanstack",
     "plumix": "workspace:*",
     "react": "catalog:react"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@lingui/cli": "catalog:lingui",
-    "@orpc/server": "catalog:",
+    "@orpc/server": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/lingui-config": "workspace:*",
@@ -78,14 +78,14 @@
     "@plumix/runtime-cloudflare": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
-    "@tanstack/react-query": "catalog:",
-    "@testing-library/jest-dom": "catalog:",
-    "@testing-library/react": "catalog:",
-    "@testing-library/user-event": "catalog:",
+    "@tanstack/react-query": "catalog:tanstack",
+    "@testing-library/jest-dom": "catalog:testing-library",
+    "@testing-library/react": "catalog:testing-library",
+    "@testing-library/user-event": "catalog:testing-library",
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
-    "@vitest/coverage-v8": "catalog:",
+    "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
     "jsdom": "catalog:",
     "plumix": "workspace:*",
@@ -94,7 +94,7 @@
     "react": "catalog:react",
     "react-dom": "catalog:react",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:vitest"
   },
   "prettier": "@plumix/prettier-config"
 }

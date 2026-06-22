@@ -52,16 +52,16 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@cloudflare/vite-plugin": "^1.42.1",
+    "@cloudflare/vite-plugin": "catalog:cloudflare",
     "jose": "^6.2.3",
     "jsonc-parser": "^3.3.1",
     "smol-toml": "^1.7.0",
-    "vite": "catalog:"
+    "vite": "catalog:vite"
   },
   "peerDependencies": {
-    "drizzle-orm": "catalog:",
+    "drizzle-orm": "catalog:drizzle",
     "plumix": "workspace:*",
-    "wrangler": "^4"
+    "wrangler": "catalog:cloudflare"
   },
   "peerDependenciesMeta": {
     "wrangler": {
@@ -70,20 +70,20 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
-    "@cloudflare/workers-types": "catalog:",
+    "@cloudflare/workers-types": "catalog:cloudflare",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
     "@types/node": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
+    "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
     "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "wrangler": "catalog:"
+    "vitest": "catalog:vitest",
+    "wrangler": "catalog:cloudflare"
   },
   "prettier": "@plumix/prettier-config"
 }

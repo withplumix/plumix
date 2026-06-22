@@ -25,15 +25,15 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@dnd-kit/core": "catalog:",
-    "@dnd-kit/sortable": "catalog:",
-    "@dnd-kit/utilities": "catalog:",
+    "@dnd-kit/core": "catalog:dnd-kit",
+    "@dnd-kit/sortable": "catalog:dnd-kit",
+    "@dnd-kit/utilities": "catalog:dnd-kit",
     "@plumix/admin-ui": "workspace:*",
     "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",
-    "@tiptap/core": "catalog:",
-    "@tiptap/react": "catalog:",
-    "@tiptap/starter-kit": "catalog:",
+    "@tiptap/core": "catalog:tiptap",
+    "@tiptap/react": "catalog:tiptap",
+    "@tiptap/starter-kit": "catalog:tiptap",
     "zustand": "^5.0.14"
   },
   "peerDependencies": {
@@ -53,12 +53,12 @@
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
     "@tailwindcss/vite": "catalog:tailwind",
-    "@testing-library/react": "catalog:",
+    "@testing-library/react": "catalog:testing-library",
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
-    "@vitejs/plugin-react": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
+    "@vitejs/plugin-react": "catalog:vite",
+    "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
     "jsdom": "catalog:",
     "prettier": "catalog:",
@@ -66,8 +66,8 @@
     "react-dom": "catalog:react",
     "tailwindcss": "catalog:tailwind",
     "typescript": "catalog:",
-    "vite": "catalog:",
-    "vitest": "catalog:"
+    "vite": "catalog:vite",
+    "vitest": "catalog:vitest"
   },
   "prettier": "@plumix/prettier-config"
 }

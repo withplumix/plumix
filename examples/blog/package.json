@@ -23,14 +23,14 @@
     "react": "catalog:react"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "catalog:",
+    "@cloudflare/workers-types": "catalog:cloudflare",
     "@plumix/typescript-config": "workspace:*",
-    "@tailwindcss/postcss": "^4.3.1",
-    "@tailwindcss/typography": "^0.5.16",
+    "@tailwindcss/postcss": "catalog:tailwind",
+    "@tailwindcss/typography": "catalog:tailwind",
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
-    "tailwindcss": "^4.3.1",
+    "tailwindcss": "catalog:tailwind",
     "typescript": "catalog:",
-    "wrangler": "catalog:"
+    "wrangler": "catalog:cloudflare"
   }
 }

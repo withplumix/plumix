@@ -69,24 +69,24 @@
     "@libsql/client": "catalog:",
     "@lingui/core": "catalog:lingui",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@orpc/openapi": "^1.14.6",
-    "@orpc/server": "catalog:",
-    "@orpc/valibot": "^1.14.6",
-    "@oslojs/crypto": "^1.0.1",
-    "@oslojs/encoding": "^1.1.0",
-    "@oslojs/webauthn": "^1.0.0",
+    "@orpc/openapi": "catalog:orpc",
+    "@orpc/server": "catalog:orpc",
+    "@orpc/valibot": "catalog:orpc",
+    "@oslojs/crypto": "catalog:oslojs",
+    "@oslojs/encoding": "catalog:oslojs",
+    "@oslojs/webauthn": "catalog:oslojs",
     "@plumix/blocks": "workspace:*",
     "@sindresorhus/slugify": "^3.0.0",
     "@valibot/to-json-schema": "^1.7.1",
-    "drizzle-kit": "catalog:",
-    "drizzle-orm": "catalog:",
-    "drizzle-valibot": "catalog:",
+    "drizzle-kit": "catalog:drizzle",
+    "drizzle-orm": "catalog:drizzle",
+    "drizzle-valibot": "catalog:drizzle",
     "fishery": "catalog:",
     "valibot": "catalog:"
   },
   "peerDependencies": {
-    "@playwright/test": "^1.59.0",
-    "esbuild": "^0.27.0"
+    "@playwright/test": "catalog:",
+    "esbuild": "catalog:"
   },
   "peerDependenciesMeta": {
     "@playwright/test": {
@@ -106,7 +106,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
-    "@vitest/coverage-v8": "catalog:",
+    "@vitest/coverage-v8": "catalog:vitest",
     "esbuild": "catalog:",
     "eslint": "catalog:",
     "jsdom": "catalog:",
@@ -114,7 +114,7 @@
     "react": "catalog:react",
     "react-dom": "catalog:react",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:vitest"
   },
   "prettier": "@plumix/prettier-config"
 }
