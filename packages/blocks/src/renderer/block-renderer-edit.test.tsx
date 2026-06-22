@@ -27,6 +27,28 @@ describe("BlockRenderer edit-mode mount boundary", () => {
     expect(html).toContain("Hi"); // still renders the content for first paint
   });
 
+  test("embeds the style env (tokens + breakpoints) for the canvas runtime", () => {
+    const html = renderToStaticMarkup(
+      <PlumixProvider
+        value={{
+          registry,
+          mode: "edit",
+          tokens: { colors: { brand: { value: "#0000ff" } } },
+          breakpoints: { tablet: 900, mobile: 600 },
+        }}
+      >
+        <BlockRenderer content={content} />
+      </PlumixProvider>,
+    );
+
+    // The canvas runtime renders in a fresh React tree with no SSR context, so
+    // it can only emit block-style CSS if tokens + breakpoints ride along in the
+    // embed. Without them, token-or-custom style edits never paint.
+    expect(html).toContain("data-plumix-style-env");
+    expect(html).toContain("brand");
+    expect(html).toContain("900");
+  });
+
   test("live render has no editor mount root or embedded tree", () => {
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry }}>

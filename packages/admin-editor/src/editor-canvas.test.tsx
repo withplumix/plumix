@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode, ThemeTokens } from "@plumix/blocks";
 import { coreBlocks, createBlockRegistry } from "@plumix/blocks";
 import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/blocks/renderer";
 
@@ -132,6 +132,31 @@ describe("EditorCanvas", () => {
 
     expect(container.querySelector('[data-plumix-id="seed"]')).not.toBeNull();
     expect(container.textContent).toContain("Seeded");
+  });
+
+  test("applies a block's style as emitted CSS when tokens are provided", () => {
+    const tokens: ThemeTokens = { colors: { brand: { value: "#0000ff" } } };
+    const { container } = render(
+      <EditorCanvas registry={registry} origin={ORIGIN} tokens={tokens} />,
+    );
+
+    // A style edit (here a custom text color) is pushed with the tree. The
+    // renderer only emits the per-block `<style>` when it has tokens; without
+    // them the edit is stored but never painted in the canvas.
+    pushTree([
+      {
+        id: "h1",
+        name: "core/heading",
+        attrs: { text: "Hi", level: 2 },
+        style: { large: { color: { raw: "#ff0000" } } },
+      },
+    ]);
+
+    const css = [...container.querySelectorAll("style")]
+      .map((s) => s.textContent)
+      .join(" ");
+    expect(css).toContain("plumix-block-h1");
+    expect(css).toContain("#ff0000");
   });
 
   test("hovering a block reports canvas:hover to the host", () => {

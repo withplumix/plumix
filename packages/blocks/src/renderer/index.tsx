@@ -115,6 +115,16 @@ export function BlockRenderer({
           ),
         }}
       />
+      <script
+        type="application/json"
+        data-plumix-style-env=""
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            tokens: ctx.tokens,
+            breakpoints: ctx.breakpoints,
+          }).replace(/</g, "\\u003c"),
+        }}
+      />
       {tree}
     </div>
   );

@@ -11,6 +11,8 @@ import type {
   BlockNode,
   BlockRegistry,
   ResolvedBlockLoaders,
+  ThemeBreakpoints,
+  ThemeTokens,
 } from "@plumix/blocks";
 import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
 import { parseLoaderData, renderBlockTree } from "@plumix/blocks";
@@ -27,6 +29,12 @@ interface EditorCanvasProps {
   readonly origin: string;
   /** Seed tree for first paint, before the host pushes (from the SSR embed). */
   readonly initialTree?: readonly BlockNode[];
+  /** Theme tokens (from the SSR embed). Without them the renderer can't emit
+   *  block-style CSS, so token-or-custom style edits never reach the canvas. */
+  readonly tokens?: ThemeTokens;
+  /** Theme breakpoints (from the SSR embed), so the canvas's responsive style
+   *  CSS gates at the same widths the live render uses. */
+  readonly breakpoints?: ThemeBreakpoints;
 }
 
 /**
@@ -39,6 +47,8 @@ export function EditorCanvas({
   registry,
   origin,
   initialTree = [],
+  tokens,
+  breakpoints,
 }: EditorCanvasProps): ReactElement {
   const [tree, setTree] = useState<readonly BlockNode[]>(initialTree);
   // Seed loader data from the SSR embed once (before React replaces the mount
@@ -132,7 +142,7 @@ export function EditorCanvas({
   };
 
   return (
-    <PlumixProvider value={{ registry, mode: "edit" }}>
+    <PlumixProvider value={{ registry, mode: "edit", tokens, breakpoints }}>
       <div
         ref={containerRef}
         data-testid="plumix-editor-canvas"
@@ -142,8 +152,14 @@ export function EditorCanvas({
       >
         {/* renderBlockTree (not BlockRenderer) so the canvas doesn't re-emit
             the SSR content-root boundary it was mounted into — just the
-            per-block data-plumix-id seam for selection. */}
-        {renderBlockTree(tree, registry, { editing: true, loaderData })}
+            per-block data-plumix-id seam for selection. tokens/breakpoints feed
+            the per-block style emitter so token-or-custom edits paint live. */}
+        {renderBlockTree(tree, registry, {
+          editing: true,
+          loaderData,
+          tokens,
+          breakpoints,
+        })}
       </div>
     </PlumixProvider>
   );
