@@ -42,13 +42,16 @@ describe("ScaffoldError.targetDirectoryNotEmpty", () => {
 });
 
 describe("ScaffoldError.catalogResolutionMissing", () => {
-  test("class identity, code, exposed catalogName, and message", () => {
+  test("class identity, code, exposed dependency/catalog, and message", () => {
     const err = ScaffoldError.catalogResolutionMissing({
-      catalogName: "react-dom",
+      dependency: "react-dom",
+      catalog: "react",
     });
     expect(err.code).toBe("catalog_resolution_missing");
-    expect(err.catalogName).toBe("react-dom");
-    expect(err.message).toContain('No catalog entry for "react-dom"');
+    expect(err.dependency).toBe("react-dom");
+    expect(err.catalog).toBe("react");
+    expect(err.message).toContain('"react-dom"');
+    expect(err.message).toContain('"react" catalog');
     expect(err.message).toContain("pnpm-workspace.yaml");
   });
 });

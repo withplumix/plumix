@@ -50,7 +50,10 @@ export function resolveDeps(
       const table = catalogName ? ctx.catalogs?.[catalogName] : ctx.catalog;
       const resolved = table?.[name];
       if (!resolved) {
-        throw ScaffoldError.catalogResolutionMissing({ catalogName: name });
+        throw ScaffoldError.catalogResolutionMissing({
+          dependency: name,
+          catalog: catalogName || "default",
+        });
       }
       out[name] = resolved;
       continue;

@@ -76,10 +76,10 @@ describe("resolveDeps", () => {
     ).toThrow(/future-dep/);
   });
 
-  test("throws on a named `catalog:<name>` dep with no matching catalog", () => {
+  test("throws naming both the dependency and the missing named catalog", () => {
     expect(() =>
-      resolveDeps({ react: "catalog:react" }, EMPTY_CATALOG_CONTEXT),
-    ).toThrow(/react/);
+      resolveDeps({ "@types/react": "catalog:react" }, EMPTY_CATALOG_CONTEXT),
+    ).toThrow(/"@types\/react" entry in the "react" catalog/);
   });
 
   test("throws on a `workspace:` dep whose version can't be found", () => {

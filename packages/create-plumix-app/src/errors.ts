@@ -9,7 +9,8 @@ type ScaffoldErrorCode =
 interface ScaffoldErrorFields {
   parent?: string;
   targetDir?: string;
-  catalogName?: string;
+  dependency?: string;
+  catalog?: string;
   packageName?: string;
   template?: string;
   available?: readonly string[];
@@ -23,7 +24,8 @@ export class ScaffoldError extends Error {
   readonly code: ScaffoldErrorCode;
   readonly parent: string | undefined;
   readonly targetDir: string | undefined;
-  readonly catalogName: string | undefined;
+  readonly dependency: string | undefined;
+  readonly catalog: string | undefined;
   readonly packageName: string | undefined;
   readonly template: string | undefined;
   readonly available: readonly string[] | undefined;
@@ -37,7 +39,8 @@ export class ScaffoldError extends Error {
     this.code = code;
     this.parent = fields.parent;
     this.targetDir = fields.targetDir;
-    this.catalogName = fields.catalogName;
+    this.dependency = fields.dependency;
+    this.catalog = fields.catalog;
     this.packageName = fields.packageName;
     this.template = fields.template;
     this.available = fields.available;
@@ -67,10 +70,13 @@ export class ScaffoldError extends Error {
     );
   }
 
-  static catalogResolutionMissing(ctx: { catalogName: string }): ScaffoldError {
+  static catalogResolutionMissing(ctx: {
+    dependency: string;
+    catalog: string;
+  }): ScaffoldError {
     return new ScaffoldError(
       "catalog_resolution_missing",
-      `No catalog entry for "${ctx.catalogName}" in pnpm-workspace.yaml — the template references it via \`catalog:\` but the workspace catalog has no such key.`,
+      `No "${ctx.dependency}" entry in the "${ctx.catalog}" catalog of pnpm-workspace.yaml — the template references it via \`catalog:\` but that catalog has no such key.`,
       ctx,
     );
   }
