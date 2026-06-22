@@ -10,8 +10,10 @@ updates:
     groups:
       eslint:
         patterns:
-          - "eslint"
+          - "eslint*"
           - "@eslint/*"
+        exclude-patterns:
+          - "eslint-plugin-turbo"
       typescript-eslint:
         patterns:
           - "typescript-eslint"
@@ -34,18 +36,52 @@ updates:
         patterns:
           - "vitest"
           - "@vitest/*"
+      vite:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
       tiptap:
         patterns:
           - "@tiptap/*"
       orpc:
         patterns:
           - "@orpc/*"
+      tanstack:
+        patterns:
+          - "@tanstack/*"
+      drizzle:
+        patterns:
+          - "drizzle-orm"
+          - "drizzle-kit"
+          - "drizzle-valibot"
+      oslojs:
+        patterns:
+          - "@oslojs/*"
+      testing-library:
+        patterns:
+          - "@testing-library/*"
+      dnd-kit:
+        patterns:
+          - "@dnd-kit/*"
+      cloudflare:
+        patterns:
+          - "wrangler"
+          - "@cloudflare/*"
       react:
         patterns:
           - "react"
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
+      forms:
+        patterns:
+          - "react-hook-form"
+          - "@hookform/*"
+      prettier:
+        patterns:
+          - "prettier"
+          - "prettier-plugin-*"
+          - "@ianvs/prettier-plugin-*"
       fontsource:
         patterns:
           - "@fontsource*/*"

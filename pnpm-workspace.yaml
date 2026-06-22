@@ -12,32 +12,16 @@ packages:
   - "examples/*"
   - "tooling/*"
 
+# Default catalog: version-coordinated deps that aren't part of a multi-package
+# family. Multi-package families live in the named catalogs below. Single-consumer
+# deps (incl. the @oslojs/* auth stack, @hookform/resolvers, the prettier plugins)
+# are not cataloged at all — they stay inline in their own package.json.
 catalog:
   "@arethetypeswrong/cli": ^0.18.4
-  "@cloudflare/workers-types": ^4.20260621.1
-  "@dnd-kit/core": ^6.3.1
-  "@dnd-kit/sortable": ^10.0.0
-  "@dnd-kit/utilities": ^3.2.2
   "@libsql/client": ^0.17.4
-  "@orpc/client": ^1.14.6
-  "@orpc/server": ^1.14.6
-  "@orpc/tanstack-query": ^1.14.6
   "@playwright/test": ^1.61.0
-  "@tanstack/react-query": ^5.101.0
-  "@tanstack/react-router": ^1.170.16
-  "@testing-library/jest-dom": ^6.9.1
-  "@testing-library/react": ^16.3.2
-  "@testing-library/user-event": ^14.6.1
-  "@tiptap/core": ^3.27.1
-  "@tiptap/react": ^3.27.1
-  "@tiptap/starter-kit": ^3.27.1
   "@types/node": ^24.13.2
-  "@vitejs/plugin-react": ^6.0.2
-  "@vitest/coverage-v8": ^4.1.9
   cmdk: ^1.1.1
-  drizzle-kit: ^0.31.10
-  drizzle-orm: ^0.45.2
-  drizzle-valibot: ^0.4.2
   esbuild: ^0.28.1
   eslint: ^10.5.0
   fishery: ^2.4.0
@@ -51,10 +35,10 @@ catalog:
   tailwind-merge: ^3.6.0
   typescript: ^6.0.3
   valibot: ^1.4.1
-  vite: ^8.0.16
-  vitest: ^4.1.9
-  wrangler: ^4.103.0
 
+# Named catalogs group a multi-package family (2+ packages, 2+ consumers) under one
+# handle, named to match its group in .github/dependabot.yml. Referenced as
+# `catalog:<name>` from consumer package.json files.
 catalogs:
   react:
     "@types/react": ^19.2.17
@@ -71,8 +55,54 @@ catalogs:
   tailwind:
     "@tailwindcss/node": ^4.3.1
     "@tailwindcss/oxide": ^4.3.1
+    "@tailwindcss/postcss": ^4.3.1
+    "@tailwindcss/typography": ^0.5.16
     "@tailwindcss/vite": ^4.3.1
     tailwindcss: ^4.3.1
+  vitest:
+    "@vitest/coverage-v8": ^4.1.9
+    vitest: ^4.1.9
+  vite:
+    "@vitejs/plugin-react": ^6.0.2
+    vite: ^8.0.16
+  tiptap:
+    "@tiptap/core": ^3.27.1
+    "@tiptap/react": ^3.27.1
+    "@tiptap/starter-kit": ^3.27.1
+  orpc:
+    "@orpc/client": ^1.14.6
+    "@orpc/openapi": ^1.14.6
+    "@orpc/server": ^1.14.6
+    "@orpc/tanstack-query": ^1.14.6
+    "@orpc/valibot": ^1.14.6
+  tanstack:
+    "@tanstack/react-query": ^5.101.0
+    "@tanstack/react-query-devtools": ^5.101.0
+    "@tanstack/react-router": ^1.170.16
+    "@tanstack/react-router-devtools": ^1.167.0
+    "@tanstack/react-table": ^8.21.3
+    "@tanstack/router-plugin": ^1.168.18
+  drizzle:
+    drizzle-kit: ^0.31.10
+    drizzle-orm: ^0.45.2
+    drizzle-valibot: ^0.4.2
+  oslojs:
+    "@oslojs/crypto": ^1.0.1
+    "@oslojs/encoding": ^1.1.0
+    "@oslojs/webauthn": ^1.0.0
+  testing-library:
+    "@testing-library/jest-dom": ^6.9.1
+    "@testing-library/react": ^16.3.2
+    "@testing-library/user-event": ^14.6.1
+  dnd-kit:
+    "@dnd-kit/core": ^6.3.1
+    "@dnd-kit/modifiers": ^9.0.0
+    "@dnd-kit/sortable": ^10.0.0
+    "@dnd-kit/utilities": ^3.2.2
+  cloudflare:
+    "@cloudflare/vite-plugin": ^1.42.1
+    "@cloudflare/workers-types": ^4.20260621.1
+    wrangler: ^4.103.0
 
 publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"

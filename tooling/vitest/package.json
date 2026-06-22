@@ -17,7 +17,7 @@
     "@types/node": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:vitest"
   },
   "prettier": "@plumix/prettier-config"
 }

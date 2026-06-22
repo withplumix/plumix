@@ -158,10 +158,10 @@
     "ui:add": "pnpm dlx shadcn@latest add && prettier --write src --ignore-path ../../.gitignore"
   },
   "dependencies": {
-    "@dnd-kit/core": "catalog:",
-    "@dnd-kit/modifiers": "^9.0.0",
-    "@dnd-kit/sortable": "catalog:",
-    "@dnd-kit/utilities": "catalog:",
+    "@dnd-kit/core": "catalog:dnd-kit",
+    "@dnd-kit/modifiers": "catalog:dnd-kit",
+    "@dnd-kit/sortable": "catalog:dnd-kit",
+    "@dnd-kit/utilities": "catalog:dnd-kit",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "catalog:",
