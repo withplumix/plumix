@@ -120,6 +120,51 @@ export function EditorCanvas({
     return () => observer.disconnect();
   }, [reportGeometry]);
 
+  // Forward wheel/trackpad gestures to the host so it can pan/zoom the free
+  // canvas — events over the iframe never bubble to the parent stage. Native
+  // + non-passive so we can preventDefault and stop the iframe scrolling itself
+  // under the host's transform.
+  useEffect(() => {
+    const onWheel = (e: WheelEvent): void => {
+      e.preventDefault();
+      connectionRef.current?.reportWheel(
+        e.deltaX,
+        e.deltaY,
+        e.ctrlKey || e.metaKey,
+        e.clientX,
+        e.clientY,
+      );
+    };
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Forward the canvas-view keys (space to pan, shift+digit to zoom) so those
+  // shortcuts work while focus is inside the iframe. Only these keys — typing
+  // in the canvas is otherwise untouched. Space is prevented so it doesn't
+  // scroll the iframe document.
+  useEffect(() => {
+    const isViewKey = (e: KeyboardEvent): boolean =>
+      e.code === "Space" ||
+      (e.shiftKey &&
+        (e.code === "Digit0" || e.code === "Digit1" || e.code === "Digit2"));
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (!isViewKey(e)) return;
+      if (e.code === "Space") e.preventDefault();
+      connectionRef.current?.reportKey(true, e.code, e.shiftKey);
+    };
+    const onKeyUp = (e: KeyboardEvent): void => {
+      if (e.code !== "Space") return;
+      connectionRef.current?.reportKey(false, e.code, e.shiftKey);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+
   const blockIdAt = (event: MouseEvent<HTMLDivElement>): string | null => {
     const block = (event.target as HTMLElement).closest("[data-plumix-id]");
     return block?.getAttribute("data-plumix-id") ?? null;

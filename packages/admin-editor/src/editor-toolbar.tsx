@@ -92,13 +92,16 @@ function DeviceZoomControls(): ReactElement {
   const device = useEditorStore((s) => s.device);
   const zoom = useEditorStore((s) => s.zoom);
   const setDevice = useEditorStore((s) => s.setDevice);
-  const setZoom = useEditorStore((s) => s.setZoom);
+  const zoomToCenter = useEditorStore((s) => s.zoomToCenter);
   const enableZoomFit = useEditorStore((s) => s.enableZoomFit);
 
+  // Zoom toward the viewport center (the wheel handles zoom-to-cursor).
   const zoomOut = (): void =>
-    setZoom([...ZOOM_STEPS].reverse().find((s) => s < zoom - 0.01) ?? zoom);
+    zoomToCenter(
+      [...ZOOM_STEPS].reverse().find((s) => s < zoom - 0.01) ?? zoom,
+    );
   const zoomIn = (): void =>
-    setZoom(ZOOM_STEPS.find((s) => s > zoom + 0.01) ?? zoom);
+    zoomToCenter(ZOOM_STEPS.find((s) => s > zoom + 0.01) ?? zoom);
 
   return (
     <div

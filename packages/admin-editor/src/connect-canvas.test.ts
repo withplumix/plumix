@@ -56,6 +56,62 @@ describe("connectCanvas", () => {
     conn.dispose();
   });
 
+  test("a canvas:wheel message is delivered to onWheel", () => {
+    const store = createEditorStore();
+    const { win } = fakeFrame();
+    const onWheel = vi.fn();
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      onWheel,
+    });
+
+    fromCanvas({
+      type: "canvas:wheel",
+      deltaX: 1,
+      deltaY: -8,
+      zoomIntent: true,
+      clientX: 50,
+      clientY: 60,
+    });
+
+    expect(onWheel).toHaveBeenCalledWith({
+      deltaX: 1,
+      deltaY: -8,
+      zoomIntent: true,
+      clientX: 50,
+      clientY: 60,
+    });
+    conn.dispose();
+  });
+
+  test("a canvas:key message is delivered to onKey", () => {
+    const store = createEditorStore();
+    const { win } = fakeFrame();
+    const onKey = vi.fn();
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      onKey,
+    });
+
+    fromCanvas({
+      type: "canvas:key",
+      down: true,
+      code: "Space",
+      shiftKey: false,
+    });
+
+    expect(onKey).toHaveBeenCalledWith({
+      down: true,
+      code: "Space",
+      shiftKey: false,
+    });
+    conn.dispose();
+  });
+
   test("an additive canvas:select extends the selection set", () => {
     const store = createEditorStore();
     const { win } = fakeFrame();

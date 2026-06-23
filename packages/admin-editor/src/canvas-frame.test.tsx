@@ -1,9 +1,9 @@
 import type { ReactElement, ReactNode } from "react";
-import { useEffect } from "react";
+import { Profiler, useEffect } from "react";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { BlockNode, BlockSpec } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
@@ -147,6 +147,78 @@ describe("CanvasFrame", () => {
     });
 
     expect(queryByTestId("plumix-selection-toolbar")).not.toBeNull();
+  });
+
+  test("a wheel burst pans live without a render or store commit per event", () => {
+    vi.useFakeTimers();
+    try {
+      let storeApi: ReturnType<typeof useEditorStoreApi> | undefined;
+      function Capture(): null {
+        const api = useEditorStoreApi();
+        useEffect(() => {
+          storeApi = api;
+        }, [api]);
+        return null;
+      }
+      let renders = 0;
+      const { container } = render(
+        <I18nProvider i18n={i18n}>
+          <EditorProvider>
+            <Profiler
+              id="cf"
+              onRender={() => {
+                renders++;
+              }}
+            >
+              <CanvasFrame
+                previewUrl="about:blank"
+                origin={ORIGIN}
+                registry={registry}
+                capabilities={NO_CAPS}
+              />
+            </Profiler>
+            <Capture />
+          </EditorProvider>
+        </I18nProvider>,
+      );
+      // A geometry report populates the container box the wheel handler needs.
+      fromCanvas({ type: "canvas:geometry", rects: [] });
+
+      const canvas = container.querySelector<HTMLElement>(
+        '[data-testid="plumix-canvas-frame"]',
+      );
+      const stage = canvas?.firstElementChild as HTMLElement;
+      const before = stage.style.transform;
+
+      renders = 0;
+      // A trackpad pan = a burst of wheel events.
+      act(() => {
+        for (let i = 0; i < 6; i++) {
+          canvas?.dispatchEvent(
+            new WheelEvent("wheel", {
+              deltaY: 20,
+              bubbles: true,
+              cancelable: true,
+            }),
+          );
+        }
+      });
+
+      // The transform moved live (imperative DOM write)...
+      expect(stage.style.transform).not.toBe(before);
+      // ...but the whole burst caused at most one render (the gesture-start
+      // flag), not one per event — and nothing committed to the store yet.
+      expect(renders).toBeLessThanOrEqual(1);
+      expect(storeApi?.getState().zoomFit).toBe(true);
+
+      // The store commits exactly once when the gesture settles.
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(storeApi?.getState().zoomFit).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("empty-state affordance inserts the first catalog block", () => {
