@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useId } from "react";
+import { lazy, Suspense, useId } from "react";
 import { useLingui } from "@lingui/react";
 
 import type { BlockInput, BlockInputOption } from "@plumix/blocks";
@@ -8,7 +8,11 @@ import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
 import { resolveLabel } from "@plumix/core/i18n";
 
-import { RichTextField } from "./rich-text-field.js";
+// Lazy so the Tiptap + ProseMirror engine (~230 KB) splits into its own chunk,
+// fetched only when a rich-text block is selected.
+const RichTextField = lazy(() =>
+  import("./rich-text-field.js").then((m) => ({ default: m.RichTextField })),
+);
 
 interface BlockInputControlProps {
   readonly input: BlockInput;
@@ -112,11 +116,13 @@ export function BlockInputControl({
         );
       case "richtext":
         return (
-          <RichTextField
-            value={asString(value)}
-            onChange={onChange}
-            testId={testId}
-          />
+          <Suspense fallback={<RichTextFieldSkeleton testId={testId} />}>
+            <RichTextField
+              value={asString(value)}
+              onChange={onChange}
+              testId={testId}
+            />
+          </Suspense>
         );
       case "combobox": {
         const listId = `${id}-list`;
@@ -157,6 +163,34 @@ export function BlockInputControl({
         {label}
       </Label>
       {control}
+    </div>
+  );
+}
+
+/**
+ * Placeholder shown while the lazy `RichTextField` chunk loads. Mirrors the
+ * field's footprint (toolbar row + content box + hint) so the panel doesn't
+ * jump when the real editor swaps in. Pure skeleton — no copy, so no new i18n.
+ */
+function RichTextFieldSkeleton({
+  testId,
+}: {
+  readonly testId: string;
+}): ReactElement {
+  return (
+    <div
+      className="flex flex-col gap-1.5"
+      data-testid={`${testId}-loading`}
+      aria-busy="true"
+    >
+      <div className="flex flex-wrap items-center gap-0.5">
+        {/* ~one placeholder per toolbar control (marks + lists + link + clear) */}
+        {Array.from({ length: 9 }, (_, i) => (
+          <div key={i} className="bg-muted size-8 animate-pulse rounded-md" />
+        ))}
+      </div>
+      <div className="border-input bg-muted/40 min-h-32 w-full animate-pulse rounded-md border" />
+      <div className="bg-muted h-3 w-48 animate-pulse rounded" />
     </div>
   );
 }

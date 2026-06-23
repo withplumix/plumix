@@ -152,13 +152,15 @@ describe("BlockInputControl", () => {
     expect(onChange).toHaveBeenCalledWith("custom");
   });
 
-  test("richtext renders the Tiptap toolbar and editable surface", () => {
-    const { getByTestId, queryByTestId } = renderControl(
+  test("richtext lazy-loads the Tiptap toolbar and editable surface", async () => {
+    const { findByTestId, getByTestId, queryByTestId } = renderControl(
       { name: "body", type: "richtext", label: "Body" },
       "<p>Hello</p>",
     );
-    // The toolbar's formatting controls and the contenteditable surface mount.
-    expect(getByTestId("block-input-body-bold")).toBeDefined();
+    // The editor (Tiptap + ProseMirror) is a lazy chunk; the skeleton shows
+    // until it resolves, then the toolbar + contenteditable surface mount.
+    expect(getByTestId("block-input-body-loading")).toBeDefined();
+    expect(await findByTestId("block-input-body-bold")).toBeDefined();
     expect(getByTestId("block-input-body-clear")).toBeDefined();
     // Headings are the dedicated Heading block, so rich text offers no h2–h4.
     expect(queryByTestId("block-input-body-h2")).toBeNull();
