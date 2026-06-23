@@ -68,7 +68,17 @@ catalogs:
   tiptap:
     "@tiptap/core": ^3.27.1
     "@tiptap/react": ^3.27.1
-    "@tiptap/starter-kit": ^3.27.1
+    # Explicit extension set for the rich-text rail instead of starter-kit,
+    # which bundles ~16 extensions but we activate only these (the rest are
+    # disabled marks we replace with @plumix/blocks marks, or nodes that are
+    # standalone blocks). All pinned in lockstep with @tiptap/core so a single
+    # prosemirror/core copy is bundled.
+    "@tiptap/extension-document": ^3.27.1
+    "@tiptap/extension-hard-break": ^3.27.1
+    "@tiptap/extension-list": ^3.27.1
+    "@tiptap/extension-paragraph": ^3.27.1
+    "@tiptap/extension-text": ^3.27.1
+    "@tiptap/extensions": ^3.27.1
   orpc:
     "@orpc/client": ^1.14.6
     "@orpc/openapi": ^1.14.6

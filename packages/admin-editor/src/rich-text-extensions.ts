@@ -1,27 +1,54 @@
 import type { Extensions } from "@tiptap/core";
-import StarterKit from "@tiptap/starter-kit";
+import { Document } from "@tiptap/extension-document";
+import { HardBreak } from "@tiptap/extension-hard-break";
+import {
+  BulletList,
+  ListItem,
+  ListKeymap,
+  OrderedList,
+} from "@tiptap/extension-list";
+import { Paragraph } from "@tiptap/extension-paragraph";
+import { Text } from "@tiptap/extension-text";
+import {
+  Dropcursor,
+  Gapcursor,
+  TrailingNode,
+  UndoRedo,
+} from "@tiptap/extensions";
 
 import { coreMarkExtensions } from "@plumix/blocks";
 
 /**
- * Tiptap extensions for the rich-text rail: StarterKit's block nodes
- * (paragraph, lists, …) plus `@plumix/blocks`' 13 canonical marks. Headings are
- * disabled — structural headings are the dedicated Heading block, so rich text
- * stays prose-only. StarterKit's own marks are disabled so they don't
- * double-register with the shared core marks — the editor and the renderer then
- * speak the same mark vocabulary.
+ * Tiptap extensions for the rich-text rail. We import the exact set the body
+ * uses instead of `@tiptap/starter-kit`: StarterKit bundles ~16 extensions but
+ * we activated only these — the rest were either marks we replace with
+ * `@plumix/blocks`' shared marks (bold/italic/…) or nodes that are standalone
+ * blocks (heading, quote, code, separator). `configure({ bold: false })` would
+ * disable but still bundle them, so the explicit list is what actually drops
+ * them from the editor chunk.
+ *
+ * Kept (the set StarterKit had active here): document/paragraph/text (schema),
+ * hard break (shift-enter), bullet + ordered lists (toolbar buttons) with
+ * list-item + keymap, undo/redo (in-field history — the host toolbar bails
+ * inside contenteditable, so the field owns its own), drop/gap cursors, and the
+ * trailing node (keeps an empty paragraph after a trailing list so the caret
+ * can escape it). Marks come from `coreMarkExtensions` so the editor and
+ * renderer share one vocabulary.
  */
 export function richTextExtensions(): Extensions {
   return [
-    StarterKit.configure({
-      heading: false,
-      bold: false,
-      italic: false,
-      strike: false,
-      code: false,
-      link: false,
-      underline: false,
-    }),
+    Document,
+    Paragraph,
+    Text,
+    HardBreak,
+    BulletList,
+    OrderedList,
+    ListItem,
+    ListKeymap,
+    UndoRedo,
+    Dropcursor,
+    Gapcursor,
+    TrailingNode,
     ...coreMarkExtensions,
   ];
 }

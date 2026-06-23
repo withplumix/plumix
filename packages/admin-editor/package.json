@@ -32,8 +32,13 @@
     "@plumix/blocks": "workspace:*",
     "@plumix/core": "workspace:*",
     "@tiptap/core": "catalog:tiptap",
+    "@tiptap/extension-document": "catalog:tiptap",
+    "@tiptap/extension-hard-break": "catalog:tiptap",
+    "@tiptap/extension-list": "catalog:tiptap",
+    "@tiptap/extension-paragraph": "catalog:tiptap",
+    "@tiptap/extension-text": "catalog:tiptap",
+    "@tiptap/extensions": "catalog:tiptap",
     "@tiptap/react": "catalog:tiptap",
-    "@tiptap/starter-kit": "catalog:tiptap",
     "zustand": "^5.0.14"
   },
   "peerDependencies": {
