@@ -387,6 +387,67 @@ test.describe("editor playground", () => {
     expect(desktop).toBe(1280);
   });
 
+  test("device switch keeps the frame centered and on-screen", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const container = page.getByTestId("plumix-canvas-frame");
+    const iframe = page.locator(CANVAS_FRAME);
+
+    // The thing this guards: a narrower device must re-land centered and fully
+    // visible, never pinned to a corner or pushed off-stage.
+    for (const device of ["mobile", "tablet", "desktop"]) {
+      await page.getByTestId(`plumix-device-${device}`).click();
+      const c = await container.boundingBox();
+      const f = await iframe.boundingBox();
+      expect(c && f).toBeTruthy();
+      if (!c || !f) continue;
+      // Within the viewport horizontally (allow 1px rounding).
+      expect(f.x).toBeGreaterThanOrEqual(c.x - 1);
+      expect(f.x + f.width).toBeLessThanOrEqual(c.x + c.width + 1);
+      // Centered: equal left/right margins.
+      const leftMargin = f.x - c.x;
+      const rightMargin = c.x + c.width - (f.x + f.width);
+      expect(Math.abs(leftMargin - rightMargin)).toBeLessThan(2);
+    }
+  });
+
+  test("wheel pans the canvas (no scrollbars, free stage)", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const iframe = page.locator(CANVAS_FRAME);
+    const before = await iframe.boundingBox();
+    expect(before).toBeTruthy();
+
+    await page.getByTestId("plumix-canvas-frame").hover();
+    await page.mouse.wheel(0, 240); // scroll down → content pans up
+
+    await expect
+      .poll(async () => (await iframe.boundingBox())?.y ?? 0)
+      .toBeLessThan((before?.y ?? 0) - 20);
+  });
+
+  test("zoom to selection (Shift+2) frames the active block", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const overlay = page.getByTestId("plumix-overlay-selected");
+
+    // The heading sits at the top in fit mode; framing it should recenter it
+    // vertically. ("Shift+2" emits code "Digit2", which the handler keys off.)
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await expect(overlay).toBeVisible();
+    const before = await overlay.boundingBox();
+    expect(before).toBeTruthy();
+
+    await page.keyboard.press("Shift+2");
+    await expect
+      .poll(async () => (await overlay.boundingBox())?.y ?? 0)
+      .toBeGreaterThan((before?.y ?? 0) + 30);
+  });
+
   test("zoom controls show a percentage and re-fit to width", async ({
     page,
   }) => {

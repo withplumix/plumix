@@ -21,6 +21,18 @@ export interface RuntimeConnection {
     rects: readonly BlockRect[],
     slots?: readonly SlotRect[],
   ) => void;
+  /** Forward a wheel/trackpad gesture to the host so it can pan/zoom the free
+   *  canvas. clientX/Y are iframe-local pointer coords. */
+  readonly reportWheel: (
+    deltaX: number,
+    deltaY: number,
+    zoomIntent: boolean,
+    clientX: number,
+    clientY: number,
+  ) => void;
+  /** Forward a canvas-view key (space / shift+digit) so the host's pan +
+   *  zoom shortcuts work while the iframe holds focus. */
+  readonly reportKey: (down: boolean, code: string, shiftKey: boolean) => void;
   readonly dispose: () => void;
 }
 
@@ -96,6 +108,22 @@ export function connectRuntime({
       post({ type: "canvas:hover", id } satisfies CanvasMessage),
     reportGeometry: (rects, slots) =>
       post({ type: "canvas:geometry", rects, slots } satisfies CanvasMessage),
+    reportWheel: (deltaX, deltaY, zoomIntent, clientX, clientY) =>
+      post({
+        type: "canvas:wheel",
+        deltaX,
+        deltaY,
+        zoomIntent,
+        clientX,
+        clientY,
+      } satisfies CanvasMessage),
+    reportKey: (down, code, shiftKey) =>
+      post({
+        type: "canvas:key",
+        down,
+        code,
+        shiftKey,
+      } satisfies CanvasMessage),
     dispose: () => window.removeEventListener("message", onMessage),
   };
 }

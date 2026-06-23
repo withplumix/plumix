@@ -34,6 +34,21 @@ interface ConnectCanvasOptions {
     rects: readonly BlockRect[],
     slots: readonly SlotRect[],
   ) => void;
+  /** A wheel/trackpad gesture over the canvas, forwarded from the iframe so the
+   *  host can pan/zoom the free canvas. clientX/Y are iframe-local. */
+  readonly onWheel?: (wheel: {
+    readonly deltaX: number;
+    readonly deltaY: number;
+    readonly zoomIntent: boolean;
+    readonly clientX: number;
+    readonly clientY: number;
+  }) => void;
+  /** A canvas-view key, forwarded so pan/zoom shortcuts work over the iframe. */
+  readonly onKey?: (key: {
+    readonly down: boolean;
+    readonly code: string;
+    readonly shiftKey: boolean;
+  }) => void;
 }
 
 // The iframe runtime usually boots after the parent mounts, so a single hello
@@ -49,6 +64,8 @@ export function connectCanvas({
   frameWindow,
   origin,
   onGeometry,
+  onWheel,
+  onKey,
 }: ConnectCanvasOptions): CanvasConnection {
   const post = (message: object): void => {
     frameWindow.postMessage(encode(EDITOR_BRIDGE_CHANNEL, message), origin);
@@ -87,6 +104,22 @@ export function connectCanvas({
         break;
       case "canvas:geometry":
         onGeometry?.(canvas.rects, canvas.slots ?? []);
+        break;
+      case "canvas:wheel":
+        onWheel?.({
+          deltaX: canvas.deltaX,
+          deltaY: canvas.deltaY,
+          zoomIntent: canvas.zoomIntent,
+          clientX: canvas.clientX,
+          clientY: canvas.clientY,
+        });
+        break;
+      case "canvas:key":
+        onKey?.({
+          down: canvas.down,
+          code: canvas.code,
+          shiftKey: canvas.shiftKey,
+        });
         break;
     }
   };

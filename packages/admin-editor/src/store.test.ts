@@ -67,11 +67,25 @@ describe("editor store", () => {
   test("zoom is clamped to the allowed range", () => {
     const store = createEditorStore();
 
-    store.getState().setZoom(99);
+    store.getState().zoomToCenter(99);
     expect(store.getState().zoom).toBe(MAX_ZOOM);
 
-    store.getState().setZoom(0);
+    store.getState().zoomToCenter(0);
     expect(store.getState().zoom).toBe(MIN_ZOOM);
+  });
+
+  test("zoomToCenter keeps the viewport center's point fixed", () => {
+    const store = createEditorStore();
+    store.getState().setViewport(1000, 800);
+    store.getState().setPan(0, 0);
+
+    store.getState().zoomToCenter(2);
+
+    expect(store.getState().zoom).toBe(2);
+    // center (500,400) was world (500,400) at zoom 1; at zoom 2 it must still
+    // land at the viewport center: pan = center - world*zoom.
+    expect(store.getState().panX).toBe(500 - 500 * 2);
+    expect(store.getState().panY).toBe(400 - 400 * 2);
   });
 
   test("deviceWidth: desktop is fixed; tablet/mobile track the breakpoints", () => {
@@ -81,21 +95,22 @@ describe("editor store", () => {
     expect(deviceWidth("mobile", breakpoints)).toBe(500);
   });
 
-  test("manual zoom turns off fit; device switch + applyFitZoom keep/restore it", () => {
+  test("manual zoom turns off fit; device switch + applyFitView keep/restore it", () => {
     const store = createEditorStore();
     expect(store.getState().zoomFit).toBe(true);
 
-    store.getState().setZoom(1.5);
+    store.getState().zoomToCenter(1.5);
     expect(store.getState().zoomFit).toBe(false);
 
-    // The canvas applies a computed fit without leaving fit mode...
+    // The canvas applies a computed fit + center without leaving fit mode...
     store.getState().enableZoomFit();
-    store.getState().applyFitZoom(0.8);
+    store.getState().applyFitView({ zoom: 0.8, panX: 10, panY: 20 });
     expect(store.getState().zoom).toBe(0.8);
+    expect(store.getState().panX).toBe(10);
     expect(store.getState().zoomFit).toBe(true);
 
     // ...and a manual zoom leaves it, while switching device restores it.
-    store.getState().setZoom(2);
+    store.getState().zoomToCenter(2);
     expect(store.getState().zoomFit).toBe(false);
     store.getState().setDevice("mobile");
     expect(store.getState().device).toBe("mobile");

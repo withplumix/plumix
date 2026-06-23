@@ -12,6 +12,13 @@ import {
   slotAllowedBlocks,
 } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
+import {
+  clampPanToFrame,
+  clampZoom,
+  fitView,
+  frameSelection,
+  zoomToCursor,
+} from "./canvas-view.js";
 import { connectCanvas } from "./connect-canvas.js";
 import { dropPlacement } from "./drop-index.js";
 import { overlayBox } from "./overlay.js";
@@ -77,6 +84,8 @@ export function CanvasFrame({
   const loaderPushRef = useLoaderPushRef();
   const device = useEditorStore((s) => s.device);
   const zoom = useEditorStore((s) => s.zoom);
+  const panX = useEditorStore((s) => s.panX);
+  const panY = useEditorStore((s) => s.panY);
   const breakpoints = useEditorStore((s) => s.breakpoints);
   const zoomFit = useEditorStore((s) => s.zoomFit);
   const frameWidth = deviceWidth(device, breakpoints);
@@ -97,6 +106,15 @@ export function CanvasFrame({
   // Mirror geometry for the drag handler so it reads fresh rects without
   // re-subscribing the window listeners on every geometry report.
   const geometryRef = useRef<Geometry>(geometry);
+  // Space held → ready to pan-drag (grab cursor; the iframe goes click-through
+  // so the host receives the drag).
+  const [panReady, setPanReady] = useState(false);
+  // Latest key handler, so the bridge's forwarded keys (iframe focus) and the
+  // window listener (shell focus) both reach the same logic without
+  // re-subscribing the bridge.
+  const keyHandlerRef = useRef<
+    ((down: boolean, code: string, shiftKey: boolean) => void) | null
+  >(null);
   const [dropY, setDropY] = useState<number | null>(null);
   const [dropSlot, setDropSlot] = useState<SlotDrop | null>(null);
   // The iframe's own document height (same-origin), so the frame sizes to its
@@ -122,6 +140,56 @@ export function CanvasFrame({
     };
   }, []);
 
+  // The free-canvas pan/zoom gesture, shared by the host's own wheel (over the
+  // margins) and the iframe-forwarded wheel (over the canvas). `cx/cy` are the
+  // cursor in container space. Reads live state so the bridge wiring stays
+  // subscribed once; scaled frame dims come straight off the iframe rect.
+  const handleWheel = useCallback(
+    (
+      deltaX: number,
+      deltaY: number,
+      zoomIntent: boolean,
+      cx: number,
+      cy: number,
+    ): void => {
+      const iframe = iframeRef.current;
+      const box = geometryRef.current.container;
+      if (!iframe || !box) return;
+      const rect = iframe.getBoundingClientRect();
+      const { panX, panY, zoom } = store.getState();
+      if (zoomIntent) {
+        const nextZoom = clampZoom(zoom * Math.exp(-deltaY * 0.0015));
+        if (nextZoom === zoom) return;
+        // Zoom toward the cursor, then clamp so the frame stays reachable.
+        const view = zoomToCursor({ zoom, panX, panY }, nextZoom, cx, cy);
+        const baseW = rect.width / zoom;
+        const baseH = rect.height / zoom;
+        store.getState().setView({
+          zoom: view.zoom,
+          ...clampPanToFrame(
+            view.panX,
+            view.panY,
+            baseW * view.zoom,
+            baseH * view.zoom,
+            box.width,
+            box.height,
+          ),
+        });
+      } else {
+        const p = clampPanToFrame(
+          panX - deltaX,
+          panY - deltaY,
+          rect.width,
+          rect.height,
+          box.width,
+          box.height,
+        );
+        store.getState().setPan(p.panX, p.panY);
+      }
+    },
+    [store],
+  );
+
   useEffect(() => {
     const frameWindow = iframeRef.current?.contentWindow;
     if (!frameWindow) return;
@@ -141,6 +209,21 @@ export function CanvasFrame({
         // may have shifted too.
         measureContent();
       },
+      // Forwarded from the iframe: clientX/Y are iframe-local (unscaled), so the
+      // cursor in container space is the frame's pan offset plus the scaled
+      // local position.
+      onWheel: ({ deltaX, deltaY, zoomIntent, clientX, clientY }) => {
+        const { panX, panY, zoom } = store.getState();
+        handleWheel(
+          deltaX,
+          deltaY,
+          zoomIntent,
+          panX + clientX * zoom,
+          panY + clientY * zoom,
+        );
+      },
+      onKey: ({ down, code, shiftKey }) =>
+        keyHandlerRef.current?.(down, code, shiftKey),
     });
     // Expose the loader-data push to the inspector's refresh control.
     if (loaderPushRef) loaderPushRef.current = connection.pushLoaderData;
@@ -148,7 +231,7 @@ export function CanvasFrame({
       if (loaderPushRef) loaderPushRef.current = null;
       connection.dispose();
     };
-  }, [store, origin, measureHost, measureContent, loaderPushRef]);
+  }, [store, origin, measureHost, measureContent, loaderPushRef, handleWheel]);
 
   // Keep frame/container fresh when the canvas moves without a block report:
   // column scroll, window resize, and rail collapse (which resizes the inset).
@@ -174,21 +257,186 @@ export function CanvasFrame({
     };
   }, [measureHost]);
 
-  // Fit-to-width: while in fit mode, scale the frame so its full width fits the
-  // canvas column (never upscaling past 100%). A manual zoom turns fit off; a
-  // device switch turns it back on, so the new width refits.
+  // Fit-and-center: while in fit mode, scale the frame to the viewport width
+  // (never past 100%) AND center it. This is what a device switch lands on
+  // (setDevice re-enables fit), so the frame is always on-screen and centered
+  // instead of pinned to the top-left. A manual pan/zoom leaves fit mode.
+  const containerWidth = geometry.container?.width;
+  const containerHeight = geometry.container?.height;
   useEffect(() => {
-    if (!zoomFit) return;
-    const columnWidth = geometry.container?.width;
-    if (!columnWidth) return;
-    const fit = Math.min(1, columnWidth / frameWidth);
-    if (fit !== store.getState().zoom) store.getState().applyFitZoom(fit);
-  }, [zoomFit, frameWidth, geometry.container?.width, store]);
+    if (!zoomFit || !containerWidth || !containerHeight) return;
+    const next = fitView(
+      frameWidth,
+      contentHeight ?? CANVAS_HEIGHT,
+      containerWidth,
+      containerHeight,
+    );
+    const s = store.getState();
+    if (s.zoom !== next.zoom || s.panX !== next.panX || s.panY !== next.panY) {
+      s.applyFitView(next);
+    }
+  }, [
+    zoomFit,
+    frameWidth,
+    contentHeight,
+    containerWidth,
+    containerHeight,
+    store,
+  ]);
+
+  // The stage transform moves the iframe without firing scroll, so re-measure
+  // the frame/container rects after a pan/zoom paints — the overlays read the
+  // iframe's live on-screen box and must track it.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      const next = { ...geometryRef.current, ...measureHost() };
+      geometryRef.current = next;
+      setGeometry(next);
+      // Keep the frame reachable after a manual zoom (e.g. the toolbar +/-,
+      // which zoom from the center and could otherwise drift it off-stage). The
+      // fit effect owns pan while in fit mode, so only clamp manual views.
+      const iframe = iframeRef.current;
+      const s = store.getState();
+      if (next.container && iframe && !s.zoomFit) {
+        const r = iframe.getBoundingClientRect();
+        const p = clampPanToFrame(
+          s.panX,
+          s.panY,
+          r.width,
+          r.height,
+          next.container.width,
+          next.container.height,
+        );
+        if (p.panX !== s.panX || p.panY !== s.panY) s.setPan(p.panX, p.panY);
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [panX, panY, zoom, frameWidth, contentHeight, measureHost, store]);
+
+  // Mirror the viewport size into the store so toolbar zoom-to-center has the
+  // dims it needs without reaching into the DOM.
+  useEffect(() => {
+    if (containerWidth && containerHeight) {
+      store.getState().setViewport(containerWidth, containerHeight);
+    }
+  }, [containerWidth, containerHeight, store]);
+
+  // Frame the active block in the viewport (Shift+2) — the move that makes a
+  // free canvas genuinely better for editing, not just nicer to look at.
+  const zoomToSelection = useCallback((): void => {
+    const s = store.getState();
+    const box = geometryRef.current.container;
+    const rect = s.activeId
+      ? geometryRef.current.rects.get(s.activeId)
+      : undefined;
+    if (!box || !rect || rect.width === 0 || rect.height === 0) return;
+    s.setView(frameSelection(rect, box.width, box.height));
+  }, [store]);
+
+  // Space-to-pan + view shortcuts. Keys arrive natively (shell focus) and
+  // forwarded from the iframe (canvas focus) — both routed through one handler.
+  useEffect(() => {
+    let spaceHeld = false;
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startPanX = 0;
+    let startPanY = 0;
+    // The iframe's click-through is owned declaratively by the render (it's
+    // none while a block drag OR a space-pan is active), so this just tracks
+    // the space state — no imperative pointerEvents toggling to desync.
+    const exitPan = (): void => {
+      spaceHeld = false;
+      dragging = false;
+      setPanReady(false);
+    };
+    const handleKey = (
+      down: boolean,
+      code: string,
+      shiftKey: boolean,
+    ): void => {
+      if (!down) {
+        if (code === "Space") exitPan();
+        return;
+      }
+      if (code === "Space") {
+        if (!spaceHeld) {
+          spaceHeld = true;
+          setPanReady(true);
+        }
+        return;
+      }
+      if (!shiftKey) return;
+      if (code === "Digit1") store.getState().enableZoomFit();
+      else if (code === "Digit2") zoomToSelection();
+      else if (code === "Digit0") store.getState().zoomToCenter(1);
+    };
+    keyHandlerRef.current = handleKey;
+
+    const isTyping = (t: EventTarget | null): boolean =>
+      t instanceof HTMLElement &&
+      (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+    const isViewKey = (e: KeyboardEvent): boolean =>
+      e.code === "Space" ||
+      (e.shiftKey &&
+        (e.code === "Digit0" || e.code === "Digit1" || e.code === "Digit2"));
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (isTyping(e.target) || !isViewKey(e)) return;
+      if (e.code === "Space") e.preventDefault();
+      handleKey(true, e.code, e.shiftKey);
+    };
+    const onKeyUp = (e: KeyboardEvent): void => {
+      if (e.code === "Space") handleKey(false, e.code, false);
+    };
+    const onPointerDown = (e: PointerEvent): void => {
+      if (!spaceHeld) return;
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      const s = store.getState();
+      startPanX = s.panX;
+      startPanY = s.panY;
+    };
+    const onPointerMove = (e: PointerEvent): void => {
+      if (!dragging) return;
+      const box = geometryRef.current.container;
+      const iframe = iframeRef.current;
+      if (!box || !iframe) return;
+      const r = iframe.getBoundingClientRect();
+      const p = clampPanToFrame(
+        startPanX + (e.clientX - startX),
+        startPanY + (e.clientY - startY),
+        r.width,
+        r.height,
+        box.width,
+        box.height,
+      );
+      store.getState().setPan(p.panX, p.panY);
+    };
+    const onPointerUp = (): void => {
+      dragging = false;
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      keyHandlerRef.current = null;
+      exitPan();
+    };
+  }, [store, zoomToSelection]);
 
   // Canvas drag, shared by two sources: a catalog block being inserted
-  // (dragSpec) and an existing block being moved (movingId). While dragging, the
-  // iframe ignores pointer events so the host keeps receiving them; the target
-  // is computed from the reported block + slot geometry mapped into screen space.
+  // (dragSpec) and an existing block being moved (movingId). The iframe is
+  // click-through while dragging (owned by the render) so the host receives the
+  // pointer events; the target is computed from the reported block + slot
+  // geometry mapped into screen space.
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
@@ -196,7 +444,6 @@ export function CanvasFrame({
       dragSpec?.name ??
       (movingId ? findBlock(store.getState().tree, movingId)?.name : undefined);
     if (!draggingName) return;
-    iframe.style.pointerEvents = "none";
 
     const endDrag = (): void => {
       if (dragSpec) store.getState().endBlockDrag();
@@ -335,7 +582,6 @@ export function CanvasFrame({
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
       window.removeEventListener("keydown", onKey);
-      iframe.style.pointerEvents = "";
       setDropY(null);
       setDropSlot(null);
     };
@@ -348,6 +594,27 @@ export function CanvasFrame({
       store.getState().insertBlock(createNodeFromEntry(registry, entry), 0);
     }
   }, [registry, capabilities, store]);
+
+  // Host-side wheel: pan/zoom when the cursor is over the margin around the
+  // frame. Over the iframe the gesture is forwarded via the bridge (onWheel
+  // above). Native + non-passive so we can preventDefault the page scroll.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent): void => {
+      e.preventDefault();
+      const box = el.getBoundingClientRect();
+      handleWheel(
+        e.deltaX,
+        e.deltaY,
+        e.ctrlKey || e.metaKey,
+        e.clientX - box.left,
+        e.clientY - box.top,
+      );
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [handleWheel]);
 
   // Overlays live in a clip layer pinned over the canvas viewport, so their
   // boxes are expressed relative to that layer's top-left (the container's
@@ -390,24 +657,32 @@ export function CanvasFrame({
     <div
       ref={containerRef}
       data-testid="plumix-canvas-frame"
-      // A neutral surface (not the shell's near-black) shows around the framed
-      // page — the device width is narrower than the column and a short page
-      // ends above the fold. `var(--muted)` reads as canvas, not a void.
+      // A Figma-style pannable stage: the device frame floats in this surface
+      // and is panned/zoomed via a transform (no scrollbars). `overflow:hidden`
+      // clips the off-stage frame; `touch-action:none` lets us own wheel/touch
+      // gestures. `var(--muted)` reads as canvas, not a void.
       style={{
         position: "relative",
         flex: 1,
-        overflow: "auto",
+        overflow: "hidden",
+        touchAction: "none",
         background: "var(--muted)",
+        cursor: panReady ? "grab" : "default",
       }}
     >
-      {/* `transform: scale()` shrinks the iframe visually but not its layout
-          box, so a wrapper sized to the SCALED dimensions keeps the scroll area
-          flush with the page — otherwise the surface shows below/right of the
-          zoomed-out frame as dead space. */}
+      {/* The stage: positioned at the container origin and moved as a whole by
+          `translate(pan) scale(zoom)`. The iframe sits at natural size; the
+          transform does the panning + zooming, and the overlays track it by
+          re-reading the iframe's live on-screen rect. */}
       <div
         style={{
-          width: frameWidth * zoom,
-          height: (contentHeight ?? CANVAS_HEIGHT) * zoom,
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: frameWidth,
+          height: contentHeight ?? CANVAS_HEIGHT,
+          transform: `translate(${String(panX)}px, ${String(panY)}px) scale(${String(zoom)})`,
+          transformOrigin: "top left",
         }}
       >
         <iframe
@@ -420,10 +695,26 @@ export function CanvasFrame({
             width: frameWidth,
             height: contentHeight ?? CANVAS_HEIGHT,
             border: 0,
-            transform: `scale(${String(zoom)})`,
-            transformOrigin: "top left",
+            // Click-through while a block drag or a space-pan is active so the
+            // host receives the pointer events. Single declarative owner — no
+            // imperative toggling that could desync across the two gestures.
+            pointerEvents:
+              dragSpec || movingId || panReady ? "none" : undefined,
           }}
         />
+        {/* Inside the stage so it sits on the frame (and pans/zooms with it),
+            rather than floating over the container now that the frame is
+            centered/pannable. */}
+        {!readOnly && isEmpty && (
+          <button
+            type="button"
+            data-testid="plumix-empty-add"
+            onClick={addFirstBlock}
+            className="border-muted-foreground/40 text-muted-foreground hover:bg-accent absolute inset-x-8 top-8 rounded-md border border-dashed p-6 text-sm"
+          >
+            <Trans id="editor.canvas.addBlock" message="Add a block" />
+          </button>
+        )}
       </div>
       {/* Clip layer pinned over the visible canvas column. Its overflow:hidden
           keeps the absolutely-positioned overlays + toolbar from spilling onto
@@ -482,18 +773,6 @@ export function CanvasFrame({
             />
           )}
         </div>
-      )}
-      {/* Stays visible during a drag so an empty canvas still shows a drop
-          target (no block geometry exists to draw an indicator against). */}
-      {!readOnly && isEmpty && (
-        <button
-          type="button"
-          data-testid="plumix-empty-add"
-          onClick={addFirstBlock}
-          className="border-muted-foreground/40 text-muted-foreground hover:bg-accent absolute inset-x-8 top-8 rounded-md border border-dashed p-6 text-sm"
-        >
-          <Trans id="editor.canvas.addBlock" message="Add a block" />
-        </button>
       )}
     </div>
   );

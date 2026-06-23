@@ -56,6 +56,32 @@ export type CanvasMessage =
       readonly rects: readonly BlockRect[];
       /** Container slot regions, for resolving a drag to a nested drop target. */
       readonly slots?: readonly SlotRect[];
+    }
+  | {
+      // A wheel/trackpad gesture over the canvas, forwarded so the host can
+      // pan/zoom the free canvas (events over the iframe never reach the parent
+      // stage). `zoomIntent` is ctrl/⌘ held — which is also how trackpad pinch
+      // arrives — so the host zooms toward the cursor instead of panning.
+      // `clientX/Y` are the iframe-local pointer coords; the host maps them to
+      // its own space via the live iframe rect + zoom.
+      readonly type: "canvas:wheel";
+      readonly deltaX: number;
+      readonly deltaY: number;
+      readonly zoomIntent: boolean;
+      readonly clientX: number;
+      readonly clientY: number;
+    }
+  | {
+      // A canvas-view keyboard event (space to pan, shift+digit to zoom),
+      // forwarded so the shortcuts work while the iframe holds focus. Only the
+      // view keys are forwarded — typing in the canvas is unaffected.
+      // NB: no `kind` field — the bridge's handshake frames are discriminated
+      // by a string `kind`, so a `kind` here would be mistaken for one.
+      readonly type: "canvas:key";
+      readonly down: boolean;
+      /** Layout-independent physical key, e.g. "Space", "Digit1". */
+      readonly code: string;
+      readonly shiftKey: boolean;
     };
 
 export type EditorBridgeMessage = HostMessage | CanvasMessage;

@@ -21,6 +21,7 @@ import {
   removeBlocks,
   selectionRoots,
 } from "./block-tree-ops.js";
+import { clampZoom, zoomToCursor } from "./canvas-view.js";
 import { initHistory, recordHistory, redo, undo } from "./history.js";
 
 /** The responsive bucket a style edit targets (per active device). */
@@ -55,11 +56,9 @@ export function deviceWidth(
   return DESKTOP_CANVAS_WIDTH;
 }
 
-export const MIN_ZOOM = 0.25;
-export const MAX_ZOOM = 2;
-
-const clampZoom = (zoom: number): number =>
-  Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
+// Re-exported for the package's public surface (index.ts) and consumers; the
+// zoom range + view math live in canvas-view.
+export { MAX_ZOOM, MIN_ZOOM } from "./canvas-view.js";
 
 /** The active tab in the right inspector rail. */
 export type RightPanel = "block" | "styles" | "page";
@@ -73,6 +72,14 @@ export interface EditorState {
   readonly hoverId: string | null;
   readonly device: EditorDevice;
   readonly zoom: number;
+  /** Free-canvas pan offset (px, host/container space) of the device frame's
+   *  top-left. The canvas is a Figma-style pannable stage, not a scroll area. */
+  readonly panX: number;
+  readonly panY: number;
+  /** The canvas viewport size, mirrored from the host so view actions
+   *  (zoom-to-center) can do their math without the DOM. */
+  readonly viewportW: number;
+  readonly viewportH: number;
   /** Theme breakpoints driving the device canvas widths. */
   readonly breakpoints: ThemeBreakpoints;
   /** When true, zoom auto-fits the canvas to the viewport width; a manual zoom
@@ -142,12 +149,30 @@ export interface EditorActions {
   setJsonOpen: (open: boolean) => void;
   /** Set (or clear, with an empty string) a block's Layers-tree instance name. */
   setBlockLabel: (id: string, label: string) => void;
-  /** Manual zoom — pins the level and turns off fit-to-width. */
-  setZoom: (zoom: number) => void;
-  /** Apply a computed fit-to-width zoom without leaving fit mode (canvas-driven). */
-  applyFitZoom: (zoom: number) => void;
-  /** Re-enable fit-to-width (the toolbar's "Fit" action). */
+  /** Re-enable fit-to-width (the toolbar's "Fit" action). Also recenters. */
   enableZoomFit: () => void;
+  /** Pan the free canvas to an absolute offset (canvas-driven; clamped by the
+   *  caller to keep the frame on-screen). A manual pan leaves fit mode. */
+  setPan: (panX: number, panY: number) => void;
+  /** Set zoom + pan atomically (zoom-to-cursor keeps a focal point fixed).
+   *  Leaves fit mode — it's a manual gesture. */
+  setView: (view: {
+    readonly zoom: number;
+    readonly panX: number;
+    readonly panY: number;
+  }) => void;
+  /** Mirror the host canvas viewport size so view actions can do their math. */
+  setViewport: (width: number, height: number) => void;
+  /** Zoom keeping the viewport center's point fixed (the toolbar +/- buttons,
+   *  vs. the wheel's zoom-to-cursor). Leaves fit mode. */
+  zoomToCenter: (zoom: number) => void;
+  /** Center + fit the frame in the viewport (canvas-driven, stays in fit mode).
+   *  This is how a device switch re-lands the frame on-screen. */
+  applyFitView: (view: {
+    readonly zoom: number;
+    readonly panX: number;
+    readonly panY: number;
+  }) => void;
   startBlockDrag: (entry: InsertableBlockEntry) => void;
   endBlockDrag: () => void;
   /** Begin / end dragging an existing block to a new canvas position. */
@@ -233,6 +258,10 @@ export function createEditorStore(
     hoverId: null,
     device: initial?.device ?? "desktop",
     zoom: initial?.zoom ?? 1,
+    panX: 0,
+    panY: 0,
+    viewportW: 0,
+    viewportH: 0,
     breakpoints: initial?.breakpoints ?? DEFAULT_BREAKPOINTS,
     zoomFit: true,
     dragSpec: null,
@@ -395,9 +424,32 @@ export function createEditorStore(
     setDevice: (device) => set({ device, zoomFit: true }),
     setRightPanel: (rightPanel) => set({ rightPanel }),
     setJsonOpen: (jsonOpen) => set({ jsonOpen }),
-    setZoom: (zoom) => set({ zoom: clampZoom(zoom), zoomFit: false }),
-    applyFitZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
     enableZoomFit: () => set({ zoomFit: true }),
+    setPan: (panX, panY) => set({ panX, panY, zoomFit: false }),
+    setView: ({ zoom, panX, panY }) =>
+      set({ zoom: clampZoom(zoom), panX, panY, zoomFit: false }),
+    applyFitView: ({ zoom, panX, panY }) =>
+      set({ zoom: clampZoom(zoom), panX, panY }),
+    setViewport: (width, height) =>
+      set((s) =>
+        s.viewportW === width && s.viewportH === height
+          ? {}
+          : { viewportW: width, viewportH: height },
+      ),
+    zoomToCenter: (zoom) =>
+      set((s) => {
+        const next = clampZoom(zoom);
+        if (next === s.zoom) return {};
+        if (s.viewportW === 0) return { zoom: next, zoomFit: false };
+        // Zoom keeping the viewport center fixed (vs. the wheel's cursor).
+        const view = zoomToCursor(
+          { zoom: s.zoom, panX: s.panX, panY: s.panY },
+          next,
+          s.viewportW / 2,
+          s.viewportH / 2,
+        );
+        return { ...view, zoomFit: false };
+      }),
     startBlockDrag: (dragSpec) => set({ dragSpec }),
     endBlockDrag: () => set({ dragSpec: null }),
     startMove: (movingId) => set({ movingId }),

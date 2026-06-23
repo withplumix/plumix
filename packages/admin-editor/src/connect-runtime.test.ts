@@ -95,6 +95,46 @@ describe("connectRuntime (canvas/iframe side)", () => {
     conn.dispose();
   });
 
+  test("reportWheel posts canvas:wheel to the host", () => {
+    const { win, posted } = fakeParent();
+    const conn = connectRuntime({
+      parentWindow: win,
+      origin: ORIGIN,
+      onTree: () => undefined,
+    });
+
+    conn.reportWheel(4, -12, true, 100, 200);
+
+    expect(messages(posted)).toContainEqual({
+      type: "canvas:wheel",
+      deltaX: 4,
+      deltaY: -12,
+      zoomIntent: true,
+      clientX: 100,
+      clientY: 200,
+    });
+    conn.dispose();
+  });
+
+  test("reportKey posts canvas:key to the host", () => {
+    const { win, posted } = fakeParent();
+    const conn = connectRuntime({
+      parentWindow: win,
+      origin: ORIGIN,
+      onTree: () => undefined,
+    });
+
+    conn.reportKey(true, "Space", false);
+
+    expect(messages(posted)).toContainEqual({
+      type: "canvas:key",
+      down: true,
+      code: "Space",
+      shiftKey: false,
+    });
+    conn.dispose();
+  });
+
   test("ignores host messages from a foreign origin", () => {
     const seen: (readonly BlockNode[])[] = [];
     const { win } = fakeParent();
