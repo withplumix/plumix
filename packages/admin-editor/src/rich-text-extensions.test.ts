@@ -5,8 +5,8 @@ import { richTextExtensions } from "./rich-text-extensions.js";
 
 describe("richTextExtensions", () => {
   // getSchema throws on a duplicate extension name, so a clean build proves the
-  // core marks and StarterKit's bundled marks don't collide.
-  test("builds one schema from StarterKit nodes + the core marks", () => {
+  // explicit nodes and the core marks don't collide.
+  test("builds one schema from the explicit nodes + the core marks", () => {
     const schema = getSchema([...richTextExtensions()]);
 
     expect(Object.keys(schema.marks)).toEqual(

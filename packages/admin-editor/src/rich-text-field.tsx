@@ -50,8 +50,9 @@ interface ActiveState {
 }
 
 /**
- * Right-rail rich-text editor: a Tiptap instance over StarterKit nodes + the
- * shared core marks, serializing to the HTML string the block stores and
+ * Right-rail rich-text editor: a Tiptap instance over the explicit node set
+ * (see richTextExtensions) + the shared core marks, serializing to the HTML
+ * string the block stores and
  * renders. The editor identity is stable — `useEditor` is created once and
  * external value changes are pushed in without emitting an update — so typing
  * never loses focus across the live patch loop's re-renders.
