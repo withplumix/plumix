@@ -1,18 +1,18 @@
-import type { ComponentType, ReactElement } from "react";
+import type { ReactElement } from "react";
 
-import * as LucideIcons from "@plumix/admin-ui/icons";
+import type { LucideIcon } from "@plumix/admin-ui/icons";
+import { blockIcons, fallbackBlockIcon } from "@plumix/admin-ui/icons";
 
-type IconComponent = ComponentType<{ readonly className?: string }>;
+// `blockIcons` has literal keys; widen to a string index so a runtime block
+// name can address it.
+const Icons: Record<string, LucideIcon> = blockIcons;
 
-// Blocks declare `icon` as a lucide name (e.g. "Heading"); resolve it off the
-// shared icon barrel so core and plugin blocks alike render their own glyph.
-const ICONS = LucideIcons as unknown as Record<
-  string,
-  IconComponent | undefined
->;
-const Fallback = ICONS.Square ?? (() => null);
-
-/** Renders a block's declared lucide icon, falling back to a generic square. */
+/**
+ * Renders a block's declared icon by its `icon: "Heading"` name, resolved
+ * against admin-ui's curated `blockIcons` map (the single owner of the set).
+ * Unknown names fall back to a generic square — that's the path a third-party
+ * block hits when it names an icon plumix doesn't ship.
+ */
 export function BlockIcon({
   name,
   className,
@@ -20,6 +20,6 @@ export function BlockIcon({
   readonly name?: string;
   readonly className?: string;
 }): ReactElement {
-  const Icon = (name ? ICONS[name] : undefined) ?? Fallback;
+  const Icon = (name ? Icons[name] : undefined) ?? fallbackBlockIcon;
   return <Icon className={className} />;
 }
