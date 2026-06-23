@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "//sideEffects": "Everything is pure except the island runtime, which calls registerIslandElement() at module load and is imported purely for that side effect (import \"@plumix/blocks/island-runtime\"). Marking the rest side-effect-free lets bundlers drop unused barrel re-exports — notably the Tiptap mark/node schemas (unknownBlockSchema, coreMarkExtensions) so ProseMirror tree-shakes out of consumers that only use coreBlocks/render.",
+  "sideEffects": [
+    "**/island-runtime.js"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
