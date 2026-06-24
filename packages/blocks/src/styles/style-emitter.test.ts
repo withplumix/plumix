@@ -6,6 +6,7 @@ import {
   emitBlockStyleCss,
   normalizeStyleValue,
   tokenCategoryForProperty,
+  tokenCssVar,
   tokenIdToCssVar,
 } from "./style-emitter.js";
 
@@ -214,6 +215,14 @@ describe("emitBlockStyleCss", () => {
     expect(
       emitBlockStyleCss("b", style, { typography: { lg: { value: "20px" } } }),
     ).toBe(".b { font-size: var(--plumix-typography-lg, 20px); }");
+  });
+
+  test("builds a bare token CSS variable reference (no resolved fallback)", () => {
+    // `colors` maps to the `color` segment; no fallback value is appended.
+    expect(tokenCssVar("primary", "colors")).toBe(
+      "var(--plumix-color-primary)",
+    );
+    expect(tokenCssVar("lg", "spacing")).toBe("var(--plumix-spacing-lg)");
   });
 
   test("resolves the token category for a known property, undefined otherwise", () => {

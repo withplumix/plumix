@@ -20,7 +20,7 @@ import {
   PopoverTrigger,
 } from "@plumix/admin-ui/popover";
 import { cn } from "@plumix/admin-ui/utils";
-import { tokenCategoryForProperty } from "@plumix/blocks";
+import { tokenCategoryForProperty, tokenCssVar } from "@plumix/blocks";
 
 import { CSS_PROPERTIES } from "./css-properties.js";
 
@@ -107,6 +107,10 @@ function DeclarationRow({
   const [keyDraft, setKeyDraft] = useState(property);
   const category = tokenCategoryForProperty(property);
   const tokenGroup = category ? (tokens[category] ?? {}) : {};
+  // Show a token as the CSS variable it emits (`var(--plumix-color-primary)`),
+  // not its label or resolved literal — this is the raw-CSS view.
+  const tokenVar = (id: string): string =>
+    category ? tokenCssVar(id, category) : id;
 
   const commitRename = (): void => {
     const next = keyDraft.trim();
@@ -160,11 +164,11 @@ function DeclarationRow({
               scale) visible + selected — a controlled select with no matching
               option would render blank, hiding the stored value. */}
           {value.token !== "" && !(value.token in tokenGroup) ? (
-            <option value={value.token}>{value.token}</option>
+            <option value={value.token}>{tokenVar(value.token)}</option>
           ) : null}
           {Object.keys(tokenGroup).map((id) => (
             <option key={id} value={id}>
-              {tokenGroup[id]?.label ?? id}
+              {tokenVar(id)}
             </option>
           ))}
         </select>

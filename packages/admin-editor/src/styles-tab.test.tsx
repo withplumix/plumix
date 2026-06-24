@@ -24,8 +24,12 @@ function StyleProbe({ id }: { readonly id: string }): ReactElement {
   return <output data-testid="style-probe">{JSON.stringify(style)}</output>;
 }
 
-function renderTab(tree: readonly BlockNode[], activeId?: string) {
-  return render(
+function renderTab(
+  tree: readonly BlockNode[],
+  activeId?: string,
+  { expandCss = true }: { readonly expandCss?: boolean } = {},
+) {
+  const utils = render(
     <I18nProvider i18n={i18n}>
       <EditorProvider initialTree={tree}>
         <ActiveSeed activeId={activeId} />
@@ -34,6 +38,12 @@ function renderTab(tree: readonly BlockNode[], activeId?: string) {
       </EditorProvider>
     </I18nProvider>,
   );
+  // The raw-CSS "declarations" section is collapsed by default; open it so its
+  // content is queryable. Tests asserting the default pass `expandCss: false`.
+  if (activeId && expandCss) {
+    fireEvent.click(utils.getByTestId("styles-section-declarations"));
+  }
+  return utils;
 }
 
 function ActiveSeed({ activeId }: { readonly activeId?: string }): null {
@@ -124,6 +134,15 @@ describe("StylesTab — declarations list", () => {
     name: "core/x",
     style: { large: { color: { raw: "#0c2238" } } },
   };
+
+  test("keeps the CSS section collapsed by default (dev escape hatch)", () => {
+    const { getByTestId, queryByTestId } = renderTab([styled], "a", {
+      expandCss: false,
+    });
+    // The section trigger renders, but its content stays unmounted until opened.
+    expect(getByTestId("styles-section-declarations")).toBeDefined();
+    expect(queryByTestId("style-declaration-color-key")).toBeNull();
+  });
 
   test("lists each declaration in the active bucket with its raw value", () => {
     const { getByTestId } = renderTab([styled], "a");
@@ -221,6 +240,17 @@ describe("StylesTab — declarations list", () => {
     expect(options).toContain("lg");
     expect(options).toContain("sm");
     expect(queryByTestId("style-declaration-fontFamily-value")).toBeNull();
+  });
+
+  test("displays the chosen token as its CSS variable reference", () => {
+    const { getByTestId } = renderTab([fontToken], "a");
+    const picker = getByTestId(
+      "style-declaration-fontFamily-token",
+    ) as HTMLSelectElement;
+    // The selected option reads as the emitted var(), not the label or literal.
+    expect(picker.options[picker.selectedIndex]?.text).toBe(
+      "var(--plumix-typography-lg)",
+    );
   });
 
   test("changing the token picker writes the new token", () => {

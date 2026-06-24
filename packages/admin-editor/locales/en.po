@@ -44,6 +44,11 @@ msgstr ""
 #~ msgstr "JSON"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.all"
+#~ msgstr "All styles"
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr "{count} selected"
@@ -74,11 +79,6 @@ msgid "editor.styles.align.right"
 msgstr "Align right"
 
 #. js-lingui-explicit-id
-#: src/styles-tab.tsx
-msgid "editor.styles.all"
-msgstr "All styles"
-
-#. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.header.back"
 msgstr "Back"
@@ -107,6 +107,11 @@ msgstr "Bold"
 #: src/style-declarations.tsx
 msgid "editor.styles.add.create"
 msgstr "Create"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.css"
+msgstr "CSS"
 
 #. js-lingui-explicit-id
 #: src/style-control.tsx
