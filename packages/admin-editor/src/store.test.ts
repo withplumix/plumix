@@ -703,3 +703,74 @@ describe("renameBlockStyleProperty", () => {
     expect(store.getState().tree).toBe(tree);
   });
 });
+
+describe("updateBlockHtmlAttr", () => {
+  test("sets an attribute on a block", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+
+    store.getState().updateBlockHtmlAttr("a", "id", "hero");
+
+    expect(store.getState().tree[0]?.htmlAttrs).toEqual({ id: "hero" });
+  });
+
+  test("clears an attribute when value is null, pruning empty htmlAttrs", () => {
+    const store = createEditorStore({
+      tree: [{ id: "a", name: "core/x", htmlAttrs: { id: "hero" } }],
+    });
+
+    store.getState().updateBlockHtmlAttr("a", "id", null);
+
+    expect(store.getState().tree[0]?.htmlAttrs).toBeUndefined();
+  });
+
+  test("is a no-op (stable tree) for an unknown block", () => {
+    const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
+    const store = createEditorStore({ tree });
+
+    store.getState().updateBlockHtmlAttr("nope", "id", "x");
+
+    expect(store.getState().tree).toBe(tree);
+  });
+});
+
+describe("renameBlockHtmlAttr", () => {
+  test("renames an attribute in place, preserving value and position", () => {
+    const store = createEditorStore({
+      tree: [
+        {
+          id: "a",
+          name: "core/x",
+          htmlAttrs: { id: "hero", "data-x": "1" },
+        },
+      ],
+    });
+
+    store.getState().renameBlockHtmlAttr("a", "id", "title");
+
+    expect(store.getState().tree[0]?.htmlAttrs).toEqual({
+      title: "hero",
+      "data-x": "1",
+    });
+    expect(Object.keys(store.getState().tree[0]?.htmlAttrs ?? {})).toEqual([
+      "title",
+      "data-x",
+    ]);
+  });
+
+  test("is a no-op when the target name is taken or the source is missing", () => {
+    const tree: readonly BlockNode[] = [
+      {
+        id: "a",
+        name: "core/x",
+        htmlAttrs: { id: "hero", title: "t" },
+      },
+    ];
+    const store = createEditorStore({ tree });
+
+    store.getState().renameBlockHtmlAttr("a", "id", "title");
+    expect(store.getState().tree).toBe(tree);
+
+    store.getState().renameBlockHtmlAttr("a", "nope", "role");
+    expect(store.getState().tree).toBe(tree);
+  });
+});
