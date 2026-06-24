@@ -253,4 +253,30 @@ describe("r2 presignPut", () => {
     // among the headers the browser is told to send back.
     expect(result.headers).not.toHaveProperty("host");
   });
+
+  test("resolves an (env) => s3 credentials block from the connect env", async () => {
+    const fake = fakeR2Binding();
+    const store = r2({
+      binding: "MEDIA",
+      s3: (env) => ({
+        bucket: "plumix-media",
+        accountId: "abc123",
+        accessKeyId: (env as { S3_KEY?: string }).S3_KEY ?? "",
+        secretAccessKey: (env as { S3_SECRET?: string }).S3_SECRET ?? "",
+      }),
+    }).connect({
+      MEDIA: fake.binding,
+      S3_KEY: "AKIA-FROM-ENV",
+      S3_SECRET: "secret-from-env",
+    });
+    if (!store.presignPut) throw new Error("r2 should expose presignPut");
+
+    const result = await store.presignPut("uploads/cat.jpg", {
+      contentType: "image/jpeg",
+      expiresIn: 600,
+    });
+
+    // The signing credential came from the resolver, fed the request env.
+    expect(result.url).toContain("AKIA-FROM-ENV");
+  });
 });
