@@ -132,6 +132,7 @@ export type {
 } from "./styles/types.js";
 
 // ─── HTML sanitisation ──────────────────────────────────────────────────────
+export { isAllowedHtmlAttr, safeHtmlAttrs } from "./html/attrs.js";
 export { BASELINE_HTML_ALLOWLIST, sanitizeHtml } from "./html/sanitize.js";
 export type { HtmlAllowlist } from "./html/sanitize.js";
 export { buildHtmlAllowlist } from "./html/build-allowlist.js";

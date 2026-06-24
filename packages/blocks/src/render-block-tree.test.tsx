@@ -36,6 +36,67 @@ const headingRegistry = createBlockRegistry([
   },
 ]);
 
+const selfSeamRegistry = createBlockRegistry([
+  {
+    name: "core/box",
+    selfSeam: true,
+    render: ({ blockProps }) => <section {...blockProps}>box</section>,
+  },
+]);
+
+describe("renderBlockTree — htmlAttrs", () => {
+  test("spreads allowlisted attributes onto the wrapper, dropping unsafe keys", () => {
+    const node: BlockNode = {
+      id: "abc",
+      name: "core/heading",
+      attrs: { text: "Hi", level: 2 },
+      htmlAttrs: {
+        id: "hero",
+        "data-track": "cta",
+        onclick: "alert(1)",
+        style: "color:red",
+      },
+    };
+
+    const html = renderToStaticMarkup(renderBlockTree([node], headingRegistry));
+
+    expect(html).toContain('id="hero"');
+    expect(html).toContain('data-track="cta"');
+    expect(html).not.toContain("onclick");
+    expect(html).not.toContain("style=");
+  });
+
+  test("never lets an attribute clobber the framework data-plumix seam", () => {
+    const node: BlockNode = {
+      id: "abc",
+      name: "core/heading",
+      attrs: { text: "Hi", level: 2 },
+      htmlAttrs: { "data-plumix-block": "evil" },
+    };
+
+    const html = renderToStaticMarkup(renderBlockTree([node], headingRegistry));
+
+    expect(html).toContain('data-plumix-block="core/heading"');
+    expect(html).not.toContain("evil");
+  });
+
+  test("applies attributes to a selfSeam block's own root element", () => {
+    const node: BlockNode = {
+      id: "abc",
+      name: "core/box",
+      htmlAttrs: { id: "panel", "aria-label": "Panel" },
+    };
+
+    const html = renderToStaticMarkup(
+      renderBlockTree([node], selfSeamRegistry),
+    );
+
+    expect(html).toContain("<section");
+    expect(html).toContain('id="panel"');
+    expect(html).toContain('aria-label="Panel"');
+  });
+});
+
 describe("renderBlockTree", () => {
   test("renders a single heading block with its text attribute", () => {
     const heading: BlockNode = {

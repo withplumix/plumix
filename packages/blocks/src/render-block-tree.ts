@@ -15,6 +15,7 @@ import type {
 } from "./styles/style-emitter.js";
 import type { ThemeTokens } from "./styles/types.js";
 import { editAppender } from "./edit-appender.js";
+import { safeHtmlAttrs } from "./html/attrs.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
 
 const PATTERN_REF_BLOCK = "core/pattern-ref";
@@ -46,6 +47,10 @@ export interface BlockNode {
   readonly name: string;
   readonly attrs?: Readonly<Record<string, unknown>>;
   readonly style?: ResponsiveStyleSlot;
+  /** Author-supplied HTML attributes spread onto the block's root element.
+   *  Filtered through {@link safeHtmlAttrs} at render — only allowlisted, inert
+   *  keys (id, title, role, aria-, data- prefixes) survive. Not responsive. */
+  readonly htmlAttrs?: Readonly<Record<string, string>>;
   /** Author-given instance name shown in the Layers tree; falls back to the
    *  block type's title when absent. Editor-only metadata, ignored at render. */
   readonly label?: string;
@@ -89,11 +94,16 @@ export interface RenderBlockTreeOptions {
 
 /** Editor/style seam attributes a block spreads onto its root element when it
  *  opts into `selfSeam`. `data-plumix-id` is present only in edit mode. */
-interface BlockProps {
+/** The framework seam keys a block spreads onto its root element. */
+interface BlockSeamProps {
   readonly "data-plumix-block": string;
   readonly "data-plumix-id"?: string;
   readonly className?: string;
 }
+
+// Seam props plus author HTML attributes. The seam keys are spread last when
+// built, so they always win a key collision.
+type BlockProps = Readonly<Record<string, string | undefined>> & BlockSeamProps;
 
 export interface BlockNodeRenderProps<
   Attrs = Readonly<Record<string, unknown>>,
@@ -297,6 +307,7 @@ function renderNode(
     ? createElement("style", { key: "style" }, styleCss)
     : null;
   const blockProps: BlockProps = {
+    ...safeHtmlAttrs(node.htmlAttrs),
     "data-plumix-block": node.name,
     "data-plumix-id": env.editing && safeId ? safeId : undefined,
     className,
