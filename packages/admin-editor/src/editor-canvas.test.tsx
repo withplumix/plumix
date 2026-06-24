@@ -228,4 +228,83 @@ describe("EditorCanvas", () => {
     expect(hover).toEqual({ type: "canvas:hover", id: "h1" });
     spy.mockRestore();
   });
+
+  test("a link click in the canvas is prevented from navigating", () => {
+    const { container } = render(
+      <EditorCanvas registry={registry} origin={ORIGIN} />,
+    );
+    const link = document.createElement("a");
+    link.href = "/elsewhere";
+    container.appendChild(link);
+
+    const event = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+    });
+    act(() => {
+      link.dispatchEvent(event);
+    });
+
+    // The capture-phase guard kills navigation, leaving selection to bubble.
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  test("a middle-click on a link is prevented (no new-tab navigation)", () => {
+    const { container } = render(
+      <EditorCanvas registry={registry} origin={ORIGIN} />,
+    );
+    const link = document.createElement("a");
+    link.href = "/elsewhere";
+    container.appendChild(link);
+
+    const event = new MouseEvent("auxclick", {
+      bubbles: true,
+      cancelable: true,
+      button: 1,
+    });
+    act(() => {
+      link.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  test("a form submit in the canvas is prevented", () => {
+    const { container } = render(
+      <EditorCanvas registry={registry} origin={ORIGIN} />,
+    );
+    const form = document.createElement("form");
+    container.appendChild(form);
+
+    const event = new Event("submit", { bubbles: true, cancelable: true });
+    act(() => {
+      form.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  test("theme chrome around the content root is made inert, content stays live", () => {
+    const { getByTestId } = render(
+      <div>
+        <header data-testid="chrome-header">
+          <a href="/x">Home</a>
+        </header>
+        <div data-plumix-content-root>
+          <EditorCanvas registry={registry} origin={ORIGIN} />
+        </div>
+        <footer data-testid="chrome-footer" />
+      </div>,
+    );
+
+    expect(getByTestId("chrome-header").hasAttribute("inert")).toBe(true);
+    expect(
+      getByTestId("chrome-header").hasAttribute("data-plumix-chrome"),
+    ).toBe(true);
+    expect(getByTestId("chrome-footer").hasAttribute("inert")).toBe(true);
+    // The editable content root is left interactive.
+    expect(getByTestId("plumix-editor-canvas").hasAttribute("inert")).toBe(
+      false,
+    );
+  });
 });
