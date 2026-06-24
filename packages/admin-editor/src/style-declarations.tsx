@@ -177,7 +177,7 @@ function DeclarationRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="size-8 shrink-0"
+        className="text-destructive hover:text-destructive size-8 shrink-0"
         data-testid={`style-declaration-${property}-remove`}
         onClick={() => onChange(property, null)}
       >
