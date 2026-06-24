@@ -15,6 +15,7 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from "@plumix/admin-ui/popover";
+import { ScrollArea } from "@plumix/admin-ui/scroll-area";
 
 import type { View } from "./canvas-view.js";
 import type { FrameOffset, OverlayBox } from "./overlay.js";
@@ -957,16 +958,21 @@ export function CanvasFrame({
           <PopoverContent
             data-testid="plumix-inserter-popover"
             align="start"
-            className="max-h-96 w-72 overflow-auto p-0"
+            className="w-72 p-0"
           >
-            <BlockCatalog
-              registry={registry}
-              capabilities={capabilities}
-              allowed={pendingAllowed}
-              parentName={pendingParentName}
-              target={pendingTarget}
-              onInsert={() => setPendingAdd(null)}
-            />
+            {/* Radix's viewport (height:100%) won't clamp to a max-height on
+                the Root, so cap the viewport directly — it then scrolls while
+                the popover still shrinks to fit short lists. */}
+            <ScrollArea className="[&>[data-slot=scroll-area-viewport]]:max-h-96">
+              <BlockCatalog
+                registry={registry}
+                capabilities={capabilities}
+                allowed={pendingAllowed}
+                parentName={pendingParentName}
+                target={pendingTarget}
+                onInsert={() => setPendingAdd(null)}
+              />
+            </ScrollArea>
           </PopoverContent>
         </Popover>
       )}

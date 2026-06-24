@@ -227,6 +227,14 @@ test.describe("editor playground", () => {
     const popover = page.getByTestId("plumix-inserter-popover");
     await expect(popover).toBeVisible();
 
+    // The list is bounded by the ScrollArea viewport (max-h-96 ≈ 384px) rather
+    // than spilling out of the popover — guards the viewport-targeted cap, which
+    // silently fails if the scroll-area data-slot ever drifts.
+    const viewport = popover.locator('[data-slot="scroll-area-viewport"]');
+    const box = await viewport.boundingBox();
+    if (!box) throw new Error("expected scroll-area viewport box");
+    expect(box.height).toBeLessThanOrEqual(400);
+
     // Picking a block nests it into that column and closes the popover. The
     // fresh heading is empty (no box), so assert attachment, not visibility.
     await popover.getByTestId("block-catalog-item-core/heading").click();
