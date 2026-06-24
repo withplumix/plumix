@@ -5,6 +5,7 @@ import type { ThemeTokens } from "./types.js";
 import {
   emitBlockStyleCss,
   normalizeStyleValue,
+  tokenCategoryForProperty,
   tokenIdToCssVar,
 } from "./style-emitter.js";
 
@@ -213,6 +214,15 @@ describe("emitBlockStyleCss", () => {
     expect(
       emitBlockStyleCss("b", style, { typography: { lg: { value: "20px" } } }),
     ).toBe(".b { font-size: var(--plumix-typography-lg, 20px); }");
+  });
+
+  test("resolves the token category for a known property, undefined otherwise", () => {
+    expect(tokenCategoryForProperty("marginTop")).toBe("spacing");
+    expect(tokenCategoryForProperty("color")).toBe("colors");
+    expect(tokenCategoryForProperty("borderRadius")).toBe("radius");
+    // A property with no token scale (or an arbitrary custom one) has none.
+    expect(tokenCategoryForProperty("display")).toBeUndefined();
+    expect(tokenCategoryForProperty("--brand")).toBeUndefined();
   });
 
   test("preserves the case of custom properties (they are case-sensitive)", () => {

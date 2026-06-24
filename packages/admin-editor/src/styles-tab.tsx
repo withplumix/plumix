@@ -181,6 +181,7 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
           <AccordionContent>
             <StyleDeclarations
               declarations={declarations}
+              tokens={tokens}
               onChange={(property, value) => setter(property)(value)}
               onRename={(from, to) =>
                 renameBlockStyleProperty(activeId, bucket, from, to)

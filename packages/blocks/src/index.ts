@@ -110,6 +110,7 @@ export {
   DEFAULT_BREAKPOINTS,
   emitBlockStyleCss,
   normalizeStyleValue,
+  tokenCategoryForProperty,
   tokenIdToCssVar,
   VIEWPORT_MAX_PX,
 } from "./styles/style-emitter.js";

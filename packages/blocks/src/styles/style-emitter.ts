@@ -59,6 +59,15 @@ const PROPERTY_TO_CATEGORY: Readonly<Record<string, TokenCategory>> = {
   boxShadow: "shadow",
 };
 
+/** The token category a property reads from (e.g. `marginTop` → `spacing`), or
+ *  `undefined` for a property with no token scale. The editor uses this to offer
+ *  the right token picker for a declaration. */
+export function tokenCategoryForProperty(
+  property: string,
+): TokenCategory | undefined {
+  return PROPERTY_TO_CATEGORY[property];
+}
+
 const SAFE_CSS_TOKEN_RE = /^[A-Za-z0-9_-]+$/;
 
 export const VIEWPORT_MAX_PX: Readonly<Record<"medium" | "small", number>> = {

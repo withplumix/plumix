@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
-import type { StyleValue } from "@plumix/blocks";
+import type { StyleValue, ThemeTokens } from "@plumix/blocks";
 import { Button } from "@plumix/admin-ui/button";
 import {
   Command,
@@ -20,6 +20,7 @@ import {
   PopoverTrigger,
 } from "@plumix/admin-ui/popover";
 import { cn } from "@plumix/admin-ui/utils";
+import { tokenCategoryForProperty } from "@plumix/blocks";
 
 import { CSS_PROPERTIES } from "./css-properties.js";
 
@@ -35,6 +36,8 @@ export interface StyleDeclaration {
 
 interface StyleDeclarationsProps {
   readonly declarations: readonly StyleDeclaration[];
+  /** Theme tokens, for the per-property token picker on token-valued rows. */
+  readonly tokens: ThemeTokens;
   /** Set a property's raw value, or clear it with `null`. */
   readonly onChange: (property: string, value: StyleValue | null) => void;
   /** Rename a property in place, keeping its value. */
@@ -43,12 +46,13 @@ interface StyleDeclarationsProps {
 
 /**
  * The compiled list of every declaration in the active bucket — the escape
- * hatch that mirrors what the structured controls write. Raw declarations are
- * editable inline; token declarations (set via a control's token mode) show
- * their token id read-only, since their value lives in the theme.
+ * hatch that mirrors what the structured controls write. Raw declarations edit
+ * as a text value; token declarations edit through an inline token picker of
+ * the property's theme scale.
  */
 export function StyleDeclarations({
   declarations,
+  tokens,
   onChange,
   onRename,
 }: StyleDeclarationsProps): ReactElement {
@@ -61,6 +65,7 @@ export function StyleDeclarations({
           property={property}
           value={value}
           siblingKeys={keys}
+          tokens={tokens}
           onChange={onChange}
           onRename={onRename}
         />
@@ -82,22 +87,26 @@ export function StyleDeclarations({
 }
 
 /** One declaration row: an editable property name (renamed on commit), the raw
- *  value input (or read-only token id), and a remove button. Keyed by property
- *  in the parent, so the draft re-inits when the row's identity changes. */
+ *  value input (or a token picker), and a remove button. Keyed by property in
+ *  the parent, so the draft re-inits when the row's identity changes. */
 function DeclarationRow({
   property,
   value,
   siblingKeys,
+  tokens,
   onChange,
   onRename,
 }: {
   readonly property: string;
   readonly value: StyleValue;
   readonly siblingKeys: readonly string[];
+  readonly tokens: ThemeTokens;
   readonly onChange: (property: string, value: StyleValue | null) => void;
   readonly onRename: (from: string, to: string) => void;
 }): ReactElement {
   const [keyDraft, setKeyDraft] = useState(property);
+  const category = tokenCategoryForProperty(property);
+  const tokenGroup = category ? (tokens[category] ?? {}) : {};
 
   const commitRename = (): void => {
     const next = keyDraft.trim();
@@ -135,12 +144,30 @@ function DeclarationRow({
           onChange={(e) => onChange(property, { raw: e.target.value })}
         />
       ) : (
-        <span
-          className="text-muted-foreground flex-1 truncate text-xs italic"
+        <select
+          className="border-input flex h-8 w-full rounded-md border bg-transparent px-2 text-sm"
           data-testid={`style-declaration-${property}-token`}
+          value={value.token}
+          onChange={(e) =>
+            onChange(
+              property,
+              e.target.value === "" ? null : { token: e.target.value },
+            )
+          }
         >
-          {value.token}
-        </span>
+          <option value="">—</option>
+          {/* Keep an unknown token (stale id, or a property with no token
+              scale) visible + selected — a controlled select with no matching
+              option would render blank, hiding the stored value. */}
+          {value.token !== "" && !(value.token in tokenGroup) ? (
+            <option value={value.token}>{value.token}</option>
+          ) : null}
+          {Object.keys(tokenGroup).map((id) => (
+            <option key={id} value={id}>
+              {tokenGroup[id]?.label ?? id}
+            </option>
+          ))}
+        </select>
       )}
       <Button
         type="button"
