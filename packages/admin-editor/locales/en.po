@@ -69,6 +69,11 @@ msgid "editor.styles.align.right"
 msgstr "Align right"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.all"
+msgstr "All styles"
+
+#. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.header.back"
 msgstr "Back"
@@ -179,6 +184,11 @@ msgid "editor.page.empty"
 msgstr "No document settings."
 
 #. js-lingui-explicit-id
+#: src/style-declarations.tsx
+msgid "editor.styles.none"
+msgstr "No styles set for this device."
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.padding"
 msgstr "Padding"
@@ -217,6 +227,11 @@ msgstr "Redo"
 #: src/block-inspector.tsx
 msgid "editor.inspector.refreshData"
 msgstr "Refresh data"
+
+#. js-lingui-explicit-id
+#: src/style-declarations.tsx
+msgid "editor.styles.remove"
+msgstr "Remove"
 
 #. js-lingui-explicit-id
 #: src/block-catalog-tab.tsx

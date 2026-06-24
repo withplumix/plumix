@@ -22,10 +22,12 @@ import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import { normalizeStyleValue } from "@plumix/blocks";
 
 import type { StyleBucket } from "./store.js";
+import type { StyleDeclaration } from "./style-declarations.js";
 import { findBlock } from "./block-tree-ops.js";
 import { useEditorStore } from "./provider.js";
 import { deviceBucket } from "./store.js";
 import { StyleControl } from "./style-control.js";
+import { StyleDeclarations } from "./style-declarations.js";
 
 interface StylesTabProps {
   readonly tokens: ThemeTokens;
@@ -84,7 +86,7 @@ const SECTIONS: readonly {
   },
 ];
 
-const SECTION_IDS = [...SECTIONS.map((s) => s.id), "spacing"];
+const SECTION_IDS = [...SECTIONS.map((s) => s.id), "spacing", "declarations"];
 
 /**
  * Right-rail Styles tab: collapsible sections of token-or-custom controls plus a
@@ -114,6 +116,12 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
   const current = block.style?.[bucket];
   const valueOf = (property: string): StyleValue | undefined =>
     normalizeStyleValue(current?.[property]) ?? undefined;
+  const declarations: StyleDeclaration[] = Object.entries(
+    current ?? {},
+  ).flatMap(([property, stored]) => {
+    const value = normalizeStyleValue(stored);
+    return value ? [{ property, value }] : [];
+  });
   const setter =
     (property: string) =>
     (value: StyleValue | null): void =>
@@ -160,6 +168,17 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
               tokens={tokens}
               valueOf={valueOf}
               setter={setter}
+            />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="declarations">
+          <AccordionTrigger data-testid="styles-section-declarations">
+            <Trans id="editor.styles.all" message="All styles" />
+          </AccordionTrigger>
+          <AccordionContent>
+            <StyleDeclarations
+              declarations={declarations}
+              onChange={(property, value) => setter(property)(value)}
             />
           </AccordionContent>
         </AccordionItem>
