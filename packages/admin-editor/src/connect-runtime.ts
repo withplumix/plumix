@@ -33,6 +33,9 @@ export interface RuntimeConnection {
   /** Forward a canvas-view key (space / shift+digit) so the host's pan +
    *  zoom shortcuts work while the iframe holds focus. */
   readonly reportKey: (down: boolean, code: string, shiftKey: boolean) => void;
+  /** An in-canvas "Add a block" affordance was clicked — root (no args) or an
+   *  empty slot. The host resolves the insert. */
+  readonly reportRequestAdd: (parentId?: string, slotKey?: string) => void;
   readonly dispose: () => void;
 }
 
@@ -45,6 +48,8 @@ interface ConnectRuntimeOptions {
   readonly onTree: (tree: readonly BlockNode[]) => void;
   /** Called with a scoped refresh's re-resolved loader data (node-keyed). */
   readonly onLoaderData?: (data: SerializedLoaderData) => void;
+  /** Called with the host's resolved canvas chrome (e.g. localized labels). */
+  readonly onConfig?: (config: { readonly addBlockLabel: string }) => void;
 }
 
 /**
@@ -58,6 +63,7 @@ export function connectRuntime({
   origin,
   onTree,
   onLoaderData,
+  onConfig,
 }: ConnectRuntimeOptions): RuntimeConnection {
   const post = (message: object): void => {
     parentWindow.postMessage(encode(EDITOR_BRIDGE_CHANNEL, message), origin);
@@ -91,6 +97,9 @@ export function connectRuntime({
       case "host:loader-data":
         onLoaderData?.(host.data);
         break;
+      case "host:config":
+        onConfig?.({ addBlockLabel: host.addBlockLabel });
+        break;
     }
   };
 
@@ -123,6 +132,12 @@ export function connectRuntime({
         down,
         code,
         shiftKey,
+      } satisfies CanvasMessage),
+    reportRequestAdd: (parentId, slotKey) =>
+      post({
+        type: "canvas:requestAdd",
+        ...(parentId !== undefined && { parentId }),
+        ...(slotKey !== undefined && { slotKey }),
       } satisfies CanvasMessage),
     dispose: () => window.removeEventListener("message", onMessage),
   };

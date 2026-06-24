@@ -2,7 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 import { Profiler, useEffect } from "react";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
-import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { BlockNode, BlockSpec } from "@plumix/blocks";
@@ -221,8 +221,8 @@ describe("CanvasFrame", () => {
     }
   });
 
-  test("empty-state affordance inserts the first catalog block", () => {
-    const { getByTestId, queryByTestId } = render(
+  test("an in-canvas add request inserts the first catalog block at the root", () => {
+    const { getByTestId } = render(
       <Wrapper>
         <CanvasFrame
           previewUrl="about:blank"
@@ -235,10 +235,11 @@ describe("CanvasFrame", () => {
     );
 
     expect(getByTestId("tree-probe").textContent).toBe("");
-    fireEvent.click(getByTestId("plumix-empty-add"));
+    // The empty-document appender lives in the canvas; clicking it forwards a
+    // requestAdd over the bridge, which the host resolves into a top-level
+    // insert.
+    fromCanvas({ type: "canvas:requestAdd" });
     expect(getByTestId("tree-probe").textContent).toBe("core/heading");
-    // Affordance disappears once the canvas is no longer empty.
-    expect(queryByTestId("plumix-empty-add")).toBeNull();
   });
 });
 
@@ -326,6 +327,22 @@ describe("CanvasFrame nested drop", () => {
     renderWith([{ id: "g1", name: "core/group", attrs: { content: [] } }]);
 
     dragInto("g1", "content");
+
+    const content = storeApi?.getState().tree[0]?.attrs?.content as
+      | readonly BlockNode[]
+      | undefined;
+    expect(content?.map((n) => n.name)).toEqual(["core/heading"]);
+  });
+
+  test("an in-canvas add request inserts into an empty slot", () => {
+    renderWith([{ id: "g1", name: "core/group", attrs: { content: [] } }]);
+
+    // The empty slot's in-canvas appender forwards a slot-scoped requestAdd.
+    fromCanvas({
+      type: "canvas:requestAdd",
+      parentId: "g1",
+      slotKey: "content",
+    });
 
     const content = storeApi?.getState().tree[0]?.attrs?.content as
       | readonly BlockNode[]

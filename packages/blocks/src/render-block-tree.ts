@@ -14,6 +14,7 @@ import type {
   ThemeBreakpoints,
 } from "./styles/style-emitter.js";
 import type { ThemeTokens } from "./styles/types.js";
+import { editAppender } from "./edit-appender.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
 
 const PATTERN_REF_BLOCK = "core/pattern-ref";
@@ -80,6 +81,10 @@ export interface RenderBlockTreeOptions {
   readonly entry?: Readonly<Record<string, unknown>> | null;
   /** Edit mode: tag each block wrapper with `data-plumix-id` for canvas selection. */
   readonly editing?: boolean;
+  /** Localized "Add a block" label for the edit-mode empty-slot affordance.
+   *  The host resolves it (it owns Lingui) and passes it in; the canvas has no
+   *  i18n runtime. Defaults to English inside `editAppender` when absent. */
+  readonly addBlockLabel?: string;
 }
 
 /** Editor/style seam attributes a block spreads onto its root element when it
@@ -167,40 +172,64 @@ function materializeSlots(
 ): Readonly<Record<string, unknown>> {
   const attrs = node.attrs ?? {};
   const inputs = env.registry.get(node.name)?.inputs;
-  let materialized: Record<string, unknown> | undefined;
+
+  // Slots to materialize: any attr that already holds a child array, plus —
+  // when editing — every declared slot input even if unset, so an empty slot
+  // still renders its placeholder + "Add a block" affordance. Outside edit
+  // mode an unset slot stays absent, keeping SSR output byte-identical.
+  const slotKeys = new Set<string>();
   for (const [key, value] of Object.entries(attrs)) {
-    if (isBlockNodeArray(value)) {
-      materialized ??= { ...attrs };
-      const children = value;
-      // A raw slot renders children directly — its drop-target wrapper would be
-      // invalid HTML in the parent (e.g. a `<div>` inside `<table>`/`<tr>`).
-      const rawSlot = inputs?.find((i) => i.name === key)?.rawSlot === true;
-      materialized[key] = function SlotComponent() {
-        const rendered = renderNodes(children, env, childContext);
-        if (!env.editing || rawSlot) return rendered;
-        // Tag the slot so the canvas can resolve a nested drop to it. The
-        // wrapper is display:contents — zero layout impact, the children flow
-        // as if it weren't there. Parent id + slot key are separate attrs (not
-        // one delimited string) so an id never needs charset-escaping. An empty
-        // slot gets a min-height placeholder so it stays a measurable target.
-        return createElement(
-          "div",
-          {
-            "data-plumix-slot-parent": node.id,
-            "data-plumix-slot-key": key,
-            style: { display: "contents" },
-          },
-          children.length > 0
-            ? rendered
-            : createElement("div", {
-                "data-plumix-slot-empty": "",
-                style: { minHeight: "2rem" },
-              }),
-        );
-      };
+    if (isBlockNodeArray(value)) slotKeys.add(key);
+  }
+  if (env.editing) {
+    for (const input of inputs ?? []) {
+      if (input.type === "slot" && input.rawSlot !== true)
+        slotKeys.add(input.name);
     }
   }
-  return materialized ?? attrs;
+  if (slotKeys.size === 0) return attrs;
+
+  const materialized: Record<string, unknown> = { ...attrs };
+  for (const key of slotKeys) {
+    const value = attrs[key];
+    const children = isBlockNodeArray(value) ? value : [];
+    // A raw slot renders children directly — its drop-target wrapper would be
+    // invalid HTML in the parent (e.g. a `<div>` inside `<table>`/`<tr>`).
+    const rawSlot = inputs?.find((i) => i.name === key)?.rawSlot === true;
+    materialized[key] = function SlotComponent() {
+      const rendered = renderNodes(children, env, childContext);
+      if (!env.editing || rawSlot) return rendered;
+      // Tag the slot so the canvas can resolve a nested drop to it. The
+      // wrapper is display:contents — zero layout impact, the children flow
+      // as if it weren't there. Parent id + slot key are separate attrs (not
+      // one delimited string) so an id never needs charset-escaping. An empty
+      // slot gets a min-height placeholder so it stays a measurable target.
+      return createElement(
+        "div",
+        {
+          "data-plumix-slot-parent": node.id,
+          "data-plumix-slot-key": key,
+          style: { display: "contents" },
+        },
+        children.length > 0
+          ? rendered
+          : createElement(
+              "div",
+              {
+                "data-plumix-slot-empty": "",
+                style: { minHeight: "2rem", padding: "0.5rem" },
+              },
+              // An empty slot shows the same in-canvas "Add a block"
+              // affordance as the root — clicking it inserts into this slot.
+              editAppender(
+                { parentId: node.id, slotKey: key },
+                env.addBlockLabel,
+              ),
+            ),
+      );
+    };
+  }
+  return materialized;
 }
 
 interface WalkerEnv {
@@ -212,6 +241,7 @@ interface WalkerEnv {
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly patterns: PatternRegistry | undefined;
   readonly editing: boolean;
+  readonly addBlockLabel: string | undefined;
 }
 
 function renderNodes(
@@ -360,6 +390,7 @@ export function renderBlockTree(
     loaderData: options?.loaderData,
     patterns: options?.patterns,
     editing: options?.editing ?? false,
+    addBlockLabel: options?.addBlockLabel,
   };
   const rootContext: BlockContext = {
     ...DEFAULT_BLOCK_CONTEXT,

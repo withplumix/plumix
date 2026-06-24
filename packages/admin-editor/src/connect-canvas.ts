@@ -49,6 +49,14 @@ interface ConnectCanvasOptions {
     readonly code: string;
     readonly shiftKey: boolean;
   }) => void;
+  /** An in-canvas "Add a block" affordance was clicked — root or empty slot. */
+  readonly onRequestAdd?: (target: {
+    readonly parentId?: string;
+    readonly slotKey?: string;
+  }) => void;
+  /** Host-resolved canvas chrome (localized labels) pushed once the canvas is
+   *  ready. The canvas has no i18n runtime, so the host owns these strings. */
+  readonly config?: { readonly addBlockLabel: string };
 }
 
 // The iframe runtime usually boots after the parent mounts, so a single hello
@@ -66,6 +74,8 @@ export function connectCanvas({
   onGeometry,
   onWheel,
   onKey,
+  onRequestAdd,
+  config,
 }: ConnectCanvasOptions): CanvasConnection {
   const post = (message: object): void => {
     frameWindow.postMessage(encode(EDITOR_BRIDGE_CHANNEL, message), origin);
@@ -77,6 +87,15 @@ export function connectCanvas({
       type: "host:tree",
       tree: store.getState().tree,
     } satisfies HostMessage);
+  };
+
+  const pushConfig = (): void => {
+    if (config) {
+      post({
+        type: "host:config",
+        addBlockLabel: config.addBlockLabel,
+      } satisfies HostMessage);
+    }
   };
 
   const onMessage = (event: MessageEvent): void => {
@@ -94,6 +113,7 @@ export function connectCanvas({
     const canvas = message as CanvasMessage;
     switch (canvas.type) {
       case "canvas:ready":
+        pushConfig();
         pushTree();
         break;
       case "canvas:select":
@@ -120,6 +140,9 @@ export function connectCanvas({
           code: canvas.code,
           shiftKey: canvas.shiftKey,
         });
+        break;
+      case "canvas:requestAdd":
+        onRequestAdd?.({ parentId: canvas.parentId, slotKey: canvas.slotKey });
         break;
     }
   };

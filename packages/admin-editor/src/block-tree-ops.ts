@@ -185,7 +185,10 @@ export function moveBlock(
 }
 
 // Whether `target` names a real slot on a real parent. The top level always
-// exists; a nested target needs the parent present with that slot as an array.
+// exists; a nested target needs the parent present and the slot either already
+// populated or unset — an unset declared slot is simply empty, and insertNode
+// creates its array. A non-array value (a scalar attr) is never a slot. Callers
+// resolve `slotKey` from the registry/geometry, so it always names a real slot.
 function slotTargetExists(
   tree: readonly BlockNode[],
   target: MoveTarget,
@@ -194,7 +197,9 @@ function slotTargetExists(
   const parent = findBlock(tree, target.parentId);
   if (!parent) return false;
   const key = target.slotKey ?? slotKey(parent);
-  return key !== null && isBlockNodeArray(parent.attrs?.[key]);
+  if (key === null) return false;
+  const value = parent.attrs?.[key];
+  return value === undefined || isBlockNodeArray(value);
 }
 
 /**
@@ -370,8 +375,9 @@ function insertNode(
       const key = target.slotKey ?? slotKey(current);
       if (key === null) return current;
       const slot = current.attrs?.[key];
-      if (!isBlockNodeArray(slot)) return current;
-      const children = slot;
+      // A scalar attr is never a slot; an unset slot starts empty.
+      if (slot !== undefined && !isBlockNodeArray(slot)) return current;
+      const children = isBlockNodeArray(slot) ? slot : [];
       const at = clampIndex(target.index, children.length);
       return {
         ...current,
