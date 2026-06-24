@@ -15,8 +15,8 @@ beforeAll(() => {
 afterEach(cleanup);
 
 const tokens: ThemeTokens = {
-  spacing: { lg: { value: "24px" } },
-  typography: { lg: { value: "20px" } },
+  spacing: { lg: { value: "24px" }, sm: { value: "8px" } },
+  typography: { lg: { value: "20px" }, sm: { value: "14px" } },
 };
 
 function StyleProbe({ id }: { readonly id: string }): ReactElement {
@@ -24,8 +24,12 @@ function StyleProbe({ id }: { readonly id: string }): ReactElement {
   return <output data-testid="style-probe">{JSON.stringify(style)}</output>;
 }
 
-function renderTab(tree: readonly BlockNode[], activeId?: string) {
-  return render(
+function renderTab(
+  tree: readonly BlockNode[],
+  activeId?: string,
+  { expandCss = true }: { readonly expandCss?: boolean } = {},
+) {
+  const utils = render(
     <I18nProvider i18n={i18n}>
       <EditorProvider initialTree={tree}>
         <ActiveSeed activeId={activeId} />
@@ -34,6 +38,12 @@ function renderTab(tree: readonly BlockNode[], activeId?: string) {
       </EditorProvider>
     </I18nProvider>,
   );
+  // The raw-CSS "declarations" section is collapsed by default; open it so its
+  // content is queryable. Tests asserting the default pass `expandCss: false`.
+  if (activeId && expandCss) {
+    fireEvent.click(utils.getByTestId("styles-section-declarations"));
+  }
+  return utils;
 }
 
 function ActiveSeed({ activeId }: { readonly activeId?: string }): null {
@@ -125,6 +135,15 @@ describe("StylesTab — declarations list", () => {
     style: { large: { color: { raw: "#0c2238" } } },
   };
 
+  test("keeps the CSS section collapsed by default (dev escape hatch)", () => {
+    const { getByTestId, queryByTestId } = renderTab([styled], "a", {
+      expandCss: false,
+    });
+    // The section trigger renders, but its content stays unmounted until opened.
+    expect(getByTestId("styles-section-declarations")).toBeDefined();
+    expect(queryByTestId("style-declaration-color-key")).toBeNull();
+  });
+
   test("lists each declaration in the active bucket with its raw value", () => {
     const { getByTestId } = renderTab([styled], "a");
     const value = getByTestId(
@@ -204,17 +223,67 @@ describe("StylesTab — declarations list", () => {
     expect(getByTestId("style-probe").textContent).toBe("");
   });
 
-  test("a token declaration shows its token id read-only (value lives in theme)", () => {
-    const tokenStyled: BlockNode = {
+  const fontToken: BlockNode = {
+    id: "a",
+    name: "core/x",
+    style: { large: { fontFamily: { token: "lg" } } },
+  };
+
+  test("a token declaration renders a token picker, no raw value input", () => {
+    const { getByTestId, queryByTestId } = renderTab([fontToken], "a");
+    const picker = getByTestId(
+      "style-declaration-fontFamily-token",
+    ) as HTMLSelectElement;
+    expect(picker.value).toBe("lg");
+    // The category's tokens are the options; raw input is absent for a token row.
+    const options = [...picker.options].map((o) => o.value);
+    expect(options).toContain("lg");
+    expect(options).toContain("sm");
+    expect(queryByTestId("style-declaration-fontFamily-value")).toBeNull();
+  });
+
+  test("displays the chosen token as its CSS variable reference", () => {
+    const { getByTestId } = renderTab([fontToken], "a");
+    const picker = getByTestId(
+      "style-declaration-fontFamily-token",
+    ) as HTMLSelectElement;
+    // The selected option reads as the emitted var(), not the label or literal.
+    expect(picker.options[picker.selectedIndex]?.text).toBe(
+      "var(--plumix-typography-lg)",
+    );
+  });
+
+  test("changing the token picker writes the new token", () => {
+    const { getByTestId } = renderTab([fontToken], "a");
+    fireEvent.change(getByTestId("style-declaration-fontFamily-token"), {
+      target: { value: "sm" },
+    });
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"fontFamily":{"token":"sm"}',
+    );
+  });
+
+  test("keeps an unknown token visible and selected in the picker", () => {
+    const ghost: BlockNode = {
       id: "a",
       name: "core/x",
-      style: { large: { color: { token: "primary" } } },
+      style: { large: { fontFamily: { token: "ghost" } } },
     };
-    const { getByTestId, queryByTestId } = renderTab([tokenStyled], "a");
-    expect(getByTestId("style-declaration-color-token").textContent).toBe(
-      "primary",
-    );
-    expect(queryByTestId("style-declaration-color-value")).toBeNull();
+    const { getByTestId } = renderTab([ghost], "a");
+    const picker = getByTestId(
+      "style-declaration-fontFamily-token",
+    ) as HTMLSelectElement;
+    // "ghost" isn't in the theme, but the select still shows it (not blank).
+    expect(picker.value).toBe("ghost");
+    expect([...picker.options].map((o) => o.value)).toContain("ghost");
+  });
+
+  test("clearing the token picker removes the declaration", () => {
+    const { getByTestId } = renderTab([fontToken], "a");
+    fireEvent.change(getByTestId("style-declaration-fontFamily-token"), {
+      target: { value: "" },
+    });
+    expect(getByTestId("style-probe").textContent).toBe("");
   });
 
   test("shows an empty hint when the block has no styles for the device", () => {

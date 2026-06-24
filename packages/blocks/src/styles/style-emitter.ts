@@ -59,6 +59,15 @@ const PROPERTY_TO_CATEGORY: Readonly<Record<string, TokenCategory>> = {
   boxShadow: "shadow",
 };
 
+/** The token category a property reads from (e.g. `marginTop` → `spacing`), or
+ *  `undefined` for a property with no token scale. The editor uses this to offer
+ *  the right token picker for a declaration. */
+export function tokenCategoryForProperty(
+  property: string,
+): TokenCategory | undefined {
+  return PROPERTY_TO_CATEGORY[property];
+}
+
 const SAFE_CSS_TOKEN_RE = /^[A-Za-z0-9_-]+$/;
 
 export const VIEWPORT_MAX_PX: Readonly<Record<"medium" | "small", number>> = {
@@ -88,12 +97,18 @@ export function tokenIdToCssVar(
   category: TokenCategory,
   tokens: ThemeTokens,
 ): string {
-  const cssVar = `--plumix-${categoryToSegment(category)}-${id}`;
   const entry = tokens[category]?.[id];
   if (entry?.value !== undefined) {
-    return `var(${cssVar}, ${entry.value})`;
+    return `var(--plumix-${categoryToSegment(category)}-${id}, ${entry.value})`;
   }
-  return `var(${cssVar})`;
+  return tokenCssVar(id, category);
+}
+
+/** The bare CSS variable reference for a token — `var(--plumix-color-primary)`,
+ *  no resolved fallback. The editor shows this as a token declaration's value so
+ *  the list reads like the emitted CSS rather than the literal it resolves to. */
+export function tokenCssVar(id: string, category: TokenCategory): string {
+  return `var(--plumix-${categoryToSegment(category)}-${id})`;
 }
 
 export function emitBlockStyleCss(

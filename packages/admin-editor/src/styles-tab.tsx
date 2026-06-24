@@ -86,7 +86,9 @@ const SECTIONS: readonly {
   },
 ];
 
-const SECTION_IDS = [...SECTIONS.map((s) => s.id), "spacing", "declarations"];
+// The visual sections open by default; the raw-CSS "declarations" section is a
+// dev-facing escape hatch, so it starts collapsed.
+const SECTION_IDS = [...SECTIONS.map((s) => s.id), "spacing"];
 
 /**
  * Right-rail Styles tab: collapsible sections of token-or-custom controls plus a
@@ -176,11 +178,12 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
         </AccordionItem>
         <AccordionItem value="declarations">
           <AccordionTrigger data-testid="styles-section-declarations">
-            <Trans id="editor.styles.all" message="All styles" />
+            <Trans id="editor.styles.css" message="CSS" />
           </AccordionTrigger>
           <AccordionContent>
             <StyleDeclarations
               declarations={declarations}
+              tokens={tokens}
               onChange={(property, value) => setter(property)(value)}
               onRename={(from, to) =>
                 renameBlockStyleProperty(activeId, bucket, from, to)
