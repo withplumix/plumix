@@ -104,6 +104,11 @@ msgid "editor.styles.mark.bold"
 msgstr "Bold"
 
 #. js-lingui-explicit-id
+#: src/style-declarations.tsx
+msgid "editor.styles.add.create"
+msgstr "Create"
+
+#. js-lingui-explicit-id
 #: src/style-control.tsx
 msgid "editor.styles.mode.custom"
 msgstr "Custom"
@@ -190,6 +195,11 @@ msgstr "No document settings."
 
 #. js-lingui-explicit-id
 #: src/style-declarations.tsx
+msgid "editor.styles.add.none"
+msgstr "No property."
+
+#. js-lingui-explicit-id
+#: src/style-declarations.tsx
 msgid "editor.styles.none"
 msgstr "No styles set for this device."
 
@@ -247,6 +257,11 @@ msgstr "Remove"
 #: src/block-catalog-tab.tsx
 msgid "editor.catalog.searchLabel"
 msgstr "Search blocks"
+
+#. js-lingui-explicit-id
+#: src/style-declarations.tsx
+msgid "editor.styles.add.search"
+msgstr "Search property…"
 
 #. js-lingui-explicit-id
 #: src/block-inspector.tsx
