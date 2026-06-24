@@ -54,6 +54,11 @@ msgid "editor.canvas.addBlock"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/style-declarations.tsx
+msgid "editor.styles.add"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.align.center"
 msgstr ""
@@ -214,6 +219,11 @@ msgid "editor.header.preview"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/style-declarations.tsx
+msgid "editor.styles.add.key"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.toolbar.publish"
 msgstr ""
@@ -311,6 +321,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.header.untitled"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/style-declarations.tsx
+msgid "editor.styles.add.value"
 msgstr ""
 
 #. js-lingui-explicit-id

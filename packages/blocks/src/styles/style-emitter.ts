@@ -157,6 +157,9 @@ function declarationValue(
 }
 
 function propertyToCss(property: string): string {
+  // CSS custom properties are case-sensitive (`--brandColor` ≠ `--brand-color`),
+  // so pass them through verbatim; only camelCase standard props get kebab-cased.
+  if (property.startsWith("--")) return property;
   return property.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
 }
 
