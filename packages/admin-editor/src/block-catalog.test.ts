@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode, BlockPattern, BlockSpec } from "@plumix/blocks";
-import { createBlockRegistry } from "@plumix/blocks";
+import { columnsBlock, createBlockRegistry } from "@plumix/blocks";
 
 import {
   createNodeFromEntry,
@@ -109,6 +109,57 @@ describe("groupInsertables", () => {
       }).flatMap((g) => g.entries.map((e) => e.slug)),
     ).toEqual(["core/secret"]);
   });
+
+  test("restricts to allowed block names when an allow-list is given", () => {
+    const registry = createBlockRegistry([
+      spec({ name: "core/heading", category: "text", title: "Heading" }),
+      spec({ name: "core/quote", category: "text", title: "Quote" }),
+      spec({ name: "core/spacer", category: "layout", title: "Spacer" }),
+    ]);
+
+    const slugs = groupInsertables(registry, {
+      capabilities: NO_CAPS,
+      allowed: ["core/heading", "core/spacer"],
+    }).flatMap((g) => g.entries.map((e) => e.name));
+
+    expect(slugs).toEqual(["core/heading", "core/spacer"]);
+  });
+
+  test("hides requiresParent blocks unless the target parent matches", () => {
+    const registry = createBlockRegistry([
+      spec({ name: "core/heading", category: "text", title: "Heading" }),
+      spec({
+        name: "core/button",
+        category: "interactive",
+        title: "Button",
+        requiresParent: ["core/buttons"],
+      }),
+    ]);
+    const names = (parentName?: string): readonly string[] =>
+      groupInsertables(registry, { capabilities: NO_CAPS, parentName }).flatMap(
+        (g) => g.entries.map((e) => e.name),
+      );
+
+    // Root inserter (no parent) hides the parent-bound button.
+    expect(names()).toEqual(["core/heading"]);
+    // Offered only when scoped to a matching parent.
+    expect(names("core/buttons")).toContain("core/button");
+    expect(names("core/group")).not.toContain("core/button");
+  });
+
+  test("an undefined allow-list permits every eligible block", () => {
+    const registry = createBlockRegistry([
+      spec({ name: "core/heading", category: "text", title: "Heading" }),
+      spec({ name: "core/quote", category: "text", title: "Quote" }),
+    ]);
+
+    const slugs = groupInsertables(registry, {
+      capabilities: NO_CAPS,
+      allowed: undefined,
+    }).flatMap((g) => g.entries.map((e) => e.name));
+
+    expect(slugs).toEqual(["core/heading", "core/quote"]);
+  });
 });
 
 describe("filterPatterns", () => {
@@ -167,6 +218,78 @@ describe("createNodeFromEntry", () => {
     expect(a.id).not.toBe("seed");
     expect(a.id.length).toBeGreaterThan(0);
     expect(a.id).not.toBe(b.id);
+  });
+
+  test("seeds a slot's defaultChildren so a fresh container isn't bare", () => {
+    const seeded = createBlockRegistry([
+      spec({
+        name: "core/columns",
+        category: "layout",
+        inputs: [
+          {
+            name: "left",
+            type: "slot",
+            defaultChildren: [{ id: "d1", name: "core/rich-text" }],
+          },
+          { name: "right", type: "slot" },
+        ],
+      }),
+    ]);
+
+    const node = createNodeFromEntry(seeded, {
+      name: "core/columns",
+      slug: "core/columns",
+      title: "Columns",
+    });
+
+    const left = node.attrs?.left as readonly BlockNode[];
+    expect(left.map((n) => n.name)).toEqual(["core/rich-text"]);
+    // Freshly minted id, not the spec's template id.
+    expect(left[0]?.id).not.toBe("d1");
+    // A slot with no default stays absent (the empty-slot appender covers it).
+    expect(node.attrs?.right).toBeUndefined();
+  });
+
+  test("the core/columns block seeds a paragraph into each column", () => {
+    const reg = createBlockRegistry([columnsBlock]);
+    const node = createNodeFromEntry(reg, {
+      name: "core/columns",
+      slug: "core/columns",
+      title: "Columns",
+    });
+    expect(
+      (node.attrs?.left as readonly BlockNode[]).map((n) => n.name),
+    ).toEqual(["core/rich-text"]);
+    expect(
+      (node.attrs?.right as readonly BlockNode[]).map((n) => n.name),
+    ).toEqual(["core/rich-text"]);
+  });
+
+  test("an explicit slot value wins over the slot's defaultChildren", () => {
+    const seeded = createBlockRegistry([
+      spec({
+        name: "core/columns",
+        category: "layout",
+        inputs: [
+          {
+            name: "left",
+            type: "slot",
+            defaultChildren: [{ id: "d1", name: "core/rich-text" }],
+          },
+        ],
+      }),
+    ]);
+
+    const node = createNodeFromEntry(seeded, {
+      name: "core/columns",
+      slug: "core/columns",
+      title: "Columns",
+      attrs: { left: [{ id: "x", name: "core/heading" }] },
+    });
+
+    expect(
+      (node.attrs?.left as readonly BlockNode[]).map((n) => n.name),
+    ).toEqual(["core/heading"]);
   });
 });
 

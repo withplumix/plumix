@@ -10,14 +10,16 @@ import { useLingui } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/blocks";
 import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@plumix/admin-ui/popover";
 
 import type { View } from "./canvas-view.js";
 import type { FrameOffset, OverlayBox } from "./overlay.js";
-import {
-  createNodeFromEntry,
-  groupInsertables,
-  slotAllowedBlocks,
-} from "./block-catalog.js";
+import { BlockCatalog } from "./block-catalog-tab.js";
+import { createNodeFromEntry, slotAllowedBlocks } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
 import {
   clampPanToFrame,
@@ -141,6 +143,17 @@ export function CanvasFrame({
   >(null);
   const [dropY, setDropY] = useState<number | null>(null);
   const [dropSlot, setDropSlot] = useState<SlotDrop | null>(null);
+  // The in-canvas "Add a block" affordance opens a slot-scoped inserter popover
+  // instead of inserting a default. Null when closed; an empty target (no
+  // parentId/slotKey) is the root document.
+  const [pendingAdd, setPendingAdd] = useState<{
+    readonly parentId?: string;
+    readonly slotKey?: string;
+  } | null>(null);
+  // A transient "can't place here" notice (a refused `requiresParent` drop).
+  // The editor has no toast surface of its own, so it shows inline and clears
+  // itself after a moment.
+  const [rejection, setRejection] = useState<string | null>(null);
   // The iframe's own document height (same-origin), so the frame sizes to its
   // content — footer visible, no fixed gap below it.
   const [contentHeight, setContentHeight] = useState<number | null>(null);
@@ -272,39 +285,14 @@ export function CanvasFrame({
     [applyLive],
   );
 
-  // Insert the first insertable block at the top level (empty-document add).
-  const addFirstBlock = useCallback((): void => {
-    const [group] = groupInsertables(registry, { capabilities });
-    const entry = group?.entries[0];
-    if (entry) {
-      store.getState().insertBlock(createNodeFromEntry(registry, entry), 0);
-    }
-  }, [registry, capabilities, store]);
-
-  // Resolve an in-canvas "Add a block" click: root (no target) inserts at the
-  // top level; an empty slot inserts the first block its allowedBlocks permits.
+  // An in-canvas "Add a block" click opens the slot-scoped inserter popover
+  // rather than inserting a default — the author picks the block. Root has no
+  // parentId/slotKey; a slot carries both.
   const requestAdd = useCallback(
     (parentId?: string, slotKey?: string): void => {
-      if (!parentId || !slotKey) {
-        addFirstBlock();
-        return;
-      }
-      const parent = findBlock(store.getState().tree, parentId);
-      if (!parent) return;
-      const allowed = slotAllowedBlocks(registry, parent.name, slotKey);
-      const entry = groupInsertables(registry, { capabilities })
-        .flatMap((g) => g.entries)
-        .find((e) => !allowed || allowed.includes(e.name));
-      if (!entry) return;
-      store
-        .getState()
-        .insertBlockInto(
-          createNodeFromEntry(registry, entry),
-          { parentId, slotKey, index: Number.MAX_SAFE_INTEGER },
-          allowed,
-        );
+      setPendingAdd({ parentId, slotKey });
     },
-    [registry, capabilities, store, addFirstBlock],
+    [],
   );
 
   useEffect(() => {
@@ -580,12 +568,6 @@ export function CanvasFrame({
       if (dragSpec) store.getState().endBlockDrag();
       else store.getState().endMove();
     };
-    const allowedForSlot = (slot: SlotDrop): readonly string[] | undefined => {
-      const parent = findBlock(store.getState().tree, slot.parentId);
-      return parent
-        ? slotAllowedBlocks(registry, parent.name, slot.slotKey)
-        : undefined;
-    };
 
     const placementAt = (clientX: number, clientY: number) => {
       const rect = iframe.getBoundingClientRect();
@@ -650,8 +632,26 @@ export function CanvasFrame({
       );
     };
     const onUp = (e: PointerEvent): void => {
+      // A `requiresParent` block is refused unless the parent it would land
+      // under (a slot's parent, or none at the top level) is in its list.
+      const req = registry.get(draggingName)?.requiresParent;
+      const refuse = (): void => {
+        setRejection(
+          i18n._({
+            id: "editor.canvas.cantPlaceHere",
+            message: "This block can't be placed here.",
+          }),
+        );
+        endDrag();
+      };
+
       const slot = slotTargetAt(e.clientX, e.clientY);
       if (slot) {
+        const parent = findBlock(store.getState().tree, slot.parentId);
+        if (req && (!parent || !req.includes(parent.name))) {
+          refuse();
+          return;
+        }
         // Nested drops append (a sentinel index that insertNode/moveBlock clamp
         // to the slot length).
         const target = {
@@ -659,7 +659,9 @@ export function CanvasFrame({
           slotKey: slot.slotKey,
           index: Number.MAX_SAFE_INTEGER,
         };
-        const allowed = allowedForSlot(slot);
+        const allowed = parent
+          ? slotAllowedBlocks(registry, parent.name, slot.slotKey)
+          : undefined;
         if (dragSpec) {
           store
             .getState()
@@ -674,6 +676,11 @@ export function CanvasFrame({
       } else {
         const placement = placementAt(e.clientX, e.clientY);
         if (placement) {
+          // A `requiresParent` block can't live at the top level.
+          if (req) {
+            refuse();
+            return;
+          }
           if (dragSpec) {
             store
               .getState()
@@ -716,7 +723,14 @@ export function CanvasFrame({
       setDropY(null);
       setDropSlot(null);
     };
-  }, [dragSpec, movingId, store, registry]);
+  }, [dragSpec, movingId, store, registry, i18n]);
+
+  // Auto-dismiss the transient rejection notice.
+  useEffect(() => {
+    if (!rejection) return;
+    const t = setTimeout(() => setRejection(null), 2500);
+    return () => clearTimeout(t);
+  }, [rejection]);
 
   // Host-side wheel: pan/zoom when the cursor is over the margin around the
   // frame. Over the iframe the gesture is forwarded via the bridge (onWheel
@@ -775,6 +789,34 @@ export function CanvasFrame({
       />
     );
   };
+
+  // Inserter popover scope: a slot target carries both ids; the root document
+  // carries neither (no allow-list — every block is offered).
+  const pendingTarget =
+    pendingAdd?.parentId && pendingAdd.slotKey
+      ? { parentId: pendingAdd.parentId, slotKey: pendingAdd.slotKey }
+      : undefined;
+  const pendingParentName = pendingTarget
+    ? findBlock(store.getState().tree, pendingTarget.parentId)?.name
+    : undefined;
+  const pendingAllowed =
+    pendingTarget && pendingParentName
+      ? slotAllowedBlocks(registry, pendingParentName, pendingTarget.slotKey)
+      : undefined;
+  // Anchor the popover over the slot's on-screen box when we have its geometry;
+  // fall back to the canvas box (root add, or a slot not yet measured).
+  const pendingSlotRect =
+    pendingTarget && geometry.frame
+      ? geometry.slots.find(
+          (s) =>
+            s.parentId === pendingTarget.parentId &&
+            s.slotKey === pendingTarget.slotKey,
+        )
+      : undefined;
+  const pendingAnchor =
+    pendingSlotRect && geometry.frame
+      ? overlayBox(pendingSlotRect, geometry.frame, zoom)
+      : container;
 
   return (
     <div
@@ -889,6 +931,68 @@ export function CanvasFrame({
               }}
             />
           )}
+        </div>
+      )}
+
+      {/* Slot-scoped inserter: opened by the in-canvas "Add a block" affordance,
+          anchored over the slot, listing only that slot's permitted blocks. A
+          pick inserts into the slot (or at the root) and closes it. */}
+      {!readOnly && pendingAdd && (
+        <Popover
+          open
+          onOpenChange={(next) => {
+            if (!next) setPendingAdd(null);
+          }}
+        >
+          <PopoverAnchor
+            style={{
+              position: "fixed",
+              left: pendingAnchor?.left ?? 0,
+              top: pendingAnchor?.top ?? 0,
+              width: pendingAnchor?.width ?? 0,
+              height: pendingAnchor?.height ?? 0,
+              pointerEvents: "none",
+            }}
+          />
+          <PopoverContent
+            data-testid="plumix-inserter-popover"
+            align="start"
+            className="max-h-96 w-72 overflow-auto p-0"
+          >
+            <BlockCatalog
+              registry={registry}
+              capabilities={capabilities}
+              allowed={pendingAllowed}
+              parentName={pendingParentName}
+              target={pendingTarget}
+              onInsert={() => setPendingAdd(null)}
+            />
+          </PopoverContent>
+        </Popover>
+      )}
+
+      {/* Transient "can't place here" notice for a refused requiresParent drop;
+          the editor has no toast surface, so it shows inline. */}
+      {!readOnly && rejection && (
+        <div
+          role="status"
+          data-testid="plumix-add-rejection"
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: 16,
+            transform: "translateX(-50%)",
+            zIndex: 30,
+            padding: "0.5rem 0.75rem",
+            borderRadius: 8,
+            fontSize: "0.8125rem",
+            color: "var(--destructive-foreground, #fff)",
+            background: "var(--destructive, #dc2626)",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            pointerEvents: "none",
+          }}
+        >
+          {rejection}
         </div>
       )}
     </div>

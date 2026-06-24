@@ -28,6 +28,12 @@ interface BlockCatalogProps {
   readonly patterns?: readonly InserterPattern[];
   /** Called after any click-insert, so a host popover can close itself. */
   readonly onInsert?: () => void;
+  /** Restrict the listed blocks to a slot's `allowedBlocks`; omit for all. */
+  readonly allowed?: readonly string[];
+  /** Insert picks into this slot instead of appending at the top level. */
+  readonly target?: { readonly parentId: string; readonly slotKey: string };
+  /** The target slot's parent block name, for enforcing `requiresParent`. */
+  readonly parentName?: string;
 }
 
 /**
@@ -41,17 +47,22 @@ export function BlockCatalog({
   capabilities,
   patterns,
   onInsert,
+  allowed,
+  target,
+  parentName,
 }: BlockCatalogProps): ReactElement {
   const { i18n } = useLingui();
   const [query, setQuery] = useState("");
   const insertBlock = useEditorStore((s) => s.insertBlock);
+  const insertBlockInto = useEditorStore((s) => s.insertBlockInto);
   const insertBlocks = useEditorStore((s) => s.insertBlocks);
   const startBlockDrag = useEditorStore((s) => s.startBlockDrag);
   const treeLength = useEditorStore((s) => s.tree.length);
 
   const groups = useMemo(
-    () => groupInsertables(registry, { capabilities, query }),
-    [registry, capabilities, query],
+    () =>
+      groupInsertables(registry, { capabilities, query, allowed, parentName }),
+    [registry, capabilities, query, allowed, parentName],
   );
   const matchedPatterns = useMemo(
     () => filterPatterns(patterns ?? [], query),
@@ -59,7 +70,15 @@ export function BlockCatalog({
   );
 
   const insertEntry = (node: BlockNode): void => {
-    insertBlock(node, treeLength);
+    if (target) {
+      insertBlockInto(
+        node,
+        { ...target, index: Number.MAX_SAFE_INTEGER },
+        allowed,
+      );
+    } else {
+      insertBlock(node, treeLength);
+    }
     onInsert?.();
   };
   const insertPattern = (nodes: readonly BlockNode[]): void => {

@@ -207,6 +207,37 @@ test.describe("editor playground", () => {
     ).toBeAttached();
   });
 
+  test("the in-canvas appender opens a slot-scoped inserter that nests a pick", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    // Empty the seeded columns' left slot so its in-canvas appender appears.
+    await canvas.locator('[data-plumix-id="col-left"]').click();
+    await page.getByTestId("selection-toolbar-delete").click();
+    const appender = canvas.locator(
+      '[data-plumix-add][data-plumix-add-slot="left"]',
+    );
+    await expect(appender).toBeVisible();
+
+    // Clicking it opens the inserter popover (host-side, anchored to the slot)
+    // rather than silently inserting a default.
+    await appender.click();
+    const popover = page.getByTestId("plumix-inserter-popover");
+    await expect(popover).toBeVisible();
+
+    // Picking a block nests it into that column and closes the popover. The
+    // fresh heading is empty (no box), so assert attachment, not visibility.
+    await popover.getByTestId("block-catalog-item-core/heading").click();
+    await expect(popover).toBeHidden();
+    await expect(
+      canvas.locator(
+        '[data-plumix-column="left"] [data-plumix-block="core/heading"]',
+      ),
+    ).toBeAttached();
+  });
+
   test("dragging the toolbar handle reorders a top-level block", async ({
     page,
   }) => {

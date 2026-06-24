@@ -2,7 +2,13 @@ import type { ReactElement, ReactNode } from "react";
 import { Profiler, useEffect } from "react";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
-import { act, cleanup, render } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { BlockNode, BlockSpec } from "@plumix/blocks";
@@ -221,8 +227,8 @@ describe("CanvasFrame", () => {
     }
   });
 
-  test("an in-canvas add request inserts the first catalog block at the root", () => {
-    const { getByTestId } = render(
+  test("an in-canvas add request opens the inserter; a pick inserts at root", () => {
+    const { getByTestId, queryByTestId } = render(
       <Wrapper>
         <CanvasFrame
           previewUrl="about:blank"
@@ -235,11 +241,18 @@ describe("CanvasFrame", () => {
     );
 
     expect(getByTestId("tree-probe").textContent).toBe("");
-    // The empty-document appender lives in the canvas; clicking it forwards a
-    // requestAdd over the bridge, which the host resolves into a top-level
-    // insert.
+    // The empty-document appender forwards a root requestAdd, which opens the
+    // inserter popover rather than inserting anything yet.
     fromCanvas({ type: "canvas:requestAdd" });
+    expect(getByTestId("plumix-inserter-popover")).toBeDefined();
+    expect(getByTestId("tree-probe").textContent).toBe("");
+
+    // Picking a block inserts it at the top level and closes the popover.
+    act(() => {
+      fireEvent.click(getByTestId("block-catalog-item-core/heading"));
+    });
     expect(getByTestId("tree-probe").textContent).toBe("core/heading");
+    expect(queryByTestId("plumix-inserter-popover")).toBeNull();
   });
 });
 
@@ -268,6 +281,13 @@ describe("CanvasFrame nested drop", () => {
           allowedBlocks: ["core/button"],
         },
       ],
+    },
+    {
+      name: "core/button",
+      render: () => null,
+      category: "interactive",
+      title: "Button",
+      requiresParent: ["core/buttons"],
     },
   ]);
 
@@ -334,20 +354,81 @@ describe("CanvasFrame nested drop", () => {
     expect(content?.map((n) => n.name)).toEqual(["core/heading"]);
   });
 
-  test("an in-canvas add request inserts into an empty slot", () => {
+  test("an in-canvas slot add opens the inserter; a pick nests into that slot", () => {
     renderWith([{ id: "g1", name: "core/group", attrs: { content: [] } }]);
 
-    // The empty slot's in-canvas appender forwards a slot-scoped requestAdd.
+    // The empty slot's appender forwards a slot-scoped requestAdd → the inserter
+    // opens scoped to that slot, inserting nothing until a block is picked.
     fromCanvas({
       type: "canvas:requestAdd",
       parentId: "g1",
       slotKey: "content",
+    });
+    expect(screen.getByTestId("plumix-inserter-popover")).toBeDefined();
+    expect(storeApi?.getState().tree[0]?.attrs?.content).toEqual([]);
+
+    act(() => {
+      fireEvent.click(screen.getByTestId("block-catalog-item-core/heading"));
     });
 
     const content = storeApi?.getState().tree[0]?.attrs?.content as
       | readonly BlockNode[]
       | undefined;
     expect(content?.map((n) => n.name)).toEqual(["core/heading"]);
+  });
+
+  test("the slot inserter lists only the slot's allowed blocks", () => {
+    renderWith([{ id: "b1", name: "core/buttons", attrs: { items: [] } }]);
+
+    fromCanvas({
+      type: "canvas:requestAdd",
+      parentId: "b1",
+      slotKey: "items",
+    });
+
+    // items allows only core/button — the heading must not be offered.
+    expect(screen.getByTestId("block-catalog-item-core/button")).toBeDefined();
+    expect(screen.queryByTestId("block-catalog-item-core/heading")).toBeNull();
+  });
+
+  test("refuses a requiresParent block dropped into a non-matching parent", () => {
+    renderWith([{ id: "g1", name: "core/group", attrs: { content: [] } }]);
+
+    fromCanvas({
+      type: "canvas:geometry",
+      rects: [{ id: "g1", x: 0, y: 0, width: 500, height: 500 }],
+      slots: [
+        {
+          parentId: "g1",
+          slotKey: "content",
+          x: 0,
+          y: 0,
+          width: 500,
+          height: 500,
+        },
+      ],
+    });
+    act(() =>
+      storeApi?.getState().startBlockDrag({
+        name: "core/button",
+        slug: "core/button",
+        title: "Button",
+        category: "interactive",
+      }),
+    );
+    act(() => {
+      window.dispatchEvent(
+        new MouseEvent("pointermove", { clientX: 50, clientY: 50 }),
+      );
+      window.dispatchEvent(
+        new MouseEvent("pointerup", { clientX: 50, clientY: 50 }),
+      );
+    });
+
+    // core/button requiresParent core/buttons — the group must refuse it, with
+    // a visible notice and no insert.
+    expect(storeApi?.getState().tree[0]?.attrs?.content).toEqual([]);
+    expect(screen.getByTestId("plumix-add-rejection")).toBeDefined();
   });
 
   test("a slot rejects a block its allowedBlocks does not permit", () => {
