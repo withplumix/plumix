@@ -1,5 +1,7 @@
 import type { Db } from "../../context/app.js";
+import type { PlumixEnv } from "../../runtime/bindings.js";
 import type { OAuthProfile, OAuthProviderClient } from "./types.js";
+import { resolveEnvInput } from "../../runtime/env-input.js";
 import { OAuthError } from "./errors.js";
 import { computeS256Challenge, generateCodeVerifier } from "./pkce.js";
 import { issueOAuthState } from "./state.js";
@@ -9,6 +11,8 @@ interface BuildAuthorizeUrlInput {
   readonly providerKey: string;
   readonly provider: OAuthProviderClient;
   readonly redirectUri: string;
+  /** Request env, for resolving a `client` that's an `(env) => …` resolver. */
+  readonly env: PlumixEnv;
 }
 
 interface BuiltAuthorizeUrl {
@@ -25,6 +29,7 @@ export async function buildAuthorizeUrl(
   input: BuildAuthorizeUrlInput,
 ): Promise<BuiltAuthorizeUrl> {
   const { provider } = input;
+  const client = resolveEnvInput(provider.client, input.env);
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await computeS256Challenge(codeVerifier);
 
@@ -34,7 +39,7 @@ export async function buildAuthorizeUrl(
   });
 
   const url = new URL(provider.authorizeUrl);
-  url.searchParams.set("client_id", provider.client.clientId);
+  url.searchParams.set("client_id", client.clientId);
   url.searchParams.set("redirect_uri", input.redirectUri);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", provider.scopes.join(" "));
@@ -51,6 +56,8 @@ interface ExchangeAndFetchInput {
   readonly code: string;
   readonly redirectUri: string;
   readonly codeVerifier: string;
+  /** Request env, for resolving a `client` that's an `(env) => …` resolver. */
+  readonly env: PlumixEnv;
 }
 
 interface TokenResponse {
@@ -103,6 +110,7 @@ async function exchangeCode(
   input: ExchangeAndFetchInput,
 ): Promise<TokenResponse> {
   const { provider } = input;
+  const client = resolveEnvInput(provider.client, input.env);
   // RFC 6749 §2.3.1 / Copenhagen Book: client credentials go in the
   // Authorization header (HTTP Basic). client_id stays in the body for
   // providers (like Google) whose docs require it on the form too —
@@ -111,12 +119,10 @@ async function exchangeCode(
     grant_type: "authorization_code",
     code: input.code,
     redirect_uri: input.redirectUri,
-    client_id: provider.client.clientId,
+    client_id: client.clientId,
     code_verifier: input.codeVerifier,
   });
-  const basic = btoa(
-    `${provider.client.clientId}:${provider.client.clientSecret}`,
-  );
+  const basic = btoa(`${client.clientId}:${client.clientSecret}`);
 
   let response: Response;
   try {

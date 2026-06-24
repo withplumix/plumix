@@ -1,7 +1,18 @@
+import type { EnvInput } from "../../runtime/env-input.js";
+
 export interface OAuthClientConfig {
   readonly clientId: string;
   readonly clientSecret: string;
 }
+
+/**
+ * Either literal credentials, or an `(env) => OAuthClientConfig` resolver — the
+ * client secret is used at token exchange (request time), so on Workers it must
+ * come from the per-request `env`, not config-time. See {@link EnvInput}.
+ * Module-local: callers reach it through the `github`/`google` factory signature
+ * (`OAuthProviderFactory`), never by name.
+ */
+type OAuthClientInput = EnvInput<OAuthClientConfig>;
 
 export interface OAuthProfile {
   /** Provider-side stable user id. */
@@ -37,7 +48,7 @@ export interface OAuthProviderClient {
   readonly tokenUrl: string;
   readonly userInfoUrl: string;
   readonly scopes: readonly string[];
-  readonly client: OAuthClientConfig;
+  readonly client: OAuthClientInput;
 
   /**
    * Translate the provider's userinfo JSON into a partial OAuthProfile.
@@ -72,7 +83,7 @@ export interface OAuthProviderClient {
  * users can write their own factories the same way.
  */
 export type OAuthProviderFactory = (
-  client: OAuthClientConfig,
+  client: OAuthClientInput,
 ) => OAuthProviderClient;
 
 // Provider keys (the map keys in `auth.oauth.providers`) flow through the

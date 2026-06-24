@@ -1,8 +1,4 @@
-import type {
-  OAuthClientConfig,
-  OAuthProviderClient,
-  OAuthProviderFactory,
-} from "../types.js";
+import type { OAuthProviderClient, OAuthProviderFactory } from "../types.js";
 
 interface GoogleProfile {
   readonly sub: string;
@@ -12,9 +8,7 @@ interface GoogleProfile {
   readonly picture: string | null;
 }
 
-export const google: OAuthProviderFactory = (
-  client: OAuthClientConfig,
-): OAuthProviderClient => ({
+export const google: OAuthProviderFactory = (client): OAuthProviderClient => ({
   label: "Google",
   authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
   tokenUrl: "https://oauth2.googleapis.com/token",

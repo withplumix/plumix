@@ -50,6 +50,7 @@ export async function handleOAuthStart(
       providerKey,
       provider,
       redirectUri,
+      env: ctx.env,
     });
     return redirectTo(url);
   } catch (error) {
@@ -95,6 +96,7 @@ export async function handleOAuthCallback(
       code,
       redirectUri,
       codeVerifier: stored.codeVerifier,
+      env: ctx.env,
     });
 
     const { user, created } = await resolveOAuthUser(ctx.db, {
