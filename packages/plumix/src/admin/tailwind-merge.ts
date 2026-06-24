@@ -2,8 +2,9 @@
 // `window.plumix.runtime.tailwindMerge` so plugin chunks share it instead of
 // bundling their own copy. The plugin-bundle Vite step aliases bare
 // `tailwind-merge` imports here (see SHARED_ADMIN_RUNTIME_SPECIFIERS in
-// @plumix/core). Re-export every public upstream member — shim-drift.test.ts
-// fails CI if this falls behind upstream.
+// @plumix/core). A curated surface, not a full mirror — shim-drift.test.ts
+// fails CI only if a binding re-exported here disappears upstream (#1177); add
+// new upstream bindings when a plugin needs them.
 import type * as TailwindMergeNs from "tailwind-merge";
 
 import { getRuntime } from "./runtime.js";
