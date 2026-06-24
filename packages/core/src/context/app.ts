@@ -9,6 +9,7 @@ import type { RemotePattern } from "@plumix/blocks/renderer";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
+import type { MailerInput } from "../auth/mailer/resolve.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { KnownCapability } from "../auth/rbac.js";
 import type * as coreSchema from "../db/schema/index.js";
@@ -26,6 +27,7 @@ import type {
   ImageDelivery,
 } from "../runtime/slots.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
+import { resolveMailer } from "../auth/mailer/resolve.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
@@ -281,7 +283,9 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly cache?: ConnectedCache;
   readonly imageDelivery?: ImageDelivery;
   readonly imageRemotePatterns?: readonly RemotePattern[];
-  readonly mailer?: Mailer;
+  /** Literal transport, or an `(env) => Mailer` resolver (resolved per-request
+   *  from `env`, memoized) for secrets that only exist at request time. */
+  readonly mailer?: MailerInput;
   readonly i18n?: ResolvedI18n;
   readonly oauthProviders?: readonly OAuthProviderSummary[];
   readonly authenticator?: RequestAuthenticator;
@@ -385,7 +389,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     cache: args.cache,
     imageDelivery: args.imageDelivery,
     imageRemotePatterns: args.imageRemotePatterns,
-    mailer: args.mailer,
+    mailer: resolveMailer(args.mailer, args.env),
     i18n,
     locale,
     oauthProviders: args.oauthProviders ?? [],
