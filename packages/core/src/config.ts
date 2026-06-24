@@ -2,7 +2,7 @@ import type { HtmlAllowlistOverride } from "@plumix/blocks";
 import type { RemotePattern } from "@plumix/blocks/renderer";
 
 import type { PlumixAuthConfig } from "./auth/config.js";
-import type { Mailer } from "./auth/mailer/types.js";
+import type { MailerInput } from "./auth/mailer/resolve.js";
 import type { I18nInput, ResolvedI18n } from "./i18n/locale-registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
@@ -86,7 +86,7 @@ export interface PlumixConfigInput {
    * configure the transport once at the top level. `consoleMailer()`
    * is the dev default.
    */
-  readonly mailer?: Mailer;
+  readonly mailer?: MailerInput;
   /**
    * The site's theme. Optional: a site that registers none falls back to
    * the built-in {@link welcomeTheme}, which renders a self-contained
@@ -145,7 +145,7 @@ export interface PlumixConfig {
   readonly imageDelivery?: ImageDelivery;
   readonly kv?: KV;
   readonly cache?: CacheProvider;
-  readonly mailer?: Mailer;
+  readonly mailer?: MailerInput;
   readonly theme: ThemeDescriptor;
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly i18n: ResolvedI18n;
