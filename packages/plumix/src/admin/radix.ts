@@ -2,9 +2,10 @@
 // `window.plumix.runtime.radix` so plugin chunks share it instead of
 // bundling their own copy. The plugin-bundle Vite step aliases bare
 // `radix-ui` imports here (see SHARED_ADMIN_RUNTIME_SPECIFIERS in
-// @plumix/core). Re-export every public upstream member — shim-drift.test.ts
-// fails CI if this falls behind upstream. Each export is annotated with its
-// upstream type so declaration emit references `radix-ui` rather than the
+// @plumix/core). A curated surface, not a full mirror — shim-drift.test.ts
+// fails CI only if a binding re-exported here disappears upstream (#1177); add
+// new upstream bindings when a plugin needs them. Each export is annotated with
+// its upstream type so declaration emit references `radix-ui` rather than the
 // non-portable per-primitive sub-package paths (TS2883).
 import type * as RadixNs from "radix-ui";
 
