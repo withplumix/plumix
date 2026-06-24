@@ -117,3 +117,66 @@ describe("StylesTab", () => {
     );
   });
 });
+
+describe("StylesTab — declarations list", () => {
+  const styled: BlockNode = {
+    id: "a",
+    name: "core/x",
+    style: { large: { color: { raw: "#0c2238" } } },
+  };
+
+  test("lists each declaration in the active bucket with its raw value", () => {
+    const { getByTestId } = renderTab([styled], "a");
+    const value = getByTestId(
+      "style-declaration-color-value",
+    ) as HTMLInputElement;
+    expect(value.value).toBe("#0c2238");
+  });
+
+  test("editing a declaration's value writes it back to the bucket", () => {
+    const { getByTestId } = renderTab([styled], "a");
+    fireEvent.change(getByTestId("style-declaration-color-value"), {
+      target: { value: "rebeccapurple" },
+    });
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"color":{"raw":"rebeccapurple"}',
+    );
+  });
+
+  test("clearing the value keeps the row (only the Trash button deletes)", () => {
+    const { getByTestId } = renderTab([styled], "a");
+    fireEvent.change(getByTestId("style-declaration-color-value"), {
+      target: { value: "" },
+    });
+    // Row survives an empty value so retyping doesn't unmount the focused input.
+    expect(getByTestId("style-declaration-color-value")).toBeDefined();
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"color":{"raw":""}',
+    );
+  });
+
+  test("removing a declaration clears the property", () => {
+    const { getByTestId } = renderTab([styled], "a");
+    fireEvent.click(getByTestId("style-declaration-color-remove"));
+    // The only property is gone, so the style slot prunes to undefined.
+    expect(getByTestId("style-probe").textContent).toBe("");
+  });
+
+  test("a token declaration shows its token id read-only (value lives in theme)", () => {
+    const tokenStyled: BlockNode = {
+      id: "a",
+      name: "core/x",
+      style: { large: { color: { token: "primary" } } },
+    };
+    const { getByTestId, queryByTestId } = renderTab([tokenStyled], "a");
+    expect(getByTestId("style-declaration-color-token").textContent).toBe(
+      "primary",
+    );
+    expect(queryByTestId("style-declaration-color-value")).toBeNull();
+  });
+
+  test("shows an empty hint when the block has no styles for the device", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    expect(getByTestId("style-declarations-empty")).toBeDefined();
+  });
+});

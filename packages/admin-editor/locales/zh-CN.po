@@ -69,6 +69,11 @@ msgid "editor.styles.align.right"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.all"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.header.back"
 msgstr ""
@@ -179,6 +184,11 @@ msgid "editor.page.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/style-declarations.tsx
+msgid "editor.styles.none"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.padding"
 msgstr ""
@@ -216,6 +226,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/block-inspector.tsx
 msgid "editor.inspector.refreshData"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/style-declarations.tsx
+msgid "editor.styles.remove"
 msgstr ""
 
 #. js-lingui-explicit-id
