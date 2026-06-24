@@ -291,6 +291,43 @@ describe("StylesTab — declarations list", () => {
     expect(getByTestId("style-probe").textContent).not.toContain("99px");
   });
 
+  test("a raw value added in the list reflects in the matching control", () => {
+    // paddingTop's control defaults to token mode; adding a raw value via the
+    // list must flip it to its custom input showing that value (two-way bind).
+    const { getByTestId, queryByTestId } = renderTab(
+      [{ id: "a", name: "core/x" }],
+      "a",
+    );
+    expect(queryByTestId("style-control-paddingTop-custom")).toBeNull();
+
+    fireEvent.click(getByTestId("style-declaration-add-key"));
+    fireEvent.click(getByTestId("style-declaration-add-key-option-paddingTop"));
+    fireEvent.change(getByTestId("style-declaration-add-value"), {
+      target: { value: "7px" },
+    });
+    fireEvent.click(getByTestId("style-declaration-add-submit"));
+
+    const control = getByTestId(
+      "style-control-paddingTop-custom",
+    ) as HTMLInputElement;
+    expect(control.value).toBe("7px");
+  });
+
+  test("switching a token value to custom mode clears it and shows the input", () => {
+    const tokenStyled: BlockNode = {
+      id: "a",
+      name: "core/x",
+      style: { large: { color: { token: "lg" } } },
+    };
+    const { getByTestId, queryByTestId } = renderTab([tokenStyled], "a");
+    // Mounts in token mode (the value is a token), so the custom input is hidden.
+    expect(queryByTestId("style-control-color-custom")).toBeNull();
+    fireEvent.click(getByTestId("style-control-color-mode-custom"));
+    // The incompatible token is cleared and the raw input takes over.
+    expect(getByTestId("style-control-color-custom")).toBeDefined();
+    expect(getByTestId("style-probe").textContent).not.toContain('"color"');
+  });
+
   test("offers no create item for a case-variant of a known property", () => {
     const { getByTestId, queryByTestId } = renderTab(
       [{ id: "a", name: "core/x" }],
