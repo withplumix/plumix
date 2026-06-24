@@ -618,3 +618,88 @@ describe("updateBlockStyle", () => {
     expect(store.getState().tree).toBe(tree);
   });
 });
+
+describe("renameBlockStyleProperty", () => {
+  test("renames a property in place, preserving its value and position", () => {
+    const store = createEditorStore({
+      tree: [
+        {
+          id: "a",
+          name: "core/x",
+          style: {
+            large: {
+              color: { raw: "#333" },
+              marginTop: { raw: "8px" },
+            },
+          },
+        },
+      ],
+    });
+
+    store
+      .getState()
+      .renameBlockStyleProperty("a", "large", "color", "background");
+
+    // Value kept, order kept (background takes color's first slot).
+    expect(store.getState().tree[0]?.style).toEqual({
+      large: {
+        background: { raw: "#333" },
+        marginTop: { raw: "8px" },
+      },
+    });
+    expect(Object.keys(store.getState().tree[0]?.style?.large ?? {})).toEqual([
+      "background",
+      "marginTop",
+    ]);
+  });
+
+  test("is a no-op when the target name is already taken (no clobber)", () => {
+    const tree: readonly BlockNode[] = [
+      {
+        id: "a",
+        name: "core/x",
+        style: {
+          large: { color: { raw: "#333" }, background: { raw: "#fff" } },
+        },
+      },
+    ];
+    const store = createEditorStore({ tree });
+
+    store
+      .getState()
+      .renameBlockStyleProperty("a", "large", "color", "background");
+
+    expect(store.getState().tree).toBe(tree);
+  });
+
+  test("preserves a token value across a rename", () => {
+    const store = createEditorStore({
+      tree: [
+        {
+          id: "a",
+          name: "core/x",
+          style: { large: { color: { token: "primary" } } },
+        },
+      ],
+    });
+
+    store
+      .getState()
+      .renameBlockStyleProperty("a", "large", "color", "background");
+
+    expect(store.getState().tree[0]?.style).toEqual({
+      large: { background: { token: "primary" } },
+    });
+  });
+
+  test("is a no-op when the source property is missing", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "a", name: "core/x", style: { large: { color: { raw: "#333" } } } },
+    ];
+    const store = createEditorStore({ tree });
+
+    store.getState().renameBlockStyleProperty("a", "large", "nope", "gap");
+
+    expect(store.getState().tree).toBe(tree);
+  });
+});

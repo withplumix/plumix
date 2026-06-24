@@ -133,6 +133,48 @@ describe("StylesTab — declarations list", () => {
     expect(value.value).toBe("#0c2238");
   });
 
+  test("renames a declaration's property via the key field on commit", () => {
+    const { getByTestId } = renderTab([styled], "a");
+    const key = getByTestId("style-declaration-color-key") as HTMLInputElement;
+    fireEvent.change(key, { target: { value: "background" } });
+    fireEvent.blur(key);
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"background":{"raw":"#0c2238"}',
+    );
+    expect(getByTestId("style-probe").textContent).not.toContain('"color"');
+  });
+
+  test("reverts an invalid rename, leaving the property unchanged", () => {
+    const { getByTestId } = renderTab([styled], "a");
+    const key = getByTestId("style-declaration-color-key") as HTMLInputElement;
+    fireEvent.change(key, { target: { value: "bad key!" } });
+    fireEvent.blur(key);
+    expect(getByTestId("style-probe").textContent).toContain('"color"');
+    // The field snaps back to the original property name.
+    expect(
+      (getByTestId("style-declaration-color-key") as HTMLInputElement).value,
+    ).toBe("color");
+  });
+
+  test("won't rename onto an existing property (no clobber)", () => {
+    const twoProps: BlockNode = {
+      id: "a",
+      name: "core/x",
+      style: { large: { color: { raw: "#333" }, background: { raw: "#fff" } } },
+    };
+    const { getByTestId } = renderTab([twoProps], "a");
+    const key = getByTestId("style-declaration-color-key") as HTMLInputElement;
+    fireEvent.change(key, { target: { value: "background" } });
+    fireEvent.blur(key);
+    // Both originals survive; the collision is rejected.
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"color":{"raw":"#333"}',
+    );
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"background":{"raw":"#fff"}',
+    );
+  });
+
   test("editing a declaration's value writes it back to the bucket", () => {
     const { getByTestId } = renderTab([styled], "a");
     fireEvent.change(getByTestId("style-declaration-color-value"), {

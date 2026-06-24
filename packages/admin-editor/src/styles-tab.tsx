@@ -100,6 +100,9 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
     s.activeId ? findBlock(s.tree, s.activeId) : null,
   );
   const updateBlockStyle = useEditorStore((s) => s.updateBlockStyle);
+  const renameBlockStyleProperty = useEditorStore(
+    (s) => s.renameBlockStyleProperty,
+  );
 
   if (!activeId || !block) {
     return (
@@ -179,6 +182,9 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
             <StyleDeclarations
               declarations={declarations}
               onChange={(property, value) => setter(property)(value)}
+              onRename={(from, to) =>
+                renameBlockStyleProperty(activeId, bucket, from, to)
+              }
             />
           </AccordionContent>
         </AccordionItem>

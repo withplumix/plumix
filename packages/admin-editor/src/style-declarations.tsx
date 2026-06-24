@@ -37,6 +37,8 @@ interface StyleDeclarationsProps {
   readonly declarations: readonly StyleDeclaration[];
   /** Set a property's raw value, or clear it with `null`. */
   readonly onChange: (property: string, value: StyleValue | null) => void;
+  /** Rename a property in place, keeping its value. */
+  readonly onRename: (from: string, to: string) => void;
 }
 
 /**
@@ -48,53 +50,20 @@ interface StyleDeclarationsProps {
 export function StyleDeclarations({
   declarations,
   onChange,
+  onRename,
 }: StyleDeclarationsProps): ReactElement {
+  const keys = declarations.map((d) => d.property);
   return (
     <div className="flex flex-col gap-1" data-testid="style-declarations">
       {declarations.map(({ property, value }) => (
-        <div
+        <DeclarationRow
           key={property}
-          className="flex items-center gap-2"
-          data-testid={`style-declaration-${property}`}
-        >
-          <span
-            className="text-muted-foreground w-1/3 shrink-0 truncate text-xs"
-            title={property}
-          >
-            {property}
-          </span>
-          {"raw" in value ? (
-            <Input
-              className="h-8"
-              data-testid={`style-declaration-${property}-value`}
-              value={value.raw}
-              // Empty-string stays a (raw) declaration rather than clearing —
-              // otherwise clearing the field to retype unmounts the focused row.
-              // The Trash button is the sole delete affordance.
-              onChange={(e) => onChange(property, { raw: e.target.value })}
-            />
-          ) : (
-            <span
-              className="text-muted-foreground flex-1 truncate text-xs italic"
-              data-testid={`style-declaration-${property}-token`}
-            >
-              {value.token}
-            </span>
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0"
-            data-testid={`style-declaration-${property}-remove`}
-            onClick={() => onChange(property, null)}
-          >
-            <Trash2 />
-            <span className="sr-only">
-              <Trans id="editor.styles.remove" message="Remove" />
-            </span>
-          </Button>
-        </div>
+          property={property}
+          value={value}
+          siblingKeys={keys}
+          onChange={onChange}
+          onRename={onRename}
+        />
       ))}
       {declarations.length === 0 ? (
         <p
@@ -107,10 +76,85 @@ export function StyleDeclarations({
           />
         </p>
       ) : null}
-      <AddDeclaration
-        onAdd={onChange}
-        existingKeys={declarations.map((d) => d.property)}
+      <AddDeclaration onAdd={onChange} existingKeys={keys} />
+    </div>
+  );
+}
+
+/** One declaration row: an editable property name (renamed on commit), the raw
+ *  value input (or read-only token id), and a remove button. Keyed by property
+ *  in the parent, so the draft re-inits when the row's identity changes. */
+function DeclarationRow({
+  property,
+  value,
+  siblingKeys,
+  onChange,
+  onRename,
+}: {
+  readonly property: string;
+  readonly value: StyleValue;
+  readonly siblingKeys: readonly string[];
+  readonly onChange: (property: string, value: StyleValue | null) => void;
+  readonly onRename: (from: string, to: string) => void;
+}): ReactElement {
+  const [keyDraft, setKeyDraft] = useState(property);
+
+  const commitRename = (): void => {
+    const next = keyDraft.trim();
+    const valid =
+      next !== property &&
+      VALID_PROPERTY.test(next) &&
+      !siblingKeys.includes(next);
+    if (valid) onRename(property, next);
+    else setKeyDraft(property); // snap back on a no-op / invalid edit
+  };
+
+  return (
+    <div
+      className="flex items-center gap-2"
+      data-testid={`style-declaration-${property}`}
+    >
+      <Input
+        className="h-8 w-1/3 shrink-0"
+        data-testid={`style-declaration-${property}-key`}
+        value={keyDraft}
+        onChange={(e) => setKeyDraft(e.target.value)}
+        onBlur={commitRename}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
       />
+      {"raw" in value ? (
+        <Input
+          className="h-8"
+          data-testid={`style-declaration-${property}-value`}
+          value={value.raw}
+          // Empty-string stays a (raw) declaration rather than clearing —
+          // otherwise clearing the field to retype unmounts the focused row.
+          // The Trash button is the sole delete affordance.
+          onChange={(e) => onChange(property, { raw: e.target.value })}
+        />
+      ) : (
+        <span
+          className="text-muted-foreground flex-1 truncate text-xs italic"
+          data-testid={`style-declaration-${property}-token`}
+        >
+          {value.token}
+        </span>
+      )}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-8 shrink-0"
+        data-testid={`style-declaration-${property}-remove`}
+        onClick={() => onChange(property, null)}
+      >
+        <Trash2 />
+        <span className="sr-only">
+          <Trans id="editor.styles.remove" message="Remove" />
+        </span>
+      </Button>
     </div>
   );
 }
