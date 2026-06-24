@@ -1,15 +1,18 @@
 import type {
   ConnectedObjectStorage,
+  EnvInput,
   GetResult,
   ListOptions,
   ListResult,
   ObjectBody,
   ObjectStorage,
+  PlumixEnv,
   PresignedPutResult,
   PresignPutOptions,
   PutOptions,
   UrlOptions,
 } from "plumix";
+import { resolveEnvInput } from "plumix";
 
 import { R2Error } from "./errors.js";
 import { presignPutUrl } from "./sigv4.js";
@@ -41,8 +44,12 @@ export interface R2Config {
    * `presignPut` throws "not configured" and consumers must accept that
    * uploads cannot bypass the worker. R2 native bindings cannot mint
    * presigned URLs — that's an S3-API-only capability.
+   *
+   * Either literal credentials, or an `(env) => R2S3Credentials` resolver — the
+   * keys sign requests at presign (request) time, so on Workers they come from
+   * the per-request `env`, resolved + memoized like the other secret slots.
    */
-  readonly s3?: R2S3Credentials;
+  readonly s3?: EnvInput<R2S3Credentials>;
 }
 
 export interface R2ObjectStorage extends ObjectStorage {
@@ -209,7 +216,10 @@ export function r2(config: R2Config): R2ObjectStorage {
       // R2 native bindings can't mint presigned URLs, so the optional
       // slot stays `undefined` if the consumer didn't opt in.
       if (config.s3) {
-        const s3 = config.s3;
+        // `connect`'s env is loosely typed (`unknown`); a resolver authored
+        // against `EnvInput` expects the typed `PlumixEnv`. The runtime value
+        // is that env — bridge it here, at the one loose boundary.
+        const s3 = resolveEnvInput(config.s3, env as PlumixEnv);
         connected.presignPut = async (
           key: string,
           opts: PresignPutOptions,

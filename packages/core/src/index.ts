@@ -31,6 +31,8 @@ export type { PlumixApp } from "./runtime/app.js";
 export type * from "./runtime/bindings.js";
 export { createPlumixDispatcher } from "./runtime/dispatcher.js";
 export type { PlumixDispatcher } from "./runtime/dispatcher.js";
+export type { EnvInput } from "./runtime/env-input.js";
+export { resolveEnvInput } from "./runtime/env-input.js";
 export {
   forbidden,
   jsonResponse,
