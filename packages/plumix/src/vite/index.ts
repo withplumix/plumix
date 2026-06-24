@@ -30,6 +30,7 @@ import {
   pluginCatalogStagedPath,
 } from "@plumix/core";
 
+import type { LoadConfigOptions } from "../cli/load-config.js";
 import type { DiscoveredIsland } from "./island-transform.js";
 import { loadConfig } from "../cli/load-config.js";
 import {
@@ -175,11 +176,10 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       if (userConfig.publicDir === undefined) {
         base.publicDir = ".plumix/public";
       }
-      // Loaded fresh (not memoized) on purpose: the dev watcher in
-      // `configureServer` re-runs `regenerate` -> `loadConfig` on every
-      // `plumix.config.ts` edit, so a path-keyed cache here would break
-      // config hot-reload. Deduping the cold-start fan-out needs
-      // watch-aware invalidation — tracked in #1102.
+      // Served from the cold-start config cache (#1102) — populated by the CLI
+      // dispatch / `emitPlumixSources` earlier in this same process. The dev
+      // watcher in `configureServer` forces a fresh eval on edits, so config
+      // hot-reload still works.
       const { config } = await loadConfig(scanRoot, options.configFile);
       return config.vite
         ? (mergeConfig(
@@ -264,7 +264,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     configureServer(server) {
       server.watcher.on("change", (path) => {
         if (!configPath || resolve(path) !== configPath) return;
-        void regenerate(root, options.configFile)
+        // Force-fresh: the whole point of the watcher is to pick up the edit,
+        // so bypass (and refresh) the cold-start config cache.
+        void regenerate(root, options.configFile, { fresh: true })
           .then(async (emitted) => {
             await stageUserPublic({ workspaceRoot: root, publicDir });
             await stageAdminAssets(
@@ -305,13 +307,16 @@ export async function emitPlumixSources(
 async function regenerate(
   cwd: string,
   explicitConfig: string | undefined,
+  // The dev watcher forces a fresh config eval on `plumix.config.ts` edits;
+  // cold-start callers share the cached one (#1102).
+  options?: LoadConfigOptions,
 ): Promise<{
   configPath: string;
   manifest: PlumixManifest;
   registry: PluginRegistry;
   plugins: readonly AnyPluginDescriptor[];
 }> {
-  const { config, configPath } = await loadConfig(cwd, explicitConfig);
+  const { config, configPath } = await loadConfig(cwd, explicitConfig, options);
 
   const schemaSource = generateSchemaSource(config).source;
   writeIfChanged(resolve(cwd, ".plumix/schema.ts"), schemaSource);

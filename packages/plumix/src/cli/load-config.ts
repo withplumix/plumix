@@ -17,12 +17,41 @@ export interface LoadedConfig {
   readonly configPath: string;
 }
 
+export interface LoadConfigOptions {
+  /**
+   * Bypass the cache and re-evaluate the config module, then refresh the cached
+   * entry. The dev file-watcher passes this so an edit to `plumix.config.ts`
+   * hot-reloads; cold-start callers omit it and share one evaluation.
+   */
+  readonly fresh?: boolean;
+}
+
+// One cold start fans `loadConfig` out across the CLI dispatch, the runtime
+// adapter's pre-vite source emit, and the Vite plugin's `config()` +
+// `buildStart()` hooks (the latter once per build environment) — ~8 calls for a
+// build, each re-evaluating the config's whole JSX theme graph (`moduleCache:
+// false`), ~12ms+ apiece. They all resolve to the same file in one process, so
+// cache by absolute path. The watcher invalidates via `fresh` (see #1102), so
+// config hot-reload still works — this is a watch-aware cache, not a plain memo.
+const cache = new Map<string, LoadedConfig>();
+
 export async function loadConfig(
   cwd: string,
   explicit?: string,
+  options?: LoadConfigOptions,
 ): Promise<LoadedConfig> {
   const configPath = resolveConfigPath(cwd, explicit);
+  if (!options?.fresh) {
+    const cached = cache.get(configPath);
+    if (cached) return cached;
+  }
 
+  const loaded = await evaluateConfig(configPath);
+  cache.set(configPath, loaded);
+  return loaded;
+}
+
+async function evaluateConfig(configPath: string): Promise<LoadedConfig> {
   const jiti = createJiti(pathToFileURL(configPath).href, {
     interopDefault: true,
     moduleCache: false,
