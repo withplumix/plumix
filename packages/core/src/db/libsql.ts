@@ -1,7 +1,10 @@
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 
+import type { PlumixEnv } from "../runtime/bindings.js";
+import type { EnvInput } from "../runtime/env-input.js";
 import type { DatabaseAdapter } from "../runtime/slots.js";
+import { resolveEnvInput } from "../runtime/env-input.js";
 
 export interface LibsqlConfig {
   /**
@@ -13,14 +16,11 @@ export interface LibsqlConfig {
 }
 
 /**
- * Either literal connection config, or a resolver that derives it from the
- * runtime `env` at request time. The resolver form is required wherever the
- * connection secret only exists per-request — notably Cloudflare Workers,
- * where `env` (not `process.env`) carries bindings and the config module is
- * evaluated before any request. The literal form fits Node/Docker, where the
- * URL (including a `file:` path on shared storage) is known at config time.
+ * Literal connection config, or an `(env) => LibsqlConfig` resolver for the
+ * Workers case where the auth token only exists in the per-request `env`. See
+ * {@link EnvInput} for the shared union + the typed `env`.
  */
-export type LibsqlConfigInput = LibsqlConfig | ((env: unknown) => LibsqlConfig);
+export type LibsqlConfigInput = EnvInput<LibsqlConfig>;
 
 export interface LibsqlDatabaseAdapter extends DatabaseAdapter {
   readonly config: LibsqlConfigInput;
@@ -45,7 +45,7 @@ export function libsql(config: LibsqlConfigInput): LibsqlDatabaseAdapter {
     config,
     connect: (env, _request, schema) => {
       if (!client) {
-        const resolved = typeof config === "function" ? config(env) : config;
+        const resolved = resolveEnvInput(config, env as PlumixEnv);
         client = createClient({
           url: resolved.url,
           authToken: resolved.authToken,

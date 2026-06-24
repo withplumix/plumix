@@ -172,6 +172,50 @@ describe("auth() — oauth schema", () => {
     expect(error.issues[0]?.message).toMatch(/authorizeUrl/);
   });
 
+  test("rejects an empty clientSecret literal, naming the field", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      oauth: {
+        providers: {
+          acme: {
+            ...stubProvider,
+            client: { clientId: "id", clientSecret: "" },
+          },
+        },
+      },
+    });
+    expect(error.issues[0]?.message).toMatch(/clientSecret/);
+  });
+
+  test("accepts an (env) => client resolver", () => {
+    const config = auth({
+      passkey: validPasskey,
+      oauth: {
+        providers: {
+          acme: {
+            ...stubProvider,
+            client: () => ({ clientId: "id", clientSecret: "s" }),
+          },
+        },
+      },
+    });
+    expect(config.oauth?.providers.acme).toBeDefined();
+  });
+
+  test("rejects a provider missing the client entirely", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      oauth: {
+        providers: {
+          acme: { ...stubProvider, client: undefined },
+        },
+      } as unknown as PlumixAuthInput["oauth"],
+    });
+    expect(error.issues[0]?.message).toMatch(
+      /client must be an .* object or an .* resolver/,
+    );
+  });
+
   test("rejects a provider missing the parseProfile function", () => {
     const error = rejected({
       passkey: validPasskey,
