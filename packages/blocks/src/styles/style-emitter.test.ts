@@ -214,4 +214,14 @@ describe("emitBlockStyleCss", () => {
       emitBlockStyleCss("b", style, { typography: { lg: { value: "20px" } } }),
     ).toBe(".b { font-size: var(--plumix-typography-lg, 20px); }");
   });
+
+  test("preserves the case of custom properties (they are case-sensitive)", () => {
+    const style: ResponsiveStyleSlot = {
+      large: { "--brandColor": { raw: "#0c2238" } },
+    };
+
+    expect(emitBlockStyleCss("b", style, {})).toBe(
+      ".b { --brandColor: #0c2238; }",
+    );
+  });
 });

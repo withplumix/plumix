@@ -179,4 +179,74 @@ describe("StylesTab — declarations list", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
     expect(getByTestId("style-declarations-empty")).toBeDefined();
   });
+
+  test("adds a new declaration from the key + value fields", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    fireEvent.change(getByTestId("style-declaration-add-key"), {
+      target: { value: "letterSpacing" },
+    });
+    fireEvent.change(getByTestId("style-declaration-add-value"), {
+      target: { value: "0.05em" },
+    });
+    fireEvent.click(getByTestId("style-declaration-add-submit"));
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"letterSpacing":{"raw":"0.05em"}',
+    );
+  });
+
+  test("clears the add fields after a successful add", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    fireEvent.change(getByTestId("style-declaration-add-key"), {
+      target: { value: "opacity" },
+    });
+    fireEvent.change(getByTestId("style-declaration-add-value"), {
+      target: { value: "0.5" },
+    });
+    fireEvent.click(getByTestId("style-declaration-add-submit"));
+    expect(
+      (getByTestId("style-declaration-add-key") as HTMLInputElement).value,
+    ).toBe("");
+    expect(
+      (getByTestId("style-declaration-add-value") as HTMLInputElement).value,
+    ).toBe("");
+  });
+
+  test("does not add a declaration with an invalid key", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    fireEvent.change(getByTestId("style-declaration-add-key"), {
+      target: { value: "bad key!" },
+    });
+    fireEvent.change(getByTestId("style-declaration-add-value"), {
+      target: { value: "1px" },
+    });
+    fireEvent.click(getByTestId("style-declaration-add-submit"));
+    // Invalid CSS property name → no write, slot stays undefined.
+    expect(getByTestId("style-probe").textContent).toBe("");
+  });
+
+  test("does not add a declaration with an empty value", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    fireEvent.change(getByTestId("style-declaration-add-key"), {
+      target: { value: "opacity" },
+    });
+    fireEvent.click(getByTestId("style-declaration-add-submit"));
+    // A blank value would drop at emit, so submit stays gated.
+    expect(getByTestId("style-probe").textContent).toBe("");
+  });
+
+  test("does not add a key that already exists (no silent overwrite)", () => {
+    const { getByTestId } = renderTab([styled], "a");
+    fireEvent.change(getByTestId("style-declaration-add-key"), {
+      target: { value: "color" },
+    });
+    fireEvent.change(getByTestId("style-declaration-add-value"), {
+      target: { value: "red" },
+    });
+    fireEvent.click(getByTestId("style-declaration-add-submit"));
+    // The existing color declaration is untouched.
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"color":{"raw":"#0c2238"}',
+    );
+    expect(getByTestId("style-probe").textContent).not.toContain("red");
+  });
 });
