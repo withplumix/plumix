@@ -152,22 +152,34 @@ describe("BlockInputControl", () => {
     expect(onChange).toHaveBeenCalledWith("custom");
   });
 
-  test("richtext lazy-loads the Tiptap toolbar and editable surface", async () => {
-    const { findByTestId, getByTestId, queryByTestId } = renderControl(
-      { name: "body", type: "richtext", label: "Body" },
-      "<p>Hello</p>",
-    );
-    // The editor (Tiptap + ProseMirror) is a lazy chunk; the skeleton shows
-    // until it resolves, then the toolbar + contenteditable surface mount.
-    expect(getByTestId("block-input-body-loading")).toBeDefined();
-    expect(await findByTestId("block-input-body-bold")).toBeDefined();
-    expect(getByTestId("block-input-body-clear")).toBeDefined();
-    // Headings are the dedicated Heading block, so rich text offers no h2–h4.
-    expect(queryByTestId("block-input-body-h2")).toBeNull();
-    const editor = getByTestId("block-input-body-editor");
-    expect(editor.getAttribute("contenteditable")).toBe("true");
-    expect(editor.textContent).toContain("Hello");
-  });
+  // The Tiptap + ProseMirror lazy chunk is heavy; under a loaded CI box it can
+  // resolve past the 1s findBy default. Raise the findBy margin to 5s and the
+  // test timeout above it, so a real failure surfaces the informative findBy
+  // error instead of racing vitest's (default 5s) test timeout.
+  test(
+    "richtext lazy-loads the Tiptap toolbar and editable surface",
+    { timeout: 15_000 },
+    async () => {
+      const { findByTestId, getByTestId, queryByTestId } = renderControl(
+        { name: "body", type: "richtext", label: "Body" },
+        "<p>Hello</p>",
+      );
+      // The editor (Tiptap + ProseMirror) is a lazy chunk; the skeleton shows
+      // until it resolves, then the toolbar + contenteditable surface mount.
+      expect(getByTestId("block-input-body-loading")).toBeDefined();
+      expect(
+        await findByTestId("block-input-body-bold", undefined, {
+          timeout: 5000,
+        }),
+      ).toBeDefined();
+      expect(getByTestId("block-input-body-clear")).toBeDefined();
+      // Headings are the dedicated Heading block, so rich text offers no h2–h4.
+      expect(queryByTestId("block-input-body-h2")).toBeNull();
+      const editor = getByTestId("block-input-body-editor");
+      expect(editor.getAttribute("contenteditable")).toBe("true");
+      expect(editor.textContent).toContain("Hello");
+    },
+  );
 
   test("falls back to a text input for an unknown kind", () => {
     const { getByTestId } = renderControl(
