@@ -59,6 +59,11 @@ msgid "editor.canvas.addBlock"
 msgstr "Add a block"
 
 #. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add"
+msgstr "Add attribute"
+
+#. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.add"
 msgstr "Add style"
@@ -77,6 +82,11 @@ msgstr "Align left"
 #: src/styles-tab.tsx
 msgid "editor.styles.align.right"
 msgstr "Align right"
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add.key"
+msgstr "attribute"
 
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
@@ -102,6 +112,11 @@ msgstr "Blocks"
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.bold"
 msgstr "Bold"
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add.create"
+msgstr "Create"
 
 #. js-lingui-explicit-id
 #: src/style-declarations.tsx
@@ -154,6 +169,11 @@ msgid "editor.richtext.hint"
 msgstr "Formatting applies to the selected text."
 
 #. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.htmlAttrs.title"
+msgstr "HTML attributes"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.italic"
 msgstr "Italic"
@@ -182,6 +202,16 @@ msgstr "Move down"
 #: src/selection-toolbar.tsx
 msgid "editor.selection.moveUp"
 msgstr "Move up"
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add.none"
+msgstr "No attribute."
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.none"
+msgstr "No attributes set."
 
 #. js-lingui-explicit-id
 #: src/block-catalog-tab.tsx
@@ -254,9 +284,19 @@ msgid "editor.inspector.refreshData"
 msgstr "Refresh data"
 
 #. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.remove"
+msgstr "Remove"
+
+#. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.remove"
 msgstr "Remove"
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add.search"
+msgstr "Search attribute…"
 
 #. js-lingui-explicit-id
 #: src/block-catalog-tab.tsx
@@ -342,6 +382,11 @@ msgstr "Undo"
 #: src/editor-header.tsx
 msgid "editor.header.untitled"
 msgstr "Untitled"
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add.value"
+msgstr "value"
 
 #. js-lingui-explicit-id
 #: src/style-declarations.tsx

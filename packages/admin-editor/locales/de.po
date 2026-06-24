@@ -59,6 +59,11 @@ msgid "editor.canvas.addBlock"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.add"
 msgstr ""
@@ -76,6 +81,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.align.right"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add.key"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -101,6 +111,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.bold"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add.create"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -154,6 +169,11 @@ msgid "editor.richtext.hint"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.htmlAttrs.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.italic"
 msgstr ""
@@ -181,6 +201,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.moveUp"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add.none"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.none"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -254,8 +284,18 @@ msgid "editor.inspector.refreshData"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.remove"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.remove"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add.search"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -341,6 +381,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.header.untitled"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/html-attributes.tsx
+msgid "editor.htmlAttrs.add.value"
 msgstr ""
 
 #. js-lingui-explicit-id
