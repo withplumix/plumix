@@ -132,6 +132,14 @@ export interface EditorActions {
     property: string,
     value: StyleValue | null,
   ) => void;
+  /** Rename one style property in a block's bucket, keeping its value and
+   *  position. No-op when the source is missing or the target name is taken. */
+  renameBlockStyleProperty: (
+    id: string,
+    bucket: StyleBucket,
+    from: string,
+    to: string,
+  ) => void;
   select: (id: string, options?: { readonly additive?: boolean }) => void;
   clearSelection: () => void;
   /** Delete every selected block (bulk) and clear the selection. */
@@ -240,6 +248,28 @@ function setNodeStyle(
       ? undefined
       : (nextSlot as ResponsiveStyleSlot);
   return { ...node, style };
+}
+
+// Rename one property in a bucket, rebuilding it so the renamed key holds its
+// old position (a fresh `{ ...bucket, [to]: ... }` would move it to the end).
+// Returns the same reference when the source is missing or the target is taken.
+function renameNodeStyleProperty(
+  node: BlockNode,
+  bucket: StyleBucket,
+  from: string,
+  to: string,
+): BlockNode {
+  const slot: ResponsiveStyleSlot = node.style ?? {};
+  const current: ResponsiveStyleBucket = slot[bucket] ?? {};
+  // Covers from===to too: the source key is then also the (taken) target.
+  if (!(from in current) || to in current) return node;
+  const nextBucket: Record<string, StyleValue | string> = {};
+  for (const [key, val] of Object.entries(current)) {
+    nextBucket[key === from ? to : key] = val;
+  }
+  const nextSlot: Record<string, ResponsiveStyleBucket> = { ...slot };
+  nextSlot[bucket] = nextBucket;
+  return { ...node, style: nextSlot };
 }
 
 export type EditorStore = EditorState & EditorActions;
@@ -356,6 +386,15 @@ export function createEditorStore(
         // Coalesce edits to one property+bucket (e.g. typing a raw value).
         const key = `style:${id}:${bucket}:${property}`;
         return { tree, history: recordHistory(state.history, tree, key) };
+      }),
+    renameBlockStyleProperty: (id, bucket, from, to) =>
+      set((state) => {
+        const tree = mapNodeById(state.tree, id, (node) =>
+          renameNodeStyleProperty(node, bucket, from, to),
+        );
+        if (tree === state.tree) return {};
+        // A blur-committed rename is one atomic action — never coalesced.
+        return { tree, history: recordHistory(state.history, tree, null) };
       }),
     select: (id, options) =>
       set((state) => {
