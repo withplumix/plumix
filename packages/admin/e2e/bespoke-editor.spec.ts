@@ -90,9 +90,7 @@ test.describe("bespoke editor route", () => {
     await expect(page.getByTestId("block-inspector-empty")).toBeVisible();
   });
 
-  test("mounts the left-rail block catalog and the empty-state affordance", async ({
-    page,
-  }) => {
+  test("mounts the left-rail block catalog", async ({ page }) => {
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
       "/entry/get": editorEntry(),
@@ -101,14 +99,15 @@ test.describe("bespoke editor route", () => {
 
     await page.goto("entries/posts/1/edit");
 
-    // The catalog lists the core blocks the registry ships, searchable.
+    // The catalog lists the core blocks the registry ships, searchable. The
+    // empty-state "Add a block" affordance now renders inside the canvas iframe
+    // (the mock harness can't serve that route — see above), so it's covered by
+    // the admin-editor unit + playground layers, not here.
     await expect(page.getByTestId("plumix-editor-left")).toBeVisible();
     await expect(page.getByTestId("block-catalog-search")).toBeVisible();
     await expect(
       page.getByTestId("block-catalog-item-core/heading"),
     ).toBeVisible();
-    // A fresh (content-less) entry offers the "Add a block" affordance.
-    await expect(page.getByTestId("plumix-empty-add")).toBeVisible();
   });
 
   test("the Layers tab outlines the entry's nested block structure", async ({
