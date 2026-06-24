@@ -140,6 +140,12 @@ export interface EditorActions {
     from: string,
     to: string,
   ) => void;
+  /** Set (or clear, with `null`) one HTML attribute on a block. Flat (not
+   *  responsive); empty `htmlAttrs` is pruned. Allowlisted at render. */
+  updateBlockHtmlAttr: (id: string, key: string, value: string | null) => void;
+  /** Rename one HTML attribute in place, keeping its value and position.
+   *  No-op when the source is missing or the target name is taken. */
+  renameBlockHtmlAttr: (id: string, from: string, to: string) => void;
   select: (id: string, options?: { readonly additive?: boolean }) => void;
   clearSelection: () => void;
   /** Delete every selected block (bulk) and clear the selection. */
@@ -272,6 +278,42 @@ function renameNodeStyleProperty(
   return { ...node, style: nextSlot };
 }
 
+// Set/clear one HTML attribute on a node, pruning an emptied htmlAttrs. Flat
+// (not responsive). Values are allowlisted at render, not here.
+function setNodeHtmlAttr(
+  node: BlockNode,
+  key: string,
+  value: string | null,
+): BlockNode {
+  const current: Readonly<Record<string, string>> = node.htmlAttrs ?? {};
+  let next: Record<string, string>;
+  if (value === null) {
+    if (!(key in current)) return node;
+    const { [key]: _dropped, ...rest } = current;
+    next = rest;
+  } else {
+    next = { ...current, [key]: value };
+  }
+  const htmlAttrs = Object.keys(next).length === 0 ? undefined : next;
+  return { ...node, htmlAttrs };
+}
+
+// Rename one HTML attribute in place, keeping its value + position. No-op when
+// the source is missing or the target is taken (mirrors the style rename).
+function renameNodeHtmlAttr(
+  node: BlockNode,
+  from: string,
+  to: string,
+): BlockNode {
+  const current: Readonly<Record<string, string>> = node.htmlAttrs ?? {};
+  if (!(from in current) || to in current) return node;
+  const next: Record<string, string> = {};
+  for (const [key, val] of Object.entries(current)) {
+    next[key === from ? to : key] = val;
+  }
+  return { ...node, htmlAttrs: next };
+}
+
 export type EditorStore = EditorState & EditorActions;
 
 export type EditorStoreApi = ReturnType<typeof createEditorStore>;
@@ -394,6 +436,27 @@ export function createEditorStore(
         );
         if (tree === state.tree) return {};
         // A blur-committed rename is one atomic action — never coalesced.
+        return { tree, history: recordHistory(state.history, tree, null) };
+      }),
+    updateBlockHtmlAttr: (id, key, value) =>
+      set((state) => {
+        const tree = mapNodeById(state.tree, id, (node) =>
+          setNodeHtmlAttr(node, key, value),
+        );
+        if (tree === state.tree) return {};
+        // Coalesce keystrokes for one attribute into a single undo step.
+        const coalesceKey = `htmlattr:${id}:${key}`;
+        return {
+          tree,
+          history: recordHistory(state.history, tree, coalesceKey),
+        };
+      }),
+    renameBlockHtmlAttr: (id, from, to) =>
+      set((state) => {
+        const tree = mapNodeById(state.tree, id, (node) =>
+          renameNodeHtmlAttr(node, from, to),
+        );
+        if (tree === state.tree) return {};
         return { tree, history: recordHistory(state.history, tree, null) };
       }),
     select: (id, options) =>
