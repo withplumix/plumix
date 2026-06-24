@@ -37,8 +37,13 @@ export function StyleControl({
   onChange,
 }: StyleControlProps): ReactElement {
   const testId = `style-control-${property}`;
-  const [custom, setCustom] = useState(value !== undefined && "raw" in value);
-  const isCustom = category === undefined || custom;
+  // Mode follows the current value's kind, so a value set elsewhere (the
+  // declarations list, another control) reflects here live. With no value, the
+  // user's last toggle (`pref`) decides which input to show for entry.
+  const [pref, setPref] = useState<"token" | "custom">("token");
+  const isCustom =
+    category === undefined ||
+    (value !== undefined ? "raw" in value : pref === "custom");
   const isColor = category === "colors";
   const group = category ? (tokens[category] ?? {}) : {};
   const raw = value && "raw" in value ? value.raw : "";
@@ -51,15 +56,23 @@ export function StyleControl({
           <div className="flex gap-0.5 text-xs">
             <ModeButton
               testId={`${testId}-mode-token`}
-              active={!custom}
-              onClick={() => setCustom(false)}
+              active={!isCustom}
+              // Clear a raw value when switching to token mode so the select
+              // isn't shadowed by a value it can't represent.
+              onClick={() => {
+                setPref("token");
+                if (value && "raw" in value) onChange(null);
+              }}
             >
               <Trans id="editor.styles.mode.token" message="Token" />
             </ModeButton>
             <ModeButton
               testId={`${testId}-mode-custom`}
-              active={custom}
-              onClick={() => setCustom(true)}
+              active={isCustom}
+              onClick={() => {
+                setPref("custom");
+                if (value && "token" in value) onChange(null);
+              }}
             >
               <Trans id="editor.styles.mode.custom" message="Custom" />
             </ModeButton>
