@@ -170,6 +170,70 @@ export function EditorCanvas({
     };
   }, []);
 
+  // Layer 1 — navigation guard. The canvas renders the entry's real themed
+  // route, so its links and forms are live and would carry the iframe off the
+  // entry. Neutralize at capture phase (ahead of theme JS). We preventDefault
+  // but deliberately do NOT stopPropagation: the click still bubbles to
+  // handleClick so an in-content link block stays selectable — it just doesn't
+  // navigate. Covers chrome links too (belt-and-suspenders with layer 2).
+  useEffect(() => {
+    const onClickCapture = (event: Event): void => {
+      if ((event.target as HTMLElement | null)?.closest("a[href]")) {
+        event.preventDefault();
+      }
+    };
+    const onSubmitCapture = (event: Event): void => event.preventDefault();
+    // `auxclick` covers middle-click, which doesn't fire `click` — without it a
+    // middle-click would open the themed route in a new tab.
+    document.addEventListener("click", onClickCapture, true);
+    document.addEventListener("auxclick", onClickCapture, true);
+    document.addEventListener("submit", onSubmitCapture, true);
+    return () => {
+      document.removeEventListener("click", onClickCapture, true);
+      document.removeEventListener("auxclick", onClickCapture, true);
+      document.removeEventListener("submit", onSubmitCapture, true);
+    };
+  }, []);
+
+  // Layer 2 — isolate the editable content. The entry's blocks render inside the
+  // content root (this container); the theme chrome (header/footer/nav) is
+  // everything else on the page. Mark those off-path regions `inert` so they
+  // render faithfully but take no clicks, hover, focus or theme-JS events —
+  // mirroring Gutenberg's `disabled` block editing mode. Walks root→body,
+  // disabling each ancestor's other children so only the content branch stays
+  // live. Anchors on the SSR `[data-plumix-content-root]` (production, where the
+  // theme wraps it in chrome), falling back to this container (the standalone
+  // playground, which has no content-root marker).
+  useEffect(() => {
+    const root =
+      document.querySelector<HTMLElement>("[data-plumix-content-root]") ??
+      containerRef.current;
+    if (!root) return;
+    // Track whether we added `inert` so cleanup never strips chrome the theme
+    // had already marked inert itself.
+    const touched: { el: HTMLElement; addedInert: boolean }[] = [];
+    let node: HTMLElement = root;
+    while (node !== document.body) {
+      const parent = node.parentElement;
+      if (!parent) break;
+      for (const sibling of Array.from(parent.children)) {
+        if (sibling !== node && sibling instanceof HTMLElement) {
+          const addedInert = !sibling.hasAttribute("inert");
+          if (addedInert) sibling.setAttribute("inert", "");
+          sibling.setAttribute("data-plumix-chrome", "");
+          touched.push({ el: sibling, addedInert });
+        }
+      }
+      node = parent;
+    }
+    return () => {
+      for (const { el, addedInert } of touched) {
+        if (addedInert) el.removeAttribute("inert");
+        el.removeAttribute("data-plumix-chrome");
+      }
+    };
+  }, []);
+
   const blockIdAt = (event: MouseEvent<HTMLDivElement>): string | null => {
     const block = (event.target as HTMLElement).closest("[data-plumix-id]");
     return block?.getAttribute("data-plumix-id") ?? null;
