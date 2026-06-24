@@ -137,6 +137,28 @@ describe("oauth start route", () => {
     expect(rows.some((r) => r.type === "oauth_state")).toBe(true);
   });
 
+  test("resolves an (env) => client config from the request env at authorize", async () => {
+    const h = await createDispatcherHarness({
+      oauth: {
+        github: github((env) => ({
+          clientId: (env as { GH_ID?: string }).GH_ID ?? "",
+          clientSecret: (env as { GH_SECRET?: string }).GH_SECRET ?? "",
+        })),
+      },
+      env: { GH_ID: "gh-from-env", GH_SECRET: "secret-from-env" },
+    });
+    await h.seedUser("admin");
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/auth/oauth/github/start"),
+    );
+    const location = response.headers.get("location");
+    if (!location) throw new Error("missing location header");
+
+    // The clientId in the redirect came from the resolver, fed the request env.
+    expect(new URL(location).searchParams.get("client_id")).toBe("gh-from-env");
+  });
+
   test("redirects to login with error when provider isn't configured", async () => {
     const h = await createDispatcherHarness();
     await h.seedUser("admin");

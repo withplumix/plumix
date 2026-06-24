@@ -166,13 +166,25 @@ const oauthProviderClientSchema = v.object({
   tokenUrl: v.pipe(v.string(), v.url("tokenUrl must be a valid URL")),
   userInfoUrl: v.pipe(v.string(), v.url("userInfoUrl must be a valid URL")),
   scopes: v.array(v.string()),
-  client: v.object({
-    clientId: v.pipe(v.string(), v.nonEmpty("clientId must be non-empty")),
-    clientSecret: v.pipe(
-      v.string(),
-      v.nonEmpty("clientSecret must be non-empty"),
+  // Literal credentials, or an `(env) => OAuthClientConfig` resolver (the
+  // secret is read from the request env at token exchange). The resolver's
+  // return is validated at use, not here — env isn't available at config time.
+  client: v.union([
+    v.object({
+      clientId: v.pipe(v.string(), v.nonEmpty("clientId must be non-empty")),
+      clientSecret: v.pipe(
+        v.string(),
+        v.nonEmpty("clientSecret must be non-empty"),
+      ),
+    }),
+    v.pipe(
+      v.unknown(),
+      v.check(
+        (val) => typeof val === "function",
+        "client must be an { clientId, clientSecret } object or an (env) => … resolver",
+      ),
     ),
-  }),
+  ]),
   parseProfile: v.pipe(
     v.unknown(),
     v.check(

@@ -1,8 +1,4 @@
-import type {
-  OAuthClientConfig,
-  OAuthProviderClient,
-  OAuthProviderFactory,
-} from "../types.js";
+import type { OAuthProviderClient, OAuthProviderFactory } from "../types.js";
 
 interface GitHubProfile {
   readonly id: number;
@@ -18,9 +14,7 @@ interface GitHubEmail {
   readonly verified: boolean;
 }
 
-export const github: OAuthProviderFactory = (
-  client: OAuthClientConfig,
-): OAuthProviderClient => ({
+export const github: OAuthProviderFactory = (client): OAuthProviderClient => ({
   label: "GitHub",
   authorizeUrl: "https://github.com/login/oauth/authorize",
   tokenUrl: "https://github.com/login/oauth/access_token",
