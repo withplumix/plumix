@@ -92,6 +92,10 @@
       "types": "./dist/radio-group.d.ts",
       "default": "./dist/radio-group.js"
     },
+    "./scroll-area": {
+      "types": "./dist/scroll-area.d.ts",
+      "default": "./dist/scroll-area.js"
+    },
     "./select": {
       "types": "./dist/select.d.ts",
       "default": "./dist/select.js"
