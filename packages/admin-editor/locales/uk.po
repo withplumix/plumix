@@ -269,6 +269,11 @@ msgid "editor.toolbar.device.tablet"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/canvas-frame.tsx
+msgid "editor.canvas.cantPlaceHere"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.header.title"
 msgstr ""

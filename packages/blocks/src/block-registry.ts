@@ -29,6 +29,13 @@ export interface BlockInput {
    * selectable via their own seam).
    */
   readonly rawSlot?: boolean;
+  /**
+   * Slot inputs only: the body seeded into this slot when the block is first
+   * inserted, so a fresh container isn't bare. Inserted as a deep-cloned,
+   * ID-rewritten tree; an explicit slot value (e.g. a variation's innerBlocks)
+   * wins. Mirrors Builder.io's `defaultChildren`.
+   */
+  readonly defaultChildren?: readonly BlockNode[];
 }
 
 export type BlockVariationScope = "inserter" | "block" | "transform";
@@ -146,6 +153,14 @@ export interface BlockSpec<
   readonly capability?: string;
   readonly transforms?: BlockTransforms;
   readonly variations?: readonly BlockVariation[];
+  /**
+   * The parent block names this block may be nested under. Set = the block can
+   * only be inserted into a matching parent's slot (never at the top level); the
+   * inserter hides it elsewhere and a drop into a non-matching parent is
+   * refused. The inverse of a slot's `allowedBlocks`. Mirrors Builder.io's
+   * `requiresParent`.
+   */
+  readonly requiresParent?: readonly string[];
 }
 
 export interface BlockRegistry {

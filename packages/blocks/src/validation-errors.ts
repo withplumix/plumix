@@ -7,7 +7,8 @@ import type { BlockContentValidationResult } from "./validate-content.js";
  */
 export type BlockContentValidationCode =
   | "unknown_block_type"
-  | "disallowed_child";
+  | "disallowed_child"
+  | "requires_parent";
 
 export interface BlockContentValidationIssue {
   readonly code: BlockContentValidationCode;

@@ -165,6 +165,85 @@ describe("validateEntryContent", () => {
     );
   });
 
+  describe("requiresParent", () => {
+    const reg = createBlockRegistry([
+      headingBlock,
+      {
+        name: "core/group",
+        render: () => null,
+        inputs: [{ name: "content", type: "slot" }],
+      },
+      {
+        name: "core/buttons",
+        render: () => null,
+        inputs: [{ name: "items", type: "slot" }],
+      },
+      {
+        name: "core/button",
+        render: () => null,
+        requiresParent: ["core/buttons"],
+      },
+    ]);
+
+    test("rejects a requiresParent block at the top level", () => {
+      const result = validateEntryContent(
+        { version: "plumix.v2", blocks: [{ id: "b1", name: "core/button" }] },
+        reg,
+      );
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          code: "requires_parent",
+          nodeName: "core/button",
+          path: "blocks[0]",
+        }),
+      );
+    });
+
+    test("rejects a requiresParent block under a non-matching parent", () => {
+      const result = validateEntryContent(
+        {
+          version: "plumix.v2",
+          blocks: [
+            {
+              id: "g1",
+              name: "core/group",
+              attrs: { content: [{ id: "b1", name: "core/button" }] },
+            },
+          ],
+        },
+        reg,
+      );
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          code: "requires_parent",
+          nodeName: "core/button",
+          path: "blocks[0].content[0]",
+        }),
+      );
+    });
+
+    test("accepts a requiresParent block under a matching parent", () => {
+      const result = validateEntryContent(
+        {
+          version: "plumix.v2",
+          blocks: [
+            {
+              id: "p1",
+              name: "core/buttons",
+              attrs: { items: [{ id: "b1", name: "core/button" }] },
+            },
+          ],
+        },
+        reg,
+      );
+      expect(result.ok).toBe(true);
+    });
+  });
+
   test("accepts a valid table tree", () => {
     const result = validateEntryContent(
       {

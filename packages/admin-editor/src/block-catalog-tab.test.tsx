@@ -71,6 +71,23 @@ describe("BlockCatalog", () => {
     expect(getByTestId("block-catalog-item-core/image")).toBeDefined();
   });
 
+  test("restricts the listed blocks to the allowed set", () => {
+    const { getByTestId, queryByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={[]}>
+          <BlockCatalog
+            registry={registry}
+            capabilities={NO_CAPS}
+            allowed={["core/heading"]}
+          />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+    expect(getByTestId("block-catalog-item-core/heading")).toBeDefined();
+    expect(queryByTestId("block-catalog-item-core/image")).toBeNull();
+    expect(queryByTestId("block-catalog-item-core/quote")).toBeNull();
+  });
+
   test("search narrows the catalog", () => {
     const { getByTestId, queryByTestId } = renderCatalog();
     fireEvent.change(getByTestId("block-catalog-search"), {

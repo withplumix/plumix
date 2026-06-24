@@ -22,7 +22,7 @@ export function validateEntryContent(
   registry: SpecLookup,
 ): BlockContentValidationResult {
   const errors: BlockContentValidationIssue[] = [];
-  walk(content.blocks, "blocks", errors, registry);
+  walk(content.blocks, "blocks", null, errors, registry);
   if (errors.length === 0) return { ok: true };
   return { ok: false, errors };
 }
@@ -30,6 +30,7 @@ export function validateEntryContent(
 function walk(
   nodes: readonly BlockNode[],
   basePath: string,
+  parentName: string | null,
   out: BlockContentValidationIssue[],
   registry: SpecLookup,
 ): void {
@@ -44,6 +45,21 @@ function walk(
         nodeName: node.name,
       });
       return;
+    }
+    // The inverse of a slot's `allowedBlocks`: a parent-bound block may only sit
+    // under a listed parent (and never at the top level, where parentName null).
+    if (
+      spec.requiresParent &&
+      (parentName === null || !spec.requiresParent.includes(parentName))
+    ) {
+      out.push({
+        code: "requires_parent",
+        message: `Block "${node.name}" can only be nested under ${spec.requiresParent
+          .map((p) => `"${p}"`)
+          .join(", ")} at ${path}.`,
+        path,
+        nodeName: node.name,
+      });
     }
     for (const [key, value] of Object.entries(node.attrs ?? {})) {
       if (!isBlockNodeArray(value)) continue;
@@ -64,7 +80,7 @@ function walk(
           });
         });
       }
-      walk(value, `${path}.${key}`, out, registry);
+      walk(value, `${path}.${key}`, node.name, out, registry);
     }
   });
 }

@@ -45,6 +45,12 @@ interface GroupOptions {
   readonly capabilities: ReadonlySet<string>;
   /** Case-insensitive filter over name, title and keywords. */
   readonly query?: string;
+  /** Restrict to these block names (a slot's `allowedBlocks`); `undefined`
+   *  permits every eligible block. */
+  readonly allowed?: readonly string[];
+  /** The block the inserter targets, for enforcing each candidate's
+   *  `requiresParent`. `undefined` = the top level (parent-bound blocks hidden). */
+  readonly parentName?: string;
 }
 
 interface InsertableGroup {
@@ -60,13 +66,16 @@ interface InsertableGroup {
  */
 export function groupInsertables(
   registry: BlockRegistry,
-  { capabilities, query }: GroupOptions,
+  { capabilities, query, allowed, parentName }: GroupOptions,
 ): readonly InsertableGroup[] {
   const needle = query?.trim().toLowerCase() ?? "";
   const eligible = [...registry].filter(
     (spec) =>
       spec.inserter !== false &&
-      (!spec.capability || capabilities.has(spec.capability)),
+      (!spec.capability || capabilities.has(spec.capability)) &&
+      (!allowed || allowed.includes(spec.name)) &&
+      (!spec.requiresParent ||
+        (parentName !== undefined && spec.requiresParent.includes(parentName))),
   );
   // Map iteration is insertion-ordered, which is the registry order we want.
   const buckets = new Map<string, InsertableBlockEntry[]>();
@@ -104,11 +113,24 @@ export function createNodeFromEntry(
   registry: BlockRegistry,
   entry: InsertableBlockEntry,
 ): BlockNode {
+  const spec = registry.get(entry.name);
   const attrs: Record<string, unknown> = {
-    ...registry.get(entry.name)?.defaults,
+    ...spec?.defaults,
     ...entry.attrs,
   };
   if (entry.innerBlocks) attrs[CONTENT_SLOT] = entry.innerBlocks;
+  // Seed each declared slot's defaultChildren unless that slot was already
+  // provided (by defaults, the variation's attrs, or innerBlocks). Ids are
+  // minted fresh below, so the spec's template ids never leak into the tree.
+  for (const input of spec?.inputs ?? []) {
+    if (
+      input.type === "slot" &&
+      input.defaultChildren &&
+      attrs[input.name] === undefined
+    ) {
+      attrs[input.name] = input.defaultChildren;
+    }
+  }
   const seed: BlockNode = { id: "seed", name: entry.name, attrs };
   const [node = seed] = rewriteBlockNodeIds([seed]);
   return node;

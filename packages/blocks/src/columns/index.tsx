@@ -23,8 +23,18 @@ export const columnsBlock = defineBlock({
       label: "Gap",
       options: GAPS.map((v) => ({ label: v, value: v })),
     },
-    { name: "left", type: "slot", label: "Left column" },
-    { name: "right", type: "slot", label: "Right column" },
+    {
+      name: "left",
+      type: "slot",
+      label: "Left column",
+      defaultChildren: [{ id: "left-text", name: "core/rich-text" }],
+    },
+    {
+      name: "right",
+      type: "slot",
+      label: "Right column",
+      defaultChildren: [{ id: "right-text", name: "core/rich-text" }],
+    },
   ],
   defaults: { gap: "md" },
   render: ({ attrs }): ReactNode => {
