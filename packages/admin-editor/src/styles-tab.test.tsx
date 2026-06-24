@@ -180,11 +180,23 @@ describe("StylesTab — declarations list", () => {
     expect(getByTestId("style-declarations-empty")).toBeDefined();
   });
 
-  test("adds a new declaration from the key + value fields", () => {
+  test("offers CSS property suggestions in the key combobox", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
-    fireEvent.change(getByTestId("style-declaration-add-key"), {
-      target: { value: "letterSpacing" },
-    });
+    fireEvent.click(getByTestId("style-declaration-add-key"));
+    expect(
+      getByTestId("style-declaration-add-key-option-marginTop"),
+    ).toBeDefined();
+    expect(
+      getByTestId("style-declaration-add-key-option-display"),
+    ).toBeDefined();
+  });
+
+  test("adds a declaration by picking a property and typing a value", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    fireEvent.click(getByTestId("style-declaration-add-key"));
+    fireEvent.click(
+      getByTestId("style-declaration-add-key-option-letterSpacing"),
+    );
     fireEvent.change(getByTestId("style-declaration-add-value"), {
       target: { value: "0.05em" },
     });
@@ -196,57 +208,99 @@ describe("StylesTab — declarations list", () => {
 
   test("clears the add fields after a successful add", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
-    fireEvent.change(getByTestId("style-declaration-add-key"), {
-      target: { value: "opacity" },
-    });
+    fireEvent.click(getByTestId("style-declaration-add-key"));
+    fireEvent.click(getByTestId("style-declaration-add-key-option-opacity"));
     fireEvent.change(getByTestId("style-declaration-add-value"), {
       target: { value: "0.5" },
     });
     fireEvent.click(getByTestId("style-declaration-add-submit"));
-    expect(
-      (getByTestId("style-declaration-add-key") as HTMLInputElement).value,
-    ).toBe("");
+    // Property resets (submit re-disables) and the value field empties.
+    expect(getByTestId("style-declaration-add-submit")).toHaveProperty(
+      "disabled",
+      true,
+    );
     expect(
       (getByTestId("style-declaration-add-value") as HTMLInputElement).value,
     ).toBe("");
   });
 
-  test("does not add a declaration with an invalid key", () => {
+  test("excludes already-set properties from the suggestions", () => {
+    const { getByTestId, queryByTestId } = renderTab([styled], "a");
+    fireEvent.click(getByTestId("style-declaration-add-key"));
+    // `color` is already set, so it can't be re-added (no silent overwrite).
+    expect(queryByTestId("style-declaration-add-key-option-color")).toBeNull();
+    expect(
+      getByTestId("style-declaration-add-key-option-marginTop"),
+    ).toBeDefined();
+  });
+
+  test("can add a property outside the curated list via the create item", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
-    fireEvent.change(getByTestId("style-declaration-add-key"), {
-      target: { value: "bad key!" },
+    fireEvent.click(getByTestId("style-declaration-add-key"));
+    fireEvent.change(getByTestId("style-declaration-add-key-search"), {
+      target: { value: "scrollSnapAlign" },
     });
+    fireEvent.click(getByTestId("style-declaration-add-key-create"));
     fireEvent.change(getByTestId("style-declaration-add-value"), {
-      target: { value: "1px" },
+      target: { value: "start" },
     });
     fireEvent.click(getByTestId("style-declaration-add-submit"));
-    // Invalid CSS property name → no write, slot stays undefined.
-    expect(getByTestId("style-probe").textContent).toBe("");
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"scrollSnapAlign":{"raw":"start"}',
+    );
+  });
+
+  test("offers no create item for an invalid property name", () => {
+    const { getByTestId, queryByTestId } = renderTab(
+      [{ id: "a", name: "core/x" }],
+      "a",
+    );
+    fireEvent.click(getByTestId("style-declaration-add-key"));
+    fireEvent.change(getByTestId("style-declaration-add-key-search"), {
+      target: { value: "bad key!" },
+    });
+    expect(queryByTestId("style-declaration-add-key-create")).toBeNull();
   });
 
   test("does not add a declaration with an empty value", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
-    fireEvent.change(getByTestId("style-declaration-add-key"), {
-      target: { value: "opacity" },
-    });
+    fireEvent.click(getByTestId("style-declaration-add-key"));
+    fireEvent.click(getByTestId("style-declaration-add-key-option-opacity"));
     fireEvent.click(getByTestId("style-declaration-add-submit"));
     // A blank value would drop at emit, so submit stays gated.
     expect(getByTestId("style-probe").textContent).toBe("");
   });
 
-  test("does not add a key that already exists (no silent overwrite)", () => {
-    const { getByTestId } = renderTab([styled], "a");
-    fireEvent.change(getByTestId("style-declaration-add-key"), {
-      target: { value: "color" },
+  test("won't overwrite a property that became set after it was picked", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    // Pick marginTop in the add row, then set marginTop via the Margin control
+    // before submitting — the add submit must not clobber the control's value.
+    fireEvent.click(getByTestId("style-declaration-add-key"));
+    fireEvent.click(getByTestId("style-declaration-add-key-option-marginTop"));
+    fireEvent.click(getByTestId("style-control-marginTop-mode-custom"));
+    fireEvent.change(getByTestId("style-control-marginTop-custom"), {
+      target: { value: "8px" },
     });
     fireEvent.change(getByTestId("style-declaration-add-value"), {
-      target: { value: "red" },
+      target: { value: "99px" },
     });
     fireEvent.click(getByTestId("style-declaration-add-submit"));
-    // The existing color declaration is untouched.
     expect(getByTestId("style-probe").textContent).toContain(
-      '"color":{"raw":"#0c2238"}',
+      '"marginTop":{"raw":"8px"}',
     );
-    expect(getByTestId("style-probe").textContent).not.toContain("red");
+    expect(getByTestId("style-probe").textContent).not.toContain("99px");
+  });
+
+  test("offers no create item for a case-variant of a known property", () => {
+    const { getByTestId, queryByTestId } = renderTab(
+      [{ id: "a", name: "core/x" }],
+      "a",
+    );
+    fireEvent.click(getByTestId("style-declaration-add-key"));
+    fireEvent.change(getByTestId("style-declaration-add-key-search"), {
+      target: { value: "margintop" },
+    });
+    // `margintop` collides with the curated `marginTop`, so no second creation.
+    expect(queryByTestId("style-declaration-add-key-create")).toBeNull();
   });
 });

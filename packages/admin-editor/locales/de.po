@@ -104,6 +104,11 @@ msgid "editor.styles.mark.bold"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/style-declarations.tsx
+msgid "editor.styles.add.create"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/style-control.tsx
 msgid "editor.styles.mode.custom"
 msgstr ""
@@ -190,6 +195,11 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/style-declarations.tsx
+msgid "editor.styles.add.none"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/style-declarations.tsx
 msgid "editor.styles.none"
 msgstr ""
 
@@ -246,6 +256,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/block-catalog-tab.tsx
 msgid "editor.catalog.searchLabel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/style-declarations.tsx
+msgid "editor.styles.add.search"
 msgstr ""
 
 #. js-lingui-explicit-id
