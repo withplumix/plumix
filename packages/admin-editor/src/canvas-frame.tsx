@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useLingui } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/blocks";
 import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
@@ -86,6 +87,13 @@ export function CanvasFrame({
   capabilities,
   readOnly = false,
 }: CanvasFrameProps): ReactElement {
+  const { i18n } = useLingui();
+  // The canvas has no i18n runtime, so resolve its chrome (the in-canvas "Add a
+  // block" affordance, root + empty slots) here and push it over the bridge.
+  const addBlockLabel = i18n._({
+    id: "editor.canvas.addBlock",
+    message: "Add a block",
+  });
   const store = useEditorStoreApi();
   const loaderPushRef = useLoaderPushRef();
   const device = useEditorStore((s) => s.device);
@@ -334,6 +342,7 @@ export function CanvasFrame({
       onKey: ({ down, code, shiftKey }) =>
         keyHandlerRef.current?.(down, code, shiftKey),
       onRequestAdd: ({ parentId, slotKey }) => requestAdd(parentId, slotKey),
+      config: { addBlockLabel },
     });
     // Expose the loader-data push to the inspector's refresh control.
     if (loaderPushRef) loaderPushRef.current = connection.pushLoaderData;
@@ -349,6 +358,7 @@ export function CanvasFrame({
     loaderPushRef,
     handleWheel,
     requestAdd,
+    addBlockLabel,
   ]);
 
   // Keep frame/container fresh when the canvas moves without a block report:

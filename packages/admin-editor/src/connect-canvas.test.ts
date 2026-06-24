@@ -123,12 +123,48 @@ describe("connectCanvas", () => {
       onRequestAdd,
     });
 
-    fromCanvas({ type: "canvas:requestAdd", parentId: "g1", slotKey: "content" });
+    fromCanvas({
+      type: "canvas:requestAdd",
+      parentId: "g1",
+      slotKey: "content",
+    });
 
     expect(onRequestAdd).toHaveBeenCalledWith({
       parentId: "g1",
       slotKey: "content",
     });
+    conn.dispose();
+  });
+
+  test("pushes host:config to the canvas on ready when config is given", () => {
+    const store = createEditorStore();
+    const { win, posted } = fakeFrame();
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      config: { addBlockLabel: "Ajouter un bloc" },
+    });
+
+    fromCanvas({ type: "canvas:ready" });
+
+    const configMsg = hostMessages(posted).find(
+      (m) => m.type === "host:config",
+    ) as { addBlockLabel?: string } | undefined;
+    expect(configMsg?.addBlockLabel).toBe("Ajouter un bloc");
+    conn.dispose();
+  });
+
+  test("sends no host:config when no config is given", () => {
+    const store = createEditorStore();
+    const { win, posted } = fakeFrame();
+    const conn = connectCanvas({ store, frameWindow: win, origin: ORIGIN });
+
+    fromCanvas({ type: "canvas:ready" });
+
+    expect(hostMessages(posted).some((m) => m.type === "host:config")).toBe(
+      false,
+    );
     conn.dispose();
   });
 

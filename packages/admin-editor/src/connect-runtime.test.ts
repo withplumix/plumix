@@ -135,6 +135,22 @@ describe("connectRuntime (canvas/iframe side)", () => {
     conn.dispose();
   });
 
+  test("delivers a pushed host:config to onConfig", () => {
+    const seen: { addBlockLabel: string }[] = [];
+    const { win } = fakeParent();
+    const conn = connectRuntime({
+      parentWindow: win,
+      origin: ORIGIN,
+      onTree: () => undefined,
+      onConfig: (config) => seen.push(config),
+    });
+
+    fromHost({ type: "host:config", addBlockLabel: "Ajouter un bloc" });
+
+    expect(seen.at(-1)).toEqual({ addBlockLabel: "Ajouter un bloc" });
+    conn.dispose();
+  });
+
   test("reportRequestAdd posts canvas:requestAdd to the host", () => {
     const { win, posted } = fakeParent();
     const conn = connectRuntime({

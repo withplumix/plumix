@@ -179,9 +179,11 @@ test.describe("editor playground", () => {
     const handle = await page
       .getByTestId("selection-toolbar-drag")
       .boundingBox();
-    const target = await canvas
-      .locator('[data-plumix-id="group-heading"]')
-      .boundingBox();
+    // Await the drop target's paint before measuring — boundingBox() returns
+    // null for a not-yet-visible element, which raced under slow CI.
+    const groupHeading = canvas.locator('[data-plumix-id="group-heading"]');
+    await expect(groupHeading).toBeVisible();
+    const target = await groupHeading.boundingBox();
     if (!handle || !target) throw new Error("expected handle + target boxes");
 
     // Drag the handle (host-side) into the group's slot and release.

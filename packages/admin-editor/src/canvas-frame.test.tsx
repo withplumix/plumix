@@ -338,7 +338,11 @@ describe("CanvasFrame nested drop", () => {
     renderWith([{ id: "g1", name: "core/group", attrs: { content: [] } }]);
 
     // The empty slot's in-canvas appender forwards a slot-scoped requestAdd.
-    fromCanvas({ type: "canvas:requestAdd", parentId: "g1", slotKey: "content" });
+    fromCanvas({
+      type: "canvas:requestAdd",
+      parentId: "g1",
+      slotKey: "content",
+    });
 
     const content = storeApi?.getState().tree[0]?.attrs?.content as
       | readonly BlockNode[]

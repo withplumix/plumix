@@ -180,6 +180,33 @@ describe("EditorCanvas", () => {
     spy.mockRestore();
   });
 
+  test("applies the host's pushed config label to the add affordance", () => {
+    const { container } = render(
+      <EditorCanvas registry={registry} origin={ORIGIN} />,
+    );
+
+    // Before config arrives, the appender falls back to English.
+    expect(container.querySelector("[data-plumix-add]")?.textContent).toBe(
+      "Add a block",
+    );
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: encode(EDITOR_BRIDGE_CHANNEL, {
+            type: "host:config",
+            addBlockLabel: "Ajouter un bloc",
+          }),
+          origin: ORIGIN,
+        }),
+      );
+    });
+
+    expect(container.querySelector("[data-plumix-add]")?.textContent).toBe(
+      "Ajouter un bloc",
+    );
+  });
+
   test("hovering a block reports canvas:hover to the host", () => {
     const posted: unknown[] = [];
     const spy = vi

@@ -134,6 +134,21 @@ describe("renderBlockTree edit-aware seam", () => {
     expect(html).not.toContain("data-plumix-add");
   });
 
+  test("threads the localized add-block label into the empty-slot affordance", () => {
+    const empty: readonly BlockNode[] = [
+      { id: "g2", name: "core/group", attrs: { content: [] } },
+    ];
+    const html = renderToStaticMarkup(
+      renderBlockTree(empty, registry, {
+        editing: true,
+        addBlockLabel: "Ajouter un bloc",
+      }),
+    );
+
+    expect(html).toContain("Ajouter un bloc");
+    expect(html).not.toContain("Add a block");
+  });
+
   test("the normal render carries no slot markers or add affordance", () => {
     const html = renderToStaticMarkup(renderBlockTree(nested, registry));
 

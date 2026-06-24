@@ -59,6 +59,10 @@ export function EditorCanvas({
       document.querySelector("[data-plumix-loader-data]")?.textContent ?? "",
     ),
   );
+  // Canvas chrome the host resolves (it owns Lingui; the canvas has none).
+  // Undefined until config arrives, so editAppender's own default is the single
+  // English fallback for the pre-config window.
+  const [addBlockLabel, setAddBlockLabel] = useState<string>();
   const connectionRef = useRef<RuntimeConnection | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +73,7 @@ export function EditorCanvas({
       onTree: setTree,
       onLoaderData: (data) =>
         setLoaderData((prior) => mergeLoaderData(prior, data)),
+      onConfig: (config) => setAddBlockLabel(config.addBlockLabel),
     });
     connectionRef.current = connection;
     return () => {
@@ -212,13 +217,16 @@ export function EditorCanvas({
         {tree.length === 0 ? (
           // Empty document: the same in-canvas appender an empty slot shows,
           // flowing in content rather than as a host overlay.
-          <div style={{ padding: "2rem" }}>{editAppender()}</div>
+          <div style={{ padding: "2rem" }}>
+            {editAppender(undefined, addBlockLabel)}
+          </div>
         ) : (
           renderBlockTree(tree, registry, {
             editing: true,
             loaderData,
             tokens,
             breakpoints,
+            addBlockLabel,
           })
         )}
       </div>

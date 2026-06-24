@@ -81,6 +81,10 @@ export interface RenderBlockTreeOptions {
   readonly entry?: Readonly<Record<string, unknown>> | null;
   /** Edit mode: tag each block wrapper with `data-plumix-id` for canvas selection. */
   readonly editing?: boolean;
+  /** Localized "Add a block" label for the edit-mode empty-slot affordance.
+   *  The host resolves it (it owns Lingui) and passes it in; the canvas has no
+   *  i18n runtime. Defaults to English inside `editAppender` when absent. */
+  readonly addBlockLabel?: string;
 }
 
 /** Editor/style seam attributes a block spreads onto its root element when it
@@ -217,7 +221,10 @@ function materializeSlots(
               },
               // An empty slot shows the same in-canvas "Add a block"
               // affordance as the root — clicking it inserts into this slot.
-              editAppender({ parentId: node.id, slotKey: key }),
+              editAppender(
+                { parentId: node.id, slotKey: key },
+                env.addBlockLabel,
+              ),
             ),
       );
     };
@@ -234,6 +241,7 @@ interface WalkerEnv {
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly patterns: PatternRegistry | undefined;
   readonly editing: boolean;
+  readonly addBlockLabel: string | undefined;
 }
 
 function renderNodes(
@@ -382,6 +390,7 @@ export function renderBlockTree(
     loaderData: options?.loaderData,
     patterns: options?.patterns,
     editing: options?.editing ?? false,
+    addBlockLabel: options?.addBlockLabel,
   };
   const rootContext: BlockContext = {
     ...DEFAULT_BLOCK_CONTEXT,

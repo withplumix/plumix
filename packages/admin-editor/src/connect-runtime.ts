@@ -48,6 +48,8 @@ interface ConnectRuntimeOptions {
   readonly onTree: (tree: readonly BlockNode[]) => void;
   /** Called with a scoped refresh's re-resolved loader data (node-keyed). */
   readonly onLoaderData?: (data: SerializedLoaderData) => void;
+  /** Called with the host's resolved canvas chrome (e.g. localized labels). */
+  readonly onConfig?: (config: { readonly addBlockLabel: string }) => void;
 }
 
 /**
@@ -61,6 +63,7 @@ export function connectRuntime({
   origin,
   onTree,
   onLoaderData,
+  onConfig,
 }: ConnectRuntimeOptions): RuntimeConnection {
   const post = (message: object): void => {
     parentWindow.postMessage(encode(EDITOR_BRIDGE_CHANNEL, message), origin);
@@ -93,6 +96,9 @@ export function connectRuntime({
         break;
       case "host:loader-data":
         onLoaderData?.(host.data);
+        break;
+      case "host:config":
+        onConfig?.({ addBlockLabel: host.addBlockLabel });
         break;
     }
   };

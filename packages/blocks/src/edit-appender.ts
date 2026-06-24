@@ -27,12 +27,17 @@ const STYLE: Record<string, string> = {
  * canvas click-delegation turns into an add-intent; it has no event handler so
  * the renderer stays pure (the same code string-renders for SSR, where this is
  * never emitted because it's edit-only). `target` identifies an empty slot;
- * omit it for the root document.
+ * omit it for the root document. `label` is the localized text — resolved by
+ * the host (which owns Lingui) and threaded in, since the canvas has no i18n
+ * runtime; it falls back to English when the host hasn't pushed config yet.
  */
-export function editAppender(target?: {
-  readonly parentId: string;
-  readonly slotKey: string;
-}): ReactElement {
+export function editAppender(
+  target?: {
+    readonly parentId: string;
+    readonly slotKey: string;
+  },
+  label = "Add a block",
+): ReactElement {
   return createElement(
     "button",
     {
@@ -44,6 +49,6 @@ export function editAppender(target?: {
       }),
       style: STYLE,
     },
-    "Add a block",
+    label,
   );
 }

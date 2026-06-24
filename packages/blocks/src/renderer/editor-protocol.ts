@@ -35,6 +35,13 @@ export interface SlotRect {
 export type HostMessage =
   | { readonly type: "host:tree"; readonly tree: readonly BlockNode[] }
   | {
+      // Static, locale-dependent canvas chrome the host resolves (it owns the
+      // i18n runtime; the canvas does not). Sent once the canvas is ready and
+      // again if the locale changes. Currently just the "Add a block" label.
+      readonly type: "host:config";
+      readonly addBlockLabel: string;
+    }
+  | {
       // A scoped refresh's re-resolved loader data, node-keyed (same shape
       // `serializeLoaderData` emits). The canvas merges it into its loader map.
       readonly type: "host:loader-data";
