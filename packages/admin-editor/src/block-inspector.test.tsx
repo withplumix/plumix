@@ -10,7 +10,11 @@ import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import { BlockInspector } from "./block-inspector.js";
-import { EditorProvider, useEditorStoreApi } from "./provider.js";
+import {
+  EditorProvider,
+  useEditorStore,
+  useEditorStoreApi,
+} from "./provider.js";
 
 beforeAll(() => {
   i18n.loadAndActivate({ locale: "en", messages: {} });
@@ -162,5 +166,145 @@ describe("BlockInspector", () => {
       "lp1",
     );
     expect(queryByTestId("refresh-block-loader")).toBeNull();
+  });
+});
+
+function HtmlAttrProbe({ id }: { readonly id: string }): ReactElement {
+  const attrs = useEditorStore(
+    (s) => s.tree.find((n) => n.id === id)?.htmlAttrs,
+  );
+  return <output data-testid="html-attr-probe">{JSON.stringify(attrs)}</output>;
+}
+
+function renderHtmlAttrs(tree: readonly BlockNode[], selectId: string) {
+  const utils = render(
+    <I18nProvider i18n={i18n}>
+      <EditorProvider initialTree={tree}>
+        <Selector id={selectId} />
+        <BlockInspector registry={registry} />
+        <HtmlAttrProbe id={tree[0]?.id ?? ""} />
+      </EditorProvider>
+    </I18nProvider>,
+  );
+  // The HTML attributes section is collapsed by default — open it.
+  fireEvent.click(utils.getByTestId("block-section-html"));
+  return utils;
+}
+
+describe("BlockInspector — HTML attributes", () => {
+  const withAttrs: BlockNode = {
+    id: "h1",
+    name: "core/heading",
+    htmlAttrs: { id: "hero", "data-track": "cta" },
+  };
+
+  test("lists existing attributes as editable key/value rows", () => {
+    const { getByTestId } = renderHtmlAttrs([withAttrs], "h1");
+    expect((getByTestId("html-attr-id-key") as HTMLInputElement).value).toBe(
+      "id",
+    );
+    expect((getByTestId("html-attr-id-value") as HTMLInputElement).value).toBe(
+      "hero",
+    );
+  });
+
+  test("the section is collapsed by default", () => {
+    const { getByTestId, queryByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={[withAttrs]}>
+          <Selector id="h1" />
+          <BlockInspector registry={registry} />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+    expect(getByTestId("block-section-html")).toBeDefined();
+    expect(queryByTestId("html-attr-id-key")).toBeNull();
+  });
+
+  test("editing a value writes it back to the block", () => {
+    const { getByTestId } = renderHtmlAttrs([withAttrs], "h1");
+    fireEvent.change(getByTestId("html-attr-id-value"), {
+      target: { value: "main" },
+    });
+    expect(getByTestId("html-attr-probe").textContent).toContain('"id":"main"');
+  });
+
+  test("removing an attribute clears it", () => {
+    const single: BlockNode = {
+      id: "h1",
+      name: "core/heading",
+      htmlAttrs: { id: "hero" },
+    };
+    const { getByTestId } = renderHtmlAttrs([single], "h1");
+    fireEvent.click(getByTestId("html-attr-id-remove"));
+    expect(getByTestId("html-attr-probe").textContent).toBe("");
+  });
+
+  test("adds an attribute via the combobox and value", () => {
+    const { getByTestId } = renderHtmlAttrs(
+      [{ id: "h1", name: "core/heading" }],
+      "h1",
+    );
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.click(getByTestId("html-attr-add-key-option-role"));
+    fireEvent.change(getByTestId("html-attr-add-value"), {
+      target: { value: "banner" },
+    });
+    fireEvent.click(getByTestId("html-attr-add-submit"));
+    expect(getByTestId("html-attr-probe").textContent).toContain(
+      '"role":"banner"',
+    );
+  });
+
+  test("offers no create item for a disallowed attribute name", () => {
+    const { getByTestId, queryByTestId } = renderHtmlAttrs(
+      [{ id: "h1", name: "core/heading" }],
+      "h1",
+    );
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.change(getByTestId("html-attr-add-key-search"), {
+      target: { value: "onclick" },
+    });
+    expect(queryByTestId("html-attr-add-key-create")).toBeNull();
+  });
+
+  test("normalizes a typed key to lowercase so the renderer keeps it", () => {
+    const { getByTestId } = renderHtmlAttrs(
+      [{ id: "h1", name: "core/heading" }],
+      "h1",
+    );
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.change(getByTestId("html-attr-add-key-search"), {
+      target: { value: "Data-Track" },
+    });
+    fireEvent.click(getByTestId("html-attr-add-key-create"));
+    fireEvent.change(getByTestId("html-attr-add-value"), {
+      target: { value: "cta" },
+    });
+    fireEvent.click(getByTestId("html-attr-add-submit"));
+    expect(getByTestId("html-attr-probe").textContent).toContain(
+      '"data-track":"cta"',
+    );
+  });
+
+  test("won't add a case-variant of an existing attribute", () => {
+    const { getByTestId, queryByTestId } = renderHtmlAttrs([withAttrs], "h1");
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.change(getByTestId("html-attr-add-key-search"), {
+      target: { value: "DATA-TRACK" },
+    });
+    // `data-track` already exists, so no create item for its uppercase variant.
+    expect(queryByTestId("html-attr-add-key-create")).toBeNull();
+  });
+
+  test("renames an attribute via the key field on commit", () => {
+    const { getByTestId } = renderHtmlAttrs([withAttrs], "h1");
+    const key = getByTestId("html-attr-id-key") as HTMLInputElement;
+    fireEvent.change(key, { target: { value: "title" } });
+    fireEvent.blur(key);
+    expect(getByTestId("html-attr-probe").textContent).toContain(
+      '"title":"hero"',
+    );
+    expect(getByTestId("html-attr-probe").textContent).not.toContain('"id"');
   });
 });

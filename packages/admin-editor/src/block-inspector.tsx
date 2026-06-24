@@ -4,11 +4,18 @@ import { Trans } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/blocks";
 import type { SerializedLoaderData } from "@plumix/blocks/renderer";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@plumix/admin-ui/accordion";
 import { Button } from "@plumix/admin-ui/button";
 import { RefreshCw } from "@plumix/admin-ui/icons";
 
 import { BlockInputControl } from "./block-input-control.js";
 import { findBlock } from "./block-tree-ops.js";
+import { HtmlAttributes } from "./html-attributes.js";
 import { useEditorStore, useLoaderPushRef } from "./provider.js";
 
 interface BlockInspectorProps {
@@ -34,6 +41,8 @@ export function BlockInspector({
   const activeId = useEditorStore((s) => s.activeId);
   const tree = useEditorStore((s) => s.tree);
   const updateBlockAttrs = useEditorStore((s) => s.updateBlockAttrs);
+  const updateBlockHtmlAttr = useEditorStore((s) => s.updateBlockHtmlAttr);
+  const renameBlockHtmlAttr = useEditorStore((s) => s.renameBlockHtmlAttr);
   const loaderPushRef = useLoaderPushRef();
 
   const block = activeId ? findBlock(tree, activeId) : undefined;
@@ -92,6 +101,23 @@ export function BlockInspector({
           <Trans id="editor.inspector.refreshData" message="Refresh data" />
         </Button>
       )}
+      {/* Raw HTML attributes — a dev escape hatch, collapsed by default. */}
+      <Accordion type="multiple">
+        <AccordionItem value="html">
+          <AccordionTrigger data-testid="block-section-html">
+            <Trans id="editor.htmlAttrs.title" message="HTML attributes" />
+          </AccordionTrigger>
+          <AccordionContent>
+            <HtmlAttributes
+              attributes={block.htmlAttrs ?? {}}
+              onChange={(key, value) =>
+                updateBlockHtmlAttr(block.id, key, value)
+              }
+              onRename={(from, to) => renameBlockHtmlAttr(block.id, from, to)}
+            />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
