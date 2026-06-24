@@ -49,6 +49,11 @@ interface ConnectCanvasOptions {
     readonly code: string;
     readonly shiftKey: boolean;
   }) => void;
+  /** An in-canvas "Add a block" affordance was clicked — root or empty slot. */
+  readonly onRequestAdd?: (target: {
+    readonly parentId?: string;
+    readonly slotKey?: string;
+  }) => void;
 }
 
 // The iframe runtime usually boots after the parent mounts, so a single hello
@@ -66,6 +71,7 @@ export function connectCanvas({
   onGeometry,
   onWheel,
   onKey,
+  onRequestAdd,
 }: ConnectCanvasOptions): CanvasConnection {
   const post = (message: object): void => {
     frameWindow.postMessage(encode(EDITOR_BRIDGE_CHANNEL, message), origin);
@@ -120,6 +126,9 @@ export function connectCanvas({
           code: canvas.code,
           shiftKey: canvas.shiftKey,
         });
+        break;
+      case "canvas:requestAdd":
+        onRequestAdd?.({ parentId: canvas.parentId, slotKey: canvas.slotKey });
         break;
     }
   };

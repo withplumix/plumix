@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { Trans } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/blocks";
 import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
@@ -101,7 +100,6 @@ export function CanvasFrame({
   const hoverId = useEditorStore((s) => s.hoverId);
   const dragSpec = useEditorStore((s) => s.dragSpec);
   const movingId = useEditorStore((s) => s.movingId);
-  const isEmpty = useEditorStore((s) => s.tree.length === 0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [geometry, setGeometry] = useState<Geometry>({
@@ -266,6 +264,41 @@ export function CanvasFrame({
     [applyLive],
   );
 
+  // Insert the first insertable block at the top level (empty-document add).
+  const addFirstBlock = useCallback((): void => {
+    const [group] = groupInsertables(registry, { capabilities });
+    const entry = group?.entries[0];
+    if (entry) {
+      store.getState().insertBlock(createNodeFromEntry(registry, entry), 0);
+    }
+  }, [registry, capabilities, store]);
+
+  // Resolve an in-canvas "Add a block" click: root (no target) inserts at the
+  // top level; an empty slot inserts the first block its allowedBlocks permits.
+  const requestAdd = useCallback(
+    (parentId?: string, slotKey?: string): void => {
+      if (!parentId || !slotKey) {
+        addFirstBlock();
+        return;
+      }
+      const parent = findBlock(store.getState().tree, parentId);
+      if (!parent) return;
+      const allowed = slotAllowedBlocks(registry, parent.name, slotKey);
+      const entry = groupInsertables(registry, { capabilities })
+        .flatMap((g) => g.entries)
+        .find((e) => !allowed || allowed.includes(e.name));
+      if (!entry) return;
+      store
+        .getState()
+        .insertBlockInto(
+          createNodeFromEntry(registry, entry),
+          { parentId, slotKey, index: Number.MAX_SAFE_INTEGER },
+          allowed,
+        );
+    },
+    [registry, capabilities, store, addFirstBlock],
+  );
+
   useEffect(() => {
     const frameWindow = iframeRef.current?.contentWindow;
     if (!frameWindow) return;
@@ -300,6 +333,7 @@ export function CanvasFrame({
       },
       onKey: ({ down, code, shiftKey }) =>
         keyHandlerRef.current?.(down, code, shiftKey),
+      onRequestAdd: ({ parentId, slotKey }) => requestAdd(parentId, slotKey),
     });
     // Expose the loader-data push to the inspector's refresh control.
     if (loaderPushRef) loaderPushRef.current = connection.pushLoaderData;
@@ -307,7 +341,15 @@ export function CanvasFrame({
       if (loaderPushRef) loaderPushRef.current = null;
       connection.dispose();
     };
-  }, [store, origin, measureHost, measureContent, loaderPushRef, handleWheel]);
+  }, [
+    store,
+    origin,
+    measureHost,
+    measureContent,
+    loaderPushRef,
+    handleWheel,
+    requestAdd,
+  ]);
 
   // Keep frame/container fresh when the canvas moves without a block report:
   // column scroll, window resize, and rail collapse (which resizes the inset).
@@ -666,14 +708,6 @@ export function CanvasFrame({
     };
   }, [dragSpec, movingId, store, registry]);
 
-  const addFirstBlock = useCallback((): void => {
-    const [group] = groupInsertables(registry, { capabilities });
-    const entry = group?.entries[0];
-    if (entry) {
-      store.getState().insertBlock(createNodeFromEntry(registry, entry), 0);
-    }
-  }, [registry, capabilities, store]);
-
   // Host-side wheel: pan/zoom when the cursor is over the margin around the
   // frame. Over the iframe the gesture is forwarded via the bridge (onWheel
   // above). Native + non-passive so we can preventDefault the page scroll.
@@ -785,19 +819,6 @@ export function CanvasFrame({
               dragSpec || movingId || panReady ? "none" : undefined,
           }}
         />
-        {/* Inside the stage so it sits on the frame (and pans/zooms with it),
-            rather than floating over the container now that the frame is
-            centered/pannable. */}
-        {!readOnly && isEmpty && (
-          <button
-            type="button"
-            data-testid="plumix-empty-add"
-            onClick={addFirstBlock}
-            className="border-muted-foreground/40 text-muted-foreground hover:bg-accent absolute inset-x-8 top-8 rounded-md border border-dashed p-6 text-sm"
-          >
-            <Trans id="editor.canvas.addBlock" message="Add a block" />
-          </button>
-        )}
       </div>
       {/* Clip layer pinned over the visible canvas column. Its overflow:hidden
           keeps the absolutely-positioned overlays + toolbar from spilling onto

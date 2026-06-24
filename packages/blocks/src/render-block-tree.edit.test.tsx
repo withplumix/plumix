@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
+import { columnsBlock } from "./columns/index.js";
 import { groupBlock } from "./group/index.js";
 import { headingBlock } from "./heading/index.js";
 import { renderBlockTree } from "./render-block-tree.js";
@@ -12,7 +13,7 @@ import {
   tableCellBlock,
 } from "./table/index.js";
 
-const registry = createBlockRegistry([headingBlock, groupBlock]);
+const registry = createBlockRegistry([headingBlock, groupBlock, columnsBlock]);
 const tableRegistry = createBlockRegistry([
   tableBlock,
   tableBodyRowBlock,
@@ -94,7 +95,7 @@ describe("renderBlockTree edit-aware seam", () => {
     expect(html).toContain('data-plumix-id="h1"');
   });
 
-  test("editing gives an empty slot a droppable placeholder", () => {
+  test("editing gives an empty slot a droppable placeholder + add affordance", () => {
     const empty: readonly BlockNode[] = [
       { id: "g2", name: "core/group", attrs: { content: [] } },
     ];
@@ -104,11 +105,39 @@ describe("renderBlockTree edit-aware seam", () => {
 
     expect(html).toContain('data-plumix-slot-parent="g2"');
     expect(html).toContain("data-plumix-slot-empty");
+    // The empty slot shows the in-canvas "Add a block" affordance scoped to it.
+    expect(html).toContain("data-plumix-add");
+    expect(html).toContain('data-plumix-add-parent="g2"');
+    expect(html).toContain('data-plumix-add-slot="content"');
   });
 
-  test("the normal render carries no slot markers", () => {
+  test("editing reveals declared slots even when the attr was never set", () => {
+    // Columns ship with no `left`/`right` in their defaults, so a freshly
+    // inserted columns block has unset slots. Edit mode must still surface each
+    // declared slot as an empty drop target with its own "Add a block".
+    const cols: readonly BlockNode[] = [{ id: "c1", name: "core/columns" }];
+    const html = renderToStaticMarkup(
+      renderBlockTree(cols, registry, { editing: true }),
+    );
+
+    expect(html).toContain('data-plumix-slot-key="left"');
+    expect(html).toContain('data-plumix-slot-key="right"');
+    expect(html).toContain('data-plumix-add-slot="left"');
+    expect(html).toContain('data-plumix-add-slot="right"');
+  });
+
+  test("an unset slot stays absent outside edit mode (no SSR drift)", () => {
+    const cols: readonly BlockNode[] = [{ id: "c1", name: "core/columns" }];
+    const html = renderToStaticMarkup(renderBlockTree(cols, registry));
+
+    expect(html).not.toContain("data-plumix-slot");
+    expect(html).not.toContain("data-plumix-add");
+  });
+
+  test("the normal render carries no slot markers or add affordance", () => {
     const html = renderToStaticMarkup(renderBlockTree(nested, registry));
 
     expect(html).not.toContain("data-plumix-slot");
+    expect(html).not.toContain("data-plumix-add");
   });
 });

@@ -112,6 +112,26 @@ describe("connectCanvas", () => {
     conn.dispose();
   });
 
+  test("a canvas:requestAdd message is delivered to onRequestAdd", () => {
+    const store = createEditorStore();
+    const { win } = fakeFrame();
+    const onRequestAdd = vi.fn();
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      onRequestAdd,
+    });
+
+    fromCanvas({ type: "canvas:requestAdd", parentId: "g1", slotKey: "content" });
+
+    expect(onRequestAdd).toHaveBeenCalledWith({
+      parentId: "g1",
+      slotKey: "content",
+    });
+    conn.dispose();
+  });
+
   test("an additive canvas:select extends the selection set", () => {
     const store = createEditorStore();
     const { win } = fakeFrame();

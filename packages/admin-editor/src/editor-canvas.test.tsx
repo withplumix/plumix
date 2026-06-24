@@ -159,6 +159,27 @@ describe("EditorCanvas", () => {
     expect(css).toContain("#ff0000");
   });
 
+  test("empty document renders the add affordance; clicking it reports requestAdd", () => {
+    const posted: unknown[] = [];
+    const spy = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation((data) => posted.push(data));
+
+    // No tree pushed → empty document → the in-canvas "Add a block" appender.
+    const { container } = render(
+      <EditorCanvas registry={registry} origin={ORIGIN} />,
+    );
+    const add = container.querySelector("[data-plumix-add]");
+    expect(add).not.toBeNull();
+    if (add) fireEvent.click(add);
+
+    const req = posted
+      .map((p) => (p as { message?: { type?: string } }).message)
+      .find((m) => m?.type === "canvas:requestAdd");
+    expect(req).toEqual({ type: "canvas:requestAdd" });
+    spy.mockRestore();
+  });
+
   test("hovering a block reports canvas:hover to the host", () => {
     const posted: unknown[] = [];
     const spy = vi

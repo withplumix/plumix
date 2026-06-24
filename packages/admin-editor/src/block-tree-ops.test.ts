@@ -357,10 +357,31 @@ describe("moveBlock into a named slot", () => {
     expect(slot(moved, "left").map((n) => n.id)).toEqual(["a", "l"]);
   });
 
-  test("is a no-op for a slot the parent does not have", () => {
+  test("moving into an unset slot creates it (an empty slot is droppable)", () => {
+    const sparse: readonly BlockNode[] = [
+      { id: "a", name: "core/heading" },
+      {
+        id: "cols",
+        name: "core/columns",
+        attrs: { left: [{ id: "l", name: "x" }] },
+      },
+    ];
+    const moved = moveBlock(sparse, "a", {
+      parentId: "cols",
+      slotKey: "right",
+      index: 0,
+    });
+    expect(slot(moved, "right").map((n) => n.id)).toEqual(["a"]);
+  });
+
+  test("is a no-op when the target value is a non-slot scalar", () => {
+    const scalar: readonly BlockNode[] = [
+      { id: "a", name: "core/heading" },
+      { id: "cols", name: "core/columns", attrs: { gap: "md" } },
+    ];
     expect(
-      moveBlock(tree, "a", { parentId: "cols", slotKey: "missing", index: 0 }),
-    ).toBe(tree);
+      moveBlock(scalar, "a", { parentId: "cols", slotKey: "gap", index: 0 }),
+    ).toBe(scalar);
   });
 });
 
@@ -429,14 +450,35 @@ describe("insertBlockAt", () => {
     ).toBe(tree);
   });
 
-  test("is a no-op when the target slot is absent", () => {
+  test("creates an unset slot's array on first insert", () => {
+    // A freshly inserted container has no array for its declared slots yet.
+    // Inserting into one must create it rather than no-op, so the in-canvas
+    // "Add a block" affordance can fill an empty slot. The caller resolves the
+    // slot key from the registry, so it always names a real slot.
+    const empty: readonly BlockNode[] = [{ id: "cols", name: "core/columns" }];
+    const next = insertBlockAt(
+      empty,
+      { id: "n", name: "core/heading" },
+      { parentId: "cols", slotKey: "left", index: 0 },
+    );
+    expect(
+      (findBlock(next, "cols")?.attrs?.left as readonly BlockNode[]).map(
+        (node) => node.id,
+      ),
+    ).toEqual(["n"]);
+  });
+
+  test("is a no-op when the target value is a non-slot scalar", () => {
+    const scalar: readonly BlockNode[] = [
+      { id: "cols", name: "core/columns", attrs: { gap: "md" } },
+    ];
     expect(
       insertBlockAt(
-        tree,
+        scalar,
         { id: "n", name: "x" },
-        { parentId: "cols", slotKey: "missing", index: 0 },
+        { parentId: "cols", slotKey: "gap", index: 0 },
       ),
-    ).toBe(tree);
+    ).toBe(scalar);
   });
 });
 

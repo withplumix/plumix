@@ -135,6 +135,27 @@ describe("connectRuntime (canvas/iframe side)", () => {
     conn.dispose();
   });
 
+  test("reportRequestAdd posts canvas:requestAdd to the host", () => {
+    const { win, posted } = fakeParent();
+    const conn = connectRuntime({
+      parentWindow: win,
+      origin: ORIGIN,
+      onTree: () => undefined,
+    });
+
+    conn.reportRequestAdd("g1", "content");
+    expect(messages(posted)).toContainEqual({
+      type: "canvas:requestAdd",
+      parentId: "g1",
+      slotKey: "content",
+    });
+
+    // Root (no args) omits the slot identity.
+    conn.reportRequestAdd();
+    expect(messages(posted)).toContainEqual({ type: "canvas:requestAdd" });
+    conn.dispose();
+  });
+
   test("ignores host messages from a foreign origin", () => {
     const seen: (readonly BlockNode[])[] = [];
     const { win } = fakeParent();

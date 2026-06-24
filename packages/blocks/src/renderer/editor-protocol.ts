@@ -82,6 +82,14 @@ export type CanvasMessage =
       /** Layout-independent physical key, e.g. "Space", "Digit1". */
       readonly code: string;
       readonly shiftKey: boolean;
+    }
+  | {
+      // An in-canvas "Add a block" affordance was clicked (empty root document,
+      // or an empty child slot identified by parentId+slotKey). The host owns
+      // the tree, so it resolves the actual insert.
+      readonly type: "canvas:requestAdd";
+      readonly parentId?: string;
+      readonly slotKey?: string;
     };
 
 export type EditorBridgeMessage = HostMessage | CanvasMessage;

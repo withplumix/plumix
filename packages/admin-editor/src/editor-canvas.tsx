@@ -15,7 +15,7 @@ import type {
   ThemeTokens,
 } from "@plumix/blocks";
 import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
-import { parseLoaderData, renderBlockTree } from "@plumix/blocks";
+import { editAppender, parseLoaderData, renderBlockTree } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
@@ -171,6 +171,16 @@ export function EditorCanvas({
   };
 
   const handleClick = (event: MouseEvent<HTMLDivElement>): void => {
+    // An in-canvas "Add a block" affordance (root or empty slot) takes
+    // precedence over selection — it lives inside the parent block's box.
+    const add = (event.target as HTMLElement).closest("[data-plumix-add]");
+    if (add) {
+      connectionRef.current?.reportRequestAdd(
+        add.getAttribute("data-plumix-add-parent") ?? undefined,
+        add.getAttribute("data-plumix-add-slot") ?? undefined,
+      );
+      return;
+    }
     const id = blockIdAt(event);
     if (!id) return;
     // Shift / cmd / ctrl extend the selection rather than replacing it.
@@ -199,12 +209,18 @@ export function EditorCanvas({
             the SSR content-root boundary it was mounted into — just the
             per-block data-plumix-id seam for selection. tokens/breakpoints feed
             the per-block style emitter so token-or-custom edits paint live. */}
-        {renderBlockTree(tree, registry, {
-          editing: true,
-          loaderData,
-          tokens,
-          breakpoints,
-        })}
+        {tree.length === 0 ? (
+          // Empty document: the same in-canvas appender an empty slot shows,
+          // flowing in content rather than as a host overlay.
+          <div style={{ padding: "2rem" }}>{editAppender()}</div>
+        ) : (
+          renderBlockTree(tree, registry, {
+            editing: true,
+            loaderData,
+            tokens,
+            breakpoints,
+          })
+        )}
       </div>
     </PlumixProvider>
   );
