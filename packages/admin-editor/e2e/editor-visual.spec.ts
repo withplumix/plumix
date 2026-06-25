@@ -561,6 +561,27 @@ test.describe("editor playground", () => {
     await expect(root).not.toHaveAttribute("data-plumix-xray", "");
   });
 
+  test("x-ray outlines nested blocks, not just top-level ones", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    // group-heading sits inside the seeded group; heading-1 is top-level.
+    const nested = canvas.locator('[data-plumix-id="group-heading"]');
+    const top = canvas.locator('[data-plumix-id="heading-1"]');
+
+    // Off: no outline at any depth (toHaveCSS reads computed style).
+    await expect(nested).toHaveCSS("outline-style", "none");
+
+    await page.getByTestId("plumix-xray-toggle").click();
+    await expect(top).toHaveCSS("outline-style", "dashed");
+    // The nested block paints its own outline (descendant selector, any depth).
+    await expect(nested).toHaveCSS("outline-style", "dashed");
+
+    await page.getByTestId("plumix-xray-toggle").click();
+    await expect(nested).toHaveCSS("outline-style", "none");
+  });
+
   test("Shift+X toggles x-ray from the keyboard", async ({ page }) => {
     await page.goto("/");
     const root = page
