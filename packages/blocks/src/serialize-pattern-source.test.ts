@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
-import { headingBlock } from "./heading/index.js";
 import {
   block,
   commitPatterns,
@@ -58,11 +57,11 @@ describe("serializePatternSource", () => {
     const out = serializePatternSource([
       {
         id: "h1",
-        name: "core/heading",
+        name: "core/rich-text",
         attrs: { level: 2, text: "Hello", featured: true, anchor: null },
       },
     ]);
-    expect(out).toContain('block("core/heading", {');
+    expect(out).toContain('block("core/rich-text", {');
     expect(out).toContain("level: 2,");
     expect(out).toContain('text: "Hello",');
     expect(out).toContain("featured: true,");
@@ -73,7 +72,7 @@ describe("serializePatternSource", () => {
     const out = serializePatternSource([
       {
         id: "h1",
-        name: "core/heading",
+        name: "core/rich-text",
         attrs: {
           text: 'He said "hi" then \\n broke',
           subtitle: "line\nbreak\ttab",
@@ -93,7 +92,7 @@ describe("serializePatternSource", () => {
         name: "core/group",
         attrs: {
           children: [
-            { id: "h1", name: "core/heading", attrs: { level: 2 } },
+            { id: "h1", name: "core/rich-text", attrs: { level: 2 } },
             {
               id: "g2",
               name: "core/group",
@@ -115,7 +114,7 @@ describe("serializePatternSource", () => {
     // one of which is itself a group whose `children` is another nested block().
     expect(out).toContain("children: [");
     expect(out).toMatch(
-      /block\("core\/group", \{[\s\S]*block\("core\/heading"/,
+      /block\("core\/group", \{[\s\S]*block\("core\/rich-text"/,
     );
     expect(out).toMatch(
       /block\("core\/group", \{[\s\S]*block\("core\/group", \{[\s\S]*block\("core\/rich-text"/,
@@ -126,7 +125,7 @@ describe("serializePatternSource", () => {
     const out = serializePatternSource([
       {
         id: "puck-0",
-        name: "core/heading",
+        name: "core/rich-text",
         attrs: { id: "puck-0", level: 2, text: "Hi" },
       },
     ]);
@@ -139,13 +138,13 @@ describe("serializePatternSource", () => {
     const out = serializePatternSource([
       {
         id: "h1",
-        name: "core/heading",
+        name: "core/rich-text",
         attrs: { level: 2 },
         style: { large: { marginTop: "16px" } },
       },
     ]);
     expect(out).toMatch(
-      /block\("core\/heading", \{[\s\S]*?\}, \{ style: \{[\s\S]*?"marginTop":\s*"16px"/,
+      /block\("core\/rich-text", \{[\s\S]*?\}, \{ style: \{[\s\S]*?"marginTop":\s*"16px"/,
     );
   });
 
@@ -153,7 +152,7 @@ describe("serializePatternSource", () => {
     const input: readonly BlockNode[] = [
       {
         id: "h1",
-        name: "core/heading",
+        name: "core/rich-text",
         attrs: { level: 2, text: 'A "quoted" heading' },
       },
       {
@@ -181,8 +180,8 @@ describe("serializePatternSource", () => {
     const tree: readonly BlockNode[] = [
       {
         id: "puck-0",
-        name: "core/heading",
-        attrs: { id: "puck-0", level: 2, text: "Hello" },
+        name: "core/rich-text",
+        attrs: { id: "puck-0", body: "<h2>Hello</h2>" },
       },
       {
         id: "puck-1",
@@ -195,7 +194,7 @@ describe("serializePatternSource", () => {
       title: "Round trip",
     });
     const parsed = evalPatternSource(out);
-    const blocks = createBlockRegistry([headingBlock, richTextBlock]);
+    const blocks = createBlockRegistry([richTextBlock]);
     const pattern = definePattern({
       name: "starter/round-trip",
       title: "Round trip",

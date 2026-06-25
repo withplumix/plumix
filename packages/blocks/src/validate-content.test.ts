@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { BlockSpec } from "./block-registry.js";
 import { createBlockRegistry } from "./block-registry.js";
-import { headingBlock } from "./heading/index.js";
+import { richTextBlock } from "./rich-text/index.js";
 import {
   tableBlock,
   tableBodyRowBlock,
@@ -15,7 +15,7 @@ import { validateEntryContent } from "./validate-content.js";
 const leaf = (name: string): BlockSpec => ({ name, render: () => null });
 const registry = {
   get(name: string): BlockSpec | undefined {
-    if (name === "core/heading") return leaf(name);
+    if (name === "core/rich-text") return leaf(name);
     // A content slot with no `allowedBlocks` — unconstrained.
     if (name === "core/group")
       return {
@@ -33,7 +33,7 @@ const tableRegistry = createBlockRegistry([
   tableBodyRowBlock,
   tableHeaderCellBlock,
   tableCellBlock,
-  headingBlock,
+  richTextBlock,
 ]);
 
 describe("validateEntryContent", () => {
@@ -42,7 +42,11 @@ describe("validateEntryContent", () => {
       {
         version: "plumix.v2",
         blocks: [
-          { id: "h1", name: "core/heading", attrs: { level: 2, text: "Hi" } },
+          {
+            id: "h1",
+            name: "core/rich-text",
+            attrs: { body: "<h2>Hi</h2>" },
+          },
         ],
       },
       registry,
@@ -118,8 +122,8 @@ describe("validateEntryContent", () => {
               content: [
                 {
                   id: "h1",
-                  name: "core/heading",
-                  attrs: { level: 3, text: "Inside group" },
+                  name: "core/rich-text",
+                  attrs: { body: "<h3>Inside group</h3>" },
                 },
               ],
             },
@@ -143,8 +147,8 @@ describe("validateEntryContent", () => {
               rows: [
                 {
                   id: "h1",
-                  name: "core/heading",
-                  attrs: { level: 2, text: "nope" },
+                  name: "core/rich-text",
+                  attrs: { body: "<h2>nope</h2>" },
                 },
               ],
             },
@@ -158,7 +162,7 @@ describe("validateEntryContent", () => {
     expect(result.errors).toContainEqual(
       expect.objectContaining({
         code: "disallowed_child",
-        nodeName: "core/heading",
+        nodeName: "core/rich-text",
         slotName: "rows",
         path: "blocks[0].rows[0]",
       }),
@@ -167,7 +171,7 @@ describe("validateEntryContent", () => {
 
   describe("requiresParent", () => {
     const reg = createBlockRegistry([
-      headingBlock,
+      richTextBlock,
       {
         name: "core/group",
         render: () => null,

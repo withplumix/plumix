@@ -100,7 +100,7 @@ export function publishedEntryRpcBody(entry: Record<string, unknown>): string {
   });
 }
 
-// Two visible blocks (heading text + rich-text body) so drag, select,
+// Two visible blocks (a heading + a paragraph, both rich-text) so drag, select,
 // duplicate, and delete specs start from a canvas with real geometry —
 // empty blocks render zero-height and can't be clicked.
 export const SEEDED_CONTENT = {
@@ -108,8 +108,8 @@ export const SEEDED_CONTENT = {
   blocks: [
     {
       id: "b1",
-      name: "core/heading",
-      attrs: { level: 2, text: "Seeded heading" },
+      name: "core/rich-text",
+      attrs: { body: "<h2>Seeded heading</h2>" },
     },
     {
       id: "b2",
@@ -220,9 +220,7 @@ export async function dragOnto(
 // semantic element each core block renders — which doubles as checking
 // the block actually renders its markup.
 const BLOCK_DOM: Record<string, string> = {
-  "core/heading": "h1, h2, h3, h4, h5, h6",
   "core/rich-text": ".rich-text",
-  "core/quote": "blockquote",
   "core/separator": "hr",
 };
 

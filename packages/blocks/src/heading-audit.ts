@@ -1,4 +1,5 @@
-import type { BlockNode } from "../render-block-tree.js";
+import type { BlockNode } from "./render-block-tree.js";
+import { isBlockNodeArray } from "./render-block-tree.js";
 
 export type HeadingAuditViolation =
   | { readonly kind: "multiple-h1"; readonly nodeIds: readonly string[] }
@@ -16,17 +17,25 @@ interface HeadingNode {
   readonly text: string;
 }
 
-function isBlockNodeArray(value: unknown): value is readonly BlockNode[] {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (item) =>
-        typeof item === "object" &&
-        item !== null &&
-        typeof (item as BlockNode).id === "string" &&
-        typeof (item as BlockNode).name === "string",
-    )
-  );
+// h1–h6 elements in document order. The inner capture is lazy and anchored to
+// the matching close tag; the open-tag class excludes `>` so the matcher stays
+// a single linear pass over the (editor-produced, sanitised) body HTML.
+const HEADING_RE = /<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
+
+// Strip inner tags and decode `&nbsp;` so the empty-heading check sees the
+// visible text — `<h2><strong>x</strong></h2>` is not empty, `<h2></h2>` is.
+// The strip loops to a fixpoint so a crafted `<sc<b>ript>` can't reconstruct a
+// tag after a single pass; the text is only used for emptiness/word checks
+// (never rendered), but a complete strip keeps it honest. Heading text is a
+// short line, so the bounded re-scan is cheap.
+function headingText(rawInner: string): string {
+  let text = rawInner;
+  let previous: string;
+  do {
+    previous = text;
+    text = text.replace(/<[^<>]*>/g, "");
+  } while (text !== previous);
+  return text.replace(/&nbsp;/gi, " ");
 }
 
 function collectHeadings(nodes: readonly BlockNode[]): readonly HeadingNode[] {
@@ -34,18 +43,19 @@ function collectHeadings(nodes: readonly BlockNode[]): readonly HeadingNode[] {
   function visit(list: readonly BlockNode[]): void {
     for (const node of list) {
       const attrs = node.attrs ?? {};
-      if (node.name === "core/heading") {
-        const rawLevel = (attrs as { readonly level?: unknown }).level;
-        const level =
-          typeof rawLevel === "number" &&
-          Number.isInteger(rawLevel) &&
-          rawLevel >= 1 &&
-          rawLevel <= 6
-            ? rawLevel
-            : 2;
-        const rawText = (attrs as { readonly text?: unknown }).text;
-        const text = typeof rawText === "string" ? rawText : "";
-        out.push({ id: node.id, level, text });
+      // Headings are inline formats of the rich-text body, so parse them out of
+      // its HTML rather than reading a dedicated Heading block.
+      if (node.name === "core/rich-text") {
+        const body = (attrs as { readonly body?: unknown }).body;
+        if (typeof body === "string") {
+          for (const match of body.matchAll(HEADING_RE)) {
+            out.push({
+              id: node.id,
+              level: Number(match[1]),
+              text: headingText(match[2] ?? ""),
+            });
+          }
+        }
       }
       for (const value of Object.values(attrs)) {
         if (isBlockNodeArray(value)) visit(value);

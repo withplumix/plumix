@@ -177,8 +177,8 @@ export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
       content: [
         {
           id: "p1",
-          name: "core/heading",
-          attrs: { level: 2, text: "Pattern heading" },
+          name: "core/rich-text",
+          attrs: { body: "<h2>Pattern heading</h2>" },
         },
         {
           id: "p2",
@@ -195,8 +195,8 @@ export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
       content: [
         {
           id: "p1",
-          name: "core/heading",
-          attrs: { level: 3, text: "Promo heading" },
+          name: "core/rich-text",
+          attrs: { body: "<h3>Promo heading</h3>" },
         },
       ],
     },

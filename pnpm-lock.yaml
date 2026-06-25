@@ -203,10 +203,16 @@ catalogs:
     '@tiptap/core':
       specifier: ^3.27.1
       version: 3.27.1
+    '@tiptap/extension-blockquote':
+      specifier: ^3.27.1
+      version: 3.27.1
     '@tiptap/extension-document':
       specifier: ^3.27.1
       version: 3.27.1
     '@tiptap/extension-hard-break':
+      specifier: ^3.27.1
+      version: 3.27.1
+    '@tiptap/extension-heading':
       specifier: ^3.27.1
       version: 3.27.1
     '@tiptap/extension-list':
@@ -552,10 +558,16 @@ importers:
       '@tiptap/core':
         specifier: catalog:tiptap
         version: 3.27.1(@tiptap/pm@3.23.4)
+      '@tiptap/extension-blockquote':
+        specifier: catalog:tiptap
+        version: 3.27.1(@tiptap/core@3.27.1(@tiptap/pm@3.23.4))
       '@tiptap/extension-document':
         specifier: catalog:tiptap
         version: 3.27.1(@tiptap/core@3.27.1(@tiptap/pm@3.23.4))
       '@tiptap/extension-hard-break':
+        specifier: catalog:tiptap
+        version: 3.27.1(@tiptap/core@3.27.1(@tiptap/pm@3.23.4))
+      '@tiptap/extension-heading':
         specifier: catalog:tiptap
         version: 3.27.1(@tiptap/core@3.27.1(@tiptap/pm@3.23.4))
       '@tiptap/extension-list':
@@ -4547,6 +4559,11 @@ packages:
     peerDependencies:
       '@tiptap/pm': 3.23.4
 
+  '@tiptap/extension-blockquote@3.27.1':
+    resolution: {integrity: sha512-VMF7xJx6qEGiX6DTKNiL31NLqypOcd/4sNjFSe8rb41PwejBJh/nOqVIbBvWkiT6NMGFLxMhj7zJ8/zPo1hXeg==}
+    peerDependencies:
+      '@tiptap/core': 3.27.1
+
   '@tiptap/extension-bubble-menu@3.27.1':
     resolution: {integrity: sha512-j/j8Qp9Z5nViade2m7zjrO/CYH/Ca80Qj7aqo0eUaei6FZQ5izlF9o4XQU5EFMAutV6mwynsPUp8FVo5sCuYfw==}
     peerDependencies:
@@ -4567,6 +4584,11 @@ packages:
 
   '@tiptap/extension-hard-break@3.27.1':
     resolution: {integrity: sha512-iv/m9hzl6jfSj9Q8UEjAxONvCoUDaP7M9SRCPx3PaLNxA230TTD6RE0Ye4zFJ8ze7ZVoJJMAqg9Qpq1iYg2JOQ==}
+    peerDependencies:
+      '@tiptap/core': 3.27.1
+
+  '@tiptap/extension-heading@3.27.1':
+    resolution: {integrity: sha512-SrC4l1kEIyv9ZXFaI/8LQqU2MyMmjczw7XXsWUQOTN4YXv0JyVgMNR3cI/wz0d2xsTfBdZ1N85Tdng+Ga1t0Sg==}
     peerDependencies:
       '@tiptap/core': 3.27.1
 
@@ -10316,6 +10338,10 @@ snapshots:
     dependencies:
       '@tiptap/pm': 3.23.4
 
+  '@tiptap/extension-blockquote@3.27.1(@tiptap/core@3.27.1(@tiptap/pm@3.23.4))':
+    dependencies:
+      '@tiptap/core': 3.27.1(@tiptap/pm@3.23.4)
+
   '@tiptap/extension-bubble-menu@3.27.1(@tiptap/core@3.27.1(@tiptap/pm@3.23.4))(@tiptap/pm@3.23.4)':
     dependencies:
       '@floating-ui/dom': 1.7.6
@@ -10335,6 +10361,10 @@ snapshots:
     optional: true
 
   '@tiptap/extension-hard-break@3.27.1(@tiptap/core@3.27.1(@tiptap/pm@3.23.4))':
+    dependencies:
+      '@tiptap/core': 3.27.1(@tiptap/pm@3.23.4)
+
+  '@tiptap/extension-heading@3.27.1(@tiptap/core@3.27.1(@tiptap/pm@3.23.4))':
     dependencies:
       '@tiptap/core': 3.27.1(@tiptap/pm@3.23.4)
 

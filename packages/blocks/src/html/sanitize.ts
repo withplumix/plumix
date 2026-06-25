@@ -1,5 +1,7 @@
 import sanitize from "sanitize-html";
 
+import { HEADING_TAGS } from "../headings.js";
+
 /**
  * Shape consumed by `sanitizeHtml`. Operators extend / replace it
  * via `defineApp({ blocks: { htmlAllowlist: {...} } })`; the schema-
@@ -25,9 +27,7 @@ export interface HtmlAllowlist {
 export const BASELINE_HTML_ALLOWLIST: HtmlAllowlist = Object.freeze({
   allowedTags: [
     "p",
-    "h2",
-    "h3",
-    "h4",
+    ...HEADING_TAGS,
     "blockquote",
     "pre",
     "code",

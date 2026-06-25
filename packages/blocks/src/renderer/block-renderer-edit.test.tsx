@@ -3,13 +3,15 @@ import { describe, expect, test } from "vitest";
 
 import type { EntryContent } from "../entry-content.js";
 import { createBlockRegistry } from "../block-registry.js";
-import { headingBlock } from "../heading/index.js";
+import { richTextBlock } from "../rich-text/index.js";
 import { BlockRenderer, PlumixProvider } from "./index.js";
 
-const registry = createBlockRegistry([headingBlock]);
+const registry = createBlockRegistry([richTextBlock]);
 const content: EntryContent = {
   version: "plumix.v2",
-  blocks: [{ id: "h1", name: "core/heading", attrs: { text: "Hi", level: 2 } }],
+  blocks: [
+    { id: "h1", name: "core/rich-text", attrs: { body: "<h2>Hi</h2>" } },
+  ],
 };
 
 describe("BlockRenderer edit-mode mount boundary", () => {

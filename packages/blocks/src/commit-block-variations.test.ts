@@ -2,11 +2,11 @@ import { describe, expect, test } from "vitest";
 
 import { createBlockRegistry, defineBlock } from "./block-registry.js";
 import { commitBlockVariations } from "./commit-block-variations.js";
-import { headingBlock } from "./heading/index.js";
+import { richTextBlock } from "./rich-text/index.js";
 
 describe("commitBlockVariations", () => {
   test("accepts a registry whose variations carry no innerBlocks", () => {
-    const blocks = createBlockRegistry([headingBlock]);
+    const blocks = createBlockRegistry([richTextBlock]);
     expect(() => commitBlockVariations(blocks)).not.toThrow();
   });
 
@@ -24,7 +24,7 @@ describe("commitBlockVariations", () => {
         },
       ],
     });
-    const blocks = createBlockRegistry([group, headingBlock]);
+    const blocks = createBlockRegistry([group, richTextBlock]);
     expect(() => commitBlockVariations(blocks)).toThrow(
       /Variation "with-ghost" of "core\/group-test" at innerBlocks\[0\] references unknown block "core\/ghost"/,
     );
@@ -43,16 +43,16 @@ describe("commitBlockVariations", () => {
           innerBlocks: [
             {
               id: "h1",
-              name: "core/heading",
-              attrs: { level: 2, ghost: true },
+              name: "core/rich-text",
+              attrs: { body: "<p></p>", ghost: true },
             },
           ],
         },
       ],
     });
-    const blocks = createBlockRegistry([group, headingBlock]);
+    const blocks = createBlockRegistry([group, richTextBlock]);
     expect(() => commitBlockVariations(blocks)).toThrow(
-      /Variation "bad-attr" of "core\/group-test" at innerBlocks\[0\] uses undeclared attr "ghost" on block "core\/heading"/,
+      /Variation "bad-attr" of "core\/group-test" at innerBlocks\[0\] uses undeclared attr "ghost" on block "core\/rich-text"/,
     );
   });
 
@@ -66,11 +66,11 @@ describe("commitBlockVariations", () => {
         {
           slug: "with-children",
           title: "With children",
-          innerBlocks: [{ id: "h", name: "core/heading", attrs: {} }],
+          innerBlocks: [{ id: "h", name: "core/rich-text", attrs: {} }],
         },
       ],
     });
-    const blocks = createBlockRegistry([heading, headingBlock]);
+    const blocks = createBlockRegistry([heading, richTextBlock]);
     expect(() => commitBlockVariations(blocks)).toThrow(
       /Variation "with-children" of "x-test\/leaf" declares innerBlocks at innerBlocks but the parent block has no "content" slot input/,
     );
@@ -90,7 +90,7 @@ describe("commitBlockVariations", () => {
         },
       ],
     });
-    const blocks = createBlockRegistry([group, headingBlock]);
+    const blocks = createBlockRegistry([group, richTextBlock]);
     expect(() => commitBlockVariations(blocks)).toThrow(
       /Variation "rogue-attr" of "x-test\/group" at variation\.attrs uses undeclared attr "layout" on block "x-test\/group"/,
     );
@@ -129,7 +129,7 @@ describe("commitBlockVariations", () => {
         },
       ],
     });
-    const blocks = createBlockRegistry([group, headingBlock]);
+    const blocks = createBlockRegistry([group, richTextBlock]);
     expect(() => commitBlockVariations(blocks)).toThrow(
       /Variation "rogue-example-attr" of "x-test\/group" at example\.attrs uses undeclared attr "ghost" on block "x-test\/group"/,
     );
@@ -146,12 +146,12 @@ describe("commitBlockVariations", () => {
           slug: "with-example-children",
           title: "With example children",
           example: {
-            innerBlocks: [{ id: "h", name: "core/heading", attrs: {} }],
+            innerBlocks: [{ id: "h", name: "core/rich-text", attrs: {} }],
           },
         },
       ],
     });
-    const blocks = createBlockRegistry([leaf, headingBlock]);
+    const blocks = createBlockRegistry([leaf, richTextBlock]);
     expect(() => commitBlockVariations(blocks)).toThrow(
       /Variation "with-example-children" of "x-test\/leaf" declares innerBlocks at example\.innerBlocks but the parent block has no "content" slot input/,
     );
@@ -214,7 +214,7 @@ describe("commitBlockVariations", () => {
         },
       ],
     });
-    const blocks = createBlockRegistry([group, headingBlock]);
+    const blocks = createBlockRegistry([group, richTextBlock]);
     expect(() => commitBlockVariations(blocks)).toThrow(
       /Variation "with-example" of "x-test\/group" at example\.innerBlocks\[0\] references unknown block "core\/ghost"/,
     );
@@ -242,7 +242,7 @@ describe("commitBlockVariations", () => {
         },
       ],
     });
-    const blocks = createBlockRegistry([group, headingBlock]);
+    const blocks = createBlockRegistry([group, richTextBlock]);
     expect(() => commitBlockVariations(blocks)).toThrow(
       /innerBlocks\[0\]\.content\[0\] references unknown block "core\/ghost"/,
     );

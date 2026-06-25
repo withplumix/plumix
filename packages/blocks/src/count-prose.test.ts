@@ -16,22 +16,22 @@ describe("countProse", () => {
     expect(countProse(blocks)).toEqual({ words: 2, characters: 11 });
   });
 
-  test("counts heading and quote text and sums across blocks", () => {
+  test("counts headings and quotes inside rich-text bodies, summing across blocks", () => {
     const blocks: readonly BlockNode[] = [
       {
-        id: "h1",
-        name: "core/heading",
-        attrs: { text: "Big Title", level: 2 },
+        id: "r1",
+        name: "core/rich-text",
+        attrs: { body: "<h2>Big Title</h2>" },
       },
       {
-        id: "r1",
+        id: "r2",
         name: "core/rich-text",
         attrs: { body: "<p>one two three</p>" },
       },
       {
-        id: "q1",
-        name: "core/quote",
-        attrs: { text: "a quote", citation: "me" },
+        id: "r3",
+        name: "core/rich-text",
+        attrs: { body: "<blockquote>a quote</blockquote>" },
       },
     ];
     // "Big Title" (2) + "one two three" (3) + "a quote" (2) = 7 words.
@@ -40,7 +40,11 @@ describe("countProse", () => {
 
   test("counts CJK ideographs individually since they have no inter-word spaces", () => {
     const blocks: readonly BlockNode[] = [
-      { id: "h1", name: "core/heading", attrs: { text: "你好世界" } },
+      {
+        id: "r1",
+        name: "core/rich-text",
+        attrs: { body: "<h2>你好世界</h2>" },
+      },
     ];
     // 4 ideographs → 4 words (whitespace split would wrongly give 1).
     expect(countProse(blocks)).toEqual({ words: 4, characters: 4 });
@@ -74,9 +78,9 @@ describe("countProse", () => {
         attrs: {
           content: [
             {
-              id: "h1",
-              name: "core/heading",
-              attrs: { text: "Nested heading" },
+              id: "r0",
+              name: "core/rich-text",
+              attrs: { body: "<h2>Nested heading</h2>" },
             },
             {
               id: "r1",

@@ -184,8 +184,9 @@ function RichTextFieldSkeleton({
       aria-busy="true"
     >
       <div className="flex flex-wrap items-center gap-0.5">
-        {/* ~one placeholder per toolbar control (marks + lists + link + clear) */}
-        {Array.from({ length: 9 }, (_, i) => (
+        {/* ~one placeholder per toolbar control (format + marks + lists +
+            quote + link + clear) */}
+        {Array.from({ length: 14 }, (_, i) => (
           <div key={i} className="bg-muted size-8 animate-pulse rounded-md" />
         ))}
       </div>

@@ -160,7 +160,7 @@ describe("BlockInputControl", () => {
     "richtext lazy-loads the Tiptap toolbar and editable surface",
     { timeout: 15_000 },
     async () => {
-      const { findByTestId, getByTestId, queryByTestId } = renderControl(
+      const { findByTestId, getByTestId, onChange } = renderControl(
         { name: "body", type: "richtext", label: "Body" },
         "<p>Hello</p>",
       );
@@ -173,11 +173,28 @@ describe("BlockInputControl", () => {
         }),
       ).toBeDefined();
       expect(getByTestId("block-input-body-clear")).toBeDefined();
-      // Headings are the dedicated Heading block, so rich text offers no h2–h4.
-      expect(queryByTestId("block-input-body-h2")).toBeNull();
+      // Marks defined in the schema but previously unreachable now have toggles.
+      expect(getByTestId("block-input-body-code")).toBeDefined();
+      expect(getByTestId("block-input-body-subscript")).toBeDefined();
+      expect(getByTestId("block-input-body-superscript")).toBeDefined();
       const editor = getByTestId("block-input-body-editor");
       expect(editor.getAttribute("contenteditable")).toBe("true");
       expect(editor.textContent).toContain("Hello");
+
+      // Headings are inline formats of the unified rich-text block: the format
+      // dropdown reflects the current block and converts it on change.
+      const format = getByTestId(
+        "block-input-body-format",
+      ) as HTMLSelectElement;
+      expect(format.value).toBe("paragraph");
+      fireEvent.change(format, { target: { value: "h2" } });
+      expect(onChange).toHaveBeenCalledWith(expect.stringContaining("<h2"));
+
+      // Quotes are folded in too: the blockquote toggle wraps the block.
+      fireEvent.click(getByTestId("block-input-body-blockquote"));
+      expect(onChange).toHaveBeenCalledWith(
+        expect.stringContaining("<blockquote"),
+      );
     },
   );
 

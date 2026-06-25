@@ -30,7 +30,7 @@ describe("EditorCanvas", () => {
     );
 
     pushTree([
-      { id: "h1", name: "core/heading", attrs: { text: "Hi", level: 2 } },
+      { id: "h1", name: "core/rich-text", attrs: { body: "<h2>Hi</h2>" } },
     ]);
 
     expect(container.querySelector('[data-plumix-id="h1"]')).not.toBeNull();
@@ -46,7 +46,9 @@ describe("EditorCanvas", () => {
     const { container } = render(
       <EditorCanvas registry={registry} origin={ORIGIN} />,
     );
-    pushTree([{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }]);
+    pushTree([
+      { id: "h1", name: "core/rich-text", attrs: { body: "<h2>Hi</h2>" } },
+    ]);
 
     const block = container.querySelector('[data-plumix-id="h1"]');
     expect(block).not.toBeNull();
@@ -68,7 +70,9 @@ describe("EditorCanvas", () => {
     const { container } = render(
       <EditorCanvas registry={registry} origin={ORIGIN} />,
     );
-    pushTree([{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }]);
+    pushTree([
+      { id: "h1", name: "core/rich-text", attrs: { body: "<h2>Hi</h2>" } },
+    ]);
 
     const block = container.querySelector('[data-plumix-id="h1"]');
     expect(block).not.toBeNull();
@@ -97,7 +101,13 @@ describe("EditorCanvas", () => {
         id: "g1",
         name: "core/group",
         attrs: {
-          content: [{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }],
+          content: [
+            {
+              id: "h1",
+              name: "core/rich-text",
+              attrs: { body: "<h2>Hi</h2>" },
+            },
+          ],
         },
       },
     ]);
@@ -123,8 +133,8 @@ describe("EditorCanvas", () => {
         initialTree={[
           {
             id: "seed",
-            name: "core/heading",
-            attrs: { text: "Seeded", level: 2 },
+            name: "core/rich-text",
+            attrs: { body: "<h2>Seeded</h2>" },
           },
         ]}
       />,
@@ -146,8 +156,8 @@ describe("EditorCanvas", () => {
     pushTree([
       {
         id: "h1",
-        name: "core/heading",
-        attrs: { text: "Hi", level: 2 },
+        name: "core/rich-text",
+        attrs: { body: "<h2>Hi</h2>" },
         style: { large: { color: { raw: "#ff0000" } } },
       },
     ]);
@@ -216,7 +226,9 @@ describe("EditorCanvas", () => {
     const { container } = render(
       <EditorCanvas registry={registry} origin={ORIGIN} />,
     );
-    pushTree([{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }]);
+    pushTree([
+      { id: "h1", name: "core/rich-text", attrs: { body: "<h2>Hi</h2>" } },
+    ]);
 
     const block = container.querySelector('[data-plumix-id="h1"]');
     expect(block).not.toBeNull();

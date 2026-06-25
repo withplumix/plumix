@@ -6,9 +6,7 @@ import { codeBlock } from "./code/index.js";
 import { columnsBlock } from "./columns/index.js";
 import { detailsBlock } from "./details/index.js";
 import { groupBlock } from "./group/index.js";
-import { headingBlock } from "./heading/index.js";
 import { patternRefBlock } from "./pattern-ref/index.js";
-import { quoteBlock } from "./quote/index.js";
 import { richTextBlock } from "./rich-text/index.js";
 import { separatorBlock } from "./separator/index.js";
 import { spacerBlock } from "./spacer/index.js";
@@ -21,9 +19,7 @@ import {
 } from "./table/index.js";
 
 export const coreBlocks: readonly BlockSpec[] = Object.freeze([
-  headingBlock,
   richTextBlock,
-  quoteBlock,
   separatorBlock,
   spacerBlock,
   codeBlock,

@@ -106,7 +106,7 @@ test.describe("bespoke editor route", () => {
     await expect(page.getByTestId("plumix-editor-left")).toBeVisible();
     await expect(page.getByTestId("block-catalog-search")).toBeVisible();
     await expect(
-      page.getByTestId("block-catalog-item-core/heading"),
+      page.getByTestId("block-catalog-item-core/rich-text"),
     ).toBeVisible();
   });
 
@@ -119,7 +119,11 @@ test.describe("bespoke editor route", () => {
         content: {
           version: "plumix.v2",
           blocks: [
-            { id: "h1", name: "core/heading", attrs: { text: "Hello" } },
+            {
+              id: "h1",
+              name: "core/rich-text",
+              attrs: { body: "<h2>Hello</h2>" },
+            },
             {
               id: "g1",
               name: "core/group",
@@ -151,8 +155,8 @@ test.describe("bespoke editor route", () => {
           blocks: [
             {
               id: "h1",
-              name: "core/heading",
-              attrs: { level: 2, text: "Welcome" },
+              name: "core/button",
+              attrs: { label: "Welcome" },
             },
           ],
         },
@@ -165,16 +169,16 @@ test.describe("bespoke editor route", () => {
     // Nothing edited yet — undo is disabled.
     await expect(page.getByTestId("plumix-undo")).toBeDisabled();
 
-    // Select the heading via the Layers tab and edit its Text in the inspector.
+    // Select the button via the Layers tab and edit its Label in the inspector.
     await page.getByTestId("plumix-tab-layers").click();
     await page.getByTestId("layer-h1").click();
-    const textField = page.getByTestId("block-input-text");
+    const textField = page.getByTestId("block-input-label");
     await textField.fill("Changed");
     await expect(textField).toHaveValue("Changed");
 
     // Undo restores the original text; redo becomes available.
     await page.getByTestId("plumix-undo").click();
-    await expect(page.getByTestId("block-input-text")).toHaveValue("Welcome");
+    await expect(page.getByTestId("block-input-label")).toHaveValue("Welcome");
     await expect(page.getByTestId("plumix-redo")).toBeEnabled();
   });
 
@@ -186,7 +190,13 @@ test.describe("bespoke editor route", () => {
       "/entry/get": editorEntry({
         content: {
           version: "plumix.v2",
-          blocks: [{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }],
+          blocks: [
+            {
+              id: "h1",
+              name: "core/rich-text",
+              attrs: { body: "<h2>Hi</h2>" },
+            },
+          ],
         },
       }),
       "/entry/list": [],
@@ -377,8 +387,8 @@ test.describe("editor server-loaded content", () => {
           blocks: [
             {
               id: "h1",
-              name: "core/heading",
-              attrs: { level: 2, text: "Hello from server" },
+              name: "core/rich-text",
+              attrs: { body: "<h2>Hello from server</h2>" },
             },
             {
               id: "g1",
@@ -387,8 +397,8 @@ test.describe("editor server-loaded content", () => {
                 content: [
                   {
                     id: "child-h",
-                    name: "core/heading",
-                    attrs: { level: 3, text: "Inside group" },
+                    name: "core/rich-text",
+                    attrs: { body: "<h3>Inside group</h3>" },
                   },
                 ],
               },

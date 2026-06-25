@@ -236,12 +236,12 @@ test.describe("editor playground", () => {
     expect(box.height).toBeLessThanOrEqual(400);
 
     // Picking a block nests it into that column and closes the popover. The
-    // fresh heading is empty (no box), so assert attachment, not visibility.
-    await popover.getByTestId("block-catalog-item-core/heading").click();
+    // fresh text block is empty (no box), so assert attachment, not visibility.
+    await popover.getByTestId("block-catalog-item-core/rich-text").click();
     await expect(popover).toBeHidden();
     await expect(
       canvas.locator(
-        '[data-plumix-column="left"] [data-plumix-block="core/heading"]',
+        '[data-plumix-column="left"] [data-plumix-block="core/rich-text"]',
       ),
     ).toBeAttached();
   });
@@ -336,9 +336,9 @@ test.describe("editor playground", () => {
 
     await canvas.locator('[data-plumix-id="intro"]').click();
 
-    // The Block tab now hosts the rich-text rail: a formatting toolbar (inline
-    // marks only — headings come from the Heading block) plus the contenteditable
-    // surface seeded with the block's body.
+    // The Block tab now hosts the rich-text rail: a formatting toolbar (format
+    // dropdown + inline marks + blockquote, the unified Text block) plus the
+    // contenteditable surface seeded with the block's body.
     await expect(page.getByTestId("block-input-body-bold")).toBeVisible();
     await expect(page.getByTestId("block-input-body-italic")).toBeVisible();
     await expect(page.getByTestId("block-input-body-clear")).toBeVisible();

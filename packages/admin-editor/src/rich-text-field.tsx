@@ -7,16 +7,21 @@ import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { Button } from "@plumix/admin-ui/button";
 import {
   Bold,
+  Code2,
   Highlighter,
   Italic,
   Link2,
   List,
   ListOrdered,
+  Quote,
   RemoveFormatting,
   Strikethrough,
+  Subscript,
+  Superscript,
   Underline,
 } from "@plumix/admin-ui/icons";
 import { Toggle } from "@plumix/admin-ui/toggle";
+import { HEADING_LEVELS } from "@plumix/blocks";
 
 import { richTextExtensions } from "./rich-text-extensions.js";
 
@@ -36,7 +41,10 @@ const MARKS = [
   { name: "italic", icon: Italic, testId: "italic" },
   { name: "underline", icon: Underline, testId: "underline" },
   { name: "strike", icon: Strikethrough, testId: "strike" },
+  { name: "code", icon: Code2, testId: "code" },
   { name: "highlight", icon: Highlighter, testId: "highlight" },
+  { name: "subscript", icon: Subscript, testId: "subscript" },
+  { name: "superscript", icon: Superscript, testId: "superscript" },
 ] as const;
 
 // The active-mark/-node flags the toolbar paints its pressed state from. Derived
@@ -47,6 +55,9 @@ interface ActiveState {
   readonly link: boolean;
   readonly bulletList: boolean;
   readonly orderedList: boolean;
+  readonly blockquote: boolean;
+  /** The active heading level (1–4), or null when the block is a paragraph. */
+  readonly headingLevel: number | null;
 }
 
 /**
@@ -104,6 +115,11 @@ export function RichTextField({
             link: editor.isActive("link"),
             bulletList: editor.isActive("bulletList"),
             orderedList: editor.isActive("orderedList"),
+            blockquote: editor.isActive("blockquote"),
+            headingLevel:
+              HEADING_LEVELS.find((level) =>
+                editor.isActive("heading", { level }),
+              ) ?? null,
           }
         : null,
   });
@@ -111,6 +127,21 @@ export function RichTextField({
   return (
     <div className="flex flex-col gap-1.5" data-testid={testId}>
       <div className="flex flex-wrap items-center gap-0.5" role="toolbar">
+        <select
+          data-testid={`${testId}-format`}
+          className="border-input me-1 flex h-8 rounded-md border bg-transparent px-2 text-sm"
+          aria-label="Text format"
+          disabled={!editor}
+          value={active?.headingLevel ? `h${active.headingLevel}` : "paragraph"}
+          onChange={(e) => setFormat(editor, e.target.value)}
+        >
+          <option value="paragraph">Paragraph</option>
+          {HEADING_LEVELS.map((level) => (
+            <option key={level} value={`h${level}`}>
+              Heading {level}
+            </option>
+          ))}
+        </select>
         {MARKS.map(({ name, icon: Icon, testId: suffix }) => (
           <ToolbarToggle
             key={name}
@@ -137,6 +168,14 @@ export function RichTextField({
           onToggle={() => editor?.chain().focus().toggleOrderedList().run()}
         >
           <ListOrdered />
+        </ToolbarToggle>
+        <ToolbarToggle
+          testId={`${testId}-blockquote`}
+          pressed={active?.blockquote ?? false}
+          disabled={!editor}
+          onToggle={() => editor?.chain().focus().toggleBlockquote().run()}
+        >
+          <Quote />
         </ToolbarToggle>
         <ToolbarToggle
           testId={`${testId}-link`}
@@ -197,6 +236,19 @@ function ToolbarToggle({
       {children}
     </Toggle>
   );
+}
+
+// Convert the current block to a paragraph or a heading level. "paragraph"
+// and "h1"–"h4" are the values the format dropdown emits.
+function setFormat(editor: Editor | null, value: string): void {
+  if (!editor) return;
+  const chain = editor.chain().focus();
+  const level = HEADING_LEVELS.find((l) => `h${l}` === value);
+  if (level) {
+    chain.setHeading({ level }).run();
+  } else {
+    chain.setParagraph().run();
+  }
 }
 
 // Toggle the link mark: drop it when the selection already carries one,
