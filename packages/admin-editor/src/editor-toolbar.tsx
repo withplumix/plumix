@@ -76,14 +76,40 @@ export function EditorToolbar(): ReactElement {
       className="bg-background flex items-center gap-2 border-b p-2"
       data-testid="plumix-editor-toolbar"
     >
-      {/* Collapses both rails for a focused canvas (also Cmd/Ctrl+B). */}
-      <SidebarTrigger data-testid="plumix-rails-toggle" className="shrink-0" />
-      <div className="flex flex-1 justify-center">
-        <DeviceZoomControls />
+      {/* Left cluster: rails toggle (also Cmd/Ctrl+B) + the X-ray view toggle. */}
+      <div className="flex flex-1 items-center gap-1">
+        <SidebarTrigger
+          data-testid="plumix-rails-toggle"
+          className="shrink-0"
+        />
+        <XrayToggle />
       </div>
-      {/* Balances the rails toggle so the device/zoom cluster reads as centered. */}
-      <div className="w-7 shrink-0" aria-hidden />
+      <DeviceZoomControls />
+      {/* Empty flex-1 mirror so the device/zoom cluster stays centered. */}
+      <div className="flex-1" aria-hidden />
     </header>
+  );
+}
+
+/** Toggles the X-ray view that outlines every block in the canvas. */
+function XrayToggle(): ReactElement {
+  const { i18n } = useLingui();
+  const xray = useEditorStore((s) => s.xray);
+  const toggleXray = useEditorStore((s) => s.toggleXray);
+  return (
+    <Toggle
+      variant="outline"
+      size="sm"
+      pressed={xray}
+      onPressedChange={toggleXray}
+      data-testid="plumix-xray-toggle"
+      aria-label={i18n._({
+        id: "editor.toolbar.xray",
+        message: "X-ray: outline all blocks",
+      })}
+    >
+      <Layout />
+    </Toggle>
   );
 }
 
@@ -93,9 +119,7 @@ function DeviceZoomControls(): ReactElement {
   const { i18n } = useLingui();
   const device = useEditorStore((s) => s.device);
   const zoom = useEditorStore((s) => s.zoom);
-  const xray = useEditorStore((s) => s.xray);
   const setDevice = useEditorStore((s) => s.setDevice);
-  const toggleXray = useEditorStore((s) => s.toggleXray);
   const zoomToCenter = useEditorStore((s) => s.zoomToCenter);
   const enableZoomFit = useEditorStore((s) => s.enableZoomFit);
 
@@ -112,19 +136,6 @@ function DeviceZoomControls(): ReactElement {
       className="flex items-center gap-1"
       data-testid="plumix-canvas-controls"
     >
-      <Toggle
-        variant="outline"
-        size="sm"
-        pressed={xray}
-        onPressedChange={toggleXray}
-        data-testid="plumix-xray-toggle"
-        aria-label={i18n._({
-          id: "editor.toolbar.xray",
-          message: "X-ray: outline all blocks",
-        })}
-      >
-        <Layout />
-      </Toggle>
       <ToggleGroup
         type="single"
         variant="outline"
