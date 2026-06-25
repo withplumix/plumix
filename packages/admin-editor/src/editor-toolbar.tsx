@@ -1,13 +1,13 @@
 import type { I18n } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useEffect } from "react";
-import { useLingui } from "@lingui/react";
+import { Trans, useLingui } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
-  Layout,
   Monitor,
   Smartphone,
+  SquareDashed,
   Tablet,
   ZoomIn,
   ZoomOut,
@@ -15,6 +15,11 @@ import {
 import { SidebarTrigger } from "@plumix/admin-ui/sidebar";
 import { Toggle } from "@plumix/admin-ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@plumix/admin-ui/tooltip";
 
 import type { EditorDevice } from "./store.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
@@ -78,10 +83,17 @@ export function EditorToolbar(): ReactElement {
     >
       {/* Left cluster: rails toggle (also Cmd/Ctrl+B) + the X-ray view toggle. */}
       <div className="flex flex-1 items-center gap-1">
-        <SidebarTrigger
-          data-testid="plumix-rails-toggle"
-          className="shrink-0"
-        />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <SidebarTrigger
+              data-testid="plumix-rails-toggle"
+              className="shrink-0"
+            />
+          </TooltipTrigger>
+          <TooltipContent>
+            <Trans id="editor.toolbar.rails" message="Toggle panels" />
+          </TooltipContent>
+        </Tooltip>
         <XrayToggle />
       </div>
       <DeviceZoomControls />
@@ -97,19 +109,32 @@ function XrayToggle(): ReactElement {
   const xray = useEditorStore((s) => s.xray);
   const toggleXray = useEditorStore((s) => s.toggleXray);
   return (
-    <Toggle
-      variant="outline"
-      size="sm"
-      pressed={xray}
-      onPressedChange={toggleXray}
-      data-testid="plumix-xray-toggle"
-      aria-label={i18n._({
-        id: "editor.toolbar.xray",
-        message: "X-ray: outline all blocks",
-      })}
-    >
-      <Layout />
-    </Toggle>
+    <Tooltip>
+      {/* The trigger is a wrapper span, not the Toggle itself: TooltipTrigger
+          asChild would merge its own data-state onto the child and clobber the
+          Toggle's on/off state (and its pressed styling). */}
+      <TooltipTrigger asChild>
+        <span className="inline-flex">
+          <Toggle
+            variant="outline"
+            size="sm"
+            pressed={xray}
+            onPressedChange={toggleXray}
+            data-testid="plumix-xray-toggle"
+            aria-label={i18n._({
+              id: "editor.toolbar.xray",
+              message: "X-ray: outline all blocks",
+            })}
+          >
+            <SquareDashed />
+          </Toggle>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <Trans id="editor.toolbar.xray" message="X-ray: outline all blocks" />{" "}
+        <kbd className="text-muted-foreground ms-1">⇧X</kbd>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
