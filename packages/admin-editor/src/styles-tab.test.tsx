@@ -79,6 +79,25 @@ describe("StylesTab", () => {
     expect(margin.contains(padding)).toBe(false);
   });
 
+  test("exposes Size controls that write width/min-width to the active bucket", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    expect(getByTestId("styles-section-size")).toBeDefined();
+
+    // Sizing has no token scale, so the custom input shows directly (no mode
+    // toggle) — the same model as font-size.
+    fireEvent.change(getByTestId("style-control-width-custom"), {
+      target: { value: "280px" },
+    });
+    fireEvent.change(getByTestId("style-control-minWidth-custom"), {
+      target: { value: "280px" },
+    });
+
+    const probe = getByTestId("style-probe").textContent;
+    expect(probe).toContain('"width":{"raw":"280px"}');
+    expect(probe).toContain('"minWidth":{"raw":"280px"}');
+  });
+
   test("the italic mark toggles a fontStyle raw value", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 

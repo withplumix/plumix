@@ -74,6 +74,21 @@ const SECTIONS: readonly {
     ],
   },
   {
+    // Sizing has no token scale (widths are arbitrary px/%/rem), so these are
+    // custom-only — same model as font-size.
+    id: "size",
+    label: "Size",
+    controls: [
+      { property: "width", label: "Width" },
+      { property: "height", label: "Height" },
+      { property: "aspectRatio", label: "Aspect ratio" },
+      { property: "minWidth", label: "Min width" },
+      { property: "minHeight", label: "Min height" },
+      { property: "maxWidth", label: "Max width" },
+      { property: "maxHeight", label: "Max height" },
+    ],
+  },
+  {
     id: "border",
     label: "Border",
     controls: [
