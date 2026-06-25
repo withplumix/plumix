@@ -788,6 +788,86 @@ describe("renameBlockHtmlAttr", () => {
   });
 });
 
+describe("groupSelected", () => {
+  test("wraps the selected siblings in a group and selects it", () => {
+    const store = createEditorStore({
+      tree: [
+        { id: "a", name: "core/x" },
+        { id: "b", name: "core/y" },
+        { id: "c", name: "core/z" },
+      ],
+    });
+    store.getState().select("a");
+    store.getState().select("b", { additive: true });
+
+    store.getState().groupSelected();
+
+    const tree = store.getState().tree;
+    expect(tree).toHaveLength(2);
+    expect(tree[0]?.name).toBe("core/group");
+    expect((tree[0]?.attrs?.content as BlockNode[]).map((n) => n.id)).toEqual([
+      "a",
+      "b",
+    ]);
+    expect(store.getState().activeId).toBe(tree[0]?.id);
+  });
+
+  test("is a no-op when the selection spans different parents", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "a", name: "core/x" },
+      {
+        id: "g",
+        name: "core/group",
+        attrs: { content: [{ id: "c1", name: "core/y" }] },
+      },
+    ];
+    const store = createEditorStore({ tree });
+    store.getState().select("a");
+    store.getState().select("c1", { additive: true });
+
+    store.getState().groupSelected();
+
+    expect(store.getState().tree).toBe(tree);
+  });
+});
+
+describe("ungroupSelected", () => {
+  test("replaces the active group with its children and selects them", () => {
+    const store = createEditorStore({
+      tree: [
+        {
+          id: "g",
+          name: "core/group",
+          attrs: {
+            content: [
+              { id: "c1", name: "core/x" },
+              { id: "c2", name: "core/y" },
+            ],
+          },
+        },
+        { id: "d", name: "core/z" },
+      ],
+    });
+    store.getState().select("g");
+
+    store.getState().ungroupSelected();
+
+    expect(store.getState().tree.map((n) => n.id)).toEqual(["c1", "c2", "d"]);
+    expect(store.getState().activeId).toBe("c2");
+    expect(store.getState().selectedIds.has("c1")).toBe(true);
+  });
+
+  test("is a no-op when the active block has no children", () => {
+    const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
+    const store = createEditorStore({ tree });
+    store.getState().select("a");
+
+    store.getState().ungroupSelected();
+
+    expect(store.getState().tree).toBe(tree);
+  });
+});
+
 describe("pasteBlocks", () => {
   const copied: BlockNode = {
     id: "a",

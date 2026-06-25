@@ -169,6 +169,11 @@ msgid "editor.richtext.hint"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.group"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/block-inspector.tsx
 msgid "editor.htmlAttrs.title"
 msgstr ""
@@ -381,6 +386,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.toolbar.undo"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.ungroup"
 msgstr ""
 
 #. js-lingui-explicit-id

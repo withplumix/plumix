@@ -8,7 +8,9 @@ import {
   Copy,
   CornerLeftUp,
   GripVertical,
+  Group,
   Trash2,
+  Ungroup,
 } from "@plumix/admin-ui/icons";
 import {
   Tooltip,
@@ -18,7 +20,11 @@ import {
 } from "@plumix/admin-ui/tooltip";
 
 import type { OverlayBox } from "./overlay.js";
-import { findParentId } from "./block-tree-ops.js";
+import {
+  canUngroupBlock,
+  findParentId,
+  selectionRoots,
+} from "./block-tree-ops.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
 
 const TOOLBAR_GAP = 4;
@@ -41,6 +47,17 @@ export function SelectionToolbar({
   const selectedCount = useEditorStore((s) => s.selectedIds.size);
   const hasParent = useEditorStore((s) =>
     s.activeId ? findParentId(s.tree, s.activeId) !== null : false,
+  );
+  // Group needs the selected roots to share a parent (a group can't span
+  // containers); ungroup needs the active block to actually hold children.
+  const canGroup = useEditorStore((s) => {
+    const roots = selectionRoots(s.tree, s.selectedIds);
+    if (roots.length === 0) return false;
+    const parent = findParentId(s.tree, roots[0] ?? "");
+    return roots.every((id) => findParentId(s.tree, id) === parent);
+  });
+  const canUngroup = useEditorStore((s) =>
+    s.activeId ? canUngroupBlock(s.tree, s.activeId) : false,
   );
   if (!activeId) return null;
 
@@ -125,6 +142,21 @@ export function SelectionToolbar({
           onClick={act(() => state.moveSelectedBy(1))}
           label={<Trans id="editor.selection.moveDown" message="Move down" />}
         />
+        <IconAction
+          testId="selection-toolbar-group"
+          icon={<Group className="size-4" />}
+          disabled={!canGroup}
+          onClick={act(() => state.groupSelected())}
+          label={<Trans id="editor.selection.group" message="Group" />}
+        />
+        {canUngroup ? (
+          <IconAction
+            testId="selection-toolbar-ungroup"
+            icon={<Ungroup className="size-4" />}
+            onClick={act(() => state.ungroupSelected())}
+            label={<Trans id="editor.selection.ungroup" message="Ungroup" />}
+          />
+        ) : null}
         <IconAction
           testId="selection-toolbar-duplicate"
           icon={<Copy className="size-4" />}

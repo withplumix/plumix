@@ -8,19 +8,25 @@ import type {
   StyleValue,
   ThemeBreakpoints,
 } from "@plumix/blocks";
-import { DEFAULT_BREAKPOINTS, isBlockNodeArray } from "@plumix/blocks";
+import {
+  DEFAULT_BREAKPOINTS,
+  freshBlockId,
+  isBlockNodeArray,
+} from "@plumix/blocks";
 
 import type { MoveTarget } from "./block-tree-ops.js";
 import type { History } from "./history.js";
 import {
   duplicateBlock,
   findParentId,
+  groupBlocks,
   insertBlockAt,
   moveBlockBy,
   moveBlock as moveBlockOp,
   pasteBlocks as pasteBlocksOp,
   removeBlocks,
   selectionRoots,
+  ungroupBlock,
 } from "./block-tree-ops.js";
 import { clampZoom, zoomToCursor } from "./canvas-view.js";
 import { initHistory, recordHistory, redo, undo } from "./history.js";
@@ -159,6 +165,12 @@ export interface EditorActions {
   /** Insert fresh-id clones of `nodes` after the active block (or appended to
    *  the root), then select them. Used by clipboard paste. */
   pasteBlocks: (nodes: readonly BlockNode[]) => void;
+  /** Wrap the selected sibling blocks in a new `core/group` and select it.
+   *  No-op when the selection is empty or spans different parents. */
+  groupSelected: () => void;
+  /** Replace the active block with its children (ungroup) and select them.
+   *  No-op when the active block has no children. */
+  ungroupSelected: () => void;
   /** Select the active block's container, walking one level up. */
   selectParent: () => void;
   /** Move the active block by `delta` positions among its siblings. */
@@ -536,6 +548,33 @@ export function createEditorStore(
           selectedIds: new Set(newIds),
           activeId: newIds.at(-1) ?? null,
           history: recordHistory(state.history, tree, null),
+        };
+      }),
+    groupSelected: () =>
+      set((state) => {
+        const result = groupBlocks(
+          state.tree,
+          state.selectedIds,
+          freshBlockId(),
+        );
+        if (!result) return {};
+        return {
+          tree: result.tree,
+          selectedIds: new Set([result.groupId]),
+          activeId: result.groupId,
+          history: recordHistory(state.history, result.tree, null),
+        };
+      }),
+    ungroupSelected: () =>
+      set((state) => {
+        if (state.activeId === null) return {};
+        const result = ungroupBlock(state.tree, state.activeId);
+        if (!result) return {};
+        return {
+          tree: result.tree,
+          selectedIds: new Set(result.childIds),
+          activeId: result.childIds.at(-1) ?? null,
+          history: recordHistory(state.history, result.tree, null),
         };
       }),
     selectParent: () =>

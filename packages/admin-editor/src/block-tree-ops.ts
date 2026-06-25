@@ -268,6 +268,90 @@ export function duplicateBlock(
   };
 }
 
+// The children of a block's sole slot, or null when it isn't a single-slot
+// container with content. Ungroup only unwraps these: a multi-slot block (e.g.
+// columns) has no unambiguous "the" slot, and unwrapping one would silently
+// drop the others when the node is removed.
+function soleSlotChildren(node: BlockNode): readonly BlockNode[] | null {
+  const keys = slotKeys(node);
+  const key = keys.length === 1 ? keys[0] : undefined;
+  if (key === undefined) return null;
+  const slot = node.attrs?.[key];
+  return isBlockNodeArray(slot) && slot.length > 0 ? slot : null;
+}
+
+/** Whether {@link ungroupBlock} can unwrap this block — a single-slot container
+ *  with children. The toolbar gates the Ungroup button on this. */
+export function canUngroupBlock(
+  tree: readonly BlockNode[],
+  id: string,
+): boolean {
+  const node = findBlock(tree, id);
+  return node ? soleSlotChildren(node) !== null : false;
+}
+
+/**
+ * Replace a single-slot container with its children, spliced into the block's
+ * own parent at its position. Returns `null` when the block is missing, has no
+ * children, or has more than one slot. Children keep their ids.
+ *
+ * The children move into the group's own parent slot; allowedBlocks /
+ * requiresParent aren't re-validated here. Today nothing can nest a container in
+ * a restricted slot, so it can't be violated — tracked with paste's follow-up.
+ */
+export function ungroupBlock(
+  tree: readonly BlockNode[],
+  id: string,
+): { readonly tree: readonly BlockNode[]; readonly childIds: string[] } | null {
+  const node = findBlock(tree, id);
+  if (!node) return null;
+  const children = soleSlotChildren(node);
+  if (!children) return null;
+  const parentId = findParentId(tree, id);
+  const at = siblingsOf(tree, parentId).findIndex((n) => n.id === id);
+  let next = removeBlocks(tree, new Set([id]));
+  children.forEach((child, i) => {
+    next = insertNode(next, child, { parentId, index: at + i });
+  });
+  return { tree: next, childIds: children.map((c) => c.id) };
+}
+
+/**
+ * Wrap the selected blocks in a new `core/group` at the position of the first.
+ * Only groups a selection whose roots are siblings (share a parent) — returns
+ * `null` otherwise (or when nothing is selected), since a group can't span
+ * containers. Children keep their ids; the group takes `groupId`.
+ */
+export function groupBlocks(
+  tree: readonly BlockNode[],
+  ids: ReadonlySet<string>,
+  groupId: string,
+): { readonly tree: readonly BlockNode[]; readonly groupId: string } | null {
+  const roots = new Set(selectionRoots(tree, ids));
+  if (roots.size === 0) return null;
+  const parentId = findParentId(tree, [...roots][0] ?? "");
+  const siblings = siblingsOf(tree, parentId);
+  // All roots must be siblings under the same parent.
+  if ([...roots].some((id) => findParentId(tree, id) !== parentId)) return null;
+  const content = siblings.filter((n) => roots.has(n.id));
+  if (content.length === 0) return null;
+  // Seed core/group's `layout` default so a grouped wrapper matches a
+  // catalog-inserted one (the inspector control shows a value, not unset).
+  const group: BlockNode = {
+    id: groupId,
+    name: "core/group",
+    attrs: { layout: "flow", content },
+  };
+  // Every sibling before the first root is, by definition, not a root, so the
+  // post-removal insert position is just the first root's index.
+  const insertIndex = siblings.findIndex((n) => roots.has(n.id));
+  const pruned = removeBlocks(tree, roots);
+  return {
+    tree: insertNode(pruned, group, { parentId, index: insertIndex }),
+    groupId,
+  };
+}
+
 /**
  * Collect the selected blocks as whole nodes, reduced to selection roots and
  * returned in document order (so a copy preserves the original sequence, unlike

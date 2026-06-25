@@ -8,7 +8,9 @@ const ID_ALPHABET =
   "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-";
 const ID_LENGTH = 12;
 
-function freshId(): string {
+/** A fresh, collision-resistant block id (the same generator the id rewriter
+ *  uses). For new nodes the editor mints directly, e.g. a group wrapper. */
+export function freshBlockId(): string {
   const bytes = new Uint8Array(ID_LENGTH);
   globalThis.crypto.getRandomValues(bytes);
   let out = "";
@@ -28,6 +30,6 @@ export function rewriteBlockNodeIds(
         ? rewriteBlockNodeIds(value)
         : value;
     }
-    return { ...node, id: freshId(), attrs: nextAttrs };
+    return { ...node, id: freshBlockId(), attrs: nextAttrs };
   });
 }

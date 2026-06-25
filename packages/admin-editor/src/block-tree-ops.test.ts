@@ -3,11 +3,13 @@ import { describe, expect, test } from "vitest";
 import type { BlockNode } from "@plumix/blocks";
 
 import {
+  canUngroupBlock,
   collectBlocks,
   duplicateBlock,
   findBlock,
   findParentId,
   flattenTree,
+  groupBlocks,
   insertBlockAt,
   moveBlock,
   moveBlockBy,
@@ -15,6 +17,7 @@ import {
   removeBlocks,
   selectionRoots,
   slotKeys,
+  ungroupBlock,
 } from "./block-tree-ops.js";
 
 const columns = (
@@ -495,6 +498,86 @@ describe("selectionRoots", () => {
 
   test("returns an empty array for an empty set", () => {
     expect(selectionRoots(TREE, new Set())).toEqual([]);
+  });
+});
+
+describe("groupBlocks", () => {
+  const flat: readonly BlockNode[] = [
+    { id: "a", name: "core/x" },
+    { id: "b", name: "core/y" },
+    { id: "c", name: "core/z" },
+  ];
+
+  test("wraps sibling selection roots in a group at the first position", () => {
+    const result = groupBlocks(flat, new Set(["a", "b"]), "grp");
+    expect(result).not.toBeNull();
+    expect(result?.tree.map((n) => n.id)).toEqual(["grp", "c"]);
+    const grouped = result?.tree[0];
+    expect(grouped?.name).toBe("core/group");
+    expect(grouped?.attrs?.layout).toBe("flow"); // seeds core/group's default
+    expect((grouped?.attrs?.content as BlockNode[]).map((n) => n.id)).toEqual([
+      "a",
+      "b",
+    ]);
+  });
+
+  test("orders grouped children by document order, not selection order", () => {
+    const result = groupBlocks(flat, new Set(["b", "a"]), "grp");
+    expect(
+      (result?.tree[0]?.attrs?.content as BlockNode[]).map((n) => n.id),
+    ).toEqual(["a", "b"]);
+  });
+
+  test("groups a single block", () => {
+    const result = groupBlocks(flat, new Set(["b"]), "grp");
+    expect(result?.tree.map((n) => n.id)).toEqual(["a", "grp", "c"]);
+  });
+
+  test("pulls non-contiguous siblings together at the first position", () => {
+    const result = groupBlocks(flat, new Set(["a", "c"]), "grp");
+    expect(result?.tree.map((n) => n.id)).toEqual(["grp", "b"]);
+    expect(
+      (result?.tree[0]?.attrs?.content as BlockNode[]).map((n) => n.id),
+    ).toEqual(["a", "c"]);
+  });
+
+  test("refuses to group blocks that don't share a parent", () => {
+    // `a` is top-level; `c1` is nested inside `g` — different parents.
+    expect(groupBlocks(TREE, new Set(["a", "c1"]), "grp")).toBeNull();
+  });
+});
+
+describe("ungroupBlock", () => {
+  const withGroup: readonly BlockNode[] = [
+    group("g", [
+      { id: "c1", name: "core/x" },
+      { id: "c2", name: "core/y" },
+    ]),
+    { id: "d", name: "core/z" },
+  ];
+
+  test("replaces a group with its children at its position", () => {
+    const result = ungroupBlock(withGroup, "g");
+    expect(result?.tree.map((n) => n.id)).toEqual(["c1", "c2", "d"]);
+    expect(result?.childIds).toEqual(["c1", "c2"]);
+  });
+
+  test("returns null for a block with no children", () => {
+    expect(ungroupBlock(withGroup, "d")).toBeNull();
+  });
+
+  test("refuses a multi-slot block (unwrapping one slot would drop the rest)", () => {
+    const tree: readonly BlockNode[] = [
+      columns([{ id: "l", name: "x" }], [{ id: "r", name: "y" }]),
+    ];
+    expect(ungroupBlock(tree, "cols")).toBeNull();
+    expect(canUngroupBlock(tree, "cols")).toBe(false);
+  });
+
+  test("canUngroupBlock matches the op: true only for a single filled slot", () => {
+    expect(canUngroupBlock(withGroup, "g")).toBe(true);
+    expect(canUngroupBlock(withGroup, "d")).toBe(false);
+    expect(canUngroupBlock(withGroup, "missing")).toBe(false);
   });
 });
 
