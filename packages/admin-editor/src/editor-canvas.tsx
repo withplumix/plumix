@@ -19,6 +19,7 @@ import { editAppender, parseLoaderData, renderBlockTree } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
+import { clipboardOpFromEvent } from "./clipboard-ops.js";
 import { connectRuntime } from "./connect-runtime.js";
 import { mergeLoaderData } from "./merge-loader-data.js";
 
@@ -187,6 +188,20 @@ export function EditorCanvas({
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
+  }, []);
+
+  // Forward block clipboard shortcuts (Cmd/Ctrl+C/X/V) to the host, which owns
+  // the tree + clipboard. Defers to native copy when there's a real text
+  // selection, and to the field's own clipboard while typing.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent): void => {
+      const op = clipboardOpFromEvent(e);
+      if (!op) return;
+      e.preventDefault();
+      connectionRef.current?.reportClipboard(op);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   // Layer 1 — navigation guard. The canvas renders the entry's real themed

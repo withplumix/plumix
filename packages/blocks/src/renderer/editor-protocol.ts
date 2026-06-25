@@ -103,6 +103,13 @@ export type CanvasMessage =
       readonly type: "canvas:requestAdd";
       readonly parentId?: string;
       readonly slotKey?: string;
+    }
+  | {
+      // A clipboard shortcut (Cmd/Ctrl+C/X/V) fired while focus was inside the
+      // iframe. The host owns the tree + clipboard, so the canvas just forwards
+      // the intent and the host performs it.
+      readonly type: "canvas:clipboard";
+      readonly op: "copy" | "cut" | "paste";
     };
 
 export type EditorBridgeMessage = HostMessage | CanvasMessage;

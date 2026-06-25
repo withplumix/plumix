@@ -54,6 +54,9 @@ interface ConnectCanvasOptions {
     readonly parentId?: string;
     readonly slotKey?: string;
   }) => void;
+  /** A clipboard shortcut fired with focus inside the iframe; the host performs
+   *  the copy/cut/paste against its tree + the system clipboard. */
+  readonly onClipboard?: (op: "copy" | "cut" | "paste") => void;
   /** Host-resolved canvas chrome (localized labels) pushed once the canvas is
    *  ready. The canvas has no i18n runtime, so the host owns these strings. */
   readonly config?: { readonly addBlockLabel: string };
@@ -75,6 +78,7 @@ export function connectCanvas({
   onWheel,
   onKey,
   onRequestAdd,
+  onClipboard,
   config,
 }: ConnectCanvasOptions): CanvasConnection {
   const post = (message: object): void => {
@@ -151,6 +155,9 @@ export function connectCanvas({
         break;
       case "canvas:requestAdd":
         onRequestAdd?.({ parentId: canvas.parentId, slotKey: canvas.slotKey });
+        break;
+      case "canvas:clipboard":
+        onClipboard?.(canvas.op);
         break;
     }
   };

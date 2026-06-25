@@ -787,3 +787,78 @@ describe("renameBlockHtmlAttr", () => {
     expect(store.getState().tree).toBe(tree);
   });
 });
+
+describe("pasteBlocks", () => {
+  const copied: BlockNode = {
+    id: "a",
+    name: "core/heading",
+    attrs: { text: "Hi" },
+  };
+
+  test("appends pasted blocks with fresh ids and selects them", () => {
+    const store = createEditorStore();
+
+    store.getState().pasteBlocks([copied]);
+
+    const tree = store.getState().tree;
+    expect(tree).toHaveLength(1);
+    expect(tree[0]?.name).toBe("core/heading");
+    // A fresh id — never the copied source's id (would collide on a re-paste).
+    expect(tree[0]?.id).not.toBe("a");
+    expect(store.getState().activeId).toBe(tree[0]?.id);
+    expect(store.getState().selectedIds.has(tree[0]?.id ?? "")).toBe(true);
+  });
+
+  test("inserts after the active block, not at the end", () => {
+    const store = createEditorStore({
+      tree: [
+        { id: "a", name: "core/x" },
+        { id: "b", name: "core/y" },
+      ],
+    });
+    store.getState().select("a");
+
+    store.getState().pasteBlocks([copied]);
+
+    const names = store.getState().tree.map((n) => n.name);
+    expect(names).toEqual(["core/x", "core/heading", "core/y"]);
+  });
+
+  test("rewrites ids through nested children (no source-id collision)", () => {
+    const store = createEditorStore();
+    const group: BlockNode = {
+      id: "g",
+      name: "core/group",
+      attrs: { content: [{ id: "child", name: "core/x" }] },
+    };
+
+    store.getState().pasteBlocks([group]);
+
+    const pasted = store.getState().tree[0];
+    const child = (pasted?.attrs?.content as BlockNode[])[0];
+    expect(pasted?.id).not.toBe("g");
+    expect(child?.id).not.toBe("child");
+  });
+
+  test("pastes at the top level even when a nested block is active", () => {
+    const store = createEditorStore({
+      tree: [
+        {
+          id: "g",
+          name: "core/group",
+          attrs: { content: [{ id: "child", name: "core/x" }] },
+        },
+      ],
+    });
+    store.getState().select("child");
+
+    store.getState().pasteBlocks([copied]);
+
+    // Lands at the root after the group — never inside the group's slot, whose
+    // allowedBlocks the clipboard can't honor.
+    expect(store.getState().tree.map((n) => n.name)).toEqual([
+      "core/group",
+      "core/heading",
+    ]);
+  });
+});

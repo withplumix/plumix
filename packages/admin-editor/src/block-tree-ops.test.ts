@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { BlockNode } from "@plumix/blocks";
 
 import {
+  collectBlocks,
   duplicateBlock,
   findBlock,
   findParentId,
@@ -494,6 +495,25 @@ describe("selectionRoots", () => {
 
   test("returns an empty array for an empty set", () => {
     expect(selectionRoots(TREE, new Set())).toEqual([]);
+  });
+});
+
+describe("collectBlocks", () => {
+  test("returns the selected root nodes whole", () => {
+    expect(collectBlocks(TREE, new Set(["a"]))).toEqual([TREE[0]]);
+  });
+
+  test("returns roots in document order, not selection order", () => {
+    // Set iterates g before a, but copy must preserve the document sequence.
+    expect(collectBlocks(TREE, new Set(["g", "a"])).map((n) => n.id)).toEqual([
+      "a",
+      "g",
+    ]);
+  });
+
+  test("collapses a nested selection to its containing root (whole subtree)", () => {
+    const out = collectBlocks(TREE, new Set(["g", "deep"]));
+    expect(out.map((n) => n.id)).toEqual(["g"]);
   });
 });
 

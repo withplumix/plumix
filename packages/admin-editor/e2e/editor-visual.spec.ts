@@ -610,6 +610,27 @@ test.describe("editor playground", () => {
     await expect(root).toHaveAttribute("data-plumix-xray", "");
   });
 
+  test("copy + paste a block (Cmd/Ctrl+C/V) from canvas focus", async ({
+    page,
+  }) => {
+    await page
+      .context()
+      .grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const blocks = canvas.locator("[data-plumix-id]");
+    const before = await blocks.count();
+
+    // Clicking a block puts focus inside the iframe; the shortcuts must still
+    // work via the canvas:clipboard forward path.
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await page.keyboard.press("ControlOrMeta+KeyC");
+    await page.waitForTimeout(150); // let the async clipboard write settle
+    await page.keyboard.press("ControlOrMeta+KeyV");
+
+    await expect(blocks).toHaveCount(before + 1);
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 
