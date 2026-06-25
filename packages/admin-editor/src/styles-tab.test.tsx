@@ -114,6 +114,55 @@ describe("StylesTab", () => {
     );
   });
 
+  test("the hide toggle sets display:none in the active device bucket", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    fireEvent.click(getByTestId("style-hide-on-device"));
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"display":{"raw":"none"}',
+    );
+  });
+
+  test("the hide toggle reads pressed from an existing display:none (raw or token)", () => {
+    const raw: BlockNode = {
+      id: "a",
+      name: "core/x",
+      style: { large: { display: { raw: "none" } } },
+    };
+    expect(
+      renderTab([raw], "a")
+        .getByTestId("style-hide-on-device")
+        .getAttribute("data-state"),
+    ).toBe("on");
+
+    cleanup();
+    const token: BlockNode = {
+      id: "a",
+      name: "core/x",
+      style: { large: { display: { token: "none" } } },
+    };
+    expect(
+      renderTab([token], "a")
+        .getByTestId("style-hide-on-device")
+        .getAttribute("data-state"),
+    ).toBe("on");
+  });
+
+  test("the hide toggle clears display:none when turned off", () => {
+    const hidden: BlockNode = {
+      id: "a",
+      name: "core/x",
+      style: { large: { display: { raw: "none" } } },
+    };
+    const { getByTestId } = renderTab([hidden], "a");
+
+    fireEvent.click(getByTestId("style-hide-on-device"));
+
+    // The only declaration is gone, so the style slot prunes to undefined.
+    expect(getByTestId("style-probe").textContent).toBe("");
+  });
+
   test("box-model writes a per-side custom padding value", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 

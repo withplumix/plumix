@@ -14,10 +14,13 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
+  Eye,
+  EyeOff,
   Italic,
   Strikethrough,
   Underline,
 } from "@plumix/admin-ui/icons";
+import { Toggle } from "@plumix/admin-ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import { normalizeStyleValue } from "@plumix/blocks";
 
@@ -96,6 +99,7 @@ const SECTION_IDS = [...SECTIONS.map((s) => s.id), "spacing"];
  * responsive bucket, so styles are set per breakpoint.
  */
 export function StylesTab({ tokens }: StylesTabProps): ReactElement {
+  const { i18n } = useLingui();
   const activeId = useEditorStore((s) => s.activeId);
   const device = useEditorStore((s) => s.device);
   const block = useEditorStore((s) =>
@@ -131,15 +135,38 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
     (property: string) =>
     (value: StyleValue | null): void =>
       updateBlockStyle(activeId, bucket, property, value);
+  // Hidden when display resolves to "none" in either form — a value typed in
+  // the CSS section is raw, but a legacy/token "none" should read as hidden too.
+  const display = valueOf("display");
+  const hidden =
+    (display && ("raw" in display ? display.raw : display.token)) === "none";
 
   return (
     <div className="flex flex-col gap-2 p-3" data-testid="styles-tab">
-      <p
-        className="text-muted-foreground text-xs"
-        data-testid="styles-tab-scope"
-      >
-        <Trans id="editor.styles.scope" message="Editing" /> · {device}
-      </p>
+      <div className="flex items-center justify-between">
+        <p
+          className="text-muted-foreground text-xs"
+          data-testid="styles-tab-scope"
+        >
+          <Trans id="editor.styles.scope" message="Editing" /> · {device}
+        </p>
+        {/* Writes display:none into the active device's bucket only. */}
+        <Toggle
+          variant="outline"
+          size="sm"
+          pressed={hidden}
+          onPressedChange={(next) =>
+            setter("display")(next ? { raw: "none" } : null)
+          }
+          data-testid="style-hide-on-device"
+          aria-label={i18n._({
+            id: "editor.styles.hideOnDevice",
+            message: "Hide on this device",
+          })}
+        >
+          {hidden ? <EyeOff /> : <Eye />}
+        </Toggle>
+      </div>
       <Accordion type="multiple" defaultValue={SECTION_IDS}>
         {SECTIONS.map((section) => (
           <AccordionItem key={section.id} value={section.id}>

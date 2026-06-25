@@ -62,6 +62,7 @@ export {
   CornerLeftUp,
   Eye,
   EyeIcon,
+  EyeOff,
   FileText,
   Folder,
   Globe,
