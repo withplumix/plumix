@@ -24,8 +24,18 @@ const HEADING_RE = /<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
 
 // Strip inner tags and decode `&nbsp;` so the empty-heading check sees the
 // visible text — `<h2><strong>x</strong></h2>` is not empty, `<h2></h2>` is.
+// The strip loops to a fixpoint so a crafted `<sc<b>ript>` can't reconstruct a
+// tag after a single pass; the text is only used for emptiness/word checks
+// (never rendered), but a complete strip keeps it honest. Heading text is a
+// short line, so the bounded re-scan is cheap.
 function headingText(rawInner: string): string {
-  return rawInner.replace(/<[^<>]*>/g, "").replace(/&nbsp;/gi, " ");
+  let text = rawInner;
+  let previous: string;
+  do {
+    previous = text;
+    text = text.replace(/<[^<>]*>/g, "");
+  } while (text !== previous);
+  return text.replace(/&nbsp;/gi, " ");
 }
 
 function collectHeadings(nodes: readonly BlockNode[]): readonly HeadingNode[] {

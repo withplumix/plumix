@@ -139,6 +139,10 @@ export { buildHtmlAllowlist } from "./html/build-allowlist.js";
 export type { HtmlAllowlistOverride } from "./html/build-allowlist.js";
 export { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
 
+// ─── Headings ─────────────────────────────────────────────────────────────
+export { HEADING_LEVELS, HEADING_TAGS } from "./headings.js";
+export type { HeadingLevel } from "./headings.js";
+
 // ─── Heading audit ──────────────────────────────────────────────────────────
 export { analyzeHeadingStructure } from "./heading-audit.js";
 export type { HeadingAuditViolation } from "./heading-audit.js";

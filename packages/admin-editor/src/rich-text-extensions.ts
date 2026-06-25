@@ -18,7 +18,7 @@ import {
   UndoRedo,
 } from "@tiptap/extensions";
 
-import { coreMarkExtensions } from "@plumix/blocks";
+import { coreMarkExtensions, HEADING_LEVELS } from "@plumix/blocks";
 
 /**
  * Tiptap extensions for the rich-text rail. We import the exact set the body
@@ -39,15 +39,15 @@ import { coreMarkExtensions } from "@plumix/blocks";
  * can escape it). Marks come from `coreMarkExtensions` so the editor and
  * renderer share one vocabulary.
  *
- * Heading levels are capped at h1–h4 to match the sanitiser allowlist; h5/h6
- * are intentionally unavailable.
+ * Heading levels come from the shared `HEADING_LEVELS` (h1–h4), the single
+ * source of truth the sanitiser allowlist also derives from.
  */
 export function richTextExtensions(): Extensions {
   return [
     Document,
     Paragraph,
     Text,
-    Heading.configure({ levels: [1, 2, 3, 4] }),
+    Heading.configure({ levels: [...HEADING_LEVELS] }),
     Blockquote,
     HardBreak,
     BulletList,

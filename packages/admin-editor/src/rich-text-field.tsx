@@ -21,6 +21,7 @@ import {
   Underline,
 } from "@plumix/admin-ui/icons";
 import { Toggle } from "@plumix/admin-ui/toggle";
+import { HEADING_LEVELS } from "@plumix/blocks";
 
 import { richTextExtensions } from "./rich-text-extensions.js";
 
@@ -58,10 +59,6 @@ interface ActiveState {
   /** The active heading level (1–4), or null when the block is a paragraph. */
   readonly headingLevel: number | null;
 }
-
-// Heading levels the unified Text block offers — capped at h1–h4 to match the
-// sanitiser allowlist (h5/h6 are intentionally unavailable).
-const HEADING_LEVELS = [1, 2, 3, 4] as const;
 
 /**
  * Right-rail rich-text editor: a Tiptap instance over the explicit node set
@@ -245,10 +242,10 @@ function ToolbarToggle({
 // and "h1"–"h4" are the values the format dropdown emits.
 function setFormat(editor: Editor | null, value: string): void {
   if (!editor) return;
-  const match = /^h([1-4])$/.exec(value);
   const chain = editor.chain().focus();
-  if (match) {
-    chain.setHeading({ level: Number(match[1]) as 1 | 2 | 3 | 4 }).run();
+  const level = HEADING_LEVELS.find((l) => `h${l}` === value);
+  if (level) {
+    chain.setHeading({ level }).run();
   } else {
     chain.setParagraph().run();
   }
