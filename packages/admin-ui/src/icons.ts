@@ -94,6 +94,7 @@ export {
   SettingsIcon,
   Smartphone,
   Square,
+  SquareDashed,
   Strikethrough,
   Tablet,
   Tag,

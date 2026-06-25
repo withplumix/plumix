@@ -364,6 +364,11 @@ msgid "editor.header.title"
 msgstr "Title"
 
 #. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.rails"
+msgstr "Toggle panels"
+
+#. js-lingui-explicit-id
 #: src/style-control.tsx
 msgid "editor.styles.mode.token"
 msgstr "Token"
