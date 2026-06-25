@@ -15,8 +15,6 @@ const PROSE_ATTRS: Readonly<
   Record<string, { readonly attr: string; readonly html: boolean }>
 > = {
   "core/rich-text": { attr: "body", html: true },
-  "core/heading": { attr: "text", html: false },
-  "core/quote": { attr: "text", html: false },
   "core/details": { attr: "summary", html: false },
   "core/table-header-cell": { attr: "text", html: false },
   "core/table-cell": { attr: "text", html: false },

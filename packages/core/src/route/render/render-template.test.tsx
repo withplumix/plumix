@@ -1939,7 +1939,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
       title: "Blocks",
       content: {
         version: "plumix.v2",
-        blocks: [{ id: "h", name: "core/heading", attrs: { text: "Hi" } }],
+        blocks: [
+          { id: "h", name: "core/rich-text", attrs: { body: "<h2>Hi</h2>" } },
+        ],
       },
       status: "published",
       authorId: author.id,
@@ -1952,7 +1954,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(response.status).toBe(200);
     const body = await response.text();
     expect(body).toContain("Hi");
-    expect(body).toContain('data-plumix-block="core/heading"');
+    expect(body).toContain('data-plumix-block="core/rich-text"');
   });
 
   test("theme tokens reach the block walker — styled blocks emit `var(--plumix-…)` fallbacks", async () => {
@@ -1978,8 +1980,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
         blocks: [
           {
             id: "s",
-            name: "core/heading",
-            attrs: { text: "Hi" },
+            name: "core/rich-text",
+            attrs: { body: "<h2>Hi</h2>" },
             style: { large: { background: "brand" } },
           },
         ],

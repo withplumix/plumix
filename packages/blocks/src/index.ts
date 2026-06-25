@@ -140,8 +140,8 @@ export type { HtmlAllowlistOverride } from "./html/build-allowlist.js";
 export { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
 
 // ─── Heading audit ──────────────────────────────────────────────────────────
-export { analyzeHeadingStructure } from "./heading/audit.js";
-export type { HeadingAuditViolation } from "./heading/audit.js";
+export { analyzeHeadingStructure } from "./heading-audit.js";
+export type { HeadingAuditViolation } from "./heading-audit.js";
 
 // ─── Unknown-node Tiptap fallback ──────────────────────────────────────────
 export { unknownBlockSchema } from "./unknown-node.js";
@@ -155,9 +155,7 @@ export { codeBlock } from "./code/index.js";
 export { columnsBlock } from "./columns/index.js";
 export { detailsBlock } from "./details/index.js";
 export { groupBlock } from "./group/index.js";
-export { headingBlock } from "./heading/index.js";
 export { htmlBlock } from "./html/index.js";
-export { quoteBlock } from "./quote/index.js";
 export { richTextBlock } from "./rich-text/index.js";
 export { separatorBlock } from "./separator/index.js";
 export { spacerBlock } from "./spacer/index.js";

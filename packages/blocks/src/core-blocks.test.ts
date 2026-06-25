@@ -6,22 +6,25 @@ import { coreBlocks } from "./core-blocks.js";
 describe("coreBlocks", () => {
   test("includes the canonical typography and layout blocks", () => {
     const names = new Set(coreBlocks.map((b) => b.name));
-    expect(names.has("core/heading")).toBe(true);
     expect(names.has("core/rich-text")).toBe(true);
-    expect(names.has("core/quote")).toBe(true);
     expect(names.has("core/code")).toBe(true);
     expect(names.has("core/group")).toBe(true);
     expect(names.has("core/columns")).toBe(true);
     expect(names.has("core/table")).toBe(true);
   });
 
+  test("core/heading and core/quote collapsed into core/rich-text", () => {
+    const names = new Set(coreBlocks.map((b) => b.name));
+    expect(names.has("core/heading")).toBe(false);
+    expect(names.has("core/quote")).toBe(false);
+  });
+
   test("core/paragraph is no longer registered (collapsed into core/rich-text)", () => {
     expect(coreBlocks.map((b) => b.name)).not.toContain("core/paragraph");
   });
 
-  test("places core/rich-text immediately after core/heading at the top of the inserter", () => {
-    const names = coreBlocks.map((b) => b.name);
-    expect(names[names.indexOf("core/heading") + 1]).toBe("core/rich-text");
+  test("leads the inserter with core/rich-text, the unified Text block", () => {
+    expect(coreBlocks.map((b) => b.name)[0]).toBe("core/rich-text");
   });
 
   test("declares unique block names with no duplicates", () => {

@@ -121,7 +121,7 @@ describe("dompurify-shim — baseline allowlist parity", () => {
   });
 
   test("strips non-allowlisted heading levels to text", () => {
-    for (const tag of ["h1", "h5", "h6"]) {
+    for (const tag of ["h5", "h6"]) {
       const out = run(`<${tag}>title</${tag}>`);
       expect(out).not.toContain(`<${tag}`);
       expect(parse(out).textContent).toBe("title");

@@ -25,6 +25,7 @@ export interface HtmlAllowlist {
 export const BASELINE_HTML_ALLOWLIST: HtmlAllowlist = Object.freeze({
   allowedTags: [
     "p",
+    "h1",
     "h2",
     "h3",
     "h4",

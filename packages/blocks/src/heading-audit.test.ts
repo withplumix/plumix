@@ -1,15 +1,30 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockNode } from "../render-block-tree.js";
-import { analyzeHeadingStructure } from "./audit.js";
+import type { BlockNode } from "./render-block-tree.js";
+import { analyzeHeadingStructure } from "./heading-audit.js";
 
+// Headings are inline formats of the unified rich-text block, so the audit
+// reads them from each block's body HTML. This helper wraps one heading in a
+// rich-text body whose block id is what violations point back at.
 function heading(id: string, level: number, text = "OK"): BlockNode {
-  return { id, name: "core/heading", attrs: { level, text } };
+  return {
+    id,
+    name: "core/rich-text",
+    attrs: { body: `<h${level}>${text}</h${level}>` },
+  };
 }
 
 describe("analyzeHeadingStructure", () => {
   test("returns [] for empty input", () => {
     expect(analyzeHeadingStructure([])).toEqual([]);
+  });
+
+  test("returns [] when no rich-text body contains a heading", () => {
+    expect(
+      analyzeHeadingStructure([
+        { id: "p", name: "core/rich-text", attrs: { body: "<p>prose</p>" } },
+      ]),
+    ).toEqual([]);
   });
 
   test("returns [] for a single well-formed heading", () => {
@@ -26,7 +41,7 @@ describe("analyzeHeadingStructure", () => {
     ).toEqual([]);
   });
 
-  test("flags multiple h1 with all offending node ids", () => {
+  test("flags multiple h1 with all offending block ids", () => {
     const violations = analyzeHeadingStructure([
       heading("first", 1),
       heading("middle", 2),
@@ -59,7 +74,7 @@ describe("analyzeHeadingStructure", () => {
     ).toEqual([]);
   });
 
-  test("flags an empty heading (empty text + whitespace-only counts)", () => {
+  test("flags an empty heading (empty + whitespace-only bodies count)", () => {
     const violations = analyzeHeadingStructure([
       heading("good", 1, "title"),
       heading("blank", 2, ""),
@@ -70,6 +85,33 @@ describe("analyzeHeadingStructure", () => {
       { kind: "empty-heading", nodeId: "blank" },
       { kind: "empty-heading", nodeId: "whitespace" },
     ]);
+  });
+
+  test("reads several headings from one rich-text body in document order", () => {
+    const violations = analyzeHeadingStructure([
+      {
+        id: "block",
+        name: "core/rich-text",
+        attrs: { body: "<h1>One</h1><p>x</p><h3>Three</h3>" },
+      },
+    ]);
+
+    // Both headings come from the same block, so the skip points at its id.
+    expect(violations).toEqual([
+      { kind: "skipped-level", nodeId: "block", from: 1, to: 3 },
+    ]);
+  });
+
+  test("does not flag a heading whose text is only inline markup", () => {
+    expect(
+      analyzeHeadingStructure([
+        {
+          id: "rich",
+          name: "core/rich-text",
+          attrs: { body: "<h1>Hello <strong>there</strong></h1>" },
+        },
+      ]),
+    ).toEqual([]);
   });
 
   test("walks slot-typed BlockNode[] arrays inside attrs to find nested headings", () => {
@@ -90,40 +132,16 @@ describe("analyzeHeadingStructure", () => {
     ]);
   });
 
-  test("clamps invalid/out-of-range levels to 2 (default)", () => {
-    const violations = analyzeHeadingStructure([
-      heading("a", 1),
-      heading("nan", 9),
-      heading("after", 3),
-    ]);
-
-    // The bogus h9 is treated as level 2, so a(1) → nan(2) is fine, but
-    // nan(2) → after(3) is also fine. Net: zero violations.
-    expect(violations).toEqual([]);
-  });
-
-  test("clamps every invalid-level shape (0, negative, fractional, undefined, string) to 2", () => {
-    for (const level of [0, -1, 1.5, undefined, "2"] as unknown[]) {
-      const violations = analyzeHeadingStructure([
-        { id: "x", name: "core/heading", attrs: { level, text: "OK" } },
-        heading("after", 3),
-      ]);
-      // x clamps to 2, after is 3 — no skip, no violation.
-      expect(violations).toEqual([]);
-    }
-  });
-
   test("does not crash on an attribute that looks like a BlockNode[] but isn't a slot", () => {
     // An attribute that happens to be an array of {id,name} objects (e.g. a
-    // term picker producing taxonomy refs) should be walked safely. The
-    // shape-detection heuristic is documented; this test pins the boundary.
+    // term picker producing taxonomy refs) should be walked safely without
+    // surfacing false-positive headings.
     const violations = analyzeHeadingStructure([
       {
         id: "outer",
-        name: "core/heading",
+        name: "core/rich-text",
         attrs: {
-          level: 1,
-          text: "Title",
+          body: "<h1>Title</h1>",
           terms: [
             { id: "t1", name: "tag:foo" },
             { id: "t2", name: "tag:bar" },
@@ -132,8 +150,6 @@ describe("analyzeHeadingStructure", () => {
       },
     ]);
 
-    // Outer heading is well-formed; the term-shaped attr's items have
-    // names that aren't `core/heading` so no false-positive headings appear.
     expect(violations).toEqual([]);
   });
 

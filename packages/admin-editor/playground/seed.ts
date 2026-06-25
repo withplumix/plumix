@@ -12,8 +12,8 @@ import { FEED_SEED } from "./feed-block.js";
 export const SEED_BLOCKS: readonly BlockNode[] = [
   {
     id: "heading-1",
-    name: "core/heading",
-    attrs: { level: 1, text: "Plumix editor playground" },
+    name: "core/rich-text",
+    attrs: { body: "<h1>Plumix editor playground</h1>" },
   },
   {
     id: "intro",
@@ -29,8 +29,8 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
       content: [
         {
           id: "group-heading",
-          name: "core/heading",
-          attrs: { level: 2, text: "A nested group" },
+          name: "core/rich-text",
+          attrs: { body: "<h2>A nested group</h2>" },
         },
         {
           id: "group-text",
@@ -90,8 +90,8 @@ export const SEED_PATTERNS: readonly InserterPattern[] = [
     content: [
       {
         id: "hero-heading",
-        name: "core/heading",
-        attrs: { level: 1, text: "Build anything" },
+        name: "core/rich-text",
+        attrs: { body: "<h1>Build anything</h1>" },
       },
       {
         id: "hero-text",

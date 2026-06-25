@@ -18,8 +18,8 @@ describe("mountEditorRuntime", () => {
       blocks: [
         {
           id: "e1",
-          name: "core/heading",
-          attrs: { text: "Embedded", level: 2 },
+          name: "core/rich-text",
+          attrs: { body: "<h2>Embedded</h2>" },
         },
       ],
     };
@@ -46,8 +46,8 @@ describe("mountEditorRuntime", () => {
       blocks: [
         {
           id: "e1",
-          name: "core/heading",
-          attrs: { text: "Styled", level: 2 },
+          name: "core/rich-text",
+          attrs: { body: "<h2>Styled</h2>" },
           style: { large: { color: { raw: "#ff0000" } } },
         },
       ],

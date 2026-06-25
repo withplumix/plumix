@@ -73,8 +73,10 @@ catalogs:
     # disabled marks we replace with @plumix/blocks marks, or nodes that are
     # standalone blocks). All pinned in lockstep with @tiptap/core so a single
     # prosemirror/core copy is bundled.
+    "@tiptap/extension-blockquote": ^3.27.1
     "@tiptap/extension-document": ^3.27.1
     "@tiptap/extension-hard-break": ^3.27.1
+    "@tiptap/extension-heading": ^3.27.1
     "@tiptap/extension-list": ^3.27.1
     "@tiptap/extension-paragraph": ^3.27.1
     "@tiptap/extension-text": ^3.27.1
