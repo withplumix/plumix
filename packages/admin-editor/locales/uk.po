@@ -410,6 +410,11 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
+msgid "editor.toolbar.xray"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
 msgid "editor.toolbar.zoomIn"
 msgstr ""
 

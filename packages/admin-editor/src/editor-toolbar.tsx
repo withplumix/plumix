@@ -5,6 +5,7 @@ import { useLingui } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
+  Layout,
   Monitor,
   Smartphone,
   Tablet,
@@ -12,6 +13,7 @@ import {
   ZoomOut,
 } from "@plumix/admin-ui/icons";
 import { SidebarTrigger } from "@plumix/admin-ui/sidebar";
+import { Toggle } from "@plumix/admin-ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 
 import type { EditorDevice } from "./store.js";
@@ -91,7 +93,9 @@ function DeviceZoomControls(): ReactElement {
   const { i18n } = useLingui();
   const device = useEditorStore((s) => s.device);
   const zoom = useEditorStore((s) => s.zoom);
+  const xray = useEditorStore((s) => s.xray);
   const setDevice = useEditorStore((s) => s.setDevice);
+  const toggleXray = useEditorStore((s) => s.toggleXray);
   const zoomToCenter = useEditorStore((s) => s.zoomToCenter);
   const enableZoomFit = useEditorStore((s) => s.enableZoomFit);
 
@@ -108,6 +112,19 @@ function DeviceZoomControls(): ReactElement {
       className="flex items-center gap-1"
       data-testid="plumix-canvas-controls"
     >
+      <Toggle
+        variant="outline"
+        size="sm"
+        pressed={xray}
+        onPressedChange={toggleXray}
+        data-testid="plumix-xray-toggle"
+        aria-label={i18n._({
+          id: "editor.toolbar.xray",
+          message: "X-ray: outline all blocks",
+        })}
+      >
+        <Layout />
+      </Toggle>
       <ToggleGroup
         type="single"
         variant="outline"

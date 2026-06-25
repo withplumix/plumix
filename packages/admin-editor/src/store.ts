@@ -72,6 +72,9 @@ export interface EditorState {
   readonly hoverId: string | null;
   readonly device: EditorDevice;
   readonly zoom: number;
+  /** X-ray view: when on, the canvas outlines every block. Transient view
+   *  state (like zoom), not persisted to the document. */
+  readonly xray: boolean;
   /** Free-canvas pan offset (px, host/container space) of the device frame's
    *  top-left. The canvas is a Figma-style pannable stage, not a scroll area. */
   readonly panX: number;
@@ -159,6 +162,8 @@ export interface EditorActions {
   setHover: (id: string | null) => void;
   /** Switch device; re-enables fit-to-width so the new width fits the viewport. */
   setDevice: (device: EditorDevice) => void;
+  /** Flip the X-ray (outline-all-blocks) view. */
+  toggleXray: () => void;
   setRightPanel: (panel: RightPanel) => void;
   setJsonOpen: (open: boolean) => void;
   /** Set (or clear, with an empty string) a block's Layers-tree instance name. */
@@ -329,6 +334,7 @@ export function createEditorStore(
     activeId: null,
     hoverId: null,
     device: initial?.device ?? "desktop",
+    xray: false,
     zoom: initial?.zoom ?? 1,
     panX: 0,
     panY: 0,
@@ -524,6 +530,7 @@ export function createEditorStore(
       }),
     setHover: (hoverId) => set({ hoverId }),
     setDevice: (device) => set({ device, zoomFit: true }),
+    toggleXray: () => set((s) => ({ xray: !s.xray })),
     setRightPanel: (rightPanel) => set({ rightPanel }),
     setJsonOpen: (jsonOpen) => set({ jsonOpen }),
     enableZoomFit: () => set({ zoomFit: true }),

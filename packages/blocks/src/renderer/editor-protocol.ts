@@ -46,6 +46,12 @@ export type HostMessage =
       // `serializeLoaderData` emits). The canvas merges it into its loader map.
       readonly type: "host:loader-data";
       readonly data: SerializedLoaderData;
+    }
+  | {
+      // X-ray view toggle — the canvas outlines every block while on. Pushed on
+      // change and once the canvas is ready (initial sync).
+      readonly type: "host:xray";
+      readonly enabled: boolean;
     };
 
 /** Canvas (iframe) → parent (admin shell). */

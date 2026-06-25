@@ -547,6 +547,48 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("refresh-block-loader")).toHaveCount(0);
   });
 
+  test("x-ray toggle outlines every block in the canvas", async ({ page }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const root = canvas.locator('[data-testid="plumix-editor-canvas"]');
+    // The flag crosses the bridge into the iframe and gates the outline CSS.
+    await expect(root).not.toHaveAttribute("data-plumix-xray", "");
+
+    await page.getByTestId("plumix-xray-toggle").click();
+    await expect(root).toHaveAttribute("data-plumix-xray", "");
+
+    await page.getByTestId("plumix-xray-toggle").click();
+    await expect(root).not.toHaveAttribute("data-plumix-xray", "");
+  });
+
+  test("Shift+X toggles x-ray from the keyboard", async ({ page }) => {
+    await page.goto("/");
+    const root = page
+      .frameLocator(CANVAS_FRAME)
+      .locator('[data-testid="plumix-editor-canvas"]');
+
+    await page.keyboard.press("Shift+KeyX");
+    await expect(root).toHaveAttribute("data-plumix-xray", "");
+    await expect(page.getByTestId("plumix-xray-toggle")).toHaveAttribute(
+      "data-state",
+      "on",
+    );
+  });
+
+  test("Shift+X works with focus inside the canvas iframe (forwarded)", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const root = canvas.locator('[data-testid="plumix-editor-canvas"]');
+
+    // Click a block so focus lands inside the iframe, then the shortcut must
+    // still toggle via the canvas:key forward path.
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await page.keyboard.press("Shift+KeyX");
+    await expect(root).toHaveAttribute("data-plumix-xray", "");
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 

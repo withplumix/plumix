@@ -37,6 +37,13 @@ interface EditorCanvasProps {
   readonly breakpoints?: ThemeBreakpoints;
 }
 
+// X-ray outline rule, gated by data-plumix-xray on the content root. Static, so
+// the toggle is a pure attribute flip — no per-block geometry.
+const XRAY_STYLE = `[data-plumix-xray] [data-plumix-block] {
+  outline: 1px dashed rgba(59, 130, 246, 0.5);
+  outline-offset: -1px;
+}`;
+
 /**
  * The canvas that runs inside the editor iframe. Renders the host's tree via
  * the real BlockRenderer in edit mode (so blocks are tagged with
@@ -63,6 +70,9 @@ export function EditorCanvas({
   // Undefined until config arrives, so editAppender's own default is the single
   // English fallback for the pre-config window.
   const [addBlockLabel, setAddBlockLabel] = useState<string>();
+  // X-ray view: the host pushes the toggle over the bridge; a CSS rule (gated by
+  // the data-plumix-xray attribute below) then outlines every block.
+  const [xray, setXray] = useState(false);
   const connectionRef = useRef<RuntimeConnection | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -74,6 +84,7 @@ export function EditorCanvas({
       onLoaderData: (data) =>
         setLoaderData((prior) => mergeLoaderData(prior, data)),
       onConfig: (config) => setAddBlockLabel(config.addBlockLabel),
+      onXray: setXray,
     });
     connectionRef.current = connection;
     return () => {
@@ -149,12 +160,20 @@ export function EditorCanvas({
   // in the canvas is otherwise untouched. Space is prevented so it doesn't
   // scroll the iframe document.
   useEffect(() => {
+    const isTyping = (t: EventTarget | null): boolean =>
+      t instanceof HTMLElement &&
+      (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
     const isViewKey = (e: KeyboardEvent): boolean =>
       e.code === "Space" ||
       (e.shiftKey &&
-        (e.code === "Digit0" || e.code === "Digit1" || e.code === "Digit2"));
+        (e.code === "Digit0" ||
+          e.code === "Digit1" ||
+          e.code === "Digit2" ||
+          e.code === "KeyX"));
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (!isViewKey(e)) return;
+      // Skip auto-repeat (a held key must not re-fire the toggle) and typing in
+      // a field, so a view shortcut never fires while the author edits content.
+      if (e.repeat || isTyping(e.target) || !isViewKey(e)) return;
       if (e.code === "Space") e.preventDefault();
       connectionRef.current?.reportKey(true, e.code, e.shiftKey);
     };
@@ -270,10 +289,13 @@ export function EditorCanvas({
       <div
         ref={containerRef}
         data-testid="plumix-editor-canvas"
+        data-plumix-xray={xray ? "" : undefined}
         onClick={handleClick}
         onMouseOver={handleMouseOver}
         onMouseOut={handleMouseOut}
       >
+        {/* X-ray outline rule; the data-plumix-xray attribute above gates it. */}
+        <style>{XRAY_STYLE}</style>
         {/* renderBlockTree (not BlockRenderer) so the canvas doesn't re-emit
             the SSR content-root boundary it was mounted into — just the
             per-block data-plumix-id seam for selection. tokens/breakpoints feed
