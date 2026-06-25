@@ -169,6 +169,11 @@ msgid "editor.richtext.hint"
 msgstr "Formatting applies to the selected text."
 
 #. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.group"
+msgstr "Group"
+
+#. js-lingui-explicit-id
 #: src/block-inspector.tsx
 msgid "editor.htmlAttrs.title"
 msgstr "HTML attributes"
@@ -382,6 +387,11 @@ msgstr "Underline"
 #: src/editor-header.tsx
 msgid "editor.toolbar.undo"
 msgstr "Undo"
+
+#. js-lingui-explicit-id
+#: src/selection-toolbar.tsx
+msgid "editor.selection.ungroup"
+msgstr "Ungroup"
 
 #. js-lingui-explicit-id
 #: src/editor-header.tsx

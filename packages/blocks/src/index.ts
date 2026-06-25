@@ -27,7 +27,7 @@ export {
   renderBlockTree,
 } from "./render-block-tree.js";
 export { editAppender } from "./edit-appender.js";
-export { rewriteBlockNodeIds } from "./rewrite-node-ids.js";
+export { freshBlockId, rewriteBlockNodeIds } from "./rewrite-node-ids.js";
 export { countProse } from "./count-prose.js";
 export type { ProseCount } from "./count-prose.js";
 export type {

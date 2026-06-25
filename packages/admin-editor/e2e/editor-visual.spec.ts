@@ -631,6 +631,27 @@ test.describe("editor playground", () => {
     await expect(blocks).toHaveCount(before + 1);
   });
 
+  test("group then ungroup selected blocks via the toolbar", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const blocks = canvas.locator("[data-plumix-id]");
+    const before = await blocks.count();
+
+    // Multi-select two root siblings, then group → one new container block.
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await page.keyboard.down("Shift");
+    await canvas.locator('[data-plumix-id="intro"]').click();
+    await page.keyboard.up("Shift");
+    await page.getByTestId("selection-toolbar-group").click();
+    await expect(blocks).toHaveCount(before + 1);
+
+    // The new group is active; ungroup restores the original count.
+    await page.getByTestId("selection-toolbar-ungroup").click();
+    await expect(blocks).toHaveCount(before);
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 
