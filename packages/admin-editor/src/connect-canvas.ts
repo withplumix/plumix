@@ -98,6 +98,13 @@ export function connectCanvas({
     }
   };
 
+  const pushXray = (): void => {
+    post({
+      type: "host:xray",
+      enabled: store.getState().xray,
+    } satisfies HostMessage);
+  };
+
   const onMessage = (event: MessageEvent): void => {
     const message = parseEnvelope<object>(
       EDITOR_BRIDGE_CHANNEL,
@@ -114,6 +121,7 @@ export function connectCanvas({
     switch (canvas.type) {
       case "canvas:ready":
         pushConfig();
+        pushXray();
         pushTree();
         break;
       case "canvas:select":
@@ -150,10 +158,15 @@ export function connectCanvas({
   window.addEventListener("message", onMessage);
 
   let previousTree = store.getState().tree;
+  let previousXray = store.getState().xray;
   const unsubscribe = store.subscribe((state) => {
     if (state.tree !== previousTree) {
       previousTree = state.tree;
       pushTree();
+    }
+    if (state.xray !== previousXray) {
+      previousXray = state.xray;
+      pushXray();
     }
   });
 

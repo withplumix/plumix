@@ -57,6 +57,20 @@ describe("EditorToolbar", () => {
     fireEvent.click(getByTestId("plumix-zoom-percent"));
     expect(storeApi?.getState().zoomFit).toBe(true);
   });
+
+  test("the X-ray toggle flips the store and reflects its pressed state", () => {
+    const { getByTestId } = renderToolbar();
+    const toggle = getByTestId("plumix-xray-toggle");
+
+    expect(storeApi?.getState().xray).toBe(false);
+    expect(toggle.getAttribute("data-state")).toBe("off");
+
+    fireEvent.click(toggle);
+    expect(storeApi?.getState().xray).toBe(true);
+    expect(getByTestId("plumix-xray-toggle").getAttribute("data-state")).toBe(
+      "on",
+    );
+  });
 });
 
 describe("EditorShortcuts", () => {

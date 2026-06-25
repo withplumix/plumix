@@ -704,6 +704,19 @@ describe("renameBlockStyleProperty", () => {
   });
 });
 
+describe("xray", () => {
+  test("defaults off and toggles", () => {
+    const store = createEditorStore();
+    expect(store.getState().xray).toBe(false);
+
+    store.getState().toggleXray();
+    expect(store.getState().xray).toBe(true);
+
+    store.getState().toggleXray();
+    expect(store.getState().xray).toBe(false);
+  });
+});
+
 describe("updateBlockHtmlAttr", () => {
   test("sets an attribute on a block", () => {
     const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });

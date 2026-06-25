@@ -487,6 +487,7 @@ export function CanvasFrame({
       if (code === "Digit1") store.getState().enableZoomFit();
       else if (code === "Digit2") zoomToSelection();
       else if (code === "Digit0") store.getState().zoomToCenter(1);
+      else if (code === "KeyX") store.getState().toggleXray();
     };
     keyHandlerRef.current = handleKey;
 
@@ -496,9 +497,13 @@ export function CanvasFrame({
     const isViewKey = (e: KeyboardEvent): boolean =>
       e.code === "Space" ||
       (e.shiftKey &&
-        (e.code === "Digit0" || e.code === "Digit1" || e.code === "Digit2"));
+        (e.code === "Digit0" ||
+          e.code === "Digit1" ||
+          e.code === "Digit2" ||
+          e.code === "KeyX"));
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (isTyping(e.target) || !isViewKey(e)) return;
+      // Skip auto-repeat: a held key must not re-fire the x-ray toggle.
+      if (e.repeat || isTyping(e.target) || !isViewKey(e)) return;
       if (e.code === "Space") e.preventDefault();
       handleKey(true, e.code, e.shiftKey);
     };

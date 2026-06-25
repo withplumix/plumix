@@ -5,6 +5,7 @@ import { useLingui } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
+  Layout,
   Monitor,
   Smartphone,
   Tablet,
@@ -12,6 +13,7 @@ import {
   ZoomOut,
 } from "@plumix/admin-ui/icons";
 import { SidebarTrigger } from "@plumix/admin-ui/sidebar";
+import { Toggle } from "@plumix/admin-ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 
 import type { EditorDevice } from "./store.js";
@@ -74,14 +76,40 @@ export function EditorToolbar(): ReactElement {
       className="bg-background flex items-center gap-2 border-b p-2"
       data-testid="plumix-editor-toolbar"
     >
-      {/* Collapses both rails for a focused canvas (also Cmd/Ctrl+B). */}
-      <SidebarTrigger data-testid="plumix-rails-toggle" className="shrink-0" />
-      <div className="flex flex-1 justify-center">
-        <DeviceZoomControls />
+      {/* Left cluster: rails toggle (also Cmd/Ctrl+B) + the X-ray view toggle. */}
+      <div className="flex flex-1 items-center gap-1">
+        <SidebarTrigger
+          data-testid="plumix-rails-toggle"
+          className="shrink-0"
+        />
+        <XrayToggle />
       </div>
-      {/* Balances the rails toggle so the device/zoom cluster reads as centered. */}
-      <div className="w-7 shrink-0" aria-hidden />
+      <DeviceZoomControls />
+      {/* Empty flex-1 mirror so the device/zoom cluster stays centered. */}
+      <div className="flex-1" aria-hidden />
     </header>
+  );
+}
+
+/** Toggles the X-ray view that outlines every block in the canvas. */
+function XrayToggle(): ReactElement {
+  const { i18n } = useLingui();
+  const xray = useEditorStore((s) => s.xray);
+  const toggleXray = useEditorStore((s) => s.toggleXray);
+  return (
+    <Toggle
+      variant="outline"
+      size="sm"
+      pressed={xray}
+      onPressedChange={toggleXray}
+      data-testid="plumix-xray-toggle"
+      aria-label={i18n._({
+        id: "editor.toolbar.xray",
+        message: "X-ray: outline all blocks",
+      })}
+    >
+      <Layout />
+    </Toggle>
   );
 }
 
