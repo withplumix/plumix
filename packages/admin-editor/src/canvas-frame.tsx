@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -29,6 +30,7 @@ import {
   frameSelection,
   zoomToCursor,
 } from "./canvas-view.js";
+import { clipboardOpFromEvent, createClipboardOps } from "./clipboard-ops.js";
 import { connectCanvas } from "./connect-canvas.js";
 import { dropPlacement } from "./drop-index.js";
 import { overlayBox } from "./overlay.js";
@@ -98,6 +100,16 @@ export function CanvasFrame({
     message: "Add a block",
   });
   const store = useEditorStoreApi();
+  const clipboard = useMemo(
+    // requiresParent blocks can't live at the top level, where paste lands.
+    () =>
+      createClipboardOps(
+        store,
+        navigator.clipboard,
+        (node) => !registry.get(node.name)?.requiresParent,
+      ),
+    [store, registry],
+  );
   const loaderPushRef = useLoaderPushRef();
   const device = useEditorStore((s) => s.device);
   const zoom = useEditorStore((s) => s.zoom);
@@ -331,6 +343,7 @@ export function CanvasFrame({
       onKey: ({ down, code, shiftKey }) =>
         keyHandlerRef.current?.(down, code, shiftKey),
       onRequestAdd: ({ parentId, slotKey }) => requestAdd(parentId, slotKey),
+      onClipboard: (op) => void clipboard.run(op),
       config: { addBlockLabel },
     });
     // Expose the loader-data push to the inspector's refresh control.
@@ -348,7 +361,22 @@ export function CanvasFrame({
     handleWheel,
     requestAdd,
     addBlockLabel,
+    clipboard,
   ]);
+
+  // Block clipboard shortcuts while focus is on the host chrome (the iframe
+  // forwards its own via the bridge). Defers to native copy on a text selection
+  // and to fields while typing.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent): void => {
+      const op = clipboardOpFromEvent(e);
+      if (!op) return;
+      e.preventDefault();
+      void clipboard.run(op);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [clipboard]);
 
   // Keep frame/container fresh when the canvas moves without a block report:
   // column scroll, window resize, and rail collapse (which resizes the inset).

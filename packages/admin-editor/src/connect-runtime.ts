@@ -36,6 +36,9 @@ export interface RuntimeConnection {
   /** An in-canvas "Add a block" affordance was clicked — root (no args) or an
    *  empty slot. The host resolves the insert. */
   readonly reportRequestAdd: (parentId?: string, slotKey?: string) => void;
+  /** Forward a clipboard shortcut (focus is inside the iframe); the host owns
+   *  the tree + clipboard and performs the op. */
+  readonly reportClipboard: (op: "copy" | "cut" | "paste") => void;
   readonly dispose: () => void;
 }
 
@@ -145,6 +148,8 @@ export function connectRuntime({
         ...(parentId !== undefined && { parentId }),
         ...(slotKey !== undefined && { slotKey }),
       } satisfies CanvasMessage),
+    reportClipboard: (op) =>
+      post({ type: "canvas:clipboard", op } satisfies CanvasMessage),
     dispose: () => window.removeEventListener("message", onMessage),
   };
 }

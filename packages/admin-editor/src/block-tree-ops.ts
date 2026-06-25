@@ -269,6 +269,59 @@ export function duplicateBlock(
 }
 
 /**
+ * Collect the selected blocks as whole nodes, reduced to selection roots and
+ * returned in document order (so a copy preserves the original sequence, unlike
+ * the set-insertion order of {@link selectionRoots}). For clipboard copy.
+ */
+export function collectBlocks(
+  tree: readonly BlockNode[],
+  ids: ReadonlySet<string>,
+): readonly BlockNode[] {
+  const roots = new Set(selectionRoots(tree, ids));
+  const out: BlockNode[] = [];
+  const walk = (nodes: readonly BlockNode[]): void => {
+    for (const node of nodes) {
+      if (roots.has(node.id)) {
+        out.push(node); // a root is taken whole — never descend into it
+        continue;
+      }
+      for (const key of slotKeys(node)) {
+        const slot = node.attrs?.[key];
+        if (isBlockNodeArray(slot)) walk(slot);
+      }
+    }
+  };
+  walk(tree);
+  return out;
+}
+
+/**
+ * Insert fresh-id clones of `nodes` after `afterId` (within its parent slot),
+ * or appended to the root when `afterId` is null. Ids are rewritten through each
+ * subtree so a paste is independent of its source and of repeated pastes.
+ * Returns the new tree and the inserted roots' ids.
+ */
+export function pasteBlocks(
+  tree: readonly BlockNode[],
+  nodes: readonly BlockNode[],
+  afterId: string | null,
+): { readonly tree: readonly BlockNode[]; readonly newIds: readonly string[] } {
+  const clones = rewriteBlockNodeIds(nodes);
+  if (clones.length === 0) return { tree, newIds: [] };
+  const parentId = afterId ? findParentId(tree, afterId) : null;
+  const siblings = siblingsOf(tree, parentId);
+  const after = afterId ? siblings.findIndex((n) => n.id === afterId) : -1;
+  const start = after >= 0 ? after + 1 : siblings.length;
+  let next = tree;
+  const newIds: string[] = [];
+  clones.forEach((clone, i) => {
+    next = insertNode(next, clone, { parentId, index: start + i });
+    newIds.push(clone.id);
+  });
+  return { tree: next, newIds };
+}
+
+/**
  * Reduce a selection to its roots: ids that have no selected ancestor. Used by
  * bulk duplicate so a block isn't cloned twice when both it and its container
  * are selected (the container's clone already carries a copy of the child).

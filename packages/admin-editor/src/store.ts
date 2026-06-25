@@ -18,6 +18,7 @@ import {
   insertBlockAt,
   moveBlockBy,
   moveBlock as moveBlockOp,
+  pasteBlocks as pasteBlocksOp,
   removeBlocks,
   selectionRoots,
 } from "./block-tree-ops.js";
@@ -155,6 +156,9 @@ export interface EditorActions {
   removeSelected: () => void;
   /** Clone every selected block after itself and select the clones (bulk). */
   duplicateSelected: () => void;
+  /** Insert fresh-id clones of `nodes` after the active block (or appended to
+   *  the root), then select them. Used by clipboard paste. */
+  pasteBlocks: (nodes: readonly BlockNode[]) => void;
   /** Select the active block's container, walking one level up. */
   selectParent: () => void;
   /** Move the active block by `delta` positions among its siblings. */
@@ -506,6 +510,26 @@ export function createEditorStore(
           tree = result.tree;
           if (result.newId) newIds.push(result.newId);
         }
+        if (tree === state.tree) return {};
+        return {
+          tree,
+          selectedIds: new Set(newIds),
+          activeId: newIds.at(-1) ?? null,
+          history: recordHistory(state.history, tree, null),
+        };
+      }),
+    pasteBlocks: (nodes) =>
+      set((state) => {
+        // Paste at the top level (the open container), after the active block's
+        // root ancestor — never into a nested slot, whose allowedBlocks the
+        // clipboard can't honor. (Smart paste-as-sibling is a follow-up.)
+        let afterId = state.activeId;
+        while (afterId !== null) {
+          const parent = findParentId(state.tree, afterId);
+          if (parent === null) break;
+          afterId = parent;
+        }
+        const { tree, newIds } = pasteBlocksOp(state.tree, nodes, afterId);
         if (tree === state.tree) return {};
         return {
           tree,
