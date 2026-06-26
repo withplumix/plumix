@@ -79,6 +79,16 @@ describe("StylesTab", () => {
     expect(margin.contains(padding)).toBe(false);
   });
 
+  test("leads the Styles tab with the Size section", () => {
+    const { container } = renderTab([{ id: "a", name: "core/x" }], "a", {
+      expandCss: false,
+    });
+    const sections = [
+      ...container.querySelectorAll('[data-testid^="styles-section-"]'),
+    ].map((el) => el.getAttribute("data-testid"));
+    expect(sections[0]).toBe("styles-section-size");
+  });
+
   test("exposes Size controls that write width/min-width to the active bucket", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
