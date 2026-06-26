@@ -50,7 +50,9 @@ export function StyleControl({
 
   return (
     <div className="flex flex-col gap-1" data-testid={testId}>
-      <div className="flex items-center justify-between">
+      {/* Label over the Token/Custom toggle (not side-by-side) so the toggle
+          never clips in the narrow half-width grid cells. */}
+      <div className="flex flex-col gap-0.5">
         <Label className="text-xs">{label}</Label>
         {category ? (
           <div className="flex gap-0.5 text-xs">
