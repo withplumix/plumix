@@ -19,6 +19,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@plumix/admin-ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { cn } from "@plumix/admin-ui/utils";
 import { tokenCategoryForProperty, tokenCssVar } from "@plumix/blocks";
 
@@ -27,6 +34,10 @@ import { CSS_PROPERTIES } from "./css-properties.js";
 // A camelCase standard property (`marginTop`) or a CSS custom property
 // (`--brand-gap`) — stricter than the render guard, which also tolerates junk.
 const VALID_PROPERTY = /^(--)?[a-zA-Z][a-zA-Z-]*$/;
+
+// Radix Select forbids an empty-string item value, so the "clear" choice
+// carries a sentinel that maps back to `null` on change.
+const NONE_VALUE = "__none__";
 
 export interface StyleDeclaration {
   /** CSS property (camelCase), as stored in the bucket. */
@@ -148,30 +159,45 @@ function DeclarationRow({
           onChange={(e) => onChange(property, { raw: e.target.value })}
         />
       ) : (
-        <select
-          className="border-input flex h-8 w-full rounded-md border bg-transparent px-2 text-sm"
-          data-testid={`style-declaration-${property}-token`}
-          value={value.token}
-          onChange={(e) =>
-            onChange(
-              property,
-              e.target.value === "" ? null : { token: e.target.value },
-            )
+        <Select
+          value={value.token === "" ? NONE_VALUE : value.token}
+          onValueChange={(next) =>
+            onChange(property, next === NONE_VALUE ? null : { token: next })
           }
         >
-          <option value="">—</option>
-          {/* Keep an unknown token (stale id, or a property with no token
-              scale) visible + selected — a controlled select with no matching
-              option would render blank, hiding the stored value. */}
-          {value.token !== "" && !(value.token in tokenGroup) ? (
-            <option value={value.token}>{tokenVar(value.token)}</option>
-          ) : null}
-          {Object.keys(tokenGroup).map((id) => (
-            <option key={id} value={id}>
-              {tokenVar(id)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            size="sm"
+            className="w-full"
+            data-testid={`style-declaration-${property}-token`}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              value={NONE_VALUE}
+              data-testid={`style-declaration-${property}-token-none`}
+            >
+              —
+            </SelectItem>
+            {/* Keep an unknown token (stale id, or a property with no token
+                scale) visible + selected — a controlled select with no matching
+                item would render blank, hiding the stored value. */}
+            {value.token !== "" && !(value.token in tokenGroup) ? (
+              <SelectItem value={value.token}>
+                {tokenVar(value.token)}
+              </SelectItem>
+            ) : null}
+            {Object.keys(tokenGroup).map((id) => (
+              <SelectItem
+                key={id}
+                value={id}
+                data-testid={`style-declaration-${property}-token-${id}`}
+              >
+                {tokenVar(id)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       )}
       <Button
         type="button"

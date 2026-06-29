@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { BlockNode, ThemeTokens } from "@plumix/blocks";
@@ -58,14 +59,14 @@ describe("StylesTab", () => {
     expect(getByTestId("styles-tab-empty")).toBeDefined();
   });
 
-  test("writes a token style to the active desktop bucket", () => {
+  test("writes a token style to the active desktop bucket", async () => {
+    const user = userEvent.setup();
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
     // Font family is the typography-token control (size/weight/line-height are
     // custom-only, since the theme has no scale for them).
-    fireEvent.change(getByTestId("style-control-fontFamily-token"), {
-      target: { value: "lg" },
-    });
+    await user.click(getByTestId("style-control-fontFamily-token"));
+    await user.click(getByTestId("style-control-fontFamily-token-lg"));
 
     expect(getByTestId("style-probe").textContent).toContain(
       '"large":{"fontFamily":{"token":"lg"}}',
@@ -336,35 +337,24 @@ describe("StylesTab — declarations list", () => {
     style: { large: { fontFamily: { token: "lg" } } },
   };
 
-  test("a token declaration renders a token picker, no raw value input", () => {
+  test("a token declaration renders a token picker, no raw value input", async () => {
+    const user = userEvent.setup();
     const { getByTestId, queryByTestId } = renderTab([fontToken], "a");
-    const picker = getByTestId(
-      "style-declaration-fontFamily-token",
-    ) as HTMLSelectElement;
-    expect(picker.value).toBe("lg");
+    const picker = getByTestId("style-declaration-fontFamily-token");
+    // The trigger shows the chosen token as its emitted var(), not a literal.
+    expect(picker.textContent).toContain("var(--plumix-typography-lg)");
     // The category's tokens are the options; raw input is absent for a token row.
-    const options = [...picker.options].map((o) => o.value);
-    expect(options).toContain("lg");
-    expect(options).toContain("sm");
+    await user.click(picker);
+    expect(getByTestId("style-declaration-fontFamily-token-lg")).toBeDefined();
+    expect(getByTestId("style-declaration-fontFamily-token-sm")).toBeDefined();
     expect(queryByTestId("style-declaration-fontFamily-value")).toBeNull();
   });
 
-  test("displays the chosen token as its CSS variable reference", () => {
+  test("changing the token picker writes the new token", async () => {
+    const user = userEvent.setup();
     const { getByTestId } = renderTab([fontToken], "a");
-    const picker = getByTestId(
-      "style-declaration-fontFamily-token",
-    ) as HTMLSelectElement;
-    // The selected option reads as the emitted var(), not the label or literal.
-    expect(picker.options[picker.selectedIndex]?.text).toBe(
-      "var(--plumix-typography-lg)",
-    );
-  });
-
-  test("changing the token picker writes the new token", () => {
-    const { getByTestId } = renderTab([fontToken], "a");
-    fireEvent.change(getByTestId("style-declaration-fontFamily-token"), {
-      target: { value: "sm" },
-    });
+    await user.click(getByTestId("style-declaration-fontFamily-token"));
+    await user.click(getByTestId("style-declaration-fontFamily-token-sm"));
     expect(getByTestId("style-probe").textContent).toContain(
       '"fontFamily":{"token":"sm"}',
     );
@@ -377,19 +367,17 @@ describe("StylesTab — declarations list", () => {
       style: { large: { fontFamily: { token: "ghost" } } },
     };
     const { getByTestId } = renderTab([ghost], "a");
-    const picker = getByTestId(
-      "style-declaration-fontFamily-token",
-    ) as HTMLSelectElement;
-    // "ghost" isn't in the theme, but the select still shows it (not blank).
-    expect(picker.value).toBe("ghost");
-    expect([...picker.options].map((o) => o.value)).toContain("ghost");
+    // "ghost" isn't in the theme, but the trigger still shows it (not blank).
+    expect(
+      getByTestId("style-declaration-fontFamily-token").textContent,
+    ).toContain("var(--plumix-typography-ghost)");
   });
 
-  test("clearing the token picker removes the declaration", () => {
+  test("clearing the token picker removes the declaration", async () => {
+    const user = userEvent.setup();
     const { getByTestId } = renderTab([fontToken], "a");
-    fireEvent.change(getByTestId("style-declaration-fontFamily-token"), {
-      target: { value: "" },
-    });
+    await user.click(getByTestId("style-declaration-fontFamily-token"));
+    await user.click(getByTestId("style-declaration-fontFamily-token-none"));
     expect(getByTestId("style-probe").textContent).toBe("");
   });
 

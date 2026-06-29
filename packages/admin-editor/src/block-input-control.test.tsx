@@ -1,6 +1,7 @@
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { BlockInput } from "@plumix/blocks";
@@ -183,20 +184,22 @@ describe("BlockInputControl", () => {
       expect(editor.getAttribute("contenteditable")).toBe("true");
       expect(editor.textContent).toContain("Hello");
 
-      // Headings are inline formats of the unified rich-text block: the format
-      // dropdown reflects the current block and converts it on change.
-      const format = getByTestId(
-        "block-input-body-format",
-      ) as HTMLSelectElement;
-      expect(format.value).toBe("paragraph");
-      fireEvent.change(format, { target: { value: "h2" } });
-      expect(onChange).toHaveBeenCalledWith(expect.stringContaining("<h2"));
-
       // Quotes are folded in too: the blockquote toggle wraps the block.
+      // Asserted before the format dropdown — opening the Radix Select portal
+      // steals the editor selection, so exercise the editor toggles first.
       fireEvent.click(getByTestId("block-input-body-blockquote"));
       expect(onChange).toHaveBeenCalledWith(
         expect.stringContaining("<blockquote"),
       );
+
+      // Headings are inline formats of the unified rich-text block: the format
+      // dropdown reflects the current block and converts it on change.
+      const user = userEvent.setup();
+      const format = getByTestId("block-input-body-format");
+      expect(format.textContent).toContain("Paragraph");
+      await user.click(format);
+      await user.click(getByTestId("block-input-body-format-h2"));
+      expect(onChange).toHaveBeenCalledWith(expect.stringContaining("<h2"));
     },
   );
 

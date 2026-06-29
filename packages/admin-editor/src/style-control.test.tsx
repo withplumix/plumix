@@ -1,6 +1,7 @@
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { ThemeTokens } from "@plumix/blocks";
@@ -37,16 +38,19 @@ function renderControl(
 }
 
 describe("StyleControl", () => {
-  test("token mode emits a token ref, and clears on the empty option", () => {
-    const { getByTestId, onChange } = renderControl();
-    const select = getByTestId(
-      "style-control-padding-token",
-    ) as HTMLSelectElement;
+  test("token mode emits a token ref, and clears on the empty option", async () => {
+    const user = userEvent.setup();
+    // The spy doesn't feed the chosen value back as a prop, so each pick is
+    // made from the same rendered `lg` value — choose targets that differ
+    // from it (Radix skips onValueChange when the active item is re-picked).
+    const { getByTestId, onChange } = renderControl({ value: { token: "lg" } });
 
-    fireEvent.change(select, { target: { value: "lg" } });
-    expect(onChange).toHaveBeenCalledWith({ token: "lg" });
+    await user.click(getByTestId("style-control-padding-token"));
+    await user.click(getByTestId("style-control-padding-token-sm"));
+    expect(onChange).toHaveBeenLastCalledWith({ token: "sm" });
 
-    fireEvent.change(select, { target: { value: "" } });
+    await user.click(getByTestId("style-control-padding-token"));
+    await user.click(getByTestId("style-control-padding-token-none"));
     expect(onChange).toHaveBeenLastCalledWith(null);
   });
 

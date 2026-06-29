@@ -41,3 +41,24 @@ const elementProto = Element.prototype as unknown as {
 elementProto.hasPointerCapture = (): boolean => false;
 elementProto.setPointerCapture = (): void => undefined;
 elementProto.releasePointerCapture = (): void => undefined;
+
+// jsdom's Range omits getClientRects; ProseMirror calls it to measure the
+// caret when the rich-text editor takes focus (e.g. after a format change
+// driven through the toolbar). Return an empty list so coordinate lookups
+// no-op instead of throwing an unhandled error.
+const rangeProto = Range.prototype as unknown as {
+  getClientRects?: () => DOMRect[];
+  getBoundingClientRect?: () => DOMRect;
+};
+rangeProto.getClientRects = (): DOMRect[] => [];
+rangeProto.getBoundingClientRect = (): DOMRect =>
+  ({
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: 0,
+    height: 0,
+  }) as DOMRect;
