@@ -61,6 +61,40 @@ describe("createDebouncer", () => {
     expect(fn).not.toHaveBeenCalled();
   });
 
+  test("flush resolves only once the async fn settles, so callers can await persistence", async () => {
+    let resolveFn: (() => void) | undefined;
+    const fn = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFn = resolve;
+        }),
+    );
+    const d = createDebouncer(fn, 300);
+
+    d.call();
+    let settled = false;
+    const flushed = d.flush().then(() => {
+      settled = true;
+    });
+
+    // The fn started but hasn't resolved — flush must still be pending.
+    expect(fn).toHaveBeenCalledTimes(1);
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    resolveFn?.();
+    await flushed;
+    expect(settled).toBe(true);
+  });
+
+  test("flush resolves immediately when idle", async () => {
+    const fn = vi.fn();
+    const d = createDebouncer(fn, 300);
+
+    await expect(d.flush()).resolves.toBeUndefined();
+    expect(fn).not.toHaveBeenCalled();
+  });
+
   test("cancel prevents fn from firing", () => {
     const fn = vi.fn();
     const d = createDebouncer(fn, 300);
