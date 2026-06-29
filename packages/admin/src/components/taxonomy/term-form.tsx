@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
+import { Textarea } from "@plumix/admin-ui/textarea";
 import { idParam, vMessage } from "@plumix/core/validation";
 
 /** Normalised input shape consumed by both create + update paths. */
@@ -174,12 +175,12 @@ export function TermForm({
                 <Trans id="termForm.description" message="Description" />
               </FormLabel>
               <FormControl>
-                <textarea
+                <Textarea
                   {...field}
                   disabled={isSubmitting}
                   rows={3}
                   data-testid="term-form-description-input"
-                  className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-20"
                 />
               </FormControl>
               <FormMessage />

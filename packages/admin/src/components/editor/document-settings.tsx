@@ -12,6 +12,7 @@ import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
 import { Form } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
+import { Textarea } from "@plumix/admin-ui/textarea";
 
 const M = {
   title: defineMessage({ id: "editor.document.title", message: "Title" }),
@@ -193,14 +194,14 @@ export function DocumentSettingsPanel({
       {excerpt ? (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="entry-excerpt-input">{renderLabel(M.excerpt)}</Label>
-          <textarea
+          <Textarea
             id="entry-excerpt-input"
             rows={3}
             value={excerpt.value}
             onChange={(event) => {
               excerpt.onChange(event.target.value);
             }}
-            className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+            className="min-h-20"
             data-testid="entry-excerpt-input"
           />
         </div>

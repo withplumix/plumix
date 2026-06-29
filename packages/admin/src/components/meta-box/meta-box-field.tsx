@@ -19,6 +19,7 @@ import {
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
 import { Slider } from "@plumix/admin-ui/slider";
+import { Textarea } from "@plumix/admin-ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 
 import { MultiReferencePicker } from "./multi-reference-picker.js";
@@ -125,9 +126,9 @@ export function MetaBoxField({
   );
 }
 
-// Base classes shared by <textarea> and <select> — mirror the shadcn
-// <Input> look (same border, ring, disabled states) so all three line
-// up visually in a dense sidebar.
+// Mirrors the shadcn <Input> look (same border, ring, disabled states)
+// for the native <select>, so it lines up with the other controls in a
+// dense sidebar.
 const CONTROL_BASE_CLASS = cn(
   "border-input bg-background focus-visible:ring-ring",
   "rounded-md border text-sm",
@@ -197,7 +198,7 @@ function renderNativeInput({
 
   if (field.inputType === "textarea") {
     return (
-      <textarea
+      <Textarea
         {...common}
         value={asString(rhf.value)}
         maxLength={field.maxLength}
@@ -206,7 +207,7 @@ function renderNativeInput({
         onChange={(e) => {
           rhf.onChange(e.target.value);
         }}
-        className={cn(CONTROL_BASE_CLASS, "flex min-h-20 w-full px-3 py-2")}
+        className="min-h-20"
       />
     );
   }
@@ -402,8 +403,8 @@ function renderNativeInput({
     // a metabox needs a separate Tiptap host slice; until that lands, the
     // field falls back to a JSON textarea so the value is at least authorable.
     return (
-      <textarea
-        className="border-input bg-background w-full rounded-md border p-2 font-mono text-xs"
+      <Textarea
+        className="font-mono text-xs"
         value={
           typeof rhf.value === "string" ? rhf.value : JSON.stringify(rhf.value)
         }
@@ -611,7 +612,7 @@ function JsonControl({
 
   return (
     <div className="flex flex-col gap-1" data-testid={`${testId}-shell`}>
-      <textarea
+      <Textarea
         name={name}
         value={draft}
         disabled={disabled}
@@ -636,12 +637,9 @@ function JsonControl({
         }}
         rows={6}
         spellCheck={false}
+        aria-invalid={error ? true : undefined}
         data-testid={testId}
-        className={cn(
-          CONTROL_BASE_CLASS,
-          "min-h-32 w-full px-3 py-2 font-mono text-xs",
-          error ? "border-destructive" : "",
-        )}
+        className="min-h-32 font-mono text-xs"
       />
       {error ? (
         <p className="text-destructive text-xs" data-testid={`${testId}-error`}>

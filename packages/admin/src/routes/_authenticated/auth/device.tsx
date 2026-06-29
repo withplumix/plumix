@@ -32,6 +32,7 @@ import {
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
+import { Textarea } from "@plumix/admin-ui/textarea";
 import { vMessage } from "@plumix/core/validation";
 
 // Descriptors used outside JSX — error helpers + the textarea
@@ -531,12 +532,12 @@ function ApproveCard({
                       />
                     </FormLabel>
                     <FormControl>
-                      <textarea
+                      <Textarea
                         rows={4}
                         placeholder={label(M.scopesPlaceholder)}
                         disabled={pending}
                         data-testid="auth-device-scopes-textarea"
-                        className="border-input bg-background focus-visible:ring-ring rounded-md border px-3 py-2 font-mono text-sm focus-visible:ring-2 focus-visible:outline-none"
+                        className="font-mono"
                         {...field}
                       />
                     </FormControl>

@@ -28,6 +28,7 @@ import {
 } from "@plumix/admin-ui/alert-dialog";
 import { Badge } from "@plumix/admin-ui/badge";
 import { Button } from "@plumix/admin-ui/button";
+import { Textarea } from "@plumix/admin-ui/textarea";
 import {
   Card,
   CardContent,
@@ -667,12 +668,12 @@ function CreateTokenForm({
                   />
                 </FormLabel>
                 <FormControl>
-                  <textarea
+                  <Textarea
                     rows={4}
                     placeholder={label(M.capabilitiesPlaceholder)}
                     disabled={pending}
                     data-testid="api-tokens-create-scopes-textarea"
-                    className="border-input bg-background focus-visible:ring-ring rounded-md border px-3 py-2 font-mono text-sm focus-visible:ring-2 focus-visible:outline-none"
+                    className="font-mono"
                     {...field}
                   />
                 </FormControl>

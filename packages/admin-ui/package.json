@@ -132,6 +132,10 @@
       "types": "./dist/tabs.d.ts",
       "default": "./dist/tabs.js"
     },
+    "./textarea": {
+      "types": "./dist/textarea.d.ts",
+      "default": "./dist/textarea.js"
+    },
     "./toggle": {
       "types": "./dist/toggle.d.ts",
       "default": "./dist/toggle.js"
