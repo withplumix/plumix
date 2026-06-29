@@ -1,8 +1,19 @@
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode, BlockRegistry } from "@plumix/blocks";
 
 import type { EditorStoreApi } from "./store.js";
 import { collectBlocks } from "./block-tree-ops.js";
 import { parseClipboardBlocks, serializeBlocks } from "./clipboard.js";
+
+/**
+ * Paste lands at the top level, so a `requiresParent` block (which can't live
+ * there) is dropped. Shared by the canvas frame and the Layers panel, which
+ * both build their own clipboard ops over the same tree.
+ */
+export function pasteableAtRoot(
+  registry: BlockRegistry,
+): (node: BlockNode) => boolean {
+  return (node) => !registry.get(node.name)?.requiresParent;
+}
 
 /** The subset of the Clipboard API the ops need — injectable for testing. */
 export interface ClipboardLike {

@@ -30,7 +30,11 @@ import {
   frameSelection,
   zoomToCursor,
 } from "./canvas-view.js";
-import { clipboardOpFromEvent, createClipboardOps } from "./clipboard-ops.js";
+import {
+  clipboardOpFromEvent,
+  createClipboardOps,
+  pasteableAtRoot,
+} from "./clipboard-ops.js";
 import { connectCanvas } from "./connect-canvas.js";
 import { dropPlacement } from "./drop-index.js";
 import { overlayBox } from "./overlay.js";
@@ -101,13 +105,8 @@ export function CanvasFrame({
   });
   const store = useEditorStoreApi();
   const clipboard = useMemo(
-    // requiresParent blocks can't live at the top level, where paste lands.
     () =>
-      createClipboardOps(
-        store,
-        navigator.clipboard,
-        (node) => !registry.get(node.name)?.requiresParent,
-      ),
+      createClipboardOps(store, navigator.clipboard, pasteableAtRoot(registry)),
     [store, registry],
   );
   const loaderPushRef = useLoaderPushRef();
