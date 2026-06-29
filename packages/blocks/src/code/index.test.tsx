@@ -43,6 +43,12 @@ describe("core/code", () => {
     expect(html).toContain('data-language="typescript"');
   });
 
+  test("a freshly inserted block carries visible placeholder code", () => {
+    const html = renderBlockSpecToHtml(codeBlock, codeBlock.defaults);
+
+    expect(html).toContain("Your code here");
+  });
+
   test("exposes the language input as a combobox suggesting common languages", () => {
     const languageInput = codeBlock.inputs?.find((i) => i.name === "language");
     // Combobox (free text + datalist), not select — a select would drop

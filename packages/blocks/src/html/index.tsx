@@ -19,6 +19,6 @@ export const htmlBlock = defineBlock({
   icon: "Code",
   category: "interactive",
   inputs: [{ name: "html", type: "textarea", label: "HTML" }],
-  defaults: { html: "" },
+  defaults: { html: "<p>Custom HTML</p>" },
   render: HtmlBlockRender,
 });

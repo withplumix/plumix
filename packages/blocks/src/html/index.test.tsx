@@ -21,11 +21,17 @@ describe("core/html", () => {
     expect(html).toContain("<p>Safe</p>");
   });
 
-  test("renders an empty wrapper when html is empty", () => {
+  test("renders an empty wrapper when html is explicitly empty", () => {
     const html = renderBlockSpecToHtml(htmlBlock, { html: "" });
 
     expect(html).toContain(
       '<div data-plumix-block="core/html"><div></div></div>',
     );
+  });
+
+  test("a freshly inserted block carries visible default markup", () => {
+    const html = renderBlockSpecToHtml(htmlBlock, htmlBlock.defaults);
+
+    expect(html).toContain("Custom HTML");
   });
 });
