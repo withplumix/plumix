@@ -254,16 +254,17 @@ describe("MenusShell", () => {
 
       renderShell();
 
-      const primarySelect = await screen.findByTestId<HTMLSelectElement>(
+      const primarySelect = await screen.findByTestId(
         "menus-location-select-primary",
       );
       expect(primarySelect).toBeInTheDocument();
-      expect(primarySelect.value).toBe("main");
+      // The Radix trigger shows the bound menu's name (or the unassigned hint).
+      expect(primarySelect).toHaveTextContent("Main");
 
-      const footerSelect = await screen.findByTestId<HTMLSelectElement>(
+      const footerSelect = await screen.findByTestId(
         "menus-location-select-footer",
       );
-      expect(footerSelect.value).toBe("");
+      expect(footerSelect).toHaveTextContent("Unassigned");
     });
 
     test("each select reflects its own persisted binding when every location is assigned", async () => {
@@ -296,14 +297,14 @@ describe("MenusShell", () => {
 
       renderShell();
 
-      const primarySelect = await screen.findByTestId<HTMLSelectElement>(
+      const primarySelect = await screen.findByTestId(
         "menus-location-select-primary",
       );
-      expect(primarySelect.value).toBe("primary");
-      const footerSelect = await screen.findByTestId<HTMLSelectElement>(
+      expect(primarySelect).toHaveTextContent("Primary");
+      const footerSelect = await screen.findByTestId(
         "menus-location-select-footer",
       );
-      expect(footerSelect.value).toBe("footer");
+      expect(footerSelect).toHaveTextContent("Footer");
     });
 
     test("changing a select calls menu.assignLocation with the new termSlug", async () => {
@@ -324,11 +325,12 @@ describe("MenusShell", () => {
       });
 
       renderShell();
-      const select = await screen.findByTestId<HTMLSelectElement>(
-        "menus-location-select-primary",
-      );
+      await screen.findByTestId("menus-location-select-primary");
       const user = userEvent.setup();
-      await user.selectOptions(select, "main");
+      await user.click(screen.getByTestId("menus-location-select-primary"));
+      await user.click(
+        screen.getByTestId("menus-location-select-primary-main"),
+      );
 
       const call = await vi.waitFor(() => {
         const found = findRpcCall("/menu/assignLocation");
@@ -359,11 +361,12 @@ describe("MenusShell", () => {
       });
 
       renderShell();
-      const select = await screen.findByTestId<HTMLSelectElement>(
-        "menus-location-select-primary",
-      );
+      await screen.findByTestId("menus-location-select-primary");
       const user = userEvent.setup();
-      await user.selectOptions(select, "");
+      await user.click(screen.getByTestId("menus-location-select-primary"));
+      await user.click(
+        screen.getByTestId("menus-location-select-primary-unassigned"),
+      );
 
       const call = await vi.waitFor(() => {
         const found = findRpcCall("/menu/assignLocation");

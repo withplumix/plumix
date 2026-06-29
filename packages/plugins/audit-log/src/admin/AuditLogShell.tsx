@@ -1,13 +1,25 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
 import { useCallback, useSyncExternalStore } from "react";
-import { Button, Input } from "plumix/admin/ui";
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "plumix/admin/ui";
 import { formatDate, Trans, useLingui } from "plumix/i18n";
 
 import type { AuditLogFilter, AuditLogRowDTO, DateRangePreset } from "./rpc.js";
 import { presetToRange, useAuditLogList } from "./rpc.js";
 
 const MAX_DIFF_PREVIEW_FIELDS = 3;
+
+// Radix Select forbids an empty-string item value, so the "any" filter choice
+// carries a sentinel that maps back to "" (no filter) on change.
+const ANY_VALUE = "__any__";
 
 // Descriptors that need runtime indirection — used outside JSX
 // (placeholder attribute, option labels, error template with embedded
@@ -311,22 +323,28 @@ function FilterRow({
       data-testid="audit-log-filters"
       className="flex flex-wrap items-center gap-2"
     >
-      <select
-        data-testid="audit-log-filter-date"
+      <Select
         value={filters.preset}
-        onChange={(e) => {
-          onChange({
-            ...filters,
-            preset: e.target.value as DateRangePreset | "all",
-          });
+        onValueChange={(next) => {
+          onChange({ ...filters, preset: next as DateRangePreset | "all" });
         }}
-        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       >
-        <option value="all">{i18n._(M.filterDatePresetAll)}</option>
-        <option value="today">{i18n._(M.filterDatePresetToday)}</option>
-        <option value="last7">{i18n._(M.filterDatePresetLast7)}</option>
-        <option value="last30">{i18n._(M.filterDatePresetLast30)}</option>
-      </select>
+        <SelectTrigger className="w-40" data-testid="audit-log-filter-date">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{i18n._(M.filterDatePresetAll)}</SelectItem>
+          <SelectItem value="today">
+            {i18n._(M.filterDatePresetToday)}
+          </SelectItem>
+          <SelectItem value="last7">
+            {i18n._(M.filterDatePresetLast7)}
+          </SelectItem>
+          <SelectItem value="last30">
+            {i18n._(M.filterDatePresetLast30)}
+          </SelectItem>
+        </SelectContent>
+      </Select>
       <Input
         type="number"
         data-testid="audit-log-filter-actor"
@@ -339,40 +357,68 @@ function FilterRow({
         // sibling filters onto their own rows in this flex-wrap row.
         className="w-40"
       />
-      <select
-        data-testid="audit-log-filter-subject-type"
-        value={filters.subjectType}
-        onChange={(e) => {
-          onChange({ ...filters, subjectType: e.target.value });
+      <Select
+        value={filters.subjectType === "" ? ANY_VALUE : filters.subjectType}
+        onValueChange={(next) => {
+          onChange({
+            ...filters,
+            subjectType: next === ANY_VALUE ? "" : next,
+          });
         }}
-        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       >
-        <option value="">{i18n._(M.filterSubjectAny)}</option>
-        {/* Subject-type values are protocol identifiers, kept verbatim
-            across locales. */}
-        {SUBJECT_TYPES.map((t) => (
-          <option key={t} value={t}>
-            {t}
-          </option>
-        ))}
-      </select>
-      <select
-        data-testid="audit-log-filter-event-prefix"
-        value={filters.eventPrefix}
-        onChange={(e) => {
-          onChange({ ...filters, eventPrefix: e.target.value });
+        <SelectTrigger
+          className="w-40"
+          data-testid="audit-log-filter-subject-type"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ANY_VALUE}>
+            {i18n._(M.filterSubjectAny)}
+          </SelectItem>
+          {/* Subject-type values are protocol identifiers, kept verbatim
+              across locales. */}
+          {SUBJECT_TYPES.map((t) => (
+            <SelectItem
+              key={t}
+              value={t}
+              data-testid={`audit-log-filter-subject-type-${t}`}
+            >
+              {t}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={filters.eventPrefix === "" ? ANY_VALUE : filters.eventPrefix}
+        onValueChange={(next) => {
+          onChange({
+            ...filters,
+            eventPrefix: next === ANY_VALUE ? "" : next,
+          });
         }}
-        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       >
-        <option value="">{i18n._(M.filterEventAny)}</option>
-        {/* Event prefixes are protocol identifiers, kept verbatim across
-            locales. */}
-        {EVENT_PREFIXES.map((p) => (
-          <option key={p} value={p}>
-            {p}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger
+          className="w-40"
+          data-testid="audit-log-filter-event-prefix"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ANY_VALUE}>{i18n._(M.filterEventAny)}</SelectItem>
+          {/* Event prefixes are protocol identifiers, kept verbatim across
+              locales. */}
+          {EVENT_PREFIXES.map((p) => (
+            <SelectItem
+              key={p}
+              value={p}
+              data-testid={`audit-log-filter-event-prefix-${p}`}
+            >
+              {p}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Button
         type="button"
         variant="outline"

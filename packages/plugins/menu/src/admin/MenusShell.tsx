@@ -1,7 +1,14 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Button } from "plumix/admin/ui";
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
 import type { MenuListItem, MenuLocationRow } from "./rpc.js";
@@ -19,6 +26,10 @@ import {
   setSelectedMenu,
   setSelectedTab,
 } from "./url-state.js";
+
+// Radix Select forbids an empty-string item value, so the "unassigned" choice
+// carries a sentinel that maps back to `null` (no menu) on change.
+const UNASSIGNED_VALUE = "__unassigned__";
 
 // Plain descriptor literals — the plugin package builds with plain
 // `tsc`, no Lingui macro pass, so we author the `{ id, message }`
@@ -273,22 +284,36 @@ function LocationRow({
       >
         {row.label}
       </span>
-      <select
-        data-testid={`menus-location-select-${row.id}`}
-        value={currentSlug}
-        onChange={(event) => {
-          const value = event.target.value;
-          onChange(value === "" ? null : value);
+      <Select
+        value={currentSlug === "" ? UNASSIGNED_VALUE : currentSlug}
+        onValueChange={(next) => {
+          onChange(next === UNASSIGNED_VALUE ? null : next);
         }}
-        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       >
-        <option value="">{i18n._(M.unassigned)}</option>
-        {menus.map((menu) => (
-          <option key={menu.id} value={menu.slug}>
-            {menu.name}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger
+          className="w-44"
+          data-testid={`menus-location-select-${row.id}`}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            value={UNASSIGNED_VALUE}
+            data-testid={`menus-location-select-${row.id}-unassigned`}
+          >
+            {i18n._(M.unassigned)}
+          </SelectItem>
+          {menus.map((menu) => (
+            <SelectItem
+              key={menu.id}
+              value={menu.slug}
+              data-testid={`menus-location-select-${row.id}-${menu.slug}`}
+            >
+              {menu.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
