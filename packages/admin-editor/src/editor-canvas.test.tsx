@@ -115,8 +115,7 @@ describe("EditorCanvas", () => {
     const geometry = posted
       .map((p) => (p as { message?: { type?: string } }).message)
       .find((m) => m?.type === "canvas:geometry") as
-      | { slots?: { parentId: string; slotKey: string }[] }
-      | undefined;
+      { slots?: { parentId: string; slotKey: string }[] } | undefined;
     expect(
       geometry?.slots?.some(
         (s) => s.parentId === "g1" && s.slotKey === "content",

@@ -6,9 +6,7 @@ import type { BlockContentValidationResult } from "./validate-content.js";
  * don't get a false sense of coverage.
  */
 export type BlockContentValidationCode =
-  | "unknown_block_type"
-  | "disallowed_child"
-  | "requires_parent";
+  "unknown_block_type" | "disallowed_child" | "requires_parent";
 
 export interface BlockContentValidationIssue {
   readonly code: BlockContentValidationCode;

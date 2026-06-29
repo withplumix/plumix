@@ -415,8 +415,7 @@ test.describe("/users/$id/edit", () => {
         () =>
           (
             deleteInputs.at(-1) as
-              | { id?: number; reassignTo?: number }
-              | undefined
+              { id?: number; reassignTo?: number } | undefined
           )?.reassignTo,
       )
       .toBe(inheritor.id);

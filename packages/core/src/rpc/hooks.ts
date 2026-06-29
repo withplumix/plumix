@@ -417,11 +417,7 @@ declare module "../hooks/types.js" {
       user: User,
       context: {
         readonly method:
-          | "passkey"
-          | "magic_link"
-          | "oauth"
-          | "invite"
-          | "external";
+          "passkey" | "magic_link" | "oauth" | "invite" | "external";
         readonly provider?: string;
         readonly firstSignIn: boolean;
       },

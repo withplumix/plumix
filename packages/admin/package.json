@@ -41,7 +41,7 @@
     "valibot": "catalog:"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.11.3",
+    "@axe-core/playwright": "^4.12.1",
     "@babel/core": "^8.0.1",
     "@lingui/babel-plugin-lingui-macro": "catalog:lingui",
     "@lingui/cli": "catalog:lingui",

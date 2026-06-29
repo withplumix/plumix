@@ -191,8 +191,7 @@ describe("registerAuditEvents — user surface", () => {
     if (!row) throw new Error("expected a captured row");
     expect(row.event).toBe("user:updated");
     const diff = row.properties?.diff as
-      | Record<string, [unknown, unknown]>
-      | undefined;
+      Record<string, [unknown, unknown]> | undefined;
     // `name` and `role` differed; `meta` + `updatedAt` are stripped.
     expect(diff).toBeDefined();
     expect(Object.keys(diff ?? {}).sort()).toEqual(["name", "role"]);
@@ -345,8 +344,7 @@ describe("registerAuditEvents — term surface", () => {
     if (!row) throw new Error("expected a captured row");
     expect(row.event).toBe("term:updated");
     const diff = row.properties?.diff as
-      | Record<string, [unknown, unknown]>
-      | undefined;
+      Record<string, [unknown, unknown]> | undefined;
     expect(diff).toBeDefined();
     expect(Object.keys(diff ?? {}).sort()).toEqual([
       "name",
@@ -434,8 +432,7 @@ describe("registerAuditEvents — entry backfill", () => {
     expect(row?.event).toBe("entry:updated");
     expect(row?.subjectType).toBe("entry");
     const diff = row?.properties?.diff as
-      | Record<string, [unknown, unknown]>
-      | undefined;
+      Record<string, [unknown, unknown]> | undefined;
     expect(Object.keys(diff ?? {}).sort()).toEqual(["title"]);
   });
 

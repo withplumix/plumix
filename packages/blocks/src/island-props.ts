@@ -10,11 +10,7 @@
  * - `only` — no SSR markup; render client-side on connect.
  */
 export type PlumixStrategy =
-  | "load"
-  | "idle"
-  | "visible"
-  | "interaction"
-  | "only";
+  "load" | "idle" | "visible" | "interaction" | "only";
 
 /**
  * The subset of strategies valid as a *prefetch* trigger. Prefetch warms
@@ -61,7 +57,9 @@ export type IslandProps<T> = OmitFunctions<Omit<T, "client" | "prefetch">> & {
 };
 
 type OmitFunctions<T> = {
-  [K in keyof T as T[K] extends ((...args: never[]) => unknown) | undefined
-    ? never
-    : K]: T[K];
+  [
+    K in keyof T as T[K] extends ((...args: never[]) => unknown) | undefined
+      ? never
+      : K
+  ]: T[K];
 };

@@ -210,8 +210,7 @@ test.describe("/entries/$slug (list)", () => {
 
     const lastSort = (): string | null => {
       const last = inputs.at(-1) as
-        | { orderBy?: string; order?: string }
-        | undefined;
+        { orderBy?: string; order?: string } | undefined;
       return last ? `${last.orderBy ?? ""}:${last.order ?? ""}` : null;
     };
 
@@ -681,8 +680,7 @@ test.describe("/entries/$slug (list) — taxonomy filters", () => {
         () =>
           (
             inputs.at(-1) as
-              | { termTaxonomies?: Record<string, string[]> }
-              | undefined
+              { termTaxonomies?: Record<string, string[]> } | undefined
           )?.termTaxonomies ?? null,
       )
       .toEqual({ category: ["news"] });

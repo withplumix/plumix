@@ -97,8 +97,7 @@ function isPlumixConfig(value: unknown): value is PlumixConfig {
   if (!value || typeof value !== "object") return false;
   const c = value as Record<string, unknown>;
   const runtime = c.runtime as
-    | { name?: unknown; buildFetchHandler?: unknown }
-    | undefined;
+    { name?: unknown; buildFetchHandler?: unknown } | undefined;
   const database = c.database as { kind?: unknown } | undefined;
   const auth = c.auth as { passkey?: unknown } | undefined;
   return (

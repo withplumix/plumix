@@ -1171,19 +1171,10 @@ export interface RegisteredFieldType extends FieldTypeOptions {
 }
 
 export type PluginRouteMethod =
-  | "GET"
-  | "HEAD"
-  | "POST"
-  | "PUT"
-  | "PATCH"
-  | "DELETE"
-  | "OPTIONS"
-  | "*";
+  "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "*";
 
 export type PluginRouteAuth =
-  | "public"
-  | "authenticated"
-  | { readonly capability: string };
+  "public" | "authenticated" | { readonly capability: string };
 
 export interface RegisteredRawRoute {
   readonly pluginId: string;

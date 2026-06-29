@@ -68,8 +68,7 @@ export type TemplateRender<TData extends TemplateData> = (
  * request with the same args `render` sees.
  */
 type TemplateDocument<TData extends TemplateData> =
-  | DocumentManifest
-  | ((args: TemplateRenderArgs<TData>) => DocumentManifest);
+  DocumentManifest | ((args: TemplateRenderArgs<TData>) => DocumentManifest);
 
 /**
  * Output of `defineTemplate`. The brand symbol is non-enumerable so

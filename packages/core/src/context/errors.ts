@@ -1,6 +1,5 @@
 type ContextErrorCode =
-  | "no_request_context"
-  | "app_context_extension_shadows_builtin";
+  "no_request_context" | "app_context_extension_shadows_builtin";
 
 /**
  * Request/app-context invariant violated. `no_request_context` means an

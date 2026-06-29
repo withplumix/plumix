@@ -49,9 +49,7 @@ export interface MetaPatch {
  * public contract.
  */
 type MetaSanitizationReason =
-  | "not_registered"
-  | "invalid_value"
-  | "value_too_large";
+  "not_registered" | "invalid_value" | "value_too_large";
 
 export class MetaSanitizationError extends Error {
   static {

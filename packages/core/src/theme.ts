@@ -51,8 +51,7 @@ export type TemplateComponent<Data> = ComponentType<{ readonly data: Data }>;
 // The `normalizeTemplate` boot-time helper accepts both and rejects
 // hand-written `{ render }` literals that didn't go through the factory.
 export type TemplateEntry<Data extends TemplateData> =
-  | TemplateComponent<Data>
-  | Template<Data>;
+  TemplateComponent<Data> | Template<Data>;
 
 // Catch-all for the registry's index signature. The narrow per-key
 // slots can't share a single typed slot due to contravariance, so the

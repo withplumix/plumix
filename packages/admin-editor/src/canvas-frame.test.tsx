@@ -349,8 +349,7 @@ describe("CanvasFrame nested drop", () => {
     dragInto("g1", "content");
 
     const content = storeApi?.getState().tree[0]?.attrs?.content as
-      | readonly BlockNode[]
-      | undefined;
+      readonly BlockNode[] | undefined;
     expect(content?.map((n) => n.name)).toEqual(["core/heading"]);
   });
 
@@ -372,8 +371,7 @@ describe("CanvasFrame nested drop", () => {
     });
 
     const content = storeApi?.getState().tree[0]?.attrs?.content as
-      | readonly BlockNode[]
-      | undefined;
+      readonly BlockNode[] | undefined;
     expect(content?.map((n) => n.name)).toEqual(["core/heading"]);
   });
 
@@ -437,8 +435,7 @@ describe("CanvasFrame nested drop", () => {
     dragInto("b1", "items");
 
     const items = storeApi?.getState().tree[0]?.attrs?.items as
-      | readonly BlockNode[]
-      | undefined;
+      readonly BlockNode[] | undefined;
     expect(items).toEqual([]);
   });
 

@@ -23,11 +23,11 @@ catalog:
   "@types/node": ^24.13.2
   cmdk: ^1.1.1
   esbuild: ^0.28.1
-  eslint: ^10.5.0
+  eslint: ^10.6.0
   fishery: ^2.4.0
   jsdom: ^29.1.1
   lucide-react: ^1.21.0
-  prettier: ^3.8.4
+  prettier: ^3.9.3
   publint: ^0.3.21
   radix-ui: ^1.5.0
   react-hook-form: ^7.80.0
@@ -53,18 +53,18 @@ catalogs:
     "@lingui/react": ^6.4.0
     "@lingui/vite-plugin": ^6.4.0
   tailwind:
-    "@tailwindcss/node": ^4.3.1
-    "@tailwindcss/oxide": ^4.3.1
-    "@tailwindcss/postcss": ^4.3.1
+    "@tailwindcss/node": ^4.3.2
+    "@tailwindcss/oxide": ^4.3.2
+    "@tailwindcss/postcss": ^4.3.2
     "@tailwindcss/typography": ^0.5.16
-    "@tailwindcss/vite": ^4.3.1
-    tailwindcss: ^4.3.1
+    "@tailwindcss/vite": ^4.3.2
+    tailwindcss: ^4.3.2
   vitest:
     "@vitest/coverage-v8": ^4.1.9
     vitest: ^4.1.9
   vite:
-    "@vitejs/plugin-react": ^6.0.2
-    vite: ^8.0.16
+    "@vitejs/plugin-react": ^6.0.3
+    vite: ^8.1.0
   tiptap:
     "@tiptap/core": ^3.27.1
     "@tiptap/react": ^3.27.1
@@ -88,8 +88,8 @@ catalogs:
     "@orpc/tanstack-query": ^1.14.6
     "@orpc/valibot": ^1.14.6
   tanstack:
-    "@tanstack/react-query": ^5.101.0
-    "@tanstack/react-query-devtools": ^5.101.0
+    "@tanstack/react-query": ^5.101.2
+    "@tanstack/react-query-devtools": ^5.101.2
     "@tanstack/react-router": ^1.170.16
     "@tanstack/react-router-devtools": ^1.167.0
     "@tanstack/react-table": ^8.21.3
@@ -112,9 +112,9 @@ catalogs:
     "@dnd-kit/sortable": ^10.0.0
     "@dnd-kit/utilities": ^3.2.2
   cloudflare:
-    "@cloudflare/vite-plugin": ^1.42.1
-    "@cloudflare/workers-types": ^4.20260621.1
-    wrangler: ^4.103.0
+    "@cloudflare/vite-plugin": ^1.42.3
+    "@cloudflare/workers-types": ^4.20260629.1
+    wrangler: ^4.105.0
 
 publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"

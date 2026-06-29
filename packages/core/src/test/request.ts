@@ -9,13 +9,7 @@ type TestDb = LibSQLDatabase<typeof schema>;
 
 export interface FetchOptions {
   readonly method?:
-    | "GET"
-    | "POST"
-    | "PUT"
-    | "PATCH"
-    | "DELETE"
-    | "HEAD"
-    | "OPTIONS";
+    "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
   readonly headers?: HeadersInit;
   readonly body?: BodyInit;
   /**

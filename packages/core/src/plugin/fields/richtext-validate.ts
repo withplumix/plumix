@@ -100,10 +100,7 @@ export function walkRichtextDoc(
 }
 
 type RichtextValidationReason =
-  | "disallowed_node"
-  | "disallowed_mark"
-  | "unsafe_href"
-  | "invalid_shape";
+  "disallowed_node" | "disallowed_mark" | "unsafe_href" | "invalid_shape";
 
 /**
  * Error thrown when the validator encounters a disallowed type or

@@ -42,10 +42,7 @@ type PasskeyServerErrorCode = PasskeyClassErrorCode | PasskeyWireExtraErrorCode;
 
 // Browser-side failures we distinguish ourselves before/after the server call.
 type PasskeyClientErrorCode =
-  | "user_cancelled"
-  | "no_authenticator"
-  | "network_error"
-  | "unknown";
+  "user_cancelled" | "no_authenticator" | "network_error" | "unknown";
 
 export type PasskeyErrorCode = PasskeyServerErrorCode | PasskeyClientErrorCode;
 
