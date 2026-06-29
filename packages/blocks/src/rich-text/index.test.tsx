@@ -8,7 +8,7 @@ import { renderBlockTree } from "../render-block-tree.js";
 import { richTextBlock } from "./index.js";
 
 describe("core/rich-text walker render", () => {
-  test("renders the default empty body as a single wrapped paragraph", () => {
+  test("renders an explicitly empty body as a single wrapped paragraph", () => {
     const registry = createBlockRegistry([richTextBlock]);
     const tree: readonly BlockNode[] = [
       { id: "r1", name: "core/rich-text", attrs: { body: "<p></p>" } },
@@ -19,6 +19,19 @@ describe("core/rich-text walker render", () => {
     expect(html).toBe(
       '<div data-plumix-block="core/rich-text"><div><p></p></div></div>',
     );
+  });
+
+  test("seeds visible placeholder copy in the insert default", () => {
+    // An empty <p></p> default renders zero-height — invisible/unclickable on
+    // the canvas — so the insert default must seed visible copy.
+    const registry = createBlockRegistry([richTextBlock]);
+    const tree: readonly BlockNode[] = [
+      { id: "r1", name: "core/rich-text", attrs: richTextBlock.defaults },
+    ];
+
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+    expect(html).toContain("Enter text here…");
   });
 
   test("strips a <script> from a string body so stored markup can't XSS", () => {

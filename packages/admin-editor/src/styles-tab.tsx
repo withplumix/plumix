@@ -1,5 +1,5 @@
 import type { I18n } from "@lingui/core";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
 import type { StyleValue, ThemeTokens, TokenCategory } from "@plumix/blocks";
@@ -22,6 +22,12 @@ import {
 } from "@plumix/admin-ui/icons";
 import { Toggle } from "@plumix/admin-ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@plumix/admin-ui/tooltip";
 import { normalizeStyleValue } from "@plumix/blocks";
 
 import type { StyleBucket } from "./store.js";
@@ -275,6 +281,36 @@ const TEXT_ALIGNMENTS = [
   { value: "right", Icon: AlignRight, label: "Align right" },
 ] as const;
 
+/** A tooltipped toggle item. `px-2` tightens the item's hardcoded px-3 so all
+ *  seven text controls fit the narrow rail without overflowing. */
+function TooltipToggleItem({
+  value,
+  testid,
+  label,
+  children,
+}: {
+  readonly value: string;
+  readonly testid: string;
+  readonly label: string;
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <ToggleGroupItem
+          value={value}
+          data-testid={testid}
+          aria-label={label}
+          className="px-2"
+        >
+          {children}
+        </ToggleGroupItem>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Bold/italic/underline/strikethrough marks and a text-align switch. Each
  *  writes a raw value to its CSS property (no token form). */
 function TextStyleControls({
@@ -291,61 +327,63 @@ function TextStyleControls({
   };
 
   return (
-    <div
-      className="flex items-center justify-between gap-1"
-      data-testid="style-text-controls"
-    >
-      <ToggleGroup
-        type="multiple"
-        variant="outline"
-        size="sm"
-        value={TEXT_MARKS.filter((m) => rawValue(m.property) === m.on).map(
-          (m) => m.id,
-        )}
-        onValueChange={(next) => {
-          // Radix hands back the full pressed set; write only the mark whose
-          // state flipped (exactly one per click).
-          for (const mark of TEXT_MARKS) {
-            const on = rawValue(mark.property) === mark.on;
-            const wantOn = next.includes(mark.id);
-            if (on !== wantOn) {
-              setter(mark.property)(wantOn ? { raw: mark.on } : null);
+    <TooltipProvider delayDuration={300}>
+      <div
+        className="flex items-center justify-between gap-1"
+        data-testid="style-text-controls"
+      >
+        <ToggleGroup
+          type="multiple"
+          variant="outline"
+          size="sm"
+          value={TEXT_MARKS.filter((m) => rawValue(m.property) === m.on).map(
+            (m) => m.id,
+          )}
+          onValueChange={(next) => {
+            // Radix hands back the full pressed set; write only the mark whose
+            // state flipped (exactly one per click).
+            for (const mark of TEXT_MARKS) {
+              const on = rawValue(mark.property) === mark.on;
+              const wantOn = next.includes(mark.id);
+              if (on !== wantOn) {
+                setter(mark.property)(wantOn ? { raw: mark.on } : null);
+              }
             }
+          }}
+        >
+          {TEXT_MARKS.map((mark) => (
+            <TooltipToggleItem
+              key={mark.id}
+              value={mark.id}
+              testid={`style-mark-${mark.id}`}
+              label={markLabel(i18n, mark.id)}
+            >
+              <mark.Icon />
+            </TooltipToggleItem>
+          ))}
+        </ToggleGroup>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="sm"
+          value={rawValue("textAlign") ?? ""}
+          onValueChange={(value) =>
+            setter("textAlign")(value ? { raw: value } : null)
           }
-        }}
-      >
-        {TEXT_MARKS.map((mark) => (
-          <ToggleGroupItem
-            key={mark.id}
-            value={mark.id}
-            data-testid={`style-mark-${mark.id}`}
-            aria-label={markLabel(i18n, mark.id)}
-          >
-            <mark.Icon />
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      <ToggleGroup
-        type="single"
-        variant="outline"
-        size="sm"
-        value={rawValue("textAlign") ?? ""}
-        onValueChange={(value) =>
-          setter("textAlign")(value ? { raw: value } : null)
-        }
-      >
-        {TEXT_ALIGNMENTS.map(({ value, Icon }) => (
-          <ToggleGroupItem
-            key={value}
-            value={value}
-            data-testid={`style-align-${value}`}
-            aria-label={alignLabel(i18n, value)}
-          >
-            <Icon />
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-    </div>
+        >
+          {TEXT_ALIGNMENTS.map(({ value, Icon }) => (
+            <TooltipToggleItem
+              key={value}
+              value={value}
+              testid={`style-align-${value}`}
+              label={alignLabel(i18n, value)}
+            >
+              <Icon />
+            </TooltipToggleItem>
+          ))}
+        </ToggleGroup>
+      </div>
+    </TooltipProvider>
   );
 }
 

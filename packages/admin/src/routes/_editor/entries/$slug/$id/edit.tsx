@@ -421,8 +421,8 @@ function BespokeEditor({
   /* eslint-enable react-hooks/refs */
   useEffect(
     () => () => {
-      contentDebouncer.flush();
-      structuralDebouncer.flush();
+      void contentDebouncer.flush();
+      void structuralDebouncer.flush();
     },
     [contentDebouncer, structuralDebouncer],
   );
@@ -477,6 +477,16 @@ function BespokeEditor({
     },
     [contentDebouncer],
   );
+  const handleBack = useCallback(async (): Promise<void> => {
+    // Flush pending autosaves before leaving so edits made within the debounce
+    // window aren't dropped when the route unmounts.
+    await Promise.all([contentDebouncer.flush(), structuralDebouncer.flush()]);
+    await navigate({
+      to: "/entries/$slug",
+      params: { slug },
+      search: ENTRIES_LIST_DEFAULT_SEARCH,
+    });
+  }, [contentDebouncer, structuralDebouncer, navigate, slug]);
 
   const metaBoxes = useMemo(
     () =>
@@ -795,13 +805,7 @@ function BespokeEditor({
       liveUrl={liveUrl}
       title={supportsTitle ? titleValue : undefined}
       onTitleChange={supportsTitle ? handleTitleChange : undefined}
-      onBack={() =>
-        void navigate({
-          to: "/entries/$slug",
-          params: { slug },
-          search: ENTRIES_LIST_DEFAULT_SEARCH,
-        })
-      }
+      onBack={() => void handleBack()}
       onChange={handleChange}
       documentPanel={documentPanel}
       publish={publishActions}

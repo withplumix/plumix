@@ -6,6 +6,7 @@ import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { SidebarProvider } from "@plumix/admin-ui/sidebar";
 
+import { EditorHeader } from "./editor-header.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
 import { EditorProvider, useEditorStoreApi } from "./provider.js";
 
@@ -69,6 +70,39 @@ describe("EditorToolbar", () => {
     expect(storeApi?.getState().xray).toBe(true);
     expect(getByTestId("plumix-xray-toggle").getAttribute("data-state")).toBe(
       "on",
+    );
+  });
+});
+
+describe("header / toolbar alignment", () => {
+  // Picks the first class with the given prefix, e.g. "px-" -> "px-3". Tailwind
+  // tokens, not pixels — jsdom does no layout, so we pin the shared contract.
+  const token = (el: HTMLElement, prefix: string): string | undefined =>
+    el.className.split(" ").find((c) => c.startsWith(prefix));
+
+  test("both chrome bars share the same horizontal inset and toggle size", () => {
+    const { getByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={[]}>
+          <EditorHeader onBack={() => undefined} />
+          <SidebarProvider>
+            <EditorToolbar />
+          </SidebarProvider>
+        </EditorProvider>
+      </I18nProvider>,
+    );
+
+    const header = getByTestId("plumix-editor-header");
+    const toolbar = getByTestId("plumix-editor-toolbar");
+    // Same left/right inset → the back button and rails toggle line up.
+    expect(token(toolbar, "px-")).toBe(token(header, "px-"));
+
+    // Same button box → their icon centers align, not just their left edges.
+    // The back button emits its size via the `icon-sm` Button variant while the
+    // toolbar hardcodes `size-8`; this pins those to the same token, so a retune
+    // of `icon-sm` to a different class trips it even if the bars still align.
+    expect(token(getByTestId("plumix-rails-toggle"), "size-")).toBe(
+      token(getByTestId("plumix-editor-back"), "size-"),
     );
   });
 });

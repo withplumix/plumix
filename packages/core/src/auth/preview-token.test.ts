@@ -4,7 +4,11 @@ import { eq } from "../db/index.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { factoriesFor } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
-import { createPreviewToken, verifyPreviewToken } from "./preview-token.js";
+import {
+  createPreviewToken,
+  verifyPreviewGrant,
+  verifyPreviewToken,
+} from "./preview-token.js";
 
 describe("preview tokens", () => {
   test("a minted token verifies back to its entry id", async () => {
@@ -16,6 +20,32 @@ describe("preview tokens", () => {
       userId: user.id,
     });
     expect(await verifyPreviewToken(db, token)).toBe(42);
+  });
+
+  test("the grant carries both the entry id and the minting user", async () => {
+    const db = await createTestDb();
+    const user = await factoriesFor(db).user.create();
+    const token = await createPreviewToken(db, {
+      entryId: 42,
+      userId: user.id,
+    });
+
+    expect(await verifyPreviewGrant(db, token)).toEqual({
+      entryId: 42,
+      userId: user.id,
+    });
+  });
+
+  test("an expired token yields no grant", async () => {
+    const db = await createTestDb();
+    const user = await factoriesFor(db).user.create();
+    const token = await createPreviewToken(db, { entryId: 1, userId: user.id });
+    await db
+      .update(authTokens)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(authTokens.type, "preview_link"));
+
+    expect(await verifyPreviewGrant(db, token)).toBeNull();
   });
 
   test("only the hash is persisted, never the raw token", async () => {

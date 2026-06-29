@@ -36,7 +36,7 @@ const DEVICES: readonly {
 ];
 
 // Static ids (a switch, not a template literal) so the extractor catalogs them.
-function deviceLabel(i18n: I18n, value: EditorDevice): string {
+export function deviceLabel(i18n: I18n, value: EditorDevice): string {
   switch (value) {
     case "tablet":
       return i18n._({ id: "editor.toolbar.device.tablet", message: "Tablet" });
@@ -78,7 +78,9 @@ export interface PublishActions {
 export function EditorToolbar(): ReactElement {
   return (
     <header
-      className="bg-background flex items-center gap-2 border-b p-2"
+      // Horizontal inset (px-3) matches the editor header above, so the rails
+      // toggle lines up with the header's back button when the rails are hidden.
+      className="bg-background flex items-center gap-2 border-b px-3 py-2"
       data-testid="plumix-editor-toolbar"
     >
       {/* Left cluster: rails toggle (also Cmd/Ctrl+B) + the X-ray view toggle. */}
@@ -87,7 +89,9 @@ export function EditorToolbar(): ReactElement {
           <TooltipTrigger asChild>
             <SidebarTrigger
               data-testid="plumix-rails-toggle"
-              className="shrink-0"
+              // size-8 matches the header back button (icon-sm) so the two
+              // leftmost controls share an icon center, not just a left edge.
+              className="size-8 shrink-0"
             />
           </TooltipTrigger>
           <TooltipContent>

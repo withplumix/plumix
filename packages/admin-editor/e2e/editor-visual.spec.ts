@@ -469,6 +469,68 @@ test.describe("editor playground", () => {
       .toBeLessThan((before?.y ?? 0) - 20);
   });
 
+  test("dragging the frame header strip pans the canvas", async ({ page }) => {
+    await page.goto("/");
+    const iframe = page.locator(CANVAS_FRAME);
+    const before = await iframe.boundingBox();
+    const handle = await page.getByTestId("plumix-canvas-handle").boundingBox();
+    if (!before || !handle) throw new Error("expected frame + handle boxes");
+
+    // Press-drag the strip (no Space) — the frame should follow the pointer.
+    await page.mouse.move(
+      handle.x + handle.width / 2,
+      handle.y + handle.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      handle.x + handle.width / 2 - 160,
+      handle.y + handle.height / 2 + 120,
+      { steps: 15 },
+    );
+    await page.mouse.up();
+
+    await expect
+      .poll(async () => {
+        const b = await iframe.boundingBox();
+        return b
+          ? Math.abs(b.x - before.x) > 20 || Math.abs(b.y - before.y) > 20
+          : false;
+      })
+      .toBe(true);
+  });
+
+  test("holding Space and dragging still pans the canvas", async ({ page }) => {
+    await page.goto("/");
+    const iframe = page.locator(CANVAS_FRAME);
+    const frame = await page.getByTestId("plumix-canvas-frame").boundingBox();
+    const before = await iframe.boundingBox();
+    if (!frame || !before) throw new Error("expected frame boxes");
+
+    // Space arms pan mode (grab cursor); a drag over the canvas then pans it.
+    await page.keyboard.down("Space");
+    await page.mouse.move(
+      frame.x + frame.width / 2,
+      frame.y + frame.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      frame.x + frame.width / 2 - 160,
+      frame.y + frame.height / 2 - 120,
+      { steps: 15 },
+    );
+    await page.mouse.up();
+    await page.keyboard.up("Space");
+
+    await expect
+      .poll(async () => {
+        const b = await iframe.boundingBox();
+        return b
+          ? Math.abs(b.x - before.x) > 20 || Math.abs(b.y - before.y) > 20
+          : false;
+      })
+      .toBe(true);
+  });
+
   test("zoom to selection (Shift+2) frames the active block", async ({
     page,
   }) => {

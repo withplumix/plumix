@@ -27,7 +27,7 @@ export const codeBlock = defineBlock({
       options: LANGUAGE_OPTIONS,
     },
   ],
-  defaults: { text: "", language: "" },
+  defaults: { text: "// Your code here", language: "" },
   render: ({ attrs }): ReactNode => {
     const { text = "", language = "" } = attrs as {
       readonly text?: string;

@@ -5,6 +5,8 @@ import {
   decodeSnapshotEnvelope,
   encodeSnapshotEnvelope,
   REVISION_MESSAGE_META_KEY,
+  SNAPSHOT_META_KEY,
+  stripReservedMeta,
 } from "./snapshot-envelope.js";
 
 describe("snapshot envelope codec", () => {
@@ -17,6 +19,25 @@ describe("snapshot envelope codec", () => {
       slug: "hello-world",
       parentId: 42,
     });
+  });
+});
+
+describe("stripReservedMeta", () => {
+  test("drops framework-reserved __plumix_* keys, keeps user meta", () => {
+    const stripped = stripReservedMeta({
+      seoTitle: "Hello",
+      ogImage: "/a.png",
+      [SNAPSHOT_META_KEY]: { slug: "hello", parentId: null },
+      [REVISION_MESSAGE_META_KEY]: "before redesign",
+    });
+
+    expect(stripped).toEqual({ seoTitle: "Hello", ogImage: "/a.png" });
+  });
+
+  test("returns an empty object when only reserved keys are present", () => {
+    expect(
+      stripReservedMeta({ [SNAPSHOT_META_KEY]: { slug: "x", parentId: null } }),
+    ).toEqual({});
   });
 });
 

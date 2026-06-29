@@ -143,6 +143,35 @@ describe("StylesTab", () => {
     );
   });
 
+  test("the text controls fit the rail (tightened padding) and carry tooltips", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    const controls = [
+      "style-mark-bold",
+      "style-mark-italic",
+      "style-mark-underline",
+      "style-mark-strikethrough",
+      "style-align-left",
+      "style-align-center",
+      "style-align-right",
+    ];
+
+    for (const id of controls) {
+      const button = getByTestId(id);
+      expect(button.className).toContain("px-2");
+      expect(button.getAttribute("aria-label")).toBeTruthy();
+    }
+
+    // Focusing a control opens its tooltip; Radix points the trigger's
+    // aria-describedby at the content, which must echo the control's label.
+    const bold = getByTestId("style-mark-bold");
+    fireEvent.focus(bold);
+    const tipId = bold.getAttribute("aria-describedby");
+    expect(tipId).toBeTruthy();
+    expect(document.getElementById(tipId ?? "")?.textContent).toBe(
+      bold.getAttribute("aria-label"),
+    );
+  });
+
   test("the hide toggle sets display:none in the active device bucket", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 

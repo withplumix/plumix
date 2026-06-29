@@ -104,6 +104,11 @@ msgid "editor.tab.block"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/layers-tab.tsx
+msgid "editor.layers.actions"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.blocks"
 msgstr ""
@@ -111,6 +116,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.bold"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/layers-tab.tsx
+msgid "editor.layers.copy"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -134,6 +144,11 @@ msgid "editor.styles.mode.custom"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/layers-tab.tsx
+msgid "editor.layers.delete"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.delete"
 msgstr ""
@@ -146,6 +161,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.drag"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/canvas-frame.tsx
+msgid "editor.canvas.pan"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/layers-tab.tsx
+msgid "editor.layers.duplicate"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -261,6 +286,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.page"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/layers-tab.tsx
+msgid "editor.layers.paste"
 msgstr ""
 
 #. js-lingui-explicit-id

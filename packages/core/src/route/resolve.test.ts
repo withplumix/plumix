@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { AppContext } from "../context/app.js";
 import { createPreviewToken } from "../auth/preview-token.js";
 import { definePlugin } from "../plugin/define.js";
+import { upsertAutosave } from "../revisions/repository.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { buildEntryPermalink, buildTermArchiveUrl } from "./permalink.js";
 
@@ -309,6 +310,95 @@ describe("resolvePublicRoute — single", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("<h1>Secret Draft</h1>");
+  });
+
+  test("a preview token overlays the author's autosave onto a published entry", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const author = await h.seedUser("admin");
+    const live = await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Live Title",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+    });
+    await upsertAutosave(h.db, {
+      entry: live,
+      authorId: author.id,
+      patch: {
+        title: "Draft Title",
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Draft body." }],
+            },
+          ],
+        },
+        excerpt: null,
+        meta: {},
+      },
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: live.id,
+      userId: author.id,
+    });
+
+    // With the token, the preview renders the pending autosave.
+    const preview = await h.dispatch(
+      new Request(`https://cms.example/post/hello?preview=${token}`),
+    );
+    const previewBody = await preview.text();
+    expect(previewBody).toContain("<h1>Draft Title</h1>");
+    expect(previewBody).toContain("Draft body.");
+
+    // The same URL without the token renders the published row unchanged.
+    const liveResp = await h.dispatch(
+      new Request("https://cms.example/post/hello"),
+    );
+    const liveBody = await liveResp.text();
+    expect(liveBody).toContain("<h1>Live Title</h1>");
+    expect(liveBody).not.toContain("Draft Title");
+  });
+
+  test("a preview token for a different entry does not overlay an autosave", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const author = await h.seedUser("admin");
+    const live = await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Live Title",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+    });
+    const other = await h.factory.entry.create({
+      type: "post",
+      slug: "other",
+      title: "Other",
+      content: null,
+      status: "published",
+      authorId: author.id,
+    });
+    await upsertAutosave(h.db, {
+      entry: live,
+      authorId: author.id,
+      patch: { title: "Draft Title", content: null, excerpt: null, meta: {} },
+    });
+    // Token is scoped to `other`, so it can't unlock hello's autosave.
+    const token = await createPreviewToken(h.db, {
+      entryId: other.id,
+      userId: author.id,
+    });
+
+    const resp = await h.dispatch(
+      new Request(`https://cms.example/post/hello?preview=${token}`),
+    );
+    const body = await resp.text();
+    expect(body).toContain("<h1>Live Title</h1>");
+    expect(body).not.toContain("Draft Title");
   });
 
   test("an invalid preview token still 404s the draft", async () => {
