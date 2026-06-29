@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, PointerEvent as ReactPointerEvent } from "react";
 import {
   useCallback,
   useEffect,
@@ -20,6 +20,7 @@ import { ScrollArea } from "@plumix/admin-ui/scroll-area";
 
 import type { View } from "./canvas-view.js";
 import type { FrameOffset, OverlayBox } from "./overlay.js";
+import type { EditorDevice } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
 import { createNodeFromEntry, slotAllowedBlocks } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
@@ -37,6 +38,7 @@ import {
 } from "./clipboard-ops.js";
 import { connectCanvas } from "./connect-canvas.js";
 import { dropPlacement } from "./drop-index.js";
+import { deviceLabel } from "./editor-toolbar.js";
 import { overlayBox } from "./overlay.js";
 import {
   useEditorStore,
@@ -218,6 +220,63 @@ export function CanvasFrame({
       commitTimerRef.current = setTimeout(commitLive, 150);
     },
     [commitLive],
+  );
+
+  // Pan the stage by a client-pixel delta from a drag start, clamped to the
+  // frame. Shared by the space-drag handler and the canvas handle strip.
+  const panByClientDelta = useCallback(
+    (dx: number, dy: number, startPanX: number, startPanY: number): void => {
+      const box = geometryRef.current.container;
+      const iframe = iframeRef.current;
+      if (!box || !iframe) return;
+      const r = iframe.getBoundingClientRect();
+      applyLive({
+        zoom: liveViewRef.current.zoom,
+        ...clampPanToFrame(
+          startPanX + dx,
+          startPanY + dy,
+          r.width,
+          r.height,
+          box.width,
+          box.height,
+        ),
+      });
+    },
+    [applyLive],
+  );
+
+  // Drag the canvas handle strip to pan — a discoverable, mouse-only
+  // alternative to space-drag. Pointer capture keeps the gesture alive once the
+  // pointer leaves the strip.
+  const onHandlePointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>): void => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startPanX = liveViewRef.current.panX;
+      const startPanY = liveViewRef.current.panY;
+      const el = e.currentTarget;
+      el.setPointerCapture(e.pointerId);
+      const onMove = (ev: PointerEvent): void =>
+        panByClientDelta(
+          ev.clientX - startX,
+          ev.clientY - startY,
+          startPanX,
+          startPanY,
+        );
+      const onUp = (): void => {
+        commitLive();
+        el.releasePointerCapture(e.pointerId);
+        el.removeEventListener("pointermove", onMove);
+        el.removeEventListener("pointerup", onUp);
+        el.removeEventListener("pointercancel", onUp);
+      };
+      el.addEventListener("pointermove", onMove);
+      el.addEventListener("pointerup", onUp);
+      el.addEventListener("pointercancel", onUp);
+    },
+    [panByClientDelta, commitLive],
   );
 
   // Keep the live ref in sync with the store between gestures, so discrete
@@ -547,22 +606,13 @@ export function CanvasFrame({
     };
     const onPointerMove = (e: PointerEvent): void => {
       if (!dragging) return;
-      const box = geometryRef.current.container;
-      const iframe = iframeRef.current;
-      if (!box || !iframe) return;
-      const r = iframe.getBoundingClientRect();
       // Live (imperative) — no per-frame render.
-      applyLive({
-        zoom: liveViewRef.current.zoom,
-        ...clampPanToFrame(
-          startPanX + (e.clientX - startX),
-          startPanY + (e.clientY - startY),
-          r.width,
-          r.height,
-          box.width,
-          box.height,
-        ),
-      });
+      panByClientDelta(
+        e.clientX - startX,
+        e.clientY - startY,
+        startPanX,
+        startPanY,
+      );
     };
     const onPointerUp = (): void => {
       if (dragging) commitLive();
@@ -582,7 +632,7 @@ export function CanvasFrame({
       keyHandlerRef.current = null;
       exitPan();
     };
-  }, [store, zoomToSelection, applyLive, commitLive]);
+  }, [store, zoomToSelection, panByClientDelta, commitLive]);
 
   // Canvas drag, shared by two sources: a catalog block being inserted
   // (dragSpec) and an existing block being moved (movingId). The iframe is
@@ -853,186 +903,225 @@ export function CanvasFrame({
 
   return (
     <div
-      ref={containerRef}
-      data-testid="plumix-canvas-frame"
-      // A Figma-style pannable stage: the device frame floats in this surface
-      // and is panned/zoomed via a transform (no scrollbars). `overflow:hidden`
-      // clips the off-stage frame; `touch-action:none` lets us own wheel/touch
-      // gestures. `var(--muted)` reads as canvas, not a void.
+      data-testid="plumix-canvas-frame-shell"
       style={{
-        position: "relative",
+        display: "flex",
+        flexDirection: "column",
         flex: 1,
-        overflow: "hidden",
-        touchAction: "none",
-        background: "var(--muted)",
-        cursor: panReady ? "grab" : "default",
+        minHeight: 0,
       }}
     >
-      {/* The stage: positioned at the container origin and moved as a whole by
+      {!readOnly && (
+        <CanvasHandle device={device} onPointerDown={onHandlePointerDown} />
+      )}
+      <div
+        ref={containerRef}
+        data-testid="plumix-canvas-frame"
+        // A Figma-style pannable stage: the device frame floats in this surface
+        // and is panned/zoomed via a transform (no scrollbars). `overflow:hidden`
+        // clips the off-stage frame; `touch-action:none` lets us own wheel/touch
+        // gestures. `var(--muted)` reads as canvas, not a void.
+        style={{
+          position: "relative",
+          flex: 1,
+          minHeight: 0,
+          overflow: "hidden",
+          touchAction: "none",
+          background: "var(--muted)",
+          cursor: panReady ? "grab" : "default",
+        }}
+      >
+        {/* The stage: positioned at the container origin and moved as a whole by
           `translate(pan) scale(zoom)`. The iframe sits at natural size; the
           transform does the panning + zooming, and the overlays track it by
           re-reading the iframe's live on-screen rect. */}
-      <div
-        ref={stageRef}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: frameWidth,
-          height: contentHeight ?? CANVAS_HEIGHT,
-          // Committed transform. During a gesture the live transform is written
-          // imperatively (applyLive) and re-asserted after any incidental render
-          // by the layout effect below, so this stale value never paints.
-          transform: `translate(${String(panX)}px, ${String(panY)}px) scale(${String(zoom)})`,
-          transformOrigin: "top left",
-        }}
-      >
-        <iframe
-          ref={iframeRef}
-          src={previewUrl}
-          title="plumix-editor-canvas"
-          onLoad={measureContent}
+        <div
+          ref={stageRef}
           style={{
-            display: "block",
+            position: "absolute",
+            top: 0,
+            left: 0,
             width: frameWidth,
             height: contentHeight ?? CANVAS_HEIGHT,
-            border: 0,
-            // Click-through while a block drag or a space-pan is active so the
-            // host receives the pointer events. Single declarative owner — no
-            // imperative toggling that could desync across the two gestures.
-            pointerEvents:
-              dragSpec || movingId || panReady ? "none" : undefined,
+            // Committed transform. During a gesture the live transform is written
+            // imperatively (applyLive) and re-asserted after any incidental render
+            // by the layout effect below, so this stale value never paints.
+            transform: `translate(${String(panX)}px, ${String(panY)}px) scale(${String(zoom)})`,
+            transformOrigin: "top left",
           }}
-        />
-      </div>
-      {/* Clip layer pinned over the visible canvas column. Its overflow:hidden
+        >
+          <iframe
+            ref={iframeRef}
+            src={previewUrl}
+            title="plumix-editor-canvas"
+            onLoad={measureContent}
+            style={{
+              display: "block",
+              width: frameWidth,
+              height: contentHeight ?? CANVAS_HEIGHT,
+              border: 0,
+              // Click-through while a block drag or a space-pan is active so the
+              // host receives the pointer events. Single declarative owner — no
+              // imperative toggling that could desync across the two gestures.
+              pointerEvents:
+                dragSpec || movingId || panReady ? "none" : undefined,
+            }}
+          />
+        </div>
+        {/* Clip layer pinned over the visible canvas column. Its overflow:hidden
           keeps the absolutely-positioned overlays + toolbar from spilling onto
           the side rails when the iframe renders wider than the column. Hidden
           mid-gesture: the overlays read stale geometry while the transform is
           live, and re-measuring per frame is the cost we're avoiding. They snap
           back on commit. */}
-      {!readOnly && container && !gesturing && (
-        <div
-          data-testid="plumix-overlay-clip"
-          style={{
-            position: "fixed",
-            left: container.left,
-            top: container.top,
-            width: container.width,
-            height: container.height,
-            overflow: "hidden",
-            pointerEvents: "none",
-            zIndex: 10,
-          }}
-        >
-          {overlay(hoverId, HOVER_OUTLINE, "plumix-overlay-hover")}
-          {[...selectedIds]
-            .filter((id) => id !== activeId)
-            .map((id) =>
-              overlay(id, MEMBER_OUTLINE, `plumix-overlay-member-${id}`),
-            )}
-          {overlay(activeId, SELECTED_OUTLINE, "plumix-overlay-selected")}
-          {activeBox && <SelectionToolbar box={activeBox} />}
-          {dropSlot && (
-            <div
-              data-testid="plumix-slot-drop-indicator"
-              style={{
-                position: "absolute",
-                left: dropSlot.box.left - container.left,
-                top: dropSlot.box.top - container.top,
-                width: dropSlot.box.width,
-                height: dropSlot.box.height,
-                outline: `2px dashed ${SELECTED_OUTLINE}`,
-                background: "rgba(37,99,235,0.08)",
-                pointerEvents: "none",
-                zIndex: 20,
-              }}
-            />
-          )}
-          {dropY !== null && geometry.frame && (
-            <div
-              data-testid="plumix-drop-indicator"
-              style={{
-                position: "absolute",
-                left: geometry.frame.left - container.left,
-                top: dropY - container.top,
-                width: frameWidth * zoom,
-                height: 2,
-                background: SELECTED_OUTLINE,
-                pointerEvents: "none",
-                zIndex: 20,
-              }}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Slot-scoped inserter: opened by the in-canvas "Add a block" affordance,
-          anchored over the slot, listing only that slot's permitted blocks. A
-          pick inserts into the slot (or at the root) and closes it. */}
-      {!readOnly && pendingAdd && (
-        <Popover
-          open
-          onOpenChange={(next) => {
-            if (!next) setPendingAdd(null);
-          }}
-        >
-          <PopoverAnchor
+        {!readOnly && container && !gesturing && (
+          <div
+            data-testid="plumix-overlay-clip"
             style={{
               position: "fixed",
-              left: pendingAnchor?.left ?? 0,
-              top: pendingAnchor?.top ?? 0,
-              width: pendingAnchor?.width ?? 0,
-              height: pendingAnchor?.height ?? 0,
+              left: container.left,
+              top: container.top,
+              width: container.width,
+              height: container.height,
+              overflow: "hidden",
               pointerEvents: "none",
+              zIndex: 10,
             }}
-          />
-          <PopoverContent
-            data-testid="plumix-inserter-popover"
-            align="start"
-            className="w-72 p-0"
           >
-            {/* Radix's viewport (height:100%) won't clamp to a max-height on
+            {overlay(hoverId, HOVER_OUTLINE, "plumix-overlay-hover")}
+            {[...selectedIds]
+              .filter((id) => id !== activeId)
+              .map((id) =>
+                overlay(id, MEMBER_OUTLINE, `plumix-overlay-member-${id}`),
+              )}
+            {overlay(activeId, SELECTED_OUTLINE, "plumix-overlay-selected")}
+            {activeBox && <SelectionToolbar box={activeBox} />}
+            {dropSlot && (
+              <div
+                data-testid="plumix-slot-drop-indicator"
+                style={{
+                  position: "absolute",
+                  left: dropSlot.box.left - container.left,
+                  top: dropSlot.box.top - container.top,
+                  width: dropSlot.box.width,
+                  height: dropSlot.box.height,
+                  outline: `2px dashed ${SELECTED_OUTLINE}`,
+                  background: "rgba(37,99,235,0.08)",
+                  pointerEvents: "none",
+                  zIndex: 20,
+                }}
+              />
+            )}
+            {dropY !== null && geometry.frame && (
+              <div
+                data-testid="plumix-drop-indicator"
+                style={{
+                  position: "absolute",
+                  left: geometry.frame.left - container.left,
+                  top: dropY - container.top,
+                  width: frameWidth * zoom,
+                  height: 2,
+                  background: SELECTED_OUTLINE,
+                  pointerEvents: "none",
+                  zIndex: 20,
+                }}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Slot-scoped inserter: opened by the in-canvas "Add a block" affordance,
+          anchored over the slot, listing only that slot's permitted blocks. A
+          pick inserts into the slot (or at the root) and closes it. */}
+        {!readOnly && pendingAdd && (
+          <Popover
+            open
+            onOpenChange={(next) => {
+              if (!next) setPendingAdd(null);
+            }}
+          >
+            <PopoverAnchor
+              style={{
+                position: "fixed",
+                left: pendingAnchor?.left ?? 0,
+                top: pendingAnchor?.top ?? 0,
+                width: pendingAnchor?.width ?? 0,
+                height: pendingAnchor?.height ?? 0,
+                pointerEvents: "none",
+              }}
+            />
+            <PopoverContent
+              data-testid="plumix-inserter-popover"
+              align="start"
+              className="w-72 p-0"
+            >
+              {/* Radix's viewport (height:100%) won't clamp to a max-height on
                 the Root, so cap the viewport directly — it then scrolls while
                 the popover still shrinks to fit short lists. */}
-            <ScrollArea className="[&>[data-slot=scroll-area-viewport]]:max-h-96">
-              <BlockCatalog
-                registry={registry}
-                capabilities={capabilities}
-                allowed={pendingAllowed}
-                parentName={pendingParentName}
-                target={pendingTarget}
-                onInsert={() => setPendingAdd(null)}
-              />
-            </ScrollArea>
-          </PopoverContent>
-        </Popover>
-      )}
+              <ScrollArea className="[&>[data-slot=scroll-area-viewport]]:max-h-96">
+                <BlockCatalog
+                  registry={registry}
+                  capabilities={capabilities}
+                  allowed={pendingAllowed}
+                  parentName={pendingParentName}
+                  target={pendingTarget}
+                  onInsert={() => setPendingAdd(null)}
+                />
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
+        )}
 
-      {/* Transient "can't place here" notice for a refused requiresParent drop;
+        {/* Transient "can't place here" notice for a refused requiresParent drop;
           the editor has no toast surface, so it shows inline. */}
-      {!readOnly && rejection && (
-        <div
-          role="status"
-          data-testid="plumix-add-rejection"
-          style={{
-            position: "absolute",
-            left: "50%",
-            bottom: 16,
-            transform: "translateX(-50%)",
-            zIndex: 30,
-            padding: "0.5rem 0.75rem",
-            borderRadius: 8,
-            fontSize: "0.8125rem",
-            color: "var(--destructive-foreground, #fff)",
-            background: "var(--destructive, #dc2626)",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-            pointerEvents: "none",
-          }}
-        >
-          {rejection}
-        </div>
-      )}
+        {!readOnly && rejection && (
+          <div
+            role="status"
+            data-testid="plumix-add-rejection"
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: 16,
+              transform: "translateX(-50%)",
+              zIndex: 30,
+              padding: "0.5rem 0.75rem",
+              borderRadius: 8,
+              fontSize: "0.8125rem",
+              color: "var(--destructive-foreground, #fff)",
+              background: "var(--destructive, #dc2626)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+              pointerEvents: "none",
+            }}
+          >
+            {rejection}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The frame header: the active device label, draggable to pan the canvas. */
+function CanvasHandle({
+  device,
+  onPointerDown,
+}: {
+  readonly device: EditorDevice;
+  readonly onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void;
+}): ReactElement {
+  const { i18n } = useLingui();
+  return (
+    <div
+      data-testid="plumix-canvas-handle"
+      onPointerDown={onPointerDown}
+      title={i18n._({
+        id: "editor.canvas.pan",
+        message: "Drag to move the canvas",
+      })}
+      className="bg-background flex h-7 shrink-0 cursor-grab items-center border-b px-3 text-xs font-medium select-none active:cursor-grabbing"
+      style={{ touchAction: "none" }}
+    >
+      {deviceLabel(i18n, device)}
     </div>
   );
 }

@@ -492,3 +492,48 @@ describe("CanvasFrame nested drop", () => {
     expect(tree[1]?.attrs?.items).toEqual([]);
   });
 });
+
+describe("CanvasFrame — drag handle", () => {
+  let storeApi: ReturnType<typeof useEditorStoreApi> | undefined;
+  function Capture(): null {
+    const api = useEditorStoreApi();
+    useEffect(() => {
+      storeApi = api;
+    }, [api]);
+    return null;
+  }
+
+  test("the frame handle shows the active device label", () => {
+    const { getByTestId } = render(
+      <Wrapper>
+        <CanvasFrame
+          previewUrl="about:blank"
+          origin={ORIGIN}
+          registry={registry}
+          capabilities={NO_CAPS}
+        />
+        <Capture />
+      </Wrapper>,
+    );
+
+    expect(getByTestId("plumix-canvas-handle").textContent).toBe("Desktop");
+    act(() => storeApi?.getState().setDevice("tablet"));
+    expect(getByTestId("plumix-canvas-handle").textContent).toBe("Tablet");
+  });
+
+  test("the handle is hidden in read-only preview", () => {
+    const { queryByTestId } = render(
+      <Wrapper>
+        <CanvasFrame
+          previewUrl="about:blank"
+          origin={ORIGIN}
+          registry={registry}
+          capabilities={NO_CAPS}
+          readOnly
+        />
+      </Wrapper>,
+    );
+
+    expect(queryByTestId("plumix-canvas-handle")).toBeNull();
+  });
+});

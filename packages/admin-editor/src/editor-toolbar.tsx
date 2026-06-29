@@ -36,7 +36,7 @@ const DEVICES: readonly {
 ];
 
 // Static ids (a switch, not a template literal) so the extractor catalogs them.
-function deviceLabel(i18n: I18n, value: EditorDevice): string {
+export function deviceLabel(i18n: I18n, value: EditorDevice): string {
   switch (value) {
     case "tablet":
       return i18n._({ id: "editor.toolbar.device.tablet", message: "Tablet" });
