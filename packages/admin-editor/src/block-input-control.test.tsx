@@ -177,7 +177,9 @@ describe("BlockInputControl", () => {
       expect(getByTestId("block-input-body-code")).toBeDefined();
       expect(getByTestId("block-input-body-subscript")).toBeDefined();
       expect(getByTestId("block-input-body-superscript")).toBeDefined();
-      const editor = getByTestId("block-input-body-editor");
+      // The contenteditable surface can mount a tick after the toolbar, so
+      // await it rather than reading it synchronously (a CI-only race).
+      const editor = await findByTestId("block-input-body-editor");
       expect(editor.getAttribute("contenteditable")).toBe("true");
       expect(editor.textContent).toContain("Hello");
 
