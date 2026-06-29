@@ -13,6 +13,13 @@ interface PreviewPayload {
   readonly entryId: number;
 }
 
+/** A verified preview grant: which entry it reveals, and which user minted it
+ *  (so the render can overlay that user's autosave). */
+export interface PreviewGrant {
+  readonly entryId: number;
+  readonly userId: number;
+}
+
 export async function createPreviewToken(
   db: Db,
   args: { readonly entryId: number; readonly userId: number },
@@ -30,20 +37,29 @@ export async function createPreviewToken(
 }
 
 /**
- * Resolve a raw preview token to the entry id it grants draft visibility
- * for, or null when the token is missing, the wrong type, expired, or
+ * Resolve a raw preview token to the grant it carries (entry id + minting
+ * user), or null when the token is missing, the wrong type, expired, or
  * malformed. Does not consume the token — preview links stay valid until
  * they expire.
  */
-export async function verifyPreviewToken(
+export async function verifyPreviewGrant(
   db: Db,
   rawToken: string,
-): Promise<number | null> {
+): Promise<PreviewGrant | null> {
   const hash = await hashToken(rawToken);
   const row = await db.query.authTokens.findFirst({
     where: and(eq(authTokens.hash, hash), eq(authTokens.type, "preview_link")),
   });
   if (!row || row.expiresAt.getTime() < Date.now()) return null;
   const entryId = (row.payload as PreviewPayload | null)?.entryId;
-  return typeof entryId === "number" ? entryId : null;
+  if (typeof entryId !== "number" || row.userId === null) return null;
+  return { entryId, userId: row.userId };
+}
+
+/** The entry id a token grants draft visibility for, or null. */
+export async function verifyPreviewToken(
+  db: Db,
+  rawToken: string,
+): Promise<number | null> {
+  return (await verifyPreviewGrant(db, rawToken))?.entryId ?? null;
 }

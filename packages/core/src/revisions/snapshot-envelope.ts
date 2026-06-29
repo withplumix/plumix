@@ -1,6 +1,8 @@
 // The `__plumix_*` meta-key namespace is reserved for framework use —
 // plugin / theme code must not author keys under it, and meta-box
 // fields cannot use this prefix.
+const RESERVED_META_PREFIX = "__plumix_";
+
 export const SNAPSHOT_META_KEY = "__plumix_snapshot";
 
 // Author-supplied label for a revision (Builder.io's "Comment" icon).
@@ -32,6 +34,21 @@ export function decodeSnapshotEnvelope(
   if (typeof slug !== "string" || slug.length === 0) return undefined;
   if (parentId !== null && typeof parentId !== "number") return undefined;
   return { slug, parentId };
+}
+
+/**
+ * Drop the framework-reserved `__plumix_*` keys (snapshot envelope, revision
+ * message) so an autosave's meta matches the live row's user-meta shape —
+ * used when overlaying an autosave onto a row for preview render.
+ */
+export function stripReservedMeta(
+  meta: Readonly<Record<string, unknown>>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(meta).filter(
+      ([key]) => !key.startsWith(RESERVED_META_PREFIX),
+    ),
+  );
 }
 
 export function decodeRevisionMessage(

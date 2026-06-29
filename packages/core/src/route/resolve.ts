@@ -18,12 +18,15 @@ import type {
   SingleData,
   TaxonomyData,
 } from "./render/resolved-entry.js";
+import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
 import { and, desc, eq, inArray, isNotNull, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { labelSourceText } from "../i18n/label.js";
+import { getAutosave } from "../revisions/repository.js";
+import { stripReservedMeta } from "../revisions/snapshot-envelope.js";
 import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
 import { notFound, permanentRedirect } from "../runtime/http.js";
 import { resolveEditMode } from "./edit-mode.js";
@@ -358,8 +361,11 @@ async function resolveSingle(
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
-  const row = await findEntryForSingle(ctx, intent.entryType, params);
-  if (!row) return notFound("public-post-not-found");
+  const baseRow = await findEntryForSingle(ctx, intent.entryType, params);
+  if (!baseRow) return notFound("public-post-not-found");
+  // A preview link renders the minting author's in-progress autosave, so the
+  // "Preview current draft" action shows pending edits rather than the live row.
+  const row = await overlayPreviewAutosave(ctx, baseRow);
 
   ctx.resolvedEntity = { kind: "entry", id: row.id };
 
@@ -484,6 +490,37 @@ async function resolveArchive(
 // archive matched (no /page/N).
 function parsePageParam(raw: string | undefined): number {
   return raw === undefined ? 1 : Number(raw);
+}
+
+/**
+ * When a valid `?preview=` token grants this exact entry, overlay the token
+ * author's autosave onto the live row for render. Reserved `__plumix_*` meta
+ * keys are stripped so the bag matches a live row's shape, and the live
+ * slug/parentId are kept so the permalink stays correct. Passthrough on the
+ * common no-token / no-autosave paths.
+ */
+async function overlayPreviewAutosave(
+  ctx: AppContext,
+  entry: Entry,
+): Promise<Entry> {
+  if (entry.status === "trash") return entry;
+  const token = readPreviewToken(ctx);
+  if (token === null) return entry;
+  const grant = await verifyPreviewGrant(ctx.db, token);
+  if (grant === null) return entry;
+  if (grant.entryId !== entry.id) return entry;
+  const autosave = await getAutosave(ctx.db, {
+    entryId: entry.id,
+    authorId: grant.userId,
+  });
+  if (!autosave) return entry;
+  return {
+    ...entry,
+    title: autosave.title,
+    content: autosave.content,
+    excerpt: autosave.excerpt,
+    meta: stripReservedMeta(autosave.meta),
+  };
 }
 
 async function findEntryForSingle(
