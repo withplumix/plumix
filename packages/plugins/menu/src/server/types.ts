@@ -4,9 +4,7 @@
  * resolvers land in slice 2.
  */
 export type MenuItemMeta =
-  | MenuItemCustomMeta
-  | MenuItemEntryMeta
-  | MenuItemTermMeta;
+  MenuItemCustomMeta | MenuItemEntryMeta | MenuItemTermMeta;
 
 export interface MenuItemDisplayAttrs {
   readonly target?: "_blank";

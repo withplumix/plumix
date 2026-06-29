@@ -51,9 +51,7 @@ export default plumix({
   }),
   imageDelivery: images({ zone: "media.example.com" }),
   auth: auth({
-    passkey: {
-      /* … */
-    },
+    passkey: {/* … */},
   }),
   plugins: [media()],
 });

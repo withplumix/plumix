@@ -106,8 +106,7 @@ export const Route = createFileRoute("/_authenticated/users/create")({
 // the success payload (user + url) correlates with the status without
 // nullable juggling.
 type ViewState =
-  | { status: "idle" }
-  | { status: "success"; user: User; inviteUrl: string };
+  { status: "idle" } | { status: "success"; user: User; inviteUrl: string };
 
 function InviteUserRoute(): ReactNode {
   const navigate = useNavigate();

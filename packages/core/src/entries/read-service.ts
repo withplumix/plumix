@@ -142,9 +142,7 @@ const ORDER_COLUMNS: Record<EntryListOrderColumn, AnySQLiteColumn> = {
 };
 
 type StatusInput =
-  | EntryStatus
-  | readonly (EntryStatus | undefined)[]
-  | undefined;
+  EntryStatus | readonly (EntryStatus | undefined)[] | undefined;
 
 /**
  * Resolve the caller's `status` input into a WHERE clause, honoring the

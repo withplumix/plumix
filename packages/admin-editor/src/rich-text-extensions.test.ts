@@ -42,8 +42,7 @@ describe("richTextExtensions", () => {
     // h1–h4 match the sanitiser allowlist; h5/h6 are intentionally excluded.
     const heading = richTextExtensions().find((ext) => ext.name === "heading");
     const options = heading?.options as
-      | { levels?: readonly number[] }
-      | undefined;
+      { levels?: readonly number[] } | undefined;
 
     expect(options?.levels).toEqual([1, 2, 3, 4]);
   });

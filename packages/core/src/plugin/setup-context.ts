@@ -429,8 +429,7 @@ export function createPluginSetupContext({
     registerCapability: (
       name: string,
       minRoleOrOptions:
-        | UserRole
-        | { minRole: UserRole; defaultGrants?: readonly UserRole[] },
+        UserRole | { minRole: UserRole; defaultGrants?: readonly UserRole[] },
     ) => {
       if (registry.capabilities.has(name)) {
         throw DuplicateRegistrationError.alreadyRegistered({

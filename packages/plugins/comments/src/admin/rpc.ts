@@ -18,11 +18,7 @@ export interface ModerationCommentDTO {
 
 type StatusCounts = Record<CommentStatus, number>;
 export type ModerationAction =
-  | "approve"
-  | "spam"
-  | "trash"
-  | "restore"
-  | "purge";
+  "approve" | "spam" | "trash" | "restore" | "purge";
 
 const COMMENTS_KEY = ["comments"] as const;
 
@@ -42,8 +38,7 @@ async function rpcCall<TOutput>(
   } | null;
   if (!res.ok) {
     const error = envelope?.json as
-      | { message?: string; data?: { reason?: string } }
-      | undefined;
+      { message?: string; data?: { reason?: string } } | undefined;
     // eslint-disable-next-line no-restricted-syntax -- rethrow server-derived rpc error
     throw new Error(
       error?.data?.reason ?? error?.message ?? `rpc_${String(res.status)}`,

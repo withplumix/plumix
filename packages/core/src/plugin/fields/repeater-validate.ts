@@ -70,10 +70,7 @@ export function walkRepeaterRows(
 }
 
 type RepeaterValidationReason =
-  | "invalid_shape"
-  | "below_min"
-  | "above_max"
-  | "subfield_invalid";
+  "invalid_shape" | "below_min" | "above_max" | "subfield_invalid";
 
 export class RepeaterValidationError extends Error {
   static {

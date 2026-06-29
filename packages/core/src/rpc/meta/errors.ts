@@ -1,7 +1,5 @@
 type MetaReferenceErrorCode =
-  | "scope_not_serializable"
-  | "batch_size_exceeded"
-  | "meta_key_forbidden_chars";
+  "scope_not_serializable" | "batch_size_exceeded" | "meta_key_forbidden_chars";
 
 /**
  * Reference-resolution invariant violated while batching meta lookups: a

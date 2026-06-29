@@ -100,8 +100,7 @@ function readAccept(
   field: MetaBoxFieldManifestEntry,
 ): string | readonly string[] | undefined {
   const scope = field.referenceTarget?.scope as
-    | { readonly accept?: unknown }
-    | undefined;
+    { readonly accept?: unknown } | undefined;
   const accept = scope?.accept;
   if (typeof accept === "string") return accept;
   if (Array.isArray(accept)) {

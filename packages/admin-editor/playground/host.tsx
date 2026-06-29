@@ -32,20 +32,19 @@ i18n.activate("en");
 // Core blocks ship no variations, so augment core/group with an inserter
 // variation here — the harness needs one to exercise the catalog's
 // blocks-plus-variations rendering.
-const withVariations = coreBlocks.map(
-  (spec): BlockSpec =>
-    spec.name === "core/group"
-      ? {
-          ...spec,
-          variations: [
-            {
-              slug: "group/two-column",
-              title: "Two-column group",
-              attrs: { layout: "row" },
-            },
-          ],
-        }
-      : spec,
+const withVariations = coreBlocks.map((spec): BlockSpec =>
+  spec.name === "core/group"
+    ? {
+        ...spec,
+        variations: [
+          {
+            slug: "group/two-column",
+            title: "Two-column group",
+            attrs: { layout: "row" },
+          },
+        ],
+      }
+    : spec,
 );
 const registry = createBlockRegistry([...withVariations, feedSpec]);
 

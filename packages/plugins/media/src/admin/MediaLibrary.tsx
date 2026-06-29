@@ -199,8 +199,7 @@ async function rpcCall<TOutput>(
   } | null;
   if (!res.ok) {
     const error = envelope?.json as
-      | { message?: string; data?: { reason?: string } }
-      | undefined;
+      { message?: string; data?: { reason?: string } } | undefined;
     const reason =
       error?.data?.reason ?? error?.message ?? `rpc_${String(res.status)}`;
     // eslint-disable-next-line no-restricted-syntax -- admin-side rpc envelope rethrow; server-derived message is the discriminator

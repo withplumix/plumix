@@ -128,8 +128,7 @@ export class SigV4Error extends Error {
 }
 
 type PlumixRuntimeConfigErrorCode =
-  | "bindings_missing"
-  | "async_local_storage_missing";
+  "bindings_missing" | "async_local_storage_missing";
 
 export class PlumixRuntimeConfigError extends Error {
   static {
