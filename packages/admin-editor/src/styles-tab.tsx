@@ -53,6 +53,20 @@ const SECTIONS: readonly {
   readonly controls: readonly ControlSpec[];
 }[] = [
   {
+    // Sizing has no token scale (widths are arbitrary px/%/rem), so these are
+    // custom-only — same model as font-size.
+    id: "size",
+    label: "Size",
+    controls: [
+      { property: "width", label: "Width" },
+      { property: "height", label: "Height" },
+      { property: "minWidth", label: "Min width" },
+      { property: "minHeight", label: "Min height" },
+      { property: "maxWidth", label: "Max width" },
+      { property: "maxHeight", label: "Max height" },
+    ],
+  },
+  {
     id: "typography",
     label: "Typography",
     controls: [
@@ -174,17 +188,21 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
               {section.label}
             </AccordionTrigger>
             <AccordionContent className="flex flex-col gap-3">
-              {section.controls.map((c) => (
-                <StyleControl
-                  key={c.property}
-                  label={c.label}
-                  property={c.property}
-                  category={c.category}
-                  value={valueOf(c.property)}
-                  tokens={tokens}
-                  onChange={setter(c.property)}
-                />
-              ))}
+              {/* Two-per-row so the rail stays compact; each StyleControl is a
+                  self-contained cell (label + input stacked). */}
+              <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+                {section.controls.map((c) => (
+                  <StyleControl
+                    key={c.property}
+                    label={c.label}
+                    property={c.property}
+                    category={c.category}
+                    value={valueOf(c.property)}
+                    tokens={tokens}
+                    onChange={setter(c.property)}
+                  />
+                ))}
+              </div>
               {section.id === "typography" && (
                 <TextStyleControls valueOf={valueOf} setter={setter} />
               )}
@@ -402,20 +420,22 @@ function SpacingControls({
           data-testid={group.testId}
         >
           <span className="text-muted-foreground text-xs">{group.label}</span>
-          {SIDES.map((side) => {
-            const property = `${group.prefix}${side}`;
-            return (
-              <StyleControl
-                key={property}
-                label={side}
-                property={property}
-                category="spacing"
-                value={valueOf(property)}
-                tokens={tokens}
-                onChange={setter(property)}
-              />
-            );
-          })}
+          <div className="grid grid-cols-2 gap-x-2 gap-y-2">
+            {SIDES.map((side) => {
+              const property = `${group.prefix}${side}`;
+              return (
+                <StyleControl
+                  key={property}
+                  label={side}
+                  property={property}
+                  category="spacing"
+                  value={valueOf(property)}
+                  tokens={tokens}
+                  onChange={setter(property)}
+                />
+              );
+            })}
+          </div>
         </div>
       ))}
     </div>
