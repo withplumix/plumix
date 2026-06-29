@@ -45,6 +45,6 @@ export const richTextBlock = defineBlock({
   // removed in #473.
   keywords: ["paragraph", "text", "body"],
   inputs: [{ name: "body", type: "richtext", label: "Body" }],
-  defaults: { body: "<p></p>" },
+  defaults: { body: "<p>Enter text here…</p>" },
   render: RichTextBlockRender,
 });
