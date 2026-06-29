@@ -4,7 +4,6 @@ import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useState } from "react";
 import { getPluginFieldType } from "@/lib/plugin-registry.js";
 import { useLabel } from "@/lib/use-label.js";
-import { cn } from "@/lib/utils";
 import { defineMessage } from "@lingui/core/macro";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
@@ -18,6 +17,13 @@ import {
   FormMessage,
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { Slider } from "@plumix/admin-ui/slider";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
@@ -125,16 +131,6 @@ export function MetaBoxField({
     />
   );
 }
-
-// Mirrors the shadcn <Input> look (same border, ring, disabled states)
-// for the native <select>, so it lines up with the other controls in a
-// dense sidebar.
-const CONTROL_BASE_CLASS = cn(
-  "border-input bg-background focus-visible:ring-ring",
-  "rounded-md border text-sm",
-  "focus-visible:ring-2 focus-visible:outline-none",
-  "disabled:cursor-not-allowed disabled:opacity-50",
-);
 
 // Returns the native-element body for the given field. Must render a
 // single element so shadcn's `<FormControl>` (which uses Radix `Slot`)
@@ -448,20 +444,30 @@ function renderNativeInput({
 
   if (field.inputType === "select") {
     return (
-      <select
-        {...common}
+      <Select
+        name={rhf.name}
         value={asString(rhf.value)}
-        onChange={(e) => {
-          rhf.onChange(e.target.value);
+        onValueChange={(next) => {
+          rhf.onChange(next);
         }}
-        className={cn(CONTROL_BASE_CLASS, "h-9 px-3 py-1")}
+        disabled={disabled}
+        required={field.required}
       >
-        {(field.options ?? []).map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {renderLabel(opt.label)}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger
+          className="w-full"
+          onBlur={rhf.onBlur}
+          data-testid={testId}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {(field.options ?? []).map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {renderLabel(opt.label)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     );
   }
 

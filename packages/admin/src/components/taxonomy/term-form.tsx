@@ -21,6 +21,13 @@ import {
   FormMessage,
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { idParam, vMessage } from "@plumix/core/validation";
 
@@ -45,6 +52,10 @@ const M = {
     message: "— root —",
   }),
 } satisfies Record<string, MessageDescriptor>;
+
+// Radix Select forbids an empty-string item value, so the "root" choice
+// carries a sentinel that maps back to `null` (no parent) on change.
+const ROOT_VALUE = "__root__";
 
 // Client-side shape mirrors `termCreateInputSchema` / `termUpdateInputSchema`
 // on the server. Slug is optional at the form level — the server derives
@@ -198,24 +209,33 @@ export function TermForm({
                   <Trans id="termForm.parent" message="Parent" />
                 </FormLabel>
                 <FormControl>
-                  <select
-                    value={field.value == null ? "" : String(field.value)}
-                    onBlur={field.onBlur}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      field.onChange(raw === "" ? null : Number(raw));
+                  <Select
+                    value={
+                      field.value == null ? ROOT_VALUE : String(field.value)
+                    }
+                    onValueChange={(next) => {
+                      field.onChange(next === ROOT_VALUE ? null : Number(next));
                     }}
                     disabled={isSubmitting}
-                    data-testid="term-form-parent-select"
-                    className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="">{labelFn(M.rootOption)}</option>
-                    {parentOptions.map((opt) => (
-                      <option key={opt.id} value={String(opt.id)}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      className="w-full"
+                      onBlur={field.onBlur}
+                      data-testid="term-form-parent-select"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ROOT_VALUE}>
+                        {labelFn(M.rootOption)}
+                      </SelectItem>
+                      {parentOptions.map((opt) => (
+                        <SelectItem key={opt.id} value={String(opt.id)}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </FormControl>
                 <FormMessage />
               </FormItem>

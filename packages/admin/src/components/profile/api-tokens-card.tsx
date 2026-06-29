@@ -28,7 +28,6 @@ import {
 } from "@plumix/admin-ui/alert-dialog";
 import { Badge } from "@plumix/admin-ui/badge";
 import { Button } from "@plumix/admin-ui/button";
-import { Textarea } from "@plumix/admin-ui/textarea";
 import {
   Card,
   CardContent,
@@ -55,6 +54,13 @@ import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
 import { RadioGroup, RadioGroupItem } from "@plumix/admin-ui/radio-group";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -62,6 +68,7 @@ import {
   TableHeader,
   TableRow,
 } from "@plumix/admin-ui/table";
+import { Textarea } from "@plumix/admin-ui/textarea";
 import { vMessage } from "@plumix/core/validation";
 
 // Renders the API-token surface for a target user. Two modes:
@@ -573,24 +580,30 @@ function CreateTokenForm({
                 <Trans id="apiTokens.create.expires" message="Expires" />
               </FormLabel>
               <FormControl>
-                <select
+                <Select
                   value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
+                  onValueChange={field.onChange}
                   disabled={pending}
-                  data-testid="api-tokens-create-expires-select"
-                  className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
                 >
-                  {(
-                    Object.keys(
-                      EXPIRY_DESCRIPTOR,
-                    ) as CreateFormValues["expires"][]
-                  ).map((value) => (
-                    <option key={value} value={value}>
-                      {label(EXPIRY_DESCRIPTOR[value])}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    className="w-full"
+                    onBlur={field.onBlur}
+                    data-testid="api-tokens-create-expires-select"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(
+                      Object.keys(
+                        EXPIRY_DESCRIPTOR,
+                      ) as CreateFormValues["expires"][]
+                    ).map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {label(EXPIRY_DESCRIPTOR[value])}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormControl>
               <FormMessage />
             </FormItem>

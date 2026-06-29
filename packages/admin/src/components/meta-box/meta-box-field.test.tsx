@@ -445,12 +445,12 @@ describe("MetaBoxField dispatcher", () => {
         onChangeSpy={onChange}
       />,
     );
-    const select = screen.getByTestId("meta-box-field-k-input");
-    expect(select.tagName).toBe("SELECT");
-    expect(select).toHaveValue("a");
-
-    await userEvent.selectOptions(select, "b");
-    expect(onChange).toHaveBeenCalledWith("b");
+    // shadcn Select is a Radix combobox (button trigger + portal), not a
+    // native <select>. Assert the trigger renders bound to the current
+    // value; open/click interaction is covered by editor e2e.
+    const trigger = screen.getByTestId("meta-box-field-k-input");
+    expect(trigger).toHaveAttribute("role", "combobox");
+    expect(trigger).toHaveTextContent("Alpha");
   });
 
   test("radio: renders one input per option, click fires onChange", async () => {

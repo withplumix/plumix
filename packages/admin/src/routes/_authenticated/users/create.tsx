@@ -42,6 +42,13 @@ import {
 import { ArrowLeft, Check, Copy } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { vMessage } from "@plumix/core/validation";
 
 import {
@@ -246,25 +253,30 @@ function InviteUserRoute(): ReactNode {
                       <Trans id="userInvite.role.label" message="Role" />
                     </FormLabel>
                     <FormControl>
-                      <select
+                      <Select
                         value={field.value}
-                        onBlur={field.onBlur}
-                        onChange={(e) => {
-                          // DOM types `e.target.value` as a bare string —
-                          // narrow back to `UserRole` before forwarding.
-                          const next = e.target.value;
+                        onValueChange={(next) => {
+                          // Radix yields a bare string — narrow back to
+                          // `UserRole` before forwarding.
                           if (isUserRole(next)) field.onChange(next);
                         }}
                         disabled={inviteUser.isPending}
-                        data-testid="invite-role-select"
-                        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {USER_ROLES.map((role) => (
-                          <option key={role} value={role}>
-                            {label(ROLE_LABEL_LONG[role])}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger
+                          className="w-full"
+                          onBlur={field.onBlur}
+                          data-testid="invite-role-select"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {USER_ROLES.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {label(ROLE_LABEL_LONG[role])}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

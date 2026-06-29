@@ -60,6 +60,13 @@ import {
 import { ArrowLeft } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
@@ -116,6 +123,10 @@ const M = {
     message: "Keep entries as-is (none to reassign)",
   }),
 } satisfies Record<string, MessageDescriptor>;
+
+// Radix Select forbids an empty-string item value, so "keep entries as-is"
+// carries a sentinel that maps back to `null` (no reassignment) on change.
+const KEEP_AS_IS_VALUE = "__keep__";
 
 async function invalidateUserCaches(
   queryClient: QueryClient,
@@ -413,23 +424,28 @@ function UserEditForm({
                         <Trans id="userEdit.role.label" message="Role" />
                       </FormLabel>
                       <FormControl>
-                        <select
+                        <Select
                           value={field.value}
-                          onBlur={field.onBlur}
-                          onChange={(e) => {
-                            const next = e.target.value;
+                          onValueChange={(next) => {
                             if (isUserRole(next)) field.onChange(next);
                           }}
                           disabled={updateUser.isPending}
-                          data-testid="user-edit-role-select"
-                          className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {USER_ROLES.map((role) => (
-                            <option key={role} value={role}>
-                              {label(ROLE_LABEL_LONG[role])}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger
+                            className="w-full"
+                            onBlur={field.onBlur}
+                            data-testid="user-edit-role-select"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {USER_ROLES.map((role) => (
+                              <SelectItem key={role} value={role}>
+                                {label(ROLE_LABEL_LONG[role])}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -720,24 +736,31 @@ function DeleteCard({ target }: { target: User }): ReactNode {
               message="Reassign entries to"
             />
           </UILabel>
-          <select
-            id="reassign-to"
-            value={reassignTo == null ? "" : String(reassignTo)}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setReassignTo(raw === "" ? null : Number(raw));
+          <Select
+            value={reassignTo == null ? KEEP_AS_IS_VALUE : String(reassignTo)}
+            onValueChange={(next) => {
+              setReassignTo(next === KEEP_AS_IS_VALUE ? null : Number(next));
             }}
             disabled={deleteUser.isPending || candidates.isPending}
-            data-testid="user-delete-reassign-select"
-            className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <option value="">{label(M.reassignKeepAsIs)}</option>
-            {reassignOptions.map((u) => (
-              <option key={u.id} value={String(u.id)}>
-                {u.name ?? u.email} ({u.email})
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              id="reassign-to"
+              className="w-full"
+              data-testid="user-delete-reassign-select"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={KEEP_AS_IS_VALUE}>
+                {label(M.reassignKeepAsIs)}
+              </SelectItem>
+              {reassignOptions.map((u) => (
+                <SelectItem key={u.id} value={String(u.id)}>
+                  {u.name ?? u.email} ({u.email})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {serverError ? (
