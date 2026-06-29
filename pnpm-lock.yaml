@@ -172,11 +172,11 @@ catalogs:
       version: 4.3.1
   tanstack:
     '@tanstack/react-query':
-      specifier: ^5.101.2
-      version: 5.101.2
+      specifier: ^5.101.0
+      version: 5.101.0
     '@tanstack/react-query-devtools':
-      specifier: ^5.101.2
-      version: 5.101.2
+      specifier: ^5.101.0
+      version: 5.101.0
     '@tanstack/react-router':
       specifier: ^1.170.16
       version: 1.170.16
@@ -385,7 +385,7 @@ importers:
         version: 1.14.6
       '@orpc/tanstack-query':
         specifier: catalog:orpc
-        version: 1.14.6(@orpc/client@1.14.6)(@tanstack/query-core@5.101.2)
+        version: 1.14.6(@orpc/client@1.14.6)(@tanstack/query-core@5.101.0)
       '@plumix/admin-editor':
         specifier: workspace:*
         version: link:../admin-editor
@@ -394,7 +394,7 @@ importers:
         version: link:../admin-ui
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.101.2(react@19.2.7)
+        version: 5.101.0(react@19.2.7)
       '@tanstack/react-router':
         specifier: catalog:tanstack
         version: 1.170.16(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -476,7 +476,7 @@ importers:
         version: 4.3.1(vite@8.0.16(@types/node@26.0.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
       '@tanstack/react-query-devtools':
         specifier: catalog:tanstack
-        version: 5.101.2(@tanstack/react-query@5.101.2(react@19.2.7))(react@19.2.7)
+        version: 5.101.0(@tanstack/react-query@5.101.0(react@19.2.7))(react@19.2.7)
       '@tanstack/react-router-devtools':
         specifier: catalog:tanstack
         version: 1.167.0(@tanstack/react-router@1.170.16(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@tanstack/router-core@1.171.13)(csstype@3.2.3)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -985,7 +985,7 @@ importers:
         version: link:../../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.101.2(react@19.2.7)
+        version: 5.101.0(react@19.2.7)
       '@testing-library/jest-dom':
         specifier: catalog:testing-library
         version: 6.9.1
@@ -1199,7 +1199,7 @@ importers:
         version: link:../../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.101.2(react@19.2.7)
+        version: 5.101.0(react@19.2.7)
       '@testing-library/jest-dom':
         specifier: catalog:testing-library
         version: 6.9.1
@@ -1327,7 +1327,7 @@ importers:
         version: link:../../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.101.2(react@19.2.7)
+        version: 5.101.0(react@19.2.7)
       '@testing-library/jest-dom':
         specifier: catalog:testing-library
         version: 6.9.1
@@ -1452,7 +1452,7 @@ importers:
         version: link:../../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.101.2(react@19.2.7)
+        version: 5.101.0(react@19.2.7)
       '@testing-library/jest-dom':
         specifier: catalog:testing-library
         version: 6.9.1
@@ -1665,7 +1665,7 @@ importers:
         version: 1.14.6
       '@orpc/tanstack-query':
         specifier: catalog:orpc
-        version: 1.14.6(@orpc/client@1.14.6)(@tanstack/query-core@5.101.2)
+        version: 1.14.6(@orpc/client@1.14.6)(@tanstack/query-core@5.101.0)
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.0
@@ -1686,7 +1686,7 @@ importers:
         version: link:../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.101.2(react@19.2.7)
+        version: 5.101.0(react@19.2.7)
       '@tanstack/react-router':
         specifier: catalog:tanstack
         version: 1.170.16(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -4422,20 +4422,20 @@ packages:
     resolution: {integrity: sha512-79pf/RkhteYZTRgcR4F9kbk84P2N8rugQJswxfIqovlbRiT3yI7eBE+5QorIrZaOKktsgzRlXh1l/du/xpl4iA==}
     engines: {node: '>=20.19'}
 
-  '@tanstack/query-core@5.101.2':
-    resolution: {integrity: sha512-hH5MLoJhF7KaIGd7q3xTXGXvslI+GYlM1Z/35aSHHWaCJWB7XvTSHYuV3eM7tw+aE0mT/xMro4M4Q9rCGHT0lw==}
+  '@tanstack/query-core@5.101.0':
+    resolution: {integrity: sha512-cQetA74EB+seWySv1TTKr828TnP0u39m6LykwDXIo84SNortpDkp30TMEjkqtYCNP9c40uT/iwl6MLiufEt0Ow==}
 
-  '@tanstack/query-devtools@5.101.2':
-    resolution: {integrity: sha512-o+wHcqgN7Pp0s8v1i0UGq/ZrrEKrxdIiMQmKRdYb2w7NPtylYSJ4+wg/tIn71m9DLstwUwdEGAvROdly6HXP6w==}
+  '@tanstack/query-devtools@5.101.0':
+    resolution: {integrity: sha512-MVqw17k08RQtGGLEL654+dX/btbX9p/8WjkznO//zusLTMaObxi3Q+MoFwGVkC9K3tqjn8qrrNhJevXx4fJTeQ==}
 
-  '@tanstack/react-query-devtools@5.101.2':
-    resolution: {integrity: sha512-eU7HctdA9gDjqoERoEdzLbw9DiqnBDfh5+Hu0u26gjqoHJezOpQAuiesDL2VvkU+2cPV76zgv0tMZsOrI4LjnQ==}
+  '@tanstack/react-query-devtools@5.101.0':
+    resolution: {integrity: sha512-cpZA0+WqKXwrwMfiWZEGGF6QrIWVQFbhBtxqDF5sQsAfrFf47HIE6fiPbQU3wyAUEN2+7UNqLCQe7oG6m3f93w==}
     peerDependencies:
-      '@tanstack/react-query': ^5.101.2
+      '@tanstack/react-query': ^5.101.0
       react: ^18 || ^19
 
-  '@tanstack/react-query@5.101.2':
-    resolution: {integrity: sha512-seDkr6kzGzX1okaaTtZPtgA688CDPlXUz1C6xSg0ESqn04Vuc8tlrYms1s3de+znBqhPVxFRfpAfUf+6XvfPWg==}
+  '@tanstack/react-query@5.101.0':
+    resolution: {integrity: sha512-rLlJXSpkqfizLWgkR5+eLeIk0MvTx/meEIR7LRjxic+qxiQP8zVjq7BqQkiCMNLQBlLfuOLqqr6KO5GtrDlmSg==}
     peerDependencies:
       react: ^18 || ^19
 
@@ -9021,11 +9021,11 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@orpc/tanstack-query@1.14.6(@orpc/client@1.14.6)(@tanstack/query-core@5.101.2)':
+  '@orpc/tanstack-query@1.14.6(@orpc/client@1.14.6)(@tanstack/query-core@5.101.0)':
     dependencies:
       '@orpc/client': 1.14.6
       '@orpc/shared': 1.14.6
-      '@tanstack/query-core': 5.101.2
+      '@tanstack/query-core': 5.101.0
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
@@ -10191,19 +10191,19 @@ snapshots:
 
   '@tanstack/history@1.162.0': {}
 
-  '@tanstack/query-core@5.101.2': {}
+  '@tanstack/query-core@5.101.0': {}
 
-  '@tanstack/query-devtools@5.101.2': {}
+  '@tanstack/query-devtools@5.101.0': {}
 
-  '@tanstack/react-query-devtools@5.101.2(@tanstack/react-query@5.101.2(react@19.2.7))(react@19.2.7)':
+  '@tanstack/react-query-devtools@5.101.0(@tanstack/react-query@5.101.0(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@tanstack/query-devtools': 5.101.2
-      '@tanstack/react-query': 5.101.2(react@19.2.7)
+      '@tanstack/query-devtools': 5.101.0
+      '@tanstack/react-query': 5.101.0(react@19.2.7)
       react: 19.2.7
 
-  '@tanstack/react-query@5.101.2(react@19.2.7)':
+  '@tanstack/react-query@5.101.0(react@19.2.7)':
     dependencies:
-      '@tanstack/query-core': 5.101.2
+      '@tanstack/query-core': 5.101.0
       react: 19.2.7
 
   '@tanstack/react-router-devtools@1.167.0(@tanstack/react-router@1.170.16(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@tanstack/router-core@1.171.13)(csstype@3.2.3)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
@@ -10767,7 +10767,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.9(@types/node@26.0.1)(@vitest/coverage-v8@4.1.9)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.16(@types/node@26.0.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
+      vitest: 4.1.9(@types/node@24.13.2)(@vitest/coverage-v8@4.1.9)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
 
   '@vitest/expect@4.1.9':
     dependencies:
