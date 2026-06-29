@@ -34,7 +34,7 @@
     "@commitlint/types": "^21.0.1",
     "@types/node": "catalog:",
     "knip": "^6.18.0",
-    "turbo": "^2.9.18"
+    "turbo": "^2.10.0"
   },
   "pnpm": {
     "overrides": {
