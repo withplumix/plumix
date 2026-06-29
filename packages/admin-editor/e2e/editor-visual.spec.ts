@@ -476,6 +476,11 @@ test.describe("editor playground", () => {
     const handle = await page.getByTestId("plumix-canvas-handle").boundingBox();
     if (!before || !handle) throw new Error("expected frame + handle boxes");
 
+    // The strip rides just above the frame (inside the panned/zoomed stage),
+    // left-aligned to it — not a fixed band welded to the viewport top.
+    expect(handle.y + handle.height).toBeLessThanOrEqual(before.y + 1);
+    expect(Math.abs(handle.x - before.x)).toBeLessThan(2);
+
     // Press-drag the strip (no Space) — the frame should follow the pointer.
     await page.mouse.move(
       handle.x + handle.width / 2,
