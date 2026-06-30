@@ -232,24 +232,24 @@ function AllowedDomainsRoute(): ReactNode {
                         message="Default role"
                       />
                     </FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        disabled={create.isPending}
-                      >
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={create.isPending}
+                    >
+                      <FormControl>
                         <SelectTrigger data-testid="allowed-domains-role-select">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          {USER_ROLES.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {label(ROLE_LABEL[role])}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
+                      </FormControl>
+                      <SelectContent>
+                        {USER_ROLES.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {label(ROLE_LABEL[role])}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
