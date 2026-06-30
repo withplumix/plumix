@@ -192,7 +192,11 @@ export function DocumentSettingsPanel({
                 {renderLabel(M.noParent)}
               </SelectItem>
               {parent.options.map((option) => (
-                <SelectItem key={option.id} value={String(option.id)}>
+                <SelectItem
+                  key={option.id}
+                  value={String(option.id)}
+                  data-testid={`entry-parent-select-option-${option.id}`}
+                >
                   {option.title}
                 </SelectItem>
               ))}

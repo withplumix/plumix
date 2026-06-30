@@ -634,10 +634,13 @@ test.describe("editor document tab", () => {
 
     const select = page.getByTestId("entry-parent-select");
     await expect(select).toBeVisible();
-    // The entry can't be its own parent — self is excluded client-side.
-    await expect(select.locator("option[value='1']")).toHaveCount(0);
+    await select.click();
+    // The entry can't be its own parent — self (id 1) is excluded client-side.
+    await expect(page.getByTestId("entry-parent-select-option-1")).toHaveCount(
+      0,
+    );
 
-    await select.selectOption({ label: "About" });
+    await page.getByTestId("entry-parent-select-option-2").click();
     await expect
       .poll(
         () =>

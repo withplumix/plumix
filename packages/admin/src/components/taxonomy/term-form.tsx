@@ -225,11 +225,18 @@ export function TermForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={ROOT_VALUE}>
+                    <SelectItem
+                      value={ROOT_VALUE}
+                      data-testid="term-form-parent-select-option-root"
+                    >
                       {labelFn(M.rootOption)}
                     </SelectItem>
                     {parentOptions.map((opt) => (
-                      <SelectItem key={opt.id} value={String(opt.id)}>
+                      <SelectItem
+                        key={opt.id}
+                        value={String(opt.id)}
+                        data-testid={`term-form-parent-select-option-${opt.id}`}
+                      >
                         {opt.label}
                       </SelectItem>
                     ))}

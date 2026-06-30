@@ -194,7 +194,7 @@ describe("BlockInputControl", () => {
 
       // Headings are inline formats of the unified rich-text block: the format
       // dropdown reflects the current block and converts it on change.
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const format = getByTestId("block-input-body-format");
       expect(format.textContent).toContain("Paragraph");
       await user.click(format);

@@ -262,14 +262,18 @@ test.describe("/terms/$name/$id/edit", () => {
       "Edit category",
     );
 
-    const selectOptions = await page
-      .getByTestId("term-form-parent-select")
-      .locator("option")
-      .allTextContents();
-    // Root + Fruit only; Apple (self) + Granny (descendant) excluded.
-    expect(selectOptions.some((o) => o.includes("Fruit"))).toBe(true);
-    expect(selectOptions.some((o) => o.includes("Apple"))).toBe(false);
-    expect(selectOptions.some((o) => o.includes("Granny"))).toBe(false);
+    // Root + Fruit (id 1) only; Apple (self, id 2) + Granny (descendant,
+    // id 3) excluded. Open the Radix picker and assert by option testid.
+    await page.getByTestId("term-form-parent-select").click();
+    await expect(
+      page.getByTestId("term-form-parent-select-option-1"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("term-form-parent-select-option-2"),
+    ).toHaveCount(0);
+    await expect(
+      page.getByTestId("term-form-parent-select-option-3"),
+    ).toHaveCount(0);
   });
 
   test("delete flow: confirm → redirect to list", async ({ page }) => {

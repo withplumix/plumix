@@ -60,7 +60,7 @@ describe("StylesTab", () => {
   });
 
   test("writes a token style to the active desktop bucket", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
     // Font family is the typography-token control (size/weight/line-height are
@@ -338,7 +338,7 @@ describe("StylesTab — declarations list", () => {
   };
 
   test("a token declaration renders a token picker, no raw value input", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { getByTestId, queryByTestId } = renderTab([fontToken], "a");
     const picker = getByTestId("style-declaration-fontFamily-token");
     // The trigger shows the chosen token as its emitted var(), not a literal.
@@ -351,7 +351,7 @@ describe("StylesTab — declarations list", () => {
   });
 
   test("changing the token picker writes the new token", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { getByTestId } = renderTab([fontToken], "a");
     await user.click(getByTestId("style-declaration-fontFamily-token"));
     await user.click(getByTestId("style-declaration-fontFamily-token-sm"));
@@ -374,7 +374,7 @@ describe("StylesTab — declarations list", () => {
   });
 
   test("clearing the token picker removes the declaration", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { getByTestId } = renderTab([fontToken], "a");
     await user.click(getByTestId("style-declaration-fontFamily-token"));
     await user.click(getByTestId("style-declaration-fontFamily-token-none"));

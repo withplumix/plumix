@@ -87,9 +87,8 @@ test.describe
     await page.goto("pages/audit-log");
     await expect(page.getByTestId("audit-log-table")).toBeVisible();
 
-    await page
-      .getByTestId("audit-log-filter-event-prefix")
-      .selectOption("user:");
+    await page.getByTestId("audit-log-filter-event-prefix").click();
+    await page.getByTestId("audit-log-filter-event-prefix-user:").click();
 
     const rows = page
       .getByTestId("audit-log-table")
@@ -103,9 +102,8 @@ test.describe
     page,
   }) => {
     await page.goto("pages/audit-log");
-    await page
-      .getByTestId("audit-log-filter-event-prefix")
-      .selectOption("user:");
+    await page.getByTestId("audit-log-filter-event-prefix").click();
+    await page.getByTestId("audit-log-filter-event-prefix-user:").click();
     const filtered = page
       .getByTestId("audit-log-table")
       .locator("[data-testid^='audit-log-row-']");
@@ -123,9 +121,8 @@ test.describe
     page,
   }) => {
     await page.goto("pages/audit-log");
-    await page
-      .getByTestId("audit-log-filter-event-prefix")
-      .selectOption("user:");
+    await page.getByTestId("audit-log-filter-event-prefix").click();
+    await page.getByTestId("audit-log-filter-event-prefix-user:").click();
     const filtered = page
       .getByTestId("audit-log-table")
       .locator("[data-testid^='audit-log-row-']");
@@ -136,10 +133,11 @@ test.describe
 
     await page.reload();
 
-    // Same filter applied + same narrowed list. No re-selection needed.
-    await expect(page.getByTestId("audit-log-filter-event-prefix")).toHaveValue(
-      "user:",
-    );
+    // Same filter applied + same narrowed list. No re-selection needed. The
+    // Radix trigger shows the selected prefix text rather than a native value.
+    await expect(
+      page.getByTestId("audit-log-filter-event-prefix"),
+    ).toContainText("user:");
     const afterReload = page
       .getByTestId("audit-log-table")
       .locator("[data-testid^='audit-log-row-']");

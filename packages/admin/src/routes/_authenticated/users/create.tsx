@@ -272,7 +272,11 @@ function InviteUserRoute(): ReactNode {
                       </FormControl>
                       <SelectContent>
                         {USER_ROLES.map((role) => (
-                          <SelectItem key={role} value={role}>
+                          <SelectItem
+                            key={role}
+                            value={role}
+                            data-testid={`invite-role-select-${role}`}
+                          >
                             {label(ROLE_LABEL_LONG[role])}
                           </SelectItem>
                         ))}

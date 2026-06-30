@@ -755,7 +755,11 @@ function DeleteCard({ target }: { target: User }): ReactNode {
                 {label(M.reassignKeepAsIs)}
               </SelectItem>
               {reassignOptions.map((u) => (
-                <SelectItem key={u.id} value={String(u.id)}>
+                <SelectItem
+                  key={u.id}
+                  value={String(u.id)}
+                  data-testid={`user-delete-reassign-select-${u.id}`}
+                >
                   {u.name ?? u.email} ({u.email})
                 </SelectItem>
               ))}

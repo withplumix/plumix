@@ -73,18 +73,19 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     const parentSaved = page.waitForResponse(
       (r) => r.url().endsWith("/entry/update") && r.status() === 200,
     );
+    await page.getByTestId("entry-parent-select").click();
     await page
-      .getByTestId("entry-parent-select")
-      .selectOption({ label: "About" });
+      .locator("[data-testid^='entry-parent-select-option-']")
+      .filter({ hasText: "About" })
+      .first()
+      .click();
     await parentSaved;
 
     await page.reload();
     await page.getByTestId("plumix-tab-page").click();
-    // `option:checked` reads the currently-selected option's text
-    // — avoids pulling DOM lib into the plugin's typecheck for one
-    // line of `HTMLSelectElement`.
-    await expect(
-      page.getByTestId("entry-parent-select").locator("option:checked"),
-    ).toHaveText("About");
+    // The Radix trigger shows the currently-selected parent's title.
+    await expect(page.getByTestId("entry-parent-select")).toContainText(
+      "About",
+    );
   });
 });
