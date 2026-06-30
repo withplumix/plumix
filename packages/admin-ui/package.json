@@ -120,6 +120,10 @@
       "types": "./dist/slider.d.ts",
       "default": "./dist/slider.js"
     },
+    "./sonner": {
+      "types": "./dist/sonner.d.ts",
+      "default": "./dist/sonner.js"
+    },
     "./sortable": {
       "types": "./dist/sortable.d.ts",
       "default": "./dist/sortable.js"
@@ -177,6 +181,7 @@
     "radix-ui": "catalog:",
     "react-colorful": "^5.7.0",
     "react-hook-form": "catalog:",
+    "sonner": "catalog:",
     "tailwind-merge": "catalog:"
   },
   "peerDependencies": {

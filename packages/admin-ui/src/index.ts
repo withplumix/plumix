@@ -25,6 +25,7 @@ export * from "./sheet.js";
 export * from "./sidebar.js";
 export * from "./skeleton.js";
 export * from "./slider.js";
+export * from "./sonner.js";
 export * from "./sortable.js";
 export * from "./table.js";
 export * from "./tabs.js";
