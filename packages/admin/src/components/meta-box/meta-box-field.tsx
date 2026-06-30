@@ -7,6 +7,7 @@ import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
+import { Checkbox } from "@plumix/admin-ui/checkbox";
 import { ColorPicker } from "@plumix/admin-ui/color-picker";
 import {
   FormControl,
@@ -82,16 +83,14 @@ export function MetaBoxField({
             <FormItem className={className} data-testid={testIdPrefix}>
               <div className="flex items-center gap-2">
                 <FormControl>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     name={rhf.name}
-                    ref={rhf.ref}
                     checked={rhf.value === true}
                     required={field.required}
                     disabled={disabled}
                     onBlur={rhf.onBlur}
-                    onChange={(e) => {
-                      rhf.onChange(e.target.checked);
+                    onCheckedChange={(checked) => {
+                      rhf.onChange(checked === true);
                     }}
                     data-testid={inputTestId}
                   />

@@ -486,8 +486,10 @@ describe("MetaBoxField dispatcher", () => {
         onChangeSpy={onChange}
       />,
     );
+    // shadcn Checkbox is a Radix checkbox button (role=checkbox), not a
+    // native <input type=checkbox>.
     const box = screen.getByTestId("meta-box-field-k-input");
-    expect(box).toHaveAttribute("type", "checkbox");
+    expect(box).toHaveAttribute("role", "checkbox");
 
     await userEvent.click(box);
     expect(onChange).toHaveBeenCalledWith(true);
