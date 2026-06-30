@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@plumix/admin-ui/alert-dialog";
-import { Button } from "@plumix/admin-ui/button";
+import { Button, buttonVariants } from "@plumix/admin-ui/button";
 
 // View-scoped bulk action bar (WordPress model): the Trash view offers
 // Restore + Delete permanently; every other view offers Trash. Keying off
@@ -158,6 +158,7 @@ export function EntriesBulkBar({
             </AlertDialogCancel>
             <AlertDialogAction
               data-testid="content-list-bulk-confirm"
+              className={buttonVariants({ variant: "destructive" })}
               disabled={busy}
               onClick={(e) => {
                 e.preventDefault();

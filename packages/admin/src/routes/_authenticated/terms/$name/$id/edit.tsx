@@ -44,7 +44,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@plumix/admin-ui/alert-dialog";
-import { Button } from "@plumix/admin-ui/button";
+import { Button, buttonVariants } from "@plumix/admin-ui/button";
 import {
   Card,
   CardContent,
@@ -438,7 +438,7 @@ function DeleteCard({
             <AlertDialogAction
               data-testid="term-delete-confirm-button"
               disabled={deleteTerm.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={buttonVariants({ variant: "destructive" })}
               onClick={(e) => {
                 e.preventDefault();
                 deleteTerm.mutate();

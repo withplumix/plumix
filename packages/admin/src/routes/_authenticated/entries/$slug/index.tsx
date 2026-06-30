@@ -36,7 +36,7 @@ import {
   AlertDialogTitle,
 } from "@plumix/admin-ui/alert-dialog";
 import { Badge } from "@plumix/admin-ui/badge";
-import { Button } from "@plumix/admin-ui/button";
+import { Button, buttonVariants } from "@plumix/admin-ui/button";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
 import {
   Empty,
@@ -958,6 +958,7 @@ function ContentListRoute(): ReactNode {
             </AlertDialogCancel>
             <AlertDialogAction
               data-testid="content-list-trash-confirm"
+              className={buttonVariants({ variant: "destructive" })}
               disabled={trash.isPending}
               onClick={(e) => {
                 e.preventDefault();
@@ -996,6 +997,7 @@ function ContentListRoute(): ReactNode {
             </AlertDialogCancel>
             <AlertDialogAction
               data-testid="content-list-delete-confirm"
+              className={buttonVariants({ variant: "destructive" })}
               disabled={deletePermanent.isPending}
               onClick={(e) => {
                 e.preventDefault();

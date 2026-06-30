@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@plumix/admin-ui/alert-dialog";
 import { Badge } from "@plumix/admin-ui/badge";
-import { Button } from "@plumix/admin-ui/button";
+import { Button, buttonVariants } from "@plumix/admin-ui/button";
 import {
   Card,
   CardContent,
@@ -491,7 +491,7 @@ function ApiTokensCardView({
             <AlertDialogAction
               data-testid="api-tokens-revoke-confirm-button"
               disabled={revokePending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={buttonVariants({ variant: "destructive" })}
               onClick={(e) => {
                 e.preventDefault();
                 if (!revokeTarget) return;
