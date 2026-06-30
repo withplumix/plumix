@@ -19,6 +19,15 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
   Button,
   Checkbox,
   destructiveGhostClassName,
@@ -55,10 +64,6 @@ const INDENTATION_WIDTH = 24;
 // strings, window.confirm text) or inside attributes. JSX-text strings
 // stay inline at their <Trans> callsite for extraction discoverability.
 const M = {
-  deleteConfirm: {
-    id: "plugin.menu.itemEditor.deleteConfirm",
-    message: "Delete this menu?",
-  },
   brokenLinkAria: {
     id: "plugin.menu.itemEditor.brokenLinkAria",
     message: "broken link",
@@ -326,27 +331,56 @@ function MaxDepthField({
 }
 
 function DeleteMenuButton({ termId }: { readonly termId: number }): ReactNode {
-  const { i18n } = useLingui();
   const remove = useDeleteMenu();
   return (
-    <Button
-      type="button"
-      variant="destructive"
-      size="sm"
-      data-testid="menu-delete-button"
-      disabled={remove.isPending}
-      onClick={() => {
-        if (
-          typeof window !== "undefined" &&
-          !window.confirm(i18n._(M.deleteConfirm))
-        ) {
-          return;
-        }
-        remove.mutate({ termId });
-      }}
-    >
-      <Trans id="plugin.menu.itemEditor.deleteButton" message="Delete menu" />
-    </Button>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          data-testid="menu-delete-button"
+          disabled={remove.isPending}
+        >
+          <Trans
+            id="plugin.menu.itemEditor.deleteButton"
+            message="Delete menu"
+          />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent data-testid="menu-delete-dialog">
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            <Trans
+              id="plugin.menu.itemEditor.deleteConfirm"
+              message="Delete this menu?"
+            />
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            <Trans
+              id="plugin.menu.itemEditor.deleteDescription"
+              message="This permanently removes the menu and its items. This can't be undone."
+            />
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid="menu-delete-cancel">
+            <Trans id="plugin.menu.itemEditor.deleteCancel" message="Cancel" />
+          </AlertDialogCancel>
+          <AlertDialogAction
+            data-testid="menu-delete-confirm"
+            onClick={() => {
+              remove.mutate({ termId });
+            }}
+          >
+            <Trans
+              id="plugin.menu.itemEditor.deleteButton"
+              message="Delete menu"
+            />
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
