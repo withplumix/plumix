@@ -62,8 +62,8 @@ import { dragEndToAction, getProjection } from "./tree-state.js";
 const INDENTATION_WIDTH = 24;
 
 // Descriptors that need runtime indirection — used outside JSX (aria
-// strings, window.confirm text) or inside attributes. JSX-text strings
-// stay inline at their <Trans> callsite for extraction discoverability.
+// strings, reorder labels) or inside attributes. JSX-text strings stay
+// inline at their <Trans> callsite for extraction discoverability.
 const M = {
   brokenLinkAria: {
     id: "plugin.menu.itemEditor.brokenLinkAria",
