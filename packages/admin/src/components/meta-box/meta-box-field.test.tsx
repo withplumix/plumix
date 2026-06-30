@@ -468,8 +468,10 @@ describe("MetaBoxField dispatcher", () => {
         onChangeSpy={onChange}
       />,
     );
+    // shadcn RadioGroupItem is a Radix radio button (role=radio), not a
+    // native <input type=radio>.
     const bravo = screen.getByTestId("meta-box-field-k-input-b");
-    expect(bravo).toHaveAttribute("type", "radio");
+    expect(bravo).toHaveAttribute("role", "radio");
 
     await userEvent.click(bravo);
     expect(onChange).toHaveBeenCalledWith("b");

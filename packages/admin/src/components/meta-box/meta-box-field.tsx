@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
+import { RadioGroup, RadioGroupItem } from "@plumix/admin-ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -473,32 +474,31 @@ function renderNativeInput({
 
   if (field.inputType === "radio") {
     return (
-      <div
-        role="radiogroup"
-        className="flex flex-col gap-1"
+      <RadioGroup
+        name={rhf.name}
+        value={asString(rhf.value)}
+        onValueChange={(next) => {
+          rhf.onChange(next);
+        }}
+        onBlur={rhf.onBlur}
+        disabled={disabled}
+        required={field.required}
+        className="gap-1"
         data-testid={testId}
       >
         {(field.options ?? []).map((opt) => (
-          <label
-            key={opt.value}
-            className="inline-flex items-center gap-2 text-sm"
-          >
-            <input
-              type="radio"
-              name={rhf.name}
+          <div key={opt.value} className="flex items-center gap-2 text-sm">
+            <RadioGroupItem
               value={opt.value}
-              checked={asString(rhf.value) === opt.value}
-              required={field.required}
-              disabled={disabled}
-              onChange={() => {
-                rhf.onChange(opt.value);
-              }}
+              id={`${testId}-${opt.value}`}
               data-testid={`${testId}-${opt.value}`}
             />
-            {renderLabel(opt.label)}
-          </label>
+            <label htmlFor={`${testId}-${opt.value}`}>
+              {renderLabel(opt.label)}
+            </label>
+          </div>
         ))}
-      </div>
+      </RadioGroup>
     );
   }
 
