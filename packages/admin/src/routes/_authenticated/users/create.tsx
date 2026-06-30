@@ -406,7 +406,7 @@ function InviteSuccess({
               <Trans id="userInvite.success.link.label" message="Invite link" />
             </UILabel>
             <div className="flex gap-2">
-              <input
+              <Input
                 id="invite-url"
                 readOnly
                 value={inviteUrl}
@@ -414,7 +414,7 @@ function InviteSuccess({
                   e.currentTarget.select();
                 }}
                 data-testid="invite-url-input"
-                className="border-input bg-muted text-muted-foreground flex h-9 w-full rounded-md border px-3 py-1 font-mono text-sm focus-visible:outline-none"
+                className="bg-muted text-muted-foreground font-mono"
               />
               <Button
                 type="button"

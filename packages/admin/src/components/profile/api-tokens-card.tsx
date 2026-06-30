@@ -782,13 +782,13 @@ function SecretShownDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="flex gap-2">
-          <input
+          <Input
             id="api-tokens-secret-input"
             readOnly
             value={secret ?? ""}
             onFocus={(e) => e.currentTarget.select()}
             data-testid="api-tokens-secret-input"
-            className="border-input bg-muted text-muted-foreground flex h-9 w-full rounded-md border px-3 py-1 font-mono text-sm focus-visible:outline-none"
+            className="bg-muted text-muted-foreground font-mono"
           />
           <Button
             type="button"
