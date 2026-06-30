@@ -107,6 +107,56 @@ export function MetaBoxField({
           );
         }
 
+        if (
+          field.inputType === "select" &&
+          getPluginFieldType(field.inputType) === undefined
+        ) {
+          // Radix Select needs <FormControl> wrapping the trigger (not the
+          // Select root, which renders no DOM node) so the label/error/
+          // aria-invalid wiring lands on a real element.
+          return (
+            <FormItem className={className} data-testid={testIdPrefix}>
+              <FormLabel>{labelText}</FormLabel>
+              <Select
+                name={rhf.name}
+                value={encodeOptionValue(asString(rhf.value))}
+                onValueChange={(next) => {
+                  rhf.onChange(decodeOptionValue(next));
+                }}
+                disabled={disabled}
+                required={field.required}
+              >
+                <FormControl>
+                  <SelectTrigger
+                    className="w-full"
+                    onBlur={rhf.onBlur}
+                    data-testid={inputTestId}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(field.options ?? []).map((opt) => (
+                    <SelectItem
+                      key={opt.value}
+                      value={encodeOptionValue(opt.value)}
+                      data-testid={`${inputTestId}-option-${opt.value}`}
+                    >
+                      {renderLabel(opt.label)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {field.description ? (
+                <FormDescription data-testid={`${testIdPrefix}-description`}>
+                  {renderLabel(field.description)}
+                </FormDescription>
+              ) : null}
+              <FormMessage />
+            </FormItem>
+          );
+        }
+
         return (
           <FormItem className={className} data-testid={testIdPrefix}>
             <FormLabel>{labelText}</FormLabel>
@@ -130,6 +180,18 @@ export function MetaBoxField({
       }}
     />
   );
+}
+
+// Radix Select / RadioGroup reject an empty-string item value (Radix reserves
+// it for "no selection"), but a plugin author may legitimately register an
+// option whose value is "". Encode "" to a sentinel for the item + selected
+// value and decode it back on change so author data round-trips intact.
+const EMPTY_OPTION_VALUE = "__plumix_empty__";
+function encodeOptionValue(value: string): string {
+  return value === "" ? EMPTY_OPTION_VALUE : value;
+}
+function decodeOptionValue(value: string): string {
+  return value === EMPTY_OPTION_VALUE ? "" : value;
 }
 
 // Returns the native-element body for the given field. Must render a
@@ -442,42 +504,16 @@ function renderNativeInput({
     );
   }
 
-  if (field.inputType === "select") {
-    return (
-      <Select
-        name={rhf.name}
-        value={asString(rhf.value)}
-        onValueChange={(next) => {
-          rhf.onChange(next);
-        }}
-        disabled={disabled}
-        required={field.required}
-      >
-        <SelectTrigger
-          className="w-full"
-          onBlur={rhf.onBlur}
-          data-testid={testId}
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {(field.options ?? []).map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {renderLabel(opt.label)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-  }
+  // Note: `select` is handled in the FormField render callback (it needs
+  // <FormControl> around the Radix trigger, not the Select root).
 
   if (field.inputType === "radio") {
     return (
       <RadioGroup
         name={rhf.name}
-        value={asString(rhf.value)}
+        value={encodeOptionValue(asString(rhf.value))}
         onValueChange={(next) => {
-          rhf.onChange(next);
+          rhf.onChange(decodeOptionValue(next));
         }}
         onBlur={rhf.onBlur}
         disabled={disabled}
@@ -488,7 +524,7 @@ function renderNativeInput({
         {(field.options ?? []).map((opt) => (
           <div key={opt.value} className="flex items-center gap-2 text-sm">
             <RadioGroupItem
-              value={opt.value}
+              value={encodeOptionValue(opt.value)}
               id={`${testId}-${opt.value}`}
               data-testid={`${testId}-${opt.value}`}
             />

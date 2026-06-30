@@ -579,12 +579,12 @@ function CreateTokenForm({
               <FormLabel>
                 <Trans id="apiTokens.create.expires" message="Expires" />
               </FormLabel>
-              <FormControl>
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  disabled={pending}
-                >
+              <Select
+                value={field.value}
+                onValueChange={field.onChange}
+                disabled={pending}
+              >
+                <FormControl>
                   <SelectTrigger
                     className="w-full"
                     onBlur={field.onBlur}
@@ -592,19 +592,19 @@ function CreateTokenForm({
                   >
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    {(
-                      Object.keys(
-                        EXPIRY_DESCRIPTOR,
-                      ) as CreateFormValues["expires"][]
-                    ).map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {label(EXPIRY_DESCRIPTOR[value])}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormControl>
+                </FormControl>
+                <SelectContent>
+                  {(
+                    Object.keys(
+                      EXPIRY_DESCRIPTOR,
+                    ) as CreateFormValues["expires"][]
+                  ).map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {label(EXPIRY_DESCRIPTOR[value])}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

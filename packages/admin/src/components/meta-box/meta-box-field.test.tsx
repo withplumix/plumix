@@ -446,11 +446,50 @@ describe("MetaBoxField dispatcher", () => {
       />,
     );
     // shadcn Select is a Radix combobox (button trigger + portal), not a
-    // native <select>. Assert the trigger renders bound to the current
-    // value; open/click interaction is covered by editor e2e.
+    // native <select>. The trigger renders bound to the current value, and
+    // opening it + picking another option maps through onValueChange.
     const trigger = screen.getByTestId("meta-box-field-k-input");
     expect(trigger).toHaveAttribute("role", "combobox");
     expect(trigger).toHaveTextContent("Alpha");
+
+    await userEvent.click(trigger);
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-k-input-option-b"),
+    );
+    expect(onChange).toHaveBeenCalledWith("b");
+  });
+
+  test("select: tolerates an empty-string option value (Radix-safe)", async () => {
+    // Radix Select throws on an empty-string item value; a plugin author may
+    // still register an option whose value is "". The renderer must encode it
+    // rather than crash the whole entry editor (it runs outside the field
+    // error boundary), and round-trip the original "" back through onChange.
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "select",
+          options: [
+            { value: "", label: "None" },
+            { value: "a", label: "Alpha" },
+          ],
+        })}
+        initial=""
+        onChangeSpy={onChange}
+      />,
+    );
+    const trigger = screen.getByTestId("meta-box-field-k-input");
+    expect(trigger).toHaveTextContent("None");
+
+    await userEvent.click(trigger);
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-k-input-option-a"),
+    );
+    expect(onChange).toHaveBeenLastCalledWith("a");
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId("meta-box-field-k-input-option-"));
+    expect(onChange).toHaveBeenLastCalledWith("");
   });
 
   test("radio: renders one input per option, click fires onChange", async () => {

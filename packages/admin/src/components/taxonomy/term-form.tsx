@@ -208,16 +208,14 @@ export function TermForm({
                 <FormLabel>
                   <Trans id="termForm.parent" message="Parent" />
                 </FormLabel>
-                <FormControl>
-                  <Select
-                    value={
-                      field.value == null ? ROOT_VALUE : String(field.value)
-                    }
-                    onValueChange={(next) => {
-                      field.onChange(next === ROOT_VALUE ? null : Number(next));
-                    }}
-                    disabled={isSubmitting}
-                  >
+                <Select
+                  value={field.value == null ? ROOT_VALUE : String(field.value)}
+                  onValueChange={(next) => {
+                    field.onChange(next === ROOT_VALUE ? null : Number(next));
+                  }}
+                  disabled={isSubmitting}
+                >
+                  <FormControl>
                     <SelectTrigger
                       className="w-full"
                       onBlur={field.onBlur}
@@ -225,18 +223,18 @@ export function TermForm({
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ROOT_VALUE}>
-                        {labelFn(M.rootOption)}
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={ROOT_VALUE}>
+                      {labelFn(M.rootOption)}
+                    </SelectItem>
+                    {parentOptions.map((opt) => (
+                      <SelectItem key={opt.id} value={String(opt.id)}>
+                        {opt.label}
                       </SelectItem>
-                      {parentOptions.map((opt) => (
-                        <SelectItem key={opt.id} value={String(opt.id)}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

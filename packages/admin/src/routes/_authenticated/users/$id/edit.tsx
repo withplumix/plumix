@@ -423,14 +423,14 @@ function UserEditForm({
                       <FormLabel>
                         <Trans id="userEdit.role.label" message="Role" />
                       </FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={(next) => {
-                            if (isUserRole(next)) field.onChange(next);
-                          }}
-                          disabled={updateUser.isPending}
-                        >
+                      <Select
+                        value={field.value}
+                        onValueChange={(next) => {
+                          if (isUserRole(next)) field.onChange(next);
+                        }}
+                        disabled={updateUser.isPending}
+                      >
+                        <FormControl>
                           <SelectTrigger
                             className="w-full"
                             onBlur={field.onBlur}
@@ -438,15 +438,15 @@ function UserEditForm({
                           >
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            {USER_ROLES.map((role) => (
-                              <SelectItem key={role} value={role}>
-                                {label(ROLE_LABEL_LONG[role])}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
+                        </FormControl>
+                        <SelectContent>
+                          {USER_ROLES.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {label(ROLE_LABEL_LONG[role])}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
