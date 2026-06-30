@@ -153,8 +153,6 @@ export { unknownBlockSchema } from "./unknown-node.js";
 // ─── Core blocks ────────────────────────────────────────────────────────────
 export { coreBlocks } from "./core-blocks.js";
 export { buttonBlock } from "./button/index.js";
-export { buttonsBlock } from "./buttons/index.js";
-export { calloutBlock } from "./callout/index.js";
 export { codeBlock } from "./code/index.js";
 export { columnsBlock } from "./columns/index.js";
 export { detailsBlock } from "./details/index.js";
@@ -162,7 +160,6 @@ export { groupBlock } from "./group/index.js";
 export { htmlBlock } from "./html/index.js";
 export { richTextBlock } from "./rich-text/index.js";
 export { separatorBlock } from "./separator/index.js";
-export { spacerBlock } from "./spacer/index.js";
 export {
   tableBlock,
   tableBodyRowBlock,

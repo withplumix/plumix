@@ -61,10 +61,11 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
     },
   },
   {
-    id: "buttons-1",
-    name: "core/buttons",
+    id: "button-group-1",
+    name: "core/group",
     attrs: {
-      items: [
+      layout: "flex-row",
+      content: [
         { id: "btn-1", name: "core/button", attrs: { label: "Primary" } },
         {
           id: "btn-2",

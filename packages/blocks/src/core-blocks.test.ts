@@ -32,28 +32,20 @@ describe("coreBlocks", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  test("layout-category blocks include the migrated wrappers + spacer", () => {
+  test("layout-category blocks include the migrated wrappers + details", () => {
     const layoutNames = coreBlocks
       .filter((b) => b.category === "layout")
       .map((b) => b.name);
     expect(layoutNames).toEqual(
-      expect.arrayContaining([
-        "core/group",
-        "core/columns",
-        "core/details",
-        "core/callout",
-        "core/spacer",
-      ]),
+      expect.arrayContaining(["core/group", "core/columns", "core/details"]),
     );
   });
 
-  test("interactive-category blocks include button + buttons", () => {
+  test("interactive-category blocks include button", () => {
     const interactiveNames = coreBlocks
       .filter((b) => b.category === "interactive")
       .map((b) => b.name);
-    expect(interactiveNames).toEqual(
-      expect.arrayContaining(["core/button", "core/buttons"]),
-    );
+    expect(interactiveNames).toEqual(expect.arrayContaining(["core/button"]));
   });
 
   test("text-category blocks include rich-text and table", () => {

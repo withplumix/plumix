@@ -59,7 +59,7 @@ describe("countProse", () => {
     expect(countProse(blocks).words).toBe(5);
   });
 
-  test("excludes non-prose blocks like code and buttons", () => {
+  test("excludes non-prose blocks like code", () => {
     const blocks: readonly BlockNode[] = [
       {
         id: "c1",

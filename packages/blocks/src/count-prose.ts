@@ -8,9 +8,9 @@ export interface ProseCount {
 
 // Prose-bearing attrs by block name. `html: true` means the value is an
 // HTML string whose tags must be stripped before counting; otherwise the
-// value is plain text. Non-prose blocks (code, buttons, separators, raw
-// html) are deliberately excluded from the reading-length count; nested
-// blocks (callout/group/columns slots) are reached via recursion.
+// value is plain text. Non-prose blocks (code, separators, raw html) are
+// deliberately excluded from the reading-length count; nested blocks
+// (group/columns/details slots) are reached via recursion.
 const PROSE_ATTRS: Readonly<
   Record<string, { readonly attr: string; readonly html: boolean }>
 > = {
