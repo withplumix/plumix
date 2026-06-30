@@ -5,11 +5,22 @@ import { Trans } from "@lingui/react";
 import type { StyleValue, ThemeTokens, TokenCategory } from "@plumix/blocks";
 import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { cn } from "@plumix/admin-ui/utils";
 
 // Native `<input type="color">` only round-trips 6-digit hex; anything else
 // (a token-ish string, `transparent`, rgba) leaves the swatch on a safe default.
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
+
+// Radix Select forbids an empty-string item value, so the "clear" choice
+// carries a sentinel that maps back to `null` on change.
+const NONE_VALUE = "__none__";
 
 interface StyleControlProps {
   readonly label: string;
@@ -102,21 +113,30 @@ export function StyleControl({
           />
         </div>
       ) : (
-        <select
-          data-testid={`${testId}-token`}
-          className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm"
-          value={value && "token" in value ? value.token : ""}
-          onChange={(e) =>
-            onChange(e.target.value === "" ? null : { token: e.target.value })
+        <Select
+          value={value && "token" in value ? value.token : NONE_VALUE}
+          onValueChange={(next) =>
+            onChange(next === NONE_VALUE ? null : { token: next })
           }
         >
-          <option value="">—</option>
-          {Object.keys(group).map((id) => (
-            <option key={id} value={id}>
-              {group[id]?.label ?? id}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full" data-testid={`${testId}-token`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE_VALUE} data-testid={`${testId}-token-none`}>
+              —
+            </SelectItem>
+            {Object.keys(group).map((id) => (
+              <SelectItem
+                key={id}
+                value={id}
+                data-testid={`${testId}-token-${id}`}
+              >
+                {group[id]?.label ?? id}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       )}
     </div>
   );

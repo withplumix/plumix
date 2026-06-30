@@ -21,6 +21,14 @@ import {
   FormMessage,
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
+import { Textarea } from "@plumix/admin-ui/textarea";
 import { idParam, vMessage } from "@plumix/core/validation";
 
 /** Normalised input shape consumed by both create + update paths. */
@@ -44,6 +52,10 @@ const M = {
     message: "— root —",
   }),
 } satisfies Record<string, MessageDescriptor>;
+
+// Radix Select forbids an empty-string item value, so the "root" choice
+// carries a sentinel that maps back to `null` (no parent) on change.
+const ROOT_VALUE = "__root__";
 
 // Client-side shape mirrors `termCreateInputSchema` / `termUpdateInputSchema`
 // on the server. Slug is optional at the form level — the server derives
@@ -174,12 +186,12 @@ export function TermForm({
                 <Trans id="termForm.description" message="Description" />
               </FormLabel>
               <FormControl>
-                <textarea
+                <Textarea
                   {...field}
                   disabled={isSubmitting}
                   rows={3}
                   data-testid="term-form-description-input"
-                  className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-20"
                 />
               </FormControl>
               <FormMessage />
@@ -196,26 +208,40 @@ export function TermForm({
                 <FormLabel>
                   <Trans id="termForm.parent" message="Parent" />
                 </FormLabel>
-                <FormControl>
-                  <select
-                    value={field.value == null ? "" : String(field.value)}
-                    onBlur={field.onBlur}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      field.onChange(raw === "" ? null : Number(raw));
-                    }}
-                    disabled={isSubmitting}
-                    data-testid="term-form-parent-select"
-                    className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">{labelFn(M.rootOption)}</option>
+                <Select
+                  value={field.value == null ? ROOT_VALUE : String(field.value)}
+                  onValueChange={(next) => {
+                    field.onChange(next === ROOT_VALUE ? null : Number(next));
+                  }}
+                  disabled={isSubmitting}
+                >
+                  <FormControl>
+                    <SelectTrigger
+                      className="w-full"
+                      onBlur={field.onBlur}
+                      data-testid="term-form-parent-select"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem
+                      value={ROOT_VALUE}
+                      data-testid="term-form-parent-select-option-root"
+                    >
+                      {labelFn(M.rootOption)}
+                    </SelectItem>
                     {parentOptions.map((opt) => (
-                      <option key={opt.id} value={String(opt.id)}>
+                      <SelectItem
+                        key={opt.id}
+                        value={String(opt.id)}
+                        data-testid={`term-form-parent-select-option-${opt.id}`}
+                      >
                         {opt.label}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
-                </FormControl>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

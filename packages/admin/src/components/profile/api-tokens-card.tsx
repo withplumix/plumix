@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@plumix/admin-ui/alert-dialog";
 import { Badge } from "@plumix/admin-ui/badge";
-import { Button } from "@plumix/admin-ui/button";
+import { Button, buttonVariants } from "@plumix/admin-ui/button";
 import {
   Card,
   CardContent,
@@ -54,6 +54,13 @@ import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
 import { RadioGroup, RadioGroupItem } from "@plumix/admin-ui/radio-group";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -61,6 +68,7 @@ import {
   TableHeader,
   TableRow,
 } from "@plumix/admin-ui/table";
+import { Textarea } from "@plumix/admin-ui/textarea";
 import { vMessage } from "@plumix/core/validation";
 
 // Renders the API-token surface for a target user. Two modes:
@@ -483,7 +491,7 @@ function ApiTokensCardView({
             <AlertDialogAction
               data-testid="api-tokens-revoke-confirm-button"
               disabled={revokePending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={buttonVariants({ variant: "destructive" })}
               onClick={(e) => {
                 e.preventDefault();
                 if (!revokeTarget) return;
@@ -571,26 +579,32 @@ function CreateTokenForm({
               <FormLabel>
                 <Trans id="apiTokens.create.expires" message="Expires" />
               </FormLabel>
-              <FormControl>
-                <select
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  disabled={pending}
-                  data-testid="api-tokens-create-expires-select"
-                  className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
-                >
+              <Select
+                value={field.value}
+                onValueChange={field.onChange}
+                disabled={pending}
+              >
+                <FormControl>
+                  <SelectTrigger
+                    className="w-full"
+                    onBlur={field.onBlur}
+                    data-testid="api-tokens-create-expires-select"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
                   {(
                     Object.keys(
                       EXPIRY_DESCRIPTOR,
                     ) as CreateFormValues["expires"][]
                   ).map((value) => (
-                    <option key={value} value={value}>
+                    <SelectItem key={value} value={value}>
                       {label(EXPIRY_DESCRIPTOR[value])}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-              </FormControl>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -667,12 +681,12 @@ function CreateTokenForm({
                   />
                 </FormLabel>
                 <FormControl>
-                  <textarea
+                  <Textarea
                     rows={4}
                     placeholder={label(M.capabilitiesPlaceholder)}
                     disabled={pending}
                     data-testid="api-tokens-create-scopes-textarea"
-                    className="border-input bg-background focus-visible:ring-ring rounded-md border px-3 py-2 font-mono text-sm focus-visible:ring-2 focus-visible:outline-none"
+                    className="font-mono"
                     {...field}
                   />
                 </FormControl>
@@ -768,13 +782,13 @@ function SecretShownDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="flex gap-2">
-          <input
+          <Input
             id="api-tokens-secret-input"
             readOnly
             value={secret ?? ""}
             onFocus={(e) => e.currentTarget.select()}
             data-testid="api-tokens-secret-input"
-            className="border-input bg-muted text-muted-foreground flex h-9 w-full rounded-md border px-3 py-1 font-mono text-sm focus-visible:outline-none"
+            className="bg-muted text-muted-foreground font-mono"
           />
           <Button
             type="button"

@@ -76,6 +76,10 @@
       "types": "./dist/input.d.ts",
       "default": "./dist/input.js"
     },
+    "./kbd": {
+      "types": "./dist/kbd.d.ts",
+      "default": "./dist/kbd.js"
+    },
     "./label": {
       "types": "./dist/label.d.ts",
       "default": "./dist/label.js"
@@ -120,6 +124,10 @@
       "types": "./dist/slider.d.ts",
       "default": "./dist/slider.js"
     },
+    "./sonner": {
+      "types": "./dist/sonner.d.ts",
+      "default": "./dist/sonner.js"
+    },
     "./sortable": {
       "types": "./dist/sortable.d.ts",
       "default": "./dist/sortable.js"
@@ -131,6 +139,10 @@
     "./tabs": {
       "types": "./dist/tabs.d.ts",
       "default": "./dist/tabs.js"
+    },
+    "./textarea": {
+      "types": "./dist/textarea.d.ts",
+      "default": "./dist/textarea.js"
     },
     "./toggle": {
       "types": "./dist/toggle.d.ts",
@@ -173,6 +185,7 @@
     "radix-ui": "catalog:",
     "react-colorful": "^5.7.0",
     "react-hook-form": "catalog:",
+    "sonner": "catalog:",
     "tailwind-merge": "catalog:"
   },
   "peerDependencies": {

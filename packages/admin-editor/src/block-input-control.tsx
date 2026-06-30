@@ -6,6 +6,7 @@ import type { BlockInput, BlockInputOption } from "@plumix/blocks";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
 import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
+import { Textarea } from "@plumix/admin-ui/textarea";
 import { resolveLabel } from "@plumix/core/i18n";
 
 // Lazy so the Tiptap + ProseMirror engine (~230 KB) splits into its own chunk,
@@ -26,7 +27,7 @@ const FIELD_TESTID = (name: string): string => `block-input-${name}`;
 /**
  * Renders one block attribute as an admin-ui form control, dispatching the
  * typed next value on edit. shadcn primitives where they map cleanly (text,
- * number, checkbox); native `<select>`/`<textarea>`/radio for the
+ * number, checkbox, textarea); native `<select>`/radio for the
  * option-bearing kinds so number/boolean option values survive the round trip
  * (radix Select is string-only). Mirrors the kinds the Puck field translator
  * supports so plugin blocks render unchanged.
@@ -48,10 +49,9 @@ export function BlockInputControl({
     switch (input.type) {
       case "textarea":
         return (
-          <textarea
+          <Textarea
             id={id}
             data-testid={testId}
-            className="border-input flex min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-sm"
             value={asString(value)}
             onChange={(e) => onChange(e.target.value)}
           />

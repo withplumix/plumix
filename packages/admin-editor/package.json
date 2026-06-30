@@ -61,6 +61,7 @@
     "@plumix/vitest-config": "workspace:*",
     "@tailwindcss/vite": "catalog:tailwind",
     "@testing-library/react": "catalog:testing-library",
+    "@testing-library/user-event": "catalog:testing-library",
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",

@@ -134,7 +134,7 @@ describe("MenusShell", () => {
   });
 
   describe("create flow", () => {
-    test("clicking + Create new menu prompts and calls menu.save with empty items", async () => {
+    test("the create dialog names a menu and calls menu.create", async () => {
       mockRpc({
         "/menu/list": [],
         "/menu/locations/list": [],
@@ -144,11 +144,15 @@ describe("MenusShell", () => {
           version: 1,
         },
       });
-      vi.stubGlobal("prompt", vi.fn().mockReturnValue("Header Nav"));
 
       renderShell();
       const user = userEvent.setup();
       await user.click(await screen.findByTestId("menus-selector-create-new"));
+      await user.type(
+        await screen.findByTestId("menus-create-name"),
+        "Header Nav",
+      );
+      await user.click(screen.getByTestId("menus-create-submit"));
 
       const createCall = await vi.waitFor(() => {
         const found = findRpcCall("/menu/create");
@@ -162,16 +166,17 @@ describe("MenusShell", () => {
       );
     });
 
-    test("dismissing the prompt is a no-op", async () => {
+    test("dismissing the create dialog is a no-op", async () => {
       mockRpc({
         "/menu/list": [],
         "/menu/locations/list": [],
       });
-      vi.stubGlobal("prompt", vi.fn().mockReturnValue(null));
 
       renderShell();
       const user = userEvent.setup();
       await user.click(await screen.findByTestId("menus-selector-create-new"));
+      await screen.findByTestId("menus-create-name");
+      await user.keyboard("{Escape}");
 
       expect(findRpcCall("/menu/create")).toBeUndefined();
     });
@@ -254,16 +259,17 @@ describe("MenusShell", () => {
 
       renderShell();
 
-      const primarySelect = await screen.findByTestId<HTMLSelectElement>(
+      const primarySelect = await screen.findByTestId(
         "menus-location-select-primary",
       );
       expect(primarySelect).toBeInTheDocument();
-      expect(primarySelect.value).toBe("main");
+      // The Radix trigger shows the bound menu's name (or the unassigned hint).
+      expect(primarySelect).toHaveTextContent("Main");
 
-      const footerSelect = await screen.findByTestId<HTMLSelectElement>(
+      const footerSelect = await screen.findByTestId(
         "menus-location-select-footer",
       );
-      expect(footerSelect.value).toBe("");
+      expect(footerSelect).toHaveTextContent("Unassigned");
     });
 
     test("each select reflects its own persisted binding when every location is assigned", async () => {
@@ -296,14 +302,14 @@ describe("MenusShell", () => {
 
       renderShell();
 
-      const primarySelect = await screen.findByTestId<HTMLSelectElement>(
+      const primarySelect = await screen.findByTestId(
         "menus-location-select-primary",
       );
-      expect(primarySelect.value).toBe("primary");
-      const footerSelect = await screen.findByTestId<HTMLSelectElement>(
+      expect(primarySelect).toHaveTextContent("Primary");
+      const footerSelect = await screen.findByTestId(
         "menus-location-select-footer",
       );
-      expect(footerSelect.value).toBe("footer");
+      expect(footerSelect).toHaveTextContent("Footer");
     });
 
     test("changing a select calls menu.assignLocation with the new termSlug", async () => {
@@ -324,11 +330,12 @@ describe("MenusShell", () => {
       });
 
       renderShell();
-      const select = await screen.findByTestId<HTMLSelectElement>(
-        "menus-location-select-primary",
-      );
+      await screen.findByTestId("menus-location-select-primary");
       const user = userEvent.setup();
-      await user.selectOptions(select, "main");
+      await user.click(screen.getByTestId("menus-location-select-primary"));
+      await user.click(
+        screen.getByTestId("menus-location-select-primary-main"),
+      );
 
       const call = await vi.waitFor(() => {
         const found = findRpcCall("/menu/assignLocation");
@@ -359,11 +366,12 @@ describe("MenusShell", () => {
       });
 
       renderShell();
-      const select = await screen.findByTestId<HTMLSelectElement>(
-        "menus-location-select-primary",
-      );
+      await screen.findByTestId("menus-location-select-primary");
       const user = userEvent.setup();
-      await user.selectOptions(select, "");
+      await user.click(screen.getByTestId("menus-location-select-primary"));
+      await user.click(
+        screen.getByTestId("menus-location-select-primary-unassigned"),
+      );
 
       const call = await vi.waitFor(() => {
         const found = findRpcCall("/menu/assignLocation");
@@ -602,11 +610,12 @@ describe("MenusShell", () => {
         },
         "/menu/delete": { id: 7 },
       });
-      vi.stubGlobal("confirm", vi.fn().mockReturnValue(true));
 
       renderShell();
       const user = userEvent.setup();
+      // Opens the confirm AlertDialog; the destructive action fires the delete.
       await user.click(await screen.findByTestId("menu-delete-button"));
+      await user.click(await screen.findByTestId("menu-delete-confirm"));
 
       const call = await vi.waitFor(() => {
         const found = findRpcCall("/menu/delete");

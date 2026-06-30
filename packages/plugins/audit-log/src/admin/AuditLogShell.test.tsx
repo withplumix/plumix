@@ -7,6 +7,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { i18n, I18nProvider } from "plumix/i18n";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -152,12 +153,11 @@ describe("AuditLogShell", () => {
     renderShell();
     await screen.findByTestId("audit-log-empty");
 
-    fireEvent.change(screen.getByTestId("audit-log-filter-subject-type"), {
-      target: { value: "user" },
-    });
-    fireEvent.change(screen.getByTestId("audit-log-filter-event-prefix"), {
-      target: { value: "user:" },
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("audit-log-filter-subject-type"));
+    await user.click(screen.getByTestId("audit-log-filter-subject-type-user"));
+    await user.click(screen.getByTestId("audit-log-filter-event-prefix"));
+    await user.click(screen.getByTestId("audit-log-filter-event-prefix-user:"));
     fireEvent.change(screen.getByTestId("audit-log-filter-actor"), {
       target: { value: "7" },
     });
@@ -224,9 +224,9 @@ describe("AuditLogShell", () => {
     renderShell();
     await screen.findByTestId("audit-log-empty");
 
-    fireEvent.change(screen.getByTestId("audit-log-filter-subject-type"), {
-      target: { value: "user" },
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("audit-log-filter-subject-type"));
+    await user.click(screen.getByTestId("audit-log-filter-subject-type-user"));
     await waitFor(() => {
       expect(lastJson()?.subjectType).toBe("user");
     });
@@ -261,9 +261,8 @@ describe("AuditLogShell", () => {
     expect(typeof json?.occurredAfter).toBe("number");
 
     expect(
-      screen.getByTestId<HTMLSelectElement>("audit-log-filter-event-prefix")
-        .value,
-    ).toBe("user:");
+      screen.getByTestId("audit-log-filter-event-prefix"),
+    ).toHaveTextContent("user:");
     expect(
       screen.getByTestId<HTMLInputElement>("audit-log-filter-actor").value,
     ).toBe("7");
@@ -274,9 +273,9 @@ describe("AuditLogShell", () => {
     renderShell();
     await screen.findByTestId("audit-log-empty");
 
-    fireEvent.change(screen.getByTestId("audit-log-filter-event-prefix"), {
-      target: { value: "user:" },
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("audit-log-filter-event-prefix"));
+    await user.click(screen.getByTestId("audit-log-filter-event-prefix-user:"));
 
     await waitFor(() => {
       expect(window.location.search).toContain("eventPrefix=user");

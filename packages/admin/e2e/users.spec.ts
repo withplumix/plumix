@@ -197,7 +197,8 @@ test.describe("/users/create", () => {
     await expect(page.getByTestId("invite-heading")).toBeVisible();
 
     await page.getByTestId("invite-email-input").fill("newbie@example.test");
-    await page.getByTestId("invite-role-select").selectOption("editor");
+    await page.getByTestId("invite-role-select").click();
+    await page.getByTestId("invite-role-select-editor").click();
     await page.getByTestId("invite-submit").click();
 
     // Submission forwards the expected shape to user.invite.
@@ -288,8 +289,9 @@ test.describe("/users/$id/edit", () => {
       "eddie@example.test",
     );
     await expect(page.getByTestId("user-edit-name-input")).toHaveValue("Eddie");
-    await expect(page.getByTestId("user-edit-role-select")).toHaveValue(
-      "editor",
+    // The Radix role trigger shows the long role label, not a native value.
+    await expect(page.getByTestId("user-edit-role-select")).toContainText(
+      "Editor",
     );
     // Disable + Delete surfaces are visible to admin-editing-other.
     await expect(page.getByTestId("user-edit-disable-button")).toBeVisible();
@@ -405,9 +407,10 @@ test.describe("/users/$id/edit", () => {
 
     await page.goto("users/42/edit");
     await page.getByTestId("user-edit-delete-button").click();
+    await page.getByTestId("user-delete-reassign-select").click();
     await page
-      .getByTestId("user-delete-reassign-select")
-      .selectOption(String(inheritor.id));
+      .getByTestId(`user-delete-reassign-select-${inheritor.id}`)
+      .click();
     await page.getByTestId("user-delete-confirm-button").click();
 
     await expect

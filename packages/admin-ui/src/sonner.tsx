@@ -1,16 +1,13 @@
-"use client";
-
 import type { CSSProperties } from "react";
 import type { ToasterProps } from "sonner";
-import { useTheme } from "@/providers/theme.js";
 import { Toaster as Sonner } from "sonner";
 
-const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme } = useTheme();
-
+// Styled Sonner toaster. Theme-agnostic: the host passes `theme` (this package
+// has no theme provider of its own), and the CSS variables map the toast
+// surface onto the active shadcn palette.
+function Toaster(props: ToasterProps) {
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
       className="toaster group"
       style={
         {
@@ -22,6 +19,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
       {...props}
     />
   );
-};
+}
 
 export { Toaster };

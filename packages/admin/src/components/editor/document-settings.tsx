@@ -12,6 +12,14 @@ import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
 import { Form } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
+import { Textarea } from "@plumix/admin-ui/textarea";
 
 const M = {
   title: defineMessage({ id: "editor.document.title", message: "Title" }),
@@ -23,6 +31,10 @@ const M = {
     message: "(no parent)",
   }),
 } satisfies Record<string, MessageDescriptor>;
+
+// Radix Select forbids an empty-string item value, so the "no parent"
+// choice carries a sentinel that maps back to `null` on change.
+const NO_PARENT_VALUE = "__none__";
 
 interface DocumentParentOption {
   readonly id: number;
@@ -160,23 +172,36 @@ export function DocumentSettingsPanel({
       {parent ? (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="entry-parent-select">{renderLabel(M.parent)}</Label>
-          <select
-            id="entry-parent-select"
-            value={parent.value === null ? "" : String(parent.value)}
-            onChange={(event) => {
-              const raw = event.target.value;
-              parent.onChange(raw === "" ? null : Number(raw));
+          <Select
+            value={
+              parent.value === null ? NO_PARENT_VALUE : String(parent.value)
+            }
+            onValueChange={(next) => {
+              parent.onChange(next === NO_PARENT_VALUE ? null : Number(next));
             }}
-            className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
-            data-testid="entry-parent-select"
           >
-            <option value="">{renderLabel(M.noParent)}</option>
-            {parent.options.map((option) => (
-              <option key={option.id} value={String(option.id)}>
-                {option.title}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              id="entry-parent-select"
+              className="w-full"
+              data-testid="entry-parent-select"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_PARENT_VALUE}>
+                {renderLabel(M.noParent)}
+              </SelectItem>
+              {parent.options.map((option) => (
+                <SelectItem
+                  key={option.id}
+                  value={String(option.id)}
+                  data-testid={`entry-parent-select-option-${option.id}`}
+                >
+                  {option.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       ) : null}
       {taxonomies?.map((taxonomy) => (
@@ -193,14 +218,14 @@ export function DocumentSettingsPanel({
       {excerpt ? (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="entry-excerpt-input">{renderLabel(M.excerpt)}</Label>
-          <textarea
+          <Textarea
             id="entry-excerpt-input"
             rows={3}
             value={excerpt.value}
             onChange={(event) => {
               excerpt.onChange(event.target.value);
             }}
-            className="border-input bg-background focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+            className="min-h-20"
             data-testid="entry-excerpt-input"
           />
         </div>

@@ -4,10 +4,10 @@ import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useState } from "react";
 import { getPluginFieldType } from "@/lib/plugin-registry.js";
 import { useLabel } from "@/lib/use-label.js";
-import { cn } from "@/lib/utils";
 import { defineMessage } from "@lingui/core/macro";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
+import { Checkbox } from "@plumix/admin-ui/checkbox";
 import { ColorPicker } from "@plumix/admin-ui/color-picker";
 import {
   FormControl,
@@ -18,7 +18,16 @@ import {
   FormMessage,
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
+import { RadioGroup, RadioGroupItem } from "@plumix/admin-ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { Slider } from "@plumix/admin-ui/slider";
+import { Textarea } from "@plumix/admin-ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 
 import { MultiReferencePicker } from "./multi-reference-picker.js";
@@ -74,22 +83,70 @@ export function MetaBoxField({
             <FormItem className={className} data-testid={testIdPrefix}>
               <div className="flex items-center gap-2">
                 <FormControl>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     name={rhf.name}
-                    ref={rhf.ref}
                     checked={rhf.value === true}
                     required={field.required}
                     disabled={disabled}
                     onBlur={rhf.onBlur}
-                    onChange={(e) => {
-                      rhf.onChange(e.target.checked);
+                    onCheckedChange={(checked) => {
+                      rhf.onChange(checked === true);
                     }}
                     data-testid={inputTestId}
                   />
                 </FormControl>
                 <FormLabel>{labelText}</FormLabel>
               </div>
+              {field.description ? (
+                <FormDescription data-testid={`${testIdPrefix}-description`}>
+                  {renderLabel(field.description)}
+                </FormDescription>
+              ) : null}
+              <FormMessage />
+            </FormItem>
+          );
+        }
+
+        if (
+          field.inputType === "select" &&
+          getPluginFieldType(field.inputType) === undefined
+        ) {
+          // Radix Select needs <FormControl> wrapping the trigger (not the
+          // Select root, which renders no DOM node) so the label/error/
+          // aria-invalid wiring lands on a real element.
+          return (
+            <FormItem className={className} data-testid={testIdPrefix}>
+              <FormLabel>{labelText}</FormLabel>
+              <Select
+                name={rhf.name}
+                value={encodeOptionValue(asString(rhf.value))}
+                onValueChange={(next) => {
+                  rhf.onChange(decodeOptionValue(next));
+                }}
+                disabled={disabled}
+                required={field.required}
+              >
+                <FormControl>
+                  <SelectTrigger
+                    className="w-full"
+                    onBlur={rhf.onBlur}
+                    data-testid={inputTestId}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(field.options ?? []).map((opt) => (
+                    <SelectItem
+                      key={opt.value}
+                      value={encodeOptionValue(opt.value)}
+                      data-testid={`${inputTestId}-option-${opt.value}`}
+                    >
+                      {renderLabel(opt.label)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {field.description ? (
                 <FormDescription data-testid={`${testIdPrefix}-description`}>
                   {renderLabel(field.description)}
@@ -125,15 +182,17 @@ export function MetaBoxField({
   );
 }
 
-// Base classes shared by <textarea> and <select> — mirror the shadcn
-// <Input> look (same border, ring, disabled states) so all three line
-// up visually in a dense sidebar.
-const CONTROL_BASE_CLASS = cn(
-  "border-input bg-background focus-visible:ring-ring",
-  "rounded-md border text-sm",
-  "focus-visible:ring-2 focus-visible:outline-none",
-  "disabled:cursor-not-allowed disabled:opacity-50",
-);
+// Radix Select / RadioGroup reject an empty-string item value (Radix reserves
+// it for "no selection"), but a plugin author may legitimately register an
+// option whose value is "". Encode "" to a sentinel for the item + selected
+// value and decode it back on change so author data round-trips intact.
+const EMPTY_OPTION_VALUE = "__plumix_empty__";
+function encodeOptionValue(value: string): string {
+  return value === "" ? EMPTY_OPTION_VALUE : value;
+}
+function decodeOptionValue(value: string): string {
+  return value === EMPTY_OPTION_VALUE ? "" : value;
+}
 
 // Returns the native-element body for the given field. Must render a
 // single element so shadcn's `<FormControl>` (which uses Radix `Slot`)
@@ -197,7 +256,7 @@ function renderNativeInput({
 
   if (field.inputType === "textarea") {
     return (
-      <textarea
+      <Textarea
         {...common}
         value={asString(rhf.value)}
         maxLength={field.maxLength}
@@ -206,7 +265,7 @@ function renderNativeInput({
         onChange={(e) => {
           rhf.onChange(e.target.value);
         }}
-        className={cn(CONTROL_BASE_CLASS, "flex min-h-20 w-full px-3 py-2")}
+        className="min-h-20"
       />
     );
   }
@@ -402,8 +461,8 @@ function renderNativeInput({
     // a metabox needs a separate Tiptap host slice; until that lands, the
     // field falls back to a JSON textarea so the value is at least authorable.
     return (
-      <textarea
-        className="border-input bg-background w-full rounded-md border p-2 font-mono text-xs"
+      <Textarea
+        className="font-mono text-xs"
         value={
           typeof rhf.value === "string" ? rhf.value : JSON.stringify(rhf.value)
         }
@@ -445,53 +504,36 @@ function renderNativeInput({
     );
   }
 
-  if (field.inputType === "select") {
-    return (
-      <select
-        {...common}
-        value={asString(rhf.value)}
-        onChange={(e) => {
-          rhf.onChange(e.target.value);
-        }}
-        className={cn(CONTROL_BASE_CLASS, "h-9 px-3 py-1")}
-      >
-        {(field.options ?? []).map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {renderLabel(opt.label)}
-          </option>
-        ))}
-      </select>
-    );
-  }
+  // Note: `select` is handled in the FormField render callback (it needs
+  // <FormControl> around the Radix trigger, not the Select root).
 
   if (field.inputType === "radio") {
     return (
-      <div
-        role="radiogroup"
-        className="flex flex-col gap-1"
+      <RadioGroup
+        name={rhf.name}
+        value={encodeOptionValue(asString(rhf.value))}
+        onValueChange={(next) => {
+          rhf.onChange(decodeOptionValue(next));
+        }}
+        onBlur={rhf.onBlur}
+        disabled={disabled}
+        required={field.required}
+        className="gap-1"
         data-testid={testId}
       >
         {(field.options ?? []).map((opt) => (
-          <label
-            key={opt.value}
-            className="inline-flex items-center gap-2 text-sm"
-          >
-            <input
-              type="radio"
-              name={rhf.name}
-              value={opt.value}
-              checked={asString(rhf.value) === opt.value}
-              required={field.required}
-              disabled={disabled}
-              onChange={() => {
-                rhf.onChange(opt.value);
-              }}
+          <div key={opt.value} className="flex items-center gap-2 text-sm">
+            <RadioGroupItem
+              value={encodeOptionValue(opt.value)}
+              id={`${testId}-${opt.value}`}
               data-testid={`${testId}-${opt.value}`}
             />
-            {renderLabel(opt.label)}
-          </label>
+            <label htmlFor={`${testId}-${opt.value}`}>
+              {renderLabel(opt.label)}
+            </label>
+          </div>
         ))}
-      </div>
+      </RadioGroup>
     );
   }
 
@@ -611,7 +653,7 @@ function JsonControl({
 
   return (
     <div className="flex flex-col gap-1" data-testid={`${testId}-shell`}>
-      <textarea
+      <Textarea
         name={name}
         value={draft}
         disabled={disabled}
@@ -636,12 +678,9 @@ function JsonControl({
         }}
         rows={6}
         spellCheck={false}
+        aria-invalid={error ? true : undefined}
         data-testid={testId}
-        className={cn(
-          CONTROL_BASE_CLASS,
-          "min-h-32 w-full px-3 py-2 font-mono text-xs",
-          error ? "border-destructive" : "",
-        )}
+        className="min-h-32 font-mono text-xs"
       />
       {error ? (
         <p className="text-destructive text-xs" data-testid={`${testId}-error`}>

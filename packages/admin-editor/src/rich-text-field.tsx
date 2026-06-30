@@ -20,6 +20,13 @@ import {
   Superscript,
   Underline,
 } from "@plumix/admin-ui/icons";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { Toggle } from "@plumix/admin-ui/toggle";
 import { HEADING_LEVELS } from "@plumix/blocks";
 
@@ -127,21 +134,37 @@ export function RichTextField({
   return (
     <div className="flex flex-col gap-1.5" data-testid={testId}>
       <div className="flex flex-wrap items-center gap-0.5" role="toolbar">
-        <select
-          data-testid={`${testId}-format`}
-          className="border-input me-1 flex h-8 rounded-md border bg-transparent px-2 text-sm"
-          aria-label="Text format"
+        <Select
           disabled={!editor}
           value={active?.headingLevel ? `h${active.headingLevel}` : "paragraph"}
-          onChange={(e) => setFormat(editor, e.target.value)}
+          onValueChange={(next) => setFormat(editor, next)}
         >
-          <option value="paragraph">Paragraph</option>
-          {HEADING_LEVELS.map((level) => (
-            <option key={level} value={`h${level}`}>
-              Heading {level}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            size="sm"
+            className="me-1"
+            aria-label="Text format"
+            data-testid={`${testId}-format`}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              value="paragraph"
+              data-testid={`${testId}-format-paragraph`}
+            >
+              Paragraph
+            </SelectItem>
+            {HEADING_LEVELS.map((level) => (
+              <SelectItem
+                key={level}
+                value={`h${level}`}
+                data-testid={`${testId}-format-h${level}`}
+              >
+                Heading {level}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {MARKS.map(({ name, icon: Icon, testId: suffix }) => (
           <ToolbarToggle
             key={name}

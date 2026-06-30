@@ -2,15 +2,17 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
-import { Toaster } from "@/components/ui/sonner.js";
 import { pathToCrumbs } from "@/lib/breadcrumbs.js";
 import { sessionQueryOptions } from "@/lib/session.js";
+import { useTheme } from "@/providers/theme.js";
 import { Trans, useLingui } from "@lingui/react";
 import {
   createRootRouteWithContext,
   Outlet,
   useRouterState,
 } from "@tanstack/react-router";
+
+import { Toaster } from "@plumix/admin-ui/sonner";
 
 interface RouterAppContext {
   readonly queryClient: QueryClient;
@@ -31,10 +33,11 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootLayout(): ReactNode {
   useDocumentTitle();
+  const { theme } = useTheme();
   return (
     <>
       <Outlet />
-      <Toaster />
+      <Toaster theme={theme} />
     </>
   );
 }

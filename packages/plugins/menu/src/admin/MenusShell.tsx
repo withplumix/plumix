@@ -1,7 +1,22 @@
 import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Button } from "plumix/admin/ui";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
 import type { MenuListItem, MenuLocationRow } from "./rpc.js";
@@ -20,6 +35,10 @@ import {
   setSelectedTab,
 } from "./url-state.js";
 
+// Radix Select forbids an empty-string item value, so the "unassigned" choice
+// carries a sentinel that maps back to `null` (no menu) on change.
+const UNASSIGNED_VALUE = "__unassigned__";
+
 // Plain descriptor literals — the plugin package builds with plain
 // `tsc`, no Lingui macro pass, so we author the `{ id, message }`
 // shape directly. Resolved at the consume site via `useLingui()._()`.
@@ -31,10 +50,6 @@ const M = {
   tabLocations: {
     id: "plugin.menu.shell.tab.locations",
     message: "Manage Locations",
-  },
-  createPrompt: {
-    id: "plugin.menu.shell.createPrompt",
-    message: "Menu name",
   },
   unassigned: {
     id: "plugin.menu.shell.unassigned",
@@ -51,14 +66,15 @@ const TABS: readonly {
 ];
 
 export function MenusShell(): ReactNode {
-  const { i18n } = useLingui();
   const menus = useMenuList();
   const createMenu = useCreateMenu();
   const [tab, setTab] = useState<TabId>(getSelectedTab());
   const [slug, setSlug] = useState<string | null>(getSelectedMenuSlug());
+  const [createOpen, setCreateOpen] = useState(false);
+  const [draftName, setDraftName] = useState("");
 
-  function handleCreate(): void {
-    const name = window.prompt(i18n._(M.createPrompt))?.trim();
+  function submitCreate(): void {
+    const name = draftName.trim();
     if (!name) return;
     createMenu.mutate(
       { name },
@@ -66,6 +82,8 @@ export function MenusShell(): ReactNode {
         onSuccess: (result) => {
           setSelectedMenu(result.slug);
           setSlug(result.slug);
+          setCreateOpen(false);
+          setDraftName("");
         },
       },
     );
@@ -94,9 +112,58 @@ export function MenusShell(): ReactNode {
       </h1>
       <MenuSelector
         menus={menuList}
-        onCreate={handleCreate}
+        onCreate={() => {
+          setCreateOpen(true);
+        }}
         onSelect={handleSelectMenu}
       />
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent data-testid="menus-create-dialog">
+          <DialogHeader>
+            <DialogTitle>
+              <Trans id="plugin.menu.shell.createTitle" message="Create menu" />
+            </DialogTitle>
+            <DialogDescription>
+              <Trans
+                id="plugin.menu.shell.createDescription"
+                message="Name your new menu. You can add links to it next."
+              />
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitCreate();
+            }}
+          >
+            <Label htmlFor="menus-create-name">
+              <Trans id="plugin.menu.shell.createPrompt" message="Menu name" />
+            </Label>
+            <Input
+              id="menus-create-name"
+              data-testid="menus-create-name"
+              value={draftName}
+              onChange={(event) => {
+                setDraftName(event.target.value);
+              }}
+              autoFocus
+            />
+            <DialogFooter>
+              <Button
+                type="submit"
+                data-testid="menus-create-submit"
+                disabled={createMenu.isPending || draftName.trim() === ""}
+              >
+                <Trans
+                  id="plugin.menu.shell.createSubmit"
+                  message="Create menu"
+                />
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       <Tabs activeTab={tab} onChange={handleTabChange} />
       {tab === "edit" ? (
         <EditPanel selectedMenu={selectedMenu} />
@@ -273,22 +340,36 @@ function LocationRow({
       >
         {row.label}
       </span>
-      <select
-        data-testid={`menus-location-select-${row.id}`}
-        value={currentSlug}
-        onChange={(event) => {
-          const value = event.target.value;
-          onChange(value === "" ? null : value);
+      <Select
+        value={currentSlug === "" ? UNASSIGNED_VALUE : currentSlug}
+        onValueChange={(next) => {
+          onChange(next === UNASSIGNED_VALUE ? null : next);
         }}
-        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none"
       >
-        <option value="">{i18n._(M.unassigned)}</option>
-        {menus.map((menu) => (
-          <option key={menu.id} value={menu.slug}>
-            {menu.name}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger
+          className="w-44"
+          data-testid={`menus-location-select-${row.id}`}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            value={UNASSIGNED_VALUE}
+            data-testid={`menus-location-select-${row.id}-unassigned`}
+          >
+            {i18n._(M.unassigned)}
+          </SelectItem>
+          {menus.map((menu) => (
+            <SelectItem
+              key={menu.id}
+              value={menu.slug}
+              data-testid={`menus-location-select-${row.id}-${menu.slug}`}
+            >
+              {menu.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

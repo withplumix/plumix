@@ -25,12 +25,11 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
     await page.goto("pages/menus");
     await expect(page.getByTestId("menus-shell")).toBeVisible();
 
-    // 2. Create a menu. The selector's "create new" sentinel opens a
-    //    `window.prompt` — accept with the chosen name.
-    page.once("dialog", (dialog) => {
-      void dialog.accept("Primary");
-    });
+    // 2. Create a menu. The "create new" sentinel opens a dialog; name the
+    //    menu and submit.
     await page.getByTestId("menus-selector-create-new").click();
+    await page.getByTestId("menus-create-name").fill("Primary");
+    await page.getByTestId("menus-create-submit").click();
     await expect(
       page.getByTestId("menus-selector-option-primary"),
     ).toBeVisible();
@@ -113,18 +112,18 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
     const saved = page.waitForResponse(
       (r) => r.url().endsWith("/menu/assignLocation") && r.status() === 200,
     );
-    await page
-      .getByTestId("menus-location-select-primary")
-      .selectOption("primary");
+    await page.getByTestId("menus-location-select-primary").click();
+    await page.getByTestId("menus-location-select-primary-primary").click();
     await saved;
 
-    // Reload and re-enter the locations tab — assignment persists.
+    // Reload and re-enter the locations tab — assignment persists. The Radix
+    // trigger shows the assigned menu's name ("Primary"), not its slug.
     await page.reload();
     await expect(page.getByTestId("menus-shell")).toBeVisible();
     await page.getByTestId("menus-tab-locations").click();
-    await expect(page.getByTestId("menus-location-select-primary")).toHaveValue(
-      "primary",
-    );
+    await expect(
+      page.getByTestId("menus-location-select-primary"),
+    ).toContainText("Primary");
   });
 
   test("drag-nest: pointer drag puts Docs under Home and persists across reload", async ({

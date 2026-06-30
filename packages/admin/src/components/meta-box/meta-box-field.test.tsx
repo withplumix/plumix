@@ -445,12 +445,51 @@ describe("MetaBoxField dispatcher", () => {
         onChangeSpy={onChange}
       />,
     );
-    const select = screen.getByTestId("meta-box-field-k-input");
-    expect(select.tagName).toBe("SELECT");
-    expect(select).toHaveValue("a");
+    // shadcn Select is a Radix combobox (button trigger + portal), not a
+    // native <select>. The trigger renders bound to the current value, and
+    // opening it + picking another option maps through onValueChange.
+    const trigger = screen.getByTestId("meta-box-field-k-input");
+    expect(trigger).toHaveAttribute("role", "combobox");
+    expect(trigger).toHaveTextContent("Alpha");
 
-    await userEvent.selectOptions(select, "b");
+    await userEvent.click(trigger);
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-k-input-option-b"),
+    );
     expect(onChange).toHaveBeenCalledWith("b");
+  });
+
+  test("select: tolerates an empty-string option value (Radix-safe)", async () => {
+    // Radix Select throws on an empty-string item value; a plugin author may
+    // still register an option whose value is "". The renderer must encode it
+    // rather than crash the whole entry editor (it runs outside the field
+    // error boundary), and round-trip the original "" back through onChange.
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "select",
+          options: [
+            { value: "", label: "None" },
+            { value: "a", label: "Alpha" },
+          ],
+        })}
+        initial=""
+        onChangeSpy={onChange}
+      />,
+    );
+    const trigger = screen.getByTestId("meta-box-field-k-input");
+    expect(trigger).toHaveTextContent("None");
+
+    await userEvent.click(trigger);
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-k-input-option-a"),
+    );
+    expect(onChange).toHaveBeenLastCalledWith("a");
+
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByTestId("meta-box-field-k-input-option-"));
+    expect(onChange).toHaveBeenLastCalledWith("");
   });
 
   test("radio: renders one input per option, click fires onChange", async () => {
@@ -468,8 +507,10 @@ describe("MetaBoxField dispatcher", () => {
         onChangeSpy={onChange}
       />,
     );
+    // shadcn RadioGroupItem is a Radix radio button (role=radio), not a
+    // native <input type=radio>.
     const bravo = screen.getByTestId("meta-box-field-k-input-b");
-    expect(bravo).toHaveAttribute("type", "radio");
+    expect(bravo).toHaveAttribute("role", "radio");
 
     await userEvent.click(bravo);
     expect(onChange).toHaveBeenCalledWith("b");
@@ -484,8 +525,10 @@ describe("MetaBoxField dispatcher", () => {
         onChangeSpy={onChange}
       />,
     );
+    // shadcn Checkbox is a Radix checkbox button (role=checkbox), not a
+    // native <input type=checkbox>.
     const box = screen.getByTestId("meta-box-field-k-input");
-    expect(box).toHaveAttribute("type", "checkbox");
+    expect(box).toHaveAttribute("role", "checkbox");
 
     await userEvent.click(box);
     expect(onChange).toHaveBeenCalledWith(true);

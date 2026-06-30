@@ -42,6 +42,13 @@ import {
 import { ArrowLeft, Check, Copy } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { vMessage } from "@plumix/core/validation";
 
 import {
@@ -245,27 +252,36 @@ function InviteUserRoute(): ReactNode {
                     <FormLabel>
                       <Trans id="userInvite.role.label" message="Role" />
                     </FormLabel>
-                    <FormControl>
-                      <select
-                        value={field.value}
-                        onBlur={field.onBlur}
-                        onChange={(e) => {
-                          // DOM types `e.target.value` as a bare string —
-                          // narrow back to `UserRole` before forwarding.
-                          const next = e.target.value;
-                          if (isUserRole(next)) field.onChange(next);
-                        }}
-                        disabled={inviteUser.isPending}
-                        data-testid="invite-role-select"
-                        className="border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                      >
+                    <Select
+                      value={field.value}
+                      onValueChange={(next) => {
+                        // Radix yields a bare string — narrow back to
+                        // `UserRole` before forwarding.
+                        if (isUserRole(next)) field.onChange(next);
+                      }}
+                      disabled={inviteUser.isPending}
+                    >
+                      <FormControl>
+                        <SelectTrigger
+                          className="w-full"
+                          onBlur={field.onBlur}
+                          data-testid="invite-role-select"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
                         {USER_ROLES.map((role) => (
-                          <option key={role} value={role}>
+                          <SelectItem
+                            key={role}
+                            value={role}
+                            data-testid={`invite-role-select-${role}`}
+                          >
                             {label(ROLE_LABEL_LONG[role])}
-                          </option>
+                          </SelectItem>
                         ))}
-                      </select>
-                    </FormControl>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -390,7 +406,7 @@ function InviteSuccess({
               <Trans id="userInvite.success.link.label" message="Invite link" />
             </UILabel>
             <div className="flex gap-2">
-              <input
+              <Input
                 id="invite-url"
                 readOnly
                 value={inviteUrl}
@@ -398,7 +414,7 @@ function InviteSuccess({
                   e.currentTarget.select();
                 }}
                 data-testid="invite-url-input"
-                className="border-input bg-muted text-muted-foreground flex h-9 w-full rounded-md border px-3 py-1 font-mono text-sm focus-visible:outline-none"
+                className="bg-muted text-muted-foreground font-mono"
               />
               <Button
                 type="button"

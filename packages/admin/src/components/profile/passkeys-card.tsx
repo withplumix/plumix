@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@plumix/admin-ui/alert-dialog";
 import { Badge } from "@plumix/admin-ui/badge";
-import { Button } from "@plumix/admin-ui/button";
+import { Button, buttonVariants } from "@plumix/admin-ui/button";
 import {
   Card,
   CardContent,
@@ -464,6 +464,7 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
             </AlertDialogCancel>
             <AlertDialogAction
               data-testid="profile-passkey-delete-confirm"
+              className={buttonVariants({ variant: "destructive" })}
               disabled={remove.isPending}
               onClick={(e) => {
                 e.preventDefault();

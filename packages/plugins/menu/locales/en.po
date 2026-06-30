@@ -155,6 +155,21 @@ msgstr "+ Create new menu"
 
 #. js-lingui-explicit-id
 #: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.createTitle"
+msgstr "Create menu"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.createDescription"
+msgstr "Name your new menu. You can add links to it next."
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
+msgid "plugin.menu.shell.createSubmit"
+msgstr "Create menu"
+
+#. js-lingui-explicit-id
+#: src/admin/MenusShell.tsx
 msgid "plugin.menu.shell.editEmpty"
 msgstr "Select a menu to start editing."
 
@@ -224,6 +239,16 @@ msgstr "Cannot set below the current deepest item."
 #: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.deleteButton"
 msgstr "Delete menu"
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.deleteDescription"
+msgstr "This permanently removes the menu and its items. This can't be undone."
+
+#. js-lingui-explicit-id
+#: src/admin/MenuItemEditor.tsx
+msgid "plugin.menu.itemEditor.deleteCancel"
+msgstr "Cancel"
 
 #. js-lingui-explicit-id
 #: src/admin/MenuItemEditor.tsx

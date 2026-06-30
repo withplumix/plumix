@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./base": "./base.ts"
+    "./base": "./base.ts",
+    "./jsdom-radix": "./jsdom-radix.ts"
   },
   "scripts": {
     "clean": "git clean -xdf .cache .turbo node_modules",

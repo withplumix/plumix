@@ -32,6 +32,8 @@ import {
 } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
 import { Label as UILabel } from "@plumix/admin-ui/label";
+import { RadioGroup, RadioGroupItem } from "@plumix/admin-ui/radio-group";
+import { Textarea } from "@plumix/admin-ui/textarea";
 import { vMessage } from "@plumix/core/validation";
 
 // Descriptors used outside JSX — error helpers + the textarea
@@ -480,38 +482,46 @@ function ApproveCard({
                     />
                   </FormLabel>
                   <FormControl>
-                    <div className="flex flex-col gap-2">
-                      <UILabel className="flex items-center gap-2 font-normal">
-                        <input
-                          type="radio"
-                          name={field.name}
+                    <RadioGroup
+                      name={field.name}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={pending}
+                      className="gap-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem
                           value="inherit"
-                          checked={field.value === "inherit"}
-                          onChange={() => field.onChange("inherit")}
-                          disabled={pending}
+                          id="auth-device-scope-inherit"
                           data-testid="auth-device-scope-inherit-radio"
                         />
-                        <Trans
-                          id="auth.device.scopeMode.inherit"
-                          message="Inherit all my permissions"
-                        />
-                      </UILabel>
-                      <UILabel className="flex items-center gap-2 font-normal">
-                        <input
-                          type="radio"
-                          name={field.name}
+                        <UILabel
+                          htmlFor="auth-device-scope-inherit"
+                          className="font-normal"
+                        >
+                          <Trans
+                            id="auth.device.scopeMode.inherit"
+                            message="Inherit all my permissions"
+                          />
+                        </UILabel>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem
                           value="restrict"
-                          checked={field.value === "restrict"}
-                          onChange={() => field.onChange("restrict")}
-                          disabled={pending}
+                          id="auth-device-scope-restrict"
                           data-testid="auth-device-scope-restrict-radio"
                         />
-                        <Trans
-                          id="auth.device.scopeMode.restrict"
-                          message="Restrict to specific capabilities"
-                        />
-                      </UILabel>
-                    </div>
+                        <UILabel
+                          htmlFor="auth-device-scope-restrict"
+                          className="font-normal"
+                        >
+                          <Trans
+                            id="auth.device.scopeMode.restrict"
+                            message="Restrict to specific capabilities"
+                          />
+                        </UILabel>
+                      </div>
+                    </RadioGroup>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -531,12 +541,12 @@ function ApproveCard({
                       />
                     </FormLabel>
                     <FormControl>
-                      <textarea
+                      <Textarea
                         rows={4}
                         placeholder={label(M.scopesPlaceholder)}
                         disabled={pending}
                         data-testid="auth-device-scopes-textarea"
-                        className="border-input bg-background focus-visible:ring-ring rounded-md border px-3 py-2 font-mono text-sm focus-visible:ring-2 focus-visible:outline-none"
+                        className="font-mono"
                         {...field}
                       />
                     </FormControl>
