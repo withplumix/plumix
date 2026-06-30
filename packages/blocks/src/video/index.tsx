@@ -1,8 +1,9 @@
 import type { ReactElement } from "react";
-import { defineBlock } from "plumix/blocks";
+
+import { defineBlock } from "../block-registry.js";
 
 export const videoBlock = defineBlock({
-  name: "media/video",
+  name: "core/video",
   title: "Video",
   icon: "Video",
   category: "media",

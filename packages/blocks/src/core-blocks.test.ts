@@ -13,6 +13,12 @@ describe("coreBlocks", () => {
     expect(names.has("core/table")).toBe(true);
   });
 
+  test("includes video and embed, promoted from the media plugin to core", () => {
+    const names = new Set(coreBlocks.map((b) => b.name));
+    expect(names.has("core/video")).toBe(true);
+    expect(names.has("core/embed")).toBe(true);
+  });
+
   test("core/heading and core/quote collapsed into core/rich-text", () => {
     const names = new Set(coreBlocks.map((b) => b.name));
     expect(names.has("core/heading")).toBe(false);

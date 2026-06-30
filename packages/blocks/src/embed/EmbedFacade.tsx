@@ -1,8 +1,9 @@
 "use client";
 
-import type { IslandProps } from "plumix/blocks";
 import type { CSSProperties, ReactElement } from "react";
 import { useState } from "react";
+
+import type { IslandProps } from "../island-props.js";
 
 interface EmbedFacadeProps {
   readonly src: string;
@@ -16,7 +17,7 @@ interface EmbedFacadeProps {
 }
 
 /**
- * Click-to-load facade for the `media/embed` block. The server renders
+ * Click-to-load facade for the `core/embed` block. The server renders
  * only a placeholder + play affordance — no `<iframe>`, so a visitor's
  * browser makes no third-party connection until they opt in. Hydrated
  * with `client="interaction"`, the first click replays through to mount

@@ -1,15 +1,15 @@
-import { renderBlockSpecToHtml } from "plumix/blocks/test";
 import { describe, expect, test } from "vitest";
 
+import { renderBlockSpecToHtml } from "../test/index.js";
 import { embedBlock } from "./index.js";
 
-describe("media/embed", () => {
+describe("core/embed", () => {
   test("renders a click-to-load facade, not a live iframe, on the server", () => {
     const html = renderBlockSpecToHtml(embedBlock, {
       url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
       title: "My clip",
     });
-    expect(html).toContain('data-plumix-block="media/embed"');
+    expect(html).toContain('data-plumix-block="core/embed"');
     expect(html).toContain('data-provider="youtube"');
     expect(html).toContain("plumix-embed-facade");
     // The whole point: no third-party connection until the visitor opts in.

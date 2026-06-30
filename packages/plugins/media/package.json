@@ -79,7 +79,6 @@
     "@plumix/vitest-config": "workspace:*",
     "@tanstack/react-query": "catalog:tanstack",
     "@testing-library/jest-dom": "catalog:testing-library",
-    "@testing-library/react": "catalog:testing-library",
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",

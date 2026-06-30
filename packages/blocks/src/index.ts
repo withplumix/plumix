@@ -156,6 +156,7 @@ export { buttonBlock } from "./button/index.js";
 export { codeBlock } from "./code/index.js";
 export { columnsBlock } from "./columns/index.js";
 export { detailsBlock } from "./details/index.js";
+export { embedBlock } from "./embed/index.js";
 export { groupBlock } from "./group/index.js";
 export { htmlBlock } from "./html/index.js";
 export { richTextBlock } from "./rich-text/index.js";
@@ -167,6 +168,7 @@ export {
   tableHeaderCellBlock,
   tableHeaderRowBlock,
 } from "./table/index.js";
+export { videoBlock } from "./video/index.js";
 
 // ─── Inline marks ───────────────────────────────────────────────────────────
 export { coreMarks, coreMarkExtensions } from "./marks/core/index.js";

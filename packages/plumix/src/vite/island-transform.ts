@@ -111,6 +111,16 @@ function hasDefaultModifier(node: ts.HasModifiers): boolean {
 // recursively re-trigger this transform.
 export const ORIG_QUERY = "?plumix-orig";
 
+// Virtual module the SSR shim pulls `serializeProps` from. A `"use client"`
+// island in `@plumix/blocks` itself can't import the public `plumix/blocks`
+// specifier — that package re-exports `@plumix/blocks`, so a dependency on it
+// would be a cycle, and pnpm's strict layout makes `plumix/blocks`
+// unresolvable from the island's own location. The plugin's `load` re-exports
+// `serializeProps` from `plumix/blocks` resolved at the project root (where
+// `plumix` is always a dependency), so islands in core, plugins, and userland
+// all resolve it identically.
+export const SERIALIZE_VIRTUAL_ID = "virtual:plumix/island-serialize";
+
 interface TransformUseClientOptions {
   readonly chunkUrl: string;
 }
@@ -133,8 +143,10 @@ export function transformUseClientModule(
     `import { createElement as __c } from "react";`,
     // Route props through `serializeProps` so Date/Map/Set/etc. survive
     // the round-trip the custom element's `deserializeProps` expects.
-    // Plain JSON.stringify would silently coerce them.
-    `import { serializeProps as __ser } from "plumix/blocks";`,
+    // Plain JSON.stringify would silently coerce them. Sourced from the
+    // virtual module (not `plumix/blocks` directly) so core islands resolve
+    // it too — see SERIALIZE_VIRTUAL_ID.
+    `import { serializeProps as __ser } from ${JSON.stringify(SERIALIZE_VIRTUAL_ID)};`,
     `import * as __orig from ${origUrl};`,
     // Default prefetch trigger per hydration trigger. `interaction`'s
     // `visible` default is the one that makes the first click feel instant

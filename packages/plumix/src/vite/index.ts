@@ -43,6 +43,7 @@ import { VitePluginError } from "./errors.js";
 import {
   ORIG_QUERY,
   scanUserSources,
+  SERIALIZE_VIRTUAL_ID,
   transformUseClientModule,
 } from "./island-transform.js";
 import { plumixPathAliases } from "./path-aliases.js";
@@ -66,6 +67,8 @@ export interface PlumixVitePluginOptions {
 
 const ASSET_MANIFEST_VIRTUAL_ID = "virtual:plumix/asset-manifest";
 const ASSET_MANIFEST_RESOLVED_ID = "\0" + ASSET_MANIFEST_VIRTUAL_ID;
+
+const SERIALIZE_RESOLVED_ID = "\0" + SERIALIZE_VIRTUAL_ID;
 
 export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   let root = process.cwd();
@@ -195,6 +198,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     },
     resolveId(id, importer) {
       if (id === ASSET_MANIFEST_VIRTUAL_ID) return ASSET_MANIFEST_RESOLVED_ID;
+      if (id === SERIALIZE_VIRTUAL_ID) return SERIALIZE_RESOLVED_ID;
       // `<file>?plumix-orig` — the SSR shim imports the original module
       // from this virtual ID; `transform` short-circuits on it so the
       // shim isn't recursively wrapped. The shim emits an absolute path,
@@ -210,6 +214,13 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       if (id.endsWith(ORIG_QUERY)) {
         const filePath = id.slice(0, -ORIG_QUERY.length);
         return readFileSync(filePath, "utf8");
+      }
+      if (id === SERIALIZE_RESOLVED_ID) {
+        // Re-export `serializeProps` resolved from the project root, where
+        // `plumix` is always a dependency — so a "use client" island in any
+        // package (core `@plumix/blocks` included) gets a working import the
+        // SSR shim injected via SERIALIZE_VIRTUAL_ID.
+        return `export { serializeProps } from "plumix/blocks";`;
       }
       if (id === ASSET_MANIFEST_RESOLVED_ID) {
         // Read the manifest Vite emits to `<outDir>/.vite/manifest.json`.

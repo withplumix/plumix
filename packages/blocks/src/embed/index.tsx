@@ -1,11 +1,11 @@
 import type { ReactElement } from "react";
-import { defineBlock } from "plumix/blocks";
 
+import { defineBlock } from "../block-registry.js";
 import { EmbedFacade } from "./EmbedFacade.js";
 import { resolveEmbed } from "./resolve.js";
 
 export const embedBlock = defineBlock({
-  name: "media/embed",
+  name: "core/embed",
   title: "Embed",
   icon: "Code",
   category: "media",
