@@ -12,6 +12,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "@plumix/admin-ui/icons";
+import { Kbd } from "@plumix/admin-ui/kbd";
 import { SidebarTrigger } from "@plumix/admin-ui/sidebar";
 import { Toggle } from "@plumix/admin-ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
@@ -136,7 +137,7 @@ function XrayToggle(): ReactElement {
       </TooltipTrigger>
       <TooltipContent>
         <Trans id="editor.toolbar.xray" message="X-ray: outline all blocks" />{" "}
-        <kbd className="text-muted-foreground ms-1">⇧X</kbd>
+        <Kbd className="ms-1">⇧X</Kbd>
       </TooltipContent>
     </Tooltip>
   );

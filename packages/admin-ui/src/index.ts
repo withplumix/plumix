@@ -15,6 +15,7 @@ export * from "./dropdown-menu.js";
 export * from "./empty.js";
 export * from "./form.js";
 export * from "./input.js";
+export * from "./kbd.js";
 export * from "./label.js";
 export * from "./pagination.js";
 export * from "./popover.js";
