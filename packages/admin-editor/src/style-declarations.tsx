@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
-import type { StyleValue, ThemeTokens } from "@plumix/blocks";
+import type { ThemeTokens } from "@plumix/blocks";
 import { Button } from "@plumix/admin-ui/button";
 import {
   Command,
@@ -27,7 +27,12 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { cn } from "@plumix/admin-ui/utils";
-import { tokenCategoryForProperty, tokenCssVar } from "@plumix/blocks";
+import {
+  tokenCategoryForProperty,
+  tokenCssVar,
+  tokenIdFromCssVar,
+  tokenIdToCssVar,
+} from "@plumix/blocks";
 
 import { CSS_PROPERTIES } from "./css-properties.js";
 
@@ -42,15 +47,15 @@ const NONE_VALUE = "__none__";
 export interface StyleDeclaration {
   /** CSS property (camelCase), as stored in the bucket. */
   readonly property: string;
-  readonly value: StyleValue;
+  readonly value: string;
 }
 
 interface StyleDeclarationsProps {
   readonly declarations: readonly StyleDeclaration[];
   /** Theme tokens, for the per-property token picker on token-valued rows. */
   readonly tokens: ThemeTokens;
-  /** Set a property's raw value, or clear it with `null`. */
-  readonly onChange: (property: string, value: StyleValue | null) => void;
+  /** Set a property's value, or clear it with `null`. */
+  readonly onChange: (property: string, value: string | null) => void;
   /** Rename a property in place, keeping its value. */
   readonly onRename: (from: string, to: string) => void;
 }
@@ -109,15 +114,18 @@ function DeclarationRow({
   onRename,
 }: {
   readonly property: string;
-  readonly value: StyleValue;
+  readonly value: string;
   readonly siblingKeys: readonly string[];
   readonly tokens: ThemeTokens;
-  readonly onChange: (property: string, value: StyleValue | null) => void;
+  readonly onChange: (property: string, value: string | null) => void;
   readonly onRename: (from: string, to: string) => void;
 }): ReactElement {
   const [keyDraft, setKeyDraft] = useState(property);
   const category = tokenCategoryForProperty(property);
   const tokenGroup = category ? (tokens[category] ?? {}) : {};
+  // A row edits as a token picker when its value is a `var(--plumix-…)` for the
+  // property's scale, and as a raw text input otherwise.
+  const tokenId = category ? tokenIdFromCssVar(value, category) : null;
   // Show a token as the CSS variable it emits (`var(--plumix-color-primary)`),
   // not its label or resolved literal — this is the raw-CSS view.
   const tokenVar = (id: string): string =>
@@ -148,21 +156,26 @@ function DeclarationRow({
           if (e.key === "Enter") e.currentTarget.blur();
         }}
       />
-      {"raw" in value ? (
+      {tokenId === null ? (
         <Input
           className="h-8"
           data-testid={`style-declaration-${property}-value`}
-          value={value.raw}
-          // Empty-string stays a (raw) declaration rather than clearing —
-          // otherwise clearing the field to retype unmounts the focused row.
-          // The Trash button is the sole delete affordance.
-          onChange={(e) => onChange(property, { raw: e.target.value })}
+          value={value}
+          // Empty-string stays a declaration rather than clearing — otherwise
+          // clearing the field to retype unmounts the focused row. The Trash
+          // button is the sole delete affordance.
+          onChange={(e) => onChange(property, e.target.value)}
         />
       ) : (
         <Select
-          value={value.token === "" ? NONE_VALUE : value.token}
+          value={tokenId}
           onValueChange={(next) =>
-            onChange(property, next === NONE_VALUE ? null : { token: next })
+            onChange(
+              property,
+              next === NONE_VALUE || !category
+                ? null
+                : tokenIdToCssVar(next, category, tokens),
+            )
           }
         >
           <SelectTrigger
@@ -179,13 +192,11 @@ function DeclarationRow({
             >
               —
             </SelectItem>
-            {/* Keep an unknown token (stale id, or a property with no token
-                scale) visible + selected — a controlled select with no matching
-                item would render blank, hiding the stored value. */}
-            {value.token !== "" && !(value.token in tokenGroup) ? (
-              <SelectItem value={value.token}>
-                {tokenVar(value.token)}
-              </SelectItem>
+            {/* Keep an unknown token (stale id) visible + selected — a
+                controlled select with no matching item would render blank,
+                hiding the stored value. */}
+            {!(tokenId in tokenGroup) ? (
+              <SelectItem value={tokenId}>{tokenVar(tokenId)}</SelectItem>
             ) : null}
             {Object.keys(tokenGroup).map((id) => (
               <SelectItem
@@ -224,7 +235,7 @@ function AddDeclaration({
   onAdd,
   existingKeys,
 }: {
-  readonly onAdd: (property: string, value: StyleValue) => void;
+  readonly onAdd: (property: string, value: string) => void;
   readonly existingKeys: readonly string[];
 }): ReactElement {
   const { i18n } = useLingui();
@@ -265,7 +276,7 @@ function AddDeclaration({
       onSubmit={(e) => {
         e.preventDefault();
         if (!valid) return;
-        onAdd(property, { raw: value });
+        onAdd(property, value);
         setProperty("");
         setValue("");
       }}

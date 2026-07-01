@@ -1957,7 +1957,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain('data-plumix-block="core/rich-text"');
   });
 
-  test("theme tokens reach the block walker — styled blocks emit `var(--plumix-…)` fallbacks", async () => {
+  test("a styled block's stored `var(--plumix-…)` value is emitted verbatim", async () => {
     const theme = defineTheme({
       tokens: { colors: { brand: { value: "#abc" } } },
       templates: {
@@ -1982,7 +1982,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
             id: "s",
             name: "core/rich-text",
             attrs: { body: "<h2>Hi</h2>" },
-            style: { large: { background: "brand" } },
+            style: { large: { background: "var(--plumix-color-brand, #abc)" } },
           },
         ],
       },

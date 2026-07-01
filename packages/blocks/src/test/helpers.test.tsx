@@ -32,24 +32,6 @@ describe("renderBlockSpecToHtml", () => {
         "</div>",
     );
   });
-
-  test("threads RenderBlockTreeOptions.tokens through to style emission", () => {
-    const sampleWithStyle: BlockSpec = defineBlock({
-      name: "sample/styled",
-      render: () => <span>x</span>,
-    });
-
-    const html = renderBlockSpecToHtml(
-      sampleWithStyle,
-      {},
-      { tokens: { spacing: { lg: { value: "24px" } } } },
-    );
-
-    // No style declared on the node; nothing emitted regardless of tokens.
-    expect(html).toBe(
-      '<div data-plumix-block="sample/styled"><span>x</span></div>',
-    );
-  });
 });
 
 describe("renderBlockTreeToHtml", () => {

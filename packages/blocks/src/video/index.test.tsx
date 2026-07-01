@@ -1,15 +1,15 @@
-import { renderBlockSpecToHtml } from "plumix/blocks/test";
 import { describe, expect, test } from "vitest";
 
+import { renderBlockSpecToHtml } from "../test/index.js";
 import { videoBlock } from "./index.js";
 
-describe("media/video v2", () => {
+describe("core/video", () => {
   test("renders <video> with src + poster + controls by default", () => {
     const html = renderBlockSpecToHtml(videoBlock, {
       src: "/_plumix/media/x/clip.mp4",
       poster: "/_plumix/media/x/poster.jpg",
     });
-    expect(html).toContain('data-plumix-block="media/video"');
+    expect(html).toContain('data-plumix-block="core/video"');
     expect(html).toContain('src="/_plumix/media/x/clip.mp4"');
     expect(html).toContain('poster="/_plumix/media/x/poster.jpg"');
     expect(html).toContain("controls=");

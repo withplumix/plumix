@@ -13,6 +13,12 @@ describe("coreBlocks", () => {
     expect(names.has("core/table")).toBe(true);
   });
 
+  test("includes video and embed, promoted from the media plugin to core", () => {
+    const names = new Set(coreBlocks.map((b) => b.name));
+    expect(names.has("core/video")).toBe(true);
+    expect(names.has("core/embed")).toBe(true);
+  });
+
   test("core/heading and core/quote collapsed into core/rich-text", () => {
     const names = new Set(coreBlocks.map((b) => b.name));
     expect(names.has("core/heading")).toBe(false);
@@ -32,28 +38,20 @@ describe("coreBlocks", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  test("layout-category blocks include the migrated wrappers + spacer", () => {
+  test("layout-category blocks include the migrated wrappers + details", () => {
     const layoutNames = coreBlocks
       .filter((b) => b.category === "layout")
       .map((b) => b.name);
     expect(layoutNames).toEqual(
-      expect.arrayContaining([
-        "core/group",
-        "core/columns",
-        "core/details",
-        "core/callout",
-        "core/spacer",
-      ]),
+      expect.arrayContaining(["core/group", "core/columns", "core/details"]),
     );
   });
 
-  test("interactive-category blocks include button + buttons", () => {
+  test("interactive-category blocks include button", () => {
     const interactiveNames = coreBlocks
       .filter((b) => b.category === "interactive")
       .map((b) => b.name);
-    expect(interactiveNames).toEqual(
-      expect.arrayContaining(["core/button", "core/buttons"]),
-    );
+    expect(interactiveNames).toEqual(expect.arrayContaining(["core/button"]));
   });
 
   test("text-category blocks include rich-text and table", () => {

@@ -261,7 +261,7 @@ describe("renderBlockTree", () => {
     );
   });
 
-  test("emits per-instance <style> + class when BlockNode has a style slot and tokens are provided", () => {
+  test("emits per-instance <style> + class when BlockNode has a style slot", () => {
     const registry = createBlockRegistry([
       {
         name: "core/paragraph",
@@ -276,15 +276,11 @@ describe("renderBlockTree", () => {
         id: "p1",
         name: "core/paragraph",
         attrs: { text: "Hello" },
-        style: { large: { padding: "lg" } },
+        style: { large: { padding: "var(--plumix-spacing-lg, 24px)" } },
       },
     ];
 
-    const html = renderToStaticMarkup(
-      renderBlockTree(tree, registry, {
-        tokens: { spacing: { lg: { value: "24px" } } },
-      }),
-    );
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
     expect(html).toContain('class="plumix-block-p1"');
     expect(html).toContain(
@@ -293,7 +289,7 @@ describe("renderBlockTree", () => {
     expect(html).toContain("<p>Hello</p>");
   });
 
-  test("omits the per-instance class when style is set but tokens are not provided", () => {
+  test("emits a literal style value with no token resolution needed", () => {
     const registry = createBlockRegistry([
       {
         name: "core/paragraph",
@@ -305,13 +301,16 @@ describe("renderBlockTree", () => {
         id: "p1",
         name: "core/paragraph",
         attrs: {},
-        style: { large: { padding: "lg" } },
+        style: { large: { padding: "24px" } },
       },
     ];
 
     const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
-    expect(html).toBe('<div data-plumix-block="core/paragraph"><p>x</p></div>');
+    expect(html).toContain('class="plumix-block-p1"');
+    expect(html).toContain(
+      "<style>.plumix-block-p1 { padding: 24px; }</style>",
+    );
   });
 
   test("skips style emission when node.id contains unsafe characters", () => {
@@ -326,15 +325,11 @@ describe("renderBlockTree", () => {
         id: "p1</style><script>alert(1)</script>",
         name: "core/paragraph",
         attrs: {},
-        style: { large: { padding: "lg" } },
+        style: { large: { padding: "var(--plumix-spacing-lg, 24px)" } },
       },
     ];
 
-    const html = renderToStaticMarkup(
-      renderBlockTree(tree, registry, {
-        tokens: { spacing: { lg: { value: "24px" } } },
-      }),
-    );
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
     expect(html).not.toContain("<style>");
     expect(html).not.toContain("<script>");

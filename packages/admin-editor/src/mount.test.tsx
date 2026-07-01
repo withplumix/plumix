@@ -48,7 +48,7 @@ describe("mountEditorRuntime", () => {
           id: "e1",
           name: "core/rich-text",
           attrs: { body: "<h2>Styled</h2>" },
-          style: { large: { color: { raw: "#ff0000" } } },
+          style: { large: { color: "#ff0000" } },
         },
       ],
     };

@@ -112,13 +112,13 @@ export {
   normalizeStyleValue,
   tokenCategoryForProperty,
   tokenCssVar,
+  tokenIdFromCssVar,
   tokenIdToCssVar,
   VIEWPORT_MAX_PX,
 } from "./styles/style-emitter.js";
 export type {
   ResponsiveStyleBucket,
   ResponsiveStyleSlot,
-  StyleValue,
   ThemeBreakpoints,
   TokenCategory,
 } from "./styles/style-emitter.js";
@@ -153,16 +153,14 @@ export { unknownBlockSchema } from "./unknown-node.js";
 // ─── Core blocks ────────────────────────────────────────────────────────────
 export { coreBlocks } from "./core-blocks.js";
 export { buttonBlock } from "./button/index.js";
-export { buttonsBlock } from "./buttons/index.js";
-export { calloutBlock } from "./callout/index.js";
 export { codeBlock } from "./code/index.js";
 export { columnsBlock } from "./columns/index.js";
 export { detailsBlock } from "./details/index.js";
+export { embedBlock } from "./embed/index.js";
 export { groupBlock } from "./group/index.js";
 export { htmlBlock } from "./html/index.js";
 export { richTextBlock } from "./rich-text/index.js";
 export { separatorBlock } from "./separator/index.js";
-export { spacerBlock } from "./spacer/index.js";
 export {
   tableBlock,
   tableBodyRowBlock,
@@ -170,6 +168,7 @@ export {
   tableHeaderCellBlock,
   tableHeaderRowBlock,
 } from "./table/index.js";
+export { videoBlock } from "./video/index.js";
 
 // ─── Inline marks ───────────────────────────────────────────────────────────
 export { coreMarks, coreMarkExtensions } from "./marks/core/index.js";

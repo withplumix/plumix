@@ -13,7 +13,6 @@ import type {
   ResponsiveStyleSlot,
   ThemeBreakpoints,
 } from "./styles/style-emitter.js";
-import type { ThemeTokens } from "./styles/types.js";
 import { editAppender } from "./edit-appender.js";
 import { safeHtmlAttrs } from "./html/attrs.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
@@ -40,6 +39,9 @@ export interface BlockContext {
    * `null` when the host wired none (the body then renders verbatim).
    */
   readonly shortcodes: ShortcodeRegistry | null;
+  /** True inside the editor canvas — lets a block render edit-only affordances
+   *  (e.g. an empty-state placeholder) that don't ship to the public page. */
+  readonly editing: boolean;
 }
 
 export interface BlockNode {
@@ -72,7 +74,6 @@ export interface BlockRenderHooks {
 }
 
 export interface RenderBlockTreeOptions {
-  readonly tokens?: ThemeTokens;
   /** Theme breakpoints driving the emitter's @media maxima (default 991/640). */
   readonly breakpoints?: ThemeBreakpoints;
   readonly hooks?: BlockRenderHooks;
@@ -129,6 +130,7 @@ export const DEFAULT_BLOCK_CONTEXT: BlockContext = Object.freeze({
   depth: 0,
   locale: "en",
   shortcodes: null,
+  editing: false,
 });
 
 interface DevWarnState {
@@ -245,7 +247,6 @@ function materializeSlots(
 interface WalkerEnv {
   readonly registry: BlockRegistry;
   readonly devState: DevWarnState;
-  readonly tokens: ThemeTokens | undefined;
   readonly breakpoints: ThemeBreakpoints | undefined;
   readonly hooks: BlockRenderHooks | undefined;
   readonly loaderData: ResolvedBlockLoaders | undefined;
@@ -272,7 +273,7 @@ function renderNode(
   env: WalkerEnv,
   context: BlockContext,
 ): ReactNode {
-  const { registry, devState, tokens, loaderData } = env;
+  const { registry, devState, loaderData } = env;
   if (node.name === PATTERN_REF_BLOCK) {
     return renderPatternRef(node, env, context);
   }
@@ -294,13 +295,8 @@ function renderNode(
 
   const safeId = SAFE_ID_RE.test(node.id) ? node.id : null;
   const styleCss =
-    safeId && node.style && tokens
-      ? emitBlockStyleCss(
-          `plumix-block-${safeId}`,
-          node.style,
-          tokens,
-          env.breakpoints,
-        )
+    safeId && node.style
+      ? emitBlockStyleCss(`plumix-block-${safeId}`, node.style, env.breakpoints)
       : "";
   const className = safeId && styleCss ? `plumix-block-${safeId}` : undefined;
   const styleTag = styleCss
@@ -395,7 +391,6 @@ export function renderBlockTree(
   const env: WalkerEnv = {
     registry,
     devState: devWarnState(registry),
-    tokens: options?.tokens,
     breakpoints: options?.breakpoints,
     hooks: options?.hooks,
     loaderData: options?.loaderData,
@@ -408,6 +403,7 @@ export function renderBlockTree(
     entry: options?.entry ?? DEFAULT_BLOCK_CONTEXT.entry,
     locale: options?.locale ?? DEFAULT_BLOCK_CONTEXT.locale,
     shortcodes: options?.shortcodes ?? null,
+    editing: options?.editing ?? false,
   };
   return renderNodes(nodes, env, rootContext);
 }

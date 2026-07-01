@@ -211,6 +211,29 @@ describe("createNodeFromEntry", () => {
     expect(content[0]?.id).not.toBe("seed-child");
   });
 
+  test("seeds node.style from the spec's defaultStyles", () => {
+    const seeded = createBlockRegistry([
+      spec({
+        name: "core/button",
+        defaultStyles: {
+          large: { backgroundColor: "var(--plumix-button-bg, #111827)" },
+        },
+      }),
+    ]);
+
+    const node = createNodeFromEntry(seeded, {
+      name: "core/button",
+      slug: "core/button",
+      title: "Button",
+    });
+
+    // The default styles land in node.style, so they show up (editable) in the
+    // Styles section rather than as baked, hidden CSS.
+    expect(node.style).toEqual({
+      large: { backgroundColor: "var(--plumix-button-bg, #111827)" },
+    });
+  });
+
   test("mints a fresh, unique id for every node so two inserts never collide", () => {
     const entry = { name: "core/group", slug: "core/group", title: "Group" };
     const a = createNodeFromEntry(registry, entry);

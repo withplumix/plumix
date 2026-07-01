@@ -69,7 +69,7 @@ describe("StylesTab", () => {
     await user.click(getByTestId("style-control-fontFamily-token-lg"));
 
     expect(getByTestId("style-probe").textContent).toContain(
-      '"large":{"fontFamily":{"token":"lg"}}',
+      '"large":{"fontFamily":"var(--plumix-typography-lg, 20px)"}',
     );
   });
 
@@ -105,8 +105,8 @@ describe("StylesTab", () => {
     });
 
     const probe = getByTestId("style-probe").textContent;
-    expect(probe).toContain('"width":{"raw":"280px"}');
-    expect(probe).toContain('"minWidth":{"raw":"280px"}');
+    expect(probe).toContain('"width":"280px"');
+    expect(probe).toContain('"minWidth":"280px"');
   });
 
   test("the italic mark toggles a fontStyle raw value", () => {
@@ -115,7 +115,7 @@ describe("StylesTab", () => {
     fireEvent.click(getByTestId("style-mark-italic"));
 
     expect(getByTestId("style-probe").textContent).toContain(
-      '"fontStyle":{"raw":"italic"}',
+      '"fontStyle":"italic"',
     );
   });
 
@@ -124,13 +124,13 @@ describe("StylesTab", () => {
 
     fireEvent.click(getByTestId("style-mark-underline"));
     expect(getByTestId("style-probe").textContent).toContain(
-      '"textDecoration":{"raw":"underline"}',
+      '"textDecoration":"underline"',
     );
 
     // Strikethrough overwrites the shared property rather than accumulating.
     fireEvent.click(getByTestId("style-mark-strikethrough"));
     const probe = getByTestId("style-probe").textContent;
-    expect(probe).toContain('"textDecoration":{"raw":"line-through"}');
+    expect(probe).toContain('"textDecoration":"line-through"');
     expect(probe).not.toContain("underline");
   });
 
@@ -140,7 +140,7 @@ describe("StylesTab", () => {
     fireEvent.click(getByTestId("style-align-center"));
 
     expect(getByTestId("style-probe").textContent).toContain(
-      '"textAlign":{"raw":"center"}',
+      '"textAlign":"center"',
     );
   });
 
@@ -179,30 +179,18 @@ describe("StylesTab", () => {
     fireEvent.click(getByTestId("style-hide-on-device"));
 
     expect(getByTestId("style-probe").textContent).toContain(
-      '"display":{"raw":"none"}',
+      '"display":"none"',
     );
   });
 
-  test("the hide toggle reads pressed from an existing display:none (raw or token)", () => {
-    const raw: BlockNode = {
+  test("the hide toggle reads pressed from an existing display:none", () => {
+    const hidden: BlockNode = {
       id: "a",
       name: "core/x",
-      style: { large: { display: { raw: "none" } } },
+      style: { large: { display: "none" } },
     };
     expect(
-      renderTab([raw], "a")
-        .getByTestId("style-hide-on-device")
-        .getAttribute("data-state"),
-    ).toBe("on");
-
-    cleanup();
-    const token: BlockNode = {
-      id: "a",
-      name: "core/x",
-      style: { large: { display: { token: "none" } } },
-    };
-    expect(
-      renderTab([token], "a")
+      renderTab([hidden], "a")
         .getByTestId("style-hide-on-device")
         .getAttribute("data-state"),
     ).toBe("on");
@@ -212,7 +200,7 @@ describe("StylesTab", () => {
     const hidden: BlockNode = {
       id: "a",
       name: "core/x",
-      style: { large: { display: { raw: "none" } } },
+      style: { large: { display: "none" } },
     };
     const { getByTestId } = renderTab([hidden], "a");
 
@@ -231,7 +219,7 @@ describe("StylesTab", () => {
     });
 
     expect(getByTestId("style-probe").textContent).toContain(
-      '"paddingTop":{"raw":"12px"}',
+      '"paddingTop":"12px"',
     );
   });
 });
@@ -240,7 +228,7 @@ describe("StylesTab — declarations list", () => {
   const styled: BlockNode = {
     id: "a",
     name: "core/x",
-    style: { large: { color: { raw: "#0c2238" } } },
+    style: { large: { color: "#0c2238" } },
   };
 
   test("keeps the CSS section collapsed by default (dev escape hatch)", () => {
@@ -266,7 +254,7 @@ describe("StylesTab — declarations list", () => {
     fireEvent.change(key, { target: { value: "background" } });
     fireEvent.blur(key);
     expect(getByTestId("style-probe").textContent).toContain(
-      '"background":{"raw":"#0c2238"}',
+      '"background":"#0c2238"',
     );
     expect(getByTestId("style-probe").textContent).not.toContain('"color"');
   });
@@ -287,18 +275,16 @@ describe("StylesTab — declarations list", () => {
     const twoProps: BlockNode = {
       id: "a",
       name: "core/x",
-      style: { large: { color: { raw: "#333" }, background: { raw: "#fff" } } },
+      style: { large: { color: "#333", background: "#fff" } },
     };
     const { getByTestId } = renderTab([twoProps], "a");
     const key = getByTestId("style-declaration-color-key") as HTMLInputElement;
     fireEvent.change(key, { target: { value: "background" } });
     fireEvent.blur(key);
     // Both originals survive; the collision is rejected.
+    expect(getByTestId("style-probe").textContent).toContain('"color":"#333"');
     expect(getByTestId("style-probe").textContent).toContain(
-      '"color":{"raw":"#333"}',
-    );
-    expect(getByTestId("style-probe").textContent).toContain(
-      '"background":{"raw":"#fff"}',
+      '"background":"#fff"',
     );
   });
 
@@ -308,7 +294,7 @@ describe("StylesTab — declarations list", () => {
       target: { value: "rebeccapurple" },
     });
     expect(getByTestId("style-probe").textContent).toContain(
-      '"color":{"raw":"rebeccapurple"}',
+      '"color":"rebeccapurple"',
     );
   });
 
@@ -319,9 +305,7 @@ describe("StylesTab — declarations list", () => {
     });
     // Row survives an empty value so retyping doesn't unmount the focused input.
     expect(getByTestId("style-declaration-color-value")).toBeDefined();
-    expect(getByTestId("style-probe").textContent).toContain(
-      '"color":{"raw":""}',
-    );
+    expect(getByTestId("style-probe").textContent).toContain('"color":""');
   });
 
   test("removing a declaration clears the property", () => {
@@ -334,7 +318,7 @@ describe("StylesTab — declarations list", () => {
   const fontToken: BlockNode = {
     id: "a",
     name: "core/x",
-    style: { large: { fontFamily: { token: "lg" } } },
+    style: { large: { fontFamily: "var(--plumix-typography-lg)" } },
   };
 
   test("a token declaration renders a token picker, no raw value input", async () => {
@@ -356,7 +340,7 @@ describe("StylesTab — declarations list", () => {
     await user.click(getByTestId("style-declaration-fontFamily-token"));
     await user.click(getByTestId("style-declaration-fontFamily-token-sm"));
     expect(getByTestId("style-probe").textContent).toContain(
-      '"fontFamily":{"token":"sm"}',
+      '"fontFamily":"var(--plumix-typography-sm, 14px)"',
     );
   });
 
@@ -364,7 +348,7 @@ describe("StylesTab — declarations list", () => {
     const ghost: BlockNode = {
       id: "a",
       name: "core/x",
-      style: { large: { fontFamily: { token: "ghost" } } },
+      style: { large: { fontFamily: "var(--plumix-typography-ghost)" } },
     };
     const { getByTestId } = renderTab([ghost], "a");
     // "ghost" isn't in the theme, but the trigger still shows it (not blank).
@@ -408,7 +392,7 @@ describe("StylesTab — declarations list", () => {
     });
     fireEvent.click(getByTestId("style-declaration-add-submit"));
     expect(getByTestId("style-probe").textContent).toContain(
-      '"letterSpacing":{"raw":"0.05em"}',
+      '"letterSpacing":"0.05em"',
     );
   });
 
@@ -452,7 +436,7 @@ describe("StylesTab — declarations list", () => {
     });
     fireEvent.click(getByTestId("style-declaration-add-submit"));
     expect(getByTestId("style-probe").textContent).toContain(
-      '"scrollSnapAlign":{"raw":"start"}',
+      '"scrollSnapAlign":"start"',
     );
   });
 
@@ -492,7 +476,7 @@ describe("StylesTab — declarations list", () => {
     });
     fireEvent.click(getByTestId("style-declaration-add-submit"));
     expect(getByTestId("style-probe").textContent).toContain(
-      '"marginTop":{"raw":"8px"}',
+      '"marginTop":"8px"',
     );
     expect(getByTestId("style-probe").textContent).not.toContain("99px");
   });
@@ -523,7 +507,7 @@ describe("StylesTab — declarations list", () => {
     const tokenStyled: BlockNode = {
       id: "a",
       name: "core/x",
-      style: { large: { color: { token: "lg" } } },
+      style: { large: { color: "var(--plumix-color-lg)" } },
     };
     const { getByTestId, queryByTestId } = renderTab([tokenStyled], "a");
     // Mounts in token mode (the value is a token), so the custom input is hidden.

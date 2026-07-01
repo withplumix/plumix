@@ -149,15 +149,14 @@ describe("EditorCanvas", () => {
       <EditorCanvas registry={registry} origin={ORIGIN} tokens={tokens} />,
     );
 
-    // A style edit (here a custom text color) is pushed with the tree. The
-    // renderer only emits the per-block `<style>` when it has tokens; without
-    // them the edit is stored but never painted in the canvas.
+    // A style edit (here a custom text color) is pushed with the tree; the
+    // renderer emits the per-block `<style>` from the stored value string.
     pushTree([
       {
         id: "h1",
         name: "core/rich-text",
         attrs: { body: "<h2>Hi</h2>" },
-        style: { large: { color: { raw: "#ff0000" } } },
+        style: { large: { color: "#ff0000" } },
       },
     ]);
 

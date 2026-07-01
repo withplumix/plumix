@@ -7,26 +7,23 @@ import {
   normalizeStyleValue,
   tokenCategoryForProperty,
   tokenCssVar,
+  tokenIdFromCssVar,
   tokenIdToCssVar,
 } from "./style-emitter.js";
 
 describe("normalizeStyleValue", () => {
-  test("coerces a legacy bare-string value to a token ref (the migration)", () => {
-    expect(normalizeStyleValue("lg")).toEqual({ token: "lg" });
-  });
-
-  test("passes through token and raw refs unchanged", () => {
-    expect(normalizeStyleValue({ token: "primary" })).toEqual({
-      token: "primary",
-    });
-    expect(normalizeStyleValue({ raw: "16px" })).toEqual({ raw: "16px" });
+  test("returns a non-empty string value unchanged", () => {
+    expect(normalizeStyleValue("16px")).toBe("16px");
+    expect(normalizeStyleValue("var(--plumix-color-primary, #000)")).toBe(
+      "var(--plumix-color-primary, #000)",
+    );
   });
 
   test("rejects malformed values", () => {
     expect(normalizeStyleValue(null)).toBeNull();
+    expect(normalizeStyleValue("")).toBeNull();
+    expect(normalizeStyleValue(2)).toBeNull();
     expect(normalizeStyleValue({})).toBeNull();
-    expect(normalizeStyleValue({ token: 2 })).toBeNull();
-    expect(normalizeStyleValue({ raw: "", token: "x" })).toBeNull();
   });
 });
 
@@ -58,35 +55,41 @@ describe("tokenIdToCssVar", () => {
   });
 });
 
+describe("tokenIdFromCssVar", () => {
+  test("extracts the token id from a var() reference for the property's category", () => {
+    expect(
+      tokenIdFromCssVar("var(--plumix-color-primary, #0c2238)", "colors"),
+    ).toBe("primary");
+    expect(tokenIdFromCssVar("var(--plumix-spacing-lg)", "spacing")).toBe("lg");
+  });
+
+  test("returns null for a literal value or a mismatched category", () => {
+    expect(tokenIdFromCssVar("20px", "spacing")).toBeNull();
+    expect(
+      tokenIdFromCssVar("var(--plumix-color-primary)", "spacing"),
+    ).toBeNull();
+  });
+});
+
 describe("emitBlockStyleCss", () => {
-  const tokens: ThemeTokens = {
-    spacing: { lg: { value: "24px" }, sm: { value: "8px" } },
-    colors: { primary: { value: "#0c2238" } },
-  };
-
   test("emits base CSS for the large bucket without a media-query wrapper", () => {
-    const style: ResponsiveStyleSlot = { large: { padding: "lg" } };
+    const style: ResponsiveStyleSlot = {
+      large: { padding: "var(--plumix-spacing-lg, 24px)" },
+    };
 
-    expect(emitBlockStyleCss("block-1", style, tokens)).toBe(
+    expect(emitBlockStyleCss("block-1", style)).toBe(
       ".block-1 { padding: var(--plumix-spacing-lg, 24px); }",
     );
   });
 
   test("emits desktop-first cascade with @media wrappers for medium and small", () => {
     const style: ResponsiveStyleSlot = {
-      large: { padding: "lg" },
-      medium: { padding: "md" },
-      small: { padding: "sm" },
-    };
-    const tokensWithMedium: ThemeTokens = {
-      spacing: {
-        lg: { value: "24px" },
-        md: { value: "16px" },
-        sm: { value: "8px" },
-      },
+      large: { padding: "var(--plumix-spacing-lg, 24px)" },
+      medium: { padding: "var(--plumix-spacing-md, 16px)" },
+      small: { padding: "var(--plumix-spacing-sm, 8px)" },
     };
 
-    const css = emitBlockStyleCss("block-1", style, tokensWithMedium);
+    const css = emitBlockStyleCss("block-1", style);
 
     expect(css).toContain(
       ".block-1 { padding: var(--plumix-spacing-lg, 24px); }",
@@ -99,73 +102,40 @@ describe("emitBlockStyleCss", () => {
     );
   });
 
-  test("resolves the radius and shadow token categories", () => {
-    const themed: ThemeTokens = {
-      radius: { md: { value: "8px" } },
-      shadow: { lg: { value: "0 4px 8px rgba(0,0,0,0.1)" } },
-    };
-    const css = emitBlockStyleCss(
-      "block-1",
-      { large: { borderRadius: { token: "md" }, boxShadow: { token: "lg" } } },
-      themed,
-    );
-    expect(css).toContain("border-radius: var(--plumix-radius-md, 8px);");
-    expect(css).toContain(
-      "box-shadow: var(--plumix-shadow-lg, 0 4px 8px rgba(0,0,0,0.1));",
-    );
-  });
-
-  test("maps per-side spacing and extended typography properties", () => {
-    const themed: ThemeTokens = {
-      spacing: { sm: { value: "8px" } },
-      typography: { bold: { value: "700" } },
-    };
-    const css = emitBlockStyleCss(
-      "block-1",
-      { large: { marginTop: { token: "sm" }, fontWeight: { token: "bold" } } },
-      themed,
-    );
-    expect(css).toContain("margin-top: var(--plumix-spacing-sm, 8px);");
-    expect(css).toContain("font-weight: var(--plumix-typography-bold, 700);");
-  });
-
-  test("emits raw custom values alongside token refs", () => {
+  test("emits var() token references and literal values side by side", () => {
     const style: ResponsiveStyleSlot = {
-      large: { padding: { raw: "20px" }, color: { token: "primary" } },
+      large: {
+        padding: "20px",
+        color: "var(--plumix-color-primary, #0c2238)",
+      },
     };
 
-    const css = emitBlockStyleCss("block-1", style, tokens);
-    // Raw value is emitted literally (fixed); token resolves to a CSS variable
-    // (reskins when the token changes).
+    const css = emitBlockStyleCss("block-1", style);
+    // A literal is emitted as-is; a var() reference reskins when the theme
+    // redefines the custom property — both are just CSS value strings.
     expect(css).toContain("padding: 20px;");
     expect(css).toContain("color: var(--plumix-color-primary, #0c2238);");
   });
 
-  test("a legacy bare-string value still resolves as a token (no visual change)", () => {
-    const css = emitBlockStyleCss(
-      "block-1",
-      { large: { padding: "lg" } },
-      tokens,
-    );
-    expect(css).toBe(".block-1 { padding: var(--plumix-spacing-lg, 24px); }");
+  test("emits a bare literal value as-is", () => {
+    const css = emitBlockStyleCss("block-1", { large: { padding: "24px" } });
+    expect(css).toBe(".block-1 { padding: 24px; }");
   });
 
-  test("drops a raw value carrying a breakout vector", () => {
-    const css = emitBlockStyleCss(
-      "block-1",
-      { large: { padding: { raw: "1px } body { display:none" } } },
-      tokens,
-    );
+  test("drops a value carrying a breakout vector", () => {
+    const css = emitBlockStyleCss("block-1", {
+      large: { padding: "1px } body { display:none" },
+    });
     expect(css).toBe("");
   });
 
   test("uses theme-supplied breakpoints for the @media maxima when given", () => {
     const style: ResponsiveStyleSlot = {
-      medium: { padding: "lg" },
-      small: { padding: "sm" },
+      medium: { padding: "var(--plumix-spacing-lg, 24px)" },
+      small: { padding: "var(--plumix-spacing-sm, 8px)" },
     };
 
-    const css = emitBlockStyleCss("block-1", style, tokens, {
+    const css = emitBlockStyleCss("block-1", style, {
       tablet: 900,
       mobile: 500,
     });
@@ -176,45 +146,42 @@ describe("emitBlockStyleCss", () => {
     expect(css).not.toContain("640px");
   });
 
-  test("skips unmapped CSS properties without emitting raw token ids as literal CSS values", () => {
+  test("emits arbitrary properties with their literal value (no token-scale gating)", () => {
     const style: ResponsiveStyleSlot = {
-      large: { padding: "lg", width: "lg" },
+      large: { padding: "16px", width: "300px" },
     };
 
-    const css = emitBlockStyleCss("block-1", style, tokens);
+    const css = emitBlockStyleCss("block-1", style);
 
-    expect(css).toContain("padding: var(--plumix-spacing-lg, 24px);");
-    expect(css).not.toContain("width: lg");
-    expect(css).not.toContain("width:");
+    expect(css).toContain("padding: 16px;");
+    expect(css).toContain("width: 300px;");
   });
 
-  test("skips style emission when the property or token name contains unsafe characters", () => {
+  test("skips style emission when the property name contains unsafe characters", () => {
     const style: ResponsiveStyleSlot = {
       large: {
-        padding: "lg",
-        "<script>": "lg",
+        padding: "16px",
+        "<script>": "16px",
         margin: "</style><script>alert(1)</script>",
       },
     };
 
-    const css = emitBlockStyleCss("block-1", style, tokens);
+    const css = emitBlockStyleCss("block-1", style);
 
-    expect(css).toContain("padding: var(--plumix-spacing-lg, 24px);");
+    expect(css).toContain("padding: 16px;");
     expect(css).not.toContain("<script>");
     expect(css).not.toContain("</style>");
   });
 
   test("returns an empty string for missing or empty style slot", () => {
-    expect(emitBlockStyleCss("block-1", undefined, tokens)).toBe("");
-    expect(emitBlockStyleCss("block-1", {}, tokens)).toBe("");
+    expect(emitBlockStyleCss("block-1", undefined)).toBe("");
+    expect(emitBlockStyleCss("block-1", {})).toBe("");
   });
 
   test("converts camelCase CSS properties to kebab-case", () => {
-    const style: ResponsiveStyleSlot = { large: { fontSize: "lg" } };
+    const style: ResponsiveStyleSlot = { large: { fontSize: "20px" } };
 
-    expect(
-      emitBlockStyleCss("b", style, { typography: { lg: { value: "20px" } } }),
-    ).toBe(".b { font-size: var(--plumix-typography-lg, 20px); }");
+    expect(emitBlockStyleCss("b", style)).toBe(".b { font-size: 20px; }");
   });
 
   test("builds a bare token CSS variable reference (no resolved fallback)", () => {
@@ -236,11 +203,9 @@ describe("emitBlockStyleCss", () => {
 
   test("preserves the case of custom properties (they are case-sensitive)", () => {
     const style: ResponsiveStyleSlot = {
-      large: { "--brandColor": { raw: "#0c2238" } },
+      large: { "--brandColor": "#0c2238" },
     };
 
-    expect(emitBlockStyleCss("b", style, {})).toBe(
-      ".b { --brandColor: #0c2238; }",
-    );
+    expect(emitBlockStyleCss("b", style)).toBe(".b { --brandColor: #0c2238; }");
   });
 });

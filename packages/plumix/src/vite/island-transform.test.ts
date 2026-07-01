@@ -4,6 +4,7 @@ import type { ScannerFs } from "./island-transform.js";
 import {
   findUseClientIslands,
   scanUserSources,
+  SERIALIZE_VIRTUAL_ID,
   transformUseClientModule,
 } from "./island-transform.js";
 
@@ -272,6 +273,24 @@ describe("transformUseClientModule", () => {
     // The shim destructures `client` + `prefetch` out before forwarding so
     // neither strategy slot leaks into the props attribute.
     expect(result?.code).toContain("const { client, prefetch, ...rest }");
+  });
+
+  test("imports serializeProps from the virtual module, not plumix/blocks directly", () => {
+    // A "use client" island in `@plumix/blocks` itself can't resolve the
+    // public `plumix/blocks` specifier (cycle + pnpm strictness), so the
+    // shim sources `serializeProps` from the virtual module the plugin
+    // resolves at the project root.
+    const source = `
+      "use client";
+      export function Widget() { return null; }
+    `;
+    const result = transformUseClientModule(source, "/Widget.tsx", {
+      chunkUrl: "/Widget.tsx",
+    });
+    expect(result?.code).toContain(
+      `import { serializeProps as __ser } from "${SERIALIZE_VIRTUAL_ID}"`,
+    );
+    expect(result?.code).not.toContain(`from "plumix/blocks"`);
   });
 
   test("returns null for files without the directive (no-op transform)", () => {

@@ -53,6 +53,13 @@ const registry: BlockRegistry = createBlockRegistry([
     render: () => null,
     loaders: { posts: () => Promise.resolve([]) },
   },
+  {
+    name: "core/box",
+    render: () => null,
+    inputs: [
+      { name: "width", type: "text", label: "Width", styleProperty: "width" },
+    ],
+  },
 ]);
 
 function Selector({ id }: { readonly id?: string }): ReactElement | null {
@@ -114,6 +121,22 @@ describe("BlockInspector", () => {
     // back into the control with no reload.
     expect((getByTestId("block-input-text") as HTMLInputElement).value).toBe(
       "Edited",
+    );
+  });
+
+  test("a styleProperty input reads and writes node.style (synced with the Styles tab)", () => {
+    const { getByTestId } = renderInspector(
+      [{ id: "b1", name: "core/box", style: { large: { width: "800px" } } }],
+      "b1",
+    );
+    const control = getByTestId("block-input-width") as HTMLInputElement;
+    // Reads from node.style for the active device, not from attrs.
+    expect(control.value).toBe("800px");
+    // Editing round-trips back through node.style (the same data the Styles
+    // tab's Size section edits).
+    fireEvent.change(control, { target: { value: "50%" } });
+    expect((getByTestId("block-input-width") as HTMLInputElement).value).toBe(
+      "50%",
     );
   });
 

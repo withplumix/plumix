@@ -4,28 +4,19 @@ import { sanitizeCssValue } from "./sanitize-css.js";
 export type TokenCategory = keyof ThemeTokens;
 
 /**
- * One declaration's value: a theme `token` (resolved to a CSS variable, so it
- * reskins when the token changes) or a `raw` literal (sanitized, fixed). A
- * legacy bare-string value is read as a token ref — that's the migration, done
- * lazily at emit time with no stored-data rewrite.
+ * A stored declaration value is a plain CSS value string — a literal
+ * (`"16px"`, `"#0c2238"`) or a `var()` reference (`"var(--plumix-color-primary,
+ * #0c2238)"`). Token vs. literal is not a stored distinction: a token is just a
+ * `var()` string the editor's token picker builds via {@link tokenIdToCssVar}.
+ * The emitter sanitizes and writes the string; the theme owns what the custom
+ * property resolves to.
  */
-export type StyleValue = { readonly token: string } | { readonly raw: string };
+export type ResponsiveStyleBucket = Readonly<Record<string, string>>;
 
-export type ResponsiveStyleBucket = Readonly<
-  Record<string, StyleValue | string>
->;
-
-/** Coerce a stored bucket value (possibly the legacy bare-string token id) to a
- *  `StyleValue`, or `null` when it's malformed. */
-export function normalizeStyleValue(value: unknown): StyleValue | null {
-  if (typeof value === "string") return value === "" ? null : { token: value };
-  if (!value || typeof value !== "object") return null;
-  const v = value as Record<string, unknown>;
-  const hasToken = typeof v.token === "string";
-  const hasRaw = typeof v.raw === "string";
-  // Exactly one of token | raw — never both, never neither.
-  if (hasToken === hasRaw) return null;
-  return hasToken ? { token: v.token as string } : { raw: v.raw as string };
+/** Coerce a stored bucket value to a usable CSS value string, or `null` when
+ *  it's empty or not a string. */
+export function normalizeStyleValue(value: unknown): string | null {
+  return typeof value === "string" && value !== "" ? value : null;
 }
 
 export interface ResponsiveStyleSlot {
@@ -92,6 +83,9 @@ export const DEFAULT_BREAKPOINTS: ThemeBreakpoints = {
   mobile: VIEWPORT_MAX_PX.small,
 };
 
+/** Build the `var()` string the editor's token picker stores when a token is
+ *  selected — the CSS variable with the token's registered literal as a
+ *  fallback so it renders even before a theme defines the variable. */
 export function tokenIdToCssVar(
   id: string,
   category: TokenCategory,
@@ -105,16 +99,28 @@ export function tokenIdToCssVar(
 }
 
 /** The bare CSS variable reference for a token — `var(--plumix-color-primary)`,
- *  no resolved fallback. The editor shows this as a token declaration's value so
- *  the list reads like the emitted CSS rather than the literal it resolves to. */
+ *  no resolved fallback. */
 export function tokenCssVar(id: string, category: TokenCategory): string {
   return `var(--plumix-${categoryToSegment(category)}-${id})`;
+}
+
+/** The inverse of {@link tokenIdToCssVar}: extract the token id from a stored
+ *  `var(--plumix-<segment>-<id>…)` string for the given category, or `null`
+ *  when the value is a literal or references a different category. The editor
+ *  uses it to show the token picker's selection for a stored value. */
+export function tokenIdFromCssVar(
+  value: string,
+  category: TokenCategory,
+): string | null {
+  const prefix = `var(--plumix-${categoryToSegment(category)}-`;
+  if (!value.startsWith(prefix)) return null;
+  const id = /^[A-Za-z0-9_-]+/.exec(value.slice(prefix.length))?.[0];
+  return id ?? null;
 }
 
 export function emitBlockStyleCss(
   className: string,
   style: ResponsiveStyleSlot | undefined,
-  tokens: ThemeTokens,
   breakpoints: ThemeBreakpoints = DEFAULT_BREAKPOINTS,
 ): string {
   if (!style) return "";
@@ -124,13 +130,13 @@ export function emitBlockStyleCss(
   };
   const parts: string[] = [];
   if (style.large) {
-    const decls = bucketToDeclarations(style.large, tokens);
+    const decls = bucketToDeclarations(style.large);
     if (decls) parts.push(`.${className} { ${decls} }`);
   }
   for (const viewport of ["medium", "small"] as const) {
     const bucket = style[viewport];
     if (!bucket) continue;
-    const decls = bucketToDeclarations(bucket, tokens);
+    const decls = bucketToDeclarations(bucket);
     if (decls)
       parts.push(
         `@media (max-width: ${String(maxWidth[viewport])}px) { .${className} { ${decls} } }`,
@@ -139,36 +145,17 @@ export function emitBlockStyleCss(
   return parts.join(" ");
 }
 
-function bucketToDeclarations(
-  bucket: ResponsiveStyleBucket,
-  tokens: ThemeTokens,
-): string {
+function bucketToDeclarations(bucket: ResponsiveStyleBucket): string {
   const decls: string[] = [];
   for (const [property, stored] of Object.entries(bucket)) {
     if (!SAFE_CSS_TOKEN_RE.test(property)) continue;
     const value = normalizeStyleValue(stored);
-    if (!value) continue;
-    const css = declarationValue(property, value, tokens);
+    if (value === null) continue;
+    const css = sanitizeCssValue(value);
     if (css === null) continue;
     decls.push(`${propertyToCss(property)}: ${css};`);
   }
   return decls.join(" ");
-}
-
-// Resolve one declaration's right-hand side: a token → its CSS variable (with
-// the registered literal as fallback), a raw value → the sanitized literal.
-// Returns null to drop the declaration (unknown token category, unsafe token
-// id, or a raw value carrying an injection vector).
-function declarationValue(
-  property: string,
-  value: StyleValue,
-  tokens: ThemeTokens,
-): string | null {
-  if ("raw" in value) return sanitizeCssValue(value.raw);
-  if (!SAFE_CSS_TOKEN_RE.test(value.token)) return null;
-  const category = PROPERTY_TO_CATEGORY[property];
-  if (!category) return null;
-  return tokenIdToCssVar(value.token, category, tokens);
 }
 
 function propertyToCss(property: string): string {

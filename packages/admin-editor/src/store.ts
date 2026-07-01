@@ -5,7 +5,6 @@ import type {
   InsertableBlockEntry,
   ResponsiveStyleBucket,
   ResponsiveStyleSlot,
-  StyleValue,
   ThemeBreakpoints,
 } from "@plumix/blocks";
 import {
@@ -140,7 +139,7 @@ export interface EditorActions {
     id: string,
     bucket: StyleBucket,
     property: string,
-    value: StyleValue | null,
+    value: string | null,
   ) => void;
   /** Rename one style property in a block's bucket, keeping its value and
    *  position. No-op when the source is missing or the target name is taken. */
@@ -255,11 +254,11 @@ function setNodeStyle(
   node: BlockNode,
   bucket: StyleBucket,
   property: string,
-  value: StyleValue | null,
+  value: string | null,
 ): BlockNode {
   const slot: ResponsiveStyleSlot = node.style ?? {};
   const current: ResponsiveStyleBucket = slot[bucket] ?? {};
-  let nextBucket: Record<string, StyleValue | string>;
+  let nextBucket: Record<string, string>;
   if (value === null) {
     if (!(property in current)) return node;
     const { [property]: _dropped, ...rest } = current;
@@ -290,7 +289,7 @@ function renameNodeStyleProperty(
   const current: ResponsiveStyleBucket = slot[bucket] ?? {};
   // Covers from===to too: the source key is then also the (taken) target.
   if (!(from in current) || to in current) return node;
-  const nextBucket: Record<string, StyleValue | string> = {};
+  const nextBucket: Record<string, string> = {};
   for (const [key, val] of Object.entries(current)) {
     nextBucket[key === from ? to : key] = val;
   }

@@ -563,10 +563,12 @@ describe("updateBlockStyle", () => {
   test("sets a token style value in the given bucket", () => {
     const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
 
-    store.getState().updateBlockStyle("a", "large", "padding", { token: "lg" });
+    store
+      .getState()
+      .updateBlockStyle("a", "large", "padding", "var(--plumix-spacing-lg)");
 
     expect(store.getState().tree[0]?.style).toEqual({
-      large: { padding: { token: "lg" } },
+      large: { padding: "var(--plumix-spacing-lg)" },
     });
   });
 
@@ -576,7 +578,7 @@ describe("updateBlockStyle", () => {
         {
           id: "a",
           name: "core/x",
-          style: { large: { padding: { token: "lg" } } },
+          style: { large: { padding: "var(--plumix-spacing-lg)" } },
         },
       ],
     });
@@ -597,13 +599,11 @@ describe("updateBlockStyle", () => {
       ],
     });
 
-    store
-      .getState()
-      .updateBlockStyle("c", "medium", "fontSize", { raw: "20px" });
+    store.getState().updateBlockStyle("c", "medium", "fontSize", "20px");
 
     const content = store.getState().tree[0]?.attrs?.content as BlockNode[];
     expect(content[0]?.style).toEqual({
-      medium: { fontSize: { raw: "20px" } },
+      medium: { fontSize: "20px" },
     });
   });
 
@@ -611,9 +611,9 @@ describe("updateBlockStyle", () => {
     const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
     const store = createEditorStore({ tree });
 
-    store.getState().updateBlockStyle("nope", "large", "padding", {
-      token: "lg",
-    });
+    store
+      .getState()
+      .updateBlockStyle("nope", "large", "padding", "var(--plumix-spacing-lg)");
 
     expect(store.getState().tree).toBe(tree);
   });
@@ -628,8 +628,8 @@ describe("renameBlockStyleProperty", () => {
           name: "core/x",
           style: {
             large: {
-              color: { raw: "#333" },
-              marginTop: { raw: "8px" },
+              color: "#333",
+              marginTop: "8px",
             },
           },
         },
@@ -643,8 +643,8 @@ describe("renameBlockStyleProperty", () => {
     // Value kept, order kept (background takes color's first slot).
     expect(store.getState().tree[0]?.style).toEqual({
       large: {
-        background: { raw: "#333" },
-        marginTop: { raw: "8px" },
+        background: "#333",
+        marginTop: "8px",
       },
     });
     expect(Object.keys(store.getState().tree[0]?.style?.large ?? {})).toEqual([
@@ -659,7 +659,7 @@ describe("renameBlockStyleProperty", () => {
         id: "a",
         name: "core/x",
         style: {
-          large: { color: { raw: "#333" }, background: { raw: "#fff" } },
+          large: { color: "#333", background: "#fff" },
         },
       },
     ];
@@ -678,7 +678,7 @@ describe("renameBlockStyleProperty", () => {
         {
           id: "a",
           name: "core/x",
-          style: { large: { color: { token: "primary" } } },
+          style: { large: { color: "var(--plumix-color-primary)" } },
         },
       ],
     });
@@ -688,13 +688,13 @@ describe("renameBlockStyleProperty", () => {
       .renameBlockStyleProperty("a", "large", "color", "background");
 
     expect(store.getState().tree[0]?.style).toEqual({
-      large: { background: { token: "primary" } },
+      large: { background: "var(--plumix-color-primary)" },
     });
   });
 
   test("is a no-op when the source property is missing", () => {
     const tree: readonly BlockNode[] = [
-      { id: "a", name: "core/x", style: { large: { color: { raw: "#333" } } } },
+      { id: "a", name: "core/x", style: { large: { color: "#333" } } },
     ];
     const store = createEditorStore({ tree });
 
