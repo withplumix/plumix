@@ -2,28 +2,7 @@ import type { ReactNode } from "react";
 
 import { defineBlock } from "../block-registry.js";
 
-const VARIANTS = ["primary", "secondary", "outline", "ghost"] as const;
-const SIZES = ["sm", "md", "lg"] as const;
-const TARGETS = ["_self", "_blank"] as const;
-type Target = (typeof TARGETS)[number];
-
-function pickTarget(raw: unknown): Target | undefined {
-  return typeof raw === "string" && (TARGETS as readonly string[]).includes(raw)
-    ? (raw as Target)
-    : undefined;
-}
-
 const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
-
-function pickFrom<T extends string>(
-  raw: unknown,
-  allowed: readonly T[],
-  fallback: T,
-): T {
-  return typeof raw === "string" && (allowed as readonly string[]).includes(raw)
-    ? (raw as T)
-    : fallback;
-}
 
 function sanitizeHref(raw: unknown): string | undefined {
   if (typeof raw !== "string") return undefined;
@@ -39,47 +18,46 @@ export const buttonBlock = defineBlock({
   inputs: [
     { name: "label", type: "text", label: "Label" },
     { name: "href", type: "text", label: "Href" },
-    {
-      name: "target",
-      type: "select",
-      label: "Target",
-      options: TARGETS.map((t) => ({ label: t, value: t })),
-    },
-    {
-      name: "variant",
-      type: "select",
-      label: "Variant",
-      options: VARIANTS.map((v) => ({ label: v, value: v })),
-    },
-    {
-      name: "size",
-      type: "select",
-      label: "Size",
-      options: SIZES.map((s) => ({ label: s, value: s })),
-    },
+    { name: "openInNewTab", type: "boolean", label: "Open in new tab" },
   ],
-  defaults: { label: "Click", variant: "primary", size: "md" },
-  render: ({ attrs }): ReactNode => {
-    const label = (attrs.label as string | undefined) ?? "";
+  defaults: { label: "Click" },
+  // Neutral, theme-overridable defaults, seeded as editable Styles values. The
+  // `var(--plumix-button-*, fallback)` form renders a button out of the box and
+  // lets a theme restyle every button by defining the variable in its own CSS.
+  defaultStyles: {
+    large: {
+      display: "inline-block",
+      appearance: "none",
+      cursor: "pointer",
+      textAlign: "center",
+      textDecoration: "none",
+      paddingTop: "var(--plumix-button-padding-y, 0.5rem)",
+      paddingBottom: "var(--plumix-button-padding-y, 0.5rem)",
+      paddingLeft: "var(--plumix-button-padding-x, 1rem)",
+      paddingRight: "var(--plumix-button-padding-x, 1rem)",
+      borderRadius: "var(--plumix-button-radius, 0.375rem)",
+      backgroundColor: "var(--plumix-button-bg, #111827)",
+      color: "var(--plumix-button-fg, #f9fafb)",
+    },
+  },
+  render: ({ attrs, blockProps }): ReactNode => {
+    const label = typeof attrs.label === "string" ? attrs.label : "";
     const href = sanitizeHref(attrs.href);
-    const target = pickTarget(attrs.target);
-    const variant = pickFrom(attrs.variant, VARIANTS, "primary");
-    const size = pickFrom(attrs.size, SIZES, "md");
+    const newTab = attrs.openInNewTab === true;
     if (href) {
       return (
         <a
           href={href}
-          target={target}
-          rel={target === "_blank" ? "noopener noreferrer" : undefined}
-          data-variant={variant}
-          data-size={size}
+          target={newTab ? "_blank" : undefined}
+          rel={newTab ? "noopener noreferrer" : undefined}
+          {...blockProps}
         >
           {label}
         </a>
       );
     }
     return (
-      <button type="button" data-variant={variant} data-size={size}>
+      <button type="button" {...blockProps}>
         {label}
       </button>
     );

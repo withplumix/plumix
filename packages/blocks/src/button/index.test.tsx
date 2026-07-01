@@ -9,8 +9,6 @@ describe("core/button", () => {
 
     expect(html).toContain("<button");
     expect(html).toContain("Save");
-    expect(html).toContain('data-variant="primary"');
-    expect(html).toContain('data-size="md"');
   });
 
   test("renders an <a> for a safe href", () => {
@@ -32,36 +30,30 @@ describe("core/button", () => {
     expect(html).not.toContain("javascript:");
   });
 
-  test("adds rel='noopener noreferrer' when target='_blank' on a safe href", () => {
+  test("adds target + rel='noopener noreferrer' when openInNewTab on a safe href", () => {
     const html = renderBlockSpecToHtml(buttonBlock, {
       label: "Open",
       href: "https://example.com",
-      target: "_blank",
+      openInNewTab: true,
     });
 
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
   });
 
-  test("omits rel when target='_self' (default)", () => {
+  test("omits target + rel by default (same tab)", () => {
     const html = renderBlockSpecToHtml(buttonBlock, {
       label: "Same",
       href: "https://example.com",
-      target: "_self",
     });
 
-    expect(html).toContain('target="_self"');
+    expect(html).not.toContain('target="_blank"');
     expect(html).not.toContain("rel=");
   });
 
-  test("falls back to primary/md when variant/size are invalid", () => {
-    const html = renderBlockSpecToHtml(buttonBlock, {
-      label: "Click",
-      variant: "wat",
-      size: "xxl",
-    });
-
-    expect(html).toContain('data-variant="primary"');
-    expect(html).toContain('data-size="md"');
+  test("seeds neutral, theme-overridable default styles", () => {
+    expect(buttonBlock.defaultStyles?.large?.backgroundColor).toBe(
+      "var(--plumix-button-bg, #111827)",
+    );
   });
 });
