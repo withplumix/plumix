@@ -39,6 +39,9 @@ export interface BlockContext {
    * `null` when the host wired none (the body then renders verbatim).
    */
   readonly shortcodes: ShortcodeRegistry | null;
+  /** True inside the editor canvas — lets a block render edit-only affordances
+   *  (e.g. an empty-state placeholder) that don't ship to the public page. */
+  readonly editing: boolean;
 }
 
 export interface BlockNode {
@@ -127,6 +130,7 @@ export const DEFAULT_BLOCK_CONTEXT: BlockContext = Object.freeze({
   depth: 0,
   locale: "en",
   shortcodes: null,
+  editing: false,
 });
 
 interface DevWarnState {
@@ -399,6 +403,7 @@ export function renderBlockTree(
     entry: options?.entry ?? DEFAULT_BLOCK_CONTEXT.entry,
     locale: options?.locale ?? DEFAULT_BLOCK_CONTEXT.locale,
     shortcodes: options?.shortcodes ?? null,
+    editing: options?.editing ?? false,
   };
   return renderNodes(nodes, env, rootContext);
 }

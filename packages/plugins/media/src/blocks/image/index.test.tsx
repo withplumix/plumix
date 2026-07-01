@@ -42,13 +42,40 @@ describe("media/image v2", () => {
     expect(html).toMatch(/object-position:\s?0% 100%/);
   });
 
-  test("emits the sizing data attribute when valid", () => {
+  test("renders a placeholder (no <img>) for an empty src in the editor", () => {
+    const html = renderBlockSpecToHtml(
+      imageBlock,
+      { src: "" },
+      { editing: true },
+    );
+    expect(html).toContain("data-plumix-image-placeholder");
+    expect(html).toContain("No image");
+    expect(html).not.toContain("<img");
+  });
+
+  test("renders no placeholder on the public page for an empty src", () => {
+    const html = renderBlockSpecToHtml(imageBlock, { src: "" });
+    expect(html).not.toContain("data-plumix-image-placeholder");
+    expect(html).not.toContain("No image");
+  });
+
+  test("passes sizes through to the img element", () => {
     const html = renderBlockSpecToHtml(imageBlock, {
       src: "/x.jpg",
       alt: "",
-      sizing: "wide",
+      sizes: "(max-width: 600px) 100vw, 50vw",
     });
-    expect(html).toContain('data-sizing="wide"');
+    expect(html).toContain('sizes="(max-width: 600px) 100vw, 50vw"');
+  });
+
+  test("high priority loads eagerly with fetchpriority=high", () => {
+    const html = renderBlockSpecToHtml(imageBlock, {
+      src: "/x.jpg",
+      alt: "",
+      priority: true,
+    });
+    expect(html).toContain('loading="eager"');
+    expect(html.toLowerCase()).toContain('fetchpriority="high"');
   });
 
   test("passes srcset through to the img element", () => {
