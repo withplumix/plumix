@@ -131,7 +131,12 @@ export function createNodeFromEntry(
       attrs[input.name] = input.defaultChildren;
     }
   }
-  const seed: BlockNode = { id: "seed", name: entry.name, attrs };
+  const seed: BlockNode = {
+    id: "seed",
+    name: entry.name,
+    attrs,
+    ...(spec?.defaultStyles ? { style: spec.defaultStyles } : {}),
+  };
   const [node = seed] = rewriteBlockNodeIds([seed]);
   return node;
 }

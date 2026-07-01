@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Label } from "./i18n-label.js";
 import type { BlockLoaderRecord } from "./loaders.js";
 import type { BlockNode, BlockNodeComponent } from "./render-block-tree.js";
+import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
 
 export interface BlockInputOption {
   readonly label: Label;
@@ -149,6 +150,13 @@ export interface BlockSpec<
   // narrow `Attrs` to `{ text: string }` even when `render` reads other
   // keys. `defaults` checks against the inferred `Attrs`, doesn't bias it.
   readonly defaults?: Readonly<Partial<NoInfer<Attrs>>>;
+  /**
+   * Default responsive styles seeded into a freshly-inserted block's `style`
+   * slot, so they appear as editable values in the Styles section rather than
+   * baked, hidden CSS. Use `var(--plumix-…, fallback)` values a theme can
+   * override. Mirrors Builder.io's `defaultStyles` (ours is responsive).
+   */
+  readonly defaultStyles?: ResponsiveStyleSlot;
   readonly placeholder?: string;
   readonly capability?: string;
   readonly transforms?: BlockTransforms;
