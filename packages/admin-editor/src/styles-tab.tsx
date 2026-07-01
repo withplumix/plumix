@@ -2,7 +2,7 @@ import type { I18n } from "@lingui/core";
 import type { ReactElement, ReactNode } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
-import type { StyleValue, ThemeTokens, TokenCategory } from "@plumix/blocks";
+import type { ThemeTokens, TokenCategory } from "@plumix/blocks";
 import {
   Accordion,
   AccordionContent,
@@ -49,9 +49,9 @@ interface ControlSpec {
 }
 
 /** Reads the active block's value for a style property in the current bucket. */
-type StyleGetter = (property: string) => StyleValue | undefined;
+type StyleGetter = (property: string) => string | undefined;
 /** Curried writer: pick a property, then set (or clear with `null`) its value. */
-type StyleSetter = (property: string) => (value: StyleValue | null) => void;
+type StyleSetter = (property: string) => (value: string | null) => void;
 
 const SECTIONS: readonly {
   readonly id: string;
@@ -143,23 +143,21 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
 
   const bucket: StyleBucket = deviceBucket(device);
   const current = block.style?.[bucket];
-  const valueOf = (property: string): StyleValue | undefined =>
+  const valueOf = (property: string): string | undefined =>
     normalizeStyleValue(current?.[property]) ?? undefined;
+  // Keep every string entry — including an empty one mid-retype — so clearing a
+  // value doesn't unmount its row. Emission drops empties at sanitize time.
   const declarations: StyleDeclaration[] = Object.entries(
     current ?? {},
-  ).flatMap(([property, stored]) => {
-    const value = normalizeStyleValue(stored);
-    return value ? [{ property, value }] : [];
-  });
+  ).flatMap(([property, stored]) =>
+    typeof stored === "string" ? [{ property, value: stored }] : [],
+  );
   const setter =
     (property: string) =>
-    (value: StyleValue | null): void =>
+    (value: string | null): void =>
       updateBlockStyle(activeId, bucket, property, value);
-  // Hidden when display resolves to "none" in either form — a value typed in
-  // the CSS section is raw, but a legacy/token "none" should read as hidden too.
-  const display = valueOf("display");
-  const hidden =
-    (display && ("raw" in display ? display.raw : display.token)) === "none";
+  // Hidden when display is set to "none" for this device.
+  const hidden = valueOf("display") === "none";
 
   return (
     <div className="flex flex-col gap-2 p-3" data-testid="styles-tab">
@@ -175,9 +173,7 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
           variant="outline"
           size="sm"
           pressed={hidden}
-          onPressedChange={(next) =>
-            setter("display")(next ? { raw: "none" } : null)
-          }
+          onPressedChange={(next) => setter("display")(next ? "none" : null)}
           data-testid="style-hide-on-device"
           aria-label={i18n._({
             id: "editor.styles.hideOnDevice",
@@ -321,10 +317,6 @@ function TextStyleControls({
   readonly setter: StyleSetter;
 }): ReactElement {
   const { i18n } = useLingui();
-  const rawValue = (property: string): string | undefined => {
-    const value = valueOf(property);
-    return value && "raw" in value ? value.raw : undefined;
-  };
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -336,17 +328,17 @@ function TextStyleControls({
           type="multiple"
           variant="outline"
           size="sm"
-          value={TEXT_MARKS.filter((m) => rawValue(m.property) === m.on).map(
+          value={TEXT_MARKS.filter((m) => valueOf(m.property) === m.on).map(
             (m) => m.id,
           )}
           onValueChange={(next) => {
             // Radix hands back the full pressed set; write only the mark whose
             // state flipped (exactly one per click).
             for (const mark of TEXT_MARKS) {
-              const on = rawValue(mark.property) === mark.on;
+              const on = valueOf(mark.property) === mark.on;
               const wantOn = next.includes(mark.id);
               if (on !== wantOn) {
-                setter(mark.property)(wantOn ? { raw: mark.on } : null);
+                setter(mark.property)(wantOn ? mark.on : null);
               }
             }
           }}
@@ -366,10 +358,8 @@ function TextStyleControls({
           type="single"
           variant="outline"
           size="sm"
-          value={rawValue("textAlign") ?? ""}
-          onValueChange={(value) =>
-            setter("textAlign")(value ? { raw: value } : null)
-          }
+          value={valueOf("textAlign") ?? ""}
+          onValueChange={(value) => setter("textAlign")(value || null)}
         >
           {TEXT_ALIGNMENTS.map(({ value, Icon }) => (
             <TooltipToggleItem

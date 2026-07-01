@@ -13,7 +13,6 @@ import type {
   ResponsiveStyleSlot,
   ThemeBreakpoints,
 } from "./styles/style-emitter.js";
-import type { ThemeTokens } from "./styles/types.js";
 import { editAppender } from "./edit-appender.js";
 import { safeHtmlAttrs } from "./html/attrs.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
@@ -72,7 +71,6 @@ export interface BlockRenderHooks {
 }
 
 export interface RenderBlockTreeOptions {
-  readonly tokens?: ThemeTokens;
   /** Theme breakpoints driving the emitter's @media maxima (default 991/640). */
   readonly breakpoints?: ThemeBreakpoints;
   readonly hooks?: BlockRenderHooks;
@@ -245,7 +243,6 @@ function materializeSlots(
 interface WalkerEnv {
   readonly registry: BlockRegistry;
   readonly devState: DevWarnState;
-  readonly tokens: ThemeTokens | undefined;
   readonly breakpoints: ThemeBreakpoints | undefined;
   readonly hooks: BlockRenderHooks | undefined;
   readonly loaderData: ResolvedBlockLoaders | undefined;
@@ -272,7 +269,7 @@ function renderNode(
   env: WalkerEnv,
   context: BlockContext,
 ): ReactNode {
-  const { registry, devState, tokens, loaderData } = env;
+  const { registry, devState, loaderData } = env;
   if (node.name === PATTERN_REF_BLOCK) {
     return renderPatternRef(node, env, context);
   }
@@ -294,13 +291,8 @@ function renderNode(
 
   const safeId = SAFE_ID_RE.test(node.id) ? node.id : null;
   const styleCss =
-    safeId && node.style && tokens
-      ? emitBlockStyleCss(
-          `plumix-block-${safeId}`,
-          node.style,
-          tokens,
-          env.breakpoints,
-        )
+    safeId && node.style
+      ? emitBlockStyleCss(`plumix-block-${safeId}`, node.style, env.breakpoints)
       : "";
   const className = safeId && styleCss ? `plumix-block-${safeId}` : undefined;
   const styleTag = styleCss
@@ -395,7 +387,6 @@ export function renderBlockTree(
   const env: WalkerEnv = {
     registry,
     devState: devWarnState(registry),
-    tokens: options?.tokens,
     breakpoints: options?.breakpoints,
     hooks: options?.hooks,
     loaderData: options?.loaderData,

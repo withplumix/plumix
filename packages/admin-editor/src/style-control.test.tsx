@@ -44,12 +44,12 @@ describe("StyleControl", () => {
     // made from the same rendered `lg` value — choose targets that differ
     // from it (Radix skips onValueChange when the active item is re-picked).
     const { getByTestId, onChange } = renderControl({
-      value: { token: "lg" },
+      value: "var(--plumix-spacing-lg, 24px)",
     });
 
     await user.click(getByTestId("style-control-padding-token"));
     await user.click(getByTestId("style-control-padding-token-sm"));
-    expect(onChange).toHaveBeenLastCalledWith({ token: "sm" });
+    expect(onChange).toHaveBeenLastCalledWith("var(--plumix-spacing-sm, 8px)");
 
     await user.click(getByTestId("style-control-padding-token"));
     await user.click(getByTestId("style-control-padding-token-none"));
@@ -62,7 +62,7 @@ describe("StyleControl", () => {
     fireEvent.change(getByTestId("style-control-padding-custom"), {
       target: { value: "20px" },
     });
-    expect(onChange).toHaveBeenCalledWith({ raw: "20px" });
+    expect(onChange).toHaveBeenCalledWith("20px");
   });
 
   test("a custom-only control (no category) offers no token mode", () => {

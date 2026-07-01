@@ -112,13 +112,13 @@ export {
   normalizeStyleValue,
   tokenCategoryForProperty,
   tokenCssVar,
+  tokenIdFromCssVar,
   tokenIdToCssVar,
   VIEWPORT_MAX_PX,
 } from "./styles/style-emitter.js";
 export type {
   ResponsiveStyleBucket,
   ResponsiveStyleSlot,
-  StyleValue,
   ThemeBreakpoints,
   TokenCategory,
 } from "./styles/style-emitter.js";

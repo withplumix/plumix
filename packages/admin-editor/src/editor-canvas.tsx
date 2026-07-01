@@ -30,8 +30,9 @@ interface EditorCanvasProps {
   readonly origin: string;
   /** Seed tree for first paint, before the host pushes (from the SSR embed). */
   readonly initialTree?: readonly BlockNode[];
-  /** Theme tokens (from the SSR embed). Without them the renderer can't emit
-   *  block-style CSS, so token-or-custom style edits never reach the canvas. */
+  /** Theme tokens (from the SSR embed), feeding the Styles tab's token picker so
+   *  authors can pre-select a registered token. Block-style CSS emits from the
+   *  stored value strings directly, so the walker itself needs no tokens. */
   readonly tokens?: ThemeTokens;
   /** Theme breakpoints (from the SSR embed), so the canvas's responsive style
    *  CSS gates at the same widths the live render uses. */
@@ -325,7 +326,6 @@ export function EditorCanvas({
           renderBlockTree(tree, registry, {
             editing: true,
             loaderData,
-            tokens,
             breakpoints,
             addBlockLabel,
           })

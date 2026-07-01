@@ -82,7 +82,6 @@ export function BlockRenderer({
 }): ReactNode {
   const ctx = usePlumixContext("BlockRenderer");
   const tree = renderBlockTree(content.blocks, ctx.registry, {
-    tokens: ctx.tokens,
     breakpoints: ctx.breakpoints,
     loaderData: ctx.loaderData,
     locale: ctx.locale,
