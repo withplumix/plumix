@@ -37,6 +37,14 @@ export interface BlockInput {
    * wins. Mirrors Builder.io's `defaultChildren`.
    */
   readonly defaultChildren?: readonly BlockNode[];
+  /**
+   * Bind this input to a CSS property in the block's `style` slot instead of an
+   * attr — the inspector reads/writes `node.style` for the active device, so the
+   * control is two-way synced with the Styles tab (both edit the same data).
+   * The value is a CSS string (`"800px"`, `"50%"`). Mirrors Builder.io surfacing
+   * a style like `width` as a block input.
+   */
+  readonly styleProperty?: string;
 }
 
 export type BlockVariationScope = "inserter" | "block" | "transform";

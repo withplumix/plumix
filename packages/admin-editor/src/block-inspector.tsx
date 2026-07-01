@@ -12,11 +12,13 @@ import {
 } from "@plumix/admin-ui/accordion";
 import { Button } from "@plumix/admin-ui/button";
 import { RefreshCw } from "@plumix/admin-ui/icons";
+import { normalizeStyleValue } from "@plumix/blocks";
 
 import { BlockInputControl } from "./block-input-control.js";
 import { findBlock } from "./block-tree-ops.js";
 import { HtmlAttributes } from "./html-attributes.js";
 import { useEditorStore, useLoaderPushRef } from "./provider.js";
+import { deviceBucket } from "./store.js";
 
 interface BlockInspectorProps {
   /** Core + plugin block registry; supplies each block's input schema. */
@@ -40,11 +42,14 @@ export function BlockInspector({
 }: BlockInspectorProps): ReactElement {
   const activeId = useEditorStore((s) => s.activeId);
   const tree = useEditorStore((s) => s.tree);
+  const device = useEditorStore((s) => s.device);
   const updateBlockAttrs = useEditorStore((s) => s.updateBlockAttrs);
+  const updateBlockStyle = useEditorStore((s) => s.updateBlockStyle);
   const updateBlockHtmlAttr = useEditorStore((s) => s.updateBlockHtmlAttr);
   const renameBlockHtmlAttr = useEditorStore((s) => s.renameBlockHtmlAttr);
   const loaderPushRef = useLoaderPushRef();
 
+  const bucket = deviceBucket(device);
   const block = activeId ? findBlock(tree, activeId) : undefined;
   const handleChange = useCallback(
     (key: string, value: unknown): void => {
@@ -81,14 +86,33 @@ export function BlockInspector({
 
   return (
     <div className="flex flex-col gap-4 p-4" data-testid="block-inspector">
-      {inputs.map((input) => (
-        <BlockInputControl
-          key={input.name}
-          input={input}
-          value={block.attrs?.[input.name]}
-          onChange={(value) => handleChange(input.name, value)}
-        />
-      ))}
+      {inputs.map((input) => {
+        // A `styleProperty` input edits `node.style` for the active device
+        // instead of an attr, so it's two-way synced with the Styles tab.
+        const styleProp = input.styleProperty;
+        return (
+          <BlockInputControl
+            key={input.name}
+            input={input}
+            value={
+              styleProp
+                ? (normalizeStyleValue(block.style?.[bucket]?.[styleProp]) ??
+                  undefined)
+                : block.attrs?.[input.name]
+            }
+            onChange={(value) => {
+              if (!styleProp) {
+                handleChange(input.name, value);
+                return;
+              }
+              if (!activeId) return;
+              const next =
+                typeof value === "string" && value !== "" ? value : null;
+              updateBlockStyle(activeId, bucket, styleProp, next);
+            }}
+          />
+        );
+      })}
       {canRefresh && (
         <Button
           type="button"
