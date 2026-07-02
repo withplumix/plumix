@@ -14,7 +14,7 @@ describe("core/group", () => {
     const html = renderBlockTreeToHtml([groupBlock], tree);
 
     expect(html).toBe(
-      '<div data-plumix-block="core/group"><div data-layout="flow"></div></div>',
+      '<div data-layout="flow" data-plumix-block="core/group"></div>',
     );
   });
 
