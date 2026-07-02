@@ -160,6 +160,7 @@ export { embedBlock } from "./embed/index.js";
 export { groupBlock } from "./group/index.js";
 export { htmlBlock } from "./html/index.js";
 export { richTextBlock } from "./rich-text/index.js";
+export { sectionBlock } from "./section/index.js";
 export { separatorBlock } from "./separator/index.js";
 export {
   tableBlock,
