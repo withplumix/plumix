@@ -6,12 +6,18 @@ import { defineBlock } from "../block-registry.js";
 // the value inert when spread into an inline `flex` style.
 const SAFE_WIDTH = /^\d+(\.\d+)?(px|%|rem|em|vw|vh|ch)$/;
 
-// A fixed width pins the column's flex (no grow/shrink) so it overrides the
-// class-level equal-split default; an unset or unsafe width leaves it equal.
+// A width sets the column's flex-basis and lets it shrink (but not grow), so it
+// overrides the equal-split default while staying gap-safe: several fixed
+// widths shrink to fit the row instead of overflowing past it, and an unset
+// column still grows to fill whatever's left. A bare number is a percent
+// (Builder's column width). An unsafe value leaves the column equal.
 function columnFlex(width: unknown): CSSProperties | undefined {
   if (typeof width !== "string") return undefined;
   const value = width.trim();
-  return SAFE_WIDTH.test(value) ? { flex: `0 0 ${value}` } : undefined;
+  const normalized = /^\d+(\.\d+)?$/.test(value) ? `${value}%` : value;
+  return SAFE_WIDTH.test(normalized)
+    ? { flex: `0 1 ${normalized}` }
+    : undefined;
 }
 
 export const columnBlock = defineBlock({

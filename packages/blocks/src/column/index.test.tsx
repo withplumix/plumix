@@ -36,16 +36,26 @@ describe("core/column", () => {
     expect(columnBlock.requiresParent).toEqual(["core/columns"]);
   });
 
-  test("a width fixes the column's flex, overriding the equal split", () => {
+  test("a width sets a shrinkable flex-basis, overriding the equal split", () => {
     const tree: readonly BlockNode[] = [
       { id: "col1", name: "core/column", attrs: { width: "30%" } },
     ];
 
     const html = renderBlockTreeToHtml([columnBlock], tree);
 
-    // Fixed basis, no grow/shrink — the inline style wins over the class-level
-    // equal-split default.
-    expect(html).toContain("flex:0 0 30%");
+    // Basis with shrink (no grow) — the inline style wins over the class-level
+    // equal split, and shrink keeps a full row gap-safe instead of overflowing.
+    expect(html).toContain("flex:0 1 30%");
+  });
+
+  test("a bare number width is treated as a percent", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "col1", name: "core/column", attrs: { width: "70" } },
+    ];
+
+    const html = renderBlockTreeToHtml([columnBlock], tree);
+
+    expect(html).toContain("flex:0 1 70%");
   });
 
   test("ignores an unsafe width value (falls back to equal split)", () => {
