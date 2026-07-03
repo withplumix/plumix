@@ -60,7 +60,7 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
-#~ msgid "editor.styles.spacing"
+#~ msgid "editor.styles.marginPadding"
 #~ msgstr ""
 
 #. js-lingui-explicit-id
@@ -274,11 +274,6 @@ msgid "editor.styles.margin"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/styles-tab.tsx
-msgid "editor.styles.marginPadding"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.device.mobile"
 msgstr ""
@@ -441,6 +436,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/json-inspector.tsx
 msgid "editor.json.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.spacing"
 msgstr ""
 
 #. js-lingui-explicit-id

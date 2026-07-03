@@ -89,6 +89,7 @@ describe("StylesTab", () => {
     ].map((el) => el.getAttribute("data-testid"));
     expect(sections).toEqual([
       "styles-section-layout",
+      "styles-section-size",
       "styles-section-visibility",
       "styles-section-background",
       "styles-section-typography",
@@ -101,19 +102,19 @@ describe("StylesTab", () => {
     ]);
   });
 
-  test("labels spacing 'Margin & Padding' and declarations 'CSS Properties'", () => {
+  test("labels the spacing section 'Spacing' and declarations 'CSS Properties'", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a", {
       expandCss: false,
     });
     expect(getByTestId("styles-section-spacing").textContent).toContain(
-      "Margin & Padding",
+      "Spacing",
     );
     expect(getByTestId("styles-section-declarations").textContent).toContain(
       "CSS Properties",
     );
   });
 
-  test("leads the Styles tab with the Layout section; Size folds into it", () => {
+  test("leads with Layout, then Size as its own section", () => {
     const { container } = renderTab([{ id: "a", name: "core/x" }], "a", {
       expandCss: false,
     });
@@ -121,8 +122,7 @@ describe("StylesTab", () => {
       ...container.querySelectorAll('[data-testid^="styles-section-"]'),
     ].map((el) => el.getAttribute("data-testid"));
     expect(sections[0]).toBe("styles-section-layout");
-    // Size is no longer a standalone section — its controls live under Layout.
-    expect(sections).not.toContain("styles-section-size");
+    expect(sections[1]).toBe("styles-section-size");
   });
 
   test("the Layout section writes align-self for the block within its parent", () => {
@@ -154,14 +154,10 @@ describe("StylesTab", () => {
     expect(getByTestId("style-alignItems-stretch")).toBeDefined();
   });
 
-  test("exposes Size controls (folded into Layout) that write width/min-width", () => {
-    const { getByTestId, queryByTestId } = renderTab(
-      [{ id: "a", name: "core/x" }],
-      "a",
-    );
+  test("exposes a Size section that writes width/min-width", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
-    // Size is folded into Layout — no standalone section, but the controls stay.
-    expect(queryByTestId("styles-section-size")).toBeNull();
+    expect(getByTestId("styles-section-size")).toBeDefined();
 
     // Sizing has no token scale, so the custom input shows directly (no mode
     // toggle) — the same model as font-size.

@@ -72,23 +72,26 @@ type StyleGetter = (property: string) => string | undefined;
 /** Curried writer: pick a property, then set (or clear with `null`) its value. */
 type StyleSetter = (property: string) => (value: string | null) => void;
 
-// Sizing has no token scale (widths are arbitrary px/%/rem), so these are
-// custom-only — same model as font-size. Folded into the Layout section (like
-// Builder), not a standalone section.
-const SIZE_CONTROLS: readonly ControlSpec[] = [
-  { property: "width", label: "Width" },
-  { property: "height", label: "Height" },
-  { property: "minWidth", label: "Min width" },
-  { property: "minHeight", label: "Min height" },
-  { property: "maxWidth", label: "Max width" },
-  { property: "maxHeight", label: "Max height" },
-];
-
 interface SectionDef {
   readonly id: string;
   readonly label: string;
   readonly controls: readonly ControlSpec[];
 }
+
+// Box dimensions — its own section (not folded into Layout, which is about
+// arrangement). No token scale (widths are arbitrary px/%/rem), so custom-only.
+const SIZE_SECTION: SectionDef = {
+  id: "size",
+  label: "Size",
+  controls: [
+    { property: "width", label: "Width" },
+    { property: "height", label: "Height" },
+    { property: "minWidth", label: "Min width" },
+    { property: "minHeight", label: "Min height" },
+    { property: "maxWidth", label: "Max width" },
+    { property: "maxHeight", label: "Max height" },
+  ],
+};
 
 // Grid-of-controls sections (rendered by GenericSection). The bespoke sections
 // (layout / visibility / spacing / effects / declarations) render their own
@@ -148,6 +151,7 @@ const BORDER_SECTION: SectionDef = {
 // is a dev-facing escape hatch, so it's intentionally omitted (starts collapsed).
 const SECTION_IDS = [
   "layout",
+  "size",
   "visibility",
   "background",
   "typography",
@@ -224,6 +228,12 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
             <LayoutControls valueOf={valueOf} setter={setter} tokens={tokens} />
           </AccordionContent>
         </AccordionItem>
+        <GenericSection
+          section={SIZE_SECTION}
+          valueOf={valueOf}
+          setter={setter}
+          tokens={tokens}
+        />
         <AccordionItem value="visibility">
           <AccordionTrigger data-testid="styles-section-visibility">
             <Trans id="editor.styles.visibility" message="Visibility" />
@@ -246,10 +256,7 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
         />
         <AccordionItem value="spacing">
           <AccordionTrigger data-testid="styles-section-spacing">
-            <Trans
-              id="editor.styles.marginPadding"
-              message="Margin & Padding"
-            />
+            <Trans id="editor.styles.spacing" message="Spacing" />
           </AccordionTrigger>
           <AccordionContent>
             <SpacingControls
@@ -676,19 +683,6 @@ function LayoutControls({
         valueOf={valueOf}
         setter={setter}
       />
-      {/* Sizing (width/height/min/max), folded in from the old Size section. */}
-      <div className="grid grid-cols-2 gap-x-2 gap-y-3">
-        {SIZE_CONTROLS.map((c) => (
-          <StyleControl
-            key={c.property}
-            label={c.label}
-            property={c.property}
-            value={valueOf(c.property)}
-            tokens={tokens}
-            onChange={setter(c.property)}
-          />
-        ))}
-      </div>
     </div>
   );
 }
