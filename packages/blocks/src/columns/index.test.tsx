@@ -56,11 +56,59 @@ describe("core/columns", () => {
     expect(html).not.toContain("data-gap");
   });
 
-  test("seeds a flex row that stacks at tablet, with a gap", () => {
+  test("seeds a flex row with a gap", () => {
     expect(columnsBlock.defaultStyles?.large?.display).toBe("flex");
     expect(columnsBlock.defaultStyles?.large?.gap).toBe("20px");
-    // Builder's stackColumnsAt default is 'tablet': columns stack below it.
-    expect(columnsBlock.defaultStyles?.medium?.flexDirection).toBe("column");
+  });
+
+  test("stacks columns below the tablet breakpoint by default", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "c1", name: "core/columns", attrs: {} },
+    ];
+
+    const html = renderBlockTreeToHtml([columnsBlock], tree);
+
+    // Builder's stackColumnsAt default is 'tablet' — a scoped media query flips
+    // the row to a column below the tablet breakpoint (991px default).
+    expect(html).toContain("@media (max-width: 991px)");
+    expect(html).toContain("flex-direction: column");
+    expect(html).toContain("plumix-cols-c1");
+  });
+
+  test("stackAt=mobile stacks below the mobile breakpoint instead", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "c1", name: "core/columns", attrs: { stackAt: "mobile" } },
+    ];
+
+    const html = renderBlockTreeToHtml([columnsBlock], tree);
+
+    expect(html).toContain("@media (max-width: 640px)");
+    expect(html).not.toContain("991px");
+  });
+
+  test("stackAt=never emits no stacking media query", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "c1", name: "core/columns", attrs: { stackAt: "never" } },
+    ];
+
+    const html = renderBlockTreeToHtml([columnsBlock], tree);
+
+    expect(html).not.toContain("@media");
+    expect(html).not.toContain("flex-direction: column");
+  });
+
+  test("reverseWhenStacked stacks in reverse order", () => {
+    const tree: readonly BlockNode[] = [
+      {
+        id: "c1",
+        name: "core/columns",
+        attrs: { reverseWhenStacked: true },
+      },
+    ];
+
+    const html = renderBlockTreeToHtml([columnsBlock], tree);
+
+    expect(html).toContain("flex-direction: column-reverse");
   });
 
   test("accepts only core/column children, seeding two by default", () => {

@@ -58,4 +58,43 @@ describe("core/column", () => {
     expect(html).not.toContain("flex:");
     expect(html).not.toContain("evil");
   });
+
+  test("a safe link wraps the column in an anchor", () => {
+    const tree: readonly BlockNode[] = [
+      {
+        id: "col1",
+        name: "core/column",
+        attrs: {
+          link: "/pricing",
+          openInNewTab: true,
+          content: [
+            { id: "p1", name: "core/rich-text", attrs: { body: "<p>Go</p>" } },
+          ],
+        },
+      },
+    ];
+
+    const html = renderBlockTreeToHtml([columnBlock, richTextBlock], tree);
+
+    expect(html).toContain('<a href="/pricing"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).toContain("<p>Go</p>");
+  });
+
+  test("a javascript: link is rejected, leaving a plain div", () => {
+    const tree: readonly BlockNode[] = [
+      {
+        id: "col1",
+        name: "core/column",
+        // eslint-disable-next-line no-script-url
+        attrs: { link: "javascript:alert(1)" },
+      },
+    ];
+
+    const html = renderBlockTreeToHtml([columnBlock], tree);
+
+    expect(html).not.toContain("<a");
+    expect(html).not.toContain("javascript:");
+  });
 });
