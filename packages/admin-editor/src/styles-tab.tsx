@@ -1121,15 +1121,6 @@ function CssClassesField({
         })}
         data-testid="style-css-classes"
       />
-      <p
-        className="text-muted-foreground text-xs"
-        data-testid="style-css-classes-hint"
-      >
-        <Trans
-          id="editor.styles.cssClasses.hint"
-          message="Added to the block root element."
-        />
-      </p>
     </div>
   );
 }

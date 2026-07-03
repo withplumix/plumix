@@ -79,6 +79,11 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.cssClasses.hint"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr ""
@@ -96,11 +101,6 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.add"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/styles-tab.tsx
-msgid "editor.styles.cssClasses.hint"
 msgstr ""
 
 #. js-lingui-explicit-id
