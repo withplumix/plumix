@@ -71,6 +71,18 @@ describe("BlockInputControl", () => {
     expect(onChange).toHaveBeenCalledWith(true);
   });
 
+  test("boolean renders a switch that reflects and emits a boolean", () => {
+    const { getByTestId, onChange } = renderControl(
+      { name: "reverse", type: "boolean" },
+      false,
+    );
+    const control = getByTestId("block-input-reverse");
+    // A Switch (role=switch), not a text input, per the on/off control rule.
+    expect(control.getAttribute("role")).toBe("switch");
+    fireEvent.click(control);
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
   test("select preserves a numeric option value through the round trip", () => {
     const { getByTestId, onChange } = renderControl(
       {

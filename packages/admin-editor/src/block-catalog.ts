@@ -137,31 +137,32 @@ export function createNodeFromEntry(
   }
   const seed: BlockNode = { id: "seed", name: entry.name, attrs };
   const [node = seed] = rewriteBlockNodeIds([seed]);
-  // Seed defaultStyles down the whole tree, not just the inserted block, so a
-  // container's seeded children (e.g. the equal-split columns) get their spec's
-  // styles too — matching a child inserted directly.
-  return seedDefaultStyles(node, registry);
+  // Seed spec defaults down the whole tree, not just the inserted block, so a
+  // container's seeded children (e.g. a column's paragraph or the equal-split
+  // columns) get their own spec's defaults + defaultStyles — matching a child
+  // inserted directly.
+  return seedNodeDefaults(node, registry);
 }
 
-// Apply each node's spec `defaultStyles` where the node carries none, recursing
-// through every slot. Fresh-insert only: hand-authored/stored content keeps its
-// explicit styles untouched (a node with a style is left as-is).
-function seedDefaultStyles(
-  node: BlockNode,
-  registry: BlockRegistry,
-): BlockNode {
-  let attrs = node.attrs;
-  if (attrs) {
-    const next: Record<string, unknown> = { ...attrs };
-    for (const [key, value] of Object.entries(attrs)) {
-      if (isBlockNodeArray(value)) {
-        next[key] = value.map((child) => seedDefaultStyles(child, registry));
-      }
-    }
-    attrs = next;
+// Apply each node's spec `defaults` (attrs) and `defaultStyles` (style) where
+// the node carries none, recursing through every slot. Fresh-insert only:
+// hand-authored/stored content keeps its explicit attrs + styles untouched (an
+// existing value wins over the default).
+function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
+  const spec = registry.get(node.name);
+  const base: Record<string, unknown> = { ...spec?.defaults, ...node.attrs };
+  const attrs: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(base)) {
+    attrs[key] = isBlockNodeArray(value)
+      ? value.map((child) => seedNodeDefaults(child, registry))
+      : value;
   }
-  const style = node.style ?? registry.get(node.name)?.defaultStyles;
-  return { ...node, attrs, ...(style ? { style } : {}) };
+  const style = node.style ?? spec?.defaultStyles;
+  return {
+    ...node,
+    attrs: Object.keys(attrs).length > 0 ? attrs : undefined,
+    ...(style ? { style } : {}),
+  };
 }
 
 /** The concrete block(s) a pattern inserts: a deep-cloned, id-rewritten copy of

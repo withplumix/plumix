@@ -6,6 +6,7 @@ import type { BlockInput, BlockInputOption } from "@plumix/blocks";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
 import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
+import { Switch } from "@plumix/admin-ui/switch";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { resolveLabel } from "@plumix/core/i18n";
 
@@ -74,6 +75,15 @@ export function BlockInputControl({
       case "checkbox":
         return (
           <Checkbox
+            id={id}
+            data-testid={testId}
+            checked={value === true}
+            onCheckedChange={(checked) => onChange(checked === true)}
+          />
+        );
+      case "boolean":
+        return (
+          <Switch
             id={id}
             data-testid={testId}
             checked={value === true}

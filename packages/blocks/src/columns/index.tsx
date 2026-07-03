@@ -10,28 +10,12 @@ const DEFAULT_COLUMNS: readonly BlockNode[] = [
   {
     id: "column-1",
     name: "core/column",
-    attrs: {
-      content: [
-        {
-          id: "column-1-text",
-          name: "core/rich-text",
-          attrs: { body: "<p>Column</p>" },
-        },
-      ],
-    },
+    attrs: { content: [{ id: "column-1-text", name: "core/rich-text" }] },
   },
   {
     id: "column-2",
     name: "core/column",
-    attrs: {
-      content: [
-        {
-          id: "column-2-text",
-          name: "core/rich-text",
-          attrs: { body: "<p>Column</p>" },
-        },
-      ],
-    },
+    attrs: { content: [{ id: "column-2-text", name: "core/rich-text" }] },
   },
 ];
 

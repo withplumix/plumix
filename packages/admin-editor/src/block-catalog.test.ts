@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode, BlockPattern, BlockSpec } from "@plumix/blocks";
-import { columnBlock, columnsBlock, createBlockRegistry } from "@plumix/blocks";
+import {
+  columnBlock,
+  columnsBlock,
+  createBlockRegistry,
+  richTextBlock,
+} from "@plumix/blocks";
 
 import {
   createNodeFromEntry,
@@ -300,6 +305,21 @@ describe("createNodeFromEntry", () => {
     const columns = node.attrs?.columns as readonly BlockNode[];
     expect(columns[0]?.style?.large?.flexGrow).toBe("1");
     expect(columns[1]?.style?.large?.flexBasis).toBe("0");
+  });
+
+  test("seeds a container's descendants with their own spec default attrs", () => {
+    const reg = createBlockRegistry([columnsBlock, columnBlock, richTextBlock]);
+    const node = createNodeFromEntry(reg, {
+      name: "core/columns",
+      slug: "core/columns",
+      title: "Columns",
+    });
+
+    // The seeded column paragraph inherits core/rich-text's default body — the
+    // same as a rich-text inserted directly — rather than rendering blank.
+    const columns = node.attrs?.columns as readonly BlockNode[];
+    const para = (columns[0]?.attrs?.content as readonly BlockNode[])[0];
+    expect(para?.attrs?.body).toBe("<p>Enter text here…</p>");
   });
 
   test("an explicit slot value wins over the slot's defaultChildren", () => {
