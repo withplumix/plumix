@@ -3,9 +3,9 @@ import type { ReactElement, ReactNode } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
 import type {
-  ResponsiveStyleSlot,
   ThemeTokens,
   TokenCategory,
+  VisibilityFlags,
 } from "@plumix/blocks";
 import {
   Accordion,
@@ -173,6 +173,7 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
     s.activeId ? findBlock(s.tree, s.activeId) : null,
   );
   const updateBlockStyle = useEditorStore((s) => s.updateBlockStyle);
+  const updateBlockHidden = useEditorStore((s) => s.updateBlockHidden);
   const renameBlockStyleProperty = useEditorStore(
     (s) => s.renameBlockStyleProperty,
   );
@@ -207,10 +208,10 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
     (property: string) =>
     (value: string | null): void =>
       updateBlockStyle(activeId, bucket, property, value);
-  // Visibility writes display:none per device bucket directly (not via the
-  // active-device `setter`), so all three breakpoints are editable at once.
+  // Visibility is stored off the style slot (per device), so hiding never
+  // clobbers a bucket's layout `display`; all three breakpoints edit at once.
   const setHiddenOn = (target: StyleBucket, hidden: boolean): void =>
-    updateBlockStyle(activeId, target, "display", hidden ? "none" : null);
+    updateBlockHidden(activeId, target, hidden);
 
   return (
     <div className="flex flex-col gap-2 p-3" data-testid="styles-tab">
@@ -240,7 +241,7 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
             <Trans id="editor.styles.visibility" message="Visibility" />
           </AccordionTrigger>
           <AccordionContent>
-            <VisibilityControls style={block.style} onToggle={setHiddenOn} />
+            <VisibilityControls hidden={block.hidden} onToggle={setHiddenOn} />
           </AccordionContent>
         </AccordionItem>
         <GenericSection
@@ -564,14 +565,14 @@ const VISIBILITY_DEVICES: readonly {
   },
 ];
 
-/** Per-device hide switches — writes display:none into each device's bucket
+/** Per-device hide switches — toggles each device's visibility flag
  *  independently, so all three breakpoints are visible/editable at once
- *  (Builder's Visibility panel). */
+ *  (Builder's Visibility panel). Decoupled from layout `display`. */
 function VisibilityControls({
-  style,
+  hidden,
   onToggle,
 }: {
-  readonly style: ResponsiveStyleSlot | undefined;
+  readonly hidden: VisibilityFlags | undefined;
   readonly onToggle: (bucket: StyleBucket, hidden: boolean) => void;
 }): ReactElement {
   return (
@@ -580,8 +581,7 @@ function VisibilityControls({
       data-testid="style-visibility-controls"
     >
       {VISIBILITY_DEVICES.map((device) => {
-        const hidden =
-          normalizeStyleValue(style?.[device.bucket]?.display) === "none";
+        const isHidden = hidden?.[device.bucket] ?? false;
         return (
           <div key={device.id} className="flex items-center justify-between">
             <Label htmlFor={`visibility-${device.id}`} className="text-xs">
@@ -589,7 +589,7 @@ function VisibilityControls({
             </Label>
             <Switch
               id={`visibility-${device.id}`}
-              checked={hidden}
+              checked={isHidden}
               onCheckedChange={(on) => onToggle(device.bucket, on)}
               data-testid={`style-visibility-${device.id}`}
             />

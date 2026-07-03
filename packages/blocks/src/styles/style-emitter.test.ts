@@ -182,6 +182,34 @@ describe("emitBlockStyleCss", () => {
     expect(emitBlockStyleCss("block-1", {})).toBe("");
   });
 
+  test("overlays display:none for a hidden bucket, overriding its layout display", () => {
+    // The block is laid out as flex on desktop AND hidden on desktop — hiding
+    // wins, but the flex stays in the style slot (only the emitted CSS is none).
+    const css = emitBlockStyleCss(
+      "block-1",
+      { large: { display: "flex", gap: "8px" } },
+      undefined,
+      { large: true },
+    );
+
+    expect(css).toContain(".block-1 { ");
+    expect(css).toContain("display: none;");
+    expect(css).toContain("gap: 8px;");
+    expect(css).not.toContain("display: flex;");
+  });
+
+  test("emits a media-query display:none for a bucket hidden with no styles", () => {
+    // Hidden only on mobile, no other styles anywhere: a single @media rule,
+    // no bare base rule.
+    const css = emitBlockStyleCss("block-1", undefined, undefined, {
+      small: true,
+    });
+
+    expect(css).toBe(
+      "@media (max-width: 640px) { .block-1 { display: none; } }",
+    );
+  });
+
   test("converts camelCase CSS properties to kebab-case", () => {
     const style: ResponsiveStyleSlot = { large: { fontSize: "20px" } };
 

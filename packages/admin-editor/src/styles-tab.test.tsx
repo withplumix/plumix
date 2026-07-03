@@ -23,7 +23,13 @@ const tokens: ThemeTokens = {
 
 function StyleProbe({ id }: { readonly id: string }): ReactElement {
   const style = useEditorStore((s) => s.tree.find((n) => n.id === id)?.style);
-  return <output data-testid="style-probe">{JSON.stringify(style)}</output>;
+  const hidden = useEditorStore((s) => s.tree.find((n) => n.id === id)?.hidden);
+  return (
+    <>
+      <output data-testid="style-probe">{JSON.stringify(style)}</output>
+      <output data-testid="hidden-probe">{JSON.stringify(hidden)}</output>
+    </>
+  );
 }
 
 function renderTab(
@@ -403,22 +409,35 @@ describe("StylesTab", () => {
   });
 
   test("the Visibility section hides on any device, not just the active one", () => {
-    // Active device is desktop, but the Mobile switch writes display:none into
-    // the small bucket directly — all three devices are editable at once.
+    // Active device is desktop, but the Mobile switch writes the small
+    // visibility flag directly — all three devices are editable at once.
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
     fireEvent.click(getByTestId("style-visibility-mobile"));
 
+    expect(getByTestId("hidden-probe").textContent).toContain('"small":true');
+  });
+
+  test("hiding a device leaves its layout display untouched", () => {
+    // The block is laid out as flex on desktop; hiding it must not clobber that.
+    const { getByTestId } = renderTab(
+      [{ id: "a", name: "core/x", style: { large: { display: "flex" } } }],
+      "a",
+    );
+
+    fireEvent.click(getByTestId("style-visibility-desktop"));
+
+    expect(getByTestId("hidden-probe").textContent).toContain('"large":true');
     expect(getByTestId("style-probe").textContent).toContain(
-      '"small":{"display":"none"}',
+      '"large":{"display":"flex"}',
     );
   });
 
-  test("a visibility switch reads checked from an existing display:none", () => {
+  test("a visibility switch reads checked from an existing hidden flag", () => {
     const hidden: BlockNode = {
       id: "a",
       name: "core/x",
-      style: { large: { display: "none" } },
+      hidden: { large: true },
     };
     expect(
       renderTab([hidden], "a")
@@ -427,18 +446,18 @@ describe("StylesTab", () => {
     ).toBe("checked");
   });
 
-  test("toggling a visibility switch off clears display:none for that bucket", () => {
+  test("toggling a visibility switch off clears the hidden flag for that bucket", () => {
     const hidden: BlockNode = {
       id: "a",
       name: "core/x",
-      style: { large: { display: "none" } },
+      hidden: { large: true },
     };
     const { getByTestId } = renderTab([hidden], "a");
 
     fireEvent.click(getByTestId("style-visibility-desktop"));
 
-    // The only declaration is gone, so the style slot prunes to undefined.
-    expect(getByTestId("style-probe").textContent).toBe("");
+    // The only flag is gone, so the hidden slot prunes to undefined.
+    expect(getByTestId("hidden-probe").textContent).toBe("");
   });
 
   test("box-model writes a per-side custom padding value", () => {

@@ -23,6 +23,15 @@ export interface ResponsiveStyleSlot {
   readonly small?: ResponsiveStyleBucket;
 }
 
+/** Per-device visibility, kept OUT of the style slot so hiding never clobbers a
+ *  bucket's layout `display`. Emitted as `display: none` (overriding layout) for
+ *  each flagged device; clearing a flag restores the stored `display`. */
+export interface VisibilityFlags {
+  readonly large?: boolean;
+  readonly medium?: boolean;
+  readonly small?: boolean;
+}
+
 // Which token category a property reads from. `spacing` and `color` are the
 // two cross-property buckets; every other property reads its own same-named
 // scale (fontSize → fontSize, not the font-family bucket).
@@ -126,27 +135,38 @@ export function emitBlockStyleCss(
   className: string,
   style: ResponsiveStyleSlot | undefined,
   breakpoints: ThemeBreakpoints = DEFAULT_BREAKPOINTS,
+  hidden?: VisibilityFlags,
 ): string {
-  if (!style) return "";
+  if (!style && !hidden) return "";
   const maxWidth: Readonly<Record<"medium" | "small", number>> = {
     medium: breakpoints.tablet,
     small: breakpoints.mobile,
   };
   const parts: string[] = [];
-  if (style.large) {
-    const decls = bucketToDeclarations(style.large);
-    if (decls) parts.push(`.${className} { ${decls} }`);
-  }
+  const largeDecls = bucketToDeclarations(
+    effectiveBucket(style?.large, hidden?.large),
+  );
+  if (largeDecls) parts.push(`.${className} { ${largeDecls} }`);
   for (const viewport of ["medium", "small"] as const) {
-    const bucket = style[viewport];
-    if (!bucket) continue;
-    const decls = bucketToDeclarations(bucket);
+    const decls = bucketToDeclarations(
+      effectiveBucket(style?.[viewport], hidden?.[viewport]),
+    );
     if (decls)
       parts.push(
         `@media (max-width: ${String(maxWidth[viewport])}px) { .${className} { ${decls} } }`,
       );
   }
   return parts.join(" ");
+}
+
+// A device's emitted declarations: its stored bucket, with `display: none`
+// forced on top when the device is hidden (visibility overrides layout, and the
+// spread keeps `display` last so it wins).
+function effectiveBucket(
+  bucket: ResponsiveStyleBucket | undefined,
+  hide: boolean | undefined,
+): ResponsiveStyleBucket {
+  return hide ? { ...bucket, display: "none" } : (bucket ?? {});
 }
 
 function bucketToDeclarations(bucket: ResponsiveStyleBucket): string {

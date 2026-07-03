@@ -619,6 +619,44 @@ describe("updateBlockStyle", () => {
   });
 });
 
+describe("updateBlockHidden", () => {
+  test("sets and clears a per-device visibility flag, pruning empty", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+
+    store.getState().updateBlockHidden("a", "small", true);
+    expect(store.getState().tree[0]?.hidden).toEqual({ small: true });
+
+    store.getState().updateBlockHidden("a", "small", false);
+    expect(store.getState().tree[0]?.hidden).toBeUndefined();
+  });
+
+  test("hiding then unhiding a device preserves the bucket's layout display", () => {
+    const store = createEditorStore({
+      tree: [
+        { id: "a", name: "core/x", style: { large: { display: "flex" } } },
+      ],
+    });
+
+    store.getState().updateBlockHidden("a", "large", true);
+    store.getState().updateBlockHidden("a", "large", false);
+
+    // Visibility lives off the style slot, so the flex layout is untouched.
+    expect(store.getState().tree[0]?.style).toEqual({
+      large: { display: "flex" },
+    });
+    expect(store.getState().tree[0]?.hidden).toBeUndefined();
+  });
+
+  test("is a no-op (stable tree) for an unknown block", () => {
+    const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
+    const store = createEditorStore({ tree });
+
+    store.getState().updateBlockHidden("nope", "large", true);
+
+    expect(store.getState().tree).toBe(tree);
+  });
+});
+
 describe("renameBlockStyleProperty", () => {
   test("renames a property in place, preserving its value and position", () => {
     const store = createEditorStore({

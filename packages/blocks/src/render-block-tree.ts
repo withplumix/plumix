@@ -13,6 +13,7 @@ import type { ShortcodeRegistry } from "./shortcodes/types.js";
 import type {
   ResponsiveStyleSlot,
   ThemeBreakpoints,
+  VisibilityFlags,
 } from "./styles/style-emitter.js";
 import { editAppender } from "./edit-appender.js";
 import { safeHtmlAttrs } from "./html/attrs.js";
@@ -51,6 +52,9 @@ export interface BlockNode {
   readonly name: string;
   readonly attrs?: Readonly<Record<string, unknown>>;
   readonly style?: ResponsiveStyleSlot;
+  /** Per-device visibility, decoupled from `style` so hiding a block never
+   *  overwrites a bucket's layout `display`. Emitted as `display: none`. */
+  readonly hidden?: VisibilityFlags;
   /** Author-supplied HTML attributes spread onto the block's root element.
    *  Filtered through {@link safeHtmlAttrs} at render — only allowlisted, inert
    *  keys (id, title, role, aria-, data- prefixes) survive. Not responsive. */
@@ -308,8 +312,13 @@ function renderNode(
 
   const safeId = SAFE_ID_RE.test(node.id) ? node.id : null;
   const styleCss =
-    safeId && node.style
-      ? emitBlockStyleCss(`plumix-block-${safeId}`, node.style, env.breakpoints)
+    safeId && (node.style || node.hidden)
+      ? emitBlockStyleCss(
+          `plumix-block-${safeId}`,
+          node.style,
+          env.breakpoints,
+          node.hidden,
+        )
       : "";
   const styleClass = safeId && styleCss ? `plumix-block-${safeId}` : undefined;
   // Author classes ride alongside the generated style class. Order is cosmetic

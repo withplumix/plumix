@@ -366,6 +366,31 @@ describe("renderBlockTree", () => {
     expect(html).toContain("<p>Hello</p>");
   });
 
+  test("a node hidden on mobile emits a media-query display:none and keeps its flex", () => {
+    const registry = createBlockRegistry([
+      { name: "core/paragraph", render: () => <p>x</p> },
+    ]);
+    const tree: readonly BlockNode[] = [
+      {
+        id: "p1",
+        name: "core/paragraph",
+        attrs: {},
+        // A flex layout on desktop, hidden on mobile — the two are decoupled:
+        // hiding never touches the stored `display: flex`.
+        style: { large: { display: "flex" } },
+        hidden: { small: true },
+      },
+    ];
+
+    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+
+    expect(html).toContain('class="plumix-block-p1"');
+    expect(html).toContain(".plumix-block-p1 { display: flex; }");
+    expect(html).toContain(
+      "@media (max-width: 640px) { .plumix-block-p1 { display: none; } }",
+    );
+  });
+
   test("emits a literal style value with no token resolution needed", () => {
     const registry = createBlockRegistry([
       {
