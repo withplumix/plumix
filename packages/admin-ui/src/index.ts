@@ -28,6 +28,7 @@ export * from "./skeleton.js";
 export * from "./slider.js";
 export * from "./sonner.js";
 export * from "./sortable.js";
+export * from "./switch.js";
 export * from "./table.js";
 export * from "./tabs.js";
 export * from "./textarea.js";
