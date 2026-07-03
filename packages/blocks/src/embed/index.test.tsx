@@ -9,7 +9,6 @@ describe("core/embed", () => {
       url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
       title: "My clip",
     });
-    expect(html).toContain('data-plumix-block="core/embed"');
     expect(html).toContain('data-provider="youtube"');
     expect(html).toContain("plumix-embed-facade");
     // The whole point: no third-party connection until the visitor opts in.

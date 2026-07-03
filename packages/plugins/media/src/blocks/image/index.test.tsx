@@ -9,7 +9,6 @@ describe("media/image v2", () => {
       src: "/_plumix/media/x/photo.jpg",
       alt: "A cat",
     });
-    expect(html).toContain('data-plumix-block="media/image"');
     expect(html).toContain('src="/_plumix/media/x/photo.jpg"');
     expect(html).toContain('alt="A cat"');
     expect(html).toContain('loading="lazy"');

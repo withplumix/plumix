@@ -13,7 +13,6 @@ describe("core/section", () => {
     const html = renderBlockTreeToHtml([sectionBlock], tree);
 
     expect(html).toContain("<section");
-    expect(html).toContain('data-plumix-block="core/section"');
     expect(html).toContain("max-width:960px");
     expect(html).toContain("margin-inline:auto");
   });

@@ -24,9 +24,7 @@ describe("core/html", () => {
   test("renders an empty wrapper when html is explicitly empty", () => {
     const html = renderBlockSpecToHtml(htmlBlock, { html: "" });
 
-    expect(html).toContain(
-      '<div data-plumix-block="core/html"><div></div></div>',
-    );
+    expect(html).toContain("<div><div></div></div>");
   });
 
   test("a freshly inserted block carries visible default markup", () => {

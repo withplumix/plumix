@@ -40,7 +40,10 @@ const withVariations = coreBlocks.map((spec): BlockSpec =>
           {
             slug: "group/two-column",
             title: "Two-column group",
-            attrs: { layout: "row" },
+            innerBlocks: [
+              { id: "col-a", name: "core/rich-text" },
+              { id: "col-b", name: "core/rich-text" },
+            ],
           },
         ],
       }

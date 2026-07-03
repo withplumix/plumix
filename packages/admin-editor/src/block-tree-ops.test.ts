@@ -514,7 +514,8 @@ describe("groupBlocks", () => {
     expect(result?.tree.map((n) => n.id)).toEqual(["grp", "c"]);
     const grouped = result?.tree[0];
     expect(grouped?.name).toBe("core/group");
-    expect(grouped?.attrs?.layout).toBe("flow"); // seeds core/group's default
+    // Box carries no layout attr — layout is a style, not a block prop.
+    expect(grouped?.attrs?.layout).toBeUndefined();
     expect((grouped?.attrs?.content as BlockNode[]).map((n) => n.id)).toEqual([
       "a",
       "b",

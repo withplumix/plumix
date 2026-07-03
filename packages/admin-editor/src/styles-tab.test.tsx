@@ -80,14 +80,34 @@ describe("StylesTab", () => {
     expect(margin.contains(padding)).toBe(false);
   });
 
-  test("leads the Styles tab with the Size section", () => {
+  test("leads the Styles tab with the Layout section, then Size", () => {
     const { container } = renderTab([{ id: "a", name: "core/x" }], "a", {
       expandCss: false,
     });
     const sections = [
       ...container.querySelectorAll('[data-testid^="styles-section-"]'),
     ].map((el) => el.getAttribute("data-testid"));
-    expect(sections[0]).toBe("styles-section-size");
+    expect(sections[0]).toBe("styles-section-layout");
+    expect(sections[1]).toBe("styles-section-size");
+  });
+
+  test("the Layout section writes display to node.style and reveals flex controls", () => {
+    const { getByTestId, queryByTestId } = renderTab(
+      [{ id: "a", name: "core/x" }],
+      "a",
+    );
+    // Flex-only controls stay hidden until display is flex.
+    expect(queryByTestId("style-flexDirection-row")).toBeNull();
+
+    fireEvent.click(getByTestId("style-display-flex"));
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"display":"flex"',
+    );
+    // Direction / justify / align now appear.
+    expect(getByTestId("style-flexDirection-row")).toBeDefined();
+    expect(getByTestId("style-justifyContent-center")).toBeDefined();
+    expect(getByTestId("style-alignItems-stretch")).toBeDefined();
   });
 
   test("exposes Size controls that write width/min-width to the active bucket", () => {
