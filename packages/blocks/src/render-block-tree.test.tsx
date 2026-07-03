@@ -132,6 +132,36 @@ describe("renderBlockTree — htmlAttrs", () => {
     expect(html).toContain("<section");
   });
 
+  test("merges an author className with the block's style class", () => {
+    const node: BlockNode = {
+      id: "abc",
+      name: "core/heading",
+      attrs: { text: "Hi", level: 2 },
+      className: "hero big",
+      style: { large: { color: "#f00" } },
+    };
+
+    const html = renderToStaticMarkup(renderBlockTree([node], headingRegistry));
+
+    expect(html).toContain("hero big");
+    expect(html).toContain("plumix-block-abc");
+  });
+
+  test("applies an author className to a selfSeam block's own root", () => {
+    const node: BlockNode = {
+      id: "abc",
+      name: "core/box",
+      className: "hero",
+    };
+
+    const html = renderToStaticMarkup(
+      renderBlockTree([node], selfSeamRegistry),
+    );
+
+    expect(html).toContain("<section");
+    expect(html).toContain("hero");
+  });
+
   test("applies attributes to a selfSeam block's own root element", () => {
     const node: BlockNode = {
       id: "abc",

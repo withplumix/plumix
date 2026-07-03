@@ -62,6 +62,10 @@ export interface BlockNode {
    *  default wrapper and threaded to `selfSeam` container blocks via render
    *  props; constrained to {@link resolveRootTag}'s allowlist, else ignored. */
   readonly tagName?: string;
+  /** Author-supplied CSS class names (space-separated) merged onto the block's
+   *  root, alongside the generated style class. An inert escape hatch — class
+   *  tokens can't execute; React escapes the attribute. */
+  readonly className?: string;
 }
 
 /**
@@ -307,7 +311,11 @@ function renderNode(
     safeId && node.style
       ? emitBlockStyleCss(`plumix-block-${safeId}`, node.style, env.breakpoints)
       : "";
-  const className = safeId && styleCss ? `plumix-block-${safeId}` : undefined;
+  const styleClass = safeId && styleCss ? `plumix-block-${safeId}` : undefined;
+  // Author classes ride alongside the generated style class. Order is cosmetic
+  // — CSS cascade is source-order in the stylesheet, not attribute order.
+  const classes = [node.className?.trim(), styleClass].filter(Boolean);
+  const className = classes.length > 0 ? classes.join(" ") : undefined;
   const styleTag = styleCss
     ? createElement("style", { key: "style" }, styleCss)
     : null;
