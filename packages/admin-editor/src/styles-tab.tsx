@@ -80,57 +80,64 @@ const SIZE_CONTROLS: readonly ControlSpec[] = [
   { property: "maxHeight", label: "Max height" },
 ];
 
-const SECTIONS: readonly {
+interface SectionDef {
   readonly id: string;
   readonly label: string;
   readonly controls: readonly ControlSpec[];
-}[] = [
-  {
-    id: "typography",
-    label: "Typography",
-    controls: [
-      { property: "color", label: "Text color", category: "colors" },
-      // Only font-family draws from the typography tokens (the theme's named
-      // font presets). Size/weight/line-height have no token scale, so they're
-      // custom-only — otherwise they'd wrongly offer font-family names.
-      { property: "fontFamily", label: "Font family", category: "typography" },
-      { property: "fontSize", label: "Font size" },
-      { property: "fontWeight", label: "Font weight" },
-      { property: "lineHeight", label: "Line height" },
-      { property: "letterSpacing", label: "Letter spacing" },
-    ],
-  },
-  {
-    id: "background",
-    label: "Background",
-    controls: [
-      { property: "background", label: "Background", category: "colors" },
-    ],
-  },
-  {
-    id: "border",
-    label: "Border",
-    controls: [
-      {
-        property: "borderStyle",
-        label: "Style",
-        options: ["none", "solid", "dashed", "dotted", "double"],
-      },
-      { property: "borderWidth", label: "Width", category: "border" },
-      { property: "borderColor", label: "Color", category: "colors" },
-      { property: "borderRadius", label: "Radius", category: "radius" },
-    ],
-  },
-];
+}
 
-// The visual sections open by default; the raw-CSS "declarations" section is a
-// dev-facing escape hatch, so it starts collapsed.
+// Grid-of-controls sections (rendered by GenericSection). The bespoke sections
+// (layout / visibility / spacing / effects / declarations) render their own
+// components; all are ordered explicitly below to mirror Builder.
+const BACKGROUND_SECTION: SectionDef = {
+  id: "background",
+  label: "Background",
+  controls: [
+    { property: "background", label: "Background", category: "colors" },
+  ],
+};
+
+const TYPOGRAPHY_SECTION: SectionDef = {
+  id: "typography",
+  label: "Typography",
+  controls: [
+    { property: "color", label: "Text color", category: "colors" },
+    // Only font-family draws from the typography tokens (the theme's named
+    // font presets). Size/weight/line-height have no token scale, so they're
+    // custom-only — otherwise they'd wrongly offer font-family names.
+    { property: "fontFamily", label: "Font family", category: "typography" },
+    { property: "fontSize", label: "Font size" },
+    { property: "fontWeight", label: "Font weight" },
+    { property: "lineHeight", label: "Line height" },
+    { property: "letterSpacing", label: "Letter spacing" },
+  ],
+};
+
+const BORDER_SECTION: SectionDef = {
+  id: "border",
+  label: "Border",
+  controls: [
+    {
+      property: "borderStyle",
+      label: "Style",
+      options: ["none", "solid", "dashed", "dotted", "double"],
+    },
+    { property: "borderWidth", label: "Width", category: "border" },
+    { property: "borderColor", label: "Color", category: "colors" },
+    { property: "borderRadius", label: "Radius", category: "radius" },
+  ],
+};
+
+// Default-open sections, in Builder's order. The raw-CSS "declarations" section
+// is a dev-facing escape hatch, so it's intentionally omitted (starts collapsed).
 const SECTION_IDS = [
   "layout",
   "visibility",
-  ...SECTIONS.map((s) => s.id),
-  "effects",
+  "background",
+  "typography",
   "spacing",
+  "border",
+  "effects",
 ];
 
 /**
@@ -205,50 +212,39 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
             <VisibilityControls style={block.style} onToggle={setHiddenOn} />
           </AccordionContent>
         </AccordionItem>
-        {SECTIONS.map((section) => (
-          <AccordionItem key={section.id} value={section.id}>
-            <AccordionTrigger data-testid={`styles-section-${section.id}`}>
-              {section.label}
-            </AccordionTrigger>
-            <AccordionContent className="flex flex-col gap-3">
-              {/* Two-per-row so the rail stays compact; each StyleControl is a
-                  self-contained cell (label + input stacked). */}
-              <div className="grid grid-cols-2 gap-x-2 gap-y-3">
-                {section.controls.map((c) =>
-                  c.options ? (
-                    <KeywordControl
-                      key={c.property}
-                      label={c.label}
-                      property={c.property}
-                      options={c.options}
-                      value={valueOf(c.property)}
-                      onChange={setter(c.property)}
-                    />
-                  ) : (
-                    <StyleControl
-                      key={c.property}
-                      label={c.label}
-                      property={c.property}
-                      category={c.category}
-                      value={valueOf(c.property)}
-                      tokens={tokens}
-                      onChange={setter(c.property)}
-                    />
-                  ),
-                )}
-              </div>
-              {section.id === "typography" && (
-                <TextStyleControls valueOf={valueOf} setter={setter} />
-              )}
-              {section.id === "background" && (
-                <BackgroundImageControl
-                  value={valueOf("backgroundImage")}
-                  onChange={setter("backgroundImage")}
-                />
-              )}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
+        <GenericSection
+          section={BACKGROUND_SECTION}
+          valueOf={valueOf}
+          setter={setter}
+          tokens={tokens}
+        />
+        <GenericSection
+          section={TYPOGRAPHY_SECTION}
+          valueOf={valueOf}
+          setter={setter}
+          tokens={tokens}
+        />
+        <AccordionItem value="spacing">
+          <AccordionTrigger data-testid="styles-section-spacing">
+            <Trans
+              id="editor.styles.marginPadding"
+              message="Margin & Padding"
+            />
+          </AccordionTrigger>
+          <AccordionContent>
+            <SpacingControls
+              tokens={tokens}
+              valueOf={valueOf}
+              setter={setter}
+            />
+          </AccordionContent>
+        </AccordionItem>
+        <GenericSection
+          section={BORDER_SECTION}
+          valueOf={valueOf}
+          setter={setter}
+          tokens={tokens}
+        />
         <AccordionItem value="effects">
           <AccordionTrigger data-testid="styles-section-effects">
             <Trans id="editor.styles.effects" message="Shadows & Effects" />
@@ -261,21 +257,9 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
             />
           </AccordionContent>
         </AccordionItem>
-        <AccordionItem value="spacing">
-          <AccordionTrigger data-testid="styles-section-spacing">
-            <Trans id="editor.styles.spacing" message="Spacing" />
-          </AccordionTrigger>
-          <AccordionContent>
-            <SpacingControls
-              tokens={tokens}
-              valueOf={valueOf}
-              setter={setter}
-            />
-          </AccordionContent>
-        </AccordionItem>
         <AccordionItem value="declarations">
           <AccordionTrigger data-testid="styles-section-declarations">
-            <Trans id="editor.styles.css" message="CSS" />
+            <Trans id="editor.styles.cssProperties" message="CSS Properties" />
           </AccordionTrigger>
           <AccordionContent>
             <StyleDeclarations
@@ -290,6 +274,66 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
         </AccordionItem>
       </Accordion>
     </div>
+  );
+}
+
+/** A grid-of-controls section: two-per-row cells (KeywordControl for enumerated
+ *  props, else StyleControl), with the typography/background sections appending
+ *  their bespoke sub-controls. */
+function GenericSection({
+  section,
+  valueOf,
+  setter,
+  tokens,
+}: {
+  readonly section: SectionDef;
+  readonly valueOf: StyleGetter;
+  readonly setter: StyleSetter;
+  readonly tokens: ThemeTokens;
+}): ReactElement {
+  return (
+    <AccordionItem value={section.id}>
+      <AccordionTrigger data-testid={`styles-section-${section.id}`}>
+        {section.label}
+      </AccordionTrigger>
+      <AccordionContent className="flex flex-col gap-3">
+        {/* Two-per-row so the rail stays compact; each cell is a self-contained
+            control (label + input stacked). */}
+        <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+          {section.controls.map((c) =>
+            c.options ? (
+              <KeywordControl
+                key={c.property}
+                label={c.label}
+                property={c.property}
+                options={c.options}
+                value={valueOf(c.property)}
+                onChange={setter(c.property)}
+              />
+            ) : (
+              <StyleControl
+                key={c.property}
+                label={c.label}
+                property={c.property}
+                category={c.category}
+                value={valueOf(c.property)}
+                tokens={tokens}
+                onChange={setter(c.property)}
+              />
+            ),
+          )}
+        </div>
+        {section.id === "typography" && (
+          <TextStyleControls valueOf={valueOf} setter={setter} />
+        )}
+        {section.id === "background" && (
+          <BackgroundImageControl
+            value={valueOf("backgroundImage")}
+            onChange={setter("backgroundImage")}
+          />
+        )}
+      </AccordionContent>
+    </AccordionItem>
   );
 }
 

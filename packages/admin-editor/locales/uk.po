@@ -49,6 +49,21 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.css"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.hideOnDevice"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.spacing"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr ""
@@ -135,7 +150,7 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
-msgid "editor.styles.css"
+msgid "editor.styles.cssProperties"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -184,6 +199,11 @@ msgid "editor.styles.scope"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.fillImage"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.fitWidth"
 msgstr ""
@@ -200,7 +220,17 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
-msgid "editor.styles.hideOnDevice"
+msgid "editor.styles.visibility.desktop"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.visibility.mobile"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.visibility.tablet"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -221,6 +251,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.margin"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.marginPadding"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -271,6 +306,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.none"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.opacity"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -369,13 +409,13 @@ msgid "editor.selection.selectParent"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/json-inspector.tsx
-msgid "editor.json.title"
+#: src/styles-tab.tsx
+msgid "editor.styles.effects"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/styles-tab.tsx
-msgid "editor.styles.spacing"
+#: src/json-inspector.tsx
+msgid "editor.json.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -391,6 +431,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.device.tablet"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.textShadow"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -456,6 +501,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.header.source"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.visibility"
 msgstr ""
 
 #. js-lingui-explicit-id

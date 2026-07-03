@@ -49,6 +49,21 @@ msgstr ""
 #~ msgstr "All styles"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.css"
+#~ msgstr "CSS"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.hideOnDevice"
+#~ msgstr "Hide on this device"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.spacing"
+#~ msgstr "Spacing"
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr "{count} selected"
@@ -135,8 +150,8 @@ msgstr "Create"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
-msgid "editor.styles.css"
-msgstr "CSS"
+msgid "editor.styles.cssProperties"
+msgstr "CSS Properties"
 
 #. js-lingui-explicit-id
 #: src/style-control.tsx
@@ -184,6 +199,11 @@ msgid "editor.styles.scope"
 msgstr "Editing"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.fillImage"
+msgstr "Fill image"
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.fitWidth"
 msgstr "Fit to width"
@@ -200,8 +220,18 @@ msgstr "Group"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
-msgid "editor.styles.hideOnDevice"
-msgstr "Hide on this device"
+msgid "editor.styles.visibility.desktop"
+msgstr "Hide on desktop"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.visibility.mobile"
+msgstr "Hide on mobile"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.visibility.tablet"
+msgstr "Hide on tablet"
 
 #. js-lingui-explicit-id
 #: src/block-inspector.tsx
@@ -222,6 +252,11 @@ msgstr "Layers"
 #: src/styles-tab.tsx
 msgid "editor.styles.margin"
 msgstr "Margin"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.marginPadding"
+msgstr "Margin & Padding"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
@@ -272,6 +307,11 @@ msgstr "No property."
 #: src/style-declarations.tsx
 msgid "editor.styles.none"
 msgstr "No styles set for this device."
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.opacity"
+msgstr "Opacity"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -369,14 +409,14 @@ msgid "editor.selection.selectParent"
 msgstr "Select parent"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.effects"
+msgstr "Shadows & Effects"
+
+#. js-lingui-explicit-id
 #: src/json-inspector.tsx
 msgid "editor.json.title"
 msgstr "Source"
-
-#. js-lingui-explicit-id
-#: src/styles-tab.tsx
-msgid "editor.styles.spacing"
-msgstr "Spacing"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -392,6 +432,11 @@ msgstr "Styles"
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.device.tablet"
 msgstr "Tablet"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.textShadow"
+msgstr "Text shadow"
 
 #. js-lingui-explicit-id
 #: src/canvas-frame.tsx
@@ -457,6 +502,11 @@ msgstr "View live entry"
 #: src/editor-header.tsx
 msgid "editor.header.source"
 msgstr "View source"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.visibility"
+msgstr "Visibility"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx

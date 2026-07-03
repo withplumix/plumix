@@ -80,6 +80,37 @@ describe("StylesTab", () => {
     expect(margin.contains(padding)).toBe(false);
   });
 
+  test("orders the sections to mirror Builder", () => {
+    const { container } = renderTab([{ id: "a", name: "core/x" }], "a", {
+      expandCss: false,
+    });
+    const sections = [
+      ...container.querySelectorAll('[data-testid^="styles-section-"]'),
+    ].map((el) => el.getAttribute("data-testid"));
+    expect(sections).toEqual([
+      "styles-section-layout",
+      "styles-section-visibility",
+      "styles-section-background",
+      "styles-section-typography",
+      "styles-section-spacing",
+      "styles-section-border",
+      "styles-section-effects",
+      "styles-section-declarations",
+    ]);
+  });
+
+  test("labels spacing 'Margin & Padding' and declarations 'CSS Properties'", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a", {
+      expandCss: false,
+    });
+    expect(getByTestId("styles-section-spacing").textContent).toContain(
+      "Margin & Padding",
+    );
+    expect(getByTestId("styles-section-declarations").textContent).toContain(
+      "CSS Properties",
+    );
+  });
+
   test("leads the Styles tab with the Layout section; Size folds into it", () => {
     const { container } = renderTab([{ id: "a", name: "core/x" }], "a", {
       expandCss: false,
