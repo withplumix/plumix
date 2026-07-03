@@ -64,6 +64,21 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.advanced"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.blockId"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.cssProperties"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr ""
@@ -81,11 +96,6 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.add"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/styles-tab.tsx
-msgid "editor.styles.advanced"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -114,6 +124,11 @@ msgid "editor.header.back"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.background"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/json-inspector.tsx
 msgid "editor.json.block"
 msgstr ""
@@ -129,11 +144,6 @@ msgid "editor.layers.actions"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/styles-tab.tsx
-msgid "editor.styles.blockId"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.blocks"
 msgstr ""
@@ -141,6 +151,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.bold"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.border"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -164,13 +179,13 @@ msgid "editor.styles.cssClasses"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/styles-tab.tsx
-msgid "editor.styles.cssProperties"
+#: src/style-control.tsx
+msgid "editor.styles.mode.custom"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/style-control.tsx
-msgid "editor.styles.mode.custom"
+#: src/styles-tab.tsx
+msgid "editor.styles.customCss"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -266,6 +281,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.layers"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.layout"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -434,6 +454,11 @@ msgid "editor.styles.effects"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.size"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/json-inspector.tsx
 msgid "editor.json.title"
 msgstr ""
@@ -486,6 +511,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/style-control.tsx
 msgid "editor.styles.mode.token"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.typography"
 msgstr ""
 
 #. js-lingui-explicit-id

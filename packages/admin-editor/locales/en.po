@@ -64,6 +64,21 @@ msgstr ""
 #~ msgstr "Margin & Padding"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.advanced"
+#~ msgstr "Advanced"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.blockId"
+#~ msgstr "Block ID"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.cssProperties"
+#~ msgstr "CSS Properties"
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr "{count} selected"
@@ -82,11 +97,6 @@ msgstr "Add attribute"
 #: src/style-declarations.tsx
 msgid "editor.styles.add"
 msgstr "Add style"
-
-#. js-lingui-explicit-id
-#: src/styles-tab.tsx
-msgid "editor.styles.advanced"
-msgstr "Advanced"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -114,6 +124,11 @@ msgid "editor.header.back"
 msgstr "Back"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.background"
+msgstr "Background"
+
+#. js-lingui-explicit-id
 #: src/json-inspector.tsx
 msgid "editor.json.block"
 msgstr "Block"
@@ -129,11 +144,6 @@ msgid "editor.layers.actions"
 msgstr "Block actions"
 
 #. js-lingui-explicit-id
-#: src/styles-tab.tsx
-msgid "editor.styles.blockId"
-msgstr "Block ID"
-
-#. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.blocks"
 msgstr "Blocks"
@@ -142,6 +152,11 @@ msgstr "Blocks"
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.bold"
 msgstr "Bold"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.border"
+msgstr "Border"
 
 #. js-lingui-explicit-id
 #: src/layers-tab.tsx
@@ -164,14 +179,14 @@ msgid "editor.styles.cssClasses"
 msgstr "CSS classes"
 
 #. js-lingui-explicit-id
-#: src/styles-tab.tsx
-msgid "editor.styles.cssProperties"
-msgstr "CSS Properties"
-
-#. js-lingui-explicit-id
 #: src/style-control.tsx
 msgid "editor.styles.mode.custom"
 msgstr "Custom"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.customCss"
+msgstr "Custom CSS"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -267,6 +282,11 @@ msgstr "Italic"
 #: src/plumix-editor.tsx
 msgid "editor.tab.layers"
 msgstr "Layers"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.layout"
+msgstr "Layout"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -434,6 +454,11 @@ msgid "editor.styles.effects"
 msgstr "Shadows & Effects"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.size"
+msgstr "Size"
+
+#. js-lingui-explicit-id
 #: src/json-inspector.tsx
 msgid "editor.json.title"
 msgstr "Source"
@@ -487,6 +512,11 @@ msgstr "Toggle panels"
 #: src/style-control.tsx
 msgid "editor.styles.mode.token"
 msgstr "Token"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.typography"
+msgstr "Typography"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx

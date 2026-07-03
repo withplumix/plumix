@@ -74,7 +74,7 @@ type StyleSetter = (property: string) => (value: string | null) => void;
 
 interface SectionDef {
   readonly id: string;
-  readonly label: string;
+  readonly label: ReactElement;
   readonly controls: readonly ControlSpec[];
 }
 
@@ -82,7 +82,7 @@ interface SectionDef {
 // arrangement). No token scale (widths are arbitrary px/%/rem), so custom-only.
 const SIZE_SECTION: SectionDef = {
   id: "size",
-  label: "Size",
+  label: <Trans id="editor.styles.size" message="Size" />,
   controls: [
     { property: "width", label: "Width" },
     { property: "height", label: "Height" },
@@ -98,7 +98,7 @@ const SIZE_SECTION: SectionDef = {
 // components; all are ordered explicitly below to mirror Builder.
 const BACKGROUND_SECTION: SectionDef = {
   id: "background",
-  label: "Background",
+  label: <Trans id="editor.styles.background" message="Background" />,
   controls: [
     {
       property: "background",
@@ -111,7 +111,7 @@ const BACKGROUND_SECTION: SectionDef = {
 
 const TYPOGRAPHY_SECTION: SectionDef = {
   id: "typography",
-  label: "Typography",
+  label: <Trans id="editor.styles.typography" message="Typography" />,
   controls: [
     { property: "color", label: "Text color", category: "color" },
     { property: "fontFamily", label: "Font family", category: "fontFamily" },
@@ -128,7 +128,7 @@ const TYPOGRAPHY_SECTION: SectionDef = {
 
 const BORDER_SECTION: SectionDef = {
   id: "border",
-  label: "Border",
+  label: <Trans id="editor.styles.border" message="Border" />,
   // Builder's order/layout: Style and Color are full-width rows; Width (Size)
   // and Radius pair up as half-width cells below.
   controls: [
@@ -223,7 +223,7 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
       <Accordion type="multiple" defaultValue={SECTION_IDS}>
         <AccordionItem value="layout">
           <AccordionTrigger data-testid="styles-section-layout">
-            Layout
+            <Trans id="editor.styles.layout" message="Layout" />
           </AccordionTrigger>
           <AccordionContent>
             <LayoutControls valueOf={valueOf} setter={setter} tokens={tokens} />
@@ -285,11 +285,17 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
             />
           </AccordionContent>
         </AccordionItem>
+        {/* One escape hatch: author classes + raw CSS declarations — the
+            "drop to CSS" tools together. */}
         <AccordionItem value="declarations">
           <AccordionTrigger data-testid="styles-section-declarations">
-            <Trans id="editor.styles.cssProperties" message="CSS Properties" />
+            <Trans id="editor.styles.customCss" message="Custom CSS" />
           </AccordionTrigger>
-          <AccordionContent>
+          <AccordionContent className="flex flex-col gap-3">
+            <CssClassesField
+              className={block.className}
+              onChange={(next) => setBlockClassName(activeId, next)}
+            />
             <StyleDeclarations
               declarations={declarations}
               tokens={tokens}
@@ -315,18 +321,6 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
                 updateBlockHtmlAttr(activeId, key, value)
               }
               onRename={(from, to) => renameBlockHtmlAttr(activeId, from, to)}
-            />
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="advanced">
-          <AccordionTrigger data-testid="styles-section-advanced">
-            <Trans id="editor.styles.advanced" message="Advanced" />
-          </AccordionTrigger>
-          <AccordionContent>
-            <AdvancedControls
-              blockId={activeId}
-              className={block.className}
-              onChangeClassName={(next) => setBlockClassName(activeId, next)}
             />
           </AccordionContent>
         </AccordionItem>
@@ -1099,45 +1093,30 @@ function TagNameField({
   );
 }
 
-/** Advanced: a free-form CSS class field (merged onto the block root at render)
- *  plus the read-only block id — mirroring Builder's Advanced panel. */
-function AdvancedControls({
-  blockId,
+/** A free-form CSS class field (merged onto the block root at render) — the
+ *  class-name escape hatch, sitting above the raw declarations in Custom CSS. */
+function CssClassesField({
   className,
-  onChangeClassName,
+  onChange,
 }: {
-  readonly blockId: string;
   readonly className: string | undefined;
-  readonly onChangeClassName: (className: string) => void;
+  readonly onChange: (className: string) => void;
 }): ReactElement {
   const { i18n } = useLingui();
   return (
-    <div className="flex flex-col gap-3" data-testid="style-advanced-controls">
-      <div className="flex flex-col gap-1">
-        <Label className="text-xs">
-          <Trans id="editor.styles.cssClasses" message="CSS classes" />
-        </Label>
-        <Input
-          value={className ?? ""}
-          onChange={(e) => onChangeClassName(e.target.value)}
-          placeholder={i18n._({
-            id: "editor.styles.cssClasses.placeholder",
-            message: "my-class other-class",
-          })}
-          data-testid="style-css-classes"
-        />
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label className="text-xs">
-          <Trans id="editor.styles.blockId" message="Block ID" />
-        </Label>
-        <Input
-          value={blockId}
-          readOnly
-          className="text-muted-foreground font-mono"
-          data-testid="style-block-id"
-        />
-      </div>
+    <div className="flex flex-col gap-1">
+      <Label className="text-xs">
+        <Trans id="editor.styles.cssClasses" message="CSS classes" />
+      </Label>
+      <Input
+        value={className ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={i18n._({
+          id: "editor.styles.cssClasses.placeholder",
+          message: "my-class other-class",
+        })}
+        data-testid="style-css-classes"
+      />
     </div>
   );
 }

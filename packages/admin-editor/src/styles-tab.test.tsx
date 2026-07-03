@@ -111,11 +111,10 @@ describe("StylesTab", () => {
       "styles-section-effects",
       "styles-section-declarations",
       "styles-section-html",
-      "styles-section-advanced",
     ]);
   });
 
-  test("labels the spacing section 'Spacing' and declarations 'CSS Properties'", () => {
+  test("labels the spacing section 'Spacing' and the escape hatch 'Custom CSS'", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a", {
       expandCss: false,
     });
@@ -123,7 +122,7 @@ describe("StylesTab", () => {
       "Spacing",
     );
     expect(getByTestId("styles-section-declarations").textContent).toContain(
-      "CSS Properties",
+      "Custom CSS",
     );
   });
 
@@ -786,7 +785,7 @@ function NodeProbe({ id }: { readonly id: string }): ReactElement {
 function renderNodeSection(
   tree: readonly BlockNode[],
   activeId: string,
-  section: "html" | "advanced" = "html",
+  section: "html" | "declarations" = "html",
 ) {
   const utils = render(
     <I18nProvider i18n={i18n}>
@@ -955,12 +954,12 @@ describe("StylesTab — HTML attributes & tag name", () => {
   });
 });
 
-describe("StylesTab — Advanced", () => {
+describe("StylesTab — Custom CSS (classes + raw + block id)", () => {
   test("the CSS classes field writes author className to the block", () => {
     const { getByTestId } = renderNodeSection(
       [{ id: "a", name: "core/x" }],
       "a",
-      "advanced",
+      "declarations",
     );
     fireEvent.change(getByTestId("style-css-classes"), {
       target: { value: "hero big" },
@@ -968,27 +967,14 @@ describe("StylesTab — Advanced", () => {
     expect(getByTestId("class-name-probe").textContent).toBe("hero big");
   });
 
-  test("shows the block id as a read-only field", () => {
+  test("bundles the CSS classes field and the raw declarations repeater together", () => {
     const { getByTestId } = renderNodeSection(
-      [{ id: "block-42", name: "core/x" }],
-      "block-42",
-      "advanced",
+      [{ id: "a", name: "core/x" }],
+      "a",
+      "declarations",
     );
-    const input = getByTestId("style-block-id") as HTMLInputElement;
-    expect(input.value).toBe("block-42");
-    expect(input.readOnly).toBe(true);
-  });
-
-  test("the Advanced section is collapsed by default", () => {
-    const { getByTestId, queryByTestId } = render(
-      <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={[{ id: "a", name: "core/x" }]}>
-          <ActiveSeed activeId="a" />
-          <StylesTab tokens={tokens} />
-        </EditorProvider>
-      </I18nProvider>,
-    );
-    expect(getByTestId("styles-section-advanced")).toBeDefined();
-    expect(queryByTestId("style-css-classes")).toBeNull();
+    // Both escape-hatch tools live in the one Custom CSS section.
+    expect(getByTestId("style-css-classes")).toBeDefined();
+    expect(getByTestId("style-declaration-add-key")).toBeDefined();
   });
 });
