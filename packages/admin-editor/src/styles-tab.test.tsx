@@ -129,6 +129,20 @@ describe("StylesTab", () => {
     expect(probe).toContain('"minWidth":"280px"');
   });
 
+  test("exposes a letter-spacing control that writes to the active bucket", () => {
+    // Char Space in Builder: a custom-only control (no token scale), so its raw
+    // input shows directly like font-size.
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    fireEvent.change(getByTestId("style-control-letterSpacing-custom"), {
+      target: { value: "0.05em" },
+    });
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"letterSpacing":"0.05em"',
+    );
+  });
+
   test("the italic mark toggles a fontStyle raw value", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 

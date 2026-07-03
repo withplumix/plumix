@@ -85,6 +85,7 @@ const SECTIONS: readonly {
       { property: "fontSize", label: "Font size" },
       { property: "fontWeight", label: "Font weight" },
       { property: "lineHeight", label: "Line height" },
+      { property: "letterSpacing", label: "Letter spacing" },
     ],
   },
   {
