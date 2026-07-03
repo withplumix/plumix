@@ -83,6 +83,85 @@ describe("renderBlockTree — htmlAttrs", () => {
     expect(html).not.toContain("evil");
   });
 
+  test("renders the default wrapper as an allowlisted tagName override", () => {
+    const node: BlockNode = {
+      id: "abc",
+      name: "core/heading",
+      attrs: { text: "Hi", level: 2 },
+      tagName: "nav",
+    };
+
+    const html = renderToStaticMarkup(renderBlockTree([node], headingRegistry));
+
+    // The wrapper element is now <nav>, not the default <div>.
+    expect(html).toContain("<nav");
+    expect(html).not.toContain("<div");
+  });
+
+  test("falls back to div for a disallowed tagName", () => {
+    const node: BlockNode = {
+      id: "abc",
+      name: "core/heading",
+      attrs: { text: "Hi", level: 2 },
+      tagName: "script",
+    };
+
+    const html = renderToStaticMarkup(renderBlockTree([node], headingRegistry));
+
+    expect(html).toContain("<div");
+    expect(html).not.toContain("<script");
+  });
+
+  test("threads the resolved tagName to a selfSeam block's render", () => {
+    const registry = createBlockRegistry([
+      {
+        name: "core/box2",
+        selfSeam: true,
+        render: ({ tagName, blockProps }) =>
+          createElement(tagName ?? "div", blockProps, "box"),
+      },
+    ]);
+    const node: BlockNode = {
+      id: "abc",
+      name: "core/box2",
+      tagName: "section",
+    };
+
+    const html = renderToStaticMarkup(renderBlockTree([node], registry));
+
+    expect(html).toContain("<section");
+  });
+
+  test("merges an author className with the block's style class", () => {
+    const node: BlockNode = {
+      id: "abc",
+      name: "core/heading",
+      attrs: { text: "Hi", level: 2 },
+      className: "hero big",
+      style: { large: { color: "#f00" } },
+    };
+
+    const html = renderToStaticMarkup(renderBlockTree([node], headingRegistry));
+
+    expect(html).toContain("hero big");
+    expect(html).toContain("plumix-block-abc");
+  });
+
+  test("applies an author className to a selfSeam block's own root", () => {
+    const node: BlockNode = {
+      id: "abc",
+      name: "core/box",
+      className: "hero",
+    };
+
+    const html = renderToStaticMarkup(
+      renderBlockTree([node], selfSeamRegistry),
+    );
+
+    expect(html).toContain("<section");
+    expect(html).toContain("hero");
+  });
+
   test("applies attributes to a selfSeam block's own root element", () => {
     const node: BlockNode = {
       id: "abc",

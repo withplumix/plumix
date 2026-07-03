@@ -132,6 +132,10 @@
       "types": "./dist/sortable.d.ts",
       "default": "./dist/sortable.js"
     },
+    "./switch": {
+      "types": "./dist/switch.d.ts",
+      "default": "./dist/switch.js"
+    },
     "./table": {
       "types": "./dist/table.d.ts",
       "default": "./dist/table.js"

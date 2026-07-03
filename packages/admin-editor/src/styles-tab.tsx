@@ -2,7 +2,11 @@ import type { I18n } from "@lingui/core";
 import type { ReactElement, ReactNode } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
-import type { ThemeTokens, TokenCategory } from "@plumix/blocks";
+import type {
+  ResponsiveStyleSlot,
+  ThemeTokens,
+  TokenCategory,
+} from "@plumix/blocks";
 import {
   Accordion,
   AccordionContent,
@@ -14,14 +18,21 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
-  Eye,
-  EyeOff,
   Italic,
   Strikethrough,
   Underline,
 } from "@plumix/admin-ui/icons";
+import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
-import { Toggle } from "@plumix/admin-ui/toggle";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
+import { Slider } from "@plumix/admin-ui/slider";
+import { Switch } from "@plumix/admin-ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import {
   Tooltip,
@@ -29,14 +40,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@plumix/admin-ui/tooltip";
-import { normalizeStyleValue } from "@plumix/blocks";
+import { normalizeStyleValue, resolveRootTag, ROOT_TAGS } from "@plumix/blocks";
 
 import type { StyleBucket } from "./store.js";
 import type { StyleDeclaration } from "./style-declarations.js";
 import { findBlock } from "./block-tree-ops.js";
+import { HtmlAttributes } from "./html-attributes.js";
 import { useEditorStore } from "./provider.js";
 import { deviceBucket } from "./store.js";
-import { StyleControl } from "./style-control.js";
+import { HEX6, StyleControl } from "./style-control.js";
 import { StyleDeclarations } from "./style-declarations.js";
 
 interface StylesTabProps {
@@ -47,6 +59,12 @@ interface ControlSpec {
   readonly property: string;
   readonly label: string;
   readonly category?: TokenCategory;
+  /** Enumerated CSS keywords rendered as a Select (e.g. border-style). When
+   *  set, the control is a plain keyword picker — no token/custom modes. */
+  readonly options?: readonly string[];
+  /** Render on its own full-width row instead of a half-width grid cell — for
+   *  keyword selects and lone controls that would otherwise leave a gap. */
+  readonly fullWidth?: boolean;
 }
 
 /** Reads the active block's value for a style property in the current bucket. */
@@ -54,65 +72,94 @@ type StyleGetter = (property: string) => string | undefined;
 /** Curried writer: pick a property, then set (or clear with `null`) its value. */
 type StyleSetter = (property: string) => (value: string | null) => void;
 
-const SECTIONS: readonly {
+interface SectionDef {
   readonly id: string;
-  readonly label: string;
+  readonly label: ReactElement;
   readonly controls: readonly ControlSpec[];
-}[] = [
-  {
-    // Sizing has no token scale (widths are arbitrary px/%/rem), so these are
-    // custom-only — same model as font-size.
-    id: "size",
-    label: "Size",
-    controls: [
-      { property: "width", label: "Width" },
-      { property: "height", label: "Height" },
-      { property: "minWidth", label: "Min width" },
-      { property: "minHeight", label: "Min height" },
-      { property: "maxWidth", label: "Max width" },
-      { property: "maxHeight", label: "Max height" },
-    ],
-  },
-  {
-    id: "typography",
-    label: "Typography",
-    controls: [
-      { property: "color", label: "Text color", category: "colors" },
-      // Only font-family draws from the typography tokens (the theme's named
-      // font presets). Size/weight/line-height have no token scale, so they're
-      // custom-only — otherwise they'd wrongly offer font-family names.
-      { property: "fontFamily", label: "Font family", category: "typography" },
-      { property: "fontSize", label: "Font size" },
-      { property: "fontWeight", label: "Font weight" },
-      { property: "lineHeight", label: "Line height" },
-    ],
-  },
-  {
-    id: "background",
-    label: "Background",
-    controls: [
-      { property: "background", label: "Background", category: "colors" },
-    ],
-  },
-  {
-    id: "border",
-    label: "Border",
-    controls: [
-      { property: "borderWidth", label: "Width", category: "border" },
-      { property: "borderColor", label: "Color", category: "colors" },
-      { property: "borderRadius", label: "Radius", category: "radius" },
-    ],
-  },
-  {
-    id: "effects",
-    label: "Shadow",
-    controls: [{ property: "boxShadow", label: "Shadow", category: "shadow" }],
-  },
-];
+}
 
-// The visual sections open by default; the raw-CSS "declarations" section is a
-// dev-facing escape hatch, so it starts collapsed.
-const SECTION_IDS = ["layout", ...SECTIONS.map((s) => s.id), "spacing"];
+// Box dimensions — its own section (not folded into Layout, which is about
+// arrangement). No token scale (widths are arbitrary px/%/rem), so custom-only.
+const SIZE_SECTION: SectionDef = {
+  id: "size",
+  label: <Trans id="editor.styles.size" message="Size" />,
+  controls: [
+    { property: "width", label: "Width" },
+    { property: "height", label: "Height" },
+    { property: "minWidth", label: "Min width" },
+    { property: "minHeight", label: "Min height" },
+    { property: "maxWidth", label: "Max width", category: "maxWidth" },
+    { property: "maxHeight", label: "Max height" },
+  ],
+};
+
+// Grid-of-controls sections (rendered by GenericSection). The bespoke sections
+// (layout / visibility / spacing / effects / declarations) render their own
+// components; all are ordered explicitly below to mirror Builder.
+const BACKGROUND_SECTION: SectionDef = {
+  id: "background",
+  label: <Trans id="editor.styles.background" message="Background" />,
+  controls: [
+    {
+      property: "background",
+      label: "Background",
+      category: "color",
+      fullWidth: true,
+    },
+  ],
+};
+
+const TYPOGRAPHY_SECTION: SectionDef = {
+  id: "typography",
+  label: <Trans id="editor.styles.typography" message="Typography" />,
+  controls: [
+    { property: "color", label: "Text color", category: "color" },
+    { property: "fontFamily", label: "Font family", category: "fontFamily" },
+    { property: "fontSize", label: "Font size", category: "fontSize" },
+    { property: "fontWeight", label: "Font weight", category: "fontWeight" },
+    { property: "lineHeight", label: "Line height", category: "lineHeight" },
+    {
+      property: "letterSpacing",
+      label: "Letter spacing",
+      category: "letterSpacing",
+    },
+  ],
+};
+
+const BORDER_SECTION: SectionDef = {
+  id: "border",
+  label: <Trans id="editor.styles.border" message="Border" />,
+  // Builder's order/layout: Style and Color are full-width rows; Width (Size)
+  // and Radius pair up as half-width cells below.
+  controls: [
+    {
+      property: "borderStyle",
+      label: "Style",
+      options: ["none", "solid", "dashed", "dotted", "double"],
+    },
+    {
+      property: "borderColor",
+      label: "Color",
+      category: "color",
+      fullWidth: true,
+    },
+    { property: "borderWidth", label: "Width", category: "borderWidth" },
+    { property: "borderRadius", label: "Radius", category: "borderRadius" },
+  ],
+};
+
+// Default-open sections, in Builder's order. The raw-CSS "declarations" section
+// is a dev-facing escape hatch, so it's intentionally omitted (starts collapsed).
+const SECTION_IDS = [
+  "layout",
+  "size",
+  "visibility",
+  "background",
+  "typography",
+  "spacing",
+  "border",
+  "effects",
+];
 
 /**
  * Right-rail Styles tab: collapsible sections of token-or-custom controls plus a
@@ -120,7 +167,6 @@ const SECTION_IDS = ["layout", ...SECTIONS.map((s) => s.id), "spacing"];
  * responsive bucket, so styles are set per breakpoint.
  */
 export function StylesTab({ tokens }: StylesTabProps): ReactElement {
-  const { i18n } = useLingui();
   const activeId = useEditorStore((s) => s.activeId);
   const device = useEditorStore((s) => s.device);
   const block = useEditorStore((s) =>
@@ -130,6 +176,10 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
   const renameBlockStyleProperty = useEditorStore(
     (s) => s.renameBlockStyleProperty,
   );
+  const setBlockTagName = useEditorStore((s) => s.setBlockTagName);
+  const setBlockClassName = useEditorStore((s) => s.setBlockClassName);
+  const updateBlockHtmlAttr = useEditorStore((s) => s.updateBlockHtmlAttr);
+  const renameBlockHtmlAttr = useEditorStore((s) => s.renameBlockHtmlAttr);
 
   if (!activeId || !block) {
     return (
@@ -157,69 +207,54 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
     (property: string) =>
     (value: string | null): void =>
       updateBlockStyle(activeId, bucket, property, value);
-  // Hidden when display is set to "none" for this device.
-  const hidden = valueOf("display") === "none";
+  // Visibility writes display:none per device bucket directly (not via the
+  // active-device `setter`), so all three breakpoints are editable at once.
+  const setHiddenOn = (target: StyleBucket, hidden: boolean): void =>
+    updateBlockStyle(activeId, target, "display", hidden ? "none" : null);
 
   return (
     <div className="flex flex-col gap-2 p-3" data-testid="styles-tab">
-      <div className="flex items-center justify-between">
-        <p
-          className="text-muted-foreground text-xs"
-          data-testid="styles-tab-scope"
-        >
-          <Trans id="editor.styles.scope" message="Editing" /> · {device}
-        </p>
-        {/* Writes display:none into the active device's bucket only. */}
-        <Toggle
-          variant="outline"
-          size="sm"
-          pressed={hidden}
-          onPressedChange={(next) => setter("display")(next ? "none" : null)}
-          data-testid="style-hide-on-device"
-          aria-label={i18n._({
-            id: "editor.styles.hideOnDevice",
-            message: "Hide on this device",
-          })}
-        >
-          {hidden ? <EyeOff /> : <Eye />}
-        </Toggle>
-      </div>
+      <p
+        className="text-muted-foreground text-xs"
+        data-testid="styles-tab-scope"
+      >
+        <Trans id="editor.styles.scope" message="Editing" /> · {device}
+      </p>
       <Accordion type="multiple" defaultValue={SECTION_IDS}>
         <AccordionItem value="layout">
           <AccordionTrigger data-testid="styles-section-layout">
-            Layout
+            <Trans id="editor.styles.layout" message="Layout" />
           </AccordionTrigger>
           <AccordionContent>
             <LayoutControls valueOf={valueOf} setter={setter} tokens={tokens} />
           </AccordionContent>
         </AccordionItem>
-        {SECTIONS.map((section) => (
-          <AccordionItem key={section.id} value={section.id}>
-            <AccordionTrigger data-testid={`styles-section-${section.id}`}>
-              {section.label}
-            </AccordionTrigger>
-            <AccordionContent className="flex flex-col gap-3">
-              {/* Two-per-row so the rail stays compact; each StyleControl is a
-                  self-contained cell (label + input stacked). */}
-              <div className="grid grid-cols-2 gap-x-2 gap-y-3">
-                {section.controls.map((c) => (
-                  <StyleControl
-                    key={c.property}
-                    label={c.label}
-                    property={c.property}
-                    category={c.category}
-                    value={valueOf(c.property)}
-                    tokens={tokens}
-                    onChange={setter(c.property)}
-                  />
-                ))}
-              </div>
-              {section.id === "typography" && (
-                <TextStyleControls valueOf={valueOf} setter={setter} />
-              )}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
+        <GenericSection
+          section={SIZE_SECTION}
+          valueOf={valueOf}
+          setter={setter}
+          tokens={tokens}
+        />
+        <AccordionItem value="visibility">
+          <AccordionTrigger data-testid="styles-section-visibility">
+            <Trans id="editor.styles.visibility" message="Visibility" />
+          </AccordionTrigger>
+          <AccordionContent>
+            <VisibilityControls style={block.style} onToggle={setHiddenOn} />
+          </AccordionContent>
+        </AccordionItem>
+        <GenericSection
+          section={BACKGROUND_SECTION}
+          valueOf={valueOf}
+          setter={setter}
+          tokens={tokens}
+        />
+        <GenericSection
+          section={TYPOGRAPHY_SECTION}
+          valueOf={valueOf}
+          setter={setter}
+          tokens={tokens}
+        />
         <AccordionItem value="spacing">
           <AccordionTrigger data-testid="styles-section-spacing">
             <Trans id="editor.styles.spacing" message="Spacing" />
@@ -232,23 +267,135 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
             />
           </AccordionContent>
         </AccordionItem>
+        <GenericSection
+          section={BORDER_SECTION}
+          valueOf={valueOf}
+          setter={setter}
+          tokens={tokens}
+        />
+        <AccordionItem value="effects">
+          <AccordionTrigger data-testid="styles-section-effects">
+            <Trans id="editor.styles.effects" message="Shadows & Effects" />
+          </AccordionTrigger>
+          <AccordionContent className="flex flex-col gap-3">
+            <ShadowsEffectsControls
+              tokens={tokens}
+              valueOf={valueOf}
+              setter={setter}
+            />
+          </AccordionContent>
+        </AccordionItem>
+        {/* One escape hatch: author classes + raw CSS declarations — the
+            "drop to CSS" tools together. */}
         <AccordionItem value="declarations">
           <AccordionTrigger data-testid="styles-section-declarations">
-            <Trans id="editor.styles.css" message="CSS" />
+            <Trans id="editor.styles.customCss" message="Custom CSS" />
           </AccordionTrigger>
-          <AccordionContent>
-            <StyleDeclarations
-              declarations={declarations}
-              tokens={tokens}
-              onChange={(property, value) => setter(property)(value)}
-              onRename={(from, to) =>
-                renameBlockStyleProperty(activeId, bucket, from, to)
+          <AccordionContent className="flex flex-col gap-3">
+            <CssClassesField
+              className={block.className}
+              onChange={(next) => setBlockClassName(activeId, next)}
+            />
+            {/* Divider so the raw declarations don't read as more class-name
+                fields. */}
+            <div className="border-border border-t pt-3">
+              <StyleDeclarations
+                declarations={declarations}
+                tokens={tokens}
+                onChange={(property, value) => setter(property)(value)}
+                onRename={(from, to) =>
+                  renameBlockStyleProperty(activeId, bucket, from, to)
+                }
+              />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="html">
+          <AccordionTrigger data-testid="styles-section-html">
+            <Trans id="editor.htmlAttrs.title" message="HTML attributes" />
+          </AccordionTrigger>
+          <AccordionContent className="flex flex-col gap-3">
+            <TagNameField
+              value={block.tagName}
+              onChange={(tagName) => setBlockTagName(activeId, tagName)}
+            />
+            <HtmlAttributes
+              attributes={block.htmlAttrs ?? {}}
+              onChange={(key, value) =>
+                updateBlockHtmlAttr(activeId, key, value)
               }
+              onRename={(from, to) => renameBlockHtmlAttr(activeId, from, to)}
             />
           </AccordionContent>
         </AccordionItem>
       </Accordion>
     </div>
+  );
+}
+
+/** A grid-of-controls section: two-per-row cells (KeywordControl for enumerated
+ *  props, else StyleControl), with the typography/background sections appending
+ *  their bespoke sub-controls. */
+function GenericSection({
+  section,
+  valueOf,
+  setter,
+  tokens,
+}: {
+  readonly section: SectionDef;
+  readonly valueOf: StyleGetter;
+  readonly setter: StyleSetter;
+  readonly tokens: ThemeTokens;
+}): ReactElement {
+  return (
+    <AccordionItem value={section.id}>
+      <AccordionTrigger data-testid={`styles-section-${section.id}`}>
+        {section.label}
+      </AccordionTrigger>
+      <AccordionContent className="flex flex-col gap-3">
+        {/* Two-per-row so the rail stays compact; each cell is a self-contained
+            control (label + input stacked). */}
+        <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+          {section.controls.map((c) => (
+            // Keyword selects and full-width controls take their own row so the
+            // token/custom controls beside them stay aligned and lone controls
+            // don't leave a half-width gap.
+            <div
+              key={c.property}
+              className={c.options || c.fullWidth ? "col-span-2" : undefined}
+            >
+              {c.options ? (
+                <KeywordControl
+                  label={c.label}
+                  property={c.property}
+                  options={c.options}
+                  value={valueOf(c.property)}
+                  onChange={setter(c.property)}
+                />
+              ) : (
+                <StyleControl
+                  label={c.label}
+                  property={c.property}
+                  category={c.category}
+                  value={valueOf(c.property)}
+                  tokens={tokens}
+                  onChange={setter(c.property)}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        {section.id === "typography" && (
+          <TextStyleControls valueOf={valueOf} setter={setter} />
+        )}
+        {section.id === "background" && (
+          <BackgroundImageControl
+            value={valueOf("backgroundImage")}
+            onChange={setter("backgroundImage")}
+          />
+        )}
+      </AccordionContent>
+    </AccordionItem>
   );
 }
 
@@ -386,6 +533,73 @@ function TextStyleControls({
   );
 }
 
+// Each device maps to the responsive bucket its @media narrows to. The Switch is
+// `htmlFor`-associated with its translated Label, so the label doubles as the
+// accessible name and clicking it toggles (Builder's click-anywhere rows).
+const VISIBILITY_DEVICES: readonly {
+  readonly id: string;
+  readonly bucket: StyleBucket;
+  readonly label: ReactElement;
+}[] = [
+  {
+    id: "desktop",
+    bucket: "large",
+    label: (
+      <Trans id="editor.styles.visibility.desktop" message="Hide on desktop" />
+    ),
+  },
+  {
+    id: "tablet",
+    bucket: "medium",
+    label: (
+      <Trans id="editor.styles.visibility.tablet" message="Hide on tablet" />
+    ),
+  },
+  {
+    id: "mobile",
+    bucket: "small",
+    label: (
+      <Trans id="editor.styles.visibility.mobile" message="Hide on mobile" />
+    ),
+  },
+];
+
+/** Per-device hide switches — writes display:none into each device's bucket
+ *  independently, so all three breakpoints are visible/editable at once
+ *  (Builder's Visibility panel). */
+function VisibilityControls({
+  style,
+  onToggle,
+}: {
+  readonly style: ResponsiveStyleSlot | undefined;
+  readonly onToggle: (bucket: StyleBucket, hidden: boolean) => void;
+}): ReactElement {
+  return (
+    <div
+      className="flex flex-col gap-3"
+      data-testid="style-visibility-controls"
+    >
+      {VISIBILITY_DEVICES.map((device) => {
+        const hidden =
+          normalizeStyleValue(style?.[device.bucket]?.display) === "none";
+        return (
+          <div key={device.id} className="flex items-center justify-between">
+            <Label htmlFor={`visibility-${device.id}`} className="text-xs">
+              {device.label}
+            </Label>
+            <Switch
+              id={`visibility-${device.id}`}
+              checked={hidden}
+              onCheckedChange={(on) => onToggle(device.bucket, on)}
+              data-testid={`style-visibility-${device.id}`}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const LAYOUT_LABELS: Readonly<Record<string, string>> = {
   block: "Block",
   flex: "Flex",
@@ -459,6 +673,68 @@ function LayoutControls({
           />
         </>
       ) : null}
+      {/* Self-alignment within the parent — Builder's "Align" row. Independent
+          of this block's own display, so it's always offered. */}
+      <LayoutToggle
+        label="Align self"
+        property="alignSelf"
+        options={["flex-start", "center", "flex-end", "stretch"]}
+        valueOf={valueOf}
+        setter={setter}
+      />
+    </div>
+  );
+}
+
+// Radix Select forbids an empty item value, so the "clear" choice carries a
+// sentinel that maps back to `null` (property absent) on change.
+const KEYWORD_NONE = "__unset__";
+
+/** A labelled dropdown of enumerated CSS keywords (e.g. border-style). Writes
+ *  the picked keyword to `property`; the leading "—" clears it. No token mode —
+ *  these properties have no theme scale, only a fixed value set. */
+function KeywordControl({
+  label,
+  property,
+  options,
+  value,
+  onChange,
+}: {
+  readonly label: string;
+  readonly property: string;
+  readonly options: readonly string[];
+  readonly value: string | undefined;
+  readonly onChange: (value: string | null) => void;
+}): ReactElement {
+  const testId = `style-control-${property}`;
+  return (
+    <div className="flex flex-col gap-1" data-testid={testId}>
+      <Label className="text-xs">{label}</Label>
+      <Select
+        value={value ?? KEYWORD_NONE}
+        onValueChange={(next) => onChange(next === KEYWORD_NONE ? null : next)}
+      >
+        <SelectTrigger className="w-full" data-testid={`${testId}-select`}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            value={KEYWORD_NONE}
+            data-testid={`${testId}-option-unset`}
+          >
+            —
+          </SelectItem>
+          {options.map((opt) => (
+            <SelectItem
+              key={opt}
+              value={opt}
+              data-testid={`${testId}-option-${opt}`}
+            >
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -554,6 +830,300 @@ const SPACING_GROUPS = [
     label: <Trans id="editor.styles.padding" message="Padding" />,
   },
 ] as const;
+
+// Unwraps `url("…")` to the bare URL for editing; tolerant of single/double/no
+// quotes. A non-url() value (e.g. a gradient set via raw CSS) yields "" so the
+// field stays empty rather than showing a form it can't represent.
+function parseBackgroundImageUrl(value: string | undefined): string {
+  const match = value?.match(/^url\((['"]?)(.*)\1\)$/);
+  return match?.[2] ?? "";
+}
+
+/** A "Fill image" URL field composing `background-image: url("…")`. Kept a URL
+ *  entry (not a media browser) — the media library isn't wired into the styles
+ *  rail; a pasted/resolved URL is the minimum that reaches parity.
+ *
+ *  The value is stored verbatim; `sanitizeCssValue` at emit drops URLs carrying
+ *  `@`, `;`, or a `data:` scheme (its breakout denylist), so those won't ship
+ *  even though the field accepts them — an accepted limitation, not a guard. */
+function BackgroundImageControl({
+  value,
+  onChange,
+}: {
+  readonly value: string | undefined;
+  readonly onChange: (value: string | null) => void;
+}): ReactElement {
+  return (
+    <div
+      className="flex flex-col gap-1"
+      data-testid="style-control-backgroundImage"
+    >
+      <Label className="text-xs">
+        <Trans id="editor.styles.fillImage" message="Fill image" />
+      </Label>
+      <Input
+        value={parseBackgroundImageUrl(value)}
+        onChange={(e) => {
+          const url = e.target.value.trim();
+          onChange(url === "" ? null : `url("${url}")`);
+        }}
+        placeholder="https://…"
+        data-testid="style-control-backgroundImage-url"
+      />
+    </div>
+  );
+}
+
+/** Shadows & Effects: opacity plus a box-shadow token picker. Opacity leads,
+ *  matching Builder's ordering. */
+function ShadowsEffectsControls({
+  tokens,
+  valueOf,
+  setter,
+}: {
+  readonly tokens: ThemeTokens;
+  readonly valueOf: StyleGetter;
+  readonly setter: StyleSetter;
+}): ReactElement {
+  return (
+    <>
+      <OpacityControl value={valueOf("opacity")} onChange={setter("opacity")} />
+      <StyleControl
+        label="Box shadow"
+        property="boxShadow"
+        category="boxShadow"
+        value={valueOf("boxShadow")}
+        tokens={tokens}
+        onChange={setter("boxShadow")}
+      />
+      <TextShadowControls
+        value={valueOf("textShadow")}
+        onChange={setter("textShadow")}
+      />
+    </>
+  );
+}
+
+// A text-shadow as its offset/blur/color parts. Enabling seeds a soft default;
+// each field recomposes the whole `x y blur color` value.
+const DEFAULT_TEXT_SHADOW = { x: "1", y: "1", blur: "3", color: "#000000" };
+
+interface TextShadowParts {
+  readonly x: string;
+  readonly y: string;
+  readonly blur: string;
+  readonly color: string;
+}
+
+// Splits on whitespace and treats the 4th token as the color — a hex-only
+// contract that matches the swatch below. A hand-authored space-separated color
+// (e.g. `rgb(0 0 0)`) via the raw-CSS section wouldn't round-trip; the composer
+// resets it to the default hex on the next edit.
+function parseTextShadow(value: string | undefined): TextShadowParts {
+  if (!value) return DEFAULT_TEXT_SHADOW;
+  const parts = value.trim().split(/\s+/);
+  const len = (raw: string | undefined, fallback: string): string =>
+    raw ? raw.replace("px", "") : fallback;
+  return {
+    x: len(parts[0], DEFAULT_TEXT_SHADOW.x),
+    y: len(parts[1], DEFAULT_TEXT_SHADOW.y),
+    blur: len(parts[2], DEFAULT_TEXT_SHADOW.blur),
+    color: parts[3] ?? DEFAULT_TEXT_SHADOW.color,
+  };
+}
+
+function formatTextShadow(parts: TextShadowParts): string {
+  return `${parts.x}px ${parts.y}px ${parts.blur}px ${parts.color}`;
+}
+
+/** A switch-gated text-shadow composer: color swatch plus X/Y/blur offsets.
+ *  Off clears the property; on seeds a default then edits its parts in place. */
+function TextShadowControls({
+  value,
+  onChange,
+}: {
+  readonly value: string | undefined;
+  readonly onChange: (value: string | null) => void;
+}): ReactElement {
+  const enabled = value !== undefined;
+  const parts = parseTextShadow(value);
+  const setPart =
+    (key: keyof TextShadowParts) =>
+    (next: string): void =>
+      onChange(formatTextShadow({ ...parts, [key]: next }));
+
+  return (
+    <div className="flex flex-col gap-2" data-testid="style-text-shadow">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">
+          <Trans id="editor.styles.textShadow" message="Text shadow" />
+        </Label>
+        <Switch
+          checked={enabled}
+          onCheckedChange={(on) =>
+            onChange(on ? formatTextShadow(DEFAULT_TEXT_SHADOW) : null)
+          }
+          data-testid="style-text-shadow-toggle"
+          aria-label="Text shadow"
+        />
+      </div>
+      {enabled ? (
+        <div className="flex flex-col gap-2">
+          <input
+            type="color"
+            value={HEX6.test(parts.color) ? parts.color : "#000000"}
+            onChange={(e) => setPart("color")(e.target.value)}
+            className="border-input h-8 w-full cursor-pointer rounded-md border bg-transparent p-1"
+            data-testid="style-text-shadow-color"
+            aria-label="Text shadow color"
+          />
+          <div className="grid grid-cols-3 gap-2">
+            {(["x", "y", "blur"] as const).map((key) => (
+              <div key={key} className="flex flex-col gap-1">
+                <Label className="text-xs capitalize">{key}</Label>
+                <Input
+                  type="number"
+                  value={parts[key]}
+                  // Coalesce an emptied field to 0 so composition never emits a
+                  // malformed `text-shadow` (e.g. "px 1px 3px …").
+                  onChange={(e) => setPart(key)(e.target.value || "0")}
+                  className="h-8"
+                  data-testid={`style-text-shadow-${key}`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Opacity as a 0–1 slider paired with an editable numeric readout. The input
+ *  is the canonical entry point (fully controllable); the slider mirrors it. An
+ *  absent value reads as fully opaque (1) but leaves the property unset. */
+function OpacityControl({
+  value,
+  onChange,
+}: {
+  readonly value: string | undefined;
+  readonly onChange: (value: string | null) => void;
+}): ReactElement {
+  const parsed = value !== undefined ? Number(value) : 1;
+  const slider = Number.isFinite(parsed) ? parsed : 1;
+  return (
+    <div className="flex flex-col gap-1" data-testid="style-control-opacity">
+      <Label className="text-xs">
+        <Trans id="editor.styles.opacity" message="Opacity" />
+      </Label>
+      <div className="flex items-center gap-2">
+        <Slider
+          min={0}
+          max={1}
+          step={0.05}
+          value={[slider]}
+          onValueChange={(values) => {
+            const next = values[0];
+            if (typeof next === "number") onChange(String(next));
+          }}
+          className="flex-1"
+          data-testid="style-control-opacity-slider"
+          aria-label="Opacity"
+        />
+        <Input
+          type="number"
+          min={0}
+          max={1}
+          step={0.1}
+          value={value ?? ""}
+          placeholder="1"
+          onChange={(e) =>
+            onChange(e.target.value === "" ? null : e.target.value)
+          }
+          className="h-8 w-16"
+          data-testid="style-control-opacity-input"
+        />
+      </div>
+    </div>
+  );
+}
+
+// Radix Select forbids an empty item value, so "Default" (no override → the
+// block's own element) carries a sentinel that maps to an empty string.
+const TAG_DEFAULT = "__default__";
+
+/** Root-element override picker (Builder's tag-name). "Default" clears it;
+ *  otherwise writes one of the allowlisted container tags. A stale value is
+ *  normalized to "Default" so the picker matches what the renderer emits. */
+function TagNameField({
+  value,
+  onChange,
+}: {
+  readonly value: string | undefined;
+  readonly onChange: (tagName: string) => void;
+}): ReactElement {
+  const resolved = resolveRootTag(value);
+  return (
+    <div className="flex flex-col gap-1" data-testid="block-tag-name">
+      <Label className="text-xs">
+        <Trans id="editor.htmlAttrs.tagName" message="Tag name" />
+      </Label>
+      <Select
+        value={resolved ?? TAG_DEFAULT}
+        onValueChange={(next) => onChange(next === TAG_DEFAULT ? "" : next)}
+      >
+        <SelectTrigger className="w-full" data-testid="block-tag-name-select">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            value={TAG_DEFAULT}
+            data-testid="block-tag-name-option-default"
+          >
+            <Trans id="editor.htmlAttrs.tagName.default" message="Default" />
+          </SelectItem>
+          {ROOT_TAGS.map((tag) => (
+            <SelectItem
+              key={tag}
+              value={tag}
+              data-testid={`block-tag-name-option-${tag}`}
+            >
+              {tag}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+/** A free-form CSS class field (merged onto the block root at render) — the
+ *  class-name escape hatch, sitting above the raw declarations in Custom CSS. */
+function CssClassesField({
+  className,
+  onChange,
+}: {
+  readonly className: string | undefined;
+  readonly onChange: (className: string) => void;
+}): ReactElement {
+  const { i18n } = useLingui();
+  return (
+    <div className="flex flex-col gap-1">
+      <Label className="text-xs">
+        <Trans id="editor.styles.cssClasses" message="CSS classes" />
+      </Label>
+      <Input
+        value={className ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={i18n._({
+          id: "editor.styles.cssClasses.placeholder",
+          message: "my-class other-class",
+        })}
+        data-testid="style-css-classes"
+      />
+    </div>
+  );
+}
 
 /** Margin and padding, each its own card of per-side token-or-custom controls. */
 function SpacingControls({

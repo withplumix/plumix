@@ -120,19 +120,22 @@ export type {
   ResponsiveStyleBucket,
   ResponsiveStyleSlot,
   ThemeBreakpoints,
-  TokenCategory,
 } from "./styles/style-emitter.js";
 export { sanitizeCssValue } from "./styles/sanitize-css.js";
 export { parseLoaderData, serializeLoaderData } from "./loader-data.js";
 export { findBlockNode } from "./find-block-node.js";
 export type {
+  KnownTokenCategory,
   ThemeTokenEntry,
   ThemeTokenGroup,
   ThemeTokens,
+  TokenCategory,
 } from "./styles/types.js";
 
 // ─── HTML sanitisation ──────────────────────────────────────────────────────
 export { isAllowedHtmlAttr, safeHtmlAttrs } from "./html/attrs.js";
+export { ROOT_TAGS, resolveRootTag } from "./html/root-tag.js";
+export type { RootTag } from "./html/root-tag.js";
 export { BASELINE_HTML_ALLOWLIST, sanitizeHtml } from "./html/sanitize.js";
 export type { HtmlAllowlist } from "./html/sanitize.js";
 export { buildHtmlAllowlist } from "./html/build-allowlist.js";

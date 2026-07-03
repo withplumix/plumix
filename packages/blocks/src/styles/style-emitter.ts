@@ -1,7 +1,5 @@
-import type { ThemeTokens } from "./types.js";
+import type { ThemeTokens, TokenCategory } from "./types.js";
 import { sanitizeCssValue } from "./sanitize-css.js";
-
-export type TokenCategory = keyof ThemeTokens;
 
 /**
  * A stored declaration value is a plain CSS value string — a literal
@@ -25,6 +23,9 @@ export interface ResponsiveStyleSlot {
   readonly small?: ResponsiveStyleBucket;
 }
 
+// Which token category a property reads from. `spacing` and `color` are the
+// two cross-property buckets; every other property reads its own same-named
+// scale (fontSize → fontSize, not the font-family bucket).
 const PROPERTY_TO_CATEGORY: Readonly<Record<string, TokenCategory>> = {
   padding: "spacing",
   paddingTop: "spacing",
@@ -37,17 +38,20 @@ const PROPERTY_TO_CATEGORY: Readonly<Record<string, TokenCategory>> = {
   marginBottom: "spacing",
   marginLeft: "spacing",
   gap: "spacing",
-  background: "colors",
-  color: "colors",
-  borderColor: "colors",
-  fontSize: "typography",
-  fontFamily: "typography",
-  fontWeight: "typography",
-  lineHeight: "typography",
-  letterSpacing: "typography",
-  borderWidth: "border",
-  borderRadius: "radius",
-  boxShadow: "shadow",
+  background: "color",
+  color: "color",
+  borderColor: "color",
+  fontFamily: "fontFamily",
+  fontSize: "fontSize",
+  fontWeight: "fontWeight",
+  lineHeight: "lineHeight",
+  letterSpacing: "letterSpacing",
+  borderWidth: "borderWidth",
+  borderRadius: "borderRadius",
+  boxShadow: "boxShadow",
+  textShadow: "textShadow",
+  backgroundImage: "backgroundImage",
+  maxWidth: "maxWidth",
 };
 
 /** The token category a property reads from (e.g. `marginTop` → `spacing`), or
@@ -158,13 +162,18 @@ function bucketToDeclarations(bucket: ResponsiveStyleBucket): string {
   return decls.join(" ");
 }
 
+const kebabCase = (s: string): string =>
+  s.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+
 function propertyToCss(property: string): string {
   // CSS custom properties are case-sensitive (`--brandColor` ≠ `--brand-color`),
   // so pass them through verbatim; only camelCase standard props get kebab-cased.
   if (property.startsWith("--")) return property;
-  return property.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+  return kebabCase(property);
 }
 
+// The CSS-var segment for a category is its kebab-cased key, so the var is
+// always `--plumix-<kebab(category)>-<slug>` — one rule, no per-category cases.
 function categoryToSegment(category: TokenCategory): string {
-  return category === "colors" ? "color" : category;
+  return kebabCase(category);
 }

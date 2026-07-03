@@ -746,6 +746,64 @@ describe("updateBlockHtmlAttr", () => {
   });
 });
 
+describe("setBlockTagName", () => {
+  test("sets the root-element override on a block", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+
+    store.getState().setBlockTagName("a", "section");
+
+    expect(store.getState().tree[0]?.tagName).toBe("section");
+  });
+
+  test("clears the override when passed an empty string", () => {
+    const store = createEditorStore({
+      tree: [{ id: "a", name: "core/x", tagName: "nav" }],
+    });
+
+    store.getState().setBlockTagName("a", "");
+
+    expect(store.getState().tree[0]?.tagName).toBeUndefined();
+  });
+
+  test("is a no-op (stable tree) for an unknown block", () => {
+    const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
+    const store = createEditorStore({ tree });
+
+    store.getState().setBlockTagName("nope", "section");
+
+    expect(store.getState().tree).toBe(tree);
+  });
+});
+
+describe("setBlockClassName", () => {
+  test("sets author CSS classes on a block", () => {
+    const store = createEditorStore({ tree: [{ id: "a", name: "core/x" }] });
+
+    store.getState().setBlockClassName("a", "hero big");
+
+    expect(store.getState().tree[0]?.className).toBe("hero big");
+  });
+
+  test("clears the classes when passed a blank string", () => {
+    const store = createEditorStore({
+      tree: [{ id: "a", name: "core/x", className: "hero" }],
+    });
+
+    store.getState().setBlockClassName("a", "  ");
+
+    expect(store.getState().tree[0]?.className).toBeUndefined();
+  });
+
+  test("is a no-op (stable tree) for an unknown block", () => {
+    const tree: readonly BlockNode[] = [{ id: "a", name: "core/x" }];
+    const store = createEditorStore({ tree });
+
+    store.getState().setBlockClassName("nope", "hero");
+
+    expect(store.getState().tree).toBe(tree);
+  });
+});
+
 describe("renameBlockHtmlAttr", () => {
   test("renames an attribute in place, preserving value and position", () => {
     const store = createEditorStore({

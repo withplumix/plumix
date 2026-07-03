@@ -17,7 +17,8 @@ afterEach(cleanup);
 
 const tokens: ThemeTokens = {
   spacing: { lg: { value: "24px" }, sm: { value: "8px" } },
-  typography: { lg: { value: "20px" }, sm: { value: "14px" } },
+  fontFamily: { lg: { value: "20px" }, sm: { value: "14px" } },
+  fontSize: { base: { value: "16px" } },
 };
 
 function StyleProbe({ id }: { readonly id: string }): ReactElement {
@@ -63,13 +64,25 @@ describe("StylesTab", () => {
     const user = userEvent.setup({ delay: null });
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
-    // Font family is the typography-token control (size/weight/line-height are
-    // custom-only, since the theme has no scale for them).
+    // Font family draws from the fontFamily token scale.
     await user.click(getByTestId("style-control-fontFamily-token"));
     await user.click(getByTestId("style-control-fontFamily-token-lg"));
 
     expect(getByTestId("style-probe").textContent).toContain(
-      '"large":{"fontFamily":"var(--plumix-typography-lg, 20px)"}',
+      '"large":{"fontFamily":"var(--plumix-font-family-lg, 20px)"}',
+    );
+  });
+
+  test("font-size draws from its own token scale, not the font-family bucket", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    // fontSize is now token-backed by its own scale (the conflation bug fix).
+    await user.click(getByTestId("style-control-fontSize-token"));
+    await user.click(getByTestId("style-control-fontSize-token-base"));
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"fontSize":"var(--plumix-font-size-base, 16px)"',
     );
   });
 
@@ -80,7 +93,40 @@ describe("StylesTab", () => {
     expect(margin.contains(padding)).toBe(false);
   });
 
-  test("leads the Styles tab with the Layout section, then Size", () => {
+  test("orders the sections to mirror Builder", () => {
+    const { container } = renderTab([{ id: "a", name: "core/x" }], "a", {
+      expandCss: false,
+    });
+    const sections = [
+      ...container.querySelectorAll('[data-testid^="styles-section-"]'),
+    ].map((el) => el.getAttribute("data-testid"));
+    expect(sections).toEqual([
+      "styles-section-layout",
+      "styles-section-size",
+      "styles-section-visibility",
+      "styles-section-background",
+      "styles-section-typography",
+      "styles-section-spacing",
+      "styles-section-border",
+      "styles-section-effects",
+      "styles-section-declarations",
+      "styles-section-html",
+    ]);
+  });
+
+  test("labels the spacing section 'Spacing' and the escape hatch 'Custom CSS'", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a", {
+      expandCss: false,
+    });
+    expect(getByTestId("styles-section-spacing").textContent).toContain(
+      "Spacing",
+    );
+    expect(getByTestId("styles-section-declarations").textContent).toContain(
+      "Custom CSS",
+    );
+  });
+
+  test("leads with Layout, then Size as its own section", () => {
     const { container } = renderTab([{ id: "a", name: "core/x" }], "a", {
       expandCss: false,
     });
@@ -89,6 +135,16 @@ describe("StylesTab", () => {
     ].map((el) => el.getAttribute("data-testid"));
     expect(sections[0]).toBe("styles-section-layout");
     expect(sections[1]).toBe("styles-section-size");
+  });
+
+  test("the Layout section writes align-self for the block within its parent", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    fireEvent.click(getByTestId("style-alignSelf-center"));
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"alignSelf":"center"',
+    );
   });
 
   test("the Layout section writes display to node.style and reveals flex controls", () => {
@@ -110,7 +166,7 @@ describe("StylesTab", () => {
     expect(getByTestId("style-alignItems-stretch")).toBeDefined();
   });
 
-  test("exposes Size controls that write width/min-width to the active bucket", () => {
+  test("exposes a Size section that writes width/min-width", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
     expect(getByTestId("styles-section-size")).toBeDefined();
@@ -127,6 +183,159 @@ describe("StylesTab", () => {
     const probe = getByTestId("style-probe").textContent;
     expect(probe).toContain('"width":"280px"');
     expect(probe).toContain('"minWidth":"280px"');
+  });
+
+  test("a control whose category has no theme tokens shows its custom input directly", () => {
+    // letterSpacing has a token category, but the test theme declares no
+    // letterSpacing tokens — so it must start in custom mode (an empty token
+    // dropdown is useless), with the raw input shown without a mode toggle.
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    fireEvent.change(getByTestId("style-control-letterSpacing-custom"), {
+      target: { value: "0.05em" },
+    });
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"letterSpacing":"0.05em"',
+    );
+  });
+
+  test("exposes a border-style select that writes borderStyle to the bucket", async () => {
+    // Builder's Border "Style" is an enumerated dropdown, not free text — a
+    // width alone renders nothing without a style, so this closes that gap.
+    const user = userEvent.setup({ delay: null });
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    await user.click(getByTestId("style-control-borderStyle-select"));
+    await user.click(getByTestId("style-control-borderStyle-option-dashed"));
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"borderStyle":"dashed"',
+    );
+  });
+
+  test("border-style writes an explicit none, distinct from clearing", async () => {
+    const user = userEvent.setup({ delay: null });
+    const styled: BlockNode = {
+      id: "a",
+      name: "core/x",
+      style: { large: { borderStyle: "solid" } },
+    };
+    const { getByTestId } = renderTab([styled], "a");
+
+    // The literal "none" keyword is a real value (border-style: none), not the
+    // clear action — the "—" sentinel is what unsets the property.
+    await user.click(getByTestId("style-control-borderStyle-select"));
+    await user.click(getByTestId("style-control-borderStyle-option-none"));
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"borderStyle":"none"',
+    );
+
+    await user.click(getByTestId("style-control-borderStyle-select"));
+    await user.click(getByTestId("style-control-borderStyle-option-unset"));
+    // Clearing the only property prunes the style slot to undefined.
+    expect(getByTestId("style-probe").textContent).toBe("");
+  });
+
+  test("border Style and Color both span the full row (like Builder)", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    // Style (keyword select) and Color are full-width rows; Width + Radius pair
+    // up below as half-width cells.
+    expect(
+      getByTestId("style-control-borderStyle").parentElement?.className,
+    ).toContain("col-span-2");
+    expect(
+      getByTestId("style-control-borderColor").parentElement?.className,
+    ).toContain("col-span-2");
+  });
+
+  test("the background color control spans the full row (no half-width gap)", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    // A lone control in a 2-col grid would leave the right half empty.
+    expect(
+      getByTestId("style-control-background").parentElement?.className,
+    ).toContain("col-span-2");
+  });
+
+  test("opacity shows 1 as a placeholder when unset", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    expect(
+      (getByTestId("style-control-opacity-input") as HTMLInputElement)
+        .placeholder,
+    ).toBe("1");
+  });
+
+  test("the Shadows & Effects section exposes an opacity control that writes opacity", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    expect(getByTestId("styles-section-effects").textContent).toContain(
+      "Shadows & Effects",
+    );
+
+    // A numeric readout (0–1) drives the write; a synced slider is visual sugar.
+    fireEvent.change(getByTestId("style-control-opacity-input"), {
+      target: { value: "0.5" },
+    });
+
+    expect(getByTestId("style-probe").textContent).toContain('"opacity":"0.5"');
+  });
+
+  test("the text-shadow switch composes and clears a text-shadow value", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    // Enabling seeds a default composed shadow (x/y/blur/color).
+    fireEvent.click(getByTestId("style-text-shadow-toggle"));
+    expect(getByTestId("style-probe").textContent).toContain('"textShadow"');
+
+    // Editing a part recomposes the whole value.
+    fireEvent.change(getByTestId("style-text-shadow-blur"), {
+      target: { value: "5" },
+    });
+    expect(getByTestId("style-probe").textContent).toContain("5px");
+
+    // Clearing an offset field coalesces to 0 — never a malformed "px …".
+    fireEvent.change(getByTestId("style-text-shadow-x"), {
+      target: { value: "" },
+    });
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"textShadow":"0px',
+    );
+    expect(getByTestId("style-probe").textContent).not.toContain('"px');
+
+    // Disabling clears the property entirely (slot prunes to undefined).
+    fireEvent.click(getByTestId("style-text-shadow-toggle"));
+    expect(getByTestId("style-probe").textContent).toBe("");
+  });
+
+  test("the Background section composes a background-image url from a URL input", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    fireEvent.change(getByTestId("style-control-backgroundImage-url"), {
+      target: { value: "https://ex.com/a.png" },
+    });
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"backgroundImage":"url(\\"https://ex.com/a.png\\")"',
+    );
+
+    // Clearing the field removes the property (slot prunes to undefined).
+    fireEvent.change(getByTestId("style-control-backgroundImage-url"), {
+      target: { value: "" },
+    });
+    expect(getByTestId("style-probe").textContent).toBe("");
+  });
+
+  test("the Background image field reads the bare URL back out of a stored url()", () => {
+    const styled: BlockNode = {
+      id: "a",
+      name: "core/x",
+      style: { large: { backgroundImage: 'url("https://ex.com/a.png")' } },
+    };
+    const { getByTestId } = renderTab([styled], "a");
+    // The field unwraps url("…") for editing rather than showing the wrapper.
+    expect(
+      (getByTestId("style-control-backgroundImage-url") as HTMLInputElement)
+        .value,
+    ).toBe("https://ex.com/a.png");
   });
 
   test("the italic mark toggles a fontStyle raw value", () => {
@@ -193,17 +402,19 @@ describe("StylesTab", () => {
     );
   });
 
-  test("the hide toggle sets display:none in the active device bucket", () => {
+  test("the Visibility section hides on any device, not just the active one", () => {
+    // Active device is desktop, but the Mobile switch writes display:none into
+    // the small bucket directly — all three devices are editable at once.
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
-    fireEvent.click(getByTestId("style-hide-on-device"));
+    fireEvent.click(getByTestId("style-visibility-mobile"));
 
     expect(getByTestId("style-probe").textContent).toContain(
-      '"display":"none"',
+      '"small":{"display":"none"}',
     );
   });
 
-  test("the hide toggle reads pressed from an existing display:none", () => {
+  test("a visibility switch reads checked from an existing display:none", () => {
     const hidden: BlockNode = {
       id: "a",
       name: "core/x",
@@ -211,12 +422,12 @@ describe("StylesTab", () => {
     };
     expect(
       renderTab([hidden], "a")
-        .getByTestId("style-hide-on-device")
+        .getByTestId("style-visibility-desktop")
         .getAttribute("data-state"),
-    ).toBe("on");
+    ).toBe("checked");
   });
 
-  test("the hide toggle clears display:none when turned off", () => {
+  test("toggling a visibility switch off clears display:none for that bucket", () => {
     const hidden: BlockNode = {
       id: "a",
       name: "core/x",
@@ -224,7 +435,7 @@ describe("StylesTab", () => {
     };
     const { getByTestId } = renderTab([hidden], "a");
 
-    fireEvent.click(getByTestId("style-hide-on-device"));
+    fireEvent.click(getByTestId("style-visibility-desktop"));
 
     // The only declaration is gone, so the style slot prunes to undefined.
     expect(getByTestId("style-probe").textContent).toBe("");
@@ -338,7 +549,7 @@ describe("StylesTab — declarations list", () => {
   const fontToken: BlockNode = {
     id: "a",
     name: "core/x",
-    style: { large: { fontFamily: "var(--plumix-typography-lg)" } },
+    style: { large: { fontFamily: "var(--plumix-font-family-lg)" } },
   };
 
   test("a token declaration renders a token picker, no raw value input", async () => {
@@ -346,7 +557,7 @@ describe("StylesTab — declarations list", () => {
     const { getByTestId, queryByTestId } = renderTab([fontToken], "a");
     const picker = getByTestId("style-declaration-fontFamily-token");
     // The trigger shows the chosen token as its emitted var(), not a literal.
-    expect(picker.textContent).toContain("var(--plumix-typography-lg)");
+    expect(picker.textContent).toContain("var(--plumix-font-family-lg)");
     // The category's tokens are the options; raw input is absent for a token row.
     await user.click(picker);
     expect(getByTestId("style-declaration-fontFamily-token-lg")).toBeDefined();
@@ -360,7 +571,7 @@ describe("StylesTab — declarations list", () => {
     await user.click(getByTestId("style-declaration-fontFamily-token"));
     await user.click(getByTestId("style-declaration-fontFamily-token-sm"));
     expect(getByTestId("style-probe").textContent).toContain(
-      '"fontFamily":"var(--plumix-typography-sm, 14px)"',
+      '"fontFamily":"var(--plumix-font-family-sm, 14px)"',
     );
   });
 
@@ -368,13 +579,13 @@ describe("StylesTab — declarations list", () => {
     const ghost: BlockNode = {
       id: "a",
       name: "core/x",
-      style: { large: { fontFamily: "var(--plumix-typography-ghost)" } },
+      style: { large: { fontFamily: "var(--plumix-font-family-ghost)" } },
     };
     const { getByTestId } = renderTab([ghost], "a");
     // "ghost" isn't in the theme, but the trigger still shows it (not blank).
     expect(
       getByTestId("style-declaration-fontFamily-token").textContent,
-    ).toContain("var(--plumix-typography-ghost)");
+    ).toContain("var(--plumix-font-family-ghost)");
   });
 
   test("clearing the token picker removes the declaration", async () => {
@@ -549,5 +760,221 @@ describe("StylesTab — declarations list", () => {
     });
     // `margintop` collides with the curated `marginTop`, so no second creation.
     expect(queryByTestId("style-declaration-add-key-create")).toBeNull();
+  });
+});
+
+function NodeProbe({ id }: { readonly id: string }): ReactElement {
+  const attrs = useEditorStore(
+    (s) => s.tree.find((n) => n.id === id)?.htmlAttrs,
+  );
+  const tagName = useEditorStore(
+    (s) => s.tree.find((n) => n.id === id)?.tagName,
+  );
+  const className = useEditorStore(
+    (s) => s.tree.find((n) => n.id === id)?.className,
+  );
+  return (
+    <>
+      <output data-testid="html-attr-probe">{JSON.stringify(attrs)}</output>
+      <output data-testid="tag-name-probe">{tagName ?? ""}</output>
+      <output data-testid="class-name-probe">{className ?? ""}</output>
+    </>
+  );
+}
+
+function renderNodeSection(
+  tree: readonly BlockNode[],
+  activeId: string,
+  section: "html" | "declarations" = "html",
+) {
+  const utils = render(
+    <I18nProvider i18n={i18n}>
+      <EditorProvider initialTree={tree}>
+        <ActiveSeed activeId={activeId} />
+        <StylesTab tokens={tokens} />
+        <NodeProbe id={tree[0]?.id ?? ""} />
+      </EditorProvider>
+    </I18nProvider>,
+  );
+  // The HTML attributes / Advanced sections are collapsed by default — open one.
+  fireEvent.click(utils.getByTestId(`styles-section-${section}`));
+  return utils;
+}
+
+describe("StylesTab — HTML attributes & tag name", () => {
+  const withAttrs: BlockNode = {
+    id: "a",
+    name: "core/x",
+    htmlAttrs: { id: "hero", "data-track": "cta" },
+  };
+
+  test("the tag-name select overrides the block's root element", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/group" }],
+      "a",
+    );
+
+    await user.click(getByTestId("block-tag-name-select"));
+    await user.click(getByTestId("block-tag-name-option-section"));
+
+    expect(getByTestId("tag-name-probe").textContent).toBe("section");
+  });
+
+  test("a non-allowlisted stored tag-name presents as Default (matches render)", () => {
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/group", tagName: "span" }],
+      "a",
+    );
+    expect(getByTestId("block-tag-name-select").textContent).toBe("Default");
+  });
+
+  test("resetting the tag-name to Default clears the override", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/group", tagName: "nav" }],
+      "a",
+    );
+
+    await user.click(getByTestId("block-tag-name-select"));
+    await user.click(getByTestId("block-tag-name-option-default"));
+
+    expect(getByTestId("tag-name-probe").textContent).toBe("");
+  });
+
+  test("the HTML attributes section is collapsed by default", () => {
+    const { getByTestId, queryByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={[withAttrs]}>
+          <ActiveSeed activeId="a" />
+          <StylesTab tokens={tokens} />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+    expect(getByTestId("styles-section-html")).toBeDefined();
+    expect(queryByTestId("html-attr-id-key")).toBeNull();
+  });
+
+  test("lists existing attributes as editable key/value rows", () => {
+    const { getByTestId } = renderNodeSection([withAttrs], "a");
+    expect((getByTestId("html-attr-id-key") as HTMLInputElement).value).toBe(
+      "id",
+    );
+    expect((getByTestId("html-attr-id-value") as HTMLInputElement).value).toBe(
+      "hero",
+    );
+  });
+
+  test("editing a value writes it back to the block", () => {
+    const { getByTestId } = renderNodeSection([withAttrs], "a");
+    fireEvent.change(getByTestId("html-attr-id-value"), {
+      target: { value: "main" },
+    });
+    expect(getByTestId("html-attr-probe").textContent).toContain('"id":"main"');
+  });
+
+  test("adds an attribute via the combobox and value", () => {
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/x" }],
+      "a",
+    );
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.click(getByTestId("html-attr-add-key-option-role"));
+    fireEvent.change(getByTestId("html-attr-add-value"), {
+      target: { value: "banner" },
+    });
+    fireEvent.click(getByTestId("html-attr-add-submit"));
+    expect(getByTestId("html-attr-probe").textContent).toContain(
+      '"role":"banner"',
+    );
+  });
+
+  test("renames an attribute via the key field on commit", () => {
+    const { getByTestId } = renderNodeSection([withAttrs], "a");
+    const key = getByTestId("html-attr-id-key") as HTMLInputElement;
+    fireEvent.change(key, { target: { value: "title" } });
+    fireEvent.blur(key);
+    expect(getByTestId("html-attr-probe").textContent).toContain(
+      '"title":"hero"',
+    );
+    expect(getByTestId("html-attr-probe").textContent).not.toContain('"id"');
+  });
+
+  test("removing an attribute clears it", () => {
+    const single: BlockNode = {
+      id: "a",
+      name: "core/x",
+      htmlAttrs: { id: "hero" },
+    };
+    const { getByTestId } = renderNodeSection([single], "a");
+    fireEvent.click(getByTestId("html-attr-id-remove"));
+    expect(getByTestId("html-attr-probe").textContent).toBe("");
+  });
+
+  test("offers no create item for a disallowed attribute name", () => {
+    const { getByTestId, queryByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/x" }],
+      "a",
+    );
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.change(getByTestId("html-attr-add-key-search"), {
+      target: { value: "onclick" },
+    });
+    // The allowlist rejects event handlers — no create item (XSS boundary).
+    expect(queryByTestId("html-attr-add-key-create")).toBeNull();
+  });
+
+  test("normalizes a typed key to lowercase so the renderer keeps it", () => {
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/x" }],
+      "a",
+    );
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.change(getByTestId("html-attr-add-key-search"), {
+      target: { value: "Data-Track" },
+    });
+    fireEvent.click(getByTestId("html-attr-add-key-create"));
+    fireEvent.change(getByTestId("html-attr-add-value"), {
+      target: { value: "cta" },
+    });
+    fireEvent.click(getByTestId("html-attr-add-submit"));
+    expect(getByTestId("html-attr-probe").textContent).toContain(
+      '"data-track":"cta"',
+    );
+  });
+
+  test("won't add a case-variant of an existing attribute", () => {
+    const { getByTestId, queryByTestId } = renderNodeSection([withAttrs], "a");
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.change(getByTestId("html-attr-add-key-search"), {
+      target: { value: "DATA-TRACK" },
+    });
+    // `data-track` already exists, so no create item for its uppercase variant.
+    expect(queryByTestId("html-attr-add-key-create")).toBeNull();
+  });
+});
+
+describe("StylesTab — Custom CSS (classes + raw + block id)", () => {
+  test("the CSS classes field writes author className to the block", () => {
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/x" }],
+      "a",
+      "declarations",
+    );
+    fireEvent.change(getByTestId("style-css-classes"), {
+      target: { value: "hero big" },
+    });
+    expect(getByTestId("class-name-probe").textContent).toBe("hero big");
+  });
+
+  test("bundles the CSS classes field and the raw declarations repeater together", () => {
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/x" }],
+      "a",
+      "declarations",
+    );
+    // Both escape-hatch tools live in the one Custom CSS section.
+    expect(getByTestId("style-css-classes")).toBeDefined();
+    expect(getByTestId("style-declaration-add-key")).toBeDefined();
   });
 });

@@ -17,7 +17,7 @@ import { tokenIdFromCssVar, tokenIdToCssVar } from "@plumix/blocks";
 
 // Native `<input type="color">` only round-trips 6-digit hex; anything else
 // (a token var(), `transparent`, rgba) leaves the swatch on a safe default.
-const HEX6 = /^#[0-9a-fA-F]{6}$/;
+export const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // Radix Select forbids an empty-string item value, so the "clear" choice
 // carries a sentinel that maps back to `null` on change.
@@ -50,11 +50,15 @@ export function StyleControl({
   onChange,
 }: StyleControlProps): ReactElement {
   const testId = `style-control-${property}`;
+  const group = category ? (tokens[category] ?? {}) : {};
   // Mode follows the current value's kind, so a value set elsewhere (the
   // declarations list, another control) reflects here live. With no value, the
-  // user's last toggle (`pref`) decides which input to show for entry.
-  const [pref, setPref] = useState<"token" | "custom">("token");
-  const group = category ? (tokens[category] ?? {}) : {};
+  // user's last toggle (`pref`) decides which input to show — and it starts on
+  // custom when the theme declares no tokens for this category (an empty token
+  // dropdown is useless; token mode only leads when there's something to pick).
+  const [pref, setPref] = useState<"token" | "custom">(
+    Object.keys(group).length > 0 ? "token" : "custom",
+  );
   // The value is a token when it's a `var()` for this category (even an id the
   // theme no longer declares — it still edits in token mode); else it's custom.
   const tokenId =
@@ -62,7 +66,7 @@ export function StyleControl({
   const isCustom =
     category === undefined ||
     (value !== undefined ? tokenId === null : pref === "custom");
-  const isColor = category === "colors";
+  const isColor = category === "color";
   const custom = isCustom && value !== undefined ? value : "";
 
   return (

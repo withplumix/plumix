@@ -217,8 +217,9 @@ export function validateDocumentManifest(
 }
 
 function validateTokens(tokens: ThemeTokens): void {
-  for (const group of ["colors", "spacing", "typography", "border"] as const) {
-    const entries = tokens[group];
+  // Validate every registered group — the token model is open (any CSS
+  // property), so we can't enumerate a fixed set.
+  for (const [group, entries] of Object.entries(tokens)) {
     if (!entries) continue;
     for (const [slug, entry] of Object.entries(entries)) {
       if (!TOKEN_SLUG_RE.test(slug)) {

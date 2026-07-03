@@ -49,6 +49,41 @@ msgstr ""
 #~ msgstr "All styles"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.css"
+#~ msgstr "CSS"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.hideOnDevice"
+#~ msgstr "Hide on this device"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.marginPadding"
+#~ msgstr "Margin & Padding"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.advanced"
+#~ msgstr "Advanced"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.blockId"
+#~ msgstr "Block ID"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.cssProperties"
+#~ msgstr "CSS Properties"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+#~ msgid "editor.styles.cssClasses.hint"
+#~ msgstr "Added to the block root element."
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr "{count} selected"
@@ -94,6 +129,11 @@ msgid "editor.header.back"
 msgstr "Back"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.background"
+msgstr "Background"
+
+#. js-lingui-explicit-id
 #: src/json-inspector.tsx
 msgid "editor.json.block"
 msgstr "Block"
@@ -119,6 +159,11 @@ msgid "editor.styles.mark.bold"
 msgstr "Bold"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.border"
+msgstr "Border"
+
+#. js-lingui-explicit-id
 #: src/layers-tab.tsx
 msgid "editor.layers.copy"
 msgstr "Copy"
@@ -135,13 +180,23 @@ msgstr "Create"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
-msgid "editor.styles.css"
-msgstr "CSS"
+msgid "editor.styles.cssClasses"
+msgstr "CSS classes"
 
 #. js-lingui-explicit-id
 #: src/style-control.tsx
 msgid "editor.styles.mode.custom"
 msgstr "Custom"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.customCss"
+msgstr "Custom CSS"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.htmlAttrs.tagName.default"
+msgstr "Default"
 
 #. js-lingui-explicit-id
 #: src/layers-tab.tsx
@@ -184,6 +239,11 @@ msgid "editor.styles.scope"
 msgstr "Editing"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.fillImage"
+msgstr "Fill image"
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.fitWidth"
 msgstr "Fit to width"
@@ -200,11 +260,21 @@ msgstr "Group"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
-msgid "editor.styles.hideOnDevice"
-msgstr "Hide on this device"
+msgid "editor.styles.visibility.desktop"
+msgstr "Hide on desktop"
 
 #. js-lingui-explicit-id
-#: src/block-inspector.tsx
+#: src/styles-tab.tsx
+msgid "editor.styles.visibility.mobile"
+msgstr "Hide on mobile"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.visibility.tablet"
+msgstr "Hide on tablet"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
 msgid "editor.htmlAttrs.title"
 msgstr "HTML attributes"
 
@@ -217,6 +287,11 @@ msgstr "Italic"
 #: src/plumix-editor.tsx
 msgid "editor.tab.layers"
 msgstr "Layers"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.layout"
+msgstr "Layout"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -237,6 +312,11 @@ msgstr "Move down"
 #: src/selection-toolbar.tsx
 msgid "editor.selection.moveUp"
 msgstr "Move up"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.cssClasses.placeholder"
+msgstr "my-class other-class"
 
 #. js-lingui-explicit-id
 #: src/html-attributes.tsx
@@ -272,6 +352,11 @@ msgstr "No property."
 #: src/style-declarations.tsx
 msgid "editor.styles.none"
 msgstr "No styles set for this device."
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.opacity"
+msgstr "Opacity"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -369,6 +454,16 @@ msgid "editor.selection.selectParent"
 msgstr "Select parent"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.effects"
+msgstr "Shadows & Effects"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.size"
+msgstr "Size"
+
+#. js-lingui-explicit-id
 #: src/json-inspector.tsx
 msgid "editor.json.title"
 msgstr "Source"
@@ -394,6 +489,16 @@ msgid "editor.toolbar.device.tablet"
 msgstr "Tablet"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.htmlAttrs.tagName"
+msgstr "Tag name"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.textShadow"
+msgstr "Text shadow"
+
+#. js-lingui-explicit-id
 #: src/canvas-frame.tsx
 msgid "editor.canvas.cantPlaceHere"
 msgstr "This block can't be placed here."
@@ -412,6 +517,11 @@ msgstr "Toggle panels"
 #: src/style-control.tsx
 msgid "editor.styles.mode.token"
 msgstr "Token"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.typography"
+msgstr "Typography"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -457,6 +567,11 @@ msgstr "View live entry"
 #: src/editor-header.tsx
 msgid "editor.header.source"
 msgstr "View source"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.visibility"
+msgstr "Visibility"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
