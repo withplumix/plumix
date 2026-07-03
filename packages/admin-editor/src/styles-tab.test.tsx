@@ -228,12 +228,23 @@ describe("StylesTab", () => {
     expect(getByTestId("style-probe").textContent).toBe("");
   });
 
-  test("the border-style control spans the full row (own line, like Builder)", () => {
+  test("border Style and Color both span the full row (like Builder)", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
-    // Enumerated keyword selects sit on their own row so the token/custom
-    // controls beside them don't misalign.
+    // Style (keyword select) and Color are full-width rows; Width + Radius pair
+    // up below as half-width cells.
     expect(
       getByTestId("style-control-borderStyle").parentElement?.className,
+    ).toContain("col-span-2");
+    expect(
+      getByTestId("style-control-borderColor").parentElement?.className,
+    ).toContain("col-span-2");
+  });
+
+  test("the background color control spans the full row (no half-width gap)", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    // A lone control in a 2-col grid would leave the right half empty.
+    expect(
+      getByTestId("style-control-background").parentElement?.className,
     ).toContain("col-span-2");
   });
 

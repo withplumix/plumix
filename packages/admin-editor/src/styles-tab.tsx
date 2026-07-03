@@ -62,6 +62,9 @@ interface ControlSpec {
   /** Enumerated CSS keywords rendered as a Select (e.g. border-style). When
    *  set, the control is a plain keyword picker — no token/custom modes. */
   readonly options?: readonly string[];
+  /** Render on its own full-width row instead of a half-width grid cell — for
+   *  keyword selects and lone controls that would otherwise leave a gap. */
+  readonly fullWidth?: boolean;
 }
 
 /** Reads the active block's value for a style property in the current bucket. */
@@ -94,7 +97,12 @@ const BACKGROUND_SECTION: SectionDef = {
   id: "background",
   label: "Background",
   controls: [
-    { property: "background", label: "Background", category: "colors" },
+    {
+      property: "background",
+      label: "Background",
+      category: "colors",
+      fullWidth: true,
+    },
   ],
 };
 
@@ -117,14 +125,21 @@ const TYPOGRAPHY_SECTION: SectionDef = {
 const BORDER_SECTION: SectionDef = {
   id: "border",
   label: "Border",
+  // Builder's order/layout: Style and Color are full-width rows; Width (Size)
+  // and Radius pair up as half-width cells below.
   controls: [
     {
       property: "borderStyle",
       label: "Style",
       options: ["none", "solid", "dashed", "dotted", "double"],
     },
+    {
+      property: "borderColor",
+      label: "Color",
+      category: "colors",
+      fullWidth: true,
+    },
     { property: "borderWidth", label: "Width", category: "border" },
-    { property: "borderColor", label: "Color", category: "colors" },
     { property: "borderRadius", label: "Radius", category: "radius" },
   ],
 };
@@ -335,11 +350,15 @@ function GenericSection({
         {/* Two-per-row so the rail stays compact; each cell is a self-contained
             control (label + input stacked). */}
         <div className="grid grid-cols-2 gap-x-2 gap-y-3">
-          {section.controls.map((c) =>
-            c.options ? (
-              // Keyword selects take their own row so the token/custom controls
-              // beside them stay aligned.
-              <div key={c.property} className="col-span-2">
+          {section.controls.map((c) => (
+            // Keyword selects and full-width controls take their own row so the
+            // token/custom controls beside them stay aligned and lone controls
+            // don't leave a half-width gap.
+            <div
+              key={c.property}
+              className={c.options || c.fullWidth ? "col-span-2" : undefined}
+            >
+              {c.options ? (
                 <KeywordControl
                   label={c.label}
                   property={c.property}
@@ -347,19 +366,18 @@ function GenericSection({
                   value={valueOf(c.property)}
                   onChange={setter(c.property)}
                 />
-              </div>
-            ) : (
-              <StyleControl
-                key={c.property}
-                label={c.label}
-                property={c.property}
-                category={c.category}
-                value={valueOf(c.property)}
-                tokens={tokens}
-                onChange={setter(c.property)}
-              />
-            ),
-          )}
+              ) : (
+                <StyleControl
+                  label={c.label}
+                  property={c.property}
+                  category={c.category}
+                  value={valueOf(c.property)}
+                  tokens={tokens}
+                  onChange={setter(c.property)}
+                />
+              )}
+            </div>
+          ))}
         </div>
         {section.id === "typography" && (
           <TextStyleControls valueOf={valueOf} setter={setter} />
