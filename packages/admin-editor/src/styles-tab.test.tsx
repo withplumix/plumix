@@ -17,7 +17,8 @@ afterEach(cleanup);
 
 const tokens: ThemeTokens = {
   spacing: { lg: { value: "24px" }, sm: { value: "8px" } },
-  typography: { lg: { value: "20px" }, sm: { value: "14px" } },
+  fontFamily: { lg: { value: "20px" }, sm: { value: "14px" } },
+  fontSize: { base: { value: "16px" } },
 };
 
 function StyleProbe({ id }: { readonly id: string }): ReactElement {
@@ -63,13 +64,25 @@ describe("StylesTab", () => {
     const user = userEvent.setup({ delay: null });
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
-    // Font family is the typography-token control (size/weight/line-height are
-    // custom-only, since the theme has no scale for them).
+    // Font family draws from the fontFamily token scale.
     await user.click(getByTestId("style-control-fontFamily-token"));
     await user.click(getByTestId("style-control-fontFamily-token-lg"));
 
     expect(getByTestId("style-probe").textContent).toContain(
-      '"large":{"fontFamily":"var(--plumix-typography-lg, 20px)"}',
+      '"large":{"fontFamily":"var(--plumix-font-family-lg, 20px)"}',
+    );
+  });
+
+  test("font-size draws from its own token scale, not the font-family bucket", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    // fontSize is now token-backed by its own scale (the conflation bug fix).
+    await user.click(getByTestId("style-control-fontSize-token"));
+    await user.click(getByTestId("style-control-fontSize-token-base"));
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"fontSize":"var(--plumix-font-size-base, 16px)"',
     );
   });
 
@@ -173,11 +186,12 @@ describe("StylesTab", () => {
     expect(probe).toContain('"minWidth":"280px"');
   });
 
-  test("exposes a letter-spacing control that writes to the active bucket", () => {
-    // Char Space in Builder: a custom-only control (no token scale), so its raw
-    // input shows directly like font-size.
+  test("exposes a letter-spacing control that writes a custom value", () => {
+    // letterSpacing now has a token scale, so it mounts in token mode; switch to
+    // custom to type a raw value (Builder's Char Space).
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
+    fireEvent.click(getByTestId("style-control-letterSpacing-mode-custom"));
     fireEvent.change(getByTestId("style-control-letterSpacing-custom"), {
       target: { value: "0.05em" },
     });
@@ -536,7 +550,7 @@ describe("StylesTab — declarations list", () => {
   const fontToken: BlockNode = {
     id: "a",
     name: "core/x",
-    style: { large: { fontFamily: "var(--plumix-typography-lg)" } },
+    style: { large: { fontFamily: "var(--plumix-font-family-lg)" } },
   };
 
   test("a token declaration renders a token picker, no raw value input", async () => {
@@ -544,7 +558,7 @@ describe("StylesTab — declarations list", () => {
     const { getByTestId, queryByTestId } = renderTab([fontToken], "a");
     const picker = getByTestId("style-declaration-fontFamily-token");
     // The trigger shows the chosen token as its emitted var(), not a literal.
-    expect(picker.textContent).toContain("var(--plumix-typography-lg)");
+    expect(picker.textContent).toContain("var(--plumix-font-family-lg)");
     // The category's tokens are the options; raw input is absent for a token row.
     await user.click(picker);
     expect(getByTestId("style-declaration-fontFamily-token-lg")).toBeDefined();
@@ -558,7 +572,7 @@ describe("StylesTab — declarations list", () => {
     await user.click(getByTestId("style-declaration-fontFamily-token"));
     await user.click(getByTestId("style-declaration-fontFamily-token-sm"));
     expect(getByTestId("style-probe").textContent).toContain(
-      '"fontFamily":"var(--plumix-typography-sm, 14px)"',
+      '"fontFamily":"var(--plumix-font-family-sm, 14px)"',
     );
   });
 
@@ -566,13 +580,13 @@ describe("StylesTab — declarations list", () => {
     const ghost: BlockNode = {
       id: "a",
       name: "core/x",
-      style: { large: { fontFamily: "var(--plumix-typography-ghost)" } },
+      style: { large: { fontFamily: "var(--plumix-font-family-ghost)" } },
     };
     const { getByTestId } = renderTab([ghost], "a");
     // "ghost" isn't in the theme, but the trigger still shows it (not blank).
     expect(
       getByTestId("style-declaration-fontFamily-token").textContent,
-    ).toContain("var(--plumix-typography-ghost)");
+    ).toContain("var(--plumix-font-family-ghost)");
   });
 
   test("clearing the token picker removes the declaration", async () => {

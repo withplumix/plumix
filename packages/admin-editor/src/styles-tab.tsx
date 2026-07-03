@@ -88,7 +88,7 @@ const SIZE_SECTION: SectionDef = {
     { property: "height", label: "Height" },
     { property: "minWidth", label: "Min width" },
     { property: "minHeight", label: "Min height" },
-    { property: "maxWidth", label: "Max width" },
+    { property: "maxWidth", label: "Max width", category: "maxWidth" },
     { property: "maxHeight", label: "Max height" },
   ],
 };
@@ -103,7 +103,7 @@ const BACKGROUND_SECTION: SectionDef = {
     {
       property: "background",
       label: "Background",
-      category: "colors",
+      category: "color",
       fullWidth: true,
     },
   ],
@@ -113,15 +113,16 @@ const TYPOGRAPHY_SECTION: SectionDef = {
   id: "typography",
   label: "Typography",
   controls: [
-    { property: "color", label: "Text color", category: "colors" },
-    // Only font-family draws from the typography tokens (the theme's named
-    // font presets). Size/weight/line-height have no token scale, so they're
-    // custom-only — otherwise they'd wrongly offer font-family names.
-    { property: "fontFamily", label: "Font family", category: "typography" },
-    { property: "fontSize", label: "Font size" },
-    { property: "fontWeight", label: "Font weight" },
-    { property: "lineHeight", label: "Line height" },
-    { property: "letterSpacing", label: "Letter spacing" },
+    { property: "color", label: "Text color", category: "color" },
+    { property: "fontFamily", label: "Font family", category: "fontFamily" },
+    { property: "fontSize", label: "Font size", category: "fontSize" },
+    { property: "fontWeight", label: "Font weight", category: "fontWeight" },
+    { property: "lineHeight", label: "Line height", category: "lineHeight" },
+    {
+      property: "letterSpacing",
+      label: "Letter spacing",
+      category: "letterSpacing",
+    },
   ],
 };
 
@@ -139,11 +140,11 @@ const BORDER_SECTION: SectionDef = {
     {
       property: "borderColor",
       label: "Color",
-      category: "colors",
+      category: "color",
       fullWidth: true,
     },
-    { property: "borderWidth", label: "Width", category: "border" },
-    { property: "borderRadius", label: "Radius", category: "radius" },
+    { property: "borderWidth", label: "Width", category: "borderWidth" },
+    { property: "borderRadius", label: "Radius", category: "borderRadius" },
   ],
 };
 
@@ -892,7 +893,7 @@ function ShadowsEffectsControls({
       <StyleControl
         label="Box shadow"
         property="boxShadow"
-        category="shadow"
+        category="boxShadow"
         value={valueOf("boxShadow")}
         tokens={tokens}
         onChange={setter("boxShadow")}

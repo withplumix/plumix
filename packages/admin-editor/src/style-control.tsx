@@ -62,7 +62,7 @@ export function StyleControl({
   const isCustom =
     category === undefined ||
     (value !== undefined ? tokenId === null : pref === "custom");
-  const isColor = category === "colors";
+  const isColor = category === "color";
   const custom = isCustom && value !== undefined ? value : "";
 
   return (
