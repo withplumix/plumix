@@ -296,18 +296,9 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
               className={block.className}
               onChange={(next) => setBlockClassName(activeId, next)}
             />
-            {/* Divider + sub-label so the raw declarations don't read as more
-                class-name fields. */}
-            <div className="border-border flex flex-col gap-2 border-t pt-3">
-              <span
-                className="text-muted-foreground text-xs"
-                data-testid="style-declarations-label"
-              >
-                <Trans
-                  id="editor.styles.cssProperties"
-                  message="CSS Properties"
-                />
-              </span>
+            {/* Divider so the raw declarations don't read as more class-name
+                fields. */}
+            <div className="border-border border-t pt-3">
               <StyleDeclarations
                 declarations={declarations}
                 tokens={tokens}
@@ -1136,7 +1127,7 @@ function CssClassesField({
       >
         <Trans
           id="editor.styles.cssClasses.hint"
-          message="List CSS classes separated by spaces."
+          message="Added to the block root element."
         />
       </p>
     </div>
