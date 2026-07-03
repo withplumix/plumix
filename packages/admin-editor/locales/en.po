@@ -85,6 +85,11 @@ msgstr "Add style"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
+msgid "editor.styles.advanced"
+msgstr "Advanced"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
 msgid "editor.styles.align.center"
 msgstr "Align center"
 
@@ -124,6 +129,11 @@ msgid "editor.layers.actions"
 msgstr "Block actions"
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.blockId"
+msgstr "Block ID"
+
+#. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.blocks"
 msgstr "Blocks"
@@ -150,6 +160,11 @@ msgstr "Create"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
+msgid "editor.styles.cssClasses"
+msgstr "CSS classes"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
 msgid "editor.styles.cssProperties"
 msgstr "CSS Properties"
 
@@ -159,7 +174,7 @@ msgid "editor.styles.mode.custom"
 msgstr "Custom"
 
 #. js-lingui-explicit-id
-#: src/block-inspector.tsx
+#: src/styles-tab.tsx
 msgid "editor.htmlAttrs.tagName.default"
 msgstr "Default"
 
@@ -239,7 +254,7 @@ msgid "editor.styles.visibility.tablet"
 msgstr "Hide on tablet"
 
 #. js-lingui-explicit-id
-#: src/block-inspector.tsx
+#: src/styles-tab.tsx
 msgid "editor.htmlAttrs.title"
 msgstr "HTML attributes"
 
@@ -277,6 +292,11 @@ msgstr "Move down"
 #: src/selection-toolbar.tsx
 msgid "editor.selection.moveUp"
 msgstr "Move up"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.cssClasses.placeholder"
+msgstr "my-class other-class"
 
 #. js-lingui-explicit-id
 #: src/html-attributes.tsx
@@ -439,7 +459,7 @@ msgid "editor.toolbar.device.tablet"
 msgstr "Tablet"
 
 #. js-lingui-explicit-id
-#: src/block-inspector.tsx
+#: src/styles-tab.tsx
 msgid "editor.htmlAttrs.tagName"
 msgstr "Tag name"
 

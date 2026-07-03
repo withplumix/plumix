@@ -96,6 +96,8 @@ describe("StylesTab", () => {
       "styles-section-border",
       "styles-section-effects",
       "styles-section-declarations",
+      "styles-section-html",
+      "styles-section-advanced",
     ]);
   });
 
@@ -738,5 +740,234 @@ describe("StylesTab — declarations list", () => {
     });
     // `margintop` collides with the curated `marginTop`, so no second creation.
     expect(queryByTestId("style-declaration-add-key-create")).toBeNull();
+  });
+});
+
+function NodeProbe({ id }: { readonly id: string }): ReactElement {
+  const attrs = useEditorStore(
+    (s) => s.tree.find((n) => n.id === id)?.htmlAttrs,
+  );
+  const tagName = useEditorStore(
+    (s) => s.tree.find((n) => n.id === id)?.tagName,
+  );
+  const className = useEditorStore(
+    (s) => s.tree.find((n) => n.id === id)?.className,
+  );
+  return (
+    <>
+      <output data-testid="html-attr-probe">{JSON.stringify(attrs)}</output>
+      <output data-testid="tag-name-probe">{tagName ?? ""}</output>
+      <output data-testid="class-name-probe">{className ?? ""}</output>
+    </>
+  );
+}
+
+function renderNodeSection(
+  tree: readonly BlockNode[],
+  activeId: string,
+  section: "html" | "advanced" = "html",
+) {
+  const utils = render(
+    <I18nProvider i18n={i18n}>
+      <EditorProvider initialTree={tree}>
+        <ActiveSeed activeId={activeId} />
+        <StylesTab tokens={tokens} />
+        <NodeProbe id={tree[0]?.id ?? ""} />
+      </EditorProvider>
+    </I18nProvider>,
+  );
+  // The HTML attributes / Advanced sections are collapsed by default — open one.
+  fireEvent.click(utils.getByTestId(`styles-section-${section}`));
+  return utils;
+}
+
+describe("StylesTab — HTML attributes & tag name", () => {
+  const withAttrs: BlockNode = {
+    id: "a",
+    name: "core/x",
+    htmlAttrs: { id: "hero", "data-track": "cta" },
+  };
+
+  test("the tag-name select overrides the block's root element", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/group" }],
+      "a",
+    );
+
+    await user.click(getByTestId("block-tag-name-select"));
+    await user.click(getByTestId("block-tag-name-option-section"));
+
+    expect(getByTestId("tag-name-probe").textContent).toBe("section");
+  });
+
+  test("a non-allowlisted stored tag-name presents as Default (matches render)", () => {
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/group", tagName: "span" }],
+      "a",
+    );
+    expect(getByTestId("block-tag-name-select").textContent).toBe("Default");
+  });
+
+  test("resetting the tag-name to Default clears the override", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/group", tagName: "nav" }],
+      "a",
+    );
+
+    await user.click(getByTestId("block-tag-name-select"));
+    await user.click(getByTestId("block-tag-name-option-default"));
+
+    expect(getByTestId("tag-name-probe").textContent).toBe("");
+  });
+
+  test("the HTML attributes section is collapsed by default", () => {
+    const { getByTestId, queryByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={[withAttrs]}>
+          <ActiveSeed activeId="a" />
+          <StylesTab tokens={tokens} />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+    expect(getByTestId("styles-section-html")).toBeDefined();
+    expect(queryByTestId("html-attr-id-key")).toBeNull();
+  });
+
+  test("lists existing attributes as editable key/value rows", () => {
+    const { getByTestId } = renderNodeSection([withAttrs], "a");
+    expect((getByTestId("html-attr-id-key") as HTMLInputElement).value).toBe(
+      "id",
+    );
+    expect((getByTestId("html-attr-id-value") as HTMLInputElement).value).toBe(
+      "hero",
+    );
+  });
+
+  test("editing a value writes it back to the block", () => {
+    const { getByTestId } = renderNodeSection([withAttrs], "a");
+    fireEvent.change(getByTestId("html-attr-id-value"), {
+      target: { value: "main" },
+    });
+    expect(getByTestId("html-attr-probe").textContent).toContain('"id":"main"');
+  });
+
+  test("adds an attribute via the combobox and value", () => {
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/x" }],
+      "a",
+    );
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.click(getByTestId("html-attr-add-key-option-role"));
+    fireEvent.change(getByTestId("html-attr-add-value"), {
+      target: { value: "banner" },
+    });
+    fireEvent.click(getByTestId("html-attr-add-submit"));
+    expect(getByTestId("html-attr-probe").textContent).toContain(
+      '"role":"banner"',
+    );
+  });
+
+  test("renames an attribute via the key field on commit", () => {
+    const { getByTestId } = renderNodeSection([withAttrs], "a");
+    const key = getByTestId("html-attr-id-key") as HTMLInputElement;
+    fireEvent.change(key, { target: { value: "title" } });
+    fireEvent.blur(key);
+    expect(getByTestId("html-attr-probe").textContent).toContain(
+      '"title":"hero"',
+    );
+    expect(getByTestId("html-attr-probe").textContent).not.toContain('"id"');
+  });
+
+  test("removing an attribute clears it", () => {
+    const single: BlockNode = {
+      id: "a",
+      name: "core/x",
+      htmlAttrs: { id: "hero" },
+    };
+    const { getByTestId } = renderNodeSection([single], "a");
+    fireEvent.click(getByTestId("html-attr-id-remove"));
+    expect(getByTestId("html-attr-probe").textContent).toBe("");
+  });
+
+  test("offers no create item for a disallowed attribute name", () => {
+    const { getByTestId, queryByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/x" }],
+      "a",
+    );
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.change(getByTestId("html-attr-add-key-search"), {
+      target: { value: "onclick" },
+    });
+    // The allowlist rejects event handlers — no create item (XSS boundary).
+    expect(queryByTestId("html-attr-add-key-create")).toBeNull();
+  });
+
+  test("normalizes a typed key to lowercase so the renderer keeps it", () => {
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/x" }],
+      "a",
+    );
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.change(getByTestId("html-attr-add-key-search"), {
+      target: { value: "Data-Track" },
+    });
+    fireEvent.click(getByTestId("html-attr-add-key-create"));
+    fireEvent.change(getByTestId("html-attr-add-value"), {
+      target: { value: "cta" },
+    });
+    fireEvent.click(getByTestId("html-attr-add-submit"));
+    expect(getByTestId("html-attr-probe").textContent).toContain(
+      '"data-track":"cta"',
+    );
+  });
+
+  test("won't add a case-variant of an existing attribute", () => {
+    const { getByTestId, queryByTestId } = renderNodeSection([withAttrs], "a");
+    fireEvent.click(getByTestId("html-attr-add-key"));
+    fireEvent.change(getByTestId("html-attr-add-key-search"), {
+      target: { value: "DATA-TRACK" },
+    });
+    // `data-track` already exists, so no create item for its uppercase variant.
+    expect(queryByTestId("html-attr-add-key-create")).toBeNull();
+  });
+});
+
+describe("StylesTab — Advanced", () => {
+  test("the CSS classes field writes author className to the block", () => {
+    const { getByTestId } = renderNodeSection(
+      [{ id: "a", name: "core/x" }],
+      "a",
+      "advanced",
+    );
+    fireEvent.change(getByTestId("style-css-classes"), {
+      target: { value: "hero big" },
+    });
+    expect(getByTestId("class-name-probe").textContent).toBe("hero big");
+  });
+
+  test("shows the block id as a read-only field", () => {
+    const { getByTestId } = renderNodeSection(
+      [{ id: "block-42", name: "core/x" }],
+      "block-42",
+      "advanced",
+    );
+    const input = getByTestId("style-block-id") as HTMLInputElement;
+    expect(input.value).toBe("block-42");
+    expect(input.readOnly).toBe(true);
+  });
+
+  test("the Advanced section is collapsed by default", () => {
+    const { getByTestId, queryByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={[{ id: "a", name: "core/x" }]}>
+          <ActiveSeed activeId="a" />
+          <StylesTab tokens={tokens} />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+    expect(getByTestId("styles-section-advanced")).toBeDefined();
+    expect(queryByTestId("style-css-classes")).toBeNull();
   });
 });

@@ -152,6 +152,9 @@ export interface EditorActions {
   /** Set (or clear, with an empty string) a block's root-element override
    *  (Builder's tag-name). Allowlisted at render (`resolveRootTag`). */
   setBlockTagName: (id: string, tagName: string) => void;
+  /** Set (or clear, with a blank string) a block's author CSS class names
+   *  (space-separated). Merged onto the block root at render. */
+  setBlockClassName: (id: string, className: string) => void;
   /** Set (or clear, with `null`) one HTML attribute on a block. Flat (not
    *  responsive); empty `htmlAttrs` is pruned. Allowlisted at render. */
   updateBlockHtmlAttr: (id: string, key: string, value: string | null) => void;
@@ -473,6 +476,20 @@ export function createEditorStore(
         // Each Select choice is one discrete action — never coalesced (unlike
         // the label rename's keystroke burst).
         return { tree, history: recordHistory(state.history, tree, null) };
+      }),
+    setBlockClassName: (id, rawClassName) =>
+      set((state) => {
+        const className = rawClassName.trim() || undefined;
+        const tree = mapNodeById(state.tree, id, (node) => ({
+          ...node,
+          className,
+        }));
+        if (tree === state.tree) return {};
+        // Coalesce a typing burst in the classes field into one undo step.
+        return {
+          tree,
+          history: recordHistory(state.history, tree, `class:${id}`),
+        };
       }),
     updateBlockHtmlAttr: (id, key, value) =>
       set((state) => {

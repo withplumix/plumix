@@ -40,11 +40,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@plumix/admin-ui/tooltip";
-import { normalizeStyleValue } from "@plumix/blocks";
+import { normalizeStyleValue, resolveRootTag, ROOT_TAGS } from "@plumix/blocks";
 
 import type { StyleBucket } from "./store.js";
 import type { StyleDeclaration } from "./style-declarations.js";
 import { findBlock } from "./block-tree-ops.js";
+import { HtmlAttributes } from "./html-attributes.js";
 import { useEditorStore } from "./provider.js";
 import { deviceBucket } from "./store.js";
 import { HEX6, StyleControl } from "./style-control.js";
@@ -155,6 +156,10 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
   const renameBlockStyleProperty = useEditorStore(
     (s) => s.renameBlockStyleProperty,
   );
+  const setBlockTagName = useEditorStore((s) => s.setBlockTagName);
+  const setBlockClassName = useEditorStore((s) => s.setBlockClassName);
+  const updateBlockHtmlAttr = useEditorStore((s) => s.updateBlockHtmlAttr);
+  const renameBlockHtmlAttr = useEditorStore((s) => s.renameBlockHtmlAttr);
 
   if (!activeId || !block) {
     return (
@@ -269,6 +274,36 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
               onRename={(from, to) =>
                 renameBlockStyleProperty(activeId, bucket, from, to)
               }
+            />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="html">
+          <AccordionTrigger data-testid="styles-section-html">
+            <Trans id="editor.htmlAttrs.title" message="HTML attributes" />
+          </AccordionTrigger>
+          <AccordionContent className="flex flex-col gap-3">
+            <TagNameField
+              value={block.tagName}
+              onChange={(tagName) => setBlockTagName(activeId, tagName)}
+            />
+            <HtmlAttributes
+              attributes={block.htmlAttrs ?? {}}
+              onChange={(key, value) =>
+                updateBlockHtmlAttr(activeId, key, value)
+              }
+              onRename={(from, to) => renameBlockHtmlAttr(activeId, from, to)}
+            />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="advanced">
+          <AccordionTrigger data-testid="styles-section-advanced">
+            <Trans id="editor.styles.advanced" message="Advanced" />
+          </AccordionTrigger>
+          <AccordionContent>
+            <AdvancedControls
+              blockId={activeId}
+              className={block.className}
+              onChangeClassName={(next) => setBlockClassName(activeId, next)}
             />
           </AccordionContent>
         </AccordionItem>
@@ -996,6 +1031,98 @@ function OpacityControl({
           }
           className="h-8 w-16"
           data-testid="style-control-opacity-input"
+        />
+      </div>
+    </div>
+  );
+}
+
+// Radix Select forbids an empty item value, so "Default" (no override → the
+// block's own element) carries a sentinel that maps to an empty string.
+const TAG_DEFAULT = "__default__";
+
+/** Root-element override picker (Builder's tag-name). "Default" clears it;
+ *  otherwise writes one of the allowlisted container tags. A stale value is
+ *  normalized to "Default" so the picker matches what the renderer emits. */
+function TagNameField({
+  value,
+  onChange,
+}: {
+  readonly value: string | undefined;
+  readonly onChange: (tagName: string) => void;
+}): ReactElement {
+  const resolved = resolveRootTag(value);
+  return (
+    <div className="flex flex-col gap-1" data-testid="block-tag-name">
+      <Label className="text-xs">
+        <Trans id="editor.htmlAttrs.tagName" message="Tag name" />
+      </Label>
+      <Select
+        value={resolved ?? TAG_DEFAULT}
+        onValueChange={(next) => onChange(next === TAG_DEFAULT ? "" : next)}
+      >
+        <SelectTrigger className="w-full" data-testid="block-tag-name-select">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            value={TAG_DEFAULT}
+            data-testid="block-tag-name-option-default"
+          >
+            <Trans id="editor.htmlAttrs.tagName.default" message="Default" />
+          </SelectItem>
+          {ROOT_TAGS.map((tag) => (
+            <SelectItem
+              key={tag}
+              value={tag}
+              data-testid={`block-tag-name-option-${tag}`}
+            >
+              {tag}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+/** Advanced: a free-form CSS class field (merged onto the block root at render)
+ *  plus the read-only block id — mirroring Builder's Advanced panel. */
+function AdvancedControls({
+  blockId,
+  className,
+  onChangeClassName,
+}: {
+  readonly blockId: string;
+  readonly className: string | undefined;
+  readonly onChangeClassName: (className: string) => void;
+}): ReactElement {
+  const { i18n } = useLingui();
+  return (
+    <div className="flex flex-col gap-3" data-testid="style-advanced-controls">
+      <div className="flex flex-col gap-1">
+        <Label className="text-xs">
+          <Trans id="editor.styles.cssClasses" message="CSS classes" />
+        </Label>
+        <Input
+          value={className ?? ""}
+          onChange={(e) => onChangeClassName(e.target.value)}
+          placeholder={i18n._({
+            id: "editor.styles.cssClasses.placeholder",
+            message: "my-class other-class",
+          })}
+          data-testid="style-css-classes"
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label className="text-xs">
+          <Trans id="editor.styles.blockId" message="Block ID" />
+        </Label>
+        <Input
+          value={blockId}
+          readOnly
+          className="text-muted-foreground font-mono"
+          data-testid="style-block-id"
         />
       </div>
     </div>

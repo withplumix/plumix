@@ -85,6 +85,11 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
+msgid "editor.styles.advanced"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
 msgid "editor.styles.align.center"
 msgstr ""
 
@@ -124,6 +129,11 @@ msgid "editor.layers.actions"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.blockId"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.tab.blocks"
 msgstr ""
@@ -150,6 +160,11 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
+msgid "editor.styles.cssClasses"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
 msgid "editor.styles.cssProperties"
 msgstr ""
 
@@ -159,7 +174,7 @@ msgid "editor.styles.mode.custom"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/block-inspector.tsx
+#: src/styles-tab.tsx
 msgid "editor.htmlAttrs.tagName.default"
 msgstr ""
 
@@ -239,7 +254,7 @@ msgid "editor.styles.visibility.tablet"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/block-inspector.tsx
+#: src/styles-tab.tsx
 msgid "editor.htmlAttrs.title"
 msgstr ""
 
@@ -276,6 +291,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.moveUp"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.cssClasses.placeholder"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -439,7 +459,7 @@ msgid "editor.toolbar.device.tablet"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/block-inspector.tsx
+#: src/styles-tab.tsx
 msgid "editor.htmlAttrs.tagName"
 msgstr ""
 
