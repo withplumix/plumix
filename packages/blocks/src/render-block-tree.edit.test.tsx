@@ -122,19 +122,17 @@ describe("renderBlockTree edit-aware seam", () => {
     expect(html).toContain('data-plumix-add-slot="content"');
   });
 
-  test("editing reveals declared slots even when the attr was never set", () => {
-    // Columns ship with no `left`/`right` in their defaults, so a freshly
-    // inserted columns block has unset slots. Edit mode must still surface each
-    // declared slot as an empty drop target with its own "Add a block".
+  test("editing reveals a declared slot even when the attr was never set", () => {
+    // A freshly hand-authored columns block with no `columns` attr has an unset
+    // slot. Edit mode must still surface the declared slot as an empty drop
+    // target with its own "Add a block".
     const cols: readonly BlockNode[] = [{ id: "c1", name: "core/columns" }];
     const html = renderToStaticMarkup(
       renderBlockTree(cols, registry, { editing: true }),
     );
 
-    expect(html).toContain('data-plumix-slot-key="left"');
-    expect(html).toContain('data-plumix-slot-key="right"');
-    expect(html).toContain('data-plumix-add-slot="left"');
-    expect(html).toContain('data-plumix-add-slot="right"');
+    expect(html).toContain('data-plumix-slot-key="columns"');
+    expect(html).toContain('data-plumix-add-slot="columns"');
   });
 
   test("an unset slot stays absent outside edit mode (no SSR drift)", () => {

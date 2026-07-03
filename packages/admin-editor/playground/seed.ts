@@ -44,18 +44,34 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
     id: "columns-1",
     name: "core/columns",
     attrs: {
-      left: [
+      columns: [
         {
           id: "col-left",
-          name: "core/rich-text",
-          attrs: { body: "<p>Left column.</p>" },
+          name: "core/column",
+          style: { large: { flexGrow: "1", flexBasis: "0", minWidth: "0" } },
+          attrs: {
+            content: [
+              {
+                id: "col-left-text",
+                name: "core/rich-text",
+                attrs: { body: "<p>Left column.</p>" },
+              },
+            ],
+          },
         },
-      ],
-      right: [
         {
           id: "col-right",
-          name: "core/rich-text",
-          attrs: { body: "<p>Right column.</p>" },
+          name: "core/column",
+          style: { large: { flexGrow: "1", flexBasis: "0", minWidth: "0" } },
+          attrs: {
+            content: [
+              {
+                id: "col-right-text",
+                name: "core/rich-text",
+                attrs: { body: "<p>Right column.</p>" },
+              },
+            ],
+          },
         },
       ],
     },

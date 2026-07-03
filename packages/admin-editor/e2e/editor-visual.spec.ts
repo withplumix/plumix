@@ -149,14 +149,14 @@ test.describe("editor playground", () => {
     await page.goto("/");
     const canvas = page.frameLocator(CANVAS_FRAME);
 
-    // A block nested inside the columns' left slot is selectable at depth.
+    // A column nested inside the columns row is selectable at depth.
     await canvas.locator('[data-plumix-id="col-left"]').click();
     await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
 
     // The edit seam tags container slots so the canvas can target nested drops.
     await expect(
       canvas.locator(
-        '[data-plumix-slot-parent="columns-1"][data-plumix-slot-key="left"]',
+        '[data-plumix-slot-parent="columns-1"][data-plumix-slot-key="columns"]',
       ),
     ).toBeAttached();
   });
@@ -213,11 +213,11 @@ test.describe("editor playground", () => {
     await page.goto("/");
     const canvas = page.frameLocator(CANVAS_FRAME);
 
-    // Empty the seeded columns' left slot so its in-canvas appender appears.
-    await canvas.locator('[data-plumix-id="col-left"]').click();
+    // Empty the left column's content slot so its in-canvas appender appears.
+    await canvas.locator('[data-plumix-id="col-left-text"]').click();
     await page.getByTestId("selection-toolbar-delete").click();
     const appender = canvas.locator(
-      '[data-plumix-add][data-plumix-add-slot="left"]',
+      '[data-plumix-add][data-plumix-add-parent="col-left"][data-plumix-add-slot="content"]',
     );
     await expect(appender).toBeVisible();
 
@@ -241,7 +241,7 @@ test.describe("editor playground", () => {
     await expect(popover).toBeHidden();
     await expect(
       canvas.locator(
-        '[data-plumix-column="left"] [data-plumix-block="core/rich-text"]',
+        '[data-plumix-id="col-left"] [data-plumix-block="core/rich-text"]',
       ),
     ).toBeAttached();
   });
@@ -377,7 +377,7 @@ test.describe("editor playground", () => {
 
     // The same stable editor instance must swap to the next block's body — no
     // content bleed from the previously selected block.
-    await canvas.locator('[data-plumix-id="col-left"]').click();
+    await canvas.locator('[data-plumix-id="col-left-text"]').click();
     await expect(editor).toContainText("Left column");
     await expect(editor).not.toContainText("standalone harness");
   });

@@ -1,6 +1,7 @@
 import type { BlockSpec } from "./block-registry.js";
 import { buttonBlock } from "./button/index.js";
 import { codeBlock } from "./code/index.js";
+import { columnBlock } from "./column/index.js";
 import { columnsBlock } from "./columns/index.js";
 import { detailsBlock } from "./details/index.js";
 import { embedBlock } from "./embed/index.js";
@@ -25,6 +26,7 @@ export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   groupBlock,
   sectionBlock,
   columnsBlock,
+  columnBlock,
   buttonBlock,
   detailsBlock,
   videoBlock,

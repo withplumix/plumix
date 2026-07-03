@@ -4,7 +4,11 @@ import type {
   BlockRegistry,
   InsertableBlockEntry,
 } from "@plumix/blocks";
-import { expandBlockVariations, rewriteBlockNodeIds } from "@plumix/blocks";
+import {
+  expandBlockVariations,
+  isBlockNodeArray,
+  rewriteBlockNodeIds,
+} from "@plumix/blocks";
 import { labelSourceText } from "@plumix/core/i18n";
 
 const PATTERN_REF_BLOCK = "core/pattern-ref";
@@ -131,14 +135,33 @@ export function createNodeFromEntry(
       attrs[input.name] = input.defaultChildren;
     }
   }
-  const seed: BlockNode = {
-    id: "seed",
-    name: entry.name,
-    attrs,
-    ...(spec?.defaultStyles ? { style: spec.defaultStyles } : {}),
-  };
+  const seed: BlockNode = { id: "seed", name: entry.name, attrs };
   const [node = seed] = rewriteBlockNodeIds([seed]);
-  return node;
+  // Seed defaultStyles down the whole tree, not just the inserted block, so a
+  // container's seeded children (e.g. the equal-split columns) get their spec's
+  // styles too — matching a child inserted directly.
+  return seedDefaultStyles(node, registry);
+}
+
+// Apply each node's spec `defaultStyles` where the node carries none, recursing
+// through every slot. Fresh-insert only: hand-authored/stored content keeps its
+// explicit styles untouched (a node with a style is left as-is).
+function seedDefaultStyles(
+  node: BlockNode,
+  registry: BlockRegistry,
+): BlockNode {
+  let attrs = node.attrs;
+  if (attrs) {
+    const next: Record<string, unknown> = { ...attrs };
+    for (const [key, value] of Object.entries(attrs)) {
+      if (isBlockNodeArray(value)) {
+        next[key] = value.map((child) => seedDefaultStyles(child, registry));
+      }
+    }
+    attrs = next;
+  }
+  const style = node.style ?? registry.get(node.name)?.defaultStyles;
+  return { ...node, attrs, ...(style ? { style } : {}) };
 }
 
 /** The concrete block(s) a pattern inserts: a deep-cloned, id-rewritten copy of
