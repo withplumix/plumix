@@ -167,8 +167,17 @@ export function BlockInputControl({
     }
   })();
 
+  // Toggles read as one inline row — label left, control right — like the
+  // Styles tab's Visibility switches; other kinds stack the label above.
+  const inline = input.type === "boolean" || input.type === "checkbox";
   return (
-    <div className="flex flex-col gap-1.5">
+    <div
+      className={
+        inline
+          ? "flex items-center justify-between gap-2"
+          : "flex flex-col gap-1.5"
+      }
+    >
       <Label htmlFor={id} id={labelId}>
         {label}
       </Label>

@@ -14,14 +14,6 @@ function columnFlex(width: unknown): CSSProperties | undefined {
   return SAFE_WIDTH.test(value) ? { flex: `0 0 ${value}` } : undefined;
 }
 
-const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
-
-function sanitizeHref(raw: unknown): string | undefined {
-  if (typeof raw !== "string") return undefined;
-  const trimmed = raw.trim();
-  return trimmed.length > 0 && SAFE_HREF.test(trimmed) ? trimmed : undefined;
-}
-
 export const columnBlock = defineBlock({
   name: "core/column",
   title: "Column",
@@ -33,8 +25,6 @@ export const columnBlock = defineBlock({
   requiresParent: ["core/columns"],
   inputs: [
     { name: "width", type: "text", label: "Width" },
-    { name: "link", type: "text", label: "Link" },
-    { name: "openInNewTab", type: "boolean", label: "Open in new tab" },
     {
       name: "content",
       type: "slot",
@@ -50,26 +40,9 @@ export const columnBlock = defineBlock({
   },
   render: ({ attrs, blockProps }): ReactNode => {
     const Content = attrs.content as (() => ReactNode) | undefined;
-    const style = columnFlex(attrs.width);
-    const inner = Content ? <Content /> : null;
-    const href = sanitizeHref(attrs.link);
-    if (href) {
-      const newTab = attrs.openInNewTab === true;
-      return (
-        <a
-          href={href}
-          target={newTab ? "_blank" : undefined}
-          rel={newTab ? "noopener noreferrer" : undefined}
-          {...blockProps}
-          style={style}
-        >
-          {inner}
-        </a>
-      );
-    }
     return (
-      <div {...blockProps} style={style}>
-        {inner}
+      <div {...blockProps} style={columnFlex(attrs.width)}>
+        {Content ? <Content /> : null}
       </div>
     );
   },
