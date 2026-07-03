@@ -332,17 +332,19 @@ describe("StylesTab", () => {
     );
   });
 
-  test("the hide toggle sets display:none in the active device bucket", () => {
+  test("the Visibility section hides on any device, not just the active one", () => {
+    // Active device is desktop, but the Mobile switch writes display:none into
+    // the small bucket directly — all three devices are editable at once.
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
-    fireEvent.click(getByTestId("style-hide-on-device"));
+    fireEvent.click(getByTestId("style-visibility-mobile"));
 
     expect(getByTestId("style-probe").textContent).toContain(
-      '"display":"none"',
+      '"small":{"display":"none"}',
     );
   });
 
-  test("the hide toggle reads pressed from an existing display:none", () => {
+  test("a visibility switch reads checked from an existing display:none", () => {
     const hidden: BlockNode = {
       id: "a",
       name: "core/x",
@@ -350,12 +352,12 @@ describe("StylesTab", () => {
     };
     expect(
       renderTab([hidden], "a")
-        .getByTestId("style-hide-on-device")
+        .getByTestId("style-visibility-desktop")
         .getAttribute("data-state"),
-    ).toBe("on");
+    ).toBe("checked");
   });
 
-  test("the hide toggle clears display:none when turned off", () => {
+  test("toggling a visibility switch off clears display:none for that bucket", () => {
     const hidden: BlockNode = {
       id: "a",
       name: "core/x",
@@ -363,7 +365,7 @@ describe("StylesTab", () => {
     };
     const { getByTestId } = renderTab([hidden], "a");
 
-    fireEvent.click(getByTestId("style-hide-on-device"));
+    fireEvent.click(getByTestId("style-visibility-desktop"));
 
     // The only declaration is gone, so the style slot prunes to undefined.
     expect(getByTestId("style-probe").textContent).toBe("");

@@ -2,7 +2,11 @@ import type { I18n } from "@lingui/core";
 import type { ReactElement, ReactNode } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
-import type { ThemeTokens, TokenCategory } from "@plumix/blocks";
+import type {
+  ResponsiveStyleSlot,
+  ThemeTokens,
+  TokenCategory,
+} from "@plumix/blocks";
 import {
   Accordion,
   AccordionContent,
@@ -14,8 +18,6 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
-  Eye,
-  EyeOff,
   Italic,
   Strikethrough,
   Underline,
@@ -31,7 +33,6 @@ import {
 } from "@plumix/admin-ui/select";
 import { Slider } from "@plumix/admin-ui/slider";
 import { Switch } from "@plumix/admin-ui/switch";
-import { Toggle } from "@plumix/admin-ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import {
   Tooltip,
@@ -126,6 +127,7 @@ const SECTIONS: readonly {
 // dev-facing escape hatch, so it starts collapsed.
 const SECTION_IDS = [
   "layout",
+  "visibility",
   ...SECTIONS.map((s) => s.id),
   "effects",
   "spacing",
@@ -137,7 +139,6 @@ const SECTION_IDS = [
  * responsive bucket, so styles are set per breakpoint.
  */
 export function StylesTab({ tokens }: StylesTabProps): ReactElement {
-  const { i18n } = useLingui();
   const activeId = useEditorStore((s) => s.activeId);
   const device = useEditorStore((s) => s.device);
   const block = useEditorStore((s) =>
@@ -174,33 +175,19 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
     (property: string) =>
     (value: string | null): void =>
       updateBlockStyle(activeId, bucket, property, value);
-  // Hidden when display is set to "none" for this device.
-  const hidden = valueOf("display") === "none";
+  // Visibility writes display:none per device bucket directly (not via the
+  // active-device `setter`), so all three breakpoints are editable at once.
+  const setHiddenOn = (target: StyleBucket, hidden: boolean): void =>
+    updateBlockStyle(activeId, target, "display", hidden ? "none" : null);
 
   return (
     <div className="flex flex-col gap-2 p-3" data-testid="styles-tab">
-      <div className="flex items-center justify-between">
-        <p
-          className="text-muted-foreground text-xs"
-          data-testid="styles-tab-scope"
-        >
-          <Trans id="editor.styles.scope" message="Editing" /> · {device}
-        </p>
-        {/* Writes display:none into the active device's bucket only. */}
-        <Toggle
-          variant="outline"
-          size="sm"
-          pressed={hidden}
-          onPressedChange={(next) => setter("display")(next ? "none" : null)}
-          data-testid="style-hide-on-device"
-          aria-label={i18n._({
-            id: "editor.styles.hideOnDevice",
-            message: "Hide on this device",
-          })}
-        >
-          {hidden ? <EyeOff /> : <Eye />}
-        </Toggle>
-      </div>
+      <p
+        className="text-muted-foreground text-xs"
+        data-testid="styles-tab-scope"
+      >
+        <Trans id="editor.styles.scope" message="Editing" /> · {device}
+      </p>
       <Accordion type="multiple" defaultValue={SECTION_IDS}>
         <AccordionItem value="layout">
           <AccordionTrigger data-testid="styles-section-layout">
@@ -208,6 +195,14 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
           </AccordionTrigger>
           <AccordionContent>
             <LayoutControls valueOf={valueOf} setter={setter} tokens={tokens} />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="visibility">
+          <AccordionTrigger data-testid="styles-section-visibility">
+            <Trans id="editor.styles.visibility" message="Visibility" />
+          </AccordionTrigger>
+          <AccordionContent>
+            <VisibilityControls style={block.style} onToggle={setHiddenOn} />
           </AccordionContent>
         </AccordionItem>
         {SECTIONS.map((section) => (
@@ -429,6 +424,73 @@ function TextStyleControls({
         </ToggleGroup>
       </div>
     </TooltipProvider>
+  );
+}
+
+// Each device maps to the responsive bucket its @media narrows to. The Switch is
+// `htmlFor`-associated with its translated Label, so the label doubles as the
+// accessible name and clicking it toggles (Builder's click-anywhere rows).
+const VISIBILITY_DEVICES: readonly {
+  readonly id: string;
+  readonly bucket: StyleBucket;
+  readonly label: ReactElement;
+}[] = [
+  {
+    id: "desktop",
+    bucket: "large",
+    label: (
+      <Trans id="editor.styles.visibility.desktop" message="Hide on desktop" />
+    ),
+  },
+  {
+    id: "tablet",
+    bucket: "medium",
+    label: (
+      <Trans id="editor.styles.visibility.tablet" message="Hide on tablet" />
+    ),
+  },
+  {
+    id: "mobile",
+    bucket: "small",
+    label: (
+      <Trans id="editor.styles.visibility.mobile" message="Hide on mobile" />
+    ),
+  },
+];
+
+/** Per-device hide switches — writes display:none into each device's bucket
+ *  independently, so all three breakpoints are visible/editable at once
+ *  (Builder's Visibility panel). */
+function VisibilityControls({
+  style,
+  onToggle,
+}: {
+  readonly style: ResponsiveStyleSlot | undefined;
+  readonly onToggle: (bucket: StyleBucket, hidden: boolean) => void;
+}): ReactElement {
+  return (
+    <div
+      className="flex flex-col gap-3"
+      data-testid="style-visibility-controls"
+    >
+      {VISIBILITY_DEVICES.map((device) => {
+        const hidden =
+          normalizeStyleValue(style?.[device.bucket]?.display) === "none";
+        return (
+          <div key={device.id} className="flex items-center justify-between">
+            <Label htmlFor={`visibility-${device.id}`} className="text-xs">
+              {device.label}
+            </Label>
+            <Switch
+              id={`visibility-${device.id}`}
+              checked={hidden}
+              onCheckedChange={(on) => onToggle(device.bucket, on)}
+              data-testid={`style-visibility-${device.id}`}
+            />
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
