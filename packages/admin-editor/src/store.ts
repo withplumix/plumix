@@ -6,6 +6,7 @@ import type {
   ResponsiveStyleBucket,
   ResponsiveStyleSlot,
   ThemeBreakpoints,
+  VisibilityFlags,
 } from "@plumix/blocks";
 import {
   DEFAULT_BREAKPOINTS,
@@ -141,6 +142,10 @@ export interface EditorActions {
     property: string,
     value: string | null,
   ) => void;
+  /** Set or clear one device's visibility flag on a block. Stored off the style
+   *  slot (in `hidden`) so hiding never overwrites a bucket's layout `display`;
+   *  clearing restores it. Empty `hidden` is pruned. */
+  updateBlockHidden: (id: string, bucket: StyleBucket, hidden: boolean) => void;
   /** Rename one style property in a block's bucket, keeping its value and
    *  position. No-op when the source is missing or the target name is taken. */
   renameBlockStyleProperty: (
@@ -280,6 +285,24 @@ function setNodeStyle(
       ? undefined
       : (nextSlot as ResponsiveStyleSlot);
   return { ...node, style };
+}
+
+// Set/clear one device's visibility flag, pruning an emptied `hidden`. Kept off
+// the style slot so it never touches a bucket's layout `display`. Returns the
+// same reference when nothing changed.
+function setNodeHidden(
+  node: BlockNode,
+  bucket: StyleBucket,
+  hidden: boolean,
+): BlockNode {
+  const current: VisibilityFlags = node.hidden ?? {};
+  if (Boolean(current[bucket]) === hidden) return node;
+  const next: Record<string, boolean> = { ...current };
+  if (hidden) next[bucket] = true;
+  else delete next[bucket];
+  const nextHidden =
+    Object.keys(next).length === 0 ? undefined : (next as VisibilityFlags);
+  return { ...node, hidden: nextHidden };
 }
 
 // Rename one property in a bucket, rebuilding it so the renamed key holds its
@@ -454,6 +477,16 @@ export function createEditorStore(
         if (tree === state.tree) return {};
         // Coalesce edits to one property+bucket (e.g. typing a raw value).
         const key = `style:${id}:${bucket}:${property}`;
+        return { tree, history: recordHistory(state.history, tree, key) };
+      }),
+    updateBlockHidden: (id, bucket, hidden) =>
+      set((state) => {
+        const tree = mapNodeById(state.tree, id, (node) =>
+          setNodeHidden(node, bucket, hidden),
+        );
+        if (tree === state.tree) return {};
+        // Each device toggle is one discrete action — never coalesced.
+        const key = `hidden:${id}:${bucket}`;
         return { tree, history: recordHistory(state.history, tree, key) };
       }),
     renameBlockStyleProperty: (id, bucket, from, to) =>

@@ -120,6 +120,7 @@ export type {
   ResponsiveStyleBucket,
   ResponsiveStyleSlot,
   ThemeBreakpoints,
+  VisibilityFlags,
 } from "./styles/style-emitter.js";
 export { sanitizeCssValue } from "./styles/sanitize-css.js";
 export { parseLoaderData, serializeLoaderData } from "./loader-data.js";
