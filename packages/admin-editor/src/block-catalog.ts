@@ -135,19 +135,31 @@ export function createNodeFromEntry(
       attrs[input.name] = input.defaultChildren;
     }
   }
-  const seed: BlockNode = { id: "seed", name: entry.name, attrs };
+  // Seed each seeded slot child with its own spec defaults + defaultStyles, so a
+  // container's descendants (e.g. the equal-split columns and their paragraphs)
+  // are treated like a directly-inserted child. The top node's own defaults are
+  // already merged above; only descendants recurse.
+  for (const key of Object.keys(attrs)) {
+    const value = attrs[key];
+    if (isBlockNodeArray(value)) {
+      attrs[key] = value.map((child) => seedNodeDefaults(child, registry));
+    }
+  }
+  const seed: BlockNode = {
+    id: "seed",
+    name: entry.name,
+    attrs,
+    ...(spec?.defaultStyles ? { style: spec.defaultStyles } : {}),
+  };
   const [node = seed] = rewriteBlockNodeIds([seed]);
-  // Seed spec defaults down the whole tree, not just the inserted block, so a
-  // container's seeded children (e.g. a column's paragraph or the equal-split
-  // columns) get their own spec's defaults + defaultStyles — matching a child
-  // inserted directly.
-  return seedNodeDefaults(node, registry);
+  return node;
 }
 
-// Apply each node's spec `defaults` (attrs) and `defaultStyles` (style) where
-// the node carries none, recursing through every slot. Fresh-insert only:
-// hand-authored/stored content keeps its explicit attrs + styles untouched (an
-// existing value wins over the default).
+// Apply a node's own spec `defaults` (attrs) + `defaultStyles` (style) where it
+// carries none, recursing through its slots (an existing attr/style wins). This
+// seeds a descendant's own defaults, but NOT a nested container's empty slot
+// `defaultChildren` — a container placed in `defaultChildren` must spell out its
+// own children, as core/columns' DEFAULT_COLUMNS does.
 function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
   const spec = registry.get(node.name);
   const base: Record<string, unknown> = { ...spec?.defaults, ...node.attrs };

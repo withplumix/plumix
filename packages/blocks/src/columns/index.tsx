@@ -41,7 +41,7 @@ function stackStyleCss(
   if (stackAt === "never") return "";
   const max = stackAt === "mobile" ? breakpoints.mobile : breakpoints.tablet;
   const direction = reverse ? "column-reverse" : "column";
-  return `@media (max-width: ${String(max)}px) { .plumix-cols-${nodeId} { flex-direction: ${direction}; } }`;
+  return `@media (max-width: ${max}px) { .plumix-cols-${nodeId} { flex-direction: ${direction}; } }`;
 }
 
 export const columnsBlock = defineBlock({
