@@ -39,7 +39,13 @@ export const columnBlock = defineBlock({
       name: "content",
       type: "slot",
       label: "Content",
-      defaultChildren: [{ id: "column-text", name: "core/rich-text" }],
+      defaultChildren: [
+        {
+          id: "column-text",
+          name: "core/rich-text",
+          attrs: { body: "<p>Column</p>" },
+        },
+      ],
     },
   ],
   // Equal split by default: grow to share the row evenly (gap-aware, unlike a
