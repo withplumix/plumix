@@ -58,9 +58,13 @@ describe("tokenIdToCssVar", () => {
 describe("tokenIdFromCssVar", () => {
   test("extracts the token id from a var() reference for the property's category", () => {
     expect(
-      tokenIdFromCssVar("var(--plumix-color-primary, #0c2238)", "colors"),
+      tokenIdFromCssVar("var(--plumix-color-primary, #0c2238)", "color"),
     ).toBe("primary");
     expect(tokenIdFromCssVar("var(--plumix-spacing-lg)", "spacing")).toBe("lg");
+    // A multi-word category kebab-cases in the var segment.
+    expect(
+      tokenIdFromCssVar("var(--plumix-font-family-serif)", "fontFamily"),
+    ).toBe("serif");
   });
 
   test("returns null for a literal value or a mismatched category", () => {
@@ -185,17 +189,39 @@ describe("emitBlockStyleCss", () => {
   });
 
   test("builds a bare token CSS variable reference (no resolved fallback)", () => {
-    // `colors` maps to the `color` segment; no fallback value is appended.
-    expect(tokenCssVar("primary", "colors")).toBe(
-      "var(--plumix-color-primary)",
-    );
+    // Category key === the var segment (kebab-cased); no fallback appended.
+    expect(tokenCssVar("primary", "color")).toBe("var(--plumix-color-primary)");
     expect(tokenCssVar("lg", "spacing")).toBe("var(--plumix-spacing-lg)");
+    expect(tokenCssVar("serif", "fontFamily")).toBe(
+      "var(--plumix-font-family-serif)",
+    );
+  });
+
+  test("emits the token var with the token's literal as fallback (kebab segment)", () => {
+    const tokens: ThemeTokens = {
+      fontFamily: { serif: { value: "Georgia, serif" } },
+    };
+    expect(tokenIdToCssVar("serif", "fontFamily", tokens)).toBe(
+      "var(--plumix-font-family-serif, Georgia, serif)",
+    );
+  });
+
+  test("tokenizes an arbitrary CSS property (open model, not a fixed enum)", () => {
+    const tokens: ThemeTokens = { zIndex: { top: { value: "9999" } } };
+    expect(tokenIdToCssVar("top", "zIndex", tokens)).toBe(
+      "var(--plumix-z-index-top, 9999)",
+    );
   });
 
   test("resolves the token category for a known property, undefined otherwise", () => {
+    // Property-keyed: the category IS the property (no conflation).
     expect(tokenCategoryForProperty("marginTop")).toBe("spacing");
-    expect(tokenCategoryForProperty("color")).toBe("colors");
-    expect(tokenCategoryForProperty("borderRadius")).toBe("radius");
+    expect(tokenCategoryForProperty("color")).toBe("color");
+    expect(tokenCategoryForProperty("background")).toBe("color");
+    expect(tokenCategoryForProperty("borderRadius")).toBe("borderRadius");
+    // font-size reads its own scale, NOT the font-family bucket.
+    expect(tokenCategoryForProperty("fontSize")).toBe("fontSize");
+    expect(tokenCategoryForProperty("fontFamily")).toBe("fontFamily");
     // A property with no token scale (or an arbitrary custom one) has none.
     expect(tokenCategoryForProperty("display")).toBeUndefined();
     expect(tokenCategoryForProperty("--brand")).toBeUndefined();

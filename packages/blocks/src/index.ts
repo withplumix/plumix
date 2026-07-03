@@ -120,15 +120,16 @@ export type {
   ResponsiveStyleBucket,
   ResponsiveStyleSlot,
   ThemeBreakpoints,
-  TokenCategory,
 } from "./styles/style-emitter.js";
 export { sanitizeCssValue } from "./styles/sanitize-css.js";
 export { parseLoaderData, serializeLoaderData } from "./loader-data.js";
 export { findBlockNode } from "./find-block-node.js";
 export type {
+  KnownTokenCategory,
   ThemeTokenEntry,
   ThemeTokenGroup,
   ThemeTokens,
+  TokenCategory,
 } from "./styles/types.js";
 
 // ─── HTML sanitisation ──────────────────────────────────────────────────────
