@@ -226,6 +226,23 @@ describe("StylesTab", () => {
     expect(getByTestId("style-probe").textContent).toBe("");
   });
 
+  test("the border-style control spans the full row (own line, like Builder)", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    // Enumerated keyword selects sit on their own row so the token/custom
+    // controls beside them don't misalign.
+    expect(
+      getByTestId("style-control-borderStyle").parentElement?.className,
+    ).toContain("col-span-2");
+  });
+
+  test("opacity shows 1 as a placeholder when unset", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+    expect(
+      (getByTestId("style-control-opacity-input") as HTMLInputElement)
+        .placeholder,
+    ).toBe("1");
+  });
+
   test("the Shadows & Effects section exposes an opacity control that writes opacity", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 

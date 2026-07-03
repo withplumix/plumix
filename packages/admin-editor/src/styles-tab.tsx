@@ -302,14 +302,17 @@ function GenericSection({
         <div className="grid grid-cols-2 gap-x-2 gap-y-3">
           {section.controls.map((c) =>
             c.options ? (
-              <KeywordControl
-                key={c.property}
-                label={c.label}
-                property={c.property}
-                options={c.options}
-                value={valueOf(c.property)}
-                onChange={setter(c.property)}
-              />
+              // Keyword selects take their own row so the token/custom controls
+              // beside them stay aligned.
+              <div key={c.property} className="col-span-2">
+                <KeywordControl
+                  label={c.label}
+                  property={c.property}
+                  options={c.options}
+                  value={valueOf(c.property)}
+                  onChange={setter(c.property)}
+                />
+              </div>
             ) : (
               <StyleControl
                 key={c.property}
@@ -987,6 +990,7 @@ function OpacityControl({
           max={1}
           step={0.1}
           value={value ?? ""}
+          placeholder="1"
           onChange={(e) =>
             onChange(e.target.value === "" ? null : e.target.value)
           }
