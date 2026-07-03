@@ -222,6 +222,37 @@ describe("StylesTab", () => {
     expect(getByTestId("style-probe").textContent).toBe("");
   });
 
+  test("the Background section composes a background-image url from a URL input", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    fireEvent.change(getByTestId("style-control-backgroundImage-url"), {
+      target: { value: "https://ex.com/a.png" },
+    });
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"backgroundImage":"url(\\"https://ex.com/a.png\\")"',
+    );
+
+    // Clearing the field removes the property (slot prunes to undefined).
+    fireEvent.change(getByTestId("style-control-backgroundImage-url"), {
+      target: { value: "" },
+    });
+    expect(getByTestId("style-probe").textContent).toBe("");
+  });
+
+  test("the Background image field reads the bare URL back out of a stored url()", () => {
+    const styled: BlockNode = {
+      id: "a",
+      name: "core/x",
+      style: { large: { backgroundImage: 'url("https://ex.com/a.png")' } },
+    };
+    const { getByTestId } = renderTab([styled], "a");
+    // The field unwraps url("…") for editing rather than showing the wrapper.
+    expect(
+      (getByTestId("style-control-backgroundImage-url") as HTMLInputElement)
+        .value,
+    ).toBe("https://ex.com/a.png");
+  });
+
   test("the italic mark toggles a fontStyle raw value", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 

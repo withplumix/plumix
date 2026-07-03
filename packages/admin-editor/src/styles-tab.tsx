@@ -247,6 +247,12 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
               {section.id === "typography" && (
                 <TextStyleControls valueOf={valueOf} setter={setter} />
               )}
+              {section.id === "background" && (
+                <BackgroundImageControl
+                  value={valueOf("backgroundImage")}
+                  onChange={setter("backgroundImage")}
+                />
+              )}
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -649,6 +655,49 @@ const SPACING_GROUPS = [
     label: <Trans id="editor.styles.padding" message="Padding" />,
   },
 ] as const;
+
+// Unwraps `url("…")` to the bare URL for editing; tolerant of single/double/no
+// quotes. A non-url() value (e.g. a gradient set via raw CSS) yields "" so the
+// field stays empty rather than showing a form it can't represent.
+function parseBackgroundImageUrl(value: string | undefined): string {
+  const match = value?.match(/^url\((['"]?)(.*)\1\)$/);
+  return match?.[2] ?? "";
+}
+
+/** A "Fill image" URL field composing `background-image: url("…")`. Kept a URL
+ *  entry (not a media browser) — the media library isn't wired into the styles
+ *  rail; a pasted/resolved URL is the minimum that reaches parity.
+ *
+ *  The value is stored verbatim; `sanitizeCssValue` at emit drops URLs carrying
+ *  `@`, `;`, or a `data:` scheme (its breakout denylist), so those won't ship
+ *  even though the field accepts them — an accepted limitation, not a guard. */
+function BackgroundImageControl({
+  value,
+  onChange,
+}: {
+  readonly value: string | undefined;
+  readonly onChange: (value: string | null) => void;
+}): ReactElement {
+  return (
+    <div
+      className="flex flex-col gap-1"
+      data-testid="style-control-backgroundImage"
+    >
+      <Label className="text-xs">
+        <Trans id="editor.styles.fillImage" message="Fill image" />
+      </Label>
+      <Input
+        value={parseBackgroundImageUrl(value)}
+        onChange={(e) => {
+          const url = e.target.value.trim();
+          onChange(url === "" ? null : `url("${url}")`);
+        }}
+        placeholder="https://…"
+        data-testid="style-control-backgroundImage-url"
+      />
+    </div>
+  );
+}
 
 /** Shadows & Effects: opacity plus a box-shadow token picker. Opacity leads,
  *  matching Builder's ordering. */
