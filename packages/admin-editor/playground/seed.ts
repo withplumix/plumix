@@ -43,6 +43,9 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
   {
     id: "columns-1",
     name: "core/columns",
+    // Hand-authored seed: defaultStyles only seed at insert, so spell out the
+    // flex row (what a freshly-inserted columns block gets automatically).
+    style: { large: { display: "flex", gap: "20px", alignItems: "stretch" } },
     attrs: {
       columns: [
         {
