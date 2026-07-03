@@ -578,8 +578,9 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("styles-tab")).toBeVisible();
     await expect(page.getByTestId("styles-section-typography")).toBeVisible();
 
-    // Set the font size (custom-only — no token scale) and a per-side custom
-    // padding; both land on the canonical tree (visible through the source dialog).
+    // Set the font size (the seed theme declares no font-size tokens, so the
+    // control shows its custom input directly) and a per-side custom padding;
+    // both land on the canonical tree (visible through the source dialog).
     await page.getByTestId("style-control-fontSize-custom").fill("20px");
     await page.getByTestId("style-control-paddingTop-mode-custom").click();
     await page.getByTestId("style-control-paddingTop-custom").fill("12px");

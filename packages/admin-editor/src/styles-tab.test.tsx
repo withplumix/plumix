@@ -185,12 +185,12 @@ describe("StylesTab", () => {
     expect(probe).toContain('"minWidth":"280px"');
   });
 
-  test("exposes a letter-spacing control that writes a custom value", () => {
-    // letterSpacing now has a token scale, so it mounts in token mode; switch to
-    // custom to type a raw value (Builder's Char Space).
+  test("a control whose category has no theme tokens shows its custom input directly", () => {
+    // letterSpacing has a token category, but the test theme declares no
+    // letterSpacing tokens — so it must start in custom mode (an empty token
+    // dropdown is useless), with the raw input shown without a mode toggle.
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 
-    fireEvent.click(getByTestId("style-control-letterSpacing-mode-custom"));
     fireEvent.change(getByTestId("style-control-letterSpacing-custom"), {
       target: { value: "0.05em" },
     });

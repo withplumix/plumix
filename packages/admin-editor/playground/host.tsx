@@ -53,14 +53,14 @@ const registry = createBlockRegistry([...withVariations, feedSpec]);
 
 // Seed theme tokens so the Styles tab's token-or-custom controls have options.
 const SEED_TOKENS = {
-  colors: {
+  color: {
     primary: { value: "#2563eb", label: "Primary" },
     ink: { value: "#0c2238", label: "Ink" },
   },
   spacing: { sm: { value: "8px" }, lg: { value: "24px" } },
-  typography: { base: { value: "16px" }, xl: { value: "24px" } },
-  radius: { md: { value: "8px" } },
-  shadow: { lg: { value: "0 4px 12px rgba(0,0,0,0.1)" } },
+  fontFamily: { sans: { value: "system-ui, sans-serif", label: "Sans" } },
+  borderRadius: { md: { value: "8px" } },
+  boxShadow: { lg: { value: "0 4px 12px rgba(0,0,0,0.1)" } },
 } as const;
 
 function DocumentPanelStub(): ReactElement {
