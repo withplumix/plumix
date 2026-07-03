@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { BlockNode, BlockRegistry } from "@plumix/blocks";
@@ -196,7 +197,15 @@ function HtmlAttrProbe({ id }: { readonly id: string }): ReactElement {
   const attrs = useEditorStore(
     (s) => s.tree.find((n) => n.id === id)?.htmlAttrs,
   );
-  return <output data-testid="html-attr-probe">{JSON.stringify(attrs)}</output>;
+  const tagName = useEditorStore(
+    (s) => s.tree.find((n) => n.id === id)?.tagName,
+  );
+  return (
+    <>
+      <output data-testid="html-attr-probe">{JSON.stringify(attrs)}</output>
+      <output data-testid="tag-name-probe">{tagName ?? ""}</output>
+    </>
+  );
 }
 
 function renderHtmlAttrs(tree: readonly BlockNode[], selectId: string) {
@@ -220,6 +229,42 @@ describe("BlockInspector — HTML attributes", () => {
     name: "core/heading",
     htmlAttrs: { id: "hero", "data-track": "cta" },
   };
+
+  test("the tag-name select overrides the block's root element", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { getByTestId } = renderHtmlAttrs(
+      [{ id: "h1", name: "core/group" }],
+      "h1",
+    );
+
+    await user.click(getByTestId("block-tag-name-select"));
+    await user.click(getByTestId("block-tag-name-option-section"));
+
+    expect(getByTestId("tag-name-probe").textContent).toBe("section");
+  });
+
+  test("a non-allowlisted stored tag-name presents as Default (matches render)", () => {
+    // The renderer's resolveRootTag drops "span" (not a container tag) and falls
+    // back to the default element; the picker must agree, not blank the trigger.
+    const { getByTestId } = renderHtmlAttrs(
+      [{ id: "h1", name: "core/group", tagName: "span" }],
+      "h1",
+    );
+    expect(getByTestId("block-tag-name-select").textContent).toBe("Default");
+  });
+
+  test("resetting the tag-name to Default clears the override", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { getByTestId } = renderHtmlAttrs(
+      [{ id: "h1", name: "core/group", tagName: "nav" }],
+      "h1",
+    );
+
+    await user.click(getByTestId("block-tag-name-select"));
+    await user.click(getByTestId("block-tag-name-option-default"));
+
+    expect(getByTestId("tag-name-probe").textContent).toBe("");
+  });
 
   test("lists existing attributes as editable key/value rows", () => {
     const { getByTestId } = renderHtmlAttrs([withAttrs], "h1");

@@ -159,6 +159,11 @@ msgid "editor.styles.mode.custom"
 msgstr "Custom"
 
 #. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.htmlAttrs.tagName.default"
+msgstr "Default"
+
+#. js-lingui-explicit-id
 #: src/layers-tab.tsx
 msgid "editor.layers.delete"
 msgstr "Delete"
@@ -432,6 +437,11 @@ msgstr "Styles"
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.device.tablet"
 msgstr "Tablet"
+
+#. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.htmlAttrs.tagName"
+msgstr "Tag name"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx

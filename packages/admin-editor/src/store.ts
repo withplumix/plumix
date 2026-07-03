@@ -149,6 +149,9 @@ export interface EditorActions {
     from: string,
     to: string,
   ) => void;
+  /** Set (or clear, with an empty string) a block's root-element override
+   *  (Builder's tag-name). Allowlisted at render (`resolveRootTag`). */
+  setBlockTagName: (id: string, tagName: string) => void;
   /** Set (or clear, with `null`) one HTML attribute on a block. Flat (not
    *  responsive); empty `htmlAttrs` is pruned. Allowlisted at render. */
   updateBlockHtmlAttr: (id: string, key: string, value: string | null) => void;
@@ -457,6 +460,18 @@ export function createEditorStore(
         );
         if (tree === state.tree) return {};
         // A blur-committed rename is one atomic action — never coalesced.
+        return { tree, history: recordHistory(state.history, tree, null) };
+      }),
+    setBlockTagName: (id, rawTagName) =>
+      set((state) => {
+        const tagName = rawTagName.trim() || undefined;
+        const tree = mapNodeById(state.tree, id, (node) => ({
+          ...node,
+          tagName,
+        }));
+        if (tree === state.tree) return {};
+        // Each Select choice is one discrete action — never coalesced (unlike
+        // the label rename's keystroke burst).
         return { tree, history: recordHistory(state.history, tree, null) };
       }),
     updateBlockHtmlAttr: (id, key, value) =>
