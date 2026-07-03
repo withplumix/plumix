@@ -101,7 +101,10 @@ jobs:
   test-e2e:
     name: Test (e2e)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 15 not 10: the tests run in ~4 min, but a cold build (e.g. when the Turbo
+    # remote cache 429s) pushes the build+run past a 10-min budget and the job
+    # times out.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
