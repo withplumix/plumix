@@ -9,7 +9,6 @@ describe("core/video", () => {
       src: "/_plumix/media/x/clip.mp4",
       poster: "/_plumix/media/x/poster.jpg",
     });
-    expect(html).toContain('data-plumix-block="core/video"');
     expect(html).toContain('src="/_plumix/media/x/clip.mp4"');
     expect(html).toContain('poster="/_plumix/media/x/poster.jpg"');
     expect(html).toContain("controls=");

@@ -64,16 +64,16 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
     id: "button-group-1",
     name: "core/group",
     attrs: {
-      layout: "flex-row",
       content: [
         { id: "btn-1", name: "core/button", attrs: { label: "Primary" } },
         {
           id: "btn-2",
           name: "core/button",
-          attrs: { label: "Secondary", variant: "secondary" },
+          attrs: { label: "Secondary" },
         },
       ],
     },
+    style: { large: { display: "flex", gap: "0.5rem" } },
   },
   FEED_SEED,
 ];

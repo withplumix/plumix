@@ -20,16 +20,14 @@ const sampleHeading: BlockSpec = defineBlock({
 });
 
 describe("renderBlockSpecToHtml", () => {
-  test("renders the spec's component wrapped in the universal data-plumix-block div", () => {
+  test("renders the spec's component wrapped in the walker div", () => {
     const html = renderBlockSpecToHtml(sampleHeading, {
       level: 2,
       text: "Hello",
     });
 
     expect(html).toBe(
-      '<div data-plumix-block="sample/heading">' +
-        '<span data-test-tag="h2">Hello</span>' +
-        "</div>",
+      "<div>" + '<span data-test-tag="h2">Hello</span>' + "</div>",
     );
   });
 });

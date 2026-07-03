@@ -1954,7 +1954,6 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(response.status).toBe(200);
     const body = await response.text();
     expect(body).toContain("Hi");
-    expect(body).toContain('data-plumix-block="core/rich-text"');
   });
 
   test("a styled block's stored `var(--plumix-…)` value is emitted verbatim", async () => {

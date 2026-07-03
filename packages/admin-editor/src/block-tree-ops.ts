@@ -335,12 +335,10 @@ export function groupBlocks(
   if ([...roots].some((id) => findParentId(tree, id) !== parentId)) return null;
   const content = siblings.filter((n) => roots.has(n.id));
   if (content.length === 0) return null;
-  // Seed core/group's `layout` default so a grouped wrapper matches a
-  // catalog-inserted one (the inspector control shows a value, not unset).
   const group: BlockNode = {
     id: groupId,
     name: "core/group",
-    attrs: { layout: "flow", content },
+    attrs: { content },
   };
   // Every sibling before the first root is, by definition, not a root, so the
   // post-removal insert position is just the first root's index.

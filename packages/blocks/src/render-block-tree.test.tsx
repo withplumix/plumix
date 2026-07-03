@@ -74,7 +74,10 @@ describe("renderBlockTree — htmlAttrs", () => {
       htmlAttrs: { "data-plumix-block": "evil" },
     };
 
-    const html = renderToStaticMarkup(renderBlockTree([node], headingRegistry));
+    // The seam is edit-only, so render editing to assert it can't be clobbered.
+    const html = renderToStaticMarkup(
+      renderBlockTree([node], headingRegistry, { editing: true }),
+    );
 
     expect(html).toContain('data-plumix-block="core/heading"');
     expect(html).not.toContain("evil");
@@ -109,9 +112,7 @@ describe("renderBlockTree", () => {
       renderBlockTree([heading], headingRegistry),
     );
 
-    expect(html).toBe(
-      '<div data-plumix-block="core/heading"><h2>Hello, world</h2></div>',
-    );
+    expect(html).toBe("<div><h2>Hello, world</h2></div>");
   });
 
   test("renders multiple sibling blocks in document order", () => {
@@ -124,9 +125,9 @@ describe("renderBlockTree", () => {
     const html = renderToStaticMarkup(renderBlockTree(blocks, headingRegistry));
 
     expect(html).toBe(
-      '<div data-plumix-block="core/heading"><h2>First</h2></div>' +
-        '<div data-plumix-block="core/heading"><h3>Second</h3></div>' +
-        '<div data-plumix-block="core/heading"><h2>Third</h2></div>',
+      "<div><h2>First</h2></div>" +
+        "<div><h3>Second</h3></div>" +
+        "<div><h2>Third</h2></div>",
     );
   });
 
@@ -162,8 +163,7 @@ describe("renderBlockTree", () => {
     );
 
     expect(html).toBe(
-      '<div data-plumix-block="core/heading"><h2>Before</h2></div>' +
-        '<div data-plumix-block="core/heading"><h2>After</h2></div>',
+      "<div><h2>Before</h2></div>" + "<div><h2>After</h2></div>",
     );
   });
 
@@ -255,9 +255,7 @@ describe("renderBlockTree", () => {
     const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
     expect(html).toBe(
-      '<div data-plumix-block="core/section"><section>' +
-        '<div data-plumix-block="core/heading"><h2>Inside</h2></div>' +
-        "</section></div>",
+      "<div><section>" + "<div><h2>Inside</h2></div>" + "</section></div>",
     );
   });
 
@@ -346,9 +344,7 @@ describe("renderBlockTree", () => {
       renderBlockTree([heading], headingRegistry),
     );
 
-    expect(html).toBe(
-      '<div data-plumix-block="core/heading"><h2>No style</h2></div>',
-    );
+    expect(html).toBe("<div><h2>No style</h2></div>");
   });
 
   test("skips the universal wrapper for blocks with inline: true", () => {

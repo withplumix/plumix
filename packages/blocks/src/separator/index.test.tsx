@@ -7,9 +7,7 @@ describe("core/separator", () => {
   test("renders an <hr> with the solid variant by default", () => {
     const html = renderBlockSpecToHtml(separatorBlock, {});
 
-    expect(html).toBe(
-      '<div data-plumix-block="core/separator"><hr data-variant="solid"/></div>',
-    );
+    expect(html).toBe('<div><hr data-variant="solid"/></div>');
   });
 
   test("renders the declared variant when valid", () => {

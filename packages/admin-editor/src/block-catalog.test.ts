@@ -190,7 +190,7 @@ describe("createNodeFromEntry", () => {
     spec({
       name: "core/group",
       category: "layout",
-      defaults: { layout: "flow" },
+      defaults: { align: "start" },
     }),
   ]);
 
@@ -199,13 +199,13 @@ describe("createNodeFromEntry", () => {
       name: "core/group",
       slug: "group/two-col",
       title: "Two columns",
-      attrs: { layout: "flex-row" },
+      attrs: { align: "center" },
       innerBlocks: [{ id: "seed-child", name: "core/heading" }],
     });
 
     // Variation attr wins over the spec default; innerBlocks seed the content
     // slot with freshly minted ids.
-    expect(node.attrs?.layout).toBe("flex-row");
+    expect(node.attrs?.align).toBe("center");
     const content = node.attrs?.content as readonly BlockNode[];
     expect(content.map((n) => n.name)).toEqual(["core/heading"]);
     expect(content[0]?.id).not.toBe("seed-child");

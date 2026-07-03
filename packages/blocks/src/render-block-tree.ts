@@ -93,11 +93,11 @@ export interface RenderBlockTreeOptions {
   readonly addBlockLabel?: string;
 }
 
-/** Editor/style seam attributes a block spreads onto its root element when it
- *  opts into `selfSeam`. `data-plumix-id` is present only in edit mode. */
-/** The framework seam keys a block spreads onto its root element. */
+/** The framework seam keys a block spreads onto its root element. Both
+ *  `data-plumix-*` markers are edit-only (canvas selection + X-ray); the public
+ *  page ships neither. */
 interface BlockSeamProps {
-  readonly "data-plumix-block": string;
+  readonly "data-plumix-block"?: string;
   readonly "data-plumix-id"?: string;
   readonly className?: string;
 }
@@ -304,7 +304,7 @@ function renderNode(
     : null;
   const blockProps: BlockProps = {
     ...safeHtmlAttrs(node.htmlAttrs),
-    "data-plumix-block": node.name,
+    "data-plumix-block": env.editing ? node.name : undefined,
     "data-plumix-id": env.editing && safeId ? safeId : undefined,
     className,
   };

@@ -11,7 +11,6 @@ describe("media/file v2", () => {
       size: 2_048_576,
       mime: "application/pdf",
     });
-    expect(html).toContain('data-plumix-block="media/file"');
     expect(html).toContain('href="/_plumix/media/abc/report.pdf"');
     expect(html).toContain('download="report.pdf"');
     expect(html).toContain("report.pdf");

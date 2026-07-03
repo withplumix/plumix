@@ -56,10 +56,10 @@ describe("core/columns", () => {
     const html = renderBlockTreeToHtml([columnsBlock, richTextBlock], tree);
 
     expect(html).toContain(
-      '<div data-plumix-column="left"><div data-plumix-block="core/rich-text"><div><p>L</p></div></div></div>',
+      '<div data-plumix-column="left"><div><div><p>L</p></div></div></div>',
     );
     expect(html).toContain(
-      '<div data-plumix-column="right"><div data-plumix-block="core/rich-text"><div><p>R</p></div></div></div>',
+      '<div data-plumix-column="right"><div><div><p>R</p></div></div></div>',
     );
   });
 });

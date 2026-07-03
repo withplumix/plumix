@@ -9,9 +9,7 @@ describe("core/code", () => {
       text: "const x = 1;",
     });
 
-    expect(html).toBe(
-      '<div data-plumix-block="core/code"><pre>const x = 1;</pre></div>',
-    );
+    expect(html).toBe("<div><pre>const x = 1;</pre></div>");
   });
 
   test("wraps the text in <code data-language> when a language is provided", () => {

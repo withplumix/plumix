@@ -16,9 +16,7 @@ describe("core/rich-text walker render", () => {
 
     const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
-    expect(html).toBe(
-      '<div data-plumix-block="core/rich-text"><div><p></p></div></div>',
-    );
+    expect(html).toBe("<div><div><p></p></div></div>");
   });
 
   test("seeds visible placeholder copy in the insert default", () => {
@@ -70,7 +68,7 @@ describe("core/rich-text walker render", () => {
     const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
     expect(html).toBe(
-      '<div data-plumix-block="core/rich-text"><div data-editor-portal="true"><span>inline editor mock</span></div></div>',
+      '<div><div data-editor-portal="true"><span>inline editor mock</span></div></div>',
     );
   });
 
@@ -84,9 +82,7 @@ describe("core/rich-text walker render", () => {
 
     const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
-    expect(html).toBe(
-      `<div data-plumix-block="core/rich-text"><div>${body}</div></div>`,
-    );
+    expect(html).toBe(`<div><div>${body}</div></div>`);
   });
 
   describe("shortcode body expansion", () => {

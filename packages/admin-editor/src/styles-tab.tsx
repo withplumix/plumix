@@ -20,6 +20,7 @@ import {
   Strikethrough,
   Underline,
 } from "@plumix/admin-ui/icons";
+import { Label } from "@plumix/admin-ui/label";
 import { Toggle } from "@plumix/admin-ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import {
@@ -111,7 +112,7 @@ const SECTIONS: readonly {
 
 // The visual sections open by default; the raw-CSS "declarations" section is a
 // dev-facing escape hatch, so it starts collapsed.
-const SECTION_IDS = [...SECTIONS.map((s) => s.id), "spacing"];
+const SECTION_IDS = ["layout", ...SECTIONS.map((s) => s.id), "spacing"];
 
 /**
  * Right-rail Styles tab: collapsible sections of token-or-custom controls plus a
@@ -184,6 +185,14 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
         </Toggle>
       </div>
       <Accordion type="multiple" defaultValue={SECTION_IDS}>
+        <AccordionItem value="layout">
+          <AccordionTrigger data-testid="styles-section-layout">
+            Layout
+          </AccordionTrigger>
+          <AccordionContent>
+            <LayoutControls valueOf={valueOf} setter={setter} tokens={tokens} />
+          </AccordionContent>
+        </AccordionItem>
         {SECTIONS.map((section) => (
           <AccordionItem key={section.id} value={section.id}>
             <AccordionTrigger data-testid={`styles-section-${section.id}`}>
@@ -374,6 +383,123 @@ function TextStyleControls({
         </ToggleGroup>
       </div>
     </TooltipProvider>
+  );
+}
+
+const LAYOUT_LABELS: Readonly<Record<string, string>> = {
+  block: "Block",
+  flex: "Flex",
+  grid: "Grid",
+  row: "Row",
+  column: "Column",
+  "flex-start": "Start",
+  center: "Center",
+  "flex-end": "End",
+  "space-between": "Between",
+  stretch: "Stretch",
+};
+
+/** Style-bound layout controls (display / direction / gap / justify / align)
+ *  written straight to the block's `node.style` — the unopinionated Box gets
+ *  its layout here rather than from a block prop, like Builder's Box. */
+function LayoutControls({
+  valueOf,
+  setter,
+  tokens,
+}: {
+  readonly valueOf: StyleGetter;
+  readonly setter: StyleSetter;
+  readonly tokens: ThemeTokens;
+}): ReactElement {
+  const display = valueOf("display");
+  const isFlex = display === "flex";
+  return (
+    <div className="flex flex-col gap-3" data-testid="style-layout-controls">
+      <LayoutToggle
+        label="Display"
+        property="display"
+        options={["block", "flex", "grid"]}
+        valueOf={valueOf}
+        setter={setter}
+      />
+      {isFlex ? (
+        <LayoutToggle
+          label="Direction"
+          property="flexDirection"
+          options={["row", "column"]}
+          valueOf={valueOf}
+          setter={setter}
+        />
+      ) : null}
+      {isFlex || display === "grid" ? (
+        <StyleControl
+          label="Gap"
+          property="gap"
+          category="spacing"
+          value={valueOf("gap")}
+          tokens={tokens}
+          onChange={setter("gap")}
+        />
+      ) : null}
+      {isFlex ? (
+        <>
+          <LayoutToggle
+            label="Justify"
+            property="justifyContent"
+            options={["flex-start", "center", "flex-end", "space-between"]}
+            valueOf={valueOf}
+            setter={setter}
+          />
+          <LayoutToggle
+            label="Align"
+            property="alignItems"
+            options={["flex-start", "center", "flex-end", "stretch"]}
+            valueOf={valueOf}
+            setter={setter}
+          />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/** One style-bound single-choice row: writes the picked CSS keyword to
+ *  `property` in node.style, clears it when the active item is re-picked. */
+function LayoutToggle({
+  label,
+  property,
+  options,
+  valueOf,
+  setter,
+}: {
+  readonly label: string;
+  readonly property: string;
+  readonly options: readonly string[];
+  readonly valueOf: StyleGetter;
+  readonly setter: StyleSetter;
+}): ReactElement {
+  return (
+    <div className="flex flex-col gap-1">
+      <Label className="text-xs">{label}</Label>
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        size="sm"
+        value={valueOf(property) ?? ""}
+        onValueChange={(value) => setter(property)(value || null)}
+      >
+        {options.map((opt) => (
+          <ToggleGroupItem
+            key={opt}
+            value={opt}
+            data-testid={`style-${property}-${opt}`}
+            className="text-xs"
+          >
+            {LAYOUT_LABELS[opt] ?? opt}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </div>
   );
 }
 
