@@ -13,8 +13,11 @@ export const groupBlock = defineBlock({
   // prop; every layout decision is a style, like Builder's Box.
   selfSeam: true,
   inputs: [{ name: "content", type: "slot", label: "Content" }],
-  render: ({ attrs, blockProps }): ReactNode => {
+  render: ({ attrs, blockProps, tagName }): ReactNode => {
     const Content = attrs.content as (() => ReactNode) | undefined;
-    return <div {...blockProps}>{Content ? <Content /> : null}</div>;
+    // Honor the author's root-element override (Builder's tag-name); the Box is
+    // a generic container, so div/section/nav/etc are all valid.
+    const Tag = tagName ?? "div";
+    return <Tag {...blockProps}>{Content ? <Content /> : null}</Tag>;
   },
 });

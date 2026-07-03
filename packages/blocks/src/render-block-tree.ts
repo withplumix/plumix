@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { createElement, Fragment } from "react";
 
 import type { BlockRegistry } from "./block-registry.js";
+import type { RootTag } from "./html/root-tag.js";
 import type {
   BlockLoaderRecord,
   ResolvedBlockLoaders,
@@ -15,6 +16,7 @@ import type {
 } from "./styles/style-emitter.js";
 import { editAppender } from "./edit-appender.js";
 import { safeHtmlAttrs } from "./html/attrs.js";
+import { resolveRootTag } from "./html/root-tag.js";
 import { emitBlockStyleCss } from "./styles/style-emitter.js";
 
 const PATTERN_REF_BLOCK = "core/pattern-ref";
@@ -56,6 +58,10 @@ export interface BlockNode {
   /** Author-given instance name shown in the Layers tree; falls back to the
    *  block type's title when absent. Editor-only metadata, ignored at render. */
   readonly label?: string;
+  /** Overrides the block's root element (Builder's tag-name). Applied to the
+   *  default wrapper and threaded to `selfSeam` container blocks via render
+   *  props; constrained to {@link resolveRootTag}'s allowlist, else ignored. */
+  readonly tagName?: string;
 }
 
 /**
@@ -115,6 +121,9 @@ export interface BlockNodeRenderProps<
   readonly loaders: ResolvedLoaders<Loaders>;
   /** Seam attributes for `selfSeam` blocks to spread onto their root element. */
   readonly blockProps: BlockProps;
+  /** The author's allowlisted root-element override, or `undefined`. A
+   *  `selfSeam` container block should render `tagName ?? <its default>`. */
+  readonly tagName?: RootTag;
 }
 
 export type BlockNodeComponent<
@@ -308,6 +317,9 @@ function renderNode(
     "data-plumix-id": env.editing && safeId ? safeId : undefined,
     className,
   };
+  // The author's root-element override, allowlisted. selfSeam container blocks
+  // read it via render props; the default wrapper uses it below.
+  const tagName = resolveRootTag(node.tagName);
 
   let rendered: ReactNode;
   if (data && data.error !== null) {
@@ -323,6 +335,7 @@ function renderNode(
       context,
       loaders,
       blockProps,
+      tagName,
     });
   }
 
@@ -338,7 +351,7 @@ function renderNode(
     return createElement(Fragment, { key: node.id }, rendered);
   }
   return createElement(
-    "div",
+    tagName ?? "div",
     { key: node.id, ...blockProps },
     styleTag,
     rendered,

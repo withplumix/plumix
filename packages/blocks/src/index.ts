@@ -133,6 +133,8 @@ export type {
 
 // ─── HTML sanitisation ──────────────────────────────────────────────────────
 export { isAllowedHtmlAttr, safeHtmlAttrs } from "./html/attrs.js";
+export { ROOT_TAGS, resolveRootTag } from "./html/root-tag.js";
+export type { RootTag } from "./html/root-tag.js";
 export { BASELINE_HTML_ALLOWLIST, sanitizeHtml } from "./html/sanitize.js";
 export type { HtmlAllowlist } from "./html/sanitize.js";
 export { buildHtmlAllowlist } from "./html/build-allowlist.js";
