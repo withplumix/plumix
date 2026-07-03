@@ -143,6 +143,43 @@ describe("StylesTab", () => {
     );
   });
 
+  test("exposes a border-style select that writes borderStyle to the bucket", async () => {
+    // Builder's Border "Style" is an enumerated dropdown, not free text — a
+    // width alone renders nothing without a style, so this closes that gap.
+    const user = userEvent.setup({ delay: null });
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    await user.click(getByTestId("style-control-borderStyle-select"));
+    await user.click(getByTestId("style-control-borderStyle-option-dashed"));
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"borderStyle":"dashed"',
+    );
+  });
+
+  test("border-style writes an explicit none, distinct from clearing", async () => {
+    const user = userEvent.setup({ delay: null });
+    const styled: BlockNode = {
+      id: "a",
+      name: "core/x",
+      style: { large: { borderStyle: "solid" } },
+    };
+    const { getByTestId } = renderTab([styled], "a");
+
+    // The literal "none" keyword is a real value (border-style: none), not the
+    // clear action — the "—" sentinel is what unsets the property.
+    await user.click(getByTestId("style-control-borderStyle-select"));
+    await user.click(getByTestId("style-control-borderStyle-option-none"));
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"borderStyle":"none"',
+    );
+
+    await user.click(getByTestId("style-control-borderStyle-select"));
+    await user.click(getByTestId("style-control-borderStyle-option-unset"));
+    // Clearing the only property prunes the style slot to undefined.
+    expect(getByTestId("style-probe").textContent).toBe("");
+  });
+
   test("the italic mark toggles a fontStyle raw value", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 

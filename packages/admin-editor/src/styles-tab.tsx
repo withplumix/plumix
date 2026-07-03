@@ -21,6 +21,13 @@ import {
   Underline,
 } from "@plumix/admin-ui/icons";
 import { Label } from "@plumix/admin-ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { Toggle } from "@plumix/admin-ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import {
@@ -47,6 +54,9 @@ interface ControlSpec {
   readonly property: string;
   readonly label: string;
   readonly category?: TokenCategory;
+  /** Enumerated CSS keywords rendered as a Select (e.g. border-style). When
+   *  set, the control is a plain keyword picker — no token/custom modes. */
+  readonly options?: readonly string[];
 }
 
 /** Reads the active block's value for a style property in the current bucket. */
@@ -99,6 +109,11 @@ const SECTIONS: readonly {
     id: "border",
     label: "Border",
     controls: [
+      {
+        property: "borderStyle",
+        label: "Style",
+        options: ["none", "solid", "dashed", "dotted", "double"],
+      },
       { property: "borderWidth", label: "Width", category: "border" },
       { property: "borderColor", label: "Color", category: "colors" },
       { property: "borderRadius", label: "Radius", category: "radius" },
@@ -203,17 +218,28 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
               {/* Two-per-row so the rail stays compact; each StyleControl is a
                   self-contained cell (label + input stacked). */}
               <div className="grid grid-cols-2 gap-x-2 gap-y-3">
-                {section.controls.map((c) => (
-                  <StyleControl
-                    key={c.property}
-                    label={c.label}
-                    property={c.property}
-                    category={c.category}
-                    value={valueOf(c.property)}
-                    tokens={tokens}
-                    onChange={setter(c.property)}
-                  />
-                ))}
+                {section.controls.map((c) =>
+                  c.options ? (
+                    <KeywordControl
+                      key={c.property}
+                      label={c.label}
+                      property={c.property}
+                      options={c.options}
+                      value={valueOf(c.property)}
+                      onChange={setter(c.property)}
+                    />
+                  ) : (
+                    <StyleControl
+                      key={c.property}
+                      label={c.label}
+                      property={c.property}
+                      category={c.category}
+                      value={valueOf(c.property)}
+                      tokens={tokens}
+                      onChange={setter(c.property)}
+                    />
+                  ),
+                )}
               </div>
               {section.id === "typography" && (
                 <TextStyleControls valueOf={valueOf} setter={setter} />
@@ -460,6 +486,59 @@ function LayoutControls({
           />
         </>
       ) : null}
+    </div>
+  );
+}
+
+// Radix Select forbids an empty item value, so the "clear" choice carries a
+// sentinel that maps back to `null` (property absent) on change.
+const KEYWORD_NONE = "__unset__";
+
+/** A labelled dropdown of enumerated CSS keywords (e.g. border-style). Writes
+ *  the picked keyword to `property`; the leading "—" clears it. No token mode —
+ *  these properties have no theme scale, only a fixed value set. */
+function KeywordControl({
+  label,
+  property,
+  options,
+  value,
+  onChange,
+}: {
+  readonly label: string;
+  readonly property: string;
+  readonly options: readonly string[];
+  readonly value: string | undefined;
+  readonly onChange: (value: string | null) => void;
+}): ReactElement {
+  const testId = `style-control-${property}`;
+  return (
+    <div className="flex flex-col gap-1" data-testid={testId}>
+      <Label className="text-xs">{label}</Label>
+      <Select
+        value={value ?? KEYWORD_NONE}
+        onValueChange={(next) => onChange(next === KEYWORD_NONE ? null : next)}
+      >
+        <SelectTrigger className="w-full" data-testid={`${testId}-select`}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            value={KEYWORD_NONE}
+            data-testid={`${testId}-option-unset`}
+          >
+            —
+          </SelectItem>
+          {options.map((opt) => (
+            <SelectItem
+              key={opt}
+              value={opt}
+              data-testid={`${testId}-option-${opt}`}
+            >
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
