@@ -132,6 +132,11 @@ export interface BlockNodeRenderProps<
   /** The author's allowlisted root-element override, or `undefined`. A
    *  `selfSeam` container block should render `tagName ?? <its default>`. */
   readonly tagName?: RootTag;
+  /** The node's render-safe id (absent for an unsafe id), for a block that emits
+   *  its own per-instance scoped CSS (e.g. `.plumix-<x>-${nodeId}` in a `<style>`). */
+  readonly nodeId?: string;
+  /** Active theme breakpoints, for a block emitting its own responsive `<style>`. */
+  readonly breakpoints?: ThemeBreakpoints;
 }
 
 export type BlockNodeComponent<
@@ -353,6 +358,8 @@ function renderNode(
       loaders,
       blockProps,
       tagName,
+      nodeId: safeId ?? undefined,
+      breakpoints: env.breakpoints,
     });
   }
 

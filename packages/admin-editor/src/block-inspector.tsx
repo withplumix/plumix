@@ -5,9 +5,10 @@ import { Trans } from "@lingui/react";
 import type { BlockRegistry } from "@plumix/blocks";
 import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import { Button } from "@plumix/admin-ui/button";
-import { RefreshCw } from "@plumix/admin-ui/icons";
+import { Plus, RefreshCw } from "@plumix/admin-ui/icons";
 import { normalizeStyleValue } from "@plumix/blocks";
 
+import { createNodeFromEntry } from "./block-catalog.js";
 import { BlockInputControl } from "./block-input-control.js";
 import { findBlock } from "./block-tree-ops.js";
 import { useEditorStore, useLoaderPushRef } from "./provider.js";
@@ -38,6 +39,7 @@ export function BlockInspector({
   const device = useEditorStore((s) => s.device);
   const updateBlockAttrs = useEditorStore((s) => s.updateBlockAttrs);
   const updateBlockStyle = useEditorStore((s) => s.updateBlockStyle);
+  const insertBlockInto = useEditorStore((s) => s.insertBlockInto);
   const loaderPushRef = useLoaderPushRef();
 
   const bucket = deviceBucket(device);
@@ -53,6 +55,24 @@ export function BlockInspector({
     const data = await onRefreshBlockLoader(activeId);
     loaderPushRef?.current?.(data);
   }, [activeId, onRefreshBlockLoader, loaderPushRef]);
+  const handleAddColumn = useCallback((): void => {
+    if (!block) return;
+    const node = createNodeFromEntry(registry, {
+      name: "core/column",
+      slug: "core/column",
+      title: "Column",
+    });
+    // Append at the end of the row's slot; the store clamps the index.
+    insertBlockInto(
+      node,
+      {
+        parentId: block.id,
+        slotKey: "columns",
+        index: Number.MAX_SAFE_INTEGER,
+      },
+      ["core/column"],
+    );
+  }, [block, registry, insertBlockInto]);
 
   if (!block) {
     return (
@@ -74,6 +94,7 @@ export function BlockInspector({
   const spec = registry.get(block.name);
   const inputs = (spec?.inputs ?? []).filter((input) => input.type !== "slot");
   const canRefresh = Boolean(onRefreshBlockLoader && spec?.loaders);
+  const isColumns = block.name === "core/columns";
 
   return (
     <div className="flex flex-col gap-4 p-4" data-testid="block-inspector">
@@ -104,6 +125,18 @@ export function BlockInspector({
           />
         );
       })}
+      {isColumns && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          data-testid="inspector-add-column"
+          onClick={handleAddColumn}
+        >
+          <Plus />
+          <Trans id="editor.inspector.addColumn" message="Add column" />
+        </Button>
+      )}
       {canRefresh && (
         <Button
           type="button"

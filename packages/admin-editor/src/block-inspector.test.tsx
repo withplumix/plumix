@@ -10,7 +10,11 @@ import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import { BlockInspector } from "./block-inspector.js";
-import { EditorProvider, useEditorStoreApi } from "./provider.js";
+import {
+  EditorProvider,
+  useEditorStore,
+  useEditorStoreApi,
+} from "./provider.js";
 
 beforeAll(() => {
   i18n.loadAndActivate({ locale: "en", messages: {} });
@@ -56,7 +60,34 @@ const registry: BlockRegistry = createBlockRegistry([
       { name: "width", type: "text", label: "Width", styleProperty: "width" },
     ],
   },
+  {
+    name: "core/columns",
+    render: () => null,
+    inputs: [{ name: "columns", type: "slot", allowedBlocks: ["core/column"] }],
+  },
+  {
+    name: "core/column",
+    render: () => null,
+    requiresParent: ["core/columns"],
+    inputs: [
+      {
+        name: "content",
+        type: "slot",
+        defaultChildren: [{ id: "seed", name: "core/heading" }],
+      },
+    ],
+  },
 ]);
+
+function ColumnsProbe({ id }: { readonly id: string }): ReactElement {
+  const count = useEditorStore((s) => {
+    const node = s.tree.find((b) => b.id === id);
+    return (
+      (node?.attrs?.columns as readonly unknown[] | undefined)?.length ?? 0
+    );
+  });
+  return <output data-testid="columns-count">{String(count)}</output>;
+}
 
 function Selector({ id }: { readonly id?: string }): ReactElement | null {
   const api = useEditorStoreApi();
@@ -185,5 +216,41 @@ describe("BlockInspector", () => {
       "lp1",
     );
     expect(queryByTestId("refresh-block-loader")).toBeNull();
+  });
+
+  test("Add column inserts a core/column into the selected columns block", () => {
+    const tree: readonly BlockNode[] = [
+      {
+        id: "cols",
+        name: "core/columns",
+        attrs: {
+          columns: [
+            { id: "a", name: "core/column" },
+            { id: "b", name: "core/column" },
+          ],
+        },
+      },
+    ];
+    const { getByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={tree}>
+          <Selector id="cols" />
+          <BlockInspector registry={registry} />
+          <ColumnsProbe id="cols" />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+
+    expect(getByTestId("columns-count").textContent).toBe("2");
+    fireEvent.click(getByTestId("inspector-add-column"));
+    expect(getByTestId("columns-count").textContent).toBe("3");
+  });
+
+  test("shows no Add column control for a non-columns block", () => {
+    const { queryByTestId } = renderInspector(
+      [{ id: "h1", name: "core/heading" }],
+      "h1",
+    );
+    expect(queryByTestId("inspector-add-column")).toBeNull();
   });
 });

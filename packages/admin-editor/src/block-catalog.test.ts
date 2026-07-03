@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode, BlockPattern, BlockSpec } from "@plumix/blocks";
-import { columnsBlock, createBlockRegistry } from "@plumix/blocks";
+import {
+  columnBlock,
+  columnsBlock,
+  createBlockRegistry,
+  richTextBlock,
+} from "@plumix/blocks";
 
 import {
   createNodeFromEntry,
@@ -246,7 +251,7 @@ describe("createNodeFromEntry", () => {
   test("seeds a slot's defaultChildren so a fresh container isn't bare", () => {
     const seeded = createBlockRegistry([
       spec({
-        name: "core/columns",
+        name: "acme/two-slot",
         category: "layout",
         inputs: [
           {
@@ -260,9 +265,9 @@ describe("createNodeFromEntry", () => {
     ]);
 
     const node = createNodeFromEntry(seeded, {
-      name: "core/columns",
-      slug: "core/columns",
-      title: "Columns",
+      name: "acme/two-slot",
+      slug: "acme/two-slot",
+      title: "Two slot",
     });
 
     const left = node.attrs?.left as readonly BlockNode[];
@@ -273,19 +278,48 @@ describe("createNodeFromEntry", () => {
     expect(node.attrs?.right).toBeUndefined();
   });
 
-  test("the core/columns block seeds a paragraph into each column", () => {
+  test("the core/columns block seeds two columns, each with a paragraph", () => {
     const reg = createBlockRegistry([columnsBlock]);
     const node = createNodeFromEntry(reg, {
       name: "core/columns",
       slug: "core/columns",
       title: "Columns",
     });
-    expect(
-      (node.attrs?.left as readonly BlockNode[]).map((n) => n.name),
-    ).toEqual(["core/rich-text"]);
-    expect(
-      (node.attrs?.right as readonly BlockNode[]).map((n) => n.name),
-    ).toEqual(["core/rich-text"]);
+    const columns = node.attrs?.columns as readonly BlockNode[];
+    expect(columns.map((n) => n.name)).toEqual(["core/column", "core/column"]);
+    // Each seeded column carries its own paragraph.
+    const firstContent = columns[0]?.attrs?.content as readonly BlockNode[];
+    expect(firstContent.map((n) => n.name)).toEqual(["core/rich-text"]);
+  });
+
+  test("seeds a container's children with their own spec defaultStyles", () => {
+    const reg = createBlockRegistry([columnsBlock, columnBlock]);
+    const node = createNodeFromEntry(reg, {
+      name: "core/columns",
+      slug: "core/columns",
+      title: "Columns",
+    });
+
+    // A seeded column inherits the equal-split flex from core/column's spec —
+    // the same as a column inserted directly — so a fresh row splits evenly.
+    const columns = node.attrs?.columns as readonly BlockNode[];
+    expect(columns[0]?.style?.large?.flexGrow).toBe("1");
+    expect(columns[1]?.style?.large?.flexBasis).toBe("0");
+  });
+
+  test("seeds a container's descendants with their own spec default attrs", () => {
+    const reg = createBlockRegistry([columnsBlock, columnBlock, richTextBlock]);
+    const node = createNodeFromEntry(reg, {
+      name: "core/columns",
+      slug: "core/columns",
+      title: "Columns",
+    });
+
+    // The seeded column paragraph inherits core/rich-text's default body — the
+    // same as a rich-text inserted directly — rather than rendering blank.
+    const columns = node.attrs?.columns as readonly BlockNode[];
+    const para = (columns[0]?.attrs?.content as readonly BlockNode[])[0];
+    expect(para?.attrs?.body).toBe("<p>Enter text here…</p>");
   });
 
   test("an explicit slot value wins over the slot's defaultChildren", () => {

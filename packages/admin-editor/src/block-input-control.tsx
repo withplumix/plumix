@@ -6,6 +6,7 @@ import type { BlockInput, BlockInputOption } from "@plumix/blocks";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
 import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
+import { Switch } from "@plumix/admin-ui/switch";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { resolveLabel } from "@plumix/core/i18n";
 
@@ -74,6 +75,15 @@ export function BlockInputControl({
       case "checkbox":
         return (
           <Checkbox
+            id={id}
+            data-testid={testId}
+            checked={value === true}
+            onCheckedChange={(checked) => onChange(checked === true)}
+          />
+        );
+      case "boolean":
+        return (
+          <Switch
             id={id}
             data-testid={testId}
             checked={value === true}
@@ -157,8 +167,17 @@ export function BlockInputControl({
     }
   })();
 
+  // Toggles read as one inline row — label left, control right — like the
+  // Styles tab's Visibility switches; other kinds stack the label above.
+  const inline = input.type === "boolean" || input.type === "checkbox";
   return (
-    <div className="flex flex-col gap-1.5">
+    <div
+      className={
+        inline
+          ? "flex items-center justify-between gap-2"
+          : "flex flex-col gap-1.5"
+      }
+    >
       <Label htmlFor={id} id={labelId}>
         {label}
       </Label>

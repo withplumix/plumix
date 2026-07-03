@@ -158,6 +158,7 @@ export { unknownBlockSchema } from "./unknown-node.js";
 export { coreBlocks } from "./core-blocks.js";
 export { buttonBlock } from "./button/index.js";
 export { codeBlock } from "./code/index.js";
+export { columnBlock } from "./column/index.js";
 export { columnsBlock } from "./columns/index.js";
 export { detailsBlock } from "./details/index.js";
 export { embedBlock } from "./embed/index.js";

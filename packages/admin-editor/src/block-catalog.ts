@@ -4,7 +4,11 @@ import type {
   BlockRegistry,
   InsertableBlockEntry,
 } from "@plumix/blocks";
-import { expandBlockVariations, rewriteBlockNodeIds } from "@plumix/blocks";
+import {
+  expandBlockVariations,
+  isBlockNodeArray,
+  rewriteBlockNodeIds,
+} from "@plumix/blocks";
 import { labelSourceText } from "@plumix/core/i18n";
 
 const PATTERN_REF_BLOCK = "core/pattern-ref";
@@ -131,6 +135,16 @@ export function createNodeFromEntry(
       attrs[input.name] = input.defaultChildren;
     }
   }
+  // Seed each seeded slot child with its own spec defaults + defaultStyles, so a
+  // container's descendants (e.g. the equal-split columns and their paragraphs)
+  // are treated like a directly-inserted child. The top node's own defaults are
+  // already merged above; only descendants recurse.
+  for (const key of Object.keys(attrs)) {
+    const value = attrs[key];
+    if (isBlockNodeArray(value)) {
+      attrs[key] = value.map((child) => seedNodeDefaults(child, registry));
+    }
+  }
   const seed: BlockNode = {
     id: "seed",
     name: entry.name,
@@ -139,6 +153,28 @@ export function createNodeFromEntry(
   };
   const [node = seed] = rewriteBlockNodeIds([seed]);
   return node;
+}
+
+// Apply a node's own spec `defaults` (attrs) + `defaultStyles` (style) where it
+// carries none, recursing through its slots (an existing attr/style wins). This
+// seeds a descendant's own defaults, but NOT a nested container's empty slot
+// `defaultChildren` — a container placed in `defaultChildren` must spell out its
+// own children, as core/columns' DEFAULT_COLUMNS does.
+function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
+  const spec = registry.get(node.name);
+  const base: Record<string, unknown> = { ...spec?.defaults, ...node.attrs };
+  const attrs: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(base)) {
+    attrs[key] = isBlockNodeArray(value)
+      ? value.map((child) => seedNodeDefaults(child, registry))
+      : value;
+  }
+  const style = node.style ?? spec?.defaultStyles;
+  return {
+    ...node,
+    attrs: Object.keys(attrs).length > 0 ? attrs : undefined,
+    ...(style ? { style } : {}),
+  };
 }
 
 /** The concrete block(s) a pattern inserts: a deep-cloned, id-rewritten copy of
