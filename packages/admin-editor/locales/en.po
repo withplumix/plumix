@@ -74,11 +74,6 @@ msgstr ""
 #~ msgstr "Block ID"
 
 #. js-lingui-explicit-id
-#: src/styles-tab.tsx
-#~ msgid "editor.styles.cssProperties"
-#~ msgstr "CSS Properties"
-
-#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr "{count} selected"
@@ -177,6 +172,11 @@ msgstr "Create"
 #: src/styles-tab.tsx
 msgid "editor.styles.cssClasses"
 msgstr "CSS classes"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.cssProperties"
+msgstr "CSS Properties"
 
 #. js-lingui-explicit-id
 #: src/style-control.tsx
@@ -287,6 +287,11 @@ msgstr "Layers"
 #: src/styles-tab.tsx
 msgid "editor.styles.layout"
 msgstr "Layout"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.cssClasses.hint"
+msgstr "List CSS classes separated by spaces."
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx

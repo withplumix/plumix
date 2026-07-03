@@ -296,14 +296,27 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
               className={block.className}
               onChange={(next) => setBlockClassName(activeId, next)}
             />
-            <StyleDeclarations
-              declarations={declarations}
-              tokens={tokens}
-              onChange={(property, value) => setter(property)(value)}
-              onRename={(from, to) =>
-                renameBlockStyleProperty(activeId, bucket, from, to)
-              }
-            />
+            {/* Divider + sub-label so the raw declarations don't read as more
+                class-name fields. */}
+            <div className="border-border flex flex-col gap-2 border-t pt-3">
+              <span
+                className="text-muted-foreground text-xs"
+                data-testid="style-declarations-label"
+              >
+                <Trans
+                  id="editor.styles.cssProperties"
+                  message="CSS Properties"
+                />
+              </span>
+              <StyleDeclarations
+                declarations={declarations}
+                tokens={tokens}
+                onChange={(property, value) => setter(property)(value)}
+                onRename={(from, to) =>
+                  renameBlockStyleProperty(activeId, bucket, from, to)
+                }
+              />
+            </div>
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="html">
@@ -1117,6 +1130,15 @@ function CssClassesField({
         })}
         data-testid="style-css-classes"
       />
+      <p
+        className="text-muted-foreground text-xs"
+        data-testid="style-css-classes-hint"
+      >
+        <Trans
+          id="editor.styles.cssClasses.hint"
+          message="List CSS classes separated by spaces."
+        />
+      </p>
     </div>
   );
 }

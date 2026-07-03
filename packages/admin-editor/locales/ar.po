@@ -74,11 +74,6 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
-#: src/styles-tab.tsx
-#~ msgid "editor.styles.cssProperties"
-#~ msgstr ""
-
-#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.count"
 msgstr ""
@@ -176,6 +171,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.cssClasses"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.cssProperties"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -286,6 +286,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.layout"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.cssClasses.hint"
 msgstr ""
 
 #. js-lingui-explicit-id
