@@ -180,6 +180,48 @@ describe("StylesTab", () => {
     expect(getByTestId("style-probe").textContent).toBe("");
   });
 
+  test("the Shadows & Effects section exposes an opacity control that writes opacity", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    expect(getByTestId("styles-section-effects").textContent).toContain(
+      "Shadows & Effects",
+    );
+
+    // A numeric readout (0–1) drives the write; a synced slider is visual sugar.
+    fireEvent.change(getByTestId("style-control-opacity-input"), {
+      target: { value: "0.5" },
+    });
+
+    expect(getByTestId("style-probe").textContent).toContain('"opacity":"0.5"');
+  });
+
+  test("the text-shadow switch composes and clears a text-shadow value", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    // Enabling seeds a default composed shadow (x/y/blur/color).
+    fireEvent.click(getByTestId("style-text-shadow-toggle"));
+    expect(getByTestId("style-probe").textContent).toContain('"textShadow"');
+
+    // Editing a part recomposes the whole value.
+    fireEvent.change(getByTestId("style-text-shadow-blur"), {
+      target: { value: "5" },
+    });
+    expect(getByTestId("style-probe").textContent).toContain("5px");
+
+    // Clearing an offset field coalesces to 0 — never a malformed "px …".
+    fireEvent.change(getByTestId("style-text-shadow-x"), {
+      target: { value: "" },
+    });
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"textShadow":"0px',
+    );
+    expect(getByTestId("style-probe").textContent).not.toContain('"px');
+
+    // Disabling clears the property entirely (slot prunes to undefined).
+    fireEvent.click(getByTestId("style-text-shadow-toggle"));
+    expect(getByTestId("style-probe").textContent).toBe("");
+  });
+
   test("the italic mark toggles a fontStyle raw value", () => {
     const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
 

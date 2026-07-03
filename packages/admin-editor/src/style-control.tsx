@@ -17,7 +17,7 @@ import { tokenIdFromCssVar, tokenIdToCssVar } from "@plumix/blocks";
 
 // Native `<input type="color">` only round-trips 6-digit hex; anything else
 // (a token var(), `transparent`, rgba) leaves the swatch on a safe default.
-const HEX6 = /^#[0-9a-fA-F]{6}$/;
+export const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // Radix Select forbids an empty-string item value, so the "clear" choice
 // carries a sentinel that maps back to `null` on change.
