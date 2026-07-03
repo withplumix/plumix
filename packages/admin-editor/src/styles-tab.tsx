@@ -67,25 +67,23 @@ type StyleGetter = (property: string) => string | undefined;
 /** Curried writer: pick a property, then set (or clear with `null`) its value. */
 type StyleSetter = (property: string) => (value: string | null) => void;
 
+// Sizing has no token scale (widths are arbitrary px/%/rem), so these are
+// custom-only — same model as font-size. Folded into the Layout section (like
+// Builder), not a standalone section.
+const SIZE_CONTROLS: readonly ControlSpec[] = [
+  { property: "width", label: "Width" },
+  { property: "height", label: "Height" },
+  { property: "minWidth", label: "Min width" },
+  { property: "minHeight", label: "Min height" },
+  { property: "maxWidth", label: "Max width" },
+  { property: "maxHeight", label: "Max height" },
+];
+
 const SECTIONS: readonly {
   readonly id: string;
   readonly label: string;
   readonly controls: readonly ControlSpec[];
 }[] = [
-  {
-    // Sizing has no token scale (widths are arbitrary px/%/rem), so these are
-    // custom-only — same model as font-size.
-    id: "size",
-    label: "Size",
-    controls: [
-      { property: "width", label: "Width" },
-      { property: "height", label: "Height" },
-      { property: "minWidth", label: "Min width" },
-      { property: "minHeight", label: "Min height" },
-      { property: "maxWidth", label: "Max width" },
-      { property: "maxHeight", label: "Max height" },
-    ],
-  },
   {
     id: "typography",
     label: "Typography",
@@ -507,6 +505,28 @@ function LayoutControls({
           />
         </>
       ) : null}
+      {/* Self-alignment within the parent — Builder's "Align" row. Independent
+          of this block's own display, so it's always offered. */}
+      <LayoutToggle
+        label="Align self"
+        property="alignSelf"
+        options={["flex-start", "center", "flex-end", "stretch"]}
+        valueOf={valueOf}
+        setter={setter}
+      />
+      {/* Sizing (width/height/min/max), folded in from the old Size section. */}
+      <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+        {SIZE_CONTROLS.map((c) => (
+          <StyleControl
+            key={c.property}
+            label={c.label}
+            property={c.property}
+            value={valueOf(c.property)}
+            tokens={tokens}
+            onChange={setter(c.property)}
+          />
+        ))}
+      </div>
     </div>
   );
 }

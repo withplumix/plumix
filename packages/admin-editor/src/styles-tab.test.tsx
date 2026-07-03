@@ -80,7 +80,7 @@ describe("StylesTab", () => {
     expect(margin.contains(padding)).toBe(false);
   });
 
-  test("leads the Styles tab with the Layout section, then Size", () => {
+  test("leads the Styles tab with the Layout section; Size folds into it", () => {
     const { container } = renderTab([{ id: "a", name: "core/x" }], "a", {
       expandCss: false,
     });
@@ -88,7 +88,18 @@ describe("StylesTab", () => {
       ...container.querySelectorAll('[data-testid^="styles-section-"]'),
     ].map((el) => el.getAttribute("data-testid"));
     expect(sections[0]).toBe("styles-section-layout");
-    expect(sections[1]).toBe("styles-section-size");
+    // Size is no longer a standalone section — its controls live under Layout.
+    expect(sections).not.toContain("styles-section-size");
+  });
+
+  test("the Layout section writes align-self for the block within its parent", () => {
+    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+
+    fireEvent.click(getByTestId("style-alignSelf-center"));
+
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"alignSelf":"center"',
+    );
   });
 
   test("the Layout section writes display to node.style and reveals flex controls", () => {
@@ -110,10 +121,14 @@ describe("StylesTab", () => {
     expect(getByTestId("style-alignItems-stretch")).toBeDefined();
   });
 
-  test("exposes Size controls that write width/min-width to the active bucket", () => {
-    const { getByTestId } = renderTab([{ id: "a", name: "core/x" }], "a");
+  test("exposes Size controls (folded into Layout) that write width/min-width", () => {
+    const { getByTestId, queryByTestId } = renderTab(
+      [{ id: "a", name: "core/x" }],
+      "a",
+    );
 
-    expect(getByTestId("styles-section-size")).toBeDefined();
+    // Size is folded into Layout — no standalone section, but the controls stay.
+    expect(queryByTestId("styles-section-size")).toBeNull();
 
     // Sizing has no token scale, so the custom input shows directly (no mode
     // toggle) — the same model as font-size.
