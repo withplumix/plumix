@@ -99,6 +99,11 @@ msgid "editor.htmlAttrs.add"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.inspector.addColumn"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.add"
 msgstr ""
