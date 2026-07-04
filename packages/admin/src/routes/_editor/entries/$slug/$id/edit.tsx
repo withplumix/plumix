@@ -12,6 +12,7 @@ import {
   supportsEditor,
   supportsRevisions,
 } from "@/editor/resolve-editor-mode.js";
+import { resolvePluginFieldType } from "@/editor/resolve-plugin-field-type.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
@@ -813,6 +814,7 @@ function BespokeEditor({
       onRefreshBlockLoader={(blockId) =>
         orpc.entry.refreshBlockLoader.call({ id, blockId }).then((r) => r.data)
       }
+      resolvePluginFieldType={resolvePluginFieldType}
     />
   );
 }

@@ -66,6 +66,11 @@ const registry: BlockRegistry = createBlockRegistry([
     inputs: [{ name: "columns", type: "slot", allowedBlocks: ["core/column"] }],
   },
   {
+    name: "core/probe-media",
+    render: () => null,
+    inputs: [{ name: "image", type: "media", label: "Image" }],
+  },
+  {
     name: "core/column",
     render: () => null,
     requiresParent: ["core/columns"],
@@ -244,6 +249,59 @@ describe("BlockInspector", () => {
     expect(getByTestId("columns-count").textContent).toBe("2");
     fireEvent.click(getByTestId("inspector-add-column"));
     expect(getByTestId("columns-count").textContent).toBe("3");
+  });
+
+  test("renders a host-resolved plugin field and patches the store on edit", () => {
+    const StubField = ({
+      rhf,
+      testId,
+    }: {
+      readonly rhf: {
+        readonly value: unknown;
+        readonly onChange: (v: unknown) => void;
+      };
+      readonly testId: string;
+    }): ReactElement => {
+      const id =
+        rhf.value && typeof (rhf.value as { id?: unknown }).id === "string"
+          ? (rhf.value as { id: string }).id
+          : "";
+      return (
+        <input
+          data-testid={testId}
+          value={id}
+          onChange={(e) => rhf.onChange({ id: e.target.value })}
+        />
+      );
+    };
+    const { getByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider
+          initialTree={[
+            {
+              id: "m1",
+              name: "core/probe-media",
+              attrs: { image: { id: "7" } },
+            },
+          ]}
+        >
+          <Selector id="m1" />
+          <BlockInspector
+            registry={registry}
+            resolvePluginFieldType={(t) =>
+              t === "media" ? StubField : undefined
+            }
+          />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+    const control = getByTestId("block-input-image") as HTMLInputElement;
+    expect(control.value).toBe("7");
+    // The composite value round-trips through updateBlockAttrs into attrs.image.
+    fireEvent.change(control, { target: { value: "42" } });
+    expect((getByTestId("block-input-image") as HTMLInputElement).value).toBe(
+      "42",
+    );
   });
 
   test("shows no Add column control for a non-columns block", () => {

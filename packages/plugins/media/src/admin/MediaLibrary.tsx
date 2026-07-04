@@ -154,6 +154,29 @@ interface MediaListResponse {
   readonly hasMore: boolean;
 }
 
+/**
+ * What the picker hands back on confirm. Carries the resolved url/alt (not just
+ * the id) so a consumer can snapshot them without a second round-trip — the
+ * block editor stores these directly on the image block.
+ */
+export interface MediaSelection {
+  readonly id: string;
+  readonly url: string;
+  readonly alt: string | null;
+  readonly mime: string;
+  readonly filename: string;
+}
+
+function toSelection(item: MediaItem): MediaSelection {
+  return {
+    id: String(item.id),
+    url: item.url,
+    alt: item.alt,
+    mime: item.mime,
+    filename: item.title,
+  };
+}
+
 interface CreateUploadUrlResponse {
   readonly uploadUrl: string;
   readonly method: "PUT";
@@ -365,7 +388,7 @@ export interface MediaLibraryProps {
    * user confirms a selection. Single-pick semantics — caller is
    * responsible for closing the modal.
    */
-  readonly onSelect?: (id: string) => void;
+  readonly onSelect?: (selection: MediaSelection) => void;
   /** Picker-mode only: called when the user clicks Cancel. */
   readonly onCancel?: () => void;
 }
@@ -490,11 +513,13 @@ export function MediaLibrary({
   //   - single click → set this id as the picked one (footer enables)
   //   - double click → confirm + close (auto-close)
   // Footer "Use selection" is the keyboard-friendly confirmation.
-  const [pickerSelectedId, setPickerSelectedId] = useState<number | null>(null);
+  // Hold the whole item, not just its id: the footer confirm must resolve a
+  // full selection even after a search/scroll evicts it from the loaded page.
+  const [pickerSelected, setPickerSelected] = useState<MediaItem | null>(null);
   const handleCardActivate = useCallback(
     (item: MediaItem): void => {
       if (isPicker) {
-        setPickerSelectedId(item.id);
+        setPickerSelected(item);
         return;
       }
       setSelectedItem(item);
@@ -504,7 +529,7 @@ export function MediaLibrary({
   const handleCardConfirm = useCallback(
     (item: MediaItem): void => {
       if (!isPicker) return;
-      onSelect?.(String(item.id));
+      onSelect?.(toSelection(item));
     },
     [isPicker, onSelect],
   );
@@ -602,7 +627,7 @@ export function MediaLibrary({
           >
             {items.map((item) => {
               const selected = isPicker
-                ? pickerSelectedId === item.id
+                ? pickerSelected?.id === item.id
                 : selectedItem?.id === item.id;
               return (
                 <MediaCard
@@ -678,11 +703,9 @@ export function MediaLibrary({
             <Button
               type="button"
               size="sm"
-              disabled={pickerSelectedId === null}
+              disabled={pickerSelected === null}
               onClick={() => {
-                if (pickerSelectedId !== null) {
-                  onSelect?.(String(pickerSelectedId));
-                }
+                if (pickerSelected) onSelect?.(toSelection(pickerSelected));
               }}
               data-testid="media-library-picker-confirm"
             >

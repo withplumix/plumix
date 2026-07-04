@@ -8,6 +8,7 @@ import { Button } from "@plumix/admin-ui/button";
 import { Plus, RefreshCw } from "@plumix/admin-ui/icons";
 import { normalizeStyleValue } from "@plumix/blocks";
 
+import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { createNodeFromEntry } from "./block-catalog.js";
 import { BlockInputControl } from "./block-input-control.js";
 import { findBlock } from "./block-tree-ops.js";
@@ -22,6 +23,9 @@ interface BlockInspectorProps {
   readonly onRefreshBlockLoader?: (
     blockId: string,
   ) => Promise<SerializedLoaderData>;
+  /** Resolves plugin-registered input types (e.g. the media picker) to a
+   *  control; threaded down to each {@link BlockInputControl}. */
+  readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }
 
 /**
@@ -33,6 +37,7 @@ interface BlockInspectorProps {
 export function BlockInspector({
   registry,
   onRefreshBlockLoader,
+  resolvePluginFieldType,
 }: BlockInspectorProps): ReactElement {
   const activeId = useEditorStore((s) => s.activeId);
   const tree = useEditorStore((s) => s.tree);
@@ -106,6 +111,7 @@ export function BlockInspector({
           <BlockInputControl
             key={input.name}
             input={input}
+            resolvePluginFieldType={resolvePluginFieldType}
             value={
               styleProp
                 ? (normalizeStyleValue(block.style?.[bucket]?.[styleProp]) ??

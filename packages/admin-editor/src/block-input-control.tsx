@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { lazy, Suspense, useId } from "react";
+import { createElement, lazy, Suspense, useId } from "react";
 import { useLingui } from "@lingui/react";
 
 import type { BlockInput, BlockInputOption } from "@plumix/blocks";
@@ -16,12 +16,49 @@ const RichTextField = lazy(() =>
   import("./rich-text-field.js").then((m) => ({ default: m.RichTextField })),
 );
 
+/**
+ * A plugin-supplied field control (e.g. the media picker), resolved by the host
+ * from the same registry metaboxes use. The seam adapts a block attribute onto
+ * the `rhf` shape these controls already expect, so one registration serves
+ * both metaboxes and the block inspector. `field` is opaque here — the host's
+ * control casts it to its own field-manifest type.
+ */
+export interface PluginFieldControlProps {
+  readonly field: unknown;
+  readonly rhf: {
+    readonly value: unknown;
+    readonly onChange: (value: unknown) => void;
+    readonly onBlur: () => void;
+    readonly name: string;
+  };
+  readonly disabled: boolean;
+  readonly testId: string;
+}
+
+export type PluginFieldControl = (
+  props: PluginFieldControlProps,
+) => ReactElement | null;
+
+/**
+ * Resolves an input type the built-in kinds don't handle to a host control.
+ * Threaded from the app (which owns the plugin field registry) down to each
+ * control, so this package stays decoupled from that registry.
+ */
+export type ResolvePluginFieldType = (
+  type: string,
+) => PluginFieldControl | undefined;
+
 interface BlockInputControlProps {
   readonly input: BlockInput;
   readonly value: unknown;
   /** Emits the next typed value (string for text, number for number, etc.). */
   readonly onChange: (value: unknown) => void;
+  readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }
+
+// Block-attr edits commit on onChange; the block path has no RHF touched-state,
+// so a plugin control's onBlur is inert here (kept to satisfy the shim shape).
+const noop = (): void => undefined;
 
 const FIELD_TESTID = (name: string): string => `block-input-${name}`;
 
@@ -37,6 +74,7 @@ export function BlockInputControl({
   input,
   value,
   onChange,
+  resolvePluginFieldType,
 }: BlockInputControlProps): ReactElement {
   const { i18n } = useLingui();
   const id = useId();
@@ -155,7 +193,21 @@ export function BlockInputControl({
           </>
         );
       }
-      default:
+      default: {
+        // A plugin may register a control for a type the built-ins don't
+        // handle (the media picker). Fall through to plain text when nothing
+        // is registered, preserving the prior behavior for stray types.
+        const PluginField = resolvePluginFieldType?.(input.type);
+        if (PluginField) {
+          // createElement, not JSX: the component is resolved at runtime from a
+          // prop, and the host caches its identity — render it directly.
+          return createElement(PluginField, {
+            field: input,
+            rhf: { value, onChange, onBlur: noop, name: input.name },
+            disabled: false,
+            testId,
+          });
+        }
         return (
           <Input
             id={id}
@@ -164,6 +216,7 @@ export function BlockInputControl({
             onChange={(e) => onChange(e.target.value)}
           />
         );
+      }
     }
   })();
 

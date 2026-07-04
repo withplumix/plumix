@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button, Dialog, DialogContent, DialogTitle } from "plumix/admin/ui";
 import { useLingui } from "plumix/i18n";
 
+import type { MediaSelection } from "./MediaLibrary.js";
 import { MediaLibrary } from "./MediaLibrary.js";
 
 const M = {
@@ -147,7 +148,7 @@ export function MediaListPickerField({
     if (max !== undefined && next.length >= max) setOpen(false);
   };
 
-  const handlePick = (id: string): void => {
+  const handlePick = ({ id }: MediaSelection): void => {
     if (atMax) return;
     // Admin-side dedup: the picker rejects re-adding an id that's
     // already in the array. The server-side meta pipeline does NOT
@@ -343,7 +344,7 @@ function MediaListPickerModal({
   testId,
 }: {
   readonly accept: string | readonly string[] | undefined;
-  readonly onSelect: (id: string) => void;
+  readonly onSelect: (selection: MediaSelection) => void;
   readonly onCancel: () => void;
   readonly testId: string;
 }): ReactNode {

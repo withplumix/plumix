@@ -223,6 +223,63 @@ describe("BlockInputControl", () => {
     expect(getByTestId("block-input-mystery")).toBeDefined();
   });
 
+  test("renders a host-resolved plugin field for an unknown kind and forwards edits", () => {
+    const onChange = vi.fn();
+    // A plugin control reads rhf.value and emits a composite value — proving
+    // the seam forwards a plugin-shaped value straight back to the block attr.
+    const StubField = ({
+      rhf,
+      testId,
+    }: {
+      readonly rhf: {
+        readonly value: unknown;
+        readonly onChange: (v: unknown) => void;
+      };
+      readonly testId: string;
+    }) => (
+      <input
+        data-testid={testId}
+        data-plugin="stub"
+        value={typeof rhf.value === "string" ? rhf.value : ""}
+        onChange={(e) => rhf.onChange({ id: e.target.value })}
+      />
+    );
+    const resolve = (type: string) =>
+      type === "media" ? StubField : undefined;
+
+    const { getByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <BlockInputControl
+          input={{ name: "image", type: "media" }}
+          value="seed"
+          onChange={onChange}
+          resolvePluginFieldType={resolve}
+        />
+      </I18nProvider>,
+    );
+
+    const control = getByTestId("block-input-image");
+    expect(control.getAttribute("data-plugin")).toBe("stub");
+    fireEvent.change(control, { target: { value: "42" } });
+    expect(onChange).toHaveBeenCalledWith({ id: "42" });
+  });
+
+  test("still falls back to text when no resolver matches the unknown kind", () => {
+    const { getByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <BlockInputControl
+          input={{ name: "mystery", type: "future-kind" }}
+          value="x"
+          onChange={vi.fn()}
+          resolvePluginFieldType={() => undefined}
+        />
+      </I18nProvider>,
+    );
+    const control = getByTestId("block-input-mystery") as HTMLInputElement;
+    expect(control.getAttribute("data-plugin")).toBeNull();
+    expect(control.value).toBe("x");
+  });
+
   test("uses the input name as the label when none is given", () => {
     const { getByText } = renderControl({ name: "slug", type: "text" }, "");
     expect(getByText("slug")).toBeDefined();

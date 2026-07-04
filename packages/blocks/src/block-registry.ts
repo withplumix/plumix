@@ -45,6 +45,12 @@ export interface BlockInput {
    * a style like `width` as a block input.
    */
   readonly styleProperty?: string;
+  /**
+   * Plugin reference inputs only (e.g. the media picker): the value scope the
+   * host control filters by — a MIME prefix (`"image/"`) or exact list. Opaque
+   * to the core seam; the host resolver forwards it to the plugin field.
+   */
+  readonly accept?: string | readonly string[];
 }
 
 export type BlockVariationScope = "inserter" | "block" | "transform";
