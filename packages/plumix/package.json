@@ -113,6 +113,10 @@
       "types": "./dist/blocks/index.d.ts",
       "default": "./dist/blocks/index.js"
     },
+    "./blocks/renderer": {
+      "types": "./dist/blocks/renderer.d.ts",
+      "default": "./dist/blocks/renderer.js"
+    },
     "./blocks/test": {
       "types": "./dist/blocks/test.d.ts",
       "default": "./dist/blocks/test.js"
