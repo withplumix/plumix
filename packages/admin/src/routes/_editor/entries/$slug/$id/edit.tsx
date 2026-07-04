@@ -3,7 +3,10 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentSettingsPanel } from "@/components/editor/document-settings.js";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
-import { AUTOSAVE_DEBOUNCE_MS, freshLiveUpdatedAt } from "@/editor/autosave.js";
+import {
+  AUTOSAVE_DEBOUNCE_MS,
+  classifyAutosaveError,
+} from "@/editor/autosave.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
@@ -64,6 +67,10 @@ const M = {
   publishFailed: defineMessage({
     id: "editor.bespoke.toast.publishFailed",
     message: "Couldn't publish — try again.",
+  }),
+  autosaveFailed: defineMessage({
+    id: "editor.bespoke.toast.autosaveFailed",
+    message: "Couldn't save your changes — they may contain invalid content.",
   }),
   discarded: defineMessage({
     id: "editor.bespoke.toast.discarded",
@@ -270,6 +277,9 @@ function BespokeEditor({
   const [hasLocalDraft, setHasLocalDraft] = useState(false);
 
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
+  // Latches once an autosave genuinely fails so the author is told exactly once
+  // (not on every debounce tick); cleared on the next successful save.
+  const autosaveFailedRef = useRef(false);
   const seedContent = isEntryContent(entry.content)
     ? entry.content
     : defineEntryContent([]);
@@ -321,6 +331,24 @@ function BespokeEditor({
     termsRef.current = termSelections;
   });
 
+  // Surface a genuine autosave failure so a rejected save (e.g. content
+  // referencing an unknown block) isn't silently swallowed and lost; a
+  // recoverable stale-token conflict just re-anchors and stays quiet.
+  const handleAutosaveError = useCallback(
+    async (err: unknown): Promise<void> => {
+      const outcome = await classifyAutosaveError(err, queryClient, id);
+      if (outcome.kind === "recovered") {
+        if (outcome.updatedAt) liveUpdatedAtRef.current = outcome.updatedAt;
+        return;
+      }
+      if (!autosaveFailedRef.current) {
+        autosaveFailedRef.current = true;
+        toastError(renderLabel(M.autosaveFailed));
+      }
+    },
+    [queryClient, id, renderLabel],
+  );
+
   /* eslint-disable react-hooks/refs -- callbacks fire post-keystroke, not during render */
   const contentDebouncer = useMemo(
     () =>
@@ -355,12 +383,12 @@ function BespokeEditor({
           if (contentChanged) lastSavedContentRef.current = serializedBlocks;
           if (excerptChanged) lastSavedExcerptRef.current = nextExcerpt;
           if (metaChanged) lastSavedMetaRef.current = serializedMeta;
+          autosaveFailedRef.current = false;
         } catch (err) {
-          const fresh = await freshLiveUpdatedAt(err, queryClient, id);
-          if (fresh) liveUpdatedAtRef.current = fresh;
+          await handleAutosaveError(err);
         }
       }, AUTOSAVE_DEBOUNCE_MS),
-    [id, entry.type, queryClient],
+    [id, entry.type, handleAutosaveError],
   );
   const structuralDebouncer = useMemo(
     () =>
@@ -412,12 +440,12 @@ function BespokeEditor({
               ),
             };
           }
+          autosaveFailedRef.current = false;
         } catch (err) {
-          const fresh = await freshLiveUpdatedAt(err, queryClient, id);
-          if (fresh) liveUpdatedAtRef.current = fresh;
+          await handleAutosaveError(err);
         }
       }, AUTOSAVE_DEBOUNCE_MS),
-    [id, queryClient],
+    [id, handleAutosaveError],
   );
   /* eslint-enable react-hooks/refs */
   useEffect(
@@ -656,6 +684,9 @@ function BespokeEditor({
       return updated;
     },
     onSuccess: () => {
+      // A successful manual save persisted the content, so re-arm the autosave
+      // failure latch — otherwise a later genuine autosave failure stays quiet.
+      autosaveFailedRef.current = false;
       toastSuccess(renderLabel(M.published));
       return invalidateEntry();
     },
@@ -668,6 +699,7 @@ function BespokeEditor({
         expectedLiveUpdatedAt: liveUpdatedAtRef.current,
       }),
     onSuccess: async (updated) => {
+      autosaveFailedRef.current = false;
       toastSuccess(renderLabel(M.published));
       liveUpdatedAtRef.current = updated.updatedAt;
       setHasLocalDraft(false);

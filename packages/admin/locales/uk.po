@@ -703,13 +703,13 @@ msgstr "{count, plural, one {# чернетка} few {# чернетки} many {
 
 #. count: number of selected entries
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.selected"
 msgstr "{count, plural, one {# запис вибрано} few {# записи вибрано} many {# записів вибрано} other {# запису вибрано}}{# вибрано}}"
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/index.test.tsx
+#: src/routes/_authenticated/settings/-index.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# група} few {# групи} many {# груп} other {# груп}}"
@@ -720,7 +720,7 @@ msgid "dashboard.count.published"
 msgstr "{count, plural, one {# опубліковано} few {# опубліковано} many {# опубліковано} other {# опубліковано}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.deleteTitle"
 msgstr "{count, plural, one {Видалити # запис назавжди?} few {Видалити # записи назавжди?} many {Видалити # записів назавжди?} other {Видалити # запису назавжди?}}"
 
@@ -730,7 +730,7 @@ msgid "entries.list.bulk.toastDeleted"
 msgstr "{count, plural, one {Видалено # запис.} few {Видалено # записи.} many {Видалено # записів.} other {Видалено # запису.}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.trashTitle"
 msgstr "{count, plural, one {Перемістити # запис до кошика?} few {Перемістити # записи до кошика?} many {Перемістити # записів до кошика?} other {Перемістити # запису до кошика?}}"
 
@@ -1109,7 +1109,7 @@ msgid "terms.edit.delete.cancel"
 msgstr "Скасувати"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.cancel"
 msgstr "Скасувати"
 
@@ -1269,7 +1269,7 @@ msgid "allowedDomains.list.title"
 msgstr "Налаштовані домени"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.confirm"
 msgstr "Підтвердити"
 
@@ -1408,7 +1408,7 @@ msgid "terms.create.error.emptySlug"
 msgstr "Не вдалося визначити slug з цієї назви — введіть його вручну."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.discardFailed"
 msgstr ""
 
@@ -1473,17 +1473,17 @@ msgid "apiTokens.mint.fallback"
 msgstr "Не вдалося створити токен. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.previewFailedTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.previewFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.publishFailed"
 msgstr ""
 
@@ -1548,7 +1548,12 @@ msgid "allowedDomains.error.fallback"
 msgstr "Не вдалося зберегти домен. Спробуйте знову."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/plain-form-route.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.bespoke.toast.autosaveFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/-plain-form-route.tsx
 msgid "editor.entry.edit.saveFailed"
 msgstr "Не вдалося зберегти."
 
@@ -1695,7 +1700,7 @@ msgid "profile.passkeys.delete.confirm"
 msgstr "Видалити passkey"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.delete"
 msgstr "Видалити назавжди"
 
@@ -1853,7 +1858,7 @@ msgid "entries.list.statusFilter.draft"
 msgstr "Чернетка"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.discarded"
 msgstr ""
 
@@ -2334,7 +2339,7 @@ msgid "users.list.loading"
 msgstr "Завантаження користувачів"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.stale.loading"
 msgstr ""
 
@@ -2424,7 +2429,7 @@ msgid "editor.preview.more"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.trash"
 msgstr "До кошика"
 
@@ -2739,7 +2744,7 @@ msgid "editor.preview.tooltip"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.loading"
 msgstr ""
 
@@ -2901,7 +2906,7 @@ msgid "type.generic.itemPublishedPrivately"
 msgstr "Опубліковано приватно"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.published"
 msgstr ""
 
@@ -2961,7 +2966,7 @@ msgid "profile.passkeys.rename.label"
 msgstr "Перейменувати passkey"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.restore"
 msgstr "Відновити"
 
@@ -3753,7 +3758,7 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "Цей пристрій не підтримує passkeys."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.revision.conflict"
 msgstr ""
 
@@ -3793,7 +3798,7 @@ msgid "entries.list.deleteDialog.description"
 msgstr "Запис і всі його редакції буде видалено назавжди. Цю дію неможливо скасувати."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.deleteBody"
 msgstr "Це назавжди видалить вибрані записи та їхні редакції. Дію не можна скасувати."
 
@@ -3828,14 +3833,14 @@ msgid "apiTokens.empty.description.admin"
 msgstr "Цей користувач не створював API-токенів."
 
 #. js-lingui-explicit-id
-#: src/components/editor/document-settings.tsx
-msgid "editor.document.title"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.title"
 msgstr "Назва"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.title"
+msgstr ""
 
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
