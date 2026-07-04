@@ -17,6 +17,7 @@ import type { ComponentType } from "react";
 import { mediaBlocks } from "../media-blocks.js";
 import { MediaListPickerField } from "./MediaListPickerField.js";
 import { MediaPickerField } from "./MediaPickerField.js";
+import { MediaUrlField } from "./MediaUrlField.js";
 
 // Minimal structural shape of the host admin's `window.plumix` —
 // we only need the registration entries. The host's full declaration
@@ -49,6 +50,11 @@ export function registerMediaAdmin(
     plumix.registerPluginFieldType(
       "mediaList",
       MediaListPickerField as ComponentType<never>,
+    );
+    // Url-valued variant for CSS surfaces (the Styles-tab background control).
+    plumix.registerPluginFieldType(
+      "mediaUrl",
+      MediaUrlField as ComponentType<never>,
     );
     for (const spec of mediaBlocks) {
       plumix.registerPluginBlock(spec);

@@ -4,7 +4,7 @@ import { mediaBlocks } from "../media-blocks.js";
 import { registerMediaAdmin } from "./index.js";
 
 describe("registerMediaAdmin", () => {
-  test("registers every mediaBlocks spec and both field types with the host", () => {
+  test("registers every mediaBlocks spec and all field types with the host", () => {
     const registerPluginBlock = vi.fn();
     const registerPluginFieldType = vi.fn();
 
@@ -20,6 +20,11 @@ describe("registerMediaAdmin", () => {
     );
     expect(registerPluginFieldType).toHaveBeenCalledWith(
       "mediaList",
+      expect.anything(),
+    );
+    // Url-valued variant backing the Styles-tab background control.
+    expect(registerPluginFieldType).toHaveBeenCalledWith(
+      "mediaUrl",
       expect.anything(),
     );
   });
