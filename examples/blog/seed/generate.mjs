@@ -105,26 +105,25 @@ const tags = [
 // ---------------------------------------------------------------------------
 let blockSeq = 0;
 const bid = () => `b${++blockSeq}`;
-const heading = (level, text) => ({
-  id: bid(),
-  name: "core/heading",
-  attrs: { level, text },
-});
+const escapeHtml = (s) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const richText = (body) => ({
   id: bid(),
   name: "core/rich-text",
   attrs: { body },
 });
-// The quote block renders `citation` only as the (invisible) `cite=` URL
-// attribute, so fold a human attribution into the visible text instead.
-const quote = (text, attribution) => ({
-  id: bid(),
-  name: "core/quote",
-  attrs: {
-    text: attribution ? `${text} — ${attribution}` : text,
-    citation: "",
-  },
-});
+// core/heading and core/quote were folded into core/rich-text — headings (h1–h4)
+// and blockquote are inline formats of the unified block now. Emit rich-text
+// carrying the semantic HTML the SSR renders verbatim; a blockquote folds the
+// attribution into the visible text (there's no separate citation field).
+const heading = (level, text) =>
+  richText(`<h${level}>${escapeHtml(text)}</h${level}>`);
+const quote = (text, attribution) =>
+  richText(
+    `<blockquote><p>${escapeHtml(
+      attribution ? `${text} — ${attribution}` : text,
+    )}</p></blockquote>`,
+  );
 const code = (language, source) => ({
   id: bid(),
   name: "core/code",
