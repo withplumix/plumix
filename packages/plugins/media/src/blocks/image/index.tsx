@@ -1,21 +1,29 @@
 import type { CSSProperties, ReactElement } from "react";
 import { defineBlock } from "plumix/blocks";
+import { Image } from "plumix/blocks/renderer";
 
 import { normalizeFocalPoint } from "./normalize.js";
 
 interface MediaValue {
   readonly url: string;
   readonly alt: string;
+  readonly width: number | null;
+  readonly height: number | null;
 }
 
-// The media picker writes a { id, url, alt } snapshot. Read just what render
-// needs, tolerating a null/legacy value. A missing/null asset alt projects to
-// "" here (the picker stores alt as string | null).
+// The media picker writes a { id, url, alt, width, height } snapshot. Read just
+// what render needs, tolerating a null/legacy value. A missing/null asset alt
+// projects to "" here (the picker stores alt as string | null).
 function normalizeMediaValue(raw: unknown): MediaValue | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
   if (typeof obj.url !== "string" || obj.url === "") return null;
-  return { url: obj.url, alt: typeof obj.alt === "string" ? obj.alt : "" };
+  return {
+    url: obj.url,
+    alt: typeof obj.alt === "string" ? obj.alt : "",
+    width: typeof obj.width === "number" ? obj.width : null,
+    height: typeof obj.height === "number" ? obj.height : null,
+  };
 }
 
 export const imageBlock = defineBlock({
@@ -26,12 +34,13 @@ export const imageBlock = defineBlock({
   description: "Image with alt text, caption, and focal-point cropping.",
   keywords: ["picture", "photo", "media"],
   inputs: [
-    // The picked library asset — a snapshot { id, url, alt } written by the
-    // media picker. Render prefers it; `src` below is the escape hatch for an
-    // unmanaged external URL.
+    // The picked library asset — a snapshot { id, url, alt, width, height }
+    // written by the media picker. Render prefers it; `src` below is the escape
+    // hatch for an unmanaged external URL.
     { name: "media", type: "media", label: "Image", accept: "image/" },
     { name: "src", type: "url", label: "Source URL" },
-    { name: "srcset", type: "text", label: "Source set" },
+    // `sizes` feeds the responsive srcset the shared <Image> generates; the
+    // srcset itself is generated, not authored.
     { name: "sizes", type: "text", label: "Sizes" },
     { name: "alt", type: "text", label: "Alternative text" },
     { name: "caption", type: "text", label: "Caption" },
@@ -48,7 +57,6 @@ export const imageBlock = defineBlock({
   defaults: {
     media: null,
     src: "",
-    srcset: "",
     sizes: "",
     alt: "",
     caption: "",
@@ -82,7 +90,6 @@ export const imageBlock = defineBlock({
     // snapshot's (?? won't do this — "" is a set-but-empty override to skip).
     const blockAlt = typeof attrs.alt === "string" ? attrs.alt : "";
     const alt = blockAlt !== "" ? blockAlt : (media?.alt ?? "");
-    const srcset = typeof attrs.srcset === "string" ? attrs.srcset : undefined;
     const sizes = typeof attrs.sizes === "string" ? attrs.sizes : undefined;
     const priority = attrs.priority === true;
     const focal = normalizeFocalPoint(attrs.focalPoint);
@@ -97,18 +104,34 @@ export const imageBlock = defineBlock({
         objectPosition: `${(focal.x * 100).toFixed(0)}% ${(focal.y * 100).toFixed(0)}%`,
       }),
     };
+
     return (
       <figure style={{ margin: 0 }}>
-        <img
-          src={src}
-          srcSet={srcset}
-          sizes={sizes}
-          alt={alt}
-          loading={priority ? "eager" : "lazy"}
-          decoding="async"
-          {...(priority && { fetchPriority: "high" as const })}
-          style={style}
-        />
+        {media?.width != null && media.height != null ? (
+          // Managed image with intrinsic dimensions: the shared renderer builds
+          // a responsive srcset (via the image-delivery transform) and emits
+          // width/height to reserve layout space — no CLS.
+          <Image
+            src={src}
+            alt={alt}
+            width={media.width}
+            height={media.height}
+            sizes={sizes}
+            priority={priority}
+            style={style}
+          />
+        ) : (
+          // Unmanaged/dimensionless source (external URL or SVG): render a plain
+          // img — no srcset, no intrinsic dimensions to assume.
+          <img
+            src={src}
+            alt={alt}
+            loading={priority ? "eager" : "lazy"}
+            decoding={priority ? "sync" : "async"}
+            {...(priority && { fetchPriority: "high" as const })}
+            style={style}
+          />
+        )}
         {caption.length > 0 ? <figcaption>{caption}</figcaption> : null}
       </figure>
     );

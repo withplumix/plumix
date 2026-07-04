@@ -81,6 +81,7 @@ const config: KnipConfig = {
         // path is a static import knip can follow.
         "src/admin/theme.css",
         "src/blocks/index.ts",
+        "src/blocks/renderer.ts",
         "src/blocks/test.ts",
         // The islands runtime + renderer entries are loaded by the
         // consumer's generated `.plumix/islands-*-entry.ts` files via

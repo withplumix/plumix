@@ -147,6 +147,8 @@ interface MediaItem {
   readonly alt: string | null;
   readonly uploadedAt: string;
   readonly uploadedById: number;
+  readonly width: number | null;
+  readonly height: number | null;
 }
 
 interface MediaListResponse {
@@ -165,6 +167,8 @@ export interface MediaSelection {
   readonly alt: string | null;
   readonly mime: string;
   readonly filename: string;
+  readonly width: number | null;
+  readonly height: number | null;
 }
 
 function toSelection(item: MediaItem): MediaSelection {
@@ -174,6 +178,8 @@ function toSelection(item: MediaItem): MediaSelection {
     alt: item.alt,
     mime: item.mime,
     filename: item.title,
+    width: item.width,
+    height: item.height,
   };
 }
 
