@@ -291,7 +291,10 @@ function RightRail({
             />
           </TabsContent>
           <TabsContent value="styles">
-            <StylesTab tokens={tokens ?? {}} />
+            <StylesTab
+              tokens={tokens ?? {}}
+              resolvePluginFieldType={resolvePluginFieldType}
+            />
           </TabsContent>
           <TabsContent value="page" data-testid="plumix-page-panel">
             {documentPanel ?? (

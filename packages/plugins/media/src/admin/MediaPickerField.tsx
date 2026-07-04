@@ -8,7 +8,7 @@ import { Trans, useLingui } from "plumix/i18n";
 import type { MediaSelection } from "./MediaLibrary.js";
 import { MediaLibrary } from "./MediaLibrary.js";
 
-const M = {
+export const M = {
   empty: {
     id: "plugin.media.pickerField.empty",
     message: "No media selected",
@@ -64,7 +64,7 @@ function normalizeValue(raw: unknown): MediaValue | null {
   };
 }
 
-function readAccept(
+export function readAccept(
   field: MetaBoxFieldManifestEntry,
 ): string | readonly string[] | undefined {
   const scope = field.referenceTarget?.scope as
@@ -205,7 +205,7 @@ function MediaPreview({
 // and backdrop dismiss that this used to wire by hand. Mounted only while
 // open (parent renders conditionally), so closing routes through
 // `onOpenChange` → `onCancel`.
-function MediaPickerModal({
+export function MediaPickerModal({
   accept,
   onSelect,
   onCancel,

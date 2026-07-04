@@ -1,5 +1,6 @@
 import type { I18n } from "@lingui/core";
 import type { ReactElement, ReactNode } from "react";
+import { createElement } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
 import type {
@@ -42,6 +43,7 @@ import {
 } from "@plumix/admin-ui/tooltip";
 import { normalizeStyleValue, resolveRootTag, ROOT_TAGS } from "@plumix/blocks";
 
+import type { ResolvePluginFieldType } from "./block-input-control.js";
 import type { StyleBucket } from "./store.js";
 import type { StyleDeclaration } from "./style-declarations.js";
 import { findBlock } from "./block-tree-ops.js";
@@ -53,6 +55,9 @@ import { StyleDeclarations } from "./style-declarations.js";
 
 interface StylesTabProps {
   readonly tokens: ThemeTokens;
+  /** Resolves the plugin media picker for the Background section's image
+   *  control; when absent, the section falls back to a hand-typed URL. */
+  readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }
 
 interface ControlSpec {
@@ -166,7 +171,10 @@ const SECTION_IDS = [
  * visual box-model for per-side spacing. Every edit targets the active device's
  * responsive bucket, so styles are set per breakpoint.
  */
-export function StylesTab({ tokens }: StylesTabProps): ReactElement {
+export function StylesTab({
+  tokens,
+  resolvePluginFieldType,
+}: StylesTabProps): ReactElement {
   const activeId = useEditorStore((s) => s.activeId);
   const device = useEditorStore((s) => s.device);
   const block = useEditorStore((s) =>
@@ -249,6 +257,7 @@ export function StylesTab({ tokens }: StylesTabProps): ReactElement {
           valueOf={valueOf}
           setter={setter}
           tokens={tokens}
+          resolvePluginFieldType={resolvePluginFieldType}
         />
         <GenericSection
           section={TYPOGRAPHY_SECTION}
@@ -342,11 +351,13 @@ function GenericSection({
   valueOf,
   setter,
   tokens,
+  resolvePluginFieldType,
 }: {
   readonly section: SectionDef;
   readonly valueOf: StyleGetter;
   readonly setter: StyleSetter;
   readonly tokens: ThemeTokens;
+  readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }): ReactElement {
   return (
     <AccordionItem value={section.id}>
@@ -390,9 +401,10 @@ function GenericSection({
           <TextStyleControls valueOf={valueOf} setter={setter} />
         )}
         {section.id === "background" && (
-          <BackgroundImageControl
+          <BackgroundImageField
             value={valueOf("backgroundImage")}
             onChange={setter("backgroundImage")}
+            resolvePluginFieldType={resolvePluginFieldType}
           />
         )}
       </AccordionContent>
@@ -839,9 +851,55 @@ function parseBackgroundImageUrl(value: string | undefined): string {
   return match?.[2] ?? "";
 }
 
-/** A "Fill image" URL field composing `background-image: url("…")`. Kept a URL
- *  entry (not a media browser) — the media library isn't wired into the styles
- *  rail; a pasted/resolved URL is the minimum that reaches parity.
+/** The Background "Fill image" control. Uses the plugin media picker when one
+ *  is registered (pick/upload from the shared library), falling back to a
+ *  hand-typed URL when it isn't (a media-less deployment). Both compose the same
+ *  `background-image: url("…")` string into the active device's style bucket. */
+function BackgroundImageField({
+  value,
+  onChange,
+  resolvePluginFieldType,
+}: {
+  readonly value: string | undefined;
+  readonly onChange: (value: string | null) => void;
+  readonly resolvePluginFieldType?: ResolvePluginFieldType;
+}): ReactElement {
+  const Picker = resolvePluginFieldType?.("mediaUrl");
+  if (!Picker) {
+    return <BackgroundImageControl value={value} onChange={onChange} />;
+  }
+  return (
+    <div
+      className="flex flex-col gap-1"
+      data-testid="style-control-backgroundImage"
+    >
+      <Label className="text-xs">
+        <Trans id="editor.styles.fillImage" message="Fill image" />
+      </Label>
+      {createElement(Picker, {
+        // `field` is a block-input shape the host resolver adapts onto the
+        // field manifest the picker reads — `accept` becomes its scope. The
+        // picker's value is a bare url; the style stores a css url(), so unwrap
+        // in and re-wrap (or clear on empty/null) out.
+        field: { name: "backgroundImage", type: "mediaUrl", accept: "image/" },
+        rhf: {
+          value: parseBackgroundImageUrl(value),
+          onChange: (next) =>
+            onChange(
+              typeof next === "string" && next !== "" ? `url("${next}")` : null,
+            ),
+          onBlur: () => undefined,
+          name: "backgroundImage",
+        },
+        disabled: false,
+        testId: "style-control-backgroundImage",
+      })}
+    </div>
+  );
+}
+
+/** A "Fill image" URL field composing `background-image: url("…")` — the
+ *  hand-typed fallback used when no media picker is registered.
  *
  *  The value is stored verbatim; `sanitizeCssValue` at emit drops URLs carrying
  *  `@`, `;`, or a `data:` scheme (its breakout denylist), so those won't ship

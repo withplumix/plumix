@@ -7,6 +7,7 @@ import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { BlockNode, ThemeTokens } from "@plumix/blocks";
 
+import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { EditorProvider, useEditorStore } from "./provider.js";
 import { StylesTab } from "./styles-tab.js";
 
@@ -35,13 +36,19 @@ function StyleProbe({ id }: { readonly id: string }): ReactElement {
 function renderTab(
   tree: readonly BlockNode[],
   activeId?: string,
-  { expandCss = true }: { readonly expandCss?: boolean } = {},
+  {
+    expandCss = true,
+    resolve,
+  }: {
+    readonly expandCss?: boolean;
+    readonly resolve?: ResolvePluginFieldType;
+  } = {},
 ) {
   const utils = render(
     <I18nProvider i18n={i18n}>
       <EditorProvider initialTree={tree}>
         <ActiveSeed activeId={activeId} />
-        <StylesTab tokens={tokens} />
+        <StylesTab tokens={tokens} resolvePluginFieldType={resolve} />
         <StyleProbe id={tree[0]?.id ?? ""} />
       </EditorProvider>
     </I18nProvider>,
@@ -342,6 +349,55 @@ describe("StylesTab", () => {
       (getByTestId("style-control-backgroundImage-url") as HTMLInputElement)
         .value,
     ).toBe("https://ex.com/a.png");
+  });
+
+  test("the Background section uses the media picker when one is registered", () => {
+    // A stub 'mediaUrl' control that emits a resolved url on click — the styles
+    // seam wraps it into a css url() and writes it to the active bucket.
+    const resolve: ResolvePluginFieldType = (type) =>
+      type === "mediaUrl"
+        ? ({ rhf, testId }) => (
+            <button
+              type="button"
+              data-testid={`${testId}-pick`}
+              onClick={() => rhf.onChange("https://cdn/x.png")}
+            />
+          )
+        : undefined;
+
+    const { getByTestId, queryByTestId } = renderTab(
+      [{ id: "a", name: "core/x" }],
+      "a",
+      { resolve },
+    );
+    // The hand-typed URL input is replaced by the picker control.
+    expect(queryByTestId("style-control-backgroundImage-url")).toBeNull();
+
+    fireEvent.click(getByTestId("style-control-backgroundImage-pick"));
+    expect(getByTestId("style-probe").textContent).toContain(
+      '"backgroundImage":"url(\\"https://cdn/x.png\\")"',
+    );
+  });
+
+  test("clearing the picked background removes the style property", () => {
+    const resolve: ResolvePluginFieldType = (type) =>
+      type === "mediaUrl"
+        ? ({ rhf, testId }) => (
+            <button
+              type="button"
+              data-testid={`${testId}-clear`}
+              onClick={() => rhf.onChange(null)}
+            />
+          )
+        : undefined;
+    const styled: BlockNode = {
+      id: "a",
+      name: "core/x",
+      style: { large: { backgroundImage: 'url("https://cdn/x.png")' } },
+    };
+    const { getByTestId } = renderTab([styled], "a", { resolve });
+    fireEvent.click(getByTestId("style-control-backgroundImage-clear"));
+    expect(getByTestId("style-probe").textContent).toBe("");
   });
 
   test("the italic mark toggles a fontStyle raw value", () => {
