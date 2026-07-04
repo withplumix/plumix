@@ -703,13 +703,13 @@ msgstr "{count, plural, zero {# مسودة} one {# مسودة} two {مسودتا
 
 #. count: number of selected entries
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.selected"
 msgstr "{count, plural, zero {# إدخال محدد} one {# إدخال محدد} two {تم تحديد إدخالين} few {# إدخالات محددة} many {# إدخالًا محددًا} other {# إدخال محدد}}many {# محددًا} other {# محدد}}"
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/index.test.tsx
+#: src/routes/_authenticated/settings/-index.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, zero {لا توجد مجموعات} one {مجموعة واحدة} two {مجموعتان} few {# مجموعات} many {# مجموعة} other {# مجموعة}}"
@@ -720,7 +720,7 @@ msgid "dashboard.count.published"
 msgstr "{count, plural, zero {# منشور} one {# منشور} two {منشوران} few {# منشورات} many {# منشورًا} other {# منشور}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.deleteTitle"
 msgstr "{count, plural, zero {حذف # إدخال نهائيًا؟} one {حذف # إدخال نهائيًا؟} two {حذف إدخالين نهائيًا؟} few {حذف # إدخالات نهائيًا؟} many {حذف # إدخالًا نهائيًا؟} other {حذف # إدخال نهائيًا؟}}"
 
@@ -730,7 +730,7 @@ msgid "entries.list.bulk.toastDeleted"
 msgstr "{count, plural, zero {تم حذف # إدخال.} one {تم حذف # إدخال.} two {تم حذف إدخالين.} few {تم حذف # إدخالات.} many {تم حذف # إدخالًا.} other {تم حذف # إدخال.}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.trashTitle"
 msgstr "{count, plural, zero {نقل # إدخال إلى المهملات؟} one {نقل # إدخال إلى المهملات؟} two {نقل إدخالين إلى المهملات؟} few {نقل # إدخالات إلى المهملات؟} many {نقل # إدخالًا إلى المهملات؟} other {نقل # إدخال إلى المهملات؟}}"
 
@@ -1109,7 +1109,7 @@ msgid "terms.edit.delete.cancel"
 msgstr "إلغاء"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.cancel"
 msgstr "إلغاء"
 
@@ -1269,7 +1269,7 @@ msgid "allowedDomains.list.title"
 msgstr "النطاقات المُكوَّنة"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.confirm"
 msgstr "تأكيد"
 
@@ -1408,7 +1408,7 @@ msgid "terms.create.error.emptySlug"
 msgstr "تعذّر اشتقاق slug من ذلك الاسم — يرجى كتابة واحد يدوياً."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.discardFailed"
 msgstr ""
 
@@ -1473,17 +1473,17 @@ msgid "apiTokens.mint.fallback"
 msgstr "تعذّر إنشاء الرمز. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.previewFailedTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.previewFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.publishFailed"
 msgstr ""
 
@@ -1548,7 +1548,12 @@ msgid "allowedDomains.error.fallback"
 msgstr "تعذّر حفظ النطاق. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/plain-form-route.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.bespoke.toast.autosaveFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/-plain-form-route.tsx
 msgid "editor.entry.edit.saveFailed"
 msgstr "تعذّر الحفظ."
 
@@ -1695,7 +1700,7 @@ msgid "profile.passkeys.delete.confirm"
 msgstr "حذف passkey"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.delete"
 msgstr "حذف نهائي"
 
@@ -1853,7 +1858,7 @@ msgid "entries.list.statusFilter.draft"
 msgstr "مسودة"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.discarded"
 msgstr ""
 
@@ -2334,7 +2339,7 @@ msgid "users.list.loading"
 msgstr "جارٍ تحميل المستخدمين"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.stale.loading"
 msgstr ""
 
@@ -2424,7 +2429,7 @@ msgid "editor.preview.more"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.trash"
 msgstr "نقل إلى المهملات"
 
@@ -2739,7 +2744,7 @@ msgid "editor.preview.tooltip"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.loading"
 msgstr ""
 
@@ -2901,7 +2906,7 @@ msgid "type.generic.itemPublishedPrivately"
 msgstr "منشور بشكل خاص"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.published"
 msgstr ""
 
@@ -2961,7 +2966,7 @@ msgid "profile.passkeys.rename.label"
 msgstr "إعادة تسمية passkey"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.restore"
 msgstr "استعادة"
 
@@ -3753,7 +3758,7 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "هذا الجهاز لا يدعم passkeys."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.revision.conflict"
 msgstr ""
 
@@ -3793,7 +3798,7 @@ msgid "entries.list.deleteDialog.description"
 msgstr "سيؤدي هذا إلى حذف الإدخال ومراجعاته نهائيًا. لا يمكن التراجع عن هذا الإجراء."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.deleteBody"
 msgstr "يؤدي هذا إلى حذف الإدخالات المحددة ومراجعاتها نهائيًا. لا يمكن التراجع."
 
@@ -3828,14 +3833,14 @@ msgid "apiTokens.empty.description.admin"
 msgstr "هذا المستخدم لم يصدر رموز API."
 
 #. js-lingui-explicit-id
-#: src/components/editor/document-settings.tsx
-msgid "editor.document.title"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.title"
 msgstr "العنوان"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.title"
+msgstr ""
 
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
