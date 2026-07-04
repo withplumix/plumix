@@ -20,10 +20,9 @@ export function isStaleConflictError(err: unknown): boolean {
 /**
  * On a stale-token conflict, refetch the live row and return its `updatedAt`
  * so the caller can re-anchor the optimistic-concurrency token; null when the
- * error isn't a stale conflict or the refetch fails (best-effort — the next
- * edit retries). Shared by both autosave debouncers.
+ * refetch fails (best-effort — the next edit retries).
  */
-export async function freshLiveUpdatedAt(
+async function freshLiveUpdatedAt(
   err: unknown,
   queryClient: QueryClient,
   id: number,
@@ -38,4 +37,29 @@ export async function freshLiveUpdatedAt(
   } catch {
     return null;
   }
+}
+
+/**
+ * Classify an autosave write error:
+ * - `recovered`: a stale-token conflict — re-anchor on `updatedAt` when the
+ *   refetch succeeded (`null` = refetch failed; the next edit retries). Either
+ *   way the edit is intact, so stay quiet.
+ * - `failed`: the write genuinely didn't persist (invalid block content,
+ *   over-cap, server/network error). The author MUST be told, not silently
+ *   dropped.
+ */
+export type AutosaveErrorOutcome =
+  | { readonly kind: "recovered"; readonly updatedAt: Date | null }
+  | { readonly kind: "failed" };
+
+export async function classifyAutosaveError(
+  err: unknown,
+  queryClient: QueryClient,
+  id: number,
+): Promise<AutosaveErrorOutcome> {
+  if (!isStaleConflictError(err)) return { kind: "failed" };
+  return {
+    kind: "recovered",
+    updatedAt: await freshLiveUpdatedAt(err, queryClient, id),
+  };
 }

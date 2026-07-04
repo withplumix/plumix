@@ -703,13 +703,13 @@ msgstr "{count, plural, one {# draft} other {# drafts}}"
 
 #. count: number of selected entries
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.selected"
 msgstr "{count, plural, one {# entry selected} other {# entries selected}}"
 
 #. count: number of settings groups this page surfaces
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/settings/index.test.tsx
+#: src/routes/_authenticated/settings/-index.test.tsx
 #: src/routes/_authenticated/settings/index.tsx
 msgid "settings.pageSummary"
 msgstr "{count, plural, one {# group} other {# groups}}"
@@ -720,7 +720,7 @@ msgid "dashboard.count.published"
 msgstr "{count, plural, one {# published} other {# published}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.deleteTitle"
 msgstr "{count, plural, one {Delete # entry permanently?} other {Delete # entries permanently?}}"
 
@@ -730,7 +730,7 @@ msgid "entries.list.bulk.toastDeleted"
 msgstr "{count, plural, one {Deleted # entry.} other {Deleted # entries.}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.trashTitle"
 msgstr "{count, plural, one {Move # entry to trash?} other {Move # entries to trash?}}"
 
@@ -1109,7 +1109,7 @@ msgid "terms.edit.delete.cancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.cancel"
 msgstr "Cancel"
 
@@ -1269,7 +1269,7 @@ msgid "allowedDomains.list.title"
 msgstr "Configured domains"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.confirm"
 msgstr "Confirm"
 
@@ -1408,7 +1408,7 @@ msgid "terms.create.error.emptySlug"
 msgstr "Couldn't derive a slug from that name — please type one manually."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.discardFailed"
 msgstr "Couldn't discard the draft — try again."
 
@@ -1473,17 +1473,17 @@ msgid "apiTokens.mint.fallback"
 msgstr "Couldn't mint token. Try again."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.previewFailedTitle"
 msgstr "Couldn't open the editor"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.previewFailed"
 msgstr "Couldn't open this entry in the editor."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.publishFailed"
 msgstr "Couldn't publish — try again."
 
@@ -1548,7 +1548,12 @@ msgid "allowedDomains.error.fallback"
 msgstr "Couldn't save the domain. Try again."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/plain-form-route.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
+msgid "editor.bespoke.toast.autosaveFailed"
+msgstr "Couldn't save your changes — they may contain invalid content."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/-plain-form-route.tsx
 msgid "editor.entry.edit.saveFailed"
 msgstr "Couldn't save."
 
@@ -1695,7 +1700,7 @@ msgid "profile.passkeys.delete.confirm"
 msgstr "Delete passkey"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.delete"
 msgstr "Delete permanently"
 
@@ -1853,7 +1858,7 @@ msgid "entries.list.statusFilter.draft"
 msgstr "Draft"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.discarded"
 msgstr "Draft discarded."
 
@@ -2334,7 +2339,7 @@ msgid "users.list.loading"
 msgstr "Loading users"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.stale.loading"
 msgstr "Loading…"
 
@@ -2424,7 +2429,7 @@ msgid "editor.preview.more"
 msgstr "More preview options"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.trash"
 msgstr "Move to trash"
 
@@ -2739,7 +2744,7 @@ msgid "editor.preview.tooltip"
 msgstr "Open a preview in a new tab"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.loading"
 msgstr "Opening the editor…"
 
@@ -2901,7 +2906,7 @@ msgid "type.generic.itemPublishedPrivately"
 msgstr "Published privately"
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.toast.published"
 msgstr "Published."
 
@@ -2961,7 +2966,7 @@ msgid "profile.passkeys.rename.label"
 msgstr "Rename passkey"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.restore"
 msgstr "Restore"
 
@@ -3753,7 +3758,7 @@ msgid "profile.passkeys.enroll.noAuthenticator"
 msgstr "This device doesn't support passkeys."
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/editor.tsx
+#: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.bespoke.revision.conflict"
 msgstr "This entry changed since the preview loaded — reload and retry."
 
@@ -3793,7 +3798,7 @@ msgid "entries.list.deleteDialog.description"
 msgstr "This permanently deletes the entry and its revisions. It cannot be undone."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/entries-bulk-bar.tsx
+#: src/routes/_authenticated/entries/$slug/-entries-bulk-bar.tsx
 msgid "entries.list.bulk.deleteBody"
 msgstr "This permanently deletes the selected entries and their revisions. It cannot be undone."
 
@@ -3828,13 +3833,13 @@ msgid "apiTokens.empty.description.admin"
 msgstr "This user hasn't minted any API tokens."
 
 #. js-lingui-explicit-id
-#: src/components/editor/document-settings.tsx
-msgid "editor.document.title"
+#: src/routes/_authenticated/entries/$slug/index.tsx
+msgid "entries.list.column.title"
 msgstr "Title"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/entries/$slug/index.tsx
-msgid "entries.list.column.title"
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.title"
 msgstr "Title"
 
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
