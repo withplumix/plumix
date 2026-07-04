@@ -48,8 +48,10 @@ export const imageBlock = defineBlock({
     // Styles tab's Size section (both write `node.style.width`).
     { name: "width", type: "text", label: "Width", styleProperty: "width" },
     {
+      // An on/off setting → a Switch, consistent with the Styles tab's
+      // visibility toggles (the repo's on/off convention).
       name: "priority",
-      type: "checkbox",
+      type: "boolean",
       label: "High priority (load eagerly)",
     },
     { name: "focalPoint", type: "json", label: "Focal point" },
