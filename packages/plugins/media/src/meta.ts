@@ -4,6 +4,10 @@ interface MediaMeta {
   readonly storageKey: string;
   readonly originalName: string | null;
   readonly alt: string | null;
+  // Intrinsic pixel dimensions, captured at confirm for raster images. Null
+  // for vector/unknown formats or uploads predating dimension capture.
+  readonly width: number | null;
+  readonly height: number | null;
 }
 
 export function parseMediaMeta(raw: unknown): MediaMeta | null {
@@ -22,5 +26,7 @@ export function parseMediaMeta(raw: unknown): MediaMeta | null {
     size: r.size,
     originalName: typeof r.originalName === "string" ? r.originalName : null,
     alt: typeof r.alt === "string" ? r.alt : null,
+    width: typeof r.width === "number" ? r.width : null,
+    height: typeof r.height === "number" ? r.height : null,
   };
 }

@@ -160,6 +160,8 @@ interface ConfirmOutput {
   readonly storageKey: string;
   readonly mime: string;
   readonly size: number;
+  readonly width: number | null;
+  readonly height: number | null;
 }
 
 describe("@plumix/plugin-media — media.createUploadUrl", () => {
@@ -305,6 +307,37 @@ describe("@plumix/plugin-media — media.confirm", () => {
     expect(confirmed.output?.storageKey).toBe(init.storageKey);
     expect(confirmed.output?.mime).toBe("image/png");
     expect(confirmed.output?.size).toBe(8);
+  });
+
+  test("captures intrinsic dimensions from the uploaded image", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const user = await h.seedUser("contributor");
+
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      user.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    await storage.put(created.output.storageKey, PNG_1X1_BYTES, {
+      contentType: "image/png",
+    });
+
+    const confirmed = await rpcDispatch<ConfirmOutput>(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      user.id,
+    );
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.output?.width).toBe(1);
+    expect(confirmed.output?.height).toBe(1);
   });
 
   test("rejects + deletes the object when bytes don't match the claimed mime", async () => {
@@ -508,6 +541,8 @@ interface MediaListItemOutput {
   readonly alt: string | null;
   readonly uploadedAt: string;
   readonly uploadedById: number;
+  readonly width: number | null;
+  readonly height: number | null;
 }
 
 interface MediaListOutput {
@@ -541,6 +576,42 @@ async function seedPublishedMedia(
 }
 
 describe("@plumix/plugin-media — media.list", () => {
+  test("surfaces captured dimensions on each item", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    await storage.put(created.output.storageKey, PNG_1X1_BYTES, {
+      contentType: "image/png",
+    });
+    await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      owner.id,
+    );
+
+    const result = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 10, offset: 0 },
+      owner.id,
+    );
+    expect(result.output?.items[0]?.width).toBe(1);
+    expect(result.output?.items[0]?.height).toBe(1);
+  });
+
   test("returns published media for any reader; thumbnail url is the storage url when no imageDelivery", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
@@ -743,6 +814,50 @@ describe("@plumix/plugin-media — media.delete", () => {
 });
 
 describe("@plumix/plugin-media — media.update", () => {
+  test("editing alt preserves the captured dimensions", async () => {
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+
+    const created = await rpcDispatch<CreateUploadUrlOutput>(
+      h,
+      "media/createUploadUrl",
+      {
+        filename: "tile.png",
+        contentType: "image/png",
+        size: PNG_1X1_BYTES.byteLength,
+      },
+      owner.id,
+    );
+    if (!created.output) throw new Error("expected createUploadUrl output");
+    await storage.put(created.output.storageKey, PNG_1X1_BYTES, {
+      contentType: "image/png",
+    });
+    await rpcDispatch(
+      h,
+      "media/confirm",
+      { id: created.output.mediaId },
+      owner.id,
+    );
+
+    await rpcDispatch(
+      h,
+      "media/update",
+      { id: created.output.mediaId, alt: "a tile" },
+      owner.id,
+    );
+
+    const listed = await rpcDispatch<MediaListOutput>(
+      h,
+      "media/list",
+      { limit: 10, offset: 0 },
+      owner.id,
+    );
+    expect(listed.output?.items[0]?.alt).toBe("a tile");
+    expect(listed.output?.items[0]?.width).toBe(1);
+    expect(listed.output?.items[0]?.height).toBe(1);
+  });
+
   test("owner can set alt text on their own media", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });

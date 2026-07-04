@@ -9,6 +9,10 @@ import {
 } from "plumix/plugin";
 import * as v from "valibot";
 
+import {
+  DIMENSION_SAMPLE_SIZE,
+  readImageDimensions,
+} from "./image-dimensions.js";
 import { looksLikeMime, MAGIC_BYTE_SAMPLE_SIZE } from "./magic-bytes.js";
 import { parseMediaMeta } from "./meta.js";
 import { extensionForMime } from "./mime.js";
@@ -42,6 +46,8 @@ interface ConfirmResponse {
   readonly storageKey: string;
   readonly mime: string;
   readonly size: number;
+  readonly width: number | null;
+  readonly height: number | null;
 }
 
 interface DeleteResponse {
@@ -273,9 +279,14 @@ export function createMediaRouter(
 
       // Verify the bytes match the claimed mime via magic-byte sniff.
       // Delete on mismatch so an attacker can't force-leave junk in
-      // the bucket between a forged claim and our detection.
+      // the bucket between a forged claim and our detection. The same
+      // sample feeds the dimension probe below, so read the larger of
+      // the two windows in one range request.
       const sampleObj = await storage.get(meta.storageKey, {
-        range: { offset: 0, length: MAGIC_BYTE_SAMPLE_SIZE },
+        range: {
+          offset: 0,
+          length: Math.max(MAGIC_BYTE_SAMPLE_SIZE, DIMENSION_SAMPLE_SIZE),
+        },
       });
       if (!sampleObj) {
         throw errors.CONFLICT({ data: { reason: "object_not_found" } });
@@ -286,6 +297,14 @@ export function createMediaRouter(
         throw errors.CONFLICT({ data: { reason: "mime_mismatch" } });
       }
 
+      // Best-effort intrinsic dimensions — null for vector/unknown formats
+      // or a header we couldn't parse. Never blocks the confirm.
+      const dimensions = readImageDimensions(sample, meta.mime);
+      const dims = {
+        width: dimensions?.width ?? null,
+        height: dimensions?.height ?? null,
+      };
+
       // CAS the draft → published transition: the WHERE clause
       // includes `status = 'draft'`. Two concurrent confirms on the
       // same draft will race the sniff but exactly one will flip the
@@ -293,7 +312,11 @@ export function createMediaRouter(
       // publishing or stomping `publishedAt`.
       const [published] = await context.db
         .update(entries)
-        .set({ status: "published", publishedAt: new Date() })
+        .set({
+          status: "published",
+          publishedAt: new Date(),
+          meta: { ...meta, ...dims },
+        })
         .where(and(eq(entries.id, input.id), eq(entries.status, "draft")))
         .returning();
       if (!published) {
@@ -313,6 +336,7 @@ export function createMediaRouter(
         storageKey: meta.storageKey,
         mime: meta.mime,
         size: meta.size,
+        ...dims,
       };
     });
 
@@ -350,10 +374,7 @@ export function createMediaRouter(
       }
 
       const nextMeta = {
-        mime: meta.mime,
-        size: meta.size,
-        storageKey: meta.storageKey,
-        originalName: meta.originalName,
+        ...meta,
         alt: input.alt ?? meta.alt,
       };
       const [updated] = await context.db
