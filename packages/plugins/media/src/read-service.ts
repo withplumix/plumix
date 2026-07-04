@@ -54,6 +54,8 @@ interface MediaItem {
   readonly thumbnailUrl: string;
   readonly uploadedAt: string;
   readonly uploadedById: number;
+  readonly width: number | null;
+  readonly height: number | null;
 }
 
 interface MediaListResult {
@@ -183,6 +185,8 @@ async function buildMediaItem(
     thumbnailUrl: thumbnailFor(ctx, url, meta.mime),
     uploadedAt,
     uploadedById: row.authorId,
+    width: meta.width,
+    height: meta.height,
   };
 }
 
