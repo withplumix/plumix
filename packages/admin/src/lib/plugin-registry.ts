@@ -25,6 +25,10 @@ interface PluginFieldRendererProps {
   readonly rhf: ControllerRenderProps<FieldValues, string>;
   readonly disabled: boolean;
   readonly testId: string;
+  /** The active block's other attributes when rendered in the block inspector
+   *  (a sibling-aware control like the focal-point picker reads the image url);
+   *  absent in the metabox context, where fields are independent. */
+  readonly attrs?: Readonly<Record<string, unknown>>;
 }
 
 type PluginFieldComponent = ComponentType<PluginFieldRendererProps>;

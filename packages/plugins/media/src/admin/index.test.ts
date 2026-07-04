@@ -27,6 +27,11 @@ describe("registerMediaAdmin", () => {
       "mediaUrl",
       expect.anything(),
     );
+    // Visual focal-point picker for the image block.
+    expect(registerPluginFieldType).toHaveBeenCalledWith(
+      "focalPoint",
+      expect.anything(),
+    );
   });
 
   test("warns and does not throw when the host global is missing", () => {

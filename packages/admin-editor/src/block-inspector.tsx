@@ -112,6 +112,7 @@ export function BlockInspector({
             key={input.name}
             input={input}
             resolvePluginFieldType={resolvePluginFieldType}
+            attrs={block.attrs}
             value={
               styleProp
                 ? (normalizeStyleValue(block.style?.[bucket]?.[styleProp]) ??
