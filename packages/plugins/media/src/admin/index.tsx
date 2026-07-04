@@ -15,6 +15,7 @@ import type { BlockSpec } from "plumix/blocks";
 import type { ComponentType } from "react";
 
 import { mediaBlocks } from "../media-blocks.js";
+import { FocalPointField } from "./FocalPointField.js";
 import { MediaListPickerField } from "./MediaListPickerField.js";
 import { MediaPickerField } from "./MediaPickerField.js";
 import { MediaUrlField } from "./MediaUrlField.js";
@@ -55,6 +56,11 @@ export function registerMediaAdmin(
     plumix.registerPluginFieldType(
       "mediaUrl",
       MediaUrlField as ComponentType<never>,
+    );
+    // Visual crop-anchor picker for the image block's focal point.
+    plumix.registerPluginFieldType(
+      "focalPoint",
+      FocalPointField as ComponentType<never>,
     );
     for (const spec of mediaBlocks) {
       plumix.registerPluginBlock(spec);

@@ -44,12 +44,19 @@ export function resolvePluginFieldType(
   if (!Component) return undefined;
   const cached = wrappers.get(Component);
   if (cached) return cached;
-  const wrapper: PluginFieldControl = ({ field, rhf, disabled, testId }) => (
+  const wrapper: PluginFieldControl = ({
+    field,
+    rhf,
+    disabled,
+    testId,
+    attrs,
+  }) => (
     <Component
       field={inputToField(field as BlockInput)}
       rhf={rhf as unknown as ControllerRenderProps<FieldValues, string>}
       disabled={disabled}
       testId={testId}
+      attrs={attrs}
     />
   );
   wrappers.set(Component, wrapper);

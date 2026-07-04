@@ -264,6 +264,34 @@ describe("BlockInputControl", () => {
     expect(onChange).toHaveBeenCalledWith({ id: "42" });
   });
 
+  test("forwards the block's sibling attrs to a plugin control", () => {
+    // A sibling-aware control (the focal-point picker) reads other block attrs
+    // — e.g. the image url — off `attrs`.
+    const SiblingField = ({
+      testId,
+      attrs,
+    }: {
+      readonly testId: string;
+      readonly attrs?: Readonly<Record<string, unknown>>;
+    }) => <span data-testid={testId} data-src={String(attrs?.src)} />;
+    const { getByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <BlockInputControl
+          input={{ name: "focalPoint", type: "focalPoint" }}
+          value={{ x: 0.5, y: 0.5 }}
+          onChange={vi.fn()}
+          attrs={{ src: "/photo.jpg", alt: "x" }}
+          resolvePluginFieldType={(t) =>
+            t === "focalPoint" ? SiblingField : undefined
+          }
+        />
+      </I18nProvider>,
+    );
+    expect(getByTestId("block-input-focalPoint").getAttribute("data-src")).toBe(
+      "/photo.jpg",
+    );
+  });
+
   test("still falls back to text when no resolver matches the unknown kind", () => {
     const { getByTestId } = render(
       <I18nProvider i18n={i18n}>

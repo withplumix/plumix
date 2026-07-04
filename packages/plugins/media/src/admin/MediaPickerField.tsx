@@ -1,4 +1,3 @@
-import type { MessageDescriptor } from "plumix/i18n";
 import type { MetaBoxFieldManifestEntry } from "plumix/plugin";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -7,30 +6,9 @@ import { Trans, useLingui } from "plumix/i18n";
 
 import type { MediaSelection } from "./MediaLibrary.js";
 import { MediaLibrary } from "./MediaLibrary.js";
+import { M } from "./messages.js";
 
-export const M = {
-  empty: {
-    id: "plugin.media.pickerField.empty",
-    message: "No media selected",
-  },
-  buttonChange: {
-    id: "plugin.media.pickerField.button.change",
-    message: "Change",
-  },
-  buttonSelect: {
-    id: "plugin.media.pickerField.button.select",
-    message: "Select",
-  },
-  pending: {
-    id: "plugin.media.pickerField.pending",
-    message: "Selected (id {id})",
-    comment: "id: the media item's numeric id, shown while filename loads",
-  },
-  modalAria: {
-    id: "plugin.media.pickerField.modalAria",
-    message: "Select media",
-  },
-} satisfies Record<string, MessageDescriptor>;
+export { M } from "./messages.js";
 
 // `media` field admin renderer. Registered into the host admin's
 // plugin-field-type registry on module load (see admin/index.tsx),
@@ -64,6 +42,17 @@ function normalizeValue(raw: unknown): MediaValue | null {
   };
 }
 
+// Clear is offered only for standalone metabox fields. In the block editor
+// (signalled by the sibling `attrs` the block passes down) the block itself is
+// the unit an author removes, so a per-field Clear is redundant clutter.
+export function offersClear(
+  hasValue: boolean,
+  required: boolean,
+  inBlockEditor: boolean,
+): boolean {
+  return hasValue && !required && !inBlockEditor;
+}
+
 export function readAccept(
   field: MetaBoxFieldManifestEntry,
 ): string | readonly string[] | undefined {
@@ -82,6 +71,7 @@ export function MediaPickerField({
   rhf,
   disabled,
   testId,
+  attrs,
 }: {
   readonly field: MetaBoxFieldManifestEntry;
   readonly rhf: {
@@ -92,6 +82,9 @@ export function MediaPickerField({
   };
   readonly disabled: boolean;
   readonly testId: string;
+  // Present only in the block inspector (the block's sibling attributes);
+  // absent in metaboxes. Used purely to know which context we're rendering in.
+  readonly attrs?: Readonly<Record<string, unknown>>;
 }): ReactNode {
   const { i18n } = useLingui();
   const [open, setOpen] = useState(false);
@@ -141,7 +134,7 @@ export function MediaPickerField({
       >
         {value ? i18n._(M.buttonChange) : i18n._(M.buttonSelect)}
       </Button>
-      {value && !required ? (
+      {offersClear(value != null, required, attrs !== undefined) ? (
         <Button
           type="button"
           variant="ghost"

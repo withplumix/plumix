@@ -39,25 +39,24 @@ export const imageBlock = defineBlock({
     // hatch for an unmanaged external URL.
     { name: "media", type: "media", label: "Image", accept: "image/" },
     { name: "src", type: "url", label: "Source URL" },
-    // `sizes` feeds the responsive srcset the shared <Image> generates; the
-    // srcset itself is generated, not authored.
-    { name: "sizes", type: "text", label: "Sizes" },
     { name: "alt", type: "text", label: "Alternative text" },
     { name: "caption", type: "text", label: "Caption" },
-    // Display width edits the block's `style` slot, so it stays in sync with the
-    // Styles tab's Size section (both write `node.style.width`).
-    { name: "width", type: "text", label: "Width", styleProperty: "width" },
     {
+      // An on/off setting → a Switch, consistent with the Styles tab's
+      // visibility toggles (the repo's on/off convention).
       name: "priority",
-      type: "checkbox",
+      type: "boolean",
       label: "High priority (load eagerly)",
     },
-    { name: "focalPoint", type: "json", label: "Focal point" },
+    // A visual crop anchor: click/drag a dot on the image preview. `sizes` and
+    // display `width` are deliberately not authored here — `sizes` is a
+    // dev-only responsive hint the renderer defaults sensibly, and width lives
+    // in the Styles tab's Size section (both would edit `node.style.width`).
+    { name: "focalPoint", type: "focalPoint", label: "Focal point" },
   ],
   defaults: {
     media: null,
     src: "",
-    sizes: "",
     alt: "",
     caption: "",
     priority: false,

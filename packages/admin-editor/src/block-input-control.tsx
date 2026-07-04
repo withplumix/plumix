@@ -33,6 +33,12 @@ export interface PluginFieldControlProps {
   };
   readonly disabled: boolean;
   readonly testId: string;
+  /**
+   * The rest of the active block's attributes (read-only). A few controls are
+   * sibling-aware — the focal-point picker reads the block's image url to draw
+   * its preview. Absent in the metabox context (fields there are independent).
+   */
+  readonly attrs?: Readonly<Record<string, unknown>>;
 }
 
 export type PluginFieldControl = (
@@ -54,6 +60,9 @@ interface BlockInputControlProps {
   /** Emits the next typed value (string for text, number for number, etc.). */
   readonly onChange: (value: unknown) => void;
   readonly resolvePluginFieldType?: ResolvePluginFieldType;
+  /** The active block's other attributes, forwarded to sibling-aware plugin
+   *  controls (e.g. the focal-point picker reads the image url). */
+  readonly attrs?: Readonly<Record<string, unknown>>;
 }
 
 // Block-attr edits commit on onChange; the block path has no RHF touched-state,
@@ -75,6 +84,7 @@ export function BlockInputControl({
   value,
   onChange,
   resolvePluginFieldType,
+  attrs,
 }: BlockInputControlProps): ReactElement {
   const { i18n } = useLingui();
   const id = useId();
@@ -206,6 +216,7 @@ export function BlockInputControl({
             rhf: { value, onChange, onBlur: noop, name: input.name },
             disabled: false,
             testId,
+            attrs: attrs ?? {},
           });
         }
         return (
