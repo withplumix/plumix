@@ -3,6 +3,21 @@ import { defineBlock } from "plumix/blocks";
 
 import { normalizeFocalPoint } from "./normalize.js";
 
+interface MediaValue {
+  readonly url: string;
+  readonly alt: string;
+}
+
+// The media picker writes a { id, url, alt } snapshot. Read just what render
+// needs, tolerating a null/legacy value. A missing/null asset alt projects to
+// "" here (the picker stores alt as string | null).
+function normalizeMediaValue(raw: unknown): MediaValue | null {
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.url !== "string" || obj.url === "") return null;
+  return { url: obj.url, alt: typeof obj.alt === "string" ? obj.alt : "" };
+}
+
 export const imageBlock = defineBlock({
   name: "media/image",
   title: "Image",
@@ -11,7 +26,10 @@ export const imageBlock = defineBlock({
   description: "Image with alt text, caption, and focal-point cropping.",
   keywords: ["picture", "photo", "media"],
   inputs: [
-    { name: "mediaId", type: "text", label: "Media id" },
+    // The picked library asset — a snapshot { id, url, alt } written by the
+    // media picker. Render prefers it; `src` below is the escape hatch for an
+    // unmanaged external URL.
+    { name: "media", type: "media", label: "Image", accept: "image/" },
     { name: "src", type: "url", label: "Source URL" },
     { name: "srcset", type: "text", label: "Source set" },
     { name: "sizes", type: "text", label: "Sizes" },
@@ -28,7 +46,7 @@ export const imageBlock = defineBlock({
     { name: "focalPoint", type: "json", label: "Focal point" },
   ],
   defaults: {
-    mediaId: "",
+    media: null,
     src: "",
     srcset: "",
     sizes: "",
@@ -38,7 +56,13 @@ export const imageBlock = defineBlock({
     focalPoint: { x: 0.5, y: 0.5 },
   },
   render: ({ attrs, context }): ReactElement | null => {
-    const src = typeof attrs.src === "string" ? attrs.src : "";
+    // A picked library asset snapshots its url/alt; prefer it over the raw
+    // `src` escape hatch so a managed image survives a stale typed URL.
+    const media = normalizeMediaValue(attrs.media);
+    const rawSrc = typeof attrs.src === "string" ? attrs.src : "";
+    // `media.url` is guaranteed non-empty when present (normalizeMediaValue
+    // drops a blank url), so ?? cleanly falls through to the raw src.
+    const src = media?.url ?? rawSrc;
     const caption = typeof attrs.caption === "string" ? attrs.caption : "";
 
     // Empty source: show a placeholder in the editor so the block stays visible
@@ -54,7 +78,10 @@ export const imageBlock = defineBlock({
       );
     }
 
-    const alt = typeof attrs.alt === "string" ? attrs.alt : "";
+    // Block alt overrides the asset's alt; an empty block alt falls back to the
+    // snapshot's (?? won't do this — "" is a set-but-empty override to skip).
+    const blockAlt = typeof attrs.alt === "string" ? attrs.alt : "";
+    const alt = blockAlt !== "" ? blockAlt : (media?.alt ?? "");
     const srcset = typeof attrs.srcset === "string" ? attrs.srcset : undefined;
     const sizes = typeof attrs.sizes === "string" ? attrs.sizes : undefined;
     const priority = attrs.priority === true;

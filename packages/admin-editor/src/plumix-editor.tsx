@@ -25,6 +25,7 @@ import {
 import { defineEntryContent } from "@plumix/blocks";
 
 import type { InserterPattern } from "./block-catalog.js";
+import type { ResolvePluginFieldType } from "./block-input-control.js";
 import type { PublishActions } from "./editor-toolbar.js";
 import type { RightPanel } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
@@ -91,6 +92,10 @@ interface PlumixEditorProps {
   readonly onRefreshBlockLoader?: (
     blockId: string,
   ) => Promise<SerializedLoaderData>;
+  /** Resolves plugin-registered block-input types (e.g. the media picker) to a
+   *  control, wired from the app's field-type registry. Kept as a prop so this
+   *  package stays decoupled from the registry. */
+  readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }
 
 /**
@@ -119,6 +124,7 @@ export function PlumixEditor({
   publish,
   overlay,
   onRefreshBlockLoader,
+  resolvePluginFieldType,
 }: PlumixEditorProps): ReactElement {
   if (readOnly) {
     return (
@@ -218,6 +224,7 @@ export function PlumixEditor({
             tokens={tokens}
             documentPanel={documentPanel}
             onRefreshBlockLoader={onRefreshBlockLoader}
+            resolvePluginFieldType={resolvePluginFieldType}
           />
         </div>
       </SidebarProvider>
@@ -238,6 +245,7 @@ function RightRail({
   tokens,
   documentPanel,
   onRefreshBlockLoader,
+  resolvePluginFieldType,
 }: {
   readonly registry: BlockRegistry;
   readonly tokens?: ThemeTokens;
@@ -245,6 +253,7 @@ function RightRail({
   readonly onRefreshBlockLoader?: (
     blockId: string,
   ) => Promise<SerializedLoaderData>;
+  readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }): ReactElement {
   const rightPanel = useEditorStore((s) => s.rightPanel);
   const setRightPanel = useEditorStore((s) => s.setRightPanel);
@@ -278,6 +287,7 @@ function RightRail({
             <BlockInspector
               registry={registry}
               onRefreshBlockLoader={onRefreshBlockLoader}
+              resolvePluginFieldType={resolvePluginFieldType}
             />
           </TabsContent>
           <TabsContent value="styles">

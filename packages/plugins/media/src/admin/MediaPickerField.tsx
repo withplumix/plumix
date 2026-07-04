@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button, Dialog, DialogContent, DialogTitle } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
+import type { MediaSelection } from "./MediaLibrary.js";
 import { MediaLibrary } from "./MediaLibrary.js";
 
 const M = {
@@ -46,6 +47,8 @@ interface MediaValue {
   readonly id: string;
   readonly mime?: string;
   readonly filename?: string;
+  readonly url?: string;
+  readonly alt?: string | null;
 }
 
 function normalizeValue(raw: unknown): MediaValue | null {
@@ -56,6 +59,8 @@ function normalizeValue(raw: unknown): MediaValue | null {
     id: obj.id,
     mime: typeof obj.mime === "string" ? obj.mime : undefined,
     filename: typeof obj.filename === "string" ? obj.filename : undefined,
+    url: typeof obj.url === "string" ? obj.url : undefined,
+    alt: typeof obj.alt === "string" ? obj.alt : null,
   };
 }
 
@@ -94,12 +99,12 @@ export function MediaPickerField({
   const accept = readAccept(field);
   const required = field.required === true;
 
-  const handleSelect = (id: string): void => {
-    // Write back the bare id; the meta pipeline normalizes to the
-    // cached-object shape on save (`{ id, mime, filename }`). Until
-    // the next save lands, the form holds a bare-string interim
-    // value — `normalizeValue` accepts both shapes.
-    rhf.onChange(id);
+  const handleSelect = (selection: MediaSelection): void => {
+    // Write back the resolved snapshot ({ id, url, alt, mime, filename }).
+    // The block editor stores url/alt directly for render; the metabox meta
+    // pipeline reads `id` and re-normalizes to the cached-object shape on
+    // save, ignoring the extra keys.
+    rhf.onChange(selection);
     setOpen(false);
     rhf.onBlur();
   };
@@ -207,7 +212,7 @@ function MediaPickerModal({
   testId,
 }: {
   readonly accept: string | readonly string[] | undefined;
-  readonly onSelect: (id: string) => void;
+  readonly onSelect: (selection: MediaSelection) => void;
   readonly onCancel: () => void;
   readonly testId: string;
 }): ReactNode {

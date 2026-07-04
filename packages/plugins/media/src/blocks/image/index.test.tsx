@@ -14,6 +14,40 @@ describe("media/image v2", () => {
     expect(html).toContain('loading="lazy"');
   });
 
+  test("renders from a picked media value's url", () => {
+    const html = renderBlockSpecToHtml(imageBlock, {
+      media: { id: "42", url: "/_plumix/media/serve/42", alt: "A dog" },
+    });
+    expect(html).toContain('src="/_plumix/media/serve/42"');
+    expect(html).toContain('alt="A dog"');
+  });
+
+  test("the picked media alt is the default; the block alt overrides it", () => {
+    const html = renderBlockSpecToHtml(imageBlock, {
+      media: { id: "42", url: "/x.jpg", alt: "asset alt" },
+      alt: "override alt",
+    });
+    expect(html).toContain('alt="override alt"');
+    expect(html).not.toContain("asset alt");
+  });
+
+  test("a raw src is the escape hatch when no media is picked", () => {
+    const html = renderBlockSpecToHtml(imageBlock, {
+      src: "https://cdn.example/e.jpg",
+      alt: "external",
+    });
+    expect(html).toContain('src="https://cdn.example/e.jpg"');
+  });
+
+  test("a picked media url wins over a stale raw src", () => {
+    const html = renderBlockSpecToHtml(imageBlock, {
+      media: { id: "42", url: "/managed.jpg", alt: "" },
+      src: "https://cdn.example/old.jpg",
+    });
+    expect(html).toContain('src="/managed.jpg"');
+    expect(html).not.toContain("old.jpg");
+  });
+
   test("adds figcaption when caption is provided", () => {
     const html = renderBlockSpecToHtml(imageBlock, {
       src: "/x.jpg",
