@@ -5,7 +5,7 @@ import { defineBlock } from "../block-registry.js";
 export const sectionBlock = defineBlock({
   name: "core/section",
   title: "Section",
-  icon: "RectangleHorizontal",
+  icon: "LayoutTemplate",
   category: "layout",
   // selfSeam so the full-bleed styles + block class land on the `<section>`
   // itself (not a wrapper div), and the centered inner sits inside it.

@@ -15,6 +15,7 @@ import type { LucideIcon } from "lucide-react";
 // Bindings for the blockIcons map (block-declared icons, resolved by string).
 import {
   AlignLeft,
+  Box,
   ChevronDown,
   Code,
   Columns,
@@ -22,6 +23,7 @@ import {
   Group,
   Image,
   Images,
+  LayoutTemplate,
   List,
   ListOrdered,
   Megaphone,
@@ -122,6 +124,7 @@ export {
 // entry when a block ships a new `icon: "..."`.
 export const blockIcons = {
   AlignLeft,
+  Box,
   ChevronDown,
   Code,
   Columns,
@@ -129,6 +132,7 @@ export const blockIcons = {
   Group,
   Image,
   Images,
+  LayoutTemplate,
   List,
   ListOrdered,
   Megaphone,
