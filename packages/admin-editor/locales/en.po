@@ -429,6 +429,16 @@ msgid "editor.styles.remove"
 msgstr "Remove"
 
 #. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.inspector.removeColumn"
+msgstr "Remove column"
+
+#. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.inspector.removeRow"
+msgstr "Remove row"
+
+#. js-lingui-explicit-id
 #: src/html-attributes.tsx
 msgid "editor.htmlAttrs.add.search"
 msgstr "Search attribute…"

@@ -17,6 +17,8 @@ import {
   moveBlockBy,
   projectMove,
   removeBlocks,
+  removeTableColumn,
+  removeTableRow,
   selectionRoots,
   slotKeys,
   ungroupBlock,
@@ -723,5 +725,58 @@ describe("appendTableRow", () => {
   test("no-ops (same ref) when the id isn't a table", () => {
     const tree = tableTree();
     expect(appendTableRow(tree, "missing")).toBe(tree);
+  });
+});
+
+describe("removeTableColumn", () => {
+  test("drops the last cell from every row", () => {
+    const rows = tableRows(removeTableColumn(tableTree(), "t1"));
+    expect(rowCells(rows[0]).map((c) => c.id)).toEqual(["h1"]);
+    expect(rowCells(rows[1]).map((c) => c.id)).toEqual(["b1"]);
+  });
+
+  test("no-ops (same ref) at one column, or when the id isn't a table", () => {
+    const tree = tableTree();
+    expect(removeTableColumn(tree, "missing")).toBe(tree);
+    const oneCol: readonly BlockNode[] = [
+      {
+        id: "t1",
+        name: "core/table",
+        attrs: {
+          rows: [
+            {
+              id: "r",
+              name: "core/table-body-row",
+              attrs: { cells: [{ id: "c", name: "core/table-cell" }] },
+            },
+          ],
+        },
+      },
+    ];
+    expect(removeTableColumn(oneCol, "t1")).toBe(oneCol);
+  });
+});
+
+describe("removeTableRow", () => {
+  test("drops the last row", () => {
+    const rows = tableRows(removeTableRow(tableTree(), "t1"));
+    expect(rows.map((r) => r.id)).toEqual(["hr"]);
+  });
+
+  test("no-ops (same ref) at one row, or when the id isn't a table", () => {
+    const tree = tableTree();
+    expect(removeTableRow(tree, "missing")).toBe(tree);
+    const oneRow: readonly BlockNode[] = [
+      {
+        id: "t1",
+        name: "core/table",
+        attrs: {
+          rows: [
+            { id: "hr", name: "core/table-header-row", attrs: { cells: [] } },
+          ],
+        },
+      },
+    ];
+    expect(removeTableRow(oneRow, "t1")).toBe(oneRow);
   });
 });

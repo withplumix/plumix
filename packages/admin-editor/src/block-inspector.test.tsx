@@ -378,6 +378,62 @@ describe("BlockInspector", () => {
     expect(getByTestId("table-summary").textContent).toBe("1:2");
   });
 
+  const cell = (id: string): BlockNode => ({ id, name: "core/table-cell" });
+  const grid2x2: readonly BlockNode[] = [
+    {
+      id: "tbl",
+      name: "core/table",
+      attrs: {
+        rows: [
+          {
+            id: "r1",
+            name: "core/table-body-row",
+            attrs: { cells: [cell("r1c1"), cell("r1c2")] },
+          },
+          {
+            id: "r2",
+            name: "core/table-body-row",
+            attrs: { cells: [cell("r2c1"), cell("r2c2")] },
+          },
+        ],
+      },
+    },
+  ];
+
+  function renderGrid(): ReturnType<typeof render> {
+    return render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={grid2x2}>
+          <Selector id="tbl" />
+          <BlockInspector registry={registry} />
+          <TableProbe id="tbl" />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+  }
+
+  test("Remove row drops the last row of the selected table", () => {
+    const { getByTestId } = renderGrid();
+    expect(getByTestId("table-summary").textContent).toBe("2:2");
+    fireEvent.click(getByTestId("inspector-remove-table-row"));
+    expect(getByTestId("table-summary").textContent).toBe("1:2");
+  });
+
+  test("Remove column drops the last cell of every row", () => {
+    const { getByTestId } = renderGrid();
+    expect(getByTestId("table-summary").textContent).toBe("2:2");
+    fireEvent.click(getByTestId("inspector-remove-table-column"));
+    expect(getByTestId("table-summary").textContent).toBe("2:1");
+  });
+
+  test("Remove is a no-op at the single-row/single-column floor", () => {
+    const { getByTestId } = renderTableInspector();
+    expect(getByTestId("table-summary").textContent).toBe("1:1");
+    fireEvent.click(getByTestId("inspector-remove-table-row"));
+    fireEvent.click(getByTestId("inspector-remove-table-column"));
+    expect(getByTestId("table-summary").textContent).toBe("1:1");
+  });
+
   test("shows no table controls for a non-table block", () => {
     const { queryByTestId } = renderInspector(
       [{ id: "h1", name: "core/heading" }],
@@ -385,5 +441,7 @@ describe("BlockInspector", () => {
     );
     expect(queryByTestId("inspector-add-table-row")).toBeNull();
     expect(queryByTestId("inspector-add-table-column")).toBeNull();
+    expect(queryByTestId("inspector-remove-table-row")).toBeNull();
+    expect(queryByTestId("inspector-remove-table-column")).toBeNull();
   });
 });

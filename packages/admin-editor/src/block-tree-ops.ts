@@ -508,6 +508,46 @@ export function appendTableRow(
   return setTableRows(tree, tableId, [...rows, row]);
 }
 
+/**
+ * Remove a table's last column — drop the trailing cell from every row. One
+ * transform (a single undo step). A no-op (same tree ref) when `tableId` isn't a
+ * core/table or the table is already down to a single column, so it never leaves
+ * a column-less table.
+ */
+export function removeTableColumn(
+  tree: readonly BlockNode[],
+  tableId: string,
+): readonly BlockNode[] {
+  const table = findBlock(tree, tableId);
+  if (table?.name !== TABLE) return tree;
+  const rows = table.attrs?.rows;
+  if (!isBlockNodeArray(rows) || columnCount(rows) <= 1) return tree;
+  const shrunk = rows.map((row) => {
+    const cells = cellsOf(row);
+    return cells.length > 0
+      ? { ...row, attrs: { ...row.attrs, cells: cells.slice(0, -1) } }
+      : row;
+  });
+  return setTableRows(tree, tableId, shrunk);
+}
+
+/**
+ * Remove a table's last row. One transform. A no-op when `tableId` isn't a
+ * core/table or the table is down to a single row, so it never leaves a
+ * row-less table.
+ */
+export function removeTableRow(
+  tree: readonly BlockNode[],
+  tableId: string,
+): readonly BlockNode[] {
+  const table = findBlock(tree, tableId);
+  if (table?.name !== TABLE) return tree;
+  const raw = table.attrs?.rows;
+  const rows = isBlockNodeArray(raw) ? raw : [];
+  if (rows.length <= 1) return tree;
+  return setTableRows(tree, tableId, rows.slice(0, -1));
+}
+
 // Replace a table's `rows` slot, descending through slots so a nested table is
 // reachable. Untouched branches keep their reference for React.
 function setTableRows(

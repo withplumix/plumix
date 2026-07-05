@@ -84,6 +84,7 @@ export {
   Mail,
   MessageCircle,
   MessageCircleMore,
+  Minus,
   Monitor,
   MoreVertical,
   Pencil,

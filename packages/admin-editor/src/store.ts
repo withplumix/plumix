@@ -27,6 +27,8 @@ import {
   moveBlock as moveBlockOp,
   pasteBlocks as pasteBlocksOp,
   removeBlocks,
+  removeTableColumn,
+  removeTableRow,
   selectionRoots,
   ungroupBlock,
 } from "./block-tree-ops.js";
@@ -137,6 +139,12 @@ export interface EditorActions {
   /** Append a body row to a table, sized to its current column count, as one
    *  undo step. No-op when the id isn't a table. */
   addTableRow: (tableId: string) => void;
+  /** Remove a table's last column (the trailing cell of every row) as one undo
+   *  step. No-op when the id isn't a table or only one column remains. */
+  removeTableColumn: (tableId: string) => void;
+  /** Remove a table's last row as one undo step. No-op when the id isn't a table
+   *  or only one row remains. */
+  removeTableRow: (tableId: string) => void;
   /** Merge a partial attrs patch into one block, anywhere in the tree. */
   updateBlockAttrs: (
     id: string,
@@ -463,6 +471,18 @@ export function createEditorStore(
     addTableRow: (tableId) =>
       set((state) => {
         const tree = appendTableRow(state.tree, tableId);
+        if (tree === state.tree) return {};
+        return { tree, history: recordHistory(state.history, tree, null) };
+      }),
+    removeTableColumn: (tableId) =>
+      set((state) => {
+        const tree = removeTableColumn(state.tree, tableId);
+        if (tree === state.tree) return {};
+        return { tree, history: recordHistory(state.history, tree, null) };
+      }),
+    removeTableRow: (tableId) =>
+      set((state) => {
+        const tree = removeTableRow(state.tree, tableId);
         if (tree === state.tree) return {};
         return { tree, history: recordHistory(state.history, tree, null) };
       }),
