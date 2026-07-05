@@ -44,6 +44,25 @@ describe("core/table family", () => {
     expect(html).toBe("<td>v1</td>");
   });
 
+  test("seeds a starter grid so a dropped table isn't an empty strip", () => {
+    const slot = tableBlock.inputs?.find((i) => i.name === "rows");
+    expect(slot?.allowedBlocks).toEqual([
+      "core/table-header-row",
+      "core/table-body-row",
+    ]);
+    const seeded = slot?.defaultChildren ?? [];
+    expect(seeded.map((n) => n.name)).toEqual([
+      "core/table-header-row",
+      "core/table-body-row",
+      "core/table-body-row",
+    ]);
+    // Every row seeds the same cell count, so the starter grid is rectangular.
+    const cellCounts = seeded.map(
+      (row) => (row.attrs?.cells as readonly unknown[] | undefined)?.length,
+    );
+    expect(cellCounts).toEqual([3, 3, 3]);
+  });
+
   test("th/td nest as direct children of <tr>, rows inside a <tbody> (valid HTML content model)", () => {
     const tree: readonly BlockNode[] = [
       {

@@ -6,6 +6,11 @@ import {
   columnsBlock,
   createBlockRegistry,
   richTextBlock,
+  tableBlock,
+  tableBodyRowBlock,
+  tableCellBlock,
+  tableHeaderCellBlock,
+  tableHeaderRowBlock,
 } from "@plumix/blocks";
 
 import {
@@ -290,6 +295,40 @@ describe("createNodeFromEntry", () => {
     // Each seeded column carries its own paragraph.
     const firstContent = columns[0]?.attrs?.content as readonly BlockNode[];
     expect(firstContent.map((n) => n.name)).toEqual(["core/rich-text"]);
+  });
+
+  test("the core/table block seeds a full grid down to its cells", () => {
+    const reg = createBlockRegistry([
+      tableBlock,
+      tableHeaderRowBlock,
+      tableBodyRowBlock,
+      tableHeaderCellBlock,
+      tableCellBlock,
+    ]);
+    const node = createNodeFromEntry(reg, {
+      name: "core/table",
+      slug: "core/table",
+      title: "Table",
+    });
+
+    const rows = node.attrs?.rows as readonly BlockNode[];
+    expect(rows.map((r) => r.name)).toEqual([
+      "core/table-header-row",
+      "core/table-body-row",
+      "core/table-body-row",
+    ]);
+    // Each row seeds its own cells (the nested subtree, not just the rows), so
+    // the dropped table is an editable grid rather than empty <tr>s.
+    const header = rows[0]?.attrs?.cells as readonly BlockNode[];
+    expect(header.map((c) => c.name)).toEqual([
+      "core/table-header-cell",
+      "core/table-header-cell",
+      "core/table-header-cell",
+    ]);
+    // Cells inherit their spec default (empty text) and get freshly minted ids —
+    // the template ids never leak into the tree.
+    expect(header[0]?.attrs?.text).toBe("");
+    expect(header[0]?.id).not.toBe("row-header-c1");
   });
 
   test("seeds a container's children with their own spec defaultStyles", () => {
