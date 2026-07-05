@@ -455,6 +455,24 @@ function cellsOf(row: BlockNode): readonly BlockNode[] {
   return isBlockNodeArray(cells) ? cells : [];
 }
 
+/**
+ * The id of the table enclosing `id` — `id` itself if it's a core/table, else
+ * its nearest table ancestor (so a selected row or cell resolves to its table),
+ * or null when nothing in the chain is a table. Lets the inspector keep the
+ * table controls in reach while the editor is working inside a cell.
+ */
+export function enclosingTableId(
+  tree: readonly BlockNode[],
+  id: string,
+): string | null {
+  let current: string | null = id;
+  while (current) {
+    if (findBlock(tree, current)?.name === TABLE) return current;
+    current = findParentId(tree, current);
+  }
+  return null;
+}
+
 // A table's column count is its widest row's cell count, so a new row/column
 // keeps the grid rectangular even when existing rows disagree.
 function columnCount(rows: readonly BlockNode[]): number {

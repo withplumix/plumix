@@ -8,6 +8,7 @@ import {
   canUngroupBlock,
   collectBlocks,
   duplicateBlock,
+  enclosingTableId,
   findBlock,
   findParentId,
   flattenTree,
@@ -778,5 +779,20 @@ describe("removeTableRow", () => {
       },
     ];
     expect(removeTableRow(oneRow, "t1")).toBe(oneRow);
+  });
+});
+
+describe("enclosingTableId", () => {
+  test("resolves the table from the table, a row, or a cell", () => {
+    const tree = tableTree();
+    expect(enclosingTableId(tree, "t1")).toBe("t1");
+    expect(enclosingTableId(tree, "hr")).toBe("t1");
+    expect(enclosingTableId(tree, "h1")).toBe("t1");
+    expect(enclosingTableId(tree, "b2")).toBe("t1");
+  });
+
+  test("returns null outside any table, or for a missing id", () => {
+    expect(enclosingTableId(TREE, "a")).toBeNull();
+    expect(enclosingTableId(tableTree(), "missing")).toBeNull();
   });
 });

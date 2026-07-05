@@ -434,6 +434,25 @@ describe("BlockInspector", () => {
     expect(getByTestId("table-summary").textContent).toBe("1:1");
   });
 
+  test("keeps the table controls in reach when a cell is selected", () => {
+    const { getByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={tableTree}>
+          <Selector id="c0" />
+          <BlockInspector registry={registry} />
+          <TableProbe id="tbl" />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+    // A cell is selected, yet the table's structure controls still show...
+    expect(getByTestId("inspector-add-table-row")).toBeDefined();
+    expect(getByTestId("inspector-remove-table-column")).toBeDefined();
+    // ...and they act on the enclosing table, not the cell.
+    expect(getByTestId("table-summary").textContent).toBe("1:1");
+    fireEvent.click(getByTestId("inspector-add-table-row"));
+    expect(getByTestId("table-summary").textContent).toBe("2:1");
+  });
+
   test("shows no table controls for a non-table block", () => {
     const { queryByTestId } = renderInspector(
       [{ id: "h1", name: "core/heading" }],

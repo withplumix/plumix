@@ -11,7 +11,7 @@ import { normalizeStyleValue } from "@plumix/blocks";
 import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { createNodeFromEntry } from "./block-catalog.js";
 import { BlockInputControl } from "./block-input-control.js";
-import { findBlock } from "./block-tree-ops.js";
+import { enclosingTableId, findBlock } from "./block-tree-ops.js";
 import { useEditorStore, useLoaderPushRef } from "./provider.js";
 import { deviceBucket } from "./store.js";
 
@@ -53,6 +53,9 @@ export function BlockInspector({
 
   const bucket = deviceBucket(device);
   const block = activeId ? findBlock(tree, activeId) : undefined;
+  // The table the selection sits in (the table itself, or the one owning the
+  // selected row/cell), so the table controls stay in reach while editing cells.
+  const tableId = block ? enclosingTableId(tree, block.id) : null;
   const handleChange = useCallback(
     (key: string, value: unknown): void => {
       if (activeId) updateBlockAttrs(activeId, { [key]: value });
@@ -83,17 +86,17 @@ export function BlockInspector({
     );
   }, [block, registry, insertBlockInto]);
   const handleAddTableRow = useCallback((): void => {
-    if (block) addTableRow(block.id);
-  }, [block, addTableRow]);
+    if (tableId) addTableRow(tableId);
+  }, [tableId, addTableRow]);
   const handleAddTableColumn = useCallback((): void => {
-    if (block) addTableColumn(block.id);
-  }, [block, addTableColumn]);
+    if (tableId) addTableColumn(tableId);
+  }, [tableId, addTableColumn]);
   const handleRemoveTableRow = useCallback((): void => {
-    if (block) removeTableRow(block.id);
-  }, [block, removeTableRow]);
+    if (tableId) removeTableRow(tableId);
+  }, [tableId, removeTableRow]);
   const handleRemoveTableColumn = useCallback((): void => {
-    if (block) removeTableColumn(block.id);
-  }, [block, removeTableColumn]);
+    if (tableId) removeTableColumn(tableId);
+  }, [tableId, removeTableColumn]);
 
   if (!block) {
     return (
@@ -116,7 +119,6 @@ export function BlockInspector({
   const inputs = (spec?.inputs ?? []).filter((input) => input.type !== "slot");
   const canRefresh = Boolean(onRefreshBlockLoader && spec?.loaders);
   const isColumns = block.name === "core/columns";
-  const isTable = block.name === "core/table";
 
   return (
     <div className="flex flex-col gap-4 p-4" data-testid="block-inspector">
@@ -161,7 +163,7 @@ export function BlockInspector({
           <Trans id="editor.inspector.addColumn" message="Add column" />
         </Button>
       )}
-      {isTable && (
+      {tableId && (
         <div className="flex flex-col gap-2">
           <div className="flex gap-2">
             <Button
