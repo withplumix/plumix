@@ -45,6 +45,8 @@ export function BlockInspector({
   const updateBlockAttrs = useEditorStore((s) => s.updateBlockAttrs);
   const updateBlockStyle = useEditorStore((s) => s.updateBlockStyle);
   const insertBlockInto = useEditorStore((s) => s.insertBlockInto);
+  const addTableColumn = useEditorStore((s) => s.addTableColumn);
+  const addTableRow = useEditorStore((s) => s.addTableRow);
   const loaderPushRef = useLoaderPushRef();
 
   const bucket = deviceBucket(device);
@@ -78,6 +80,12 @@ export function BlockInspector({
       ["core/column"],
     );
   }, [block, registry, insertBlockInto]);
+  const handleAddTableRow = useCallback((): void => {
+    if (block) addTableRow(block.id);
+  }, [block, addTableRow]);
+  const handleAddTableColumn = useCallback((): void => {
+    if (block) addTableColumn(block.id);
+  }, [block, addTableColumn]);
 
   if (!block) {
     return (
@@ -100,6 +108,7 @@ export function BlockInspector({
   const inputs = (spec?.inputs ?? []).filter((input) => input.type !== "slot");
   const canRefresh = Boolean(onRefreshBlockLoader && spec?.loaders);
   const isColumns = block.name === "core/columns";
+  const isTable = block.name === "core/table";
 
   return (
     <div className="flex flex-col gap-4 p-4" data-testid="block-inspector">
@@ -143,6 +152,30 @@ export function BlockInspector({
           <Plus />
           <Trans id="editor.inspector.addColumn" message="Add column" />
         </Button>
+      )}
+      {isTable && (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            data-testid="inspector-add-table-row"
+            onClick={handleAddTableRow}
+          >
+            <Plus />
+            <Trans id="editor.inspector.addRow" message="Add row" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            data-testid="inspector-add-table-column"
+            onClick={handleAddTableColumn}
+          >
+            <Plus />
+            <Trans id="editor.inspector.addColumn" message="Add column" />
+          </Button>
+        </div>
       )}
       {canRefresh && (
         <Button

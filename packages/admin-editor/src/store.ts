@@ -17,6 +17,8 @@ import {
 import type { MoveTarget } from "./block-tree-ops.js";
 import type { History } from "./history.js";
 import {
+  appendTableColumn,
+  appendTableRow,
   duplicateBlock,
   findParentId,
   groupBlocks,
@@ -129,6 +131,12 @@ export interface EditorActions {
     target: MoveTarget,
     allowed?: readonly string[],
   ) => void;
+  /** Append a column to a table — a cell to the end of every row — as one undo
+   *  step. No-op when the id isn't a table or the table has no rows. */
+  addTableColumn: (tableId: string) => void;
+  /** Append a body row to a table, sized to its current column count, as one
+   *  undo step. No-op when the id isn't a table. */
+  addTableRow: (tableId: string) => void;
   /** Merge a partial attrs patch into one block, anywhere in the tree. */
   updateBlockAttrs: (
     id: string,
@@ -441,6 +449,20 @@ export function createEditorStore(
     moveBlock: (sourceId, target, allowed) =>
       set((state) => {
         const tree = moveBlockOp(state.tree, sourceId, target, allowed);
+        if (tree === state.tree) return {};
+        return { tree, history: recordHistory(state.history, tree, null) };
+      }),
+    // Keep the table selected (activeId unchanged) so its inspector buttons stay
+    // put for repeated clicks, unlike a single-block insert that selects itself.
+    addTableColumn: (tableId) =>
+      set((state) => {
+        const tree = appendTableColumn(state.tree, tableId);
+        if (tree === state.tree) return {};
+        return { tree, history: recordHistory(state.history, tree, null) };
+      }),
+    addTableRow: (tableId) =>
+      set((state) => {
+        const tree = appendTableRow(state.tree, tableId);
         if (tree === state.tree) return {};
         return { tree, history: recordHistory(state.history, tree, null) };
       }),

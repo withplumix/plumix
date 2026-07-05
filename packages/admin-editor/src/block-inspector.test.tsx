@@ -82,6 +82,18 @@ const registry: BlockRegistry = createBlockRegistry([
       },
     ],
   },
+  {
+    name: "core/table",
+    render: () => null,
+    inputs: [
+      { name: "striped", type: "checkbox", label: "Striped" },
+      {
+        name: "rows",
+        type: "slot",
+        allowedBlocks: ["core/table-header-row", "core/table-body-row"],
+      },
+    ],
+  },
 ]);
 
 function ColumnsProbe({ id }: { readonly id: string }): ReactElement {
@@ -92,6 +104,18 @@ function ColumnsProbe({ id }: { readonly id: string }): ReactElement {
     );
   });
   return <output data-testid="columns-count">{String(count)}</output>;
+}
+
+// "rows:cellsInFirstRow" — lets a test watch both dimensions of the table grid.
+function TableProbe({ id }: { readonly id: string }): ReactElement {
+  const summary = useEditorStore((s) => {
+    const node = s.tree.find((b) => b.id === id);
+    const rows = (node?.attrs?.rows as readonly BlockNode[] | undefined) ?? [];
+    const cells =
+      (rows[0]?.attrs?.cells as readonly unknown[] | undefined) ?? [];
+    return `${rows.length}:${cells.length}`;
+  });
+  return <output data-testid="table-summary">{summary}</output>;
 }
 
 function Selector({ id }: { readonly id?: string }): ReactElement | null {
@@ -310,5 +334,56 @@ describe("BlockInspector", () => {
       "h1",
     );
     expect(queryByTestId("inspector-add-column")).toBeNull();
+  });
+
+  const tableTree: readonly BlockNode[] = [
+    {
+      id: "tbl",
+      name: "core/table",
+      attrs: {
+        rows: [
+          {
+            id: "r0",
+            name: "core/table-header-row",
+            attrs: { cells: [{ id: "c0", name: "core/table-header-cell" }] },
+          },
+        ],
+      },
+    },
+  ];
+
+  function renderTableInspector(): ReturnType<typeof render> {
+    return render(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={tableTree}>
+          <Selector id="tbl" />
+          <BlockInspector registry={registry} />
+          <TableProbe id="tbl" />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+  }
+
+  test("Add row appends a body row to the selected table", () => {
+    const { getByTestId } = renderTableInspector();
+    expect(getByTestId("table-summary").textContent).toBe("1:1");
+    fireEvent.click(getByTestId("inspector-add-table-row"));
+    expect(getByTestId("table-summary").textContent).toBe("2:1");
+  });
+
+  test("Add column appends a cell to every row of the selected table", () => {
+    const { getByTestId } = renderTableInspector();
+    expect(getByTestId("table-summary").textContent).toBe("1:1");
+    fireEvent.click(getByTestId("inspector-add-table-column"));
+    expect(getByTestId("table-summary").textContent).toBe("1:2");
+  });
+
+  test("shows no table controls for a non-table block", () => {
+    const { queryByTestId } = renderInspector(
+      [{ id: "h1", name: "core/heading" }],
+      "h1",
+    );
+    expect(queryByTestId("inspector-add-table-row")).toBeNull();
+    expect(queryByTestId("inspector-add-table-column")).toBeNull();
   });
 });
