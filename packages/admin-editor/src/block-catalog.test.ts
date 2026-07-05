@@ -325,9 +325,9 @@ describe("createNodeFromEntry", () => {
       "core/table-header-cell",
       "core/table-header-cell",
     ]);
-    // Cells inherit their spec default (empty text) and get freshly minted ids —
+    // Cells carry their seeded placeholder text and get freshly minted ids —
     // the template ids never leak into the tree.
-    expect(header[0]?.attrs?.text).toBe("");
+    expect(header[0]?.attrs?.text).toBe("Header 1");
     expect(header[0]?.id).not.toBe("row-header-c1");
   });
 

@@ -61,6 +61,13 @@ describe("core/table family", () => {
       (row) => (row.attrs?.cells as readonly unknown[] | undefined)?.length,
     );
     expect(cellCounts).toEqual([3, 3, 3]);
+    // Cells carry placeholder text so the dropped table isn't visually empty.
+    const headerCells = seeded[0]?.attrs?.cells as readonly BlockNode[];
+    expect(headerCells.map((c) => c.attrs?.text)).toEqual([
+      "Header 1",
+      "Header 2",
+      "Header 3",
+    ]);
   });
 
   test("th/td nest as direct children of <tr>, rows inside a <tbody> (valid HTML content model)", () => {
