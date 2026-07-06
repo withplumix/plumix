@@ -354,6 +354,11 @@ msgid "editor.page.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/block-input-control.tsx
+msgid "editor.combobox.none"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.add.none"
 msgstr ""
@@ -454,6 +459,11 @@ msgid "editor.styles.add.search"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/block-input-control.tsx
+msgid "editor.combobox.search"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/block-inspector.tsx
 msgid "editor.inspector.empty"
 msgstr ""
@@ -471,6 +481,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.selectParent"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/block-input-control.tsx
+msgid "editor.combobox.placeholder"
 msgstr ""
 
 #. js-lingui-explicit-id

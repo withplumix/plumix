@@ -139,7 +139,7 @@ describe("BlockInputControl", () => {
     // Unlike a native <select> (which silently shows the first option), the
     // Radix trigger stays blank until a real value is set — blocks seed a
     // default, so this only surfaces for an unspecified attribute.
-    expect(getByTestId("block-input-stackAt").textContent?.trim()).toBe("");
+    expect(getByTestId("block-input-stackAt").textContent).toBe("");
   });
 
   test("select round-trips an empty-string option value (Radix-safe)", async () => {
@@ -189,7 +189,24 @@ describe("BlockInputControl", () => {
     expect(onChange).toHaveBeenCalledWith("right");
   });
 
-  test("combobox is free-text with option suggestions", () => {
+  test("combobox picks an option from the searchable dropdown", async () => {
+    const { getByTestId, onChange } = renderControl(
+      {
+        name: "tag",
+        type: "combobox",
+        options: [
+          { label: "News", value: "news" },
+          { label: "Blog", value: "blog" },
+        ],
+      },
+      "",
+    );
+    await userEvent.click(getByTestId("block-input-tag"));
+    await userEvent.click(getByTestId("block-input-tag-option-blog"));
+    expect(onChange).toHaveBeenLastCalledWith("blog");
+  });
+
+  test("combobox commits a free-typed value not in the options", async () => {
     const { getByTestId, onChange } = renderControl(
       {
         name: "tag",
@@ -198,10 +215,39 @@ describe("BlockInputControl", () => {
       },
       "",
     );
-    fireEvent.change(getByTestId("block-input-tag"), {
-      target: { value: "custom" },
-    });
-    expect(onChange).toHaveBeenCalledWith("custom");
+    await userEvent.click(getByTestId("block-input-tag"));
+    await userEvent.type(getByTestId("block-input-tag-search"), "custom");
+    await userEvent.click(getByTestId("block-input-tag-create"));
+    expect(onChange).toHaveBeenLastCalledWith("custom");
+  });
+
+  test("combobox search matches an option's label, not just its value", async () => {
+    const { getByTestId, queryByTestId } = renderControl(
+      {
+        name: "tag",
+        type: "combobox",
+        // Label diverges from value, like the code block's "C++" → "cpp".
+        options: [{ label: "C++", value: "cpp" }],
+      },
+      "",
+    );
+    await userEvent.click(getByTestId("block-input-tag"));
+    await userEvent.type(getByTestId("block-input-tag-search"), "C++");
+    expect(queryByTestId("block-input-tag-option-cpp")).not.toBeNull();
+  });
+
+  test("combobox hides the create affordance when the query is an option value", async () => {
+    const { getByTestId, queryByTestId } = renderControl(
+      {
+        name: "tag",
+        type: "combobox",
+        options: [{ label: "News", value: "news" }],
+      },
+      "",
+    );
+    await userEvent.click(getByTestId("block-input-tag"));
+    await userEvent.type(getByTestId("block-input-tag-search"), "news");
+    expect(queryByTestId("block-input-tag-create")).toBeNull();
   });
 
   // The Tiptap + ProseMirror lazy chunk is heavy; under a loaded CI box it can
