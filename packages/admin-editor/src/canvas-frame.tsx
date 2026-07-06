@@ -366,6 +366,18 @@ export function CanvasFrame({
     [],
   );
 
+  // Radix dismisses the inserter on an outside pointerdown, but those events
+  // fire on the host document — a click *inside* the cross-frame canvas never
+  // reaches it, so the popover would stay open. Opening the inserter moves focus
+  // into its content (host document); a later click into the iframe blurs the
+  // host window, which we treat as an outside interaction and close on.
+  useEffect(() => {
+    if (!pendingAdd) return;
+    const close = (): void => setPendingAdd(null);
+    window.addEventListener("blur", close);
+    return () => window.removeEventListener("blur", close);
+  }, [pendingAdd]);
+
   useEffect(() => {
     const frameWindow = iframeRef.current?.contentWindow;
     if (!frameWindow) return;
