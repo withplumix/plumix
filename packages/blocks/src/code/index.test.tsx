@@ -12,14 +12,30 @@ describe("core/code", () => {
     expect(html).toBe("<div><pre>const x = 1;</pre></div>");
   });
 
-  test("wraps the text in <code data-language> when a language is provided", () => {
+  test("syntax-highlights the code for a supported language", () => {
     const html = renderBlockSpecToHtml(codeBlock, {
       text: "fn main() {}",
       language: "rust",
     });
 
     expect(html).toContain('data-language="rust"');
-    expect(html).toContain('<code data-language="rust">fn main() {}</code>');
+    // highlight.js wraps tokens in hljs spans; the theme rides along as vars.
+    expect(html).toContain('class="hljs"');
+    expect(html).toContain("hljs-");
+    expect(html).toContain("--plumix-code-");
+  });
+
+  test("falls back to plain <code> for a language no grammar covers", () => {
+    const html = renderBlockSpecToHtml(codeBlock, {
+      text: "IDENTIFICATION DIVISION.",
+      language: "cobol",
+    });
+
+    // Unknown language: semantic attribute kept, no highlight markup.
+    expect(html).toContain(
+      '<code data-language="cobol">IDENTIFICATION DIVISION.</code>',
+    );
+    expect(html).not.toContain('class="hljs"');
   });
 
   test("treats whitespace-only language as no language", () => {

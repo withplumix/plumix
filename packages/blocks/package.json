@@ -44,6 +44,7 @@
   "dependencies": {
     "@tiptap/core": "catalog:tiptap",
     "dompurify": "^3.4.11",
+    "highlight.js": "^11.11.1",
     "sanitize-html": "^2.17.5"
   },
   "peerDependencies": {
