@@ -15,6 +15,11 @@ export const buttonBlock = defineBlock({
   title: "Button",
   icon: "MousePointerClick",
   category: "interactive",
+  // selfSeam so the block class + default styles land on the `<a>`/`<button>`
+  // itself. Without it the framework also wraps a `<div>` carrying the same
+  // class + data-plumix-id, double-applying the button styles (a box inside a
+  // box) and giving the selection overlay two elements to track.
+  selfSeam: true,
   inputs: [
     { name: "label", type: "text", label: "Label" },
     { name: "href", type: "text", label: "Href" },
