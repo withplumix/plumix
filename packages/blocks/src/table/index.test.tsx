@@ -11,22 +11,16 @@ import {
 } from "./index.js";
 
 describe("core/table family", () => {
-  test("renders an empty <table> with no striped/bordered attrs by default", () => {
+  test("renders a plain <table> with a <tbody>", () => {
     const html = renderBlockSpecToHtml(tableBlock, {});
 
     expect(html).toContain("<table>");
-    expect(html).not.toContain("data-striped");
-    expect(html).not.toContain("data-bordered");
+    expect(html).toContain("<tbody>");
   });
 
-  test("renders striped + bordered when truthy", () => {
-    const html = renderBlockSpecToHtml(tableBlock, {
-      striped: true,
-      bordered: true,
-    });
-
-    expect(html).toContain('data-striped="true"');
-    expect(html).toContain('data-bordered="true"');
+  test("exposes only the rows slot — no bespoke styling inputs", () => {
+    const names = tableBlock.inputs?.map((i) => i.name) ?? [];
+    expect(names).toEqual(["rows"]);
   });
 
   test("renders <th scope=col> for header-cell, seam on the <th> (selfSeam)", () => {

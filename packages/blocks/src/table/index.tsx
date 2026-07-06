@@ -66,8 +66,6 @@ export const tableBlock = defineBlock({
   icon: "Table",
   category: "text",
   inputs: [
-    { name: "striped", type: "checkbox", label: "Striped" },
-    { name: "bordered", type: "checkbox", label: "Bordered" },
     {
       name: "rows",
       type: "slot",
@@ -79,15 +77,13 @@ export const tableBlock = defineBlock({
   ],
   defaults: {},
   render: ({ attrs }): ReactNode => {
-    const striped = attrs.striped === true || undefined;
-    const bordered = attrs.bordered === true || undefined;
     const Rows = attrs.rows as (() => ReactNode) | undefined;
     // Rows render straight into a <tbody> — browsers inject one anyway, so
     // emitting it ourselves keeps the DOM React hydrates against valid (no
     // <tr> directly under <table>). Header rows live here too; `scope="col"`
     // on their cells is what marks them as headers.
     return (
-      <table data-striped={striped} data-bordered={bordered}>
+      <table>
         <tbody>{Rows ? <Rows /> : null}</tbody>
       </table>
     );
