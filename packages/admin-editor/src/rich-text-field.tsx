@@ -43,15 +43,21 @@ interface RichTextFieldProps {
 
 // The uniform marks: each toggles via toggleMark(name) and paints its pressed
 // state from isActive(name), so one table drives the toolbar and the selector.
+// `label` is the tooltip / accessible name for the icon-only button.
 const MARKS = [
-  { name: "bold", icon: Bold, testId: "bold" },
-  { name: "italic", icon: Italic, testId: "italic" },
-  { name: "underline", icon: Underline, testId: "underline" },
-  { name: "strike", icon: Strikethrough, testId: "strike" },
-  { name: "code", icon: Code2, testId: "code" },
-  { name: "highlight", icon: Highlighter, testId: "highlight" },
-  { name: "subscript", icon: Subscript, testId: "subscript" },
-  { name: "superscript", icon: Superscript, testId: "superscript" },
+  { name: "bold", icon: Bold, testId: "bold", label: "Bold" },
+  { name: "italic", icon: Italic, testId: "italic", label: "Italic" },
+  { name: "underline", icon: Underline, testId: "underline", label: "Underline" },
+  { name: "strike", icon: Strikethrough, testId: "strike", label: "Strikethrough" },
+  { name: "code", icon: Code2, testId: "code", label: "Inline code" },
+  { name: "highlight", icon: Highlighter, testId: "highlight", label: "Highlight" },
+  { name: "subscript", icon: Subscript, testId: "subscript", label: "Subscript" },
+  {
+    name: "superscript",
+    icon: Superscript,
+    testId: "superscript",
+    label: "Superscript",
+  },
 ] as const;
 
 // The active-mark/-node flags the toolbar paints its pressed state from. Derived
@@ -165,10 +171,11 @@ export function RichTextField({
             ))}
           </SelectContent>
         </Select>
-        {MARKS.map(({ name, icon: Icon, testId: suffix }) => (
+        {MARKS.map(({ name, icon: Icon, testId: suffix, label }) => (
           <ToolbarToggle
             key={name}
             testId={`${testId}-${suffix}`}
+            label={label}
             pressed={active?.marks[name] ?? false}
             disabled={!editor}
             onToggle={() => editor?.chain().focus().toggleMark(name).run()}
@@ -178,6 +185,7 @@ export function RichTextField({
         ))}
         <ToolbarToggle
           testId={`${testId}-bullet-list`}
+          label="Bullet list"
           pressed={active?.bulletList ?? false}
           disabled={!editor}
           onToggle={() => editor?.chain().focus().toggleBulletList().run()}
@@ -186,6 +194,7 @@ export function RichTextField({
         </ToolbarToggle>
         <ToolbarToggle
           testId={`${testId}-ordered-list`}
+          label="Numbered list"
           pressed={active?.orderedList ?? false}
           disabled={!editor}
           onToggle={() => editor?.chain().focus().toggleOrderedList().run()}
@@ -194,6 +203,7 @@ export function RichTextField({
         </ToolbarToggle>
         <ToolbarToggle
           testId={`${testId}-blockquote`}
+          label="Blockquote"
           pressed={active?.blockquote ?? false}
           disabled={!editor}
           onToggle={() => editor?.chain().focus().toggleBlockquote().run()}
@@ -202,6 +212,7 @@ export function RichTextField({
         </ToolbarToggle>
         <ToolbarToggle
           testId={`${testId}-link`}
+          label="Link"
           pressed={active?.link ?? false}
           disabled={!editor}
           onToggle={() => toggleLink(editor)}
@@ -237,12 +248,14 @@ export function RichTextField({
 
 function ToolbarToggle({
   testId,
+  label,
   pressed,
   disabled,
   onToggle,
   children,
 }: {
   readonly testId: string;
+  readonly label: string;
   readonly pressed: boolean;
   readonly disabled: boolean;
   readonly onToggle: () => void;
@@ -252,6 +265,8 @@ function ToolbarToggle({
     <Toggle
       size="sm"
       data-testid={testId}
+      title={label}
+      aria-label={label}
       pressed={pressed}
       disabled={disabled}
       onPressedChange={onToggle}
