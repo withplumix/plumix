@@ -1,9 +1,58 @@
 import type { ReactNode } from "react";
 
+import type { BlockNode } from "../render-block-tree.js";
 import { defineBlock } from "../block-registry.js";
 
 const ALIGNS = ["left", "center", "right"] as const;
 type Align = (typeof ALIGNS)[number];
+
+const COLUMN_COUNT = 3;
+
+// A container in defaultChildren must spell out its whole subtree — slot seeding
+// doesn't recurse into a nested slot's own defaultChildren — so each seeded row
+// lists its cells. Cells carry placeholder text so a dropped table reads as a
+// real grid, not an empty strip; the text is ordinary content the user edits.
+function seedCells(
+  rowId: string,
+  cell: string,
+  label: (col: number) => string,
+): readonly BlockNode[] {
+  return Array.from({ length: COLUMN_COUNT }, (_, i) => ({
+    id: `${rowId}-c${i + 1}`,
+    name: cell,
+    attrs: { text: label(i + 1) },
+  }));
+}
+
+// A header row + two body rows, so a freshly dropped table reads as an editable,
+// filled grid and shows both row types up front.
+const DEFAULT_ROWS: readonly BlockNode[] = [
+  {
+    id: "row-header",
+    name: "core/table-header-row",
+    attrs: {
+      cells: seedCells(
+        "row-header",
+        "core/table-header-cell",
+        (col) => `Header ${col}`,
+      ),
+    },
+  },
+  {
+    id: "row-1",
+    name: "core/table-body-row",
+    attrs: {
+      cells: seedCells("row-1", "core/table-cell", (col) => `Cell ${col}`),
+    },
+  },
+  {
+    id: "row-2",
+    name: "core/table-body-row",
+    attrs: {
+      cells: seedCells("row-2", "core/table-cell", (col) => `Cell ${col}`),
+    },
+  },
+];
 
 function pickAlign(raw: unknown): Align | undefined {
   return typeof raw === "string" && (ALIGNS as readonly string[]).includes(raw)
@@ -25,6 +74,7 @@ export const tableBlock = defineBlock({
       label: "Rows",
       rawSlot: true,
       allowedBlocks: ["core/table-header-row", "core/table-body-row"],
+      defaultChildren: DEFAULT_ROWS,
     },
   ],
   defaults: {},

@@ -3,9 +3,12 @@ import { describe, expect, test } from "vitest";
 import type { BlockNode } from "@plumix/blocks";
 
 import {
+  appendTableColumn,
+  appendTableRow,
   canUngroupBlock,
   collectBlocks,
   duplicateBlock,
+  enclosingTableId,
   findBlock,
   findParentId,
   flattenTree,
@@ -15,6 +18,8 @@ import {
   moveBlockBy,
   projectMove,
   removeBlocks,
+  removeTableColumn,
+  removeTableRow,
   selectionRoots,
   slotKeys,
   ungroupBlock,
@@ -612,5 +617,182 @@ describe("findBlock", () => {
 
   test("returns undefined when absent", () => {
     expect(findBlock(TREE, "zzz")).toBeUndefined();
+  });
+});
+
+const tableTree = (): readonly BlockNode[] => [
+  {
+    id: "t1",
+    name: "core/table",
+    attrs: {
+      rows: [
+        {
+          id: "hr",
+          name: "core/table-header-row",
+          attrs: {
+            cells: [
+              { id: "h1", name: "core/table-header-cell" },
+              { id: "h2", name: "core/table-header-cell" },
+            ],
+          },
+        },
+        {
+          id: "br",
+          name: "core/table-body-row",
+          attrs: {
+            cells: [
+              { id: "b1", name: "core/table-cell" },
+              { id: "b2", name: "core/table-cell" },
+            ],
+          },
+        },
+      ],
+    },
+  },
+];
+
+const tableRows = (tree: readonly BlockNode[]): readonly BlockNode[] =>
+  (findBlock(tree, "t1")?.attrs?.rows ?? []) as readonly BlockNode[];
+
+const rowCells = (row: BlockNode | undefined): readonly BlockNode[] =>
+  (row?.attrs?.cells ?? []) as readonly BlockNode[];
+
+describe("appendTableColumn", () => {
+  test("appends a cell to every row, matching each row's cell type", () => {
+    const rows = tableRows(appendTableColumn(tableTree(), "t1"));
+    expect(rowCells(rows[0]).map((c) => c.name)).toEqual([
+      "core/table-header-cell",
+      "core/table-header-cell",
+      "core/table-header-cell",
+    ]);
+    expect(rowCells(rows[1]).map((c) => c.name)).toEqual([
+      "core/table-cell",
+      "core/table-cell",
+      "core/table-cell",
+    ]);
+  });
+
+  test("mints fresh, unique ids for the appended cells", () => {
+    const rows = tableRows(appendTableColumn(tableTree(), "t1"));
+    const newHeader = rowCells(rows[0])[2];
+    const newBody = rowCells(rows[1])[2];
+    expect(newHeader?.id).toBeTruthy();
+    expect(newBody?.id).toBeTruthy();
+    expect(newHeader?.id).not.toBe(newBody?.id);
+  });
+
+  test("descends into a nested table", () => {
+    const tree: readonly BlockNode[] = [group("g", tableTree())];
+    const next = appendTableColumn(tree, "t1");
+    expect(next).not.toBe(tree);
+    expect(rowCells(tableRows(next)[0])).toHaveLength(3);
+  });
+
+  test("no-ops (same ref) when the id isn't a table or has no rows", () => {
+    const tree = tableTree();
+    expect(appendTableColumn(tree, "hr")).toBe(tree);
+    expect(appendTableColumn(tree, "missing")).toBe(tree);
+    const empty: readonly BlockNode[] = [
+      { id: "t1", name: "core/table", attrs: { rows: [] } },
+    ];
+    expect(appendTableColumn(empty, "t1")).toBe(empty);
+  });
+});
+
+describe("appendTableRow", () => {
+  test("appends a body row with a cell per existing column", () => {
+    const rows = tableRows(appendTableRow(tableTree(), "t1"));
+    expect(rows.map((r) => r.name)).toEqual([
+      "core/table-header-row",
+      "core/table-body-row",
+      "core/table-body-row",
+    ]);
+    expect(rowCells(rows[2]).map((c) => c.name)).toEqual([
+      "core/table-cell",
+      "core/table-cell",
+    ]);
+    expect(rows[2]?.id).toBeTruthy();
+  });
+
+  test("seeds a single cell when the table is empty", () => {
+    const tree: readonly BlockNode[] = [
+      { id: "t1", name: "core/table", attrs: { rows: [] } },
+    ];
+    const rows = tableRows(appendTableRow(tree, "t1"));
+    expect(rows).toHaveLength(1);
+    expect(rowCells(rows[0])).toHaveLength(1);
+  });
+
+  test("no-ops (same ref) when the id isn't a table", () => {
+    const tree = tableTree();
+    expect(appendTableRow(tree, "missing")).toBe(tree);
+  });
+});
+
+describe("removeTableColumn", () => {
+  test("drops the last cell from every row", () => {
+    const rows = tableRows(removeTableColumn(tableTree(), "t1"));
+    expect(rowCells(rows[0]).map((c) => c.id)).toEqual(["h1"]);
+    expect(rowCells(rows[1]).map((c) => c.id)).toEqual(["b1"]);
+  });
+
+  test("no-ops (same ref) at one column, or when the id isn't a table", () => {
+    const tree = tableTree();
+    expect(removeTableColumn(tree, "missing")).toBe(tree);
+    const oneCol: readonly BlockNode[] = [
+      {
+        id: "t1",
+        name: "core/table",
+        attrs: {
+          rows: [
+            {
+              id: "r",
+              name: "core/table-body-row",
+              attrs: { cells: [{ id: "c", name: "core/table-cell" }] },
+            },
+          ],
+        },
+      },
+    ];
+    expect(removeTableColumn(oneCol, "t1")).toBe(oneCol);
+  });
+});
+
+describe("removeTableRow", () => {
+  test("drops the last row", () => {
+    const rows = tableRows(removeTableRow(tableTree(), "t1"));
+    expect(rows.map((r) => r.id)).toEqual(["hr"]);
+  });
+
+  test("no-ops (same ref) at one row, or when the id isn't a table", () => {
+    const tree = tableTree();
+    expect(removeTableRow(tree, "missing")).toBe(tree);
+    const oneRow: readonly BlockNode[] = [
+      {
+        id: "t1",
+        name: "core/table",
+        attrs: {
+          rows: [
+            { id: "hr", name: "core/table-header-row", attrs: { cells: [] } },
+          ],
+        },
+      },
+    ];
+    expect(removeTableRow(oneRow, "t1")).toBe(oneRow);
+  });
+});
+
+describe("enclosingTableId", () => {
+  test("resolves the table from the table, a row, or a cell", () => {
+    const tree = tableTree();
+    expect(enclosingTableId(tree, "t1")).toBe("t1");
+    expect(enclosingTableId(tree, "hr")).toBe("t1");
+    expect(enclosingTableId(tree, "h1")).toBe("t1");
+    expect(enclosingTableId(tree, "b2")).toBe("t1");
+  });
+
+  test("returns null outside any table, or for a missing id", () => {
+    expect(enclosingTableId(TREE, "a")).toBeNull();
+    expect(enclosingTableId(tableTree(), "missing")).toBeNull();
   });
 });

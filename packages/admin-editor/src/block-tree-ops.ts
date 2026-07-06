@@ -1,5 +1,9 @@
 import type { BlockNode } from "@plumix/blocks";
-import { isBlockNodeArray, rewriteBlockNodeIds } from "@plumix/blocks";
+import {
+  freshBlockId,
+  isBlockNodeArray,
+  rewriteBlockNodeIds,
+} from "@plumix/blocks";
 
 /** Find a block by id anywhere in the tree, descending into slot attrs. */
 export function findBlock(
@@ -438,6 +442,151 @@ export function moveBlockBy(
   const to = from + delta;
   if (to < 0 || to >= siblings.length) return tree;
   return moveBlock(tree, id, { parentId, index: to });
+}
+
+const TABLE = "core/table";
+const HEADER_ROW = "core/table-header-row";
+const HEADER_CELL = "core/table-header-cell";
+const BODY_ROW = "core/table-body-row";
+const BODY_CELL = "core/table-cell";
+
+function cellsOf(row: BlockNode): readonly BlockNode[] {
+  const cells = row.attrs?.cells;
+  return isBlockNodeArray(cells) ? cells : [];
+}
+
+/**
+ * The id of the table enclosing `id` — `id` itself if it's a core/table, else
+ * its nearest table ancestor (so a selected row or cell resolves to its table),
+ * or null when nothing in the chain is a table. Lets the inspector keep the
+ * table controls in reach while the editor is working inside a cell.
+ */
+export function enclosingTableId(
+  tree: readonly BlockNode[],
+  id: string,
+): string | null {
+  let current: string | null = id;
+  while (current) {
+    if (findBlock(tree, current)?.name === TABLE) return current;
+    current = findParentId(tree, current);
+  }
+  return null;
+}
+
+// A table's column count is its widest row's cell count, so a new row/column
+// keeps the grid rectangular even when existing rows disagree.
+function columnCount(rows: readonly BlockNode[]): number {
+  return rows.reduce((max, row) => Math.max(max, cellsOf(row).length), 0);
+}
+
+/**
+ * Append a column to a table: a fresh cell at the end of every row's `cells`
+ * slot — a `<th>` in the header row, a `<td>` in body rows. One immutable
+ * transform, so it's a single undo step. A no-op (same tree ref) when `tableId`
+ * isn't a core/table or the table has no rows.
+ */
+export function appendTableColumn(
+  tree: readonly BlockNode[],
+  tableId: string,
+): readonly BlockNode[] {
+  const table = findBlock(tree, tableId);
+  if (table?.name !== TABLE) return tree;
+  const rows = table.attrs?.rows;
+  if (!isBlockNodeArray(rows) || rows.length === 0) return tree;
+  const grown = rows.map((row) => {
+    const name = row.name === HEADER_ROW ? HEADER_CELL : BODY_CELL;
+    const cell: BlockNode = { id: freshBlockId(), name };
+    return { ...row, attrs: { ...row.attrs, cells: [...cellsOf(row), cell] } };
+  });
+  return setTableRows(tree, tableId, grown);
+}
+
+/**
+ * Append a body row to a table, with one cell per existing column so the grid
+ * stays rectangular (at least one cell when the table is empty). One transform.
+ * A no-op when `tableId` isn't a core/table.
+ */
+export function appendTableRow(
+  tree: readonly BlockNode[],
+  tableId: string,
+): readonly BlockNode[] {
+  const table = findBlock(tree, tableId);
+  if (table?.name !== TABLE) return tree;
+  const raw = table.attrs?.rows;
+  const rows = isBlockNodeArray(raw) ? raw : [];
+  const cells = Array.from(
+    { length: Math.max(columnCount(rows), 1) },
+    (): BlockNode => ({ id: freshBlockId(), name: BODY_CELL }),
+  );
+  const row: BlockNode = {
+    id: freshBlockId(),
+    name: BODY_ROW,
+    attrs: { cells },
+  };
+  return setTableRows(tree, tableId, [...rows, row]);
+}
+
+/**
+ * Remove a table's last column — drop the trailing cell from every row. One
+ * transform (a single undo step). A no-op (same tree ref) when `tableId` isn't a
+ * core/table or the table is already down to a single column, so it never leaves
+ * a column-less table.
+ */
+export function removeTableColumn(
+  tree: readonly BlockNode[],
+  tableId: string,
+): readonly BlockNode[] {
+  const table = findBlock(tree, tableId);
+  if (table?.name !== TABLE) return tree;
+  const rows = table.attrs?.rows;
+  if (!isBlockNodeArray(rows) || columnCount(rows) <= 1) return tree;
+  const shrunk = rows.map((row) => {
+    const cells = cellsOf(row);
+    return cells.length > 0
+      ? { ...row, attrs: { ...row.attrs, cells: cells.slice(0, -1) } }
+      : row;
+  });
+  return setTableRows(tree, tableId, shrunk);
+}
+
+/**
+ * Remove a table's last row. One transform. A no-op when `tableId` isn't a
+ * core/table or the table is down to a single row, so it never leaves a
+ * row-less table.
+ */
+export function removeTableRow(
+  tree: readonly BlockNode[],
+  tableId: string,
+): readonly BlockNode[] {
+  const table = findBlock(tree, tableId);
+  if (table?.name !== TABLE) return tree;
+  const raw = table.attrs?.rows;
+  const rows = isBlockNodeArray(raw) ? raw : [];
+  if (rows.length <= 1) return tree;
+  return setTableRows(tree, tableId, rows.slice(0, -1));
+}
+
+// Replace a table's `rows` slot, descending through slots so a nested table is
+// reachable. Untouched branches keep their reference for React.
+function setTableRows(
+  nodes: readonly BlockNode[],
+  tableId: string,
+  rows: readonly BlockNode[],
+): readonly BlockNode[] {
+  return nodes.map((node) => {
+    if (node.id === tableId) {
+      return { ...node, attrs: { ...node.attrs, rows } };
+    }
+    const attrs = node.attrs;
+    if (!attrs) return node;
+    let nextAttrs: Record<string, unknown> | undefined;
+    for (const [key, value] of Object.entries(attrs)) {
+      if (!isBlockNodeArray(value)) continue;
+      const replaced = setTableRows(value, tableId, rows);
+      if (replaced !== value) (nextAttrs ??= { ...attrs })[key] = replaced;
+    }
+    return nextAttrs ? { ...node, attrs: nextAttrs } : node;
+  });
 }
 
 // The blocks sharing `id`'s level: the top level when parentId is null, else

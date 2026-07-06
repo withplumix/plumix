@@ -104,6 +104,11 @@ msgid "editor.inspector.addColumn"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.inspector.addRow"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.add"
 msgstr ""
@@ -421,6 +426,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.remove"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.inspector.removeColumn"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/block-inspector.tsx
+msgid "editor.inspector.removeRow"
 msgstr ""
 
 #. js-lingui-explicit-id

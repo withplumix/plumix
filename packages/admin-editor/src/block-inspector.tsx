@@ -5,13 +5,13 @@ import { Trans } from "@lingui/react";
 import type { BlockRegistry } from "@plumix/blocks";
 import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import { Button } from "@plumix/admin-ui/button";
-import { Plus, RefreshCw } from "@plumix/admin-ui/icons";
+import { Minus, Plus, RefreshCw } from "@plumix/admin-ui/icons";
 import { normalizeStyleValue } from "@plumix/blocks";
 
 import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { createNodeFromEntry } from "./block-catalog.js";
 import { BlockInputControl } from "./block-input-control.js";
-import { findBlock } from "./block-tree-ops.js";
+import { enclosingTableId, findBlock } from "./block-tree-ops.js";
 import { useEditorStore, useLoaderPushRef } from "./provider.js";
 import { deviceBucket } from "./store.js";
 
@@ -45,10 +45,17 @@ export function BlockInspector({
   const updateBlockAttrs = useEditorStore((s) => s.updateBlockAttrs);
   const updateBlockStyle = useEditorStore((s) => s.updateBlockStyle);
   const insertBlockInto = useEditorStore((s) => s.insertBlockInto);
+  const addTableColumn = useEditorStore((s) => s.addTableColumn);
+  const addTableRow = useEditorStore((s) => s.addTableRow);
+  const removeTableColumn = useEditorStore((s) => s.removeTableColumn);
+  const removeTableRow = useEditorStore((s) => s.removeTableRow);
   const loaderPushRef = useLoaderPushRef();
 
   const bucket = deviceBucket(device);
   const block = activeId ? findBlock(tree, activeId) : undefined;
+  // The table the selection sits in (the table itself, or the one owning the
+  // selected row/cell), so the table controls stay in reach while editing cells.
+  const tableId = block ? enclosingTableId(tree, block.id) : null;
   const handleChange = useCallback(
     (key: string, value: unknown): void => {
       if (activeId) updateBlockAttrs(activeId, { [key]: value });
@@ -78,6 +85,18 @@ export function BlockInspector({
       ["core/column"],
     );
   }, [block, registry, insertBlockInto]);
+  const handleAddTableRow = useCallback((): void => {
+    if (tableId) addTableRow(tableId);
+  }, [tableId, addTableRow]);
+  const handleAddTableColumn = useCallback((): void => {
+    if (tableId) addTableColumn(tableId);
+  }, [tableId, addTableColumn]);
+  const handleRemoveTableRow = useCallback((): void => {
+    if (tableId) removeTableRow(tableId);
+  }, [tableId, removeTableRow]);
+  const handleRemoveTableColumn = useCallback((): void => {
+    if (tableId) removeTableColumn(tableId);
+  }, [tableId, removeTableColumn]);
 
   if (!block) {
     return (
@@ -143,6 +162,57 @@ export function BlockInspector({
           <Plus />
           <Trans id="editor.inspector.addColumn" message="Add column" />
         </Button>
+      )}
+      {tableId && (
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-testid="inspector-add-table-row"
+              onClick={handleAddTableRow}
+            >
+              <Plus />
+              <Trans id="editor.inspector.addRow" message="Add row" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-testid="inspector-add-table-column"
+              onClick={handleAddTableColumn}
+            >
+              <Plus />
+              <Trans id="editor.inspector.addColumn" message="Add column" />
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-testid="inspector-remove-table-row"
+              onClick={handleRemoveTableRow}
+            >
+              <Minus />
+              <Trans id="editor.inspector.removeRow" message="Remove row" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-testid="inspector-remove-table-column"
+              onClick={handleRemoveTableColumn}
+            >
+              <Minus />
+              <Trans
+                id="editor.inspector.removeColumn"
+                message="Remove column"
+              />
+            </Button>
+          </div>
+        </div>
       )}
       {canRefresh && (
         <Button
