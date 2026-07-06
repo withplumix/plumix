@@ -66,21 +66,21 @@ catalogs:
     "@vitejs/plugin-react": ^6.0.3
     vite: ^8.1.0
   tiptap:
-    "@tiptap/core": ^3.27.1
-    "@tiptap/react": ^3.27.1
+    "@tiptap/core": ^3.27.2
+    "@tiptap/react": ^3.27.2
     # Explicit extension set for the rich-text rail instead of starter-kit,
     # which bundles ~16 extensions but we activate only these (the rest are
     # disabled marks we replace with @plumix/blocks marks, or nodes that are
     # standalone blocks). All pinned in lockstep with @tiptap/core so a single
     # prosemirror/core copy is bundled.
-    "@tiptap/extension-blockquote": ^3.27.1
-    "@tiptap/extension-document": ^3.27.1
-    "@tiptap/extension-hard-break": ^3.27.1
-    "@tiptap/extension-heading": ^3.27.1
-    "@tiptap/extension-list": ^3.27.1
-    "@tiptap/extension-paragraph": ^3.27.1
-    "@tiptap/extension-text": ^3.27.1
-    "@tiptap/extensions": ^3.27.1
+    "@tiptap/extension-blockquote": ^3.27.2
+    "@tiptap/extension-document": ^3.27.2
+    "@tiptap/extension-hard-break": ^3.27.2
+    "@tiptap/extension-heading": ^3.27.2
+    "@tiptap/extension-list": ^3.27.2
+    "@tiptap/extension-paragraph": ^3.27.2
+    "@tiptap/extension-text": ^3.27.2
+    "@tiptap/extensions": ^3.27.2
   orpc:
     "@orpc/client": ^1.14.6
     "@orpc/openapi": ^1.14.6
