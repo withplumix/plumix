@@ -164,54 +164,49 @@ export function BlockInspector({
         </Button>
       )}
       {tableId && (
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              data-testid="inspector-add-table-row"
-              onClick={handleAddTableRow}
-            >
-              <Plus />
-              <Trans id="editor.inspector.addRow" message="Add row" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              data-testid="inspector-add-table-column"
-              onClick={handleAddTableColumn}
-            >
-              <Plus />
-              <Trans id="editor.inspector.addColumn" message="Add column" />
-            </Button>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              data-testid="inspector-remove-table-row"
-              onClick={handleRemoveTableRow}
-            >
-              <Minus />
-              <Trans id="editor.inspector.removeRow" message="Remove row" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              data-testid="inspector-remove-table-column"
-              onClick={handleRemoveTableColumn}
-            >
-              <Minus />
-              <Trans
-                id="editor.inspector.removeColumn"
-                message="Remove column"
-              />
-            </Button>
-          </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            data-testid="inspector-add-table-row"
+            onClick={handleAddTableRow}
+          >
+            <Plus />
+            <Trans id="editor.inspector.addRow" message="Add row" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            data-testid="inspector-add-table-column"
+            onClick={handleAddTableColumn}
+          >
+            <Plus />
+            <Trans id="editor.inspector.addColumn" message="Add column" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            data-testid="inspector-remove-table-row"
+            onClick={handleRemoveTableRow}
+          >
+            <Minus />
+            <Trans id="editor.inspector.removeRow" message="Remove row" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            data-testid="inspector-remove-table-column"
+            onClick={handleRemoveTableColumn}
+          >
+            <Minus />
+            <Trans id="editor.inspector.removeColumn" message="Remove column" />
+          </Button>
         </div>
       )}
       {canRefresh && (
