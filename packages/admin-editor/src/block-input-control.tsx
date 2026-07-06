@@ -6,6 +6,13 @@ import type { BlockInput, BlockInputOption } from "@plumix/blocks";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
 import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { Switch } from "@plumix/admin-ui/switch";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { resolveLabel } from "@plumix/core/i18n";
@@ -73,11 +80,11 @@ const FIELD_TESTID = (name: string): string => `block-input-${name}`;
 
 /**
  * Renders one block attribute as an admin-ui form control, dispatching the
- * typed next value on edit. shadcn primitives where they map cleanly (text,
- * number, checkbox, textarea); native `<select>`/radio for the
- * option-bearing kinds so number/boolean option values survive the round trip
- * (radix Select is string-only). Mirrors the kinds the Puck field translator
- * supports so plugin blocks render unchanged.
+ * typed next value on edit. shadcn primitives throughout — select uses the
+ * shadcn `Select`, round-tripping number/boolean option values through their
+ * stringified `optionKey` (Radix is string-only); radio stays a native group.
+ * Mirrors the kinds the Puck field translator supports so plugin blocks render
+ * unchanged.
  */
 export function BlockInputControl({
   input,
@@ -140,19 +147,27 @@ export function BlockInputControl({
         );
       case "select":
         return (
-          <select
-            id={id}
-            data-testid={testId}
-            className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm"
-            value={optionKey(value)}
-            onChange={(e) => onChange(decodeOption(options, e.target.value))}
+          <Select
+            value={encodeSelectKey(value)}
+            onValueChange={(next) =>
+              onChange(decodeOption(options, decodeSelectKey(next)))
+            }
           >
-            {options.map((opt) => (
-              <option key={optionKey(opt.value)} value={optionKey(opt.value)}>
-                {resolveLabel(opt.label, i18n)}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id={id} data-testid={testId} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((opt) => (
+                <SelectItem
+                  key={optionKey(opt.value)}
+                  value={encodeSelectKey(opt.value)}
+                  data-testid={`${testId}-option-${optionKey(opt.value)}`}
+                >
+                  {resolveLabel(opt.label, i18n)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         );
       case "radio":
         return (
@@ -293,6 +308,21 @@ function asString(value: unknown): string {
 // number/boolean options round-trip back to their typed form via decodeOption.
 function optionKey(value: unknown): string {
   return asString(value);
+}
+
+// Radix Select reserves "" for "no selection" and throws on an empty-string
+// item value, but an option's stringified key can legitimately be "" (e.g. an
+// empty-string value). Encode "" to a sentinel for the trigger + items and
+// decode it back before resolving the typed option. (An option that stringifies
+// to the sentinel itself would collide — vanishingly unlikely, as meta-box's
+// equivalent also accepts.)
+const SELECT_EMPTY = "__plumix_empty__";
+function encodeSelectKey(value: unknown): string {
+  const key = optionKey(value);
+  return key === "" ? SELECT_EMPTY : key;
+}
+function decodeSelectKey(key: string): string {
+  return key === SELECT_EMPTY ? "" : key;
 }
 
 function decodeOption(
