@@ -354,6 +354,11 @@ msgid "editor.page.empty"
 msgstr "No document settings."
 
 #. js-lingui-explicit-id
+#: src/block-input-control.tsx
+msgid "editor.combobox.none"
+msgstr "No match."
+
+#. js-lingui-explicit-id
 #: src/style-declarations.tsx
 msgid "editor.styles.add.none"
 msgstr "No property."
@@ -454,6 +459,11 @@ msgid "editor.styles.add.search"
 msgstr "Search property…"
 
 #. js-lingui-explicit-id
+#: src/block-input-control.tsx
+msgid "editor.combobox.search"
+msgstr "Search…"
+
+#. js-lingui-explicit-id
 #: src/block-inspector.tsx
 msgid "editor.inspector.empty"
 msgstr "Select a block to edit its attributes."
@@ -472,6 +482,11 @@ msgstr "Select a block to style it."
 #: src/selection-toolbar.tsx
 msgid "editor.selection.selectParent"
 msgstr "Select parent"
+
+#. js-lingui-explicit-id
+#: src/block-input-control.tsx
+msgid "editor.combobox.placeholder"
+msgstr "Select…"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx

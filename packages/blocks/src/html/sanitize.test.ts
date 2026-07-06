@@ -99,10 +99,10 @@ describe("sanitizeHtml — baseline allowlist", () => {
     ).toBe('<a href="https://x.example">x</a>');
   });
 
-  test("keeps h1–h4 but strips non-allowlisted levels (h5, h6) to text", () => {
+  test("keeps all heading levels h1–h6", () => {
     expect(sanitizeHtml("<h1>title</h1>")).toBe("<h1>title</h1>");
-    expect(sanitizeHtml("<h5>title</h5>")).toBe("title");
-    expect(sanitizeHtml("<h6>title</h6>")).toBe("title");
+    expect(sanitizeHtml("<h5>title</h5>")).toBe("<h5>title</h5>");
+    expect(sanitizeHtml("<h6>title</h6>")).toBe("<h6>title</h6>");
   });
 
   test("strips <svg> / <math> containers used as XSS smuggling vectors", () => {

@@ -93,7 +93,10 @@ const SIZE_SECTION: SectionDef = {
     { property: "height", label: "Height" },
     { property: "minWidth", label: "Min width" },
     { property: "minHeight", label: "Min height" },
-    { property: "maxWidth", label: "Max width", category: "maxWidth" },
+    // All six are custom-only so the grid rows stay even — a lone Token/Custom
+    // toggle on maxWidth made its cell taller than its neighbour. A max-width
+    // token is still reachable as a custom `var(--…)` value.
+    { property: "maxWidth", label: "Max width" },
     { property: "maxHeight", label: "Max height" },
   ],
 };

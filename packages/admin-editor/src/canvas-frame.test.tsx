@@ -254,6 +254,53 @@ describe("CanvasFrame", () => {
     expect(getByTestId("tree-probe").textContent).toBe("core/heading");
     expect(queryByTestId("plumix-inserter-popover")).toBeNull();
   });
+
+  test("keeps the inserter open through the open transition", () => {
+    const { getByTestId, queryByTestId } = render(
+      <Wrapper>
+        <CanvasFrame
+          previewUrl="about:blank"
+          origin={ORIGIN}
+          registry={registry}
+          capabilities={NO_CAPS}
+        />
+      </Wrapper>,
+    );
+
+    // Opening is driven by an in-iframe click (a postMessage), so focus has just
+    // left the host window. The dismiss-on-blur listener must not fire during
+    // this transition and self-close the popover it was armed for.
+    fromCanvas({ type: "canvas:requestAdd" });
+    expect(queryByTestId("plumix-inserter-popover")).not.toBeNull();
+    // A re-render (another host message) must also leave it open.
+    fromCanvas({ type: "canvas:hover", id: null });
+    expect(getByTestId("plumix-inserter-popover")).toBeDefined();
+  });
+
+  test("clicking into the canvas iframe dismisses the open inserter", () => {
+    const { getByTestId, queryByTestId } = render(
+      <Wrapper>
+        <CanvasFrame
+          previewUrl="about:blank"
+          origin={ORIGIN}
+          registry={registry}
+          capabilities={NO_CAPS}
+        />
+      </Wrapper>,
+    );
+
+    fromCanvas({ type: "canvas:requestAdd" });
+    expect(getByTestId("plumix-inserter-popover")).toBeDefined();
+
+    // Radix only sees outside pointerdowns on the host document; a click inside
+    // the cross-frame canvas instead blurs the host window (focus leaves the
+    // popover for the iframe), which must close the inserter.
+    act(() => {
+      window.dispatchEvent(new Event("blur"));
+    });
+
+    expect(queryByTestId("plumix-inserter-popover")).toBeNull();
+  });
 });
 
 describe("CanvasFrame nested drop", () => {

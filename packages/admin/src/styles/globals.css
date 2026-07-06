@@ -307,10 +307,6 @@
   [data-plumix-block="core/buttons"] > div {
     @apply my-3 flex flex-wrap gap-2;
   }
-  [data-plumix-block="core/button"] > a,
-  [data-plumix-block="core/button"] > button {
-    @apply bg-primary text-primary-foreground inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium no-underline;
-  }
 
   /* Table */
   table {

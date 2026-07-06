@@ -8,6 +8,20 @@ type Align = (typeof ALIGNS)[number];
 
 const COLUMN_COUNT = 3;
 
+// Baseline table styling as theme-overridable `var(--plumix-table-*, fallback)`
+// CSS — header and body cells share one padding/border rule so they read as one
+// consistent grid (the browser gives <th>/<td> no padding on their own). Emitted
+// with the block; React 19 dedupes the `href`+`precedence` style in the editor's
+// client render, while the public string render emits one inline copy per table
+// (identical rules, harmless). A theme restyles every table via the vars.
+const TABLE_THEME_CSS = [
+  "table{border-collapse:collapse;width:var(--plumix-table-width,100%)}",
+  "th,td{border:var(--plumix-table-border,1px solid #d0d7de);padding:var(--plumix-table-cell-padding,0.5rem 0.75rem);text-align:left;vertical-align:top}",
+  "th{background:var(--plumix-table-header-bg,#f6f8fa);font-weight:var(--plumix-table-header-weight,600)}",
+  "th[data-align=center],td[data-align=center]{text-align:center}",
+  "th[data-align=right],td[data-align=right]{text-align:right}",
+].join("");
+
 // A container in defaultChildren must spell out its whole subtree — slot seeding
 // doesn't recurse into a nested slot's own defaultChildren — so each seeded row
 // lists its cells. Cells carry placeholder text so a dropped table reads as a
@@ -66,8 +80,6 @@ export const tableBlock = defineBlock({
   icon: "Table",
   category: "text",
   inputs: [
-    { name: "striped", type: "checkbox", label: "Striped" },
-    { name: "bordered", type: "checkbox", label: "Bordered" },
     {
       name: "rows",
       type: "slot",
@@ -79,17 +91,20 @@ export const tableBlock = defineBlock({
   ],
   defaults: {},
   render: ({ attrs }): ReactNode => {
-    const striped = attrs.striped === true || undefined;
-    const bordered = attrs.bordered === true || undefined;
     const Rows = attrs.rows as (() => ReactNode) | undefined;
     // Rows render straight into a <tbody> — browsers inject one anyway, so
     // emitting it ourselves keeps the DOM React hydrates against valid (no
     // <tr> directly under <table>). Header rows live here too; `scope="col"`
     // on their cells is what marks them as headers.
     return (
-      <table data-striped={striped} data-bordered={bordered}>
-        <tbody>{Rows ? <Rows /> : null}</tbody>
-      </table>
+      <>
+        <style href="plumix-table-theme" precedence="default">
+          {TABLE_THEME_CSS}
+        </style>
+        <table>
+          <tbody>{Rows ? <Rows /> : null}</tbody>
+        </table>
+      </>
     );
   },
 });

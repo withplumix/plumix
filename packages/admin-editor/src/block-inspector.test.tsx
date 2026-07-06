@@ -161,9 +161,9 @@ describe("BlockInspector", () => {
     expect((getByTestId("block-input-text") as HTMLInputElement).value).toBe(
       "Hi",
     );
-    expect((getByTestId("block-input-level") as HTMLSelectElement).value).toBe(
-      "2",
-    );
+    // The select is a shadcn (Radix) combobox; its trigger shows the active
+    // option's label rather than exposing a native `.value`.
+    expect(getByTestId("block-input-level").textContent).toContain("H2");
   });
 
   test("editing an input patches the store and re-renders live", () => {

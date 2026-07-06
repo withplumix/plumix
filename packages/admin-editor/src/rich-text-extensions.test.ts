@@ -38,13 +38,13 @@ describe("richTextExtensions", () => {
     expect(Object.keys(schema.nodes)).toContain("heading");
   });
 
-  test("offers heading levels h1–h4 only", () => {
-    // h1–h4 match the sanitiser allowlist; h5/h6 are intentionally excluded.
+  test("offers heading levels h1–h6", () => {
+    // Levels match the sanitiser allowlist — both derive from HEADING_LEVELS.
     const heading = richTextExtensions().find((ext) => ext.name === "heading");
     const options = heading?.options as
       { levels?: readonly number[] } | undefined;
 
-    expect(options?.levels).toEqual([1, 2, 3, 4]);
+    expect(options?.levels).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   test("registers the blockquote node — quotes are folded into rich text", () => {

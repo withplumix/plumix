@@ -71,12 +71,13 @@ export function StyleControl({
 
   return (
     <div className="flex flex-col gap-1" data-testid={testId}>
-      {/* Label over the Token/Custom toggle (not side-by-side) so the toggle
-          never clips in the narrow half-width grid cells. */}
+      {/* Label above the Token/Custom toggle (not side-by-side) so the toggle
+          never clips in the narrow half-width grid cells; the toggle sits at
+          the right edge under the label. */}
       <div className="flex flex-col gap-0.5">
         <Label className="text-xs">{label}</Label>
         {category ? (
-          <div className="flex gap-0.5 text-xs">
+          <div className="flex justify-end gap-0.5 text-xs">
             <ModeButton
               testId={`${testId}-mode-token`}
               active={!isCustom}

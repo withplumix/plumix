@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { renderBlockSpecToHtml } from "../test/index.js";
+import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { buttonBlock } from "./index.js";
 
 describe("core/button", () => {
@@ -9,6 +9,25 @@ describe("core/button", () => {
 
     expect(html).toContain("<button");
     expect(html).toContain("Save");
+  });
+
+  test("is selfSeam — the button is the block, with no wrapper div", () => {
+    const html = renderBlockTreeToHtml(
+      [buttonBlock],
+      [
+        {
+          id: "b1",
+          name: "core/button",
+          attrs: { label: "Click" },
+          style: buttonBlock.defaultStyles,
+        },
+      ],
+    );
+
+    // The scoped class lands only on the <button> — not also on a wrapper div,
+    // which would double-apply the styles and confuse selection tracking.
+    expect(html).toContain('<button type="button" class="plumix-block-b1"');
+    expect(html).not.toContain("<div");
   });
 
   test("renders an <a> for a safe href", () => {

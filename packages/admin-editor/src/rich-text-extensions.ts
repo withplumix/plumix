@@ -30,7 +30,7 @@ import { coreMarkExtensions, HEADING_LEVELS } from "@plumix/blocks";
  * editor chunk.
  *
  * Kept (the set StarterKit had active here): document/paragraph/text (schema),
- * headings (h1–h4) + blockquote (folded in from the former Heading and Quote
+ * headings (h1–h6) + blockquote (folded in from the former Heading and Quote
  * blocks so rich text is a single Notion-style Text block), hard break
  * (shift-enter), bullet + ordered lists (toolbar buttons) with list-item +
  * keymap, undo/redo (in-field history — the host toolbar bails inside
@@ -39,7 +39,7 @@ import { coreMarkExtensions, HEADING_LEVELS } from "@plumix/blocks";
  * can escape it). Marks come from `coreMarkExtensions` so the editor and
  * renderer share one vocabulary.
  *
- * Heading levels come from the shared `HEADING_LEVELS` (h1–h4), the single
+ * Heading levels come from the shared `HEADING_LEVELS` (h1–h6), the single
  * source of truth the sanitiser allowlist also derives from.
  */
 export function richTextExtensions(): Extensions {

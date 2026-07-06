@@ -83,7 +83,7 @@ describe("BlockInputControl", () => {
     expect(onChange).toHaveBeenCalledWith(true);
   });
 
-  test("select preserves a numeric option value through the round trip", () => {
+  test("select preserves a numeric option value through the round trip", async () => {
     const { getByTestId, onChange } = renderControl(
       {
         name: "level",
@@ -95,15 +95,18 @@ describe("BlockInputControl", () => {
       },
       2,
     );
-    const control = getByTestId("block-input-level") as HTMLSelectElement;
-    expect(control.value).toBe("2");
+    // shadcn Select is a Radix combobox: the trigger reflects the current
+    // option, and opening it + picking another maps through onValueChange.
+    const trigger = getByTestId("block-input-level");
+    expect(trigger.textContent).toContain("H2");
 
-    fireEvent.change(control, { target: { value: "3" } });
+    await userEvent.click(trigger);
+    await userEvent.click(getByTestId("block-input-level-option-3"));
     // Emits the number 3, not the string "3".
-    expect(onChange).toHaveBeenCalledWith(3);
+    expect(onChange).toHaveBeenLastCalledWith(3);
   });
 
-  test("select preserves a boolean option value through the round trip", () => {
+  test("select preserves a boolean option value through the round trip", async () => {
     const { getByTestId, onChange } = renderControl(
       {
         name: "wide",
@@ -115,11 +118,47 @@ describe("BlockInputControl", () => {
       },
       false,
     );
-    fireEvent.change(getByTestId("block-input-wide"), {
-      target: { value: "true" },
-    });
+    await userEvent.click(getByTestId("block-input-wide"));
+    await userEvent.click(getByTestId("block-input-wide-option-true"));
     // Emits the boolean true, not the string "true".
-    expect(onChange).toHaveBeenCalledWith(true);
+    expect(onChange).toHaveBeenLastCalledWith(true);
+  });
+
+  test("select shows a blank trigger when no option matches the value", () => {
+    const { getByTestId } = renderControl(
+      {
+        name: "stackAt",
+        type: "select",
+        options: [
+          { label: "Tablet", value: "tablet" },
+          { label: "Mobile", value: "mobile" },
+        ],
+      },
+      undefined,
+    );
+    // Unlike a native <select> (which silently shows the first option), the
+    // Radix trigger stays blank until a real value is set — blocks seed a
+    // default, so this only surfaces for an unspecified attribute.
+    expect(getByTestId("block-input-stackAt").textContent).toBe("");
+  });
+
+  test("select round-trips an empty-string option value (Radix-safe)", async () => {
+    const { getByTestId, onChange } = renderControl(
+      {
+        name: "variant",
+        type: "select",
+        options: [
+          { label: "Default", value: "" },
+          { label: "Wide", value: "wide" },
+        ],
+      },
+      "wide",
+    );
+    // A literal "" item value crashes Radix; the sentinel lets it render and
+    // round-trip back to the original "".
+    await userEvent.click(getByTestId("block-input-variant"));
+    await userEvent.click(getByTestId("block-input-variant-option-"));
+    expect(onChange).toHaveBeenLastCalledWith("");
   });
 
   test("number input clears to null on an unparseable value", () => {
@@ -150,7 +189,24 @@ describe("BlockInputControl", () => {
     expect(onChange).toHaveBeenCalledWith("right");
   });
 
-  test("combobox is free-text with option suggestions", () => {
+  test("combobox picks an option from the searchable dropdown", async () => {
+    const { getByTestId, onChange } = renderControl(
+      {
+        name: "tag",
+        type: "combobox",
+        options: [
+          { label: "News", value: "news" },
+          { label: "Blog", value: "blog" },
+        ],
+      },
+      "",
+    );
+    await userEvent.click(getByTestId("block-input-tag"));
+    await userEvent.click(getByTestId("block-input-tag-option-blog"));
+    expect(onChange).toHaveBeenLastCalledWith("blog");
+  });
+
+  test("combobox commits a free-typed value not in the options", async () => {
     const { getByTestId, onChange } = renderControl(
       {
         name: "tag",
@@ -159,10 +215,39 @@ describe("BlockInputControl", () => {
       },
       "",
     );
-    fireEvent.change(getByTestId("block-input-tag"), {
-      target: { value: "custom" },
-    });
-    expect(onChange).toHaveBeenCalledWith("custom");
+    await userEvent.click(getByTestId("block-input-tag"));
+    await userEvent.type(getByTestId("block-input-tag-search"), "custom");
+    await userEvent.click(getByTestId("block-input-tag-create"));
+    expect(onChange).toHaveBeenLastCalledWith("custom");
+  });
+
+  test("combobox search matches an option's label, not just its value", async () => {
+    const { getByTestId, queryByTestId } = renderControl(
+      {
+        name: "tag",
+        type: "combobox",
+        // Label diverges from value, like the code block's "C++" → "cpp".
+        options: [{ label: "C++", value: "cpp" }],
+      },
+      "",
+    );
+    await userEvent.click(getByTestId("block-input-tag"));
+    await userEvent.type(getByTestId("block-input-tag-search"), "C++");
+    expect(queryByTestId("block-input-tag-option-cpp")).not.toBeNull();
+  });
+
+  test("combobox hides the create affordance when the query is an option value", async () => {
+    const { getByTestId, queryByTestId } = renderControl(
+      {
+        name: "tag",
+        type: "combobox",
+        options: [{ label: "News", value: "news" }],
+      },
+      "",
+    );
+    await userEvent.click(getByTestId("block-input-tag"));
+    await userEvent.type(getByTestId("block-input-tag-search"), "news");
+    expect(queryByTestId("block-input-tag-create")).toBeNull();
   });
 
   // The Tiptap + ProseMirror lazy chunk is heavy; under a loaded CI box it can

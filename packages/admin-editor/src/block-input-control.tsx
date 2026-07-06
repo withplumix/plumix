@@ -1,13 +1,36 @@
 import type { ReactElement } from "react";
-import { createElement, lazy, Suspense, useId } from "react";
+import { createElement, lazy, Suspense, useId, useState } from "react";
 import { useLingui } from "@lingui/react";
 
 import type { BlockInput, BlockInputOption } from "@plumix/blocks";
+import { Button } from "@plumix/admin-ui/button";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@plumix/admin-ui/command";
+import { Check, ChevronsUpDown, Plus } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import { Label } from "@plumix/admin-ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@plumix/admin-ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plumix/admin-ui/select";
 import { Switch } from "@plumix/admin-ui/switch";
 import { Textarea } from "@plumix/admin-ui/textarea";
+import { cn } from "@plumix/admin-ui/utils";
 import { resolveLabel } from "@plumix/core/i18n";
 
 // Lazy so the Tiptap + ProseMirror engine (~230 KB) splits into its own chunk,
@@ -73,11 +96,11 @@ const FIELD_TESTID = (name: string): string => `block-input-${name}`;
 
 /**
  * Renders one block attribute as an admin-ui form control, dispatching the
- * typed next value on edit. shadcn primitives where they map cleanly (text,
- * number, checkbox, textarea); native `<select>`/radio for the
- * option-bearing kinds so number/boolean option values survive the round trip
- * (radix Select is string-only). Mirrors the kinds the Puck field translator
- * supports so plugin blocks render unchanged.
+ * typed next value on edit. shadcn primitives throughout — select uses the
+ * shadcn `Select`, round-tripping number/boolean option values through their
+ * stringified `optionKey` (Radix is string-only); radio stays a native group.
+ * Mirrors the kinds the Puck field translator supports so plugin blocks render
+ * unchanged.
  */
 export function BlockInputControl({
   input,
@@ -140,19 +163,27 @@ export function BlockInputControl({
         );
       case "select":
         return (
-          <select
-            id={id}
-            data-testid={testId}
-            className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm"
-            value={optionKey(value)}
-            onChange={(e) => onChange(decodeOption(options, e.target.value))}
+          <Select
+            value={encodeSelectKey(value)}
+            onValueChange={(next) =>
+              onChange(decodeOption(options, decodeSelectKey(next)))
+            }
           >
-            {options.map((opt) => (
-              <option key={optionKey(opt.value)} value={optionKey(opt.value)}>
-                {resolveLabel(opt.label, i18n)}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id={id} data-testid={testId} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((opt) => (
+                <SelectItem
+                  key={optionKey(opt.value)}
+                  value={encodeSelectKey(opt.value)}
+                  data-testid={`${testId}-option-${optionKey(opt.value)}`}
+                >
+                  {resolveLabel(opt.label, i18n)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         );
       case "radio":
         return (
@@ -182,27 +213,16 @@ export function BlockInputControl({
             />
           </Suspense>
         );
-      case "combobox": {
-        const listId = `${id}-list`;
+      case "combobox":
         return (
-          <>
-            <Input
-              id={id}
-              data-testid={testId}
-              list={listId}
-              value={asString(value)}
-              onChange={(e) => onChange(e.target.value)}
-            />
-            <datalist id={listId}>
-              {options.map((opt) => (
-                <option key={optionKey(opt.value)} value={optionKey(opt.value)}>
-                  {resolveLabel(opt.label, i18n)}
-                </option>
-              ))}
-            </datalist>
-          </>
+          <ComboboxControl
+            id={id}
+            testId={testId}
+            value={value}
+            options={options}
+            onChange={onChange}
+          />
         );
-      }
       default: {
         // A plugin may register a control for a type the built-ins don't
         // handle (the media picker). Fall through to plain text when nothing
@@ -289,10 +309,140 @@ function asString(value: unknown): string {
   return "";
 }
 
+// A searchable dropdown that still accepts a free-typed value — a shadcn
+// Command in a Popover, not a native `<datalist>` (which looks like a plain
+// input and hides its options until you type). Selecting an option or the
+// "use typed text" affordance commits; unknown/legacy values round-trip.
+function ComboboxControl({
+  id,
+  testId,
+  value,
+  options,
+  onChange,
+}: {
+  readonly id: string;
+  readonly testId: string;
+  readonly value: unknown;
+  readonly options: readonly BlockInputOption[];
+  readonly onChange: (value: unknown) => void;
+}): ReactElement {
+  const { i18n } = useLingui();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const current = asString(value);
+  const selected = options.find((opt) => optionKey(opt.value) === current);
+  const custom = query.trim();
+  const canCreate =
+    custom !== "" && !options.some((opt) => optionKey(opt.value) === custom);
+
+  const commit = (next: unknown): void => {
+    onChange(next);
+    setQuery("");
+    setOpen(false);
+  };
+
+  // Known option → its label; a legacy/unknown value → the raw string; empty →
+  // the placeholder.
+  const triggerLabel = selected
+    ? resolveLabel(selected.label, i18n)
+    : current ||
+      i18n._({ id: "editor.combobox.placeholder", message: "Select…" });
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          id={id}
+          data-testid={testId}
+          className={cn(
+            "w-full justify-between font-normal",
+            current === "" && "text-muted-foreground",
+          )}
+        >
+          <span className="truncate">{triggerLabel}</span>
+          <ChevronsUpDown className="opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0"
+        align="start"
+        style={{ width: "var(--radix-popover-trigger-width)" }}
+      >
+        <Command>
+          <CommandInput
+            value={query}
+            onValueChange={setQuery}
+            placeholder={i18n._({
+              id: "editor.combobox.search",
+              message: "Search…",
+            })}
+            data-testid={`${testId}-search`}
+          />
+          <CommandList>
+            {canCreate ? (
+              <CommandItem
+                value={custom}
+                onSelect={() => commit(custom)}
+                data-testid={`${testId}-create`}
+              >
+                <Plus className="me-2 size-4" />
+                {custom}
+              </CommandItem>
+            ) : (
+              <CommandEmpty>
+                <span className="text-muted-foreground text-sm">
+                  {i18n._({ id: "editor.combobox.none", message: "No match." })}
+                </span>
+              </CommandEmpty>
+            )}
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem
+                  key={optionKey(opt.value)}
+                  value={optionKey(opt.value)}
+                  // cmdk filters on `value`; add the label so a search matches
+                  // the display text too (e.g. "C++" for the `cpp` value).
+                  keywords={[resolveLabel(opt.label, i18n)]}
+                  onSelect={() => commit(opt.value)}
+                  data-testid={`${testId}-option-${optionKey(opt.value)}`}
+                >
+                  {resolveLabel(opt.label, i18n)}
+                  {optionKey(opt.value) === current ? (
+                    <Check className="ms-auto size-4" />
+                  ) : null}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // DOM control values are strings; key options by their stringified value so
 // number/boolean options round-trip back to their typed form via decodeOption.
 function optionKey(value: unknown): string {
   return asString(value);
+}
+
+// Radix Select reserves "" for "no selection" and throws on an empty-string
+// item value, but an option's stringified key can legitimately be "" (e.g. an
+// empty-string value). Encode "" to a sentinel for the trigger + items and
+// decode it back before resolving the typed option. (An option that stringifies
+// to the sentinel itself would collide — vanishingly unlikely, as meta-box's
+// equivalent also accepts.)
+const SELECT_EMPTY = "__plumix_empty__";
+function encodeSelectKey(value: unknown): string {
+  const key = optionKey(value);
+  return key === "" ? SELECT_EMPTY : key;
+}
+function decodeSelectKey(key: string): string {
+  return key === SELECT_EMPTY ? "" : key;
 }
 
 function decodeOption(
