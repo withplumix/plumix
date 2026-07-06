@@ -60,40 +60,40 @@ catalogs:
     "@tailwindcss/vite": ^4.3.2
     tailwindcss: ^4.3.2
   vitest:
-    "@vitest/coverage-v8": ^4.1.9
-    vitest: ^4.1.9
+    "@vitest/coverage-v8": ^4.1.10
+    vitest: ^4.1.10
   vite:
     "@vitejs/plugin-react": ^6.0.3
-    vite: ^8.1.0
+    vite: ^8.1.3
   tiptap:
-    "@tiptap/core": ^3.27.1
-    "@tiptap/react": ^3.27.1
+    "@tiptap/core": ^3.27.2
+    "@tiptap/react": ^3.27.2
     # Explicit extension set for the rich-text rail instead of starter-kit,
     # which bundles ~16 extensions but we activate only these (the rest are
     # disabled marks we replace with @plumix/blocks marks, or nodes that are
     # standalone blocks). All pinned in lockstep with @tiptap/core so a single
     # prosemirror/core copy is bundled.
-    "@tiptap/extension-blockquote": ^3.27.1
-    "@tiptap/extension-document": ^3.27.1
-    "@tiptap/extension-hard-break": ^3.27.1
-    "@tiptap/extension-heading": ^3.27.1
-    "@tiptap/extension-list": ^3.27.1
-    "@tiptap/extension-paragraph": ^3.27.1
-    "@tiptap/extension-text": ^3.27.1
-    "@tiptap/extensions": ^3.27.1
+    "@tiptap/extension-blockquote": ^3.27.2
+    "@tiptap/extension-document": ^3.27.2
+    "@tiptap/extension-hard-break": ^3.27.2
+    "@tiptap/extension-heading": ^3.27.2
+    "@tiptap/extension-list": ^3.27.2
+    "@tiptap/extension-paragraph": ^3.27.2
+    "@tiptap/extension-text": ^3.27.2
+    "@tiptap/extensions": ^3.27.2
   orpc:
-    "@orpc/client": ^1.14.6
-    "@orpc/openapi": ^1.14.6
-    "@orpc/server": ^1.14.6
-    "@orpc/tanstack-query": ^1.14.6
-    "@orpc/valibot": ^1.14.6
+    "@orpc/client": ^1.14.7
+    "@orpc/openapi": ^1.14.7
+    "@orpc/server": ^1.14.7
+    "@orpc/tanstack-query": ^1.14.7
+    "@orpc/valibot": ^1.14.7
   tanstack:
     "@tanstack/react-query": ^5.101.2
     "@tanstack/react-query-devtools": ^5.101.2
-    "@tanstack/react-router": ^1.170.16
+    "@tanstack/react-router": ^1.170.17
     "@tanstack/react-router-devtools": ^1.167.0
     "@tanstack/react-table": ^8.21.3
-    "@tanstack/router-plugin": ^1.168.18
+    "@tanstack/router-plugin": ^1.168.19
   drizzle:
     drizzle-kit: ^0.31.10
     drizzle-orm: ^0.45.2
