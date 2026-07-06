@@ -19,6 +19,27 @@ export const codeBlock = defineBlock({
   title: "Code",
   icon: "Code",
   category: "text",
+  // selfSeam so the block class + default styles land on the `<pre>` itself,
+  // not a wrapper div — the code box is the block.
+  selfSeam: true,
+  // Neutral, theme-overridable defaults seeded as editable Styles values: a
+  // padded, rounded, horizontally-scrolling monospace box. A theme restyles
+  // every code block by defining the vars. (Token colours are separate — they
+  // ride the highlight theme.)
+  defaultStyles: {
+    large: {
+      marginTop: "var(--plumix-code-margin-y, 1.5rem)",
+      marginBottom: "var(--plumix-code-margin-y, 1.5rem)",
+      padding: "var(--plumix-code-padding, 1rem)",
+      background: "var(--plumix-code-bg, #f6f8fa)",
+      borderRadius: "var(--plumix-code-radius, 6px)",
+      overflowX: "auto",
+      fontFamily:
+        "var(--plumix-code-font, ui-monospace, SFMono-Regular, Menlo, monospace)",
+      fontSize: "var(--plumix-code-font-size, 0.875rem)",
+      lineHeight: "var(--plumix-code-line-height, 1.6)",
+    },
+  },
   inputs: [
     { name: "text", type: "textarea", label: "Code" },
     {
@@ -29,13 +50,13 @@ export const codeBlock = defineBlock({
     },
   ],
   defaults: { text: "// Your code here", language: "" },
-  render: ({ attrs }): ReactNode => {
+  render: ({ attrs, blockProps }): ReactNode => {
     const { text = "", language = "" } = attrs as {
       readonly text?: string;
       readonly language?: string;
     };
     const lang = normalizeLanguage(language);
-    if (lang === undefined) return <pre>{text}</pre>;
+    if (lang === undefined) return <pre {...blockProps}>{text}</pre>;
 
     // highlight.js runs here — sync, so this same render highlights at SSR
     // (public) and re-runs live in the editor canvas when the language changes.
@@ -43,7 +64,7 @@ export const codeBlock = defineBlock({
     const highlighted = highlightCode(text, lang);
     if (highlighted === null) {
       return (
-        <pre data-language={lang}>
+        <pre {...blockProps} data-language={lang}>
           <code data-language={lang}>{text}</code>
         </pre>
       );
@@ -55,7 +76,7 @@ export const codeBlock = defineBlock({
         <style href="plumix-code-theme" precedence="default">
           {CODE_THEME_CSS}
         </style>
-        <pre data-language={lang}>
+        <pre {...blockProps} data-language={lang}>
           <code
             className="hljs"
             data-language={lang}
