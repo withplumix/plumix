@@ -1,28 +1,37 @@
 import { describe, expect, test } from "vitest";
 
-import { renderBlockSpecToHtml } from "../test/index.js";
+import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { separatorBlock } from "./index.js";
 
 describe("core/separator", () => {
-  test("renders an <hr> with the solid variant by default", () => {
+  test("renders a bare <hr> with no wrapper element", () => {
     const html = renderBlockSpecToHtml(separatorBlock, {});
 
-    expect(html).toBe('<div><hr data-variant="solid"/></div>');
+    // selfSeam: the block is the <hr>, not a div wrapping it.
+    expect(html).toContain("<hr");
+    expect(html).not.toContain("<div");
   });
 
-  test("renders the declared variant when valid", () => {
-    const html = renderBlockSpecToHtml(separatorBlock, {
-      variant: "dashed",
-    });
+  test("seeds theme-overridable default styles onto the rule itself", () => {
+    const html = renderBlockTreeToHtml(
+      [separatorBlock],
+      [
+        {
+          id: "s1",
+          name: "core/separator",
+          style: separatorBlock.defaultStyles,
+        },
+      ],
+    );
 
-    expect(html).toContain('data-variant="dashed"');
+    // The scoped style class lands on the <hr> (selfSeam), and the emitted CSS
+    // uses `var(--plumix-separator-*, fallback)` a theme can override.
+    expect(html).toContain('<hr class="plumix-block-s1"');
+    expect(html).toContain("--plumix-separator-color");
+    expect(html).toContain("--plumix-separator-thickness");
   });
 
-  test("falls back to solid for an unknown variant", () => {
-    const html = renderBlockSpecToHtml(separatorBlock, {
-      variant: "wavy",
-    });
-
-    expect(html).toContain('data-variant="solid"');
+  test("exposes no inputs — it is styled through the Styles tab", () => {
+    expect(separatorBlock.inputs ?? []).toEqual([]);
   });
 });

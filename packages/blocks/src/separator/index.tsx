@@ -2,31 +2,27 @@ import type { ReactNode } from "react";
 
 import { defineBlock } from "../block-registry.js";
 
-const VARIANTS = ["solid", "dashed", "dotted", "wide"] as const;
-type SeparatorVariant = (typeof VARIANTS)[number];
-
-function pickVariant(raw: unknown): SeparatorVariant {
-  return typeof raw === "string" &&
-    (VARIANTS as readonly string[]).includes(raw)
-    ? (raw as SeparatorVariant)
-    : "solid";
-}
-
 export const separatorBlock = defineBlock({
   name: "core/separator",
   title: "Separator",
   icon: "Minus",
   category: "text",
-  inputs: [
-    {
-      name: "variant",
-      type: "select",
-      label: "Variant",
-      options: VARIANTS.map((v) => ({ label: v, value: v })),
+  // selfSeam so the block class + default styles land on the `<hr>` itself
+  // rather than a wrapper div — the rule is the block.
+  selfSeam: true,
+  // Neutral, theme-overridable defaults seeded as editable Styles values (the
+  // Builder model). `border: none` drops the UA bevel so height + background
+  // paint a clean line; a theme restyles every separator by defining the vars.
+  // Replaces the former `variant` input, which only set a data-attribute no
+  // stylesheet read.
+  defaultStyles: {
+    large: {
+      border: "none",
+      height: "var(--plumix-separator-thickness, 1px)",
+      backgroundColor: "var(--plumix-separator-color, #e5e7eb)",
+      marginTop: "var(--plumix-separator-margin-y, 1.5rem)",
+      marginBottom: "var(--plumix-separator-margin-y, 1.5rem)",
     },
-  ],
-  defaults: { variant: "solid" },
-  render: ({ attrs }): ReactNode => {
-    return <hr data-variant={pickVariant(attrs.variant)} />;
   },
+  render: ({ blockProps }): ReactNode => <hr {...blockProps} />,
 });
