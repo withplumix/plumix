@@ -65,9 +65,9 @@ describe("buildHtmlAllowlist", () => {
     // parsePaste is for editor INPUT (absorbing pasted HTML into a
     // block); it must not promote tags into core/html's OUTPUT.
     const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY);
-    // The baseline doesn't include h5; even if a block declared
-    // `parsePaste: [{selector: "h5"}]` (in a populated registry),
+    // The baseline doesn't include `section`; even if a block declared
+    // `parsePaste: [{selector: "section"}]` (in a populated registry),
     // that must not surface here.
-    expect(allowlist.allowedTags).not.toContain("h5");
+    expect(allowlist.allowedTags).not.toContain("section");
   });
 });

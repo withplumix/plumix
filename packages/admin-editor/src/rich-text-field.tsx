@@ -262,7 +262,7 @@ function ToolbarToggle({
 }
 
 // Convert the current block to a paragraph or a heading level. "paragraph"
-// and "h1"–"h4" are the values the format dropdown emits.
+// and "h1"–"h6" are the values the format dropdown emits.
 function setFormat(editor: Editor | null, value: string): void {
   if (!editor) return;
   const chain = editor.chain().focus();
