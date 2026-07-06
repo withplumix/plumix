@@ -11,11 +11,14 @@ import {
 } from "./index.js";
 
 describe("core/table family", () => {
-  test("renders a plain <table> with a <tbody>", () => {
+  test("renders a <table> with a <tbody> and theme-overridable cell CSS", () => {
     const html = renderBlockSpecToHtml(tableBlock, {});
 
     expect(html).toContain("<table>");
     expect(html).toContain("<tbody>");
+    // One rule covers both <th> and <td>, so header and body share padding.
+    expect(html).toContain("th,td{");
+    expect(html).toContain("--plumix-table-cell-padding");
   });
 
   test("exposes only the rows slot — no bespoke styling inputs", () => {
