@@ -1,6 +1,6 @@
 import type { Editor } from "@tiptap/react";
 import type { ReactElement, ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trans } from "@lingui/react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 
@@ -18,8 +18,15 @@ import {
   Strikethrough,
   Subscript,
   Superscript,
+  Trash2,
   Underline,
 } from "@plumix/admin-ui/icons";
+import { Input } from "@plumix/admin-ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@plumix/admin-ui/popover";
 import {
   Select,
   SelectContent,
@@ -47,11 +54,31 @@ interface RichTextFieldProps {
 const MARKS = [
   { name: "bold", icon: Bold, testId: "bold", label: "Bold" },
   { name: "italic", icon: Italic, testId: "italic", label: "Italic" },
-  { name: "underline", icon: Underline, testId: "underline", label: "Underline" },
-  { name: "strike", icon: Strikethrough, testId: "strike", label: "Strikethrough" },
+  {
+    name: "underline",
+    icon: Underline,
+    testId: "underline",
+    label: "Underline",
+  },
+  {
+    name: "strike",
+    icon: Strikethrough,
+    testId: "strike",
+    label: "Strikethrough",
+  },
   { name: "code", icon: Code2, testId: "code", label: "Inline code" },
-  { name: "highlight", icon: Highlighter, testId: "highlight", label: "Highlight" },
-  { name: "subscript", icon: Subscript, testId: "subscript", label: "Subscript" },
+  {
+    name: "highlight",
+    icon: Highlighter,
+    testId: "highlight",
+    label: "Highlight",
+  },
+  {
+    name: "subscript",
+    icon: Subscript,
+    testId: "subscript",
+    label: "Subscript",
+  },
   {
     name: "superscript",
     icon: Superscript,
@@ -210,15 +237,12 @@ export function RichTextField({
         >
           <Quote />
         </ToolbarToggle>
-        <ToolbarToggle
-          testId={`${testId}-link`}
-          label="Link"
-          pressed={active?.link ?? false}
+        <LinkPopover
+          editor={editor}
+          active={active?.link ?? false}
           disabled={!editor}
-          onToggle={() => toggleLink(editor)}
-        >
-          <Link2 />
-        </ToolbarToggle>
+          testId={testId}
+        />
         <Button
           type="button"
           variant="ghost"
@@ -289,16 +313,108 @@ function setFormat(editor: Editor | null, value: string): void {
   }
 }
 
-// Toggle the link mark: drop it when the selection already carries one,
-// otherwise wrap the selection in a prompted href. A blank/cancelled prompt is
-// a no-op.
-function toggleLink(editor: Editor | null): void {
-  if (!editor) return;
-  if (editor.isActive("link")) {
-    editor.chain().focus().unsetMark("link").run();
-    return;
-  }
-  const href = window.prompt("Link URL")?.trim();
-  if (!href) return;
-  editor.chain().focus().setMark("link", { href }).run();
+// The link editor: a popover anchored to the toolbar's link toggle, replacing
+// the OS `window.prompt`. Focusing the URL input pulls DOM focus out of the
+// editor, but ProseMirror keeps its selection, so we snapshot the range on open
+// and restore it before mutating the link mark — the link lands on the text the
+// user had selected. Editing an existing link pre-fills its href and offers a
+// remove action.
+export function LinkPopover({
+  editor,
+  active,
+  disabled,
+  testId,
+}: {
+  readonly editor: Editor | null;
+  readonly active: boolean;
+  readonly disabled: boolean;
+  readonly testId: string;
+}): ReactElement {
+  const [open, setOpen] = useState(false);
+  const [href, setHref] = useState("");
+  const range = useRef<{ from: number; to: number } | null>(null);
+
+  const handleOpenChange = (next: boolean): void => {
+    if (next && editor) {
+      const { from, to } = editor.state.selection;
+      range.current = { from, to };
+      setHref((editor.getAttributes("link").href as string | undefined) ?? "");
+    }
+    setOpen(next);
+  };
+
+  // Restore the captured selection, then set (or, for an empty url, clear) the
+  // link mark. `extendMarkRange` widens a collapsed caret sitting inside an
+  // existing link to the whole link, so editing works without re-selecting; on
+  // unlinked text it's a no-op. Removing is just applying an empty url.
+  const applyHref = (url: string): void => {
+    if (!editor || !range.current) return;
+    const chain = editor
+      .chain()
+      .focus()
+      .setTextSelection(range.current)
+      .extendMarkRange("link");
+    if (url) chain.setMark("link", { href: url });
+    else chain.unsetMark("link");
+    chain.run();
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <Toggle
+          size="sm"
+          data-testid={`${testId}-link`}
+          title="Link"
+          aria-label="Link"
+          pressed={active}
+          disabled={disabled}
+        >
+          <Link2 />
+        </Toggle>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-2" align="start">
+        <form
+          className="flex items-center gap-2"
+          data-testid={`${testId}-link-form`}
+          onSubmit={(e) => {
+            e.preventDefault();
+            applyHref(href.trim());
+          }}
+        >
+          <Input
+            className="h-8"
+            data-testid={`${testId}-link-url`}
+            value={href}
+            onChange={(e) => setHref(e.target.value)}
+            placeholder="https://example.com"
+            autoFocus
+          />
+          <Button
+            type="submit"
+            size="sm"
+            className="shrink-0"
+            data-testid={`${testId}-link-apply`}
+          >
+            Apply
+          </Button>
+          {active ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-destructive hover:text-destructive size-8 shrink-0"
+              data-testid={`${testId}-link-remove`}
+              title="Remove link"
+              aria-label="Remove link"
+              onClick={() => applyHref("")}
+            >
+              <Trash2 />
+            </Button>
+          ) : null}
+        </form>
+      </PopoverContent>
+    </Popover>
+  );
 }
