@@ -7,8 +7,8 @@ export const sectionBlock = defineBlock({
   title: "Section",
   icon: "LayoutTemplate",
   category: "layout",
-  // selfSeam so the full-bleed styles + block class land on the `<section>`
-  // itself (not a wrapper div), and the centered inner sits inside it.
+  // selfSeam so the seeded styles + block class land on the `<section>` itself
+  // (not a wrapper div), and the centered inner sits inside it.
   selfSeam: true,
   inputs: [
     { name: "maxWidth", type: "text", label: "Content max width" },
@@ -20,13 +20,14 @@ export const sectionBlock = defineBlock({
     },
   ],
   defaults: { maxWidth: "1200px" },
-  // Full-bleed band: the section spans the viewport while its content stays
-  // centered at maxWidth. Seeded as editable Styles values, not baked CSS, so a
-  // theme or author can tune the padding/width.
+  // A full-width band (a block <section> already fills its container) with its
+  // content centered at maxWidth; vertical padding is seeded as editable Styles
+  // values. Not viewport full-bleed by default: `width: 100vw` breaks out of
+  // the container but overflows by the scrollbar's width unless an ancestor
+  // clips the x-axis, adding a horizontal scrollbar in the canvas and on the
+  // page. Edge-to-edge bleed stays opt-in via the Styles tab.
   defaultStyles: {
     large: {
-      width: "100vw",
-      marginLeft: "calc(50% - 50vw)",
       paddingTop: "3rem",
       paddingBottom: "3rem",
       paddingLeft: "1.25rem",

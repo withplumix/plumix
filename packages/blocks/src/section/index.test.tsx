@@ -27,10 +27,12 @@ describe("core/section", () => {
     expect(html).toContain("max-width:1200px");
   });
 
-  test("seeds a full-bleed default style (editable in the Styles tab)", () => {
-    expect(sectionBlock.defaultStyles?.large?.width).toBe("100vw");
-    expect(sectionBlock.defaultStyles?.large?.marginLeft).toBe(
-      "calc(50% - 50vw)",
-    );
+  test("seeds padding but no viewport-breaking width (no overflow)", () => {
+    const large = sectionBlock.defaultStyles?.large ?? {};
+    expect(large.paddingTop).toBe("3rem");
+    // No `width: 100vw` / negative margin — that full-bleed overflows by the
+    // scrollbar width and adds a horizontal scrollbar; it stays opt-in.
+    expect(large.width).toBeUndefined();
+    expect(large.marginLeft).toBeUndefined();
   });
 });
