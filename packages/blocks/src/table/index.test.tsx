@@ -26,6 +26,25 @@ describe("core/table family", () => {
     expect(names).toEqual(["rows"]);
   });
 
+  test("cell align input has capitalized labels and a Left placeholder", () => {
+    for (const spec of [tableHeaderCellBlock, tableCellBlock]) {
+      const align = spec.inputs?.find((i) => i.name === "align");
+      expect(align?.placeholder).toBe("Left");
+      expect(align?.options?.map((o) => o.label)).toEqual([
+        "Left",
+        "Center",
+        "Right",
+      ]);
+      // Only the label is capitalized — the stored value stays lowercase (what
+      // pickAlign matches and the render emits as data-align).
+      expect(align?.options?.map((o) => o.value)).toEqual([
+        "left",
+        "center",
+        "right",
+      ]);
+    }
+  });
+
   test("renders <th scope=col> for header-cell, seam on the <th> (selfSeam)", () => {
     const html = renderBlockSpecToHtml(tableHeaderCellBlock, {
       text: "Name",

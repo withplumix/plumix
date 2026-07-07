@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import type { BlockInput } from "../block-registry.js";
 import type { BlockNode } from "../render-block-tree.js";
 import { defineBlock } from "../block-registry.js";
 
@@ -7,6 +8,20 @@ const ALIGNS = ["left", "center", "right"] as const;
 type Align = (typeof ALIGNS)[number];
 
 const COLUMN_COUNT = 3;
+
+// Cell text alignment — shared by header and body cells. Left is the default
+// (an unset align), surfaced as the select's placeholder so its trigger reads
+// "Left" instead of blank.
+const ALIGN_INPUT: BlockInput = {
+  name: "align",
+  type: "select",
+  label: "Align",
+  placeholder: "Left",
+  options: ALIGNS.map((a) => ({
+    label: `${a[0]?.toUpperCase() ?? ""}${a.slice(1)}`,
+    value: a,
+  })),
+};
 
 // Baseline table styling as theme-overridable `var(--plumix-table-*, fallback)`
 // CSS — header and body cells share one padding/border rule so they read as one
@@ -166,15 +181,7 @@ export const tableHeaderCellBlock = defineBlock({
   category: "text",
   selfSeam: true,
   inserter: false,
-  inputs: [
-    { name: "text", type: "text", label: "Text" },
-    {
-      name: "align",
-      type: "select",
-      label: "Align",
-      options: ALIGNS.map((a) => ({ label: a, value: a })),
-    },
-  ],
+  inputs: [{ name: "text", type: "text", label: "Text" }, ALIGN_INPUT],
   defaults: { text: "" },
   render: ({ attrs, blockProps }): ReactNode => {
     const { text = "" } = attrs as { readonly text?: string };
@@ -194,15 +201,7 @@ export const tableCellBlock = defineBlock({
   category: "text",
   selfSeam: true,
   inserter: false,
-  inputs: [
-    { name: "text", type: "text", label: "Text" },
-    {
-      name: "align",
-      type: "select",
-      label: "Align",
-      options: ALIGNS.map((a) => ({ label: a, value: a })),
-    },
-  ],
+  inputs: [{ name: "text", type: "text", label: "Text" }, ALIGN_INPUT],
   defaults: { text: "" },
   render: ({ attrs, blockProps }): ReactNode => {
     const { text = "" } = attrs as { readonly text?: string };

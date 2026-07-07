@@ -19,10 +19,35 @@ export const embedBlock = defineBlock({
     { name: "caption", type: "text", label: "Caption" },
   ],
   defaults: { url: "", title: "", caption: "" },
-  render: ({ attrs }): ReactElement | null => {
+  render: ({ attrs, context }): ReactElement | null => {
     const url = typeof attrs.url === "string" ? attrs.url : "";
     const resolved = resolveEmbed(url);
-    if (!resolved) return null;
+    if (!resolved) {
+      // No usable URL yet: render nothing on the public page (an empty embed is
+      // an unfinished draft), but in the editor show a placeholder so the block
+      // stays visible and selectable instead of collapsing to a zero-height line.
+      if (!context.editing) return null;
+      return (
+        <div
+          data-plumix-embed-placeholder=""
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "8rem",
+            padding: "1rem",
+            border: "1px dashed #d0d7de",
+            borderRadius: "6px",
+            background: "#f6f8fa",
+            color: "#57606a",
+            fontSize: "0.875rem",
+            textAlign: "center",
+          }}
+        >
+          Add a YouTube, Vimeo, Loom, Spotify, or CodePen URL to embed.
+        </div>
+      );
+    }
 
     const title =
       typeof attrs.title === "string" && attrs.title.length > 0

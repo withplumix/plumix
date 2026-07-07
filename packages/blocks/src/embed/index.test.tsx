@@ -19,13 +19,27 @@ describe("core/embed", () => {
     expect(html).toContain("aspect-ratio:16 / 9");
   });
 
-  test("renders nothing for an empty or unframeable URL", () => {
-    expect(renderBlockSpecToHtml(embedBlock, { url: "" })).not.toContain(
-      "<iframe",
-    );
+  test("renders nothing for an empty or unframeable URL on the public page", () => {
+    const empty = renderBlockSpecToHtml(embedBlock, { url: "" });
+    expect(empty).not.toContain("<iframe");
+    // Public render of an empty embed is nothing — not even the editor
+    // placeholder.
+    expect(empty).not.toContain("data-plumix-embed-placeholder");
     expect(
       renderBlockSpecToHtml(embedBlock, { url: "javascript:alert(1)" }),
     ).not.toContain("<iframe");
+  });
+
+  test("shows a placeholder in the editor when the URL is empty", () => {
+    const html = renderBlockSpecToHtml(
+      embedBlock,
+      { url: "" },
+      { editing: true },
+    );
+    // In the editor the empty block stays visible + selectable, not a
+    // zero-height line.
+    expect(html).toContain("data-plumix-embed-placeholder");
+    expect(html).toContain("URL to embed");
   });
 
   test("renders a caption when provided", () => {
