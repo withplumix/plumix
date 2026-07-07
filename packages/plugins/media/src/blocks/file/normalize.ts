@@ -11,12 +11,32 @@ export function sanitizeHref(raw: unknown): string | undefined {
   return trimmed;
 }
 
+// The picker writes a { id, url, filename?, mime? } snapshot. Read what the
+// file render needs, tolerating a null/legacy value.
+interface FileMedia {
+  readonly url: string;
+  readonly filename: string;
+  readonly mime: string;
+}
+export function normalizeFileMedia(raw: unknown): FileMedia | null {
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.url !== "string" || obj.url === "") return null;
+  return {
+    url: obj.url,
+    filename: typeof obj.filename === "string" ? obj.filename : "",
+    mime: typeof obj.mime === "string" ? obj.mime : "",
+  };
+}
+
 export function formatSize(bytes: unknown): string | undefined {
   // Public-site SSR render. Decimal separator stays `.` until content
   // i18n lands — the visitor-facing locale resolver is the seam where
   // this should pull from. Admin-side formatting (MediaLibrary card +
   // detail) uses `Intl.NumberFormat(locale, ...)` against `i18n.locale`.
-  if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes < 0) {
+  // `<= 0` (not `< 0`): 0 is the unset default, so it reads as "no size"
+  // rather than a literal "0 B".
+  if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes <= 0) {
     return undefined;
   }
   const units = ["B", "KB", "MB", "GB"];
