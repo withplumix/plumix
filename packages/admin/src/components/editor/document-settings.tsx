@@ -9,9 +9,9 @@ import { defineMessage } from "@lingui/core/macro";
 import { useForm, useWatch } from "react-hook-form";
 
 import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
+import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Form } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
-import { Label } from "@plumix/admin-ui/label";
 import {
   Select,
   SelectContent,
@@ -144,8 +144,10 @@ export function DocumentSettingsPanel({
       data-testid="entry-document-panel"
     >
       {title ? (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="entry-title-input">{renderLabel(M.title)}</Label>
+        <Field className="gap-1.5">
+          <FieldLabel htmlFor="entry-title-input">
+            {renderLabel(M.title)}
+          </FieldLabel>
           <Input
             id="entry-title-input"
             type="text"
@@ -155,10 +157,12 @@ export function DocumentSettingsPanel({
             }}
             data-testid="plumix-editor-title-input"
           />
-        </div>
+        </Field>
       ) : null}
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="entry-slug-input">{renderLabel(M.slug)}</Label>
+      <Field className="gap-1.5">
+        <FieldLabel htmlFor="entry-slug-input">
+          {renderLabel(M.slug)}
+        </FieldLabel>
         <Input
           id="entry-slug-input"
           type="text"
@@ -168,10 +172,12 @@ export function DocumentSettingsPanel({
           }}
           data-testid="entry-slug-input"
         />
-      </div>
+      </Field>
       {parent ? (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="entry-parent-select">{renderLabel(M.parent)}</Label>
+        <Field className="gap-1.5">
+          <FieldLabel htmlFor="entry-parent-select">
+            {renderLabel(M.parent)}
+          </FieldLabel>
           <Select
             value={
               parent.value === null ? NO_PARENT_VALUE : String(parent.value)
@@ -202,22 +208,27 @@ export function DocumentSettingsPanel({
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </Field>
       ) : null}
       {taxonomies?.map((taxonomy) => (
-        <div key={taxonomy.name} className="flex flex-col gap-1.5">
-          <Label>{taxonomy.label}</Label>
+        <Field key={taxonomy.name} className="gap-1.5">
+          <FieldLabel htmlFor={`entry-taxonomy-${taxonomy.name}`}>
+            {taxonomy.label}
+          </FieldLabel>
           <MultiSelect
+            id={`entry-taxonomy-${taxonomy.name}`}
             options={taxonomy.options}
             value={taxonomy.value}
             onChange={taxonomy.onChange}
             testId={`entry-taxonomy-${taxonomy.name}`}
           />
-        </div>
+        </Field>
       ))}
       {excerpt ? (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="entry-excerpt-input">{renderLabel(M.excerpt)}</Label>
+        <Field className="gap-1.5">
+          <FieldLabel htmlFor="entry-excerpt-input">
+            {renderLabel(M.excerpt)}
+          </FieldLabel>
           <Textarea
             id="entry-excerpt-input"
             rows={3}
@@ -228,7 +239,7 @@ export function DocumentSettingsPanel({
             className="min-h-20"
             data-testid="entry-excerpt-input"
           />
-        </div>
+        </Field>
       ) : null}
       {metaBoxes && metaBoxes.boxes.length > 0 ? (
         <DocumentMetaBoxes

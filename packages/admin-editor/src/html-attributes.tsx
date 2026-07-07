@@ -161,6 +161,14 @@ function AddAttr({
   const [query, setQuery] = useState("");
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
+  const keyLabel = i18n._({
+    id: "editor.htmlAttrs.add.key",
+    message: "attribute",
+  });
+  const valueLabel = i18n._({
+    id: "editor.htmlAttrs.add.value",
+    message: "value",
+  });
 
   // Lowercase throughout: the renderer keeps only the lowercased form (React
   // drops mixed-case data-/aria- props), so the editor offers and stores that.
@@ -200,6 +208,10 @@ function AddAttr({
             size="sm"
             role="combobox"
             aria-expanded={open}
+            // Announce the picked attribute when set; the field's purpose when
+            // empty. A static label would mask the selection (combobox names
+            // come from the attribute, not the visible text).
+            aria-label={name === "" ? keyLabel : name}
             data-testid="html-attr-add-key"
             className={cn(
               "h-8 w-1/3 shrink-0 justify-between gap-1 font-normal",
@@ -265,12 +277,11 @@ function AddAttr({
         </PopoverContent>
       </Popover>
       <Input
+        name="html-attr-add-value"
         className="h-8"
         data-testid="html-attr-add-value"
-        placeholder={i18n._({
-          id: "editor.htmlAttrs.add.value",
-          message: "value",
-        })}
+        aria-label={valueLabel}
+        placeholder={valueLabel}
         value={value}
         onChange={(e) => setValue(e.target.value)}
       />

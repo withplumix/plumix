@@ -51,6 +51,7 @@ export interface MultiSelectOption {
 }
 
 export function MultiSelect({
+  id,
   options,
   value,
   onChange,
@@ -61,6 +62,8 @@ export function MultiSelect({
   testId,
   disabled = false,
 }: {
+  /** Put on the trigger so a `<FieldLabel htmlFor>` can focus the control. */
+  readonly id?: string;
   readonly options: readonly MultiSelectOption[];
   readonly value: readonly string[];
   readonly onChange: (next: readonly string[]) => void;
@@ -103,6 +106,7 @@ export function MultiSelect({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type="button"
           variant="outline"
           size="sm"

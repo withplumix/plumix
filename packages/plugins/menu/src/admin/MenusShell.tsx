@@ -9,8 +9,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Field,
+  FieldLabel,
   Input,
-  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -137,18 +138,23 @@ export function MenusShell(): ReactNode {
               submitCreate();
             }}
           >
-            <Label htmlFor="menus-create-name">
-              <Trans id="plugin.menu.shell.createPrompt" message="Menu name" />
-            </Label>
-            <Input
-              id="menus-create-name"
-              data-testid="menus-create-name"
-              value={draftName}
-              onChange={(event) => {
-                setDraftName(event.target.value);
-              }}
-              autoFocus
-            />
+            <Field className="gap-2">
+              <FieldLabel htmlFor="menus-create-name">
+                <Trans
+                  id="plugin.menu.shell.createPrompt"
+                  message="Menu name"
+                />
+              </FieldLabel>
+              <Input
+                id="menus-create-name"
+                data-testid="menus-create-name"
+                value={draftName}
+                onChange={(event) => {
+                  setDraftName(event.target.value);
+                }}
+                autoFocus
+              />
+            </Field>
             <DialogFooter>
               <Button
                 type="submit"

@@ -530,6 +530,16 @@ msgstr "Tag name"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
+msgid "editor.styles.textAlignment"
+msgstr "Text alignment"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.textFormatting"
+msgstr "Text formatting"
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
 msgid "editor.styles.textShadow"
 msgstr "Text shadow"
 

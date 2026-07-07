@@ -1,10 +1,10 @@
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Trans } from "@lingui/react";
 
 import type { ThemeTokens, TokenCategory } from "@plumix/blocks";
+import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Input } from "@plumix/admin-ui/input";
-import { Label } from "@plumix/admin-ui/label";
 import {
   Select,
   SelectContent,
@@ -50,6 +50,7 @@ export function StyleControl({
   onChange,
 }: StyleControlProps): ReactElement {
   const testId = `style-control-${property}`;
+  const controlId = useId();
   const group = category ? (tokens[category] ?? {}) : {};
   // Mode follows the current value's kind, so a value set elsewhere (the
   // declarations list, another control) reflects here live. With no value, the
@@ -70,12 +71,14 @@ export function StyleControl({
   const custom = isCustom && value !== undefined ? value : "";
 
   return (
-    <div className="flex flex-col gap-1" data-testid={testId}>
+    <Field className="gap-1" data-testid={testId}>
       {/* Label above the Token/Custom toggle (not side-by-side) so the toggle
           never clips in the narrow half-width grid cells; the toggle sits at
           the right edge under the label. */}
       <div className="flex flex-col gap-0.5">
-        <Label className="text-xs">{label}</Label>
+        <FieldLabel htmlFor={controlId} className="text-xs">
+          {label}
+        </FieldLabel>
         {category ? (
           <div className="flex justify-end gap-0.5 text-xs">
             <ModeButton
@@ -116,6 +119,7 @@ export function StyleControl({
             />
           ) : null}
           <Input
+            id={controlId}
             data-testid={`${testId}-custom`}
             value={custom}
             onChange={(e) =>
@@ -134,7 +138,11 @@ export function StyleControl({
             )
           }
         >
-          <SelectTrigger className="w-full" data-testid={`${testId}-token`}>
+          <SelectTrigger
+            id={controlId}
+            className="w-full"
+            data-testid={`${testId}-token`}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -153,7 +161,7 @@ export function StyleControl({
           </SelectContent>
         </Select>
       )}
-    </div>
+    </Field>
   );
 }
 

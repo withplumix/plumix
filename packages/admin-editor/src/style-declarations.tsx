@@ -243,6 +243,11 @@ function AddDeclaration({
   const [query, setQuery] = useState("");
   const [property, setProperty] = useState("");
   const [value, setValue] = useState("");
+  const keyLabel = i18n._({ id: "editor.styles.add.key", message: "property" });
+  const valueLabel = i18n._({
+    id: "editor.styles.add.value",
+    message: "value",
+  });
 
   const taken = new Set(existingKeys);
   const options = CSS_PROPERTIES.filter((name) => !taken.has(name));
@@ -289,6 +294,10 @@ function AddDeclaration({
             size="sm"
             role="combobox"
             aria-expanded={open}
+            // Announce the picked property when set; the field's purpose when
+            // empty. A static label would mask the selection (combobox names
+            // come from the attribute, not the visible text).
+            aria-label={property === "" ? keyLabel : property}
             data-testid="style-declaration-add-key"
             className={cn(
               "h-8 w-1/3 shrink-0 justify-between gap-1 font-normal",
@@ -351,12 +360,11 @@ function AddDeclaration({
         </PopoverContent>
       </Popover>
       <Input
+        name="style-declaration-add-value"
         className="h-8"
         data-testid="style-declaration-add-value"
-        placeholder={i18n._({
-          id: "editor.styles.add.value",
-          message: "value",
-        })}
+        aria-label={valueLabel}
+        placeholder={valueLabel}
         value={value}
         onChange={(e) => setValue(e.target.value)}
       />

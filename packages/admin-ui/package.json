@@ -64,6 +64,10 @@
       "types": "./dist/empty.d.ts",
       "default": "./dist/empty.js"
     },
+    "./field": {
+      "types": "./dist/field.d.ts",
+      "default": "./dist/field.js"
+    },
     "./form": {
       "types": "./dist/form.d.ts",
       "default": "./dist/form.js"

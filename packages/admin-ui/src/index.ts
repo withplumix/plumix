@@ -13,6 +13,7 @@ export * from "./destructive.js";
 export * from "./dialog.js";
 export * from "./dropdown-menu.js";
 export * from "./empty.js";
+export * from "./field.js";
 export * from "./form.js";
 export * from "./input.js";
 export * from "./kbd.js";

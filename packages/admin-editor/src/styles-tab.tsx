@@ -1,6 +1,6 @@
 import type { I18n } from "@lingui/core";
 import type { ReactElement, ReactNode } from "react";
-import { createElement } from "react";
+import { createElement, useId } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
 import type {
@@ -14,6 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@plumix/admin-ui/accordion";
+import { Field, FieldLabel, FieldTitle } from "@plumix/admin-ui/field";
 import {
   AlignCenter,
   AlignLeft,
@@ -24,7 +25,6 @@ import {
   Underline,
 } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
-import { Label } from "@plumix/admin-ui/label";
 import {
   Select,
   SelectContent,
@@ -500,6 +500,10 @@ function TextStyleControls({
           type="multiple"
           variant="outline"
           size="sm"
+          aria-label={i18n._({
+            id: "editor.styles.textFormatting",
+            message: "Text formatting",
+          })}
           value={TEXT_MARKS.filter((m) => valueOf(m.property) === m.on).map(
             (m) => m.id,
           )}
@@ -530,6 +534,10 @@ function TextStyleControls({
           type="single"
           variant="outline"
           size="sm"
+          aria-label={i18n._({
+            id: "editor.styles.textAlignment",
+            message: "Text alignment",
+          })}
           value={valueOf("textAlign") ?? ""}
           onValueChange={(value) => setter("textAlign")(value || null)}
         >
@@ -598,17 +606,17 @@ function VisibilityControls({
       {VISIBILITY_DEVICES.map((device) => {
         const isHidden = hidden?.[device.bucket] ?? false;
         return (
-          <div key={device.id} className="flex items-center justify-between">
-            <Label htmlFor={`visibility-${device.id}`} className="text-xs">
+          <Field key={device.id} orientation="horizontal">
+            <FieldLabel htmlFor={`visibility-${device.id}`} className="text-xs">
               {device.label}
-            </Label>
+            </FieldLabel>
             <Switch
               id={`visibility-${device.id}`}
               checked={isHidden}
               onCheckedChange={(on) => onToggle(device.bucket, on)}
               data-testid={`style-visibility-${device.id}`}
             />
-          </div>
+          </Field>
         );
       })}
     </div>
@@ -722,14 +730,21 @@ function KeywordControl({
   readonly onChange: (value: string | null) => void;
 }): ReactElement {
   const testId = `style-control-${property}`;
+  const controlId = useId();
   return (
-    <div className="flex flex-col gap-1" data-testid={testId}>
-      <Label className="text-xs">{label}</Label>
+    <Field className="gap-1" data-testid={testId}>
+      <FieldLabel htmlFor={controlId} className="text-xs">
+        {label}
+      </FieldLabel>
       <Select
         value={value ?? KEYWORD_NONE}
         onValueChange={(next) => onChange(next === KEYWORD_NONE ? null : next)}
       >
-        <SelectTrigger className="w-full" data-testid={`${testId}-select`}>
+        <SelectTrigger
+          id={controlId}
+          className="w-full"
+          data-testid={`${testId}-select`}
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -750,7 +765,7 @@ function KeywordControl({
           ))}
         </SelectContent>
       </Select>
-    </div>
+    </Field>
   );
 }
 
@@ -769,13 +784,20 @@ function LayoutToggle({
   readonly valueOf: StyleGetter;
   readonly setter: StyleSetter;
 }): ReactElement {
+  // A ToggleGroup is a `role="group"`, not a labelable control — name it with a
+  // non-<label> title referenced by aria-labelledby (a bare <label> here would
+  // be orphaned and give the group no accessible name).
+  const labelId = useId();
   return (
-    <div className="flex flex-col gap-1">
-      <Label className="text-xs">{label}</Label>
+    <Field className="gap-1">
+      <FieldTitle id={labelId} className="text-xs">
+        {label}
+      </FieldTitle>
       <ToggleGroup
         type="single"
         variant="outline"
         size="sm"
+        aria-labelledby={labelId}
         value={valueOf(property) ?? ""}
         onValueChange={(value) => setter(property)(value || null)}
       >
@@ -790,7 +812,7 @@ function LayoutToggle({
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-    </div>
+    </Field>
   );
 }
 
@@ -872,13 +894,12 @@ function BackgroundImageField({
     return <BackgroundImageControl value={value} onChange={onChange} />;
   }
   return (
-    <div
-      className="flex flex-col gap-1"
-      data-testid="style-control-backgroundImage"
-    >
-      <Label className="text-xs">
+    <Field className="gap-1" data-testid="style-control-backgroundImage">
+      {/* FieldTitle, not FieldLabel: the picker is a plugin component whose
+          focusable id we don't control, so a <label htmlFor> would be orphaned. */}
+      <FieldTitle className="text-xs">
         <Trans id="editor.styles.fillImage" message="Fill image" />
-      </Label>
+      </FieldTitle>
       {createElement(Picker, {
         // `field` is a block-input shape the host resolver adapts onto the
         // field manifest the picker reads — `accept` becomes its scope. The
@@ -897,7 +918,7 @@ function BackgroundImageField({
         disabled: false,
         testId: "style-control-backgroundImage",
       })}
-    </div>
+    </Field>
   );
 }
 
@@ -914,15 +935,14 @@ function BackgroundImageControl({
   readonly value: string | undefined;
   readonly onChange: (value: string | null) => void;
 }): ReactElement {
+  const inputId = useId();
   return (
-    <div
-      className="flex flex-col gap-1"
-      data-testid="style-control-backgroundImage"
-    >
-      <Label className="text-xs">
+    <Field className="gap-1" data-testid="style-control-backgroundImage">
+      <FieldLabel htmlFor={inputId} className="text-xs">
         <Trans id="editor.styles.fillImage" message="Fill image" />
-      </Label>
+      </FieldLabel>
       <Input
+        id={inputId}
         value={parseBackgroundImageUrl(value)}
         onChange={(e) => {
           const url = e.target.value.trim();
@@ -931,7 +951,7 @@ function BackgroundImageControl({
         placeholder="https://…"
         data-testid="style-control-backgroundImage-url"
       />
-    </div>
+    </Field>
   );
 }
 
@@ -1006,6 +1026,7 @@ function TextShadowControls({
   readonly value: string | undefined;
   readonly onChange: (value: string | null) => void;
 }): ReactElement {
+  const baseId = useId();
   const enabled = value !== undefined;
   const parts = parseTextShadow(value);
   const setPart =
@@ -1015,11 +1036,12 @@ function TextShadowControls({
 
   return (
     <div className="flex flex-col gap-2" data-testid="style-text-shadow">
-      <div className="flex items-center justify-between">
-        <Label className="text-xs">
+      <Field orientation="horizontal">
+        <FieldLabel htmlFor={`${baseId}-toggle`} className="text-xs">
           <Trans id="editor.styles.textShadow" message="Text shadow" />
-        </Label>
+        </FieldLabel>
         <Switch
+          id={`${baseId}-toggle`}
           checked={enabled}
           onCheckedChange={(on) =>
             onChange(on ? formatTextShadow(DEFAULT_TEXT_SHADOW) : null)
@@ -1027,7 +1049,7 @@ function TextShadowControls({
           data-testid="style-text-shadow-toggle"
           aria-label="Text shadow"
         />
-      </div>
+      </Field>
       {enabled ? (
         <div className="flex flex-col gap-2">
           <input
@@ -1040,9 +1062,15 @@ function TextShadowControls({
           />
           <div className="grid grid-cols-3 gap-2">
             {(["x", "y", "blur"] as const).map((key) => (
-              <div key={key} className="flex flex-col gap-1">
-                <Label className="text-xs capitalize">{key}</Label>
+              <Field key={key} className="gap-1">
+                <FieldLabel
+                  htmlFor={`${baseId}-${key}`}
+                  className="text-xs capitalize"
+                >
+                  {key}
+                </FieldLabel>
                 <Input
+                  id={`${baseId}-${key}`}
                   type="number"
                   value={parts[key]}
                   // Coalesce an emptied field to 0 so composition never emits a
@@ -1051,7 +1079,7 @@ function TextShadowControls({
                   className="h-8"
                   data-testid={`style-text-shadow-${key}`}
                 />
-              </div>
+              </Field>
             ))}
           </div>
         </div>
@@ -1070,13 +1098,14 @@ function OpacityControl({
   readonly value: string | undefined;
   readonly onChange: (value: string | null) => void;
 }): ReactElement {
+  const inputId = useId();
   const parsed = value !== undefined ? Number(value) : 1;
   const slider = Number.isFinite(parsed) ? parsed : 1;
   return (
-    <div className="flex flex-col gap-1" data-testid="style-control-opacity">
-      <Label className="text-xs">
+    <Field className="gap-1" data-testid="style-control-opacity">
+      <FieldLabel htmlFor={inputId} className="text-xs">
         <Trans id="editor.styles.opacity" message="Opacity" />
-      </Label>
+      </FieldLabel>
       <div className="flex items-center gap-2">
         <Slider
           min={0}
@@ -1092,6 +1121,7 @@ function OpacityControl({
           aria-label="Opacity"
         />
         <Input
+          id={inputId}
           type="number"
           min={0}
           max={1}
@@ -1105,7 +1135,7 @@ function OpacityControl({
           data-testid="style-control-opacity-input"
         />
       </div>
-    </div>
+    </Field>
   );
 }
 
@@ -1124,16 +1154,21 @@ function TagNameField({
   readonly onChange: (tagName: string) => void;
 }): ReactElement {
   const resolved = resolveRootTag(value);
+  const selectId = useId();
   return (
-    <div className="flex flex-col gap-1" data-testid="block-tag-name">
-      <Label className="text-xs">
+    <Field className="gap-1" data-testid="block-tag-name">
+      <FieldLabel htmlFor={selectId} className="text-xs">
         <Trans id="editor.htmlAttrs.tagName" message="Tag name" />
-      </Label>
+      </FieldLabel>
       <Select
         value={resolved ?? TAG_DEFAULT}
         onValueChange={(next) => onChange(next === TAG_DEFAULT ? "" : next)}
       >
-        <SelectTrigger className="w-full" data-testid="block-tag-name-select">
+        <SelectTrigger
+          id={selectId}
+          className="w-full"
+          data-testid="block-tag-name-select"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -1154,7 +1189,7 @@ function TagNameField({
           ))}
         </SelectContent>
       </Select>
-    </div>
+    </Field>
   );
 }
 
@@ -1168,12 +1203,14 @@ function CssClassesField({
   readonly onChange: (className: string) => void;
 }): ReactElement {
   const { i18n } = useLingui();
+  const inputId = useId();
   return (
-    <div className="flex flex-col gap-1">
-      <Label className="text-xs">
+    <Field className="gap-1">
+      <FieldLabel htmlFor={inputId} className="text-xs">
         <Trans id="editor.styles.cssClasses" message="CSS classes" />
-      </Label>
+      </FieldLabel>
       <Input
+        id={inputId}
         value={className ?? ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={i18n._({
@@ -1182,7 +1219,7 @@ function CssClassesField({
         })}
         data-testid="style-css-classes"
       />
-    </div>
+    </Field>
   );
 }
 

@@ -33,8 +33,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@plumix/admin-ui/card";
+import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Input } from "@plumix/admin-ui/input";
-import { Label as UILabel } from "@plumix/admin-ui/label";
 
 const M = {
   unnamed: defineMessage({
@@ -295,25 +295,27 @@ function PasskeyRow({ cred, isLast, onChanged }: PasskeyRowProps): ReactNode {
                 rename.mutate(trimmed);
               }}
             >
-              <UILabel
-                htmlFor={`passkey-name-${cred.id}`}
-                className="text-muted-foreground text-xs"
-              >
-                <Trans
-                  id="profile.passkeys.rename.label"
-                  message="Rename passkey"
+              <Field className="gap-2">
+                <FieldLabel
+                  htmlFor={`passkey-name-${cred.id}`}
+                  className="text-muted-foreground text-xs"
+                >
+                  <Trans
+                    id="profile.passkeys.rename.label"
+                    message="Rename passkey"
+                  />
+                </FieldLabel>
+                <Input
+                  id={`passkey-name-${cred.id}`}
+                  value={draft}
+                  maxLength={64}
+                  onChange={(e) => {
+                    setDraft(e.target.value);
+                  }}
+                  data-testid="profile-passkey-rename-input"
+                  autoFocus
                 />
-              </UILabel>
-              <Input
-                id={`passkey-name-${cred.id}`}
-                value={draft}
-                maxLength={64}
-                onChange={(e) => {
-                  setDraft(e.target.value);
-                }}
-                data-testid="profile-passkey-rename-input"
-                autoFocus
-              />
+              </Field>
               {renameError ? (
                 <Alert
                   variant="destructive"
