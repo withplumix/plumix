@@ -142,6 +142,24 @@ describe("BlockInputControl", () => {
     expect(getByTestId("block-input-stackAt").textContent).toBe("");
   });
 
+  test("select shows its placeholder when the value is unset", () => {
+    const { getByTestId } = renderControl(
+      {
+        name: "align",
+        type: "select",
+        placeholder: "Left",
+        options: [
+          { label: "Left", value: "left" },
+          { label: "Center", value: "center" },
+        ],
+      },
+      undefined,
+    );
+    // An unset value must reach Radix as "" (not the empty-string sentinel), so
+    // the placeholder renders instead of a blank trigger.
+    expect(getByTestId("block-input-align").textContent).toContain("Left");
+  });
+
   test("select round-trips an empty-string option value (Radix-safe)", async () => {
     const { getByTestId, onChange } = renderControl(
       {

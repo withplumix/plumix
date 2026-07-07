@@ -14,6 +14,9 @@ export interface BlockInput {
   readonly name: string;
   readonly type: string;
   readonly label?: Label;
+  /** Placeholder shown when the control has no value — e.g. the effective
+   *  default a `select`/`combobox` falls back to, so its trigger isn't blank. */
+  readonly placeholder?: Label;
   readonly options?: readonly BlockInputOption[];
   /**
    * Slot inputs only: the block names this slot accepts as children.

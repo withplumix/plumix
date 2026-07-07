@@ -170,7 +170,13 @@ export function BlockInputControl({
             }
           >
             <SelectTrigger id={id} data-testid={testId} className="w-full">
-              <SelectValue />
+              <SelectValue
+                placeholder={
+                  input.placeholder
+                    ? resolveLabel(input.placeholder, i18n)
+                    : undefined
+                }
+              />
             </SelectTrigger>
             <SelectContent>
               {options.map((opt) => (
@@ -438,6 +444,10 @@ function optionKey(value: unknown): string {
 // equivalent also accepts.)
 const SELECT_EMPTY = "__plumix_empty__";
 function encodeSelectKey(value: unknown): string {
+  // An unset value (no attr) maps to Radix's reserved "" — "no selection" — so
+  // the trigger renders its placeholder. The sentinel is only for an *option*
+  // whose own value stringifies to "", which must stay distinct from unset.
+  if (value === undefined || value === null) return "";
   const key = optionKey(value);
   return key === "" ? SELECT_EMPTY : key;
 }
