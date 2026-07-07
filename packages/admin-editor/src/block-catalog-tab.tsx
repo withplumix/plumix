@@ -87,18 +87,22 @@ export function BlockCatalog({
   };
 
   const empty = groups.length === 0 && matchedPatterns.length === 0;
+  const searchLabel = i18n._({
+    id: "editor.catalog.searchLabel",
+    message: "Search blocks",
+  });
 
   return (
     <div className="flex flex-col gap-3 p-2" data-testid="block-catalog">
       <div className="relative">
         <Search className="text-muted-foreground absolute start-2.5 top-1/2 size-4 -translate-y-1/2" />
         <Input
+          type="search"
+          name="block-catalog-search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder={i18n._({
-            id: "editor.catalog.searchLabel",
-            message: "Search blocks",
-          })}
+          aria-label={searchLabel}
+          placeholder={searchLabel}
           className="h-9 ps-8"
           data-testid="block-catalog-search"
         />

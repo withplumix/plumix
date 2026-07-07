@@ -367,6 +367,39 @@ test.describe("editor accessibility", () => {
     await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
     await expectNoAxeViolations(page);
   });
+
+  test("the populated inspector (Block + Styles tabs) has no WCAG 2.1 AA violations", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry({
+        content: {
+          version: "plumix.v2",
+          blocks: [
+            { id: "h1", name: "core/button", attrs: { label: "Welcome" } },
+          ],
+        },
+      }),
+      "/entry/createPreviewLink": PREVIEW_LINK,
+    });
+    await page.goto("entries/posts/1/edit");
+    await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
+
+    // The empty-chrome sweep above never reaches the inspector's form
+    // controls. Select a block so the Block tab renders its labelled inputs,
+    // then sweep — this guards the label→control wiring on every control.
+    await page.getByTestId("plumix-tab-layers").click();
+    await page.getByTestId("layer-h1").click();
+    await expect(page.getByTestId("block-input-label")).toBeVisible();
+    await expectNoAxeViolations(page);
+
+    // The Styles tab's token / keyword / toggle controls are the bulk of the
+    // inspector's fields; sweep them too.
+    await page.getByTestId("plumix-tab-styles").click();
+    await expect(page.getByTestId("styles-tab")).toBeVisible();
+    await expectNoAxeViolations(page);
+  });
 });
 
 // Ported from "editor server-loaded content". The plumix.v2 canvas render +

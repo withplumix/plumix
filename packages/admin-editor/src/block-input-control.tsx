@@ -13,9 +13,9 @@ import {
   CommandItem,
   CommandList,
 } from "@plumix/admin-ui/command";
+import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Check, ChevronsUpDown, Plus } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
-import { Label } from "@plumix/admin-ui/label";
 import {
   Popover,
   PopoverContent,
@@ -261,18 +261,15 @@ export function BlockInputControl({
   // Styles tab's Visibility switches; other kinds stack the label above.
   const inline = input.type === "boolean" || input.type === "checkbox";
   return (
-    <div
-      className={
-        inline
-          ? "flex items-center justify-between gap-2"
-          : "flex flex-col gap-1.5"
-      }
+    <Field
+      orientation={inline ? "horizontal" : "vertical"}
+      className={inline ? undefined : "gap-1.5"}
     >
-      <Label htmlFor={id} id={labelId}>
+      <FieldLabel htmlFor={id} id={labelId}>
         {label}
-      </Label>
+      </FieldLabel>
       {control}
-    </div>
+    </Field>
   );
 }
 

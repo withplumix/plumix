@@ -14,6 +14,11 @@ function Slider({
   value,
   min = 0,
   max = 100,
+  // The thumb — not the Root — carries `role="slider"`, so an accessible name
+  // must land there or it's an unnamed input to assistive tech. Radix doesn't
+  // forward Root's name down, so hoist it onto the thumb (single-thumb only).
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledby,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root>) {
   const values = React.useMemo<readonly number[]>(() => {
@@ -49,6 +54,8 @@ function Slider({
           // eslint-disable-next-line react/no-array-index-key
           key={index}
           data-slot="slider-thumb"
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledby}
           className="border-primary bg-background ring-ring/30 block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none"
         />
       ))}

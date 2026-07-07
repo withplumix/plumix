@@ -530,6 +530,16 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
+msgid "editor.styles.textAlignment"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
+msgid "editor.styles.textFormatting"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/styles-tab.tsx
 msgid "editor.styles.textShadow"
 msgstr ""
 
