@@ -27,10 +27,15 @@ describe("core/table family", () => {
   });
 
   test("cell align input has capitalized labels and a Left placeholder", () => {
+    // Labels are i18n descriptors now; assert their source message.
+    const text = (label: unknown): string | undefined =>
+      typeof label === "string"
+        ? label
+        : (label as { message?: string } | undefined)?.message;
     for (const spec of [tableHeaderCellBlock, tableCellBlock]) {
       const align = spec.inputs?.find((i) => i.name === "align");
-      expect(align?.placeholder).toBe("Left");
-      expect(align?.options?.map((o) => o.label)).toEqual([
+      expect(text(align?.placeholder)).toBe("Left");
+      expect(align?.options?.map((o) => text(o.label))).toEqual([
         "Left",
         "Center",
         "Right",

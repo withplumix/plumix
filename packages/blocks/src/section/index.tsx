@@ -4,18 +4,28 @@ import { defineBlock } from "../block-registry.js";
 
 export const sectionBlock = defineBlock({
   name: "core/section",
-  title: "Section",
+  title: { id: "block.core.section.title", message: "Section" },
   icon: "LayoutTemplate",
   category: "layout",
   // selfSeam so the seeded styles + block class land on the `<section>` itself
   // (not a wrapper div), and the centered inner sits inside it.
   selfSeam: true,
   inputs: [
-    { name: "maxWidth", type: "text", label: "Content max width" },
+    {
+      name: "maxWidth",
+      type: "text",
+      label: {
+        id: "block.core.section.input.maxWidth.label",
+        message: "Content max width",
+      },
+    },
     {
       name: "content",
       type: "slot",
-      label: "Content",
+      label: {
+        id: "block.core.section.input.content.label",
+        message: "Content",
+      },
       defaultChildren: [{ id: "section-text", name: "core/rich-text" }],
     },
   ],

@@ -28,31 +28,77 @@ function normalizeMediaValue(raw: unknown): MediaValue | null {
 
 export const imageBlock = defineBlock({
   name: "media/image",
-  title: "Image",
+  title: { id: "plugin.media.block.image.title", message: "Image" },
   icon: "Image",
   category: "media",
-  description: "Image with alt text, caption, and focal-point cropping.",
-  keywords: ["picture", "photo", "media"],
+  description: {
+    id: "plugin.media.block.image.description",
+    message: "Image with alt text, caption, and focal-point cropping.",
+  },
+  keywords: [
+    { id: "plugin.media.block.image.keyword.picture", message: "picture" },
+    { id: "plugin.media.block.image.keyword.photo", message: "photo" },
+    { id: "plugin.media.block.image.keyword.media", message: "media" },
+  ],
   inputs: [
     // The picked library asset — a snapshot { id, url, alt, width, height }
     // written by the media picker. Render prefers it; `src` below is the escape
     // hatch for an unmanaged external URL.
-    { name: "media", type: "media", label: "Image", accept: "image/" },
-    { name: "src", type: "url", label: "Source URL" },
-    { name: "alt", type: "text", label: "Alternative text" },
-    { name: "caption", type: "text", label: "Caption" },
+    {
+      name: "media",
+      type: "media",
+      label: {
+        id: "plugin.media.block.image.input.media.label",
+        message: "Image",
+      },
+      accept: "image/",
+    },
+    {
+      name: "src",
+      type: "url",
+      label: {
+        id: "plugin.media.block.image.input.src.label",
+        message: "Source URL",
+      },
+    },
+    {
+      name: "alt",
+      type: "text",
+      label: {
+        id: "plugin.media.block.image.input.alt.label",
+        message: "Alternative text",
+      },
+    },
+    {
+      name: "caption",
+      type: "text",
+      label: {
+        id: "plugin.media.block.image.input.caption.label",
+        message: "Caption",
+      },
+    },
     {
       // An on/off setting → a Switch, consistent with the Styles tab's
       // visibility toggles (the repo's on/off convention).
       name: "priority",
       type: "boolean",
-      label: "High priority (load eagerly)",
+      label: {
+        id: "plugin.media.block.image.input.priority.label",
+        message: "High priority (load eagerly)",
+      },
     },
     // A visual crop anchor: click/drag a dot on the image preview. `sizes` and
     // display `width` are deliberately not authored here — `sizes` is a
     // dev-only responsive hint the renderer defaults sensibly, and width lives
     // in the Styles tab's Size section (both would edit `node.style.width`).
-    { name: "focalPoint", type: "focalPoint", label: "Focal point" },
+    {
+      name: "focalPoint",
+      type: "focalPoint",
+      label: {
+        id: "plugin.media.block.image.input.focalPoint.label",
+        message: "Focal point",
+      },
+    },
   ],
   defaults: {
     media: null,

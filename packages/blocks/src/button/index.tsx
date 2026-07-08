@@ -12,7 +12,7 @@ function sanitizeHref(raw: unknown): string | undefined {
 
 export const buttonBlock = defineBlock({
   name: "core/button",
-  title: "Button",
+  title: { id: "block.core.button.title", message: "Button" },
   icon: "MousePointerClick",
   category: "interactive",
   // selfSeam so the block class + default styles land on the `<a>`/`<button>`
@@ -21,9 +21,24 @@ export const buttonBlock = defineBlock({
   // box) and giving the selection overlay two elements to track.
   selfSeam: true,
   inputs: [
-    { name: "label", type: "text", label: "Label" },
-    { name: "href", type: "text", label: "Href" },
-    { name: "openInNewTab", type: "boolean", label: "Open in new tab" },
+    {
+      name: "label",
+      type: "text",
+      label: { id: "block.core.button.input.label.label", message: "Label" },
+    },
+    {
+      name: "href",
+      type: "text",
+      label: { id: "block.core.button.input.href.label", message: "Href" },
+    },
+    {
+      name: "openInNewTab",
+      type: "boolean",
+      label: {
+        id: "block.core.button.input.openInNewTab.label",
+        message: "Open in new tab",
+      },
+    },
   ],
   defaults: { label: "Click" },
   // Neutral, theme-overridable defaults, seeded as editable Styles values. The

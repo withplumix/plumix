@@ -89,6 +89,11 @@ msgid "editor.selection.count"
 msgstr "{count} selected"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.embed.input.title.label"
+msgstr "Accessible title"
+
+#. js-lingui-explicit-id
 #: src/canvas-frame.tsx
 msgid "editor.canvas.addBlock"
 msgstr "Add a block"
@@ -114,6 +119,11 @@ msgid "editor.styles.add"
 msgstr "Add style"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table.input.align.label"
+msgstr "Align"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.align.center"
 msgstr "Align center"
@@ -132,6 +142,11 @@ msgstr "Align right"
 #: src/html-attributes.tsx
 msgid "editor.htmlAttrs.add.key"
 msgstr "attribute"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.input.autoplay.label"
+msgstr "Autoplay"
 
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
@@ -164,6 +179,21 @@ msgid "editor.tab.blocks"
 msgstr "Blocks"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.rich-text.keyword.body"
+msgstr "body"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.rich-text.input.body.label"
+msgstr "Body"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table-body-row.title"
+msgstr "Body Row"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.bold"
 msgstr "Bold"
@@ -172,6 +202,96 @@ msgstr "Bold"
 #: src/styles-tab.tsx
 msgid "editor.styles.border"
 msgstr "Border"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.group.title"
+msgstr "Box"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.button.title"
+msgstr "Button"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.embed.input.caption.label"
+msgstr "Caption"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table-cell.title"
+msgstr "Cell"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table-header-row.input.cells.label"
+msgstr "Cells"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table-body-row.input.cells.label"
+msgstr "Cells"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table.input.align.option.center"
+msgstr "Center"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.keyword.clip"
+msgstr "clip"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.code.title"
+msgstr "Code"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.code.input.text.label"
+msgstr "Code"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.column.title"
+msgstr "Column"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.columns.title"
+msgstr "Columns"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.columns.input.columns.label"
+msgstr "Columns"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.section.input.content.label"
+msgstr "Content"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.group.input.content.label"
+msgstr "Content"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.column.input.content.label"
+msgstr "Content"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.details.input.content.label"
+msgstr "Content"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.section.input.maxWidth.label"
+msgstr "Content max width"
 
 #. js-lingui-explicit-id
 #: src/layers-tab.tsx
@@ -224,6 +344,11 @@ msgid "editor.toolbar.device.desktop"
 msgstr "Desktop"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.details.title"
+msgstr "Details"
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.device.group"
 msgstr "Device"
@@ -254,6 +379,16 @@ msgid "editor.styles.scope"
 msgstr "Editing"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.embed.title"
+msgstr "Embed"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.embed.description"
+msgstr "Embed a YouTube, Vimeo, Loom, Spotify, or CodePen URL — or any other page in a sandboxed iframe."
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.fillImage"
 msgstr "Fill image"
@@ -274,6 +409,16 @@ msgid "editor.selection.group"
 msgstr "Group"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table-header-cell.title"
+msgstr "Header Cell"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table-header-row.title"
+msgstr "Header Row"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.visibility.desktop"
 msgstr "Hide on desktop"
@@ -289,14 +434,49 @@ msgid "editor.styles.visibility.tablet"
 msgstr "Hide on tablet"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.button.input.href.label"
+msgstr "Href"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.html.title"
+msgstr "HTML"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.html.input.html.label"
+msgstr "HTML"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.description"
+msgstr "HTML <video> with browser controls."
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.htmlAttrs.title"
 msgstr "HTML attributes"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.embed.keyword.iframe"
+msgstr "iframe"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.italic"
 msgstr "Italic"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.button.input.label.label"
+msgstr "Label"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.code.input.language.label"
+msgstr "Language"
 
 #. js-lingui-explicit-id
 #: src/plumix-editor.tsx
@@ -309,9 +489,39 @@ msgid "editor.styles.layout"
 msgstr "Layout"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table.input.align.placeholder"
+msgstr "Left"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table.input.align.option.left"
+msgstr "Left"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.input.loop.label"
+msgstr "Loop"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.margin"
 msgstr "Margin"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.keyword.media"
+msgstr "media"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.embed.keyword.media"
+msgstr "media"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.columns.input.stackAt.option.mobile"
+msgstr "Mobile"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
@@ -329,9 +539,24 @@ msgid "editor.selection.moveUp"
 msgstr "Move up"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.keyword.movie"
+msgstr "movie"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.input.muted.label"
+msgstr "Muted"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.cssClasses.placeholder"
 msgstr "my-class other-class"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.columns.input.stackAt.option.never"
+msgstr "Never"
 
 #. js-lingui-explicit-id
 #: src/html-attributes.tsx
@@ -379,6 +604,16 @@ msgid "editor.styles.opacity"
 msgstr "Opacity"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.details.input.open.label"
+msgstr "Open by default"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.button.input.openInNewTab.label"
+msgstr "Open in new tab"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.padding"
 msgstr "Padding"
@@ -394,14 +629,34 @@ msgid "editor.tab.page"
 msgstr "Page"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.rich-text.keyword.paragraph"
+msgstr "paragraph"
+
+#. js-lingui-explicit-id
 #: src/layers-tab.tsx
 msgid "editor.layers.paste"
 msgstr "Paste"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.pattern-ref.title"
+msgstr "Pattern reference"
+
+#. js-lingui-explicit-id
 #: src/block-catalog-tab.tsx
 msgid "editor.catalog.patterns"
 msgstr "Patterns"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.input.playsinline.label"
+msgstr "Plays inline (iOS)"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.input.poster.label"
+msgstr "Poster image URL"
 
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
@@ -449,6 +704,26 @@ msgid "editor.inspector.removeRow"
 msgstr "Remove row"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.columns.input.reverseWhenStacked.label"
+msgstr "Reverse when stacked"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.rich-text.title"
+msgstr "Rich text"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table.input.align.option.right"
+msgstr "Right"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table.input.rows.label"
+msgstr "Rows"
+
+#. js-lingui-explicit-id
 #: src/html-attributes.tsx
 msgid "editor.htmlAttrs.add.search"
 msgstr "Search attribute…"
@@ -467,6 +742,11 @@ msgstr "Search property…"
 #: src/block-input-control.tsx
 msgid "editor.combobox.search"
 msgstr "Search…"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.section.title"
+msgstr "Section"
 
 #. js-lingui-explicit-id
 #: src/block-inspector.tsx
@@ -494,9 +774,19 @@ msgid "editor.combobox.placeholder"
 msgstr "Select…"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.separator.title"
+msgstr "Separator"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.effects"
 msgstr "Shadows & Effects"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.input.controls.label"
+msgstr "Show controls"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -504,14 +794,29 @@ msgid "editor.styles.size"
 msgstr "Size"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.pattern-ref.input.slug.label"
+msgstr "Slug"
+
+#. js-lingui-explicit-id
 #: src/json-inspector.tsx
 msgid "editor.json.title"
 msgstr "Source"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.input.src.label"
+msgstr "Source URL"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.spacing"
 msgstr "Spacing"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.columns.input.stackAt.label"
+msgstr "Stack columns at"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -524,6 +829,21 @@ msgid "editor.tab.styles"
 msgstr "Styles"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.details.input.summary.label"
+msgstr "Summary"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table.title"
+msgstr "Table"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.columns.input.stackAt.option.tablet"
+msgstr "Tablet"
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.device.tablet"
 msgstr "Tablet"
@@ -532,6 +852,21 @@ msgstr "Tablet"
 #: src/styles-tab.tsx
 msgid "editor.htmlAttrs.tagName"
 msgstr "Tag name"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.rich-text.keyword.text"
+msgstr "text"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table-header-cell.input.text.label"
+msgstr "Text"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.table-cell.input.text.label"
+msgstr "Text"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -594,6 +929,11 @@ msgid "editor.header.untitled"
 msgstr "Untitled"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.embed.input.url.label"
+msgstr "URL"
+
+#. js-lingui-explicit-id
 #: src/html-attributes.tsx
 msgid "editor.htmlAttrs.add.value"
 msgstr "value"
@@ -602,6 +942,16 @@ msgstr "value"
 #: src/style-declarations.tsx
 msgid "editor.styles.add.value"
 msgstr "value"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.embed.keyword.video"
+msgstr "video"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.video.title"
+msgstr "Video"
 
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
@@ -619,14 +969,29 @@ msgid "editor.header.source"
 msgstr "View source"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.embed.keyword.vimeo"
+msgstr "vimeo"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.visibility"
 msgstr "Visibility"
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.column.input.width.label"
+msgstr "Width"
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.xray"
 msgstr "X-ray: outline all blocks"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.embed.keyword.youtube"
+msgstr "youtube"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx

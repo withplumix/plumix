@@ -46,7 +46,7 @@ function stackStyleCss(
 
 export const columnsBlock = defineBlock({
   name: "core/columns",
-  title: "Columns",
+  title: { id: "block.core.columns.title", message: "Columns" },
   icon: "Columns",
   category: "layout",
   // selfSeam so `display:flex` + `gap` land on the row itself, making the
@@ -56,22 +56,49 @@ export const columnsBlock = defineBlock({
     {
       name: "stackAt",
       type: "select",
-      label: "Stack columns at",
+      label: {
+        id: "block.core.columns.input.stackAt.label",
+        message: "Stack columns at",
+      },
       options: [
-        { label: "Tablet", value: "tablet" },
-        { label: "Mobile", value: "mobile" },
-        { label: "Never", value: "never" },
+        {
+          label: {
+            id: "block.core.columns.input.stackAt.option.tablet",
+            message: "Tablet",
+          },
+          value: "tablet",
+        },
+        {
+          label: {
+            id: "block.core.columns.input.stackAt.option.mobile",
+            message: "Mobile",
+          },
+          value: "mobile",
+        },
+        {
+          label: {
+            id: "block.core.columns.input.stackAt.option.never",
+            message: "Never",
+          },
+          value: "never",
+        },
       ],
     },
     {
       name: "reverseWhenStacked",
       type: "boolean",
-      label: "Reverse when stacked",
+      label: {
+        id: "block.core.columns.input.reverseWhenStacked.label",
+        message: "Reverse when stacked",
+      },
     },
     {
       name: "columns",
       type: "slot",
-      label: "Columns",
+      label: {
+        id: "block.core.columns.input.columns.label",
+        message: "Columns",
+      },
       allowedBlocks: ["core/column"],
       defaultChildren: DEFAULT_COLUMNS,
     },

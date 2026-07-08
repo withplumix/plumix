@@ -401,3 +401,103 @@ msgstr "photos"
 #: src/index.ts
 msgid "plugin.media.keyword.assets"
 msgstr "assets"
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.title"
+msgstr "Image"
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.description"
+msgstr "Image with alt text, caption, and focal-point cropping."
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.keyword.picture"
+msgstr "picture"
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.keyword.photo"
+msgstr "photo"
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.keyword.media"
+msgstr "media"
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.media.label"
+msgstr "Image"
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.src.label"
+msgstr "Source URL"
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.alt.label"
+msgstr "Alternative text"
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.caption.label"
+msgstr "Caption"
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.priority.label"
+msgstr "High priority (load eagerly)"
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.focalPoint.label"
+msgstr "Focal point"
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.title"
+msgstr "File"
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.description"
+msgstr "Downloadable file with size + MIME label."
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.keyword.download"
+msgstr "download"
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.keyword.attachment"
+msgstr "attachment"
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.input.media.label"
+msgstr "File"
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.input.href.label"
+msgstr "Download URL"
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.input.filename.label"
+msgstr "Filename"
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.input.size.label"
+msgstr "Size (bytes)"
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.input.mime.label"
+msgstr "MIME type"

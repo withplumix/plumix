@@ -16,7 +16,7 @@ const LANGUAGE_OPTIONS = CODE_LANGUAGES.map((lang) => ({
 
 export const codeBlock = defineBlock({
   name: "core/code",
-  title: "Code",
+  title: { id: "block.core.code.title", message: "Code" },
   icon: "Code",
   category: "text",
   // selfSeam so the block class + default styles land on the `<pre>` itself,
@@ -41,11 +41,20 @@ export const codeBlock = defineBlock({
     },
   },
   inputs: [
-    { name: "text", type: "textarea", label: "Code" },
+    {
+      name: "text",
+      type: "textarea",
+      label: { id: "block.core.code.input.text.label", message: "Code" },
+    },
     {
       name: "language",
       type: "combobox",
-      label: "Language",
+      label: {
+        id: "block.core.code.input.language.label",
+        message: "Language",
+      },
+      // Language display names are proper nouns (JavaScript, Python) — not
+      // localized.
       options: LANGUAGE_OPTIONS,
     },
   ],

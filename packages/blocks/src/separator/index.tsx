@@ -4,7 +4,7 @@ import { defineBlock } from "../block-registry.js";
 
 export const separatorBlock = defineBlock({
   name: "core/separator",
-  title: "Separator",
+  title: { id: "block.core.separator.title", message: "Separator" },
   icon: "Minus",
   category: "text",
   // selfSeam so the block class + default styles land on the `<hr>` itself

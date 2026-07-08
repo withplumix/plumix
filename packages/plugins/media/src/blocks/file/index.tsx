@@ -32,19 +32,60 @@ const PLACEHOLDER: CSSProperties = {
 
 export const fileBlock = defineBlock({
   name: "media/file",
-  title: "File",
+  title: { id: "plugin.media.block.file.title", message: "File" },
   icon: "File",
   category: "media",
-  description: "Downloadable file with size + MIME label.",
-  keywords: ["download", "attachment"],
+  description: {
+    id: "plugin.media.block.file.description",
+    message: "Downloadable file with size + MIME label.",
+  },
+  keywords: [
+    { id: "plugin.media.block.file.keyword.download", message: "download" },
+    { id: "plugin.media.block.file.keyword.attachment", message: "attachment" },
+  ],
   inputs: [
     // The picked library asset — a { id, url, filename, mime } snapshot the
     // media picker writes. The fields below are manual escape hatches / overrides.
-    { name: "media", type: "media", label: "File" },
-    { name: "href", type: "url", label: "Download URL" },
-    { name: "filename", type: "text", label: "Filename" },
-    { name: "size", type: "number", label: "Size (bytes)" },
-    { name: "mime", type: "text", label: "MIME type" },
+    {
+      name: "media",
+      type: "media",
+      label: {
+        id: "plugin.media.block.file.input.media.label",
+        message: "File",
+      },
+    },
+    {
+      name: "href",
+      type: "url",
+      label: {
+        id: "plugin.media.block.file.input.href.label",
+        message: "Download URL",
+      },
+    },
+    {
+      name: "filename",
+      type: "text",
+      label: {
+        id: "plugin.media.block.file.input.filename.label",
+        message: "Filename",
+      },
+    },
+    {
+      name: "size",
+      type: "number",
+      label: {
+        id: "plugin.media.block.file.input.size.label",
+        message: "Size (bytes)",
+      },
+    },
+    {
+      name: "mime",
+      type: "text",
+      label: {
+        id: "plugin.media.block.file.input.mime.label",
+        message: "MIME type",
+      },
+    },
   ],
   defaults: { media: null, href: "", filename: "", size: 0, mime: "" },
   render: ({ attrs, context }): ReactElement | null => {
