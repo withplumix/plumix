@@ -1,8 +1,8 @@
 import type { ImgHTMLAttributes, ReactNode } from "react";
 import { preload } from "react-dom";
 
+import { useImageConfig } from "./context.js";
 import { buildImageAttrs } from "./image-attrs.js";
-import { useImageConfig } from "./index.js";
 
 type ImgAttrs = Omit<
   ImgHTMLAttributes<HTMLImageElement>,
