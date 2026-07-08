@@ -401,3 +401,103 @@ msgstr ""
 #: src/index.ts
 msgid "plugin.media.keyword.assets"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.keyword.picture"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.keyword.photo"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.keyword.media"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.media.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.src.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.alt.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.caption.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.priority.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/image/index.tsx
+msgid "plugin.media.block.image.input.focalPoint.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.description"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.keyword.download"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.keyword.attachment"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.input.media.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.input.href.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.input.filename.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.input.size.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/blocks/file/index.tsx
+msgid "plugin.media.block.file.input.mime.label"
+msgstr ""

@@ -4,7 +4,7 @@ import { defineBlock } from "../block-registry.js";
 
 export const groupBlock = defineBlock({
   name: "core/group",
-  title: "Box",
+  title: { id: "block.core.group.title", message: "Box" },
   icon: "Box",
   category: "layout",
   // selfSeam so the block class (author styles: display/flex/gap set in the
@@ -12,7 +12,13 @@ export const groupBlock = defineBlock({
   // children the flex/grid items. An unopinionated container — no `layout`
   // prop; every layout decision is a style, like Builder's Box.
   selfSeam: true,
-  inputs: [{ name: "content", type: "slot", label: "Content" }],
+  inputs: [
+    {
+      name: "content",
+      type: "slot",
+      label: { id: "block.core.group.input.content.label", message: "Content" },
+    },
+  ],
   render: ({ attrs, blockProps, tagName }): ReactNode => {
     const Content = attrs.content as (() => ReactNode) | undefined;
     // Honor the author's root-element override (Builder's tag-name); the Box is

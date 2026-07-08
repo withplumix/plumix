@@ -4,22 +4,69 @@ import { defineBlock } from "../block-registry.js";
 
 export const videoBlock = defineBlock({
   name: "core/video",
-  title: "Video",
+  title: { id: "block.core.video.title", message: "Video" },
   icon: "Video",
   category: "media",
-  description: "HTML <video> with browser controls.",
-  keywords: ["movie", "clip", "media"],
+  description: {
+    id: "block.core.video.description",
+    message: "HTML <video> with browser controls.",
+  },
+  keywords: [
+    { id: "block.core.video.keyword.movie", message: "movie" },
+    { id: "block.core.video.keyword.clip", message: "clip" },
+    { id: "block.core.video.keyword.media", message: "media" },
+  ],
   // selfSeam so the block class + default sizing land on the `<video>` itself,
   // not a wrapper div.
   selfSeam: true,
   inputs: [
-    { name: "src", type: "url", label: "Source URL" },
-    { name: "poster", type: "url", label: "Poster image URL" },
-    { name: "controls", type: "boolean", label: "Show controls" },
-    { name: "autoplay", type: "boolean", label: "Autoplay" },
-    { name: "loop", type: "boolean", label: "Loop" },
-    { name: "muted", type: "boolean", label: "Muted" },
-    { name: "playsinline", type: "boolean", label: "Plays inline (iOS)" },
+    {
+      name: "src",
+      type: "url",
+      label: { id: "block.core.video.input.src.label", message: "Source URL" },
+    },
+    {
+      name: "poster",
+      type: "url",
+      label: {
+        id: "block.core.video.input.poster.label",
+        message: "Poster image URL",
+      },
+    },
+    {
+      name: "controls",
+      type: "boolean",
+      label: {
+        id: "block.core.video.input.controls.label",
+        message: "Show controls",
+      },
+    },
+    {
+      name: "autoplay",
+      type: "boolean",
+      label: {
+        id: "block.core.video.input.autoplay.label",
+        message: "Autoplay",
+      },
+    },
+    {
+      name: "loop",
+      type: "boolean",
+      label: { id: "block.core.video.input.loop.label", message: "Loop" },
+    },
+    {
+      name: "muted",
+      type: "boolean",
+      label: { id: "block.core.video.input.muted.label", message: "Muted" },
+    },
+    {
+      name: "playsinline",
+      type: "boolean",
+      label: {
+        id: "block.core.video.input.playsinline.label",
+        message: "Plays inline (iOS)",
+      },
+    },
   ],
   defaults: {
     src: "",

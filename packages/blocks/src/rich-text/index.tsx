@@ -36,15 +36,25 @@ function RichTextBlockRender({
 
 export const richTextBlock = defineBlock({
   name: "core/rich-text",
-  title: "Rich text",
+  title: { id: "block.core.rich-text.title", message: "Rich text" },
   icon: "Type",
   category: "text",
   // Authors still mentally call this "paragraph" — the slash menu's
   // title/keywords/name matcher needs an explicit hook so typing
   // `/paragraph` finds rich-text after the legacy paragraph block was
   // removed in #473.
-  keywords: ["paragraph", "text", "body"],
-  inputs: [{ name: "body", type: "richtext", label: "Body" }],
+  keywords: [
+    { id: "block.core.rich-text.keyword.paragraph", message: "paragraph" },
+    { id: "block.core.rich-text.keyword.text", message: "text" },
+    { id: "block.core.rich-text.keyword.body", message: "body" },
+  ],
+  inputs: [
+    {
+      name: "body",
+      type: "richtext",
+      label: { id: "block.core.rich-text.input.body.label", message: "Body" },
+    },
+  ],
   defaults: { body: "<p>Enter text here…</p>" },
   render: RichTextBlockRender,
 });

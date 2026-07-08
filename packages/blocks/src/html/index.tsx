@@ -15,10 +15,16 @@ function HtmlBlockRender({ attrs }: BlockNodeRenderProps): ReactNode {
 
 export const htmlBlock = defineBlock({
   name: "core/html",
-  title: "HTML",
+  title: { id: "block.core.html.title", message: "HTML" },
   icon: "Code",
   category: "interactive",
-  inputs: [{ name: "html", type: "textarea", label: "HTML" }],
+  inputs: [
+    {
+      name: "html",
+      type: "textarea",
+      label: { id: "block.core.html.input.html.label", message: "HTML" },
+    },
+  ],
   defaults: { html: "<p>Custom HTML</p>" },
   render: HtmlBlockRender,
 });

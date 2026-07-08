@@ -22,7 +22,7 @@ function columnFlex(width: unknown): CSSProperties | undefined {
 
 export const columnBlock = defineBlock({
   name: "core/column",
-  title: "Column",
+  title: { id: "block.core.column.title", message: "Column" },
   icon: "RectangleVertical",
   category: "layout",
   // selfSeam so the block's own div is the flex item — its width/flex styles
@@ -30,11 +30,18 @@ export const columnBlock = defineBlock({
   selfSeam: true,
   requiresParent: ["core/columns"],
   inputs: [
-    { name: "width", type: "text", label: "Width" },
+    {
+      name: "width",
+      type: "text",
+      label: { id: "block.core.column.input.width.label", message: "Width" },
+    },
     {
       name: "content",
       type: "slot",
-      label: "Content",
+      label: {
+        id: "block.core.column.input.content.label",
+        message: "Content",
+      },
       defaultChildren: [{ id: "column-text", name: "core/rich-text" }],
     },
   ],

@@ -15,12 +15,34 @@ const COLUMN_COUNT = 3;
 const ALIGN_INPUT: BlockInput = {
   name: "align",
   type: "select",
-  label: "Align",
-  placeholder: "Left",
-  options: ALIGNS.map((a) => ({
-    label: `${a[0]?.toUpperCase() ?? ""}${a.slice(1)}`,
-    value: a,
-  })),
+  label: { id: "block.core.table.input.align.label", message: "Align" },
+  placeholder: {
+    id: "block.core.table.input.align.placeholder",
+    message: "Left",
+  },
+  options: [
+    {
+      label: {
+        id: "block.core.table.input.align.option.left",
+        message: "Left",
+      },
+      value: "left",
+    },
+    {
+      label: {
+        id: "block.core.table.input.align.option.center",
+        message: "Center",
+      },
+      value: "center",
+    },
+    {
+      label: {
+        id: "block.core.table.input.align.option.right",
+        message: "Right",
+      },
+      value: "right",
+    },
+  ],
 };
 
 // Baseline table styling as theme-overridable `var(--plumix-table-*, fallback)`
@@ -91,14 +113,14 @@ function pickAlign(raw: unknown): Align | undefined {
 
 export const tableBlock = defineBlock({
   name: "core/table",
-  title: "Table",
+  title: { id: "block.core.table.title", message: "Table" },
   icon: "Table",
   category: "text",
   inputs: [
     {
       name: "rows",
       type: "slot",
-      label: "Rows",
+      label: { id: "block.core.table.input.rows.label", message: "Rows" },
       rawSlot: true,
       allowedBlocks: ["core/table-header-row", "core/table-body-row"],
       defaultChildren: DEFAULT_ROWS,
@@ -126,7 +148,7 @@ export const tableBlock = defineBlock({
 
 export const tableHeaderRowBlock = defineBlock({
   name: "core/table-header-row",
-  title: "Header Row",
+  title: { id: "block.core.table-header-row.title", message: "Header Row" },
   icon: "Rows",
   category: "text",
   selfSeam: true,
@@ -135,7 +157,10 @@ export const tableHeaderRowBlock = defineBlock({
     {
       name: "cells",
       type: "slot",
-      label: "Cells",
+      label: {
+        id: "block.core.table-header-row.input.cells.label",
+        message: "Cells",
+      },
       rawSlot: true,
       allowedBlocks: ["core/table-header-cell"],
     },
@@ -153,7 +178,7 @@ export const tableHeaderRowBlock = defineBlock({
 
 export const tableBodyRowBlock = defineBlock({
   name: "core/table-body-row",
-  title: "Body Row",
+  title: { id: "block.core.table-body-row.title", message: "Body Row" },
   icon: "Rows",
   category: "text",
   selfSeam: true,
@@ -162,7 +187,10 @@ export const tableBodyRowBlock = defineBlock({
     {
       name: "cells",
       type: "slot",
-      label: "Cells",
+      label: {
+        id: "block.core.table-body-row.input.cells.label",
+        message: "Cells",
+      },
       rawSlot: true,
       allowedBlocks: ["core/table-cell"],
     },
@@ -176,12 +204,22 @@ export const tableBodyRowBlock = defineBlock({
 
 export const tableHeaderCellBlock = defineBlock({
   name: "core/table-header-cell",
-  title: "Header Cell",
+  title: { id: "block.core.table-header-cell.title", message: "Header Cell" },
   icon: "AlignLeft",
   category: "text",
   selfSeam: true,
   inserter: false,
-  inputs: [{ name: "text", type: "text", label: "Text" }, ALIGN_INPUT],
+  inputs: [
+    {
+      name: "text",
+      type: "text",
+      label: {
+        id: "block.core.table-header-cell.input.text.label",
+        message: "Text",
+      },
+    },
+    ALIGN_INPUT,
+  ],
   defaults: { text: "" },
   render: ({ attrs, blockProps }): ReactNode => {
     const { text = "" } = attrs as { readonly text?: string };
@@ -196,12 +234,19 @@ export const tableHeaderCellBlock = defineBlock({
 
 export const tableCellBlock = defineBlock({
   name: "core/table-cell",
-  title: "Cell",
+  title: { id: "block.core.table-cell.title", message: "Cell" },
   icon: "AlignLeft",
   category: "text",
   selfSeam: true,
   inserter: false,
-  inputs: [{ name: "text", type: "text", label: "Text" }, ALIGN_INPUT],
+  inputs: [
+    {
+      name: "text",
+      type: "text",
+      label: { id: "block.core.table-cell.input.text.label", message: "Text" },
+    },
+    ALIGN_INPUT,
+  ],
   defaults: { text: "" },
   render: ({ attrs, blockProps }): ReactNode => {
     const { text = "" } = attrs as { readonly text?: string };

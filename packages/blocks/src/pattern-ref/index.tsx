@@ -6,8 +6,14 @@ import { defineBlock } from "../block-registry.js";
 // map. Render returns nothing because walker resolution overrides it.
 export const patternRefBlock = defineBlock({
   name: "core/pattern-ref",
-  title: "Pattern reference",
+  title: { id: "block.core.pattern-ref.title", message: "Pattern reference" },
   inserter: false,
-  inputs: [{ name: "slug", type: "text", label: "Slug" }],
+  inputs: [
+    {
+      name: "slug",
+      type: "text",
+      label: { id: "block.core.pattern-ref.input.slug.label", message: "Slug" },
+    },
+  ],
   render: () => null,
 });
