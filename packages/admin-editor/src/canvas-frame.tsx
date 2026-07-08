@@ -10,7 +10,6 @@ import {
 import { useLingui } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/blocks";
-import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
 import {
   Popover,
   PopoverAnchor,
@@ -18,11 +17,12 @@ import {
 } from "@plumix/admin-ui/popover";
 import { ScrollArea } from "@plumix/admin-ui/scroll-area";
 
+import type { Geometry } from "./canvas-geometry.js";
 import type { View } from "./canvas-view.js";
-import type { FrameOffset, OverlayBox } from "./overlay.js";
+import type { OverlayBox } from "./overlay.js";
 import type { EditorDevice } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
-import { createNodeFromEntry, slotAllowedBlocks } from "./block-catalog.js";
+import { slotAllowedBlocks } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
 import {
   clampPanToFrame,
@@ -37,7 +37,6 @@ import {
   pasteableAtRoot,
 } from "./clipboard-ops.js";
 import { connectCanvas } from "./connect-canvas.js";
-import { dropPlacement } from "./drop-index.js";
 import { deviceLabel } from "./editor-toolbar.js";
 import { overlayBox } from "./overlay.js";
 import {
@@ -47,6 +46,7 @@ import {
 } from "./provider.js";
 import { SelectionToolbar } from "./selection-toolbar.js";
 import { deviceWidth } from "./store.js";
+import { useCanvasDrag } from "./use-canvas-drag.js";
 
 interface CanvasFrameProps {
   /** URL the iframe loads — the entry's real route with `?plumix.edit`. */
@@ -66,24 +66,6 @@ const SELECTED_OUTLINE = "#2563eb";
 const MEMBER_OUTLINE = "rgba(37,99,235,0.5)";
 const HOVER_OUTLINE = "rgba(37,99,235,0.4)";
 const CANVAS_HEIGHT = 800;
-
-interface Geometry {
-  readonly rects: ReadonlyMap<string, BlockRect>;
-  /** Container slot regions (iframe coords), for resolving nested drops. */
-  readonly slots: readonly SlotRect[];
-  /** The iframe's on-screen offset, for mapping block rects to overlay boxes. */
-  readonly frame: FrameOffset | null;
-  /** The canvas viewport's on-screen box — overlays clip to this so they never
-   *  spill over the side rails (the iframe renders wider than the column). */
-  readonly container: OverlayBox | null;
-}
-
-/** A resolved nested-drop target: which slot, and its on-screen box. */
-interface SlotDrop {
-  readonly parentId: string;
-  readonly slotKey: string;
-  readonly box: OverlayBox;
-}
 
 /**
  * Host-side canvas: loads the real route in an iframe, drives it via the
@@ -155,19 +137,10 @@ export function CanvasFrame({
   const keyHandlerRef = useRef<
     ((down: boolean, code: string, shiftKey: boolean) => void) | null
   >(null);
-  const [dropY, setDropY] = useState<number | null>(null);
-  const [dropSlot, setDropSlot] = useState<SlotDrop | null>(null);
-  // The in-canvas "Add a block" affordance opens a slot-scoped inserter popover
-  // instead of inserting a default. Null when closed; an empty target (no
-  // parentId/slotKey) is the root document.
-  const [pendingAdd, setPendingAdd] = useState<{
-    readonly parentId?: string;
-    readonly slotKey?: string;
-  } | null>(null);
-  // A transient "can't place here" notice (a refused `requiresParent` drop).
-  // The editor has no toast surface of its own, so it shows inline and clears
-  // itself after a moment.
-  const [rejection, setRejection] = useState<string | null>(null);
+  // Catalog/move drag → placement resolution + insert, the in-canvas inserter
+  // popover, and the transient "can't place here" notice.
+  const { dropY, dropSlot, pendingAdd, setPendingAdd, requestAdd, rejection } =
+    useCanvasDrag({ iframeRef, geometryRef, registry });
   // The iframe's own document height (same-origin), so the frame sizes to its
   // content — footer visible, no fixed gap below it.
   const [contentHeight, setContentHeight] = useState<number | null>(null);
@@ -355,28 +328,6 @@ export function CanvasFrame({
     },
     [applyLive],
   );
-
-  // An in-canvas "Add a block" click opens the slot-scoped inserter popover
-  // rather than inserting a default — the author picks the block. Root has no
-  // parentId/slotKey; a slot carries both.
-  const requestAdd = useCallback(
-    (parentId?: string, slotKey?: string): void => {
-      setPendingAdd({ parentId, slotKey });
-    },
-    [],
-  );
-
-  // Radix dismisses the inserter on an outside pointerdown, but those events
-  // fire on the host document — a click *inside* the cross-frame canvas never
-  // reaches it, so the popover would stay open. Opening the inserter moves focus
-  // into its content (host document); a later click into the iframe blurs the
-  // host window, which we treat as an outside interaction and close on.
-  useEffect(() => {
-    if (!pendingAdd) return;
-    const close = (): void => setPendingAdd(null);
-    window.addEventListener("blur", close);
-    return () => window.removeEventListener("blur", close);
-  }, [pendingAdd]);
 
   useEffect(() => {
     const frameWindow = iframeRef.current?.contentWindow;
@@ -645,187 +596,6 @@ export function CanvasFrame({
       exitPan();
     };
   }, [store, zoomToSelection, panByClientDelta, commitLive]);
-
-  // Canvas drag, shared by two sources: a catalog block being inserted
-  // (dragSpec) and an existing block being moved (movingId). The iframe is
-  // click-through while dragging (owned by the render) so the host receives the
-  // pointer events; the target is computed from the reported block + slot
-  // geometry mapped into screen space.
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    const draggingName =
-      dragSpec?.name ??
-      (movingId ? findBlock(store.getState().tree, movingId)?.name : undefined);
-    if (!draggingName) return;
-
-    const endDrag = (): void => {
-      if (dragSpec) store.getState().endBlockDrag();
-      else store.getState().endMove();
-    };
-
-    const placementAt = (clientX: number, clientY: number) => {
-      const rect = iframe.getBoundingClientRect();
-      const over =
-        clientX >= rect.left &&
-        clientX <= rect.right &&
-        clientY >= rect.top &&
-        clientY <= rect.bottom;
-      if (!over) return null;
-      const frame: FrameOffset = { left: rect.left, top: rect.top };
-      const { tree, zoom: z } = store.getState();
-      const spans = tree.flatMap((node) => {
-        const r = geometryRef.current.rects.get(node.id);
-        if (!r) return [];
-        const box = overlayBox(r, frame, z);
-        return [{ y: box.top, height: box.height }];
-      });
-      return dropPlacement(spans, clientY);
-    };
-
-    // The innermost slot under the pointer that accepts the dragged block — a
-    // nested drop target. Innermost (smallest box) wins so a slot inside a slot
-    // is reachable; allowedBlocks gates which slots even light up.
-    const slotTargetAt = (
-      clientX: number,
-      clientY: number,
-    ): SlotDrop | null => {
-      const rect = iframe.getBoundingClientRect();
-      const frame: FrameOffset = { left: rect.left, top: rect.top };
-      const { tree, zoom: z } = store.getState();
-      let best: SlotDrop | null = null;
-      let bestArea = Infinity;
-      for (const slot of geometryRef.current.slots) {
-        const box = overlayBox(slot, frame, z);
-        if (
-          clientX < box.left ||
-          clientX > box.left + box.width ||
-          clientY < box.top ||
-          clientY > box.top + box.height
-        ) {
-          continue;
-        }
-        const parent = findBlock(tree, slot.parentId);
-        if (!parent) continue;
-        const allowed = slotAllowedBlocks(registry, parent.name, slot.slotKey);
-        if (allowed && !allowed.includes(draggingName)) continue;
-        const area = box.width * box.height;
-        if (area < bestArea) {
-          bestArea = area;
-          best = { parentId: slot.parentId, slotKey: slot.slotKey, box };
-        }
-      }
-      return best;
-    };
-
-    const onMove = (e: PointerEvent): void => {
-      const slot = slotTargetAt(e.clientX, e.clientY);
-      setDropSlot(slot);
-      // A nested slot target supersedes the top-level line indicator.
-      setDropY(
-        slot ? null : (placementAt(e.clientX, e.clientY)?.indicatorY ?? null),
-      );
-    };
-    const onUp = (e: PointerEvent): void => {
-      // A `requiresParent` block is refused unless the parent it would land
-      // under (a slot's parent, or none at the top level) is in its list.
-      const req = registry.get(draggingName)?.requiresParent;
-      const refuse = (): void => {
-        setRejection(
-          i18n._({
-            id: "editor.canvas.cantPlaceHere",
-            message: "This block can't be placed here.",
-          }),
-        );
-        endDrag();
-      };
-
-      const slot = slotTargetAt(e.clientX, e.clientY);
-      if (slot) {
-        const parent = findBlock(store.getState().tree, slot.parentId);
-        if (req && (!parent || !req.includes(parent.name))) {
-          refuse();
-          return;
-        }
-        // Nested drops append (a sentinel index that insertNode/moveBlock clamp
-        // to the slot length).
-        const target = {
-          parentId: slot.parentId,
-          slotKey: slot.slotKey,
-          index: Number.MAX_SAFE_INTEGER,
-        };
-        const allowed = parent
-          ? slotAllowedBlocks(registry, parent.name, slot.slotKey)
-          : undefined;
-        if (dragSpec) {
-          store
-            .getState()
-            .insertBlockInto(
-              createNodeFromEntry(registry, dragSpec),
-              target,
-              allowed,
-            );
-        } else if (movingId) {
-          store.getState().moveBlock(movingId, target, allowed);
-        }
-      } else {
-        const placement = placementAt(e.clientX, e.clientY);
-        if (placement) {
-          // A `requiresParent` block can't live at the top level.
-          if (req) {
-            refuse();
-            return;
-          }
-          if (dragSpec) {
-            store
-              .getState()
-              .insertBlock(
-                createNodeFromEntry(registry, dragSpec),
-                placement.index,
-              );
-          } else if (movingId) {
-            // placement.index counts the pre-removal top level; moveBlock
-            // removes the source first, so shift down by one when the source
-            // currently sits before the drop point (a downward reorder).
-            const top = store.getState().tree;
-            const from = top.findIndex((n) => n.id === movingId);
-            const index =
-              from !== -1 && from < placement.index
-                ? placement.index - 1
-                : placement.index;
-            store.getState().moveBlock(movingId, { parentId: null, index });
-          }
-        }
-      }
-      endDrag();
-    };
-    // Without this, a pointercancel (touch interruption, context menu, drag
-    // into a native element) or Escape would skip onUp, stranding the drag set
-    // and the iframe permanently non-interactive (pointerEvents: none).
-    const onCancel = (): void => endDrag();
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") endDrag();
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onCancel);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onCancel);
-      window.removeEventListener("keydown", onKey);
-      setDropY(null);
-      setDropSlot(null);
-    };
-  }, [dragSpec, movingId, store, registry, i18n]);
-
-  // Auto-dismiss the transient rejection notice.
-  useEffect(() => {
-    if (!rejection) return;
-    const t = setTimeout(() => setRejection(null), 2500);
-    return () => clearTimeout(t);
-  }, [rejection]);
 
   // Host-side wheel: pan/zoom when the cursor is over the margin around the
   // frame. Over the iframe the gesture is forwarded via the bridge (onWheel
