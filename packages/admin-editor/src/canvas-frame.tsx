@@ -33,6 +33,7 @@ import {
 import { SelectionToolbar } from "./selection-toolbar.js";
 import { deviceWidth } from "./store.js";
 import { useCanvasDrag } from "./use-canvas-drag.js";
+import { useCanvasKeys } from "./use-canvas-keys.js";
 import { usePanZoom } from "./use-pan-zoom.js";
 
 interface CanvasFrameProps {
@@ -104,9 +105,6 @@ export function CanvasFrame({
   // Mirror geometry for the drag handler so it reads fresh rects without
   // re-subscribing the window listeners on every geometry report.
   const geometryRef = useRef<Geometry>(geometry);
-  // Space held → ready to pan-drag (grab cursor; the iframe goes click-through
-  // so the host receives the drag).
-  const [panReady, setPanReady] = useState(false);
   // The pannable/zoomable stage: transform writes + gesture lifecycle. Reads
   // container geometry to clamp the frame; never writes geometry.
   const {
@@ -119,12 +117,14 @@ export function CanvasFrame({
     handleWheel,
     zoomToSelection,
   } = usePanZoom({ iframeRef, containerRef, geometryRef });
-  // Latest key handler, so the bridge's forwarded keys (iframe focus) and the
-  // window listener (shell focus) both reach the same logic without
-  // re-subscribing the bridge.
-  const keyHandlerRef = useRef<
-    ((down: boolean, code: string, shiftKey: boolean) => void) | null
-  >(null);
+  // Space-to-pan + view shortcuts; `keyHandlerRef` is fed forwarded keys by the
+  // bridge, `panReady` gates the grab cursor + iframe click-through.
+  const { panReady, keyHandlerRef } = useCanvasKeys({
+    panByClientDelta,
+    commitLive,
+    zoomToSelection,
+    liveViewRef,
+  });
   // Catalog/move drag → placement resolution + insert, the in-canvas inserter
   // popover, and the transient "can't place here" notice.
   const { dropY, dropSlot, pendingAdd, setPendingAdd, requestAdd, rejection } =
@@ -203,6 +203,7 @@ export function CanvasFrame({
     measureContent,
     loaderPushRef,
     handleWheel,
+    keyHandlerRef,
     requestAdd,
     addBlockLabel,
     clipboard,
@@ -309,104 +310,6 @@ export function CanvasFrame({
       store.getState().setViewport(containerWidth, containerHeight);
     }
   }, [containerWidth, containerHeight, store]);
-
-  // Space-to-pan + view shortcuts. Keys arrive natively (shell focus) and
-  // forwarded from the iframe (canvas focus) — both routed through one handler.
-  useEffect(() => {
-    let spaceHeld = false;
-    let dragging = false;
-    let startX = 0;
-    let startY = 0;
-    let startPanX = 0;
-    let startPanY = 0;
-    // The iframe's click-through is owned declaratively by the render (it's
-    // none while a block drag OR a space-pan is active), so this just tracks
-    // the space state — no imperative pointerEvents toggling to desync.
-    const exitPan = (): void => {
-      spaceHeld = false;
-      dragging = false;
-      setPanReady(false);
-    };
-    const handleKey = (
-      down: boolean,
-      code: string,
-      shiftKey: boolean,
-    ): void => {
-      if (!down) {
-        if (code === "Space") exitPan();
-        return;
-      }
-      if (code === "Space") {
-        if (!spaceHeld) {
-          spaceHeld = true;
-          setPanReady(true);
-        }
-        return;
-      }
-      if (!shiftKey) return;
-      if (code === "Digit1") store.getState().enableZoomFit();
-      else if (code === "Digit2") zoomToSelection();
-      else if (code === "Digit0") store.getState().zoomToCenter(1);
-      else if (code === "KeyX") store.getState().toggleXray();
-    };
-    keyHandlerRef.current = handleKey;
-
-    const isTyping = (t: EventTarget | null): boolean =>
-      t instanceof HTMLElement &&
-      (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
-    const isViewKey = (e: KeyboardEvent): boolean =>
-      e.code === "Space" ||
-      (e.shiftKey &&
-        (e.code === "Digit0" ||
-          e.code === "Digit1" ||
-          e.code === "Digit2" ||
-          e.code === "KeyX"));
-    const onKeyDown = (e: KeyboardEvent): void => {
-      // Skip auto-repeat: a held key must not re-fire the x-ray toggle.
-      if (e.repeat || isTyping(e.target) || !isViewKey(e)) return;
-      if (e.code === "Space") e.preventDefault();
-      handleKey(true, e.code, e.shiftKey);
-    };
-    const onKeyUp = (e: KeyboardEvent): void => {
-      if (e.code === "Space") handleKey(false, e.code, false);
-    };
-    const onPointerDown = (e: PointerEvent): void => {
-      if (!spaceHeld) return;
-      dragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      startPanX = liveViewRef.current.panX;
-      startPanY = liveViewRef.current.panY;
-    };
-    const onPointerMove = (e: PointerEvent): void => {
-      if (!dragging) return;
-      // Live (imperative) — no per-frame render.
-      panByClientDelta(
-        e.clientX - startX,
-        e.clientY - startY,
-        startPanX,
-        startPanY,
-      );
-    };
-    const onPointerUp = (): void => {
-      if (dragging) commitLive();
-      dragging = false;
-    };
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-      keyHandlerRef.current = null;
-      exitPan();
-    };
-  }, [store, zoomToSelection, panByClientDelta, commitLive, liveViewRef]);
 
   // Overlays live in a clip layer pinned over the canvas viewport, so their
   // boxes are expressed relative to that layer's top-left (the container's
