@@ -1,12 +1,5 @@
 import type { ReactElement, PointerEvent as ReactPointerEvent } from "react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLingui } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/blocks";
@@ -18,19 +11,12 @@ import {
 import { ScrollArea } from "@plumix/admin-ui/scroll-area";
 
 import type { Geometry } from "./canvas-geometry.js";
-import type { View } from "./canvas-view.js";
 import type { OverlayBox } from "./overlay.js";
 import type { EditorDevice } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
 import { slotAllowedBlocks } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
-import {
-  clampPanToFrame,
-  clampZoom,
-  fitView,
-  frameSelection,
-  zoomToCursor,
-} from "./canvas-view.js";
+import { clampPanToFrame, fitView } from "./canvas-view.js";
 import {
   clipboardOpFromEvent,
   createClipboardOps,
@@ -47,6 +33,7 @@ import {
 import { SelectionToolbar } from "./selection-toolbar.js";
 import { deviceWidth } from "./store.js";
 import { useCanvasDrag } from "./use-canvas-drag.js";
+import { usePanZoom } from "./use-pan-zoom.js";
 
 interface CanvasFrameProps {
   /** URL the iframe loads — the entry's real route with `?plumix.edit`. */
@@ -120,17 +107,18 @@ export function CanvasFrame({
   // Space held → ready to pan-drag (grab cursor; the iframe goes click-through
   // so the host receives the drag).
   const [panReady, setPanReady] = useState(false);
-  // Live pan/zoom path. During a continuous gesture (wheel / space-drag) the
-  // transform is written straight to the stage DOM node and the live view is
-  // kept in a ref — zero React renders per frame. The store (canonical) is
-  // committed once when the gesture settles. `gesturing` only flips twice per
-  // gesture (start/end): it hides the overlays and switches the rendered
-  // transform to read the ref, so an incidental re-render can't clobber it.
-  const stageRef = useRef<HTMLDivElement>(null);
-  const liveViewRef = useRef<View>({ zoom, panX, panY });
-  const gesturingRef = useRef(false);
-  const [gesturing, setGesturing] = useState(false);
-  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The pannable/zoomable stage: transform writes + gesture lifecycle. Reads
+  // container geometry to clamp the frame; never writes geometry.
+  const {
+    stageRef,
+    gesturing,
+    liveViewRef,
+    panByClientDelta,
+    commitLive,
+    onHandlePointerDown,
+    handleWheel,
+    zoomToSelection,
+  } = usePanZoom({ iframeRef, containerRef, geometryRef });
   // Latest key handler, so the bridge's forwarded keys (iframe focus) and the
   // window listener (shell focus) both reach the same logic without
   // re-subscribing the bridge.
@@ -163,171 +151,6 @@ export function CanvasFrame({
         : null,
     };
   }, []);
-
-  // Commit the live gesture view to the store (one render) and end the gesture.
-  const commitLive = useCallback((): void => {
-    if (commitTimerRef.current) {
-      clearTimeout(commitTimerRef.current);
-      commitTimerRef.current = null;
-    }
-    if (!gesturingRef.current) return;
-    gesturingRef.current = false;
-    setGesturing(false);
-    store.getState().setView(liveViewRef.current);
-  }, [store]);
-
-  // Apply a view live: write the transform straight to the DOM (no render),
-  // track it in the ref, and debounce a single commit when the gesture idles.
-  const applyLive = useCallback(
-    (view: View): void => {
-      liveViewRef.current = view;
-      const el = stageRef.current;
-      if (el) {
-        el.style.transform = `translate(${String(view.panX)}px, ${String(view.panY)}px) scale(${String(view.zoom)})`;
-      }
-      if (!gesturingRef.current) {
-        gesturingRef.current = true;
-        setGesturing(true);
-      }
-      if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
-      commitTimerRef.current = setTimeout(commitLive, 150);
-    },
-    [commitLive],
-  );
-
-  // Pan the stage by a client-pixel delta from a drag start, clamped to the
-  // frame. Shared by the space-drag handler and the canvas handle strip.
-  const panByClientDelta = useCallback(
-    (dx: number, dy: number, startPanX: number, startPanY: number): void => {
-      const box = geometryRef.current.container;
-      const iframe = iframeRef.current;
-      if (!box || !iframe) return;
-      const r = iframe.getBoundingClientRect();
-      applyLive({
-        zoom: liveViewRef.current.zoom,
-        ...clampPanToFrame(
-          startPanX + dx,
-          startPanY + dy,
-          r.width,
-          r.height,
-          box.width,
-          box.height,
-        ),
-      });
-    },
-    [applyLive],
-  );
-
-  // Drag the canvas handle strip to pan — a discoverable, mouse-only
-  // alternative to space-drag. Pointer capture keeps the gesture alive once the
-  // pointer leaves the strip.
-  const onHandlePointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>): void => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const startPanX = liveViewRef.current.panX;
-      const startPanY = liveViewRef.current.panY;
-      const el = e.currentTarget;
-      el.setPointerCapture(e.pointerId);
-      const onMove = (ev: PointerEvent): void =>
-        panByClientDelta(
-          ev.clientX - startX,
-          ev.clientY - startY,
-          startPanX,
-          startPanY,
-        );
-      const onUp = (): void => {
-        commitLive();
-        el.releasePointerCapture(e.pointerId);
-        el.removeEventListener("pointermove", onMove);
-        el.removeEventListener("pointerup", onUp);
-        el.removeEventListener("pointercancel", onUp);
-      };
-      el.addEventListener("pointermove", onMove);
-      el.addEventListener("pointerup", onUp);
-      el.addEventListener("pointercancel", onUp);
-    },
-    [panByClientDelta, commitLive],
-  );
-
-  // Keep the live ref in sync with the store between gestures, so discrete
-  // actions (toolbar zoom, device switch, shortcuts) seed the next gesture.
-  useEffect(() => {
-    if (!gesturingRef.current) liveViewRef.current = { zoom, panX, panY };
-  }, [zoom, panX, panY]);
-
-  // Don't leave a pending commit dangling on unmount.
-  useEffect(
-    () => () => {
-      if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
-    },
-    [],
-  );
-
-  // While a gesture is live, re-assert the imperative transform after every
-  // render (before paint) so an incidental re-render can't flash the stale
-  // committed value. The per-frame writes happen in applyLive; this only covers
-  // renders. Runs every render by design — the body is a cheap no-op otherwise.
-  useLayoutEffect(() => {
-    if (gesturingRef.current && stageRef.current) {
-      const v = liveViewRef.current;
-      stageRef.current.style.transform = `translate(${String(v.panX)}px, ${String(v.panY)}px) scale(${String(v.zoom)})`;
-    }
-  });
-
-  // The free-canvas wheel gesture, shared by the host's own wheel (over the
-  // margins) and the iframe-forwarded wheel (over the canvas). `cx/cy` are the
-  // cursor in container space; the base view is the live ref so consecutive
-  // events accumulate, and the iframe rect reflects the live transform.
-  const handleWheel = useCallback(
-    (
-      deltaX: number,
-      deltaY: number,
-      zoomIntent: boolean,
-      cx: number,
-      cy: number,
-    ): void => {
-      const iframe = iframeRef.current;
-      const box = geometryRef.current.container;
-      if (!iframe || !box) return;
-      const rect = iframe.getBoundingClientRect();
-      const { panX, panY, zoom } = liveViewRef.current;
-      if (zoomIntent) {
-        const nextZoom = clampZoom(zoom * Math.exp(-deltaY * 0.0015));
-        if (nextZoom === zoom) return;
-        // Zoom toward the cursor, then clamp so the frame stays reachable.
-        const view = zoomToCursor({ zoom, panX, panY }, nextZoom, cx, cy);
-        const baseW = rect.width / zoom;
-        const baseH = rect.height / zoom;
-        applyLive({
-          zoom: view.zoom,
-          ...clampPanToFrame(
-            view.panX,
-            view.panY,
-            baseW * view.zoom,
-            baseH * view.zoom,
-            box.width,
-            box.height,
-          ),
-        });
-      } else {
-        applyLive({
-          zoom,
-          ...clampPanToFrame(
-            panX - deltaX,
-            panY - deltaY,
-            rect.width,
-            rect.height,
-            box.width,
-            box.height,
-          ),
-        });
-      }
-    },
-    [applyLive],
-  );
 
   useEffect(() => {
     const frameWindow = iframeRef.current?.contentWindow;
@@ -487,18 +310,6 @@ export function CanvasFrame({
     }
   }, [containerWidth, containerHeight, store]);
 
-  // Frame the active block in the viewport (Shift+2) — the move that makes a
-  // free canvas genuinely better for editing, not just nicer to look at.
-  const zoomToSelection = useCallback((): void => {
-    const s = store.getState();
-    const box = geometryRef.current.container;
-    const rect = s.activeId
-      ? geometryRef.current.rects.get(s.activeId)
-      : undefined;
-    if (!box || !rect || rect.width === 0 || rect.height === 0) return;
-    s.setView(frameSelection(rect, box.width, box.height));
-  }, [store]);
-
   // Space-to-pan + view shortcuts. Keys arrive natively (shell focus) and
   // forwarded from the iframe (canvas focus) — both routed through one handler.
   useEffect(() => {
@@ -595,28 +406,7 @@ export function CanvasFrame({
       keyHandlerRef.current = null;
       exitPan();
     };
-  }, [store, zoomToSelection, panByClientDelta, commitLive]);
-
-  // Host-side wheel: pan/zoom when the cursor is over the margin around the
-  // frame. Over the iframe the gesture is forwarded via the bridge (onWheel
-  // above). Native + non-passive so we can preventDefault the page scroll.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent): void => {
-      e.preventDefault();
-      const box = el.getBoundingClientRect();
-      handleWheel(
-        e.deltaX,
-        e.deltaY,
-        e.ctrlKey || e.metaKey,
-        e.clientX - box.left,
-        e.clientY - box.top,
-      );
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [handleWheel]);
+  }, [store, zoomToSelection, panByClientDelta, commitLive, liveViewRef]);
 
   // Overlays live in a clip layer pinned over the canvas viewport, so their
   // boxes are expressed relative to that layer's top-left (the container's
