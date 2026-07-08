@@ -92,3 +92,13 @@ msgstr "Unbenannte Seite"
 #: src/index.ts
 msgid "plugin.pages.page.moveToTrash"
 msgstr "Seite in den Papierkorb verschieben?"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.keyword.static"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.keyword.page"
+msgstr ""

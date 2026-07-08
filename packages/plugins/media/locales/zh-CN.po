@@ -376,3 +376,28 @@ msgstr "按文件名搜索…"
 #: src/admin/MediaLibrary.tsx
 msgid "plugin.media.library.noMatches"
 msgstr "没有符合搜索条件的文件。"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.images"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.files"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.uploads"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.photos"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.assets"
+msgstr ""

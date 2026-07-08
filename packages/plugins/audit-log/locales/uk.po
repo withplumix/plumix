@@ -115,3 +115,28 @@ msgstr "(система)"
 #: src/admin/AuditLogShell.tsx
 msgid "plugin.auditLog.diff.overflow"
 msgstr " +ще {count}"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.keyword.history"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.keyword.activity"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.keyword.events"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.keyword.log"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.keyword.security"
+msgstr ""

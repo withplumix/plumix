@@ -75,7 +75,12 @@ export function comments(options: CommentsConfig = {}) {
           group: "content",
           label: COMMENT_LABELS.comments,
           order: 30,
-          keywords: ["moderation", "discussion", "replies", "spam"],
+          keywords: [
+            { id: "plugin.comments.keyword.moderation", message: "moderation" },
+            { id: "plugin.comments.keyword.discussion", message: "discussion" },
+            { id: "plugin.comments.keyword.replies", message: "replies" },
+            { id: "plugin.comments.keyword.spam", message: "spam" },
+          ],
         },
         component: "CommentsShell",
       });

@@ -108,3 +108,23 @@ msgstr "IP 哈希"
 #: src/admin/CommentsShell.tsx
 msgid "plugin.comments.detail.submitted"
 msgstr "提交时间"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.moderation"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.discussion"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.replies"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.spam"
+msgstr ""

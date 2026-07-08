@@ -85,4 +85,21 @@ describe("selectNavItems", () => {
       "/settings",
     ]);
   });
+
+  test("matches keywords against their resolved translation, not the source", () => {
+    // Stands in for a non-English locale: the resolver translates the
+    // `uploads` keyword to a localized synonym. Proves keyword matching runs
+    // through the i18n seam, so localized aliases are searchable and the
+    // English source term is not what gets matched under that locale.
+    const localize = (label: Label): string =>
+      typeof label !== "string" && label.id === "k.uploads"
+        ? "надсилання"
+        : text(label);
+    expect(
+      selectNavItems(items, "надсилання", localize).map((i) => i.to),
+    ).toEqual(["/media"]);
+    // "uploads" reaches /media only via the k.uploads keyword, now remapped,
+    // so under this locale the English source term resolves to nothing.
+    expect(selectNavItems(items, "uploads", localize)).toEqual([]);
+  });
 });

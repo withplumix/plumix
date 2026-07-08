@@ -92,3 +92,13 @@ msgstr "Сторінка без назви"
 #: src/index.ts
 msgid "plugin.pages.page.moveToTrash"
 msgstr "Перенести сторінку в кошик?"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.keyword.static"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.keyword.page"
+msgstr ""

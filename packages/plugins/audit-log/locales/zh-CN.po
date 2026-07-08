@@ -115,3 +115,28 @@ msgstr "（系统）"
 #: src/admin/AuditLogShell.tsx
 msgid "plugin.auditLog.diff.overflow"
 msgstr " 还有 +{count} 项"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.keyword.history"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.keyword.activity"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.keyword.events"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.keyword.log"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.auditLog.keyword.security"
+msgstr ""

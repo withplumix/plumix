@@ -92,3 +92,13 @@ msgstr "Untitled Page"
 #: src/index.ts
 msgid "plugin.pages.page.moveToTrash"
 msgstr "Move page to trash?"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.keyword.static"
+msgstr "static"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.pages.keyword.page"
+msgstr "page"

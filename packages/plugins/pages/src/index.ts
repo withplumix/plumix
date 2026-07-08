@@ -67,7 +67,10 @@ export const pages = definePlugin("pages", {
       rewrite: { slug: "" },
       capabilityType: "page",
       menuIcon: "layout",
-      keywords: ["static", "page"],
+      keywords: [
+        { id: "plugin.pages.keyword.static", message: "static" },
+        { id: "plugin.pages.keyword.page", message: "page" },
+      ],
     });
   },
 });

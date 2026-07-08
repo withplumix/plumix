@@ -244,3 +244,28 @@ msgstr "تحويل إلى رابط مخصص"
 #: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.removeButton"
 msgstr "إزالة"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.keyword.navigation"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.keyword.nav"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.keyword.appearance"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.keyword.header"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.keyword.footer"
+msgstr ""
