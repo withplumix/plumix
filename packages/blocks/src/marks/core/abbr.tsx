@@ -1,7 +1,5 @@
 import { Mark, mergeAttributes } from "@tiptap/core";
 
-import type { MarkSpec } from "../types.js";
-
 export const abbrSchema = Mark.create({
   name: "abbr",
   addAttributes() {
@@ -14,11 +12,3 @@ export const abbrSchema = Mark.create({
     return ["abbr", mergeAttributes(HTMLAttributes), 0];
   },
 });
-
-export const abbrMark: MarkSpec = {
-  name: "abbr",
-  title: "Abbreviation",
-  description: "Abbreviation with an optional tooltip via the title attr.",
-  bubbleMenuIcon: "WholeWord",
-  schema: abbrSchema,
-};

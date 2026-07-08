@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { coreMarks } from "./index.js";
+import { coreMarkExtensions, coreMarks } from "./index.js";
 
 describe("coreMarks catalogue", () => {
   test("ships the 13 canonical inline marks", () => {
@@ -22,11 +22,10 @@ describe("coreMarks catalogue", () => {
     ]);
   });
 
-  test("every core mark carries a Tiptap schema with a matching name", () => {
-    for (const mark of coreMarks) {
-      expect(mark.schema).toBeDefined();
-      expect(mark.schema?.name).toBe(mark.name);
-    }
+  test("exposes one Tiptap extension per core mark, in the same order", () => {
+    expect(coreMarkExtensions.map((extension) => extension.name)).toEqual(
+      coreMarks.map((mark) => mark.name),
+    );
   });
 
   test("declares unique mark names with no duplicates", () => {

@@ -1,7 +1,5 @@
 import { Mark, mergeAttributes } from "@tiptap/core";
 
-import type { MarkSpec } from "../types.js";
-
 // Same allowlist `renderInline` uses; kept in sync deliberately so a
 // pasted `javascript:` URL never reaches the editor doc.
 const SAFE_HREF = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
@@ -60,11 +58,3 @@ export const linkSchema = Mark.create({
     ];
   },
 });
-
-export const linkMark: MarkSpec = {
-  name: "link",
-  title: "Link",
-  description: "Inline hyperlink with safe-href filtering.",
-  bubbleMenuIcon: "Link",
-  schema: linkSchema,
-};
