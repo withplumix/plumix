@@ -1,6 +1,6 @@
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 
-import { useBasePath } from "./index.js";
+import { useBasePath } from "./context.js";
 
 /**
  * A domain object (entry/term) carrying a pre-resolved, basePath-correct
