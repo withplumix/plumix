@@ -21,7 +21,7 @@ describe("core/table family", () => {
     expect(html).toContain("--plumix-table-cell-padding");
   });
 
-  test("exposes only the rows slot — no bespoke styling inputs", () => {
+  test("exposes only the rows slot — no custom styling inputs", () => {
     const names = tableBlock.inputs?.map((i) => i.name) ?? [];
     expect(names).toEqual(["rows"]);
   });

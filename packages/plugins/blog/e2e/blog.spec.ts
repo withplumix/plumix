@@ -85,7 +85,7 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     await page.getByTestId("plumix-editor-publish-button").click();
     await updated;
     // Published draft (no pending autosave) leaves the plain Publish button,
-    // now disabled — the bespoke editor's published receipt.
+    // now disabled — the editor's published receipt.
     await expect(
       page.getByTestId("plumix-editor-publish-button"),
     ).toBeDisabled();

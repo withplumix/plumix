@@ -19,7 +19,7 @@ export const SEED_BLOCKS: readonly BlockNode[] = [
     id: "intro",
     name: "core/rich-text",
     attrs: {
-      body: "<p>A standalone harness for the bespoke editor — no worker, no orpc. Click a block to select it, shift-click to multi-select.</p>",
+      body: "<p>A standalone harness for the editor — no worker, no orpc. Click a block to select it, shift-click to multi-select.</p>",
     },
   },
   {

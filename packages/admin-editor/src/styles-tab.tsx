@@ -101,7 +101,7 @@ const SIZE_SECTION: SectionDef = {
   ],
 };
 
-// Grid-of-controls sections (rendered by GenericSection). The bespoke sections
+// Grid-of-controls sections (rendered by GenericSection). The custom sections
 // (layout / visibility / spacing / effects / declarations) render their own
 // components; all are ordered explicitly below to mirror Builder.
 const BACKGROUND_SECTION: SectionDef = {
@@ -348,7 +348,7 @@ export function StylesTab({
 
 /** A grid-of-controls section: two-per-row cells (KeywordControl for enumerated
  *  props, else StyleControl), with the typography/background sections appending
- *  their bespoke sub-controls. */
+ *  their custom sub-controls. */
 function GenericSection({
   section,
   valueOf,

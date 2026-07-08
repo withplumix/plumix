@@ -1,4 +1,4 @@
-// The bespoke visual editor now owns the `/edit` route (Puck is gone).
+// The visual editor now owns the `/edit` route (Puck is gone).
 // Editor *behavior* (block insertion, slash menu,
 // selection/actions, field/rich-text editing, patterns) lives in the
 // @plumix/admin-editor playground e2e + unit tests; this suite is INTEGRATION
@@ -47,7 +47,7 @@ test.beforeEach(async ({ page }) => {
   await mockManifest(page, MANIFEST_WITH_POST);
 });
 
-test.describe("bespoke editor route", () => {
+test.describe("editor route", () => {
   test("mounts the canvas iframe pointed at the minted preview url with plumix.edit", async ({
     page,
   }) => {
@@ -305,7 +305,7 @@ test.describe("bespoke editor route", () => {
   });
 });
 
-// Ported from the old Puck suite ("editor chrome & layout"). The bespoke
+// Ported from the old Puck suite ("editor chrome & layout"). The editor
 // shell has no mobile-sheet triggers, viewport-preset buttons, or a back
 // button (navigation back to the list is the entries-list route's concern,
 // covered there) — dropped, no equivalent. The genuine chrome wiring that
@@ -351,7 +351,7 @@ test.describe("editor chrome & layout", () => {
 });
 
 // Ported from "editor accessibility". The mobile inspector-sheet a11y sweep
-// and the Puck-shell ARIA tab pins are dropped — the bespoke shell has no
+// and the Puck-shell ARIA tab pins are dropped — the editor shell has no
 // mobile sheet, and its tab triggers are vendored radix primitives (their
 // roles are covered by the axe sweep below, not re-asserted by hand).
 test.describe("editor accessibility", () => {
@@ -404,7 +404,7 @@ test.describe("editor accessibility", () => {
 
 // Ported from "editor server-loaded content". The plumix.v2 canvas render +
 // word-count assertions can't run here (the canvas renders inside the iframe
-// the mock harness can't serve, and the bespoke shell has no word-count
+// the mock harness can't serve, and the editor shell has no word-count
 // readout). The surviving integration contract — that server-loaded content
 // is parsed and surfaced by the route — is asserted through the Layers tab,
 // which reads the same tree the canvas would.
@@ -784,7 +784,7 @@ test.describe("editor preview", () => {
 
 // Ported from "editor publishing & autosave". The autosave-pill cycle, title
 // edits, and block-insertion-driven autosave assertions are dropped — the
-// bespoke shell has no autosave pill or title input, and content edits arrive
+// editor shell has no autosave pill or title input, and content edits arrive
 // from inside the canvas iframe the mock can't serve (that loop is covered by
 // the @plumix/admin-editor package tests). The publish-button → entry.update
 // wiring + failure handling survive as integration contracts.
@@ -884,7 +884,7 @@ test.describe("editor publishing & autosave", () => {
 // Ported from "editor draft of a published entry". The existing "draft
 // save/publish/discard" route spec above already covers the pending-autosave
 // surfaces; these add the discard + publish-409-retry orpc wiring. The Puck
-// "edit the title → banner appears" variants are dropped — the bespoke shell
+// "edit the title → banner appears" variants are dropped — the editor shell
 // has no title input, so a pending draft is seeded via `_preview` instead.
 test.describe("editor draft of a published entry", () => {
   test.beforeEach(async ({ page }) => {
@@ -1077,7 +1077,7 @@ test.describe("editor stale-draft dialog", () => {
     await expect(page.getByTestId("stale-draft-dialog")).toBeVisible();
     await page.getByTestId("stale-draft-use-mine").click();
     // Dismissing keeps the editor (with the autosave content already seeded);
-    // the Puck title-value check is dropped — the bespoke shell has no title
+    // the Puck title-value check is dropped — the editor shell has no title
     // input, so the chosen-draft content lives only in the canvas iframe.
     await expect(page.getByTestId("stale-draft-dialog")).toHaveCount(0);
     await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
@@ -1094,7 +1094,7 @@ test.describe("editor stale-draft dialog", () => {
 
 // Ported from "editor revision preview". The PreviewBanner component + testids
 // are unchanged. The Puck `plumix-editor-preview-shield` + publish-button
-// assertions are dropped — the bespoke read-only mode renders no editing
+// assertions are dropped — the read-only mode renders no editing
 // toolbar at all (so no publish button to assert), and has no overlay shield.
 test.describe("editor revision preview", () => {
   const T_REV0 = new Date("2026-05-22T00:00:00Z");
@@ -1215,7 +1215,7 @@ test.describe("editor revision preview", () => {
   });
 });
 
-// Ported from "editor collaboration & presence" — DROPPED. The bespoke editor
+// Ported from "editor collaboration & presence" — DROPPED. The editor
 // has no co-author/presence indicator (no `coauthor-indicator` surface and no
 // activity polling in the route), so there is nothing to assert here.
 

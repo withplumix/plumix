@@ -99,7 +99,7 @@ interface PlumixEditorProps {
 }
 
 /**
- * The bespoke editor's host shell: the canvas iframe plus the right-rail
+ * The editor's host shell: the canvas iframe plus the right-rail
  * attribute inspector. Owns the editor store; persistence is the host app's
  * job, wired via `onChange`.
  */

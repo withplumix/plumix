@@ -61,31 +61,31 @@ import { PlainFormRouteInner } from "./-plain-form-route.js";
 
 const M = {
   published: defineMessage({
-    id: "editor.bespoke.toast.published",
+    id: "editor.toast.published",
     message: "Published.",
   }),
   publishFailed: defineMessage({
-    id: "editor.bespoke.toast.publishFailed",
+    id: "editor.toast.publishFailed",
     message: "Couldn't publish — try again.",
   }),
   autosaveFailed: defineMessage({
-    id: "editor.bespoke.toast.autosaveFailed",
+    id: "editor.toast.autosaveFailed",
     message: "Couldn't save your changes — they may contain invalid content.",
   }),
   discarded: defineMessage({
-    id: "editor.bespoke.toast.discarded",
+    id: "editor.toast.discarded",
     message: "Draft discarded.",
   }),
   discardFailed: defineMessage({
-    id: "editor.bespoke.toast.discardFailed",
+    id: "editor.toast.discardFailed",
     message: "Couldn't discard the draft — try again.",
   }),
   staleLoading: defineMessage({
-    id: "editor.bespoke.stale.loading",
+    id: "editor.stale.loading",
     message: "Loading…",
   }),
   revisionConflict: defineMessage({
-    id: "editor.bespoke.revision.conflict",
+    id: "editor.revision.conflict",
     message: "This entry changed since the preview loaded — reload and retry.",
   }),
 } satisfies Record<string, MessageDescriptor>;
@@ -114,7 +114,7 @@ const previewLinkQuery = (
     staleTime: Infinity,
   });
 
-// The bespoke visual editor. The entry load and the preview mint both run in
+// The visual editor. The entry load and the preview mint both run in
 // the loader so a failure (unreadable entry, no public url) surfaces through
 // one ErrorScreen rather than a dead canvas.
 const editorSearch = v.object({
@@ -155,7 +155,7 @@ export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
   },
   pendingComponent: PendingScreen,
   errorComponent: ErrorScreen,
-  component: BespokeEditorRoute,
+  component: EditorRoute,
 });
 
 function PendingScreen(): ReactNode {
@@ -164,7 +164,7 @@ function PendingScreen(): ReactNode {
       className="text-muted-foreground p-6 text-sm"
       data-testid="plumix-editor-loading"
     >
-      <Trans id="editor.bespoke.loading" message="Opening the editor…" />
+      <Trans id="editor.loading" message="Opening the editor…" />
     </div>
   );
 }
@@ -175,13 +175,13 @@ function ErrorScreen(): ReactNode {
       testId="plumix-editor-error"
       title={
         <Trans
-          id="editor.bespoke.previewFailedTitle"
+          id="editor.previewFailedTitle"
           message="Couldn't open the editor"
         />
       }
       description={
         <Trans
-          id="editor.bespoke.previewFailed"
+          id="editor.previewFailed"
           message="Couldn't open this entry in the editor."
         />
       }
@@ -189,7 +189,7 @@ function ErrorScreen(): ReactNode {
   );
 }
 
-function BespokeEditorRoute(): ReactNode {
+function EditorRoute(): ReactNode {
   const { slug, id } = Route.useParams();
   const { user } = Route.useRouteContext();
   const { revision } = Route.useSearch();
@@ -235,7 +235,7 @@ function BespokeEditorRoute(): ReactNode {
   // Compiler treats them as stable inputs (member/derived reads inline read as
   // possibly-mutated, which forces the compiler to skip optimizing).
   return (
-    <BespokeEditor
+    <EntryEditor
       key={`${previewSource}:${reseedNonce}`}
       capabilities={user.capabilities}
       entryType={entryType}
@@ -245,7 +245,7 @@ function BespokeEditorRoute(): ReactNode {
   );
 }
 
-interface BespokeEditorProps {
+interface EntryEditorProps {
   readonly capabilities: readonly string[];
   readonly entryType: EntryTypeManifestEntry | undefined;
   readonly userId: number;
@@ -258,12 +258,12 @@ interface BespokeEditorProps {
 // Content + excerpt + meta ride one debounced autosave-row write; slug + parent
 // ride a second debouncer that writes the live row (`saveAs: "live"`). Both
 // share one optimistic-concurrency token, refreshed on a stale conflict.
-function BespokeEditor({
+function EntryEditor({
   capabilities,
   entryType,
   userId,
   onReseed,
-}: BespokeEditorProps): ReactNode {
+}: EntryEditorProps): ReactNode {
   const { slug, id } = Route.useParams();
   const navigate = useNavigate();
   const { data: entry } = useSuspenseQuery(
