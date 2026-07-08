@@ -20,7 +20,7 @@ const PLUGIN_CATALOGS = import.meta.glob<{ messages: Messages }>(
   "../../../plugins/*/locales/*.mjs",
 );
 
-// The bespoke editor package ships its own chrome catalog (inspector,
+// The editor package ships its own chrome catalog (inspector,
 // etc.); it's bundled into admin like a workspace plugin, so merge it
 // the same zero-runtime-cost way.
 const EDITOR_CATALOGS = import.meta.glob<{ messages: Messages }>(

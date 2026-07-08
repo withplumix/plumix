@@ -1409,7 +1409,7 @@ msgstr "无法从此名称生成别名 — 请手动输入。"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.discardFailed"
+msgid "editor.toast.discardFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1474,17 +1474,17 @@ msgstr "无法创建令牌。请重试。"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.previewFailedTitle"
+msgid "editor.previewFailedTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.previewFailed"
+msgid "editor.previewFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.publishFailed"
+msgid "editor.toast.publishFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1549,7 +1549,7 @@ msgstr "无法保存域名。请重试。"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.autosaveFailed"
+msgid "editor.toast.autosaveFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1859,7 +1859,7 @@ msgstr "草稿"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.discarded"
+msgid "editor.toast.discarded"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2340,7 +2340,7 @@ msgstr "正在加载用户"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.stale.loading"
+msgid "editor.stale.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2745,7 +2745,7 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.loading"
+msgid "editor.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2907,7 +2907,7 @@ msgstr "已私密发布"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.published"
+msgid "editor.toast.published"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3759,7 +3759,7 @@ msgstr "此设备不支持 Passkey。"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.revision.conflict"
+msgid "editor.revision.conflict"
 msgstr ""
 
 #. js-lingui-explicit-id

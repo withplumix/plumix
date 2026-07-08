@@ -1409,7 +1409,7 @@ msgstr "Couldn't derive a slug from that name — please type one manually."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.discardFailed"
+msgid "editor.toast.discardFailed"
 msgstr "Couldn't discard the draft — try again."
 
 #. js-lingui-explicit-id
@@ -1474,17 +1474,17 @@ msgstr "Couldn't mint token. Try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.previewFailedTitle"
+msgid "editor.previewFailedTitle"
 msgstr "Couldn't open the editor"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.previewFailed"
+msgid "editor.previewFailed"
 msgstr "Couldn't open this entry in the editor."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.publishFailed"
+msgid "editor.toast.publishFailed"
 msgstr "Couldn't publish — try again."
 
 #. js-lingui-explicit-id
@@ -1549,7 +1549,7 @@ msgstr "Couldn't save the domain. Try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.autosaveFailed"
+msgid "editor.toast.autosaveFailed"
 msgstr "Couldn't save your changes — they may contain invalid content."
 
 #. js-lingui-explicit-id
@@ -1859,7 +1859,7 @@ msgstr "Draft"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.discarded"
+msgid "editor.toast.discarded"
 msgstr "Draft discarded."
 
 #. js-lingui-explicit-id
@@ -2340,7 +2340,7 @@ msgstr "Loading users"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.stale.loading"
+msgid "editor.stale.loading"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
@@ -2745,7 +2745,7 @@ msgstr "Open a preview in a new tab"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.loading"
+msgid "editor.loading"
 msgstr "Opening the editor…"
 
 #. js-lingui-explicit-id
@@ -2907,7 +2907,7 @@ msgstr "Published privately"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.published"
+msgid "editor.toast.published"
 msgstr "Published."
 
 #. js-lingui-explicit-id
@@ -3759,7 +3759,7 @@ msgstr "This device doesn't support passkeys."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.revision.conflict"
+msgid "editor.revision.conflict"
 msgstr "This entry changed since the preview loaded — reload and retry."
 
 #. js-lingui-explicit-id

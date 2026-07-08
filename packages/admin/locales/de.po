@@ -1409,7 +1409,7 @@ msgstr "Aus diesem Namen konnte kein Slug abgeleitet werden — bitte manuell ei
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.discardFailed"
+msgid "editor.toast.discardFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1474,17 +1474,17 @@ msgstr "Token konnte nicht erstellt werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.previewFailedTitle"
+msgid "editor.previewFailedTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.previewFailed"
+msgid "editor.previewFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.publishFailed"
+msgid "editor.toast.publishFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1549,7 +1549,7 @@ msgstr "Domain konnte nicht gespeichert werden. Bitte erneut versuchen."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.autosaveFailed"
+msgid "editor.toast.autosaveFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1859,7 +1859,7 @@ msgstr "Entwurf"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.discarded"
+msgid "editor.toast.discarded"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2340,7 +2340,7 @@ msgstr "Benutzer werden geladen"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.stale.loading"
+msgid "editor.stale.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2745,7 +2745,7 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.loading"
+msgid "editor.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2907,7 +2907,7 @@ msgstr "Privat veröffentlicht"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.toast.published"
+msgid "editor.toast.published"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3759,7 +3759,7 @@ msgstr "Dieses Gerät unterstützt keine Passkeys."
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
-msgid "editor.bespoke.revision.conflict"
+msgid "editor.revision.conflict"
 msgstr ""
 
 #. js-lingui-explicit-id
