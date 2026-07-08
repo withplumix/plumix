@@ -170,6 +170,10 @@ function DeviceZoomControls(): ReactElement {
         type="single"
         variant="outline"
         size="sm"
+        aria-label={i18n._({
+          id: "editor.toolbar.device.group",
+          message: "Device",
+        })}
         value={device}
         onValueChange={(value) => {
           if (value) setDevice(value as EditorDevice);

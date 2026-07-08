@@ -615,7 +615,7 @@ function CreateTokenForm({
           name="scopeMode"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
+              <FormLabel id="api-token-scope-label">
                 <Trans
                   id="apiTokens.create.permissions"
                   message="Permissions"
@@ -625,6 +625,7 @@ function CreateTokenForm({
                 <RadioGroup
                   value={field.value}
                   onValueChange={field.onChange}
+                  aria-labelledby="api-token-scope-label"
                   className="gap-2"
                 >
                   <div className="flex items-center gap-2">

@@ -518,6 +518,7 @@ function renderNativeInput({
         onBlur={rhf.onBlur}
         disabled={disabled}
         required={field.required}
+        aria-label={labelText}
         className="gap-1"
         data-testid={testId}
       >

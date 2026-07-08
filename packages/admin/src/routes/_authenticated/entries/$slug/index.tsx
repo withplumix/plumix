@@ -1348,6 +1348,12 @@ function TaxonomyFilter({
   const allLabel = renderLabel(termTaxonomyLabelOr(taxonomy, "allItems"));
   const searchLabel = renderLabel(termTaxonomyLabelOr(taxonomy, "searchItems"));
   const emptyLabel = renderLabel(termTaxonomyLabelOr(taxonomy, "noMatch"));
+  // Purpose label for the trigger (a role="combobox" takes its name from the
+  // author). Mirrors the sibling author/status filters; not the "All …"
+  // placeholder, which would read as the empty state, not what it filters.
+  const filterLabel = renderLabel(
+    termTaxonomyLabelOr(taxonomy, "filterByItem"),
+  );
   return (
     <MultiSelect
       options={options}
@@ -1356,6 +1362,7 @@ function TaxonomyFilter({
       placeholder={allLabel}
       searchPlaceholder={searchLabel}
       emptyText={emptyLabel}
+      aria-label={filterLabel}
       testId={`taxonomy-filter-${taxonomyName}`}
     />
   );
