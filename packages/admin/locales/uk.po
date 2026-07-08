@@ -857,6 +857,11 @@ msgid "userEdit.status.title"
 msgstr "Стан облікового запису"
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.accounts"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.actions"
 msgstr "Дії"
@@ -1262,6 +1267,11 @@ msgstr ""
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.compare"
 msgstr "Порівняти"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.configuration"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -1847,6 +1857,11 @@ msgid "allowedDomains.add.domain.label"
 msgstr "Домен"
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.domains"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.secret.done"
 msgstr "Готово"
@@ -1917,6 +1932,11 @@ msgstr "Редактор"
 #: src/lib/user-role-labels.ts
 msgid "userRole.long.editor"
 msgstr "Редактор — публікація та редагування будь-яких записів"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.email"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2165,6 +2185,11 @@ msgstr "Сховати порівняння"
 #: src/components/error-boundary-fallback.tsx
 msgid "errorBoundary.hideError"
 msgstr "Сховати помилку"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.home"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-validation-i18n.ts
@@ -2754,9 +2779,19 @@ msgid "mailer.test.recipient.placeholder"
 msgstr "ops@example.com"
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.options"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
 msgid "login.oauth.separator"
 msgstr "або"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.overview"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
@@ -2799,6 +2834,11 @@ msgstr "Passkeys"
 #: src/components/profile/user-email-field.tsx
 msgid "userEdit.email.pending"
 msgstr "Очікує зміни на <code>{newEmail}</code> — спливає {expiresAt}"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.people"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -2844,6 +2884,11 @@ msgstr "Плагін не завантажено"
 #: src/lib/plugin-error-boundary.tsx
 msgid "plugin.errorBoundary.pageTitle"
 msgstr "Не вдалося відобразити сторінку плагіна"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.preferences"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -3419,6 +3464,11 @@ msgid "profile.sessions.revoke.pending"
 msgstr "Вихід…"
 
 #. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.signups"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.label"
 msgstr "Ідентичність сайту"
@@ -3442,6 +3492,11 @@ msgstr ""
 #: src/components/taxonomy/term-form.tsx
 msgid "termForm.slug.format"
 msgstr "Slug може містити лише малі літери, цифри та дефіси."
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.smtp"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
@@ -3513,6 +3568,11 @@ msgstr "Гасло"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.termTaxonomies"
 msgstr "Таксономії"
+
+#. js-lingui-explicit-id
+#: src/lib/core-nav-i18n.ts
+msgid "core.adminNav.keyword.team"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts

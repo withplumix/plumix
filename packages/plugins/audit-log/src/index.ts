@@ -161,7 +161,13 @@ export function auditLog(options: AuditLogPluginOptions = {}) {
           group: { id: "tools", label: AUDIT_LABELS.tools, priority: 600 },
           label: AUDIT_LABELS.auditLog,
           order: 10,
-          keywords: ["history", "activity", "events", "log", "security"],
+          keywords: [
+            { id: "plugin.auditLog.keyword.history", message: "history" },
+            { id: "plugin.auditLog.keyword.activity", message: "activity" },
+            { id: "plugin.auditLog.keyword.events", message: "events" },
+            { id: "plugin.auditLog.keyword.log", message: "log" },
+            { id: "plugin.auditLog.keyword.security", message: "security" },
+          ],
         },
         component: "AuditLogShell",
       });

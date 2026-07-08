@@ -163,3 +163,38 @@ msgstr "Alle Schlagwörter"
 #: src/index.ts
 msgid "plugin.blog.tag.backToItems"
 msgstr "← Zurück zu den Schlagwörtern"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.articles"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.blog"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.writing"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.news"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.taxonomy"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.categories"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.tags"
+msgstr ""

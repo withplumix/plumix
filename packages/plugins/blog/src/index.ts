@@ -1,3 +1,4 @@
+import type { Label } from "plumix/i18n";
 import type { EntryTypeLabels, TermTaxonomyLabels } from "plumix/plugin";
 import { withContext } from "plumix/i18n";
 import { definePlugin } from "plumix/plugin";
@@ -127,6 +128,26 @@ const TAG_PLURAL = withContext(
   "taxonomy general name",
 );
 
+// Command-palette search aliases. `taxonomy` is deliberately one shared id
+// across both taxonomies — one English word, one translatable entry —
+// mirroring how core shares `keyword.email` across nav items.
+const BLOG_KEYWORDS = {
+  post: [
+    { id: "plugin.blog.keyword.articles", message: "articles" },
+    { id: "plugin.blog.keyword.blog", message: "blog" },
+    { id: "plugin.blog.keyword.writing", message: "writing" },
+    { id: "plugin.blog.keyword.news", message: "news" },
+  ],
+  category: [
+    { id: "plugin.blog.keyword.taxonomy", message: "taxonomy" },
+    { id: "plugin.blog.keyword.categories", message: "categories" },
+  ],
+  tag: [
+    { id: "plugin.blog.keyword.taxonomy", message: "taxonomy" },
+    { id: "plugin.blog.keyword.tags", message: "tags" },
+  ],
+} satisfies Record<string, readonly Label[]>;
+
 export const blog = definePlugin("blog", {
   i18n: {
     sourceLocale: "en",
@@ -149,7 +170,7 @@ export const blog = definePlugin("blog", {
       rewrite: { slug: "posts" },
       capabilityType: "post",
       menuIcon: "file-text",
-      keywords: ["articles", "blog", "writing", "news"],
+      keywords: BLOG_KEYWORDS.post,
     });
 
     ctx.registerTermTaxonomy("category", {
@@ -160,7 +181,7 @@ export const blog = definePlugin("blog", {
       isPublic: true,
       hasAdminColumn: true,
       rewrite: { slug: "category", isHierarchical: true },
-      keywords: ["taxonomy", "categories"],
+      keywords: BLOG_KEYWORDS.category,
     });
 
     ctx.registerTermTaxonomy("tag", {
@@ -171,7 +192,7 @@ export const blog = definePlugin("blog", {
       isPublic: true,
       hasAdminColumn: true,
       rewrite: { slug: "tag" },
-      keywords: ["taxonomy", "tags"],
+      keywords: BLOG_KEYWORDS.tag,
     });
 
     // Related-by-term posts for the single-post view. A blog concern (it

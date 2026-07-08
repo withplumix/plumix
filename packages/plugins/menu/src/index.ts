@@ -242,7 +242,13 @@ export function menu(
           group: { id: "appearance", label: APPEARANCE_LABEL, priority: 175 },
           label: MENU_LABELS.plural,
           order: 10,
-          keywords: ["navigation", "nav", "appearance", "header", "footer"],
+          keywords: [
+            { id: "plugin.menu.keyword.navigation", message: "navigation" },
+            { id: "plugin.menu.keyword.nav", message: "nav" },
+            { id: "plugin.menu.keyword.appearance", message: "appearance" },
+            { id: "plugin.menu.keyword.header", message: "header" },
+            { id: "plugin.menu.keyword.footer", message: "footer" },
+          ],
         },
         component: "MenusShell",
       });

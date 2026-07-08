@@ -376,3 +376,28 @@ msgstr "Nach Dateiname suchen…"
 #: src/admin/MediaLibrary.tsx
 msgid "plugin.media.library.noMatches"
 msgstr "Keine passenden Dateien gefunden."
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.images"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.files"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.uploads"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.photos"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.assets"
+msgstr ""

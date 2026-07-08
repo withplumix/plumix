@@ -376,3 +376,28 @@ msgstr "Пошук за назвою файлу…"
 #: src/admin/MediaLibrary.tsx
 msgid "plugin.media.library.noMatches"
 msgstr "Жодного файлу не знайдено за вашим запитом."
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.images"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.files"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.uploads"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.photos"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.media.keyword.assets"
+msgstr ""

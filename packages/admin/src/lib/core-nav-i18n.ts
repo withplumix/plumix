@@ -46,4 +46,57 @@ export const CORE_NAV_DESCRIPTORS = {
     id: "core.adminNav.item.settings",
     message: "Settings",
   }),
+
+  // Command-palette search aliases. Keyed by word so a synonym shared across
+  // items (e.g. `email` for both Allowed domains and Mailer) resolves to one
+  // translatable entry. Keep in lockstep with the `keywords` arrays in
+  // `packages/core/src/plugin/manifest.ts:CORE_NAV_ITEMS`.
+  keywordHome: defineMessage({
+    id: "core.adminNav.keyword.home",
+    message: "home",
+  }),
+  keywordOverview: defineMessage({
+    id: "core.adminNav.keyword.overview",
+    message: "overview",
+  }),
+  keywordAccounts: defineMessage({
+    id: "core.adminNav.keyword.accounts",
+    message: "accounts",
+  }),
+  keywordTeam: defineMessage({
+    id: "core.adminNav.keyword.team",
+    message: "team",
+  }),
+  keywordPeople: defineMessage({
+    id: "core.adminNav.keyword.people",
+    message: "people",
+  }),
+  keywordDomains: defineMessage({
+    id: "core.adminNav.keyword.domains",
+    message: "domains",
+  }),
+  keywordEmail: defineMessage({
+    id: "core.adminNav.keyword.email",
+    message: "email",
+  }),
+  keywordSignups: defineMessage({
+    id: "core.adminNav.keyword.signups",
+    message: "signups",
+  }),
+  keywordSmtp: defineMessage({
+    id: "core.adminNav.keyword.smtp",
+    message: "smtp",
+  }),
+  keywordConfiguration: defineMessage({
+    id: "core.adminNav.keyword.configuration",
+    message: "configuration",
+  }),
+  keywordPreferences: defineMessage({
+    id: "core.adminNav.keyword.preferences",
+    message: "preferences",
+  }),
+  keywordOptions: defineMessage({
+    id: "core.adminNav.keyword.options",
+    message: "options",
+  }),
 } satisfies Record<string, MessageDescriptor>;

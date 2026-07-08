@@ -163,3 +163,38 @@ msgstr "All Tags"
 #: src/index.ts
 msgid "plugin.blog.tag.backToItems"
 msgstr "← Back to Tags"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.articles"
+msgstr "articles"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.blog"
+msgstr "blog"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.writing"
+msgstr "writing"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.news"
+msgstr "news"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.taxonomy"
+msgstr "taxonomy"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.categories"
+msgstr "categories"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.blog.keyword.tags"
+msgstr "tags"

@@ -2026,7 +2026,10 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
       coreIcon: "dashboard",
       order: 0,
       exact: true,
-      keywords: ["home", "overview"],
+      keywords: [
+        { id: "core.adminNav.keyword.home", message: "home" },
+        { id: "core.adminNav.keyword.overview", message: "overview" },
+      ],
     },
   },
   {
@@ -2037,7 +2040,11 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
       coreIcon: "users",
       order: 100,
       capability: "user:list",
-      keywords: ["accounts", "team", "people"],
+      keywords: [
+        { id: "core.adminNav.keyword.accounts", message: "accounts" },
+        { id: "core.adminNav.keyword.team", message: "team" },
+        { id: "core.adminNav.keyword.people", message: "people" },
+      ],
     },
   },
   {
@@ -2051,7 +2058,11 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
       coreIcon: "users",
       order: 150,
       capability: "settings:manage",
-      keywords: ["domains", "email", "signups"],
+      keywords: [
+        { id: "core.adminNav.keyword.domains", message: "domains" },
+        { id: "core.adminNav.keyword.email", message: "email" },
+        { id: "core.adminNav.keyword.signups", message: "signups" },
+      ],
     },
   },
   {
@@ -2062,7 +2073,10 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
       coreIcon: "mail",
       order: 175,
       capability: "settings:manage",
-      keywords: ["email", "smtp"],
+      keywords: [
+        { id: "core.adminNav.keyword.email", message: "email" },
+        { id: "core.adminNav.keyword.smtp", message: "smtp" },
+      ],
     },
   },
   {
@@ -2073,7 +2087,11 @@ const CORE_NAV_ITEMS: readonly { groupId: string; item: AdminNavItem }[] = [
       coreIcon: "settings",
       order: 200,
       capability: "settings:manage",
-      keywords: ["configuration", "preferences", "options"],
+      keywords: [
+        { id: "core.adminNav.keyword.configuration", message: "configuration" },
+        { id: "core.adminNav.keyword.preferences", message: "preferences" },
+        { id: "core.adminNav.keyword.options", message: "options" },
+      ],
     },
   },
 ];

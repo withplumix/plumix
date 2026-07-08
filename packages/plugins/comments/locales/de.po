@@ -108,3 +108,23 @@ msgstr "IP-Hash"
 #: src/admin/CommentsShell.tsx
 msgid "plugin.comments.detail.submitted"
 msgstr "Eingereicht"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.moderation"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.discussion"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.replies"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.spam"
+msgstr ""

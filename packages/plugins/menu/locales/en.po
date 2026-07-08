@@ -279,3 +279,28 @@ msgstr "Convert to Custom URL"
 #: src/admin/MenuItemEditor.tsx
 msgid "plugin.menu.itemEditor.removeButton"
 msgstr "Remove"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.keyword.navigation"
+msgstr "navigation"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.keyword.nav"
+msgstr "nav"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.keyword.appearance"
+msgstr "appearance"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.keyword.header"
+msgstr "header"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.menu.keyword.footer"
+msgstr "footer"

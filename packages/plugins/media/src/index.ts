@@ -235,7 +235,13 @@ export function media(
           },
           label: MEDIA_LIBRARY_LABEL,
           order: 50,
-          keywords: ["images", "files", "uploads", "photos", "assets"],
+          keywords: [
+            { id: "plugin.media.keyword.images", message: "images" },
+            { id: "plugin.media.keyword.files", message: "files" },
+            { id: "plugin.media.keyword.uploads", message: "uploads" },
+            { id: "plugin.media.keyword.photos", message: "photos" },
+            { id: "plugin.media.keyword.assets", message: "assets" },
+          ],
         },
         component: "MediaLibrary",
       });

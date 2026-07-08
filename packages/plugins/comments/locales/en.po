@@ -123,3 +123,23 @@ msgstr "IP hash"
 #: src/admin/CommentsShell.tsx
 msgid "plugin.comments.detail.submitted"
 msgstr "Submitted"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.moderation"
+msgstr "moderation"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.discussion"
+msgstr "discussion"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.replies"
+msgstr "replies"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.comments.keyword.spam"
+msgstr "spam"
