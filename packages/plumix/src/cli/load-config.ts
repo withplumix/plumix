@@ -54,6 +54,11 @@ export async function loadConfig(
 async function evaluateConfig(configPath: string): Promise<LoadedConfig> {
   const jiti = createJiti(pathToFileURL(configPath).href, {
     interopDefault: true,
+    // Re-evaluate the module every load so the dev watcher hot-reloads config
+    // edits. This disables only the eval cache — jiti's on-disk transform cache
+    // (`fsCache`) is left at its default-on, so the config + theme TS/JSX→JS
+    // transform is still reused across runs (node_modules/.cache/jiti), ~200ms
+    // off a warm cold start (#1205). Don't set `fsCache: false`.
     moduleCache: false,
     // Themes author templates as JSX, so the config's component graph must
     // parse at load time. jiti's transform is TS-only by default; enable its
