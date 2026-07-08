@@ -8,6 +8,7 @@ import type { Geometry, SlotDrop } from "./canvas-geometry.js";
 import type { FrameOffset } from "./overlay.js";
 import { createNodeFromEntry, slotAllowedBlocks } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
+import { reorderIndex, resolveSlotTarget } from "./canvas-drop-target.js";
 import { dropPlacement } from "./drop-index.js";
 import { overlayBox } from "./overlay.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
@@ -117,39 +118,23 @@ export function useCanvasDrag({
       return dropPlacement(spans, clientY);
     };
 
-    // The innermost slot under the pointer that accepts the dragged block — a
-    // nested drop target. Innermost (smallest box) wins so a slot inside a slot
-    // is reachable; allowedBlocks gates which slots even light up.
+    // Reads the live iframe rect + store, then delegates the hit-test.
     const slotTargetAt = (
       clientX: number,
       clientY: number,
     ): SlotDrop | null => {
       const rect = iframe.getBoundingClientRect();
-      const frame: FrameOffset = { left: rect.left, top: rect.top };
-      const { tree, zoom: z } = store.getState();
-      let best: SlotDrop | null = null;
-      let bestArea = Infinity;
-      for (const slot of geometryRef.current.slots) {
-        const box = overlayBox(slot, frame, z);
-        if (
-          clientX < box.left ||
-          clientX > box.left + box.width ||
-          clientY < box.top ||
-          clientY > box.top + box.height
-        ) {
-          continue;
-        }
-        const parent = findBlock(tree, slot.parentId);
-        if (!parent) continue;
-        const allowed = slotAllowedBlocks(registry, parent.name, slot.slotKey);
-        if (allowed && !allowed.includes(draggingName)) continue;
-        const area = box.width * box.height;
-        if (area < bestArea) {
-          bestArea = area;
-          best = { parentId: slot.parentId, slotKey: slot.slotKey, box };
-        }
-      }
-      return best;
+      const { tree, zoom } = store.getState();
+      return resolveSlotTarget({
+        slots: geometryRef.current.slots,
+        tree,
+        registry,
+        draggingName,
+        frame: { left: rect.left, top: rect.top },
+        zoom,
+        clientX,
+        clientY,
+      });
     };
 
     const onMove = (e: PointerEvent): void => {
@@ -218,15 +203,11 @@ export function useCanvasDrag({
                 placement.index,
               );
           } else if (movingId) {
-            // placement.index counts the pre-removal top level; moveBlock
-            // removes the source first, so shift down by one when the source
-            // currently sits before the drop point (a downward reorder).
-            const top = store.getState().tree;
-            const from = top.findIndex((n) => n.id === movingId);
-            const index =
-              from !== -1 && from < placement.index
-                ? placement.index - 1
-                : placement.index;
+            const index = reorderIndex(
+              store.getState().tree,
+              movingId,
+              placement.index,
+            );
             store.getState().moveBlock(movingId, { parentId: null, index });
           }
         }
