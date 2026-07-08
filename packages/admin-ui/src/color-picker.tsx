@@ -18,6 +18,12 @@ interface ColorPickerProps {
   readonly name?: string;
   readonly testId?: string;
   readonly placeholder?: string;
+  // Forwarded to the hex input — the value control a label should name and
+  // focus. Without this, a wrapping <FormControl> lands its injected id/aria on
+  // the outer div (not a form field) and the input goes unlabelled.
+  readonly id?: string;
+  readonly "aria-describedby"?: string;
+  readonly "aria-invalid"?: React.ComponentProps<typeof Input>["aria-invalid"];
 }
 
 export function ColorPicker({
@@ -28,6 +34,9 @@ export function ColorPicker({
   name,
   testId,
   placeholder = "#000000",
+  id,
+  "aria-describedby": ariaDescribedby,
+  "aria-invalid": ariaInvalid,
 }: ColorPickerProps): React.ReactNode {
   const [open, setOpen] = useState(false);
   const safeHex = isHex(value) ? value : "#000000";
@@ -57,12 +66,15 @@ export function ColorPicker({
       </Popover>
       <Input
         type="text"
+        id={id}
         value={value}
         name={name}
         required={required}
         disabled={disabled}
         placeholder={placeholder}
         maxLength={7}
+        aria-describedby={ariaDescribedby}
+        aria-invalid={ariaInvalid}
         onChange={(e) => {
           onChange(e.target.value);
         }}

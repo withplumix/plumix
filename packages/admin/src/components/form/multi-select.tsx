@@ -61,9 +61,13 @@ export function MultiSelect({
   className,
   testId,
   disabled = false,
+  "aria-label": ariaLabel,
 }: {
   /** Put on the trigger so a `<FieldLabel htmlFor>` can focus the control. */
   readonly id?: string;
+  /** Accessible name for the trigger when there's no associated label
+   *  (a `role="combobox"` takes its name from the author, not visible text). */
+  readonly "aria-label"?: string;
   readonly options: readonly MultiSelectOption[];
   readonly value: readonly string[];
   readonly onChange: (next: readonly string[]) => void;
@@ -112,6 +116,7 @@ export function MultiSelect({
           size="sm"
           role="combobox"
           aria-expanded={open}
+          aria-label={ariaLabel}
           disabled={disabled}
           data-testid={testId}
           className={cn(

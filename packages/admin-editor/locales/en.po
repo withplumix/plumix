@@ -224,6 +224,11 @@ msgid "editor.toolbar.device.desktop"
 msgstr "Desktop"
 
 #. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.device.group"
+msgstr "Device"
+
+#. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.drag"
 msgstr "Drag to move"

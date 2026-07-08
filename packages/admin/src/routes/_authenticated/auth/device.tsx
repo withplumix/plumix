@@ -475,7 +475,7 @@ function ApproveCard({
               name="scopeMode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
+                  <FormLabel id="auth-device-scope-label">
                     <Trans
                       id="auth.device.scopeMode.label"
                       message="Permissions"
@@ -487,6 +487,7 @@ function ApproveCard({
                       value={field.value}
                       onValueChange={field.onChange}
                       disabled={pending}
+                      aria-labelledby="auth-device-scope-label"
                       className="gap-2"
                     >
                       <div className="flex items-center gap-2">

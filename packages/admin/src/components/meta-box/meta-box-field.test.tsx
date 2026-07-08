@@ -375,6 +375,14 @@ describe("MetaBoxField dispatcher", () => {
     // Swatch trigger reflects the color via inline `background-color`.
     expect(swatch).toHaveStyle({ "background-color": "#1a2b3c" });
     expect(hex).toHaveValue("#1a2b3c");
+    // The FormControl id lands on the hex input (the value control), not the
+    // ColorPicker's wrapper div, so the visible <FormLabel> actually names and
+    // focuses the field.
+    const formLabelFor = document
+      .querySelector('[data-slot="form-label"]')
+      ?.getAttribute("for");
+    expect(hex.getAttribute("id")).toBeTruthy();
+    expect(hex.getAttribute("id")).toBe(formLabelFor);
 
     // Editing the hex input propagates upward.
     await userEvent.clear(hex);
