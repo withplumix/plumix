@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 import { slugSchema } from "../../schemas.js";
-import { idParam } from "../../validation.js";
+import { idParam, metaInputSchema } from "../../validation.js";
 
 const taxonomySchema = v.pipe(
   v.string(),
@@ -18,27 +18,6 @@ const nameSchema = v.pipe(
 );
 
 const descriptionSchema = v.nullable(v.pipe(v.string(), v.maxLength(10_000)));
-
-// Meta bag accepted by `term.create` / `term.update`. Per-key
-// validation runs against the term meta box registry in the handler;
-// the outer shape cap mirrors `entry.meta`.
-const MAX_META_KEYS_PER_REQUEST = 200;
-
-const metaKeySchema = v.pipe(
-  v.string(),
-  v.trim(),
-  v.minLength(1),
-  v.maxLength(200),
-  v.regex(/^[a-zA-Z0-9_:-]+$/, "meta key must be alphanumeric/_/:/-"),
-);
-
-const termMetaInputSchema = v.pipe(
-  v.record(metaKeySchema, v.unknown()),
-  v.check(
-    (val) => Object.keys(val).length <= MAX_META_KEYS_PER_REQUEST,
-    `meta accepts at most ${MAX_META_KEYS_PER_REQUEST} keys per request`,
-  ),
-);
 
 export const termListInputSchema = v.object({
   taxonomy: taxonomySchema,
@@ -59,7 +38,7 @@ export const termCreateInputSchema = v.object({
   slug: slugSchema,
   description: v.optional(descriptionSchema),
   parentId: v.optional(v.nullable(idParam)),
-  meta: v.optional(termMetaInputSchema),
+  meta: v.optional(metaInputSchema),
 });
 
 export const termUpdateInputSchema = v.object({
@@ -68,7 +47,7 @@ export const termUpdateInputSchema = v.object({
   slug: v.optional(slugSchema),
   description: v.optional(descriptionSchema),
   parentId: v.optional(v.nullable(idParam)),
-  meta: v.optional(termMetaInputSchema),
+  meta: v.optional(metaInputSchema),
 });
 
 export const termDeleteInputSchema = v.object({ id: idParam });

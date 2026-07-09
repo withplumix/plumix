@@ -1,7 +1,12 @@
 import * as v from "valibot";
 
 import { USER_ROLES } from "../../../db/schema/users.js";
-import { emailField, idParam, nameField } from "../../validation.js";
+import {
+  emailField,
+  idParam,
+  metaInputSchema,
+  nameField,
+} from "../../validation.js";
 
 const avatarUrlSchema = v.pipe(
   v.string(),
@@ -13,27 +18,6 @@ const avatarUrlSchema = v.pipe(
 const roleSchema = v.picklist(USER_ROLES);
 
 const searchSchema = v.pipe(v.string(), v.trim(), v.maxLength(200));
-
-// Meta bag accepted by `user.update`. Per-key validation runs against
-// the user meta box registry in the handler; the outer shape cap
-// mirrors `entry.meta` / `term.meta`.
-const MAX_META_KEYS_PER_REQUEST = 200;
-
-const metaKeySchema = v.pipe(
-  v.string(),
-  v.trim(),
-  v.minLength(1),
-  v.maxLength(200),
-  v.regex(/^[a-zA-Z0-9_:-]+$/, "meta key must be alphanumeric/_/:/-"),
-);
-
-const userMetaInputSchema = v.pipe(
-  v.record(metaKeySchema, v.unknown()),
-  v.check(
-    (val) => Object.keys(val).length <= MAX_META_KEYS_PER_REQUEST,
-    `meta accepts at most ${MAX_META_KEYS_PER_REQUEST} keys per request`,
-  ),
-);
 
 export const userListInputSchema = v.object({
   limit: v.optional(
@@ -63,7 +47,7 @@ export const userUpdateInputSchema = v.object({
   name: v.optional(v.nullable(nameField)),
   avatarUrl: v.optional(v.nullable(avatarUrlSchema)),
   role: v.optional(roleSchema),
-  meta: v.optional(userMetaInputSchema),
+  meta: v.optional(metaInputSchema),
 });
 
 export const userDisableInputSchema = v.object({ id: idParam });
