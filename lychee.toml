@@ -1,0 +1,11 @@
+# Configuration for lychee (link checker). Read automatically by both the
+# per-PR offline check and the weekly external check in .github/workflows.
+
+# Example / local-only hosts that appear in docs snippets — not real links.
+exclude = [
+  "^https?://localhost",
+  "^https?://127\\.0\\.0\\.1",
+  "example\\.com",
+  "example\\.org",
+  "api\\.resend\\.com",
+]

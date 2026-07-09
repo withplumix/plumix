@@ -170,3 +170,31 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: pnpm attw
+
+  spellcheck:
+    name: Spellcheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: typos
+      # Markdown/prose only. Code + i18n catalogs carry their own vocabulary
+      # (acronyms, identifiers, localized strings, deliberate test fixtures)
+      # that would need a large allowlist for zero real bugs.
+      - name: Spellcheck markdown
+        run: git ls-files '*.md' '*.mdx' | xargs -r typos
+
+  links:
+    name: Links
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      # Offline: verify relative/local links resolve. External URLs are checked
+      # weekly by link-check.yml so a flaky remote never blocks a PR.
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: "--offline --no-progress '**/*.md'"
+          fail: true
