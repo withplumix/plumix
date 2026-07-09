@@ -90,3 +90,30 @@ export const idPathParam = v.pipe(
   v.minValue(1),
   v.maxValue(Number.MAX_SAFE_INTEGER),
 );
+
+// A defensive cap on meta keys per request so a malformed client can't ship a
+// huge object at us. Not translated: these outer-shape errors surface only to
+// direct RPC consumers, never admin forms (which build their own client schemas).
+const MAX_META_KEYS_PER_REQUEST = 200;
+
+const metaKeySchema = v.pipe(
+  v.string(),
+  v.trim(),
+  v.minLength(1),
+  v.maxLength(200),
+  v.regex(/^[a-zA-Z0-9_:-]+$/, "meta key must be alphanumeric/_/:/-"),
+);
+
+/**
+ * The `meta` bag accepted by the `entry` / `term` / `user` inputs that carry
+ * one. Per-key value validation runs in each handler against that entity's
+ * registered meta box types; here we enforce only the outer shape and the key
+ * cap. Values stay `unknown` because the registry drives their shape.
+ */
+export const metaInputSchema = v.pipe(
+  v.record(metaKeySchema, v.unknown()),
+  v.check(
+    (val) => Object.keys(val).length <= MAX_META_KEYS_PER_REQUEST,
+    `meta accepts at most ${MAX_META_KEYS_PER_REQUEST} keys per request`,
+  ),
+);
