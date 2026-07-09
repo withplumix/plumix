@@ -171,50 +171,65 @@ function hasLocalhostOrigin(request: Request): boolean {
   }
 }
 
-async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
-  // Strip the configured subdirectory prefix once, at the edge, by rewriting
-  // the request URL to its root-relative form. Every downstream branch and
-  // sub-handler (RPC, MCP, REST, auth flows, plugin routes, the public router,
-  // the admin shell) then matches root-relative paths with no base awareness
-  // of its own; outbound URL builders re-add the prefix via `withBasePath`. A
-  // request that isn't under the base (e.g. the bare domain root when mounted
-  // at `/custom-directory`) isn't part of the mounted site — 404 it. A root
-  // deployment (`basePath === ""`) leaves the request untouched.
-  if (app.basePath !== "") {
-    const rawUrl = new URL(ctx.request.url);
-    const stripped = stripBasePath(rawUrl.pathname, app.basePath);
-    if (stripped === null) return notFound("outside-base-path");
-    rawUrl.pathname = stripped;
-    ctx = { ...ctx, request: new Request(rawUrl, ctx.request) };
-  }
+// Strip the configured subdirectory prefix once, at the edge, by rewriting the
+// request URL to its root-relative form. Every downstream branch and sub-handler
+// (RPC, MCP, REST, auth flows, plugin routes, the public router, the admin
+// shell) then matches root-relative paths with no base awareness of its own;
+// outbound URL builders re-add the prefix via `withBasePath`. A request that
+// isn't under the base (e.g. the bare domain root when mounted at
+// `/custom-directory`) isn't part of the mounted site — 404 it. A root
+// deployment (`basePath === ""`) leaves the request untouched.
+function stripBasePathOrReject(
+  app: PlumixApp,
+  ctx: AppContext,
+): AppContext | Response {
+  if (app.basePath === "") return ctx;
+  const rawUrl = new URL(ctx.request.url);
+  const stripped = stripBasePath(rawUrl.pathname, app.basePath);
+  if (stripped === null) return notFound("outside-base-path");
+  rawUrl.pathname = stripped;
+  return { ...ctx, request: new Request(rawUrl, ctx.request) };
+}
 
-  const url = new URL(ctx.request.url);
-  const { pathname } = url;
-
-  // MCP is mounted ahead of the CSRF gate: it authenticates by bearer PAT,
-  // which is inherently CSRF-immune (a browser can't attach an Authorization
-  // header cross-site without a CORS grant Plumix never gives). The gate keeps
-  // protecting the cookie-authed RPC/auth endpoints below it unchanged.
+// The two interfaces mounted ahead of the CSRF gate. Both authenticate by
+// bearer token (MCP) or anonymous read (REST), so they're inherently
+// CSRF-immune — a cross-origin browser can't attach an Authorization header or
+// the X-Plumix-Request header without a CORS grant Plumix never gives. Returns
+// null for any other path so the gate below keeps protecting the cookie-authed
+// RPC/auth endpoints unchanged. Both stay default-off and 404 *before* their
+// dynamic import, so a disabled deployment never pulls the MCP SDK + tool
+// registry or the @orpc/openapi graph onto the cold-start path.
+async function tryColdInterfaces(
+  app: PlumixApp,
+  ctx: AppContext,
+  pathname: string,
+): Promise<Response | null> {
   if (pathname === MCP_PATH) {
-    // Default-off: 404 before the dynamic import so a disabled deployment
-    // never pulls the MCP SDK + tool registry onto the cold-start path.
     if (!interfaceEnabled(app.config.mcp)) return notFound("mcp-disabled");
     const { handleMcpRequest } = await (mcpModule ??=
       import("../mcp/dispatch.js"));
     return handleMcpRequest(ctx);
   }
-
-  // REST sits ahead of the CSRF gate for the same reason MCP does: anonymous
-  // (and future bearer) reads are CSRF-immune, and a cross-origin browser GET
-  // can't carry the X-Plumix-Request header the gate demands. Default-off:
-  // 404 before the dynamic import so the @orpc/openapi graph stays off the
-  // cold-start path of a disabled deployment.
   if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
     if (!interfaceEnabled(app.config.api)) return notFound("api-disabled");
     const dispatchRest = await app.loadRestHandler();
     return dispatchRest(ctx);
   }
+  return null;
+}
 
+// Everything mounted under `/_plumix/` behind the CSRF gate: RPC, the auth
+// flows (POST endpoints, OAuth, magic-link/email-change verify), the admin
+// shell, and plugin-registered raw routes. Returns null for any non-plumix path
+// so the public router below owns it; a plumix path that matches nothing 404s
+// here rather than falling through to the public map. Auth-flow handlers load
+// via one memoized dynamic import on first use, keeping their heavy
+// webauthn/oslo/arctic graph off the public render cold-start path.
+async function tryPlumixRoutes(
+  app: PlumixApp,
+  ctx: AppContext,
+  pathname: string,
+): Promise<Response | null> {
   if (pathname.startsWith(PLUMIX_PREFIX)) {
     const csrfFailure = enforcePlumixCsrf(app, ctx);
     if (csrfFailure) return csrfFailure;
@@ -289,12 +304,41 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
     return notFound("unknown-plumix-route");
   }
 
+  return null;
+}
+
+async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
+  const rebased = stripBasePathOrReject(app, ctx);
+  if (rebased instanceof Response) return rebased;
+  ctx = rebased;
+
+  const url = new URL(ctx.request.url);
+  const { pathname } = url;
+
+  const cold = await tryColdInterfaces(app, ctx, pathname);
+  if (cold) return cold;
+
+  const plumix = await tryPlumixRoutes(app, ctx, pathname);
+  if (plumix) return plumix;
+
+  return tryPublicRoutes(app, ctx, url);
+}
+
+// The public site: only GET/HEAD are meaningful past this point. Core SEO asset
+// routes (robots, sitemaps, feeds) resolve ahead of the public route map so a
+// plugin rewrite rule can't shadow them, then a non-canonical URL 301s to its
+// slash-less form before the route map runs, and anything left renders through
+// the public router.
+async function tryPublicRoutes(
+  app: PlumixApp,
+  ctx: AppContext,
+  url: URL,
+): Promise<Response> {
+  const { pathname } = url;
   if (ctx.request.method !== "GET" && ctx.request.method !== "HEAD") {
     return methodNotAllowed(["GET", "HEAD"]);
   }
 
-  // Core SEO asset routes resolve ahead of the public route map so a plugin
-  // rewrite rule can't shadow them.
   if (pathname === ROBOTS_PATH) {
     return handleRobotsTxt(ctx);
   }
