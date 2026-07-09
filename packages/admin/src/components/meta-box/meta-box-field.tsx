@@ -223,11 +223,17 @@ function nativeCommonProps({
   } as const;
 }
 
+// A field's optional placeholder, resolved through the label formatter.
+function fieldPlaceholder({
+  field,
+  renderLabel,
+}: NativeInputContext): string | undefined {
+  return field.placeholder ? renderLabel(field.placeholder) : undefined;
+}
+
 function renderTextareaField(ctx: NativeInputContext): ReactNode {
-  const { field, rhf, renderLabel } = ctx;
-  const placeholderText = field.placeholder
-    ? renderLabel(field.placeholder)
-    : undefined;
+  const { field, rhf } = ctx;
+  const placeholderText = fieldPlaceholder(ctx);
   return (
     <Textarea
       {...nativeCommonProps(ctx)}
@@ -244,10 +250,8 @@ function renderTextareaField(ctx: NativeInputContext): ReactNode {
 }
 
 function renderNumberField(ctx: NativeInputContext): ReactNode {
-  const { field, rhf, renderLabel } = ctx;
-  const placeholderText = field.placeholder
-    ? renderLabel(field.placeholder)
-    : undefined;
+  const { field, rhf } = ctx;
+  const placeholderText = fieldPlaceholder(ctx);
   return (
     <Input
       {...nativeCommonProps(ctx)}
@@ -498,10 +502,8 @@ function renderRadioField({
 }
 
 function renderTextLikeField(ctx: NativeInputContext): ReactNode {
-  const { field, rhf, renderLabel } = ctx;
-  const placeholderText = field.placeholder
-    ? renderLabel(field.placeholder)
-    : undefined;
+  const { field, rhf } = ctx;
+  const placeholderText = fieldPlaceholder(ctx);
   if (
     field.inputType !== "text" &&
     field.inputType !== "email" &&
