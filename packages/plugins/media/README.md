@@ -197,3 +197,15 @@ status=draft AND created_at < now-1h` would close the loop.
 - **Real worker e2e** — the plugin's e2e mocks RPC against the admin
   static dist; the playground app at
   `packages/plugins/media/playground` is the manual end-to-end rig.
+
+## Support
+
+Have a question? Start a [discussion](https://github.com/withplumix/plumix/discussions). Found a bug? [Open an issue](https://github.com/withplumix/plumix/issues).
+
+## Contributing
+
+PRs and ideas welcome. The [Contributing guide](https://github.com/withplumix/plumix/blob/main/CONTRIBUTING.md) gets you set up — new contributors especially welcome.
+
+## License
+
+[MIT](https://github.com/withplumix/plumix/blob/main/LICENSE) © Plumix Contributors
