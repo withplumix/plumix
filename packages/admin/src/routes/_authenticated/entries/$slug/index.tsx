@@ -577,58 +577,20 @@ function useEntriesListNavActions(): EntriesListNavActions {
   return { setStatus, setPage, setSearch, setAuthor, setTermFilter, setSort };
 }
 
-function ContentListRoute(): ReactNode {
-  const search = Route.useSearch();
-  const { user, entryType } = Route.useRouteContext();
-
-  const taxonomyNames = entryType.termTaxonomies ?? EMPTY_TAXONOMY_NAMES;
-  const termFilters = useMemo(
-    () => parseTermFilters(search as Record<string, unknown>, taxonomyNames),
-    [search, taxonomyNames],
-  );
-
-  const query = useQuery(
-    orpc.entry.list.queryOptions({
-      input: {
-        type: entryType.name,
-        limit: PAGE_SIZE,
-        offset: (search.page - 1) * PAGE_SIZE,
-        orderBy: search.orderBy,
-        order: search.order,
-        ...(search.status !== "all" ? { status: search.status } : {}),
-        ...(search.q ? { search: search.q } : {}),
-        ...(search.author === "mine" ? { authorId: user.id } : {}),
-        ...(Object.keys(termFilters).length > 0
-          ? { termTaxonomies: termFilters }
-          : {}),
-      },
-    }),
-  );
-
-  const { setStatus, setPage, setSearch, setAuthor, setTermFilter, setSort } =
-    useEntriesListNavActions();
-
-  // `query.data ?? []` allocates a fresh array on every render while data is
-  // undefined; memoize so the `selectedIds` useMemo below keeps a stable dep.
-  const rows: readonly Entry[] = useMemo(() => query.data ?? [], [query.data]);
-  const canPrev = search.page > 1;
-  // Heuristic "next exists": a full page came back. Imprecise when total is an
-  // exact multiple of PAGE_SIZE — the user sees an extra empty page. `entry.list`
-  // doesn't expose a total count today; accept the edge case until it does.
-  const canNext = rows.length === PAGE_SIZE;
-
-  const renderLabel = useLabel();
-  const pluralLabel = renderLabel(entryType.labels?.plural ?? entryType.label);
-
-  // Capability gate for the "New" button. Uses the capability namespace
-  // derived by core (`capabilityType ?? name`). Missing the cap? Hide the
-  // button — the new-post route also redirects on `beforeLoad` but we
-  // shouldn't surface the button at all.
-  const createCapability = `entry:${entryType.capabilityType ?? entryType.name}:create`;
-  const canCreate = hasCap(user.capabilities, createCapability);
-  const deleteCapability = `entry:${entryType.capabilityType ?? entryType.name}:delete`;
-  const canDelete = hasCap(user.capabilities, deleteCapability);
-
+// The list's mutation + selection surface: the four single-row actions (each
+// with its confirm-dialog state), page-scoped bulk selection, and the three
+// bulk actions. Split out of ContentListRoute so the component reads as render.
+function useEntryListActions({
+  entryType,
+  rows,
+  canDelete,
+  renderLabel,
+}: {
+  readonly entryType: EntryTypeManifestEntry;
+  readonly rows: readonly Entry[];
+  readonly canDelete: boolean;
+  readonly renderLabel: ReturnType<typeof useLabel>;
+}) {
   const queryClient = useQueryClient();
   const invalidateList = useCallback(
     () =>
@@ -739,7 +701,6 @@ function ContentListRoute(): ReactNode {
       .map(Number)
       .filter((id) => rowSelection[String(id)] && visible.has(id));
   }, [rowSelection, rows]);
-  const isTrashView = search.status === "trash";
   // Bulk is gated on the same `delete` cap the per-row trash/restore/
   // delete actions use; the select column only renders when available.
   const showSelect = canDelete && rows.length > 0;
@@ -777,6 +738,108 @@ function ContentListRoute(): ReactNode {
     trashMany.isPending ||
     restoreMany.isPending ||
     deletePermanentMany.isPending;
+
+  return {
+    onTrash,
+    trashingId,
+    onDuplicate,
+    duplicatingId,
+    onRestore,
+    restoringId,
+    onDeletePermanent,
+    pendingTrashId,
+    setPendingTrashId,
+    trash,
+    pendingDeleteId,
+    setPendingDeleteId,
+    deletePermanent,
+    rowSelection,
+    setRowSelection,
+    selectedIds,
+    showSelect,
+    bulkBusy,
+    trashMany,
+    restoreMany,
+    deletePermanentMany,
+  };
+}
+
+function ContentListRoute(): ReactNode {
+  const search = Route.useSearch();
+  const { user, entryType } = Route.useRouteContext();
+
+  const taxonomyNames = entryType.termTaxonomies ?? EMPTY_TAXONOMY_NAMES;
+  const termFilters = useMemo(
+    () => parseTermFilters(search as Record<string, unknown>, taxonomyNames),
+    [search, taxonomyNames],
+  );
+
+  const query = useQuery(
+    orpc.entry.list.queryOptions({
+      input: {
+        type: entryType.name,
+        limit: PAGE_SIZE,
+        offset: (search.page - 1) * PAGE_SIZE,
+        orderBy: search.orderBy,
+        order: search.order,
+        ...(search.status !== "all" ? { status: search.status } : {}),
+        ...(search.q ? { search: search.q } : {}),
+        ...(search.author === "mine" ? { authorId: user.id } : {}),
+        ...(Object.keys(termFilters).length > 0
+          ? { termTaxonomies: termFilters }
+          : {}),
+      },
+    }),
+  );
+
+  const { setStatus, setPage, setSearch, setAuthor, setTermFilter, setSort } =
+    useEntriesListNavActions();
+
+  // `query.data ?? []` allocates a fresh array on every render while data is
+  // undefined; memoize so the `selectedIds` useMemo below keeps a stable dep.
+  const rows: readonly Entry[] = useMemo(() => query.data ?? [], [query.data]);
+  const canPrev = search.page > 1;
+  // Heuristic "next exists": a full page came back. Imprecise when total is an
+  // exact multiple of PAGE_SIZE — the user sees an extra empty page. `entry.list`
+  // doesn't expose a total count today; accept the edge case until it does.
+  const canNext = rows.length === PAGE_SIZE;
+
+  const renderLabel = useLabel();
+  const pluralLabel = renderLabel(entryType.labels?.plural ?? entryType.label);
+
+  // Capability gate for the "New" button. Uses the capability namespace
+  // derived by core (`capabilityType ?? name`). Missing the cap? Hide the
+  // button — the new-post route also redirects on `beforeLoad` but we
+  // shouldn't surface the button at all.
+  const createCapability = `entry:${entryType.capabilityType ?? entryType.name}:create`;
+  const canCreate = hasCap(user.capabilities, createCapability);
+  const deleteCapability = `entry:${entryType.capabilityType ?? entryType.name}:delete`;
+  const canDelete = hasCap(user.capabilities, deleteCapability);
+
+  const {
+    onTrash,
+    trashingId,
+    onDuplicate,
+    duplicatingId,
+    onRestore,
+    restoringId,
+    onDeletePermanent,
+    pendingTrashId,
+    setPendingTrashId,
+    trash,
+    pendingDeleteId,
+    setPendingDeleteId,
+    deletePermanent,
+    rowSelection,
+    setRowSelection,
+    selectedIds,
+    showSelect,
+    bulkBusy,
+    trashMany,
+    restoreMany,
+    deletePermanentMany,
+  } = useEntryListActions({ entryType, rows, canDelete, renderLabel });
+  const isTrashView = search.status === "trash";
 
   const editLabel = renderLabel(entryTypeLabel(entryType, "editItem"));
   const { formatDate } = useFormatters();
