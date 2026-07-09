@@ -191,6 +191,33 @@ function stripBasePathOrReject(
   return { ...ctx, request: new Request(rawUrl, ctx.request) };
 }
 
+// The two interfaces mounted ahead of the CSRF gate. Both authenticate by
+// bearer token (MCP) or anonymous read (REST), so they're inherently
+// CSRF-immune — a cross-origin browser can't attach an Authorization header or
+// the X-Plumix-Request header without a CORS grant Plumix never gives. Returns
+// null for any other path so the gate below keeps protecting the cookie-authed
+// RPC/auth endpoints unchanged. Both stay default-off and 404 *before* their
+// dynamic import, so a disabled deployment never pulls the MCP SDK + tool
+// registry or the @orpc/openapi graph onto the cold-start path.
+async function tryColdInterfaces(
+  app: PlumixApp,
+  ctx: AppContext,
+  pathname: string,
+): Promise<Response | null> {
+  if (pathname === MCP_PATH) {
+    if (!interfaceEnabled(app.config.mcp)) return notFound("mcp-disabled");
+    const { handleMcpRequest } = await (mcpModule ??=
+      import("../mcp/dispatch.js"));
+    return handleMcpRequest(ctx);
+  }
+  if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
+    if (!interfaceEnabled(app.config.api)) return notFound("api-disabled");
+    const dispatchRest = await app.loadRestHandler();
+    return dispatchRest(ctx);
+  }
+  return null;
+}
+
 async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   const rebased = stripBasePathOrReject(app, ctx);
   if (rebased instanceof Response) return rebased;
@@ -199,29 +226,8 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   const url = new URL(ctx.request.url);
   const { pathname } = url;
 
-  // MCP is mounted ahead of the CSRF gate: it authenticates by bearer PAT,
-  // which is inherently CSRF-immune (a browser can't attach an Authorization
-  // header cross-site without a CORS grant Plumix never gives). The gate keeps
-  // protecting the cookie-authed RPC/auth endpoints below it unchanged.
-  if (pathname === MCP_PATH) {
-    // Default-off: 404 before the dynamic import so a disabled deployment
-    // never pulls the MCP SDK + tool registry onto the cold-start path.
-    if (!interfaceEnabled(app.config.mcp)) return notFound("mcp-disabled");
-    const { handleMcpRequest } = await (mcpModule ??=
-      import("../mcp/dispatch.js"));
-    return handleMcpRequest(ctx);
-  }
-
-  // REST sits ahead of the CSRF gate for the same reason MCP does: anonymous
-  // (and future bearer) reads are CSRF-immune, and a cross-origin browser GET
-  // can't carry the X-Plumix-Request header the gate demands. Default-off:
-  // 404 before the dynamic import so the @orpc/openapi graph stays off the
-  // cold-start path of a disabled deployment.
-  if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
-    if (!interfaceEnabled(app.config.api)) return notFound("api-disabled");
-    const dispatchRest = await app.loadRestHandler();
-    return dispatchRest(ctx);
-  }
+  const cold = await tryColdInterfaces(app, ctx, pathname);
+  if (cold) return cold;
 
   if (pathname.startsWith(PLUMIX_PREFIX)) {
     const csrfFailure = enforcePlumixCsrf(app, ctx);
