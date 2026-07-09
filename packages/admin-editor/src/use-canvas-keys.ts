@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { View } from "./canvas-view.js";
 import { useEditorStoreApi } from "./provider.js";
 
-export type CanvasKeyHandler = (
+type CanvasKeyHandler = (
   down: boolean,
   code: string,
   shiftKey: boolean,

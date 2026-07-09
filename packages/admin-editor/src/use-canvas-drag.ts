@@ -15,7 +15,7 @@ import { useEditorStore, useEditorStoreApi } from "./provider.js";
 
 /** The in-canvas "Add a block" popover target: a slot carries both ids; the
  *  root document carries neither (every block offered). */
-export interface PendingAdd {
+interface PendingAdd {
   readonly parentId?: string;
   readonly slotKey?: string;
 }
