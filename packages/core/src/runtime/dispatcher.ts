@@ -218,17 +218,18 @@ async function tryColdInterfaces(
   return null;
 }
 
-async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
-  const rebased = stripBasePathOrReject(app, ctx);
-  if (rebased instanceof Response) return rebased;
-  ctx = rebased;
-
-  const url = new URL(ctx.request.url);
-  const { pathname } = url;
-
-  const cold = await tryColdInterfaces(app, ctx, pathname);
-  if (cold) return cold;
-
+// Everything mounted under `/_plumix/` behind the CSRF gate: RPC, the auth
+// flows (POST endpoints, OAuth, magic-link/email-change verify), the admin
+// shell, and plugin-registered raw routes. Returns null for any non-plumix path
+// so the public router below owns it; a plumix path that matches nothing 404s
+// here rather than falling through to the public map. Auth-flow handlers load
+// via one memoized dynamic import on first use, keeping their heavy
+// webauthn/oslo/arctic graph off the public render cold-start path.
+async function tryPlumixRoutes(
+  app: PlumixApp,
+  ctx: AppContext,
+  pathname: string,
+): Promise<Response | null> {
   if (pathname.startsWith(PLUMIX_PREFIX)) {
     const csrfFailure = enforcePlumixCsrf(app, ctx);
     if (csrfFailure) return csrfFailure;
@@ -302,6 +303,23 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   if (pathname.startsWith(PLUMIX_PREFIX)) {
     return notFound("unknown-plumix-route");
   }
+
+  return null;
+}
+
+async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
+  const rebased = stripBasePathOrReject(app, ctx);
+  if (rebased instanceof Response) return rebased;
+  ctx = rebased;
+
+  const url = new URL(ctx.request.url);
+  const { pathname } = url;
+
+  const cold = await tryColdInterfaces(app, ctx, pathname);
+  if (cold) return cold;
+
+  const plumix = await tryPlumixRoutes(app, ctx, pathname);
+  if (plumix) return plumix;
 
   if (ctx.request.method !== "GET" && ctx.request.method !== "HEAD") {
     return methodNotAllowed(["GET", "HEAD"]);
