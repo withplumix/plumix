@@ -178,8 +178,8 @@ export function usePanZoom({
 
   // While a gesture is live, re-assert the imperative transform after every
   // render (before paint) so an incidental re-render can't flash the stale
-  // committed value. The per-frame writes happen in applyLive; this only covers
-  // renders. Runs every render by design — the body is a cheap no-op otherwise.
+  // committed value. The per-frame writes happen in applyLive; this covers
+  // renders.
   useLayoutEffect(() => {
     if (gesturingRef.current && stageRef.current) {
       const v = liveViewRef.current;

@@ -94,13 +94,10 @@ export function CanvasFrame({
   const movingId = useEditorStore((s) => s.movingId);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  // Canvas iframe geometry: reported rects + the live frame/viewport boxes,
-  // kept fresh across scroll / resize / fit / pan. geometryRef mirrors it for
-  // the gesture + drag hooks; applyReport takes fresh reports from the bridge.
+  // geometryRef is the shared substrate the gesture + drag hooks read.
   const { geometry, geometryRef, contentHeight, measureContent, applyReport } =
     useCanvasGeometry({ iframeRef, containerRef, frameWidth });
-  // The pannable/zoomable stage: transform writes + gesture lifecycle. Reads
-  // container geometry to clamp the frame; never writes geometry.
+  // Reads geometryRef to clamp the frame; never writes it (no cycle).
   const {
     stageRef,
     gesturing,
@@ -111,16 +108,12 @@ export function CanvasFrame({
     handleWheel,
     zoomToSelection,
   } = usePanZoom({ iframeRef, containerRef, geometryRef });
-  // Space-to-pan + view shortcuts; `keyHandlerRef` is fed forwarded keys by the
-  // bridge, `panReady` gates the grab cursor + iframe click-through.
   const { panReady, keyHandlerRef } = useCanvasKeys({
     panByClientDelta,
     commitLive,
     zoomToSelection,
     liveViewRef,
   });
-  // Catalog/move drag → placement resolution + insert, the in-canvas inserter
-  // popover, and the transient "can't place here" notice.
   const { dropY, dropSlot, pendingAdd, setPendingAdd, requestAdd, rejection } =
     useCanvasDrag({ iframeRef, geometryRef, registry });
   useEffect(() => {

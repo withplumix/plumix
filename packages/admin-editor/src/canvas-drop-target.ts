@@ -14,7 +14,16 @@ import { overlayBox } from "./overlay.js";
  * whether it lights up at all. Pure — the caller supplies the live frame offset
  * (from the iframe's `getBoundingClientRect`) and zoom.
  */
-export function resolveSlotTarget(args: {
+export function resolveSlotTarget({
+  slots,
+  tree,
+  registry,
+  draggingName,
+  frame,
+  zoom,
+  clientX,
+  clientY,
+}: {
   readonly slots: readonly SlotRect[];
   readonly tree: readonly BlockNode[];
   readonly registry: BlockRegistry;
@@ -24,8 +33,6 @@ export function resolveSlotTarget(args: {
   readonly clientX: number;
   readonly clientY: number;
 }): SlotDrop | null {
-  const { slots, tree, registry, draggingName, frame, zoom, clientX, clientY } =
-    args;
   let best: SlotDrop | null = null;
   let bestArea = Infinity;
   for (const slot of slots) {
