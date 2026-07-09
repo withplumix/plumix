@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { CliIO } from "./cli.js";
-import { runCli } from "./cli.js";
+import { BANNER, runCli } from "./cli.js";
 
 interface CapturedIO {
   readonly io: CliIO;
@@ -72,6 +72,7 @@ describe("runCli", () => {
     expect(stderr).toEqual([]);
     expect(existsSync(join(target, "package.json"))).toBe(true);
     const out = stdout.join("\n");
+    expect(out).toContain(BANNER);
     expect(out).toContain("my-app");
     expect(out).toContain("pnpm install");
     expect(out).toContain("pnpm dev");
