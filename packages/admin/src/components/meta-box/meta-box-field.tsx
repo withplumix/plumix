@@ -194,26 +194,388 @@ function decodeOptionValue(value: string): string {
   return value === EMPTY_OPTION_VALUE ? "" : value;
 }
 
-// Returns the native-element body for the given field. Must render a
-// single element so shadcn's `<FormControl>` (which uses Radix `Slot`)
+// The shared inputs each native-field renderer needs. Every renderer must
+// return a single element so shadcn's `<FormControl>` (which uses Radix `Slot`)
 // can forward id / aria-describedby / aria-invalid onto it.
-function renderNativeInput({
-  field,
-  rhf,
-  disabled,
-  testId,
-  renderLabel,
-}: {
+interface NativeInputContext {
   field: MetaBoxFieldManifestEntry;
   rhf: ControllerRenderProps<FieldValues, string>;
   disabled: boolean;
   testId: string;
   renderLabel: ReturnType<typeof useLabel>;
-}): ReactNode {
+}
+
+// Identity / validation / test-hook attributes shared by the plain
+// `<Input>`/`<Textarea>`-backed field types.
+function nativeCommonProps({
+  rhf,
+  field,
+  disabled,
+  testId,
+}: NativeInputContext) {
+  return {
+    name: rhf.name,
+    ref: rhf.ref,
+    required: field.required,
+    disabled,
+    onBlur: rhf.onBlur,
+    "data-testid": testId,
+  } as const;
+}
+
+// A field's optional placeholder, resolved through the label formatter.
+function fieldPlaceholder({
+  field,
+  renderLabel,
+}: NativeInputContext): string | undefined {
+  return field.placeholder ? renderLabel(field.placeholder) : undefined;
+}
+
+function renderTextareaField(ctx: NativeInputContext): ReactNode {
+  const { field, rhf } = ctx;
+  const placeholderText = fieldPlaceholder(ctx);
+  return (
+    <Textarea
+      {...nativeCommonProps(ctx)}
+      value={asString(rhf.value)}
+      maxLength={field.maxLength}
+      placeholder={placeholderText}
+      rows={3}
+      onChange={(e) => {
+        rhf.onChange(e.target.value);
+      }}
+      className="min-h-20"
+    />
+  );
+}
+
+function renderNumberField(ctx: NativeInputContext): ReactNode {
+  const { field, rhf } = ctx;
+  const placeholderText = fieldPlaceholder(ctx);
+  return (
+    <Input
+      {...nativeCommonProps(ctx)}
+      type="number"
+      value={asNumberInputValue(rhf.value)}
+      placeholder={placeholderText}
+      min={field.min}
+      max={field.max}
+      step={field.step ?? 1}
+      onChange={(e) => {
+        const raw = e.target.value;
+        if (raw === "") {
+          rhf.onChange(null);
+          return;
+        }
+        // Native `<input type=number>` accepts partial input ("-",
+        // "1e") which parses to NaN; guard so we never propagate NaN
+        // into form state. User can keep typing — once the input is
+        // a complete number the `isFinite` check passes.
+        const parsed = Number(raw);
+        if (Number.isFinite(parsed)) rhf.onChange(parsed);
+      }}
+    />
+  );
+}
+
+function renderColorField({
+  field,
+  rhf,
+  disabled,
+  testId,
+}: NativeInputContext): ReactNode {
+  return (
+    <ColorPicker
+      value={asString(rhf.value)}
+      onChange={(next) => {
+        rhf.onChange(next);
+      }}
+      disabled={disabled}
+      required={field.required}
+      name={rhf.name}
+      testId={testId}
+    />
+  );
+}
+
+function renderRangeField({
+  field,
+  rhf,
+  disabled,
+  testId,
+  renderLabel,
+}: NativeInputContext): ReactNode {
   const labelText = renderLabel(field.label);
-  const placeholderText = field.placeholder
-    ? renderLabel(field.placeholder)
-    : undefined;
+  const num = typeof rhf.value === "number" ? rhf.value : Number(rhf.value);
+  const minNum = toFiniteNumber(field.min, 0);
+  const maxNum = toFiniteNumber(field.max, 100);
+  const sliderValue = Number.isFinite(num) ? num : minNum;
+  return (
+    <div className="flex items-center gap-3" data-testid={testId}>
+      <Slider
+        name={rhf.name}
+        min={minNum}
+        max={maxNum}
+        step={field.step ?? 1}
+        value={[sliderValue]}
+        disabled={disabled}
+        onValueChange={(values) => {
+          const next = values[0];
+          if (typeof next === "number" && Number.isFinite(next)) {
+            rhf.onChange(next);
+          }
+        }}
+        onBlur={rhf.onBlur}
+        aria-label={labelText}
+        aria-required={field.required}
+        data-testid={`${testId}-slider`}
+        className="flex-1"
+      />
+      <span
+        className="text-muted-foreground min-w-[3ch] text-end text-sm tabular-nums"
+        data-testid={`${testId}-display`}
+      >
+        {Number.isFinite(num) ? num : "–"}
+      </span>
+    </div>
+  );
+}
+
+function renderRepeaterField({
+  field,
+  rhf,
+  disabled,
+  testId,
+}: NativeInputContext): ReactNode {
+  return (
+    <RepeaterField
+      field={field}
+      rhf={rhf}
+      disabled={disabled}
+      testId={testId}
+    />
+  );
+}
+
+function renderMultiselectField({
+  field,
+  rhf,
+  disabled,
+  testId,
+  renderLabel,
+}: NativeInputContext): ReactNode {
+  const labelText = renderLabel(field.label);
+  const selected = Array.isArray(rhf.value)
+    ? rhf.value.filter((v): v is string => typeof v === "string")
+    : [];
+  return (
+    <ToggleGroup
+      type="multiple"
+      variant="outline"
+      spacing={1}
+      value={selected}
+      disabled={disabled}
+      onValueChange={(next) => {
+        rhf.onChange(next);
+      }}
+      onBlur={rhf.onBlur}
+      aria-label={labelText}
+      data-testid={testId}
+    >
+      {(field.options ?? []).map((opt) => (
+        <ToggleGroupItem
+          key={opt.value}
+          value={opt.value}
+          data-testid={`${testId}-${opt.value}`}
+        >
+          {renderLabel(opt.label)}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
+
+function renderJsonField({
+  rhf,
+  disabled,
+  testId,
+}: NativeInputContext): ReactNode {
+  return (
+    <JsonControl
+      value={rhf.value as unknown}
+      onChange={rhf.onChange}
+      onBlur={rhf.onBlur}
+      name={rhf.name}
+      disabled={disabled}
+      testId={testId}
+    />
+  );
+}
+
+function renderRichtextField({
+  field,
+  rhf,
+  disabled,
+  renderLabel,
+}: NativeInputContext): ReactNode {
+  // Standalone richtext outside a block input has no host today — the
+  // richtext surface lives only inside block inputs. Surfacing it inside
+  // a metabox needs a separate Tiptap host slice; until that lands, the
+  // field falls back to a JSON textarea so the value is at least authorable.
+  return (
+    <Textarea
+      className="font-mono text-xs"
+      value={
+        typeof rhf.value === "string" ? rhf.value : JSON.stringify(rhf.value)
+      }
+      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+        rhf.onChange(e.target.value)
+      }
+      disabled={disabled}
+      aria-label={renderLabel(field.label)}
+      data-testid={`meta-box-field-${field.key}-input`}
+    />
+  );
+}
+
+function renderDateTimeField(ctx: NativeInputContext): ReactNode {
+  const { field, rhf } = ctx;
+  // Native HTML5 date / datetime-local / time inputs. They emit
+  // ISO-shaped strings (`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM`, `HH:MM`)
+  // which Plumix stores as-is; consumers parse via `parseMetaDate`
+  // when they need a JS `Date`. A future iteration may swap in the
+  // shadcn `Calendar` primitive without changing the field-type
+  // contract.
+  const htmlType =
+    field.inputType === "datetime" ? "datetime-local" : field.inputType;
+  return (
+    <Input
+      {...nativeCommonProps(ctx)}
+      type={htmlType}
+      value={asString(rhf.value)}
+      min={field.min}
+      max={field.max}
+      onChange={(e) => {
+        const raw = e.target.value;
+        rhf.onChange(raw === "" ? null : raw);
+      }}
+    />
+  );
+}
+
+function renderRadioField({
+  field,
+  rhf,
+  disabled,
+  testId,
+  renderLabel,
+}: NativeInputContext): ReactNode {
+  const labelText = renderLabel(field.label);
+  return (
+    <RadioGroup
+      name={rhf.name}
+      value={encodeOptionValue(asString(rhf.value))}
+      onValueChange={(next) => {
+        rhf.onChange(decodeOptionValue(next));
+      }}
+      onBlur={rhf.onBlur}
+      disabled={disabled}
+      required={field.required}
+      aria-label={labelText}
+      className="gap-1"
+      data-testid={testId}
+    >
+      {(field.options ?? []).map((opt) => (
+        <div key={opt.value} className="flex items-center gap-2 text-sm">
+          <RadioGroupItem
+            value={encodeOptionValue(opt.value)}
+            id={`${testId}-${opt.value}`}
+            data-testid={`${testId}-${opt.value}`}
+          />
+          <label htmlFor={`${testId}-${opt.value}`}>
+            {renderLabel(opt.label)}
+          </label>
+        </div>
+      ))}
+    </RadioGroup>
+  );
+}
+
+function renderTextLikeField(ctx: NativeInputContext): ReactNode {
+  const { field, rhf } = ctx;
+  const placeholderText = fieldPlaceholder(ctx);
+  if (
+    field.inputType !== "text" &&
+    field.inputType !== "email" &&
+    field.inputType !== "url" &&
+    field.inputType !== "password"
+  ) {
+    // Forward-compat fallback: unknown inputType renders as a plain
+    // text input so a plugin-specific type doesn't crash the editor.
+    // Warn once per render so the plugin author sees the mismatch in
+    // dev tools. A future `customRenderers` seam will hook in here
+    // before the fallback.
+    console.warn(
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/richtext/repeater/user/userList/entry/entryList/term/termList/select/radio/checkbox).`,
+    );
+  }
+
+  // Shared shape for `text` / `email` / `url` / `password` / unknown
+  // fallback. The native `type` attribute drives both browser
+  // validation (email / url) and visual masking (password).
+  const htmlType =
+    field.inputType === "email" ||
+    field.inputType === "url" ||
+    field.inputType === "password"
+      ? field.inputType
+      : "text";
+  return (
+    <Input
+      {...nativeCommonProps(ctx)}
+      type={htmlType}
+      value={asString(rhf.value)}
+      placeholder={placeholderText}
+      maxLength={field.maxLength}
+      onChange={(e) => {
+        rhf.onChange(e.target.value);
+      }}
+    />
+  );
+}
+
+type NativeInputRenderer = (ctx: NativeInputContext) => ReactNode;
+
+// Input types keyed purely on `inputType`, dispatched *before* the
+// reference-target branches — so a `repeater` (or any of these) that also
+// carried a `referenceTarget` still renders as its declared type rather than a
+// reference picker. Order within the table is irrelevant; a field has one
+// inputType.
+const PRE_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
+  textarea: renderTextareaField,
+  number: renderNumberField,
+  color: renderColorField,
+  range: renderRangeField,
+  repeater: renderRepeaterField,
+};
+
+// Input types keyed purely on `inputType`, dispatched *after* the
+// reference-target branches — a field carrying a `referenceTarget` reaches the
+// reference pickers first. `select` is absent: it's handled in the FormField
+// render callback (it needs <FormControl> around the Radix trigger).
+const POST_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
+  multiselect: renderMultiselectField,
+  json: renderJsonField,
+  richtext: renderRichtextField,
+  date: renderDateTimeField,
+  datetime: renderDateTimeField,
+  time: renderDateTimeField,
+  radio: renderRadioField,
+};
+
+function renderNativeInput(ctx: NativeInputContext): ReactNode {
+  const { field, rhf, disabled, testId, renderLabel } = ctx;
+  const labelText = renderLabel(field.label);
+
   // Plugin-supplied field renderers slot in here, BEFORE the built-in
   // switch. A plugin's admin chunk calls `window.plumix.
   // registerPluginFieldType(inputType, Component)` at module load —
@@ -245,122 +607,8 @@ function renderNativeInput({
     );
   }
 
-  const common = {
-    name: rhf.name,
-    ref: rhf.ref,
-    required: field.required,
-    disabled,
-    onBlur: rhf.onBlur,
-    "data-testid": testId,
-  } as const;
-
-  if (field.inputType === "textarea") {
-    return (
-      <Textarea
-        {...common}
-        value={asString(rhf.value)}
-        maxLength={field.maxLength}
-        placeholder={placeholderText}
-        rows={3}
-        onChange={(e) => {
-          rhf.onChange(e.target.value);
-        }}
-        className="min-h-20"
-      />
-    );
-  }
-
-  if (field.inputType === "number") {
-    return (
-      <Input
-        {...common}
-        type="number"
-        value={asNumberInputValue(rhf.value)}
-        placeholder={placeholderText}
-        min={field.min}
-        max={field.max}
-        step={field.step ?? 1}
-        onChange={(e) => {
-          const raw = e.target.value;
-          if (raw === "") {
-            rhf.onChange(null);
-            return;
-          }
-          // Native `<input type=number>` accepts partial input ("-",
-          // "1e") which parses to NaN; guard so we never propagate NaN
-          // into form state. User can keep typing — once the input is
-          // a complete number the `isFinite` check passes.
-          const parsed = Number(raw);
-          if (Number.isFinite(parsed)) rhf.onChange(parsed);
-        }}
-      />
-    );
-  }
-
-  if (field.inputType === "color") {
-    return (
-      <ColorPicker
-        value={asString(rhf.value)}
-        onChange={(next) => {
-          rhf.onChange(next);
-        }}
-        disabled={disabled}
-        required={field.required}
-        name={rhf.name}
-        testId={testId}
-      />
-    );
-  }
-
-  if (field.inputType === "range") {
-    const num = typeof rhf.value === "number" ? rhf.value : Number(rhf.value);
-    const minNum = toFiniteNumber(field.min, 0);
-    const maxNum = toFiniteNumber(field.max, 100);
-    const sliderValue = Number.isFinite(num) ? num : minNum;
-    return (
-      <div className="flex items-center gap-3" data-testid={testId}>
-        <Slider
-          name={rhf.name}
-          min={minNum}
-          max={maxNum}
-          step={field.step ?? 1}
-          value={[sliderValue]}
-          disabled={disabled}
-          onValueChange={(values) => {
-            const next = values[0];
-            if (typeof next === "number" && Number.isFinite(next)) {
-              rhf.onChange(next);
-            }
-          }}
-          onBlur={rhf.onBlur}
-          aria-label={labelText}
-          aria-required={field.required}
-          data-testid={`${testId}-slider`}
-          className="flex-1"
-        />
-        <span
-          className="text-muted-foreground min-w-[3ch] text-end text-sm tabular-nums"
-          data-testid={`${testId}-display`}
-        >
-          {Number.isFinite(num) ? num : "–"}
-        </span>
-      </div>
-    );
-  }
-
-  if (field.inputType === "repeater") {
-    // Repeater check ahead of reference-target branches: a hand-rolled
-    // manifest literal that smuggled both `inputType: "repeater"` and
-    // `referenceTarget` would otherwise route to MultiReferencePicker.
-    return (
-      <RepeaterField
-        field={field}
-        rhf={rhf}
-        disabled={disabled}
-        testId={testId}
-      />
-    );
-  }
+  const preReference = PRE_REFERENCE_RENDERERS[field.inputType];
+  if (preReference) return preReference(ctx);
 
   if (field.referenceTarget?.multiple === true) {
     const value = Array.isArray(rhf.value)
@@ -411,170 +659,10 @@ function renderNativeInput({
     );
   }
 
-  if (field.inputType === "multiselect") {
-    const selected = Array.isArray(rhf.value)
-      ? rhf.value.filter((v): v is string => typeof v === "string")
-      : [];
-    return (
-      <ToggleGroup
-        type="multiple"
-        variant="outline"
-        spacing={1}
-        value={selected}
-        disabled={disabled}
-        onValueChange={(next) => {
-          rhf.onChange(next);
-        }}
-        onBlur={rhf.onBlur}
-        aria-label={labelText}
-        data-testid={testId}
-      >
-        {(field.options ?? []).map((opt) => (
-          <ToggleGroupItem
-            key={opt.value}
-            value={opt.value}
-            data-testid={`${testId}-${opt.value}`}
-          >
-            {renderLabel(opt.label)}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-    );
-  }
+  const postReference = POST_REFERENCE_RENDERERS[field.inputType];
+  if (postReference) return postReference(ctx);
 
-  if (field.inputType === "json") {
-    return (
-      <JsonControl
-        value={rhf.value as unknown}
-        onChange={rhf.onChange}
-        onBlur={rhf.onBlur}
-        name={rhf.name}
-        disabled={disabled}
-        testId={testId}
-      />
-    );
-  }
-
-  if (field.inputType === "richtext") {
-    // Standalone richtext outside a block input has no host today — the
-    // richtext surface lives only inside block inputs. Surfacing it inside
-    // a metabox needs a separate Tiptap host slice; until that lands, the
-    // field falls back to a JSON textarea so the value is at least authorable.
-    return (
-      <Textarea
-        className="font-mono text-xs"
-        value={
-          typeof rhf.value === "string" ? rhf.value : JSON.stringify(rhf.value)
-        }
-        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-          rhf.onChange(e.target.value)
-        }
-        disabled={disabled}
-        aria-label={labelText}
-        data-testid={`meta-box-field-${field.key}-input`}
-      />
-    );
-  }
-
-  if (
-    field.inputType === "date" ||
-    field.inputType === "datetime" ||
-    field.inputType === "time"
-  ) {
-    // Native HTML5 date / datetime-local / time inputs. They emit
-    // ISO-shaped strings (`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM`, `HH:MM`)
-    // which Plumix stores as-is; consumers parse via `parseMetaDate`
-    // when they need a JS `Date`. A future iteration may swap in the
-    // shadcn `Calendar` primitive without changing the field-type
-    // contract.
-    const htmlType =
-      field.inputType === "datetime" ? "datetime-local" : field.inputType;
-    return (
-      <Input
-        {...common}
-        type={htmlType}
-        value={asString(rhf.value)}
-        min={field.min}
-        max={field.max}
-        onChange={(e) => {
-          const raw = e.target.value;
-          rhf.onChange(raw === "" ? null : raw);
-        }}
-      />
-    );
-  }
-
-  // Note: `select` is handled in the FormField render callback (it needs
-  // <FormControl> around the Radix trigger, not the Select root).
-
-  if (field.inputType === "radio") {
-    return (
-      <RadioGroup
-        name={rhf.name}
-        value={encodeOptionValue(asString(rhf.value))}
-        onValueChange={(next) => {
-          rhf.onChange(decodeOptionValue(next));
-        }}
-        onBlur={rhf.onBlur}
-        disabled={disabled}
-        required={field.required}
-        aria-label={labelText}
-        className="gap-1"
-        data-testid={testId}
-      >
-        {(field.options ?? []).map((opt) => (
-          <div key={opt.value} className="flex items-center gap-2 text-sm">
-            <RadioGroupItem
-              value={encodeOptionValue(opt.value)}
-              id={`${testId}-${opt.value}`}
-              data-testid={`${testId}-${opt.value}`}
-            />
-            <label htmlFor={`${testId}-${opt.value}`}>
-              {renderLabel(opt.label)}
-            </label>
-          </div>
-        ))}
-      </RadioGroup>
-    );
-  }
-
-  if (
-    field.inputType !== "text" &&
-    field.inputType !== "email" &&
-    field.inputType !== "url" &&
-    field.inputType !== "password"
-  ) {
-    // Forward-compat fallback: unknown inputType renders as a plain
-    // text input so a plugin-specific type doesn't crash the editor.
-    // Warn once per render so the plugin author sees the mismatch in
-    // dev tools. A future `customRenderers` seam will hook in here
-    // before the fallback.
-    console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/richtext/repeater/user/userList/entry/entryList/term/termList/select/radio/checkbox).`,
-    );
-  }
-
-  // Shared shape for `text` / `email` / `url` / `password` / unknown
-  // fallback. The native `type` attribute drives both browser
-  // validation (email / url) and visual masking (password).
-  const htmlType =
-    field.inputType === "email" ||
-    field.inputType === "url" ||
-    field.inputType === "password"
-      ? field.inputType
-      : "text";
-  return (
-    <Input
-      {...common}
-      type={htmlType}
-      value={asString(rhf.value)}
-      placeholder={placeholderText}
-      maxLength={field.maxLength}
-      onChange={(e) => {
-        rhf.onChange(e.target.value);
-      }}
-    />
-  );
+  return renderTextLikeField(ctx);
 }
 
 // Tolerant coercion for inputs that display strings. Meta values
