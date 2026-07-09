@@ -194,8 +194,8 @@ function decodeOptionValue(value: string): string {
   return value === EMPTY_OPTION_VALUE ? "" : value;
 }
 
-// Returns the native-element body for the given field. Must render a
-// single element so shadcn's `<FormControl>` (which uses Radix `Slot`)
+// The shared inputs each native-field renderer needs. Every renderer must
+// return a single element so shadcn's `<FormControl>` (which uses Radix `Slot`)
 // can forward id / aria-describedby / aria-invalid onto it.
 interface NativeInputContext {
   field: MetaBoxFieldManifestEntry;
@@ -207,7 +207,12 @@ interface NativeInputContext {
 
 // Identity / validation / test-hook attributes shared by the plain
 // `<Input>`/`<Textarea>`-backed field types.
-function nativeCommonProps({ rhf, field, disabled, testId }: NativeInputContext) {
+function nativeCommonProps({
+  rhf,
+  field,
+  disabled,
+  testId,
+}: NativeInputContext) {
   return {
     name: rhf.name,
     ref: rhf.ref,
@@ -536,6 +541,35 @@ function renderTextLikeField(ctx: NativeInputContext): ReactNode {
   );
 }
 
+type NativeInputRenderer = (ctx: NativeInputContext) => ReactNode;
+
+// Input types keyed purely on `inputType`, dispatched *before* the
+// reference-target branches — so a `repeater` (or any of these) that also
+// carried a `referenceTarget` still renders as its declared type rather than a
+// reference picker. Order within the table is irrelevant; a field has one
+// inputType.
+const PRE_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
+  textarea: renderTextareaField,
+  number: renderNumberField,
+  color: renderColorField,
+  range: renderRangeField,
+  repeater: renderRepeaterField,
+};
+
+// Input types keyed purely on `inputType`, dispatched *after* the
+// reference-target branches — a field carrying a `referenceTarget` reaches the
+// reference pickers first. `select` is absent: it's handled in the FormField
+// render callback (it needs <FormControl> around the Radix trigger).
+const POST_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
+  multiselect: renderMultiselectField,
+  json: renderJsonField,
+  richtext: renderRichtextField,
+  date: renderDateTimeField,
+  datetime: renderDateTimeField,
+  time: renderDateTimeField,
+  radio: renderRadioField,
+};
+
 function renderNativeInput(ctx: NativeInputContext): ReactNode {
   const { field, rhf, disabled, testId, renderLabel } = ctx;
   const labelText = renderLabel(field.label);
@@ -571,14 +605,8 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
     );
   }
 
-  if (field.inputType === "textarea") return renderTextareaField(ctx);
-  if (field.inputType === "number") return renderNumberField(ctx);
-  if (field.inputType === "color") return renderColorField(ctx);
-  if (field.inputType === "range") return renderRangeField(ctx);
-  // Repeater check ahead of reference-target branches: a hand-rolled
-  // manifest literal that smuggled both `inputType: "repeater"` and
-  // `referenceTarget` would otherwise route to MultiReferencePicker.
-  if (field.inputType === "repeater") return renderRepeaterField(ctx);
+  const preReference = PRE_REFERENCE_RENDERERS[field.inputType];
+  if (preReference) return preReference(ctx);
 
   if (field.referenceTarget?.multiple === true) {
     const value = Array.isArray(rhf.value)
@@ -629,19 +657,8 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
     );
   }
 
-  if (field.inputType === "multiselect") return renderMultiselectField(ctx);
-  if (field.inputType === "json") return renderJsonField(ctx);
-  if (field.inputType === "richtext") return renderRichtextField(ctx);
-  // Note: `select` is handled in the FormField render callback (it needs
-  // <FormControl> around the Radix trigger, not the Select root).
-  if (
-    field.inputType === "date" ||
-    field.inputType === "datetime" ||
-    field.inputType === "time"
-  ) {
-    return renderDateTimeField(ctx);
-  }
-  if (field.inputType === "radio") return renderRadioField(ctx);
+  const postReference = POST_REFERENCE_RENDERERS[field.inputType];
+  if (postReference) return postReference(ctx);
 
   return renderTextLikeField(ctx);
 }
