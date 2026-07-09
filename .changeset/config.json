@@ -1,0 +1,35 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
+  "changelog": [
+    "@changesets/changelog-github",
+    { "repo": "withplumix/plumix" }
+  ],
+  "commit": false,
+  "fixed": [
+    [
+      "plumix",
+      "create-plumix-app",
+      "@plumix/core",
+      "@plumix/blocks",
+      "@plumix/admin-editor",
+      "@plumix/admin-ui",
+      "@plumix/runtime-cloudflare",
+      "@plumix/plugin-audit-log",
+      "@plumix/plugin-blog",
+      "@plumix/plugin-comments",
+      "@plumix/plugin-media",
+      "@plumix/plugin-menu",
+      "@plumix/plugin-pages"
+    ]
+  ],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [
+    "@plumix/admin",
+    "@plumix/*-config",
+    "@plumix/*-playground",
+    "@plumix-examples/*"
+  ]
+}
