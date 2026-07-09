@@ -321,12 +321,24 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   const plumix = await tryPlumixRoutes(app, ctx, pathname);
   if (plumix) return plumix;
 
+  return tryPublicRoutes(app, ctx, url);
+}
+
+// The public site: only GET/HEAD are meaningful past this point. Core SEO asset
+// routes (robots, sitemaps, feeds) resolve ahead of the public route map so a
+// plugin rewrite rule can't shadow them, then a non-canonical URL 301s to its
+// slash-less form before the route map runs, and anything left renders through
+// the public router.
+async function tryPublicRoutes(
+  app: PlumixApp,
+  ctx: AppContext,
+  url: URL,
+): Promise<Response> {
+  const { pathname } = url;
   if (ctx.request.method !== "GET" && ctx.request.method !== "HEAD") {
     return methodNotAllowed(["GET", "HEAD"]);
   }
 
-  // Core SEO asset routes resolve ahead of the public route map so a plugin
-  // rewrite rule can't shadow them.
   if (pathname === ROBOTS_PATH) {
     return handleRobotsTxt(ctx);
   }
