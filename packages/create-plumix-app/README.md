@@ -33,3 +33,15 @@ pnpm create plumix-app my-blog --template blog
   a `consoleMailer()` default for development. The smallest working app.
 - **blog** — minimal plus `@plumix/plugin-blog`, `@plumix/plugin-pages`,
   and `@plumix/plugin-media`.
+
+## Support
+
+Have a question? Start a [discussion](https://github.com/withplumix/plumix/discussions). Found a bug? [Open an issue](https://github.com/withplumix/plumix/issues).
+
+## Contributing
+
+PRs and ideas welcome. The [Contributing guide](https://github.com/withplumix/plumix/blob/main/CONTRIBUTING.md) gets you set up — new contributors especially welcome.
+
+## License
+
+[MIT](https://github.com/withplumix/plumix/blob/main/LICENSE) © Plumix Contributors
