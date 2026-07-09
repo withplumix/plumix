@@ -171,22 +171,30 @@ function hasLocalhostOrigin(request: Request): boolean {
   }
 }
 
+// Strip the configured subdirectory prefix once, at the edge, by rewriting the
+// request URL to its root-relative form. Every downstream branch and sub-handler
+// (RPC, MCP, REST, auth flows, plugin routes, the public router, the admin
+// shell) then matches root-relative paths with no base awareness of its own;
+// outbound URL builders re-add the prefix via `withBasePath`. A request that
+// isn't under the base (e.g. the bare domain root when mounted at
+// `/custom-directory`) isn't part of the mounted site — 404 it. A root
+// deployment (`basePath === ""`) leaves the request untouched.
+function stripBasePathOrReject(
+  app: PlumixApp,
+  ctx: AppContext,
+): AppContext | Response {
+  if (app.basePath === "") return ctx;
+  const rawUrl = new URL(ctx.request.url);
+  const stripped = stripBasePath(rawUrl.pathname, app.basePath);
+  if (stripped === null) return notFound("outside-base-path");
+  rawUrl.pathname = stripped;
+  return { ...ctx, request: new Request(rawUrl, ctx.request) };
+}
+
 async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
-  // Strip the configured subdirectory prefix once, at the edge, by rewriting
-  // the request URL to its root-relative form. Every downstream branch and
-  // sub-handler (RPC, MCP, REST, auth flows, plugin routes, the public router,
-  // the admin shell) then matches root-relative paths with no base awareness
-  // of its own; outbound URL builders re-add the prefix via `withBasePath`. A
-  // request that isn't under the base (e.g. the bare domain root when mounted
-  // at `/custom-directory`) isn't part of the mounted site — 404 it. A root
-  // deployment (`basePath === ""`) leaves the request untouched.
-  if (app.basePath !== "") {
-    const rawUrl = new URL(ctx.request.url);
-    const stripped = stripBasePath(rawUrl.pathname, app.basePath);
-    if (stripped === null) return notFound("outside-base-path");
-    rawUrl.pathname = stripped;
-    ctx = { ...ctx, request: new Request(rawUrl, ctx.request) };
-  }
+  const rebased = stripBasePathOrReject(app, ctx);
+  if (rebased instanceof Response) return rebased;
+  ctx = rebased;
 
   const url = new URL(ctx.request.url);
   const { pathname } = url;
