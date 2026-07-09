@@ -290,6 +290,51 @@ function renderNodes(
   });
 }
 
+interface BlockPresentation {
+  /** The node id when it's a safe CSS/attribute identifier, else null.
+   *  Returned so the caller can pass it through as the block's `nodeId`. */
+  readonly safeId: string | null;
+  /** Root-element attributes: allowlisted htmlAttrs, editing markers, class. */
+  readonly blockProps: BlockProps;
+  /** The generated `<style>` sibling, or null when the node emits no CSS. */
+  readonly styleTag: ReactNode;
+}
+
+// The node's presentation layer: a per-block style class (+ its `<style>`),
+// merged with author classes and allowlisted HTML attributes, into the props
+// the block's root element carries. Split out of `renderNode` so the walk reads
+// as materialize → present → render → wrap.
+function resolveBlockPresentation(
+  node: BlockNode,
+  env: WalkerEnv,
+): BlockPresentation {
+  const safeId = SAFE_ID_RE.test(node.id) ? node.id : null;
+  const styleCss =
+    safeId && (node.style || node.hidden)
+      ? emitBlockStyleCss(
+          `plumix-block-${safeId}`,
+          node.style,
+          env.breakpoints,
+          node.hidden,
+        )
+      : "";
+  const styleClass = safeId && styleCss ? `plumix-block-${safeId}` : undefined;
+  // Author classes ride alongside the generated style class. Order is cosmetic
+  // — CSS cascade is source-order in the stylesheet, not attribute order.
+  const classes = [node.className?.trim(), styleClass].filter(Boolean);
+  const className = classes.length > 0 ? classes.join(" ") : undefined;
+  const styleTag = styleCss
+    ? createElement("style", { key: "style" }, styleCss)
+    : null;
+  const blockProps: BlockProps = {
+    ...safeHtmlAttrs(node.htmlAttrs),
+    "data-plumix-block": env.editing ? node.name : undefined,
+    "data-plumix-id": env.editing && safeId ? safeId : undefined,
+    className,
+  };
+  return { safeId, blockProps, styleTag };
+}
+
 function renderNode(
   node: BlockNode,
   env: WalkerEnv,
@@ -315,30 +360,7 @@ function renderNode(
   const attrs = materializeSlots(node, env, childContext);
   const data = loaderData?.get(node.id);
 
-  const safeId = SAFE_ID_RE.test(node.id) ? node.id : null;
-  const styleCss =
-    safeId && (node.style || node.hidden)
-      ? emitBlockStyleCss(
-          `plumix-block-${safeId}`,
-          node.style,
-          env.breakpoints,
-          node.hidden,
-        )
-      : "";
-  const styleClass = safeId && styleCss ? `plumix-block-${safeId}` : undefined;
-  // Author classes ride alongside the generated style class. Order is cosmetic
-  // — CSS cascade is source-order in the stylesheet, not attribute order.
-  const classes = [node.className?.trim(), styleClass].filter(Boolean);
-  const className = classes.length > 0 ? classes.join(" ") : undefined;
-  const styleTag = styleCss
-    ? createElement("style", { key: "style" }, styleCss)
-    : null;
-  const blockProps: BlockProps = {
-    ...safeHtmlAttrs(node.htmlAttrs),
-    "data-plumix-block": env.editing ? node.name : undefined,
-    "data-plumix-id": env.editing && safeId ? safeId : undefined,
-    className,
-  };
+  const { safeId, blockProps, styleTag } = resolveBlockPresentation(node, env);
   // The author's root-element override, allowlisted. selfSeam container blocks
   // read it via render props; the default wrapper uses it below.
   const tagName = resolveRootTag(node.tagName);
