@@ -1,8 +1,34 @@
+import { createRequire } from "node:module";
+
 import { availableTemplates, DEFAULT_TEMPLATE, scaffold } from "./scaffold.js";
 
 export interface CliIO {
   stdout(line: string): void;
   stderr(line: string): void;
+}
+
+// The plumix wordmark, shown once as a welcome header on a successful scaffold
+// (the CLI's running commands use a compact version badge instead). Kept inline
+// as a plain string so it flows through the injected `CliIO` unchanged and this
+// package stays dependency-free — it runs via `npm create` before install.
+export const BANNER = [
+  "        _                 _",
+  "  _ __ | |_   _ _ __ ___ (_)_  __",
+  " | '_ \\| | | | | '_ ` _ \\| \\ \\/ /",
+  " | |_) | | |_| | | | | | | |>  <",
+  " | .__/|_|\\__,_|_| |_| |_|_/_/\\_\\",
+  " |_|",
+].join("\n");
+
+// Resolved from this package's own manifest at runtime — never hardcoded.
+function readVersion(): string {
+  try {
+    const require = createRequire(import.meta.url);
+    const pkg = require("../package.json") as { version?: string };
+    return pkg.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
 }
 
 // Built lazily so reading the available templates from disk happens
@@ -65,6 +91,9 @@ export async function runCli(
 
   try {
     const result = await scaffold({ targetDir: target, template });
+    io.stdout(BANNER);
+    io.stdout(`v${readVersion()}`);
+    io.stdout("");
     io.stdout(`Created ${result.name} at ${result.targetDir}.`);
     io.stdout("");
     io.stdout("Next steps:");

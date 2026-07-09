@@ -16,7 +16,7 @@ import { i18nCommand } from "./commands/i18n.js";
 import { migrateCommand } from "./commands/migrate.js";
 import { formatHelp } from "./help.js";
 import { loadConfig } from "./load-config.js";
-import { exitWithError, report } from "./report.js";
+import { badge, exitWithError, report } from "./report.js";
 
 const BUILT_IN_COMMANDS: ReadonlyMap<string, CommandDefinition> = new Map([
   ["migrate", migrateCommand],
@@ -111,6 +111,16 @@ export async function run(argv: readonly string[]): Promise<void> {
   if (args.command === undefined || args.command === "help" || args.help) {
     await printHelp(args);
     return;
+  }
+
+  // Astro-style: a compact version badge greets the long-running dev/build
+  // sessions (the full wordmark is the scaffolder's welcome). Gated on a TTY so
+  // piped / CI runs stay clean; the version resolves dynamically, never hardcoded.
+  if (
+    (args.command === "dev" || args.command === "build") &&
+    process.stderr.isTTY
+  ) {
+    badge(readVersion());
   }
 
   // `i18n` is tooling — runs from any package directory (admin, plugins,
