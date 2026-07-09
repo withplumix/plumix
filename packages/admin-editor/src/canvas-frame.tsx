@@ -1,16 +1,8 @@
 import type { ReactElement, PointerEvent as ReactPointerEvent } from "react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useLingui } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/blocks";
-import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
 import {
   Popover,
   PopoverAnchor,
@@ -18,26 +10,18 @@ import {
 } from "@plumix/admin-ui/popover";
 import { ScrollArea } from "@plumix/admin-ui/scroll-area";
 
-import type { View } from "./canvas-view.js";
-import type { FrameOffset, OverlayBox } from "./overlay.js";
+import type { OverlayBox } from "./overlay.js";
 import type { EditorDevice } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
-import { createNodeFromEntry, slotAllowedBlocks } from "./block-catalog.js";
+import { slotAllowedBlocks } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
-import {
-  clampPanToFrame,
-  clampZoom,
-  fitView,
-  frameSelection,
-  zoomToCursor,
-} from "./canvas-view.js";
+import { CANVAS_HEIGHT } from "./canvas-geometry.js";
 import {
   clipboardOpFromEvent,
   createClipboardOps,
   pasteableAtRoot,
 } from "./clipboard-ops.js";
 import { connectCanvas } from "./connect-canvas.js";
-import { dropPlacement } from "./drop-index.js";
 import { deviceLabel } from "./editor-toolbar.js";
 import { overlayBox } from "./overlay.js";
 import {
@@ -47,6 +31,10 @@ import {
 } from "./provider.js";
 import { SelectionToolbar } from "./selection-toolbar.js";
 import { deviceWidth } from "./store.js";
+import { useCanvasDrag } from "./use-canvas-drag.js";
+import { useCanvasGeometry } from "./use-canvas-geometry.js";
+import { useCanvasKeys } from "./use-canvas-keys.js";
+import { usePanZoom } from "./use-pan-zoom.js";
 
 interface CanvasFrameProps {
   /** URL the iframe loads — the entry's real route with `?plumix.edit`. */
@@ -65,25 +53,6 @@ interface CanvasFrameProps {
 const SELECTED_OUTLINE = "#2563eb";
 const MEMBER_OUTLINE = "rgba(37,99,235,0.5)";
 const HOVER_OUTLINE = "rgba(37,99,235,0.4)";
-const CANVAS_HEIGHT = 800;
-
-interface Geometry {
-  readonly rects: ReadonlyMap<string, BlockRect>;
-  /** Container slot regions (iframe coords), for resolving nested drops. */
-  readonly slots: readonly SlotRect[];
-  /** The iframe's on-screen offset, for mapping block rects to overlay boxes. */
-  readonly frame: FrameOffset | null;
-  /** The canvas viewport's on-screen box — overlays clip to this so they never
-   *  spill over the side rails (the iframe renders wider than the column). */
-  readonly container: OverlayBox | null;
-}
-
-/** A resolved nested-drop target: which slot, and its on-screen box. */
-interface SlotDrop {
-  readonly parentId: string;
-  readonly slotKey: string;
-  readonly box: OverlayBox;
-}
 
 /**
  * Host-side canvas: loads the real route in an iframe, drives it via the
@@ -117,7 +86,6 @@ export function CanvasFrame({
   const panX = useEditorStore((s) => s.panX);
   const panY = useEditorStore((s) => s.panY);
   const breakpoints = useEditorStore((s) => s.breakpoints);
-  const zoomFit = useEditorStore((s) => s.zoomFit);
   const frameWidth = deviceWidth(device, breakpoints);
   const activeId = useEditorStore((s) => s.activeId);
   const selectedIds = useEditorStore((s) => s.selectedIds);
@@ -126,258 +94,28 @@ export function CanvasFrame({
   const movingId = useEditorStore((s) => s.movingId);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [geometry, setGeometry] = useState<Geometry>({
-    rects: new Map(),
-    slots: [],
-    frame: null,
-    container: null,
+  // geometryRef is the shared substrate the gesture + drag hooks read.
+  const { geometry, geometryRef, contentHeight, measureContent, applyReport } =
+    useCanvasGeometry({ iframeRef, containerRef, frameWidth });
+  // Reads geometryRef to clamp the frame; never writes it (no cycle).
+  const {
+    stageRef,
+    gesturing,
+    liveViewRef,
+    panByClientDelta,
+    commitLive,
+    onHandlePointerDown,
+    handleWheel,
+    zoomToSelection,
+  } = usePanZoom({ iframeRef, containerRef, geometryRef });
+  const { panReady, keyHandlerRef } = useCanvasKeys({
+    panByClientDelta,
+    commitLive,
+    zoomToSelection,
+    liveViewRef,
   });
-  // Mirror geometry for the drag handler so it reads fresh rects without
-  // re-subscribing the window listeners on every geometry report.
-  const geometryRef = useRef<Geometry>(geometry);
-  // Space held → ready to pan-drag (grab cursor; the iframe goes click-through
-  // so the host receives the drag).
-  const [panReady, setPanReady] = useState(false);
-  // Live pan/zoom path. During a continuous gesture (wheel / space-drag) the
-  // transform is written straight to the stage DOM node and the live view is
-  // kept in a ref — zero React renders per frame. The store (canonical) is
-  // committed once when the gesture settles. `gesturing` only flips twice per
-  // gesture (start/end): it hides the overlays and switches the rendered
-  // transform to read the ref, so an incidental re-render can't clobber it.
-  const stageRef = useRef<HTMLDivElement>(null);
-  const liveViewRef = useRef<View>({ zoom, panX, panY });
-  const gesturingRef = useRef(false);
-  const [gesturing, setGesturing] = useState(false);
-  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Latest key handler, so the bridge's forwarded keys (iframe focus) and the
-  // window listener (shell focus) both reach the same logic without
-  // re-subscribing the bridge.
-  const keyHandlerRef = useRef<
-    ((down: boolean, code: string, shiftKey: boolean) => void) | null
-  >(null);
-  const [dropY, setDropY] = useState<number | null>(null);
-  const [dropSlot, setDropSlot] = useState<SlotDrop | null>(null);
-  // The in-canvas "Add a block" affordance opens a slot-scoped inserter popover
-  // instead of inserting a default. Null when closed; an empty target (no
-  // parentId/slotKey) is the root document.
-  const [pendingAdd, setPendingAdd] = useState<{
-    readonly parentId?: string;
-    readonly slotKey?: string;
-  } | null>(null);
-  // A transient "can't place here" notice (a refused `requiresParent` drop).
-  // The editor has no toast surface of its own, so it shows inline and clears
-  // itself after a moment.
-  const [rejection, setRejection] = useState<string | null>(null);
-  // The iframe's own document height (same-origin), so the frame sizes to its
-  // content — footer visible, no fixed gap below it.
-  const [contentHeight, setContentHeight] = useState<number | null>(null);
-  const measureContent = useCallback((): void => {
-    const doc = iframeRef.current?.contentDocument;
-    if (doc) setContentHeight(doc.documentElement.scrollHeight);
-  }, []);
-
-  // The iframe's on-screen offset and the canvas viewport box, read live from
-  // the DOM. These move on scroll, window resize, and rail collapse — none of
-  // which re-fire the iframe's tree-keyed geometry report — so they're measured
-  // here and refreshed by the observer effect below, not just on block reports.
-  const measureHost = useCallback((): Pick<Geometry, "frame" | "container"> => {
-    const rect = iframeRef.current?.getBoundingClientRect();
-    const box = containerRef.current?.getBoundingClientRect();
-    return {
-      frame: rect ? { left: rect.left, top: rect.top } : null,
-      container: box
-        ? { left: box.left, top: box.top, width: box.width, height: box.height }
-        : null,
-    };
-  }, []);
-
-  // Commit the live gesture view to the store (one render) and end the gesture.
-  const commitLive = useCallback((): void => {
-    if (commitTimerRef.current) {
-      clearTimeout(commitTimerRef.current);
-      commitTimerRef.current = null;
-    }
-    if (!gesturingRef.current) return;
-    gesturingRef.current = false;
-    setGesturing(false);
-    store.getState().setView(liveViewRef.current);
-  }, [store]);
-
-  // Apply a view live: write the transform straight to the DOM (no render),
-  // track it in the ref, and debounce a single commit when the gesture idles.
-  const applyLive = useCallback(
-    (view: View): void => {
-      liveViewRef.current = view;
-      const el = stageRef.current;
-      if (el) {
-        el.style.transform = `translate(${String(view.panX)}px, ${String(view.panY)}px) scale(${String(view.zoom)})`;
-      }
-      if (!gesturingRef.current) {
-        gesturingRef.current = true;
-        setGesturing(true);
-      }
-      if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
-      commitTimerRef.current = setTimeout(commitLive, 150);
-    },
-    [commitLive],
-  );
-
-  // Pan the stage by a client-pixel delta from a drag start, clamped to the
-  // frame. Shared by the space-drag handler and the canvas handle strip.
-  const panByClientDelta = useCallback(
-    (dx: number, dy: number, startPanX: number, startPanY: number): void => {
-      const box = geometryRef.current.container;
-      const iframe = iframeRef.current;
-      if (!box || !iframe) return;
-      const r = iframe.getBoundingClientRect();
-      applyLive({
-        zoom: liveViewRef.current.zoom,
-        ...clampPanToFrame(
-          startPanX + dx,
-          startPanY + dy,
-          r.width,
-          r.height,
-          box.width,
-          box.height,
-        ),
-      });
-    },
-    [applyLive],
-  );
-
-  // Drag the canvas handle strip to pan — a discoverable, mouse-only
-  // alternative to space-drag. Pointer capture keeps the gesture alive once the
-  // pointer leaves the strip.
-  const onHandlePointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>): void => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const startPanX = liveViewRef.current.panX;
-      const startPanY = liveViewRef.current.panY;
-      const el = e.currentTarget;
-      el.setPointerCapture(e.pointerId);
-      const onMove = (ev: PointerEvent): void =>
-        panByClientDelta(
-          ev.clientX - startX,
-          ev.clientY - startY,
-          startPanX,
-          startPanY,
-        );
-      const onUp = (): void => {
-        commitLive();
-        el.releasePointerCapture(e.pointerId);
-        el.removeEventListener("pointermove", onMove);
-        el.removeEventListener("pointerup", onUp);
-        el.removeEventListener("pointercancel", onUp);
-      };
-      el.addEventListener("pointermove", onMove);
-      el.addEventListener("pointerup", onUp);
-      el.addEventListener("pointercancel", onUp);
-    },
-    [panByClientDelta, commitLive],
-  );
-
-  // Keep the live ref in sync with the store between gestures, so discrete
-  // actions (toolbar zoom, device switch, shortcuts) seed the next gesture.
-  useEffect(() => {
-    if (!gesturingRef.current) liveViewRef.current = { zoom, panX, panY };
-  }, [zoom, panX, panY]);
-
-  // Don't leave a pending commit dangling on unmount.
-  useEffect(
-    () => () => {
-      if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
-    },
-    [],
-  );
-
-  // While a gesture is live, re-assert the imperative transform after every
-  // render (before paint) so an incidental re-render can't flash the stale
-  // committed value. The per-frame writes happen in applyLive; this only covers
-  // renders. Runs every render by design — the body is a cheap no-op otherwise.
-  useLayoutEffect(() => {
-    if (gesturingRef.current && stageRef.current) {
-      const v = liveViewRef.current;
-      stageRef.current.style.transform = `translate(${String(v.panX)}px, ${String(v.panY)}px) scale(${String(v.zoom)})`;
-    }
-  });
-
-  // The free-canvas wheel gesture, shared by the host's own wheel (over the
-  // margins) and the iframe-forwarded wheel (over the canvas). `cx/cy` are the
-  // cursor in container space; the base view is the live ref so consecutive
-  // events accumulate, and the iframe rect reflects the live transform.
-  const handleWheel = useCallback(
-    (
-      deltaX: number,
-      deltaY: number,
-      zoomIntent: boolean,
-      cx: number,
-      cy: number,
-    ): void => {
-      const iframe = iframeRef.current;
-      const box = geometryRef.current.container;
-      if (!iframe || !box) return;
-      const rect = iframe.getBoundingClientRect();
-      const { panX, panY, zoom } = liveViewRef.current;
-      if (zoomIntent) {
-        const nextZoom = clampZoom(zoom * Math.exp(-deltaY * 0.0015));
-        if (nextZoom === zoom) return;
-        // Zoom toward the cursor, then clamp so the frame stays reachable.
-        const view = zoomToCursor({ zoom, panX, panY }, nextZoom, cx, cy);
-        const baseW = rect.width / zoom;
-        const baseH = rect.height / zoom;
-        applyLive({
-          zoom: view.zoom,
-          ...clampPanToFrame(
-            view.panX,
-            view.panY,
-            baseW * view.zoom,
-            baseH * view.zoom,
-            box.width,
-            box.height,
-          ),
-        });
-      } else {
-        applyLive({
-          zoom,
-          ...clampPanToFrame(
-            panX - deltaX,
-            panY - deltaY,
-            rect.width,
-            rect.height,
-            box.width,
-            box.height,
-          ),
-        });
-      }
-    },
-    [applyLive],
-  );
-
-  // An in-canvas "Add a block" click opens the slot-scoped inserter popover
-  // rather than inserting a default — the author picks the block. Root has no
-  // parentId/slotKey; a slot carries both.
-  const requestAdd = useCallback(
-    (parentId?: string, slotKey?: string): void => {
-      setPendingAdd({ parentId, slotKey });
-    },
-    [],
-  );
-
-  // Radix dismisses the inserter on an outside pointerdown, but those events
-  // fire on the host document — a click *inside* the cross-frame canvas never
-  // reaches it, so the popover would stay open. Opening the inserter moves focus
-  // into its content (host document); a later click into the iframe blurs the
-  // host window, which we treat as an outside interaction and close on.
-  useEffect(() => {
-    if (!pendingAdd) return;
-    const close = (): void => setPendingAdd(null);
-    window.addEventListener("blur", close);
-    return () => window.removeEventListener("blur", close);
-  }, [pendingAdd]);
-
+  const { dropY, dropSlot, pendingAdd, setPendingAdd, requestAdd, rejection } =
+    useCanvasDrag({ iframeRef, geometryRef, registry });
   useEffect(() => {
     const frameWindow = iframeRef.current?.contentWindow;
     if (!frameWindow) return;
@@ -385,18 +123,7 @@ export function CanvasFrame({
       store,
       frameWindow,
       origin,
-      onGeometry: (reported, slots) => {
-        const next: Geometry = {
-          rects: new Map(reported.map((r) => [r.id, r])),
-          slots,
-          ...measureHost(),
-        };
-        geometryRef.current = next;
-        setGeometry(next);
-        // A fresh geometry report follows a tree change, so the document height
-        // may have shifted too.
-        measureContent();
-      },
+      onGeometry: applyReport,
       // Forwarded from the iframe: clientX/Y are iframe-local (unscaled), so the
       // cursor in container space is the frame's pan offset plus the scaled
       // local position.
@@ -425,10 +152,10 @@ export function CanvasFrame({
   }, [
     store,
     origin,
-    measureHost,
-    measureContent,
+    applyReport,
     loaderPushRef,
     handleWheel,
+    keyHandlerRef,
     requestAdd,
     addBlockLabel,
     clipboard,
@@ -447,406 +174,6 @@ export function CanvasFrame({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [clipboard]);
-
-  // Keep frame/container fresh when the canvas moves without a block report:
-  // column scroll, window resize, and rail collapse (which resizes the inset).
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const refresh = (): void => {
-      const next = { ...geometryRef.current, ...measureHost() };
-      geometryRef.current = next;
-      setGeometry(next);
-    };
-    el.addEventListener("scroll", refresh, { passive: true });
-    window.addEventListener("resize", refresh);
-    const observer =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(refresh);
-    observer?.observe(el);
-    return () => {
-      el.removeEventListener("scroll", refresh);
-      window.removeEventListener("resize", refresh);
-      observer?.disconnect();
-    };
-  }, [measureHost]);
-
-  // Fit-and-center: while in fit mode, scale the frame to the viewport width
-  // (never past 100%) AND center it. This is what a device switch lands on
-  // (setDevice re-enables fit), so the frame is always on-screen and centered
-  // instead of pinned to the top-left. A manual pan/zoom leaves fit mode.
-  const containerWidth = geometry.container?.width;
-  const containerHeight = geometry.container?.height;
-  useEffect(() => {
-    if (!zoomFit || !containerWidth || !containerHeight) return;
-    const next = fitView(
-      frameWidth,
-      contentHeight ?? CANVAS_HEIGHT,
-      containerWidth,
-      containerHeight,
-    );
-    const s = store.getState();
-    if (s.zoom !== next.zoom || s.panX !== next.panX || s.panY !== next.panY) {
-      s.applyFitView(next);
-    }
-  }, [
-    zoomFit,
-    frameWidth,
-    contentHeight,
-    containerWidth,
-    containerHeight,
-    store,
-  ]);
-
-  // The stage transform moves the iframe without firing scroll, so re-measure
-  // the frame/container rects after a pan/zoom paints — the overlays read the
-  // iframe's live on-screen box and must track it.
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      const next = { ...geometryRef.current, ...measureHost() };
-      geometryRef.current = next;
-      setGeometry(next);
-      // Keep the frame reachable after a manual zoom (e.g. the toolbar +/-,
-      // which zoom from the center and could otherwise drift it off-stage). The
-      // fit effect owns pan while in fit mode, so only clamp manual views.
-      const iframe = iframeRef.current;
-      const s = store.getState();
-      if (next.container && iframe && !s.zoomFit) {
-        const r = iframe.getBoundingClientRect();
-        const p = clampPanToFrame(
-          s.panX,
-          s.panY,
-          r.width,
-          r.height,
-          next.container.width,
-          next.container.height,
-        );
-        if (p.panX !== s.panX || p.panY !== s.panY) s.setPan(p.panX, p.panY);
-      }
-    });
-    return () => cancelAnimationFrame(id);
-  }, [panX, panY, zoom, frameWidth, contentHeight, measureHost, store]);
-
-  // Mirror the viewport size into the store so toolbar zoom-to-center has the
-  // dims it needs without reaching into the DOM.
-  useEffect(() => {
-    if (containerWidth && containerHeight) {
-      store.getState().setViewport(containerWidth, containerHeight);
-    }
-  }, [containerWidth, containerHeight, store]);
-
-  // Frame the active block in the viewport (Shift+2) — the move that makes a
-  // free canvas genuinely better for editing, not just nicer to look at.
-  const zoomToSelection = useCallback((): void => {
-    const s = store.getState();
-    const box = geometryRef.current.container;
-    const rect = s.activeId
-      ? geometryRef.current.rects.get(s.activeId)
-      : undefined;
-    if (!box || !rect || rect.width === 0 || rect.height === 0) return;
-    s.setView(frameSelection(rect, box.width, box.height));
-  }, [store]);
-
-  // Space-to-pan + view shortcuts. Keys arrive natively (shell focus) and
-  // forwarded from the iframe (canvas focus) — both routed through one handler.
-  useEffect(() => {
-    let spaceHeld = false;
-    let dragging = false;
-    let startX = 0;
-    let startY = 0;
-    let startPanX = 0;
-    let startPanY = 0;
-    // The iframe's click-through is owned declaratively by the render (it's
-    // none while a block drag OR a space-pan is active), so this just tracks
-    // the space state — no imperative pointerEvents toggling to desync.
-    const exitPan = (): void => {
-      spaceHeld = false;
-      dragging = false;
-      setPanReady(false);
-    };
-    const handleKey = (
-      down: boolean,
-      code: string,
-      shiftKey: boolean,
-    ): void => {
-      if (!down) {
-        if (code === "Space") exitPan();
-        return;
-      }
-      if (code === "Space") {
-        if (!spaceHeld) {
-          spaceHeld = true;
-          setPanReady(true);
-        }
-        return;
-      }
-      if (!shiftKey) return;
-      if (code === "Digit1") store.getState().enableZoomFit();
-      else if (code === "Digit2") zoomToSelection();
-      else if (code === "Digit0") store.getState().zoomToCenter(1);
-      else if (code === "KeyX") store.getState().toggleXray();
-    };
-    keyHandlerRef.current = handleKey;
-
-    const isTyping = (t: EventTarget | null): boolean =>
-      t instanceof HTMLElement &&
-      (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
-    const isViewKey = (e: KeyboardEvent): boolean =>
-      e.code === "Space" ||
-      (e.shiftKey &&
-        (e.code === "Digit0" ||
-          e.code === "Digit1" ||
-          e.code === "Digit2" ||
-          e.code === "KeyX"));
-    const onKeyDown = (e: KeyboardEvent): void => {
-      // Skip auto-repeat: a held key must not re-fire the x-ray toggle.
-      if (e.repeat || isTyping(e.target) || !isViewKey(e)) return;
-      if (e.code === "Space") e.preventDefault();
-      handleKey(true, e.code, e.shiftKey);
-    };
-    const onKeyUp = (e: KeyboardEvent): void => {
-      if (e.code === "Space") handleKey(false, e.code, false);
-    };
-    const onPointerDown = (e: PointerEvent): void => {
-      if (!spaceHeld) return;
-      dragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      startPanX = liveViewRef.current.panX;
-      startPanY = liveViewRef.current.panY;
-    };
-    const onPointerMove = (e: PointerEvent): void => {
-      if (!dragging) return;
-      // Live (imperative) — no per-frame render.
-      panByClientDelta(
-        e.clientX - startX,
-        e.clientY - startY,
-        startPanX,
-        startPanY,
-      );
-    };
-    const onPointerUp = (): void => {
-      if (dragging) commitLive();
-      dragging = false;
-    };
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-      keyHandlerRef.current = null;
-      exitPan();
-    };
-  }, [store, zoomToSelection, panByClientDelta, commitLive]);
-
-  // Canvas drag, shared by two sources: a catalog block being inserted
-  // (dragSpec) and an existing block being moved (movingId). The iframe is
-  // click-through while dragging (owned by the render) so the host receives the
-  // pointer events; the target is computed from the reported block + slot
-  // geometry mapped into screen space.
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    const draggingName =
-      dragSpec?.name ??
-      (movingId ? findBlock(store.getState().tree, movingId)?.name : undefined);
-    if (!draggingName) return;
-
-    const endDrag = (): void => {
-      if (dragSpec) store.getState().endBlockDrag();
-      else store.getState().endMove();
-    };
-
-    const placementAt = (clientX: number, clientY: number) => {
-      const rect = iframe.getBoundingClientRect();
-      const over =
-        clientX >= rect.left &&
-        clientX <= rect.right &&
-        clientY >= rect.top &&
-        clientY <= rect.bottom;
-      if (!over) return null;
-      const frame: FrameOffset = { left: rect.left, top: rect.top };
-      const { tree, zoom: z } = store.getState();
-      const spans = tree.flatMap((node) => {
-        const r = geometryRef.current.rects.get(node.id);
-        if (!r) return [];
-        const box = overlayBox(r, frame, z);
-        return [{ y: box.top, height: box.height }];
-      });
-      return dropPlacement(spans, clientY);
-    };
-
-    // The innermost slot under the pointer that accepts the dragged block — a
-    // nested drop target. Innermost (smallest box) wins so a slot inside a slot
-    // is reachable; allowedBlocks gates which slots even light up.
-    const slotTargetAt = (
-      clientX: number,
-      clientY: number,
-    ): SlotDrop | null => {
-      const rect = iframe.getBoundingClientRect();
-      const frame: FrameOffset = { left: rect.left, top: rect.top };
-      const { tree, zoom: z } = store.getState();
-      let best: SlotDrop | null = null;
-      let bestArea = Infinity;
-      for (const slot of geometryRef.current.slots) {
-        const box = overlayBox(slot, frame, z);
-        if (
-          clientX < box.left ||
-          clientX > box.left + box.width ||
-          clientY < box.top ||
-          clientY > box.top + box.height
-        ) {
-          continue;
-        }
-        const parent = findBlock(tree, slot.parentId);
-        if (!parent) continue;
-        const allowed = slotAllowedBlocks(registry, parent.name, slot.slotKey);
-        if (allowed && !allowed.includes(draggingName)) continue;
-        const area = box.width * box.height;
-        if (area < bestArea) {
-          bestArea = area;
-          best = { parentId: slot.parentId, slotKey: slot.slotKey, box };
-        }
-      }
-      return best;
-    };
-
-    const onMove = (e: PointerEvent): void => {
-      const slot = slotTargetAt(e.clientX, e.clientY);
-      setDropSlot(slot);
-      // A nested slot target supersedes the top-level line indicator.
-      setDropY(
-        slot ? null : (placementAt(e.clientX, e.clientY)?.indicatorY ?? null),
-      );
-    };
-    const onUp = (e: PointerEvent): void => {
-      // A `requiresParent` block is refused unless the parent it would land
-      // under (a slot's parent, or none at the top level) is in its list.
-      const req = registry.get(draggingName)?.requiresParent;
-      const refuse = (): void => {
-        setRejection(
-          i18n._({
-            id: "editor.canvas.cantPlaceHere",
-            message: "This block can't be placed here.",
-          }),
-        );
-        endDrag();
-      };
-
-      const slot = slotTargetAt(e.clientX, e.clientY);
-      if (slot) {
-        const parent = findBlock(store.getState().tree, slot.parentId);
-        if (req && (!parent || !req.includes(parent.name))) {
-          refuse();
-          return;
-        }
-        // Nested drops append (a sentinel index that insertNode/moveBlock clamp
-        // to the slot length).
-        const target = {
-          parentId: slot.parentId,
-          slotKey: slot.slotKey,
-          index: Number.MAX_SAFE_INTEGER,
-        };
-        const allowed = parent
-          ? slotAllowedBlocks(registry, parent.name, slot.slotKey)
-          : undefined;
-        if (dragSpec) {
-          store
-            .getState()
-            .insertBlockInto(
-              createNodeFromEntry(registry, dragSpec),
-              target,
-              allowed,
-            );
-        } else if (movingId) {
-          store.getState().moveBlock(movingId, target, allowed);
-        }
-      } else {
-        const placement = placementAt(e.clientX, e.clientY);
-        if (placement) {
-          // A `requiresParent` block can't live at the top level.
-          if (req) {
-            refuse();
-            return;
-          }
-          if (dragSpec) {
-            store
-              .getState()
-              .insertBlock(
-                createNodeFromEntry(registry, dragSpec),
-                placement.index,
-              );
-          } else if (movingId) {
-            // placement.index counts the pre-removal top level; moveBlock
-            // removes the source first, so shift down by one when the source
-            // currently sits before the drop point (a downward reorder).
-            const top = store.getState().tree;
-            const from = top.findIndex((n) => n.id === movingId);
-            const index =
-              from !== -1 && from < placement.index
-                ? placement.index - 1
-                : placement.index;
-            store.getState().moveBlock(movingId, { parentId: null, index });
-          }
-        }
-      }
-      endDrag();
-    };
-    // Without this, a pointercancel (touch interruption, context menu, drag
-    // into a native element) or Escape would skip onUp, stranding the drag set
-    // and the iframe permanently non-interactive (pointerEvents: none).
-    const onCancel = (): void => endDrag();
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") endDrag();
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onCancel);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onCancel);
-      window.removeEventListener("keydown", onKey);
-      setDropY(null);
-      setDropSlot(null);
-    };
-  }, [dragSpec, movingId, store, registry, i18n]);
-
-  // Auto-dismiss the transient rejection notice.
-  useEffect(() => {
-    if (!rejection) return;
-    const t = setTimeout(() => setRejection(null), 2500);
-    return () => clearTimeout(t);
-  }, [rejection]);
-
-  // Host-side wheel: pan/zoom when the cursor is over the margin around the
-  // frame. Over the iframe the gesture is forwarded via the bridge (onWheel
-  // above). Native + non-passive so we can preventDefault the page scroll.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent): void => {
-      e.preventDefault();
-      const box = el.getBoundingClientRect();
-      handleWheel(
-        e.deltaX,
-        e.deltaY,
-        e.ctrlKey || e.metaKey,
-        e.clientX - box.left,
-        e.clientY - box.top,
-      );
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [handleWheel]);
 
   // Overlays live in a clip layer pinned over the canvas viewport, so their
   // boxes are expressed relative to that layer's top-left (the container's
