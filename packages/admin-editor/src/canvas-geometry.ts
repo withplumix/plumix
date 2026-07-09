@@ -2,6 +2,9 @@ import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
 
 import type { FrameOffset, OverlayBox } from "./overlay.js";
 
+/** Fallback stage height before the iframe reports its content height. */
+export const CANVAS_HEIGHT = 800;
+
 /** Live geometry of the canvas iframe, reported by the bridge and re-measured
  *  on scroll/resize/pan — shared by the overlays, pan/zoom, and drag hit-tests. */
 export interface Geometry {

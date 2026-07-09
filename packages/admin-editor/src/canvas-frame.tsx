@@ -1,5 +1,5 @@
 import type { ReactElement, PointerEvent as ReactPointerEvent } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useLingui } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/blocks";
@@ -10,13 +10,12 @@ import {
 } from "@plumix/admin-ui/popover";
 import { ScrollArea } from "@plumix/admin-ui/scroll-area";
 
-import type { Geometry } from "./canvas-geometry.js";
 import type { OverlayBox } from "./overlay.js";
 import type { EditorDevice } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
 import { slotAllowedBlocks } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
-import { clampPanToFrame, fitView } from "./canvas-view.js";
+import { CANVAS_HEIGHT } from "./canvas-geometry.js";
 import {
   clipboardOpFromEvent,
   createClipboardOps,
@@ -33,6 +32,7 @@ import {
 import { SelectionToolbar } from "./selection-toolbar.js";
 import { deviceWidth } from "./store.js";
 import { useCanvasDrag } from "./use-canvas-drag.js";
+import { useCanvasGeometry } from "./use-canvas-geometry.js";
 import { useCanvasKeys } from "./use-canvas-keys.js";
 import { usePanZoom } from "./use-pan-zoom.js";
 
@@ -53,7 +53,6 @@ interface CanvasFrameProps {
 const SELECTED_OUTLINE = "#2563eb";
 const MEMBER_OUTLINE = "rgba(37,99,235,0.5)";
 const HOVER_OUTLINE = "rgba(37,99,235,0.4)";
-const CANVAS_HEIGHT = 800;
 
 /**
  * Host-side canvas: loads the real route in an iframe, drives it via the
@@ -87,7 +86,6 @@ export function CanvasFrame({
   const panX = useEditorStore((s) => s.panX);
   const panY = useEditorStore((s) => s.panY);
   const breakpoints = useEditorStore((s) => s.breakpoints);
-  const zoomFit = useEditorStore((s) => s.zoomFit);
   const frameWidth = deviceWidth(device, breakpoints);
   const activeId = useEditorStore((s) => s.activeId);
   const selectedIds = useEditorStore((s) => s.selectedIds);
@@ -96,15 +94,11 @@ export function CanvasFrame({
   const movingId = useEditorStore((s) => s.movingId);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [geometry, setGeometry] = useState<Geometry>({
-    rects: new Map(),
-    slots: [],
-    frame: null,
-    container: null,
-  });
-  // Mirror geometry for the drag handler so it reads fresh rects without
-  // re-subscribing the window listeners on every geometry report.
-  const geometryRef = useRef<Geometry>(geometry);
+  // Canvas iframe geometry: reported rects + the live frame/viewport boxes,
+  // kept fresh across scroll / resize / fit / pan. geometryRef mirrors it for
+  // the gesture + drag hooks; applyReport takes fresh reports from the bridge.
+  const { geometry, geometryRef, contentHeight, measureContent, applyReport } =
+    useCanvasGeometry({ iframeRef, containerRef, frameWidth });
   // The pannable/zoomable stage: transform writes + gesture lifecycle. Reads
   // container geometry to clamp the frame; never writes geometry.
   const {
@@ -129,29 +123,6 @@ export function CanvasFrame({
   // popover, and the transient "can't place here" notice.
   const { dropY, dropSlot, pendingAdd, setPendingAdd, requestAdd, rejection } =
     useCanvasDrag({ iframeRef, geometryRef, registry });
-  // The iframe's own document height (same-origin), so the frame sizes to its
-  // content — footer visible, no fixed gap below it.
-  const [contentHeight, setContentHeight] = useState<number | null>(null);
-  const measureContent = useCallback((): void => {
-    const doc = iframeRef.current?.contentDocument;
-    if (doc) setContentHeight(doc.documentElement.scrollHeight);
-  }, []);
-
-  // The iframe's on-screen offset and the canvas viewport box, read live from
-  // the DOM. These move on scroll, window resize, and rail collapse — none of
-  // which re-fire the iframe's tree-keyed geometry report — so they're measured
-  // here and refreshed by the observer effect below, not just on block reports.
-  const measureHost = useCallback((): Pick<Geometry, "frame" | "container"> => {
-    const rect = iframeRef.current?.getBoundingClientRect();
-    const box = containerRef.current?.getBoundingClientRect();
-    return {
-      frame: rect ? { left: rect.left, top: rect.top } : null,
-      container: box
-        ? { left: box.left, top: box.top, width: box.width, height: box.height }
-        : null,
-    };
-  }, []);
-
   useEffect(() => {
     const frameWindow = iframeRef.current?.contentWindow;
     if (!frameWindow) return;
@@ -159,18 +130,7 @@ export function CanvasFrame({
       store,
       frameWindow,
       origin,
-      onGeometry: (reported, slots) => {
-        const next: Geometry = {
-          rects: new Map(reported.map((r) => [r.id, r])),
-          slots,
-          ...measureHost(),
-        };
-        geometryRef.current = next;
-        setGeometry(next);
-        // A fresh geometry report follows a tree change, so the document height
-        // may have shifted too.
-        measureContent();
-      },
+      onGeometry: applyReport,
       // Forwarded from the iframe: clientX/Y are iframe-local (unscaled), so the
       // cursor in container space is the frame's pan offset plus the scaled
       // local position.
@@ -199,8 +159,7 @@ export function CanvasFrame({
   }, [
     store,
     origin,
-    measureHost,
-    measureContent,
+    applyReport,
     loaderPushRef,
     handleWheel,
     keyHandlerRef,
@@ -222,94 +181,6 @@ export function CanvasFrame({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [clipboard]);
-
-  // Keep frame/container fresh when the canvas moves without a block report:
-  // column scroll, window resize, and rail collapse (which resizes the inset).
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const refresh = (): void => {
-      const next = { ...geometryRef.current, ...measureHost() };
-      geometryRef.current = next;
-      setGeometry(next);
-    };
-    el.addEventListener("scroll", refresh, { passive: true });
-    window.addEventListener("resize", refresh);
-    const observer =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(refresh);
-    observer?.observe(el);
-    return () => {
-      el.removeEventListener("scroll", refresh);
-      window.removeEventListener("resize", refresh);
-      observer?.disconnect();
-    };
-  }, [measureHost]);
-
-  // Fit-and-center: while in fit mode, scale the frame to the viewport width
-  // (never past 100%) AND center it. This is what a device switch lands on
-  // (setDevice re-enables fit), so the frame is always on-screen and centered
-  // instead of pinned to the top-left. A manual pan/zoom leaves fit mode.
-  const containerWidth = geometry.container?.width;
-  const containerHeight = geometry.container?.height;
-  useEffect(() => {
-    if (!zoomFit || !containerWidth || !containerHeight) return;
-    const next = fitView(
-      frameWidth,
-      contentHeight ?? CANVAS_HEIGHT,
-      containerWidth,
-      containerHeight,
-    );
-    const s = store.getState();
-    if (s.zoom !== next.zoom || s.panX !== next.panX || s.panY !== next.panY) {
-      s.applyFitView(next);
-    }
-  }, [
-    zoomFit,
-    frameWidth,
-    contentHeight,
-    containerWidth,
-    containerHeight,
-    store,
-  ]);
-
-  // The stage transform moves the iframe without firing scroll, so re-measure
-  // the frame/container rects after a pan/zoom paints — the overlays read the
-  // iframe's live on-screen box and must track it.
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      const next = { ...geometryRef.current, ...measureHost() };
-      geometryRef.current = next;
-      setGeometry(next);
-      // Keep the frame reachable after a manual zoom (e.g. the toolbar +/-,
-      // which zoom from the center and could otherwise drift it off-stage). The
-      // fit effect owns pan while in fit mode, so only clamp manual views.
-      const iframe = iframeRef.current;
-      const s = store.getState();
-      if (next.container && iframe && !s.zoomFit) {
-        const r = iframe.getBoundingClientRect();
-        const p = clampPanToFrame(
-          s.panX,
-          s.panY,
-          r.width,
-          r.height,
-          next.container.width,
-          next.container.height,
-        );
-        if (p.panX !== s.panX || p.panY !== s.panY) s.setPan(p.panX, p.panY);
-      }
-    });
-    return () => cancelAnimationFrame(id);
-  }, [panX, panY, zoom, frameWidth, contentHeight, measureHost, store]);
-
-  // Mirror the viewport size into the store so toolbar zoom-to-center has the
-  // dims it needs without reaching into the DOM.
-  useEffect(() => {
-    if (containerWidth && containerHeight) {
-      store.getState().setViewport(containerWidth, containerHeight);
-    }
-  }, [containerWidth, containerHeight, store]);
 
   // Overlays live in a clip layer pinned over the canvas viewport, so their
   // boxes are expressed relative to that layer's top-left (the container's
