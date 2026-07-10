@@ -1,6 +1,6 @@
 {
   "name": "@plumix/plugin-menu",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Menu plugin for Plumix \u2014 navigation menus assembled from entries, terms, and custom URLs",
   "license": "MIT",
