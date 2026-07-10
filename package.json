@@ -24,6 +24,7 @@
     "postinstall": "pnpm dlx sherif@latest",
     "publint": "turbo run publint",
     "release": "pnpm run build && changeset publish",
+    "smoke": "node scripts/smoke-test.mjs",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "typecheck": "turbo run typecheck",
