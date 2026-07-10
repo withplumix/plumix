@@ -38,11 +38,11 @@ Bare `pnpm --filter @plumix/core test` works locally with a warm tree but fails 
 packages/
 ├── core/                @plumix/core              — engine: schema, auth, hooks, RPC, route, plugin manifest
 ├── admin/               @plumix/admin             — React SPA (Vite + Tanstack Router/Query); shadcn-based UI
-├── blocks/              @plumix/blocks            — block primitives (currently `export {}`; design intent)
+├── blocks/              @plumix/blocks            — block primitives + renderer
 ├── plumix/              plumix                    — public umbrella; subpath exports re-export internals
 ├── create-plumix-app/                             — scaffolder
 ├── plugins/
-│   ├── audit-log/ blog/ media/ menu/ pages/       — first-party plugins
+│   ├── audit-log/ blog/ comments/ media/ menu/ pages/ — first-party plugins
 └── runtimes/
     └── cloudflare/      @plumix/runtime-cloudflare — Cloudflare D1/R2/KV bindings
 examples/{blog,minimal}                            — playgrounds + e2e fixtures
@@ -51,9 +51,9 @@ tooling/{eslint,lingui,prettier,typescript,vitest} — shared configs as workspa
 
 ### The umbrella rule
 
-The `plumix` package re-exports the public API surface from internal `@plumix/{core,admin,blocks}` under subpaths (`plumix`, `plumix/vite`, `plumix/admin`, `plumix/admin/react`, `plumix/theme`, `plumix/plugin`, …).
+The `plumix` package re-exports the public API surface from the internal `@plumix/{core,blocks,admin,admin-editor,admin-ui}` packages under subpaths (`plumix`, `plumix/vite`, `plumix/admin`, `plumix/admin/react`, `plumix/admin/ui`, `plumix/theme`, `plumix/plugin`, …).
 
-**Consumer packages — plugins, runtimes, examples, `create-plumix-app` — must import from `plumix` (or its subpaths). They must not import from `@plumix/core`, `@plumix/admin`, or `@plumix/blocks` directly.**
+**Consumer packages — plugins, runtimes, examples, `create-plumix-app` — must import from `plumix` (or its subpaths). They must not import from the internal packages (`@plumix/core`, `@plumix/blocks`, `@plumix/admin`, `@plumix/admin-editor`, `@plumix/admin-ui`) directly.**
 
 This is the boundary that lets internal packages refactor freely while the published surface stays stable. Violations are caught by ESLint's `no-restricted-imports` rule via the `noInternalImports` config in `@plumix/eslint-config`, which consumer packages opt into.
 
@@ -97,6 +97,24 @@ Wired in every test-having package (`pnpm exec vitest run --coverage`). Tracked,
 - **Wrap commit body lines at ≤100 chars** — footer-max-line-length inherits from config-conventional even though body-max-line-length is disabled.
 - Never put "claude" in a branch name or commit message.
 - All PRs are squash-merged.
+
+## Releases (changesets)
+
+Publishing is automated by Changesets (`.changeset/README.md`). Merging a PR that contains changesets makes the bot open a **"Version Packages"** PR; merging _that_ publishes to npm (signed with provenance, behind a Verdaccio boot-smoke gate).
+
+**Write a changeset** when your PR changes anything a _consumer_ of a published package would notice — a feature, a fix, or a behavior / API / exports / dependency change:
+
+```bash
+pnpm changeset   # pick the bump, write a one-line user-facing summary, commit the generated file
+```
+
+**Skip it** when the change has no consumer-visible effect — tests, CI, docs, internal refactors, chores — or touches only private packages (`examples/*`, `tooling/*`, `packages/plugins/*/playground`).
+
+**Which package to select, and the bump:**
+
+- **Framework** — `plumix`, `create-plumix-app`, and the internal `@plumix/{core,blocks,admin,admin-editor,admin-ui}` are a `fixed` group: select any one and they all bump together to the same version.
+- **Plugins and the runtime adapter** — `@plumix/plugin-*` and `@plumix/runtime-cloudflare` version **independently**; select the specific package (a plugin fix ships with no framework release).
+- Pre-1.0 (`0.x`): **patch** = fix, **minor** = feature _or_ breaking change.
 
 ## Agent skills
 
