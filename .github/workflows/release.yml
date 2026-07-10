@@ -51,16 +51,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v5
-
-      - uses: actions/setup-node@v6
+      # registry-url writes the .npmrc that authenticates the publish with
+      # NODE_AUTH_TOKEN.
+      - uses: ./.github/actions/setup
         with:
-          node-version-file: ".nvmrc"
-          cache: "pnpm"
-          # Writes an .npmrc that authenticates publishes with NODE_AUTH_TOKEN.
           registry-url: "https://registry.npmjs.org"
-
-      - run: pnpm install --frozen-lockfile
 
       # When changesets exist, this opens/updates the "Version Packages" PR
       # (running `pnpm version-packages`). When that PR is merged and no
