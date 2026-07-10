@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -93,7 +94,15 @@ describe("AuditLogShell", () => {
     window.history.replaceState(null, "", "/pages/audit-log");
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // A filter change fires its RPC synchronously (the mock records the call),
+    // so `waitFor` on the request body resolves while the query response is
+    // still a pending microtask. Flush that trailing re-render before unmounting
+    // so cleanup() can't unmount mid-render ("synchronously unmount a root while
+    // React was already rendering") — the source of intermittent CI failures.
+    await act(async () => {
+      await Promise.resolve();
+    });
     cleanup();
     vi.unstubAllGlobals();
   });

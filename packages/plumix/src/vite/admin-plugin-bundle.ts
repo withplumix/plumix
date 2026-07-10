@@ -48,7 +48,7 @@ const ADMIN_SHIM_DIR = resolve(
 );
 
 // Sibling of the runtime shims — `dist/admin/theme.css` is copied here
-// at plumix build time by `scripts/copy-admin.mjs` (see).
+// at plumix build time by `scripts/copy-theme.mjs`.
 const ADMIN_THEME_CSS = resolve(ADMIN_SHIM_DIR, "theme.css");
 
 export async function assemblePluginAdminBundle({

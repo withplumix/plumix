@@ -8,8 +8,8 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { Plugin, UserConfig } from "vite";
 import { mergeConfig } from "vite";
 
@@ -53,12 +53,14 @@ import {
 } from "./plugin-catalog-resolve.js";
 import { stageUserPublic } from "./public-staging.js";
 
-// `import.meta.url` for this module lives at plumix/dist/vite/index.js in
-// consumer installs, so the pre-compiled admin artifact is a sibling at
-// plumix/dist/admin-app. Computed once at module load.
+// The pre-compiled admin SPA ships as its own package (@plumix/admin). Resolve
+// its dist directory so the vite plugin can stage it into the user's app. This
+// relies on @plumix/admin exposing its package.json — it declares no `exports`
+// map today; add a `"./package.json"` export there if one is ever introduced.
+const require = createRequire(import.meta.url);
 const ADMIN_SOURCE_DIR = resolve(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "../admin-app",
+  dirname(require.resolve("@plumix/admin/package.json")),
+  "dist",
 );
 
 export interface PlumixVitePluginOptions {
@@ -457,8 +459,8 @@ async function computeManifestAndRegistry(
   };
 }
 
-// Copies the compiled admin SPA from plumix/dist/admin-app into the effective
-// publicDir under _plumix/admin/. The runtime adapter's asset-serving layer
+// Copies the compiled admin SPA from the @plumix/admin package into the
+// effective publicDir under _plumix/admin/. The runtime adapter's asset-serving layer
 // (Cloudflare Workers Assets today, equivalents in future adapters) picks the
 // files up from publicDir automatically. Skips the bulk copy when the
 // destination is already at least as fresh as the source so repeated
@@ -849,9 +851,7 @@ function warnOnPluginAdminMismatch(
 
 function readAdminVersion(): string | null {
   try {
-    const adminPkgPath = fileURLToPath(
-      new URL("../../../admin/package.json", import.meta.url),
-    );
+    const adminPkgPath = require.resolve("@plumix/admin/package.json");
     const raw = readFileSync(adminPkgPath, "utf8");
     const pkg = JSON.parse(raw) as { version?: unknown };
     return typeof pkg.version === "string" ? pkg.version : null;
