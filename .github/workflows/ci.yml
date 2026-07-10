@@ -101,7 +101,9 @@ jobs:
   test-e2e:
     name: Test (e2e)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # The heaviest job (Playwright across admin + plugins) runs close to 10 min;
+    # give it headroom so a slow/loaded runner doesn't cancel it mid-suite.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
