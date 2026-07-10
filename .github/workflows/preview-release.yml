@@ -1,8 +1,6 @@
 name: Preview release
 
 on:
-  push:
-    branches: [main]
   pull_request:
     # `labeled` builds when the `preview` label is added; `synchronize` refreshes
     # the preview on later pushes to an already-labeled PR.
@@ -15,20 +13,20 @@ permissions:
   id-token: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   preview:
     name: Preview release
-    # Auto on push to main; on PRs only when a maintainer adds the `preview`
-    # label, and same-repo only (the pkg-pr-new App is installed here) so forks
-    # don't publish previews under our name.
+    # Only when a maintainer adds the `preview` label, and same-repo only (the
+    # pkg-pr-new App is installed here) so forks don't publish under our name.
+    # No push-to-main previews — main is covered by real npm releases (Astro's
+    # model).
     if: >-
       github.repository == 'withplumix/plumix' &&
-      (github.event_name == 'push' ||
-      (github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(github.event.pull_request.labels.*.name, 'preview')))
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'preview')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
