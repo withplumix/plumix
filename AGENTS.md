@@ -8,6 +8,12 @@ CMS inspired by WordPress, with pluggable runtime adapters. Cloudflare (`@plumix
 
 Current target is Cloudflare Workers, so runtime code must stay Worker-compatible — no Node built-ins, no `fs`, no dynamic require.
 
+## Working rules
+
+- **TDD.** A bug isn't fixed until a failing test reproduces it first. New behavior starts red — one RED→GREEN cycle at a time, never all-tests-then-all-impl.
+- **Stay in scope.** One PR per issue; no drive-by refactors, bulk cleanups, or unrelated edits. Serialize dependent PRs — ship, merge, rebase, then start the next.
+- **Localize user-facing strings.** Everything a user reads — JSX text, `aria`/`title`/`alt`, toasts, block metadata — goes through Lingui descriptors (`useLabel`), never hardcoded English.
+
 ## Commands
 
 Turborepo drives everything from the root:
@@ -29,6 +35,8 @@ pnpm exec turbo run test --filter @plumix/core
 Bare `pnpm --filter @plumix/core test` works locally with a warm tree but fails cold in CI because upstream `build` won't have run.
 
 **Single test file.** Inside a package: `pnpm exec vitest run path/to/file.test.ts`. With coverage: `pnpm exec vitest run --coverage`.
+
+**Before committing.** `pnpm typecheck && pnpm lint && pnpm format && pnpm test` must be clean (`format` checks; `format:fix` writes), and add a changeset if the change is consumer-visible (see [Releases](#releases-changesets)). CI reruns these plus e2e, knip, i18n, publint, and attw.
 
 ## Architecture
 
@@ -66,6 +74,10 @@ A plugin is a descriptor built with `definePlugin` (from `plumix/plugin`); optio
 `pnpm-workspace.yaml` defines a `catalog:` for deps used by multiple packages (drizzle, react, vite, vitest, etc.). A dep used by exactly one package goes direct in that package's `package.json`, **not** in the catalog — the catalog is for de-duplication, not centralization.
 
 Version families that release in lockstep get a **named catalog** under `catalogs:` (`catalogs.tailwind`, `catalogs.lingui`) and are consumed as `"catalog:tailwind"` / `"catalog:lingui"` — a bump is then a single-line change.
+
+### Env & secrets
+
+Gate dev-only code on `import.meta.env.DEV` (a compile-time constant), not `process.env` — a dev endpoint must fail closed in production. Secret config slots take an `EnvInput<T>` resolved with `resolveEnvInput`; local Worker secrets live in `.dev.vars` (gitignored). Never paste secret values into commits, logs, or chat.
 
 ## Tests
 
@@ -115,6 +127,8 @@ pnpm changeset   # pick the bump, write a one-line user-facing summary, commit t
 - **Framework** — `plumix`, `create-plumix-app`, and the internal `@plumix/{core,blocks,admin,admin-editor,admin-ui}` are a `fixed` group: select any one and they all bump together to the same version.
 - **Plugins and the runtime adapter** — `@plumix/plugin-*` and `@plumix/runtime-cloudflare` version **independently**; select the specific package (a plugin fix ships with no framework release).
 - Pre-1.0 (`0.x`): **patch** = fix, **minor** = feature _or_ breaking change.
+
+Write the summary as upgrade release-notes, not a commit message: lead with a present-tense verb (Adds / Fixes / Removes) and describe the observable effect.
 
 ## Agent skills
 

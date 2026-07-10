@@ -12,7 +12,9 @@ pnpm changeset
 ```
 
 Pick the bump (patch / minor / major) and write a one-line, user-facing summary.
-That creates a markdown file here; commit it with your PR.
+Word it as upgrade release-notes, not a commit message: lead with a present-tense
+verb (Adds / Fixes / Removes) and describe the observable effect. That creates a
+markdown file here; commit it with your PR.
 
 ## Notes
 
