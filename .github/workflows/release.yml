@@ -65,9 +65,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      # No registry-url: that would write an .npmrc with an empty _authToken
-      # (the token is gone) which shadows OIDC. npm publishes to the default
-      # registry and authenticates via the id-token exchange instead.
+      # setup configures no npm auth on purpose: a token-based .npmrc would
+      # resolve to an empty _authToken and shadow OIDC. npm publishes to the
+      # default registry and authenticates via the id-token exchange below.
       - uses: ./.github/actions/setup
 
       # When changesets exist, this opens/updates the "Version Packages" PR
