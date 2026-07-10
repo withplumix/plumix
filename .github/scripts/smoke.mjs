@@ -11,7 +11,7 @@
 // `changeset publish`. Cleans up the registry, the dev server, and every temp
 // dir on success and on failure.
 //
-// Usage:  node scripts/smoke-test.mjs
+// Usage:  node .github/scripts/smoke.mjs   (or `pnpm smoke`)
 // Env:
 //   SMOKE_REGISTRY_PORT  Verdaccio port          (default 4873)
 //   SMOKE_APP_PORT       plumix dev port         (default 5173 — matches the
@@ -26,7 +26,10 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
 const REGISTRY_PORT = Number(process.env.SMOKE_REGISTRY_PORT ?? 4873);
 const APP_PORT = Number(process.env.SMOKE_APP_PORT ?? 5173);
 const REGISTRY = `http://localhost:${REGISTRY_PORT}/`;
