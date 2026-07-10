@@ -12,14 +12,19 @@ pnpm changeset
 ```
 
 Pick the bump (patch / minor / major) and write a one-line, user-facing summary.
-That creates a markdown file here; commit it with your PR.
+Word it as upgrade release-notes, not a commit message: lead with a present-tense
+verb (Adds / Fixes / Removes) and describe the observable effect. That creates a
+markdown file here; commit it with your PR.
 
 ## Notes
 
-- **Versions move in lockstep.** `plumix`, all `@plumix/*` packages, and
-  `create-plumix-app` are a `fixed` group — one changeset bumps them all to the
-  same version. Pick the bump based on the most significant change in the PR.
-- Private packages (playgrounds, examples, the admin app) are released by
-  nobody, so they don't need changesets.
+- **The framework versions in lockstep.** `plumix`, `create-plumix-app`, and the
+  internal `@plumix/{core,blocks,admin,admin-editor,admin-ui}` packages are a
+  `fixed` group — one changeset bumps them together to the same version.
+- **Plugins and the runtime adapter version independently.** `@plumix/plugin-*`
+  and `@plumix/runtime-cloudflare` are outside the fixed group — select the
+  specific package, and a plugin/adapter fix ships with no framework release.
+- Private packages (playgrounds, examples, the `tooling/*` configs) are released
+  by nobody, so they don't need changesets.
 - Releases are cut by merging the automated **"Version Packages"** PR; the
   summaries you write become the `CHANGELOG.md` entries, linked back to their PRs.
