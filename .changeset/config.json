@@ -11,6 +11,7 @@
       "create-plumix-app",
       "@plumix/core",
       "@plumix/blocks",
+      "@plumix/admin",
       "@plumix/admin-editor",
       "@plumix/admin-ui",
       "@plumix/runtime-cloudflare",
@@ -27,7 +28,6 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
-    "@plumix/admin",
     "@plumix/*-config",
     "@plumix/*-playground",
     "@plumix-examples/*"

@@ -1,8 +1,28 @@
 {
   "name": "@plumix/admin",
   "version": "0.0.0",
-  "private": true,
+  "description": "Plumix admin application (prebuilt SPA assets)",
+  "license": "MIT",
+  "author": "Plumix Contributors",
+  "homepage": "https://github.com/withplumix/plumix#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/withplumix/plumix.git",
+    "directory": "packages/admin"
+  },
+  "bugs": {
+    "url": "https://github.com/withplumix/plumix/issues"
+  },
   "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "vite build",
     "clean": "git clean -xdf .cache .turbo dist node_modules playwright-report test-results",

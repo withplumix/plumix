@@ -1,9 +1,30 @@
 {
   "name": "@plumix/core",
   "version": "0.0.0",
-  "private": true,
+  "description": "Plumix core: runtime, auth, data model, and plugin system",
+  "license": "MIT",
+  "author": "Plumix Contributors",
+  "homepage": "https://github.com/withplumix/plumix#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/withplumix/plumix.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/withplumix/plumix/issues"
+  },
   "type": "module",
   "sideEffects": false,
+  "files": [
+    "dist",
+    "locales",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

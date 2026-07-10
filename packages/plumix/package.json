@@ -169,7 +169,7 @@
   },
   "scripts": {
     "attw": "attw --pack . --profile esm-only",
-    "build": "tsc -p tsconfig.build.json && node scripts/copy-admin.mjs",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-theme.mjs",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
@@ -180,6 +180,7 @@
   "dependencies": {
     "@lingui/core": "catalog:lingui",
     "@lingui/react": "catalog:lingui",
+    "@plumix/admin": "workspace:*",
     "@plumix/admin-editor": "workspace:*",
     "@plumix/admin-ui": "workspace:*",
     "@plumix/blocks": "workspace:*",
@@ -246,7 +247,6 @@
     "@orpc/client": "catalog:orpc",
     "@orpc/tanstack-query": "catalog:orpc",
     "@playwright/test": "catalog:",
-    "@plumix/admin": "workspace:*",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",

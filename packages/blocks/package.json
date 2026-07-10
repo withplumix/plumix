@@ -1,8 +1,28 @@
 {
   "name": "@plumix/blocks",
   "version": "0.0.0",
-  "private": true,
+  "description": "Plumix block primitives and renderer",
+  "license": "MIT",
+  "author": "Plumix Contributors",
+  "homepage": "https://github.com/withplumix/plumix#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/withplumix/plumix.git",
+    "directory": "packages/blocks"
+  },
+  "bugs": {
+    "url": "https://github.com/withplumix/plumix/issues"
+  },
   "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "//sideEffects": "Everything is pure except the island runtime, which calls registerIslandElement() at module load and is imported purely for that side effect (import \"@plumix/blocks/island-runtime\"). Marking the rest side-effect-free lets bundlers drop unused barrel re-exports — notably the Tiptap mark/node schemas (unknownBlockSchema, coreMarkExtensions) so ProseMirror tree-shakes out of consumers that only use coreBlocks/render.",
   "sideEffects": [
     "**/island-runtime.js"
