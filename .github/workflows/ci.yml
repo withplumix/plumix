@@ -153,6 +153,24 @@ jobs:
           if-no-files-found: warn
           retention-days: 5
 
+  publint:
+    name: Publint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm publint
+
+  attw:
+    name: Are The Types Wrong
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm attw
+
   spellcheck:
     name: Spellcheck
     runs-on: ubuntu-latest

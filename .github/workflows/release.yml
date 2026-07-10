@@ -43,11 +43,9 @@ jobs:
         uses: ./.github/actions/setup
       - if: steps.check.outputs.run == 'true'
         run: pnpm build
-      - if: steps.check.outputs.run == 'true'
-        run: pnpm publint
-      - if: steps.check.outputs.run == 'true'
-        run: pnpm attw
       # Verdaccio → publish all 14 → scaffold from the registry → boot → 200.
+      # publint/attw run per-PR in ci.yml; this gate is the one thing that needs
+      # the actual published tarballs.
       - if: steps.check.outputs.run == 'true'
         run: SMOKE_SKIP_BUILD=1 pnpm smoke
 
