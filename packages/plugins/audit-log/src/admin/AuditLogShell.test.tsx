@@ -17,6 +17,11 @@ import { AuditLogShell } from "./AuditLogShell.js";
 i18n.load({ en: {} });
 i18n.activate("en");
 
+// These tests drive real Radix Select + text-filter interactions through
+// userEvent; under heavily-parallel CI the 5s default testTimeout is too tight
+// (they pass everywhere but a loaded runner takes ~5s just for the clicks).
+vi.setConfig({ testTimeout: 20_000 });
+
 interface CapturedCall {
   readonly url: string;
   readonly body: unknown;
@@ -95,11 +100,9 @@ describe("AuditLogShell", () => {
   });
 
   afterEach(async () => {
-    // A filter change fires its RPC synchronously (the mock records the call),
-    // so `waitFor` on the request body resolves while the query response is
-    // still a pending microtask. Flush that trailing re-render before unmounting
-    // so cleanup() can't unmount mid-render ("synchronously unmount a root while
-    // React was already rendering") — the source of intermittent CI failures.
+    // Flush a trailing query re-render before unmounting so cleanup() doesn't
+    // unmount mid-render (React's "synchronously unmount a root while rendering"
+    // warning). This quiets console noise; it is not the flake fix.
     await act(async () => {
       await Promise.resolve();
     });
