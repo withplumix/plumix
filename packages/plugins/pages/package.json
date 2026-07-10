@@ -1,6 +1,6 @@
 {
   "name": "@plumix/plugin-pages",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Pages plugin for Plumix \u2014 hierarchical static pages",
   "license": "MIT",
