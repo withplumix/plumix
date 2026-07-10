@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# Serialize releases; never cancel a publish mid-flight.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  release:
+    name: Release
+    # Only the canonical repo has the npm token + Changesets GitHub App.
+    if: github.repository == 'withplumix/plumix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # push the version bump + git tags
+      pull-requests: write # open/update the "Version Packages" PR
+      id-token: write # npm provenance via OIDC
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+          # Writes an .npmrc that authenticates publishes with NODE_AUTH_TOKEN.
+          registry-url: "https://registry.npmjs.org"
+
+      - run: pnpm install --frozen-lockfile
+
+      # When changesets exist, this opens/updates the "Version Packages" PR
+      # (running `pnpm version-packages`). When that PR is merged and no
+      # changesets remain, it runs `pnpm release` to publish to npm. Publishing
+      # therefore only happens on merge of the Version PR, and only once
+      # NPM_TOKEN is configured — nothing publishes before then.
+      - name: Version PR or publish
+        uses: changesets/action@v1
+        with:
+          version: pnpm version-packages
+          publish: pnpm release
+          commit: "ci: version packages"
+          title: "ci: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
