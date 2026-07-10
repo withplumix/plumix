@@ -1,6 +1,6 @@
 {
   "name": "@plumix/runtime-cloudflare",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Cloudflare Workers runtime adapter for Plumix",
   "license": "MIT",
@@ -60,7 +60,7 @@
   },
   "peerDependencies": {
     "drizzle-orm": "catalog:drizzle",
-    "plumix": "workspace:*",
+    "plumix": "workspace:^",
     "wrangler": "catalog:cloudflare"
   },
   "peerDependenciesMeta": {

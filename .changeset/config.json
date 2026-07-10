@@ -2,7 +2,9 @@
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
   "changelog": [
     "@changesets/changelog-github",
-    { "repo": "withplumix/plumix" }
+    {
+      "repo": "withplumix/plumix"
+    }
   ],
   "commit": false,
   "fixed": [
@@ -13,14 +15,7 @@
       "@plumix/blocks",
       "@plumix/admin",
       "@plumix/admin-editor",
-      "@plumix/admin-ui",
-      "@plumix/runtime-cloudflare",
-      "@plumix/plugin-audit-log",
-      "@plumix/plugin-blog",
-      "@plumix/plugin-comments",
-      "@plumix/plugin-media",
-      "@plumix/plugin-menu",
-      "@plumix/plugin-pages"
+      "@plumix/admin-ui"
     ]
   ],
   "linked": [],

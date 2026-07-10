@@ -1,6 +1,6 @@
 {
   "name": "@plumix/admin",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Plumix admin application (prebuilt SPA assets)",
   "license": "MIT",

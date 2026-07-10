@@ -1,8 +1,8 @@
 {
   "name": "@plumix/plugin-media",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
-  "description": "Media plugin for Plumix — uploads, library, and CDN delivery",
+  "description": "Media plugin for Plumix \u2014 uploads, library, and CDN delivery",
   "license": "MIT",
   "author": "Plumix Contributors",
   "homepage": "https://github.com/withplumix/plumix#readme",
@@ -64,7 +64,7 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": "catalog:tanstack",
-    "plumix": "workspace:*",
+    "plumix": "workspace:^",
     "react": "catalog:react"
   },
   "devDependencies": {
