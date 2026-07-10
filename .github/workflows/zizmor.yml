@@ -1,0 +1,43 @@
+name: zizmor
+
+# Static analysis of our own workflows for CI supply-chain risks. Runs as a
+# required status check: fails on high-severity, high-confidence findings and
+# surfaces them as inline PR annotations. No SARIF upload — that needs a
+# writable security-events token, which a pull_request from a fork never gets
+# (GitHub caps the fork token to read-only), so it would red-flag every
+# external contributor's PR.
+
+on:
+  pull_request:
+    branches: ["*"]
+  push:
+    branches: [main]
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions: {}
+
+jobs:
+  zizmor:
+    name: Run zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@192e21d79ab29983730a13d1382995c2307fbcaa # v0.5.7
+        with:
+          advanced-security: false # no SARIF upload (see header); annotations + exit code gate
+          annotations: true
+          # Gate only on high-severity, high-confidence findings so the tool can
+          # float to latest (no pinned version for a human to forget, and
+          # Dependabot only bumps the action SHA above, never a `with:` input)
+          # without a new low/medium audit surprise-failing an unrelated PR.
+          min-severity: high
+          min-confidence: high

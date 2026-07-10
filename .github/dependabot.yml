@@ -7,6 +7,10 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 10
+    # Let a release age before proposing it, so a compromised or broken
+    # brand-new version isn't adopted the moment it publishes.
+    cooldown:
+      default-days: 7
     groups:
       eslint:
         patterns:
@@ -99,3 +103,5 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
