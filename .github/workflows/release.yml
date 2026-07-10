@@ -3,21 +3,60 @@ name: Release
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 concurrency:
-  # Serialize releases; never cancel a publish mid-flight.
-  group: ${{ github.workflow }}
-  cancel-in-progress: false
+  # Serialize the publish (never cancel a release mid-flight); PR gate runs are
+  # per-PR and cancellable.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || 'release' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions: {}
 
 jobs:
+  # The publish gate. Runs on every PR so it can be a REQUIRED check (add it to
+  # the branch ruleset), but only does the heavy work on the auto-generated
+  # "Version Packages" PR (branch changeset-release/*) — merging that PR is what
+  # triggers the publish, so a required-and-green gate blocks a broken release.
+  # A ~15s no-op on normal PRs (all real steps skip, the job still succeeds).
+  gate:
+    name: Release gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Is this the Version PR?
+        id: check
+        run: |
+          if [[ "${{ github.head_ref }}" == changeset-release/* ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false (no-op)"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.check.outputs.run == 'true'
+        uses: actions/checkout@v7
+      - if: steps.check.outputs.run == 'true'
+        uses: ./.github/actions/setup
+      - if: steps.check.outputs.run == 'true'
+        run: pnpm build
+      - if: steps.check.outputs.run == 'true'
+        run: pnpm publint
+      - if: steps.check.outputs.run == 'true'
+        run: pnpm attw
+      # Verdaccio → publish all 14 → scaffold from the registry → boot → 200.
+      - if: steps.check.outputs.run == 'true'
+        run: SMOKE_SKIP_BUILD=1 pnpm smoke
+
   release:
     name: Release
     # Only the canonical repo has the npm token + Changesets GitHub App.
-    if: github.repository == 'withplumix/plumix'
+    if: github.event_name == 'push' && github.repository == 'withplumix/plumix'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     permissions:
       contents: write # push the version bump + git tags
       pull-requests: write # open/update the "Version Packages" PR
@@ -34,14 +73,11 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       # When changesets exist, this opens/updates the "Version Packages" PR
-      # (running `pnpm version-packages`). When that PR is merged and no
-      # changesets remain, it runs the publish command `pnpm release` —
-      # build → publint → attw → smoke → changeset publish, in that order and
-      # in one step — so a publish can only happen if the gate passes. The `&&`
-      # chain means a failed gate never reaches `changeset publish`. Publishing
-      # also requires NPM_TOKEN, so nothing releases before both a merged
-      # Version PR and the token exist.
-      - name: Version PR or gated publish
+      # (running `pnpm version-packages`). Merging that PR — gated green above —
+      # lands with no changesets, so this runs `pnpm release` to publish to npm.
+      # Publishing also requires NPM_TOKEN, so nothing releases before both a
+      # merged (gated) Version PR and the token exist.
+      - name: Version PR or publish
         uses: changesets/action@v1
         with:
           version: pnpm version-packages
