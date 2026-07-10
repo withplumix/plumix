@@ -23,7 +23,7 @@
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
     "postinstall": "pnpm dlx sherif@latest",
     "publint": "turbo run publint",
-    "release": "pnpm run build && changeset publish",
+    "release": "pnpm run build && pnpm run publint && pnpm run attw && SMOKE_SKIP_BUILD=1 pnpm run smoke && changeset publish",
     "smoke": "node .github/scripts/smoke.mjs",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",

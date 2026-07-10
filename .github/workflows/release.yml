@@ -3,45 +3,21 @@ name: Release
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 concurrency:
-  # Serialize the publish (never cancel a release mid-flight); PR gate runs are
-  # per-PR and cancellable.
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || 'release' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Serialize releases; never cancel a publish mid-flight.
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 permissions: {}
 
 jobs:
-  # The publish gate. Runs only on the auto-generated "Version Packages" PR
-  # (branch changeset-release/*), so merging that PR — which is what triggers
-  # the real publish — is guarded by publint, attw, and the full smoke
-  # rehearsal against the about-to-be-published versions. Skipped on normal PRs,
-  # which is why publint/attw are no longer per-PR CI jobs.
-  gate:
-    name: Release gate
-    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'changeset-release/')
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - run: pnpm build
-      - run: pnpm publint
-      - run: pnpm attw
-      # Verdaccio → publish all 14 → scaffold from the registry → boot → 200.
-      - run: SMOKE_SKIP_BUILD=1 pnpm smoke
-
   release:
     name: Release
     # Only the canonical repo has the npm token + Changesets GitHub App.
-    if: github.event_name == 'push' && github.repository == 'withplumix/plumix'
+    if: github.repository == 'withplumix/plumix'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: write # push the version bump + git tags
       pull-requests: write # open/update the "Version Packages" PR
@@ -59,10 +35,13 @@ jobs:
 
       # When changesets exist, this opens/updates the "Version Packages" PR
       # (running `pnpm version-packages`). When that PR is merged and no
-      # changesets remain, it runs `pnpm release` to publish to npm. Publishing
-      # therefore only happens on merge of the Version PR (gated above), and
-      # only once NPM_TOKEN is configured — nothing publishes before then.
-      - name: Version PR or publish
+      # changesets remain, it runs the publish command `pnpm release` —
+      # build → publint → attw → smoke → changeset publish, in that order and
+      # in one step — so a publish can only happen if the gate passes. The `&&`
+      # chain means a failed gate never reaches `changeset publish`. Publishing
+      # also requires NPM_TOKEN, so nothing releases before both a merged
+      # Version PR and the token exist.
+      - name: Version PR or gated publish
         uses: changesets/action@v1
         with:
           version: pnpm version-packages
