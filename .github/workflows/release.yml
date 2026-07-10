@@ -51,30 +51,31 @@ jobs:
 
   release:
     name: Release
-    # Only the canonical repo has the npm token + Changesets GitHub App.
+    # Only the canonical repo is the configured OIDC trusted publisher on npm
+    # and has the Changesets GitHub App.
     if: github.event_name == 'push' && github.repository == 'withplumix/plumix'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: write # push the version bump + git tags
       pull-requests: write # open/update the "Version Packages" PR
-      id-token: write # npm provenance via OIDC
+      id-token: write # OIDC trusted publishing + provenance (no npm token)
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      # registry-url writes the .npmrc that authenticates the publish with
-      # NODE_AUTH_TOKEN.
+      # No registry-url: that would write an .npmrc with an empty _authToken
+      # (the token is gone) which shadows OIDC. npm publishes to the default
+      # registry and authenticates via the id-token exchange instead.
       - uses: ./.github/actions/setup
-        with:
-          registry-url: "https://registry.npmjs.org"
 
       # When changesets exist, this opens/updates the "Version Packages" PR
       # (running `pnpm version-packages`). Merging that PR — gated green above —
       # lands with no changesets, so this runs `pnpm release` to publish to npm.
-      # Publishing also requires NPM_TOKEN, so nothing releases before both a
-      # merged (gated) Version PR and the token exist.
+      # Publishing is tokenless: npm (>= 11.5.1, bundled with the pinned Node)
+      # exchanges the workflow's OIDC identity for a short-lived credential, so
+      # nothing releases without a merged, gated Version PR from this repo.
       - name: Version PR or publish
         uses: changesets/action@v1
         with:
@@ -84,5 +85,8 @@ jobs:
           title: "ci: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Empty (not absent) so changesets/action skips token-based auth setup
+          # and npm falls through to OIDC trusted publishing.
+          # https://github.com/changesets/changesets/issues/1152
+          NPM_TOKEN: ""
           NPM_CONFIG_PROVENANCE: "true"
