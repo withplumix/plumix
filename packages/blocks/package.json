@@ -1,6 +1,7 @@
 {
   "name": "@plumix/blocks",
   "version": "0.0.0",
+  "type": "module",
   "description": "Plumix block primitives and renderer",
   "license": "MIT",
   "author": "Plumix Contributors",
@@ -13,20 +14,19 @@
   "bugs": {
     "url": "https://github.com/withplumix/plumix/issues"
   },
-  "type": "module",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
+  "keywords": [
+    "plumix",
+    "cms",
+    "blocks"
   ],
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
-  "//sideEffects": "Everything is pure except the island runtime, which calls registerIslandElement() at module load and is imported purely for that side effect (import \"@plumix/blocks/island-runtime\"). Marking the rest side-effect-free lets bundlers drop unused barrel re-exports — notably the Tiptap mark/node schemas (unknownBlockSchema, coreMarkExtensions) so ProseMirror tree-shakes out of consumers that only use coreBlocks/render.",
+  "//sideEffects": "Everything is pure except the island runtime, which calls registerIslandElement() at module load and is imported purely for that side effect (import \"@plumix/blocks/island-runtime\"). Marking the rest side-effect-free lets bundlers drop unused barrel re-exports \u2014 notably the Tiptap mark/node schemas (unknownBlockSchema, coreMarkExtensions) so ProseMirror tree-shakes out of consumers that only use coreBlocks/render.",
   "sideEffects": [
     "**/island-runtime.js"
   ],
+  "//browser": "Browser-only sanitizer swap. The editor + islands run in the DOM, where sanitize-html's bundled HTML parser + entity tables + postcss (~230 KB) are redundant; bundlers building for the browser remap it to the DOMPurify shim (~45 KB, native DOMParser). The worker/SSR build is DOM-less and keeps the real sanitize-html.",
+  "browser": {
+    "sanitize-html": "./dist/html/dompurify-shim.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -49,9 +49,14 @@
       "default": "./dist/island-renderer.js"
     }
   },
-  "//browser": "Browser-only sanitizer swap. The editor + islands run in the DOM, where sanitize-html's bundled HTML parser + entity tables + postcss (~230 KB) are redundant; bundlers building for the browser remap it to the DOMPurify shim (~45 KB, native DOMParser). The worker/SSR build is DOM-less and keeps the real sanitize-html.",
-  "browser": {
-    "sanitize-html": "./dist/html/dompurify-shim.js"
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

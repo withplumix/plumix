@@ -1,6 +1,7 @@
 {
   "name": "@plumix/admin-ui",
   "version": "0.0.0",
+  "type": "module",
   "description": "Plumix admin UI primitives",
   "license": "MIT",
   "author": "Plumix Contributors",
@@ -13,16 +14,12 @@
   "bugs": {
     "url": "https://github.com/withplumix/plumix/issues"
   },
-  "type": "module",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
+  "keywords": [
+    "plumix",
+    "cms",
+    "ui",
+    "components"
   ],
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -192,6 +189,15 @@
       "types": "./dist/use-mobile.d.ts",
       "default": "./dist/use-mobile.js"
     }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -54,7 +54,9 @@ import {
 import { stageUserPublic } from "./public-staging.js";
 
 // The pre-compiled admin SPA ships as its own package (@plumix/admin). Resolve
-// its dist directory so the vite plugin can stage it into the user's app.
+// its dist directory so the vite plugin can stage it into the user's app. This
+// relies on @plumix/admin exposing its package.json — it declares no `exports`
+// map today; add a `"./package.json"` export there if one is ever introduced.
 const require = createRequire(import.meta.url);
 const ADMIN_SOURCE_DIR = resolve(
   dirname(require.resolve("@plumix/admin/package.json")),
@@ -457,8 +459,8 @@ async function computeManifestAndRegistry(
   };
 }
 
-// Copies the compiled admin SPA from plumix/dist/admin-app into the effective
-// publicDir under _plumix/admin/. The runtime adapter's asset-serving layer
+// Copies the compiled admin SPA from the @plumix/admin package into the
+// effective publicDir under _plumix/admin/. The runtime adapter's asset-serving layer
 // (Cloudflare Workers Assets today, equivalents in future adapters) picks the
 // files up from publicDir automatically. Skips the bulk copy when the
 // destination is already at least as fresh as the source so repeated

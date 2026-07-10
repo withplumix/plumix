@@ -1,6 +1,7 @@
 {
   "name": "@plumix/admin-editor",
   "version": "0.0.0",
+  "type": "module",
   "description": "Plumix visual page editor for the admin",
   "license": "MIT",
   "author": "Plumix Contributors",
@@ -13,7 +14,17 @@
   "bugs": {
     "url": "https://github.com/withplumix/plumix/issues"
   },
-  "type": "module",
+  "keywords": [
+    "plumix",
+    "cms",
+    "editor"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist",
     "README.md",
@@ -22,12 +33,6 @@
   "publishConfig": {
     "access": "public",
     "provenance": true
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

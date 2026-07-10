@@ -1,10 +1,10 @@
 # @plumix/admin
 
-Pre-built React SPA that ships inside the [`plumix`](../plumix) package.
-The admin compiles once into `dist/`, gets copied into `plumix/dist/admin-app/`
-at plumix build time, and the plumix Vite plugin stages it into the consumer's
-`.plumix/public/_plumix/admin/` directory so the active runtime adapter serves
-it at `/_plumix/admin/*` with no per-consumer rebuild.
+Pre-built React SPA published as its own package and depended on by
+[`plumix`](../plumix). The admin compiles once into `dist/`, and the plumix
+Vite plugin resolves this package from `node_modules` and stages it into the
+consumer's `.plumix/public/_plumix/admin/` directory so the active runtime
+adapter serves it at `/_plumix/admin/*` with no per-consumer rebuild.
 
 ## Dev workflows
 
@@ -142,10 +142,11 @@ as noise, so add the full set you expect to use.
 
 ## How the admin is shipped
 
-Admin build output (`dist/`) becomes a static asset bundle inside the
-published `plumix` tarball. At consumer build time, `plumix build` copies
-those assets into the consumer's `dist/_plumix/admin/` and the active
-runtime adapter serves them (see `packages/core/src/runtime/dispatcher.ts`
+Admin build output (`dist/`) is published as the `@plumix/admin` package,
+which `plumix` declares as a dependency. At consumer build time, the plumix
+Vite plugin resolves `@plumix/admin` from `node_modules` and copies its
+`dist/` into the consumer's `dist/_plumix/admin/`, and the active runtime
+adapter serves them (see `packages/core/src/runtime/dispatcher.ts`
 for the runtime-agnostic request pipeline). Plugin-contributed admin
 chunks + the manifest that wires them are planned for a later phase —
 see docs/reference/architecture/09-packages/05-admin.md for the full design.

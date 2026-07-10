@@ -1,6 +1,7 @@
 {
   "name": "@plumix/core",
   "version": "0.0.0",
+  "type": "module",
   "description": "Plumix core: runtime, auth, data model, and plugin system",
   "license": "MIT",
   "author": "Plumix Contributors",
@@ -13,18 +14,12 @@
   "bugs": {
     "url": "https://github.com/withplumix/plumix/issues"
   },
-  "type": "module",
-  "sideEffects": false,
-  "files": [
-    "dist",
-    "locales",
-    "README.md",
-    "LICENSE"
+  "keywords": [
+    "plumix",
+    "cms",
+    "framework"
   ],
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -74,6 +69,16 @@
       "types": "./dist/slugify.d.ts",
       "default": "./dist/slugify.js"
     }
+  },
+  "files": [
+    "dist",
+    "locales",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
