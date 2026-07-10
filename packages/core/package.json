@@ -81,6 +81,7 @@
     "provenance": true
   },
   "scripts": {
+    "attw": "attw --pack . --profile esm-only",
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -xdf .cache .drizzle .turbo dist node_modules",
     "db:generate": "drizzle-kit generate",
@@ -88,6 +89,7 @@
     "i18n:check": "node ../plumix/bin/plumix.mjs i18n verify --src src/admin-bar --src src/welcome",
     "i18n:compile": "plumix-compile-catalogs --dts",
     "lint": "eslint",
+    "publint": "publint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
@@ -123,6 +125,7 @@
     }
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "catalog:",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/lingui-config": "workspace:*",
@@ -137,6 +140,7 @@
     "eslint": "catalog:",
     "jsdom": "catalog:",
     "prettier": "catalog:",
+    "publint": "catalog:",
     "react": "catalog:react",
     "react-dom": "catalog:react",
     "typescript": "catalog:",

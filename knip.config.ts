@@ -48,9 +48,7 @@ const config: KnipConfig = {
     "packages/plugins/pages/playground": {
       entry: ["plumix.config.ts"],
     },
-    // - drizzle-kit is invoked by consumers as a CLI hint, not imported.
-    // - @plumix/admin is consumed via filesystem copy (scripts/copy-admin.mjs)
-    //   at build time, not as a TypeScript import.
+    // drizzle-kit is invoked by consumers as a CLI hint, not imported.
     "packages/plumix": {
       entry: [
         "src/index.ts",
@@ -77,8 +75,8 @@ const config: KnipConfig = {
         "src/admin/ui.ts",
         // `theme.css` is read at runtime by `compilePluginCss`
         // (admin-plugin-bundle.ts) via `readFile(ADMIN_THEME_CSS)` and
-        // shipped to consumers via `scripts/copy-admin.mjs` — neither
-        // path is a static import knip can follow.
+        // copied into dist by `scripts/copy-theme.mjs` — neither path is a
+        // static import knip can follow.
         "src/admin/theme.css",
         "src/blocks/index.ts",
         "src/blocks/renderer.ts",
@@ -108,12 +106,11 @@ const config: KnipConfig = {
         "src/vite/index.ts",
       ],
       // - drizzle-kit is invoked by consumers as a CLI hint, not imported.
-      // - @plumix/admin is consumed via filesystem copy (scripts/copy-admin.mjs).
       // - tailwindcss is resolved at runtime by `@tailwindcss/node`'s
       //   `compile()` (which `import`s `tailwindcss/theme` and
       //   `tailwindcss/utilities` from the synthesised CSS string), not
       //   from any TS source.
-      ignoreDependencies: ["drizzle-kit", "@plumix/admin", "tailwindcss"],
+      ignoreDependencies: ["drizzle-kit", "tailwindcss"],
     },
     // The runtime-proof fixture plugin is loaded by playwright's
     // webServer command at e2e time — not via a static import knip

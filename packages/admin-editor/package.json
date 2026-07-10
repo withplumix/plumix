@@ -35,6 +35,7 @@
     "provenance": true
   },
   "scripts": {
+    "attw": "attw --pack . --profile esm-only",
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore",
@@ -45,6 +46,7 @@
     "playground": "plumix-compile-catalogs && vite",
     "playground:build": "plumix-compile-catalogs && vite build",
     "playground:preview": "vite preview --port 5179 --strictPort",
+    "publint": "publint",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
@@ -75,6 +77,7 @@
     "react-dom": "catalog:react"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "catalog:",
     "@lingui/cli": "catalog:lingui",
     "@lingui/core": "catalog:lingui",
     "@lingui/react": "catalog:lingui",
@@ -95,6 +98,7 @@
     "eslint": "catalog:",
     "jsdom": "catalog:",
     "prettier": "catalog:",
+    "publint": "catalog:",
     "react": "catalog:react",
     "react-dom": "catalog:react",
     "tailwindcss": "catalog:tailwind",

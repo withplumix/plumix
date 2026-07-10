@@ -200,10 +200,12 @@
     "provenance": true
   },
   "scripts": {
+    "attw": "attw --pack . --profile esm-only",
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
+    "publint": "publint",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
     "ui:add": "pnpm dlx shadcn@latest add && prettier --write src --ignore-path ../../.gitignore"
   },
@@ -227,6 +229,7 @@
     "react-dom": "catalog:react"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
@@ -234,6 +237,7 @@
     "@types/react-dom": "catalog:react",
     "eslint": "catalog:",
     "prettier": "catalog:",
+    "publint": "catalog:",
     "react": "catalog:react",
     "react-dom": "catalog:react",
     "typescript": "catalog:"
