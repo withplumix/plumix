@@ -34,7 +34,7 @@ catalog:
   sonner: ^2.0.7
   tailwind-merge: ^3.6.0
   typescript: ^6.0.3
-  valibot: ^1.4.1
+  valibot: ^1.4.2
 
 # Named catalogs group a multi-package family (2+ packages, 2+ consumers) under one
 # handle, named to match its group in .github/dependabot.yml. Referenced as
