@@ -1,7 +1,11 @@
 name: Congrats
 
 on:
-  pull_request_target:
+  # pull_request_target (not pull_request) so the job can comment on PRs from
+  # forks — a fork's pull_request token is read-only. Safe here: the job never
+  # checks out or runs PR-authored code, it only calls the GitHub API with the
+  # PR author's login, so there's no untrusted-code execution path.
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [closed]
 
 permissions:
@@ -13,7 +17,7 @@ jobs:
     name: First-time contributor
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v9
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const author = context.payload.pull_request.user.login;
