@@ -2,7 +2,7 @@
   "name": "@plumix/plugin-pages",
   "version": "0.1.0",
   "type": "module",
-  "description": "Pages plugin for Plumix \u2014 hierarchical static pages",
+  "description": "Pages plugin for Plumix — hierarchical static pages",
   "license": "MIT",
   "author": "Plumix Contributors",
   "homepage": "https://github.com/withplumix/plumix#readme",

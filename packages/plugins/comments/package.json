@@ -1,8 +1,8 @@
 {
   "name": "@plumix/plugin-comments",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
-  "description": "Comments plugin for Plumix \u2014 threaded, moderated discussion on entries with a tested playground.",
+  "description": "Comments plugin for Plumix — threaded, moderated discussion on entries with a tested playground.",
   "license": "MIT",
   "author": "Plumix Contributors",
   "homepage": "https://github.com/withplumix/plumix#readme",
