@@ -26,7 +26,7 @@ catalog:
   eslint: ^10.6.0
   fishery: ^2.4.0
   jsdom: ^29.1.1
-  lucide-react: ^1.21.0
+  lucide-react: ^1.23.0
   prettier: ^3.9.3
   publint: ^0.3.21
   radix-ui: ^1.5.0
