@@ -33,6 +33,22 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
+  changesets:
+    name: Changesets
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      # We're deliberately in 0.x. A `major` changeset resolves straight to
+      # 1.0.0 (changesets does no 0.x demotion), so block it from shipping as a
+      # side effect of merging a feature PR — crossing 1.0 is a decision.
+      - name: Block >= 1.0.0 while in 0.x
+        run: pnpm check-no-major
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

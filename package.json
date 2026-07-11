@@ -10,6 +10,7 @@
   "scripts": {
     "attw": "turbo run attw",
     "build": "turbo run build",
+    "check-no-major": "node .github/scripts/check-no-major.mjs",
     "clean": "git clean -xdf node_modules",
     "clean:workspaces": "turbo run clean",
     "commitlint": "commitlint",
