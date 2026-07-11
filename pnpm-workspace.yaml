@@ -26,15 +26,15 @@ catalog:
   eslint: ^10.6.0
   fishery: ^2.4.0
   jsdom: ^29.1.1
-  lucide-react: ^1.21.0
+  lucide-react: ^1.23.0
   prettier: ^3.9.3
   publint: ^0.3.21
-  radix-ui: ^1.5.0
+  radix-ui: ^1.6.1
   react-hook-form: ^7.80.0
   sonner: ^2.0.7
   tailwind-merge: ^3.6.0
   typescript: ^6.0.3
-  valibot: ^1.4.1
+  valibot: ^1.4.2
 
 # Named catalogs group a multi-package family (2+ packages, 2+ consumers) under one
 # handle, named to match its group in .github/dependabot.yml. Referenced as
@@ -112,9 +112,9 @@ catalogs:
     "@dnd-kit/sortable": ^10.0.0
     "@dnd-kit/utilities": ^3.2.2
   cloudflare:
-    "@cloudflare/vite-plugin": ^1.42.3
-    "@cloudflare/workers-types": ^4.20260629.1
-    wrangler: ^4.105.0
+    "@cloudflare/vite-plugin": ^1.43.0
+    "@cloudflare/workers-types": ^5.20260704.1
+    wrangler: ^4.107.0
 
 publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"
