@@ -61,6 +61,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
+      # No contents/pull-requests write: the App token below supplies those for
+      # the version-bump push, tags, and Version PR. Only OIDC needs a job-level
+      # scope, and it can't come from the App token (it's the workflow identity).
       id-token: write # OIDC trusted publishing + provenance (no npm token)
     steps:
       # Push the version bump + "Version Packages" PR under a GitHub App
