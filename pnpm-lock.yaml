@@ -23,8 +23,8 @@ catalogs:
       specifier: ^0.17.4
       version: 0.17.4
     '@playwright/test':
-      specifier: ^1.61.0
-      version: 1.61.0
+      specifier: ^1.61.1
+      version: 1.61.1
     '@types/node':
       specifier: ^24.13.2
       version: 24.13.2
@@ -56,8 +56,8 @@ catalogs:
       specifier: ^1.6.1
       version: 1.6.2
     react-hook-form:
-      specifier: ^7.80.0
-      version: 7.80.0
+      specifier: ^7.81.0
+      version: 7.81.0
     sonner:
       specifier: ^2.0.7
       version: 2.0.7
@@ -377,7 +377,7 @@ importers:
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.12.1
-        version: 4.12.1(playwright-core@1.61.0)
+        version: 4.12.1(playwright-core@1.61.1)
       '@babel/core':
         specifier: ^8.0.1
         version: 8.0.1
@@ -389,7 +389,7 @@ importers:
         version: 5.2.8
       '@hookform/resolvers':
         specifier: ^5.4.0
-        version: 5.4.0(react-hook-form@7.80.0(react@19.2.7))
+        version: 5.4.0(react-hook-form@7.81.0(react@19.2.7))
       '@lingui/babel-plugin-lingui-macro':
         specifier: catalog:lingui
         version: 6.4.0
@@ -404,7 +404,7 @@ importers:
         version: 6.4.0(react@19.2.7)
       '@lingui/vite-plugin':
         specifier: catalog:lingui
-        version: 6.4.0(@babel/core@8.0.1)(@lingui/babel-plugin-lingui-macro@6.4.0)(@rolldown/plugin-babel@0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)))(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 6.4.0(@babel/core@8.0.1)(@lingui/babel-plugin-lingui-macro@6.4.0)(@rolldown/plugin-babel@0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)))(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.14.7
@@ -413,7 +413,7 @@ importers:
         version: 1.14.7(@orpc/client@1.14.7)(@tanstack/query-core@5.101.2)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.61.0
+        version: 1.61.1
       '@plumix/admin-editor':
         specifier: workspace:*
         version: link:../admin-editor
@@ -443,10 +443,10 @@ importers:
         version: link:../../tooling/vitest
       '@rolldown/plugin-babel':
         specifier: ^0.2.0
-        version: 0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
       '@tailwindcss/vite':
         specifier: catalog:tailwind
-        version: 4.3.2(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.3.2(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
       '@tanstack/react-query':
         specifier: catalog:tanstack
         version: 5.101.2(react@19.2.7)
@@ -464,7 +464,7 @@ importers:
         version: 8.21.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@tanstack/router-plugin':
         specifier: catalog:tanstack
-        version: 1.168.19(@tanstack/react-router@1.170.17(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 1.168.19(@tanstack/react-router@1.170.17(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
       '@testing-library/jest-dom':
         specifier: catalog:testing-library
         version: 6.9.1
@@ -485,7 +485,7 @@ importers:
         version: 19.2.3(@types/react@19.2.17)
       '@vitejs/plugin-react':
         specifier: catalog:vite
-        version: 6.0.3(@rolldown/plugin-babel@0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)))(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 6.0.3(@rolldown/plugin-babel@0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)))(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 4.1.10(vitest@4.1.10)
@@ -515,7 +515,7 @@ importers:
         version: 19.2.7(react@19.2.7)
       react-hook-form:
         specifier: 'catalog:'
-        version: 7.80.0(react@19.2.7)
+        version: 7.81.0(react@19.2.7)
       sonner:
         specifier: 'catalog:'
         version: 2.0.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -542,10 +542,10 @@ importers:
         version: 1.4.2(typescript@6.0.3)
       vite:
         specifier: catalog:vite
-        version: 8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
+        version: 8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
       vitest:
         specifier: catalog:vitest
-        version: 4.1.10(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+        version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
 
   packages/admin-editor:
     dependencies:
@@ -615,7 +615,7 @@ importers:
         version: 6.4.0(react@19.2.7)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.61.0
+        version: 1.61.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -720,7 +720,7 @@ importers:
         version: 5.7.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react-hook-form:
         specifier: 'catalog:'
-        version: 7.80.0(react@19.2.7)
+        version: 7.81.0(react@19.2.7)
       sonner:
         specifier: 'catalog:'
         version: 2.0.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -897,7 +897,7 @@ importers:
         version: 0.18.4
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.61.0
+        version: 1.61.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -1012,7 +1012,7 @@ importers:
         version: 1.14.7(ws@8.21.0)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.61.0
+        version: 1.61.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -1131,7 +1131,7 @@ importers:
         version: 6.4.0
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.61.0
+        version: 1.61.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -1229,7 +1229,7 @@ importers:
         version: 1.14.7(ws@8.21.0)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.61.0
+        version: 1.61.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -1357,7 +1357,7 @@ importers:
         version: 6.4.0
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.61.0
+        version: 1.61.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -1479,7 +1479,7 @@ importers:
         version: 1.14.7(ws@8.21.0)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.61.0
+        version: 1.61.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -1588,7 +1588,7 @@ importers:
         version: 6.4.0
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.61.0
+        version: 1.61.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -1719,7 +1719,7 @@ importers:
         version: 1.14.7(@orpc/client@1.14.7)(@tanstack/query-core@5.101.2)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.61.0
+        version: 1.61.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -3566,8 +3566,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@playwright/test@1.61.0':
-    resolution: {integrity: sha512-cKA5B6lpFEMyMGjxF54QihfYpB4FkEGH+qZhtArDEG+wezQAJY8Pq6C7T1SjWz+FFzt3TbyoXBQYk/0292TdJA==}
+  '@playwright/test@1.61.1':
+    resolution: {integrity: sha512-8nKv6+0RJSL9FE4jYOEGXnPeM/Hg12qZpmqzZjRh3qM0Y7c3z1mrOTfFLids72RDQYVh9WpLEfR5WdpNX4fkig==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -7127,13 +7127,13 @@ packages:
     resolution: {integrity: sha512-u9mdErTewKSMsr+ceCt8VcNuNP0ro5AXiPXhUVApuEyqr2Zlvt+DdCFBcm+yGWN8mhOdZJ27meIDbnoZgfzpOw==}
     hasBin: true
 
-  playwright-core@1.61.0:
-    resolution: {integrity: sha512-caX7TrY3Ml6egyDX0WUcTHDxodl/b51y5wJOdCEA36QviK/s2g081hvmGs8eaE3DWb6NYZQ6BjO/QkNRPenoPA==}
+  playwright-core@1.61.1:
+    resolution: {integrity: sha512-h7Qlt6m4REp25qvIdvbDtVmD4LqVXfpRxhORv9L0jzETM05p4fuPJ3dKyuSXQxDSbXnmS79HAgi9589lGSpLkg==}
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.61.0:
-    resolution: {integrity: sha512-Z+7BeeqQPRRzklHsVFP4KTGIyMxKUmfeRA4WisM6G3/XW6nwGeX6fX9qYaDa+CiUqpOkb2f6X3nar05R3kSuJQ==}
+  playwright@1.61.1:
+    resolution: {integrity: sha512-DWnY5o3YbLWK4GovuAVwpqL+1VwGNdUGrRr++8j8PtQQzvAVZUIMjKQ90fY689sEJZJBbZVw1rXaOKSTitkzPQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -7349,8 +7349,8 @@ packages:
     peerDependencies:
       react: ^19.2.7
 
-  react-hook-form@7.80.0:
-    resolution: {integrity: sha512-4P+fk6oXsxY+6xSj7Euhc2sumQD8zQqCuVHoJwoyp9EchP+IUW9OESB7uHFJOKsIBQ4MQqYE84INJFqUCYNoOg==}
+  react-hook-form@7.81.0:
+    resolution: {integrity: sha512-ocbmr2p5KBMoAfj4WCUvped33lVi1Kd5DuDUvQDnB6VEAacOjPI/jMbtDdbhco4y9ct4xUuCmMY0b/C9L0QHjw==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
@@ -8290,10 +8290,10 @@ snapshots:
 
   '@asamuzakjp/nwsapi@2.3.9': {}
 
-  '@axe-core/playwright@4.12.1(playwright-core@1.61.0)':
+  '@axe-core/playwright@4.12.1(playwright-core@1.61.1)':
     dependencies:
       axe-core: 4.12.1
-      playwright-core: 1.61.0
+      playwright-core: 1.61.1
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -9149,10 +9149,10 @@ snapshots:
     dependencies:
       hono: 4.12.25
 
-  '@hookform/resolvers@5.4.0(react-hook-form@7.80.0(react@19.2.7))':
+  '@hookform/resolvers@5.4.0(react-hook-form@7.81.0(react@19.2.7))':
     dependencies:
       '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.80.0(react@19.2.7)
+      react-hook-form: 7.81.0(react@19.2.7)
 
   '@humanfs/core@0.19.1': {}
 
@@ -9449,15 +9449,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@lingui/vite-plugin@6.4.0(@babel/core@8.0.1)(@lingui/babel-plugin-lingui-macro@6.4.0)(@rolldown/plugin-babel@0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)))(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))':
+  '@lingui/vite-plugin@6.4.0(@babel/core@8.0.1)(@lingui/babel-plugin-lingui-macro@6.4.0)(@rolldown/plugin-babel@0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)))(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))':
     dependencies:
       '@lingui/cli': 6.4.0
       '@lingui/conf': 6.4.0
-      vite: 8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
+      vite: 8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
     optionalDependencies:
       '@babel/core': 8.0.1
       '@lingui/babel-plugin-lingui-macro': 6.4.0
-      '@rolldown/plugin-babel': 0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+      '@rolldown/plugin-babel': 0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
       rolldown: 1.1.3
     transitivePeerDependencies:
       - babel-plugin-macros
@@ -9841,9 +9841,9 @@ snapshots:
   '@oxc-resolver/binding-win32-x64-msvc@11.21.3':
     optional: true
 
-  '@playwright/test@1.61.0':
+  '@playwright/test@1.61.1':
     dependencies:
-      playwright: 1.61.0
+      playwright: 1.61.1
 
   '@pnpm/constants@10.0.0': {}
 
@@ -10792,6 +10792,16 @@ snapshots:
     optionalDependencies:
       '@babel/runtime': 7.29.7
       vite: 8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
+    optional: true
+
+  '@rolldown/plugin-babel@0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))':
+    dependencies:
+      '@babel/core': 8.0.1
+      picomatch: 4.0.4
+      rolldown: 1.1.3
+    optionalDependencies:
+      '@babel/runtime': 7.29.7
+      vite: 8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
 
   '@rolldown/pluginutils@1.0.1': {}
 
@@ -10903,6 +10913,13 @@ snapshots:
       tailwindcss: 4.3.2
       vite: 8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
 
+  '@tailwindcss/vite@4.3.2(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))':
+    dependencies:
+      '@tailwindcss/node': 4.3.2
+      '@tailwindcss/oxide': 4.3.2
+      tailwindcss: 4.3.2
+      vite: 8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
+
   '@tanstack/history@1.162.0': {}
 
   '@tanstack/query-core@5.101.2': {}
@@ -10981,7 +10998,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@tanstack/router-plugin@1.168.19(@tanstack/react-router@1.170.17(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))':
+  '@tanstack/router-plugin@1.168.19(@tanstack/react-router@1.170.17(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))':
     dependencies:
       '@babel/core': 7.29.7
       '@babel/template': 7.29.7
@@ -10994,7 +11011,7 @@ snapshots:
       zod: 4.4.3
     optionalDependencies:
       '@tanstack/react-router': 1.170.17(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      vite: 8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
+      vite: 8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -11460,6 +11477,13 @@ snapshots:
     optionalDependencies:
       '@rolldown/plugin-babel': 0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
 
+  '@vitejs/plugin-react@6.0.3(@rolldown/plugin-babel@0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)))(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))':
+    dependencies:
+      '@rolldown/pluginutils': 1.0.1
+      vite: 8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
+    optionalDependencies:
+      '@rolldown/plugin-babel': 0.2.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(rolldown@1.1.3)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+
   '@vitest/coverage-v8@4.1.10(vitest@4.1.10)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
@@ -11472,7 +11496,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.10(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+      vitest: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
 
   '@vitest/expect@4.1.10':
     dependencies:
@@ -11490,6 +11514,14 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
+
+  '@vitest/mocker@4.1.10(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))':
+    dependencies:
+      '@vitest/spy': 4.1.10
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
 
   '@vitest/pretty-format@4.1.10':
     dependencies:
@@ -13466,11 +13498,11 @@ snapshots:
 
   pkg-pr-new@0.0.75: {}
 
-  playwright-core@1.61.0: {}
+  playwright-core@1.61.1: {}
 
-  playwright@1.61.0:
+  playwright@1.61.1:
     dependencies:
-      playwright-core: 1.61.0
+      playwright-core: 1.61.1
     optionalDependencies:
       fsevents: 2.3.2
 
@@ -13710,7 +13742,7 @@ snapshots:
       react: 19.2.7
       scheduler: 0.27.0
 
-  react-hook-form@7.80.0(react@19.2.7):
+  react-hook-form@7.81.0(react@19.2.7):
     dependencies:
       react: 19.2.7
 
@@ -14433,6 +14465,21 @@ snapshots:
       tsx: 4.23.0
       yaml: 2.9.0
 
+  vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0):
+    dependencies:
+      lightningcss: 1.32.0
+      picomatch: 4.0.4
+      postcss: 8.5.16
+      rolldown: 1.1.3
+      tinyglobby: 0.2.17
+    optionalDependencies:
+      '@types/node': 24.13.3
+      esbuild: 0.28.1
+      fsevents: 2.3.3
+      jiti: 2.7.0
+      tsx: 4.23.0
+      yaml: 2.9.0
+
   vitest@4.1.10(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.1.3(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.10
@@ -14457,6 +14504,36 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.13.2
+      '@vitest/coverage-v8': 4.1.10(vitest@4.1.10)
+      happy-dom: 20.9.0
+      jsdom: 29.1.1
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)):
+    dependencies:
+      '@vitest/expect': 4.1.10
+      '@vitest/mocker': 4.1.10(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+      '@vitest/pretty-format': 4.1.10
+      '@vitest/runner': 4.1.10
+      '@vitest/snapshot': 4.1.10
+      '@vitest/spy': 4.1.10
+      '@vitest/utils': 4.1.10
+      es-module-lexer: 2.0.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.4
+      std-env: 4.1.0
+      tinybench: 2.9.0
+      tinyexec: 1.1.2
+      tinyglobby: 0.2.17
+      tinyrainbow: 3.1.0
+      vite: 8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 24.13.3
       '@vitest/coverage-v8': 4.1.10(vitest@4.1.10)
       happy-dom: 20.9.0
       jsdom: 29.1.1
