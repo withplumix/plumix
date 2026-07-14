@@ -19,7 +19,7 @@ packages:
 catalog:
   "@arethetypeswrong/cli": ^0.18.4
   "@libsql/client": ^0.17.4
-  "@playwright/test": ^1.61.0
+  "@playwright/test": ^1.61.1
   "@types/node": ^24.13.2
   cmdk: ^1.1.1
   esbuild: ^0.28.1
