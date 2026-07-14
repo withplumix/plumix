@@ -61,16 +61,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write # push the version bump + git tags
-      pull-requests: write # open/update the "Version Packages" PR
+      # No contents/pull-requests write: the App token below supplies those for
+      # the version-bump push, tags, and Version PR. Only OIDC needs a job-level
+      # scope, and it can't come from the App token (it's the workflow identity).
       id-token: write # OIDC trusted publishing + provenance (no npm token)
     steps:
+      # Push the version bump + "Version Packages" PR under a GitHub App
+      # identity, NOT GITHUB_TOKEN. GitHub refuses to trigger workflows from
+      # GITHUB_TOKEN-authored events (anti-recursion), so a token-pushed Version
+      # PR never gets ci.yml or the Release gate — its required checks sit
+      # unreported and it can't merge. App-token pushes DO trigger workflows.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           # Intentionally persisted: changesets/action pushes the version bump,
           # git tags, and the "Version Packages" PR using this credential.
           persist-credentials: true
+          token: ${{ steps.app-token.outputs.token }}
 
       # setup configures no npm auth on purpose: a token-based .npmrc would
       # resolve to an empty _authToken and shadow OIDC. npm publishes to the
@@ -91,7 +105,7 @@ jobs:
           commit: "ci: version packages"
           title: "ci: version packages"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           # Empty (not absent) so changesets/action skips token-based auth setup
           # and npm falls through to OIDC trusted publishing.
           # https://github.com/changesets/changesets/issues/1152
