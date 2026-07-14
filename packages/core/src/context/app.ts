@@ -186,10 +186,10 @@ export interface AppContextBase<
   readonly cache?: ConnectedCache;
   /**
    * On-the-fly image delivery (resize / format / quality URLs). Present
-   * when the config declared an `imageDelivery:` slot. Pure URL math —
-   * `imageDelivery.url(src, opts)` returns the CDN-transformed URL.
-   * Plugins that render images (media plugin, themes) read this; core
-   * procedures don't use it today.
+   * when the config declared an `imageDelivery:` slot, already resolved
+   * against the request env by the runtime. `imageDelivery.url(src, opts)`
+   * returns the CDN-transformed URL. Plugins that render images (media
+   * plugin, themes) read this; core procedures don't use it today.
    */
   readonly imageDelivery?: ImageDelivery;
   /** Remote-host allowlist for `<Image>` optimization (from `config.images.remotePatterns`). */

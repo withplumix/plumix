@@ -1,6 +1,7 @@
 import type { CacheProvider, ConnectedCache } from "plumix";
 
 import { EdgeCacheError } from "./errors.js";
+import { readEnvString } from "./read-env.js";
 
 /**
  * Edge-cache policy for {@link edge}. `ttl` is the edge freshness window in
@@ -29,12 +30,6 @@ interface EdgeStore {
 function defaultStore(): EdgeStore | null {
   const store = (globalThis as { caches?: { default?: EdgeStore } }).caches;
   return store?.default ?? null;
-}
-
-function readCredential(env: unknown, key: string): string | null {
-  if (typeof env !== "object" || env === null) return null;
-  const value = (env as Record<string, unknown>)[key];
-  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function cacheControl(config: EdgeConfig): string {
@@ -121,9 +116,9 @@ export function edge(config: EdgeConfig): CacheProvider {
   return {
     kind: "cloudflare-edge",
     connect(env) {
-      const zoneId = readCredential(env, ZONE_ID);
-      const purgeToken = readCredential(env, PURGE_TOKEN);
-      if (zoneId === null || purgeToken === null) return null;
+      const zoneId = readEnvString(env, ZONE_ID);
+      const purgeToken = readEnvString(env, PURGE_TOKEN);
+      if (zoneId === undefined || purgeToken === undefined) return null;
       const store = defaultStore();
       if (store === null) return null;
       return connectedCache(store, config, { zoneId, purgeToken });

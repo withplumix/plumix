@@ -71,6 +71,17 @@ function collectBindingsFrom(slot: unknown, into: string[]): void {
   if (bindings) into.push(...bindings);
 }
 
+// `connect` owns its result, including `undefined` for "no delivery" — so it
+// must not `?? slot` back to the bare (identity-transform) object.
+function connectImageDelivery(
+  app: PlumixApp,
+  env: unknown,
+): PlumixApp["config"]["imageDelivery"] {
+  const slot = app.config.imageDelivery;
+  if (!slot) return undefined;
+  return slot.connect ? slot.connect(env) : slot;
+}
+
 function validateBindings(app: PlumixApp, env: unknown): void {
   const required: string[] = [];
   const { database, kv, storage } = app.config;
@@ -204,7 +215,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         assets: readAssetsBinding(env),
         storage,
         cache,
-        imageDelivery: app.config.imageDelivery,
+        imageDelivery: connectImageDelivery(app, env),
         imageRemotePatterns: app.config.images?.remotePatterns,
         mailer: app.config.mailer,
         i18n: app.config.i18n,
@@ -286,7 +297,7 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
       assets: readAssetsBinding(env),
       storage,
       cache,
-      imageDelivery: app.config.imageDelivery,
+      imageDelivery: connectImageDelivery(app, env),
       imageRemotePatterns: app.config.images?.remotePatterns,
       mailer: app.config.mailer,
       i18n: app.config.i18n,

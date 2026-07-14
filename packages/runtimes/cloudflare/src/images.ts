@@ -1,12 +1,19 @@
 import type { ImageDelivery, TransformOpts } from "plumix";
 
+import { readEnvString } from "./read-env.js";
+
 export interface ImagesConfig {
   /**
    * Hostname of a Cloudflare zone that has Image Transformations enabled
    * and serves your bucket (typically R2 fronted by a custom domain).
    * No protocol or path — just the host: `"media.example.com"`.
+   *
+   * Optional: when omitted, the zone is resolved at request time from the
+   * `MEDIA_PUBLIC_URL_BASE` env key, so a bare `images()` no-ops until that
+   * host is attached. This assumes the storage binding is named `MEDIA`; a
+   * differently-named bucket won't pair automatically.
    */
-  readonly zone: string;
+  readonly zone?: string;
 }
 
 /**
@@ -25,17 +32,24 @@ export interface ImagesConfig {
  * });
  * ```
  */
-export function images(config: ImagesConfig): ImageDelivery {
-  const zone = stripProtocolAndSlash(config.zone);
-  const zonePrefix = `https://${zone}/`;
-
+export function images(config: ImagesConfig = {}): ImageDelivery {
+  const rawZone = config.zone;
+  const zone = rawZone ? stripProtocolAndSlash(rawZone) : undefined;
+  const zonePrefix = zone ? `https://${zone}/` : undefined;
   return {
     kind: "cloudflare-images",
     url(sourceUrl: string, opts?: TransformOpts): string {
       const optsStr = serializeOpts(opts);
-      if (optsStr.length === 0) return sourceUrl;
+      if (optsStr.length === 0 || zonePrefix === undefined) return sourceUrl;
       const source = resolveSource(sourceUrl, zonePrefix);
       return `${zonePrefix}cdn-cgi/image/${optsStr}/${source}`;
+    },
+    // undefined (not a passthrough) when no host resolves — else presence
+    // checks upstream build a same-URL srcSet across the width ladder.
+    connect(env: unknown): ImageDelivery | undefined {
+      if (rawZone) return this;
+      const zoneFromEnv = readEnvString(env, "MEDIA_PUBLIC_URL_BASE");
+      return zoneFromEnv ? images({ zone: zoneFromEnv }) : undefined;
     },
   };
 }

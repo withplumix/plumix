@@ -15,6 +15,7 @@ import type {
 import { resolveEnvInput } from "plumix";
 
 import { R2Error } from "./errors.js";
+import { readEnvString } from "./read-env.js";
 import { presignPutUrl } from "./sigv4.js";
 
 /**
@@ -38,16 +39,23 @@ export interface R2S3Credentials {
 
 export interface R2Config {
   readonly binding: string;
+  /**
+   * Public base URL for bucket objects (a custom domain fronting R2). When
+   * omitted, read from the `<BINDING>_PUBLIC_URL_BASE` request-env key so a
+   * bare `r2({ binding })` still resolves public URLs once a domain is
+   * attached. Absent both, `url()` returns `null`.
+   */
   readonly publicUrlBase?: string;
   /**
-   * S3-compatible credentials for presigned PUT URLs. Without this block,
-   * `presignPut` throws "not configured" and consumers must accept that
-   * uploads cannot bypass the worker. R2 native bindings cannot mint
-   * presigned URLs — that's an S3-API-only capability.
+   * S3-compatible credentials for presigned PUT URLs. R2 native bindings
+   * cannot mint presigned URLs — that's an S3-API-only capability — so
+   * `presignPut` is exposed only when credentials are available.
    *
-   * Either literal credentials, or an `(env) => R2S3Credentials` resolver — the
-   * keys sign requests at presign (request) time, so on Workers they come from
-   * the per-request `env`, resolved + memoized like the other secret slots.
+   * Either literal credentials or an `(env) => R2S3Credentials` resolver, both
+   * evaluated at presign (request) time. When omitted, credentials are read
+   * from conventional request-env keys — `CF_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+   * `R2_SECRET_ACCESS_KEY`, and the binding-derived `<BINDING>_BUCKET` — and
+   * `presignPut` stays undefined until all four are present.
    */
   readonly s3?: EnvInput<R2S3Credentials>;
 }
@@ -137,6 +145,10 @@ export function r2(config: R2Config): R2ObjectStorage {
     config,
     connect(env): ConnectedObjectStorage {
       const bucket = readR2Binding(env, config.binding);
+      const publicUrlBase =
+        config.publicUrlBase ??
+        readEnvString(env, `${config.binding}_PUBLIC_URL_BASE`);
+      const s3 = config.s3 ?? readConventionalS3(env, config.binding);
       const connected: ConnectedObjectStorage = {
         async put(key, body: ObjectBody, opts?: PutOptions): Promise<void> {
           await bucket.put(key, body, {
@@ -206,35 +218,37 @@ export function r2(config: R2Config): R2ObjectStorage {
           // unguessable-but-static keys publicly with no published-
           // status check. The consumer (media plugin) mints a
           // worker-proxied URL keyed on the entry id instead.
-          if (!config.publicUrlBase) return null;
-          const base = config.publicUrlBase.replace(/\/$/, "");
+          if (!publicUrlBase) return null;
+          const base = publicUrlBase.replace(/\/$/, "");
           return `${base}/${encodePath(key)}`;
         },
       };
 
-      // Attach `presignPut` only when S3 credentials are configured —
+      // Attach `presignPut` only when S3 credentials are available —
       // R2 native bindings can't mint presigned URLs, so the optional
-      // slot stays `undefined` if the consumer didn't opt in.
-      if (config.s3) {
+      // slot stays `undefined` when neither an explicit `s3` block nor a
+      // complete set of conventional env keys is present.
+      if (s3) {
         // `connect`'s env is loosely typed (`unknown`); a resolver authored
         // against `EnvInput` expects the typed `PlumixEnv`. The runtime value
         // is that env — bridge it here, at the one loose boundary.
-        const s3 = resolveEnvInput(config.s3, env as PlumixEnv);
+        const resolvedS3 = resolveEnvInput(s3, env as PlumixEnv);
         connected.presignPut = async (
           key: string,
           opts: PresignPutOptions,
         ): Promise<PresignedPutResult> => {
           const endpoint =
-            s3.endpoint ?? `https://${s3.accountId}.r2.cloudflarestorage.com`;
+            resolvedS3.endpoint ??
+            `https://${resolvedS3.accountId}.r2.cloudflarestorage.com`;
           return presignPutUrl({
             endpoint,
-            bucket: s3.bucket,
+            bucket: resolvedS3.bucket,
             key,
             contentType: opts.contentType,
             expiresIn: opts.expiresIn ?? DEFAULT_PRESIGN_TTL_SECONDS,
             credentials: {
-              accessKeyId: s3.accessKeyId,
-              secretAccessKey: s3.secretAccessKey,
+              accessKeyId: resolvedS3.accessKeyId,
+              secretAccessKey: resolvedS3.secretAccessKey,
             },
           });
         };
@@ -248,4 +262,19 @@ export function r2(config: R2Config): R2ObjectStorage {
 // `/` separators in keys survive — R2 stores them as literal chars.
 function encodePath(key: string): string {
   return key.split("/").map(encodeURIComponent).join("/");
+}
+
+// All four or none: a partial set stays undefined (presign disabled), not a throw.
+function readConventionalS3(
+  env: unknown,
+  binding: string,
+): R2S3Credentials | undefined {
+  const accountId = readEnvString(env, "CF_ACCOUNT_ID");
+  const accessKeyId = readEnvString(env, "R2_ACCESS_KEY_ID");
+  const secretAccessKey = readEnvString(env, "R2_SECRET_ACCESS_KEY");
+  const bucket = readEnvString(env, `${binding}_BUCKET`);
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
+    return undefined;
+  }
+  return { accountId, accessKeyId, secretAccessKey, bucket };
 }

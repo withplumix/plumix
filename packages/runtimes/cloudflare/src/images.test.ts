@@ -67,3 +67,36 @@ describe("images() — Cloudflare Image Transformations URL builder", () => {
     expect(cdn.kind).toBe("cloudflare-images");
   });
 });
+
+describe("images() — conventional env zone", () => {
+  // Zero-arg `images()` defers its zone to the deploy's request env, so a
+  // config can stay `imageDelivery: images()` and light up once the media
+  // host is attached — without the config-time `process.env` read (which is
+  // empty on Workers) or the `X ? images(...) : undefined` ternary.
+  test("resolves the zone from MEDIA_PUBLIC_URL_BASE at connect time", () => {
+    const cdn = images().connect?.({
+      MEDIA_PUBLIC_URL_BASE: "https://media.example.com",
+    });
+    if (!cdn) throw new Error("images() should expose connect");
+    expect(cdn.url("/cat.jpg", { width: 400 })).toBe(
+      "https://media.example.com/cdn-cgi/image/width=400/cat.jpg",
+    );
+  });
+
+  test("resolves to undefined (no delivery) when no zone is in the env", () => {
+    // Absent — not an identity-transform passthrough. A present slot would
+    // make the render path emit a same-URL srcSet across the width ladder;
+    // returning undefined keeps "no host" behaving exactly like "no slot".
+    expect(images().connect?.({})).toBeUndefined();
+  });
+
+  test("an explicit zone wins over the conventional env key", () => {
+    const cdn = images({ zone: "explicit.example.com" }).connect?.({
+      MEDIA_PUBLIC_URL_BASE: "https://env.example.com",
+    });
+    if (!cdn) throw new Error("images() should expose connect");
+    expect(cdn.url("/cat.jpg", { width: 100 })).toBe(
+      "https://explicit.example.com/cdn-cgi/image/width=100/cat.jpg",
+    );
+  });
+});
