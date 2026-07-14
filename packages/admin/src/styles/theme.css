@@ -1,15 +1,17 @@
 /*
- * Shared admin design tokens. Inlined into per-plugin Tailwind compiles
- * by `assemblePluginAdminBundle` (it reads this file via readFile and
- * concatenates the contents into the synthesised CSS entry) so plugin
- * utility classes resolve against the same theme as the host admin's
- * `globals.css`. Keep in sync with that file — `:root` / `.dark` vars
- * must match, and the `@theme inline` block must list every token a
- * plugin can reference via Tailwind utilities.
+ * Shared admin design tokens — the single source of truth for the
+ * Tailwind `@theme` mapping. Two consumers read this file:
  *
- * The host admin defines the variables on the live document, so plugin
- * CSS only needs the @theme inline mapping for utility-class
- * resolution; preflight + token vars stay with the admin.
+ *   1. This package's `globals.css` (`@import "./theme.css"`), so the
+ *      admin SPA's own utilities resolve against these tokens.
+ *   2. plumix's per-plugin Tailwind sidecar compile, which reads the
+ *      `dist/theme.css` this package emits (see vite.config.ts) so
+ *      plugin utility classes resolve against the same theme.
+ *
+ * Only the `@theme inline` mapping and the dark variant live here — the
+ * `:root` / `.dark` variable *values* stay in `globals.css`, defined on
+ * the live admin document. Plugin CSS therefore only needs the mapping;
+ * it references the document's vars at runtime.
  */
 
 @theme inline {

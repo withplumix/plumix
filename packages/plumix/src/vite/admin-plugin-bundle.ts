@@ -1,4 +1,5 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin as EsbuildPlugin } from "esbuild";
@@ -47,9 +48,14 @@ const ADMIN_SHIM_DIR = resolve(
   "../admin",
 );
 
-// Sibling of the runtime shims — `dist/admin/theme.css` is copied here
-// at plumix build time by `scripts/copy-theme.mjs`.
-const ADMIN_THEME_CSS = resolve(ADMIN_SHIM_DIR, "theme.css");
+// Resolve the `@theme` mapping from the installed @plumix/admin (same
+// package.json lookup index.ts uses to stage the SPA) so the per-plugin
+// sidecar compiles against the exact admin the consumer runs.
+const require = createRequire(import.meta.url);
+const ADMIN_THEME_CSS = resolve(
+  dirname(require.resolve("@plumix/admin/package.json")),
+  "dist/theme.css",
+);
 
 export async function assemblePluginAdminBundle({
   plugins,
@@ -233,11 +239,10 @@ async function compilePluginCss({
 }): Promise<boolean> {
   const themeCss = await readFile(ADMIN_THEME_CSS, "utf8").catch(() => null);
   if (themeCss === null) {
-    // Workspace dev: theme.css hasn't been copied into dist/admin yet
-    // (the consumer is running against the source tree). Skip the
-    // compile rather than failing — plugin authors testing with
-    // `pnpm dev` see the host admin's CSS but not the per-plugin
-    // utilities. Production builds always have theme.css present.
+    // @plumix/admin hasn't been built yet (its `dist/theme.css` is a
+    // build asset). Skip the compile rather than failing — plugin
+    // authors testing with `pnpm dev` see the host admin's CSS but not
+    // the per-plugin utilities. Production installs always ship it.
     return false;
   }
 

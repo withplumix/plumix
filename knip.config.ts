@@ -73,11 +73,6 @@ const config: KnipConfig = {
         // the plugin-bundle Vite step bundles them into the plugin chunk at
         // the consumer's build time — not a static import knip can follow.
         "src/admin/ui.ts",
-        // `theme.css` is read at runtime by `compilePluginCss`
-        // (admin-plugin-bundle.ts) via `readFile(ADMIN_THEME_CSS)` and
-        // copied into dist by `scripts/copy-theme.mjs` — neither path is a
-        // static import knip can follow.
-        "src/admin/theme.css",
         "src/blocks/index.ts",
         "src/blocks/renderer.ts",
         "src/blocks/test.ts",
