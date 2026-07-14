@@ -1,4 +1,6 @@
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import type { Plugin } from "vite";
 import { lingui, linguiTransformerBabelPreset } from "@lingui/vite-plugin";
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
@@ -19,6 +21,24 @@ const BACKEND_URL = process.env.PLUMIX_BACKEND_URL ?? "http://localhost:5173";
 // Explicit cwd so tools evaluating this config from the repo root
 // (knip) still find `packages/admin/lingui.config.ts`.
 const PACKAGE_DIR = fileURLToPath(new URL(".", import.meta.url));
+
+// globals.css inlines `theme.css` via `@import`, so nothing leaves a
+// standalone copy in dist. Emit one for plumix's per-plugin sidecar to
+// read from the installed package (see theme.css for who consumes it).
+function shipThemeTokens(): Plugin {
+  const src = fileURLToPath(new URL("./src/styles/theme.css", import.meta.url));
+  return {
+    name: "plumix:ship-theme-tokens",
+    apply: "build",
+    async generateBundle() {
+      this.emitFile({
+        type: "asset",
+        fileName: "theme.css",
+        source: await readFile(src, "utf8"),
+      });
+    },
+  };
+}
 
 export default defineConfig(({ command }) => ({
   // A relative base makes the built bundle relocatable: the worker injects a
@@ -41,6 +61,7 @@ export default defineConfig(({ command }) => ({
     babel({
       presets: [linguiTransformerBabelPreset(undefined, { cwd: PACKAGE_DIR })],
     }),
+    shipThemeTokens(),
   ],
   server: {
     port: ADMIN_DEV_PORT,
