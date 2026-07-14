@@ -7,19 +7,15 @@ on:
     branches: [main]
 
 concurrency:
-  # Serialize the publish (never cancel a release mid-flight); PR gate runs are
-  # per-PR and cancellable.
+  # never cancel an in-flight publish; PR gate runs are cancellable
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || 'release' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions: {}
 
 jobs:
-  # The publish gate. Runs on every PR so it can be a REQUIRED check (add it to
-  # the branch ruleset), but only does the heavy work on the auto-generated
-  # "Version Packages" PR (branch changeset-release/*) — merging that PR is what
-  # triggers the publish, so a required-and-green gate blocks a broken release.
-  # A ~15s no-op on normal PRs (all real steps skip, the job still succeeds).
+  # Required check on every PR that only does real work on the Version PR
+  # (changeset-release/*), where a green gate blocks a broken publish.
   gate:
     name: Release gate
     if: github.event_name == 'pull_request'
@@ -47,30 +43,22 @@ jobs:
         uses: ./.github/actions/setup
       - if: steps.check.outputs.run == 'true'
         run: pnpm build
-      # Verdaccio → publish all 14 → scaffold from the registry → boot → 200.
-      # publint/attw run per-PR in ci.yml; this gate is the one thing that needs
-      # the actual published tarballs.
+      # the one thing per-PR publint/attw can't cover: publish real tarballs to
+      # Verdaccio, scaffold from the registry, boot, expect 200
       - if: steps.check.outputs.run == 'true'
         run: SMOKE_SKIP_BUILD=1 pnpm smoke
 
   release:
     name: Release
-    # Only the canonical repo is the configured OIDC trusted publisher on npm
-    # and has the Changesets GitHub App.
+    # canonical repo only: it's the OIDC trusted publisher and has the App
     if: github.event_name == 'push' && github.repository == 'withplumix/plumix'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      # No contents/pull-requests write: the App token below supplies those for
-      # the version-bump push, tags, and Version PR. Only OIDC needs a job-level
-      # scope, and it can't come from the App token (it's the workflow identity).
-      id-token: write # OIDC trusted publishing + provenance (no npm token)
+      id-token: write # OIDC publish; the App token below supplies contents/PR writes
     steps:
-      # Push the version bump + "Version Packages" PR under a GitHub App
-      # identity, NOT GITHUB_TOKEN. GitHub refuses to trigger workflows from
-      # GITHUB_TOKEN-authored events (anti-recursion), so a token-pushed Version
-      # PR never gets ci.yml or the Release gate — its required checks sit
-      # unreported and it can't merge. App-token pushes DO trigger workflows.
+      # Push the Version PR under the App, not GITHUB_TOKEN: GitHub won't trigger
+      # workflows from GITHUB_TOKEN events, so its required checks would never run.
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
@@ -81,23 +69,36 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
-          # Intentionally persisted: changesets/action pushes the version bump,
-          # git tags, and the "Version Packages" PR using this credential.
-          persist-credentials: true
+          persist-credentials: true # changesets/action pushes commits/tags/PR with it
           token: ${{ steps.app-token.outputs.token }}
 
-      # setup configures no npm auth on purpose: a token-based .npmrc would
-      # resolve to an empty _authToken and shadow OIDC. npm publishes to the
-      # default registry and authenticates via the id-token exchange below.
+      # no npm auth on purpose: a token .npmrc resolves to an empty token and
+      # shadows OIDC trusted publishing
       - uses: ./.github/actions/setup
 
-      # When changesets exist, this opens/updates the "Version Packages" PR
-      # (running `pnpm version-packages`). Merging that PR — gated green above —
-      # lands with no changesets, so this runs `pnpm release` to publish to npm.
-      # Publishing is tokenless: npm (>= 11.5.1, bundled with the pinned Node)
-      # exchanges the workflow's OIDC identity for a short-lived credential, so
-      # nothing releases without a merged, gated Version PR from this repo.
+      # Ordinary merges have nothing to publish; skip the step below so they
+      # don't run a full cold build for a no-op `changeset publish`.
+      - name: Detect release work
+        id: detect
+        run: |
+          run=false
+          if [ -n "$(find .changeset -maxdepth 1 -name '*.md' ! -iname 'README.md' -print -quit)" ]; then
+            run=true # changeset pending → Version PR
+          else
+            # a pipeline, not `< <(…)`, so a pnpm/jq failure fails the step
+            # instead of silently reading nothing and skipping a release
+            pkgs=$(pnpm -r ls --depth -1 --json | jq -r '.[] | select(.private != true) | [.name, .version] | @tsv')
+            while IFS=$'\t' read -r name version; do
+              # changeset publish tags each released name@version; untagged = unpublished
+              git rev-parse -q --verify "refs/tags/$name@$version" >/dev/null || run=true
+            done <<< "$pkgs"
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+      # changesets present → open/update the Version PR; none → `pnpm release`
+      # publishes via OIDC (npm exchanges the workflow identity, no token).
       - name: Version PR or publish
+        if: steps.detect.outputs.run == 'true'
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           version: pnpm version-packages
@@ -106,8 +107,7 @@ jobs:
           title: "ci: version packages"
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          # Empty (not absent) so changesets/action skips token-based auth setup
-          # and npm falls through to OIDC trusted publishing.
-          # https://github.com/changesets/changesets/issues/1152
+          # empty (not unset) so changesets/action skips npm-token auth and falls
+          # through to OIDC — https://github.com/changesets/changesets/issues/1152
           NPM_TOKEN: ""
           NPM_CONFIG_PROVENANCE: "true"
