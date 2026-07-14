@@ -216,15 +216,15 @@ export interface TransformOpts {
  * a source URL (already publicly reachable, typically through the bucket's
  * custom domain) plus `TransformOpts` and return the transformed URL.
  *
- * No `connect(env)` step today: the canonical implementation (Cloudflare
- * Image Transformations) only needs a zone hostname known at config time.
- * If a future implementation needs request-time / env-time resolution, add
- * an optional `connect(env)` method — existing implementations stay valid
- * because the dispatcher would fall back to the bare object.
+ * Optional `connect(env)`: an implementation whose config lives in the request
+ * env (e.g. a zone from a Worker secret) binds against it, returning `undefined`
+ * for "no delivery" so downstream presence checks stay meaningful. The
+ * dispatcher uses the bare object when `connect` is absent.
  */
 export interface ImageDelivery {
   readonly kind: string;
   url(sourceUrl: string, opts?: TransformOpts): string;
+  connect?(env: unknown): ImageDelivery | undefined;
 }
 
 /**

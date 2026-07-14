@@ -280,3 +280,105 @@ describe("r2 presignPut", () => {
     expect(result.url).toContain("AKIA-FROM-ENV");
   });
 });
+
+describe("r2 conventional env credentials", () => {
+  // With no `s3` block, `r2` reads S3 credentials from the deploy's request
+  // env by convention — account-global keys plus a binding-derived bucket
+  // (`<BINDING>_BUCKET`). This is what lets a config stay `r2({ binding })`
+  // while presigned uploads still work once the secrets are attached.
+  const conventionalEnv = {
+    CF_ACCOUNT_ID: "acct-from-env",
+    R2_ACCESS_KEY_ID: "AKIA-CONVENTIONAL",
+    R2_SECRET_ACCESS_KEY: "secret-conventional",
+    MEDIA_BUCKET: "media-from-env",
+  };
+
+  test("mints presigned PUTs from conventional env keys when s3 is omitted", async () => {
+    const fake = fakeR2Binding();
+    const store = r2({ binding: "MEDIA" }).connect({
+      MEDIA: fake.binding,
+      ...conventionalEnv,
+    });
+    if (!store.presignPut) throw new Error("r2 should expose presignPut");
+
+    const result = await store.presignPut("uploads/cat.jpg", {
+      contentType: "image/jpeg",
+      expiresIn: 600,
+    });
+
+    expect(result.url).toContain(
+      "https://acct-from-env.r2.cloudflarestorage.com/",
+    );
+    expect(result.url).toContain("/media-from-env/uploads/cat.jpg");
+    expect(result.url).toContain("AKIA-CONVENTIONAL");
+  });
+
+  test("leaves presignPut undefined when conventional creds are incomplete", () => {
+    const fake = fakeR2Binding();
+    const { MEDIA_BUCKET: _omitted, ...partial } = conventionalEnv;
+    const store = r2({ binding: "MEDIA" }).connect({
+      MEDIA: fake.binding,
+      ...partial,
+    });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- absence check, not invocation
+    expect(store.presignPut).toBeUndefined();
+  });
+
+  test("derives the bucket env key from the binding name", async () => {
+    const fake = fakeR2Binding();
+    const store = r2({ binding: "ASSETS" }).connect({
+      ASSETS: fake.binding,
+      CF_ACCOUNT_ID: "acct-from-env",
+      R2_ACCESS_KEY_ID: "AKIA-CONVENTIONAL",
+      R2_SECRET_ACCESS_KEY: "secret-conventional",
+      ASSETS_BUCKET: "assets-bucket",
+    });
+    if (!store.presignPut) throw new Error("r2 should expose presignPut");
+    const result = await store.presignPut("x.jpg", {
+      contentType: "image/jpeg",
+    });
+    expect(result.url).toContain("/assets-bucket/x.jpg");
+  });
+
+  test("an explicit s3 block wins over conventional env keys", async () => {
+    const fake = fakeR2Binding();
+    const store = r2({
+      binding: "MEDIA",
+      s3: {
+        bucket: "explicit-bucket",
+        accountId: "explicit-acct",
+        accessKeyId: "AKIA-EXPLICIT",
+        secretAccessKey: "secret-explicit",
+      },
+    }).connect({ MEDIA: fake.binding, ...conventionalEnv });
+    if (!store.presignPut) throw new Error("r2 should expose presignPut");
+    const result = await store.presignPut("x.jpg", {
+      contentType: "image/jpeg",
+    });
+    expect(result.url).toContain(
+      "https://explicit-acct.r2.cloudflarestorage.com/",
+    );
+    expect(result.url).toContain("/explicit-bucket/x.jpg");
+  });
+
+  test("reads publicUrlBase from <BINDING>_PUBLIC_URL_BASE when omitted", async () => {
+    const fake = fakeR2Binding();
+    const store = r2({ binding: "MEDIA" }).connect({
+      MEDIA: fake.binding,
+      MEDIA_PUBLIC_URL_BASE: "https://cdn.example.com",
+    });
+    expect(await store.url("a/b.jpg")).toBe("https://cdn.example.com/a/b.jpg");
+  });
+
+  test("an explicit publicUrlBase wins over the conventional env key", async () => {
+    const fake = fakeR2Binding();
+    const store = r2({
+      binding: "MEDIA",
+      publicUrlBase: "https://explicit.example.com",
+    }).connect({
+      MEDIA: fake.binding,
+      MEDIA_PUBLIC_URL_BASE: "https://env.example.com",
+    });
+    expect(await store.url("a.jpg")).toBe("https://explicit.example.com/a.jpg");
+  });
+});

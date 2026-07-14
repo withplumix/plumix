@@ -1,23 +1,9 @@
-import { auth, plumix } from "plumix";
 import {
   cloudflare,
   cloudflareDeployOrigin,
   d1,
 } from "@plumix/runtime-cloudflare";
-
-// Derives `rpId` + `origin` from the Workers Builds env (`WORKERS_CI`,
-// `WORKERS_CI_BRANCH`): production deploys → `<worker>.<account>.workers.dev`,
-// preview deploys → `<branch>-<worker>.<account>.workers.dev`,
-// local `pnpm dev` → `localOrigin`. The CSRF origin-allowlist must
-// match what the browser sends: `plumix dev` serves on vite's port
-// (5173 by default), NOT wrangler's 8787 — without the override every
-// /_plumix POST 403s and the admin can't even log in. Swap to a
-// hardcoded `{ rpId, origin }` once you wire a custom domain.
-const { rpId, origin } = cloudflareDeployOrigin({
-  workerName: "plumix-minimal",
-  accountSubdomain: "enasyrov",
-  localOrigin: "http://localhost:5173",
-});
+import { auth, plumix } from "plumix";
 
 export default plumix({
   runtime: cloudflare(),
@@ -27,8 +13,13 @@ export default plumix({
   auth: auth({
     passkey: {
       rpName: "Plumix — Minimal",
-      rpId,
-      origin,
+      // localOrigin must be vite's dev port — the CSRF allowlist matches it,
+      // not wrangler's. Swap for a hardcoded { rpId, origin } once you have a domain.
+      ...cloudflareDeployOrigin({
+        workerName: "plumix-minimal",
+        accountSubdomain: "enasyrov",
+        localOrigin: "http://localhost:5173",
+      }),
     },
   }),
   // No theme registered: the public site serves plumix's built-in welcome

@@ -9,89 +9,28 @@ import {
   r2,
 } from "@plumix/runtime-cloudflare";
 
-// Plumix consumer that wires only the media plugin — the smallest config
-// you can run to dogfood `@plumix/plugin-media` without bringing the rest
-// of the plumix surface (blog, pages, etc.) along. Run `pnpm dev` from
-// this directory to launch a local worker (D1 + R2 simulated by miniflare),
-// then visit http://localhost:8787/_plumix/admin to register the first
-// admin via passkey and try the Media Library.
-//
-// R2 presigned uploads (browser PUTs straight to R2, bytes never
-// traverse the worker) require S3 API tokens — set CF_ACCOUNT_ID,
-// R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and MEDIA_BUCKET as a group
-// (all four or none). Without them, `media.createUploadUrl` falls
-// back to a worker-routed PUT (bytes flow through `env.MEDIA.put` via
-// the binding) — no extra setup, capped at the runtime's request body
-// limit (~100 MiB on Workers free).
-
-const { rpId, origin } = cloudflareDeployOrigin({
-  workerName: "plumix-media-playground",
-  accountSubdomain: "local",
-  // CSRF origin-allowlist must match what the browser sends. The
-  // e2e harness boots `plumix dev --port 3030` (see
-  // `e2e/playwright.config.ts`); override here if you boot the
-  // playground manually with a different `--port`.
-  localOrigin: "http://localhost:3030",
-});
-
-const s3 = resolveS3Credentials();
+// Smallest config that dogfoods `@plumix/plugin-media` in isolation. `pnpm dev`
+// here, then open /_plumix/admin. Presigned R2 uploads need the S3 keys in
+// `.dev.vars` (see `r2`'s docs); without them uploads route through the worker.
 
 export default plumix({
   runtime: cloudflare(),
   database: d1({ binding: "DB", session: "auto" }),
-  storage: r2({
-    binding: "MEDIA",
-    publicUrlBase: process.env.MEDIA_PUBLIC_URL_BASE,
-    s3,
-  }),
-  imageDelivery: process.env.MEDIA_PUBLIC_URL_BASE
-    ? images({ zone: process.env.MEDIA_PUBLIC_URL_BASE })
-    : undefined,
+  storage: r2({ binding: "MEDIA" }),
+  imageDelivery: images(),
   auth: auth({
     passkey: {
       rpName: "Plumix — Media playground",
-      rpId,
-      origin,
+      // CSRF origin-allowlist must match what the browser sends. The e2e
+      // harness boots `plumix dev --port 3030` (see `e2e/playwright.config.ts`);
+      // override `localOrigin` if you boot the playground on a different port.
+      ...cloudflareDeployOrigin({
+        workerName: "plumix-media-playground",
+        accountSubdomain: "local",
+        localOrigin: "http://localhost:3030",
+      }),
     },
   }),
   plugins: [media()],
   theme: defineTheme({ templates: { index: () => null } }),
 });
-
-function resolveS3Credentials():
-  | {
-      readonly bucket: string;
-      readonly accountId: string;
-      readonly accessKeyId: string;
-      readonly secretAccessKey: string;
-    }
-  | undefined {
-  const accountId = process.env.CF_ACCOUNT_ID;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-  const bucket = process.env.MEDIA_BUCKET;
-  // All four come together — partial config silently builds a broken
-  // endpoint (e.g. `https://.r2.cloudflarestorage.com`) that fails at
-  // request time with a misleading DNS error.
-  if (
-    accountId !== undefined &&
-    accessKeyId !== undefined &&
-    secretAccessKey !== undefined &&
-    bucket !== undefined
-  ) {
-    return { accountId, accessKeyId, secretAccessKey, bucket };
-  }
-  if (
-    accountId === undefined &&
-    accessKeyId === undefined &&
-    secretAccessKey === undefined &&
-    bucket === undefined
-  ) {
-    return undefined;
-  }
-  throw new Error(
-    "media playground: partial S3 credentials. Set all of " +
-      "CF_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, MEDIA_BUCKET " +
-      "(or none).",
-  );
-}
