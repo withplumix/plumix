@@ -48,6 +48,12 @@ const config: KnipConfig = {
     "packages/plugins/pages/playground": {
       entry: ["plumix.config.ts"],
     },
+    // Demo-sandbox e2e fixture — same shape as the plugin playgrounds:
+    // `plumix.config.ts` is the consumer entry, and it dynamically imports
+    // demo-sql.ts (which globs the committed drizzle migrations + seed).
+    "packages/runtimes/cloudflare/e2e/fixture": {
+      entry: ["plumix.config.ts"],
+    },
     // drizzle-kit is invoked by consumers as a CLI hint, not imported.
     "packages/plumix": {
       entry: [

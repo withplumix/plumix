@@ -57,7 +57,8 @@
     "lint": "eslint",
     "publint": "publint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false && tsc --noEmit -p e2e/tsconfig.json"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "catalog:cloudflare",
@@ -80,6 +81,7 @@
     "@arethetypeswrong/cli": "catalog:",
     "@cloudflare/workers-types": "catalog:cloudflare",
     "@libsql/client": "catalog:",
+    "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",

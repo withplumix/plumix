@@ -45,6 +45,7 @@ yarn-error.log*
 # them to a fresh per-session Durable Object at runtime (see #1338).
 drizzle/
 !/examples/blog/drizzle/
+!/packages/runtimes/cloudflare/e2e/fixture/drizzle/
 
 # worker-driven plugin e2e: storageState.json + e2e-fixtures.json are
 # written by globalSetup at the package root; playwright traces / reports
