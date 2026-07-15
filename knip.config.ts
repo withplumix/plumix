@@ -54,6 +54,14 @@ const config: KnipConfig = {
     "packages/runtimes/cloudflare/e2e/fixture": {
       entry: ["plumix.config.ts"],
     },
+    // playwright.config.ts imports `plumix/test/playwright`, whose dist may
+    // not exist on a cold clone; knip's playwright plugin would import() the
+    // config and crash at resolve time. Disable it and list the config + spec
+    // explicitly so they aren't flagged unused (mirrors `packages/admin`).
+    "packages/runtimes/cloudflare": {
+      entry: ["e2e/playwright.config.ts", "e2e/demo.spec.ts"],
+      playwright: false,
+    },
     // drizzle-kit is invoked by consumers as a CLI hint, not imported.
     "packages/plumix": {
       entry: [
