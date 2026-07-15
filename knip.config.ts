@@ -107,6 +107,17 @@ const config: KnipConfig = {
       //   from any TS source.
       ignoreDependencies: ["drizzle-kit", "tailwindcss"],
     },
+    "packages/runtimes/cloudflare": {
+      // `cloudflare:workers` (DemoDB's DurableObject base class) is a
+      // workerd runtime built-in. Its *types* come from the
+      // @cloudflare/workers-types devDep (an ambient `declare module`), but
+      // the runtime value has no installable package, so the `cloudflare:`
+      // specifier isn't node-resolvable — like `node:*`/`bun:*`, which knip
+      // allowlists but `cloudflare:*` it doesn't. Knip reduces the specifier
+      // to the bare name `cloudflare`; ignore it (this package never depends
+      // on the real `cloudflare` SDK).
+      ignoreDependencies: ["cloudflare"],
+    },
     // The runtime-proof fixture plugin is loaded by playwright's
     // webServer command at e2e time — not via a static import knip
     // can follow. Same for the assembler script.

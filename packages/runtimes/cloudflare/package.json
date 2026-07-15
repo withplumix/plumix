@@ -30,6 +30,10 @@
     "./commands": {
       "types": "./dist/commands/index.d.ts",
       "default": "./dist/commands/index.js"
+    },
+    "./demo": {
+      "types": "./dist/demo/index.d.ts",
+      "default": "./dist/demo/index.js"
     }
   },
   "files": [
@@ -71,6 +75,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@cloudflare/workers-types": "catalog:cloudflare",
+    "@libsql/client": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
