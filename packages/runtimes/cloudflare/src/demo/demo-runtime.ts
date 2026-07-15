@@ -6,6 +6,7 @@ import { isBlockedInDemo } from "./gate.js";
 import { renderDemoLoadingPage } from "./loading.js";
 import {
   clearDemoCookies,
+  DEMO_SHOWCASE_NAME,
   DEMO_TTL_SECONDS,
   demoExpiresCookie,
   demoSessionCookie,
@@ -45,6 +46,9 @@ export function demoRuntime(
     workerExports: [...(inner.workerExports ?? []), DEMO_EXPORTS_MODULE],
     buildFetchHandler(app) {
       const handle = inner.buildFetchHandler(app);
+      // Seed the shared showcase DO once per isolate, lazily on first
+      // cookieless request that needs it.
+      let showcaseReady = false;
       return async (request, env, ctx) => {
         const { pathname } = new URL(request.url);
         const typedEnv = env as PlumixEnv;
@@ -102,20 +106,32 @@ export function demoRuntime(
           );
         }
 
-        if (!readDemoToken(request)) {
-          return Response.redirect(
-            new URL("/demo", request.url).toString(),
-            302,
-          );
+        const hasSession = readDemoToken(request) !== null;
+        if (!hasSession) {
+          // The admin needs a session — route newcomers through /demo. Public
+          // pages (and media) render from the shared read-only showcase, which
+          // we seed once per isolate.
+          if (pathname.startsWith("/_plumix/admin")) {
+            return Response.redirect(
+              new URL("/demo", request.url).toString(),
+              302,
+            );
+          }
+          if (!showcaseReady) {
+            await demoStub(env, binding, DEMO_SHOWCASE_NAME).initialize(
+              await loadSql(),
+            );
+            showcaseReady = true;
+          }
         }
 
         const response = await handle(request, env, ctx);
-        // The toolbar is a public-site affordance. Keep it off `/_plumix/*`
-        // (the admin SPA and its preview iframe), where a fixed pill would
-        // overlap the editor's own chrome and appear twice.
-        return pathname.startsWith("/_plumix/")
-          ? response
-          : injectToolbar(response);
+        // The toolbar is a session-holder's public-site affordance: skip it on
+        // `/_plumix/*` (the admin + its preview iframe, where a fixed pill would
+        // overlap the editor chrome) and on the anonymous showcase.
+        return hasSession && !pathname.startsWith("/_plumix/")
+          ? injectToolbar(response)
+          : response;
       };
     },
     // buildScheduledHandler is intentionally omitted: demo mode has no shared

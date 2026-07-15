@@ -13,9 +13,26 @@ export const DEMO_EXPIRES_COOKIE_NAME = "plumix_demo_expires";
 /** How long a demo sandbox lives before its Durable Object self-cleans. */
 export const DEMO_TTL_SECONDS = 3600;
 
-/** Read the demo session token from the request cookie, or null if absent. */
+/**
+ * Durable Object name for the shared, read-only "showcase" database that
+ * serves cookieless visitors the public blog before they start their own
+ * session. One instance for everyone — a bot browsing spawns no per-session DOs.
+ */
+export const DEMO_SHOWCASE_NAME = "__plumix_demo_showcase__";
+
+/**
+ * Read the demo session token from the request cookie, or null if absent.
+ *
+ * A client-supplied token equal to the reserved showcase name is treated as
+ * absent: the cookie is an opaque, unsigned DO name, so without this a visitor
+ * could forge `plumix_demo=<showcase name>` to be authenticated as admin
+ * operating directly on the shared showcase database. Rejecting it here closes
+ * every consumer at once — auth stays anonymous, the admin redirects to /demo,
+ * and the database falls back to the showcase as a read-only reader.
+ */
 export function readDemoToken(request: Request): string | null {
-  return readSessionCookie(request, DEMO_COOKIE_NAME);
+  const token = readSessionCookie(request, DEMO_COOKIE_NAME);
+  return token === DEMO_SHOWCASE_NAME ? null : token;
 }
 
 /** Set-Cookie value that binds a visitor to their session for the TTL. */
