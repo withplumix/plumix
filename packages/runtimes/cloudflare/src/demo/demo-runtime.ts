@@ -1,5 +1,6 @@
 import type { RuntimeAdapter } from "plumix";
 
+import { isBlockedInDemo } from "./gate.js";
 import { renderDemoLoadingPage } from "./loading.js";
 import {
   DEMO_TTL_SECONDS,
@@ -59,6 +60,13 @@ export function demoRuntime(
           await stub.initialize(await loadSql());
           await stub.setTtlAlarm(DEMO_TTL_SECONDS);
           return Response.json({ ok: true });
+        }
+
+        if (isBlockedInDemo(pathname)) {
+          return Response.json(
+            { error: "Not available in the demo" },
+            { status: 403 },
+          );
         }
 
         if (!readDemoToken(request)) {
