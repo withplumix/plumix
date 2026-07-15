@@ -1,5 +1,6 @@
 import { auth } from "plumix";
 
+import type { TurnstileConfig } from "./turnstile.js";
 import { cloudflare } from "../adapter.js";
 import { demoAuthenticator } from "./authenticator.js";
 import { demoDatabase } from "./database.js";
@@ -10,6 +11,8 @@ export interface DemoPresetConfig {
   readonly binding: string;
   /** Assembles the bootstrap SQL applied to a fresh session's DO. */
   readonly loadSql: () => Promise<string>;
+  /** Optional Turnstile challenge gating session creation (bot mitigation). */
+  readonly turnstile?: TurnstileConfig;
 }
 
 /**
@@ -22,9 +25,9 @@ export interface DemoPresetConfig {
  * blocked in demo mode, and the authenticator owns who the user is.
  */
 export function demoPreset(config: DemoPresetConfig) {
-  const { binding, loadSql } = config;
+  const { binding, loadSql, turnstile } = config;
   return {
-    runtime: demoRuntime(cloudflare(), { binding, loadSql }),
+    runtime: demoRuntime(cloudflare(), { binding, loadSql, turnstile }),
     database: demoDatabase({ binding }),
     auth: auth({
       passkey: {

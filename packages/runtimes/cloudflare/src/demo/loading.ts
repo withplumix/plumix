@@ -1,9 +1,17 @@
+import { renderTurnstileWidget } from "./turnstile.js";
+
 /**
- * Minimal loading page shown at `/demo` while the sandbox provisions. It POSTs
- * `/_demo/init`, then redirects into the admin. The richer toolbar/loading UI
- * is a later slice; this is the functional minimum.
+ * Loading page shown at `/demo` while the sandbox provisions: it POSTs
+ * `/_demo/init`, then redirects into the admin. When a Turnstile site key is
+ * given, the widget's callback supplies the token and starts init (and its
+ * error callbacks fall back to the retry page); otherwise init starts
+ * immediately.
  */
-export function renderDemoLoadingPage(): string {
+export function renderDemoLoadingPage(siteKey?: string): string {
+  const widget = siteKey ? renderTurnstileWidget(siteKey) : "";
+  const boot = siteKey
+    ? "window.plumixDemoTurnstile = startDemo; window.plumixDemoTurnstileError = showError;"
+    : "startDemo();";
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -14,16 +22,24 @@ export function renderDemoLoadingPage(): string {
   <body>
     <p>Setting up your demo…</p>
     <script>
-      fetch("/_demo/init", { method: "POST" })
-        .then((response) => {
-          if (!response.ok) throw new Error("init failed");
-          location.replace("/_plumix/admin");
+      function showError() {
+        document.body.innerHTML =
+          '<p>Demo setup failed. <a href="/demo">Try again</a>.</p>';
+      }
+      function startDemo(token) {
+        fetch("/_demo/init", {
+          method: "POST",
+          headers: token ? { "cf-turnstile-token": token } : {},
         })
-        .catch(() => {
-          document.body.innerHTML =
-            '<p>Demo setup failed. <a href="/demo">Try again</a>.</p>';
-        });
+          .then((response) => {
+            if (!response.ok) throw new Error("init failed");
+            location.replace("/_plumix/admin");
+          })
+          .catch(showError);
+      }
+      ${boot}
     </script>
+    ${widget}
   </body>
 </html>
 `;

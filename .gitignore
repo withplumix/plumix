@@ -71,3 +71,7 @@ packages/*/locales/*.mjs
 packages/*/locales/*.d.mts
 packages/plugins/*/locales/*.mjs
 packages/plugins/*/locales/*.d.mts
+
+# Cloudflare local secrets
+.dev.vars
+.dev.vars.*

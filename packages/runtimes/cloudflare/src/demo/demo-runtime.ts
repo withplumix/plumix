@@ -1,5 +1,7 @@
-import type { RuntimeAdapter } from "plumix";
+import type { PlumixEnv, RuntimeAdapter } from "plumix";
+import { resolveEnvInput } from "plumix";
 
+import type { TurnstileConfig } from "./turnstile.js";
 import { isBlockedInDemo } from "./gate.js";
 import { renderDemoLoadingPage } from "./loading.js";
 import {
@@ -11,6 +13,7 @@ import {
   readDemoToken,
 } from "./session.js";
 import { injectDemoToolbar } from "./toolbar.js";
+import { verifyTurnstile } from "./turnstile.js";
 
 /** Subpath whose named exports (DemoDB) the generated worker re-exports. */
 const DEMO_EXPORTS_MODULE = "@plumix/runtime-cloudflare/demo/durable-object";
@@ -20,6 +23,8 @@ export interface DemoRuntimeConfig {
   readonly binding: string;
   /** Assembles the bootstrap SQL applied to a fresh session's DO. */
   readonly loadSql: () => Promise<string>;
+  /** Optional Turnstile challenge gating `/_demo/init` (bot mitigation). */
+  readonly turnstile?: TurnstileConfig;
 }
 
 /**
@@ -33,7 +38,7 @@ export function demoRuntime(
   inner: RuntimeAdapter,
   config: DemoRuntimeConfig,
 ): RuntimeAdapter {
-  const { binding, loadSql } = config;
+  const { binding, loadSql, turnstile } = config;
   return {
     name: `${inner.name}+demo`,
     commandsModule: inner.commandsModule,
@@ -42,15 +47,18 @@ export function demoRuntime(
       const handle = inner.buildFetchHandler(app);
       return async (request, env, ctx) => {
         const { pathname } = new URL(request.url);
+        const typedEnv = env as PlumixEnv;
 
         if (pathname === "/demo") {
           const token = readDemoToken(request) ?? crypto.randomUUID();
+          // Empty or absent site key → no widget (see renderDemoLoadingPage).
+          const siteKey = activeTurnstile(turnstile, typedEnv)?.siteKey;
           const headers = new Headers({
             "content-type": "text/html; charset=utf-8",
           });
           headers.append("set-cookie", demoSessionCookie(token, request));
           headers.append("set-cookie", demoExpiresCookie(request));
-          return new Response(renderDemoLoadingPage(), {
+          return new Response(renderDemoLoadingPage(siteKey), {
             status: 200,
             headers,
           });
@@ -70,6 +78,16 @@ export function demoRuntime(
           const token = readDemoToken(request);
           if (!token) {
             return Response.json({ error: "no demo session" }, { status: 400 });
+          }
+          const active = activeTurnstile(turnstile, typedEnv);
+          if (active) {
+            const challenge = request.headers.get("cf-turnstile-token") ?? "";
+            if (!(await verifyTurnstile(active.secretKey, challenge))) {
+              return Response.json(
+                { error: "challenge failed" },
+                { status: 403 },
+              );
+            }
           }
           const stub = demoStub(env, binding, token);
           await stub.initialize(await loadSql());
@@ -104,6 +122,23 @@ export function demoRuntime(
     // database, so scheduled tasks (session cleanup, publish-scheduled) have
     // nothing to act on. Omitting it makes the worker's scheduled() a no-op.
   };
+}
+
+/**
+ * Resolve Turnstile config for this deploy, or `undefined` when it's off.
+ * Keyed on the *secret*: a deploy with no secret (dev, e2e) skips the widget
+ * and verification, while a secret set without a site key fails loud (empty
+ * site key → no widget → every init is challenged and 403s) rather than
+ * silently disabling the gate.
+ */
+function activeTurnstile(
+  turnstile: TurnstileConfig | undefined,
+  env: PlumixEnv,
+): { siteKey: string; secretKey: string } | undefined {
+  if (!turnstile) return undefined;
+  const secretKey = resolveEnvInput(turnstile.secretKey, env);
+  if (!secretKey) return undefined;
+  return { siteKey: resolveEnvInput(turnstile.siteKey, env), secretKey };
 }
 
 /** Inject the demo toolbar into HTML responses; pass everything else through. */

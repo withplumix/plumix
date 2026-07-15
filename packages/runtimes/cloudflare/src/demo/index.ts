@@ -9,3 +9,4 @@ export type { DemoRuntimeConfig } from "./demo-runtime.js";
 export { demoPreset } from "./preset.js";
 export type { DemoPresetConfig } from "./preset.js";
 export type { DemoSqlExecutor } from "./storage.js";
+export type { TurnstileConfig } from "./turnstile.js";
