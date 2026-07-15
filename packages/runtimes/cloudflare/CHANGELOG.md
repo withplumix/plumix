@@ -1,8 +1,8 @@
-# @plumix/core
+# @plumix/runtime-cloudflare
 
-## 0.1.2
+## 0.2.0
 
-### Patch Changes
+### Minor Changes
 
 - [#1333](https://github.com/withplumix/plumix/pull/1333) [`b493fbb`](https://github.com/withplumix/plumix/commit/b493fbb4b3cefec54322ea54023129b4ce1d1139) Thanks [@nasyrov](https://github.com/nasyrov)! - `r2()` and `images()` now resolve their configuration from the per-request env
   by convention, so a Cloudflare deploy's `plumix.config.ts` stays declarative
@@ -22,14 +22,7 @@
   Backward compatible: existing explicit `r2({ ..., s3, publicUrlBase })` and
   `images({ zone })` configs are unchanged.
 
-- Updated dependencies []:
-  - @plumix/blocks@0.1.2
-
-## 0.1.1
-
 ### Patch Changes
 
-- [#1319](https://github.com/withplumix/plumix/pull/1319) [`843a184`](https://github.com/withplumix/plumix/commit/843a184ea755722f5b9d83664574eaf6ada97045) Thanks [@nasyrov](https://github.com/nasyrov)! - Bump runtime dependencies: radix-ui, lucide-react, and valibot (admin UI and validation), and markdown-it (comment rendering).
-
-- Updated dependencies []:
-  - @plumix/blocks@0.1.1
+- Updated dependencies [[`40cf6e6`](https://github.com/withplumix/plumix/commit/40cf6e627521269d8ea5947c86c99fc47447b6b2)]:
+  - plumix@0.1.2
