@@ -18,6 +18,10 @@ const EXCLUDED_SEGMENTS: ReadonlySet<string> = new Set([
   ".wrangler",
   ".plumix",
   "dist",
+  // Migrations are committed per example, but a scaffolded project may
+  // change its plugin set (hence its schema), so it generates its own
+  // rather than inheriting the example's.
+  "drizzle",
 ]);
 
 /**
