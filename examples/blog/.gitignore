@@ -1,5 +1,4 @@
 .plumix/
 .wrangler/
 dist/
-drizzle/
 node_modules/

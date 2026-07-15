@@ -233,7 +233,7 @@ describe("shouldCopyTemplateEntry", () => {
     );
   });
 
-  test.each([".cache", ".turbo", ".wrangler", ".plumix", "dist"])(
+  test.each([".cache", ".turbo", ".wrangler", ".plumix", "dist", "drizzle"])(
     "excludes %s",
     (segment) => {
       expect(shouldCopyTemplateEntry(`${root}/${segment}`, root)).toBe(false);

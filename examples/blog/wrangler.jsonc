@@ -18,6 +18,12 @@
       "bucket_name": "plumix-blog-media",
     },
   ],
+  // Per-session demo sandbox database. Each visitor's cookie maps to one
+  // isolated DemoDB instance with its own SQLite storage.
+  "durable_objects": {
+    "bindings": [{ "name": "DEMO_DO", "class_name": "DemoDB" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DemoDB"] }],
   "assets": {
     "directory": ".plumix/public",
     "binding": "ASSETS",

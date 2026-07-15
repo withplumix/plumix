@@ -223,3 +223,30 @@ export class WranglerConfigError extends Error {
     );
   }
 }
+
+export class DemoError extends Error {
+  static {
+    DemoError.prototype.name = "DemoError";
+  }
+
+  readonly code: "binding_missing" | "no_session";
+
+  private constructor(code: "binding_missing" | "no_session", message: string) {
+    super(message);
+    this.code = code;
+  }
+
+  static bindingMissing(ctx: { binding: string }): DemoError {
+    return new DemoError(
+      "binding_missing",
+      `@plumix/runtime-cloudflare: demo Durable Object binding "${ctx.binding}" missing from env`,
+    );
+  }
+
+  static noSession(): DemoError {
+    return new DemoError(
+      "no_session",
+      "@plumix/runtime-cloudflare: demo request reached the database with no session; it should route through /demo first",
+    );
+  }
+}

@@ -1,33 +1,32 @@
 import type { AuthSessionOutput } from "./schemas.js";
-import { readSessionCookie } from "../../../auth/cookies.js";
 import { capabilitiesForRole } from "../../../auth/rbac.js";
-import { validateSession } from "../../../auth/sessions.js";
 import { users } from "../../../db/schema/users.js";
 import { base } from "../../base.js";
 
 // Public (no `authenticated` middleware). This is the admin's boot probe: it
-// returns the current user when a valid session cookie is present, otherwise
-// null — and tells the UI whether the instance needs bootstrapping so we can
-// route to /bootstrap vs /login without a separate round-trip.
+// resolves the current user through the configured authenticator — the same
+// guard every other path uses, so a custom authenticator (SSO, demo) is
+// reflected here too — otherwise null, and tells the UI whether the instance
+// needs bootstrapping so we can route to /bootstrap vs /login in one round-trip.
 export const session = base.handler(
   async ({ context }): Promise<AuthSessionOutput> => {
-    const token = readSessionCookie(context.request);
-    if (token) {
-      const validated = await validateSession(context.db, token);
-      if (validated) {
-        const { id, email, name, avatarUrl, role } = validated.user;
-        return {
-          user: {
-            id,
-            email,
-            name,
-            avatarUrl,
-            role,
-            capabilities: [...capabilitiesForRole(role, context.plugins)],
-          },
-          needsBootstrap: false,
-        };
-      }
+    const result = await context.authenticator.authenticate(
+      context.request,
+      context.db,
+    );
+    if (result) {
+      const { id, email, name, avatarUrl, role } = result.user;
+      return {
+        user: {
+          id,
+          email,
+          name,
+          avatarUrl,
+          role,
+          capabilities: [...capabilitiesForRole(role, context.plugins)],
+        },
+        needsBootstrap: false,
+      };
     }
     const userCount = await context.db.$count(users);
     return { user: null, needsBootstrap: userCount === 0 };

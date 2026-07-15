@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784122216658,
+      "tag": "0000_fair_omega_flight",
+      "breakpoints": true
+    }
+  ]
+}

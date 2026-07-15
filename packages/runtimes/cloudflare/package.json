@@ -34,6 +34,10 @@
     "./demo": {
       "types": "./dist/demo/index.d.ts",
       "default": "./dist/demo/index.js"
+    },
+    "./demo/durable-object": {
+      "types": "./dist/demo/durable-object.d.ts",
+      "default": "./dist/demo/durable-object.js"
     }
   },
   "files": [
