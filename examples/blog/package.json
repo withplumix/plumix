@@ -8,7 +8,6 @@
   "scripts": {
     "build": "plumix build",
     "clean": "git clean -xdf .plumix .wrangler dist node_modules",
-    "deploy": "wrangler deploy",
     "dev": "plumix dev",
     "typecheck": "tsc --noEmit"
   },

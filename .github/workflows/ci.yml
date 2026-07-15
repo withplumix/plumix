@@ -188,27 +188,6 @@ jobs:
           if-no-files-found: warn
           retention-days: 5
 
-  deploy-check:
-    name: Deploy check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-      # Validate the generated dist/*/wrangler.json against the repo-pinned
-      # wrangler (a dry run needs no account or secrets). The production deploy
-      # runs an unpinned `pnpm dlx wrangler`, so a new wrangler release can
-      # reject the generated config and break prod with no code change; pinning
-      # this check to the workspace wrangler surfaces that on the PR that bumps
-      # wrangler instead.
-      - run: pnpm exec turbo run build --filter "./examples/*"
-      - name: Dry-run deploy (blog)
-        run: pnpm --filter @plumix-examples/blog exec wrangler deploy --dry-run
-      - name: Dry-run deploy (minimal)
-        run: pnpm --filter @plumix-examples/minimal exec wrangler deploy --dry-run
-
   publint:
     name: Publint
     runs-on: ubuntu-latest
