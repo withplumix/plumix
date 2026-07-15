@@ -4,5 +4,11 @@
     "jsx": "react",
     "types": ["node", "@cloudflare/workers-types", "react"]
   },
-  "include": ["plumix.config.ts", "theme", ".plumix"]
+  "include": [
+    "plumix.config.ts",
+    "demo-sql.ts",
+    "demo-env.d.ts",
+    "theme",
+    ".plumix"
+  ]
 }
