@@ -25,6 +25,7 @@
   "ignore": [
     "@plumix/*-config",
     "@plumix/*-playground",
+    "@plumix/*-fixture",
     "@plumix-examples/*"
   ]
 }
