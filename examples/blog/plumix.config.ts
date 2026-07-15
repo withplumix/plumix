@@ -9,6 +9,9 @@ import { consoleMailer, plumix } from "plumix";
 
 import { blogTheme } from "./theme";
 
+const readEnv = (env: unknown, name: string): string =>
+  (env as Record<string, string | undefined>)[name] ?? "";
+
 export default plumix({
   // Presigned uploads, image transforms and edge cache stay dormant until
   // their env keys are attached (see each primitive's docs); until then media
@@ -37,5 +40,12 @@ export default plumix({
   ...demoPreset({
     binding: "DEMO_DO",
     loadSql: () => import("./demo-sql").then((m) => m.demoSql()),
+    // Turnstile is active only when keys are present in the env; local dev and
+    // e2e run without them (no widget, no verification). Set the two secrets
+    // on the deploy to gate `/_demo/init` against bots.
+    turnstile: {
+      siteKey: (env) => readEnv(env, "TURNSTILE_SITE_KEY"),
+      secretKey: (env) => readEnv(env, "TURNSTILE_SECRET_KEY"),
+    },
   }),
 });
