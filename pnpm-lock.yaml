@@ -1811,6 +1811,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
         version: 5.20260711.1
+      '@libsql/client':
+        specifier: 'catalog:'
+        version: 0.17.4
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
