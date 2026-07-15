@@ -18,10 +18,11 @@ export function SiteHeader({ siteTitle, menu }: SiteHeaderProps): ReactNode {
           {siteTitle}
         </a>
 
-        {/* Desktop: inline nav + search. */}
+        {/* Desktop: inline nav + search + the demo CTA. */}
         <div className="hidden items-center gap-5 sm:flex">
           <Menu menu={menu} />
           <SearchForm />
+          <TryEditorLink testId="try-editor" />
         </div>
 
         {/* Mobile: a zero-JS disclosure (native <details>) hamburger. */}
@@ -49,9 +50,31 @@ export function SiteHeader({ siteTitle, menu }: SiteHeaderProps): ReactNode {
           <div className="absolute right-0 z-10 mt-3 w-56 rounded border border-line bg-paper p-4 shadow-lg">
             <Menu menu={menu} className="flex flex-col gap-3" />
             <SearchForm className="mt-4" />
+            <TryEditorLink
+              testId="try-editor-mobile"
+              className="mt-4 block text-center"
+            />
           </div>
         </details>
       </div>
     </header>
+  );
+}
+
+function TryEditorLink({
+  testId,
+  className,
+}: {
+  readonly testId: string;
+  readonly className?: string;
+}): ReactNode {
+  return (
+    <a
+      href="/demo"
+      className={`rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-paper ${className ?? ""}`}
+      data-testid={testId}
+    >
+      Try the editor
+    </a>
   );
 }

@@ -229,9 +229,9 @@ export class DemoError extends Error {
     DemoError.prototype.name = "DemoError";
   }
 
-  readonly code: "binding_missing" | "no_session";
+  readonly code: "binding_missing";
 
-  private constructor(code: "binding_missing" | "no_session", message: string) {
+  private constructor(code: "binding_missing", message: string) {
     super(message);
     this.code = code;
   }
@@ -240,13 +240,6 @@ export class DemoError extends Error {
     return new DemoError(
       "binding_missing",
       `@plumix/runtime-cloudflare: demo Durable Object binding "${ctx.binding}" missing from env`,
-    );
-  }
-
-  static noSession(): DemoError {
-    return new DemoError(
-      "no_session",
-      "@plumix/runtime-cloudflare: demo request reached the database with no session; it should route through /demo first",
     );
   }
 }

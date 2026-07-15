@@ -1,5 +1,7 @@
 import type { RequestAuthenticator, User } from "plumix";
 
+import { readDemoToken } from "./session.js";
+
 /**
  * Identity of the demo admin. `id` is 1 to line up with the first user
  * the demo seed creates, so seeded content authored by that user shows as
@@ -17,15 +19,17 @@ export const DEMO_ADMIN = {
 const DEMO_ADMIN_TIMESTAMP = new Date();
 
 /**
- * A `RequestAuthenticator` that treats every request as a logged-in admin,
- * with no cookie, session, or database read. This is what lets an anonymous
- * demo visitor use the full admin without a real login. The demo is
- * pre-seeded with the matching admin row, and the demo runtime blocks the
- * real auth flows, so nothing here can leak into a normal deployment.
+ * A `RequestAuthenticator` that treats a visitor who started a demo session
+ * (has the session cookie) as a logged-in admin — no real login, no database
+ * read. Cookieless traffic (bots and drive-by visitors browsing the shared
+ * read-only showcase) stays anonymous, so it can't edit shared content. The
+ * demo is pre-seeded with the matching admin row, and the demo runtime blocks
+ * the real auth flows, so nothing here can leak into a normal deployment.
  */
 export function demoAuthenticator(): RequestAuthenticator {
   return {
-    authenticate() {
+    authenticate(request) {
+      if (!readDemoToken(request)) return Promise.resolve(null);
       const user: User = {
         id: DEMO_ADMIN.id,
         email: DEMO_ADMIN.email,

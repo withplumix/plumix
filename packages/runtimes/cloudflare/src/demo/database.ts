@@ -1,8 +1,7 @@
 import type { DatabaseAdapter } from "plumix";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 
-import { DemoError } from "../errors.js";
-import { demoStub, readDemoToken } from "./session.js";
+import { DEMO_SHOWCASE_NAME, demoStub, readDemoToken } from "./session.js";
 
 export interface DemoDatabaseConfig {
   /** DemoDB Durable Object namespace binding name. */
@@ -10,11 +9,11 @@ export interface DemoDatabaseConfig {
 }
 
 /**
- * Routes every request's queries to the visitor's own demo Durable Object,
- * resolved from the session cookie. A drizzle `sqlite-proxy` driver RPCs each
- * statement to the DO's SQLite. The DO is migrated + seeded by the demo
- * runtime's `/_demo/init` before any query runs, so `connect` only wires the
- * proxy — it never migrates.
+ * Routes queries to a demo Durable Object: the visitor's own per-session DO
+ * (from the session cookie), or the shared read-only showcase DO for
+ * cookieless traffic. A drizzle `sqlite-proxy` driver RPCs each statement to
+ * the DO's SQLite; the DO is migrated + seeded by the demo runtime before any
+ * query runs, so `connect` only wires the proxy — it never migrates.
  */
 export function demoDatabase(config: DemoDatabaseConfig): DatabaseAdapter {
   const { binding } = config;
@@ -22,10 +21,7 @@ export function demoDatabase(config: DemoDatabaseConfig): DatabaseAdapter {
     kind: "demo",
     requiredBindings: [binding],
     connect(env, request, schema) {
-      const token = readDemoToken(request);
-      if (!token) {
-        throw DemoError.noSession();
-      }
+      const token = readDemoToken(request) ?? DEMO_SHOWCASE_NAME;
       const stub = demoStub(env, binding, token);
       // sqlite-proxy wants a single positional row for `get`, an array of them
       // otherwise; DemoDB.query/batch already return positional rows.
