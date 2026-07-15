@@ -7,6 +7,7 @@ packages:
   - "packages/create-plumix-app"
   - "packages/plumix"
   - "packages/runtimes/*"
+  - "packages/runtimes/*/e2e/fixture"
   - "packages/plugins/*"
   - "packages/plugins/*/playground"
   - "examples/*"

@@ -1,0 +1,27 @@
+{
+  "name": "@plumix/runtime-cloudflare-demo-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal plumix site wired with demoPreset — drives the demo sandbox e2e (not shipped, not a scaffolder template)",
+  "license": "MIT",
+  "scripts": {
+    "clean": "git clean -xdf .plumix .wrangler node_modules",
+    "dev": "plumix dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plumix/plugin-blog": "workspace:*",
+    "@plumix/runtime-cloudflare": "workspace:*",
+    "plumix": "workspace:*",
+    "react": "catalog:react"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:cloudflare",
+    "@plumix/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:react",
+    "typescript": "catalog:",
+    "wrangler": "catalog:cloudflare"
+  }
+}
