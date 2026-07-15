@@ -49,6 +49,16 @@ export interface RuntimeAdapter {
   buildFetchHandler(app: PlumixApp): FetchHandler;
   buildScheduledHandler?(app: PlumixApp): ScheduledHandler;
   /**
+   * Module specifiers whose named exports must be re-exported from the
+   * generated Worker entry. Cloudflare requires a Durable Object class to
+   * be a named export of the entry module, but that entry is codegen'd from
+   * a fixed template — so a DO-backed feature contributes its class module
+   * here, and the plumix Vite plugin surfaces it through the
+   * `virtual:plumix/worker-exports` module. Omit when the runtime
+   * contributes no worker-level exports (the common case).
+   */
+  readonly workerExports?: readonly string[];
+  /**
    * Module specifier imported by the CLI to load runtime-contributed
    * commands. Kept out of the worker-facing adapter so dev/build/deploy
    * tooling never ends up in the worker bundle.

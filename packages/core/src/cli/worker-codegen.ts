@@ -17,6 +17,12 @@ export function generateWorkerSource({
     'import assetManifest from "virtual:plumix/asset-manifest";',
     `import config from ${JSON.stringify(configModule)};`,
     "",
+    // Re-export named worker-level exports (e.g. Durable Object classes)
+    // that config slots contribute. The plumix Vite plugin resolves this
+    // virtual module from `runtime.workerExports`; it's an empty module
+    // when nothing is contributed, so this line is inert for most sites.
+    'export * from "virtual:plumix/worker-exports";',
+    "",
     // vite statically replaces `import.meta.env.DEV` (true under dev,
     // false in production builds) — see RuntimeContext.devCsrfLocalhost.
     // Fail-closed: a bundler that leaves `import.meta.env` intact yields
