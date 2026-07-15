@@ -52,6 +52,7 @@ import {
   isWorkspaceSymlinkedPlugin,
 } from "./plugin-catalog-resolve.js";
 import { stageUserPublic } from "./public-staging.js";
+import { generateWorkerExportsSource } from "./worker-exports-codegen.js";
 
 // The pre-compiled admin SPA ships as its own package (@plumix/admin). Resolve
 // its dist directory so the vite plugin can stage it into the user's app. This
@@ -72,11 +73,17 @@ const ASSET_MANIFEST_RESOLVED_ID = "\0" + ASSET_MANIFEST_VIRTUAL_ID;
 
 const SERIALIZE_RESOLVED_ID = "\0" + SERIALIZE_VIRTUAL_ID;
 
+const WORKER_EXPORTS_VIRTUAL_ID = "virtual:plumix/worker-exports";
+const WORKER_EXPORTS_RESOLVED_ID = "\0" + WORKER_EXPORTS_VIRTUAL_ID;
+
 export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   let root = process.cwd();
   let publicDir = "";
   let configPath: string | undefined;
   let command: "serve" | "build" = "serve";
+  // Populated from `runtime.workerExports` on each regenerate; served by the
+  // `virtual:plumix/worker-exports` module the generated worker re-exports.
+  let workerExports: readonly string[] = [];
   // Discovered at config() time so rollupOptions.input can be extended
   // before Vite resolves entries.
   let islands: readonly DiscoveredIsland[] = [];
@@ -201,6 +208,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     resolveId(id, importer) {
       if (id === ASSET_MANIFEST_VIRTUAL_ID) return ASSET_MANIFEST_RESOLVED_ID;
       if (id === SERIALIZE_VIRTUAL_ID) return SERIALIZE_RESOLVED_ID;
+      if (id === WORKER_EXPORTS_VIRTUAL_ID) return WORKER_EXPORTS_RESOLVED_ID;
       // `<file>?plumix-orig` — the SSR shim imports the original module
       // from this virtual ID; `transform` short-circuits on it so the
       // shim isn't recursively wrapped. The shim emits an absolute path,
@@ -216,6 +224,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       if (id.endsWith(ORIG_QUERY)) {
         const filePath = id.slice(0, -ORIG_QUERY.length);
         return readFileSync(filePath, "utf8");
+      }
+      if (id === WORKER_EXPORTS_RESOLVED_ID) {
+        return generateWorkerExportsSource(workerExports);
       }
       if (id === SERIALIZE_RESOLVED_ID) {
         // Re-export `serializeProps` resolved from the project root, where
@@ -257,6 +268,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     async buildStart() {
       const emitted = await regenerate(root, options.configFile);
       configPath = emitted.configPath;
+      workerExports = emitted.workerExports;
       warnOnPluginAdminMismatch(emitted.plugins, this.warn.bind(this));
       // User `public/` is staged BEFORE admin so the admin SPA's
       // freshness check still works against its own source mtime —
@@ -281,6 +293,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         // so bypass (and refresh) the cold-start config cache.
         void regenerate(root, options.configFile, { fresh: true })
           .then(async (emitted) => {
+            workerExports = emitted.workerExports;
             await stageUserPublic({ workspaceRoot: root, publicDir });
             await stageAdminAssets(
               publicDir,
@@ -328,6 +341,7 @@ async function regenerate(
   manifest: PlumixManifest;
   registry: PluginRegistry;
   plugins: readonly AnyPluginDescriptor[];
+  workerExports: readonly string[];
 }> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig, options);
 
@@ -394,7 +408,13 @@ async function regenerate(
     cwd,
   );
 
-  return { configPath, manifest, registry, plugins: config.plugins };
+  return {
+    configPath,
+    manifest,
+    registry,
+    plugins: config.plugins,
+    workerExports: config.runtime.workerExports ?? [],
+  };
 }
 
 type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];

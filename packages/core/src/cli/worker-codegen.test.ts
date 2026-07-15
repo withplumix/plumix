@@ -56,6 +56,11 @@ describe("generateWorkerSource", () => {
     expect(source).toContain("buildApp(config, {");
   });
 
+  test("re-exports the worker-exports virtual module so config can surface named exports (e.g. Durable Objects)", () => {
+    const source = generateWorkerSource({ configModule: "./config.ts" });
+    expect(source).toContain('export * from "virtual:plumix/worker-exports";');
+  });
+
   test("no-ops cleanly when the runtime omits buildScheduledHandler", () => {
     const source = generateWorkerSource({ configModule: "./config.ts" });
     // The generated code guards the call so a runtime that returns
