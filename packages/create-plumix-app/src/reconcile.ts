@@ -1,8 +1,7 @@
 import { DEFAULT_RUNTIME } from "./scaffold.js";
 
-// A field the interactive wizard would prompt for when not flagged. Kept
-// local until the wizard slice imports it.
-type PromptKey = "targetDir" | "runtime" | "plugins";
+/** A field the interactive wizard prompts for when it is not flagged. */
+export type PromptKey = "targetDir" | "runtime" | "plugins";
 
 export interface Reconciliation {
   readonly targetDir: string | undefined;

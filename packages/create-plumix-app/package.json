@@ -36,6 +36,7 @@
     "provenance": true
   },
   "dependencies": {
+    "@clack/prompts": "^1.7.0",
     "jsonc-parser": "catalog:"
   },
   "scripts": {
