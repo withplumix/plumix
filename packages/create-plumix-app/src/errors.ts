@@ -11,7 +11,7 @@ type ScaffoldErrorCode =
   | "unsupported_capability"
   | "unknown_plugin"
   | "wrangler_file_missing"
-  | "workspace_required";
+  | "snapshot_missing";
 
 interface ScaffoldErrorFields {
   parent?: string;
@@ -51,8 +51,9 @@ export class ScaffoldError extends Error {
     code: ScaffoldErrorCode,
     message: string,
     fields: ScaffoldErrorFields,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.code = code;
     this.parent = fields.parent;
     this.targetDir = fields.targetDir;
@@ -183,11 +184,15 @@ export class ScaffoldError extends Error {
     );
   }
 
-  static workspaceRequired(): ScaffoldError {
+  static snapshotMissing(ctx: {
+    path: string;
+    cause?: unknown;
+  }): ScaffoldError {
     return new ScaffoldError(
-      "workspace_required",
-      "create-plumix-app can currently only run inside the plumix monorepo — standalone (published) scaffolding is not wired up yet.",
-      {},
+      "snapshot_missing",
+      `Could not read or parse the bundled registry snapshot at ${ctx.path}. This is a packaging bug — please report it.`,
+      { packagePath: ctx.path },
+      { cause: ctx.cause },
     );
   }
 }
