@@ -18,7 +18,24 @@ describe("reconcile", () => {
       pluginIds: ["blog", "media"],
       yes: true,
       prompts: [],
+      pm: undefined,
+      install: true,
+      git: true,
     });
+  });
+
+  it("defaults install and git on, with no package-manager override", () => {
+    const r = reconcile(["my-app"]);
+    expect(r.install).toBe(true);
+    expect(r.git).toBe(true);
+    expect(r.pm).toBeUndefined();
+  });
+
+  it("honors --no-install, --no-git, and --pm", () => {
+    const r = reconcile(["my-app", "--no-install", "--no-git", "--pm", "bun"]);
+    expect(r.install).toBe(false);
+    expect(r.git).toBe(false);
+    expect(r.pm).toBe("bun");
   });
 
   it("defaults the runtime and empty plugins, flagging both as prompts", () => {
