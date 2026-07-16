@@ -7,6 +7,7 @@ import type {
   TaxonomyData,
   TemplateData,
 } from "plumix";
+import { hasDemoSession } from "@plumix/runtime-cloudflare/demo";
 
 import { Layout } from "../components/Layout";
 import { PostList } from "../components/PostList";
@@ -43,7 +44,11 @@ export const fallback = defineTemplate<TemplateData>({
   settings: ["site"],
   menus: ["primary", "footer"],
   render: ({ data, settings, menus, ctx }) => (
-    <Layout settings={settings} menus={menus}>
+    <Layout
+      settings={settings}
+      menus={menus}
+      showTryEditor={!hasDemoSession(ctx.request)}
+    >
       {"entries" in data ? (
         <PostList
           entries={data.entries}
