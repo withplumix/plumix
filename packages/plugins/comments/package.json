@@ -102,5 +102,18 @@
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
   },
-  "prettier": "@plumix/prettier-config"
+  "prettier": "@plumix/prettier-config",
+  "plumix": {
+    "scaffold": {
+      "kind": "plugin",
+      "id": "comments",
+      "label": "Comments",
+      "description": "Threaded, moderated discussion on entries",
+      "category": "engagement",
+      "registration": "comments({ entryTypes: [\"post\"] })",
+      "imports": [
+        "import { comments } from \"@plumix/plugin-comments\";"
+      ]
+    }
+  }
 }

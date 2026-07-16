@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -87,6 +87,19 @@ describe("runCli", () => {
     expect(code).toBe(0);
     expect(stderr).toEqual([]);
     expect(existsSync(join(target, "wrangler.jsonc"))).toBe(true);
+  });
+
+  test("-p includes comma-separated plugins in the scaffold", async () => {
+    const { io, stderr } = captureIO();
+    const target = join(tmp, "flagged-plugins");
+
+    const code = await runCli([target, "-p", "blog,media"], io);
+
+    expect(code).toBe(0);
+    expect(stderr).toEqual([]);
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain("blog,");
+    expect(config).toContain("media(),");
   });
 
   test("exits 1 with a listing error for an unknown --runtime", async () => {

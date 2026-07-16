@@ -5,6 +5,7 @@ import type { CatalogContext } from "../catalog.js";
 import type { PackageJson } from "./package-json.js";
 import type { Selection } from "./types.js";
 import { assembleConfig } from "./config.js";
+import { resolveContributions } from "./contributions.js";
 import { assembleRuntimeFiles } from "./files.js";
 import { assemblePackageJson } from "./package-json.js";
 import { fillProjectName } from "./types.js";
@@ -71,15 +72,16 @@ export async function compose({
     out[dest] = fillProjectName(content, projectName);
   }
 
+  const contributions = resolveContributions(selection);
   // Runtime files first, so the core-assembled files below always win a
   // key collision (a runtime must not shadow package.json / config / tsconfig).
-  Object.assign(out, assembleRuntimeFiles(selection));
+  Object.assign(out, assembleRuntimeFiles(selection, contributions.wrangler));
   out["package.json"] = assemblePackageJson(
     selection,
     JSON.parse(basePkgRaw) as PackageJson,
     ctx,
   );
-  out["plumix.config.ts"] = assembleConfig(selection);
+  out["plumix.config.ts"] = assembleConfig(selection, contributions);
   out["tsconfig.json"] = `${JSON.stringify(TSCONFIG, null, 2)}\n`;
 
   return out;

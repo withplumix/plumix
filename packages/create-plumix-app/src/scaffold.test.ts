@@ -134,6 +134,46 @@ describe("scaffold — blank Cloudflare app", () => {
     );
   });
 
+  test("composes selected plugins into config, deps, and wrangler bindings", async () => {
+    const target = join(tmp, "with-plugins");
+
+    await scaffold({ targetDir: target, pluginIds: ["blog", "media"] });
+
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain("blog,");
+    expect(config).toContain("media(),");
+    expect(config).toContain('storage: r2({ binding: "MEDIA" })');
+    expect(config).toContain("imageDelivery: images()");
+
+    const pkg = readPkg(target);
+    expect(pkg.dependencies).toHaveProperty("@plumix/plugin-blog");
+    expect(pkg.dependencies).toHaveProperty("@plumix/plugin-media");
+    expect(pkg.dependencies).toHaveProperty("@tanstack/react-query");
+
+    const wrangler = readFileSync(join(target, "wrangler.jsonc"), "utf8");
+    expect(wrangler).toContain("r2_buckets");
+    expect(wrangler).toContain('"binding": "MEDIA"');
+    // wrangler comments survive the binding merge
+    expect(wrangler).toContain("Fires plumix's scheduled tasks");
+  });
+
+  test("dedupes repeated plugin ids", async () => {
+    const target = join(tmp, "dupe-plugins");
+
+    await scaffold({ targetDir: target, pluginIds: ["blog", "blog"] });
+
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config.match(/^\s*blog,$/gm)).toHaveLength(1);
+  });
+
+  test("rejects an unknown plugin id", async () => {
+    const target = join(tmp, "bad-plugin");
+
+    await expect(
+      scaffold({ targetDir: target, pluginIds: ["nope"] }),
+    ).rejects.toThrow(/unknown plugin "nope"/i);
+  });
+
   test("rejects a project name that is not a valid npm package name", async () => {
     const target = join(tmp, "My App");
 

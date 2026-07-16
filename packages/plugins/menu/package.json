@@ -96,5 +96,18 @@
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
   },
-  "prettier": "@plumix/prettier-config"
+  "prettier": "@plumix/prettier-config",
+  "plumix": {
+    "scaffold": {
+      "kind": "plugin",
+      "id": "menu",
+      "label": "Menu",
+      "description": "Navigation menus from entries, terms, or URLs",
+      "category": "structure",
+      "registration": "menu({ locations: { primary: { label: \"Primary\" }, footer: { label: \"Footer\" } } })",
+      "imports": [
+        "import { menu } from \"@plumix/plugin-menu\";"
+      ]
+    }
+  }
 }

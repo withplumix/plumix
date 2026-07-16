@@ -25,17 +25,39 @@ export interface RuntimeDescriptor {
   readonly devDeps: Readonly<Record<string, string>>;
   /** Whole files the runtime contributes, keyed by relative path. */
   readonly files: Readonly<Record<string, string>>;
+  /**
+   * Named runtime capabilities a plugin can require (e.g. `storage`).
+   * Fulfilling one contributes its imports, config slots, and wrangler
+   * bindings — the seam that lets a runtime-agnostic plugin like media
+   * wire object storage without naming Cloudflare.
+   */
+  readonly capabilities?: Readonly<Record<string, Contribution>>;
 }
 
 /**
- * A plugin's scaffold contributions. Populated in the plugin-composition
- * slice; the blank app carries an empty plugin list. Not exported yet —
- * only `Selection` references it until plugins are wired.
+ * A bundle of contributions merged into the composed project: config
+ * imports and top-level slots, plus wrangler binding patches. Shared by
+ * plugin descriptors and runtime capabilities.
  */
-interface PluginDescriptor {
+export interface Contribution {
+  readonly imports?: readonly string[];
+  readonly configSlots?: Readonly<Record<string, string>>;
+  /** Top-level wrangler.jsonc keys to merge (arrays append). */
+  readonly wrangler?: Readonly<Record<string, unknown>>;
+}
+
+/** A plugin's scaffold contributions, from its `plumix.scaffold` block. */
+export interface PluginDescriptor extends Contribution {
   readonly id: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly category?: string;
   /** Expression placed in the config `plugins: [...]` array. */
   readonly registration: string;
+  /** Runtime capabilities this plugin needs (e.g. `["storage"]`). */
+  readonly requires?: readonly string[];
+  /** App dependencies, derived from the plugin's package + peers. */
+  readonly deps: Readonly<Record<string, string>>;
 }
 
 /** A fully resolved set of choices ready to compose into a project. */

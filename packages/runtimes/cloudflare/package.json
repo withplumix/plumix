@@ -70,6 +70,32 @@
       },
       "files": {
         "wrangler.jsonc": "scaffold/wrangler.jsonc"
+      },
+      "capabilities": {
+        "storage": {
+          "imports": [
+            "import { r2 } from \"@plumix/runtime-cloudflare\";"
+          ],
+          "configSlots": {
+            "storage": "r2({ binding: \"MEDIA\" })"
+          },
+          "wrangler": {
+            "r2_buckets": [
+              {
+                "binding": "MEDIA",
+                "bucket_name": "__PROJECT_NAME__-media"
+              }
+            ]
+          }
+        },
+        "imageDelivery": {
+          "imports": [
+            "import { images } from \"@plumix/runtime-cloudflare\";"
+          ],
+          "configSlots": {
+            "imageDelivery": "images()"
+          }
+        }
       }
     }
   },
@@ -91,7 +117,7 @@
   "dependencies": {
     "@cloudflare/vite-plugin": "catalog:cloudflare",
     "jose": "^6.2.3",
-    "jsonc-parser": "^3.3.1",
+    "jsonc-parser": "catalog:",
     "smol-toml": "^1.7.0",
     "vite": "catalog:vite"
   },

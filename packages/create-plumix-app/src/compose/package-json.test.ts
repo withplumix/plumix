@@ -36,10 +36,12 @@ const ctx: CatalogContext = {
   catalogs: {
     react: { react: "^19.2.7", "@types/react": "^19.0.0" },
     cloudflare: { "@cloudflare/workers-types": "^4.0.0", wrangler: "^4.111.0" },
+    tanstack: { "@tanstack/react-query": "^5.101.2" },
   },
   workspaceVersions: {
     plumix: "0.1.0",
     "@plumix/runtime-cloudflare": "0.2.1",
+    "@plumix/plugin-media": "0.1.0",
   },
 };
 
@@ -76,6 +78,31 @@ describe("assemblePackageJson — blank Cloudflare app", () => {
       "@types/react": "^19.0.0",
       typescript: "^5.6.0",
       wrangler: "^4.111.0",
+    });
+  });
+
+  it("adds selected plugins' derived deps, resolved and deduped", () => {
+    const withMedia: Selection = {
+      ...selection,
+      plugins: [
+        {
+          id: "media",
+          label: "Media",
+          registration: "media()",
+          imports: [],
+          deps: {
+            "@plumix/plugin-media": "workspace:*",
+            "@tanstack/react-query": "catalog:tanstack",
+            react: "catalog:react",
+          },
+        },
+      ],
+    };
+    const pkg = parse(assemblePackageJson(withMedia, BASE_PACKAGE_JSON, ctx));
+    expect(pkg.dependencies).toMatchObject({
+      "@plumix/plugin-media": "^0.1.0",
+      "@tanstack/react-query": "^5.101.2",
+      react: "^19.2.7",
     });
   });
 

@@ -76,5 +76,18 @@
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
   },
-  "prettier": "@plumix/prettier-config"
+  "prettier": "@plumix/prettier-config",
+  "plumix": {
+    "scaffold": {
+      "kind": "plugin",
+      "id": "blog",
+      "label": "Blog",
+      "description": "Posts, categories, and tags",
+      "category": "content",
+      "registration": "blog",
+      "imports": [
+        "import { blog } from \"@plumix/plugin-blog\";"
+      ]
+    }
+  }
 }
