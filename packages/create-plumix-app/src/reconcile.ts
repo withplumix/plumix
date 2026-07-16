@@ -8,6 +8,10 @@ export interface Reconciliation {
   readonly runtimeId: string;
   readonly pluginIds: readonly string[];
   readonly yes: boolean;
+  /** Package-manager override; detected from the environment when absent. */
+  readonly pm: string | undefined;
+  readonly install: boolean;
+  readonly git: boolean;
   /** Fields not supplied by flags — empty under `--yes`. */
   readonly prompts: readonly PromptKey[];
 }
@@ -17,6 +21,9 @@ interface ParsedArgs {
   readonly runtime: string | undefined;
   readonly plugins: readonly string[] | undefined;
   readonly yes: boolean;
+  readonly pm: string | undefined;
+  readonly install: boolean;
+  readonly git: boolean;
 }
 
 /**
@@ -38,6 +45,9 @@ export function reconcile(argv: readonly string[]): Reconciliation {
     runtimeId: parsed.runtime ?? DEFAULT_RUNTIME,
     pluginIds: parsed.plugins ?? [],
     yes: parsed.yes,
+    pm: parsed.pm,
+    install: parsed.install,
+    git: parsed.git,
     prompts: parsed.yes ? [] : missing,
   };
 }
@@ -54,7 +64,10 @@ function splitCsv(csv: string): string[] {
 function parseArgs(argv: readonly string[]): ParsedArgs {
   let runtime: string | undefined;
   let plugins: string[] | undefined;
+  let pm: string | undefined;
   let yes = false;
+  let install = true;
+  let git = true;
   const positional: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -70,6 +83,15 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       i++;
     } else if (arg.startsWith("--plugins=")) {
       plugins = splitCsv(arg.slice("--plugins=".length));
+    } else if (arg === "--pm") {
+      pm = argv[i + 1] ?? "";
+      i++;
+    } else if (arg.startsWith("--pm=")) {
+      pm = arg.slice("--pm=".length);
+    } else if (arg === "--no-install") {
+      install = false;
+    } else if (arg === "--no-git") {
+      git = false;
     } else if (arg === "--yes" || arg === "-y") {
       yes = true;
     } else if (!arg.startsWith("-")) {
@@ -77,5 +99,5 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     }
   }
 
-  return { target: positional[0], runtime, plugins, yes };
+  return { target: positional[0], runtime, plugins, yes, pm, install, git };
 }

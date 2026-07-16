@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { CliIO } from "./cli.js";
+import type { CommandRunner } from "./post-scaffold.js";
 import { BANNER, runCli } from "./cli.js";
 
 interface CapturedIO {
@@ -22,6 +23,12 @@ function captureIO(): CapturedIO {
   return { io, stdout, stderr };
 }
 
+// A runner that spawns nothing, so tests never actually install or init git,
+// plus a fixed user agent so package-manager detection is deterministic.
+const noopRunner: CommandRunner = { run: () => Promise.resolve({ ok: true }) };
+const run = (argv: readonly string[], io: CliIO): Promise<number> =>
+  runCli(argv, io, { runner: noopRunner, userAgent: "pnpm/8.0.0 npm/? node" });
+
 describe("runCli", () => {
   let tmp: string;
 
@@ -36,7 +43,7 @@ describe("runCli", () => {
   test("exits 1 with usage on stderr when no target dir is given", async () => {
     const { io, stdout, stderr } = captureIO();
 
-    const code = await runCli([], io);
+    const code = await run([], io);
 
     expect(code).toBe(1);
     expect(stdout).toEqual([]);
@@ -46,7 +53,7 @@ describe("runCli", () => {
   test("--help prints usage to stdout and exits 0", async () => {
     const { io, stdout, stderr } = captureIO();
 
-    const code = await runCli(["--help"], io);
+    const code = await run(["--help"], io);
 
     expect(code).toBe(0);
     expect(stdout.join("\n")).toMatch(/usage/i);
@@ -56,7 +63,7 @@ describe("runCli", () => {
   test("-h is the short form of --help", async () => {
     const { io, stdout } = captureIO();
 
-    const code = await runCli(["-h"], io);
+    const code = await run(["-h"], io);
 
     expect(code).toBe(0);
     expect(stdout.join("\n")).toMatch(/usage/i);
@@ -66,7 +73,9 @@ describe("runCli", () => {
     const { io, stdout, stderr } = captureIO();
     const target = join(tmp, "my-app");
 
-    const code = await runCli([target], io);
+    // --no-install so the install step appears in next-steps (otherwise it
+    // is auto-run and omitted).
+    const code = await run([target, "--no-install", "--no-git"], io);
 
     expect(code).toBe(0);
     expect(stderr).toEqual([]);
@@ -78,11 +87,22 @@ describe("runCli", () => {
     expect(out).toContain("pnpm dev");
   });
 
+  test("auto-install omits the install step from next-steps", async () => {
+    const { io, stdout } = captureIO();
+    const target = join(tmp, "installed-app");
+
+    await run([target, "--no-git"], io);
+
+    const out = stdout.join("\n");
+    expect(out).toContain("pnpm dev");
+    expect(out).not.toContain("pnpm install");
+  });
+
   test("--runtime selects the runtime and scaffolds it", async () => {
     const { io, stderr } = captureIO();
     const target = join(tmp, "cf-app");
 
-    const code = await runCli([target, "--runtime", "cloudflare"], io);
+    const code = await run([target, "--runtime", "cloudflare"], io);
 
     expect(code).toBe(0);
     expect(stderr).toEqual([]);
@@ -93,7 +113,7 @@ describe("runCli", () => {
     const { io, stderr } = captureIO();
     const target = join(tmp, "yes-blank");
 
-    const code = await runCli([target, "--yes"], io);
+    const code = await run([target, "--yes"], io);
 
     expect(code).toBe(0);
     expect(stderr).toEqual([]);
@@ -105,7 +125,7 @@ describe("runCli", () => {
     const { io, stderr } = captureIO();
     const target = join(tmp, "flagged-plugins");
 
-    const code = await runCli([target, "-p", "blog,media"], io);
+    const code = await run([target, "-p", "blog,media"], io);
 
     expect(code).toBe(0);
     expect(stderr).toEqual([]);
@@ -114,11 +134,21 @@ describe("runCli", () => {
     expect(config).toContain("media(),");
   });
 
+  test("exits 1 for an unknown --pm", async () => {
+    const { io, stderr } = captureIO();
+    const target = join(tmp, "bad-pm");
+
+    const code = await run([target, "--pm", "foo"], io);
+
+    expect(code).toBe(1);
+    expect(stderr.join("\n")).toMatch(/unknown package manager "foo"/i);
+  });
+
   test("exits 1 with a listing error for an unknown --runtime", async () => {
     const { io, stderr } = captureIO();
     const target = join(tmp, "bad-runtime");
 
-    const code = await runCli([target, "--runtime", "nope"], io);
+    const code = await run([target, "--runtime", "nope"], io);
 
     expect(code).toBe(1);
     expect(stderr.join("\n")).toMatch(/unknown runtime "nope".*cloudflare/is);
@@ -128,7 +158,7 @@ describe("runCli", () => {
     const { io, stdout, stderr } = captureIO();
     const target = join(tmp, "missing-parent", "child");
 
-    const code = await runCli([target], io);
+    const code = await run([target], io);
 
     expect(code).toBe(1);
     expect(stdout).toEqual([]);
