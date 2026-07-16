@@ -464,6 +464,46 @@ describe("dispatcher — CSRF", () => {
     );
     expect(response.status).toBe(401);
   });
+
+  test("same-origin POST is allowed even when the deploy host differs from app.origin", async () => {
+    // The demo sandbox (and any multi-domain deploy) is served on a host that
+    // isn't the canonical app.origin. A same-origin request — Origin equals the
+    // host it targets — is never cross-site forgery, so it must clear the
+    // origin check; only the header gate (satisfied) and auth then apply.
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("https://demo.deploy.example/_plumix/rpc/entry/list", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://demo.deploy.example",
+        },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    // 401 (auth), not 403 (CSRF) — the same-origin request clears the check.
+    expect(response.status).toBe(401);
+  });
+
+  test("cross-origin POST to a non-canonical host is still forbidden", async () => {
+    // The same-origin allowance must not widen the check: a forged Origin that
+    // differs from both the target host and app.origin is still rejected, even
+    // with the CSRF header present.
+    const h = await createDispatcherHarness();
+    const response = await h.dispatch(
+      plumixRequest("https://demo.deploy.example/_plumix/rpc/entry/list", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://attacker.example",
+        },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { reason?: string };
+    expect(body.reason).toBe("csrf_origin_mismatch");
+  });
 });
 
 describe("dispatcher — RPC", () => {
