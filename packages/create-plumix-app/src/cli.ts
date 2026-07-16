@@ -1,7 +1,11 @@
 import { createRequire } from "node:module";
+import * as clack from "@clack/prompts";
 
+import type { ScaffoldSources } from "./sources.js";
+import type { WizardSelection } from "./wizard.js";
 import { reconcile } from "./reconcile.js";
-import { DEFAULT_RUNTIME, scaffold } from "./scaffold.js";
+import { DEFAULT_RUNTIME, loadScaffoldSources, scaffold } from "./scaffold.js";
+import { clackPrompter, runWizard } from "./wizard.js";
 
 export interface CliIO {
   stdout(line: string): void;
@@ -45,6 +49,14 @@ Example:
   pnpm install
   pnpm dev`;
 
+// Only drive the interactive wizard on a real terminal (and never in CI),
+// so piped/scripted invocations stay on the deterministic flag path.
+function isInteractive(): boolean {
+  return (
+    Boolean(process.stdin.isTTY && process.stdout.isTTY) && !process.env.CI
+  );
+}
+
 export async function runCli(
   argv: readonly string[],
   io: CliIO,
@@ -54,26 +66,58 @@ export async function runCli(
     return 0;
   }
 
-  const { targetDir, runtimeId, pluginIds } = reconcile(argv);
+  const reconciled = reconcile(argv);
+  let selection: WizardSelection = {
+    targetDir: reconciled.targetDir,
+    runtimeId: reconciled.runtimeId,
+    pluginIds: reconciled.pluginIds,
+  };
+
+  const interactive = reconciled.prompts.length > 0 && isInteractive();
+  let sources: ScaffoldSources | undefined;
+  if (interactive) {
+    sources = await loadScaffoldSources();
+    clack.intro("create-plumix-app");
+    const filled = await runWizard(
+      reconciled.prompts,
+      selection,
+      sources.registry,
+      clackPrompter,
+    );
+    if (filled === null) {
+      clack.cancel("Scaffolding cancelled.");
+      return 1;
+    }
+    selection = filled;
+  }
+
+  const { targetDir, runtimeId, pluginIds } = selection;
   if (targetDir === undefined) {
     io.stderr(USAGE);
     return 1;
   }
 
   try {
-    const result = await scaffold({ targetDir, runtimeId, pluginIds });
-    io.stdout(BANNER);
-    io.stdout(`v${readVersion()}`);
-    io.stdout("");
-    io.stdout(`Created ${result.name} at ${result.targetDir}.`);
-    io.stdout("");
-    io.stdout("Next steps:");
-    io.stdout(`  cd ${result.name}`);
-    io.stdout("  pnpm install");
-    io.stdout("  pnpm dev");
+    const result = await scaffold({ targetDir, runtimeId, pluginIds, sources });
+    const steps = `cd ${result.name} && pnpm install && pnpm dev`;
+    if (interactive) {
+      clack.outro(`Created ${result.name}. Next: ${steps}`);
+    } else {
+      io.stdout(BANNER);
+      io.stdout(`v${readVersion()}`);
+      io.stdout("");
+      io.stdout(`Created ${result.name} at ${result.targetDir}.`);
+      io.stdout("");
+      io.stdout("Next steps:");
+      io.stdout(`  cd ${result.name}`);
+      io.stdout("  pnpm install");
+      io.stdout("  pnpm dev");
+    }
     return 0;
   } catch (error) {
-    io.stderr(error instanceof Error ? error.message : String(error));
+    const message = error instanceof Error ? error.message : String(error);
+    if (interactive) clack.cancel(message);
+    else io.stderr(message);
     return 1;
   }
 }

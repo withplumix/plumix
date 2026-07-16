@@ -4,6 +4,7 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Selection } from "./compose/types.js";
+import type { ScaffoldSources } from "./sources.js";
 import { compose } from "./compose/index.js";
 import { ScaffoldError } from "./errors.js";
 import { loadSources } from "./sources.js";
@@ -14,6 +15,8 @@ interface ScaffoldOptions {
   readonly runtimeId?: string;
   /** Plugin ids to include; defaults to none (a blank app). */
   readonly pluginIds?: readonly string[];
+  /** Pre-loaded sources (e.g. from the wizard) to avoid a second load. */
+  readonly sources?: ScaffoldSources;
 }
 
 interface ScaffoldResult {
@@ -31,10 +34,19 @@ const BASE_DIR = join(PACKAGE_ROOT, "base");
 const REPO_ROOT = join(PACKAGE_ROOT, "..", "..");
 const SNAPSHOT_PATH = join(PACKAGE_ROOT, "registry.json");
 
+/** Load the registry + catalog context (live workspace or baked snapshot). */
+export function loadScaffoldSources(): Promise<ScaffoldSources> {
+  return loadSources(REPO_ROOT, SNAPSHOT_PATH);
+}
+
 // npm package-name grammar (lowercase, no spaces/quotes/slashes): the
 // project name is spliced into package.json, wrangler.jsonc, and TS string
 // literals, so an out-of-grammar name would emit a broken project.
 const PROJECT_NAME_RE = /^[a-z0-9][a-z0-9._-]*$/;
+
+export function isValidProjectName(name: string): boolean {
+  return name.length > 0 && name.length <= 214 && PROJECT_NAME_RE.test(name);
+}
 
 export async function scaffold(
   options: ScaffoldOptions,
@@ -42,11 +54,11 @@ export async function scaffold(
   const { targetDir, runtimeId = DEFAULT_RUNTIME, pluginIds = [] } = options;
 
   const name = basename(targetDir);
-  if (name.length > 214 || !PROJECT_NAME_RE.test(name)) {
+  if (!isValidProjectName(name)) {
     throw ScaffoldError.invalidProjectName({ name });
   }
 
-  const { registry, ctx } = await loadSources(REPO_ROOT, SNAPSHOT_PATH);
+  const { registry, ctx } = options.sources ?? (await loadScaffoldSources());
   const runtime = registry.runtimes.find((r) => r.id === runtimeId);
   if (!runtime) {
     throw ScaffoldError.unknownRuntime({
