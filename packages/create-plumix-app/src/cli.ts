@@ -71,6 +71,7 @@ export async function runCli(
     targetDir: reconciled.targetDir,
     runtimeId: reconciled.runtimeId,
     pluginIds: reconciled.pluginIds,
+    authMethodIds: [],
   };
 
   const interactive = reconciled.prompts.length > 0 && isInteractive();
@@ -91,14 +92,20 @@ export async function runCli(
     selection = filled;
   }
 
-  const { targetDir, runtimeId, pluginIds } = selection;
+  const { targetDir, runtimeId, pluginIds, authMethodIds } = selection;
   if (targetDir === undefined) {
     io.stderr(USAGE);
     return 1;
   }
 
   try {
-    const result = await scaffold({ targetDir, runtimeId, pluginIds, sources });
+    const result = await scaffold({
+      targetDir,
+      runtimeId,
+      pluginIds,
+      authMethodIds,
+      sources,
+    });
     const steps = `cd ${result.name} && pnpm install && pnpm dev`;
     if (interactive) {
       clack.outro(`Created ${result.name}. Next: ${steps}`);

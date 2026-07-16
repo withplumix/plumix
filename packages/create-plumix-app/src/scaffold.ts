@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import type { Selection } from "./compose/types.js";
 import type { ScaffoldSources } from "./sources.js";
+import { resolveAuthMethods } from "./auth-methods.js";
 import { compose } from "./compose/index.js";
 import { ScaffoldError } from "./errors.js";
 import { loadSources } from "./sources.js";
@@ -15,6 +16,8 @@ interface ScaffoldOptions {
   readonly runtimeId?: string;
   /** Plugin ids to include; defaults to none (a blank app). */
   readonly pluginIds?: readonly string[];
+  /** Optional auth methods on top of passkey; defaults to none. */
+  readonly authMethodIds?: readonly string[];
   /** Pre-loaded sources (e.g. from the wizard) to avoid a second load. */
   readonly sources?: ScaffoldSources;
 }
@@ -51,7 +54,12 @@ export function isValidProjectName(name: string): boolean {
 export async function scaffold(
   options: ScaffoldOptions,
 ): Promise<ScaffoldResult> {
-  const { targetDir, runtimeId = DEFAULT_RUNTIME, pluginIds = [] } = options;
+  const {
+    targetDir,
+    runtimeId = DEFAULT_RUNTIME,
+    pluginIds = [],
+    authMethodIds = [],
+  } = options;
 
   const name = basename(targetDir);
   if (!isValidProjectName(name)) {
@@ -78,9 +86,16 @@ export async function scaffold(
     return plugin;
   });
 
+  const authMethods = resolveAuthMethods(authMethodIds, runtime);
+
   // Build the whole project in memory before touching the target, so a
   // resolution failure never leaves a half-created directory behind.
-  const selection: Selection = { projectName: name, runtime, plugins };
+  const selection: Selection = {
+    projectName: name,
+    runtime,
+    plugins,
+    authMethods,
+  };
   const files = await compose({ selection, baseDir: BASE_DIR, ctx });
 
   await ensureEmptyTarget(targetDir);

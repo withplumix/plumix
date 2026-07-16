@@ -10,6 +10,7 @@ type ScaffoldErrorCode =
   | "invalid_scaffold_meta"
   | "unsupported_capability"
   | "unknown_plugin"
+  | "unknown_auth_method"
   | "wrangler_file_missing"
   | "snapshot_missing";
 
@@ -25,6 +26,7 @@ interface ScaffoldErrorFields {
   packagePath?: string;
   capability?: string;
   plugin?: string;
+  authMethod?: string;
   available?: readonly string[];
 }
 
@@ -45,6 +47,7 @@ export class ScaffoldError extends Error {
   readonly packagePath: string | undefined;
   readonly capability: string | undefined;
   readonly plugin: string | undefined;
+  readonly authMethod: string | undefined;
   readonly available: readonly string[] | undefined;
 
   private constructor(
@@ -66,6 +69,7 @@ export class ScaffoldError extends Error {
     this.packagePath = fields.packagePath;
     this.capability = fields.capability;
     this.plugin = fields.plugin;
+    this.authMethod = fields.authMethod;
     this.available = fields.available;
   }
 
@@ -173,6 +177,17 @@ export class ScaffoldError extends Error {
       "unknown_plugin",
       `Unknown plugin "${ctx.plugin}". Available plugins: ${ctx.available.join(", ")}.`,
       ctx,
+    );
+  }
+
+  static unknownAuthMethod(ctx: {
+    method: string;
+    available: readonly string[];
+  }): ScaffoldError {
+    return new ScaffoldError(
+      "unknown_auth_method",
+      `Unknown auth method "${ctx.method}". Available: ${ctx.available.join(", ")}.`,
+      { authMethod: ctx.method, available: ctx.available },
     );
   }
 

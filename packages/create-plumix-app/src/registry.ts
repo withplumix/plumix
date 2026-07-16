@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import type {
   Contribution,
   PluginDescriptor,
+  RawAuthMethod,
   RuntimeDescriptor,
 } from "./compose/types.js";
 import { ScaffoldError } from "./errors.js";
@@ -22,6 +23,7 @@ interface RawScaffoldMeta extends Contribution {
   /** dest path in the scaffolded project → source path in this package. */
   readonly files?: Record<string, string>;
   readonly capabilities?: Record<string, Contribution>;
+  readonly authMethods?: Record<string, RawAuthMethod>;
   /** Plugin only: expression placed in the config `plugins` array. */
   readonly registration?: string;
   /** Plugin only: runtime capabilities the plugin needs. */
@@ -124,6 +126,7 @@ async function toRuntimeDescriptor(
     devDeps: meta.devDeps ?? {},
     files,
     capabilities: meta.capabilities,
+    authMethods: meta.authMethods,
   };
 }
 

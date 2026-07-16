@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type {
+  AuthMethodDescriptor,
   PluginDescriptor,
   RuntimeDescriptor,
   Selection,
@@ -31,7 +32,12 @@ const cloudflareRuntime: RuntimeDescriptor = {
 };
 
 function blankSelection(projectName: string): Selection {
-  return { projectName, runtime: cloudflareRuntime, plugins: [] };
+  return {
+    projectName,
+    runtime: cloudflareRuntime,
+    plugins: [],
+    authMethods: [],
+  };
 }
 
 describe("assembleConfig — blank Cloudflare app", () => {
@@ -104,6 +110,7 @@ describe("assembleConfig — with plugins", () => {
       projectName: "app",
       runtime: cloudflareWithCaps,
       plugins: [blog, media],
+      authMethods: [],
     });
     expect(config).toContain("  plugins: [\n    blog,\n    media(),\n  ],");
     expect(config).toContain('import { blog } from "@plumix/plugin-blog";');
@@ -115,11 +122,66 @@ describe("assembleConfig — with plugins", () => {
       projectName: "app",
       runtime: cloudflareWithCaps,
       plugins: [media],
+      authMethods: [],
     });
     expect(config).toContain(
       'import { cloudflare, cloudflareDeployOrigin, d1, images, r2 } from "@plumix/runtime-cloudflare";',
     );
     expect(config).toContain('storage: r2({ binding: "MEDIA" }),');
     expect(config).toContain("imageDelivery: images(),");
+  });
+});
+
+const oauth: AuthMethodDescriptor = {
+  id: "oauth",
+  label: "OAuth",
+  imports: ['import { github } from "plumix";'],
+  authEntry:
+    "oauth: { providers: { github: github((env) => ({ clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET })) } }",
+  envVars: ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"],
+};
+
+const magicLink: AuthMethodDescriptor = {
+  id: "magic-link",
+  label: "Magic link",
+  imports: ['import { consoleMailer } from "plumix";'],
+  authEntry: 'magicLink: { siteName: "__PROJECT_NAME__" }',
+  configSlots: { mailer: "consoleMailer()" },
+};
+
+describe("assembleConfig — auth methods", () => {
+  const withAuth = (methods: AuthMethodDescriptor[]): string =>
+    assemble({
+      projectName: "app",
+      runtime: cloudflareRuntime,
+      plugins: [],
+      authMethods: methods,
+    });
+
+  it("folds auth imports into the plumix import line", () => {
+    expect(withAuth([oauth, magicLink])).toContain(
+      'import { auth, consoleMailer, github, plumix } from "plumix";',
+    );
+  });
+
+  it("injects each method's entry into the auth block", () => {
+    const config = withAuth([oauth, magicLink]);
+    expect(config).toContain("oauth: { providers:");
+    expect(config).toContain('magicLink: { siteName: "app" }');
+  });
+
+  it("co-emits magic link's required mailer slot", () => {
+    expect(withAuth([magicLink])).toContain("mailer: consoleMailer(),");
+  });
+
+  it("declares secret bindings for env-resolver methods", () => {
+    const config = withAuth([oauth]);
+    expect(config).toContain('declare module "plumix" {');
+    expect(config).toContain("readonly GITHUB_CLIENT_ID: string;");
+    expect(config).toContain("readonly GITHUB_CLIENT_SECRET: string;");
+  });
+
+  it("adds no augmentation when no method needs secrets", () => {
+    expect(withAuth([magicLink])).not.toContain("declare module");
   });
 });

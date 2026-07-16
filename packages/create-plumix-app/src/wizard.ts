@@ -3,12 +3,14 @@ import * as clack from "@clack/prompts";
 
 import type { PromptKey } from "./reconcile.js";
 import type { Registry } from "./registry.js";
+import { availableAuthMethods } from "./auth-methods.js";
 import { isValidProjectName } from "./scaffold.js";
 
 export interface WizardSelection {
   readonly targetDir: string | undefined;
   readonly runtimeId: string;
   readonly pluginIds: readonly string[];
+  readonly authMethodIds: readonly string[];
 }
 
 // The wizard only ever chooses string ids (runtimes, plugins), so the
@@ -55,7 +57,7 @@ export async function runWizard(
   registry: Registry,
   prompter: Prompter,
 ): Promise<WizardSelection | null> {
-  let { targetDir, runtimeId, pluginIds } = flagged;
+  let { targetDir, runtimeId, pluginIds, authMethodIds } = flagged;
 
   if (prompts.includes("targetDir")) {
     const value = await prompter.text({
@@ -99,7 +101,26 @@ export async function runWizard(
     pluginIds = value;
   }
 
-  return { targetDir, runtimeId, pluginIds };
+  // Auth is always offered (passkey is implied); the options depend on the
+  // chosen runtime, so this runs after the runtime is known.
+  const runtime = registry.runtimes.find((r) => r.id === runtimeId);
+  const methods = runtime ? availableAuthMethods(runtime) : [];
+  if (methods.length > 0) {
+    const value = await prompter.multiselect({
+      message: "Add auth methods? (passkey is always enabled)",
+      options: methods.map((method) => ({
+        value: method.id,
+        label: method.label,
+        hint: method.description,
+      })),
+      initialValues: [...authMethodIds],
+      required: false,
+    });
+    if (value === null) return null;
+    authMethodIds = value;
+  }
+
+  return { targetDir, runtimeId, pluginIds, authMethodIds };
 }
 
 /** Production {@link Prompter}, backed by @clack/prompts. */

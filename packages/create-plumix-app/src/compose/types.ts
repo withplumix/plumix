@@ -32,6 +32,27 @@ export interface RuntimeDescriptor {
    * wire object storage without naming Cloudflare.
    */
   readonly capabilities?: Readonly<Record<string, Contribution>>;
+  /** Auth methods this runtime adds to the picker (e.g. Cloudflare Access). */
+  readonly authMethods?: Readonly<Record<string, RawAuthMethod>>;
+}
+
+/** The authored shape of an auth method in a `plumix.scaffold` block. */
+export interface RawAuthMethod {
+  readonly label: string;
+  readonly description?: string;
+  readonly comment?: string;
+  readonly imports?: readonly string[];
+  /** A single-line `key: value` entry spliced into the `auth({ ... })` call. */
+  readonly authEntry: string;
+  /** Top-level config slots the method needs (e.g. magic link's mailer). */
+  readonly configSlots?: Readonly<Record<string, string>>;
+  /** Secret binding names → `.dev.vars` + a PlumixEnv augmentation. */
+  readonly envVars?: readonly string[];
+}
+
+/** A resolved auth method (a core method or a runtime-contributed one). */
+export interface AuthMethodDescriptor extends RawAuthMethod {
+  readonly id: string;
 }
 
 /**
@@ -65,6 +86,8 @@ export interface Selection {
   readonly projectName: string;
   readonly runtime: RuntimeDescriptor;
   readonly plugins: readonly PluginDescriptor[];
+  /** Optional auth methods layered on the always-present passkey. */
+  readonly authMethods: readonly AuthMethodDescriptor[];
 }
 
 export function fillProjectName(value: string, projectName: string): string {

@@ -24,6 +24,7 @@ const selection: Selection = {
   projectName: "my-app",
   runtime: cloudflareRuntime,
   plugins: [],
+  authMethods: [],
 };
 
 describe("assembleRuntimeFiles", () => {
