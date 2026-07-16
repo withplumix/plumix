@@ -4,6 +4,5 @@
 # excluded from this package's formatting gate.
 base
 
-# Generated at prepack (build-snapshot / sync-template); not hand-edited.
+# Generated at prepack (build-snapshot); not hand-edited.
 registry.json
-templates

@@ -1,4 +1,4 @@
-import { glob, readFile, writeFile } from "node:fs/promises";
+import { glob, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { ScaffoldError } from "./errors.js";
@@ -61,27 +61,6 @@ export function resolveDeps(
     out[name] = range;
   }
   return out;
-}
-
-/**
- * Resolve a `package.json` file's dependency protocols in place,
- * applying an optional `patch` (e.g. renaming the package) first. The
- * 2-space indent + trailing newline matches the template's other JSON;
- * `JSON.stringify` rewrites the whole file, which is fine because these
- * are plain JSON we control — no comments or key ordering to preserve.
- */
-export async function rewritePackageJsonFile(
-  pkgPath: string,
-  ctx: CatalogContext,
-  patch?: (pkg: PackageJson) => void,
-): Promise<void> {
-  const pkg = JSON.parse(await readFile(pkgPath, "utf8")) as PackageJson;
-  patch?.(pkg);
-  const deps = resolveDeps(pkg.dependencies, ctx);
-  const devDeps = resolveDeps(pkg.devDependencies, ctx);
-  if (deps) pkg.dependencies = deps;
-  if (devDeps) pkg.devDependencies = devDeps;
-  await writeFile(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, "utf8");
 }
 
 /**

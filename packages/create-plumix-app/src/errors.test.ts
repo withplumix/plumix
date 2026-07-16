@@ -67,17 +67,3 @@ describe("ScaffoldError.workspaceVersionMissing", () => {
     expect(err.message).toContain("workspace:");
   });
 });
-
-describe("ScaffoldError.unknownTemplate", () => {
-  test("class identity, code, exposed fields, and message listing the options", () => {
-    const err = ScaffoldError.unknownTemplate({
-      template: "nope",
-      available: ["blog", "minimal"],
-    });
-    expect(err.code).toBe("unknown_template");
-    expect(err.template).toBe("nope");
-    expect(err.available).toEqual(["blog", "minimal"]);
-    expect(err.message).toContain('Unknown template "nope"');
-    expect(err.message).toContain("blog, minimal");
-  });
-});
