@@ -3,3 +3,7 @@
 # tokens that Prettier would rewrite (e.g. markdown emphasis), so it is
 # excluded from this package's formatting gate.
 base
+
+# Generated at prepack (build-snapshot / sync-template); not hand-edited.
+registry.json
+templates

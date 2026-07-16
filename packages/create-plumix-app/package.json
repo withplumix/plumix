@@ -25,6 +25,8 @@
   },
   "files": [
     "dist",
+    "base",
+    "registry.json",
     "templates",
     "README.md",
     "LICENSE"
@@ -41,7 +43,7 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules templates",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",
     "lint": "eslint",
-    "prepack": "tsc -p tsconfig.build.json && node scripts/sync-template.mjs",
+    "prepack": "tsc -p tsconfig.build.json && node scripts/sync-template.mjs && node scripts/build-snapshot.mjs",
     "publint": "publint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"

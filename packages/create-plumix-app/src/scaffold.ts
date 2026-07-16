@@ -4,10 +4,9 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Selection } from "./compose/types.js";
-import { loadCatalogContext } from "./catalog.js";
 import { compose } from "./compose/index.js";
 import { ScaffoldError } from "./errors.js";
-import { loadRegistry } from "./registry.js";
+import { loadSources } from "./sources.js";
 
 interface ScaffoldOptions {
   readonly targetDir: string;
@@ -27,9 +26,10 @@ export const DEFAULT_RUNTIME = "cloudflare";
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // The runtime-agnostic base skeleton, shipped in the package tarball.
 const BASE_DIR = join(PACKAGE_ROOT, "base");
-// Registry + catalog resolve against the live workspace. The published,
-// standalone path (a baked snapshot) is a separate slice.
+// In-workspace, sources come from the live monorepo here; a published
+// install has no monorepo and reads the snapshot baked next to the package.
 const REPO_ROOT = join(PACKAGE_ROOT, "..", "..");
+const SNAPSHOT_PATH = join(PACKAGE_ROOT, "registry.json");
 
 // npm package-name grammar (lowercase, no spaces/quotes/slashes): the
 // project name is spliced into package.json, wrangler.jsonc, and TS string
@@ -41,16 +41,12 @@ export async function scaffold(
 ): Promise<ScaffoldResult> {
   const { targetDir, runtimeId = DEFAULT_RUNTIME, pluginIds = [] } = options;
 
-  if (!existsSync(join(REPO_ROOT, "pnpm-workspace.yaml"))) {
-    throw ScaffoldError.workspaceRequired();
-  }
-
   const name = basename(targetDir);
   if (name.length > 214 || !PROJECT_NAME_RE.test(name)) {
     throw ScaffoldError.invalidProjectName({ name });
   }
 
-  const registry = await loadRegistry(REPO_ROOT);
+  const { registry, ctx } = await loadSources(REPO_ROOT, SNAPSHOT_PATH);
   const runtime = registry.runtimes.find((r) => r.id === runtimeId);
   if (!runtime) {
     throw ScaffoldError.unknownRuntime({
@@ -73,11 +69,7 @@ export async function scaffold(
   // Build the whole project in memory before touching the target, so a
   // resolution failure never leaves a half-created directory behind.
   const selection: Selection = { projectName: name, runtime, plugins };
-  const files = await compose({
-    selection,
-    baseDir: BASE_DIR,
-    ctx: await loadCatalogContext(REPO_ROOT),
-  });
+  const files = await compose({ selection, baseDir: BASE_DIR, ctx });
 
   await ensureEmptyTarget(targetDir);
   for (const [rel, content] of Object.entries(files)) {

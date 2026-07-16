@@ -2,3 +2,7 @@
 # published tarball — the workspace scaffolder resolves the examples
 # directly via a relative path. See `scripts/sync-template.mjs`.
 /templates/
+
+# Baked at `prepack` by `scripts/build-snapshot.mjs`; the workspace
+# scaffolder scans the live monorepo instead. Ships in the tarball only.
+/registry.json
