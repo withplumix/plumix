@@ -28,13 +28,15 @@ const registry: Registry = { runtimes: [cloudflare], plugins: [blog] };
 interface ScriptedAnswers {
   text?: string | null;
   select?: string | null;
-  multiselect?: string[] | null;
+  // Consumed in order: the plugins multiselect, then the auth multiselect.
+  multiselect?: (string[] | null)[];
 }
 
 function fakePrompter(
   answers: ScriptedAnswers,
 ): Prompter & { calls: string[] } {
   const calls: string[] = [];
+  const multiselects = [...(answers.multiselect ?? [])];
   return {
     calls,
     text: () => {
@@ -47,7 +49,7 @@ function fakePrompter(
     },
     multiselect: () => {
       calls.push("multiselect");
-      return Promise.resolve(answers.multiselect ?? null);
+      return Promise.resolve(multiselects.shift() ?? []);
     },
   };
 }
@@ -56,14 +58,15 @@ const defaults: WizardSelection = {
   targetDir: undefined,
   runtimeId: "cloudflare",
   pluginIds: [],
+  authMethodIds: [],
 };
 
 describe("runWizard", () => {
-  it("prompts for every field in the plan, in order", async () => {
+  it("prompts for the plan fields then auth, in order", async () => {
     const prompter = fakePrompter({
       text: "my-app",
       select: "cloudflare",
-      multiselect: ["blog"],
+      multiselect: [["blog"], ["oauth"]],
     });
 
     const result = await runWizard(
@@ -73,30 +76,38 @@ describe("runWizard", () => {
       prompter,
     );
 
-    expect(prompter.calls).toEqual(["text", "select", "multiselect"]);
+    expect(prompter.calls).toEqual([
+      "text",
+      "select",
+      "multiselect",
+      "multiselect",
+    ]);
     expect(result).toEqual({
       targetDir: "my-app",
       runtimeId: "cloudflare",
       pluginIds: ["blog"],
+      authMethodIds: ["oauth"],
     });
   });
 
-  it("only prompts for fields in the plan, keeping flagged values", async () => {
-    const prompter = fakePrompter({ select: "cloudflare" });
+  it("only prompts for plan fields, but always offers auth", async () => {
+    const prompter = fakePrompter({ select: "cloudflare", multiselect: [[]] });
 
     const result = await runWizard(
       ["runtime"],
-      { targetDir: "given", runtimeId: "cloudflare", pluginIds: ["blog"] },
+      {
+        targetDir: "given",
+        runtimeId: "cloudflare",
+        pluginIds: ["blog"],
+        authMethodIds: [],
+      },
       registry,
       prompter,
     );
 
-    expect(prompter.calls).toEqual(["select"]);
-    expect(result).toEqual({
-      targetDir: "given",
-      runtimeId: "cloudflare",
-      pluginIds: ["blog"],
-    });
+    // runtime select + auth multiselect (plugins were flagged, so skipped)
+    expect(prompter.calls).toEqual(["select", "multiselect"]);
+    expect(result).toMatchObject({ targetDir: "given", pluginIds: ["blog"] });
   });
 
   it("returns null when a prompt is cancelled", async () => {
@@ -110,15 +121,14 @@ describe("runWizard", () => {
     );
 
     expect(result).toBeNull();
-    // cancelled at select — multiselect is never reached
     expect(prompter.calls).toEqual(["text", "select"]);
   });
 
-  it("treats an empty multiselect as no plugins", async () => {
-    const prompter = fakePrompter({ multiselect: [] });
+  it("records selected auth methods", async () => {
+    const prompter = fakePrompter({ multiselect: [["magic-link"]] });
 
-    const result = await runWizard(["plugins"], defaults, registry, prompter);
+    const result = await runWizard([], defaults, registry, prompter);
 
-    expect(result?.pluginIds).toEqual([]);
+    expect(result?.authMethodIds).toEqual(["magic-link"]);
   });
 });

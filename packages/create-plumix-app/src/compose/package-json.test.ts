@@ -49,6 +49,7 @@ const selection: Selection = {
   projectName: "my-app",
   runtime: cloudflareRuntime,
   plugins: [],
+  authMethods: [],
 };
 
 function parse(json: string): {

@@ -84,6 +84,16 @@ export async function compose({
   out["plumix.config.ts"] = assembleConfig(selection, contributions);
   out["tsconfig.json"] = `${JSON.stringify(TSCONFIG, null, 2)}\n`;
 
+  const envVars = [
+    ...new Set(selection.authMethods.flatMap((m) => m.envVars ?? [])),
+  ];
+  if (envVars.length > 0) {
+    out[".dev.vars"] = `${[
+      "# Local secrets for `plumix dev`. Fill these in; never commit real values.",
+      ...envVars.map((name) => `${name}=`),
+    ].join("\n")}\n`;
+  }
+
   return out;
 }
 

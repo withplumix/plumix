@@ -46,7 +46,7 @@ const media: PluginDescriptor = {
 };
 
 function select(plugins: PluginDescriptor[]): Selection {
-  return { projectName: "app", runtime, plugins };
+  return { projectName: "app", runtime, plugins, authMethods: [] };
 }
 
 describe("resolveContributions", () => {

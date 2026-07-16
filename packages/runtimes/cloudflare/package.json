@@ -96,6 +96,17 @@
             "imageDelivery": "images()"
           }
         }
+      },
+      "authMethods": {
+        "cfAccess": {
+          "label": "Cloudflare Access (SSO)",
+          "description": "Gate the app behind your Cloudflare Access IdP",
+          "comment": "Create a Cloudflare Access application and set teamDomain + its audience (AUD) tag.",
+          "imports": [
+            "import { cfAccess } from \"@plumix/runtime-cloudflare\";"
+          ],
+          "authEntry": "authenticator: cfAccess({ teamDomain: \"your-team.cloudflareaccess.com\", audience: \"your-cf-access-aud\", defaultRole: \"editor\" })"
+        }
       }
     }
   },
