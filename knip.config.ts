@@ -12,6 +12,12 @@ const config: KnipConfig = {
     "tooling/typescript": {
       entry: ["*.json"],
     },
+    // `base/` is the scaffolder's template payload — copied verbatim into
+    // generated projects and typechecked there, not part of this package's
+    // own module graph.
+    "packages/create-plumix-app": {
+      ignore: ["base/**"],
+    },
     // plumix.config.ts is the consumer's entry — knip can't infer it
     // from package.json's exports because examples don't publish.
     "examples/blog": {

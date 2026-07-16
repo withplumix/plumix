@@ -29,9 +29,10 @@ export interface RuntimeDescriptor {
 
 /**
  * A plugin's scaffold contributions. Populated in the plugin-composition
- * slice; the blank app carries an empty plugin list.
+ * slice; the blank app carries an empty plugin list. Not exported yet —
+ * only `Selection` references it until plugins are wired.
  */
-export interface PluginDescriptor {
+interface PluginDescriptor {
   readonly id: string;
   /** Expression placed in the config `plugins: [...]` array. */
   readonly registration: string;
