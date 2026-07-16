@@ -89,6 +89,18 @@ describe("runCli", () => {
     expect(existsSync(join(target, "wrangler.jsonc"))).toBe(true);
   });
 
+  test("--yes with no plugins scaffolds a blank app", async () => {
+    const { io, stderr } = captureIO();
+    const target = join(tmp, "yes-blank");
+
+    const code = await runCli([target, "--yes"], io);
+
+    expect(code).toBe(0);
+    expect(stderr).toEqual([]);
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain("plugins: []");
+  });
+
   test("-p includes comma-separated plugins in the scaffold", async () => {
     const { io, stderr } = captureIO();
     const target = join(tmp, "flagged-plugins");

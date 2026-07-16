@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 
+import { reconcile } from "./reconcile.js";
 import { DEFAULT_RUNTIME, scaffold } from "./scaffold.js";
 
 export interface CliIO {
@@ -36,50 +37,13 @@ not exist (or must be empty); its parent must exist.
 Options:
   --runtime <id>       Runtime to target (default: ${DEFAULT_RUNTIME}).
   -p, --plugins <ids>  Comma-separated plugins to include (e.g. pages,comments).
+  -y, --yes            Accept defaults for anything not specified.
 
 Example:
   pnpm create plumix-app my-site --plugins pages,media
   cd my-site
   pnpm install
   pnpm dev`;
-
-// Parses the target dir, `--runtime`, and `-p/--plugins` (comma-separated,
-// each accepting a `--flag value` or `--flag=value` form).
-function parseArgs(argv: readonly string[]): {
-  target: string | undefined;
-  runtime: string;
-  plugins: string[];
-} {
-  let runtime = DEFAULT_RUNTIME;
-  const plugins: string[] = [];
-  const positional: string[] = [];
-  const addPlugins = (csv: string): void => {
-    for (const id of csv
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)) {
-      plugins.push(id);
-    }
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === undefined) continue;
-    if (arg === "--runtime") {
-      runtime = argv[i + 1] ?? "";
-      i++;
-    } else if (arg.startsWith("--runtime=")) {
-      runtime = arg.slice("--runtime=".length);
-    } else if (arg === "--plugins" || arg === "-p") {
-      addPlugins(argv[i + 1] ?? "");
-      i++;
-    } else if (arg.startsWith("--plugins=")) {
-      addPlugins(arg.slice("--plugins=".length));
-    } else if (!arg.startsWith("-")) {
-      positional.push(arg);
-    }
-  }
-  return { target: positional[0], runtime, plugins };
-}
 
 export async function runCli(
   argv: readonly string[],
@@ -90,18 +54,14 @@ export async function runCli(
     return 0;
   }
 
-  const { target, runtime, plugins } = parseArgs(argv);
-  if (target === undefined) {
+  const { targetDir, runtimeId, pluginIds } = reconcile(argv);
+  if (targetDir === undefined) {
     io.stderr(USAGE);
     return 1;
   }
 
   try {
-    const result = await scaffold({
-      targetDir: target,
-      runtimeId: runtime,
-      pluginIds: plugins,
-    });
+    const result = await scaffold({ targetDir, runtimeId, pluginIds });
     io.stdout(BANNER);
     io.stdout(`v${readVersion()}`);
     io.stdout("");
