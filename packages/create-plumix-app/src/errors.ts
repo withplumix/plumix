@@ -8,6 +8,9 @@ type ScaffoldErrorCode =
   | "unknown_runtime"
   | "invalid_project_name"
   | "invalid_scaffold_meta"
+  | "unsupported_capability"
+  | "unknown_plugin"
+  | "wrangler_file_missing"
   | "workspace_required";
 
 interface ScaffoldErrorFields {
@@ -20,6 +23,8 @@ interface ScaffoldErrorFields {
   runtime?: string;
   projectName?: string;
   packagePath?: string;
+  capability?: string;
+  plugin?: string;
   available?: readonly string[];
 }
 
@@ -38,6 +43,8 @@ export class ScaffoldError extends Error {
   readonly runtime: string | undefined;
   readonly projectName: string | undefined;
   readonly packagePath: string | undefined;
+  readonly capability: string | undefined;
+  readonly plugin: string | undefined;
   readonly available: readonly string[] | undefined;
 
   private constructor(
@@ -56,6 +63,8 @@ export class ScaffoldError extends Error {
     this.runtime = fields.runtime;
     this.projectName = fields.projectName;
     this.packagePath = fields.packagePath;
+    this.capability = fields.capability;
+    this.plugin = fields.plugin;
     this.available = fields.available;
   }
 
@@ -140,6 +149,37 @@ export class ScaffoldError extends Error {
       "invalid_scaffold_meta",
       `Invalid plumix.scaffold in ${ctx.packagePath}: ${ctx.reason}`,
       { packagePath: ctx.packagePath },
+    );
+  }
+
+  static unsupportedCapability(ctx: {
+    capability: string;
+    plugin: string;
+    runtime: string;
+  }): ScaffoldError {
+    return new ScaffoldError(
+      "unsupported_capability",
+      `Plugin "${ctx.plugin}" needs the "${ctx.capability}" capability, which the "${ctx.runtime}" runtime does not provide.`,
+      ctx,
+    );
+  }
+
+  static unknownPlugin(ctx: {
+    plugin: string;
+    available: readonly string[];
+  }): ScaffoldError {
+    return new ScaffoldError(
+      "unknown_plugin",
+      `Unknown plugin "${ctx.plugin}". Available plugins: ${ctx.available.join(", ")}.`,
+      ctx,
+    );
+  }
+
+  static wranglerFileMissing(ctx: { runtime: string }): ScaffoldError {
+    return new ScaffoldError(
+      "wrangler_file_missing",
+      `The "${ctx.runtime}" runtime contributes wrangler bindings but provides no wrangler.jsonc to merge them into.`,
+      ctx,
     );
   }
 

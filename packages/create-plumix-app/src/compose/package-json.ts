@@ -23,8 +23,16 @@ export function assemblePackageJson(
   base: PackageJson,
   ctx: CatalogContext,
 ): string {
-  const { projectName, runtime } = selection;
-  const deps = sortedByKey({ ...base.dependencies, ...runtime.deps });
+  const { projectName, runtime, plugins } = selection;
+  const pluginDeps: Record<string, string> = {};
+  for (const plugin of plugins) Object.assign(pluginDeps, plugin.deps);
+  // Plugin peers first, so the app's own curated base/runtime versions win
+  // a collision (a plugin peer must not silently re-pin plumix or react).
+  const deps = sortedByKey({
+    ...pluginDeps,
+    ...base.dependencies,
+    ...runtime.deps,
+  });
   const devDeps = sortedByKey({ ...base.devDependencies, ...runtime.devDeps });
 
   const pkg: PackageJson = {

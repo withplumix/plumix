@@ -13,6 +13,8 @@ interface ScaffoldOptions {
   readonly targetDir: string;
   /** Runtime to scaffold; defaults to the sole runtime today. */
   readonly runtimeId?: string;
+  /** Plugin ids to include; defaults to none (a blank app). */
+  readonly pluginIds?: readonly string[];
 }
 
 interface ScaffoldResult {
@@ -37,7 +39,7 @@ const PROJECT_NAME_RE = /^[a-z0-9][a-z0-9._-]*$/;
 export async function scaffold(
   options: ScaffoldOptions,
 ): Promise<ScaffoldResult> {
-  const { targetDir, runtimeId = DEFAULT_RUNTIME } = options;
+  const { targetDir, runtimeId = DEFAULT_RUNTIME, pluginIds = [] } = options;
 
   if (!existsSync(join(REPO_ROOT, "pnpm-workspace.yaml"))) {
     throw ScaffoldError.workspaceRequired();
@@ -57,9 +59,20 @@ export async function scaffold(
     });
   }
 
+  const plugins = [...new Set(pluginIds)].map((id) => {
+    const plugin = registry.plugins.find((p) => p.id === id);
+    if (!plugin) {
+      throw ScaffoldError.unknownPlugin({
+        plugin: id,
+        available: registry.plugins.map((p) => p.id),
+      });
+    }
+    return plugin;
+  });
+
   // Build the whole project in memory before touching the target, so a
   // resolution failure never leaves a half-created directory behind.
-  const selection: Selection = { projectName: name, runtime, plugins: [] };
+  const selection: Selection = { projectName: name, runtime, plugins };
   const files = await compose({
     selection,
     baseDir: BASE_DIR,

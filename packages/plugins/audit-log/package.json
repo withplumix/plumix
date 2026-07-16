@@ -100,5 +100,18 @@
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
   },
-  "prettier": "@plumix/prettier-config"
+  "prettier": "@plumix/prettier-config",
+  "plumix": {
+    "scaffold": {
+      "kind": "plugin",
+      "id": "audit-log",
+      "label": "Audit Log",
+      "description": "Activity-feed audit log",
+      "category": "operations",
+      "registration": "auditLog()",
+      "imports": [
+        "import { auditLog } from \"@plumix/plugin-audit-log\";"
+      ]
+    }
+  }
 }

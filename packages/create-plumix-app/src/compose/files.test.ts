@@ -28,7 +28,7 @@ const selection: Selection = {
 
 describe("assembleRuntimeFiles", () => {
   it("substitutes the project name into runtime-contributed files", () => {
-    const files = assembleRuntimeFiles(selection);
+    const files = assembleRuntimeFiles(selection, {});
     const wrangler = files["wrangler.jsonc"];
     expect(wrangler).toContain('"name": "my-app"');
     expect(wrangler).toContain('"database_name": "my-app"');
@@ -36,7 +36,17 @@ describe("assembleRuntimeFiles", () => {
   });
 
   it("returns every contributed file keyed by its relative path", () => {
-    const files = assembleRuntimeFiles(selection);
+    const files = assembleRuntimeFiles(selection, {});
     expect(Object.keys(files)).toEqual(["wrangler.jsonc"]);
+  });
+
+  it("throws if there are binding patches but no wrangler.jsonc to hold them", () => {
+    const noWrangler: Selection = {
+      ...selection,
+      runtime: { ...cloudflareRuntime, files: {} },
+    };
+    expect(() =>
+      assembleRuntimeFiles(noWrangler, { r2_buckets: [{ binding: "MEDIA" }] }),
+    ).toThrow(/wrangler bindings but provides no wrangler.jsonc/i);
   });
 });

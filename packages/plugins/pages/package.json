@@ -73,5 +73,18 @@
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
   },
-  "prettier": "@plumix/prettier-config"
+  "prettier": "@plumix/prettier-config",
+  "plumix": {
+    "scaffold": {
+      "kind": "plugin",
+      "id": "pages",
+      "label": "Pages",
+      "description": "Hierarchical static pages",
+      "category": "content",
+      "registration": "pages",
+      "imports": [
+        "import { pages } from \"@plumix/plugin-pages\";"
+      ]
+    }
+  }
 }

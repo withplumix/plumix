@@ -28,27 +28,39 @@ function readVersion(): string {
   }
 }
 
-const USAGE = `Usage: create-plumix-app <target-directory> [--runtime <id>]
+const USAGE = `Usage: create-plumix-app <target-directory> [options]
 
 Scaffold a new Plumix project into <target-directory>. The directory must
 not exist (or must be empty); its parent must exist.
 
 Options:
-  --runtime <id>  Runtime to target (default: ${DEFAULT_RUNTIME}).
+  --runtime <id>       Runtime to target (default: ${DEFAULT_RUNTIME}).
+  -p, --plugins <ids>  Comma-separated plugins to include (e.g. pages,comments).
 
 Example:
-  pnpm create plumix-app my-site
+  pnpm create plumix-app my-site --plugins pages,media
   cd my-site
   pnpm install
   pnpm dev`;
 
-// Pulls the target dir and `--runtime <id>` / `--runtime=<id>` out of argv.
+// Parses the target dir, `--runtime`, and `-p/--plugins` (comma-separated,
+// each accepting a `--flag value` or `--flag=value` form).
 function parseArgs(argv: readonly string[]): {
   target: string | undefined;
   runtime: string;
+  plugins: string[];
 } {
   let runtime = DEFAULT_RUNTIME;
+  const plugins: string[] = [];
   const positional: string[] = [];
+  const addPlugins = (csv: string): void => {
+    for (const id of csv
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)) {
+      plugins.push(id);
+    }
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === undefined) continue;
@@ -57,11 +69,16 @@ function parseArgs(argv: readonly string[]): {
       i++;
     } else if (arg.startsWith("--runtime=")) {
       runtime = arg.slice("--runtime=".length);
+    } else if (arg === "--plugins" || arg === "-p") {
+      addPlugins(argv[i + 1] ?? "");
+      i++;
+    } else if (arg.startsWith("--plugins=")) {
+      addPlugins(arg.slice("--plugins=".length));
     } else if (!arg.startsWith("-")) {
       positional.push(arg);
     }
   }
-  return { target: positional[0], runtime };
+  return { target: positional[0], runtime, plugins };
 }
 
 export async function runCli(
@@ -73,14 +90,18 @@ export async function runCli(
     return 0;
   }
 
-  const { target, runtime } = parseArgs(argv);
+  const { target, runtime, plugins } = parseArgs(argv);
   if (target === undefined) {
     io.stderr(USAGE);
     return 1;
   }
 
   try {
-    const result = await scaffold({ targetDir: target, runtimeId: runtime });
+    const result = await scaffold({
+      targetDir: target,
+      runtimeId: runtime,
+      pluginIds: plugins,
+    });
     io.stdout(BANNER);
     io.stdout(`v${readVersion()}`);
     io.stdout("");

@@ -93,5 +93,22 @@
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
   },
-  "prettier": "@plumix/prettier-config"
+  "prettier": "@plumix/prettier-config",
+  "plumix": {
+    "scaffold": {
+      "kind": "plugin",
+      "id": "media",
+      "label": "Media",
+      "description": "Uploads, library, and CDN delivery",
+      "category": "content",
+      "registration": "media()",
+      "imports": [
+        "import { media } from \"@plumix/plugin-media\";"
+      ],
+      "requires": [
+        "storage",
+        "imageDelivery"
+      ]
+    }
+  }
 }
