@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -78,53 +78,25 @@ describe("runCli", () => {
     expect(out).toContain("pnpm dev");
   });
 
-  test("--template selects a named template", async () => {
+  test("--runtime selects the runtime and scaffolds it", async () => {
     const { io, stderr } = captureIO();
-    const target = join(tmp, "my-blog");
+    const target = join(tmp, "cf-app");
 
-    const code = await runCli([target, "--template", "blog"], io);
+    const code = await runCli([target, "--runtime", "cloudflare"], io);
 
     expect(code).toBe(0);
     expect(stderr).toEqual([]);
-    expect(existsSync(join(target, "package.json"))).toBe(true);
-    const pkg = JSON.parse(
-      readFileSync(join(target, "package.json"), "utf8"),
-    ) as { dependencies?: Record<string, string> };
-    expect(pkg.dependencies?.["@plumix/plugin-blog"]).toBeDefined();
+    expect(existsSync(join(target, "wrangler.jsonc"))).toBe(true);
   });
 
-  test("--template=name form is accepted", async () => {
-    const { io } = captureIO();
-    const target = join(tmp, "eq-form");
-
-    const code = await runCli([target, "--template=blog"], io);
-
-    expect(code).toBe(0);
-    const pkg = JSON.parse(
-      readFileSync(join(target, "package.json"), "utf8"),
-    ) as { dependencies?: Record<string, string> };
-    expect(pkg.dependencies?.["@plumix/plugin-blog"]).toBeDefined();
-  });
-
-  test("exits 1 when --template is given with no value", async () => {
+  test("exits 1 with a listing error for an unknown --runtime", async () => {
     const { io, stderr } = captureIO();
-    const target = join(tmp, "no-tpl-value");
+    const target = join(tmp, "bad-runtime");
 
-    const code = await runCli([target, "--template"], io);
+    const code = await runCli([target, "--runtime", "nope"], io);
 
     expect(code).toBe(1);
-    expect(stderr.join("\n")).toMatch(/unknown template/i);
-    expect(existsSync(target)).toBe(false);
-  });
-
-  test("exits 1 with a listing error for an unknown --template", async () => {
-    const { io, stderr } = captureIO();
-    const target = join(tmp, "bad-tpl");
-
-    const code = await runCli([target, "--template", "nope"], io);
-
-    expect(code).toBe(1);
-    expect(stderr.join("\n")).toMatch(/unknown template "nope".*minimal/is);
+    expect(stderr.join("\n")).toMatch(/unknown runtime "nope".*cloudflare/is);
   });
 
   test("exits 1 and writes the error to stderr when scaffold rejects", async () => {

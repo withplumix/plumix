@@ -1,16 +1,13 @@
 import { createRequire } from "node:module";
 
-import { availableTemplates, DEFAULT_TEMPLATE, scaffold } from "./scaffold.js";
+import { DEFAULT_RUNTIME, scaffold } from "./scaffold.js";
 
 export interface CliIO {
   stdout(line: string): void;
   stderr(line: string): void;
 }
 
-// The plumix wordmark, shown once as a welcome header on a successful scaffold
-// (the CLI's running commands use a compact version badge instead). Kept inline
-// as a plain string so it flows through the injected `CliIO` unchanged and this
-// package stays dependency-free — it runs via `npm create` before install.
+// The plumix wordmark, shown once as a welcome header on a successful scaffold.
 export const BANNER = [
   "        _                 _",
   "  _ __ | |_   _ _ __ ___ (_)_  __",
@@ -31,47 +28,40 @@ function readVersion(): string {
   }
 }
 
-// Built lazily so reading the available templates from disk happens
-// when usage is shown, not as an import-time side effect.
-function usage(): string {
-  return `Usage: create-plumix-app <target-directory> [--template <name>]
+const USAGE = `Usage: create-plumix-app <target-directory> [--runtime <id>]
 
-Scaffold a new Plumix project into <target-directory>. The directory
-must not exist (or must be empty); its parent must exist.
+Scaffold a new Plumix project into <target-directory>. The directory must
+not exist (or must be empty); its parent must exist.
 
 Options:
-  --template <name>  Template to scaffold (default: ${DEFAULT_TEMPLATE}).
-                     Available: ${availableTemplates().join(", ")}.
+  --runtime <id>  Runtime to target (default: ${DEFAULT_RUNTIME}).
 
 Example:
-  pnpm create plumix-app my-blog --template blog
-  cd my-blog
+  pnpm create plumix-app my-site
+  cd my-site
   pnpm install
   pnpm dev`;
-}
 
-// Pulls the target dir and `--template <name>` / `--template=<name>`
-// out of argv, defaulting to the minimal template. Consuming the flag's
-// value keeps it out of the positional args.
+// Pulls the target dir and `--runtime <id>` / `--runtime=<id>` out of argv.
 function parseArgs(argv: readonly string[]): {
   target: string | undefined;
-  template: string;
+  runtime: string;
 } {
-  let template = DEFAULT_TEMPLATE;
+  let runtime = DEFAULT_RUNTIME;
   const positional: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === undefined) continue;
-    if (arg === "--template") {
-      template = argv[i + 1] ?? "";
+    if (arg === "--runtime") {
+      runtime = argv[i + 1] ?? "";
       i++;
-    } else if (arg.startsWith("--template=")) {
-      template = arg.slice("--template=".length);
+    } else if (arg.startsWith("--runtime=")) {
+      runtime = arg.slice("--runtime=".length);
     } else if (!arg.startsWith("-")) {
       positional.push(arg);
     }
   }
-  return { target: positional[0], template };
+  return { target: positional[0], runtime };
 }
 
 export async function runCli(
@@ -79,18 +69,18 @@ export async function runCli(
   io: CliIO,
 ): Promise<number> {
   if (argv.includes("--help") || argv.includes("-h")) {
-    io.stdout(usage());
+    io.stdout(USAGE);
     return 0;
   }
 
-  const { target, template } = parseArgs(argv);
+  const { target, runtime } = parseArgs(argv);
   if (target === undefined) {
-    io.stderr(usage());
+    io.stderr(USAGE);
     return 1;
   }
 
   try {
-    const result = await scaffold({ targetDir: target, template });
+    const result = await scaffold({ targetDir: target, runtimeId: runtime });
     io.stdout(BANNER);
     io.stdout(`v${readVersion()}`);
     io.stdout("");

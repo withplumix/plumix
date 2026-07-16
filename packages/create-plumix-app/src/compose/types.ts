@@ -1,0 +1,50 @@
+/** Placeholder token in descriptor strings, replaced with the project name. */
+export const PROJECT_NAME_TOKEN = "__PROJECT_NAME__";
+
+/**
+ * A runtime's scaffold contributions, read from its `plumix.scaffold`
+ * block. The runtime owns everything runtime-specific: config imports and
+ * slots, the passkey deploy-origin, dependencies, and whole files (e.g. a
+ * Cloudflare `wrangler.jsonc`). Strings may embed {@link PROJECT_NAME_TOKEN}.
+ */
+export interface RuntimeDescriptor {
+  readonly id: string;
+  readonly label: string;
+  /** One-line summary, shown in the runtime picker (added in a later slice). */
+  readonly description?: string;
+  /** Full `import ... from "..."` statements to prepend to the config. */
+  readonly imports: readonly string[];
+  /** Top-level `plumix({ ... })` slots, e.g. `runtime`, `database`. */
+  readonly configSlots: Readonly<Record<string, string>>;
+  /** Spread expression merged into the passkey block (deploy origin). */
+  readonly authOrigin?: string;
+  /** One-line comment emitted above {@link authOrigin}. */
+  readonly authOriginComment?: string;
+  /** Dependencies this runtime adds to the app. */
+  readonly deps: Readonly<Record<string, string>>;
+  readonly devDeps: Readonly<Record<string, string>>;
+  /** Whole files the runtime contributes, keyed by relative path. */
+  readonly files: Readonly<Record<string, string>>;
+}
+
+/**
+ * A plugin's scaffold contributions. Populated in the plugin-composition
+ * slice; the blank app carries an empty plugin list. Not exported yet —
+ * only `Selection` references it until plugins are wired.
+ */
+interface PluginDescriptor {
+  readonly id: string;
+  /** Expression placed in the config `plugins: [...]` array. */
+  readonly registration: string;
+}
+
+/** A fully resolved set of choices ready to compose into a project. */
+export interface Selection {
+  readonly projectName: string;
+  readonly runtime: RuntimeDescriptor;
+  readonly plugins: readonly PluginDescriptor[];
+}
+
+export function fillProjectName(value: string, projectName: string): string {
+  return value.replaceAll(PROJECT_NAME_TOKEN, projectName);
+}

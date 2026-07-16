@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { syncAllTemplates, syncTemplate } from "./sync-template.js";
+import {
+  shouldCopyTemplateEntry,
+  syncAllTemplates,
+  syncTemplate,
+} from "./sync-template.js";
 import { packageVersion, REPO_ROOT } from "./test-support.js";
 
 const SOURCE = join(REPO_ROOT, "examples", "minimal");
@@ -55,6 +59,36 @@ describe("syncTemplate", () => {
     ) as { dependencies?: Record<string, string> };
     expect(blogPkg.dependencies?.["@plumix/plugin-blog"]).toBe(
       `^${packageVersion("packages/plugins/blog")}`,
+    );
+  });
+});
+
+describe("shouldCopyTemplateEntry", () => {
+  const root = "/template";
+
+  test("includes ordinary files at any depth and the root itself", () => {
+    expect(shouldCopyTemplateEntry(root, root)).toBe(true);
+    expect(shouldCopyTemplateEntry(`${root}/package.json`, root)).toBe(true);
+    expect(shouldCopyTemplateEntry(`${root}/src/index.ts`, root)).toBe(true);
+  });
+
+  test.each([
+    "node_modules",
+    ".cache",
+    ".turbo",
+    ".wrangler",
+    ".plumix",
+    "dist",
+    "drizzle",
+  ])("excludes %s at any depth", (segment) => {
+    expect(shouldCopyTemplateEntry(`${root}/${segment}`, root)).toBe(false);
+    expect(shouldCopyTemplateEntry(`${root}/${segment}/x`, root)).toBe(false);
+  });
+
+  test("an excluded segment in the ancestor path does not trip the filter", () => {
+    const nested = "/var/node_modules/my-template";
+    expect(shouldCopyTemplateEntry(`${nested}/package.json`, nested)).toBe(
+      true,
     );
   });
 });

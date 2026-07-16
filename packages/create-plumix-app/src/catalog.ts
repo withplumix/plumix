@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { ScaffoldError } from "./errors.js";
 
-interface PackageJson {
+export interface PackageJson {
   name?: string;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;

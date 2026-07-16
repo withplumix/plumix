@@ -1,0 +1,5 @@
+# The base skeleton is template payload copied verbatim into scaffolded
+# projects (and formatted there). Its files carry `__PROJECT_NAME__`
+# tokens that Prettier would rewrite (e.g. markdown emphasis), so it is
+# excluded from this package's formatting gate.
+base

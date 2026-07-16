@@ -4,7 +4,11 @@ type ScaffoldErrorCode =
   | "target_directory_not_empty"
   | "catalog_resolution_missing"
   | "workspace_version_missing"
-  | "unknown_template";
+  | "unknown_template"
+  | "unknown_runtime"
+  | "invalid_project_name"
+  | "invalid_scaffold_meta"
+  | "workspace_required";
 
 interface ScaffoldErrorFields {
   parent?: string;
@@ -13,6 +17,9 @@ interface ScaffoldErrorFields {
   catalog?: string;
   packageName?: string;
   template?: string;
+  runtime?: string;
+  projectName?: string;
+  packagePath?: string;
   available?: readonly string[];
 }
 
@@ -28,6 +35,9 @@ export class ScaffoldError extends Error {
   readonly catalog: string | undefined;
   readonly packageName: string | undefined;
   readonly template: string | undefined;
+  readonly runtime: string | undefined;
+  readonly projectName: string | undefined;
+  readonly packagePath: string | undefined;
   readonly available: readonly string[] | undefined;
 
   private constructor(
@@ -43,6 +53,9 @@ export class ScaffoldError extends Error {
     this.catalog = fields.catalog;
     this.packageName = fields.packageName;
     this.template = fields.template;
+    this.runtime = fields.runtime;
+    this.projectName = fields.projectName;
+    this.packagePath = fields.packagePath;
     this.available = fields.available;
   }
 
@@ -97,6 +110,44 @@ export class ScaffoldError extends Error {
       "unknown_template",
       `Unknown template "${ctx.template}". Available templates: ${ctx.available.join(", ")}.`,
       ctx,
+    );
+  }
+
+  static unknownRuntime(ctx: {
+    runtime: string;
+    available: readonly string[];
+  }): ScaffoldError {
+    return new ScaffoldError(
+      "unknown_runtime",
+      `Unknown runtime "${ctx.runtime}". Available runtimes: ${ctx.available.join(", ")}.`,
+      ctx,
+    );
+  }
+
+  static invalidProjectName(ctx: { name: string }): ScaffoldError {
+    return new ScaffoldError(
+      "invalid_project_name",
+      `Invalid project name "${ctx.name}". Use a valid npm package name: lowercase letters, digits, and "-", "_", "." (no spaces or other characters), starting with a letter or digit.`,
+      { projectName: ctx.name },
+    );
+  }
+
+  static invalidScaffoldMeta(ctx: {
+    packagePath: string;
+    reason: string;
+  }): ScaffoldError {
+    return new ScaffoldError(
+      "invalid_scaffold_meta",
+      `Invalid plumix.scaffold in ${ctx.packagePath}: ${ctx.reason}`,
+      { packagePath: ctx.packagePath },
+    );
+  }
+
+  static workspaceRequired(): ScaffoldError {
+    return new ScaffoldError(
+      "workspace_required",
+      "create-plumix-app can currently only run inside the plumix monorepo — standalone (published) scaffolding is not wired up yet.",
+      {},
     );
   }
 }
