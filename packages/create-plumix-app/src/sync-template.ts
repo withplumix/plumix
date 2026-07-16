@@ -1,8 +1,34 @@
 import { cp, mkdir, readdir, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 
 import { loadCatalogContext, rewritePackageJsonFile } from "./catalog.js";
-import { shouldCopyTemplateEntry } from "./scaffold.js";
+
+const EXCLUDED_SEGMENTS: ReadonlySet<string> = new Set([
+  "node_modules",
+  ".cache",
+  ".turbo",
+  ".wrangler",
+  ".plumix",
+  "dist",
+  // Migrations are committed per example, but a scaffolded project may
+  // change its plugin set (hence its schema), so it generates its own.
+  "drizzle",
+]);
+
+/**
+ * Filter passed to `fs.cp` so stray artifacts inside an example (a
+ * `node_modules` from a local `pnpm install`, for instance) never reach
+ * the baked snapshot. The check is relative to the source root so it
+ * doesn't false-positive on an excluded segment in the ancestor path.
+ */
+export function shouldCopyTemplateEntry(
+  srcAbsPath: string,
+  root: string,
+): boolean {
+  const rel = relative(root, srcAbsPath);
+  if (rel === "") return true;
+  return !rel.split(sep).some((segment) => EXCLUDED_SEGMENTS.has(segment));
+}
 
 interface SyncTemplateOptions {
   /** The workspace example to snapshot (e.g. `examples/minimal`). */

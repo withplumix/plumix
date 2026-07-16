@@ -42,9 +42,37 @@
   },
   "files": [
     "dist",
+    "scaffold",
     "README.md",
     "LICENSE"
   ],
+  "plumix": {
+    "scaffold": {
+      "kind": "runtime",
+      "id": "cloudflare",
+      "label": "Cloudflare",
+      "description": "Cloudflare Workers + D1",
+      "imports": [
+        "import { cloudflare, cloudflareDeployOrigin, d1 } from \"@plumix/runtime-cloudflare\";"
+      ],
+      "configSlots": {
+        "runtime": "cloudflare()",
+        "database": "d1({ binding: \"DB\", session: \"auto\" })"
+      },
+      "authOrigin": "...cloudflareDeployOrigin({ workerName: \"__PROJECT_NAME__\", accountSubdomain: \"your-account\", localOrigin: \"http://localhost:5173\" })",
+      "authOriginComment": "Set accountSubdomain to your workers.dev subdomain before deploying.",
+      "deps": {
+        "@plumix/runtime-cloudflare": "workspace:*"
+      },
+      "devDeps": {
+        "@cloudflare/workers-types": "catalog:cloudflare",
+        "wrangler": "catalog:cloudflare"
+      },
+      "files": {
+        "wrangler.jsonc": "scaffold/wrangler.jsonc"
+      }
+    }
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true
