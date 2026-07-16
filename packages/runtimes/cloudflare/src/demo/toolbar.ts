@@ -12,11 +12,46 @@ const DEPLOY_URL = "https://github.com/withplumix/plumix";
  */
 export function renderDemoToolbar(): string {
   return `
-<div id="plumix-demo-toolbar" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:2147483647;display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:9999px;background:#111;color:#fff;font:500 13px/1 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.25)">
-  <span style="font-weight:700">Demo</span>
-  <span id="plumix-demo-time" style="opacity:.8">—</span>
-  <a href="/_demo/reset" style="color:#fff;text-decoration:underline;opacity:.9">Reset</a>
-  <a href="${DEPLOY_URL}" target="_blank" rel="noopener" style="color:#fff;text-decoration:none;background:#fff2;padding:4px 10px;border-radius:9999px">Deploy your own</a>
+<style>
+  #plumix-demo-toolbar {
+    position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%); z-index: 2147483647; box-sizing: border-box;
+    max-width: calc(100vw - 24px);
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 7px 7px 16px; border-radius: 9999px;
+    background: #111827; color: #fff; white-space: nowrap;
+    font: 500 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+  }
+  #plumix-demo-toolbar .pdt-brand { font-weight: 700; }
+  #plumix-demo-toolbar .pdt-time { opacity: 0.7; font-variant-numeric: tabular-nums; }
+  #plumix-demo-toolbar .pdt-sep { width: 1px; height: 16px; background: rgba(255, 255, 255, 0.18); }
+  #plumix-demo-toolbar a { color: #fff; }
+  #plumix-demo-toolbar .pdt-reset {
+    text-decoration: none; opacity: 0.8; padding: 6px 8px; border-radius: 8px;
+  }
+  #plumix-demo-toolbar .pdt-reset:hover { opacity: 1; background: rgba(255, 255, 255, 0.1); }
+  #plumix-demo-toolbar .pdt-deploy {
+    text-decoration: none; background: #fff; color: #111827; font-weight: 600;
+    padding: 7px 14px; border-radius: 9999px;
+  }
+  #plumix-demo-toolbar .pdt-deploy-short { display: none; }
+  @media (max-width: 420px) {
+    #plumix-demo-toolbar { gap: 8px; padding: 6px 6px 6px 13px; font-size: 12px; }
+    #plumix-demo-toolbar .pdt-deploy { padding: 6px 12px; }
+    #plumix-demo-toolbar .pdt-deploy-full { display: none; }
+    #plumix-demo-toolbar .pdt-deploy-short { display: inline; }
+  }
+</style>
+<div id="plumix-demo-toolbar" role="region" aria-label="Plumix demo">
+  <span class="pdt-brand">Demo</span>
+  <span class="pdt-time" id="plumix-demo-time">—</span>
+  <span class="pdt-sep"></span>
+  <a class="pdt-reset" href="/_demo/reset">Reset</a>
+  <a class="pdt-deploy" href="${DEPLOY_URL}" target="_blank" rel="noopener"
+    ><span class="pdt-deploy-full">Deploy your own</span
+    ><span class="pdt-deploy-short">Deploy</span></a
+  >
 </div>
 <script>
 (function () {
