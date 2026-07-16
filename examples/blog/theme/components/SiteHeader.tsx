@@ -8,9 +8,15 @@ import { SearchForm } from "./SearchForm";
 interface SiteHeaderProps {
   readonly siteTitle: string;
   readonly menu: ResolvedMenu | null | undefined;
+  /** Render the "Try the editor" demo CTA (see Layout). */
+  readonly showTryEditor: boolean;
 }
 
-export function SiteHeader({ siteTitle, menu }: SiteHeaderProps): ReactNode {
+export function SiteHeader({
+  siteTitle,
+  menu,
+  showTryEditor,
+}: SiteHeaderProps): ReactNode {
   return (
     <header className="border-b border-line">
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-6 px-5 py-5">
@@ -22,7 +28,7 @@ export function SiteHeader({ siteTitle, menu }: SiteHeaderProps): ReactNode {
         <div className="hidden items-center gap-5 sm:flex">
           <Menu menu={menu} />
           <SearchForm />
-          <TryEditorLink testId="try-editor" />
+          {showTryEditor && <TryEditorLink testId="try-editor" />}
         </div>
 
         {/* Mobile: a zero-JS disclosure (native <details>) hamburger. */}
@@ -50,10 +56,12 @@ export function SiteHeader({ siteTitle, menu }: SiteHeaderProps): ReactNode {
           <div className="absolute right-0 z-10 mt-3 w-56 rounded border border-line bg-paper p-4 shadow-lg">
             <Menu menu={menu} className="flex flex-col gap-3" />
             <SearchForm className="mt-4" />
-            <TryEditorLink
-              testId="try-editor-mobile"
-              className="mt-4 block text-center"
-            />
+            {showTryEditor && (
+              <TryEditorLink
+                testId="try-editor-mobile"
+                className="mt-4 block text-center"
+              />
+            )}
           </div>
         </details>
       </div>

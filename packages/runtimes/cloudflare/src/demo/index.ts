@@ -6,6 +6,7 @@ export { demoDatabase } from "./database.js";
 export type { DemoDatabaseConfig } from "./database.js";
 export { demoRuntime } from "./demo-runtime.js";
 export type { DemoRuntimeConfig } from "./demo-runtime.js";
+export { hasDemoSession } from "./session.js";
 export { demoPreset } from "./preset.js";
 export type { DemoPresetConfig } from "./preset.js";
 export type { DemoSqlExecutor } from "./storage.js";

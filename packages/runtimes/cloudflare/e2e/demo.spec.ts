@@ -47,6 +47,12 @@ test("visitor enters the demo, creates a post, and it persists", async ({
     page.locator(CONTENT_ROWS).filter({ hasText: POST_TITLE }).first(),
   ).toBeVisible();
 
+  // With a live session, the public site no longer offers the "Try the
+  // editor" CTA — it's the anonymous showcase's entry point only.
+  await page.goto("/");
+  await expect(page.getByTestId("post-card").first()).toBeVisible();
+  await expect(page.getByTestId("try-editor")).toHaveCount(0);
+
   // A security-gated route is refused even with a live demo session.
   const blocked = await page.request.get("/_plumix/rpc/user/list");
   expect(blocked.status()).toBe(403);

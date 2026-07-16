@@ -35,6 +35,18 @@ export function readDemoToken(request: Request): string | null {
   return token === DEMO_SHOWCASE_NAME ? null : token;
 }
 
+/**
+ * Whether the request carries a demo session — true for a provisioned visitor
+ * (and inside the editor's live preview, which is same-origin), false for the
+ * anonymous showcase. Themes use it to show the "Try the editor" CTA to
+ * newcomers only. `ctx.user` can't stand in here: core only resolves the user
+ * on public routes when the *default* session cookie is present, so a custom
+ * authenticator's session (like the demo's) leaves `ctx.user` null.
+ */
+export function hasDemoSession(request: Request): boolean {
+  return readDemoToken(request) !== null;
+}
+
 /** Set-Cookie value that binds a visitor to their session for the TTL. */
 export function demoSessionCookie(token: string, request: Request): string {
   return buildSessionCookie(token, {

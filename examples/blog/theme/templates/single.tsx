@@ -6,6 +6,7 @@ import type { SingleData } from "plumix";
 import type { ResolvedThread } from "@plumix/plugin-comments/server";
 // Likewise pulls the blog plugin's `relatedPosts` dep augmentation.
 import type { RelatedPosts as RelatedPostsData } from "@plumix/plugin-blog";
+import { hasDemoSession } from "@plumix/runtime-cloudflare/demo";
 
 import { Layout } from "../components/Layout";
 import { PostSingle } from "../components/PostSingle";
@@ -17,11 +18,15 @@ export const single = defineTemplate<SingleData>({
   menus: ["primary", "footer"],
   comments: ["current"],
   relatedPosts: ["related"],
-  render: ({ data, settings, menus, comments, relatedPosts }) => {
+  render: ({ data, settings, menus, comments, relatedPosts, ctx }) => {
     const thread: ResolvedThread | null = comments?.current ?? null;
     const related: RelatedPostsData = relatedPosts?.related ?? [];
     return (
-      <Layout settings={settings} menus={menus}>
+      <Layout
+        settings={settings}
+        menus={menus}
+        showTryEditor={!hasDemoSession(ctx.request)}
+      >
         <PostSingle entry={data.entry} />
         <Comments thread={thread} />
         <RelatedPosts entries={related} />
