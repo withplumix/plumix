@@ -144,6 +144,14 @@ function enforcePlumixCsrf(app: PlumixApp, ctx: AppContext): Response | null {
     ctx.request.headers.has("origin") &&
     !hasMatchingOrigin(ctx.request, { allowed: [app.origin] })
   ) {
+    // A same-origin request — Origin equals the host it targets — is by
+    // definition not cross-site forgery, so accept it even when the canonical
+    // app.origin differs. This covers deploys served on more than one host and
+    // the demo sandbox, whose origin varies per deploy and can't be pinned in
+    // config. The X-Plumix-Request header gate above stays the primary defense.
+    if (isSameOrigin(ctx.request)) {
+      return null;
+    }
     // devCsrfLocalhost is statically false in production builds; see its
     // declaration on RuntimeContext for why dev needs the relaxation.
     if (app.devCsrfLocalhost && hasLocalhostOrigin(ctx.request)) {
@@ -152,6 +160,16 @@ function enforcePlumixCsrf(app: PlumixApp, ctx: AppContext): Response | null {
     return forbidden("csrf_origin_mismatch");
   }
   return null;
+}
+
+function isSameOrigin(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  try {
+    return origin === new URL(request.url).origin;
+  } catch {
+    return false;
+  }
 }
 
 function hasLocalhostOrigin(request: Request): boolean {
