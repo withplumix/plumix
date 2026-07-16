@@ -15,6 +15,7 @@ interface PostScaffoldOptions {
   readonly targetDir: string;
   readonly pm: PackageManager;
   readonly install: boolean;
+  readonly db: boolean;
   readonly git: boolean;
   readonly runner: CommandRunner;
 }
@@ -22,19 +23,37 @@ interface PostScaffoldOptions {
 export interface PostScaffoldResult {
   readonly installed: boolean;
   readonly installFailed: boolean;
+  readonly dbSetup: boolean;
+  readonly dbSetupFailed: boolean;
   readonly gitInitialized: boolean;
 }
 
+// How each package manager runs a locally-installed bin (`plumix`).
+function pmExec(pm: PackageManager): readonly [string, ...string[]] {
+  switch (pm) {
+    case "npm":
+      return ["npm", "exec", "--"];
+    case "yarn":
+      return ["yarn", "exec"];
+    case "bun":
+      return ["bun", "x"];
+    case "pnpm":
+      return ["pnpm", "exec"];
+  }
+}
+
 /**
- * Run the optional post-scaffold steps: install dependencies, then
- * initialize git with one commit (skipped inside an existing repo). A
- * failed install is reported, never thrown — the generated project still
- * stands and the caller prints manual recovery steps.
+ * Run the optional post-scaffold steps: install dependencies, set up the
+ * local database (generate migrations for the selected plugins and apply
+ * them to the local dev DB), then initialize git with one commit (skipped
+ * inside an existing repo). Every failure is reported, never thrown — the
+ * generated project still stands and the caller prints manual recovery.
  */
 export async function runPostScaffold({
   targetDir,
   pm,
   install,
+  db,
   git,
   runner,
 }: PostScaffoldOptions): Promise<PostScaffoldResult> {
@@ -44,6 +63,19 @@ export async function runPostScaffold({
     const { ok } = await runner.run(pm, ["install"], targetDir);
     installed = ok;
     installFailed = !ok;
+  }
+
+  // The DB steps run the installed `plumix` bin, so they need install to
+  // have succeeded. Local-only: no cloud account, offline.
+  let dbSetup = false;
+  let dbSetupFailed = false;
+  if (db && installed) {
+    const [cmd, ...prefix] = pmExec(pm);
+    const plumix = (...args: string[]) =>
+      runner.run(cmd, [...prefix, "plumix", ...args], targetDir);
+    const generated = await plumix("migrate", "generate");
+    dbSetup = generated.ok && (await plumix("migrate", "apply", "--local")).ok;
+    dbSetupFailed = !dbSetup;
   }
 
   let gitInitialized = false;
@@ -64,17 +96,27 @@ export async function runPostScaffold({
     }
   }
 
-  return { installed, installFailed, gitInitialized };
+  return { installed, installFailed, dbSetup, dbSetupFailed, gitInitialized };
 }
 
-/** Copy-pasteable commands to finish getting started. */
+/**
+ * Copy-pasteable commands to finish getting started. Includes install and
+ * the local-migration steps only when they did not already run, so the
+ * output is always a complete path to a working `dev` — a project whose DB
+ * was never migrated would otherwise hit "no such table" on first run.
+ */
 export function nextSteps(
   pm: PackageManager,
   name: string,
-  installed: boolean,
+  done: { installed: boolean; dbReady: boolean },
 ): string[] {
+  const exec = pmExec(pm).join(" ");
   const steps = [`cd ${name}`];
-  if (!installed) steps.push(`${pm} install`);
+  if (!done.installed) steps.push(`${pm} install`);
+  if (!done.dbReady) {
+    steps.push(`${exec} plumix migrate generate`);
+    steps.push(`${exec} plumix migrate apply --local`);
+  }
   steps.push(pm === "npm" ? "npm run dev" : `${pm} dev`);
   return steps;
 }

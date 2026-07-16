@@ -12,6 +12,7 @@ export interface Reconciliation {
   readonly pm: string | undefined;
   readonly install: boolean;
   readonly git: boolean;
+  readonly db: boolean;
   /** Fields not supplied by flags — empty under `--yes`. */
   readonly prompts: readonly PromptKey[];
 }
@@ -24,6 +25,7 @@ interface ParsedArgs {
   readonly pm: string | undefined;
   readonly install: boolean;
   readonly git: boolean;
+  readonly db: boolean;
 }
 
 /**
@@ -48,6 +50,7 @@ export function reconcile(argv: readonly string[]): Reconciliation {
     pm: parsed.pm,
     install: parsed.install,
     git: parsed.git,
+    db: parsed.db,
     prompts: parsed.yes ? [] : missing,
   };
 }
@@ -68,6 +71,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
   let yes = false;
   let install = true;
   let git = true;
+  let db = true;
   const positional: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -92,6 +96,8 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       install = false;
     } else if (arg === "--no-git") {
       git = false;
+    } else if (arg === "--no-db") {
+      db = false;
     } else if (arg === "--yes" || arg === "-y") {
       yes = true;
     } else if (!arg.startsWith("-")) {
@@ -99,5 +105,5 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     }
   }
 
-  return { target: positional[0], runtime, plugins, yes, pm, install, git };
+  return { target: positional[0], runtime, plugins, yes, pm, install, git, db };
 }

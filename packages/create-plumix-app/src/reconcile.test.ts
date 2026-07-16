@@ -21,20 +21,30 @@ describe("reconcile", () => {
       pm: undefined,
       install: true,
       git: true,
+      db: true,
     });
   });
 
-  it("defaults install and git on, with no package-manager override", () => {
+  it("defaults install, git, and db on, with no package-manager override", () => {
     const r = reconcile(["my-app"]);
     expect(r.install).toBe(true);
     expect(r.git).toBe(true);
+    expect(r.db).toBe(true);
     expect(r.pm).toBeUndefined();
   });
 
-  it("honors --no-install, --no-git, and --pm", () => {
-    const r = reconcile(["my-app", "--no-install", "--no-git", "--pm", "bun"]);
+  it("honors --no-install, --no-git, --no-db, and --pm", () => {
+    const r = reconcile([
+      "my-app",
+      "--no-install",
+      "--no-git",
+      "--no-db",
+      "--pm",
+      "bun",
+    ]);
     expect(r.install).toBe(false);
     expect(r.git).toBe(false);
+    expect(r.db).toBe(false);
     expect(r.pm).toBe("bun");
   });
 

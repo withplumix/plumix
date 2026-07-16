@@ -16,6 +16,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
+    "drizzle-kit": "catalog:drizzle",
     "typescript": "catalog:"
   }
 }

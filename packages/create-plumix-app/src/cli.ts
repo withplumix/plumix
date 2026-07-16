@@ -58,6 +58,7 @@ Options:
   -p, --plugins <ids>  Comma-separated plugins to include (e.g. pages,comments).
   --pm <name>          Package manager (npm, pnpm, yarn, bun); auto-detected.
   --no-install         Skip installing dependencies.
+  --no-db              Skip generating and applying local migrations.
   --no-git             Skip initializing a git repository.
   -y, --yes            Accept defaults for anything not specified.
 
@@ -144,23 +145,26 @@ export async function runCli(
       targetDir,
       pm,
       install: reconciled.install,
+      db: reconciled.db,
       git: reconciled.git,
       runner,
     });
-    const steps = nextSteps(pm, result.name, post.installed);
+    const steps = nextSteps(pm, result.name, {
+      installed: post.installed,
+      dbReady: post.dbSetup,
+    });
 
     if (interactive) {
       if (post.installFailed) clack.log.warn(`"${pm} install" failed.`);
+      if (post.dbSetupFailed) clack.log.warn("Local database setup failed.");
       clack.outro(`Created ${result.name}. Next: ${steps.join(" && ")}`);
     } else {
       io.stdout(BANNER);
       io.stdout(`v${readVersion()}`);
       io.stdout("");
       io.stdout(`Created ${result.name} at ${result.targetDir}.`);
-      if (post.installFailed) {
-        io.stdout("");
-        io.stdout(`Dependency install failed — run "${pm} install" yourself.`);
-      }
+      if (post.installFailed) io.stdout("Dependency install failed.");
+      if (post.dbSetupFailed) io.stdout("Local database setup failed.");
       io.stdout("");
       io.stdout("Next steps:");
       for (const step of steps) io.stdout(`  ${step}`);
