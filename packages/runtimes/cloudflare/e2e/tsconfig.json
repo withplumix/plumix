@@ -1,8 +1,0 @@
-{
-  "extends": "@plumix/typescript-config/base.json",
-  "compilerOptions": {
-    "types": ["node"],
-    "noEmit": true
-  },
-  "include": ["playwright.config.ts", "demo.spec.ts"]
-}

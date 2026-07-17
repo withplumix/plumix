@@ -1867,17 +1867,17 @@ importers:
         specifier: catalog:cloudflare
         version: 4.111.0(@cloudflare/workers-types@5.20260711.1)
 
-  packages/runtimes/cloudflare/e2e/fixture:
+  packages/runtimes/cloudflare/playground:
     dependencies:
       '@plumix/plugin-blog':
         specifier: workspace:*
-        version: link:../../../../plugins/blog
+        version: link:../../../plugins/blog
       '@plumix/runtime-cloudflare':
         specifier: workspace:*
-        version: link:../..
+        version: link:..
       plumix:
         specifier: workspace:*
-        version: link:../../../../plumix
+        version: link:../../../plumix
       react:
         specifier: catalog:react
         version: 19.2.7
@@ -1887,7 +1887,7 @@ importers:
         version: 5.20260711.1
       '@plumix/typescript-config':
         specifier: workspace:*
-        version: link:../../../../../tooling/typescript
+        version: link:../../../../tooling/typescript
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.2

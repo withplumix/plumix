@@ -1,9 +1,9 @@
 {
-  "name": "@plumix/runtime-cloudflare-demo-fixture",
+  "name": "@plumix/runtime-cloudflare-playground",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Minimal plumix site wired with demoPreset — drives the demo sandbox e2e (not shipped, not a scaffolder template)",
+  "description": "Plumix consumer that wires demoPreset — for worker-driven e2e + manual dogfooding",
   "license": "MIT",
   "scripts": {
     "clean": "git clean -xdf .plumix .wrangler node_modules",

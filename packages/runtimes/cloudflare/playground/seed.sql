@@ -1,4 +1,4 @@
--- Seed for the demo fixture DO. The synthetic demo admin is user id 1 (the
+-- Seed for the demo playground DO. The synthetic demo admin is user id 1 (the
 -- authenticator returns that identity), so entries created in the editor
 -- satisfy the entries.author_id foreign key.
 

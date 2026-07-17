@@ -33,9 +33,8 @@ const config: KnipConfig = {
     "examples/minimal": {
       entry: ["plumix.config.ts"],
     },
-    // Plugin playground — same shape as examples/*: `plumix.config.ts`
-    // is the consumer entry, not visible to knip without an explicit
-    // hint.
+    // Playgrounds — same shape as examples/*: `plumix.config.ts` is the
+    // consumer entry, not visible to knip without an explicit hint.
     "packages/plugins/media/playground": {
       entry: ["plumix.config.ts"],
     },
@@ -54,10 +53,7 @@ const config: KnipConfig = {
     "packages/plugins/pages/playground": {
       entry: ["plumix.config.ts"],
     },
-    // Demo-sandbox e2e fixture — same shape as the plugin playgrounds:
-    // `plumix.config.ts` is the consumer entry, and it dynamically imports
-    // demo-sql.ts (which globs the committed drizzle migrations + seed).
-    "packages/runtimes/cloudflare/e2e/fixture": {
+    "packages/runtimes/cloudflare/playground": {
       entry: ["plumix.config.ts"],
     },
     // drizzle-kit is invoked by consumers as a CLI hint, not imported.
@@ -133,7 +129,18 @@ const config: KnipConfig = {
       // pulls in `plumix/test/playwright` whose dist may not exist on a cold
       // clone — crashing `pnpm knip`. Disable it and list only the spec as an
       // entry (never the config), mirroring the plugin e2e suites.
-      entry: ["e2e/demo.spec.ts"],
+      //
+      // The published subpaths are listed explicitly because tsconfig.json
+      // widens rootDir to `.` for the e2e tree, which stops knip mapping
+      // `exports` back through `dist/` to their sources. Keep in sync with
+      // the `exports` map — a new subpath added there goes unchecked here.
+      entry: [
+        "src/index.ts",
+        "src/commands/index.ts",
+        "src/demo/index.ts",
+        "src/demo/durable-object.ts",
+        "e2e/demo.spec.ts",
+      ],
       playwright: false,
     },
     // The runtime-proof fixture plugin is loaded by playwright's
