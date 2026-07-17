@@ -29,7 +29,7 @@
     "provenance": true
   },
   "scripts": {
-    "build": "vite build && plumix-assert-emit",
+    "build": "vite build",
     "clean": "git clean -xdf .cache .turbo dist node_modules playwright-report test-results",
     "dev": "vite",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",

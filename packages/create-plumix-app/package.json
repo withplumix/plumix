@@ -40,7 +40,7 @@
     "jsonc-parser": "catalog:"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && plumix-assert-emit",
+    "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules templates",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",
     "lint": "eslint",

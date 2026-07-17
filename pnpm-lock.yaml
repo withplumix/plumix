@@ -1982,17 +1982,7 @@ importers:
         specifier: 'catalog:'
         version: 3.9.5
 
-  tooling/typescript:
-    devDependencies:
-      '@plumix/prettier-config':
-        specifier: workspace:*
-        version: link:../prettier
-      prettier:
-        specifier: 'catalog:'
-        version: 3.9.5
-      vitest:
-        specifier: catalog:vitest
-        version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.1.3(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+  tooling/typescript: {}
 
   tooling/vitest:
     devDependencies:
