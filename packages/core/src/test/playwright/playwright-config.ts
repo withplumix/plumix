@@ -23,12 +23,21 @@ export interface PlumixE2EConfigOptions {
   /**
    * Optional path to a playground workspace (relative to the playwright
    * config file). When set, `definePlumixE2EConfig` bakes the standard
-   * worker-driven webServer setup: wipe `.wrangler/state` → apply D1
-   * migrations → run `plumix dev`. Also auto-wires `globalSetup.ts` and
-   * `storageState.json` by convention. Mutually exclusive with an
-   * explicit `webServerCommand`.
+   * worker-driven webServer setup: wipe `.wrangler/state` → generate
+   * migrations → apply them (unless `applyMigrations: false`) → run
+   * `plumix dev`.
+   * Also auto-wires `globalSetup.ts` and `storageState.json` by convention.
+   * Mutually exclusive with an explicit `webServerCommand`.
    */
   readonly playground?: string;
+  /**
+   * Whether the baked command applies the generated migrations to the
+   * playground's database before starting the worker. Defaults to `true`.
+   * Set `false` when there is no database to migrate up front — e.g. one
+   * created per session at runtime, which applies its own schema. Migrations
+   * are still generated either way. Only meaningful when `playground` is set.
+   */
+  readonly applyMigrations?: boolean;
   /** Directory passed through to playwright's `testDir`. Defaults to `'.'`. */
   readonly testDir?: string;
   /**
@@ -50,11 +59,11 @@ export interface PlumixE2EConfigOptions {
    */
   readonly webServerPort?: number;
   /**
-   * Optional shell step to run inside the baked playground command,
-   * after the D1 migrations apply and before `plumix dev` starts.
-   * Use for fixture seeds that need to live in D1 before the worker
-   * comes up (e.g. `wrangler d1 execute <db> --local --file=seed.sql`).
-   * Only meaningful when `playground` is set.
+   * Optional shell step to run inside the baked playground command, after
+   * migrations are generated and applied, and before `plumix dev` starts.
+   * Use for fixture seeds that need to live in the database before the
+   * worker comes up (e.g. `wrangler d1 execute <db> --local
+   * --file=seed.sql`). Only meaningful when `playground` is set.
    */
   readonly extraSetup?: string;
   /**
@@ -76,13 +85,18 @@ function bakePlaygroundCommand(
   port: number,
   inspectorPort: number | undefined,
   extraSetup: string | undefined,
+  applyMigrations: boolean,
 ): string {
   const steps = [
     `cd ${playground}`,
     "rm -rf .wrangler/state",
     "pnpm exec plumix migrate generate",
-    `pnpm exec wrangler d1 migrations apply ${DEFAULT_BINDING} --local`,
   ];
+  if (applyMigrations) {
+    steps.push(
+      `pnpm exec wrangler d1 migrations apply ${DEFAULT_BINDING} --local`,
+    );
+  }
   if (extraSetup) steps.push(extraSetup);
   const devFlags = [`--port ${String(port)}`];
   if (inspectorPort !== undefined) {
@@ -100,10 +114,10 @@ function bakePlaygroundCommand(
  * the build/preview command — as parameters.
  *
  * When `playground` is set, the helper bakes a worker-driven webServer
- * (wipe state → apply migrations → `plumix dev`) and wires the
- * `globalSetup.ts` / `storageState.json` convention used by the
- * worker-driven plugin e2e pattern. Otherwise the caller supplies
- * `webServerCommand` directly.
+ * (wipe state → generate migrations → apply them unless
+ * `applyMigrations: false` → `plumix dev`) and wires the `globalSetup.ts` / `storageState.json`
+ * convention used by the worker-driven plugin e2e pattern. Otherwise the
+ * caller supplies `webServerCommand` directly.
  *
  * Used by `packages/admin/playwright.config.ts` and each
  * `packages/plugins/<plugin>/e2e/playwright.config.ts`.
@@ -149,6 +163,7 @@ export function definePlumixE2EConfig(
           port,
           options.inspectorPort,
           options.extraSetup,
+          options.applyMigrations !== false,
         )
       : "");
 

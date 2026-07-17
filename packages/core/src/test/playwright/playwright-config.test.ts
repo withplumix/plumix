@@ -45,6 +45,21 @@ describe("definePlumixE2EConfig", () => {
     expect(cmd).toContain("plumix dev --port 3040");
   });
 
+  test("applyMigrations=false drops the apply step but keeps migrate generate", () => {
+    const config = definePlumixE2EConfig({
+      port: 3070,
+      playground: "../playground",
+      applyMigrations: false,
+    });
+
+    const cmd =
+      config.webServer && "command" in config.webServer
+        ? config.webServer.command
+        : undefined;
+    expect(cmd).toContain("plumix migrate generate");
+    expect(cmd).not.toContain("wrangler d1 migrations apply");
+  });
+
   test("extraSetup injects an additional step between migrations apply and plumix dev", () => {
     const config = definePlumixE2EConfig({
       playground: "..",
