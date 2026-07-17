@@ -42,9 +42,11 @@ describe("scaffold — blank Cloudflare app", () => {
     expect(readFileSync(join(target, "plumix.config.ts"), "utf8")).toContain(
       "cloudflareDeployOrigin",
     );
-    expect(readFileSync(join(target, "wrangler.jsonc"), "utf8")).toContain(
-      "d1_databases",
-    );
+    const wrangler = readFileSync(join(target, "wrangler.jsonc"), "utf8");
+    expect(wrangler).toContain("d1_databases");
+    // A non-empty database_id, so `plumix dev` runs against local D1 out of the
+    // box — an empty one crashes wrangler on startup.
+    expect(wrangler).toMatch(/"database_id": "[^"]+"/);
     expect(readFileSync(join(target, "README.md"), "utf8")).toContain("Plumix");
     expect(existsSync(join(target, "theme", "index.tsx"))).toBe(true);
     expect(existsSync(join(target, ".gitignore"))).toBe(true);
