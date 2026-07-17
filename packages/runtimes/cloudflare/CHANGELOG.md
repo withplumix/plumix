@@ -1,5 +1,22 @@
 # @plumix/runtime-cloudflare
 
+## 0.3.0
+
+### Minor Changes
+
+- [#1358](https://github.com/withplumix/plumix/pull/1358) [`17658a5`](https://github.com/withplumix/plumix/commit/17658a53b3fb2f5135527a6f6a195f8c5aa49756) Thanks [@nasyrov](https://github.com/nasyrov)! - Add an anonymous demo sandbox through the new `@plumix/runtime-cloudflare/demo` subpath. `demoPreset({ binding, loadSql, turnstile? })` returns a `runtime`/`database`/`auth` trio that hands every anonymous visitor an isolated, self-expiring Cloudflare Durable Object database — no sign-up — so a site can showcase its admin and editor.
+
+  Cookieless visitors render a shared, read-only "showcase" database; clicking through provisions a per-session sandbox on demand, which self-cleans on a TTL alarm. Media writes are blocked (the storage bucket is shared) and security-sensitive routes are refused. Optional Turnstile gates provisioning against bots. The whole module is code-isolated on the subpath, so sites that don't opt in never bundle it.
+
+### Patch Changes
+
+- [#1361](https://github.com/withplumix/plumix/pull/1361) [`fc7aaab`](https://github.com/withplumix/plumix/commit/fc7aaab84c3e8e976b003660150f6c1c5a1286d4) Thanks [@nasyrov](https://github.com/nasyrov)! - Show the demo "Try the editor" CTA only to anonymous showcase visitors. It previously rendered for everyone, including inside the editor's own live preview and on the public site once a session existed. Adds `hasDemoSession(request)` (exported from `@plumix/runtime-cloudflare/demo`) so a theme can gate the CTA on the demo session cookie — `ctx.user` can't stand in, since core only resolves the public-render user for the default session cookie, not a custom authenticator's.
+
+- [#1362](https://github.com/withplumix/plumix/pull/1362) [`100032d`](https://github.com/withplumix/plumix/commit/100032d84e6b757dd53ae8cbd5151e6c26d30eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Make the demo toolbar responsive. Its contents used to wrap onto several cramped lines on narrow screens; it now stays a single-line pill at every width — the countdown and controls never wrap (`white-space: nowrap`), the pill is capped to the viewport, the deploy CTA shortens to "Deploy" on phones, and the bar clears the iOS home indicator via the safe-area inset.
+
+- Updated dependencies [[`17658a5`](https://github.com/withplumix/plumix/commit/17658a53b3fb2f5135527a6f6a195f8c5aa49756)]:
+  - plumix@0.1.3
+
 ## 0.2.1
 
 ### Patch Changes
