@@ -133,6 +133,13 @@ jobs:
     name: Smoke (scaffold)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # Build from source rather than restoring artifacts. This job packs what
+      # it builds and asks whether *this commit* breaks generated projects, so
+      # a restored artifact is the one thing it must not trust — and pulling
+      # every package's artifact adds to a concurrent-restore burst that the
+      # remote cache answers with 429s (see #1382).
+      TURBO_TOKEN: ""
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
