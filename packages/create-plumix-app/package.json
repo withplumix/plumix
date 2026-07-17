@@ -45,6 +45,7 @@
     "lint": "eslint",
     "prepack": "tsc -p tsconfig.build.json && node scripts/build-snapshot.mjs",
     "publint": "publint",
+    "smoke:scaffold": "node scripts/smoke.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
