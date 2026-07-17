@@ -82,7 +82,7 @@
   },
   "scripts": {
     "attw": "attw --pack . --profile esm-only",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && plumix-assert-emit",
     "clean": "git clean -xdf .cache .drizzle .turbo dist node_modules",
     "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../.gitignore",

@@ -1,10 +1,8 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "rootDir": "src",
     "stripInternal": true,
     "tsBuildInfoFile": "${configDir}/.cache/build.tsbuildinfo"
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test/**"]
+  "exclude": ["src/**/*.test.ts"]
 }

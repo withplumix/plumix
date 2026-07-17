@@ -11,7 +11,7 @@
     },
     "build": {
       "dependsOn": ["^build", "i18n:compile"],
-      "outputs": [".cache/tsbuildinfo.json", "dist/**"],
+      "outputs": [".cache/build.tsbuildinfo", "dist/**"],
       "env": ["WORKERS_CI", "WORKERS_CI_BRANCH", "PLUMIX_DEV"]
     },
     "dev": {
