@@ -9,5 +9,5 @@ import { definePlumixE2EConfig } from "plumix/test/playwright";
 export default definePlumixE2EConfig({
   port: 3070,
   webServerCommand:
-    "cd ../playground && rm -rf .wrangler/state && pnpm exec plumix dev --port 3070 --inspector-port 9370",
+    "cd ../playground && rm -rf .wrangler/state && pnpm exec plumix migrate generate && pnpm exec plumix dev --port 3070 --inspector-port 9370",
 });
