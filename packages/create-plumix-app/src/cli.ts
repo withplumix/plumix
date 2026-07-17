@@ -85,6 +85,13 @@ export async function runCli(
     return 0;
   }
 
+  if (argv.some((a) => a === "--template" || a.startsWith("--template="))) {
+    io.stderr(
+      "The --template flag was removed. Use -p/--plugins to choose plugins (e.g. -p blog,pages).",
+    );
+    return 1;
+  }
+
   const runner = deps.runner ?? spawnRunner;
   const reconciled = reconcile(argv);
 

@@ -134,6 +134,17 @@ describe("runCli", () => {
     expect(config).toContain("media(),");
   });
 
+  test("exits 1 pointing at --plugins when the removed --template flag is used", async () => {
+    const { io, stderr } = captureIO();
+    const target = join(tmp, "tpl");
+
+    const code = await run([target, "--template", "blog"], io);
+
+    expect(code).toBe(1);
+    expect(stderr.join("\n")).toMatch(/--template.*removed.*--plugins/is);
+    expect(existsSync(target)).toBe(false);
+  });
+
   test("exits 1 for an unknown --pm", async () => {
     const { io, stderr } = captureIO();
     const target = join(tmp, "bad-pm");

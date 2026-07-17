@@ -4,7 +4,6 @@ type ScaffoldErrorCode =
   | "target_directory_not_empty"
   | "catalog_resolution_missing"
   | "workspace_version_missing"
-  | "unknown_template"
   | "unknown_runtime"
   | "invalid_project_name"
   | "invalid_scaffold_meta"
@@ -20,7 +19,6 @@ interface ScaffoldErrorFields {
   dependency?: string;
   catalog?: string;
   packageName?: string;
-  template?: string;
   runtime?: string;
   projectName?: string;
   packagePath?: string;
@@ -41,7 +39,6 @@ export class ScaffoldError extends Error {
   readonly dependency: string | undefined;
   readonly catalog: string | undefined;
   readonly packageName: string | undefined;
-  readonly template: string | undefined;
   readonly runtime: string | undefined;
   readonly projectName: string | undefined;
   readonly packagePath: string | undefined;
@@ -63,7 +60,6 @@ export class ScaffoldError extends Error {
     this.dependency = fields.dependency;
     this.catalog = fields.catalog;
     this.packageName = fields.packageName;
-    this.template = fields.template;
     this.runtime = fields.runtime;
     this.projectName = fields.projectName;
     this.packagePath = fields.packagePath;
@@ -112,17 +108,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "workspace_version_missing",
       `No workspace version for "${ctx.packageName}" — the template references it via \`workspace:\` but no workspace package publishes that name.`,
-      ctx,
-    );
-  }
-
-  static unknownTemplate(ctx: {
-    template: string;
-    available: readonly string[];
-  }): ScaffoldError {
-    return new ScaffoldError(
-      "unknown_template",
-      `Unknown template "${ctx.template}". Available templates: ${ctx.available.join(", ")}.`,
       ctx,
     );
   }
