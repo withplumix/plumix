@@ -8,9 +8,11 @@
     {
       "binding": "DB",
       "database_name": "__PROJECT_NAME__",
+      // A placeholder so `plumix dev` runs against local D1 out of the box.
       // Run `wrangler d1 create __PROJECT_NAME__` and paste the returned
-      // database_id here before deploying (local dev needs only the name).
-      "database_id": "",
+      // database_id here before deploying — the remote deploy needs the real
+      // one.
+      "database_id": "local-development-only",
       "migrations_dir": "drizzle",
     },
   ],
