@@ -1,7 +1,11 @@
 {
   "extends": "@plumix/typescript-config/library.json",
   "compilerOptions": {
+    // Override the library default (`${configDir}/src`) so `e2e/` sits inside
+    // the project rootDir and ts-eslint resolves its imports through
+    // package.json exports rather than falling back to `any`.
+    "rootDir": ".",
     "types": ["node", "@cloudflare/workers-types"]
   },
-  "include": ["src"]
+  "include": ["src", "e2e"]
 }

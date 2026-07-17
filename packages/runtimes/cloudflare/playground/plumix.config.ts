@@ -8,7 +8,7 @@ import { demoTheme } from "./theme";
 export default plumix({
   plugins: [blog],
   theme: demoTheme,
-  // The whole point of this fixture: exercise the demo sandbox end to end.
+  // The whole point of this playground: exercise the demo sandbox end to end.
   // Turnstile is omitted, so `/_demo/init` runs unguarded — the e2e provisions
   // a session without solving a challenge.
   ...demoPreset({

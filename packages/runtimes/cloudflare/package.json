@@ -123,7 +123,7 @@
     "publint": "publint",
     "test": "vitest run",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false && tsc --noEmit -p e2e/tsconfig.json"
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "catalog:cloudflare",
