@@ -2,22 +2,5 @@
   "name": "@plumix/typescript-config",
   "version": "0.0.0",
   "private": true,
-  "files": [
-    "*.json",
-    "src/*.mjs"
-  ],
-  "bin": {
-    "plumix-assert-emit": "./src/assert-emit-cli.mjs"
-  },
-  "scripts": {
-    "clean": "git clean -xdf .cache .turbo node_modules",
-    "format": "prettier --check . --ignore-path ../../.gitignore",
-    "test": "vitest run"
-  },
-  "devDependencies": {
-    "@plumix/prettier-config": "workspace:*",
-    "prettier": "catalog:",
-    "vitest": "catalog:vitest"
-  },
-  "prettier": "@plumix/prettier-config"
+  "files": ["*.json"]
 }
