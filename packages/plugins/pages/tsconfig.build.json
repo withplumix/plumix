@@ -7,7 +7,8 @@
     // under `dist/src/` instead of `dist/`, breaking the
     // package.json exports entry.
     "rootDir": "src",
-    "stripInternal": true
+    "stripInternal": true,
+    "tsBuildInfoFile": "${configDir}/.cache/build.tsbuildinfo"
   },
   "include": ["src"],
   "exclude": ["src/**/*.test.ts"]

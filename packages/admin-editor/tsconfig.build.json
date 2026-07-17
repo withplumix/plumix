@@ -6,7 +6,8 @@
     // the dist build is src-only, so pin it back and re-enable emit (the wide
     // config sets noEmit to stay typecheck-only).
     "rootDir": "src",
-    "noEmit": false
+    "noEmit": false,
+    "tsBuildInfoFile": "${configDir}/.cache/build.tsbuildinfo"
   },
   // The published library is src-only; the playground + e2e + tool configs
   // that tsconfig.json adds for typecheck/eslint must stay out of dist.
