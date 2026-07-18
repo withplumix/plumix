@@ -369,12 +369,23 @@ async function migrateAndBoot(appDir) {
   });
 
   const base = `http://localhost:${APP_PORT}`;
-  log("asserting public front page → 200…");
-  await waitForHttp(`${base}/`, { timeoutMs: 90_000 });
-  log("  front page 200 ✓");
-  log("asserting /_plumix/admin/ → 200…");
-  await waitForHttp(`${base}/_plumix/admin/`, { timeoutMs: 30_000 });
-  log("  admin 200 ✓");
+  try {
+    log("asserting public front page → 200…");
+    await waitForHttp(`${base}/`, { timeoutMs: 90_000 });
+    log("  front page 200 ✓");
+    log("asserting /_plumix/admin/ → 200…");
+    await waitForHttp(`${base}/_plumix/admin/`, { timeoutMs: 30_000 });
+    log("  admin 200 ✓");
+  } catch (err) {
+    // cleanup() deletes the temp dir, so surface the dev-server log before rethrowing.
+    const devLog = await fs.readFile(logFile, "utf8").catch(() => null);
+    log(
+      devLog
+        ? `plumix dev did not serve 200 — last dev-server output:\n${devLog.slice(-4000)}`
+        : `plumix dev did not serve 200 and ${logFile} is unreadable`,
+    );
+    throw err;
+  }
 }
 
 // --- main ------------------------------------------------------------------
