@@ -82,7 +82,7 @@ export function resolveBarLocale(user: {
 // Compiled lingui entries are token arrays (a lone string for plain
 // messages); the bar has no ICU placeholders, so anything else falls
 // back to the English source.
-function resolveMessage(
+export function resolveMessage(
   catalog: CompiledCatalog,
   descriptor: { readonly id: string; readonly message: string },
 ): string {

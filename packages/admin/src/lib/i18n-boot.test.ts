@@ -1,9 +1,25 @@
 import { i18n } from "@lingui/core";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { setI18nResolver, vMessage } from "@plumix/core/validation";
 
 import { bootI18n } from "./i18n-boot.js";
+
+// `catalog-globs` wraps `import.meta.glob` (a filesystem scan of the compiled
+// `locales/*.mjs`), so tests declare which locales "ship" instead of depending
+// on `i18n:compile`. English + German present, nothing else — enough to drive
+// the activate / region-strip / fallback logic.
+vi.mock("./catalog-globs.js", () => {
+  const catalog = () => Promise.resolve({ messages: {} });
+  return {
+    ADMIN_CATALOGS: {
+      "../../locales/en.mjs": catalog,
+      "../../locales/de.mjs": catalog,
+    },
+    PLUGIN_CATALOGS: {},
+    EDITOR_CATALOGS: {},
+  };
+});
 
 const originalLang = document.documentElement.lang;
 

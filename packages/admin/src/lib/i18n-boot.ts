@@ -3,29 +3,13 @@ import { i18n } from "@lingui/core";
 
 import { setI18nResolver } from "@plumix/core/validation";
 
+import {
+  ADMIN_CATALOGS,
+  EDITOR_CATALOGS,
+  PLUGIN_CATALOGS,
+} from "./catalog-globs.js";
 import { readManifest } from "./manifest.js";
 import { createPluginCatalogLoader } from "./plugin-catalogs.js";
-
-// Admin's own compiled catalogs. Vite expands the glob at build time
-// into a `path → () => import(path)` map. Adding a locale (drop a
-// `.po`, run `pnpm i18n:compile`) appears here automatically.
-const ADMIN_CATALOGS = import.meta.glob<{ messages: Messages }>(
-  "../../locales/*.mjs",
-);
-
-// First-party workspace plugins ship catalogs via static glob —
-// admin reads them at zero runtime cost. Third-party plugins (not
-// in the workspace) load via manifest URLs, fanned in below.
-const PLUGIN_CATALOGS = import.meta.glob<{ messages: Messages }>(
-  "../../../plugins/*/locales/*.mjs",
-);
-
-// The editor package ships its own chrome catalog (inspector,
-// etc.); it's bundled into admin like a workspace plugin, so merge it
-// the same zero-runtime-cost way.
-const EDITOR_CATALOGS = import.meta.glob<{ messages: Messages }>(
-  "../../../admin-editor/locales/*.mjs",
-);
 
 // Source locale: the language `descriptor.message` strings are authored
 // in. When a user's locale isn't compiled (yet, or at all), we fall

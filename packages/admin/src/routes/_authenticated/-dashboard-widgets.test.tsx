@@ -1,21 +1,14 @@
-import { i18n } from "@lingui/core";
-import { I18nProvider } from "@lingui/react";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { cleanup, screen } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { DashboardWidgetManifestEntry } from "@plumix/core/manifest";
 
-import { messages as enMessages } from "../../../locales/en.mjs";
+import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import {
   _resetPluginRegistry,
   registerPluginDashboardWidget,
 } from "../../lib/plugin-registry.js";
 import { DashboardWidgets } from "./-dashboard-widgets.js";
-
-beforeAll(() => {
-  i18n.load("en", enMessages);
-  i18n.activate("en");
-});
 
 afterEach(() => {
   cleanup();
@@ -28,11 +21,7 @@ const WIDGETS: readonly DashboardWidgetManifestEntry[] = [
 ];
 
 function renderWidgets(widgets: readonly DashboardWidgetManifestEntry[]): void {
-  render(
-    <I18nProvider i18n={i18n}>
-      <DashboardWidgets widgets={widgets} />
-    </I18nProvider>,
-  );
+  renderWithI18n(<DashboardWidgets widgets={widgets} />);
 }
 
 describe("DashboardWidgets", () => {

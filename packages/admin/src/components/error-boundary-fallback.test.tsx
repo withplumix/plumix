@@ -1,31 +1,20 @@
-import { i18n } from "@lingui/core";
-import { I18nProvider } from "@lingui/react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
-import { messages as enMessages } from "../../locales/en.mjs";
+import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { ErrorBoundaryFallback } from "./error-boundary-fallback.js";
-
-beforeAll(() => {
-  i18n.load("en", enMessages);
-  i18n.activate("en");
-});
 
 afterEach(() => {
   cleanup();
 });
 
 function renderFallback(error: Error): void {
-  render(
-    <I18nProvider i18n={i18n}>
-      <ErrorBoundaryFallback error={error} reset={() => {}} />
-    </I18nProvider>,
-  );
+  renderWithI18n(<ErrorBoundaryFallback error={error} reset={() => {}} />);
 }
 
 describe("ErrorBoundaryFallback", () => {
-  test("renders a translated title from the active locale catalog", () => {
+  test("renders a title through the i18n provider", () => {
     renderFallback(new Error("boom"));
     expect(screen.getByTestId("error-boundary-title")).toBeTruthy();
   });
