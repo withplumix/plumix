@@ -6,9 +6,9 @@
   "description": "Plumix app with the blog and pages plugins — Cloudflare + D1",
   "license": "MIT",
   "scripts": {
-    "build": "plumix build",
-    "clean": "git clean -xdf .plumix .wrangler dist node_modules",
-    "dev": "plumix dev",
+    "build": "plumix migrate generate && plumix build",
+    "clean": "git clean -xdf .plumix .wrangler dist drizzle node_modules",
+    "dev": "plumix migrate generate && plumix dev",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
