@@ -21,7 +21,9 @@ Opens a local Workers dev server on `http://localhost:8787`.
 pnpm build
 ```
 
-Emits the worker bundle to `dist/plumix_blog/`. Equivalent to `pnpm exec plumix build`.
+Emits the worker bundle to `dist/plumix_blog/`. Runs `plumix migrate generate`
+first — the demo schema (`drizzle/`) is generated from the current core + plugin
+schema rather than committed, so it can't drift — then `plumix build`.
 
 ## Deploy
 

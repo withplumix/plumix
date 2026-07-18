@@ -40,11 +40,11 @@ yarn-error.log*
 .drizzle/
 .output/
 # `plumix migrate generate` output in playgrounds + examples — generated
-# fresh on every e2e run, never committed. The blog example is the
-# exception: it is deployed, so its migrations are committed rather than
-# needing drizzle-kit at deploy time (see #1338).
+# fresh from the current schema at e2e/dev/build time, never committed, so
+# it can't drift. The deployed blog example generates at build too;
+# drizzle-kit is a runtime dep of plumix, so its deploy build regenerates
+# (#1388).
 drizzle/
-!/examples/blog/drizzle/
 
 # worker-driven plugin e2e: storageState.json + e2e-fixtures.json are
 # written by globalSetup at the package root; playwright traces / reports
