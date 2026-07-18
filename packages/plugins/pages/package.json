@@ -47,7 +47,7 @@
     "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path .prettierignore",
     "lint": "eslint",
     "publint": "publint",
-    "test": "vitest run",
+    "test:unit": "vitest run",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },

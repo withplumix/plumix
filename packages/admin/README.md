@@ -87,7 +87,7 @@ From `packages/admin/`:
 ```bash
 pnpm dev          # Vite dev server on http://localhost:5174/_plumix/admin/
 pnpm build        # emits static assets to dist/
-pnpm test         # vitest (jsdom + React Testing Library)
+pnpm test:unit    # vitest (jsdom + React Testing Library)
 pnpm test:e2e     # playwright + axe-core (needs chromium installed once)
 pnpm typecheck
 pnpm lint

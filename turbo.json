@@ -31,8 +31,16 @@
       "dependsOn": ["^topo", "^build", "i18n:compile"],
       "outputs": [".cache/tsbuildinfo.json"]
     },
-    "test": {
-      "dependsOn": ["build", "i18n:compile"]
+    "test:unit": {
+      // Low-level tests: resolve workspace imports to source and stub
+      // name-imported i18n catalogs (see tooling/vitest/source-resolver.ts), so
+      // they depend on nothing generated — no build, no i18n:compile.
+      "dependsOn": []
+    },
+    "test:build": {
+      // Tests that spin up a real Vite build and inspect the emitted artifacts
+      // (`*.build.test.ts`). Only plumix has these; they need the build graph.
+      "dependsOn": ["build", "^build"]
     },
     "test:e2e": {
       "dependsOn": ["build", "^build"],

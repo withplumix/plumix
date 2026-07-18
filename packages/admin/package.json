@@ -39,7 +39,7 @@
     "i18n:ratchet:check": "node scripts/ratchet-drift-check.mjs",
     "lint": "eslint",
     "publint": "publint",
-    "test": "vitest run",
+    "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },

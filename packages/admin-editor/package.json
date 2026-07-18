@@ -47,7 +47,7 @@
     "playground:build": "plumix-compile-catalogs && vite build",
     "playground:preview": "vite preview --port 5179 --strictPort",
     "publint": "publint",
-    "test": "vitest run",
+    "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
