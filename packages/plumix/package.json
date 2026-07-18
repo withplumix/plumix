@@ -174,7 +174,8 @@
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "publint": "publint",
-    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:build": "vitest run --config vitest.build.config.ts",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {

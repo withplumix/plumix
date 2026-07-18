@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./base": "./base.ts",
-    "./jsdom-radix": "./jsdom-radix.ts"
+    "./jsdom-radix": "./jsdom-radix.ts",
+    "./source-resolver": "./source-resolver.ts"
   },
   "scripts": {
     "clean": "git clean -xdf .cache .turbo node_modules",

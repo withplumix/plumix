@@ -42,7 +42,7 @@ pnpm typecheck    # Type-check all packages
 pnpm lint         # Lint all packages
 pnpm knip         # Check for unused exports/deps
 pnpm format       # Check formatting
-pnpm test         # Run vitest across every package that defines tests
+pnpm test         # vitest (test:unit + test:build) across packages
 ```
 
 ## Tests

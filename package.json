@@ -26,7 +26,9 @@
     "publint": "turbo run publint",
     "release": "pnpm run build && changeset publish",
     "smoke": "node .github/scripts/smoke.mjs",
-    "test": "turbo run test",
+    "test": "turbo run test:unit test:build",
+    "test:unit": "turbo run test:unit",
+    "test:build": "turbo run test:build",
     "test:e2e": "turbo run test:e2e",
     "typecheck": "turbo run typecheck",
     "version-packages": "changeset version"

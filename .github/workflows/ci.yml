@@ -127,7 +127,20 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      - run: pnpm test
+      - run: pnpm test:unit
+
+  test-build:
+    name: Test (build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      # `*.build.test.ts` suites spin up a real Vite build and inspect the
+      # emitted artifacts; the turbo task pulls the build graph.
+      - run: pnpm test:build
 
   smoke:
     name: Smoke (scaffold)

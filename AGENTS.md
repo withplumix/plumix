@@ -20,19 +20,21 @@ Turborepo drives everything from the root:
 
 - `pnpm build` — every package in topological order
 - `pnpm typecheck` / `pnpm lint` / `pnpm format` — turbo tasks; `lint` and `typecheck` `dependsOn: ^build` so they need built upstream deps
-- `pnpm test` — vitest across every package that defines tests
+- `pnpm test:unit` — low-level vitest across every package; workspace imports resolve to source and i18n catalogs are stubbed, so it needs no build or `i18n:compile`
+- `pnpm test:build` — vitest suites that spin up a real Vite build and inspect the emitted artifacts (`*.build.test.ts`; only plumix has these)
 - `pnpm test:e2e` — Playwright e2e (only the packages that opt in)
+- `pnpm test` — convenience umbrella for `test:unit` + `test:build`
 - `pnpm knip` — unused-export and dependency check
 - `pnpm i18n:check` — source↔catalog drift gate; fails when `<Trans>`/`defineMessage` strings change without `lingui extract` (run `pnpm --filter <pkg> i18n:extract` + `i18n:compile`, commit the `locales/` churn)
 - `pnpm commitlint` — conventional-commit lint
 
-**Single-package commands.** Use turbo, not pnpm, for any task with `dependsOn` set (`build`, `lint`, `typecheck`, `test`, `test:e2e`, `publint`, `attw`):
+**Single-package commands.** Use turbo, not pnpm, for any task with `dependsOn` set (`build`, `lint`, `typecheck`, `test:build`, `test:e2e`, `publint`, `attw`):
 
 ```bash
-pnpm exec turbo run test --filter @plumix/core
+pnpm exec turbo run typecheck --filter @plumix/core
 ```
 
-Bare `pnpm --filter @plumix/core test` works locally with a warm tree but fails cold in CI because upstream `build` won't have run.
+Bare `pnpm --filter @plumix/core typecheck` works locally with a warm tree but fails cold in CI because upstream `build` won't have run. `test:unit` is the exception — it has no `dependsOn` (source-resolved, nothing generated), so pnpm or turbo both work.
 
 **Single test file.** Inside a package: `pnpm exec vitest run path/to/file.test.ts`. With coverage: `pnpm exec vitest run --coverage`.
 

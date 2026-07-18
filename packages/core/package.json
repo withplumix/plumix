@@ -90,7 +90,7 @@
     "i18n:compile": "plumix-compile-catalogs --dts",
     "lint": "eslint",
     "publint": "publint",
-    "test": "vitest run",
+    "test:unit": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {

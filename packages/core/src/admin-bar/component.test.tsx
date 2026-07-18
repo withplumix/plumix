@@ -110,10 +110,14 @@ describe("PlumixAdminBar", () => {
     expect(html).toMatch(/text-overflow:\s*ellipsis/);
   });
 
-  test("renders nav with the localized aria-label", () => {
+  // Which locale renders which translation is catalog content, gated by
+  // `i18n:ratchet`. These tests cover the locale→chrome wiring: the nav carries
+  // an aria-label sourced from the bar catalog, and the locale drives the
+  // document `lang`/`dir` attributes.
+  test("renders nav with an aria-label sourced from the bar catalog", () => {
     const hooks = new HookRegistry();
 
-    const enHtml = renderToStaticMarkup(
+    const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry, user }}>
         <PlumixAdminBar
           hooks={hooks}
@@ -124,73 +128,26 @@ describe("PlumixAdminBar", () => {
         />
       </PlumixProvider>,
     );
-    expect(enHtml).toContain('aria-label="Admin"');
-
-    const deUser = { ...user, meta: { locale: "de" } };
-    const deHtml = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user: deUser }}>
-        <PlumixAdminBar
-          hooks={hooks}
-          request={request}
-          siteName="Meine Seite"
-          auth={auth}
-          entryTypes={entryTypes}
-        />
-      </PlumixProvider>,
-    );
-    expect(deHtml).toContain('aria-label="Administration"');
+    expect(html).toContain('aria-label="Admin"');
   });
 
-  test("translates chrome strings to Ukrainian when user locale is uk (Cyrillic snapshot)", () => {
+  test("sets the document lang attribute from the user's locale", () => {
     const ukUser = { ...user, meta: { locale: "uk" } };
     const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-    const types = new Map([["post", { name: "post", label: "Post" } as never]]);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry, user: ukUser }}>
         <PlumixAdminBar
           hooks={hooks}
           request={request}
-          siteName="Мій сайт"
+          siteName="My Site"
           auth={auth}
-          entryTypes={types}
-          queriedEntryDetails={{ type: "post", authorId: 7 }}
+          entryTypes={entryTypes}
         />
       </PlumixProvider>,
     );
 
     expect(html).toContain('lang="uk"');
-    expect(html).toContain('aria-label="Адміністрування"');
-    expect(html).toContain("+ Новий");
-    expect(html).toContain('aria-label="Створити"');
-    expect(html).toContain("Мій сайт");
-  });
-
-  test("translates chrome strings to Simplified Chinese when user locale is zh-CN", () => {
-    const zhUser = { ...user, meta: { locale: "zh-CN" } };
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-    const types = new Map([["post", { name: "post", label: "Post" } as never]]);
-
-    const html = renderToStaticMarkup(
-      <PlumixProvider value={{ registry: emptyRegistry, user: zhUser }}>
-        <PlumixAdminBar
-          hooks={hooks}
-          request={request}
-          siteName="我的站点"
-          auth={auth}
-          entryTypes={types}
-          queriedEntryDetails={{ type: "post", authorId: 7 }}
-        />
-      </PlumixProvider>,
-    );
-
-    expect(html).toContain('lang="zh-CN"');
-    expect(html).toContain('aria-label="管理"');
-    expect(html).toContain("+ 新建");
-    expect(html).toContain('aria-label="新建内容"');
-    expect(html).toContain("我的站点");
   });
 
   test("applies dir='rtl' and lang='ar' when the user locale is Arabic", () => {
@@ -212,8 +169,7 @@ describe("PlumixAdminBar", () => {
 
     expect(html).toContain('dir="rtl"');
     expect(html).toContain('lang="ar"');
-    expect(html).toContain('aria-label="الإدارة"');
-    // Site name passed in is Arabic — localized chrome surrounds it.
+    // Site name passed in is Arabic — the RTL chrome surrounds it.
     expect(html).toContain("موقعي");
   });
 
