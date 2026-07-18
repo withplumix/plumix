@@ -12,7 +12,7 @@
     "verbatimModuleSyntax": true,
     "incremental": true,
     "disableSourceOfProjectReferenceRedirect": true,
-    "tsBuildInfoFile": "${configDir}/.cache/tsbuildinfo.json",
+    "tsBuildInfoFile": "${configDir}/.cache/typecheck.tsbuildinfo",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,

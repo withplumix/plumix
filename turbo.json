@@ -29,7 +29,7 @@
     },
     "typecheck": {
       "dependsOn": ["^topo", "^build", "i18n:compile"],
-      "outputs": [".cache/tsbuildinfo.json"]
+      "outputs": [".cache/typecheck.tsbuildinfo"]
     },
     "test:unit": {
       // Low-level tests: resolve workspace imports to source and stub
