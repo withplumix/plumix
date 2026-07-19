@@ -129,7 +129,9 @@ export const DEBUG_BAR_CSS =
       display: flex;
       flex-wrap: wrap;
       gap: 2px;
-      padding: 6px 8px 0;
+      /* 12px inset matches the summary and panes so the tabs line up;
+         roomier top padding gives the tab row space below the header. */
+      padding: 10px 12px 0;
       border-top: 1px solid #3c434a;
     }
     .plumix-debug-bar__labels label {
