@@ -11,6 +11,7 @@ import type {
 } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type { User, UserRole } from "../db/schema/users.js";
+import type { DebugBarInput } from "../debug-bar/config.js";
 import type {
   ActionArgs,
   ActionName,
@@ -133,6 +134,8 @@ export interface CreateDispatcherHarnessOptions {
   readonly mcp?: InterfaceToggle;
   /** Mount the REST API. Default-off mirrors production. */
   readonly api?: ApiConfig;
+  /** Dev debug-bar config; set to exercise disable/collection gating. */
+  readonly debugBar?: DebugBarInput;
   /** `<Image>` remote-host allowlist; tests exercising remote optimization set it. */
   readonly images?: { readonly remotePatterns?: readonly RemotePattern[] };
   /**
@@ -229,6 +232,7 @@ function withRequest(
     origin: app.origin,
     basePath: app.basePath,
     siteName: app.config.auth.magicLink?.siteName,
+    debugBar: app.config.debugBar,
   });
 }
 
@@ -258,6 +262,7 @@ export async function createDispatcherHarness(
     basePath: options.basePath,
     mcp: options.mcp,
     api: options.api,
+    debugBar: options.debugBar,
     images: options.images,
     theme: options.theme ?? defaultTestTheme,
   });

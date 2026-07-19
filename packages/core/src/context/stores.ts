@@ -18,6 +18,8 @@ export const hookStore = new AsyncLocalStorage<HookFrame>();
 export interface TraceSpan {
   readonly name: string;
   readonly startedAt: number;
+  /** Wall-clock duration; set when the span's work completes. */
+  durationMs: number;
   readonly children: TraceSpan[];
   readonly annotations: Record<string, unknown>;
 }

@@ -16,7 +16,10 @@ const MAX_TABS = 16;
 function tabRules(): string {
   let out = "";
   for (let n = 1; n <= MAX_TABS; n++) {
+    // Show the checked tab's pane...
     out += `.plumix-debug-bar__radio:nth-of-type(${n}):checked ~ .plumix-debug-bar__panes > .plumix-debug-bar__pane:nth-of-type(${n}){display:block}`;
+    // ...and highlight its label so the active tab is obvious.
+    out += `.plumix-debug-bar__radio:nth-of-type(${n}):checked ~ .plumix-debug-bar__labels > label:nth-of-type(${n}){background:#1d2327;color:#fff}`;
   }
   return out;
 }
@@ -76,6 +79,15 @@ export const DEBUG_BAR_CSS =
       font: inherit;
       color: inherit;
       text-align: inherit;
+      /* The font shorthand omits these — reset them so a theme's element
+         rules (e.g. label text-transform/letter-spacing) can't bleed in. */
+      text-transform: none;
+      letter-spacing: normal;
+      word-spacing: normal;
+      text-decoration: none;
+      text-indent: 0;
+      white-space: normal;
+      box-shadow: none;
     }
     .plumix-debug-bar > details {
       background: #1d2327;
@@ -94,6 +106,16 @@ export const DEBUG_BAR_CSS =
     }
     .plumix-debug-bar summary::-webkit-details-marker {
       display: none;
+    }
+    /* Toggle affordance: chevron points right when collapsed, down when open,
+       so it's clear the header opens and closes the bar. */
+    .plumix-debug-bar summary::after {
+      content: "▸";
+      float: right;
+      opacity: 0.6;
+    }
+    .plumix-debug-bar > details[open] > summary::after {
+      content: "▾";
     }
     .plumix-debug-bar__radio {
       position: absolute;
@@ -124,6 +146,17 @@ export const DEBUG_BAR_CSS =
     }
     .plumix-debug-bar__pane {
       display: none;
+    }
+    .plumix-debug-bar__section-title {
+      margin: 0 0 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #8a929a;
+    }
+    .plumix-debug-bar__error {
+      margin: 0;
+      color: #f0a5a5;
     }
     .plumix-debug-bar table {
       width: 100%;

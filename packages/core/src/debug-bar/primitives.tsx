@@ -2,10 +2,27 @@ import type { ReactNode } from "react";
 
 /**
  * Presentational primitives shared by core and plugin debug panels so every
- * panel reads uniformly. `DebugKV` is the two-column key/value table the
- * scalar panels use; richer primitives (sections, columnar tables) arrive
- * with the panels that need them.
+ * panel reads uniformly. Panels may drop to raw markup, but these give them
+ * the bar's look for free: `DebugSection` groups a titled block, `DebugKV` is
+ * the two-column key/value table, `DebugTable` a columnar list.
  */
+
+export function DebugSection({
+  title,
+  children,
+}: {
+  readonly title?: string;
+  readonly children: ReactNode;
+}): ReactNode {
+  return (
+    <section>
+      {title ? (
+        <p className="plumix-debug-bar__section-title">{title}</p>
+      ) : null}
+      {children}
+    </section>
+  );
+}
 
 export interface DebugKVRow {
   readonly label: string;
@@ -24,6 +41,40 @@ export function DebugKV({
           <tr key={row.label}>
             <th scope="row">{row.label}</th>
             <td className="plumix-debug-bar__val">{row.value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** A columnar table for list-shaped panel data (queries, spans, candidates). */
+export function DebugTable({
+  headers,
+  rows,
+}: {
+  readonly headers: readonly string[];
+  readonly rows: readonly (readonly ReactNode[])[];
+}): ReactNode {
+  return (
+    <table>
+      <thead>
+        <tr>
+          {headers.map((h) => (
+            <th key={h} scope="col">
+              {h}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((cells, r) => (
+          <tr key={r}>
+            {cells.map((cell, c) => (
+              <td key={c} className="plumix-debug-bar__val">
+                {cell}
+              </td>
+            ))}
           </tr>
         ))}
       </tbody>
