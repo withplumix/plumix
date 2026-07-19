@@ -7,6 +7,7 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 import * as schema from "../db/schema/index.js";
+import { createDebugSqlLogger } from "../debug-bar/db-query.js";
 
 type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 
@@ -38,7 +39,13 @@ async function compileSchemaSql(): Promise<string[]> {
  */
 export async function createTestDb(): Promise<TestDb> {
   const client = createClient({ url: ":memory:" });
-  const db = drizzle(client, { schema, casing: "snake_case" });
+  const db = drizzle(client, {
+    schema,
+    casing: "snake_case",
+    // Mirrors the real adapters: dev-gated debug-bar query logging, so the
+    // Database panel can be exercised end-to-end through the harness.
+    logger: process.env.PLUMIX_DEV ? createDebugSqlLogger() : undefined,
+  });
   const statements = await compileSchemaSql();
   for (const stmt of statements) await db.run(sql.raw(stmt));
   return db;

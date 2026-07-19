@@ -125,17 +125,22 @@ export const DEBUG_BAR_CSS =
       opacity: 0;
       pointer-events: none;
     }
-    .plumix-debug-bar__labels {
+    /* Qualified with nav so this out-specifies the element reset (which zeroes
+       nav padding) — otherwise the tabs get no left inset and hug the border. */
+    .plumix-debug-bar nav.plumix-debug-bar__labels {
       display: flex;
       flex-wrap: wrap;
-      gap: 2px;
-      /* 12px inset matches the summary and panes so the tabs line up;
-         roomier top padding gives the tab row space below the header. */
-      padding: 10px 12px 0;
+      gap: 6px;
+      /* 12px left inset matches the summary and panes; generous top padding
+         gives the tab row space below the header. */
+      padding: 14px 12px 0;
       border-top: 1px solid #3c434a;
     }
     .plumix-debug-bar__labels label {
-      padding: 4px 8px;
+      /* No LEFT padding, so the tab text aligns exactly with the title and
+         content at 12px. Right padding gives the active box separation without
+         letting it overhang toward the border. */
+      padding: 3px 8px 3px 0;
       border-radius: 4px 4px 0 0;
       cursor: pointer;
       color: #b9c0c7;
@@ -194,6 +199,96 @@ export const DEBUG_BAR_CSS =
       color: #fff;
     }
     .plumix-debug-bar th {
+      color: #8a929a;
+    }
+    .plumix-debug-bar__empty {
+      margin: 0;
+      color: #8a929a;
+    }
+    /* Database panel — query list */
+    .plumix-debug-bar__queries {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .plumix-debug-bar__query {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #2c3338;
+    }
+    .plumix-debug-bar__query:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+    .plumix-debug-bar__query-head {
+      display: flex;
+      gap: 6px;
+      align-items: baseline;
+    }
+    .plumix-debug-bar__kind {
+      flex: 0 0 auto;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: #2c3338;
+      color: #b9c0c7;
+    }
+    .plumix-debug-bar__kind--select {
+      background: rgba(126, 231, 135, 0.15);
+      color: #7ee787;
+    }
+    .plumix-debug-bar__kind--insert {
+      background: rgba(110, 168, 254, 0.15);
+      color: #6ea8fe;
+    }
+    .plumix-debug-bar__kind--update {
+      background: rgba(227, 179, 65, 0.15);
+      color: #e3b341;
+    }
+    .plumix-debug-bar__kind--delete {
+      background: rgba(240, 165, 165, 0.15);
+      color: #f0a5a5;
+    }
+    .plumix-debug-bar__sql {
+      font-family: inherit;
+      color: #c9d1d9;
+      overflow-wrap: anywhere;
+    }
+    .plumix-debug-bar__tok--keyword {
+      color: #6ea8fe;
+    }
+    .plumix-debug-bar__tok--string {
+      color: #7ee787;
+    }
+    .plumix-debug-bar__tok--number {
+      color: #56d4dd;
+    }
+    .plumix-debug-bar__params {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding-left: 10px;
+    }
+    .plumix-debug-bar__param {
+      color: #b9c0c7;
+    }
+    .plumix-debug-bar__param--string {
+      color: #7ee787;
+    }
+    .plumix-debug-bar__param--number {
+      color: #56d4dd;
+    }
+    .plumix-debug-bar__param--boolean {
+      color: #e3b341;
+    }
+    .plumix-debug-bar__param--null {
       color: #8a929a;
     }
   ` +
