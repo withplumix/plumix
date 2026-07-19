@@ -134,6 +134,11 @@ export const DEBUG_BAR_CSS =
       border-radius: 4px 4px 0 0;
       cursor: pointer;
       color: #b9c0c7;
+      /* Intentional small-caps tab look, matching __section-title. Our own
+         rule (wins over the reset by source order), so it's theme-independent. */
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
     .plumix-debug-bar__labels label:hover {
       background: #2c3338;
