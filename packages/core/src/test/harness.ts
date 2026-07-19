@@ -7,7 +7,8 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 import * as schema from "../db/schema/index.js";
-import { createDebugSqlLogger, traceSqlClient } from "../debug-bar/db-query.js";
+import { createDebugSqlLogger } from "../debug-bar/db-query.js";
+import { traceSqlClient } from "../debug-bar/trace-libsql.js";
 
 type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 

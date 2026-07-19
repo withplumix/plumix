@@ -4,7 +4,8 @@ import { drizzle } from "drizzle-orm/libsql";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type { EnvInput } from "../runtime/env-input.js";
 import type { DatabaseAdapter } from "../runtime/slots.js";
-import { createDebugSqlLogger, traceSqlClient } from "../debug-bar/db-query.js";
+import { createDebugSqlLogger } from "../debug-bar/db-query.js";
+import { traceSqlClient } from "../debug-bar/trace-libsql.js";
 import { resolveEnvInput } from "../runtime/env-input.js";
 
 export interface LibsqlConfig {

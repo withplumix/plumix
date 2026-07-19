@@ -9,6 +9,9 @@ export * from "./config.js";
 export * from "./context/index.js";
 export * from "./db/index.js";
 export * from "./db/schema/index.js";
+// Dev-only debug bar's query logger — exposed for runtime adapters (D1) to
+// wire into their `drizzle(...)` call behind the `PLUMIX_DEV` gate.
+export { createDebugSqlLogger } from "./debug-bar/db-query.js";
 export * from "./hooks/index.js";
 export * from "./i18n/index.js";
 export * from "./mcp/index.js";
