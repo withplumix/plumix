@@ -76,3 +76,24 @@ export function injectDemoToolbar(html: string): string {
   if (!html.includes("</body>")) return html;
   return html.replace("</body>", `${renderDemoToolbar()}</body>`);
 }
+
+/**
+ * Whether the floating demo toolbar belongs on this request's document. It's a
+ * session-holder's public-site affordance, so it's skipped for:
+ *   - cookieless traffic (the anonymous showcase) — `hasSession` is false;
+ *   - the admin (`/_plumix/*`);
+ *   - the editor's canvas iframe — that loads the entry's *public* route with
+ *     `?plumix.edit`, so it isn't under `/_plumix/*`, yet a fixed pill would
+ *     float inside the editing surface. This is the load-bearing case: without
+ *     the `plumix.edit` check the pill leaks into the visual editor.
+ */
+export function shouldInjectDemoToolbar(
+  request: Request,
+  hasSession: boolean,
+): boolean {
+  if (!hasSession) return false;
+  const url = new URL(request.url);
+  if (url.pathname.startsWith("/_plumix/")) return false;
+  if (url.searchParams.has("plumix.edit")) return false;
+  return true;
+}

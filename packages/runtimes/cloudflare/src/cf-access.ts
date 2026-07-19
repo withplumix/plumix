@@ -126,6 +126,10 @@ export function cfAccess(config: CfAccessConfig): RequestAuthenticator {
     signOutUrl(): string {
       return cfAccessLogoutUrl(config.teamDomain);
     },
+    // CF Access identity rides a request header, not the session cookie.
+    hasSession(request: Request): boolean {
+      return request.headers.has(CF_ACCESS_HEADER);
+    },
     async authenticate(request: Request, db: Db) {
       const token = request.headers.get(CF_ACCESS_HEADER);
       if (!token) return null;

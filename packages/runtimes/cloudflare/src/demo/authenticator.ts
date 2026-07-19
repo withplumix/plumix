@@ -1,6 +1,6 @@
 import type { RequestAuthenticator, User } from "plumix";
 
-import { readDemoToken } from "./session.js";
+import { hasDemoSession, readDemoToken } from "./session.js";
 
 /**
  * Identity of the demo admin. `id` is 1 to line up with the first user
@@ -43,6 +43,10 @@ export function demoAuthenticator(): RequestAuthenticator {
         updatedAt: DEMO_ADMIN_TIMESTAMP,
       };
       return Promise.resolve({ user });
+    },
+    // The demo session lives in the `plumix_demo` cookie, not `plumix_session`.
+    hasSession(request) {
+      return hasDemoSession(request);
     },
   };
 }

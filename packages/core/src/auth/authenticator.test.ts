@@ -8,6 +8,7 @@ import {
   apiTokenAuthenticator,
   chainAuthenticators,
   defaultAuthenticator,
+  requestHasSession,
   sessionAuthenticator,
 } from "./authenticator.js";
 import { SESSION_COOKIE_NAME } from "./cookies.js";
@@ -253,5 +254,79 @@ describe("RequestAuthenticator interface", () => {
       db,
     );
     expect(empty).toBeNull();
+  });
+});
+
+// `hasSession` gates whether the public-render path runs the authenticator
+// at all (see loadUserForPublicRequest) — a non-cookie guard must be able to
+// opt in, or a signed-in visitor renders as anonymous.
+const carriesReq = (headers?: HeadersInit): Request =>
+  new Request("https://cms.example/post/hello", headers ? { headers } : {});
+
+describe("hasSession", () => {
+  const req = carriesReq;
+
+  test("sessionAuthenticator carries a session iff the standard cookie is present", () => {
+    const auth = sessionAuthenticator();
+    expect(auth.hasSession?.(req())).toBe(false);
+    expect(
+      auth.hasSession?.(req({ cookie: `${SESSION_COOKIE_NAME}=abc` })),
+    ).toBe(true);
+  });
+
+  test("apiTokenAuthenticator never carries a public-render session (bearer is an API client)", () => {
+    const auth = apiTokenAuthenticator();
+    expect(auth.hasSession?.(req())).toBe(false);
+    expect(auth.hasSession?.(req({ authorization: "Bearer pl_pat_x" }))).toBe(
+      false,
+    );
+  });
+
+  test("chainAuthenticators carries a session when any member does", () => {
+    const auth = defaultAuthenticator(); // session + apiToken
+    expect(auth.hasSession?.(req())).toBe(false);
+    expect(
+      auth.hasSession?.(req({ cookie: `${SESSION_COOKIE_NAME}=abc` })),
+    ).toBe(true);
+    // A custom cookie-based guard in the chain is honored, not just the default.
+    const custom: RequestAuthenticator = {
+      authenticate: () => Promise.resolve(null),
+      hasSession: (request) => request.headers.get("cookie") === "demo=1",
+    };
+    const chained = chainAuthenticators(custom);
+    expect(chained.hasSession?.(req({ cookie: "demo=1" }))).toBe(true);
+    expect(chained.hasSession?.(req({ cookie: "other=1" }))).toBe(false);
+  });
+});
+
+describe("requestHasSession", () => {
+  const req = carriesReq;
+
+  test("delegates to a guard's own hasSession (custom cookie), not the default", () => {
+    const demoGuard: RequestAuthenticator = {
+      authenticate: () => Promise.resolve(null),
+      hasSession: (request) =>
+        (request.headers.get("cookie") ?? "").includes("plumix_demo="),
+    };
+    expect(requestHasSession(demoGuard, req({ cookie: "plumix_demo=t" }))).toBe(
+      true,
+    );
+    // The standard session cookie does NOT satisfy a guard that keys off its own.
+    expect(
+      requestHasSession(demoGuard, req({ cookie: `${SESSION_COOKIE_NAME}=t` })),
+    ).toBe(false);
+  });
+
+  test("falls back to the standard session cookie when a guard omits hasSession", () => {
+    const legacyGuard: RequestAuthenticator = {
+      authenticate: () => Promise.resolve(null),
+    };
+    expect(requestHasSession(legacyGuard, req())).toBe(false);
+    expect(
+      requestHasSession(
+        legacyGuard,
+        req({ cookie: `${SESSION_COOKIE_NAME}=t` }),
+      ),
+    ).toBe(true);
   });
 });

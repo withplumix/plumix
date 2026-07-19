@@ -13,7 +13,7 @@ import {
   demoStub,
   readDemoToken,
 } from "./session.js";
-import { injectDemoToolbar } from "./toolbar.js";
+import { injectDemoToolbar, shouldInjectDemoToolbar } from "./toolbar.js";
 import { verifyTurnstile } from "./turnstile.js";
 
 /** Subpath whose named exports (DemoDB) the generated worker re-exports. */
@@ -126,10 +126,7 @@ export function demoRuntime(
         }
 
         const response = await handle(request, env, ctx);
-        // The toolbar is a session-holder's public-site affordance: skip it on
-        // `/_plumix/*` (the admin + its preview iframe, where a fixed pill would
-        // overlap the editor chrome) and on the anonymous showcase.
-        return hasSession && !pathname.startsWith("/_plumix/")
+        return shouldInjectDemoToolbar(request, hasSession)
           ? injectToolbar(response)
           : response;
       };

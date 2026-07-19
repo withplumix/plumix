@@ -1869,6 +1869,9 @@ importers:
 
   packages/runtimes/cloudflare/playground:
     dependencies:
+      '@plumix/blocks':
+        specifier: workspace:*
+        version: link:../../../blocks
       '@plumix/plugin-blog':
         specifier: workspace:*
         version: link:../../../plugins/blog

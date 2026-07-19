@@ -3,6 +3,13 @@
 // floating toolbar, and multi-select are unit-tested there but never rendered.
 // Here the playground's same-origin canvas makes the bridge — and the real
 // geometry it reports — work end to end.
+//
+// NB: this harness mounts the editor and boots the canvas directly — it does
+// NOT go through the real render's edit gate (canEdit → resolveEditMode →
+// injectEditorBootstrap). So green here means "given a booted editor, behavior
+// works", never "the editor boots on a real render". That the gate injects the
+// runtime for an authed user is covered in core's edit-mode.render.test.ts, and
+// end to end in the demo runtime in runtime-cloudflare's demo.spec.ts.
 
 import { expect, test } from "@playwright/test";
 
