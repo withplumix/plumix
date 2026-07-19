@@ -16,7 +16,10 @@ const MAX_TABS = 16;
 function tabRules(): string {
   let out = "";
   for (let n = 1; n <= MAX_TABS; n++) {
+    // Show the checked tab's pane...
     out += `.plumix-debug-bar__radio:nth-of-type(${n}):checked ~ .plumix-debug-bar__panes > .plumix-debug-bar__pane:nth-of-type(${n}){display:block}`;
+    // ...and highlight its label so the active tab is obvious.
+    out += `.plumix-debug-bar__radio:nth-of-type(${n}):checked ~ .plumix-debug-bar__labels > label:nth-of-type(${n}){background:#1d2327;color:#fff}`;
   }
   return out;
 }
@@ -48,7 +51,10 @@ export const DEBUG_BAR_CSS =
       font-size: 12px;
       line-height: 1.5;
       color: #e6e6e6;
-      max-width: min(560px, calc(100vw - 24px));
+      /* Fixed width (not max-width) so switching tabs can't resize the bar —
+         a content-driven width shifts the anchored edges and moves the tab
+         labels out from under the cursor. */
+      width: min(440px, calc(100vw - 24px));
     }
     .plumix-debug-bar *,
     .plumix-debug-bar *::before,
@@ -76,6 +82,15 @@ export const DEBUG_BAR_CSS =
       font: inherit;
       color: inherit;
       text-align: inherit;
+      /* The font shorthand omits these — reset them so a theme's element
+         rules (e.g. label text-transform/letter-spacing) can't bleed in. */
+      text-transform: none;
+      letter-spacing: normal;
+      word-spacing: normal;
+      text-decoration: none;
+      text-indent: 0;
+      white-space: normal;
+      box-shadow: none;
     }
     .plumix-debug-bar > details {
       background: #1d2327;
@@ -95,6 +110,16 @@ export const DEBUG_BAR_CSS =
     .plumix-debug-bar summary::-webkit-details-marker {
       display: none;
     }
+    /* Toggle affordance: chevron points right when collapsed, down when open,
+       so it's clear the header opens and closes the bar. */
+    .plumix-debug-bar summary::after {
+      content: "▸";
+      float: right;
+      opacity: 0.6;
+    }
+    .plumix-debug-bar > details[open] > summary::after {
+      content: "▾";
+    }
     .plumix-debug-bar__radio {
       position: absolute;
       opacity: 0;
@@ -104,7 +129,9 @@ export const DEBUG_BAR_CSS =
       display: flex;
       flex-wrap: wrap;
       gap: 2px;
-      padding: 6px 8px 0;
+      /* 12px inset matches the summary and panes so the tabs line up;
+         roomier top padding gives the tab row space below the header. */
+      padding: 10px 12px 0;
       border-top: 1px solid #3c434a;
     }
     .plumix-debug-bar__labels label {
@@ -112,6 +139,11 @@ export const DEBUG_BAR_CSS =
       border-radius: 4px 4px 0 0;
       cursor: pointer;
       color: #b9c0c7;
+      /* Intentional small-caps tab look, matching __section-title. Our own
+         rule (wins over the reset by source order), so it's theme-independent. */
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
     .plumix-debug-bar__labels label:hover {
       background: #2c3338;
@@ -119,11 +151,24 @@ export const DEBUG_BAR_CSS =
     }
     .plumix-debug-bar__panes {
       padding: 10px 12px 12px;
-      max-height: min(60vh, 480px);
+      /* Fixed height (not max-height) so the bar doesn't grow/shrink between
+         tabs; each pane scrolls within the stable frame. */
+      height: min(50vh, 320px);
       overflow: auto;
     }
     .plumix-debug-bar__pane {
       display: none;
+    }
+    .plumix-debug-bar__section-title {
+      margin: 0 0 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #8a929a;
+    }
+    .plumix-debug-bar__error {
+      margin: 0;
+      color: #f0a5a5;
     }
     .plumix-debug-bar table {
       width: 100%;
@@ -142,7 +187,10 @@ export const DEBUG_BAR_CSS =
     }
     .plumix-debug-bar td.plumix-debug-bar__val {
       white-space: normal;
-      word-break: break-word;
+      /* Wrap long values at spaces (and break a word only if it would
+         overflow) without squeezing short cells — word-break:break-word
+         shrank the numeric columns until a value like 1.8 wrapped. */
+      overflow-wrap: break-word;
       color: #fff;
     }
     .plumix-debug-bar th {

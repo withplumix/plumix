@@ -27,11 +27,14 @@ import type {
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
+import type { DebugCollector } from "./debug.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolveMailer } from "../auth/mailer/resolve.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
+import { createDebugCollector } from "../debug-bar/collector.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
+import { NOOP_DEBUG } from "./debug.js";
 import { ContextError } from "./errors.js";
 
 const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
@@ -136,6 +139,13 @@ export interface AppContextBase<
    */
   readonly shortcodes: ShortcodeRegistry;
   readonly logger: Logger;
+  /**
+   * Request-scoped debug collector. Core and plugins record per-request data
+   * for the dev debug bar via `ctx.debug.record`/`span`. Always present: the
+   * real collector in dev, {@link NOOP_DEBUG} in prod (so call sites are safe
+   * and the debug-bar module tree-shakes out of prod builds).
+   */
+  readonly debug: DebugCollector;
   readonly auth: AuthNamespace;
   /**
    * Resolved request authenticator — same instance the dispatcher
@@ -411,6 +421,11 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     origin: args.origin ?? new URL(args.request.url).origin,
     basePath: args.basePath ?? "",
     debugBar: args.debugBar,
+    // Real collector only in dev; `process.env.PLUMIX_DEV` is Vite-empty in a
+    // build, so the prod branch keeps NOOP_DEBUG and tree-shakes the rest.
+    debug: process.env.PLUMIX_DEV
+      ? createDebugCollector(args.debugBar)
+      : NOOP_DEBUG,
     siteName: args.siteName,
   };
   // Spread plugin-contributed entries onto the base. The cast is the

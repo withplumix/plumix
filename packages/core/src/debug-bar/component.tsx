@@ -1,10 +1,28 @@
 import type { ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import type { AppContext } from "../context/app.js";
+import type { DebugPanel } from "./types.js";
 import { labelSourceText } from "../i18n/label.js";
 import { collectDebugPanels } from "./collect.js";
 import { normalizeDebugBar } from "./config.js";
 import { DEBUG_BAR_CSS } from "./styles.js";
+
+// Render each panel in isolation: a panel that throws (author logic or a child
+// component during SSR) yields a fallback instead of crashing the host page —
+// exactly the page the bar is meant to help debug.
+function renderPaneHtml(panel: DebugPanel, ctx: AppContext): string {
+  try {
+    return renderToStaticMarkup(<>{panel.render(ctx)}</>);
+  } catch (error) {
+    console.error(`[plumix] debug panel "${panel.id}" failed to render`, error);
+    return renderToStaticMarkup(
+      <p className="plumix-debug-bar__error">
+        Panel “{panel.id}” failed to render.
+      </p>,
+    );
+  }
+}
 
 /**
  * The development-only debug bar. Standalone and auth-independent (unlike the
@@ -59,9 +77,8 @@ export function PlumixDebugBar({
                 key={panel.id}
                 className="plumix-debug-bar__pane"
                 data-testid={`plumix-debug-panel-${panel.id}`}
-              >
-                {panel.render(ctx)}
-              </section>
+                dangerouslySetInnerHTML={{ __html: renderPaneHtml(panel, ctx) }}
+              />
             ))}
           </div>
         </details>

@@ -25,6 +25,40 @@ function ctxWith(
 }
 
 describe("PlumixDebugBar", () => {
+  test("isolates a panel that throws in render — bar and other panels survive", () => {
+    const hooks = new HookRegistry();
+    registerCoreDebugPanels(hooks);
+    hooks.addFilter("debug_bar:panels", (panels) => [
+      ...panels,
+      {
+        id: "boom",
+        title: "Boom",
+        order: 5,
+        render: () => {
+          throw new Error("kaboom");
+        },
+      },
+    ]);
+    const ctx = {
+      hooks,
+      request: new Request("https://cms.example/x"),
+      debugBar: true,
+      resolvedEntity: null,
+      origin: "https://cms.example",
+      basePath: "",
+      locale: { code: "en", direction: "ltr" },
+    } as unknown as AppContext;
+
+    const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctx} />);
+
+    expect(html).toContain('data-testid="plumix-debug-bar"');
+    // The throwing panel shows a fallback instead of crashing the render.
+    expect(html).toContain('data-testid="plumix-debug-panel-boom"');
+    expect(html).toContain("failed to render");
+    // A healthy sibling panel still renders.
+    expect(html).toContain('data-testid="plumix-debug-panel-request"');
+  });
+
   test("renders the bar shell with the Request panel when enabled in dev", () => {
     const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctxWith(true)} />);
 
