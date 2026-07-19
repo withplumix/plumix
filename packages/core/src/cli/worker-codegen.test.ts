@@ -19,10 +19,13 @@ describe("generateWorkerSource", () => {
     );
   });
 
-  test("opts into localhost CSRF only under vite dev (import.meta.env.DEV)", () => {
+  test("leaves the dev-CSRF opt-in to buildApp (worker passes no dev flag)", () => {
     const source = generateWorkerSource({ configModule: "../plumix.config" });
     expect(source).toContain("buildApp(config, {");
-    expect(source).toContain("devCsrfLocalhost: import.meta.env.DEV");
+    // buildApp derives the opt-in from process.env.PLUMIX_DEV; the worker must
+    // not pass it, and must not reference the old vite dev flag at all.
+    expect(source).not.toContain("devCsrfLocalhost");
+    expect(source).not.toContain("import.meta.env");
   });
 
   test("exports a fetch handler default export", () => {

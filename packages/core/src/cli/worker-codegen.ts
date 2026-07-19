@@ -23,13 +23,11 @@ export function generateWorkerSource({
     // when nothing is contributed, so this line is inert for most sites.
     'export * from "virtual:plumix/worker-exports";',
     "",
-    // vite statically replaces `import.meta.env.DEV` (true under dev,
-    // false in production builds) — see RuntimeContext.devCsrfLocalhost.
-    // Fail-closed: a bundler that leaves `import.meta.env` intact yields
-    // undefined, which buildApp coerces to false.
+    // buildApp derives the dev-CSRF opt-in from `process.env.PLUMIX_DEV` (the
+    // single dev signal the plumix Vite plugin statically replaces), so the
+    // worker no longer passes it — see RuntimeContext.devCsrfLocalhost.
     "const appPromise = buildApp(config, {",
     "  assetManifest,",
-    "  devCsrfLocalhost: import.meta.env.DEV,",
     "});",
     "let fetchHandler;",
     "let scheduledHandler;",
