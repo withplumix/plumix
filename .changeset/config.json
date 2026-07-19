@@ -21,5 +21,8 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@plumix/*-config", "@plumix/*-playground", "@plumix-examples/*"]
+  "ignore": ["@plumix/*-config", "@plumix/*-playground", "@plumix-examples/*"],
+  "___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+    "onlyUpdatePeerDependentsWhenOutOfRange": true
+  }
 }
