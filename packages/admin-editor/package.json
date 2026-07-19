@@ -1,6 +1,6 @@
 {
   "name": "@plumix/admin-editor",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "description": "Plumix visual page editor for the admin",
   "license": "MIT",
