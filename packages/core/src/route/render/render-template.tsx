@@ -31,6 +31,10 @@ import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { PlumixAdminBar } from "../../admin-bar/component.js";
 import { PlumixDebugBar } from "../../debug-bar/component.js";
+import {
+  TEMPLATE_PANEL_ID,
+  templateNodeLabel,
+} from "../../debug-bar/template-node-label.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { applyCanonical } from "../../seo/canonical.js";
 import { applyHeadMeta } from "../../seo/head-defaults.js";
@@ -92,6 +96,15 @@ export async function renderThroughTheme({
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
   const { template, slot } = pickTemplate(theme.templates, candidates);
+  // Dev-only: surface the template hierarchy resolution in the debug bar.
+  // `ctx.debug` is the no-op collector in prod, so this branch tree-shakes.
+  if (process.env.PLUMIX_DEV) {
+    ctx.debug.record(TEMPLATE_PANEL_ID, {
+      nodeLabel: templateNodeLabel(node),
+      candidates,
+      picked: slot,
+    });
+  }
   const deps = await loadTemplateDeps(
     mergeTemplateDepDeclarations(
       theme,
