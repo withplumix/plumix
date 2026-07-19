@@ -115,7 +115,9 @@ export type PlumixDispatcher = (ctx: AppContext) => Promise<Response>;
 export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
   return async (ctx) => {
     try {
-      const response = await route(app, ctx);
+      // Dev-only: the top-level Timeline span. `ctx.debug` is the no-op
+      // collector in prod, so span() is a pass-through with no timing.
+      const response = await ctx.debug.span("dispatch", () => route(app, ctx));
       // Request-end seam: fire one batched edge-cache purge for whatever
       // entry mutations this request accumulated.
       flushPurgeTags(ctx);
@@ -464,7 +466,9 @@ async function renderPublicRoute(
   const assetManifest = app.assetManifest;
   try {
     ctx = await loadUserForPublicRequest(ctx);
-    const response = await resolvePublicRouteOrFallback(app, ctx, url, match);
+    const response = await ctx.debug.span("resolve", () =>
+      resolvePublicRouteOrFallback(app, ctx, url, match),
+    );
     if (response.status === 404) {
       const html = await renderErrorThroughTheme({
         ctx,

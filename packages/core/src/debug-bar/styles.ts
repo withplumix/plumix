@@ -166,6 +166,23 @@ export const DEBUG_BAR_CSS =
          tabs; each pane scrolls within the stable frame. */
       height: min(50vh, 320px);
       overflow: auto;
+      /* Narrow, theme-matched scrollbar instead of the OS default. */
+      scrollbar-width: thin;
+      scrollbar-color: #3c434a transparent;
+    }
+    .plumix-debug-bar__panes::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .plumix-debug-bar__panes::-webkit-scrollbar-thumb {
+      background: #3c434a;
+      border-radius: 4px;
+    }
+    .plumix-debug-bar__panes::-webkit-scrollbar-thumb:hover {
+      background: #4a535b;
+    }
+    .plumix-debug-bar__panes::-webkit-scrollbar-track {
+      background: transparent;
     }
     .plumix-debug-bar__pane {
       display: none;
@@ -252,6 +269,22 @@ export const DEBUG_BAR_CSS =
     .plumix-debug-bar__candidate--picked::before {
       content: "▸ ";
       margin-left: -14px;
+    }
+    /* Timeline panel — SVG waterfall */
+    .plumix-debug-bar__timeline {
+      display: block;
+      overflow: visible;
+    }
+    .plumix-debug-bar__timeline-bar {
+      fill: #6ea8fe;
+    }
+    .plumix-debug-bar__timeline-name {
+      fill: #e6e6e6;
+      font-size: 10px;
+    }
+    .plumix-debug-bar__timeline-ms {
+      fill: #8a929a;
+      font-size: 9px;
     }
     /* Database panel — query list */
     .plumix-debug-bar__queries {

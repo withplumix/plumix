@@ -82,7 +82,14 @@ interface RenderArgs {
   readonly editMode?: EditModeDecision;
 }
 
-export async function renderThroughTheme({
+export function renderThroughTheme(args: RenderArgs): Promise<string> {
+  // Dev-only: time the render phase for the Timeline. `ctx.debug` is the no-op
+  // collector in prod, so span() is a pass-through and this tree-shakes to a
+  // plain call.
+  return args.ctx.debug.span("render", () => renderThroughThemeInner(args));
+}
+
+async function renderThroughThemeInner({
   ctx,
   theme,
   document,

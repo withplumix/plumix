@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/libsql";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type { EnvInput } from "../runtime/env-input.js";
 import type { DatabaseAdapter } from "../runtime/slots.js";
-import { createDebugSqlLogger } from "../debug-bar/db-query.js";
+import { createDebugSqlLogger, traceSqlClient } from "../debug-bar/db-query.js";
 import { resolveEnvInput } from "../runtime/env-input.js";
 
 export interface LibsqlConfig {
@@ -47,10 +47,12 @@ export function libsql(config: LibsqlConfigInput): LibsqlDatabaseAdapter {
     connect: (env, _request, schema) => {
       if (!client) {
         const resolved = resolveEnvInput(config, env as PlumixEnv);
-        client = createClient({
+        const raw = createClient({
           url: resolved.url,
           authToken: resolved.authToken,
         });
+        // Dev-only: time each query as a span for the Timeline panel.
+        client = process.env.PLUMIX_DEV ? traceSqlClient(raw) : raw;
       }
       return {
         db: drizzle(client, {
