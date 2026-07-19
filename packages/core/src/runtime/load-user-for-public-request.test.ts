@@ -72,6 +72,56 @@ describe("loadUserForPublicRequest", () => {
     expect(authenticate).toHaveBeenCalledTimes(1);
     expect(result.user).toEqual(authenticatedUser);
   });
+
+  // Regression (demo editor was dead): a guard that carries its session by a
+  // non-standard signal must still run on public renders — the old gate keyed
+  // off the `plumix_session` cookie, so a demo visitor rendered as anonymous
+  // (canEdit false → no editor runtime injected → no canvas bridge).
+  test("runs a custom authenticator that carries its session without the standard cookie", async () => {
+    const authenticate = vi.fn().mockResolvedValue({
+      user: authenticatedUser,
+      tokenScopes: null,
+    });
+    const ctx = {
+      // No `plumix_session` cookie — only the custom guard's own signal.
+      request: new Request("https://example.com/post/hello?plumix.edit", {
+        headers: { Cookie: "plumix_demo=session-token" },
+      }),
+      db: {},
+      user: null,
+      plugins: createPluginRegistry(),
+      i18n,
+      authenticator: {
+        authenticate,
+        hasSession: (request: Request) =>
+          (request.headers.get("cookie") ?? "").includes("plumix_demo="),
+      },
+    } as unknown as AppContext;
+
+    const result = await loadUserForPublicRequest(ctx);
+
+    expect(authenticate).toHaveBeenCalledTimes(1);
+    expect(result.user).toEqual(authenticatedUser);
+  });
+
+  test("skips a custom authenticator whose hasSession returns false (no wasted auth on anonymous traffic)", async () => {
+    const authenticate = vi.fn();
+    const ctx = {
+      request: new Request("https://example.com/post/hello", {
+        headers: { Cookie: "plumix_demo=session-token" },
+      }),
+      user: null,
+      authenticator: {
+        authenticate,
+        hasSession: () => false,
+      },
+    } as unknown as AppContext;
+
+    const result = await loadUserForPublicRequest(ctx);
+
+    expect(result).toBe(ctx);
+    expect(authenticate).not.toHaveBeenCalled();
+  });
 });
 
 describe("dispatchPublicRoute → loadUserForPublicRequest wiring", () => {

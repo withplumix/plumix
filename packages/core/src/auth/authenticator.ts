@@ -51,6 +51,19 @@ export interface AuthResult {
 export interface RequestAuthenticator {
   authenticate(request: Request, db: Db): Promise<AuthResult | null>;
   /**
+   * Optional. Does this request carry a credential this authenticator would
+   * resolve to a browser session? Public renders consult it to skip
+   * authentication for anonymous traffic without coupling to the default
+   * session cookie — a custom guard (demo token, Cloudflare Access JWT, …)
+   * authenticates by its own signal and must be given the chance to load its
+   * user, or capability-gated render decisions (e.g. the visual-editor gate)
+   * silently see an anonymous request. Omit it and the default applies: the
+   * standard `plumix_session` cookie is present. Returning `false` opts a guard
+   * out of public-render authentication entirely (e.g. bearer-token API auth,
+   * which is not a browser session and must not bump `lastUsedAt` on every GET).
+   */
+  hasSession?(request: Request): boolean;
+  /**
    * Optional. Where the user should land after signing out — surfaced
    * to the admin client by `/_plumix/auth/signout` as `redirectTo`.
    * Returning null (or omitting the method) keeps the default
@@ -88,7 +101,25 @@ export function sessionAuthenticator(): RequestAuthenticator {
       if (!validated) return null;
       return { user: validated.user };
     },
+    hasSession(request) {
+      return readSessionCookie(request) !== null;
+    },
   };
+}
+
+/**
+ * Whether a request carries a session this authenticator would resolve on a
+ * public render. Defaults to "the standard `plumix_session` cookie is present"
+ * for a guard that doesn't declare its own signal, preserving the historical
+ * behaviour for authenticators written before this predicate existed.
+ */
+export function requestHasSession(
+  authenticator: RequestAuthenticator,
+  request: Request,
+): boolean {
+  return (
+    authenticator.hasSession?.(request) ?? readSessionCookie(request) !== null
+  );
 }
 
 /**
@@ -118,6 +149,12 @@ export function apiTokenAuthenticator(): RequestAuthenticator {
         tokenScopes: validated.token.scopes ?? null,
       };
     },
+    // A bearer token is an API client, not a browser session: opt out of
+    // public-render authentication so a cross-site GET navigation carrying an
+    // Authorization header doesn't bump the token's `lastUsedAt` on every hit.
+    hasSession() {
+      return false;
+    },
   };
 }
 
@@ -142,6 +179,9 @@ export function chainAuthenticators(
         if (result) return result;
       }
       return null;
+    },
+    hasSession(request) {
+      return authenticators.some((auth) => requestHasSession(auth, request));
     },
     signOutUrl(): string | null {
       for (const auth of authenticators) {

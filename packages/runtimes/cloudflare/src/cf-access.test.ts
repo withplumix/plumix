@@ -90,6 +90,26 @@ describe("cfAccess — signOutUrl", () => {
   });
 });
 
+describe("cfAccess — hasSession", () => {
+  // Regression: CF Access identity rides the `cf-access-jwt-assertion` header,
+  // not the standard session cookie. If the guard didn't declare it carries a
+  // session, public renders would skip authentication and the visual editor
+  // (a capability-gated render) would never boot for a CF Access operator.
+  test("carries a session when the CF Access header is present", () => {
+    const guard = cfAccess({
+      teamDomain: TEAM_DOMAIN,
+      audience: AUDIENCE,
+      defaultRole: "editor",
+    });
+    const withHeader = new Request("https://cms.example/post/hello", {
+      headers: { "cf-access-jwt-assertion": "any-token" },
+    });
+    const without = new Request("https://cms.example/post/hello");
+    expect(guard.hasSession?.(withHeader)).toBe(true);
+    expect(guard.hasSession?.(without)).toBe(false);
+  });
+});
+
 describe("cfAccessLogoutUrl", () => {
   test("composes the canonical CF Access logout URL", () => {
     expect(cfAccessLogoutUrl(TEAM_DOMAIN)).toBe(

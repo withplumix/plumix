@@ -1,11 +1,14 @@
 import type { AppContext } from "../context/app.js";
-import { readSessionCookie } from "../auth/cookies.js";
+import { requestHasSession } from "../auth/authenticator.js";
 import { withUser } from "../context/app.js";
 
 export async function loadUserForPublicRequest(
   ctx: AppContext,
 ): Promise<AppContext> {
-  if (readSessionCookie(ctx.request) === null) {
+  // Skip authentication for anonymous traffic, but let the configured guard
+  // decide what "anonymous" means — a custom authenticator carries its session
+  // by a different signal than the default cookie.
+  if (!requestHasSession(ctx.authenticator, ctx.request)) {
     return ctx;
   }
   const result = await ctx.authenticator.authenticate(ctx.request, ctx.db);

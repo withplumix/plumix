@@ -38,4 +38,17 @@ describe("demoAuthenticator", () => {
     );
     expect(result).toBeNull();
   });
+
+  // Regression: the demo session lives in the `plumix_demo` cookie, so the guard
+  // must declare it carries a session — otherwise public renders (the editor
+  // canvas iframe) skip authentication and the visitor edits nothing.
+  test("hasSession follows the demo cookie, not the standard session cookie", () => {
+    const auth = demoAuthenticator();
+    expect(auth.hasSession?.(withSession)).toBe(true);
+    expect(auth.hasSession?.(withoutSession)).toBe(false);
+    const standardOnly = new Request("https://demo.example/post/hello", {
+      headers: { cookie: "plumix_session=abc" },
+    });
+    expect(auth.hasSession?.(standardOnly)).toBe(false);
+  });
 });
