@@ -19,24 +19,7 @@ export function collectDebugPanels(
   ctx: AppContext,
   disabled: ReadonlySet<string>,
 ): readonly DebugPanel[] {
-  let panels: readonly DebugPanel[] = [];
-  for (const { fn, plugin } of hooks.getFilterHandlers("debug_bar:panels")) {
-    try {
-      const next = fn(panels, ctx);
-      if (Array.isArray(next)) {
-        panels = next;
-      } else {
-        console.error(
-          `[plumix] debug_bar:panels handler returned non-array plugin=${plugin ?? "core"}; contribution discarded`,
-        );
-      }
-    } catch (error) {
-      console.error(
-        `[plumix] debug_bar:panels handler failed plugin=${plugin ?? "core"}`,
-        error,
-      );
-    }
-  }
+  const panels = hooks.applyFilterIsolated("debug_bar:panels", [], ctx);
 
   const byId = new Map<string, DebugPanel>();
   for (const p of panels) {

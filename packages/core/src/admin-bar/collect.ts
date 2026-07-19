@@ -5,24 +5,7 @@ export function collectAdminBarNodes(
   hooks: HookExecutor,
   ctx: BarRenderContext,
 ): readonly AdminBarNode[] {
-  let nodes: readonly AdminBarNode[] = [];
-  for (const { fn, plugin } of hooks.getFilterHandlers("admin_bar:nodes")) {
-    try {
-      const next = fn(nodes, ctx);
-      if (Array.isArray(next)) {
-        nodes = next;
-      } else {
-        console.error(
-          `[plumix] admin_bar:nodes handler returned non-array plugin=${plugin ?? "core"}; contribution discarded`,
-        );
-      }
-    } catch (error) {
-      console.error(
-        `[plumix] admin_bar:nodes handler failed plugin=${plugin ?? "core"}`,
-        error,
-      );
-    }
-  }
+  const nodes = hooks.applyFilterIsolated("admin_bar:nodes", [], ctx);
   return dedupeById(nodes);
 }
 

@@ -46,10 +46,24 @@ export interface HookExecutor {
     ...rest: FilterRest<TName>
   ): FilterInput<TName>;
   /**
+   * Synchronous array-accumulating filter pipeline with per-handler error
+   * isolation: a handler that throws or returns a non-array is logged and
+   * skipped, and the chain continues from the last good value. Used by the
+   * collector surfaces (admin bar, debug bar) that gather contributions and
+   * must not let one misbehaving plugin take down the whole bar. Only valid
+   * for array-valued filters — the runtime treats a non-array return as the
+   * skip signal, so a scalar filter's every return would be discarded.
+   */
+  applyFilterIsolated<TName extends FilterName>(
+    name: TName,
+    seed: FilterInput<TName>,
+    ...rest: FilterRest<TName>
+  ): FilterInput<TName>;
+  /**
    * Sorted snapshot of a filter's registered handlers — for surfaces that
-   * want full per-handler control (try/catch boundary, return-shape
-   * validation, custom accumulator) instead of the linear pipeline that
-   * `applyFilterSync` provides. Admin-bar is the first consumer.
+   * run the handlers themselves rather than as an accumulating pipeline.
+   * `admin-search` is the consumer: it fans the handlers out in parallel
+   * (`Promise.all`) instead of threading one result into the next.
    */
   getFilterHandlers<TName extends FilterName>(
     name: TName,
@@ -157,6 +171,36 @@ export class HookRegistry implements HookExecutor {
         throw HookExecutionError.asyncHandlerInSyncFilter({ name });
       }
       current = next;
+    }
+    return current as FilterInput<TName>;
+  }
+
+  applyFilterIsolated<TName extends FilterName>(
+    name: TName,
+    seed: FilterInput<TName>,
+    ...rest: FilterRest<TName>
+  ): FilterInput<TName> {
+    const entries = this.#filters.get(name);
+    if (!entries || entries.length === 0) return seed;
+
+    const sorted = sortEntries(entries);
+    let current: unknown = seed;
+    for (const entry of sorted) {
+      try {
+        const next = entry.fn(current, ...(rest as unknown[]));
+        if (Array.isArray(next)) {
+          current = next;
+        } else {
+          console.error(
+            `[plumix] ${name} handler returned non-array plugin=${entry.plugin ?? "core"}; contribution discarded`,
+          );
+        }
+      } catch (error) {
+        console.error(
+          `[plumix] ${name} handler failed plugin=${entry.plugin ?? "core"}`,
+          error,
+        );
+      }
     }
     return current as FilterInput<TName>;
   }

@@ -7,17 +7,7 @@
 // theme element selectors — not airtight, but enough for a dev tool. Zero-JS:
 // a native <details> toggles the panel and radio inputs drive the tabs.
 
-// No-op tag for editor syntax-highlighting + stylelint (see admin-bar/styles).
-function css(
-  strings: TemplateStringsArray,
-  ...values: readonly string[]
-): string {
-  let out = strings[0] ?? "";
-  for (let i = 0; i < values.length; i++) {
-    out += values[i] + (strings[i + 1] ?? "");
-  }
-  return out;
-}
+import { css } from "../css-tag.js";
 
 // Upper bound on pure-CSS tab wiring. Panels beyond this still render but
 // their tab won't toggle; core ships far fewer than this.
