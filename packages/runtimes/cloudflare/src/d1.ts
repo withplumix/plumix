@@ -4,7 +4,11 @@ import type {
   RequestScopedDbArgs,
 } from "plumix";
 import { drizzle } from "drizzle-orm/d1";
-import { isSecureRequest, readSessionCookie } from "plumix";
+import {
+  createDebugSqlLogger,
+  isSecureRequest,
+  readSessionCookie,
+} from "plumix";
 
 import {
   buildBookmarkCookie,
@@ -44,7 +48,12 @@ export function d1(config: D1Config): D1DatabaseAdapter {
     requiredBindings: [config.binding],
     connect: (env, _request, schema) => {
       const binding = getBinding(env, config.binding);
-      const db = drizzle(binding, { schema, casing: "snake_case" });
+      const db = drizzle(binding, {
+        schema,
+        casing: "snake_case",
+        // Dev-only: feed the debug bar's Database panel. Tree-shaken in prod.
+        logger: process.env.PLUMIX_DEV ? createDebugSqlLogger() : undefined,
+      });
       return { db };
     },
     connectRequest: sessionEnabled
@@ -88,6 +97,8 @@ function connectRequestScoped(
   const db = drizzle(sessionAsBinding, {
     schema: args.schema,
     casing: "snake_case",
+    // Dev-only: feed the debug bar's Database panel. Tree-shaken in prod.
+    logger: process.env.PLUMIX_DEV ? createDebugSqlLogger() : undefined,
   });
 
   const secure = isSecureRequest(args.request);

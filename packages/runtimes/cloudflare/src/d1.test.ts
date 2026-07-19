@@ -1,9 +1,12 @@
+import type { SQL } from "drizzle-orm";
 import type {
   DatabaseAdapter,
   RequestScopedDb,
   RequestScopedDbArgs,
 } from "plumix";
-import { describe, expect, test } from "vitest";
+import { sql } from "drizzle-orm";
+import { requestStore } from "plumix";
+import { afterEach, describe, expect, test } from "vitest";
 
 import { d1 } from "./d1.js";
 
@@ -80,6 +83,63 @@ describe("d1() adapter — session config", () => {
   test("session: 'primary-first' → exposes connectRequest", () => {
     const adapter = d1({ binding: "DB", session: "primary-first" });
     expect(typeof adapter.connectRequest).toBe("function");
+  });
+});
+
+// A minimal D1 binding that lets drizzle prepare/bind/run a query so the
+// dev-gated logger fires. Returns empty result sets.
+function loggingBinding(): D1Database {
+  const stmt = {
+    bind: () => stmt,
+    run: () => Promise.resolve({ results: [], success: true, meta: {} }),
+    all: () => Promise.resolve({ results: [], success: true, meta: {} }),
+    first: () => Promise.resolve(null),
+    raw: () => Promise.resolve([]),
+  };
+  return { prepare: () => stmt } as unknown as D1Database;
+}
+
+// Runs one query through a freshly connected d1 adapter inside a request whose
+// debug collector captures whatever the drizzle logger records to the database
+// bucket. Toggle PLUMIX_DEV in the caller to exercise the dev gate.
+async function recordQueriesForOneRun(): Promise<unknown[]> {
+  const recorded: unknown[] = [];
+  const ctx = {
+    debug: {
+      record: (namespace: string, entry: unknown) => {
+        if (namespace === "database") recorded.push(entry);
+      },
+    },
+  };
+  const db = d1({ binding: "DB" }).connect(
+    { DB: loggingBinding() },
+    new Request("https://cms.example"),
+    {},
+  ).db as { run(query: SQL): Promise<unknown> };
+
+  await requestStore.run(ctx as never, async () => {
+    await db.run(sql`select 1`);
+  });
+  return recorded;
+}
+
+describe("d1() adapter — debug bar query logging", () => {
+  const original = process.env.PLUMIX_DEV;
+  afterEach(() => {
+    if (original === undefined) delete process.env.PLUMIX_DEV;
+    else process.env.PLUMIX_DEV = original;
+  });
+
+  test("records queries to the request debug collector when PLUMIX_DEV is set", async () => {
+    process.env.PLUMIX_DEV = "1";
+    expect(await recordQueriesForOneRun()).toEqual([
+      { sql: "select 1", params: [] },
+    ]);
+  });
+
+  test("records nothing when PLUMIX_DEV is unset", async () => {
+    delete process.env.PLUMIX_DEV;
+    expect(await recordQueriesForOneRun()).toEqual([]);
   });
 });
 
