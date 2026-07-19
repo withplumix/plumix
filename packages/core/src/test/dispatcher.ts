@@ -38,6 +38,7 @@ import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
 import { plumix } from "../config.js";
 import { createAppContext } from "../context/app.js";
+import { requestStore } from "../context/stores.js";
 import { buildApp } from "../runtime/app.js";
 import { createPlumixDispatcher } from "../runtime/dispatcher.js";
 import { defaultTestTheme } from "./default-theme.js";
@@ -288,7 +289,10 @@ export async function createDispatcherHarness(
         request,
         user,
       );
-      return dispatcher(ctx);
+      // Mirror the runtime adapter, which runs dispatch inside the request
+      // store so `tryGetContext()`-based features (DB logging, debug spans,
+      // audit-log) see the context.
+      return requestStore.run(ctx, () => dispatcher(ctx));
     },
     fetch: async (path, fetchOptions = {}) => {
       const request = await buildRequest(db, path, fetchOptions);
@@ -302,7 +306,7 @@ export async function createDispatcherHarness(
         request,
         fetchOptions.as ?? null,
       );
-      const response = await dispatcher(ctx);
+      const response = await requestStore.run(ctx, () => dispatcher(ctx));
       return new TestResponse(response);
     },
     authenticateRequest: async (request, userId) => {

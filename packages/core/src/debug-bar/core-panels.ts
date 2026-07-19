@@ -4,6 +4,7 @@ import { appPanel } from "./panels/app.js";
 import { databasePanel } from "./panels/database.js";
 import { requestPanel } from "./panels/request.js";
 import { templatePanel } from "./panels/template.js";
+import { timelinePanel } from "./panels/timeline.js";
 
 /**
  * Registers core's built-in debug panels. Wired at `buildApp` time behind
@@ -18,6 +19,7 @@ export function registerCoreDebugPanels(hooks: HookRegistry): void {
       requestPanel,
       templatePanel,
       databasePanel,
+      timelinePanel,
       appPanel,
     ],
     { plugin: "core", priority: 10 },

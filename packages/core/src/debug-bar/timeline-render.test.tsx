@@ -14,14 +14,14 @@ const blogPlugin = definePlugin("blog", (ctx) => {
 
 const theme = defineTheme({ templates: { index: () => null } });
 
-describe("debug bar Database panel (end to end)", () => {
+describe("debug bar Timeline panel (end to end)", () => {
   const original = process.env.PLUMIX_DEV;
   afterEach(() => {
     if (original === undefined) delete process.env.PLUMIX_DEV;
     else process.env.PLUMIX_DEV = original;
   });
 
-  test("surfaces the queries a real page render ran", async () => {
+  test("records dispatch, resolve, render, and database spans for a real render", async () => {
     process.env.PLUMIX_DEV = "1";
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
@@ -38,11 +38,12 @@ describe("debug bar Database panel (end to end)", () => {
     const res = await h.dispatch(new Request("https://cms.example/post/hello"));
     const html = await res.text();
 
-    expect(html).toContain('data-testid="plumix-debug-panel-database"');
-    // The resolve step queried the DB, so a real query row renders. Assert on
-    // rendered SQL content (table + column names) — every panel CSS class is in
-    // the inlined stylesheet, so only dynamic query text is a trustworthy signal.
-    expect(html).toContain("entries");
-    expect(html).toContain("author_id");
+    expect(html).toContain('data-testid="plumix-debug-panel-timeline"');
+    // The waterfall renders the phase spans and at least one timed query.
+    expect(html).toContain("<svg");
+    expect(html).toContain("dispatch");
+    expect(html).toContain("resolve");
+    expect(html).toContain("render");
+    expect(html).toContain("db: select");
   });
 });
