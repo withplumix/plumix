@@ -1301,6 +1301,8 @@ export interface RegisteredShortcode {
 }
 
 export interface PluginRegistry {
+  /** Ids of the installed plugins, in registration order. */
+  readonly pluginIds: readonly string[];
   readonly entryTypes: ReadonlyMap<string, RegisteredEntryType>;
   readonly termTaxonomies: ReadonlyMap<string, RegisteredTermTaxonomy>;
   readonly entryMetaBoxes: ReadonlyMap<string, RegisteredEntryMetaBox>;
@@ -1328,6 +1330,7 @@ export interface PluginRegistry {
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
+  readonly pluginIds: string[];
   readonly entryTypes: Map<string, RegisteredEntryType>;
   readonly termTaxonomies: Map<string, RegisteredTermTaxonomy>;
   readonly entryMetaBoxes: Map<string, RegisteredEntryMetaBox>;
@@ -1356,6 +1359,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
 
 export function createPluginRegistry(): MutablePluginRegistry {
   return {
+    pluginIds: [],
     entryTypes: new Map(),
     termTaxonomies: new Map(),
     entryMetaBoxes: new Map(),

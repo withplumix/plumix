@@ -21,6 +21,8 @@ function ctxWith(
     origin: "https://cms.example",
     basePath: "",
     locale: { code: "en", direction: "ltr" },
+    user: null,
+    tokenScopes: null,
   } as unknown as AppContext;
 }
 
@@ -47,6 +49,8 @@ describe("PlumixDebugBar", () => {
       origin: "https://cms.example",
       basePath: "",
       locale: { code: "en", direction: "ltr" },
+      user: null,
+      tokenScopes: null,
     } as unknown as AppContext;
 
     const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctx} />);

@@ -42,6 +42,7 @@ export async function installPlugins({
       });
     }
     seenIds.add(descriptor.id);
+    registry.pluginIds.push(descriptor.id);
   }
 
   const pluginExtensions = new Map<string, ContextExtensionEntry>();

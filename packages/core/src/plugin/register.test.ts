@@ -33,6 +33,23 @@ const examplePost = (overrides: Partial<NewEntry> = {}): NewEntry => ({
 });
 
 describe("installPlugins", () => {
+  test("records the installed plugin ids on the registry", async () => {
+    const hooks = new HookRegistry();
+    const { registry } = await installPlugins({
+      hooks,
+      plugins: [
+        definePlugin("alpha", () => {
+          // id-only plugin; ordering is what this test asserts
+        }),
+        definePlugin("beta", () => {
+          // id-only plugin
+        }),
+      ],
+    });
+
+    expect(registry.pluginIds).toEqual(["alpha", "beta"]);
+  });
+
   test("auto-prefixes plugin-registered filters with the plugin id", async () => {
     const hooks = new HookRegistry();
     const seo = definePlugin("seo", (ctx) => {
