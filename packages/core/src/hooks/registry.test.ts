@@ -13,6 +13,10 @@ declare module "./types.js" {
     };
     "test:passthrough": (value: string) => string;
     "test:with_rest": (value: number, multiplier: number) => number;
+    "test:isolated": (
+      value: readonly number[],
+      bump: number,
+    ) => readonly number[];
   }
   interface ActionRegistry {
     "test:fired": () => void;
@@ -123,6 +127,101 @@ describe("applyFilterSync", () => {
     expect(() => registry.applyFilterSync("test:passthrough", "x")).toThrow(
       HookExecutionError,
     );
+  });
+});
+
+describe("applyFilterIsolated", () => {
+  test("returns the seed unchanged when no filters are registered", () => {
+    const registry = new HookRegistry();
+    const seed = [1, 2];
+    expect(registry.applyFilterIsolated("test:isolated", seed, 0)).toBe(seed);
+  });
+
+  test("accumulates through handlers in priority order", () => {
+    const registry = new HookRegistry();
+    registry.addFilter("test:isolated", (v) => [...v, 100], { priority: 100 });
+    registry.addFilter("test:isolated", (v) => [...v, 50], { priority: 50 });
+    expect(registry.applyFilterIsolated("test:isolated", [], 0)).toEqual([
+      50, 100,
+    ]);
+  });
+
+  test("passes rest args to each handler", () => {
+    const registry = new HookRegistry();
+    registry.addFilter("test:isolated", (v, bump) => [...v, bump]);
+    registry.addFilter("test:isolated", (v, bump) => [...v, bump * 2]);
+    expect(registry.applyFilterIsolated("test:isolated", [], 7)).toEqual([
+      7, 14,
+    ]);
+  });
+
+  test("isolates a throwing handler so later handlers still run", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      /* silence */
+    });
+    try {
+      const registry = new HookRegistry();
+      registry.addFilter("test:isolated", (v) => [...v, 1], { plugin: "a" });
+      registry.addFilter(
+        "test:isolated",
+        () => {
+          throw new Error("boom");
+        },
+        { plugin: "blowup" },
+      );
+      registry.addFilter("test:isolated", (v) => [...v, 2], { plugin: "b" });
+
+      expect(registry.applyFilterIsolated("test:isolated", [], 0)).toEqual([
+        1, 2,
+      ]);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy.mock.calls[0]?.[0]).toContain("test:isolated");
+      expect(errorSpy.mock.calls[0]?.[0]).toContain("plugin=blowup");
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  test("discards a non-array return and continues with the prior state", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      /* silence */
+    });
+    try {
+      const registry = new HookRegistry();
+      registry.addFilter("test:isolated", (v) => [...v, 1], { plugin: "a" });
+      registry.addFilter(
+        "test:isolated",
+        (() => "nope") as unknown as FilterFn<"test:isolated">,
+        { plugin: "bad" },
+      );
+      registry.addFilter("test:isolated", (v) => [...v, 2], { plugin: "b" });
+
+      expect(registry.applyFilterIsolated("test:isolated", [], 0)).toEqual([
+        1, 2,
+      ]);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy.mock.calls[0]?.[0]).toContain("non-array");
+      expect(errorSpy.mock.calls[0]?.[0]).toContain("plugin=bad");
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  test("labels a pluginless handler as core in the error message", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      /* silence */
+    });
+    try {
+      const registry = new HookRegistry();
+      registry.addFilter("test:isolated", () => {
+        throw new Error("boom");
+      });
+
+      registry.applyFilterIsolated("test:isolated", [], 0);
+      expect(errorSpy.mock.calls[0]?.[0]).toContain("plugin=core");
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });
 

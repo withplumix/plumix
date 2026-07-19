@@ -6,20 +6,7 @@
 // rendering falls through `system-ui` to the OS UI font; missing-glyph
 // fallback is the browser's responsibility.
 
-// No-op tag — the tooling marker that lets vscode-styled-components +
-// stylelint syntax-highlight + lint the CSS source. CSS Modules don't fit
-// because the bar is built with tsc-only and emits its CSS inline in the
-// SSR response, not as a separate stylesheet request.
-function css(
-  strings: TemplateStringsArray,
-  ...values: readonly string[]
-): string {
-  let out = strings[0] ?? "";
-  for (let i = 0; i < values.length; i++) {
-    out += values[i] + (strings[i + 1] ?? "");
-  }
-  return out;
-}
+import { css } from "../css-tag.js";
 
 export const ADMIN_BAR_CSS = css`
   .plumix-admin-bar {
