@@ -1,4 +1,6 @@
-export type DebugBarPosition =
+// Local: referenced only by DebugBarInput/NormalizedDebugBar in this file.
+// Users write the position as a string literal, so it needs no public name.
+type DebugBarPosition =
   "bottom-right" | "bottom-left" | "top-right" | "top-left";
 
 export type DebugBarInput =
