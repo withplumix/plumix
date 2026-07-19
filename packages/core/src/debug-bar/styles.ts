@@ -51,7 +51,10 @@ export const DEBUG_BAR_CSS =
       font-size: 12px;
       line-height: 1.5;
       color: #e6e6e6;
-      max-width: min(560px, calc(100vw - 24px));
+      /* Fixed width (not max-width) so switching tabs can't resize the bar —
+         a content-driven width shifts the anchored edges and moves the tab
+         labels out from under the cursor. */
+      width: min(440px, calc(100vw - 24px));
     }
     .plumix-debug-bar *,
     .plumix-debug-bar *::before,
@@ -146,7 +149,9 @@ export const DEBUG_BAR_CSS =
     }
     .plumix-debug-bar__panes {
       padding: 10px 12px 12px;
-      max-height: min(60vh, 480px);
+      /* Fixed height (not max-height) so the bar doesn't grow/shrink between
+         tabs; each pane scrolls within the stable frame. */
+      height: min(50vh, 320px);
       overflow: auto;
     }
     .plumix-debug-bar__pane {
@@ -180,7 +185,10 @@ export const DEBUG_BAR_CSS =
     }
     .plumix-debug-bar td.plumix-debug-bar__val {
       white-space: normal;
-      word-break: break-word;
+      /* Wrap long values at spaces (and break a word only if it would
+         overflow) without squeezing short cells — word-break:break-word
+         shrank the numeric columns until a value like 1.8 wrapped. */
+      overflow-wrap: break-word;
       color: #fff;
     }
     .plumix-debug-bar th {
