@@ -1,5 +1,6 @@
 import type { HookRegistry } from "../hooks/registry.js";
 import type { DebugPanel } from "./types.js";
+import { appPanel } from "./panels/app.js";
 import { databasePanel } from "./panels/database.js";
 import { requestPanel } from "./panels/request.js";
 import { templatePanel } from "./panels/template.js";
@@ -17,6 +18,7 @@ export function registerCoreDebugPanels(hooks: HookRegistry): void {
       requestPanel,
       templatePanel,
       databasePanel,
+      appPanel,
     ],
     { plugin: "core", priority: 10 },
   );

@@ -34,12 +34,14 @@ export const templatePanel: DebugPanel = {
     }
     return (
       <>
-        <DebugKV
-          rows={[
-            { label: "Resolved", value: resolution.nodeLabel },
-            { label: "Matched", value: resolution.picked },
-          ]}
-        />
+        <DebugSection title="Resolution">
+          <DebugKV
+            rows={[
+              { label: "Resolved", value: resolution.nodeLabel },
+              { label: "Matched", value: resolution.picked },
+            ]}
+          />
+        </DebugSection>
         <DebugSection title="Candidates">
           <ol className="plumix-debug-bar__candidates">
             {resolution.candidates.map((candidate) => (

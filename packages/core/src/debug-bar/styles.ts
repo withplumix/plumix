@@ -74,7 +74,10 @@ export const DEBUG_BAR_CSS =
     .plumix-debug-bar tbody,
     .plumix-debug-bar tr,
     .plumix-debug-bar th,
-    .plumix-debug-bar td {
+    .plumix-debug-bar td,
+    .plumix-debug-bar dl,
+    .plumix-debug-bar dt,
+    .plumix-debug-bar dd {
       margin: 0;
       padding: 0;
       border: 0;
@@ -155,7 +158,10 @@ export const DEBUG_BAR_CSS =
       color: #fff;
     }
     .plumix-debug-bar__panes {
-      padding: 10px 12px 12px;
+      /* Small horizontal inset so cards sit just off the bar edge; the card's
+         own padding adds the rest, landing content text at 12px — flush with
+         the summary title and tab row above. */
+      padding: 10px 4px 12px;
       /* Fixed height (not max-height) so the bar doesn't grow/shrink between
          tabs; each pane scrolls within the stable frame. */
       height: min(50vh, 320px);
@@ -170,6 +176,30 @@ export const DEBUG_BAR_CSS =
       text-transform: uppercase;
       letter-spacing: 0.04em;
       color: #8a929a;
+    }
+    /* Key/value description list — a fixed first column so every value lines
+       up the same distance in, across all sections. */
+    .plumix-debug-bar__kv {
+      display: grid;
+      grid-template-columns: 104px 1fr;
+      gap: 3px 8px;
+      align-items: baseline;
+    }
+    .plumix-debug-bar__kv dt {
+      color: #8a929a;
+    }
+    .plumix-debug-bar__kv dd {
+      color: #fff;
+      overflow-wrap: anywhere;
+    }
+    /* Group each section as a subtle card. */
+    .plumix-debug-bar__pane > section {
+      background: #23282f;
+      border-radius: 6px;
+      padding: 8px;
+    }
+    .plumix-debug-bar__pane > section + section {
+      margin-top: 8px;
     }
     .plumix-debug-bar__error {
       margin: 0;

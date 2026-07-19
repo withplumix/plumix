@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
+import { Fragment } from "react";
 
 /**
  * Presentational primitives shared by core and plugin debug panels so every
  * panel reads uniformly. Panels may drop to raw markup, but these give them
  * the bar's look for free: `DebugSection` groups a titled block, `DebugKV` is
- * the two-column key/value table, `DebugTable` a columnar list.
+ * the key/value description list, `DebugTable` a columnar list.
  */
 
 export function DebugSection({
@@ -34,17 +35,17 @@ export function DebugKV({
 }: {
   readonly rows: readonly DebugKVRow[];
 }): ReactNode {
+  // A description list is the semantic fit for key/value pairs; a fixed-column
+  // grid (in CSS) aligns every value the same distance in across sections.
   return (
-    <table>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.label}>
-            <th scope="row">{row.label}</th>
-            <td className="plumix-debug-bar__val">{row.value}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <dl className="plumix-debug-bar__kv">
+      {rows.map((row) => (
+        <Fragment key={row.label}>
+          <dt>{row.label}</dt>
+          <dd>{row.value}</dd>
+        </Fragment>
+      ))}
+    </dl>
   );
 }
 
