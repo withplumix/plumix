@@ -14,6 +14,7 @@ import type { Mailer } from "../auth/mailer/types.js";
 import type { KnownCapability } from "../auth/rbac.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
+import type { DebugBarInput } from "../debug-bar/config.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
@@ -220,6 +221,12 @@ export interface AppContextBase<
    */
   readonly basePath: string;
   /**
+   * Raw development-only debug-bar config, carried through from
+   * `config.debugBar` (like {@link mcp}) as inert data. Interpreted only by
+   * the dev-gated debug-bar module, which is tree-shaken from prod builds.
+   */
+  readonly debugBar?: DebugBarInput;
+  /**
    * Operator-set site name from `auth.magicLink.siteName`, used as
    * the human-friendly label in mailer subjects ("Confirm your email
    * for {siteName}"). Undefined when magic-link isn't configured —
@@ -275,6 +282,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly tokenScopes?: readonly string[] | null;
   readonly origin?: string;
   readonly basePath?: string;
+  readonly debugBar?: DebugBarInput;
   readonly siteName?: string;
   readonly logger?: Logger;
   readonly defer?: DeferFn;
@@ -402,6 +410,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     // outgoing email are stable across worker geos.
     origin: args.origin ?? new URL(args.request.url).origin,
     basePath: args.basePath ?? "",
+    debugBar: args.debugBar,
     siteName: args.siteName,
   };
   // Spread plugin-contributed entries onto the base. The cast is the
