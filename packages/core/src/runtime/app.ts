@@ -204,11 +204,14 @@ export interface PlumixApp {
 interface RuntimeContext {
   readonly assetManifest?: AssetManifest;
   /**
-   * Dev-server opt-in: treat any localhost origin as same-origin for
-   * CSRF. `plumix dev` serves through vite on a port the user's config
-   * cannot reliably predict (5173 by default, auto-incremented when
-   * taken), so the generated worker passes `import.meta.env.DEV` here —
-   * statically false in production builds.
+   * Dev-server opt-in: treat any localhost origin as same-origin for CSRF.
+   * `plumix dev` serves through vite on a port the user's config cannot
+   * reliably predict (5173 by default, auto-incremented when taken).
+   *
+   * Defaults to `process.env.PLUMIX_DEV === "1"` — the single dev signal,
+   * which the plumix Vite plugin statically replaces (`""` in production
+   * builds, so this fails closed). The generated worker no longer passes it;
+   * an explicit value here is an override for tests.
    */
   readonly devCsrfLocalhost?: boolean;
 }
@@ -382,7 +385,8 @@ export async function buildApp(
     loadRestHandler,
     origin: passkey.origin,
     basePath: config.basePath,
-    devCsrfLocalhost: runtime.devCsrfLocalhost ?? false,
+    devCsrfLocalhost:
+      runtime.devCsrfLocalhost ?? process.env.PLUMIX_DEV === "1",
     passkey,
     sessionPolicy: config.auth.sessions ?? DEFAULT_SESSION_POLICY,
     authenticator,

@@ -421,8 +421,10 @@ describe("dispatcher — CSRF", () => {
     expect(body.reason).toBe("csrf_origin_mismatch");
   });
 
-  test("without the dev opt-in, a localhost origin still mismatches", async () => {
-    const h = await createDispatcherHarness();
+  test("with the dev opt-in explicitly off, a localhost origin still mismatches", async () => {
+    // Pin the override so this doesn't ride on ambient PLUMIX_DEV (the
+    // env-derived default is covered by the prod-fails-closed test below).
+    const h = await createDispatcherHarness({ devCsrfLocalhost: false });
     const response = await h.dispatch(
       plumixRequest("/_plumix/rpc/entry/list", {
         method: "POST",
@@ -434,6 +436,50 @@ describe("dispatcher — CSRF", () => {
       }),
     );
     expect(response.status).toBe(403);
+  });
+
+  test("dev-CSRF derives from PLUMIX_DEV: a loopback origin is allowed when set", async () => {
+    const original = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    try {
+      const h = await createDispatcherHarness();
+      const response = await h.dispatch(
+        plumixRequest("/_plumix/rpc/entry/list", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            origin: "http://localhost:5174",
+          },
+          body: JSON.stringify({ json: {} }),
+        }),
+      );
+      expect(response.status).not.toBe(403);
+    } finally {
+      if (original === undefined) delete process.env.PLUMIX_DEV;
+      else process.env.PLUMIX_DEV = original;
+    }
+  });
+
+  test("prod fails closed: a loopback origin is rejected when PLUMIX_DEV is unset", async () => {
+    const original = process.env.PLUMIX_DEV;
+    delete process.env.PLUMIX_DEV;
+    try {
+      const h = await createDispatcherHarness();
+      const response = await h.dispatch(
+        plumixRequest("/_plumix/rpc/entry/list", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            origin: "http://localhost:5174",
+          },
+          body: JSON.stringify({ json: {} }),
+        }),
+      );
+      expect(response.status).toBe(403);
+    } finally {
+      if (original === undefined) delete process.env.PLUMIX_DEV;
+      else process.env.PLUMIX_DEV = original;
+    }
   });
 
   test("POST with a matching Origin header passes through to the RPC layer", async () => {
