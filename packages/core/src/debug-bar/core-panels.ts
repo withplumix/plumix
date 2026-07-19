@@ -1,5 +1,6 @@
 import type { HookRegistry } from "../hooks/registry.js";
 import type { DebugPanel } from "./types.js";
+import { databasePanel } from "./panels/database.js";
 import { requestPanel } from "./panels/request.js";
 
 /**
@@ -10,7 +11,7 @@ import { requestPanel } from "./panels/request.js";
 export function registerCoreDebugPanels(hooks: HookRegistry): void {
   hooks.addFilter(
     "debug_bar:panels",
-    (panels: readonly DebugPanel[]) => [...panels, requestPanel],
+    (panels: readonly DebugPanel[]) => [...panels, requestPanel, databasePanel],
     { plugin: "core", priority: 10 },
   );
 }
