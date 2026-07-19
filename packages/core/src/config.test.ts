@@ -159,3 +159,14 @@ test("plumix() accepts auth.magicLink when paired with a top-level mailer", () =
     plumix({ runtime, database, auth: authWithMagicLink, theme, mailer }),
   ).not.toThrow();
 });
+
+test("plumix() carries the raw debugBar config through untouched", () => {
+  const debugBar = { disable: ["timeline"] } as const;
+  const config = plumix({ runtime, database, auth: authConfig, debugBar });
+  expect(config.debugBar).toBe(debugBar);
+});
+
+test("plumix() leaves debugBar undefined when unset", () => {
+  const config = plumix({ runtime, database, auth: authConfig });
+  expect(config.debugBar).toBeUndefined();
+});

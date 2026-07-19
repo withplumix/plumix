@@ -30,6 +30,7 @@ import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { PlumixAdminBar } from "../../admin-bar/component.js";
+import { PlumixDebugBar } from "../../debug-bar/component.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { applyCanonical } from "../../seo/canonical.js";
 import { applyHeadMeta } from "../../seo/head-defaults.js";
@@ -380,6 +381,13 @@ function renderTree({
           queriedEntryDetails,
           entryTypes: ctx.plugins.entryTypes,
         }),
+    // Dev-only debug bar — standalone and auth-independent (unlike the admin
+    // bar it never gates on a user). `process.env.PLUMIX_DEV` is Vite-empty
+    // in prod builds, so this branch and the whole debug-bar module tree-shake
+    // out. Dropped in edit mode alongside the admin bar.
+    process.env.PLUMIX_DEV && editMode.mode !== "edit"
+      ? createElement(PlumixDebugBar, { ctx })
+      : null,
     createElement(TemplateAdapter),
   );
   const rendered = renderToString(templateTree);
