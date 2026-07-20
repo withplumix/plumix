@@ -1,4 +1,4 @@
-import type { SingleData, TemplateData } from "plumix";
+import type { EntryData, TemplateData } from "plumix";
 import * as React from "react";
 import { defineTemplate, defineTheme } from "plumix";
 
@@ -25,7 +25,7 @@ const index = defineTemplate<TemplateData>({
 
 // Generic single-entry template: renders any content plugin's entry. Copy it
 // into dedicated `single` / `page` templates for richer, per-type layouts.
-const single = defineTemplate<SingleData>({
+const single = defineTemplate<EntryData>({
   render: ({ data }) => (
     <main style={wrap}>
       <article>

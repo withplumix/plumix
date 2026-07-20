@@ -1,4 +1,4 @@
-import type { SingleData } from "plumix";
+import type { EntryData } from "plumix";
 import type { ReactNode } from "react";
 import { createElement as h } from "react";
 import { defineTemplate, defineTheme } from "plumix";
@@ -93,7 +93,7 @@ const LOAD_MORE_SCRIPT = `
 })();
 `;
 
-const single = defineTemplate<SingleData>({
+const single = defineTemplate<EntryData>({
   comments: ["current"],
   render: ({ data, comments }): ReactNode => {
     const thread: ResolvedThread | null = comments?.current ?? null;

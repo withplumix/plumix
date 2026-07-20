@@ -43,13 +43,13 @@ export { slugify } from "./slugify.js";
 export { buildResolvedEntries } from "./route/render/build-resolved-entries.js";
 export type {
   ArchiveData,
+  EntryData,
   ErrorData,
   FrontPageData,
   Pagination,
   ResolvedAuthor,
   ResolvedEntry,
   SearchData,
-  SingleData,
   TaxonomyData,
 } from "./route/render/resolved-entry.js";
 export { defineTemplate } from "./template.js";
@@ -60,7 +60,15 @@ export type {
   TemplateRenderArgs,
 } from "./template.js";
 export type { TemplateDepLoader } from "./template-deps.js";
-export { defineTheme } from "./theme.js";
+export {
+  defineTheme,
+  isArchive,
+  isEntry,
+  isError,
+  isFrontPage,
+  isSearch,
+  isTaxonomy,
+} from "./theme.js";
 export type {
   DocumentLink,
   DocumentManifest,

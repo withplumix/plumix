@@ -1,4 +1,4 @@
-import type { SingleData } from "plumix";
+import type { EntryData } from "plumix";
 import { defineTemplate } from "plumix";
 
 import { hasDemoSession } from "@plumix/runtime-cloudflare/demo";
@@ -7,7 +7,7 @@ import { Layout } from "../components/Layout";
 import { PostSingle } from "../components/PostSingle";
 
 // Static page: title + body, no post metadata.
-export const page = defineTemplate<SingleData>({
+export const page = defineTemplate<EntryData>({
   settings: ["site"],
   menus: ["primary", "footer"],
   render: ({ data, settings, menus, ctx }) => (

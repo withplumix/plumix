@@ -1,4 +1,4 @@
-import type { SingleData } from "plumix";
+import type { EntryData } from "plumix";
 import { createElement as el } from "react";
 import { defineTemplate, defineTheme } from "plumix";
 import { definePlugin } from "plumix/plugin";
@@ -42,7 +42,7 @@ function renderComment(
   );
 }
 
-const single = defineTemplate<SingleData>({
+const single = defineTemplate<EntryData>({
   comments: ["current"],
   render: ({ data, comments: threadDep }) => {
     const thread: ResolvedThread | null = threadDep?.current ?? null;

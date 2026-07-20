@@ -13,9 +13,9 @@ import type { RouteMatch } from "./match.js";
 import type { AssetManifest } from "./render/asset-manifest.js";
 import type {
   ArchiveData,
+  EntryData,
   FrontPageData,
   SearchData,
-  SingleData,
   TaxonomyData,
 } from "./render/resolved-entry.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
@@ -39,9 +39,7 @@ import { renderThroughTheme } from "./render/render-template.js";
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
-    "resolve:single:data": (
-      data: SingleData,
-    ) => SingleData | Promise<SingleData>;
+    "resolve:single:data": (data: EntryData) => EntryData | Promise<EntryData>;
     "resolve:archive:data": (
       data: ArchiveData,
     ) => ArchiveData | Promise<ArchiveData>;
@@ -160,6 +158,7 @@ async function resolveFrontPage(
   if (result.outOfRange) return notFound("public-front-page-page-out-of-range");
 
   const initial: FrontPageData = {
+    kind: "frontPage",
     entries: await buildResolvedEntries(ctx, result.rows),
     pagination: {
       page,
@@ -246,6 +245,7 @@ async function resolveSearch(
   );
   if (result.outOfRange) return notFound("public-search-page-out-of-range");
   const initial: SearchData = {
+    kind: "search",
     query,
     entries: await buildResolvedEntries(ctx, result.rows),
     pagination: {
@@ -314,6 +314,7 @@ async function resolveTaxonomy(
   if (result.outOfRange) return notFound("public-term-page-out-of-range");
 
   const initial: TaxonomyData = {
+    kind: "taxonomy",
     taxonomy: intent.taxonomy,
     // Single archive term: the async builder walks ancestors for the full
     // nested URL (one call — no N+1).
@@ -383,7 +384,7 @@ async function resolveSingle(
     // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
     throw new Error("buildResolvedEntries: empty result for one row");
   }
-  const initial: SingleData = { entry };
+  const initial: EntryData = { kind: "entry", entry };
   const data = await ctx.hooks.applyFilter("resolve:single:data", initial);
   // Expand shortcodes in the author-written entry title so both the
   // document `<title>` and the theme-rendered heading resolve `[year]` &c.
@@ -395,7 +396,7 @@ async function resolveSingle(
     locale: ctx.locale.code,
     entry: entryContext,
   });
-  const expanded: SingleData = {
+  const expanded: EntryData = {
     ...data,
     entry: { ...data.entry, title },
   };
@@ -457,6 +458,7 @@ async function resolveArchive(
     : intent.entryType;
 
   const initial: ArchiveData = {
+    kind: "archive",
     contentType: intent.entryType,
     entries: await buildResolvedEntries(ctx, result.rows),
     pagination: {

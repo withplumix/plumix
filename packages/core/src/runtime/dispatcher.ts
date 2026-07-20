@@ -479,6 +479,7 @@ async function renderPublicRoute(
         assetManifest,
         kind: "not-found",
         data: {
+          kind: "error",
           request: ctx.request,
           hint: response.headers.get("x-plumix-hint") ?? undefined,
         },
@@ -502,7 +503,7 @@ async function renderPublicRoute(
         templateDeps,
         assetManifest,
         kind: "server-error",
-        data: { request: ctx.request },
+        data: { kind: "error", request: ctx.request },
       });
       return new Response(html, {
         status: 500,

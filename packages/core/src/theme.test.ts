@@ -1,12 +1,28 @@
 import { describe, expect, test } from "vitest";
 
+import type {
+  ArchiveData,
+  EntryData,
+  ErrorData,
+  FrontPageData,
+  SearchData,
+  TaxonomyData,
+} from "./route/render/resolved-entry.js";
 import type { ThemeDescriptor } from "./theme.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
 import { definePlugin } from "./plugin/define.js";
 import { buildApp } from "./runtime/app.js";
 import { ThemeRegistrationError } from "./theme-errors.js";
-import { defineTheme } from "./theme.js";
+import {
+  defineTheme,
+  isArchive,
+  isEntry,
+  isError,
+  isFrontPage,
+  isSearch,
+  isTaxonomy,
+} from "./theme.js";
 
 const stubAdapter = {
   name: "test",
@@ -322,6 +338,26 @@ describe("buildApp — per-template document fragments", () => {
     expect(() => {
       (doc as { link?: unknown }).link = "mutated";
     }).toThrow(TypeError);
+  });
+});
+
+describe("template-data guards", () => {
+  // The guards read only the `kind` discriminant, so minimal casts suffice.
+  const entry = { kind: "entry" } as EntryData;
+  const archive = { kind: "archive" } as ArchiveData;
+  const taxonomy = { kind: "taxonomy" } as TaxonomyData;
+  const frontPage = { kind: "frontPage" } as FrontPageData;
+  const search = { kind: "search" } as SearchData;
+  const error = { kind: "error" } as ErrorData;
+  const all = [entry, archive, taxonomy, frontPage, search, error];
+
+  test("each guard narrows exactly its own kind", () => {
+    expect(all.filter(isEntry)).toEqual([entry]);
+    expect(all.filter(isArchive)).toEqual([archive]);
+    expect(all.filter(isTaxonomy)).toEqual([taxonomy]);
+    expect(all.filter(isFrontPage)).toEqual([frontPage]);
+    expect(all.filter(isSearch)).toEqual([search]);
+    expect(all.filter(isError)).toEqual([error]);
   });
 });
 

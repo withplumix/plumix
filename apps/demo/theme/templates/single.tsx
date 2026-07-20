@@ -1,4 +1,4 @@
-import type { SingleData } from "plumix";
+import type { EntryData } from "plumix";
 import { defineTemplate } from "plumix";
 
 // Likewise pulls the blog plugin's `relatedPosts` dep augmentation.
@@ -13,7 +13,7 @@ import { Layout } from "../components/Layout";
 import { PostSingle } from "../components/PostSingle";
 import { RelatedPosts } from "../components/RelatedPosts";
 
-export const single = defineTemplate<SingleData>({
+export const single = defineTemplate<EntryData>({
   settings: ["site"],
   menus: ["primary", "footer"],
   comments: ["current"],

@@ -8,10 +8,10 @@ import type {
 
 import type {
   ArchiveData,
+  EntryData,
   ErrorData,
   FrontPageData,
   SearchData,
-  SingleData,
   TaxonomyData,
 } from "./route/render/resolved-entry.js";
 import type { Template, TemplateDepDeclarations } from "./template.js";
@@ -33,16 +33,37 @@ declare module "./hooks/types.js" {
 
 /**
  * Discriminated union of every data shape a template can receive. Per-kind
- * templates (`single`, `archive`, …) narrow via the registry; `index`
- * receives the union and discriminates at runtime (e.g. `"entry" in data`).
+ * templates (`single`, `archive`, …) narrow via the registry; a template that
+ * receives the whole union (like `index`) discriminates on the `kind` field —
+ * a `switch (data.kind)` gets exhaustiveness, or use the `isEntry`/`isArchive`/…
+ * guards below for single-branch checks.
  */
 export type TemplateData =
-  | SingleData
+  | EntryData
   | ArchiveData
   | TaxonomyData
   | FrontPageData
   | SearchData
   | ErrorData;
+
+export function isEntry(data: TemplateData): data is EntryData {
+  return data.kind === "entry";
+}
+export function isArchive(data: TemplateData): data is ArchiveData {
+  return data.kind === "archive";
+}
+export function isTaxonomy(data: TemplateData): data is TaxonomyData {
+  return data.kind === "taxonomy";
+}
+export function isFrontPage(data: TemplateData): data is FrontPageData {
+  return data.kind === "frontPage";
+}
+export function isSearch(data: TemplateData): data is SearchData {
+  return data.kind === "search";
+}
+export function isError(data: TemplateData): data is ErrorData {
+  return data.kind === "error";
+}
 
 export type TemplateComponent<Data> = ComponentType<{ readonly data: Data }>;
 
@@ -58,7 +79,7 @@ export type TemplateEntry<Data extends TemplateData> =
 // signature accepts any concrete-shape entry (`single-{type}`,
 // `archive-{type}`, …) or one written against the full union.
 type DynamicTemplateEntry =
-  | TemplateEntry<SingleData>
+  | TemplateEntry<EntryData>
   | TemplateEntry<ArchiveData>
   | TemplateEntry<TaxonomyData>
   | TemplateEntry<FrontPageData>
@@ -118,9 +139,9 @@ export interface DocumentManifest {
 
 export interface TemplateRegistry {
   readonly index: TemplateEntry<TemplateData>;
-  readonly single?: TemplateEntry<SingleData>;
-  readonly singular?: TemplateEntry<SingleData>;
-  readonly page?: TemplateEntry<SingleData>;
+  readonly single?: TemplateEntry<EntryData>;
+  readonly singular?: TemplateEntry<EntryData>;
+  readonly page?: TemplateEntry<EntryData>;
   readonly archive?: TemplateEntry<ArchiveData>;
   readonly taxonomy?: TemplateEntry<TaxonomyData>;
   readonly category?: TemplateEntry<TaxonomyData>;
