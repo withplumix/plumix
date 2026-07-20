@@ -1,5 +1,6 @@
 import type { WelcomeStrings } from "./welcome/i18n.js";
 import { withBasePath } from "./base-path.js";
+import { fallback } from "./route/render/template-builders.js";
 import { defineTemplate } from "./template.js";
 import { defineTheme } from "./theme.js";
 import { welcomeMessages } from "./welcome/i18n.js";
@@ -183,20 +184,22 @@ function WelcomeScreen({
  * substitutes it at config resolution, so to all downstream code a
  * theme-less site is indistinguishable from one with a user theme.
  *
- * The `index` template uses `defineTemplate` (not a plain function) so its
- * render receives `ctx` — needed for the basePath-aware admin link.
+ * The sole `fallback` template uses `defineTemplate` (not a plain function) so
+ * its render receives `ctx` — needed for the basePath-aware admin link.
  */
 export const welcomeTheme = defineTheme({
-  templates: {
-    index: defineTemplate({
-      render: ({ ctx }) => (
-        <WelcomeScreen
-          basePath={ctx.basePath}
-          strings={welcomeMessages(ctx.locale.code)}
-        />
-      ),
-    }),
-  },
+  templates: [
+    fallback(
+      defineTemplate({
+        render: ({ ctx }) => (
+          <WelcomeScreen
+            basePath={ctx.basePath}
+            strings={welcomeMessages(ctx.locale.code)}
+          />
+        ),
+      }),
+    ),
+  ],
   // Never index a placeholder — it's a misconfiguration if it reaches prod.
   document: {
     title: "plumix",

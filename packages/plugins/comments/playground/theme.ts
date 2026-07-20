@@ -1,7 +1,7 @@
 import type { EntryData } from "plumix";
 import type { ReactNode } from "react";
 import { createElement as h } from "react";
-import { defineTemplate, defineTheme } from "plumix";
+import { defineTemplate, defineTheme, entry, fallback } from "plumix";
 
 // Importing the result type also pulls the plugin's `TemplateDepRegistry`
 // augmentation, so `comments` is typed on the render args below.
@@ -136,8 +136,5 @@ const single = defineTemplate<EntryData>({
 });
 
 export const theme = defineTheme({
-  templates: {
-    index: () => null,
-    single,
-  },
+  templates: [fallback(() => null), entry(single)],
 });

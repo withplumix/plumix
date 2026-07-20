@@ -16,7 +16,6 @@ import type {
 } from "./route/render/resolved-entry.js";
 import type { Template, TemplateDepDeclarations } from "./template.js";
 import { RESERVED_DEP_KIND_NAMES } from "./template-deps.js";
-import { isTemplate } from "./template.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
 
 // `theme:document` is a boot-time filter chain. `buildApp` fires it once,
@@ -125,52 +124,6 @@ export interface TemplateRule {
 }
 
 /**
- * Runtime discriminator for the object-map `templates` form, as opposed to the
- * array (rule list) or bare-component (fallback-only) forms. Both `defineTheme`
- * and `buildApp` branch on it so the object-map path is untouched while the new
- * forms are accepted alongside it.
- */
-export function isTemplateRegistry(
-  templates: ThemeDescriptor["templates"],
-): templates is TemplateRegistry {
-  return (
-    !Array.isArray(templates) &&
-    typeof templates !== "function" &&
-    !isTemplate(templates)
-  );
-}
-
-/**
- * Boot-time guard: the object-map form must declare `index` (the hierarchy
- * terminal, else pages render blank). The array / bare-component forms carry
- * their own terminal, so they skip it. `defineTheme` (author time) and
- * `buildApp` (boot time) both call it — defense-in-depth for JS callers, who
- * can drop `index` even though the type marks it required (hence the cast).
- */
-export function assertIndexTemplate(
-  templates: ThemeDescriptor["templates"],
-): void {
-  if (!isTemplateRegistry(templates)) return;
-  const map = templates as Readonly<Record<string, unknown>>;
-  if (!map.index) {
-    throw ThemeRegistrationError.missingIndexTemplate();
-  }
-}
-
-// Catch-all for the registry's index signature. The narrow per-key
-// slots can't share a single typed slot due to contravariance, so the
-// signature accepts any concrete-shape entry (`single-{type}`,
-// `archive-{type}`, …) or one written against the full union.
-type DynamicTemplateEntry =
-  | TemplateEntry<EntryData>
-  | TemplateEntry<ArchiveData>
-  | TemplateEntry<TaxonomyData>
-  | TemplateEntry<FrontPageData>
-  | TemplateEntry<SearchData>
-  | TemplateEntry<ErrorData>
-  | TemplateEntry<TemplateData>;
-
-/**
  * Strip React-isms that don't belong in HTML attribute descriptors:
  * `key`/`ref` are React infrastructure; `on*` handlers don't apply
  * to SSR'd strings; `children` and `dangerouslySetInnerHTML` are kept
@@ -220,32 +173,13 @@ export interface DocumentManifest {
   readonly titleTemplate?: string | ((title: string | undefined) => string);
 }
 
-export interface TemplateRegistry {
-  readonly index: TemplateEntry<TemplateData>;
-  readonly single?: TemplateEntry<EntryData>;
-  readonly singular?: TemplateEntry<EntryData>;
-  readonly page?: TemplateEntry<EntryData>;
-  readonly archive?: TemplateEntry<ArchiveData>;
-  readonly taxonomy?: TemplateEntry<TaxonomyData>;
-  readonly category?: TemplateEntry<TaxonomyData>;
-  readonly tag?: TemplateEntry<TaxonomyData>;
-  readonly "front-page"?: TemplateEntry<FrontPageData>;
-  readonly home?: TemplateEntry<FrontPageData>;
-  readonly search?: TemplateEntry<SearchData>;
-  readonly "404"?: TemplateEntry<ErrorData>;
-  readonly "500"?: TemplateEntry<ErrorData>;
-  readonly [key: string]: DynamicTemplateEntry | undefined;
-}
-
 export interface ThemeDescriptor extends TemplateDepDeclarations {
   /**
-   * The object-map form (legacy WP-style slots), the new array of builder
-   * rules, or a bare component as fallback-only shorthand. The array/shorthand
-   * forms are accepted and resolvable now; they render through the pipeline in
-   * a later slice.
+   * The theme's templates: an array of builder rules (`fallback(...)`,
+   * `forEntryType(...).template(...)`, …), or a bare component as fallback-only
+   * shorthand.
    */
-  readonly templates:
-    TemplateRegistry | readonly TemplateRule[] | TemplateEntry<TemplateData>;
+  readonly templates: readonly TemplateRule[] | TemplateEntry<TemplateData>;
   readonly document?: DocumentManifest;
   readonly tokens?: ThemeTokens;
   /**
@@ -275,7 +209,6 @@ const TOKEN_SLUG_RE = /^[a-z][a-z0-9-]*$/;
 const TOKEN_VALUE_FORBIDDEN_CHARS = /[;{}\\\n\r]|\/\*|\*\//;
 
 export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
-  assertIndexTemplate(descriptor.templates);
   if ("templateDeps" in descriptor) {
     throw ThemeRegistrationError.legacyTemplateDepsShape();
   }
@@ -299,13 +232,10 @@ export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
 // can't recover from gracefully — link entries without `rel` (browsers
 // ignore them, invalid HTML) and scripts with no src + no inline body
 // (dead weight, signals a plugin bug worth surfacing loud).
-export function validateDocumentManifest(
-  manifest: DocumentManifest,
-  slot?: string,
-): void {
+export function validateDocumentManifest(manifest: DocumentManifest): void {
   manifest.link?.forEach((entry, index) => {
     if (typeof entry.rel !== "string" || entry.rel.length === 0) {
-      throw ThemeRegistrationError.documentInvalidLink({ index, slot });
+      throw ThemeRegistrationError.documentInvalidLink({ index });
     }
   });
   manifest.script?.forEach((entry, index) => {
@@ -316,7 +246,7 @@ export function validateDocumentManifest(
       typeof entry.dangerouslySetInnerHTML?.__html === "string" &&
       entry.dangerouslySetInnerHTML.__html.length > 0;
     if (!hasSrc && !hasChildren && !hasInnerHtml) {
-      throw ThemeRegistrationError.documentInvalidScript({ index, slot });
+      throw ThemeRegistrationError.documentInvalidScript({ index });
     }
   });
 }

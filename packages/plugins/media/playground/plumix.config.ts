@@ -32,5 +32,5 @@ export default plumix({
     },
   }),
   plugins: [media()],
-  theme: defineTheme({ templates: { index: () => null } }),
+  theme: defineTheme({ templates: () => null }),
 });

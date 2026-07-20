@@ -35,5 +35,5 @@ export default plumix({
     },
   }),
   plugins: [auditLog()],
-  theme: defineTheme({ templates: { index: () => null } }),
+  theme: defineTheme({ templates: () => null }),
 });

@@ -1,6 +1,12 @@
 import type { EntryData, TemplateData } from "plumix";
 import * as React from "react";
-import { defineTemplate, defineTheme } from "plumix";
+import {
+  defineTemplate,
+  defineTheme,
+  entry,
+  fallback,
+  forEntryType,
+} from "plumix";
 
 const wrap = { maxWidth: "40rem", margin: "4rem auto", padding: "0 1rem" };
 
@@ -37,7 +43,11 @@ const single = defineTemplate<EntryData>({
 });
 
 export const theme = defineTheme({
-  templates: { index, single, page: single },
+  templates: [
+    fallback(index),
+    entry(single),
+    forEntryType("page").template(single),
+  ],
   document: {
     titleTemplate: (title) => (title ? `${title} — Plumix` : "Plumix"),
   },

@@ -7,16 +7,14 @@ import { TEMPLATE_PANEL_ID } from "../template-node-label.js";
 export interface TemplateResolution {
   /** Human label for the resolved route node, e.g. "post: hello-world". */
   readonly nodeLabel: string;
-  /** Ordered candidate template names (after the `template:hierarchy` filter). */
-  readonly candidates: readonly string[];
-  /** The winning candidate — the template that rendered. */
+  /** The matched rule's label — its tier, or its targeted type + narrowing. */
   readonly picked: string;
 }
 
 /**
- * The Template panel: how the WordPress-style template hierarchy resolved for
- * this request — the ordered candidate list and which one won. Empty on error
- * pages, which don't run the hierarchy.
+ * The Template panel: how the theme's `templates` array resolved for this
+ * request — the route node and which rule matched. Empty on error pages,
+ * which don't run rule resolution.
  */
 export const templatePanel: DebugPanel = {
   id: TEMPLATE_PANEL_ID,
@@ -33,32 +31,14 @@ export const templatePanel: DebugPanel = {
       );
     }
     return (
-      <>
-        <DebugSection title="Resolution">
-          <DebugKV
-            rows={[
-              { label: "Resolved", value: resolution.nodeLabel },
-              { label: "Matched", value: resolution.picked },
-            ]}
-          />
-        </DebugSection>
-        <DebugSection title="Candidates">
-          <ol className="plumix-debug-bar__candidates">
-            {resolution.candidates.map((candidate) => (
-              <li
-                key={candidate}
-                className={`plumix-debug-bar__candidate ${
-                  candidate === resolution.picked
-                    ? "plumix-debug-bar__candidate--picked"
-                    : ""
-                }`}
-              >
-                {candidate}
-              </li>
-            ))}
-          </ol>
-        </DebugSection>
-      </>
+      <DebugSection title="Resolution">
+        <DebugKV
+          rows={[
+            { label: "Resolved", value: resolution.nodeLabel },
+            { label: "Matched", value: resolution.picked },
+          ]}
+        />
+      </DebugSection>
     );
   },
 };

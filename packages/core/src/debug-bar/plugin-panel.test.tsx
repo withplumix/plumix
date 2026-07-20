@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "vitest";
 
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import { definePlugin } from "../plugin/define.js";
+import { fallback } from "../route/render/template-builders.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
 import { DebugSection, DebugTable } from "./primitives.js";
@@ -39,7 +40,7 @@ const demoPlugin = definePlugin("debug-demo", (ctx) => {
   ]);
 });
 
-const theme = defineTheme({ templates: { index: () => null } });
+const theme = defineTheme({ templates: [fallback(() => null)] });
 
 async function seedAndRender(h: DispatcherHarness): Promise<string> {
   const author = await h.seedUser("admin");

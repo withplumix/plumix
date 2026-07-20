@@ -1,6 +1,6 @@
 import type { EntryData } from "plumix";
 import { createElement as el } from "react";
-import { defineTemplate, defineTheme } from "plumix";
+import { defineTemplate, defineTheme, entry, fallback } from "plumix";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
@@ -66,7 +66,9 @@ const single = defineTemplate<EntryData>({
   },
 });
 
-const theme = defineTheme({ templates: { index: () => null, single } });
+const theme = defineTheme({
+  templates: [fallback(() => null), entry(single)],
+});
 
 async function seedPost(
   harness: Awaited<ReturnType<typeof createDispatcherHarness>>,

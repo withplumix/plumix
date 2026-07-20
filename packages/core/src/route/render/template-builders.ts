@@ -11,6 +11,7 @@ import type {
   TemplateData,
   TemplateEntry,
   TemplateRule,
+  ThemeDescriptor,
 } from "../../theme.js";
 import type {
   ArchiveData,
@@ -80,6 +81,20 @@ export function notFound(template: TemplateEntry<ErrorData>): TemplateRule {
 /** The 500 handler. */
 export function serverError(template: TemplateEntry<ErrorData>): TemplateRule {
   return rule("serverError", template);
+}
+
+/**
+ * Normalize a theme's `templates` to a rule array — the array form as-is, or a
+ * bare component wrapped as the fallback tier.
+ */
+export function templateRules(
+  templates: ThemeDescriptor["templates"],
+): readonly TemplateRule[] {
+  // `Array.isArray` widens a `readonly T[]` to `any[]`, so re-assert the element
+  // type on the array branch rather than leaning on the narrowing.
+  return Array.isArray(templates)
+    ? (templates as readonly TemplateRule[])
+    : [fallback(templates as TemplateEntry<TemplateData>)];
 }
 
 // ── Targeted builders ───────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type { DatabaseAdapter, ImageDelivery } from "./runtime/slots.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
+import { fallback } from "./route/render/template-builders.js";
 import { defineTheme } from "./theme.js";
 import { welcomeTheme } from "./welcome-theme.js";
 
@@ -25,7 +26,7 @@ const authConfig = auth({
   },
 });
 
-const theme = defineTheme({ templates: { index: () => null } });
+const theme = defineTheme({ templates: [fallback(() => null)] });
 
 test("plumix() defaults a missing theme to the built-in welcome theme", () => {
   const config = plumix({ runtime, database, auth: authConfig });

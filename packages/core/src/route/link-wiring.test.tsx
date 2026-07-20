@@ -6,6 +6,7 @@ import { definePlugin } from "../plugin/define.js";
 import { defineTemplate } from "../template.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
+import { fallback } from "./render/template-builders.js";
 
 const blog = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -19,20 +20,22 @@ const blog = definePlugin("blog", (ctx) => {
 // A theme that links to the first front-page entry and its first term — the
 // end-to-end path: resolve attaches url → provider carries basePath → Link.
 const linkTheme = defineTheme({
-  templates: {
-    index: defineTemplate({
-      render: ({ data }) => {
-        const entry = "entries" in data ? data.entries[0] : undefined;
-        const term = entry?.terms[0];
-        return (
-          <main>
-            {entry ? <Link entry={entry}>{entry.title}</Link> : null}
-            {term ? <Link term={term}>{term.name}</Link> : null}
-          </main>
-        );
-      },
-    }),
-  },
+  templates: [
+    fallback(
+      defineTemplate({
+        render: ({ data }) => {
+          const entry = "entries" in data ? data.entries[0] : undefined;
+          const term = entry?.terms[0];
+          return (
+            <main>
+              {entry ? <Link entry={entry}>{entry.title}</Link> : null}
+              {term ? <Link term={term}>{term.name}</Link> : null}
+            </main>
+          );
+        },
+      }),
+    ),
+  ],
 });
 
 test("Link resolves entry/term permalinks with the configured basePath", async () => {

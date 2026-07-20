@@ -252,24 +252,6 @@ export const DEBUG_BAR_CSS =
       margin: 0;
       color: #8a929a;
     }
-    /* Template panel — candidate hierarchy */
-    .plumix-debug-bar__candidates {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .plumix-debug-bar__candidate {
-      padding: 1px 0 1px 14px;
-      color: #8a929a;
-    }
-    .plumix-debug-bar__candidate--picked {
-      color: #7ee787;
-      font-weight: 600;
-    }
-    .plumix-debug-bar__candidate--picked::before {
-      content: "▸ ";
-      margin-left: -14px;
-    }
     /* Timeline panel — SVG waterfall */
     .plumix-debug-bar__timeline {
       display: block;

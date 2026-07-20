@@ -4,6 +4,7 @@ import type { PlumixConfig } from "../config.js";
 import type { PluginDescriptor } from "../plugin/define.js";
 import { auth } from "../auth/config.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
+import { fallback } from "../route/render/template-builders.js";
 import { defineTheme } from "../theme.js";
 import { generateSchemaSource } from "./schema-codegen.js";
 
@@ -13,7 +14,7 @@ const baseConfig: PlumixConfig = {
   auth: auth({
     passkey: { rpName: "t", rpId: "t", origin: "https://t" },
   }),
-  theme: defineTheme({ templates: { index: () => null } }),
+  theme: defineTheme({ templates: [fallback(() => null)] }),
   plugins: [],
   i18n: resolveLocales({ defaultLocale: "en", locales: ["en"] }),
   basePath: "",

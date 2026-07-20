@@ -43,7 +43,7 @@ const RESERVED_THEME_KEYS = new Set(["templates", "document", "tokens", "css"]);
 const RESERVED_TEMPLATE_KEYS = new Set([
   "render",
   "document",
-  "prefetchListingLoaders",
+  "prefetchArchiveLoaders",
 ]);
 export const RESERVED_DEP_KIND_NAMES: ReadonlySet<string> = new Set([
   ...RESERVED_THEME_KEYS,

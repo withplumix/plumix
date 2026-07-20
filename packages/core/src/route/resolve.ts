@@ -57,12 +57,20 @@ declare module "../hooks/types.js" {
 
 const DEFAULT_ARCHIVE_PER_PAGE = 20;
 
+// `renderThroughTheme` returns `null` when the theme has no rule for the node
+// and no `fallback` — a 404, per the router-style resolution model.
+function htmlResponseOrNotFound(html: string | null, reason: string): Response {
+  if (html === null) return notFound(reason);
+  return new Response(html, {
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
+}
+
 export async function resolvePublicRoute(
   ctx: AppContext,
   match: RouteMatch,
   theme: ThemeDescriptor,
   document: DocumentManifest,
-  templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
@@ -74,7 +82,6 @@ export async function resolvePublicRoute(
         match.params,
         theme,
         document,
-        templateDocuments,
         templateDeps,
         assetManifest,
       );
@@ -85,7 +92,6 @@ export async function resolvePublicRoute(
         match.params,
         theme,
         document,
-        templateDocuments,
         templateDeps,
         assetManifest,
       );
@@ -96,7 +102,6 @@ export async function resolvePublicRoute(
         match.params,
         theme,
         document,
-        templateDocuments,
         templateDeps,
         assetManifest,
       );
@@ -106,7 +111,6 @@ export async function resolvePublicRoute(
         match.params,
         theme,
         document,
-        templateDocuments,
         templateDeps,
         assetManifest,
       );
@@ -116,7 +120,6 @@ export async function resolvePublicRoute(
         match.params,
         theme,
         document,
-        templateDocuments,
         templateDeps,
         assetManifest,
       );
@@ -128,7 +131,6 @@ async function resolveFrontPage(
   params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
-  templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
@@ -172,7 +174,6 @@ async function resolveFrontPage(
     ctx,
     theme,
     document,
-    templateDocuments,
     templateDeps,
     assetManifest,
 
@@ -182,9 +183,7 @@ async function resolveFrontPage(
     // (site root) stays English here.
     title: "Home",
   });
-  return new Response(html, {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
+  return htmlResponseOrNotFound(html, "public-front-page-no-template");
 }
 
 function decodeSearchQuery(raw: string | undefined): string {
@@ -203,7 +202,6 @@ async function resolveSearch(
   params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
-  templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
@@ -260,16 +258,13 @@ async function resolveSearch(
     ctx,
     theme,
     document,
-    templateDocuments,
     templateDeps,
     assetManifest,
     node: { kind: "search" },
     data,
     title: data.query ? `Search: ${data.query}` : "Search",
   });
-  return new Response(html, {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
+  return htmlResponseOrNotFound(html, "public-search-no-template");
 }
 
 async function resolveTaxonomy(
@@ -278,7 +273,6 @@ async function resolveTaxonomy(
   params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
-  templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
@@ -332,7 +326,6 @@ async function resolveTaxonomy(
     ctx,
     theme,
     document,
-    templateDocuments,
     templateDeps,
     assetManifest,
 
@@ -347,9 +340,7 @@ async function resolveTaxonomy(
       ? labelSourceText(taxonomy.labels?.singular ?? taxonomy.label)
       : term.name,
   });
-  return new Response(html, {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
+  return htmlResponseOrNotFound(html, "public-taxonomy-no-template");
 }
 
 async function resolveSingle(
@@ -358,7 +349,6 @@ async function resolveSingle(
   params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
-  templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
@@ -404,7 +394,6 @@ async function resolveSingle(
     ctx,
     theme,
     document,
-    templateDocuments,
     templateDeps,
     assetManifest,
 
@@ -418,9 +407,7 @@ async function resolveSingle(
     title,
     editMode,
   });
-  return new Response(html, {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
+  return htmlResponseOrNotFound(html, "public-single-no-template");
 }
 
 async function resolveArchive(
@@ -429,7 +416,6 @@ async function resolveArchive(
   params: Record<string, string>,
   theme: ThemeDescriptor,
   document: DocumentManifest,
-  templateDocuments: ReadonlyMap<string, DocumentManifest>,
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
@@ -473,7 +459,6 @@ async function resolveArchive(
     ctx,
     theme,
     document,
-    templateDocuments,
     templateDeps,
     assetManifest,
 
@@ -481,9 +466,7 @@ async function resolveArchive(
     data,
     title,
   });
-  return new Response(html, {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
+  return htmlResponseOrNotFound(html, "public-archive-no-template");
 }
 
 // URL :page captures are always strings; invalid input (non-numeric,

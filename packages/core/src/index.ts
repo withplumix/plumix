@@ -29,12 +29,7 @@ export { createPlumixDispatcher } from "./runtime/dispatcher.js";
 export type { PlumixDispatcher } from "./runtime/dispatcher.js";
 export type { EnvInput } from "./runtime/env-input.js";
 export { resolveEnvInput } from "./runtime/env-input.js";
-export {
-  forbidden,
-  jsonResponse,
-  methodNotAllowed,
-  notFound,
-} from "./runtime/http.js";
+export { forbidden, jsonResponse, methodNotAllowed } from "./runtime/http.js";
 export { memoryStorage } from "./runtime/memory-storage.js";
 export type { MemoryStorageConfig } from "./runtime/memory-storage.js";
 export { runScheduledTasks } from "./runtime/scheduled.js";
@@ -49,9 +44,12 @@ export {
   forTaxonomy,
   frontPage,
   NAMED_TEMPLATE_META_KEY,
+  notFound,
   postsPage,
   search,
+  serverError,
   taxonomy,
+  templateRules,
 } from "./route/render/template-builders.js";
 export type {
   EntryProjection,
@@ -105,7 +103,6 @@ export type {
   TemplateComponent,
   TemplateData,
   TemplateEntry,
-  TemplateRegistry,
   TemplateRule,
   ThemeDescriptor,
 } from "./theme.js";

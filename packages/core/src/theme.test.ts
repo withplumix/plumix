@@ -8,12 +8,11 @@ import type {
   SearchData,
   TaxonomyData,
 } from "./route/render/resolved-entry.js";
-import type { ThemeDescriptor } from "./theme.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
 import { definePlugin } from "./plugin/define.js";
+import { fallback } from "./route/render/template-builders.js";
 import { buildApp } from "./runtime/app.js";
-import { ThemeRegistrationError } from "./theme-errors.js";
 import {
   defineTheme,
   isArchive,
@@ -33,20 +32,10 @@ const stubAuth = auth({
   passkey: { rpName: "t", rpId: "t", origin: "https://t" },
 });
 
-// Bypass the compile-time `templates.index` requirement to simulate a
-// hand-rolled descriptor that skipped the `defineTheme` factory.
-const badTheme = { templates: {} } as unknown as ThemeDescriptor;
-
-describe("defineTheme", () => {
-  test("throws ThemeRegistrationError when templates.index is missing", () => {
-    expect(() => defineTheme(badTheme)).toThrow(ThemeRegistrationError);
-  });
-});
-
 describe("buildApp — theme:document filter", () => {
   test("app.document mirrors theme.document when no plugin filters are registered", async () => {
     const theme = defineTheme({
-      templates: { index: () => null },
+      templates: [fallback(() => null)],
       document: { link: [{ rel: "icon", href: "/favicon.svg" }] },
     });
     const app = await buildApp(
@@ -86,7 +75,7 @@ describe("buildApp — theme:document filter", () => {
         runtime: stubAdapter,
         database: stubDatabase,
         auth: stubAuth,
-        theme: defineTheme({ templates: { index: () => null } }),
+        theme: defineTheme({ templates: [fallback(() => null)] }),
         plugins: [firstPlugin, secondPlugin],
       }),
     );
@@ -109,7 +98,7 @@ describe("buildApp — theme:document filter", () => {
         runtime: stubAdapter,
         database: stubDatabase,
         auth: stubAuth,
-        theme: defineTheme({ templates: { index: () => null } }),
+        theme: defineTheme({ templates: [fallback(() => null)] }),
         plugins: [probePlugin],
       }),
     );
@@ -123,7 +112,7 @@ describe("buildApp — theme:document filter", () => {
         database: stubDatabase,
         auth: stubAuth,
         theme: defineTheme({
-          templates: { index: () => null },
+          templates: [fallback(() => null)],
           document: { meta: [{ name: "viewport", content: "x" }] },
         }),
       }),
@@ -151,7 +140,7 @@ describe("buildApp — theme:document filter", () => {
           runtime: stubAdapter,
           database: stubDatabase,
           auth: stubAuth,
-          theme: defineTheme({ templates: { index: () => null } }),
+          theme: defineTheme({ templates: [fallback(() => null)] }),
           plugins: [broken],
         }),
       ),
@@ -174,7 +163,7 @@ describe("buildApp — theme:document filter", () => {
           runtime: stubAdapter,
           database: stubDatabase,
           auth: stubAuth,
-          theme: defineTheme({ templates: { index: () => null } }),
+          theme: defineTheme({ templates: [fallback(() => null)] }),
           plugins: [broken],
         }),
       ),
@@ -196,7 +185,7 @@ describe("buildApp — theme:document filter", () => {
           runtime: stubAdapter,
           database: stubDatabase,
           auth: stubAuth,
-          theme: defineTheme({ templates: { index: () => null } }),
+          theme: defineTheme({ templates: [fallback(() => null)] }),
           plugins: [explode],
         }),
       ),
@@ -214,7 +203,7 @@ describe("buildApp — theme:document filter", () => {
       }));
     });
     const theme = defineTheme({
-      templates: { index: () => null },
+      templates: [fallback(() => null)],
       document: { link: [{ rel: "icon", href: "/favicon.svg" }] },
     });
     const app = await buildApp(
@@ -240,7 +229,7 @@ describe("buildApp — core site settings", () => {
         runtime: stubAdapter,
         database: stubDatabase,
         auth: stubAuth,
-        theme: defineTheme({ templates: { index: () => null } }),
+        theme: defineTheme({ templates: [fallback(() => null)] }),
       }),
     );
     const group = app.plugins.settingsGroups.get("site");
@@ -261,83 +250,11 @@ describe("buildApp — core site settings", () => {
           runtime: stubAdapter,
           database: stubDatabase,
           auth: stubAuth,
-          theme: defineTheme({ templates: { index: () => null } }),
+          theme: defineTheme({ templates: [fallback(() => null)] }),
           plugins: [collide],
         }),
       ),
     ).rejects.toThrow(/already registered/i);
-  });
-});
-
-describe("buildApp — per-template document fragments", () => {
-  test("PlumixApp.templateDocuments holds the per-template merged manifest", async () => {
-    const { defineTemplate } = await import("./template.js");
-    const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          render: () => null,
-          document: { meta: [{ name: "robots", content: "noindex" }] },
-        }),
-      },
-      document: {
-        meta: [{ name: "theme-color", content: "#0ea5e9" }],
-      },
-    });
-    const app = await buildApp(
-      plumix({
-        runtime: stubAdapter,
-        database: stubDatabase,
-        auth: stubAuth,
-        theme,
-      }),
-    );
-    const singleDoc = app.templateDocuments.get("single");
-    expect(singleDoc?.meta).toEqual([
-      { name: "theme-color", content: "#0ea5e9" },
-      { name: "robots", content: "noindex" },
-    ]);
-  });
-
-  test("templates without a document fragment do NOT populate the map", async () => {
-    const app = await buildApp(
-      plumix({
-        runtime: stubAdapter,
-        database: stubDatabase,
-        auth: stubAuth,
-        theme: defineTheme({
-          templates: { index: () => null, single: () => null },
-          document: { meta: [{ name: "x", content: "y" }] },
-        }),
-      }),
-    );
-    expect(app.templateDocuments.has("single")).toBe(false);
-    expect(app.templateDocuments.has("index")).toBe(false);
-  });
-
-  test("templateDocuments entries are deep-frozen", async () => {
-    const { defineTemplate } = await import("./template.js");
-    const app = await buildApp(
-      plumix({
-        runtime: stubAdapter,
-        database: stubDatabase,
-        auth: stubAuth,
-        theme: defineTheme({
-          templates: {
-            index: () => null,
-            single: defineTemplate({
-              render: () => null,
-              document: { link: [{ rel: "icon", href: "/x.svg" }] },
-            }),
-          },
-        }),
-      }),
-    );
-    const doc = app.templateDocuments.get("single");
-    expect(Object.isFrozen(doc)).toBe(true);
-    expect(() => {
-      (doc as { link?: unknown }).link = "mutated";
-    }).toThrow(TypeError);
   });
 });
 
@@ -358,20 +275,5 @@ describe("template-data guards", () => {
     expect(all.filter(isFrontPage)).toEqual([frontPage]);
     expect(all.filter(isSearch)).toEqual([search]);
     expect(all.filter(isError)).toEqual([error]);
-  });
-});
-
-describe("buildApp", () => {
-  test("throws ThemeRegistrationError when config.theme omits templates.index", async () => {
-    await expect(
-      buildApp(
-        plumix({
-          runtime: stubAdapter,
-          database: stubDatabase,
-          auth: stubAuth,
-          theme: badTheme,
-        }),
-      ),
-    ).rejects.toThrow(ThemeRegistrationError);
   });
 });

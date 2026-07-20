@@ -13,20 +13,18 @@ function ctxWith(resolution?: TemplateResolution): AppContext {
 }
 
 describe("templatePanel", () => {
-  test("renders node label, matched slot, and the candidate list with the winner marked", () => {
+  test("renders the resolved node label and the matched rule", () => {
     const ctx = ctxWith({
       nodeLabel: "post: hello-world",
-      candidates: ["single-post", "single", "singular", "index"],
-      picked: "single-post",
+      picked: "page",
     });
 
     const html = renderToStaticMarkup(<>{templatePanel.render(ctx)}</>);
 
-    expect(html).toContain("post: hello-world");
-    expect(html).toContain("single-post");
-    expect(html).toContain("singular");
-    // The winning candidate is marked.
-    expect(html).toContain("plumix-debug-bar__candidate--picked");
+    // Pin the exact `DebugKV` value cells — "post" is too common a substring
+    // to assert bare.
+    expect(html).toContain("<dd>post: hello-world</dd>");
+    expect(html).toContain("<dd>page</dd>");
   });
 
   test("shows an n/a state when no template was resolved (e.g. an error page)", () => {
