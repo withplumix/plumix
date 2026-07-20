@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "plumix-docs",
+  "compatibility_date": "2026-04-01",
+  // Static Astro Starlight build — no Worker script, just assets served from the
+  // edge. `astro build` emits to ./dist; `wrangler deploy` uploads it.
+  "assets": { "directory": "./dist" },
+}
