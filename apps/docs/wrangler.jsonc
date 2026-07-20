@@ -2,9 +2,11 @@
   "$schema": "https://unpkg.com/wrangler/config-schema.json",
   "name": "plumix-docs",
   "compatibility_date": "2026-04-01",
-  // Served only on the custom domain (no *.workers.dev); declaring the route
-  // here keeps deploys reconciled with the domain attached in the dashboard.
+  // Production is served only on the custom domain (no *.workers.dev), but keep
+  // per-version preview URLs on workers.dev for branch deploys. Declaring the
+  // route keeps deploys reconciled with the domain attached in the dashboard.
   "workers_dev": false,
+  "preview_urls": true,
   "routes": [{ "pattern": "docs.plumix.dev", "custom_domain": true }],
   // Static Astro Starlight build — no Worker script, just assets served from the
   // edge. `astro build` emits to ./dist; `wrangler deploy` uploads it.
