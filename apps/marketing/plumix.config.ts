@@ -1,5 +1,7 @@
 import { auth, plumix } from "plumix";
 
+import { media } from "@plumix/plugin-media";
+import { pages } from "@plumix/plugin-pages";
 import {
   cloudflare,
   cloudflareDeployOrigin,
@@ -12,8 +14,7 @@ export default plumix({
   // session: "auto" routes writes to primary, nearest replica for anon reads,
   // and resumes authenticated reads from a bookmark cookie for read-your-writes.
   database: d1({ binding: "DB", session: "auto" }),
-  // Media uploads land in R2. Dormant until the marketing-content follow-up
-  // wires a theme/media that actually stores images.
+  // Media uploads (via the media plugin) land in the R2 MEDIA bucket.
   storage: r2({ binding: "MEDIA" }),
   auth: auth({
     passkey: {
@@ -28,7 +29,8 @@ export default plumix({
       }),
     },
   }),
-  // Scaffold: no theme or content plugins yet, so the public site serves
-  // plumix's built-in welcome screen. The real landing page — a theme plus the
-  // `pages` plugin — lands with the marketing-content follow-up.
+  plugins: [pages, media()],
+  // No theme registered yet, so the public site still serves plumix's built-in
+  // welcome screen — the landing page theme lands with the marketing-content
+  // follow-up. Pages + media are wired so content can be authored now.
 });
