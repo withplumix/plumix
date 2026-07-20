@@ -9,17 +9,21 @@ function fakeApp(tasks: RegisteredScheduledTask[]): PlumixApp {
   return { scheduledTasks: tasks } as unknown as PlumixApp;
 }
 
+// Returns the context alongside the `error` spy as a standalone handle. Asserting
+// on the handle rather than `ctx.logger.error` keeps `unbound-method` happy —
+// `AppContext.logger.error` is a method type, so reading it back off the object
+// reads as an unbound method reference.
 function fakeCtx() {
-  return {
+  const error = vi.fn();
+  const ctx = {
     logger: {
       debug: () => undefined,
       info: () => undefined,
       warn: () => undefined,
-      error: vi.fn(),
+      error,
     },
-  } as unknown as AppContext & {
-    logger: { error: ReturnType<typeof vi.fn> };
-  };
+  } as unknown as AppContext;
+  return { ctx, error };
 }
 
 describe("runScheduledTasks", () => {
@@ -50,7 +54,7 @@ describe("runScheduledTasks", () => {
       },
     ];
 
-    await runScheduledTasks(fakeApp(tasks), fakeCtx());
+    await runScheduledTasks(fakeApp(tasks), fakeCtx().ctx);
 
     expect(calls).toEqual(["a", "b", "c"]);
   });
@@ -82,13 +86,13 @@ describe("runScheduledTasks", () => {
         },
       },
     ];
-    const ctx = fakeCtx();
+    const { ctx, error } = fakeCtx();
 
     await runScheduledTasks(fakeApp(tasks), ctx);
 
     expect(calls).toEqual(["before", "after"]);
-    expect(ctx.logger.error).toHaveBeenCalledTimes(1);
-    const errorCall = ctx.logger.error.mock.calls[0];
+    expect(error).toHaveBeenCalledTimes(1);
+    const errorCall = error.mock.calls[0];
     expect(String(errorCall?.[0])).toContain("p:failing");
     expect(String(errorCall?.[0])).toContain("boom");
     expect(errorCall?.[1]).toMatchObject({
@@ -100,13 +104,13 @@ describe("runScheduledTasks", () => {
   });
 
   test("empty task list is a no-op (no logger calls)", async () => {
-    const ctx = fakeCtx();
+    const { ctx, error } = fakeCtx();
     await runScheduledTasks(fakeApp([]), ctx);
-    expect(ctx.logger.error).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
   });
 
   test("async rejection is caught (same path as sync throw)", async () => {
-    const ctx = fakeCtx();
+    const { ctx, error } = fakeCtx();
     const tasks: RegisteredScheduledTask[] = [
       {
         id: "async-fail",
@@ -117,8 +121,8 @@ describe("runScheduledTasks", () => {
 
     await runScheduledTasks(fakeApp(tasks), ctx);
 
-    expect(ctx.logger.error).toHaveBeenCalledTimes(1);
-    expect(String(ctx.logger.error.mock.calls[0]?.[0])).toContain("async-boom");
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(String(error.mock.calls[0]?.[0])).toContain("async-boom");
   });
 
   test("with a fired cron, runs only matching-cron tasks plus untagged ones", async () => {
@@ -149,7 +153,7 @@ describe("runScheduledTasks", () => {
       },
     ];
 
-    await runScheduledTasks(fakeApp(tasks), fakeCtx(), "0 3 * * *");
+    await runScheduledTasks(fakeApp(tasks), fakeCtx().ctx, "0 3 * * *");
 
     expect(calls).toEqual(["daily", "always"]);
   });
@@ -174,7 +178,7 @@ describe("runScheduledTasks", () => {
       },
     ];
 
-    await runScheduledTasks(fakeApp(tasks), fakeCtx());
+    await runScheduledTasks(fakeApp(tasks), fakeCtx().ctx);
 
     expect(calls).toEqual(["daily", "always"]);
   });
