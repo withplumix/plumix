@@ -103,6 +103,14 @@ export interface TargetMatcher {
   readonly type: string;
   readonly slug?: string;
   readonly id?: number;
+  /**
+   * A runtime predicate over the resolved data (`whereMeta`/`where`/`named`),
+   * evaluated after the identity match. Data-dependent, so the resolver must be
+   * given the resolved data to honour it.
+   */
+  readonly predicate?: (data: TemplateData) => boolean;
+  /** For an author-selectable (`named`) template: its id + editor label. */
+  readonly named?: { readonly id: string; readonly label: string };
 }
 
 /**
