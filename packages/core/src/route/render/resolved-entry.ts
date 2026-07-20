@@ -32,9 +32,10 @@ export interface ResolvedEntry extends Entry {
 
 // Per-kind data shapes are generic over the entry projection so theme
 // authors can narrow `data.entry` to plugin-populated types (e.g.
-// `defineTemplate<SingleData<BlogPost>>`). Default to `ResolvedEntry`
+// `defineTemplate<EntryData<BlogPost>>`). Default to `ResolvedEntry`
 // — the framework's internal renderer always sees the default.
-export interface SingleData<TEntry extends ResolvedEntry = ResolvedEntry> {
+export interface EntryData<TEntry extends ResolvedEntry = ResolvedEntry> {
+  readonly kind: "entry";
   readonly entry: TEntry;
 }
 
@@ -46,12 +47,14 @@ export interface Pagination {
 }
 
 export interface ArchiveData<TEntry extends ResolvedEntry = ResolvedEntry> {
+  readonly kind: "archive";
   readonly contentType: string;
   readonly entries: readonly TEntry[];
   readonly pagination: Pagination;
 }
 
 export interface TaxonomyData<TEntry extends ResolvedEntry = ResolvedEntry> {
+  readonly kind: "taxonomy";
   readonly taxonomy: string;
   readonly term: ResolvedTerm;
   readonly entries: readonly TEntry[];
@@ -59,11 +62,13 @@ export interface TaxonomyData<TEntry extends ResolvedEntry = ResolvedEntry> {
 }
 
 export interface FrontPageData<TEntry extends ResolvedEntry = ResolvedEntry> {
+  readonly kind: "frontPage";
   readonly entries: readonly TEntry[];
   readonly pagination: Pagination;
 }
 
 export interface SearchData<TEntry extends ResolvedEntry = ResolvedEntry> {
+  readonly kind: "search";
   readonly query: string;
   readonly entries: readonly TEntry[];
   readonly pagination: Pagination;
@@ -75,6 +80,7 @@ export interface SearchData<TEntry extends ResolvedEntry = ResolvedEntry> {
  * no path to the rendered output.
  */
 export interface ErrorData {
+  readonly kind: "error";
   readonly request: Request;
   readonly hint?: string;
 }
