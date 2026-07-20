@@ -4,6 +4,11 @@
   "main": ".plumix/worker.ts",
   "compatibility_date": "2026-04-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Marketing is the apex site. Served only on the custom domain (no
+  // *.workers.dev); declaring the route here keeps deploys reconciled with the
+  // domain attached in the dashboard.
+  "workers_dev": false,
+  "routes": [{ "pattern": "plumix.dev", "custom_domain": true }],
   "d1_databases": [
     {
       "binding": "DB",
