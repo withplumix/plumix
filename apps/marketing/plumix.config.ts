@@ -2,12 +2,7 @@ import { auth, plumix } from "plumix";
 
 import { media } from "@plumix/plugin-media";
 import { pages } from "@plumix/plugin-pages";
-import {
-  cloudflare,
-  cloudflareDeployOrigin,
-  d1,
-  r2,
-} from "@plumix/runtime-cloudflare";
+import { cloudflare, d1, r2 } from "@plumix/runtime-cloudflare";
 
 export default plumix({
   runtime: cloudflare(),
@@ -19,14 +14,13 @@ export default plumix({
   auth: auth({
     passkey: {
       rpName: "Plumix — Marketing",
-      // Placeholder deploy origin — set a real workerName/accountSubdomain when
-      // the marketing-content follow-up wires deployment. localOrigin must be
-      // vite's dev port; the CSRF allowlist matches it, not wrangler's.
-      ...cloudflareDeployOrigin({
-        workerName: "plumix-marketing",
-        accountSubdomain: "your-account",
-        localOrigin: "http://localhost:5173",
-      }),
+      // WebAuthn is origin-bound. Served on the custom domain plumix.dev in
+      // production (cloudflareDeployOrigin only builds *.workers.dev URLs, so
+      // set it directly); localhost in dev. WORKERS_CI is the build-time signal
+      // Cloudflare Workers Builds injects.
+      ...(process.env.WORKERS_CI === "1"
+        ? { rpId: "plumix.dev", origin: "https://plumix.dev" }
+        : { rpId: "localhost", origin: "http://localhost:5173" }),
     },
   }),
   plugins: [pages, media()],
