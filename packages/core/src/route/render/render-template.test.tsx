@@ -10,6 +10,18 @@ import { definePlugin } from "../../plugin/define.js";
 import { defineTemplate } from "../../template.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
 import { defineTheme } from "../../theme.js";
+import {
+  archive,
+  entry,
+  fallback,
+  forEntryType,
+  forTaxonomy,
+  frontPage,
+  notFound,
+  search,
+  serverError,
+  taxonomy,
+} from "./template-builders.js";
 
 const blogPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -49,7 +61,7 @@ async function seedPost(
 
 describe("SEO — canonical + render:document seam", () => {
   test("a public page renders exactly one canonical with the slash-less absolute URL", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     await seedPost(h);
 
@@ -71,7 +83,7 @@ describe("SEO — canonical + render:document seam", () => {
         ],
       }));
     });
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({
       plugins: [blogPlugin, seoPlugin],
       theme,
@@ -86,7 +98,7 @@ describe("SEO — canonical + render:document seam", () => {
 
   test("a template-set canonical is not duplicated by the gap-filler", async () => {
     const theme = defineTheme({
-      templates: { index: () => null },
+      templates: [fallback(() => null)],
       document: {
         link: [{ rel: "canonical", href: "https://cms.example/from-theme" }],
       },
@@ -112,7 +124,7 @@ async function seedSiteSettings(
 
 describe("SEO — default head meta", () => {
   test("an entry page emits the singular default meta set", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     await seedSiteSettings(h, {
       title: "Demo",
@@ -154,7 +166,7 @@ describe("SEO — default head meta", () => {
   });
 
   test("description falls back to the site tagline when the entry has no excerpt", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     await seedSiteSettings(h, { tagline: "Fallback tagline" });
     await seedPost(h);
@@ -167,7 +179,7 @@ describe("SEO — default head meta", () => {
   });
 
   test("og:image is absent and the card downgrades when no default image is set", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     await seedPost(h);
 
@@ -178,7 +190,7 @@ describe("SEO — default head meta", () => {
   });
 
   test("a search-results route emits noindex", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
 
     const head = await dispatchHead(h, "https://cms.example/search/anything");
@@ -188,7 +200,7 @@ describe("SEO — default head meta", () => {
 
   test("a template-set head field is not duplicated by the defaults", async () => {
     const theme = defineTheme({
-      templates: { index: () => null },
+      templates: [fallback(() => null)],
       document: {
         meta: [{ property: "og:site_name", content: "From Theme" }],
       },
@@ -229,7 +241,7 @@ describe("SEO — sitemap", () => {
   }
 
   test("the index lists a sub-sitemap for a type with published content", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     await seedPost(h);
 
@@ -241,7 +253,7 @@ describe("SEO — sitemap", () => {
   });
 
   test("a sub-sitemap lists published entry URLs with lastmod, excluding drafts", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
@@ -270,7 +282,7 @@ describe("SEO — sitemap", () => {
   });
 
   test("a page past the end is an empty url-set", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     await seedPost(h);
 
@@ -284,7 +296,7 @@ describe("SEO — sitemap", () => {
     const dropAll = definePlugin("sitemap-test", (ctx) => {
       ctx.addFilter("seo:sitemap:urls", () => []);
     });
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({
       plugins: [blogPlugin, dropAll],
       theme,
@@ -297,7 +309,7 @@ describe("SEO — sitemap", () => {
   });
 
   test("a taxonomy sub-sitemap lists term URLs", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({
       plugins: [taxonomyPlugin],
       theme,
@@ -314,7 +326,7 @@ describe("SEO — sitemap", () => {
   });
 
   test("a private site suppresses the sitemap", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     await h.factory.setting.create({
       group: "site",
@@ -332,7 +344,7 @@ describe("SEO — sitemap", () => {
 
 describe("SEO — robots.txt + public gate", () => {
   test("GET /robots.txt is text/plain and allows crawling by default", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
 
     const res = await h.dispatch(new Request("https://cms.example/robots.txt"));
@@ -343,7 +355,7 @@ describe("SEO — robots.txt + public gate", () => {
   });
 
   test("a private site disallows all crawling", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     await h.factory.setting.create({
       group: "site",
@@ -363,7 +375,7 @@ describe("SEO — robots.txt + public gate", () => {
         (body) => `${body}Sitemap: https://cms.example/sitemap.xml\n`,
       );
     });
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({
       plugins: [blogPlugin, seoPlugin],
       theme,
@@ -377,7 +389,7 @@ describe("SEO — robots.txt + public gate", () => {
   });
 
   test("a private site cascades to noindex,nofollow on rendered pages", async () => {
-    const theme = defineTheme({ templates: { index: () => null } });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     await h.factory.setting.create({
       group: "site",
@@ -395,10 +407,10 @@ describe("SEO — robots.txt + public gate", () => {
 describe("resolvePublicRoute — single entry through theme", () => {
   test("renders the entry title via the matched `single` template", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <h1 data-testid="title">{data.entry.title}</h1>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <h1 data-testid="title">{data.entry.title}</h1>),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -424,12 +436,13 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("falls through to `index` template when no `single` is registered", async () => {
     const theme = defineTheme({
-      templates: {
-        index: ({ data }) =>
+      templates: [
+        fallback(({ data }) =>
           "entry" in data ? (
             <article data-testid="index">{data.entry.title}</article>
           ) : null,
-      },
+        ),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -454,11 +467,11 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("more-specific keys win: single-{type} > single > index", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => <div data-testid="index" />,
-        single: () => <div data-testid="single" />,
-        "single-post": () => <div data-testid="single-post" />,
-      },
+      templates: [
+        fallback(() => <div data-testid="index" />),
+        entry(() => <div data-testid="single" />),
+        forEntryType("post").template(() => <div data-testid="single-post" />),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -483,10 +496,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("runs resolve:single:data filters before the template renders", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <h1>{data.entry.title}</h1>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <h1>{data.entry.title}</h1>),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -520,12 +533,12 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("template receives ResolvedAuthor with public-safe fields", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => (
           <p data-testid="author">{data.entry.author.name}</p>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -554,17 +567,17 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("template receives eager-loaded terms in batched order", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => (
           <span data-testid="terms">{`terms:${String(data.entry.terms.length)}`}</span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
-    const entry = await h.factory.entry.create({
+    const createdEntry = await h.factory.entry.create({
       type: "post",
       slug: "tagged",
       title: "Tagged",
@@ -584,12 +597,12 @@ describe("resolvePublicRoute — single entry through theme", () => {
       name: "Beta",
     });
     await h.factory.entryTerm.create({
-      entryId: entry.id,
+      entryId: createdEntry.id,
       termId: a.id,
       sortOrder: 0,
     });
     await h.factory.entryTerm.create({
-      entryId: entry.id,
+      entryId: createdEntry.id,
       termId: b.id,
       sortOrder: 1,
     });
@@ -603,10 +616,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("default document shell supplies doctype + html/head/body with charset, viewport, and title", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -637,10 +650,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("public route stays on site default — Accept-Language is intentionally ignored (WP get_locale parity)", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -672,10 +685,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("authenticated visitor of a public URL still sees the site default (WP frontend vs admin split)", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -718,10 +731,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("authenticated public render carries the PlumixAdminBar empty shell", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
     });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
@@ -747,10 +760,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("edit-mode render does NOT carry the PlumixAdminBar", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
     });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
@@ -782,10 +795,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("anonymous public render does NOT carry the PlumixAdminBar", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
     });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
@@ -809,10 +822,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("site's i18n defaultLocale drives <html lang dir> (RTL example)", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -840,10 +853,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("manifest `html.lang` spreads onto the rendered <html>", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
       document: { html: { lang: "fr" } },
     });
 
@@ -868,10 +881,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("manifest `body.className` spreads onto the rendered <body>", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
       document: { body: { className: "font-sans theme-light" } },
     });
 
@@ -896,10 +909,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("bundled CSS from the asset manifest auto-injects after theme link[]", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
       document: {
         link: [{ rel: "icon", href: "/favicon.svg" }],
       },
@@ -943,16 +956,18 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("per-template document fragment merges with theme document; theme entries first", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          document: {
-            meta: [{ name: "robots", content: "noindex" }],
-            html: { className: "single-variant" },
-          },
-          render: ({ data }) => <article>{data.entry.title}</article>,
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            document: {
+              meta: [{ name: "robots", content: "noindex" }],
+              html: { className: "single-variant" },
+            },
+            render: ({ data }) => <article>{data.entry.title}</article>,
+          }),
+        ),
+      ],
       document: {
         meta: [{ name: "theme-color", content: "#0ea5e9" }],
         html: { lang: "en", className: "site" },
@@ -989,23 +1004,58 @@ describe("resolvePublicRoute — single entry through theme", () => {
     );
   });
 
+  test("an invalid per-template document fragment fails the render (500)", async () => {
+    const theme = defineTheme({
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            // `rel` is required on every link; the empty one trips
+            // `validateDocumentManifest` when the fragment merges at render.
+            document: { link: [{ rel: "", href: "/x.css" }] },
+            render: ({ data }) => <article>{data.entry.title}</article>,
+          }),
+        ),
+      ],
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "bad-fragment",
+      title: "Bad",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/bad-fragment"),
+    );
+    expect(response.status).toBe(500);
+  });
+
   test("per-template script[] with headEnd position lands in head after theme scripts", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          document: {
-            script: [
-              {
-                src: "https://template.example/single.js",
-                position: "headEnd",
-                defer: true,
-              },
-            ],
-          },
-          render: ({ data }) => <article>{data.entry.title}</article>,
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            document: {
+              script: [
+                {
+                  src: "https://template.example/single.js",
+                  position: "headEnd",
+                  defer: true,
+                },
+              ],
+            },
+            render: ({ data }) => <article>{data.entry.title}</article>,
+          }),
+        ),
+      ],
       document: {
         script: [
           {
@@ -1043,20 +1093,22 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("template `document` accepts a function that receives the render args and renders per-request", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          document: ({ data }) => ({
-            meta: [
-              {
-                property: "og:description",
-                content: `desc:${data.entry.title}`,
-              },
-            ],
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            document: ({ data }) => ({
+              meta: [
+                {
+                  property: "og:description",
+                  content: `desc:${data.entry.title}`,
+                },
+              ],
+            }),
+            render: ({ data }) => <article>{data.entry.title}</article>,
           }),
-          render: ({ data }) => <article>{data.entry.title}</article>,
-        }),
-      },
+        ),
+      ],
       document: {
         meta: [{ name: "theme-color", content: "#0ea5e9" }],
       },
@@ -1093,11 +1145,11 @@ describe("resolvePublicRoute — single entry through theme", () => {
     // fragment shouldn't pay any per-template cost — and shouldn't
     // accidentally render a wrong document either.
     const theme = defineTheme({
-      templates: {
-        index: () => null,
+      templates: [
+        fallback(() => null),
         // Plain function form — no `document` at all.
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
       document: {
         meta: [{ name: "theme-color", content: "#0ea5e9" }],
       },
@@ -1127,19 +1179,21 @@ describe("resolvePublicRoute — single entry through theme", () => {
     // "Invalid hook call". The TemplateAdapter wraps the call so hooks
     // are legal — this test enforces that contract.
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          render: ({ data }) => {
-            const id = useId();
-            return (
-              <article id={id} data-testid="hook-host">
-                {data.entry.title}
-              </article>
-            );
-          },
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            render: ({ data }) => {
+              const id = useId();
+              return (
+                <article id={id} data-testid="hook-host">
+                  {data.entry.title}
+                </article>
+              );
+            },
+          }),
+        ),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -1166,17 +1220,19 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("factory-built template's render receives ctx with request + resolvedEntity", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          render: ({ data, ctx }) => (
-            <article data-testid="entry">
-              <h1>{data.entry.title}</h1>
-              <p data-testid="ctx-host">{new URL(ctx.request.url).host}</p>
-            </article>
-          ),
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            render: ({ data, ctx }) => (
+              <article data-testid="entry">
+                <h1>{data.entry.title}</h1>
+                <p data-testid="ctx-host">{new URL(ctx.request.url).host}</p>
+              </article>
+            ),
+          }),
+        ),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -1216,10 +1272,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
       }));
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [seoPlugin], theme });
@@ -1249,10 +1305,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("manifest `link[]` entries land in <head> in declared order", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
       document: {
         link: [
           { rel: "icon", href: "/favicon.svg" },
@@ -1289,10 +1345,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("manifest `meta[]` entries land in <head> in declared order", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
       document: {
         meta: [
           { name: "description", content: "Site default" },
@@ -1329,10 +1385,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test('manifest `script[].position="headStart"` lands at the top of <head>', async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
       document: {
         link: [{ rel: "icon", href: "/favicon.svg" }],
         script: [
@@ -1372,10 +1428,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test('manifest `script[].position="headEnd"` lands after theme link/meta but inside <head>', async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
       document: {
         link: [{ rel: "icon", href: "/favicon.svg" }],
         meta: [{ name: "theme-color", content: "#ffffff" }],
@@ -1415,12 +1471,12 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test('manifest `script[].position="bodyStart"` lands at the top of <body>', async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => (
           <article data-testid="entry">{data.entry.title}</article>
-        ),
-      },
+        )),
+      ],
       document: {
         script: [
           {
@@ -1458,12 +1514,12 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("manifest `script[]` with no position defaults to end of <body>", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => (
           <article data-testid="entry">{data.entry.title}</article>
-        ),
-      },
+        )),
+      ],
       document: {
         script: [{ src: "https://cdn.example/analytics.js" }],
       },
@@ -1496,10 +1552,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("reserved hydration slot sits at the end of <body>, after any theme scripts", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
       document: {
         script: [{ src: "https://cdn.example/analytics.js" }],
       },
@@ -1532,13 +1588,15 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("theme-level string titleTemplate composes the per-template title", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          document: ({ data }) => ({ title: data.entry.title }),
-          render: ({ data }) => <article>{data.entry.title}</article>,
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            document: ({ data }) => ({ title: data.entry.title }),
+            render: ({ data }) => <article>{data.entry.title}</article>,
+          }),
+        ),
+      ],
       document: { titleTemplate: "%s · Plumix Starter" },
     });
 
@@ -1563,13 +1621,15 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("function titleTemplate receives the per-template title", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          document: ({ data }) => ({ title: data.entry.title }),
-          render: ({ data }) => <article>{data.entry.title}</article>,
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            document: ({ data }) => ({ title: data.entry.title }),
+            render: ({ data }) => <article>{data.entry.title}</article>,
+          }),
+        ),
+      ],
       document: {
         titleTemplate: (title) => (title ? `${title} | Plumix` : "Plumix"),
       },
@@ -1596,18 +1656,20 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("function titleTemplate receives undefined when template supplies no title", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: defineTemplate({
-          render: ({ data }) => (
-            <ul>
-              {data.entries.map((entry: ResolvedEntry) => (
-                <li key={entry.id}>{entry.title}</li>
-              ))}
-            </ul>
-          ),
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        archive(
+          defineTemplate({
+            render: ({ data }) => (
+              <ul>
+                {data.entries.map((entry: ResolvedEntry) => (
+                  <li key={entry.id}>{entry.title}</li>
+                ))}
+              </ul>
+            ),
+          }),
+        ),
+      ],
       document: {
         titleTemplate: (title) => title ?? "Plumix Archive",
       },
@@ -1635,18 +1697,20 @@ describe("resolvePublicRoute — single entry through theme", () => {
     // template doesn't name its own title and the theme uses string form,
     // the resolver-computed title still renders bare.
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: defineTemplate({
-          render: ({ data }) => (
-            <ul>
-              {data.entries.map((entry: ResolvedEntry) => (
-                <li key={entry.id}>{entry.title}</li>
-              ))}
-            </ul>
-          ),
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        archive(
+          defineTemplate({
+            render: ({ data }) => (
+              <ul>
+                {data.entries.map((entry: ResolvedEntry) => (
+                  <li key={entry.id}>{entry.title}</li>
+                ))}
+              </ul>
+            ),
+          }),
+        ),
+      ],
       document: { titleTemplate: "%s · Plumix" },
     });
 
@@ -1672,10 +1736,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("back-compat: theme without titleTemplate or document.title renders resolver title", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -1699,16 +1763,18 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("per-template titleTemplate overrides the theme-level titleTemplate", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          document: ({ data }) => ({
-            title: data.entry.title,
-            titleTemplate: "%s | Per-Template",
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            document: ({ data }) => ({
+              title: data.entry.title,
+              titleTemplate: "%s | Per-Template",
+            }),
+            render: ({ data }) => <article>{data.entry.title}</article>,
           }),
-          render: ({ data }) => <article>{data.entry.title}</article>,
-        }),
-      },
+        ),
+      ],
       document: { titleTemplate: "%s · Theme" },
     });
 
@@ -1734,15 +1800,15 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("template-rendered <title> wins over framework default title", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => (
           <>
             <title>From-Template</title>
             <article>{data.entry.title}</article>
           </>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -1774,9 +1840,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("react 19 hoists template-rendered <script> into <head>", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => (
           <>
             <script
               async
@@ -1785,8 +1851,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
             />
             <article>{data.entry.title}</article>
           </>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -1819,10 +1885,10 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("manifest `meta[]` translates JSX-cased keys (`httpEquiv` -> `http-equiv`)", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <article>{data.entry.title}</article>,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
       document: {
         meta: [{ httpEquiv: "X-UA-Compatible", content: "IE=edge" }],
       },
@@ -1856,14 +1922,14 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("theme reads entry.contentBlocks without a cast", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => (
           <span data-testid="blocks">
             {`blocks:${String(data.entry.contentBlocks?.blocks.length ?? 0)}`}
           </span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -1892,14 +1958,14 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("contentBlocks is null when stored content doesn't match the EntryContent shape", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => (
           <span data-testid="result">
             {`isNull:${String(data.entry.contentBlocks === null)}`}
           </span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -1922,13 +1988,14 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("template can render <BlockRenderer/> against the entry's content tree", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) =>
+      templates: [
+        fallback(() => null),
+        entry(({ data }) =>
           data.entry.contentBlocks ? (
             <BlockRenderer content={data.entry.contentBlocks} />
           ) : null,
-      },
+        ),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -1959,13 +2026,14 @@ describe("resolvePublicRoute — single entry through theme", () => {
   test("a styled block's stored `var(--plumix-…)` value is emitted verbatim", async () => {
     const theme = defineTheme({
       tokens: { colors: { brand: { value: "#abc" } } },
-      templates: {
-        index: () => null,
-        single: ({ data }) =>
+      templates: [
+        fallback(() => null),
+        entry(({ data }) =>
           data.entry.contentBlocks ? (
             <BlockRenderer content={data.entry.contentBlocks} />
           ) : null,
-      },
+        ),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -2009,13 +2077,14 @@ describe("resolvePublicRoute — single entry through theme", () => {
       );
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) =>
+      templates: [
+        fallback(() => null),
+        entry(({ data }) =>
           data.entry.contentBlocks ? (
             <BlockRenderer content={data.entry.contentBlocks} />
           ) : null,
-      },
+        ),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -2048,9 +2117,9 @@ describe("resolvePublicRoute — single entry through theme", () => {
 describe("resolvePublicRoute — archive through theme", () => {
   test("renders the archive template with the seeded entries listed", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        archive(({ data }) => (
           <ul data-testid="archive">
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`entry-${entry.slug}`}>
@@ -2058,8 +2127,8 @@ describe("resolvePublicRoute — archive through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -2093,16 +2162,16 @@ describe("resolvePublicRoute — archive through theme", () => {
 
   test("archive listing exposes `entry.url` to templates", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        archive(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id}>{entry.url}</li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
@@ -2120,7 +2189,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     expect(await response.text()).toContain("/post/alpha");
   });
 
-  test("archive with `prefetchListingLoaders` resolves block loaders for every entry", async () => {
+  test("archive with `prefetchArchiveLoaders` resolves block loaders for every entry", async () => {
     const probePlugin = definePlugin("acme-listing-probe", (ctx) => {
       ctx.registerBlock(
         defineBlock({
@@ -2137,23 +2206,25 @@ describe("resolvePublicRoute — archive through theme", () => {
       );
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: defineTemplate({
-          prefetchListingLoaders: true,
-          render: ({ data }) => (
-            <ul>
-              {data.entries.map((entry: ResolvedEntry) =>
-                entry.contentBlocks ? (
-                  <li key={entry.id}>
-                    <BlockRenderer content={entry.contentBlocks} />
-                  </li>
-                ) : null,
-              )}
-            </ul>
-          ),
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        archive(
+          defineTemplate({
+            prefetchArchiveLoaders: true,
+            render: ({ data }) => (
+              <ul>
+                {data.entries.map((entry: ResolvedEntry) =>
+                  entry.contentBlocks ? (
+                    <li key={entry.id}>
+                      <BlockRenderer content={entry.contentBlocks} />
+                    </li>
+                  ) : null,
+                )}
+              </ul>
+            ),
+          }),
+        ),
+      ],
     });
     const h = await createDispatcherHarness({
       plugins: [blogPlugin, probePlugin],
@@ -2195,7 +2266,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     expect(body).toContain("loaded-b");
   });
 
-  test("archive without `prefetchListingLoaders` leaves listing block loaders unresolved", async () => {
+  test("archive without `prefetchArchiveLoaders` leaves listing block loaders unresolved", async () => {
     const probePlugin = definePlugin("acme-listing-probe-off", (ctx) => {
       ctx.registerBlock(
         defineBlock({
@@ -2208,9 +2279,9 @@ describe("resolvePublicRoute — archive through theme", () => {
       );
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        archive(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) =>
               entry.contentBlocks ? (
@@ -2220,8 +2291,8 @@ describe("resolvePublicRoute — archive through theme", () => {
               ) : null,
             )}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
     const h = await createDispatcherHarness({
       plugins: [blogPlugin, probePlugin],
@@ -2251,9 +2322,9 @@ describe("resolvePublicRoute — archive through theme", () => {
 
   test("excludes published entries with NULL publishedAt from the archive", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        archive(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`entry-${entry.slug}`}>
@@ -2261,8 +2332,8 @@ describe("resolvePublicRoute — archive through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -2294,14 +2365,14 @@ describe("resolvePublicRoute — archive through theme", () => {
 
   test("template receives the pagination shape { page, perPage, total, pageCount }", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        archive(({ data }) => (
           <span data-testid="pagination">
             {`page:${String(data.pagination.page)};perPage:${String(data.pagination.perPage)};total:${String(data.pagination.total)};pageCount:${String(data.pagination.pageCount)}`}
           </span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -2332,12 +2403,12 @@ describe("resolvePublicRoute — archive through theme", () => {
 
   test("/post/page/2 renders page 2 of entries", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        archive(({ data }) => (
           <span data-testid="page">{`page:${String(data.pagination.page)};entries:${String(data.entries.length)}`}</span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -2373,12 +2444,12 @@ describe("resolvePublicRoute — archive through theme", () => {
       });
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        archive(({ data }) => (
           <span data-testid="per-page">{`perPage:${String(data.pagination.perPage)}`}</span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -2402,11 +2473,13 @@ describe("resolvePublicRoute — archive through theme", () => {
 
   test("archive-{type} specificity wins over `archive` and `index`", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => <div data-testid="index" />,
-        archive: () => <div data-testid="archive" />,
-        "archive-post": () => <div data-testid="archive-post" />,
-      },
+      templates: [
+        fallback(() => <div data-testid="index" />),
+        archive(() => <div data-testid="archive" />),
+        forEntryType("post").archive.template(() => (
+          <div data-testid="archive-post" />
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -2429,13 +2502,13 @@ describe("resolvePublicRoute — archive through theme", () => {
 
   test("falls through to `index` template when `archive` is not registered", async () => {
     const theme = defineTheme({
-      templates: {
-        index: ({ data }) => (
+      templates: [
+        fallback(({ data }) => (
           <span data-testid="index-fallback">
             {`entries:${String("entries" in data ? data.entries.length : 0)}`}
           </span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -2458,10 +2531,10 @@ describe("resolvePublicRoute — archive through theme", () => {
 
   test("runs resolve:archive:data filters before the template renders", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: ({ data }) => <span data-testid="ct">{data.contentType}</span>,
-      },
+      templates: [
+        fallback(() => null),
+        archive(({ data }) => <span data-testid="ct">{data.contentType}</span>),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -2489,9 +2562,9 @@ describe("resolvePublicRoute — archive through theme", () => {
 
   test("each entry in the archive carries its eager-loaded author + terms", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        archive(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`row-${entry.slug}`}>
@@ -2500,8 +2573,8 @@ describe("resolvePublicRoute — archive through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -2510,7 +2583,7 @@ describe("resolvePublicRoute — archive through theme", () => {
       name: "Ada Author",
       role: "admin",
     });
-    const entry = await h.factory.entry.create({
+    const createdEntry = await h.factory.entry.create({
       type: "post",
       slug: "eager",
       title: "Eager",
@@ -2525,7 +2598,7 @@ describe("resolvePublicRoute — archive through theme", () => {
       name: "Alpha",
     });
     await h.factory.entryTerm.create({
-      entryId: entry.id,
+      entryId: createdEntry.id,
       termId: tag.id,
       sortOrder: 0,
     });
@@ -2575,9 +2648,9 @@ const categoryPlugin = definePlugin("blog-category", (ctx) => {
 describe("resolvePublicRoute — taxonomy through theme", () => {
   test("renders the taxonomy template with the term + its entries", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        taxonomy: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        taxonomy(({ data }) => (
           <section data-testid="taxonomy">
             <h1 data-testid="term-name">{data.term.name}</h1>
             <ul>
@@ -2586,8 +2659,8 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
               ))}
             </ul>
           </section>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -2642,12 +2715,12 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       });
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        taxonomy: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        taxonomy(({ data }) => (
           <span data-testid="per-page">{`perPage:${String(data.pagination.perPage)}`}</span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -2660,7 +2733,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       slug: "news",
       name: "News",
     });
-    const entry = await h.factory.entry.create({
+    const createdEntry = await h.factory.entry.create({
       type: "post",
       slug: "t",
       title: "T",
@@ -2670,7 +2743,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       publishedAt: new Date(),
     });
     await h.factory.entryTerm.create({
-      entryId: entry.id,
+      entryId: createdEntry.id,
       termId: term.id,
       sortOrder: 0,
     });
@@ -2683,9 +2756,9 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
 
   test("excludes published entries with NULL publishedAt from the term archive", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        taxonomy: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        taxonomy(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`entry-${entry.slug}`}>
@@ -2693,8 +2766,8 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [topicPlugin], theme });
@@ -2747,12 +2820,12 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
 
   test("renders built-in `category` template via the category-* hierarchy", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        category: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        forTaxonomy("category").template(({ data }) => (
           <div data-testid="category">{data.term.name}</div>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -2790,12 +2863,12 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
 
   test("/topic/{slug}/page/2 renders page 2 of entries", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        taxonomy: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        taxonomy(({ data }) => (
           <span data-testid="page">{`page:${String(data.pagination.page)};entries:${String(data.entries.length)}`}</span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -2835,12 +2908,12 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
 
   test("runs resolve:term:data filters before the template renders", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        taxonomy: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        taxonomy(({ data }) => (
           <span data-testid="name">{data.term.name}</span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -2872,9 +2945,9 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
 
   test("each entry in the taxonomy carries eager-loaded author + terms", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        taxonomy: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        taxonomy(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id}>
@@ -2882,8 +2955,8 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -2925,10 +2998,12 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
 
   test("built-in `tag` template via the tag-* hierarchy mirrors `category`", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        tag: ({ data }) => <div data-testid="tag">{data.term.name}</div>,
-      },
+      templates: [
+        fallback(() => null),
+        forTaxonomy("tag").template(({ data }) => (
+          <div data-testid="tag">{data.term.name}</div>
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -2968,9 +3043,9 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
 describe("resolvePublicRoute — front-page through theme", () => {
   test("renders the front-page template with the latest entries at /", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        "front-page": ({ data }) => (
+      templates: [
+        fallback(() => null),
+        frontPage(({ data }) => (
           <section data-testid="front-page">
             <ul>
               {data.entries.map((entry: ResolvedEntry) => (
@@ -2980,8 +3055,8 @@ describe("resolvePublicRoute — front-page through theme", () => {
               ))}
             </ul>
           </section>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3005,9 +3080,9 @@ describe("resolvePublicRoute — front-page through theme", () => {
 
   test("excludes entries whose type is not registered by any plugin", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        "front-page": ({ data }) => (
+      templates: [
+        fallback(() => null),
+        frontPage(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`row-${entry.slug}`}>
@@ -3015,8 +3090,8 @@ describe("resolvePublicRoute — front-page through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3053,9 +3128,9 @@ describe("resolvePublicRoute — front-page through theme", () => {
       ctx.registerEntryType("internal", { label: "Internal", isPublic: false });
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        "front-page": ({ data }) => (
+      templates: [
+        fallback(() => null),
+        frontPage(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`row-${entry.slug}`}>
@@ -3063,8 +3138,8 @@ describe("resolvePublicRoute — front-page through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [mixedPlugin], theme });
@@ -3096,9 +3171,9 @@ describe("resolvePublicRoute — front-page through theme", () => {
 
   test("excludes published entries with NULL publishedAt", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        "front-page": ({ data }) => (
+      templates: [
+        fallback(() => null),
+        frontPage(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`row-${entry.slug}`}>
@@ -3106,8 +3181,8 @@ describe("resolvePublicRoute — front-page through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3141,12 +3216,12 @@ describe("resolvePublicRoute — front-page through theme", () => {
 
   test("/page/1 canonical-redirects to the front page, which renders page 1", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        "front-page": ({ data }) => (
+      templates: [
+        fallback(() => null),
+        frontPage(({ data }) => (
           <span data-testid="page">{`page:${String(data.pagination.page)}`}</span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3174,7 +3249,7 @@ describe("resolvePublicRoute — front-page through theme", () => {
 
   test("/page/0 on the front-page is out-of-range 404", async () => {
     const theme = defineTheme({
-      templates: { index: () => null, "front-page": () => null },
+      templates: [fallback(() => null), frontPage(() => null)],
     });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
 
@@ -3193,12 +3268,12 @@ describe("resolvePublicRoute — front-page through theme", () => {
       ctx.registerEntryType("page", { label: "Pages", isPublic: true });
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        "front-page": ({ data }) => (
+      templates: [
+        fallback(() => null),
+        frontPage(({ data }) => (
           <span data-testid="page">{`page:${String(data.pagination.page)}`}</span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -3248,12 +3323,12 @@ describe("resolvePublicRoute — front-page through theme", () => {
       });
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        archive: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        archive(({ data }) => (
           <span data-testid="archive">{`type:${data.contentType}`}</span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -3282,11 +3357,11 @@ describe("resolvePublicRoute — front-page through theme", () => {
       ctx.registerRewriteRule("/", { kind: "archive", entryType: "post" });
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        "front-page": () => <section data-testid="front-page" />,
-        archive: () => <section data-testid="archive" />,
-      },
+      templates: [
+        fallback(() => null),
+        frontPage(() => <section data-testid="front-page" />),
+        archive(() => <section data-testid="archive" />),
+      ],
     });
 
     const h = await createDispatcherHarness({
@@ -3301,9 +3376,9 @@ describe("resolvePublicRoute — front-page through theme", () => {
 
   test("runs resolve:front-page:data filters before the template renders", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        "front-page": ({ data }) => (
+      templates: [
+        fallback(() => null),
+        frontPage(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`row-${entry.slug}`}>
@@ -3311,8 +3386,8 @@ describe("resolvePublicRoute — front-page through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3352,12 +3427,12 @@ describe("resolvePublicRoute — front-page through theme", () => {
 describe("resolvePublicRoute — search through theme", () => {
   test("/search/<query> renders the `search` template with the query in scope", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        search: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        search(({ data }) => (
           <section data-testid="search">{`query:${data.query}`}</section>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3372,9 +3447,9 @@ describe("resolvePublicRoute — search through theme", () => {
 
   test("search results filter entries whose title matches the query", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        search: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        search(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`hit-${entry.slug}`}>
@@ -3382,8 +3457,8 @@ describe("resolvePublicRoute — search through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3417,12 +3492,12 @@ describe("resolvePublicRoute — search through theme", () => {
 
   test("/search/<q>/page/N paginates the search results", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        search: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        search(({ data }) => (
           <span data-testid="page">{`page:${String(data.pagination.page)};entries:${String(data.entries.length)}`}</span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3449,12 +3524,12 @@ describe("resolvePublicRoute — search through theme", () => {
 
   test("/search (no query) renders the empty-search state", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        search: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        search(({ data }) => (
           <section data-testid="search">{`q:[${data.query}]`}</section>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3469,15 +3544,15 @@ describe("resolvePublicRoute — search through theme", () => {
 
   test("?s= on a non-search URL stays on the original route (no hijack)", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => (
           <article data-testid={`post-${data.entry.slug}`}>
             {data.entry.title}
           </article>
-        ),
-        search: () => <section data-testid="search" />,
-      },
+        )),
+        search(() => <section data-testid="search" />),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3510,9 +3585,9 @@ describe("resolvePublicRoute — search through theme", () => {
       });
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        search: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        search(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`hit-${entry.slug}`}>
@@ -3520,8 +3595,8 @@ describe("resolvePublicRoute — search through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [mediaPlugin], theme });
@@ -3555,12 +3630,12 @@ describe("resolvePublicRoute — search through theme", () => {
 
   test("URL-encoded query is decoded before matching and rendering", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        search: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        search(({ data }) => (
           <span data-testid="q">{`q:[${data.query}]`}</span>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3586,9 +3661,9 @@ describe("resolvePublicRoute — search through theme", () => {
     // Without escaping, SQLite LIKE treats `_` as a wildcard — a query of
     // `_` would match every entry. The framework escapes user wildcards.
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        search: ({ data }) => (
+      templates: [
+        fallback(() => null),
+        search(({ data }) => (
           <ul>
             {data.entries.map((entry: ResolvedEntry) => (
               <li key={entry.id} data-testid={`hit-${entry.slug}`}>
@@ -3596,8 +3671,8 @@ describe("resolvePublicRoute — search through theme", () => {
               </li>
             ))}
           </ul>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3631,10 +3706,10 @@ describe("resolvePublicRoute — search through theme", () => {
 
   test("runs resolve:search:data filters before the search template renders", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        search: ({ data }) => <span data-testid="q">{`q:${data.query}`}</span>,
-      },
+      templates: [
+        fallback(() => null),
+        search(({ data }) => <span data-testid="q">{`q:${data.query}`}</span>),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3653,7 +3728,7 @@ describe("resolvePublicRoute — search through theme", () => {
 
   test("/search/<q>/page/N returns 404 when N is out of range", async () => {
     const theme = defineTheme({
-      templates: { index: () => null, search: () => null },
+      templates: [fallback(() => null), search(() => null)],
     });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const response = await h.dispatch(
@@ -3666,10 +3741,10 @@ describe("resolvePublicRoute — search through theme", () => {
 describe("resolvePublicRoute — error pages through theme", () => {
   test("404 page composes its title through the theme titleTemplate", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        "404": () => <main data-testid="four-oh-four" />,
-      },
+      templates: [
+        fallback(() => null),
+        notFound(() => <main data-testid="four-oh-four" />),
+      ],
       document: { titleTemplate: "%s · Plumix" },
     });
 
@@ -3684,15 +3759,15 @@ describe("resolvePublicRoute — error pages through theme", () => {
 
   test("registered `404` template renders for an unmatched URL", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        "404": ({ data }) => (
+      templates: [
+        fallback(() => null),
+        notFound(({ data }) => (
           <main data-testid="four-oh-four">
             <h1>Page missing</h1>
             <code data-testid="hint">{data.hint ?? ""}</code>
           </main>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3707,10 +3782,10 @@ describe("resolvePublicRoute — error pages through theme", () => {
 
   test("themed 404 preserves the `x-plumix-hint` diagnostic header", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        "404": () => <main data-testid="four-oh-four" />,
-      },
+      templates: [
+        fallback(() => null),
+        notFound(() => <main data-testid="four-oh-four" />),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3723,9 +3798,7 @@ describe("resolvePublicRoute — error pages through theme", () => {
 
   test("built-in 404 default renders when the theme has no `404` template", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-      },
+      templates: [fallback(() => null)],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3741,18 +3814,18 @@ describe("resolvePublicRoute — error pages through theme", () => {
 
   test("theme template that throws renders the `500` template + 500 status", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: () => {
+      templates: [
+        fallback(() => null),
+        entry(() => {
           throw new Error("kaboom-secret-payload");
-        },
-        "500": ({ data }) => (
+        }),
+        serverError(({ data }) => (
           <main data-testid="five-oh-oh">
             <h1>Server error</h1>
             <p data-testid="hint">{data.hint ?? ""}</p>
           </main>
-        ),
-      },
+        )),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3779,12 +3852,12 @@ describe("resolvePublicRoute — error pages through theme", () => {
 
   test("built-in 500 default renders when the theme has no `500` template", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: () => {
+      templates: [
+        fallback(() => null),
+        entry(() => {
           throw new Error("kaboom-different-payload");
-        },
-      },
+        }),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3811,11 +3884,11 @@ describe("resolvePublicRoute — error pages through theme", () => {
 
   test("a resolver-side throw renders the themed `500` template, not JSON", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: ({ data }) => <h1>{data.entry.title}</h1>,
-        "500": () => <main data-testid="five-oh-oh" />,
-      },
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <h1>{data.entry.title}</h1>),
+        serverError(() => <main data-testid="five-oh-oh" />),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
@@ -3845,15 +3918,15 @@ describe("resolvePublicRoute — error pages through theme", () => {
 
   test("falls back to plaintext 500 when the theme's `500` template also throws", async () => {
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: () => {
+      templates: [
+        fallback(() => null),
+        entry(() => {
           throw new Error("kaboom-inner-secret");
-        },
-        "500": () => {
+        }),
+        serverError(() => {
           throw new Error("kaboom-error-template-secret");
-        },
-      },
+        }),
+      ],
     });
 
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });

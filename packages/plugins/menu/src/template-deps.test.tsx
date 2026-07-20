@@ -1,4 +1,5 @@
 import type { AppContext, PluginRegistry } from "plumix/plugin";
+import { entry, fallback } from "plumix";
 import {
   createPluginRegistry,
   definePlugin,
@@ -147,24 +148,26 @@ describe("@plumix/plugin-menu — end-to-end SSR", () => {
       });
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          menus: ["primary"],
-          render: (args) => {
-            const primary = args.menus?.primary;
-            return (
-              <nav>
-                {primary?.items.map((item) => (
-                  <a key={item.id} href={item.href} data-testid="menu-link">
-                    {item.label}
-                  </a>
-                )) ?? null}
-              </nav>
-            );
-          },
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            menus: ["primary"],
+            render: (args) => {
+              const primary = args.menus?.primary;
+              return (
+                <nav>
+                  {primary?.items.map((item) => (
+                    <a key={item.id} href={item.href} data-testid="menu-link">
+                      {item.label}
+                    </a>
+                  )) ?? null}
+                </nav>
+              );
+            },
+          }),
+        ),
+      ],
     });
     const h = await createDispatcherHarness({
       plugins: [blogPlugin, menu()],

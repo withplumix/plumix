@@ -38,5 +38,5 @@ export default plumix({
   // Ukrainian alongside the default so the e2e can exercise the
   // locale switcher + the SSR admin bar translation end-to-end.
   i18n: { defaultLocale: "en", locales: ["en", "uk"] },
-  theme: defineTheme({ templates: { index: () => null } }),
+  theme: defineTheme({ templates: () => null }),
 });

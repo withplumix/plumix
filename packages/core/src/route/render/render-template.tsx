@@ -22,7 +22,7 @@ import type {
   DocumentMeta,
   DocumentScript,
   TemplateData,
-  TemplateRegistry,
+  TemplateRule,
   ThemeDescriptor,
 } from "../../theme.js";
 import type { EditModeDecision } from "../edit-mode.js";
@@ -48,7 +48,8 @@ import { LIVE_EDIT_MODE } from "../edit-mode.js";
 import { bundledCssTags, devThemeStylesTag } from "./asset-manifest.js";
 import { injectEditorBootstrap } from "./inject-editor-bootstrap.js";
 import { injectIslandsBootstrap } from "./inject-islands-bootstrap.js";
-import { resolveTemplateCandidates } from "./template-hierarchy.js";
+import { templateRules } from "./template-builders.js";
+import { resolveErrorTemplate, resolveTemplate } from "./template-hierarchy.js";
 
 declare module "../../hooks/types.js" {
   interface FilterRegistry {
@@ -72,7 +73,6 @@ interface RenderArgs {
   readonly ctx: AppContext;
   readonly theme: ThemeDescriptor;
   readonly document: DocumentManifest;
-  readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly assetManifest: AssetManifest;
   readonly node: ResolvedNode;
@@ -82,7 +82,11 @@ interface RenderArgs {
   readonly editMode?: EditModeDecision;
 }
 
-export function renderThroughTheme(args: RenderArgs): Promise<string> {
+/**
+ * Render a resolved node through the theme. Returns `null` when the theme
+ * declares no matching tier and no `fallback` — the caller then renders 404.
+ */
+export function renderThroughTheme(args: RenderArgs): Promise<string | null> {
   // Dev-only: time the render phase for the Timeline. `ctx.debug` is the no-op
   // collector in prod, so span() is a pass-through and this tree-shakes to a
   // plain call.
@@ -93,29 +97,22 @@ async function renderThroughThemeInner({
   ctx,
   theme,
   document,
-  templateDocuments,
   templateDeps,
   assetManifest,
   node,
   data,
   title,
   editMode = LIVE_EDIT_MODE,
-}: RenderArgs): Promise<string> {
-  const candidates = await resolveTemplateCandidates(node, ctx.hooks);
-  // The render pipeline handles the object-map form only; the array /
-  // bare-component forms resolve via `resolveTemplate` and wire into rendering
-  // in a later slice.
-  const { template, slot } = pickTemplate(
-    theme.templates as TemplateRegistry,
-    candidates,
-  );
-  // Dev-only: surface the template hierarchy resolution in the debug bar.
-  // `ctx.debug` is the no-op collector in prod, so this branch tree-shakes.
+}: RenderArgs): Promise<string | null> {
+  const matched = resolveTemplate(templateRules(theme.templates), node, data);
+  if (matched === undefined) return null;
+  const template = normalizeTemplate(matched.template, pickedLabel(matched));
+  // Dev-only: surface the resolution in the debug bar. `ctx.debug` is the no-op
+  // collector in prod, so this branch tree-shakes.
   if (process.env.PLUMIX_DEV) {
     ctx.debug.record(TEMPLATE_PANEL_ID, {
       nodeLabel: templateNodeLabel(node),
-      candidates,
-      picked: slot,
+      picked: pickedLabel(matched),
     });
   }
   const deps = await loadTemplateDeps(
@@ -126,15 +123,7 @@ async function renderThroughThemeInner({
     templateDeps,
     ctx,
   );
-  const merged = resolveRenderDocument({
-    template,
-    slot,
-    document,
-    templateDocuments,
-    data,
-    ctx,
-    deps,
-  });
+  const merged = resolveRenderDocument({ template, document, data, ctx, deps });
   const filtered = await ctx.hooks.applyFilter(
     "render:document",
     merged,
@@ -178,7 +167,6 @@ interface RenderErrorArgs {
   readonly ctx: AppContext;
   readonly theme: ThemeDescriptor;
   readonly document: DocumentManifest;
-  readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly assetManifest: AssetManifest;
   readonly kind: "not-found" | "server-error";
@@ -186,9 +174,13 @@ interface RenderErrorArgs {
 }
 
 const ERROR_VARIANTS = {
-  "not-found": { key: "404", title: "Not Found", fallback: DefaultNotFound },
+  "not-found": {
+    tier: "notFound",
+    title: "Not Found",
+    fallback: DefaultNotFound,
+  },
   "server-error": {
-    key: "500",
+    tier: "serverError",
     title: "Internal Server Error",
     fallback: DefaultServerError,
   },
@@ -198,7 +190,6 @@ export async function renderErrorThroughTheme({
   ctx,
   theme,
   document,
-  templateDocuments,
   templateDeps,
   assetManifest,
   kind,
@@ -206,8 +197,9 @@ export async function renderErrorThroughTheme({
 }: RenderErrorArgs): Promise<string> {
   const variant = ERROR_VARIANTS[kind];
   const raw =
-    (theme.templates as TemplateRegistry)[variant.key] ?? variant.fallback;
-  const template = normalizeTemplate(raw, variant.key);
+    resolveErrorTemplate(templateRules(theme.templates), variant.tier)
+      ?.template ?? variant.fallback;
+  const template = normalizeTemplate(raw, variant.tier);
   const deps = await loadTemplateDeps(
     mergeTemplateDepDeclarations(
       theme,
@@ -218,9 +210,7 @@ export async function renderErrorThroughTheme({
   );
   const renderDocument = resolveRenderDocument({
     template,
-    slot: variant.key,
     document,
-    templateDocuments,
     data,
     ctx,
     deps,
@@ -279,36 +269,35 @@ function collectLoaderBlocks(
 ): readonly BlockNode[] {
   if ("entry" in data) return data.entry.contentBlocks?.blocks ?? [];
   if (!("entries" in data)) return [];
-  if (!template.prefetchListingLoaders) return [];
+  if (!template.prefetchArchiveLoaders) return [];
   return data.entries.flatMap((e) => e.contentBlocks?.blocks ?? []);
 }
 
 interface ResolveDocumentArgs {
   readonly template: Template<TemplateData>;
-  readonly slot: string;
   readonly document: DocumentManifest;
-  readonly templateDocuments: ReadonlyMap<string, DocumentManifest>;
   readonly data: TemplateData;
   readonly ctx: AppContext;
   readonly deps: Record<string, Record<string, unknown>>;
 }
 
+// Merge the matched template's `document` fragment (a literal or a per-request
+// function) onto the theme-wide document. No fragment → the theme document.
 function resolveRenderDocument({
   template,
-  slot,
   document,
-  templateDocuments,
   data,
   ctx,
   deps,
 }: ResolveDocumentArgs): DocumentManifest {
   const fragment = template.document;
-  if (typeof fragment !== "function") {
-    return templateDocuments.get(slot) ?? document;
-  }
-  const resolved = fragment({ ...deps, data, ctx });
+  if (fragment === undefined) return document;
+  const resolved =
+    typeof fragment === "function"
+      ? fragment({ ...deps, data, ctx })
+      : fragment;
   const merged = mergeDocumentManifest(document, resolved);
-  validateDocumentManifest(merged, slot);
+  validateDocumentManifest(merged);
   return merged;
 }
 
@@ -602,25 +591,18 @@ function escapeAttr(value: string): string {
   return escapeHtml(value).replace(/"/g, "&quot;");
 }
 
-function pickTemplate(
-  templates: TemplateRegistry,
-  candidates: readonly string[],
-): { template: Template<TemplateData>; slot: string } {
-  // The candidate list is derived from the route's kind, so the picked
-  // template's narrowed data shape always matches the runtime `data`.
-  // Normalize at the boundary — accepts both plain function templates
-  // (legacy) and factory-built `Template<T>` objects. The returned
-  // `slot` keys per-template document lookups on the app's precomputed
-  // `templateDocuments` map.
-  for (const name of candidates) {
-    const candidate = templates[name];
-    if (candidate)
-      return { template: normalizeTemplate(candidate, name), slot: name };
-  }
-  return {
-    template: normalizeTemplate(templates.index, "index"),
-    slot: "index",
-  };
+// A short human label for a matched rule, for the dev debug bar and the
+// normalize-error slot name. Tier rules use their tier; match rules use the
+// type plus any slug/id narrowing.
+function pickedLabel(rule: TemplateRule): string {
+  if (rule.tier !== undefined) return rule.tier;
+  const m = rule.match;
+  if (m === undefined) return "?";
+  let sel = "";
+  if (m.slug !== undefined) sel = `:${m.slug}`;
+  else if (m.id !== undefined) sel = `#${m.id}`;
+  const prefix = m.nodeKind === "content-type-archive" ? "archive:" : "";
+  return `${prefix}${m.type}${sel}`;
 }
 
 function DefaultNotFound() {

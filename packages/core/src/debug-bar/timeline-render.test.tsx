@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest";
 
 import { definePlugin } from "../plugin/define.js";
+import { fallback } from "../route/render/template-builders.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
 
@@ -12,7 +13,7 @@ const blogPlugin = definePlugin("blog", (ctx) => {
   });
 });
 
-const theme = defineTheme({ templates: { index: () => null } });
+const theme = defineTheme({ templates: [fallback(() => null)] });
 
 describe("debug bar Timeline panel (end to end)", () => {
   const original = process.env.PLUMIX_DEV;

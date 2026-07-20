@@ -90,7 +90,7 @@ export interface Template<
    * bulk imports must ensure unique ids or sibling loader data
    * silently collides in the per-id result map.
    */
-  readonly prefetchListingLoaders?: boolean;
+  readonly prefetchArchiveLoaders?: boolean;
   readonly [PLUMIX_TEMPLATE_BRAND]: true;
 }
 
@@ -99,7 +99,7 @@ interface DefineTemplateConfig<
 > extends TemplateDepDeclarations {
   readonly render: TemplateRender<TData>;
   readonly document?: TemplateDocument<TData>;
-  readonly prefetchListingLoaders?: boolean;
+  readonly prefetchArchiveLoaders?: boolean;
 }
 
 export function defineTemplate<TData extends TemplateData = TemplateData>(

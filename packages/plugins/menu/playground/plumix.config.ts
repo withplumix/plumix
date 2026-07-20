@@ -44,5 +44,5 @@ export default plumix({
       },
     }),
   ],
-  theme: defineTheme({ templates: { index: () => null } }),
+  theme: defineTheme({ templates: () => null }),
 });

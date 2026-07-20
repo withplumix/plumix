@@ -1,17 +1,22 @@
-import { defineTheme } from "plumix";
+import { defineTheme, entry, fallback, forEntryType, notFound } from "plumix";
 
-import { fallback } from "./templates/fallback";
-import { notFound } from "./templates/not-found";
+import { fallback as fallbackTemplate } from "./templates/fallback";
+import { notFound as notFoundTemplate } from "./templates/not-found";
 import { page } from "./templates/page";
 import { single } from "./templates/single";
 import { DEFAULT_TOKENS } from "./tokens";
 
-// `index` (the universal fallback) renders every listing route — front page,
-// archive, category, tag, search — by discriminating the data shape. `single`
-// is the only dedicated slot: posts get the richer article view (and, later,
-// comments).
+// The `fallback` rule renders every listing route — front page, archive,
+// category, tag, search — by discriminating the data shape. `entry` gives posts
+// the richer article view (and, later, comments); `page` overrides it for the
+// `page` type with a metadata-free layout.
 export const blogTheme = defineTheme({
-  templates: { index: fallback, single, page, "404": notFound },
+  templates: [
+    fallback(fallbackTemplate),
+    entry(single),
+    forEntryType("page").template(page),
+    notFound(notFoundTemplate),
+  ],
   tokens: DEFAULT_TOKENS,
   css: ["./theme/styles.css"],
   document: {

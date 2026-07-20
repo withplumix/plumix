@@ -6,6 +6,7 @@ import type { ImageDelivery } from "../runtime/slots.js";
 import { defineTemplate } from "../template.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
+import { fallback } from "./render/template-builders.js";
 
 const imageDelivery: ImageDelivery = {
   kind: "stub",
@@ -14,15 +15,17 @@ const imageDelivery: ImageDelivery = {
 };
 
 const imageTheme = defineTheme({
-  templates: {
-    index: defineTemplate({
-      render: () => (
-        <main>
-          <Image src="/a.jpg" alt="A" width={400} height={300} />
-        </main>
-      ),
-    }),
-  },
+  templates: [
+    fallback(
+      defineTemplate({
+        render: () => (
+          <main>
+            <Image src="/a.jpg" alt="A" width={400} height={300} />
+          </main>
+        ),
+      }),
+    ),
+  ],
 });
 
 test("<Image> builds a responsive srcset from the configured imageDelivery", async () => {
@@ -36,26 +39,28 @@ test("<Image> builds a responsive srcset from the configured imageDelivery", asy
 });
 
 const remoteTheme = defineTheme({
-  templates: {
-    index: defineTemplate({
-      render: () => (
-        <main>
-          <Image
-            src="https://cdn.example.com/ok.jpg"
-            alt="ok"
-            width={200}
-            height={200}
-          />
-          <Image
-            src="https://evil.com/no.jpg"
-            alt="no"
-            width={200}
-            height={200}
-          />
-        </main>
-      ),
-    }),
-  },
+  templates: [
+    fallback(
+      defineTemplate({
+        render: () => (
+          <main>
+            <Image
+              src="https://cdn.example.com/ok.jpg"
+              alt="ok"
+              width={200}
+              height={200}
+            />
+            <Image
+              src="https://evil.com/no.jpg"
+              alt="no"
+              width={200}
+              height={200}
+            />
+          </main>
+        ),
+      }),
+    ),
+  ],
 });
 
 test("<Image> optimizes allowlisted remote hosts and passes through the rest", async () => {
@@ -76,15 +81,23 @@ test("<Image> optimizes allowlisted remote hosts and passes through the rest", a
 });
 
 const priorityTheme = defineTheme({
-  templates: {
-    index: defineTemplate({
-      render: () => (
-        <main>
-          <Image src="/hero.jpg" alt="hero" width={400} height={300} priority />
-        </main>
-      ),
-    }),
-  },
+  templates: [
+    fallback(
+      defineTemplate({
+        render: () => (
+          <main>
+            <Image
+              src="/hero.jpg"
+              alt="hero"
+              width={400}
+              height={300}
+              priority
+            />
+          </main>
+        ),
+      }),
+    ),
+  ],
 });
 
 test("priority <Image> hoists a single preload link into <head>", async () => {

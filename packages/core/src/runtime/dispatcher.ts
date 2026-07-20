@@ -461,7 +461,6 @@ async function renderPublicRoute(
 ): Promise<Response> {
   const theme = app.config.theme;
   const document = app.document;
-  const templateDocuments = app.templateDocuments;
   const templateDeps = app.plugins.templateDeps;
   const assetManifest = app.assetManifest;
   try {
@@ -474,7 +473,6 @@ async function renderPublicRoute(
         ctx,
         theme,
         document,
-        templateDocuments,
         templateDeps,
         assetManifest,
         kind: "not-found",
@@ -499,7 +497,6 @@ async function renderPublicRoute(
         ctx,
         theme,
         document,
-        templateDocuments,
         templateDeps,
         assetManifest,
         kind: "server-error",
@@ -533,7 +530,6 @@ async function resolvePublicRouteOrFallback(
 ): Promise<Response> {
   const theme = app.config.theme;
   const document = app.document;
-  const templateDocuments = app.templateDocuments;
   const templateDeps = app.plugins.templateDeps;
   const assetManifest = app.assetManifest;
   if (match !== null) {
@@ -542,7 +538,6 @@ async function resolvePublicRouteOrFallback(
       match,
       theme,
       document,
-      templateDocuments,
       templateDeps,
       assetManifest,
     );
@@ -553,7 +548,6 @@ async function resolvePublicRouteOrFallback(
       { intent: { kind: "front-page" }, params: {} },
       theme,
       document,
-      templateDocuments,
       templateDeps,
       assetManifest,
     );

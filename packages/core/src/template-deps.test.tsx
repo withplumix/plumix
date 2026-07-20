@@ -6,6 +6,7 @@ import { plumix } from "./config.js";
 import { settings as settingsSchema } from "./db/schema/settings.js";
 import { definePlugin } from "./plugin/define.js";
 import { DuplicateRegistrationError } from "./plugin/errors.js";
+import { entry, fallback } from "./route/render/template-builders.js";
 import { buildApp } from "./runtime/app.js";
 import { loadTemplateDeps } from "./template-deps.js";
 import { defineTemplate, normalizeTemplate } from "./template.js";
@@ -20,7 +21,7 @@ const stubDatabase = { kind: "test", connect: () => ({ db: {} }) };
 const stubAuth = auth({
   passkey: { rpName: "t", rpId: "t", origin: "https://t" },
 });
-const stubTheme = defineTheme({ templates: { index: () => null } });
+const stubTheme = defineTheme({ templates: [fallback(() => null)] });
 
 // Augment the registry with a test-only kind so the typed
 // `registerTemplateDep("test-thing", ...)` calls below compile.
@@ -238,28 +239,32 @@ describe("renderThroughTheme — template deps lifecycle", () => {
       });
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          "test-thing": ["alpha", "beta"],
-          render: (args) => {
-            const deps = (
-              args as unknown as Record<
-                string,
-                Record<string, { value: string } | null>
-              >
-            )["test-thing"];
-            return (
-              <article>
-                <span data-testid="alpha">
-                  {deps?.alpha?.value ?? "missing"}
-                </span>
-                <span data-testid="beta">{deps?.beta?.value ?? "missing"}</span>
-              </article>
-            );
-          },
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            "test-thing": ["alpha", "beta"],
+            render: (args) => {
+              const deps = (
+                args as unknown as Record<
+                  string,
+                  Record<string, { value: string } | null>
+                >
+              )["test-thing"];
+              return (
+                <article>
+                  <span data-testid="alpha">
+                    {deps?.alpha?.value ?? "missing"}
+                  </span>
+                  <span data-testid="beta">
+                    {deps?.beta?.value ?? "missing"}
+                  </span>
+                </article>
+              );
+            },
+          }),
+        ),
+      ],
     });
     const h = await createDispatcherHarness({ plugins: [seoPlugin], theme });
     const author = await h.seedUser("admin");
@@ -293,13 +298,15 @@ describe("renderThroughTheme — template deps lifecycle", () => {
       });
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          "test-thing": ["anything"],
-          render: () => <p data-testid="rendered">ok</p>,
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            "test-thing": ["anything"],
+            render: () => <p data-testid="rendered">ok</p>,
+          }),
+        ),
+      ],
     });
     const h = await createDispatcherHarness({ plugins: [broken], theme });
     const author = await h.seedUser("admin");
@@ -331,24 +338,26 @@ describe("core settings dep", () => {
       });
     });
     const theme = defineTheme({
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          settings: ["site-info"],
-          render: (args) => {
-            const siteInfo = args.settings?.["site-info"];
-            const title =
-              siteInfo && typeof siteInfo === "object"
-                ? siteInfo.title
-                : undefined;
-            return (
-              <h1 data-testid="site-title">
-                {typeof title === "string" ? title : "Untitled"}
-              </h1>
-            );
-          },
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            settings: ["site-info"],
+            render: (args) => {
+              const siteInfo = args.settings?.["site-info"];
+              const title =
+                siteInfo && typeof siteInfo === "object"
+                  ? siteInfo.title
+                  : undefined;
+              return (
+                <h1 data-testid="site-title">
+                  {typeof title === "string" ? title : "Untitled"}
+                </h1>
+              );
+            },
+          }),
+        ),
+      ],
     });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
@@ -400,13 +409,15 @@ describe("theme-level flat dep declarations", () => {
   test("dep slugs declared at the flat root of defineTheme reach the render args", async () => {
     const theme = defineTheme({
       settings: ["site-info"],
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          render: (args) =>
-            pickString(args.settings?.["site-info"], "title") || "Untitled",
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            render: (args) =>
+              pickString(args.settings?.["site-info"], "title") || "Untitled",
+          }),
+        ),
+      ],
     });
     const h = await createDispatcherHarness({
       plugins: [blogTypePlugin],
@@ -440,19 +451,21 @@ describe("theme-level flat dep declarations", () => {
     // theme. To extend instead, use the function form (TDD #3).
     const theme = defineTheme({
       settings: ["site-info"],
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          settings: ["author-info"],
-          render: (args) => (
-            <article>
-              {`site:${pickString(args.settings?.["site-info"], "title")}`}
-              {"|"}
-              {`author:${pickString(args.settings?.["author-info"], "name")}`}
-            </article>
-          ),
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            settings: ["author-info"],
+            render: (args) => (
+              <article>
+                {`site:${pickString(args.settings?.["site-info"], "title")}`}
+                {"|"}
+                {`author:${pickString(args.settings?.["author-info"], "name")}`}
+              </article>
+            ),
+          }),
+        ),
+      ],
     });
     const h = await createDispatcherHarness({
       plugins: [blogTypePlugin],
@@ -484,19 +497,21 @@ describe("theme-level flat dep declarations", () => {
   test("template function form receives parent slugs and can extend them", async () => {
     const theme = defineTheme({
       settings: ["site-info"],
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          settings: (prev: readonly string[]) => [...prev, "author-info"],
-          render: (args) => (
-            <article>
-              {`site:${pickString(args.settings?.["site-info"], "title")}`}
-              {"|"}
-              {`author:${pickString(args.settings?.["author-info"], "name")}`}
-            </article>
-          ),
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            settings: (prev: readonly string[]) => [...prev, "author-info"],
+            render: (args) => (
+              <article>
+                {`site:${pickString(args.settings?.["site-info"], "title")}`}
+                {"|"}
+                {`author:${pickString(args.settings?.["author-info"], "name")}`}
+              </article>
+            ),
+          }),
+        ),
+      ],
     });
     const h = await createDispatcherHarness({
       plugins: [blogTypePlugin],
@@ -528,16 +543,18 @@ describe("theme-level flat dep declarations", () => {
   test("template empty array disables the dep for that template", async () => {
     const theme = defineTheme({
       settings: ["site-info"],
-      templates: {
-        index: () => null,
-        single: defineTemplate({
-          settings: [],
-          render: (args) =>
-            args.settings === undefined
-              ? "disabled"
-              : `loaded:${JSON.stringify(args.settings)}`,
-        }),
-      },
+      templates: [
+        fallback(() => null),
+        entry(
+          defineTemplate({
+            settings: [],
+            render: (args) =>
+              args.settings === undefined
+                ? "disabled"
+                : `loaded:${JSON.stringify(args.settings)}`,
+          }),
+        ),
+      ],
     });
     const h = await createDispatcherHarness({
       plugins: [blogTypePlugin],

@@ -30,7 +30,7 @@ const auth = authConfig({
   },
 });
 
-const theme = defineTheme({ templates: { index: () => null } });
+const theme = defineTheme({ templates: () => null });
 
 const emptyExecutionContext = {} as ExecutionContext;
 

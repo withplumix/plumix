@@ -24,17 +24,8 @@ export class ThemeRegistrationError extends Error {
       "missing_theme",
       `Plumix config requires a \`theme\`. Every app renders public routes ` +
         `through a theme — there is no inline-HTML fallback. Define one with ` +
-        `\`defineTheme({ templates: { index: …, … } })\` and pass it to ` +
+        `\`defineTheme({ templates: [fallback(...)] })\` and pass it to ` +
         `\`plumix({ … , theme })\`.`,
-    );
-  }
-
-  static missingIndexTemplate(): ThemeRegistrationError {
-    return new ThemeRegistrationError(
-      "missing_index_template",
-      `Theme registration: \`templates.index\` is required. Every theme ` +
-        `must declare an \`index\` template — it is the final fallback the ` +
-        `template hierarchy walks to when no more-specific template matches.`,
     );
   }
 
@@ -59,19 +50,13 @@ export class ThemeRegistrationError extends Error {
     );
   }
 
-  static documentInvalidLink(ctx: {
-    index: number;
-    slot?: string;
-  }): ThemeRegistrationError {
-    const source = ctx.slot
-      ? `template \`${ctx.slot}\` document fragment`
-      : "`theme:document` filter chain";
+  static documentInvalidLink(ctx: { index: number }): ThemeRegistrationError {
     return new ThemeRegistrationError(
       "document_invalid_link",
-      `${source} produced a \`link[${ctx.index}]\` entry without a \`rel\` ` +
-        `attribute. Every \`<link>\` in the document manifest must declare ` +
-        `a \`rel\` — browsers ignore unkeyed link tags and the renderer ` +
-        `would emit invalid HTML.`,
+      `The document manifest has a \`link[${ctx.index}]\` entry without a ` +
+        `\`rel\` attribute. Every \`<link>\` must declare a \`rel\` — ` +
+        `browsers ignore unkeyed link tags and the renderer would emit ` +
+        `invalid HTML.`,
     );
   }
 
@@ -86,17 +71,11 @@ export class ThemeRegistrationError extends Error {
     );
   }
 
-  static documentInvalidScript(ctx: {
-    index: number;
-    slot?: string;
-  }): ThemeRegistrationError {
-    const source = ctx.slot
-      ? `template \`${ctx.slot}\` document fragment`
-      : "`theme:document` filter chain";
+  static documentInvalidScript(ctx: { index: number }): ThemeRegistrationError {
     return new ThemeRegistrationError(
       "document_invalid_script",
-      `${source} produced a \`script[${ctx.index}]\` entry with neither ` +
-        `\`src\` nor inline content (\`children\` / ` +
+      `The document manifest has a \`script[${ctx.index}]\` entry with ` +
+        `neither \`src\` nor inline content (\`children\` / ` +
         `\`dangerouslySetInnerHTML\`). Scripts must reference a source URL ` +
         `or carry an inline body — an empty \`<script>\` tag is dead weight.`,
     );

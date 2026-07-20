@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { auth } from "../auth/config.js";
 import { plumix } from "../config.js";
 import { definePlugin } from "../plugin/define.js";
+import { fallback } from "../route/render/template-builders.js";
 import { defineTheme } from "../theme.js";
 import { buildApp } from "./app.js";
 
@@ -14,7 +15,7 @@ const stubDatabase = { kind: "test", connect: () => ({ db: {} }) } as const;
 const stubAuth = auth({
   passkey: { rpName: "t", rpId: "t", origin: "https://t" },
 });
-const stubTheme = defineTheme({ templates: { index: () => null } });
+const stubTheme = defineTheme({ templates: [fallback(() => null)] });
 
 describe("buildApp — RPC plugin-id collisions", () => {
   // `constructor` passes registration (it's not a core namespace) but would
