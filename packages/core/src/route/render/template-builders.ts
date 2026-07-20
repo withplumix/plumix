@@ -1,5 +1,12 @@
 import type {
+  EntryProjection,
+  EntryTypeName,
+  TaxonomyName,
+  TermProjection,
+} from "../../template-registry.js";
+import type {
   GenericTier,
+  TargetMatcher,
   TemplateData,
   TemplateEntry,
   TemplateRule,
@@ -72,4 +79,88 @@ export function notFound(template: TemplateEntry<ErrorData>): TemplateRule {
 /** The 500 handler. */
 export function serverError(template: TemplateEntry<ErrorData>): TemplateRule {
   return rule("serverError", template);
+}
+
+// ── Targeted builders ───────────────────────────────────────────────────────
+// `forEntryType`/`forTaxonomy` produce match rules keyed off the registered
+// names. Each selector types the template to the tier's data shape (with the
+// registry projection) and erases to the union like the generic builders above.
+
+function matchRule<Data extends TemplateData>(
+  match: TargetMatcher,
+  template: TemplateEntry<Data>,
+): TemplateRule {
+  return {
+    match,
+    template: template as unknown as TemplateEntry<TemplateData>,
+  };
+}
+
+interface EntrySelector<K extends EntryTypeName> {
+  /** Bind the template for the selected entry. */
+  template(t: TemplateEntry<EntryData<EntryProjection<K>>>): TemplateRule;
+}
+
+interface EntryTypeBuilder<K extends EntryTypeName> extends EntrySelector<K> {
+  /** Narrow to one entry by slug. */
+  slug(slug: string): EntrySelector<K>;
+  /** Narrow to one entry by numeric id. */
+  id(id: number): EntrySelector<K>;
+  /** The content-type archive listing. */
+  readonly archive: {
+    template(t: TemplateEntry<ArchiveData<EntryProjection<K>>>): TemplateRule;
+  };
+}
+
+/**
+ * Target a registered entry type. `name` autocompletes and rejects typos
+ * (`keyof EntryTypeRegistry`); the template's `data.entry` is typed from the
+ * type's projection.
+ */
+export function forEntryType<K extends EntryTypeName>(
+  name: K,
+): EntryTypeBuilder<K> {
+  return {
+    template: (t) => matchRule({ nodeKind: "content", type: name }, t),
+    slug: (slug) => ({
+      template: (t) => matchRule({ nodeKind: "content", type: name, slug }, t),
+    }),
+    id: (id) => ({
+      template: (t) => matchRule({ nodeKind: "content", type: name, id }, t),
+    }),
+    archive: {
+      template: (t) =>
+        matchRule({ nodeKind: "content-type-archive", type: name }, t),
+    },
+  };
+}
+
+interface TaxonomySelector<K extends TaxonomyName> {
+  /** Bind the template for the selected term(s). */
+  template(t: TemplateEntry<TaxonomyData<TermProjection<K>>>): TemplateRule;
+}
+
+interface TaxonomyBuilder<K extends TaxonomyName> extends TaxonomySelector<K> {
+  /** Narrow to one term by slug. */
+  slug(slug: string): TaxonomySelector<K>;
+  /** Narrow to one term by numeric id. */
+  id(id: number): TaxonomySelector<K>;
+}
+
+/**
+ * Target a registered taxonomy. `name` autocompletes and rejects typos; the
+ * template's `data.term` is typed from the taxonomy's term projection.
+ */
+export function forTaxonomy<K extends TaxonomyName>(
+  name: K,
+): TaxonomyBuilder<K> {
+  return {
+    template: (t) => matchRule({ nodeKind: "term", type: name }, t),
+    slug: (slug) => ({
+      template: (t) => matchRule({ nodeKind: "term", type: name, slug }, t),
+    }),
+    id: (id) => ({
+      template: (t) => matchRule({ nodeKind: "term", type: name, id }, t),
+    }),
+  };
 }

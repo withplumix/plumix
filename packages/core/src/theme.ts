@@ -93,10 +93,27 @@ export type GenericTier =
   | "notFound"
   | "serverError";
 
-/** One entry in a theme's `templates` array: a generic tier bound to a template. */
+/**
+ * How a targeted rule (from `forEntryType`/`forTaxonomy`) matches a resolved
+ * node: by node kind + type name, optionally narrowed to one entry/term by
+ * `slug` or `id`.
+ */
+export interface TargetMatcher {
+  readonly nodeKind: "content" | "content-type-archive" | "term";
+  readonly type: string;
+  readonly slug?: string;
+  readonly id?: number;
+}
+
+/**
+ * One entry in a theme's `templates` array: a template bound to either a
+ * generic `tier` or a targeted `match`. Exactly one is set — the builders never
+ * produce both.
+ */
 export interface TemplateRule {
-  readonly tier: GenericTier;
   readonly template: TemplateEntry<TemplateData>;
+  readonly tier?: GenericTier;
+  readonly match?: TargetMatcher;
 }
 
 /**

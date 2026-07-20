@@ -45,11 +45,21 @@ export {
   archive,
   entry,
   fallback,
+  forEntryType,
+  forTaxonomy,
   frontPage,
   postsPage,
   search,
   taxonomy,
 } from "./route/render/template-builders.js";
+export type {
+  EntryProjection,
+  EntryTypeName,
+  EntryTypeRegistry,
+  TaxonomyName,
+  TaxonomyRegistry,
+  TermProjection,
+} from "./template-registry.js";
 export {
   resolveErrorTemplate,
   resolveTemplate,
@@ -62,6 +72,7 @@ export type {
   Pagination,
   ResolvedAuthor,
   ResolvedEntry,
+  ResolvedTerm,
   SearchData,
   TaxonomyData,
 } from "./route/render/resolved-entry.js";
@@ -88,6 +99,7 @@ export type {
   DocumentMeta,
   DocumentScript,
   GenericTier,
+  TargetMatcher,
   TemplateComponent,
   TemplateData,
   TemplateEntry,

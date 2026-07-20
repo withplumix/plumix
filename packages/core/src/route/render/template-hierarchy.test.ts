@@ -1,12 +1,20 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import type { ArchiveData, EntryData, TaxonomyData } from "./resolved-entry.js";
+import type {
+  ArchiveData,
+  EntryData,
+  ResolvedEntry,
+  ResolvedTerm,
+  TaxonomyData,
+} from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import {
   archive,
   entry,
   fallback,
+  forEntryType,
+  forTaxonomy,
   frontPage,
   notFound,
   postsPage,
@@ -263,5 +271,141 @@ describe("generic-tier builders — data typing", () => {
       expectTypeOf(data).toEqualTypeOf<TaxonomyData>();
       return null;
     });
+  });
+});
+
+interface Product extends ResolvedEntry {
+  readonly price: number;
+}
+interface Brand extends ResolvedTerm {
+  readonly logoUrl: string | null;
+}
+declare module "../../template-registry.js" {
+  interface EntryTypeRegistry {
+    product: { entry: Product };
+  }
+  interface TaxonomyRegistry {
+    brand: { term: Brand };
+  }
+}
+
+describe("resolveTemplate — targeted rules (Zone 1)", () => {
+  const postNode: ResolvedNode = {
+    kind: "content",
+    entryType: "post",
+    slug: "hello",
+    databaseId: 42,
+  };
+  const postArchive: ResolvedNode = {
+    kind: "content-type-archive",
+    entryType: "post",
+  };
+  const catTerm: ResolvedNode = {
+    kind: "term",
+    taxonomy: "category",
+    slug: "news",
+    databaseId: 7,
+  };
+
+  test("a targeted type rule matches its content node and beats the generic tier", () => {
+    const rules = [
+      entry(() => null),
+      forEntryType("post").template(() => null),
+    ];
+    expect(resolveTemplate(rules, postNode)?.match?.type).toBe("post");
+  });
+
+  test(".slug narrows to one entry; a different slug falls through to the tier", () => {
+    const rules = [
+      forEntryType("post")
+        .slug("hello")
+        .template(() => null),
+      entry(() => null),
+    ];
+    expect(resolveTemplate(rules, postNode)?.match?.slug).toBe("hello");
+    expect(resolveTemplate(rules, { ...postNode, slug: "world" })?.tier).toBe(
+      "entry",
+    );
+  });
+
+  test(".id narrows by databaseId", () => {
+    const rules = [
+      forEntryType("post")
+        .id(42)
+        .template(() => null),
+      entry(() => null),
+    ];
+    expect(resolveTemplate(rules, postNode)?.match?.id).toBe(42);
+    expect(resolveTemplate(rules, { ...postNode, databaseId: 99 })?.tier).toBe(
+      "entry",
+    );
+  });
+
+  test(".archive matches the content-type-archive node, not a content node", () => {
+    const rules = [forEntryType("post").archive.template(() => null)];
+    expect(resolveTemplate(rules, postArchive)?.match?.nodeKind).toBe(
+      "content-type-archive",
+    );
+    expect(resolveTemplate(rules, postNode)).toBeUndefined();
+  });
+
+  test("forTaxonomy matches a term node; .slug narrows the term", () => {
+    const rules = [
+      forTaxonomy("category")
+        .slug("news")
+        .template(() => null),
+      taxonomy(() => null),
+    ];
+    expect(resolveTemplate(rules, catTerm)?.match?.slug).toBe("news");
+    expect(resolveTemplate(rules, { ...catTerm, slug: "sports" })?.tier).toBe(
+      "taxonomy",
+    );
+  });
+
+  test("first matching targeted rule wins (declaration order)", () => {
+    const broad = forEntryType("post").template(() => null);
+    const specific = forEntryType("post")
+      .slug("hello")
+      .template(() => null);
+    // Broad, declared first, shadows the specific one; reversed, specific wins.
+    expect(resolveTemplate([broad, specific], postNode)).toBe(broad);
+    expect(resolveTemplate([specific, broad], postNode)).toBe(specific);
+  });
+});
+
+describe("targeted builders — name checking and data typing", () => {
+  test("forEntryType types data.entry from the registry projection", () => {
+    forEntryType("post").template(({ data }) => {
+      expectTypeOf(data.entry).toEqualTypeOf<ResolvedEntry>();
+      return null;
+    });
+    forEntryType("product").template(({ data }) => {
+      expectTypeOf(data.entry).toEqualTypeOf<Product>();
+      return null;
+    });
+    forEntryType("product").archive.template(({ data }) => {
+      expectTypeOf(data.entries).toEqualTypeOf<readonly Product[]>();
+      return null;
+    });
+  });
+
+  test("forTaxonomy types data.term from the registry projection", () => {
+    forTaxonomy("category").template(({ data }) => {
+      expectTypeOf(data.term).toEqualTypeOf<ResolvedTerm>();
+      return null;
+    });
+    forTaxonomy("brand")
+      .slug("acme")
+      .template(({ data }) => {
+        expectTypeOf(data.term).toEqualTypeOf<Brand>();
+        return null;
+      });
+  });
+
+  test("unregistered names are compile errors", () => {
+    // @ts-expect-error - not a registered entry type
+    forEntryType("nope");
+    // @ts-expect-error - not a registered taxonomy
+    forTaxonomy("nope");
   });
 });

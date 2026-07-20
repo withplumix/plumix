@@ -13,7 +13,7 @@ export interface ResolvedAuthor {
 // A term plus its pre-resolved archive `url` (basePath-correct). `url` is null
 // for a private taxonomy or a nested term needing an ancestor-chain walk —
 // `<Link term>` then degrades to its children. Mirrors `ResolvedEntry.url`.
-interface ResolvedTerm extends Term {
+export interface ResolvedTerm extends Term {
   readonly url: string | null;
 }
 
@@ -53,10 +53,13 @@ export interface ArchiveData<TEntry extends ResolvedEntry = ResolvedEntry> {
   readonly pagination: Pagination;
 }
 
-export interface TaxonomyData<TEntry extends ResolvedEntry = ResolvedEntry> {
+export interface TaxonomyData<
+  TTerm extends ResolvedTerm = ResolvedTerm,
+  TEntry extends ResolvedEntry = ResolvedEntry,
+> {
   readonly kind: "taxonomy";
   readonly taxonomy: string;
-  readonly term: ResolvedTerm;
+  readonly term: TTerm;
   readonly entries: readonly TEntry[];
   readonly pagination: Pagination;
 }
