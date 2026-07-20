@@ -114,7 +114,7 @@ catalogs:
     "@dnd-kit/utilities": ^3.2.2
   cloudflare:
     "@cloudflare/vite-plugin": ^1.45.0
-    "@cloudflare/workers-types": ^5.20260704.1
+    "@cloudflare/workers-types": ^5.20260713.1
     wrangler: ^4.111.0
 
 publicHoistPattern:
