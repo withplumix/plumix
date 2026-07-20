@@ -1,0 +1,14 @@
+{
+  // Compose Astro's base (jsx / astro type resolution) with our shared config
+  // last, so its `incremental` + `tsBuildInfoFile` win and `pnpm typecheck`
+  // caches through turbo like every other workspace.
+  //
+  // NOTE: our shared base targets Cloudflare Workers (`lib: [ES2022,
+  // WebWorker]`). This site is browser-served, but forcing DOM libs here trips
+  // typechecking of unstorage's transitive driver types — so browser-lib config
+  // is deferred to the docs-site follow-up, which will revisit whether to extend
+  // this base at all. Fine while the scaffold is markdown-only.
+  "extends": ["astro/tsconfigs/base", "@plumix/typescript-config/base.json"],
+  "include": ["astro.config.mjs", "src", ".astro/types.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@plumix-apps/docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Plumix documentation site — Astro Starlight (scaffold; content + versioning land with the docs follow-up)",
+  "license": "MIT",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "clean": "git clean -xdf .astro dist node_modules",
+    "typecheck": "astro sync && tsc --noEmit"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.41.3",
+    "astro": "^7.1.1"
+  },
+  "devDependencies": {
+    "@plumix/typescript-config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
