@@ -83,11 +83,11 @@ catalogs:
     "@tiptap/extension-text": ^3.27.2
     "@tiptap/extensions": ^3.27.2
   orpc:
-    "@orpc/client": ^1.14.7
-    "@orpc/openapi": ^1.14.7
-    "@orpc/server": ^1.14.7
-    "@orpc/tanstack-query": ^1.14.7
-    "@orpc/valibot": ^1.14.7
+    "@orpc/client": ^1.14.8
+    "@orpc/openapi": ^1.14.8
+    "@orpc/server": ^1.14.8
+    "@orpc/tanstack-query": ^1.14.8
+    "@orpc/valibot": ^1.14.8
   tanstack:
     "@tanstack/react-query": ^5.101.2
     "@tanstack/react-query-devtools": ^5.101.2
