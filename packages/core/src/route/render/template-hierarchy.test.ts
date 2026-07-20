@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { TemplateData } from "../../theme.js";
 import type {
   ArchiveData,
   EntryData,
@@ -16,6 +17,7 @@ import {
   forEntryType,
   forTaxonomy,
   frontPage,
+  NAMED_TEMPLATE_META_KEY,
   notFound,
   postsPage,
   search,
@@ -282,7 +284,7 @@ interface Brand extends ResolvedTerm {
 }
 declare module "../../template-registry.js" {
   interface EntryTypeRegistry {
-    product: { entry: Product };
+    product: { entry: Product; meta: { onSale: boolean } };
   }
   interface TaxonomyRegistry {
     brand: { term: Brand };
@@ -407,5 +409,87 @@ describe("targeted builders — name checking and data typing", () => {
     forEntryType("nope");
     // @ts-expect-error - not a registered taxonomy
     forTaxonomy("nope");
+  });
+
+  test("whereMeta types keys and values against the meta projection", () => {
+    forEntryType("product")
+      .whereMeta("onSale", true)
+      .template(() => null);
+    // @ts-expect-error - "nope" is not a meta key of product
+    forEntryType("product").whereMeta("nope", true);
+    // @ts-expect-error - onSale is a boolean, not a string
+    forEntryType("product").whereMeta("onSale", "yes");
+  });
+});
+
+describe("resolveTemplate — predicate rules (whereMeta / where / named)", () => {
+  const postNode: ResolvedNode = {
+    kind: "content",
+    entryType: "post",
+    slug: "hello",
+    databaseId: 1,
+  };
+  const entryData = (meta: Record<string, unknown>): TemplateData =>
+    ({ kind: "entry", entry: { meta } }) as unknown as TemplateData;
+
+  test("whereMeta matches when the entry-meta value equals; else falls through", () => {
+    const rules = [
+      forEntryType("post")
+        .whereMeta("featured", true)
+        .template(() => null),
+      entry(() => null),
+    ];
+    expect(
+      resolveTemplate(rules, postNode, entryData({ featured: true }))?.match,
+    ).toBeDefined();
+    expect(
+      resolveTemplate(rules, postNode, entryData({ featured: false }))?.tier,
+    ).toBe("entry");
+  });
+
+  test("where evaluates an arbitrary predicate over the resolved data", () => {
+    const rules = [
+      forEntryType("post")
+        .where((data) => data.entry.meta.premium === 1)
+        .template(() => null),
+      entry(() => null),
+    ];
+    expect(
+      resolveTemplate(rules, postNode, entryData({ premium: 1 }))?.match,
+    ).toBeDefined();
+    expect(
+      resolveTemplate(rules, postNode, entryData({ premium: 0 }))?.tier,
+    ).toBe("entry");
+  });
+
+  test("named matches the stored template choice and carries its label", () => {
+    const rule = forEntryType("page")
+      .named("landing", "Landing Page")
+      .template(() => null);
+    expect(rule.match?.named).toEqual({ id: "landing", label: "Landing Page" });
+    const pageNode: ResolvedNode = {
+      kind: "content",
+      entryType: "page",
+      slug: "home",
+      databaseId: 1,
+    };
+    expect(
+      resolveTemplate(
+        [rule],
+        pageNode,
+        entryData({ [NAMED_TEMPLATE_META_KEY]: "landing" }),
+      ),
+    ).toBe(rule);
+    expect(resolveTemplate([rule], pageNode, entryData({}))).toBeUndefined();
+  });
+
+  test("a predicate rule never matches when data is absent", () => {
+    const rules = [
+      forEntryType("post")
+        .whereMeta("featured", true)
+        .template(() => null),
+      entry(() => null),
+    ];
+    expect(resolveTemplate(rules, postNode)?.tier).toBe("entry");
   });
 });

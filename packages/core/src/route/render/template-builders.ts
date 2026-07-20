@@ -1,6 +1,7 @@
 import type {
   EntryProjection,
   EntryTypeName,
+  MetaOf,
   TaxonomyName,
   TermProjection,
 } from "../../template-registry.js";
@@ -96,6 +97,20 @@ function matchRule<Data extends TemplateData>(
   };
 }
 
+/**
+ * Reserved entry-meta key holding an author's `named`-template choice — the
+ * editor writes it, the resolver reads it. Part of the `__plumix_*` namespace.
+ */
+export const NAMED_TEMPLATE_META_KEY = "__plumix_template";
+
+/** A predicate matching when a content entry's meta value equals `value`. */
+function metaEquals(
+  key: string,
+  value: unknown,
+): (data: TemplateData) => boolean {
+  return (data) => "entry" in data && data.entry.meta[key] === value;
+}
+
 interface EntrySelector<K extends EntryTypeName> {
   /** Bind the template for the selected entry. */
   template(t: TemplateEntry<EntryData<EntryProjection<K>>>): TemplateRule;
@@ -106,6 +121,17 @@ interface EntryTypeBuilder<K extends EntryTypeName> extends EntrySelector<K> {
   slug(slug: string): EntrySelector<K>;
   /** Narrow to one entry by numeric id. */
   id(id: number): EntrySelector<K>;
+  /** Narrow by an entry-meta value, typed against the type's meta projection. */
+  whereMeta<M extends keyof MetaOf<K>>(
+    key: M,
+    value: MetaOf<K>[M],
+  ): EntrySelector<K>;
+  /** Narrow by an arbitrary predicate over the resolved data. */
+  where(
+    predicate: (data: EntryData<EntryProjection<K>>) => boolean,
+  ): EntrySelector<K>;
+  /** Register an author-selectable template, matched from stored entry meta. */
+  named(id: string, label: string): EntrySelector<K>;
   /** The content-type archive listing. */
   readonly archive: {
     template(t: TemplateEntry<ArchiveData<EntryProjection<K>>>): TemplateRule;
@@ -120,14 +146,26 @@ interface EntryTypeBuilder<K extends EntryTypeName> extends EntrySelector<K> {
 export function forEntryType<K extends EntryTypeName>(
   name: K,
 ): EntryTypeBuilder<K> {
+  // Each selector adds its narrowing to the shared content-node prefix.
+  const content = (extra?: Partial<TargetMatcher>): EntrySelector<K> => ({
+    template: (t) =>
+      matchRule({ nodeKind: "content", type: name, ...extra }, t),
+  });
   return {
     template: (t) => matchRule({ nodeKind: "content", type: name }, t),
-    slug: (slug) => ({
-      template: (t) => matchRule({ nodeKind: "content", type: name, slug }, t),
-    }),
-    id: (id) => ({
-      template: (t) => matchRule({ nodeKind: "content", type: name, id }, t),
-    }),
+    slug: (slug) => content({ slug }),
+    id: (id) => content({ id }),
+    whereMeta: (key, value) =>
+      content({ predicate: metaEquals(String(key), value) }),
+    where: (predicate) =>
+      content({
+        predicate: predicate as unknown as (d: TemplateData) => boolean,
+      }),
+    named: (id, label) =>
+      content({
+        named: { id, label },
+        predicate: metaEquals(NAMED_TEMPLATE_META_KEY, id),
+      }),
     archive: {
       template: (t) =>
         matchRule({ nodeKind: "content-type-archive", type: name }, t),

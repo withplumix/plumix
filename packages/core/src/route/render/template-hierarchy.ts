@@ -19,7 +19,12 @@
  */
 
 import type { HookExecutor } from "../../hooks/registry.js";
-import type { GenericTier, TargetMatcher, TemplateRule } from "../../theme.js";
+import type {
+  GenericTier,
+  TargetMatcher,
+  TemplateData,
+  TemplateRule,
+} from "../../theme.js";
 
 declare module "../../hooks/types.js" {
   interface FilterRegistry {
@@ -163,10 +168,10 @@ const GENERIC_TIER_FOR_NODE: Record<ResolvedNode["kind"], GenericTier> = {
 };
 
 /**
- * Does a targeted matcher apply to this node? Compares node kind and type name,
- * then the optional `slug`/`id` narrowing — an unset selector matches any.
+ * The identity part of a match: node kind + type name, then the optional
+ * `slug`/`id` narrowing — an unset selector matches any.
  */
-function matchesNode(match: TargetMatcher, node: ResolvedNode): boolean {
+function matchesIdentity(match: TargetMatcher, node: ResolvedNode): boolean {
   if (match.nodeKind !== node.kind) return false;
   switch (node.kind) {
     case "content-type-archive":
@@ -189,18 +194,37 @@ function matchesNode(match: TargetMatcher, node: ResolvedNode): boolean {
 }
 
 /**
+ * Does a targeted matcher apply? Identity first, then the optional data
+ * predicate (`whereMeta`/`where`/`named`) — which needs the resolved data, so a
+ * predicate rule never matches when `data` is absent.
+ */
+function matchesNode(
+  match: TargetMatcher,
+  node: ResolvedNode,
+  data: TemplateData | undefined,
+): boolean {
+  if (!matchesIdentity(match, node)) return false;
+  if (match.predicate === undefined) return true;
+  return data !== undefined && match.predicate(data);
+}
+
+/**
  * Resolve a node to its template rule from a theme's `templates` array:
- * (1) targeted rules (`forEntryType`/`forTaxonomy`) in declaration order, first
- * match wins; (2) the generic tier for the node's kind; (3) the universal
- * `fallback`. Returns `undefined` when nothing matches — the caller then renders
- * the `notFound` (404) template.
+ * (1) targeted rules (`forEntryType`/`forTaxonomy`, incl. `whereMeta`/`where`/
+ * `named` predicates) in declaration order, first match wins; (2) the generic
+ * tier for the node's kind; (3) the universal `fallback`. Returns `undefined`
+ * when nothing matches — the caller then renders the `notFound` (404) template.
+ * `data` is required for predicate rules to match.
  */
 export function resolveTemplate(
   rules: readonly TemplateRule[],
   node: ResolvedNode,
+  data?: TemplateData,
 ): TemplateRule | undefined {
   for (const rule of rules) {
-    if (rule.match !== undefined && matchesNode(rule.match, node)) return rule;
+    if (rule.match !== undefined && matchesNode(rule.match, node, data)) {
+      return rule;
+    }
   }
   const tier = GENERIC_TIER_FOR_NODE[node.kind];
   return (
