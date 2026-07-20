@@ -8,10 +8,7 @@
     {
       "binding": "DB",
       "database_name": "plumix_marketing",
-      // Placeholder — run `wrangler d1 create plumix_marketing` and paste the
-      // real id when the marketing-content follow-up wires deployment. Local
-      // `plumix dev` uses local D1 state and ignores this value.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "b68893f4-b79a-454e-8d5e-0dfcb6e1ef7d",
       "migrations_dir": "drizzle",
     },
   ],
