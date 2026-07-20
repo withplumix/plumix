@@ -16,8 +16,7 @@ follow-up** to #1425. Deployment is not wired yet: the resource ids in
 pnpm dev
 ```
 
-Runs `plumix migrate generate && plumix dev` — a local Workers dev server on
-`http://localhost:8787`.
+Runs `plumix dev` — a local Workers dev server on `http://localhost:8787`.
 
 ## Build
 

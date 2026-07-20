@@ -6,9 +6,9 @@
   "description": "Plumix marketing site — built on plumix (scaffold; the landing page lands with the marketing-content follow-up)",
   "license": "MIT",
   "scripts": {
-    "build": "plumix migrate generate && plumix build",
+    "build": "plumix build",
     "clean": "git clean -xdf .plumix .wrangler dist drizzle node_modules",
-    "dev": "plumix migrate generate && plumix dev",
+    "dev": "plumix dev",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
