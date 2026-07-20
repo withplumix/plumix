@@ -4,6 +4,13 @@
   "main": ".plumix/worker.ts",
   "compatibility_date": "2026-04-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Production is served only on the custom domain (no *.workers.dev). No
+  // preview_urls here on purpose: Cloudflare doesn't generate preview URLs for
+  // Workers with a Durable Object (this one has DemoDB), so the flag would be
+  // inert. The domain was attached in the dashboard; declaring the route keeps
+  // deploys reconciled.
+  "workers_dev": false,
+  "routes": [{ "pattern": "demo.plumix.dev", "custom_domain": true }],
   "d1_databases": [
     {
       "binding": "DB",
