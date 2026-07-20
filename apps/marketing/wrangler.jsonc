@@ -1,0 +1,29 @@
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "plumix-marketing",
+  "main": ".plumix/worker.ts",
+  "compatibility_date": "2026-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "plumix_marketing",
+      // Placeholder — run `wrangler d1 create plumix_marketing` and paste the
+      // real id when the marketing-content follow-up wires deployment. Local
+      // `plumix dev` uses local D1 state and ignores this value.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "assets": {
+    "directory": ".plumix/public",
+    "binding": "ASSETS",
+    "not_found_handling": "none"
+  },
+  // Fires plumix's scheduled tasks. `0 3 * * *` matches the core
+  // session-cleanup task (daily); `*/5 * * * *` matches publish-scheduled
+  // (publishes due future-dated entries within 5 minutes).
+  "triggers": {
+    "crons": ["0 3 * * *", "*/5 * * * *"]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "extends": "@plumix/typescript-config/base.json",
+  "compilerOptions": {
+    "types": ["node", "@cloudflare/workers-types"]
+  },
+  "include": ["plumix.config.ts", ".plumix"]
+}
