@@ -8,16 +8,14 @@
     {
       "binding": "DB",
       "database_name": "plumix_demo",
-      // Preserved from the former blog example so an existing D1 instance isn't
-      // orphaned; only the cosmetic name changed.
-      "database_id": "67ed8348-4cfa-45ce-8b0a-17eb9e351896",
+      "database_id": "86e58d20-9e38-4edd-8d6f-f63541a9670c",
       "migrations_dir": "drizzle",
     },
   ],
   "r2_buckets": [
     {
       "binding": "MEDIA",
-      "bucket_name": "plumix-demo-media",
+      "bucket_name": "plumix-demo",
     },
   ],
   // Per-session demo sandbox database. Each visitor's cookie maps to one

@@ -23,7 +23,8 @@
     "@plumix/prettier-config": "workspace:*",
     "eslint": "catalog:",
     "prettier": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "wrangler": "catalog:cloudflare"
   },
   "prettier": "@plumix/prettier-config"
 }

@@ -390,9 +390,18 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      wrangler:
+        specifier: catalog:cloudflare
+        version: 4.111.0(@cloudflare/workers-types@5.20260711.1)
 
   apps/marketing:
     dependencies:
+      '@plumix/plugin-media':
+        specifier: workspace:*
+        version: link:../../packages/plugins/media
+      '@plumix/plugin-pages':
+        specifier: workspace:*
+        version: link:../../packages/plugins/pages
       '@plumix/runtime-cloudflare':
         specifier: workspace:*
         version: link:../../packages/runtimes/cloudflare

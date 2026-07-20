@@ -38,6 +38,12 @@ const config: KnipConfig = {
     "apps/marketing": {
       entry: ["plumix.config.ts"],
     },
+    "apps/docs": {
+      // wrangler is invoked by the Workers Build deploy command (`wrangler
+      // deploy`), not a repo script; knip's wrangler plugin only recognises
+      // configs with a `main`, and this static-assets site has none.
+      ignoreDependencies: ["wrangler"],
+    },
     // Playgrounds — same shape as apps/*: `plumix.config.ts` is the
     // consumer entry, not visible to knip without an explicit hint.
     "packages/plugins/media/playground": {

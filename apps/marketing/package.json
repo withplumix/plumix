@@ -6,14 +6,16 @@
   "description": "Plumix marketing site — built on plumix (scaffold; the landing page lands with the marketing-content follow-up)",
   "license": "MIT",
   "scripts": {
-    "build": "plumix build",
+    "build": "plumix migrate generate && plumix build",
     "clean": "git clean -xdf .plumix .wrangler dist drizzle node_modules",
-    "dev": "plumix dev",
+    "dev": "plumix migrate generate && plumix dev",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .gitignore",
     "lint": "eslint --no-error-on-unmatched-pattern",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@plumix/plugin-media": "workspace:*",
+    "@plumix/plugin-pages": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
     "plumix": "workspace:*"
   },
