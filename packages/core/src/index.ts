@@ -41,6 +41,19 @@ export { runScheduledTasks } from "./runtime/scheduled.js";
 export type * from "./runtime/slots.js";
 export { slugify } from "./slugify.js";
 export { buildResolvedEntries } from "./route/render/build-resolved-entries.js";
+export {
+  archive,
+  entry,
+  fallback,
+  frontPage,
+  postsPage,
+  search,
+  taxonomy,
+} from "./route/render/template-builders.js";
+export {
+  resolveErrorTemplate,
+  resolveTemplate,
+} from "./route/render/template-hierarchy.js";
 export type {
   ArchiveData,
   EntryData,
@@ -74,10 +87,12 @@ export type {
   DocumentManifest,
   DocumentMeta,
   DocumentScript,
+  GenericTier,
   TemplateComponent,
   TemplateData,
   TemplateEntry,
   TemplateRegistry,
+  TemplateRule,
   ThemeDescriptor,
 } from "./theme.js";
 export { ThemeError, ThemeRegistrationError } from "./theme-errors.js";

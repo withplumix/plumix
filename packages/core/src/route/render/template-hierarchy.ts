@@ -19,6 +19,7 @@
  */
 
 import type { HookExecutor } from "../../hooks/registry.js";
+import type { GenericTier, TemplateRule } from "../../theme.js";
 
 declare module "../../hooks/types.js" {
   interface FilterRegistry {
@@ -147,4 +148,46 @@ function appendContentNodeCandidates(
     out.push("single");
   }
   out.push("singular");
+}
+
+// Maps each resolved-node kind to the generic tier that renders it. `fallback`
+// (universal) and the `notFound`/`serverError` handlers are not node-matched —
+// the former is the terminal, the latter fire on a condition, not a node.
+const GENERIC_TIER_FOR_NODE: Record<ResolvedNode["kind"], GenericTier> = {
+  content: "entry",
+  "content-type-archive": "archive",
+  term: "taxonomy",
+  "front-page": "frontPage",
+  "posts-page": "postsPage",
+  search: "search",
+};
+
+/**
+ * Resolve a node to its template rule from a theme's `templates` array. Walks
+ * the generic tier matching the node's kind, then the universal `fallback`.
+ * Returns `undefined` when neither is declared — the caller then renders the
+ * `notFound` (404) template. Targeted (type / slug / predicate) matchers layer
+ * in ahead of the generic tier in a later slice.
+ */
+export function resolveTemplate(
+  rules: readonly TemplateRule[],
+  node: ResolvedNode,
+): TemplateRule | undefined {
+  const tier = GENERIC_TIER_FOR_NODE[node.kind];
+  return (
+    rules.find((r) => r.tier === tier) ??
+    rules.find((r) => r.tier === "fallback")
+  );
+}
+
+/**
+ * Look up an error-tier template (`notFound` → 404, `serverError` → 500).
+ * Separate from `resolveTemplate` because error pages are triggered by a
+ * condition (no match, or a render throw), not by a resolved node.
+ */
+export function resolveErrorTemplate(
+  rules: readonly TemplateRule[],
+  tier: "notFound" | "serverError",
+): TemplateRule | undefined {
+  return rules.find((r) => r.tier === tier);
 }

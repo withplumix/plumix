@@ -54,7 +54,11 @@ import { registerCoreSettings } from "../settings-core.js";
 import { registerCoreTemplateDeps } from "../template-deps-core.js";
 import { isTemplate } from "../template.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
-import { validateDocumentManifest } from "../theme.js";
+import {
+  assertIndexTemplate,
+  isTemplateRegistry,
+  validateDocumentManifest,
+} from "../theme.js";
 import { AppBootError } from "./errors.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { assembleShortcodeRegistry } from "./shortcode-registry.js";
@@ -249,10 +253,7 @@ export async function buildApp(
   if (!config.theme) {
     throw ThemeRegistrationError.missingTheme();
   }
-  const templates = config.theme.templates as Readonly<Record<string, unknown>>;
-  if (!templates.index) {
-    throw ThemeRegistrationError.missingIndexTemplate();
-  }
+  assertIndexTemplate(config.theme.templates);
 
   const schema: Record<string, unknown> = { ...coreSchema };
   const origin = new Map<string, string>();
@@ -358,10 +359,11 @@ export async function buildApp(
   );
 
   const document = await resolveDocumentManifest(hooks, config.theme.document);
-  const templateDocuments = buildTemplateDocuments(
-    config.theme.templates,
-    document,
-  );
+  // The array / bare-component forms have no per-slot document fragments (they
+  // wire into rendering in a later slice), so they get an empty map here.
+  const templateDocuments = isTemplateRegistry(config.theme.templates)
+    ? buildTemplateDocuments(config.theme.templates, document)
+    : new Map<string, DocumentManifest>();
 
   // Memoized so the heavy router module + handler construction happen once per
   // isolate, on the first RPC request — never on the public render cold path.
