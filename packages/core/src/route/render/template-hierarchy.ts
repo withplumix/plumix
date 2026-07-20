@@ -19,7 +19,7 @@
  */
 
 import type { HookExecutor } from "../../hooks/registry.js";
-import type { GenericTier, TemplateRule } from "../../theme.js";
+import type { GenericTier, TargetMatcher, TemplateRule } from "../../theme.js";
 
 declare module "../../hooks/types.js" {
   interface FilterRegistry {
@@ -163,16 +163,45 @@ const GENERIC_TIER_FOR_NODE: Record<ResolvedNode["kind"], GenericTier> = {
 };
 
 /**
- * Resolve a node to its template rule from a theme's `templates` array. Walks
- * the generic tier matching the node's kind, then the universal `fallback`.
- * Returns `undefined` when neither is declared — the caller then renders the
- * `notFound` (404) template. Targeted (type / slug / predicate) matchers layer
- * in ahead of the generic tier in a later slice.
+ * Does a targeted matcher apply to this node? Compares node kind and type name,
+ * then the optional `slug`/`id` narrowing — an unset selector matches any.
+ */
+function matchesNode(match: TargetMatcher, node: ResolvedNode): boolean {
+  if (match.nodeKind !== node.kind) return false;
+  switch (node.kind) {
+    case "content-type-archive":
+      return match.type === node.entryType;
+    case "content":
+      return (
+        match.type === node.entryType &&
+        (match.slug === undefined || match.slug === node.slug) &&
+        (match.id === undefined || match.id === node.databaseId)
+      );
+    case "term":
+      return (
+        match.type === node.taxonomy &&
+        (match.slug === undefined || match.slug === node.slug) &&
+        (match.id === undefined || match.id === node.databaseId)
+      );
+    default:
+      return false;
+  }
+}
+
+/**
+ * Resolve a node to its template rule from a theme's `templates` array:
+ * (1) targeted rules (`forEntryType`/`forTaxonomy`) in declaration order, first
+ * match wins; (2) the generic tier for the node's kind; (3) the universal
+ * `fallback`. Returns `undefined` when nothing matches — the caller then renders
+ * the `notFound` (404) template.
  */
 export function resolveTemplate(
   rules: readonly TemplateRule[],
   node: ResolvedNode,
 ): TemplateRule | undefined {
+  for (const rule of rules) {
+    if (rule.match !== undefined && matchesNode(rule.match, node)) return rule;
+  }
   const tier = GENERIC_TIER_FOR_NODE[node.kind];
   return (
     rules.find((r) => r.tier === tier) ??
