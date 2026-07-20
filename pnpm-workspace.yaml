@@ -17,7 +17,7 @@ packages:
 # deps (incl. the @oslojs/* auth stack, @hookform/resolvers, the prettier plugins)
 # are not cataloged at all — they stay inline in their own package.json.
 catalog:
-  "@arethetypeswrong/cli": ^0.18.4
+  "@arethetypeswrong/cli": ^0.18.5
   "@libsql/client": ^0.17.4
   "@playwright/test": ^1.61.1
   "@types/node": ^24.13.2

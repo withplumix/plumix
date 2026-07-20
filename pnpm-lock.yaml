@@ -17,8 +17,8 @@ catalogs:
       version: 4.111.0
   default:
     '@arethetypeswrong/cli':
-      specifier: ^0.18.4
-      version: 0.18.4
+      specifier: ^0.18.5
+      version: 0.18.5
     '@libsql/client':
       specifier: ^0.17.4
       version: 0.17.4
@@ -667,7 +667,7 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@lingui/cli':
         specifier: catalog:lingui
         version: 6.4.0
@@ -794,7 +794,7 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -846,7 +846,7 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -915,13 +915,13 @@ importers:
         version: 1.29.0(zod@4.4.3)
       '@orpc/openapi':
         specifier: catalog:orpc
-        version: 1.14.7(crossws@0.3.5)(ws@8.21.0)
+        version: 1.14.7(crossws@0.3.5)(ws@8.21.1)
       '@orpc/server':
         specifier: catalog:orpc
-        version: 1.14.7(crossws@0.3.5)(ws@8.21.0)
+        version: 1.14.7(crossws@0.3.5)(ws@8.21.1)
       '@orpc/valibot':
         specifier: catalog:orpc
-        version: 1.14.7(@orpc/contract@1.14.7)(@orpc/server@1.14.7(crossws@0.3.5)(ws@8.21.0))(crossws@0.3.5)(valibot@1.4.2(typescript@6.0.3))(ws@8.21.0)
+        version: 1.14.7(@orpc/contract@1.14.7)(@orpc/server@1.14.7(crossws@0.3.5)(ws@8.21.1))(crossws@0.3.5)(valibot@1.4.2(typescript@6.0.3))(ws@8.21.1)
       '@oslojs/crypto':
         specifier: catalog:oslojs
         version: 1.0.1
@@ -958,7 +958,7 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.1
@@ -1071,7 +1071,7 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.17.4
@@ -1080,7 +1080,7 @@ importers:
         version: 6.4.0
       '@orpc/server':
         specifier: catalog:orpc
-        version: 1.14.7(crossws@0.3.5)(ws@8.21.0)
+        version: 1.14.7(crossws@0.3.5)(ws@8.21.1)
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.1
@@ -1196,7 +1196,7 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@lingui/cli':
         specifier: catalog:lingui
         version: 6.4.0
@@ -1288,7 +1288,7 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.17.4
@@ -1297,7 +1297,7 @@ importers:
         version: 6.4.0
       '@orpc/server':
         specifier: catalog:orpc
-        version: 1.14.7(crossws@0.3.5)(ws@8.21.0)
+        version: 1.14.7(crossws@0.3.5)(ws@8.21.1)
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.1
@@ -1422,7 +1422,7 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@lingui/cli':
         specifier: catalog:lingui
         version: 6.4.0
@@ -1541,13 +1541,13 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@lingui/cli':
         specifier: catalog:lingui
         version: 6.4.0
       '@orpc/server':
         specifier: catalog:orpc
-        version: 1.14.7(crossws@0.3.5)(ws@8.21.0)
+        version: 1.14.7(crossws@0.3.5)(ws@8.21.1)
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.1
@@ -1653,7 +1653,7 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@lingui/cli':
         specifier: catalog:lingui
         version: 6.4.0
@@ -1781,7 +1781,7 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@orpc/client':
         specifier: catalog:orpc
         version: 1.14.7
@@ -1878,7 +1878,7 @@ importers:
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
-        version: 0.18.4
+        version: 0.18.5
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
         version: 5.20260711.1
@@ -1966,7 +1966,7 @@ importers:
         version: 10.6.0(jiti@2.7.0)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.3
+        version: 3.9.5
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -2041,13 +2041,13 @@ packages:
   '@andrewbranch/untar.js@1.0.3':
     resolution: {integrity: sha512-Jh15/qVmrLGhkKJBdXlK1+9tY4lZruYjsgkDFj08ZmDiWVBLJcqkok7Z0/R0In+i1rScBpJlSvrTS2Lm41Pbnw==}
 
-  '@arethetypeswrong/cli@0.18.4':
-    resolution: {integrity: sha512-kNWo6LTzGAuLYPpJ7Sgo63whSUeeSuKMlYx6IBgzs4ONEG807gW4hSSENvpeCHzO2H2wIzG5EFl0OKBbqGBAyA==}
+  '@arethetypeswrong/cli@0.18.5':
+    resolution: {integrity: sha512-gM+8vRsQOD/Uc7EnBedUhkG5OCsDWE4uoak5QvomGpMpaky0Eh41p04nIMgrWb8EOmqZUJGc6zz9hsP6E56R7g==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@arethetypeswrong/core@0.18.4':
-    resolution: {integrity: sha512-M5F0ePyN6h2Z6XxRiyIPqjGbltotXLjR0CKA0uKspsDu0QmgTNYvRb4RSQPMUs2ZXZHCCYpbaZbFbYOXLxCjUA==}
+  '@arethetypeswrong/core@0.18.5':
+    resolution: {integrity: sha512-9ytjzGwxjm9Uz7I9avfbt5vlQt6uk9uRRESzJjqrznl6WKvI6dwYTo+vJ3U02Wrq/mR3iql/PzhvHhKdJIAjDQ==}
     engines: {node: '>=20'}
 
   '@asamuzakjp/css-color@5.1.11':
@@ -2682,11 +2682,11 @@ packages:
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild-kit/esm-loader@2.6.5':
     resolution: {integrity: sha512-FxEMIkJKnodyA1OaCUoEvbYRkoZlLZ4d/eXFu9Fh8CbBBgP5EmZxrfTRyN0qpXZ4vOvqnE5YdRdcrmUUXuU+dA==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}
@@ -8144,11 +8144,6 @@ packages:
     engines: {node: '>=10.13.0'}
     hasBin: true
 
-  prettier@3.9.3:
-    resolution: {integrity: sha512-HWmu+K+zvHNpaMfSnYeqdqrDbR16cuIXaPx8WoHaviQkDJh1/0BNtOZmHVQI5jc3wXv0H1yXc9wjvFdXh+n3hQ==}
-    engines: {node: '>=14'}
-    hasBin: true
-
   prettier@3.9.5:
     resolution: {integrity: sha512-/FVl766LpUfB5vXgCYOYa0MeV/441Ia99AeICQIQFTY/Nw0roZwULcXpku5i1/m5kt/baz+s4Zogspd839HSMg==}
     engines: {node: '>=14'}
@@ -9358,6 +9353,18 @@ packages:
       utf-8-validate:
         optional: true
 
+  ws@8.21.1:
+    resolution: {integrity: sha512-+0NTnW77fFN/DjQi6k/Sq/Yvk4Sgajw7urW8V+asjXnRgDs9gyGkdb7EzgfhA4goXsRIZKE28fzIXBHEzhuiWw==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   xml-name-validator@5.0.0:
     resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
     engines: {node: '>=18'}
@@ -9457,9 +9464,9 @@ snapshots:
 
   '@andrewbranch/untar.js@1.0.3': {}
 
-  '@arethetypeswrong/cli@0.18.4':
+  '@arethetypeswrong/cli@0.18.5':
     dependencies:
-      '@arethetypeswrong/core': 0.18.4
+      '@arethetypeswrong/core': 0.18.5
       chalk: 4.1.2
       cli-table3: 0.6.5
       commander: 10.0.1
@@ -9467,7 +9474,7 @@ snapshots:
       marked-terminal: 7.3.0(marked@9.1.6)
       semver: 7.8.5
 
-  '@arethetypeswrong/core@0.18.4':
+  '@arethetypeswrong/core@0.18.5':
     dependencies:
       '@andrewbranch/untar.js': 1.0.3
       '@loaderkit/resolve': 1.0.4
@@ -11059,13 +11066,13 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@orpc/openapi@1.14.7(crossws@0.3.5)(ws@8.21.0)':
+  '@orpc/openapi@1.14.7(crossws@0.3.5)(ws@8.21.1)':
     dependencies:
       '@orpc/client': 1.14.7
       '@orpc/contract': 1.14.7
       '@orpc/interop': 1.14.7
       '@orpc/openapi-client': 1.14.7
-      '@orpc/server': 1.14.7(crossws@0.3.5)(ws@8.21.0)
+      '@orpc/server': 1.14.7(crossws@0.3.5)(ws@8.21.1)
       '@orpc/shared': 1.14.7
       '@orpc/standard-server': 1.14.7
       json-schema-typed: 8.0.2
@@ -11076,7 +11083,7 @@ snapshots:
       - fastify
       - ws
 
-  '@orpc/server@1.14.7(crossws@0.3.5)(ws@8.21.0)':
+  '@orpc/server@1.14.7(crossws@0.3.5)(ws@8.21.1)':
     dependencies:
       '@orpc/client': 1.14.7
       '@orpc/contract': 1.14.7
@@ -11091,7 +11098,7 @@ snapshots:
       cookie: 1.1.1
     optionalDependencies:
       crossws: 0.3.5
-      ws: 8.21.0
+      ws: 8.21.1
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - fastify
@@ -11154,11 +11161,11 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@orpc/valibot@1.14.7(@orpc/contract@1.14.7)(@orpc/server@1.14.7(crossws@0.3.5)(ws@8.21.0))(crossws@0.3.5)(valibot@1.4.2(typescript@6.0.3))(ws@8.21.0)':
+  '@orpc/valibot@1.14.7(@orpc/contract@1.14.7)(@orpc/server@1.14.7(crossws@0.3.5)(ws@8.21.1))(crossws@0.3.5)(valibot@1.4.2(typescript@6.0.3))(ws@8.21.1)':
     dependencies:
       '@orpc/contract': 1.14.7
-      '@orpc/openapi': 1.14.7(crossws@0.3.5)(ws@8.21.0)
-      '@orpc/server': 1.14.7(crossws@0.3.5)(ws@8.21.0)
+      '@orpc/openapi': 1.14.7(crossws@0.3.5)(ws@8.21.1)
+      '@orpc/server': 1.14.7(crossws@0.3.5)(ws@8.21.1)
       '@valibot/to-json-schema': 1.7.1(valibot@1.4.2(typescript@6.0.3))
       valibot: 1.4.2(typescript@6.0.3)
     transitivePeerDependencies:
@@ -14546,7 +14553,7 @@ snapshots:
       '@types/ws': 8.18.1
       entities: 7.0.1
       whatwg-mimetype: 3.0.0
-      ws: 8.21.0
+      ws: 8.21.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -16188,8 +16195,6 @@ snapshots:
 
   prettier@2.8.8: {}
 
-  prettier@3.9.3: {}
-
   prettier@3.9.5: {}
 
   pretty-format@27.5.1:
@@ -17672,6 +17677,9 @@ snapshots:
       write-file-atomic: 5.0.1
 
   ws@8.21.0: {}
+
+  ws@8.21.1:
+    optional: true
 
   xml-name-validator@5.0.0: {}
 
