@@ -40,7 +40,7 @@ function isExecutionContext(value: unknown): value is ExecutionContext {
 // wrangler config declares `assets.binding: "ASSETS"`. Consumers using a
 // different binding name here get no admin serving — the core dispatcher
 // falls back to `admin-not-available` for /_plumix/admin/*. Convention
-// over config; `ASSETS` is what `examples/minimal/wrangler.jsonc` ships.
+// over config; `ASSETS` is what `apps/demo/wrangler.jsonc` ships.
 function readAssetsBinding(env: unknown): AssetsBinding | undefined {
   if (typeof env !== "object" || env === null) return undefined;
   const candidate = (env as { readonly ASSETS?: unknown }).ASSETS;

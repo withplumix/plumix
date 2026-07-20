@@ -1,0 +1,4 @@
+# Scaffold — not deployed yet; do not index. The marketing-content follow-up
+# replaces this with a real crawl policy for the launched site.
+User-agent: *
+Disallow: /

@@ -1,0 +1,45 @@
+{
+  "name": "@plumix-apps/demo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Plumix anonymous demo sandbox — the deployed \"try the editor\" app and the workspace dev harness",
+  "license": "MIT",
+  "scripts": {
+    "build": "plumix migrate generate && plumix build",
+    "clean": "git clean -xdf .plumix .wrangler dist drizzle node_modules",
+    "dev": "plumix migrate generate && plumix dev",
+    "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .gitignore",
+    "lint": "eslint",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plumix/blocks": "workspace:*",
+    "@plumix/plugin-blog": "workspace:*",
+    "@plumix/plugin-comments": "workspace:*",
+    "@plumix/plugin-media": "workspace:*",
+    "@plumix/plugin-menu": "workspace:*",
+    "@plumix/plugin-pages": "workspace:*",
+    "@plumix/runtime-cloudflare": "workspace:*",
+    "plumix": "workspace:*",
+    "react": "catalog:react"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:cloudflare",
+    "@playwright/test": "catalog:",
+    "@plumix/eslint-config": "workspace:*",
+    "@plumix/prettier-config": "workspace:*",
+    "@plumix/typescript-config": "workspace:*",
+    "@tailwindcss/postcss": "catalog:tailwind",
+    "@tailwindcss/typography": "catalog:tailwind",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:react",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "tailwindcss": "catalog:tailwind",
+    "typescript": "catalog:",
+    "wrangler": "catalog:cloudflare"
+  },
+  "prettier": "@plumix/prettier-config"
+}

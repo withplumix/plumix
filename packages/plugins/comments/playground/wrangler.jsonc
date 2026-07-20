@@ -15,7 +15,7 @@
   // `none` (not the admin-only playgrounds' `single-page-application`) so
   // the worker runs for every non-asset path and resolves public content
   // routes itself — SPA mode would serve the admin index.html before the
-  // worker ever sees `/posts/:slug`. Matches examples/blog + minimal.
+  // worker ever sees `/posts/:slug`. Matches apps/demo.
   "assets": {
     "directory": ".plumix/public",
     "binding": "ASSETS",

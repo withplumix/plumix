@@ -1,0 +1,14 @@
+{
+  // Astro's strict preset is the right base for a browser-served site — it
+  // leaves `lib` unset, so TS injects the DOM libs by default (our shared
+  // Workers-targeted base would force `WebWorker` and drop DOM). We only layer
+  // on the incremental cache so `pnpm typecheck` caches through turbo like every
+  // other workspace.
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": "${configDir}/.cache/typecheck.tsbuildinfo"
+  },
+  "include": ["astro.config.mjs", "src", ".astro/types.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}
