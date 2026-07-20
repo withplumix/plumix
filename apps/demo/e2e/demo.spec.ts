@@ -13,6 +13,13 @@ const CONTENT_ROWS =
 
 const POST_TITLE = "A post I made in the demo";
 
+// The seeded typography showcase — the richest seeded entry, so it's a reliable
+// target for opening the editor and rendering tagged blocks. The seed pins it to
+// a fixed id (`POST_BASE_ID + 0` in seed/generate.mjs), so open it directly
+// rather than hunting a date-sorted, paginated list where it sits last.
+const SHOWCASE_ID = 200;
+const SHOWCASE_SLUG = "typography-and-elements-a-theme-test-sheet";
+
 test("visitor enters the demo, creates a post, and it persists", async ({
   page,
 }) => {
@@ -73,13 +80,8 @@ test("the visual editor boots inside the demo — blocks are selectable, no demo
   await page.getByTestId("try-editor").click();
   await page.waitForURL(/\/_plumix\/admin/);
 
-  // Open the seeded showcase post in the editor.
-  await page.goto("entries/posts");
-  await page
-    .locator("[data-testid^='content-list-row-']")
-    .filter({ hasText: "Hello from the showcase" })
-    .first()
-    .click();
+  // Open the seeded showcase post in the editor (directly, by its pinned id).
+  await page.goto(`entries/posts/${String(SHOWCASE_ID)}/edit`);
   await page.waitForURL(/\/entries\/posts\/\d+\/edit/);
 
   // The canvas iframe loads the entry's public route with `?plumix.edit`. If the
@@ -88,15 +90,15 @@ test("the visual editor boots inside the demo — blocks are selectable, no demo
   // `data-plumix-mode="edit"` and no tagged blocks.
   const canvas = page.frameLocator(CANVAS_FRAME);
   await expect(canvas.locator('[data-plumix-mode="edit"]')).toBeAttached();
-  await expect(canvas.locator('[data-plumix-id="seed-heading"]')).toBeVisible();
+  await expect(canvas.locator("[data-plumix-id]").first()).toBeVisible();
 
-  // Selecting the block from the Layers tab draws the host-side overlay — which
+  // Selecting a block from the Layers tab draws the host-side overlay — which
   // is positioned from geometry the canvas reports back over the bridge. So the
   // overlay appearing proves the in-iframe editor runtime booted AND the bridge
   // is live (the whole path canEdit → runtime → bridge). Driving it from the
   // rail rather than a canvas click keeps it off the CSS-scaled canvas surface.
   await page.getByTestId("plumix-tab-layers").click();
-  await page.getByTestId("layer-seed-heading").click();
+  await page.locator("[data-testid^='layer-']").first().click();
   await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
   await expect(page.getByTestId("plumix-selection-toolbar")).toBeVisible();
 
@@ -115,6 +117,6 @@ test("the demo pill still shows on the public site for a session holder", async 
 
   // Visit a public entry (not the admin, not the editor canvas): the pill is
   // there. Absolute path — the baseURL points at the admin mount.
-  await page.goto("/posts/hello-from-the-showcase");
+  await page.goto(`/posts/${SHOWCASE_SLUG}`);
   await expect(page.locator("#plumix-demo-toolbar")).toBeVisible();
 });

@@ -13,14 +13,17 @@ Two supported loops, pick whichever matches what you're iterating on.
 ### Consumer-style: `plumix dev` only (single origin)
 
 Once the consumer has wired static-asset serving for their chosen runtime
-(the example app's config shows the right binding for that runtime),
+(the demo app's config shows the right binding for that runtime),
 running the backend serves admin too — no second process:
 
 ```bash
-cd examples/minimal
+cd apps/demo
 pnpm dev                              # :5173
 # open http://localhost:5173/_plumix/admin/
 ```
+
+`apps/demo` runs in demo mode: the synthetic authenticator auto-logs you in
+as admin, so there's no sign-in step while iterating.
 
 This mode exercises the same serving path production uses (the runtime's
 asset layer in front of the request handler). Best for "does my feature
@@ -33,7 +36,7 @@ faster than rebuilding + restaging. Two terminals:
 
 ```bash
 # terminal 1 — backend
-cd examples/minimal && pnpm dev       # :5173
+cd apps/demo && pnpm dev              # :5173
 
 # terminal 2 — admin with HMR
 cd packages/admin && pnpm dev         # :5174
@@ -57,14 +60,11 @@ two-port layout as the two-terminal variant but in one shell.
 
 ### First-time setup
 
-Before RPC endpoints work, the dev database needs migrations applied —
-the specifics depend on the database adapter the example app uses. From
-your example app (e.g. `examples/minimal`):
-
-```bash
-cd examples/minimal
-pnpm plumix migrate apply
-```
+`apps/demo` needs no manual migration step: its per-session Durable Object
+database applies its own schema at runtime, so `pnpm dev` (which runs
+`plumix migrate generate` first) is enough to bring RPC endpoints up. A
+real-D1 app would instead apply migrations up front with
+`pnpm plumix migrate apply`.
 
 ### End-to-end tests (Playwright + axe-core)
 

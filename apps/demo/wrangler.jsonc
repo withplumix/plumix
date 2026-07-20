@@ -1,13 +1,15 @@
 {
   "$schema": "https://unpkg.com/wrangler/config-schema.json",
-  "name": "plumix-blog",
+  "name": "plumix-demo",
   "main": ".plumix/worker.ts",
   "compatibility_date": "2026-04-01",
   "compatibility_flags": ["nodejs_compat"],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "plumix_blog",
+      "database_name": "plumix_demo",
+      // Preserved from the former blog example so an existing D1 instance isn't
+      // orphaned; only the cosmetic name changed.
       "database_id": "67ed8348-4cfa-45ce-8b0a-17eb9e351896",
       "migrations_dir": "drizzle",
     },
@@ -15,7 +17,7 @@
   "r2_buckets": [
     {
       "binding": "MEDIA",
-      "bucket_name": "plumix-blog-media",
+      "bucket_name": "plumix-demo-media",
     },
   ],
   // Per-session demo sandbox database. Each visitor's cookie maps to one

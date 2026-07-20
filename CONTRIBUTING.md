@@ -60,7 +60,7 @@ what the test needs:
 
 End-to-end tests (Playwright) are not part of this taxonomy and will land
 later as a separate `test:e2e` script in the packages that need them
-(`packages/admin`, `examples/*`).
+(`packages/admin`, `apps/*`).
 
 Every test-having package ships a `vitest.config.ts` with coverage wired
 (`pnpm exec vitest run --coverage` inside the package). Thresholds are not

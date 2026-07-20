@@ -1,14 +1,15 @@
 {
-  "name": "@plumix-examples/blog",
+  "name": "@plumix-apps/demo",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Plumix app with the blog and pages plugins — Cloudflare + D1",
+  "description": "Plumix anonymous demo sandbox — the deployed \"try the editor\" app and the workspace dev harness",
   "license": "MIT",
   "scripts": {
     "build": "plumix migrate generate && plumix build",
     "clean": "git clean -xdf .plumix .wrangler dist drizzle node_modules",
     "dev": "plumix migrate generate && plumix dev",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:cloudflare",
+    "@playwright/test": "catalog:",
     "@plumix/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "catalog:tailwind",
     "@tailwindcss/typography": "catalog:tailwind",

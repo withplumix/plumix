@@ -55,7 +55,10 @@ packages/
 │   ├── audit-log/ blog/ comments/ media/ menu/ pages/ — first-party plugins
 └── runtimes/
     └── cloudflare/      @plumix/runtime-cloudflare — Cloudflare D1/R2/KV bindings
-examples/{blog,minimal}                            — playgrounds + e2e fixtures
+apps/
+├── demo/       @plumix-apps/demo      — anon "try the editor" sandbox; deploy + dev harness + demo e2e
+├── marketing/  @plumix-apps/marketing — marketing site on plumix (scaffold)
+└── docs/       @plumix-apps/docs      — Astro Starlight documentation site
 tooling/{eslint,lingui,prettier,typescript,vitest} — shared configs as workspace packages
 ```
 
@@ -122,7 +125,7 @@ Publishing is automated by Changesets (`.changeset/README.md`). Merging a PR tha
 pnpm changeset   # pick the bump, write a one-line user-facing summary, commit the generated file
 ```
 
-**Skip it** when the change has no consumer-visible effect — tests, CI, docs, internal refactors, chores — or touches only private packages (`examples/*`, `tooling/*`, `packages/plugins/*/playground`).
+**Skip it** when the change has no consumer-visible effect — tests, CI, docs, internal refactors, chores — or touches only private packages (`apps/*`, `tooling/*`, `packages/plugins/*/playground`).
 
 **Which package to select, and the bump:**
 

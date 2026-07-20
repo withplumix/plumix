@@ -19,21 +19,26 @@ const config: KnipConfig = {
       ignore: ["base/**"],
     },
     // plumix.config.ts is the consumer's entry — knip can't infer it
-    // from package.json's exports because examples don't publish.
-    "examples/blog": {
-      // seed/generate.mjs is a standalone CLI run by hand to emit seed.sql.
-      entry: ["plumix.config.ts", "seed/generate.mjs"],
+    // from package.json's exports because apps don't publish.
+    "apps/demo": {
+      // seed/generate.mjs is a standalone CLI run by hand to emit seed.sql;
+      // the playwright spec runs via the CLI, not a static import.
+      entry: ["plumix.config.ts", "seed/generate.mjs", "e2e/*.spec.ts"],
       // theme/styles.css is referenced via the theme's `css: []` string
       // array, not a static import knip can follow. tailwindcss and the
       // typography plugin are consumed through `@import`/`@plugin` in that
       // stylesheet, not a TS import.
       ignore: ["theme/styles.css"],
       ignoreDependencies: ["@tailwindcss/typography", "tailwindcss"],
+      // e2e/playwright.config.ts imports `plumix/test/playwright` whose dist
+      // may not exist on a cold clone; disable the plugin and list the spec as
+      // an entry instead (mirrors the plugin e2e suites).
+      playwright: false,
     },
-    "examples/minimal": {
+    "apps/marketing": {
       entry: ["plumix.config.ts"],
     },
-    // Playgrounds — same shape as examples/*: `plumix.config.ts` is the
+    // Playgrounds — same shape as apps/*: `plumix.config.ts` is the
     // consumer entry, not visible to knip without an explicit hint.
     "packages/plugins/media/playground": {
       entry: ["plumix.config.ts"],
@@ -51,9 +56,6 @@ const config: KnipConfig = {
       entry: ["plumix.config.ts"],
     },
     "packages/plugins/pages/playground": {
-      entry: ["plumix.config.ts"],
-    },
-    "packages/runtimes/cloudflare/playground": {
       entry: ["plumix.config.ts"],
     },
     // drizzle-kit is invoked by consumers as a CLI hint, not imported.
@@ -125,23 +127,6 @@ const config: KnipConfig = {
       // to the bare name `cloudflare`; ignore it (this package never depends
       // on the real `cloudflare` SDK).
       ignoreDependencies: ["cloudflare"],
-      // The playwright plugin would import() e2e/playwright.config.ts, which
-      // pulls in `plumix/test/playwright` whose dist may not exist on a cold
-      // clone — crashing `pnpm knip`. Disable it and list only the spec as an
-      // entry (never the config), mirroring the plugin e2e suites.
-      //
-      // The published subpaths are listed explicitly because tsconfig.json
-      // widens rootDir to `.` for the e2e tree, which stops knip mapping
-      // `exports` back through `dist/` to their sources. Keep in sync with
-      // the `exports` map — a new subpath added there goes unchecked here.
-      entry: [
-        "src/index.ts",
-        "src/commands/index.ts",
-        "src/demo/index.ts",
-        "src/demo/durable-object.ts",
-        "e2e/demo.spec.ts",
-      ],
-      playwright: false,
     },
     // The runtime-proof fixture plugin is loaded by playwright's
     // webServer command at e2e time — not via a static import knip

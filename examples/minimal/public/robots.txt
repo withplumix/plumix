@@ -1,3 +1,0 @@
-# Demo app — do not index in any search engine.
-User-agent: *
-Disallow: /
