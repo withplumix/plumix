@@ -1,6 +1,6 @@
-import * as React from "react";
-import type { ReactNode } from "react";
 import type { ResolvedEntry } from "plumix";
+import type { ReactNode } from "react";
+
 import { Link } from "@plumix/blocks/renderer";
 
 import { FeaturedImage } from "./FeaturedImage";
@@ -25,8 +25,10 @@ export function PostCard({ entry }: PostCardProps): ReactNode {
           {entry.title}
         </Link>
       </h2>
-      {entry.excerpt ? <p className="mt-2 text-muted">{entry.excerpt}</p> : null}
-      <PostMeta entry={entry} className="mt-3 text-sm text-muted" />
+      {entry.excerpt ? (
+        <p className="text-muted mt-2">{entry.excerpt}</p>
+      ) : null}
+      <PostMeta entry={entry} className="text-muted mt-3 text-sm" />
     </article>
   );
 }

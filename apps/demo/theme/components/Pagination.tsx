@@ -1,6 +1,6 @@
-import * as React from "react";
-import type { ReactNode } from "react";
 import type { Pagination as PaginationData } from "plumix";
+import type { ReactNode } from "react";
+
 import { Link } from "@plumix/blocks/renderer";
 
 export interface PaginationInfo {
@@ -27,7 +27,11 @@ function pageHref(base: string, n: number): string {
   return base === "/" ? `/page/${n}` : `${base}/page/${n}`;
 }
 
-export function Pagination({ path, page, pageCount }: PaginationInfo): ReactNode {
+export function Pagination({
+  path,
+  page,
+  pageCount,
+}: PaginationInfo): ReactNode {
   if (pageCount <= 1) return null;
   const base = path.replace(/\/page\/\d+$/, "") || "/";
 

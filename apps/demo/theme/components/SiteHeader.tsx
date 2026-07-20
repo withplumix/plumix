@@ -1,5 +1,5 @@
-import * as React from "react";
 import type { ReactNode } from "react";
+
 import type { ResolvedMenu } from "@plumix/plugin-menu/server";
 
 import { Menu } from "./Menu";
@@ -18,7 +18,7 @@ export function SiteHeader({
   showTryEditor,
 }: SiteHeaderProps): ReactNode {
   return (
-    <header className="border-b border-line">
+    <header className="border-line border-b">
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-6 px-5 py-5">
         <a href="/" className="font-serif text-xl" data-testid="site-title">
           {siteTitle}
@@ -53,7 +53,7 @@ export function SiteHeader({
               <path d="M4 7h16M4 12h16M4 17h16" />
             </svg>
           </summary>
-          <div className="absolute right-0 z-10 mt-3 w-56 rounded border border-line bg-paper p-4 shadow-lg">
+          <div className="border-line bg-paper absolute right-0 z-10 mt-3 w-56 rounded border p-4 shadow-lg">
             <Menu menu={menu} className="flex flex-col gap-3" />
             <SearchForm className="mt-4" />
             {showTryEditor && (
@@ -79,7 +79,7 @@ function TryEditorLink({
   return (
     <a
       href="/demo"
-      className={`rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-paper ${className ?? ""}`}
+      className={`bg-ink text-paper rounded-full px-4 py-1.5 text-sm font-medium ${className ?? ""}`}
       data-testid={testId}
     >
       Try the editor

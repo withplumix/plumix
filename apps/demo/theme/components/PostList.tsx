@@ -1,9 +1,9 @@
-import * as React from "react";
-import type { ReactNode } from "react";
 import type { ResolvedEntry } from "plumix";
+import type { ReactNode } from "react";
 
+import type { PaginationInfo } from "./Pagination";
+import { Pagination } from "./Pagination";
 import { PostCard } from "./PostCard";
-import { Pagination, type PaginationInfo } from "./Pagination";
 
 // Backs the front page, archive, taxonomy and search.
 interface PostListProps {

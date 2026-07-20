@@ -1,9 +1,10 @@
+import { auth, plumix } from "plumix";
+
 import {
   cloudflare,
   cloudflareDeployOrigin,
   d1,
 } from "@plumix/runtime-cloudflare";
-import { auth, plumix } from "plumix";
 
 export default plumix({
   runtime: cloudflare(),

@@ -1,6 +1,6 @@
-import * as React from "react";
-import type { ReactNode } from "react";
 import type { ResolvedEntry } from "plumix";
+import type { ReactNode } from "react";
+
 import { Image } from "@plumix/blocks/renderer";
 
 // Read from `entry.meta` because there's no admin affordance to set a
@@ -27,7 +27,7 @@ export function FeaturedImage({
   placeholder,
   className,
 }: FeaturedImageProps): ReactNode {
-  const image = entry.meta?.featuredImage as FeaturedImageMeta | undefined;
+  const image = entry.meta.featuredImage as FeaturedImageMeta | undefined;
   const content =
     image?.src && image.width && image.height ? (
       <Image
@@ -39,7 +39,7 @@ export function FeaturedImage({
       />
     ) : placeholder ? (
       <div
-        className="aspect-[3/2] w-full rounded bg-line"
+        className="bg-line aspect-[3/2] w-full rounded"
         data-testid="featured-placeholder"
       />
     ) : null;

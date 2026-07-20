@@ -1,16 +1,16 @@
-import * as React from "react";
-import { defineTemplate } from "plumix";
 import type { SingleData } from "plumix";
+import { defineTemplate } from "plumix";
+
+// Likewise pulls the blog plugin's `relatedPosts` dep augmentation.
+import type { RelatedPosts as RelatedPostsData } from "@plumix/plugin-blog";
 // Importing the thread type also pulls the plugin's `comments` template-dep
 // augmentation, so `comments: ["current"]` is typed on the render args.
 import type { ResolvedThread } from "@plumix/plugin-comments/server";
-// Likewise pulls the blog plugin's `relatedPosts` dep augmentation.
-import type { RelatedPosts as RelatedPostsData } from "@plumix/plugin-blog";
 import { hasDemoSession } from "@plumix/runtime-cloudflare/demo";
 
+import { Comments } from "../components/Comments";
 import { Layout } from "../components/Layout";
 import { PostSingle } from "../components/PostSingle";
-import { Comments } from "../components/Comments";
 import { RelatedPosts } from "../components/RelatedPosts";
 
 export const single = defineTemplate<SingleData>({

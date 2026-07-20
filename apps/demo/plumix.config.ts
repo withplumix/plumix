@@ -1,3 +1,5 @@
+import { consoleMailer, plumix } from "plumix";
+
 import { blog } from "@plumix/plugin-blog";
 import { comments } from "@plumix/plugin-comments";
 import { media } from "@plumix/plugin-media";
@@ -5,7 +7,6 @@ import { menu } from "@plumix/plugin-menu";
 import { pages } from "@plumix/plugin-pages";
 import { edge, images, r2 } from "@plumix/runtime-cloudflare";
 import { demoPreset } from "@plumix/runtime-cloudflare/demo";
-import { consoleMailer, plumix } from "plumix";
 
 import { blogTheme } from "./theme";
 

@@ -1,6 +1,5 @@
-import * as React from "react";
-import type { ReactNode } from "react";
 import type { ResolvedEntry } from "plumix";
+import type { ReactNode } from "react";
 
 import { PostCard } from "./PostCard";
 
@@ -15,7 +14,7 @@ export function RelatedPosts({ entries }: RelatedPostsProps): ReactNode {
   if (entries.length === 0) return null;
   return (
     <section
-      className="mt-16 border-t border-line pt-8"
+      className="border-line mt-16 border-t pt-8"
       data-testid="related-posts"
     >
       <h2 className="font-serif text-2xl">Related posts</h2>

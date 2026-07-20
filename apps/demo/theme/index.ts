@@ -1,9 +1,9 @@
 import { defineTheme } from "plumix";
 
-import { single } from "./templates/single";
-import { page } from "./templates/page";
-import { notFound } from "./templates/not-found";
 import { fallback } from "./templates/fallback";
+import { notFound } from "./templates/not-found";
+import { page } from "./templates/page";
+import { single } from "./templates/single";
 import { DEFAULT_TOKENS } from "./tokens";
 
 // `index` (the universal fallback) renders every listing route — front page,

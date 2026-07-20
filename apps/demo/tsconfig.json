@@ -1,7 +1,7 @@
 {
   "extends": "@plumix/typescript-config/base.json",
   "compilerOptions": {
-    "jsx": "react",
+    "jsx": "react-jsx",
     "types": ["node", "@cloudflare/workers-types", "react"]
   },
   "include": [
@@ -9,6 +9,7 @@
     "demo-sql.ts",
     "demo-env.d.ts",
     "theme",
+    "e2e",
     ".plumix"
   ]
 }

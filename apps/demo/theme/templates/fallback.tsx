@@ -1,5 +1,3 @@
-import * as React from "react";
-import { defineTemplate } from "plumix";
 import type {
   ArchiveData,
   FrontPageData,
@@ -7,11 +5,13 @@ import type {
   TaxonomyData,
   TemplateData,
 } from "plumix";
+import { defineTemplate } from "plumix";
+
 import { hasDemoSession } from "@plumix/runtime-cloudflare/demo";
 
 import { Layout } from "../components/Layout";
-import { PostList } from "../components/PostList";
 import { paginationInfo } from "../components/Pagination";
+import { PostList } from "../components/PostList";
 
 type ListingData = ArchiveData | FrontPageData | SearchData | TaxonomyData;
 

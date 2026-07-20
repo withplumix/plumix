@@ -1,6 +1,6 @@
-import * as React from "react";
-import type { ReactNode } from "react";
 import type { ResolvedEntry } from "plumix";
+import type { ReactNode } from "react";
+
 import { BlockRenderer, Link } from "@plumix/blocks/renderer";
 
 import { FeaturedImage } from "./FeaturedImage";
@@ -29,15 +29,15 @@ export function PostSingle({
           {entry.title}
         </h1>
         {showMeta ? (
-          <PostMeta entry={entry} className="mt-3 text-sm text-muted" />
+          <PostMeta entry={entry} className="text-muted mt-3 text-sm" />
         ) : null}
         {entry.excerpt ? (
-          <p className="mt-4 text-lg text-muted">{entry.excerpt}</p>
+          <p className="text-muted mt-4 text-lg">{entry.excerpt}</p>
         ) : null}
       </header>
 
       <div
-        className="prose prose-stone max-w-none prose-headings:font-serif"
+        className="prose prose-stone prose-headings:font-serif max-w-none"
         data-testid="post-body"
       >
         {entry.contentBlocks ? (
@@ -51,7 +51,7 @@ export function PostSingle({
             <Link
               key={tag.id}
               term={tag}
-              className="rounded border border-line px-2.5 py-0.5 text-sm text-muted hover:text-ink"
+              className="border-line text-muted hover:text-ink rounded border px-2.5 py-0.5 text-sm"
             >
               {tag.name}
             </Link>

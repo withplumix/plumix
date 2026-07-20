@@ -1,4 +1,5 @@
-import { countProse, type EntryContent } from "@plumix/blocks";
+import type { EntryContent } from "@plumix/blocks";
+import { countProse } from "@plumix/blocks";
 
 const WORDS_PER_MINUTE = 200;
 

@@ -12,18 +12,18 @@
       // real id when the marketing-content follow-up wires deployment. Local
       // `plumix dev` uses local D1 state and ignores this value.
       "database_id": "00000000-0000-0000-0000-000000000000",
-      "migrations_dir": "drizzle"
-    }
+      "migrations_dir": "drizzle",
+    },
   ],
   "assets": {
     "directory": ".plumix/public",
     "binding": "ASSETS",
-    "not_found_handling": "none"
+    "not_found_handling": "none",
   },
   // Fires plumix's scheduled tasks. `0 3 * * *` matches the core
   // session-cleanup task (daily); `*/5 * * * *` matches publish-scheduled
   // (publishes due future-dated entries within 5 minutes).
   "triggers": {
-    "crons": ["0 3 * * *", "*/5 * * * *"]
-  }
+    "crons": ["0 3 * * *", "*/5 * * * *"],
+  },
 }

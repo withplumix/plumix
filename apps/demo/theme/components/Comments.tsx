@@ -1,5 +1,5 @@
-import * as React from "react";
 import type { ReactNode } from "react";
+
 import type {
   ResolvedComment,
   ResolvedThread,
@@ -28,7 +28,7 @@ function CommentItem({ comment }: CommentItemProps): ReactNode {
         dangerouslySetInnerHTML={{ __html: comment.bodyHtml }}
       />
       {comment.replies.length > 0 ? (
-        <ul className="mt-4 space-y-4 border-l border-line pl-4">
+        <ul className="border-line mt-4 space-y-4 border-l pl-4">
           {comment.replies.map((reply) => (
             <CommentItem key={reply.id} comment={reply} />
           ))}
@@ -50,7 +50,7 @@ export function Comments({ thread }: CommentsProps): ReactNode {
   const label = count === 1 ? "comment" : "comments";
 
   return (
-    <section className="mt-16 border-t border-line pt-8" data-testid="comments">
+    <section className="border-line mt-16 border-t pt-8" data-testid="comments">
       <h2 className="font-serif text-2xl">
         {count} {label}
       </h2>
@@ -61,7 +61,7 @@ export function Comments({ thread }: CommentsProps): ReactNode {
           ))}
         </ul>
       ) : (
-        <p className="mt-4 text-muted">No comments yet.</p>
+        <p className="text-muted mt-4">No comments yet.</p>
       )}
     </section>
   );

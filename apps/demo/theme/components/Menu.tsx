@@ -1,5 +1,5 @@
-import * as React from "react";
 import type { ReactNode } from "react";
+
 // Importing the menu type also pulls the plugin's `menus` template-dep
 // augmentation, so `menus: [...]` is typed on the templates' render args.
 import type { ResolvedMenu } from "@plumix/plugin-menu/server";

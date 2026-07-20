@@ -10,6 +10,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "clean": "git clean -xdf .astro dist node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .gitignore",
+    "lint": "astro sync && eslint",
     "typecheck": "astro sync && tsc --noEmit"
   },
   "dependencies": {
@@ -17,7 +19,11 @@
     "astro": "^7.1.1"
   },
   "devDependencies": {
-    "@plumix/typescript-config": "workspace:*",
+    "@plumix/eslint-config": "workspace:*",
+    "@plumix/prettier-config": "workspace:*",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
     "typescript": "catalog:"
-  }
+  },
+  "prettier": "@plumix/prettier-config"
 }

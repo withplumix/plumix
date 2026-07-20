@@ -329,6 +329,12 @@ importers:
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.1
+      '@plumix/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
+      '@plumix/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript
@@ -344,6 +350,12 @@ importers:
       '@types/react':
         specifier: catalog:react
         version: 19.2.17
+      eslint:
+        specifier: 'catalog:'
+        version: 10.6.0(jiti@2.7.0)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.5
       tailwindcss:
         specifier: catalog:tailwind
         version: 4.3.2
@@ -363,9 +375,18 @@ importers:
         specifier: ^7.1.1
         version: 7.1.1(@astrojs/markdown-remark@7.2.1)(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.3)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
     devDependencies:
-      '@plumix/typescript-config':
+      '@plumix/eslint-config':
         specifier: workspace:*
-        version: link:../../tooling/typescript
+        version: link:../../tooling/eslint
+      '@plumix/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier
+      eslint:
+        specifier: 'catalog:'
+        version: 10.6.0(jiti@2.7.0)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.5
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -382,12 +403,24 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
         version: 5.20260711.1
+      '@plumix/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
+      '@plumix/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.2
+      eslint:
+        specifier: 'catalog:'
+        version: 10.6.0(jiti@2.7.0)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.5
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

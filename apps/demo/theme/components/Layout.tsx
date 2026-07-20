@@ -1,9 +1,9 @@
-import * as React from "react";
 import type { ReactNode } from "react";
+
 import type { ResolvedMenu } from "@plumix/plugin-menu/server";
 
-import { SiteHeader } from "./SiteHeader";
 import { SiteFooter } from "./SiteFooter";
+import { SiteHeader } from "./SiteHeader";
 
 interface LayoutProps {
   readonly settings?: Readonly<Record<string, unknown>>;
@@ -21,7 +21,7 @@ export function Layout({
   showTryEditor = false,
   children,
 }: LayoutProps): ReactNode {
-  const site = (settings?.site ?? null) as { readonly title?: string } | null;
+  const site = settings?.site as { readonly title?: string } | undefined;
   const siteTitle = site?.title ?? "Plumix Blog";
 
   return (

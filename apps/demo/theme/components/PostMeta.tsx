@@ -1,6 +1,5 @@
-import * as React from "react";
-import type { ReactNode } from "react";
 import type { ResolvedEntry } from "plumix";
+import type { ReactNode } from "react";
 
 import { readingTime } from "../reading-time";
 

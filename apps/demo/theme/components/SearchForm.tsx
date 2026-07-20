@@ -1,4 +1,3 @@
-import * as React from "react";
 import type { ReactNode } from "react";
 
 // Zero-JS GET search — submits to /search, which 301s the bare `?q=` to the
@@ -14,7 +13,7 @@ export function SearchForm({
         name="q"
         placeholder="Search…"
         aria-label="Search"
-        className="w-full rounded border border-line bg-transparent px-2 py-1 text-sm"
+        className="border-line w-full rounded border bg-transparent px-2 py-1 text-sm"
       />
     </form>
   );
