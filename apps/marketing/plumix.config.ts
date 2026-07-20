@@ -4,6 +4,7 @@ import {
   cloudflare,
   cloudflareDeployOrigin,
   d1,
+  r2,
 } from "@plumix/runtime-cloudflare";
 
 export default plumix({
@@ -11,6 +12,9 @@ export default plumix({
   // session: "auto" routes writes to primary, nearest replica for anon reads,
   // and resumes authenticated reads from a bookmark cookie for read-your-writes.
   database: d1({ binding: "DB", session: "auto" }),
+  // Media uploads land in R2. Dormant until the marketing-content follow-up
+  // wires a theme/media that actually stores images.
+  storage: r2({ binding: "MEDIA" }),
   auth: auth({
     passkey: {
       rpName: "Plumix — Marketing",

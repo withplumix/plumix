@@ -15,7 +15,7 @@
   "r2_buckets": [
     {
       "binding": "MEDIA",
-      "bucket_name": "plumix-demo-media",
+      "bucket_name": "plumix-demo",
     },
   ],
   // Per-session demo sandbox database. Each visitor's cookie maps to one
