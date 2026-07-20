@@ -102,7 +102,13 @@ async function renderThroughThemeInner({
   editMode = LIVE_EDIT_MODE,
 }: RenderArgs): Promise<string> {
   const candidates = await resolveTemplateCandidates(node, ctx.hooks);
-  const { template, slot } = pickTemplate(theme.templates, candidates);
+  // The render pipeline handles the object-map form only; the array /
+  // bare-component forms resolve via `resolveTemplate` and wire into rendering
+  // in a later slice.
+  const { template, slot } = pickTemplate(
+    theme.templates as TemplateRegistry,
+    candidates,
+  );
   // Dev-only: surface the template hierarchy resolution in the debug bar.
   // `ctx.debug` is the no-op collector in prod, so this branch tree-shakes.
   if (process.env.PLUMIX_DEV) {
@@ -199,7 +205,8 @@ export async function renderErrorThroughTheme({
   data,
 }: RenderErrorArgs): Promise<string> {
   const variant = ERROR_VARIANTS[kind];
-  const raw = theme.templates[variant.key] ?? variant.fallback;
+  const raw =
+    (theme.templates as TemplateRegistry)[variant.key] ?? variant.fallback;
   const template = normalizeTemplate(raw, variant.key);
   const deps = await loadTemplateDeps(
     mergeTemplateDepDeclarations(

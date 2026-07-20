@@ -16,6 +16,7 @@ import type {
 } from "./route/render/resolved-entry.js";
 import type { Template, TemplateDepDeclarations } from "./template.js";
 import { RESERVED_DEP_KIND_NAMES } from "./template-deps.js";
+import { isTemplate } from "./template.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
 
 // `theme:document` is a boot-time filter chain. `buildApp` fires it once,
@@ -73,6 +74,63 @@ export type TemplateComponent<Data> = ComponentType<{ readonly data: Data }>;
 // hand-written `{ render }` literals that didn't go through the factory.
 export type TemplateEntry<Data extends TemplateData> =
   TemplateComponent<Data> | Template<Data>;
+
+/**
+ * The fixed set of generic tiers a theme's `templates` array can declare. Each
+ * matches one resolved-node kind (`entry`→content, `archive`→content-type
+ * archive, `taxonomy`→term, `frontPage`/`postsPage`/`search`), plus `fallback`
+ * (the universal catch-all) and the `notFound`/`serverError` condition handlers.
+ * Type/term-specific matchers arrive in a later slice.
+ */
+export type GenericTier =
+  | "fallback"
+  | "entry"
+  | "archive"
+  | "taxonomy"
+  | "frontPage"
+  | "postsPage"
+  | "search"
+  | "notFound"
+  | "serverError";
+
+/** One entry in a theme's `templates` array: a generic tier bound to a template. */
+export interface TemplateRule {
+  readonly tier: GenericTier;
+  readonly template: TemplateEntry<TemplateData>;
+}
+
+/**
+ * Runtime discriminator for the object-map `templates` form, as opposed to the
+ * array (rule list) or bare-component (fallback-only) forms. Both `defineTheme`
+ * and `buildApp` branch on it so the object-map path is untouched while the new
+ * forms are accepted alongside it.
+ */
+export function isTemplateRegistry(
+  templates: ThemeDescriptor["templates"],
+): templates is TemplateRegistry {
+  return (
+    !Array.isArray(templates) &&
+    typeof templates !== "function" &&
+    !isTemplate(templates)
+  );
+}
+
+/**
+ * Boot-time guard: the object-map form must declare `index` (the hierarchy
+ * terminal, else pages render blank). The array / bare-component forms carry
+ * their own terminal, so they skip it. `defineTheme` (author time) and
+ * `buildApp` (boot time) both call it — defense-in-depth for JS callers, who
+ * can drop `index` even though the type marks it required (hence the cast).
+ */
+export function assertIndexTemplate(
+  templates: ThemeDescriptor["templates"],
+): void {
+  if (!isTemplateRegistry(templates)) return;
+  const map = templates as Readonly<Record<string, unknown>>;
+  if (!map.index) {
+    throw ThemeRegistrationError.missingIndexTemplate();
+  }
+}
 
 // Catch-all for the registry's index signature. The narrow per-key
 // slots can't share a single typed slot due to contravariance, so the
@@ -155,7 +213,14 @@ export interface TemplateRegistry {
 }
 
 export interface ThemeDescriptor extends TemplateDepDeclarations {
-  readonly templates: TemplateRegistry;
+  /**
+   * The object-map form (legacy WP-style slots), the new array of builder
+   * rules, or a bare component as fallback-only shorthand. The array/shorthand
+   * forms are accepted and resolvable now; they render through the pipeline in
+   * a later slice.
+   */
+  readonly templates:
+    TemplateRegistry | readonly TemplateRule[] | TemplateEntry<TemplateData>;
   readonly document?: DocumentManifest;
   readonly tokens?: ThemeTokens;
   /**
@@ -185,13 +250,7 @@ const TOKEN_SLUG_RE = /^[a-z][a-z0-9-]*$/;
 const TOKEN_VALUE_FORBIDDEN_CHARS = /[;{}\\\n\r]|\/\*|\*\//;
 
 export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
-  // Defense-in-depth: the type system already requires `templates.index`,
-  // but JS callers can drop it. The hierarchy walker terminates at
-  // `index`, so an absent fallback would render blank pages.
-  const templates = descriptor.templates as Readonly<Record<string, unknown>>;
-  if (!templates.index) {
-    throw ThemeRegistrationError.missingIndexTemplate();
-  }
+  assertIndexTemplate(descriptor.templates);
   if ("templateDeps" in descriptor) {
     throw ThemeRegistrationError.legacyTemplateDepsShape();
   }

@@ -1,8 +1,23 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { ArchiveData, EntryData, TaxonomyData } from "./resolved-entry.js";
+import type { ResolvedNode } from "./template-hierarchy.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import {
+  archive,
+  entry,
+  fallback,
+  frontPage,
+  notFound,
+  postsPage,
+  search,
+  serverError,
+  taxonomy,
+} from "./template-builders.js";
+import {
   getPossibleTemplates,
+  resolveErrorTemplate,
+  resolveTemplate,
   resolveTemplateCandidates,
 } from "./template-hierarchy.js";
 
@@ -165,5 +180,88 @@ describe("resolveTemplateCandidates — `template:hierarchy` filter", () => {
       "archive",
       "index",
     ]);
+  });
+});
+
+const contentNode: ResolvedNode = {
+  kind: "content",
+  entryType: "post",
+  slug: "x",
+  databaseId: 1,
+};
+
+describe("resolveTemplate — generic tiers", () => {
+  const rules = [
+    entry(() => null),
+    archive(() => null),
+    taxonomy(() => null),
+    frontPage(() => null),
+    postsPage(() => null),
+    search(() => null),
+    fallback(() => null),
+  ];
+
+  test.each<[ResolvedNode, string]>([
+    [contentNode, "entry"],
+    [{ kind: "content-type-archive", entryType: "post" }, "archive"],
+    [
+      { kind: "term", taxonomy: "category", slug: "x", databaseId: 1 },
+      "taxonomy",
+    ],
+    [{ kind: "front-page" }, "frontPage"],
+    [{ kind: "posts-page" }, "postsPage"],
+    [{ kind: "search" }, "search"],
+  ])("resolves a node to its matching generic tier (#%#)", (node, tier) => {
+    expect(resolveTemplate(rules, node)?.tier).toBe(tier);
+  });
+
+  test("array order is cosmetic — the node's own tier wins over fallback", () => {
+    // `fallback` is declared last but a content node still resolves to `entry`.
+    expect(resolveTemplate(rules, contentNode)?.tier).toBe("entry");
+  });
+
+  test("falls back to `fallback` when the node's tier is absent", () => {
+    expect(resolveTemplate([fallback(() => null)], contentNode)?.tier).toBe(
+      "fallback",
+    );
+  });
+
+  test("returns undefined when neither the tier nor fallback is present", () => {
+    expect(resolveTemplate([archive(() => null)], contentNode)).toBeUndefined();
+  });
+});
+
+describe("resolveErrorTemplate", () => {
+  const rules = [notFound(() => null), serverError(() => null)];
+
+  test("finds the notFound (404) tier", () => {
+    expect(resolveErrorTemplate(rules, "notFound")?.tier).toBe("notFound");
+  });
+
+  test("finds the serverError (500) tier", () => {
+    expect(resolveErrorTemplate(rules, "serverError")?.tier).toBe(
+      "serverError",
+    );
+  });
+
+  test("returns undefined when the error tier is absent", () => {
+    expect(resolveErrorTemplate([], "notFound")).toBeUndefined();
+  });
+});
+
+describe("generic-tier builders — data typing", () => {
+  test("each builder types its template's data to the tier's shape", () => {
+    entry(({ data }) => {
+      expectTypeOf(data).toEqualTypeOf<EntryData>();
+      return null;
+    });
+    archive(({ data }) => {
+      expectTypeOf(data).toEqualTypeOf<ArchiveData>();
+      return null;
+    });
+    taxonomy(({ data }) => {
+      expectTypeOf(data).toEqualTypeOf<TaxonomyData>();
+      return null;
+    });
   });
 });
