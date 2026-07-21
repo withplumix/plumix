@@ -25,6 +25,7 @@ import {
   getPatterns,
   getThemeBreakpoints,
   getThemeTokens,
+  namedTemplatesForType,
   visibleTermTaxonomies,
 } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
@@ -55,6 +56,7 @@ import {
   defineEntryContent,
   isEntryContent,
 } from "@plumix/blocks";
+import { NAMED_TEMPLATE_META_KEY } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
 import { PlainFormRouteInner } from "./-plain-form-route.js";
@@ -292,6 +294,16 @@ function EntryEditor({
   const lastSavedExcerptRef = useRef<string>(entry.excerpt ?? "");
   const metaRef = useRef<Record<string, unknown>>(entry.meta);
   const lastSavedMetaRef = useRef<string>(JSON.stringify(entry.meta));
+  // Named-template pick — a reserved meta key, but sent as the dedicated
+  // `template` field (the meta bag sanitizer rejects reserved keys). `null`
+  // = theme default. Rides the same autosave debouncer as content/meta.
+  const rawTemplate = entry.meta[NAMED_TEMPLATE_META_KEY];
+  const initialTemplate = typeof rawTemplate === "string" ? rawTemplate : null;
+  const [templateValue, setTemplateValue] = useState<string | null>(
+    initialTemplate,
+  );
+  const templateRef = useRef<string | null>(initialTemplate);
+  const lastSavedTemplateRef = useRef<string | null>(initialTemplate);
   const [titleValue, setTitleValue] = useState<string>(entry.title);
   const [slugValue, setSlugValue] = useState<string>(entry.slug);
   const [parentValue, setParentValue] = useState<number | null>(entry.parentId);
@@ -329,6 +341,7 @@ function EntryEditor({
     slugRef.current = slugValue;
     parentRef.current = parentValue;
     termsRef.current = termSelections;
+    templateRef.current = templateValue;
   });
 
   // Surface a genuine autosave failure so a rejected save (e.g. content
@@ -360,7 +373,15 @@ function EntryEditor({
         const excerptChanged = nextExcerpt !== lastSavedExcerptRef.current;
         const serializedMeta = JSON.stringify(metaRef.current);
         const metaChanged = serializedMeta !== lastSavedMetaRef.current;
-        if (!contentChanged && !excerptChanged && !metaChanged) return;
+        const nextTemplate = templateRef.current;
+        const templateChanged = nextTemplate !== lastSavedTemplateRef.current;
+        if (
+          !contentChanged &&
+          !excerptChanged &&
+          !metaChanged &&
+          !templateChanged
+        )
+          return;
         try {
           const updated = await orpc.entry.update.call({
             id,
@@ -371,6 +392,7 @@ function EntryEditor({
               ? { excerpt: nextExcerpt.length === 0 ? null : nextExcerpt }
               : {}),
             ...(metaChanged ? { meta: metaRef.current } : {}),
+            ...(templateChanged ? { template: nextTemplate } : {}),
             expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
           if (updated.type === entry.type) {
@@ -383,6 +405,7 @@ function EntryEditor({
           if (contentChanged) lastSavedContentRef.current = serializedBlocks;
           if (excerptChanged) lastSavedExcerptRef.current = nextExcerpt;
           if (metaChanged) lastSavedMetaRef.current = serializedMeta;
+          if (templateChanged) lastSavedTemplateRef.current = nextTemplate;
           autosaveFailedRef.current = false;
         } catch (err) {
           await handleAutosaveError(err);
@@ -506,6 +529,14 @@ function EntryEditor({
     },
     [contentDebouncer],
   );
+  const handleTemplateChange = useCallback(
+    (next: string | null): void => {
+      templateRef.current = next;
+      setTemplateValue(next);
+      contentDebouncer.call();
+    },
+    [contentDebouncer, setTemplateValue],
+  );
   const handleBack = useCallback(async (): Promise<void> => {
     // Flush pending autosaves before leaving so edits made within the debounce
     // window aren't dropped when the route unmounts.
@@ -521,6 +552,10 @@ function EntryEditor({
     () =>
       entryTypeName ? entryMetaBoxesForType(entryTypeName, capabilities) : [],
     [entryTypeName, capabilities],
+  );
+  const templateOptions = useMemo(
+    () => (entryTypeName ? namedTemplatesForType(entryTypeName) : []),
+    [entryTypeName],
   );
   const supportsTitle =
     // `supports` list code, not a display label.
@@ -594,6 +629,15 @@ function EntryEditor({
               }
             : undefined
         }
+        template={
+          templateOptions.length > 0
+            ? {
+                value: templateValue,
+                options: templateOptions,
+                onChange: handleTemplateChange,
+              }
+            : undefined
+        }
         taxonomies={taxonomyPickers.length > 0 ? taxonomyPickers : undefined}
         metaBoxes={
           metaBoxes.length > 0
@@ -616,6 +660,9 @@ function EntryEditor({
       parentValue,
       parentOptions,
       handleParentChange,
+      templateOptions,
+      templateValue,
+      handleTemplateChange,
       taxonomyPickers,
       metaBoxes,
       entry.meta,

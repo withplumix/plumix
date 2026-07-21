@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
 import { createRpcHarness } from "../test/rpc.js";
 
 function registryWithAutosave() {
@@ -58,6 +59,19 @@ describe("entry.update saveAs", () => {
     // Live is unchanged.
     const live = await h.client.entry.get({ id: h.entryId });
     expect(live.title).toBe("Live");
+  });
+
+  test("carries a named-template choice into the autosave row's meta (preview honors an unsaved pick)", async () => {
+    const h = await publishedPostFixture();
+    const result = await h.client.entry.update({
+      id: h.entryId,
+      template: "landing",
+    });
+    expect(result.type).toBe("autosave");
+    expect(result.meta[NAMED_TEMPLATE_META_KEY]).toBe("landing");
+    // Live row is untouched until the draft is published.
+    const live = await h.client.entry.get({ id: h.entryId });
+    expect(live.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
   });
 
   test("explicit saveAs: 'live' bypasses the default and writes to live even when supports has 'autosave'", async () => {

@@ -39,14 +39,18 @@ export function decodeSnapshotEnvelope(
 /**
  * Drop the framework-reserved `__plumix_*` keys (snapshot envelope, revision
  * message) so an autosave's meta matches the live row's user-meta shape —
- * used when overlaying an autosave onto a row for preview render.
+ * used when overlaying an autosave onto a row for preview render. Keys named
+ * in `keep` are exempted: the preview path keeps `__plumix_template` so an
+ * unsaved named-template choice still drives template resolution.
  */
 export function stripReservedMeta(
   meta: Readonly<Record<string, unknown>>,
+  keep: readonly string[] = [],
 ): Record<string, unknown> {
+  const kept = new Set(keep);
   return Object.fromEntries(
     Object.entries(meta).filter(
-      ([key]) => !key.startsWith(RESERVED_META_PREFIX),
+      ([key]) => kept.has(key) || !key.startsWith(RESERVED_META_PREFIX),
     ),
   );
 }

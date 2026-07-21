@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
@@ -5,7 +6,13 @@ import { createPreviewToken } from "../auth/preview-token.js";
 import { definePlugin } from "../plugin/define.js";
 import { upsertAutosave } from "../revisions/repository.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
+import { defineTheme } from "../theme.js";
 import { buildEntryPermalink, buildTermArchiveUrl } from "./permalink.js";
+import {
+  fallback,
+  forEntryType,
+  NAMED_TEMPLATE_META_KEY,
+} from "./render/template-builders.js";
 
 const blogPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -361,6 +368,97 @@ describe("resolvePublicRoute — single", () => {
     const liveBody = await liveResp.text();
     expect(liveBody).toContain("<h1>Live Title</h1>");
     expect(liveBody).not.toContain("Draft Title");
+  });
+
+  test("a preview overlay honors an unsaved named-template choice", async () => {
+    // Theme with a `named` template for posts, plus the default fallback.
+    const landingTheme = defineTheme({
+      templates: [
+        forEntryType("post")
+          .named("landing", "Landing")
+          .template(() => createElement("h1", null, "LANDING PAGE")),
+        fallback(({ data }) =>
+          "entry" in data ? createElement("h1", null, data.entry.title) : null,
+        ),
+      ],
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: landingTheme,
+    });
+    const author = await h.seedUser("admin");
+    const live = await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Live Title",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+    });
+    // Autosave carries the pending template pick as reserved meta.
+    await upsertAutosave(h.db, {
+      entry: live,
+      authorId: author.id,
+      patch: {
+        title: "Live Title",
+        content: TIPTAP_BODY,
+        excerpt: null,
+        meta: { [NAMED_TEMPLATE_META_KEY]: "landing" },
+      },
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: live.id,
+      userId: author.id,
+    });
+
+    // Preview resolves to the picked template — the reserved key survives
+    // the overlay strip.
+    const preview = await h.dispatch(
+      new Request(`https://cms.example/post/hello?preview=${token}`),
+    );
+    expect(await preview.text()).toContain("LANDING PAGE");
+
+    // Without the token the published row has no choice → default template.
+    const liveResp = await h.dispatch(
+      new Request("https://cms.example/post/hello"),
+    );
+    const liveBody = await liveResp.text();
+    expect(liveBody).not.toContain("LANDING PAGE");
+    expect(liveBody).toContain("Live Title");
+  });
+
+  test("a published entry's saved template choice resolves on the public route", async () => {
+    const landingTheme = defineTheme({
+      templates: [
+        forEntryType("post")
+          .named("landing", "Landing")
+          .template(() => createElement("h1", null, "LANDING PAGE")),
+        fallback(({ data }) =>
+          "entry" in data ? createElement("h1", null, data.entry.title) : null,
+        ),
+      ],
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: landingTheme,
+    });
+    const author = await h.seedUser("admin");
+    // The choice lives in the live row's meta (as the publish flow persists it).
+    await h.factory.entry.create({
+      type: "post",
+      slug: "promo",
+      title: "Promo",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+      meta: { [NAMED_TEMPLATE_META_KEY]: "landing" },
+    });
+
+    // No preview token — the public route resolves the named template.
+    const resp = await h.dispatch(
+      new Request("https://cms.example/post/promo"),
+    );
+    expect(await resp.text()).toContain("LANDING PAGE");
   });
 
   test("a preview token for a different entry does not overlay an autosave", async () => {

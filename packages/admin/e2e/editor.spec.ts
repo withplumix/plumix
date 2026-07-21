@@ -758,6 +758,60 @@ test.describe("editor document tab", () => {
     // it over the live row's bag.
     expect(captures.at(-1)).not.toHaveProperty("saveAs");
   });
+
+  test("the template picker sends the chosen named template via the `template` field", async ({
+    page,
+  }) => {
+    await mockManifest(page, {
+      ...MANIFEST_WITH_POST,
+      entryTypes: [
+        {
+          name: "post",
+          adminSlug: "posts",
+          label: "Posts",
+          labels: { singular: "Post", plural: "Posts" },
+          supports: ["title", "editor", "slug"],
+          namedTemplates: [{ id: "landing", label: "Landing Page" }],
+        },
+      ],
+    });
+    const captures = await mockRpcWithCapture(page, {
+      captureSuffix: "/entry/update",
+      captureResponse: { ...editorEntry(), updatedAt: T0 },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/entry/get": editorEntry(),
+        "/entry/list": [],
+        "/entry/createPreviewLink": PREVIEW_LINK,
+      },
+    });
+
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-tab-page").click();
+
+    await page.getByTestId("entry-template-select").click();
+    // The list offers "(theme default)" plus each registered named template.
+    await expect(
+      page.getByTestId("entry-template-select-option-default"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("entry-template-select-option-landing"),
+    ).toBeVisible();
+    await page.getByTestId("entry-template-select-option-landing").click();
+
+    await expect
+      .poll(
+        () =>
+          (captures.at(-1) as { template?: string | null } | undefined)
+            ?.template ?? null,
+      )
+      .toBe("landing");
+    // The reserved key is NOT smuggled through the plugin meta bag — the
+    // choice travels only via the dedicated `template` field.
+    const last = captures.at(-1) as
+      { meta?: Record<string, unknown> } | undefined;
+    expect(last?.meta?.__plumix_template).toBeUndefined();
+  });
 });
 
 // The header's preview menu (eye icon) offers the current draft and the live

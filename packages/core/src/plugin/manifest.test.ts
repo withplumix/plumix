@@ -508,6 +508,27 @@ describe("buildManifest", () => {
     expect(entry.capabilities).toBeUndefined();
   });
 
+  test("surfaces per-type named templates from options; omits the field otherwise", async () => {
+    const hooks = new HookRegistry();
+    const blog = definePlugin("blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts" });
+      ctx.registerEntryType("page", { label: "Pages" });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [blog] });
+
+    const manifest = buildManifest(registry, {
+      namedTemplates: { page: [{ id: "landing", label: "Landing Page" }] },
+    });
+
+    const page = manifest.entryTypes.find((e) => e.name === "page");
+    const post = manifest.entryTypes.find((e) => e.name === "post");
+    expect(page?.namedTemplates).toEqual([
+      { id: "landing", label: "Landing Page" },
+    ]);
+    // A type the theme registers nothing for omits the field entirely.
+    expect(post?.namedTemplates).toBeUndefined();
+  });
+
   test("uses labels.plural (slugified) for adminSlug when provided", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("shop", (ctx) => {

@@ -15,6 +15,7 @@ import type { ResolvedNode } from "./template-hierarchy.js";
 import {
   archive,
   author,
+  collectNamedTemplates,
   date,
   entry,
   fallback,
@@ -763,5 +764,40 @@ describe("explainTemplateResolution", () => {
       status: "skipped",
       predicate: { fired: false, result: false },
     });
+  });
+});
+
+describe("collectNamedTemplates", () => {
+  test("groups named entry templates by type; dedupes; ignores non-content", () => {
+    const map = collectNamedTemplates([
+      forEntryType("page")
+        .named("landing", "Landing Page")
+        .template(() => null),
+      forEntryType("page")
+        .named("wide", "Wide")
+        .template(() => null),
+      // Duplicate id within a type keeps the first declaration.
+      forEntryType("page")
+        .named("landing", "Landing v2")
+        .template(() => null),
+      forEntryType("post")
+        .named("feature", "Feature")
+        .template(() => null),
+      // Term/fallback rules aren't author-selectable per entry → ignored.
+      forTermTaxonomy("category")
+        .named("spotlight", "Spotlight")
+        .template(() => null),
+      fallback(() => null),
+    ]);
+    expect(map.page).toEqual([
+      { id: "landing", label: "Landing Page" },
+      { id: "wide", label: "Wide" },
+    ]);
+    expect(map.post).toEqual([{ id: "feature", label: "Feature" }]);
+    expect(map.category).toBeUndefined();
+  });
+
+  test("returns an empty map for a theme with no named templates", () => {
+    expect(collectNamedTemplates([fallback(() => null)])).toEqual({});
   });
 });

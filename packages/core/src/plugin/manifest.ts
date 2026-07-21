@@ -26,11 +26,18 @@ import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { McpTool } from "../mcp/tool.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { CustomArchiveData } from "../route/render/resolved-entry.js";
+import type { NamedTemplateChoice } from "../route/render/template-builders.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
 import type { PluginI18nSlot } from "./define.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
+
+export type { NamedTemplateChoice } from "../route/render/template-builders.js";
+// Re-exported on the manifest subpath so the precompiled admin editor can read
+// the reserved key without reaching through the root barrel (which pulls the
+// request-scoped runtime and crashes at admin module-init).
+export { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
 
 /**
  * WP-style per-type chrome labels shared between `EntryTypeOptions.labels`
@@ -1539,6 +1546,14 @@ export interface EntryTypeManifestEntry {
     readonly maxRevisions: number;
     readonly autosaveIntervalSeconds: number;
   };
+  /**
+   * Theme-registered `named` templates selectable for this entry type,
+   * surfaced to the editor's template picker. Sourced from the theme's
+   * `templates` rules (not the plugin registry) and threaded in via
+   * `buildManifest` options — the precompiled admin can't import the theme.
+   * Omitted when the theme registers none for this type.
+   */
+  readonly namedTemplates?: readonly NamedTemplateChoice[];
 }
 
 /**
@@ -1906,6 +1921,14 @@ export function buildManifest(
   options?: {
     readonly tokens?: ThemeTokens;
     readonly breakpoints?: ThemeBreakpoints;
+    /**
+     * Theme `named` templates grouped by entry-type name (see
+     * `collectNamedTemplates`). Routed through options — like `tokens` —
+     * because the theme's template rules aren't in the plugin registry.
+     */
+    readonly namedTemplates?: Readonly<
+      Record<string, readonly NamedTemplateChoice[]>
+    >;
     readonly i18n?: ResolvedI18n;
     readonly plugins?: readonly {
       readonly id: string;
@@ -1923,7 +1946,7 @@ export function buildManifest(
   },
 ): BuiltManifest {
   const entries = Array.from(registry.entryTypes.values())
-    .map(toEntryTypeManifest)
+    .map((pt) => toEntryTypeManifest(pt, options?.namedTemplates?.[pt.name]))
     .sort(byPriorityThen((e) => e.name));
   assertUniqueAdminSlugs(entries);
   const termTaxonomies = Array.from(registry.termTaxonomies.values()).map(
@@ -2491,7 +2514,10 @@ function slugify(input: string): string {
 // the raw per-surface visibility inputs are intentionally excluded — the
 // resolved `isPublic` / `showUI` / `showInSidebar` triple is what the
 // admin consumes, and `capabilities` is server-side authorization metadata.
-function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
+function toEntryTypeManifest(
+  pt: RegisteredEntryType,
+  namedTemplates?: readonly NamedTemplateChoice[],
+): EntryTypeManifestEntry {
   const {
     name,
     label,
@@ -2531,6 +2557,7 @@ function toEntryTypeManifest(pt: RegisteredEntryType): EntryTypeManifestEntry {
     menuIcon,
     keywords,
     versioning: deriveVersioning(supports, versioning),
+    ...(namedTemplates && namedTemplates.length > 0 ? { namedTemplates } : {}),
   };
 }
 

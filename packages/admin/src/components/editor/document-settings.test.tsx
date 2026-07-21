@@ -53,3 +53,28 @@ describe("DocumentSettingsPanel taxonomies", () => {
     expect(queryByTestId("entry-taxonomy-category")).toBeNull();
   });
 });
+
+describe("DocumentSettingsPanel template picker", () => {
+  test("renders the picker when the theme registers named templates", () => {
+    const { getByTestId } = renderPanel({
+      ...BASE,
+      template: {
+        value: null,
+        options: [
+          { id: "landing", label: "Landing Page" },
+          { id: "wide", label: "Wide" },
+        ],
+        onChange: () => {},
+      },
+    });
+    expect(getByTestId("entry-template-select")).toBeDefined();
+  });
+
+  test("renders no picker when there are no named templates", () => {
+    const { queryByTestId } = renderPanel({
+      ...BASE,
+      template: { value: null, options: [], onChange: () => {} },
+    });
+    expect(queryByTestId("entry-template-select")).toBeNull();
+  });
+});

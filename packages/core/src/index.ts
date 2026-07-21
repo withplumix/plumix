@@ -41,6 +41,7 @@ export {
   author,
   date,
   entry,
+  collectNamedTemplates,
   fallback,
   forArchiveType,
   forAuthor,
@@ -55,6 +56,7 @@ export {
   taxonomy,
   templateRules,
 } from "./route/render/template-builders.js";
+export type { NamedTemplateChoice } from "./route/render/template-builders.js";
 export type {
   ArchiveDataOf,
   ArchiveTypeName,

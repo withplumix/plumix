@@ -22,6 +22,17 @@ const excerptSchema = v.nullable(
   v.pipe(v.string(), v.maxLength(MAX_EXCERPT_LENGTH)),
 );
 
+// The id of a theme-registered `named` template (see `forEntryType(...).named`).
+// Written to the reserved `__plumix_template` meta key. `null` clears the
+// choice (theme-default resolution); an unknown id simply falls through to the
+// default at render time, so the server doesn't validate it against the theme.
+const templateChoiceSchema = v.pipe(
+  v.string(),
+  v.trim(),
+  v.minLength(1),
+  v.maxLength(200),
+);
+
 const serverControlledKeys = [
   "id",
   "authorId",
@@ -72,6 +83,8 @@ export const entryUpdateInputSchema = v.object({
   sortOrder: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
   terms: v.optional(postTermsSchema),
   meta: v.optional(metaInputSchema),
+  /** Named-template choice; `null` clears it. See `templateChoiceSchema`. */
+  template: v.optional(v.nullable(templateChoiceSchema)),
   /** Target publish time; required (and must be future) when `status: "scheduled"`. */
   publishedAt: v.optional(v.date()),
   /**

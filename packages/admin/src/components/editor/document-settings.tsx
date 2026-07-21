@@ -8,7 +8,10 @@ import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { useForm, useWatch } from "react-hook-form";
 
-import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
+import type {
+  EntryMetaBoxManifestEntry,
+  NamedTemplateChoice,
+} from "@plumix/core/manifest";
 import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Form } from "@plumix/admin-ui/form";
 import { Input } from "@plumix/admin-ui/input";
@@ -30,11 +33,22 @@ const M = {
     id: "editor.document.parent.none",
     message: "(no parent)",
   }),
+  template: defineMessage({
+    id: "editor.document.template",
+    message: "Template",
+  }),
+  themeDefault: defineMessage({
+    id: "editor.document.template.default",
+    message: "(theme default)",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 // Radix Select forbids an empty-string item value, so the "no parent"
 // choice carries a sentinel that maps back to `null` on change.
 const NO_PARENT_VALUE = "__none__";
+
+// Same Radix constraint for the "theme default" (no override) template choice.
+const THEME_DEFAULT_VALUE = "__default__";
 
 interface DocumentParentOption {
   readonly id: number;
@@ -59,6 +73,12 @@ interface DocumentSettingsPanelProps {
     readonly value: number | null;
     readonly options: readonly DocumentParentOption[];
     readonly onChange: (next: number | null) => void;
+  };
+  /** Present only when the theme registers `named` templates for this type. */
+  readonly template?: {
+    readonly value: string | null;
+    readonly options: readonly NamedTemplateChoice[];
+    readonly onChange: (next: string | null) => void;
   };
   /** Term pickers for the taxonomies registered against this entry type. */
   readonly taxonomies?: readonly {
@@ -134,6 +154,7 @@ export function DocumentSettingsPanel({
   onSlugChange,
   excerpt,
   parent,
+  template,
   taxonomies,
   metaBoxes,
 }: DocumentSettingsPanelProps): ReactElement {
@@ -204,6 +225,44 @@ export function DocumentSettingsPanel({
                   data-testid={`entry-parent-select-option-${option.id}`}
                 >
                   {option.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      ) : null}
+      {template && template.options.length > 0 ? (
+        <Field className="gap-1.5">
+          <FieldLabel htmlFor="entry-template-select">
+            {renderLabel(M.template)}
+          </FieldLabel>
+          <Select
+            value={template.value ?? THEME_DEFAULT_VALUE}
+            onValueChange={(next) => {
+              template.onChange(next === THEME_DEFAULT_VALUE ? null : next);
+            }}
+          >
+            <SelectTrigger
+              id="entry-template-select"
+              className="w-full"
+              data-testid="entry-template-select"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                value={THEME_DEFAULT_VALUE}
+                data-testid="entry-template-select-option-default"
+              >
+                {renderLabel(M.themeDefault)}
+              </SelectItem>
+              {template.options.map((option) => (
+                <SelectItem
+                  key={option.id}
+                  value={option.id}
+                  data-testid={`entry-template-select-option-${option.id}`}
+                >
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
