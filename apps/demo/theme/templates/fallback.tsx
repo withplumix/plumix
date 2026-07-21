@@ -1,6 +1,7 @@
 import type {
   ArchiveData,
   AuthorArchiveData,
+  DateArchiveData,
   FrontPageData,
   SearchData,
   TaxonomyData,
@@ -13,7 +14,36 @@ import { paginationInfo } from "../components/Pagination";
 import { PostList } from "../components/PostList";
 
 type ListingData =
-  ArchiveData | AuthorArchiveData | FrontPageData | SearchData | TaxonomyData;
+  | ArchiveData
+  | AuthorArchiveData
+  | DateArchiveData
+  | FrontPageData
+  | SearchData
+  | TaxonomyData;
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+// A readable heading for a date archive: "2026", "July 2026", "July 21, 2026".
+function dateHeading(data: DateArchiveData): string {
+  const { year, month, day } = data;
+  if (month === null) return String(year);
+  const monthName = MONTHS[month - 1] ?? String(month);
+  if (day === null) return `${monthName} ${String(year)}`;
+  return `${monthName} ${String(day)}, ${String(year)}`;
+}
 
 // Title + empty-state copy for each listing node; the front page has neither.
 function listingCopy(data: ListingData): {
@@ -38,6 +68,12 @@ function listingCopy(data: ListingData): {
     return {
       heading: `Posts by ${data.author.name ?? data.author.slug}`,
       emptyMessage: "No posts by this author yet.",
+    };
+  }
+  if ("year" in data) {
+    return {
+      heading: dateHeading(data),
+      emptyMessage: "No posts from this period.",
     };
   }
   return {};
