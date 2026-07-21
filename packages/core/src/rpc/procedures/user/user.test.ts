@@ -104,6 +104,26 @@ describe("user.invite", () => {
     });
   });
 
+  test("derives the author slug from the invited name", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const { user } = await h.client.user.invite({
+      email: "jane@example.test",
+      name: "Jane Doe",
+    });
+    expect(user.slug).toBe("jane-doe");
+  });
+
+  test("concurrent invites with the same name get distinct slugs", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const [a, b] = await Promise.all([
+      h.client.user.invite({ email: "a@example.test", name: "Jane" }),
+      h.client.user.invite({ email: "b@example.test", name: "Jane" }),
+    ]);
+    // The slug-race retry (or the dedup read) must hand each a distinct slug —
+    // and a slug collision must never be misreported as an email conflict.
+    expect(new Set([a.user.slug, b.user.slug]).size).toBe(2);
+  });
+
   test("fires user:invited with the token + invitedBy for plugins to hook (e.g. email delivery)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const onInvited = h.spyAction("user:invited");

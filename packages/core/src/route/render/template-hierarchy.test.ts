@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, test } from "vitest";
 import type { TemplateData } from "../../theme.js";
 import type {
   ArchiveData,
+  AuthorArchiveData,
   EntryData,
   ResolvedEntry,
   ResolvedTerm,
@@ -11,8 +12,10 @@ import type {
 import type { ResolvedNode } from "./template-hierarchy.js";
 import {
   archive,
+  author,
   entry,
   fallback,
+  forAuthor,
   forEntryType,
   forTermTaxonomy,
   frontPage,
@@ -41,6 +44,7 @@ describe("resolveTemplate — generic tiers", () => {
     entry(() => null),
     archive(() => null),
     taxonomy(() => null),
+    author(() => null),
     frontPage(() => null),
     search(() => null),
     fallback(() => null),
@@ -53,6 +57,7 @@ describe("resolveTemplate — generic tiers", () => {
       { kind: "term", taxonomy: "category", slug: "x", databaseId: 1 },
       "taxonomy",
     ],
+    [{ kind: "author", slug: "jane", databaseId: 1 }, "author"],
     [{ kind: "front-page" }, "frontPage"],
     [{ kind: "search" }, "search"],
   ])("resolves a node to its matching generic tier (#%#)", (node, tier) => {
@@ -105,6 +110,10 @@ describe("generic-tier builders — data typing", () => {
     });
     taxonomy(({ data }) => {
       expectTypeOf(data).toEqualTypeOf<TaxonomyData>();
+      return null;
+    });
+    author(({ data }) => {
+      expectTypeOf(data).toEqualTypeOf<AuthorArchiveData>();
       return null;
     });
   });
@@ -410,6 +419,58 @@ describe("resolveTemplate — term predicate rules (whereMeta / where / named)",
       taxonomy(() => null),
     ];
     expect(resolveTemplate(rules, catTerm)?.tier).toBe("taxonomy");
+  });
+});
+
+describe("resolveTemplate — forAuthor targeted rules", () => {
+  const janeNode: ResolvedNode = {
+    kind: "author",
+    slug: "jane",
+    databaseId: 7,
+  };
+
+  test("forAuthor().slug narrows the author and beats the generic tier", () => {
+    const rules = [
+      author(() => null),
+      forAuthor()
+        .slug("jane")
+        .template(() => null),
+    ];
+    expect(resolveTemplate(rules, janeNode)?.match?.slug).toBe("jane");
+    // A different author falls through to the generic `author` tier.
+    expect(resolveTemplate(rules, { ...janeNode, slug: "john" })?.tier).toBe(
+      "author",
+    );
+  });
+
+  test("forAuthor().id narrows by databaseId", () => {
+    const rules = [
+      forAuthor()
+        .id(7)
+        .template(() => null),
+      author(() => null),
+    ];
+    expect(resolveTemplate(rules, janeNode)?.match?.id).toBe(7);
+    expect(resolveTemplate(rules, { ...janeNode, databaseId: 99 })?.tier).toBe(
+      "author",
+    );
+  });
+
+  test("bare forAuthor().template matches any author node", () => {
+    const rule = forAuthor().template(() => null);
+    expect(rule.match?.nodeKind).toBe("author");
+    expect(rule.match?.type).toBe("author");
+    expect(resolveTemplate([rule], janeNode)).toBe(rule);
+  });
+
+  test("data.author is typed as ResolvedAuthor", () => {
+    forAuthor()
+      .slug("jane")
+      .template(({ data }) => {
+        expectTypeOf(data).toEqualTypeOf<AuthorArchiveData>();
+        expectTypeOf(data.author).toEqualTypeOf<AuthorArchiveData["author"]>();
+        return null;
+      });
   });
 });
 

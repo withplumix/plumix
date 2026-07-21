@@ -33,6 +33,7 @@ export function demoAuthenticator(): RequestAuthenticator {
       const user: User = {
         id: DEMO_ADMIN.id,
         email: DEMO_ADMIN.email,
+        slug: "demo-editor",
         name: DEMO_ADMIN.name,
         avatarUrl: null,
         role: "admin",

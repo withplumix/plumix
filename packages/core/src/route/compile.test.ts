@@ -6,6 +6,8 @@ import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
 import {
   compileRouteMap,
+  FRAMEWORK_AUTHOR_PAGINATED_PATTERN,
+  FRAMEWORK_AUTHOR_PATTERN,
   FRAMEWORK_FRONT_PAGE_PATTERN,
   FRAMEWORK_SEARCH_BARE_PATTERN,
   FRAMEWORK_SEARCH_PAGINATED_PATTERN,
@@ -17,6 +19,8 @@ const FRAMEWORK_PATTERNS = new Set<string>([
   FRAMEWORK_SEARCH_PAGINATED_PATTERN,
   FRAMEWORK_SEARCH_QUERY_PATTERN,
   FRAMEWORK_SEARCH_BARE_PATTERN,
+  FRAMEWORK_AUTHOR_PAGINATED_PATTERN,
+  FRAMEWORK_AUTHOR_PATTERN,
 ]);
 
 async function buildRegistry(plugins: ReturnType<typeof definePlugin>[]) {

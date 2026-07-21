@@ -6,6 +6,7 @@ import type { Term } from "../../db/schema/terms.js";
 /** Public-safe author projection — query select narrows away email + auth columns. */
 export interface ResolvedAuthor {
   readonly id: number;
+  readonly slug: string;
   readonly name: string | null;
   readonly avatarUrl: string | null;
 }
@@ -60,6 +61,19 @@ export interface TaxonomyData<
   readonly kind: "taxonomy";
   readonly taxonomy: string;
   readonly term: TTerm;
+  readonly entries: readonly TEntry[];
+  readonly pagination: Pagination;
+}
+
+/**
+ * Payload for an author archive (`/authors/{slug}`). Carries the resolved author
+ * as the subject (like `TaxonomyData.term`) plus their published entries.
+ */
+export interface AuthorArchiveData<
+  TEntry extends ResolvedEntry = ResolvedEntry,
+> {
+  readonly kind: "author";
+  readonly author: ResolvedAuthor;
   readonly entries: readonly TEntry[];
   readonly pagination: Pagination;
 }

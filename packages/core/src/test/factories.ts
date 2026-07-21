@@ -64,6 +64,7 @@ export const userFactory = Factory.define<NewUser, DbTransient, User>(
 
     return {
       email: params.email ?? `user-${sequence}@example.test`,
+      slug: params.slug ?? `user-${sequence}`,
       name: params.name ?? null,
       role: params.role ?? "subscriber",
     };

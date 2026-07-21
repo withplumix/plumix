@@ -23,13 +23,15 @@ export const FEED_LIMIT = 20;
 type FeedFormat = "rss2" | "atom";
 
 /**
- * What a feed covers: the whole site, one entry type, or one taxonomy term.
- * `taxonomy`/`term` are the registered taxonomy name + term slug.
+ * What a feed covers: the whole site, one entry type, one taxonomy term, or one
+ * author. `taxonomy`/`term` are the registered taxonomy name + term slug;
+ * `slug` on the author scope is the user's slug.
  */
 type FeedScope =
   | { readonly kind: "site" }
   | { readonly kind: "type"; readonly type: string }
-  | { readonly kind: "term"; readonly taxonomy: string; readonly term: string };
+  | { readonly kind: "term"; readonly taxonomy: string; readonly term: string }
+  | { readonly kind: "author"; readonly slug: string };
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
@@ -198,6 +200,16 @@ async function feedFilter(
     return typeNames.length === 0 ? null : and(publicTypes, published);
   }
 
+  if (scope.kind === "author") {
+    // The author's published, public-type entries. Unknown slug → 404.
+    const [author] = await ctx.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.slug, scope.slug));
+    if (!author || typeNames.length === 0) return null;
+    return and(publicTypes, published, eq(entries.authorId, author.id));
+  }
+
   // term: only entries attached to the term, and still of a public type. Only
   // top-level terms have the flat `/base/slug/feed` URL the route addresses —
   // nested terms have no feed route yet, so they 404.
@@ -316,6 +328,7 @@ function discoveryFeedBase(
     if (data.term.parentId !== null) return false;
     return `/${termTaxonomyBaseSlug(taxonomy)}/${data.term.slug}/feed`;
   }
+  if ("author" in data) return `/authors/${data.author.slug}/feed`;
   if ("query" in data) return false;
   if ("request" in data) return false;
   return "/feed";

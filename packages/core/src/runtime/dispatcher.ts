@@ -54,6 +54,9 @@ const SUB_SITEMAP_PATTERN = /^\/sitemap-(.+)-(\d+)\.xml$/;
 // leading segment is the entry-type scope; `/feed*` reserves these paths the
 // way WordPress does, so a page slugged "feed" can't shadow them.
 const FEED_PATTERN = /^\/(?:([^/]+)\/)?feed(\/atom)?$/;
+// `/authors/<slug>/feed` (+ `/atom`) — the author-scoped feed. Checked before
+// the generic term-feed shape since `/authors/*` is a reserved framework space.
+const AUTHOR_FEED_PATTERN = /^\/authors\/([^/]+)\/feed(\/atom)?$/;
 // `/<taxonomy>/<term>/feed` (+ `/atom`) — the term-scoped feed.
 const TERM_FEED_PATTERN = /^\/([^/]+)\/([^/]+)\/feed(\/atom)?$/;
 
@@ -380,6 +383,16 @@ async function tryPublicRoutes(
     if (isPublicEntryType(ctx, type)) {
       return handleFeed(ctx, { kind: "type", type }, feed[2] ? "atom" : "rss2");
     }
+  }
+  const authorFeed = AUTHOR_FEED_PATTERN.exec(pathname);
+  if (authorFeed) {
+    // `collectFeedItems` 404s an unknown slug, so a bogus `/authors/x/feed`
+    // returns 404 rather than falling through to the public router.
+    return handleFeed(
+      ctx,
+      { kind: "author", slug: authorFeed[1] ?? "" },
+      authorFeed[2] ? "atom" : "rss2",
+    );
   }
   const termFeed = TERM_FEED_PATTERN.exec(pathname);
   if (termFeed) {

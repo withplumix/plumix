@@ -13,6 +13,7 @@ import type { RouteMatch } from "./match.js";
 import type { AssetManifest } from "./render/asset-manifest.js";
 import type {
   ArchiveData,
+  AuthorArchiveData,
   EntryData,
   FrontPageData,
   SearchData,
@@ -24,6 +25,7 @@ import { and, desc, eq, inArray, isNotNull, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
+import { users } from "../db/schema/users.js";
 import { labelSourceText } from "../i18n/label.js";
 import { getAutosave } from "../revisions/repository.js";
 import { stripReservedMeta } from "../revisions/snapshot-envelope.js";
@@ -46,6 +48,9 @@ declare module "../hooks/types.js" {
     "resolve:term:data": (
       data: TaxonomyData,
     ) => TaxonomyData | Promise<TaxonomyData>;
+    "resolve:author:data": (
+      data: AuthorArchiveData,
+    ) => AuthorArchiveData | Promise<AuthorArchiveData>;
     "resolve:front-page:data": (
       data: FrontPageData,
     ) => FrontPageData | Promise<FrontPageData>;
@@ -107,6 +112,15 @@ export async function resolvePublicRoute(
       );
     case "front-page":
       return resolveFrontPage(
+        ctx,
+        match.params,
+        theme,
+        document,
+        templateDeps,
+        assetManifest,
+      );
+    case "author":
+      return resolveAuthor(
         ctx,
         match.params,
         theme,
@@ -341,6 +355,83 @@ async function resolveTaxonomy(
       : term.name,
   });
   return htmlResponseOrNotFound(html, "public-taxonomy-no-template");
+}
+
+async function resolveAuthor(
+  ctx: AppContext,
+  params: Record<string, string>,
+  theme: ThemeDescriptor,
+  document: DocumentManifest,
+  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
+  assetManifest: AssetManifest,
+): Promise<Response> {
+  const slug = params.slug;
+  if (typeof slug !== "string" || slug === "") {
+    return notFound("public-author-not-found");
+  }
+  const author = await ctx.db.query.users.findFirst({
+    where: eq(users.slug, slug),
+  });
+  if (!author) return notFound("public-author-not-found");
+
+  ctx.resolvedEntity = { kind: "author", id: author.id };
+
+  const page = parsePageParam(params.page);
+  // Author archives list the same public, non-hierarchical type set as the
+  // front page — a person's posts, not their standalone pages.
+  const publicTypes = Array.from(ctx.plugins.entryTypes.entries())
+    .filter(
+      ([, spec]) => spec.isPublic !== false && spec.isHierarchical !== true,
+    )
+    .map(([key]) => key);
+  const where =
+    publicTypes.length === 0
+      ? null
+      : and(
+          eq(entries.authorId, author.id),
+          eq(entries.status, "published"),
+          isNotNull(entries.publishedAt),
+          inArray(entries.type, publicTypes),
+        );
+  const result = await paginatedEntries(
+    ctx,
+    where,
+    page,
+    DEFAULT_ARCHIVE_PER_PAGE,
+  );
+  if (result.outOfRange) return notFound("public-author-page-out-of-range");
+
+  const initial: AuthorArchiveData = {
+    kind: "author",
+    // Explicit projection — never spread the full user row (it carries email
+    // and auth columns) into the public template payload.
+    author: {
+      id: author.id,
+      slug: author.slug,
+      name: author.name,
+      avatarUrl: author.avatarUrl,
+    },
+    entries: await buildResolvedEntries(ctx, result.rows),
+    pagination: {
+      page,
+      perPage: DEFAULT_ARCHIVE_PER_PAGE,
+      total: result.total,
+      pageCount: result.pageCount,
+    },
+  };
+  const data = await ctx.hooks.applyFilter("resolve:author:data", initial);
+  const html = await renderThroughTheme({
+    ctx,
+    theme,
+    document,
+    templateDeps,
+    assetManifest,
+
+    node: { kind: "author", slug: author.slug, databaseId: author.id },
+    data,
+    title: data.author.name ?? data.author.slug,
+  });
+  return htmlResponseOrNotFound(html, "public-author-no-template");
 }
 
 async function resolveSingle(

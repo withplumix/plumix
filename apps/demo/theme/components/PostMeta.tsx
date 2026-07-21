@@ -1,5 +1,8 @@
 import type { ResolvedEntry } from "plumix";
 import type { ReactNode } from "react";
+import { Fragment } from "react";
+
+import { Link } from "@plumix/blocks/renderer";
 
 import { readingTime } from "../reading-time";
 
@@ -18,18 +21,38 @@ interface PostMetaProps {
 }
 
 // The `author · date · reading-time` line, shared by the post card and the
-// single-post header. Each present part is joined; an empty line renders
-// nothing.
+// single-post header. The author links to their archive (`/authors/{slug}`);
+// each present part is separated by a middot.
 export function PostMeta({ entry, className }: PostMetaProps): ReactNode {
-  const parts = [
-    entry.author.name,
-    formatDate(entry.publishedAt),
-    `${readingTime(entry.contentBlocks)} min read`,
-  ].filter(Boolean);
-  if (parts.length === 0) return null;
+  const date = formatDate(entry.publishedAt);
+  const parts: { readonly key: string; readonly node: ReactNode }[] = [];
+  if (entry.author.name) {
+    parts.push({
+      key: "author",
+      node: (
+        <Link
+          href={`/authors/${entry.author.slug}`}
+          className="hover:text-accent"
+          data-testid="post-meta-author"
+        >
+          {entry.author.name}
+        </Link>
+      ),
+    });
+  }
+  if (date) parts.push({ key: "date", node: date });
+  parts.push({
+    key: "reading",
+    node: `${readingTime(entry.contentBlocks)} min read`,
+  });
   return (
     <p className={className} data-testid="post-meta">
-      {parts.join(" · ")}
+      {parts.map((part, i) => (
+        <Fragment key={part.key}>
+          {i > 0 ? " · " : null}
+          {part.node}
+        </Fragment>
+      ))}
     </p>
   );
 }

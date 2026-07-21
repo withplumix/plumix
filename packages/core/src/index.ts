@@ -38,8 +38,10 @@ export { slugify } from "./slugify.js";
 export { buildResolvedEntries } from "./route/render/build-resolved-entries.js";
 export {
   archive,
+  author,
   entry,
   fallback,
+  forAuthor,
   forEntryType,
   forTermTaxonomy,
   frontPage,
@@ -66,6 +68,7 @@ export {
 } from "./route/render/template-hierarchy.js";
 export type {
   ArchiveData,
+  AuthorArchiveData,
   EntryData,
   ErrorData,
   FrontPageData,
@@ -87,6 +90,7 @@ export type { TemplateDepLoader } from "./template-deps.js";
 export {
   defineTheme,
   isArchive,
+  isAuthor,
   isEntry,
   isError,
   isFrontPage,

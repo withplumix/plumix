@@ -663,6 +663,151 @@ describe("resolvePublicRoute — archive", () => {
   });
 });
 
+describe("resolvePublicRoute — author archive", () => {
+  test("/author/{slug} lists that author's published entries, newest first", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
+    const john = await h.factory.author.create({ name: "John", slug: "john" });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "janes-older",
+      title: "Janes Older",
+      content: null,
+      status: "published",
+      authorId: jane.id,
+      publishedAt: new Date("2026-04-20"),
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "janes-newer",
+      title: "Janes Newer",
+      content: null,
+      status: "published",
+      authorId: jane.id,
+      publishedAt: new Date("2026-04-21"),
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "johns-post",
+      title: "Johns Post",
+      content: null,
+      status: "published",
+      authorId: john.id,
+      publishedAt: new Date("2026-04-22"),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/authors/jane"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    // data.author is wired — the theme rendered the author's name + title.
+    expect(body).toContain("<title>Jane</title>");
+    expect(body).toContain("Janes Newer");
+    expect(body).toContain("Janes Older");
+    // Only this author's entries.
+    expect(body).not.toContain("Johns Post");
+    // Newest first.
+    expect(body.indexOf("Janes Newer")).toBeLessThan(
+      body.indexOf("Janes Older"),
+    );
+  });
+
+  test("unknown author slug returns 404", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const response = await h.dispatch(
+      new Request("https://cms.example/authors/nobody"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("an author with no published entries renders the empty state (200)", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    await h.factory.author.create({ name: "Quiet", slug: "quiet" });
+    const response = await h.dispatch(
+      new Request("https://cms.example/authors/quiet"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("<title>Quiet</title>");
+    expect(body).toContain("No entries yet.");
+  });
+
+  test("drafts and other authors' posts are excluded", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "janes-draft",
+      title: "Janes Draft",
+      content: null,
+      status: "draft",
+      authorId: jane.id,
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/authors/jane"),
+    );
+    const body = await response.text();
+    expect(body).toContain("No entries yet.");
+    expect(body).not.toContain("Janes Draft");
+  });
+
+  test("pagination: /author/{slug}/page/2 returns the offset slice", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
+    for (let i = 1; i <= 25; i++) {
+      await h.factory.entry.create({
+        type: "post",
+        slug: `p-${String(i).padStart(2, "0")}`,
+        title: `Post ${String(i).padStart(2, "0")}`,
+        content: null,
+        status: "published",
+        authorId: jane.id,
+        publishedAt: new Date(`2026-04-${String(i).padStart(2, "0")}`),
+      });
+    }
+    const response = await h.dispatch(
+      new Request("https://cms.example/authors/jane/page/2"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    // perPage=20, page 2 shows the 5 oldest.
+    expect(body).toContain("Post 05");
+    expect(body).toContain("Post 01");
+    expect(body).not.toContain("Post 25");
+  });
+
+  test("out-of-range page returns 404", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "only",
+      title: "Only",
+      content: null,
+      status: "published",
+      authorId: jane.id,
+      publishedAt: new Date(),
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/authors/jane/page/99"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("explicit /page/1 canonical-redirects (301) to the bare author archive", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    await h.factory.author.create({ name: "Jane", slug: "jane" });
+    const response = await h.dispatch(
+      new Request("https://cms.example/authors/jane/page/1"),
+    );
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(
+      "https://cms.example/authors/jane",
+    );
+  });
+});
+
 const taxonomyPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",

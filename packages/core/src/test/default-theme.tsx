@@ -24,6 +24,14 @@ export const defaultTestTheme = defineTheme({
           </article>
         );
       }
+      if ("author" in data) {
+        return (
+          <>
+            <h1>{data.author.name ?? data.author.slug}</h1>
+            <EntryList entries={data.entries} />
+          </>
+        );
+      }
       if ("entries" in data) {
         return (
           <>

@@ -8,6 +8,7 @@ import type {
 
 import type {
   ArchiveData,
+  AuthorArchiveData,
   EntryData,
   ErrorData,
   FrontPageData,
@@ -42,6 +43,7 @@ export type TemplateData =
   | EntryData
   | ArchiveData
   | TaxonomyData
+  | AuthorArchiveData
   | FrontPageData
   | SearchData
   | ErrorData;
@@ -54,6 +56,9 @@ export function isArchive(data: TemplateData): data is ArchiveData {
 }
 export function isTaxonomy(data: TemplateData): data is TaxonomyData {
   return data.kind === "taxonomy";
+}
+export function isAuthor(data: TemplateData): data is AuthorArchiveData {
+  return data.kind === "author";
 }
 export function isFrontPage(data: TemplateData): data is FrontPageData {
   return data.kind === "frontPage";
@@ -86,18 +91,20 @@ export type GenericTier =
   | "entry"
   | "archive"
   | "taxonomy"
+  | "author"
   | "frontPage"
   | "search"
   | "notFound"
   | "serverError";
 
 /**
- * How a targeted rule (from `forEntryType`/`forTermTaxonomy`) matches a resolved
- * node: by node kind + type name, optionally narrowed to one entry/term by
- * `slug` or `id`.
+ * How a targeted rule (from `forEntryType`/`forTermTaxonomy`/`forAuthor`)
+ * matches a resolved node: by node kind + type name, optionally narrowed to one
+ * entry/term/author by `slug` or `id`. Author matchers use a fixed `type` of
+ * `"author"` (there is only one author "kind").
  */
 export interface TargetMatcher {
-  readonly nodeKind: "content" | "content-type-archive" | "term";
+  readonly nodeKind: "content" | "content-type-archive" | "term" | "author";
   readonly type: string;
   readonly slug?: string;
   readonly id?: number;

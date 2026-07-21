@@ -21,6 +21,9 @@ export const FRAMEWORK_SEARCH_BARE_PATTERN = "/search";
 export const FRAMEWORK_SEARCH_QUERY_PATTERN = "/search/:query";
 export const FRAMEWORK_SEARCH_PAGINATED_PATTERN =
   "/search/:query/page/:page(\\d+)";
+export const FRAMEWORK_AUTHOR_PATTERN = "/authors/:slug";
+export const FRAMEWORK_AUTHOR_PAGINATED_PATTERN =
+  "/authors/:slug/page/:page(\\d+)";
 
 interface CompiledRule extends RouteRule {
   readonly registeredBy: string | null;
@@ -65,6 +68,22 @@ export function compileRouteMap(
       pattern: new URLPattern({ pathname: FRAMEWORK_SEARCH_BARE_PATTERN }),
       rawPattern: FRAMEWORK_SEARCH_BARE_PATTERN,
       intent: { kind: "search" },
+      priority: FRAMEWORK_ROUTE_PRIORITY,
+      registeredBy: null,
+    },
+    // Paginated variant first, mirroring search — keeps the more-specific rule
+    // ahead of the bare `/authors/:slug`.
+    {
+      pattern: new URLPattern({ pathname: FRAMEWORK_AUTHOR_PAGINATED_PATTERN }),
+      rawPattern: FRAMEWORK_AUTHOR_PAGINATED_PATTERN,
+      intent: { kind: "author" },
+      priority: FRAMEWORK_ROUTE_PRIORITY,
+      registeredBy: null,
+    },
+    {
+      pattern: new URLPattern({ pathname: FRAMEWORK_AUTHOR_PATTERN }),
+      rawPattern: FRAMEWORK_AUTHOR_PATTERN,
+      intent: { kind: "author" },
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
     },
