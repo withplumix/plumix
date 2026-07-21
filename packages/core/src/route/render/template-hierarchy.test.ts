@@ -14,7 +14,7 @@ import {
   entry,
   fallback,
   forEntryType,
-  forTaxonomy,
+  forTermTaxonomy,
   frontPage,
   NAMED_TEMPLATE_META_KEY,
   notFound,
@@ -123,7 +123,7 @@ declare module "../../template-registry.js" {
   interface EntryTypeRegistry {
     product: { entry: Product; meta: { onSale: boolean } };
   }
-  interface TaxonomyRegistry {
+  interface TermTaxonomyRegistry {
     brand: { term: Brand };
   }
 }
@@ -188,9 +188,9 @@ describe("resolveTemplate — targeted rules (Zone 1)", () => {
     expect(resolveTemplate(rules, postNode)).toBeUndefined();
   });
 
-  test("forTaxonomy matches a term node; .slug narrows the term", () => {
+  test("forTermTaxonomy matches a term node; .slug narrows the term", () => {
     const rules = [
-      forTaxonomy("category")
+      forTermTaxonomy("category")
         .slug("news")
         .template(() => null),
       taxonomy(() => null),
@@ -228,12 +228,12 @@ describe("targeted builders — name checking and data typing", () => {
     });
   });
 
-  test("forTaxonomy types data.term from the registry projection", () => {
-    forTaxonomy("category").template(({ data }) => {
+  test("forTermTaxonomy types data.term from the registry projection", () => {
+    forTermTaxonomy("category").template(({ data }) => {
       expectTypeOf(data.term).toEqualTypeOf<ResolvedTerm>();
       return null;
     });
-    forTaxonomy("brand")
+    forTermTaxonomy("brand")
       .slug("acme")
       .template(({ data }) => {
         expectTypeOf(data.term).toEqualTypeOf<Brand>();
@@ -245,7 +245,7 @@ describe("targeted builders — name checking and data typing", () => {
     // @ts-expect-error - not a registered entry type
     forEntryType("nope");
     // @ts-expect-error - not a registered taxonomy
-    forTaxonomy("nope");
+    forTermTaxonomy("nope");
   });
 
   test("whereMeta types keys and values against the meta projection", () => {

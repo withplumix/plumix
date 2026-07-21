@@ -15,7 +15,7 @@ import {
   entry,
   fallback,
   forEntryType,
-  forTaxonomy,
+  forTermTaxonomy,
   frontPage,
   notFound,
   search,
@@ -2822,7 +2822,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        forTaxonomy("category").template(({ data }) => (
+        forTermTaxonomy("category").template(({ data }) => (
           <div data-testid="category">{data.term.name}</div>
         )),
       ],
@@ -3000,7 +3000,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
-        forTaxonomy("tag").template(({ data }) => (
+        forTermTaxonomy("tag").template(({ data }) => (
           <div data-testid="tag">{data.term.name}</div>
         )),
       ],

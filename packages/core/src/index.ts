@@ -41,7 +41,7 @@ export {
   entry,
   fallback,
   forEntryType,
-  forTaxonomy,
+  forTermTaxonomy,
   frontPage,
   NAMED_TEMPLATE_META_KEY,
   notFound,
@@ -56,8 +56,8 @@ export type {
   EntryTypeName,
   EntryTypeRegistry,
   MetaOf,
-  TaxonomyName,
-  TaxonomyRegistry,
+  TermTaxonomyName,
+  TermTaxonomyRegistry,
   TermProjection,
 } from "./template-registry.js";
 export {
