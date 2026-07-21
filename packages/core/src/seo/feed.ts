@@ -4,11 +4,12 @@ import type { AppContext } from "../context/app.js";
 import type { RegisteredTermTaxonomy } from "../plugin/manifest.js";
 import type { DocumentLink, DocumentManifest, TemplateData } from "../theme.js";
 import { withBasePath } from "../base-path.js";
-import { and, desc, eq, inArray } from "../db/index.js";
+import { and, desc, eq, gte, inArray, lt } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
+import { dateRange } from "../route/date-range.js";
 import {
   buildEntryPermalink,
   termTaxonomyBaseSlug,
@@ -31,7 +32,13 @@ type FeedScope =
   | { readonly kind: "site" }
   | { readonly kind: "type"; readonly type: string }
   | { readonly kind: "term"; readonly taxonomy: string; readonly term: string }
-  | { readonly kind: "author"; readonly slug: string };
+  | { readonly kind: "author"; readonly slug: string }
+  | {
+      readonly kind: "date";
+      readonly year: number;
+      readonly month: number | null;
+      readonly day: number | null;
+    };
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
@@ -210,6 +217,19 @@ async function feedFilter(
     return and(publicTypes, published, eq(entries.authorId, author.id));
   }
 
+  if (scope.kind === "date") {
+    // Published, public-type entries in the period. An impossible date (Feb 30)
+    // → null → 404, matching the date-archive resolver.
+    const range = dateRange(scope.year, scope.month, scope.day);
+    if (range === null || typeNames.length === 0) return null;
+    return and(
+      publicTypes,
+      published,
+      gte(entries.publishedAt, range.start),
+      lt(entries.publishedAt, range.end),
+    );
+  }
+
   // term: only entries attached to the term, and still of a public type. Only
   // top-level terms have the flat `/base/slug/feed` URL the route addresses —
   // nested terms have no feed route yet, so they 404.
@@ -329,6 +349,12 @@ function discoveryFeedBase(
     return `/${termTaxonomyBaseSlug(taxonomy)}/${data.term.slug}/feed`;
   }
   if ("author" in data) return `/authors/${data.author.slug}/feed`;
+  if ("year" in data) {
+    const parts = [String(data.year)];
+    if (data.month !== null) parts.push(String(data.month).padStart(2, "0"));
+    if (data.day !== null) parts.push(String(data.day).padStart(2, "0"));
+    return `/${parts.join("/")}/feed`;
+  }
   if ("query" in data) return false;
   if ("request" in data) return false;
   return "/feed";

@@ -312,3 +312,73 @@ describe("author feed routes", () => {
     );
   });
 });
+
+describe("date feed routes", () => {
+  async function seedDated(
+    h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+    dates: readonly string[],
+  ): Promise<void> {
+    const author = await h.seedUser("admin");
+    for (const iso of dates) {
+      await h.factory.entry.create({
+        type: "post",
+        slug: `post-${iso}`,
+        title: `Post ${iso}`,
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(`${iso}T12:00:00Z`),
+      });
+    }
+  }
+
+  test("GET /YYYY[/MM[/DD]]/feed returns the period's posts", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    await seedDated(h, ["2026-07-21", "2026-07-22", "2026-08-01"]);
+
+    const month = await h.fetch("/2026/07/feed");
+    month.assertStatus(200);
+    expect(month.headers.get("content-type")).toContain("application/rss+xml");
+    const body = await month.text();
+    expect(body).toContain(
+      '<atom:link href="https://cms.example/2026/07/feed" rel="self"',
+    );
+    expect(body).toContain("Post 2026-07-21");
+    expect(body).toContain("Post 2026-07-22");
+    expect(body).not.toContain("Post 2026-08-01");
+
+    const day = await h.fetch("/2026/07/21/feed");
+    day.assertStatus(200);
+    const dayBody = await day.text();
+    expect(dayBody).toContain("Post 2026-07-21");
+    expect(dayBody).not.toContain("Post 2026-07-22");
+  });
+
+  test("GET /YYYY/feed/atom returns an Atom feed", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    await seedDated(h, ["2026-03-03"]);
+    const atom = await h.fetch("/2026/feed/atom");
+    atom.assertStatus(200);
+    expect(await atom.text()).toContain(
+      "<id>https://cms.example/2026/feed/atom</id>",
+    );
+  });
+
+  test("an impossible date 404s", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    (await h.fetch("/2026/02/30/feed")).assertStatus(404);
+    (await h.fetch("/2026/13/feed")).assertStatus(404);
+  });
+
+  test("date-archive pages emit the matching feed-discovery tags", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    await seedDated(h, ["2026-07-21"]);
+    const body = await (await h.fetch("/2026/07")).text();
+    expect(body).toContain(
+      '<link rel="alternate" type="application/rss+xml" href="https://cms.example/2026/07/feed"',
+    );
+    expect(body).toContain(
+      '<link rel="alternate" type="application/atom+xml" href="https://cms.example/2026/07/feed/atom"',
+    );
+  });
+});

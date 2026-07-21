@@ -57,6 +57,10 @@ const FEED_PATTERN = /^\/(?:([^/]+)\/)?feed(\/atom)?$/;
 // `/authors/<slug>/feed` (+ `/atom`) — the author-scoped feed. Checked before
 // the generic term-feed shape since `/authors/*` is a reserved framework space.
 const AUTHOR_FEED_PATTERN = /^\/authors\/([^/]+)\/feed(\/atom)?$/;
+// `/YYYY[/MM[/DD]]/feed` (+ `/atom`) — the date-scoped feed. Numeric-constrained
+// (like the date route rules) and checked before the generic term-feed shape.
+const DATE_FEED_PATTERN =
+  /^\/(\d{4})(?:\/(\d{2}))?(?:\/(\d{2}))?\/feed(\/atom)?$/;
 // `/<taxonomy>/<term>/feed` (+ `/atom`) — the term-scoped feed.
 const TERM_FEED_PATTERN = /^\/([^/]+)\/([^/]+)\/feed(\/atom)?$/;
 
@@ -392,6 +396,20 @@ async function tryPublicRoutes(
       ctx,
       { kind: "author", slug: authorFeed[1] ?? "" },
       authorFeed[2] ? "atom" : "rss2",
+    );
+  }
+  const dateFeed = DATE_FEED_PATTERN.exec(pathname);
+  if (dateFeed) {
+    // An impossible date (Feb 30) yields a null filter → 404 in `handleFeed`.
+    return handleFeed(
+      ctx,
+      {
+        kind: "date",
+        year: Number(dateFeed[1]),
+        month: dateFeed[2] === undefined ? null : Number(dateFeed[2]),
+        day: dateFeed[3] === undefined ? null : Number(dateFeed[3]),
+      },
+      dateFeed[4] ? "atom" : "rss2",
     );
   }
   const termFeed = TERM_FEED_PATTERN.exec(pathname);
