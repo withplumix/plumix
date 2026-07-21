@@ -16,6 +16,8 @@ export function templateNodeLabel(node: ResolvedNode): string {
       return `date: ${[node.year, node.month, node.day]
         .filter((v) => v !== null)
         .join("-")}`;
+    case "custom":
+      return `archive: ${node.name}`;
     case "content-type-archive":
       return `${node.entryType} archive`;
     case "front-page":

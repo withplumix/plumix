@@ -11,7 +11,11 @@ export type RouteIntent =
   | { readonly kind: "author" }
   | { readonly kind: "date" }
   | { readonly kind: "front-page" }
-  | { readonly kind: "search" };
+  | { readonly kind: "search" }
+  // A plugin-registered archive type (`registerArchiveType`); `name` looks the
+  // resolver up on the registry. This is the open seam — new archive types are
+  // registered, not added to this union.
+  | { readonly kind: "custom"; readonly name: string };
 
 /**
  * Compiled rule. `priority` preserves arch-doc ordering semantics — lower

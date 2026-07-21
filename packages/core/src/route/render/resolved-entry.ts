@@ -106,6 +106,19 @@ export interface SearchData<TEntry extends ResolvedEntry = ResolvedEntry> {
 }
 
 /**
+ * Base payload for a plugin-registered archive (`registerArchiveType`). The
+ * `kind`/`name` discriminate it; a plugin extends this with its own fields
+ * (entries, pagination, whatever the archive lists) and declares the extended
+ * shape in `ArchiveTypeRegistry` so `forArchiveType(name)` types `data`. Core
+ * only ever sees the base — the resolver and template come from the plugin.
+ */
+export interface CustomArchiveData {
+  readonly kind: "custom";
+  /** The registered archive-type name (`registerArchiveType(name, …)`). */
+  readonly name: string;
+}
+
+/**
  * Payload threaded to a theme's `404` / `500` template. Public-safe by
  * shape — there is no Error field, so internal exception messages have
  * no path to the rendered output.

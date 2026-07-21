@@ -4,6 +4,7 @@ import type { TemplateData } from "../../theme.js";
 import type {
   ArchiveData,
   AuthorArchiveData,
+  CustomArchiveData,
   DateArchiveData,
   EntryData,
   ResolvedEntry,
@@ -17,6 +18,7 @@ import {
   date,
   entry,
   fallback,
+  forArchiveType,
   forAuthor,
   forDate,
   forEntryType,
@@ -134,12 +136,20 @@ interface Product extends ResolvedEntry {
 interface Brand extends ResolvedTerm {
   readonly logoUrl: string | null;
 }
+interface GalleryData extends CustomArchiveData {
+  readonly kind: "custom";
+  readonly name: "gallery";
+  readonly album: string;
+}
 declare module "../../template-registry.js" {
   interface EntryTypeRegistry {
     product: { entry: Product; meta: { onSale: boolean } };
   }
   interface TermTaxonomyRegistry {
     brand: { term: Brand; meta: { featured: boolean } };
+  }
+  interface ArchiveTypeRegistry {
+    gallery: { data: GalleryData };
   }
 }
 
@@ -529,6 +539,38 @@ describe("resolveTemplate — forDate targeted rules", () => {
     });
     // @ts-expect-error - a month needs a year (no zero-arg overload)
     forDate();
+  });
+});
+
+describe("resolveTemplate — forArchiveType targeted rules", () => {
+  const galleryNode: ResolvedNode = { kind: "custom", name: "gallery" };
+
+  test("forArchiveType matches its custom node by name", () => {
+    const rules = [
+      fallback(() => null),
+      forArchiveType("gallery").template(() => null),
+    ];
+    expect(resolveTemplate(rules, galleryNode)?.match?.type).toBe("gallery");
+    // A different archive type falls through to `fallback`.
+    expect(
+      resolveTemplate(rules, { kind: "custom", name: "events" })?.tier,
+    ).toBe("fallback");
+  });
+
+  test("the matcher carries nodeKind `custom` + the archive name as type", () => {
+    const rule = forArchiveType("gallery").template(() => null);
+    expect(rule.match?.nodeKind).toBe("custom");
+    expect(rule.match?.type).toBe("gallery");
+  });
+
+  test("data is typed from the ArchiveTypeRegistry projection", () => {
+    forArchiveType("gallery").template(({ data }) => {
+      expectTypeOf(data).toEqualTypeOf<GalleryData>();
+      expectTypeOf(data.album).toEqualTypeOf<string>();
+      return null;
+    });
+    // @ts-expect-error - "nope" is not a registered archive type
+    forArchiveType("nope");
   });
 });
 

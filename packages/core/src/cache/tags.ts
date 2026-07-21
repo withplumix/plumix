@@ -46,7 +46,11 @@ export function pageTags(sources: PageTagSources): string[] {
       // Author and date archives list the same public, non-hierarchical type
       // set as the front page, so any publish of those types can change them.
       return sources.frontPageEntryTypes().map(typeTag);
+    case "custom":
     case "search":
+      // A plugin archive's content dependencies are unknown to core (as search
+      // results are), so it carries no coarse type tags — the plugin manages
+      // its own invalidation if it edge-caches.
       return [];
   }
 }

@@ -7,9 +7,9 @@ import { withBasePath } from "../base-path.js";
 import { and, desc, eq, gte, inArray, lt } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
-import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
 import { dateRange } from "../route/date-range.js";
+import { findTermByPath } from "../route/path-chain.js";
 import {
   buildEntryPermalink,
   termTaxonomyBaseSlug,
@@ -24,20 +24,31 @@ export const FEED_LIMIT = 20;
 type FeedFormat = "rss2" | "atom";
 
 /**
- * What a feed covers: the whole site, one entry type, one taxonomy term, or one
- * author. `taxonomy`/`term` are the registered taxonomy name + term slug;
- * `slug` on the author scope is the user's slug.
+ * What a feed covers: the whole site, one entry type, one taxonomy term, one
+ * author, a date period, or a plugin-registered archive (`custom`). `taxonomy`
+ * is the registered name; `path` is the term's slug path (a single segment for a
+ * top-level term, `parent/child` for a nested one). `slug` on the author scope
+ * is the user's slug; `custom.name`/`params` name a registered archive feed.
  */
-type FeedScope =
+export type FeedScope =
   | { readonly kind: "site" }
   | { readonly kind: "type"; readonly type: string }
-  | { readonly kind: "term"; readonly taxonomy: string; readonly term: string }
+  | {
+      readonly kind: "term";
+      readonly taxonomy: string;
+      readonly path: readonly string[];
+    }
   | { readonly kind: "author"; readonly slug: string }
   | {
       readonly kind: "date";
       readonly year: number;
       readonly month: number | null;
       readonly day: number | null;
+    }
+  | {
+      readonly kind: "custom";
+      readonly name: string;
+      readonly params: Record<string, string>;
     };
 
 declare module "../hooks/types.js" {
@@ -201,6 +212,14 @@ async function feedFilter(
     return and(eq(entries.type, scope.type), published);
   }
 
+  if (scope.kind === "custom") {
+    // A plugin archive's feed is entirely plugin-defined; its filter returns the
+    // row predicate (or null → 404). Missing archive/feed → 404.
+    const archive = ctx.plugins.archiveTypes.get(scope.name);
+    if (!archive?.feed) return null;
+    return archive.feed.filter(ctx, scope.params);
+  }
+
   const typeNames = publicEntryTypeNames(ctx);
   const publicTypes = inArray(entries.type, typeNames);
   if (scope.kind === "site") {
@@ -230,15 +249,11 @@ async function feedFilter(
     );
   }
 
-  // term: only entries attached to the term, and still of a public type. Only
-  // top-level terms have the flat `/base/slug/feed` URL the route addresses —
-  // nested terms have no feed route yet, so they 404.
-  const [term] = await ctx.db
-    .select({ id: terms.id, parentId: terms.parentId })
-    .from(terms)
-    .where(and(eq(terms.taxonomy, scope.taxonomy), eq(terms.slug, scope.term)));
-  if (!term) return null;
-  if (term.parentId !== null || typeNames.length === 0) return null;
+  // term: entries attached to the term — resolved by its full slug path, so a
+  // nested term (`/base/parent/child/feed`) works, not just a top-level one —
+  // and still of a public type. Unknown path → 404.
+  const term = await findTermByPath(ctx, scope.taxonomy, scope.path);
+  if (!term || typeNames.length === 0) return null;
   const attached = ctx.db
     .select({ id: entryTerm.entryId })
     .from(entryTerm)
@@ -336,6 +351,10 @@ function discoveryFeedBase(
   data: TemplateData,
   ctx: AppContext,
 ): string | false {
+  // A plugin archive's payload is arbitrary, so it can't be classified by the
+  // duck-typed checks below (a `year`/`author` field would misfire). It
+  // advertises no feed by default; the plugin adds its own `<link>` if it wants.
+  if (data.kind === "custom") return false;
   if ("contentType" in data) {
     return isPublicEntryType(ctx, data.contentType)
       ? `/${data.contentType}/feed`

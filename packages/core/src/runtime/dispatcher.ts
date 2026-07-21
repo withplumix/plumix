@@ -15,7 +15,8 @@ import { pageTags } from "../cache/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
-import { matchRoute } from "../route/match.js";
+import { exposesHierarchicalUrls } from "../route/compile.js";
+import { extractParams, matchRoute } from "../route/match.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
 import { canonicalRedirectTarget } from "../seo/canonical.js";
@@ -61,8 +62,9 @@ const AUTHOR_FEED_PATTERN = /^\/authors\/([^/]+)\/feed(\/atom)?$/;
 // (like the date route rules) and checked before the generic term-feed shape.
 const DATE_FEED_PATTERN =
   /^\/(\d{4})(?:\/(\d{2}))?(?:\/(\d{2}))?\/feed(\/atom)?$/;
-// `/<taxonomy>/<term>/feed` (+ `/atom`) — the term-scoped feed.
-const TERM_FEED_PATTERN = /^\/([^/]+)\/([^/]+)\/feed(\/atom)?$/;
+// `/<taxonomy>/<term-path>/feed` (+ `/atom`) — the term-scoped feed. The path
+// is one segment for a top-level term, `parent/child` for a nested one.
+const TERM_FEED_PATTERN = /^\/([^/]+)\/(.+)\/feed(\/atom)?$/;
 
 // MCP is cold-path-exclusive (an agent endpoint, never the public render path).
 // Dynamic-import its handler so the tool registry and the MCP SDK it pulls in
@@ -412,15 +414,33 @@ async function tryPublicRoutes(
       dateFeed[4] ? "atom" : "rss2",
     );
   }
-  const termFeed = TERM_FEED_PATTERN.exec(pathname);
-  if (termFeed) {
-    // Only a public taxonomy's archive space owns `/<taxonomy>/<term>/feed`;
-    // anything else (e.g. a nested page) falls through to the public router.
-    const taxonomy = publicTaxonomyByBaseSlug(ctx, termFeed[1] ?? "");
-    if (taxonomy) {
+  // Plugin-registered archive feeds (`registerArchiveType({ feed })`). Gated on
+  // the `/feed` suffix so the URLPattern match only runs for feed-shaped URLs,
+  // never the hot public-render path; checked before the generic term feed so a
+  // custom `/x/y/feed` isn't misread as a term feed.
+  if (pathname.endsWith("/feed") || pathname.endsWith("/feed/atom")) {
+    const archiveFeed = matchArchiveFeed(ctx, pathname);
+    if (archiveFeed) {
       return handleFeed(
         ctx,
-        { kind: "term", taxonomy: taxonomy.name, term: termFeed[2] ?? "" },
+        { kind: "custom", name: archiveFeed.name, params: archiveFeed.params },
+        archiveFeed.atom ? "atom" : "rss2",
+      );
+    }
+  }
+  const termFeed = TERM_FEED_PATTERN.exec(pathname);
+  if (termFeed) {
+    // Only a public taxonomy's archive space owns `/<taxonomy>/<path>/feed`;
+    // anything else (e.g. a nested page) falls through to the public router.
+    const taxonomy = publicTaxonomyByBaseSlug(ctx, termFeed[1] ?? "");
+    const path = (termFeed[2] ?? "").split("/");
+    // A nested (multi-segment) path is only a term feed when the taxonomy
+    // exposes hierarchical URLs — mirrors the archive route, which only emits
+    // `:path+` for hierarchical taxonomies.
+    if (taxonomy && (path.length === 1 || exposesHierarchicalUrls(taxonomy))) {
+      return handleFeed(
+        ctx,
+        { kind: "term", taxonomy: taxonomy.name, path },
         termFeed[3] ? "atom" : "rss2",
       );
     }
@@ -432,6 +452,34 @@ async function tryPublicRoutes(
   if (canonical !== null) return permanentRedirect(canonical);
 
   return dispatchPublicRoute(app, ctx, url);
+}
+
+// Match a `/…/feed[/atom]` request against every registered archive feed route.
+// The `/atom` variant of each route is matched too, so a plugin declares only
+// the base feed route to get both formats. Returns the archive name + captured
+// params, or null when no archive feed owns the path.
+function matchArchiveFeed(
+  ctx: AppContext,
+  pathname: string,
+): { name: string; params: Record<string, string>; atom: boolean } | null {
+  // The caller only enters on the `/feed[/atom]` suffix, and routes are declared
+  // base-only, so the format is fixed here — no need to try both variants.
+  const atom = pathname.endsWith("/atom");
+  for (const archive of ctx.plugins.archiveTypes.values()) {
+    if (!archive.feed) continue;
+    for (const route of archive.feed.routes) {
+      const result = new URLPattern({
+        pathname: atom ? `${route}/atom` : route,
+      }).exec({ pathname });
+      if (!result) continue;
+      return {
+        name: archive.name,
+        params: extractParams(result.pathname),
+        atom,
+      };
+    }
+  }
+  return null;
 }
 
 // The public route intent for a resolved match: an unmatched root is the front

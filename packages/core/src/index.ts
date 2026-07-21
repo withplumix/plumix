@@ -42,6 +42,7 @@ export {
   date,
   entry,
   fallback,
+  forArchiveType,
   forAuthor,
   forDate,
   forEntryType,
@@ -55,6 +56,9 @@ export {
   templateRules,
 } from "./route/render/template-builders.js";
 export type {
+  ArchiveDataOf,
+  ArchiveTypeName,
+  ArchiveTypeRegistry,
   EntryProjection,
   EntryTypeName,
   EntryTypeRegistry,
@@ -71,6 +75,7 @@ export {
 export type {
   ArchiveData,
   AuthorArchiveData,
+  CustomArchiveData,
   DateArchiveData,
   EntryData,
   ErrorData,
@@ -94,6 +99,7 @@ export {
   defineTheme,
   isArchive,
   isAuthor,
+  isCustom,
   isDate,
   isEntry,
   isError,

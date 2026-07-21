@@ -1,4 +1,5 @@
 import type {
+  CustomArchiveData,
   ResolvedEntry,
   ResolvedTerm,
 } from "./route/render/resolved-entry.js";
@@ -34,8 +35,33 @@ export interface TermTaxonomyRegistry {
   tag: { term: ResolvedTerm };
 }
 
+/**
+ * Augmentable map of plugin-registered archive-type names to their data
+ * projection. A plugin augments it alongside its `registerArchiveType` call so
+ * `forArchiveType` autocompletes the name, rejects typos, and types `data`. The
+ * projection must extend {@link CustomArchiveData}; a name registered without a
+ * `data` projection degrades to the base.
+ *
+ * ```ts
+ * declare module "@plumix/core" {
+ *   interface ArchiveTypeRegistry {
+ *     "event-series": { data: EventSeriesData };
+ *   }
+ * }
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
+export interface ArchiveTypeRegistry {}
+
 export type EntryTypeName = keyof EntryTypeRegistry;
 export type TermTaxonomyName = keyof TermTaxonomyRegistry;
+export type ArchiveTypeName = keyof ArchiveTypeRegistry;
+
+/** The data projection for a registered archive type, defaulting to the base. */
+export type ArchiveDataOf<K extends ArchiveTypeName> =
+  ArchiveTypeRegistry[K] extends { data: infer D extends CustomArchiveData }
+    ? D
+    : CustomArchiveData;
 
 /** The entry projection for a registered type, defaulting to `ResolvedEntry`. */
 export type EntryProjection<K extends EntryTypeName> =

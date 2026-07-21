@@ -21,6 +21,7 @@ export type ResolvedNode =
   | ResolvedContentTypeArchive
   | ResolvedAuthorNode
   | ResolvedDateNode
+  | ResolvedCustomNode
   | ResolvedFrontPage
   | ResolvedSearch;
 
@@ -42,6 +43,12 @@ interface ResolvedDateNode {
   readonly year: number;
   readonly month: number | null;
   readonly day: number | null;
+}
+
+interface ResolvedCustomNode {
+  readonly kind: "custom";
+  /** The registered archive-type name (`registerArchiveType`). */
+  readonly name: string;
 }
 
 interface ResolvedContentNode {
@@ -73,6 +80,9 @@ const GENERIC_TIER_FOR_NODE: Record<ResolvedNode["kind"], GenericTier> = {
   term: "taxonomy",
   author: "author",
   date: "date",
+  // Plugin archives have no dedicated generic tier — they template via a
+  // `forArchiveType(name)` targeted rule, else the universal `fallback`.
+  custom: "fallback",
   "front-page": "frontPage",
   search: "search",
 };
@@ -117,6 +127,9 @@ function matchesIdentity(match: TargetMatcher, node: ResolvedNode): boolean {
         (match.month ?? null) === node.month &&
         (match.day ?? null) === node.day
       );
+    case "custom":
+      // A `forArchiveType(name)` matcher carries the archive-type name as `type`.
+      return match.type === node.name;
     default:
       return false;
   }
