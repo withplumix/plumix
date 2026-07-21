@@ -78,6 +78,20 @@ export interface AuthorArchiveData<
   readonly pagination: Pagination;
 }
 
+/**
+ * Payload for a date archive (`/YYYY[/MM[/DD]]`). `year` is always set;
+ * `month`/`day` are 1-based and `null` at a coarser granularity (a year archive
+ * has `month: null, day: null`).
+ */
+export interface DateArchiveData<TEntry extends ResolvedEntry = ResolvedEntry> {
+  readonly kind: "date";
+  readonly year: number;
+  readonly month: number | null;
+  readonly day: number | null;
+  readonly entries: readonly TEntry[];
+  readonly pagination: Pagination;
+}
+
 export interface FrontPageData<TEntry extends ResolvedEntry = ResolvedEntry> {
   readonly kind: "frontPage";
   readonly entries: readonly TEntry[];

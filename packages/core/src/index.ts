@@ -39,9 +39,11 @@ export { buildResolvedEntries } from "./route/render/build-resolved-entries.js";
 export {
   archive,
   author,
+  date,
   entry,
   fallback,
   forAuthor,
+  forDate,
   forEntryType,
   forTermTaxonomy,
   frontPage,
@@ -69,6 +71,7 @@ export {
 export type {
   ArchiveData,
   AuthorArchiveData,
+  DateArchiveData,
   EntryData,
   ErrorData,
   FrontPageData,
@@ -91,6 +94,7 @@ export {
   defineTheme,
   isArchive,
   isAuthor,
+  isDate,
   isEntry,
   isError,
   isFrontPage,

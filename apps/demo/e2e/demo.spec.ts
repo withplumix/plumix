@@ -133,6 +133,28 @@ test("an unknown author slug returns 404", async ({ page }) => {
   expect(res.status()).toBe(404);
 });
 
+test("the post date links to its day archive", async ({ page }) => {
+  await page.goto("/");
+  // Each post card's meta line carries the published date as a link to
+  // `/YYYY/MM/DD`.
+  const dateLink = page.getByTestId("post-meta-date").first();
+  await expect(dateLink).toBeVisible();
+  const href = await dateLink.getAttribute("href");
+  expect(href).toMatch(/^\/\d{4}\/\d{2}\/\d{2}$/);
+  await dateLink.click();
+
+  // Lands on the day archive, which lists posts from that day.
+  await page.waitForURL(/\/\d{4}\/\d{2}\/\d{2}$/);
+  await expect(page.getByTestId("post-list")).toBeVisible();
+  await expect(page.getByTestId("post-card").first()).toBeVisible();
+});
+
+// An impossible date 404s (parity with the other archives).
+test("an impossible date returns 404", async ({ page }) => {
+  const res = await page.request.get("/2026/02/30");
+  expect(res.status()).toBe(404);
+});
+
 // Companion guard: the demo pill still appears on an ordinary public page for a
 // session holder — the fix narrows where it's suppressed, it doesn't remove it.
 test("the demo pill still shows on the public site for a session holder", async ({

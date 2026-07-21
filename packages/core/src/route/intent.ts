@@ -9,6 +9,7 @@ export type RouteIntent =
   | { readonly kind: "archive"; readonly entryType: string }
   | { readonly kind: "taxonomy"; readonly taxonomy: string }
   | { readonly kind: "author" }
+  | { readonly kind: "date" }
   | { readonly kind: "front-page" }
   | { readonly kind: "search" };
 

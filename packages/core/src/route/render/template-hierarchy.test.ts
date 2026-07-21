@@ -4,6 +4,7 @@ import type { TemplateData } from "../../theme.js";
 import type {
   ArchiveData,
   AuthorArchiveData,
+  DateArchiveData,
   EntryData,
   ResolvedEntry,
   ResolvedTerm,
@@ -13,9 +14,11 @@ import type { ResolvedNode } from "./template-hierarchy.js";
 import {
   archive,
   author,
+  date,
   entry,
   fallback,
   forAuthor,
+  forDate,
   forEntryType,
   forTermTaxonomy,
   frontPage,
@@ -45,6 +48,7 @@ describe("resolveTemplate — generic tiers", () => {
     archive(() => null),
     taxonomy(() => null),
     author(() => null),
+    date(() => null),
     frontPage(() => null),
     search(() => null),
     fallback(() => null),
@@ -58,6 +62,7 @@ describe("resolveTemplate — generic tiers", () => {
       "taxonomy",
     ],
     [{ kind: "author", slug: "jane", databaseId: 1 }, "author"],
+    [{ kind: "date", year: 2026, month: 7, day: 21 }, "date"],
     [{ kind: "front-page" }, "frontPage"],
     [{ kind: "search" }, "search"],
   ])("resolves a node to its matching generic tier (#%#)", (node, tier) => {
@@ -114,6 +119,10 @@ describe("generic-tier builders — data typing", () => {
     });
     author(({ data }) => {
       expectTypeOf(data).toEqualTypeOf<AuthorArchiveData>();
+      return null;
+    });
+    date(({ data }) => {
+      expectTypeOf(data).toEqualTypeOf<DateArchiveData>();
       return null;
     });
   });
@@ -471,6 +480,55 @@ describe("resolveTemplate — forAuthor targeted rules", () => {
         expectTypeOf(data.author).toEqualTypeOf<AuthorArchiveData["author"]>();
         return null;
       });
+  });
+});
+
+describe("resolveTemplate — forDate targeted rules", () => {
+  const dayNode: ResolvedNode = {
+    kind: "date",
+    year: 2026,
+    month: 7,
+    day: 21,
+  };
+  const yearNode: ResolvedNode = {
+    kind: "date",
+    year: 2026,
+    month: null,
+    day: null,
+  };
+
+  test("forDate matches its exact granularity and beats the generic tier", () => {
+    const rules = [date(() => null), forDate(2026, 7, 21).template(() => null)];
+    expect(resolveTemplate(rules, dayNode)?.match?.day).toBe(21);
+    // A different day falls through to the generic `date` tier.
+    expect(resolveTemplate(rules, { ...dayNode, day: 22 })?.tier).toBe("date");
+  });
+
+  test("a coarser forDate matches only that granularity, not a finer node", () => {
+    const rules = [forDate(2026).template(() => null), date(() => null)];
+    // The year matcher (month/day unset) matches the year node.
+    expect(resolveTemplate(rules, yearNode)?.match?.year).toBe(2026);
+    // ...but a day node with month/day set does not match the year-only rule.
+    expect(resolveTemplate(rules, dayNode)?.tier).toBe("date");
+  });
+
+  test("forDate carries a fixed `date` type + nodeKind + numeric narrowing", () => {
+    const rule = forDate(2026, 7).template(() => null);
+    expect(rule.match?.nodeKind).toBe("date");
+    expect(rule.match?.type).toBe("date");
+    expect(rule.match?.year).toBe(2026);
+    expect(rule.match?.month).toBe(7);
+    expect(rule.match?.day).toBeUndefined();
+  });
+
+  test("data is typed as DateArchiveData", () => {
+    forDate(2026).template(({ data }) => {
+      expectTypeOf(data).toEqualTypeOf<DateArchiveData>();
+      expectTypeOf(data.year).toEqualTypeOf<number>();
+      return null;
+    });
+    // @ts-expect-error - a month needs a year (no zero-arg overload)
+    forDate();
   });
 });
 

@@ -12,6 +12,10 @@ export function templateNodeLabel(node: ResolvedNode): string {
       return `${node.taxonomy}: ${node.slug}`;
     case "author":
       return `author: ${node.slug}`;
+    case "date":
+      return `date: ${[node.year, node.month, node.day]
+        .filter((v) => v !== null)
+        .join("-")}`;
     case "content-type-archive":
       return `${node.entryType} archive`;
     case "front-page":

@@ -25,6 +25,21 @@ export const FRAMEWORK_AUTHOR_PATTERN = "/authors/:slug";
 export const FRAMEWORK_AUTHOR_PAGINATED_PATTERN =
   "/authors/:slug/page/:page(\\d+)";
 
+// Date archives: bare numeric segments, so each is constrained (`\d{4}`/`\d{2}`)
+// to only match date-shaped URLs. These sort at framework priority, so `/2026`
+// resolves to the year archive — a post slugged "2026" is shadowed (WP reserves
+// date-archive URL space the same way).
+const YEAR = ":year(\\d{4})";
+const MONTH = ":month(\\d{2})";
+const DAY = ":day(\\d{2})";
+const PAGE = "/page/:page(\\d+)";
+export const FRAMEWORK_DATE_YEAR_PATTERN = `/${YEAR}`;
+export const FRAMEWORK_DATE_MONTH_PATTERN = `/${YEAR}/${MONTH}`;
+export const FRAMEWORK_DATE_DAY_PATTERN = `/${YEAR}/${MONTH}/${DAY}`;
+export const FRAMEWORK_DATE_YEAR_PAGINATED_PATTERN = `/${YEAR}${PAGE}`;
+export const FRAMEWORK_DATE_MONTH_PAGINATED_PATTERN = `/${YEAR}/${MONTH}${PAGE}`;
+export const FRAMEWORK_DATE_DAY_PAGINATED_PATTERN = `/${YEAR}/${MONTH}/${DAY}${PAGE}`;
+
 interface CompiledRule extends RouteRule {
   readonly registeredBy: string | null;
 }
@@ -87,6 +102,24 @@ export function compileRouteMap(
       priority: FRAMEWORK_ROUTE_PRIORITY,
       registeredBy: null,
     },
+    // Date archives, most-specific first (day → month → year, paginated before
+    // bare) so a more-granular URL is never captured by a coarser rule.
+    ...(
+      [
+        FRAMEWORK_DATE_DAY_PAGINATED_PATTERN,
+        FRAMEWORK_DATE_DAY_PATTERN,
+        FRAMEWORK_DATE_MONTH_PAGINATED_PATTERN,
+        FRAMEWORK_DATE_MONTH_PATTERN,
+        FRAMEWORK_DATE_YEAR_PAGINATED_PATTERN,
+        FRAMEWORK_DATE_YEAR_PATTERN,
+      ] as const
+    ).map((rawPattern): CompiledRule => ({
+      pattern: new URLPattern({ pathname: rawPattern }),
+      rawPattern,
+      intent: { kind: "date" },
+      priority: FRAMEWORK_ROUTE_PRIORITY,
+      registeredBy: null,
+    })),
   ];
 
   // Taxonomies emit before entry types so that a slug collision (e.g. a

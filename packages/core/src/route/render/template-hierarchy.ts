@@ -20,6 +20,7 @@ export type ResolvedNode =
   | ResolvedContentNode
   | ResolvedContentTypeArchive
   | ResolvedAuthorNode
+  | ResolvedDateNode
   | ResolvedFrontPage
   | ResolvedSearch;
 
@@ -34,6 +35,13 @@ interface ResolvedAuthorNode {
   readonly kind: "author";
   readonly slug: string;
   readonly databaseId: number;
+}
+
+interface ResolvedDateNode {
+  readonly kind: "date";
+  readonly year: number;
+  readonly month: number | null;
+  readonly day: number | null;
 }
 
 interface ResolvedContentNode {
@@ -64,6 +72,7 @@ const GENERIC_TIER_FOR_NODE: Record<ResolvedNode["kind"], GenericTier> = {
   "content-type-archive": "archive",
   term: "taxonomy",
   author: "author",
+  date: "date",
   "front-page": "frontPage",
   search: "search",
 };
@@ -96,6 +105,17 @@ function matchesIdentity(match: TargetMatcher, node: ResolvedNode): boolean {
         match.type === "author" &&
         (match.slug === undefined || match.slug === node.slug) &&
         (match.id === undefined || match.id === node.databaseId)
+      );
+    case "date":
+      // Date matchers carry a fixed `type` of "date" and match one exact
+      // granularity: an unset component (`forDate(2026)` has no month/day)
+      // requires the node's component to be null, so a year matcher matches the
+      // year archive only, not that year's month/day archives.
+      return (
+        match.type === "date" &&
+        match.year === node.year &&
+        (match.month ?? null) === node.month &&
+        (match.day ?? null) === node.day
       );
     default:
       return false;

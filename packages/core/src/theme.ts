@@ -9,6 +9,7 @@ import type {
 import type {
   ArchiveData,
   AuthorArchiveData,
+  DateArchiveData,
   EntryData,
   ErrorData,
   FrontPageData,
@@ -44,6 +45,7 @@ export type TemplateData =
   | ArchiveData
   | TaxonomyData
   | AuthorArchiveData
+  | DateArchiveData
   | FrontPageData
   | SearchData
   | ErrorData;
@@ -59,6 +61,9 @@ export function isTaxonomy(data: TemplateData): data is TaxonomyData {
 }
 export function isAuthor(data: TemplateData): data is AuthorArchiveData {
   return data.kind === "author";
+}
+export function isDate(data: TemplateData): data is DateArchiveData {
+  return data.kind === "date";
 }
 export function isFrontPage(data: TemplateData): data is FrontPageData {
   return data.kind === "frontPage";
@@ -92,22 +97,28 @@ export type GenericTier =
   | "archive"
   | "taxonomy"
   | "author"
+  | "date"
   | "frontPage"
   | "search"
   | "notFound"
   | "serverError";
 
 /**
- * How a targeted rule (from `forEntryType`/`forTermTaxonomy`/`forAuthor`)
- * matches a resolved node: by node kind + type name, optionally narrowed to one
- * entry/term/author by `slug` or `id`. Author matchers use a fixed `type` of
- * `"author"` (there is only one author "kind").
+ * How a targeted rule (from `forEntryType`/`forTermTaxonomy`/`forAuthor`/
+ * `forDate`) matches a resolved node: by node kind + type name, optionally
+ * narrowed. Author matchers use a fixed `type` of `"author"`; date matchers use
+ * `"date"` and narrow by `year`/`month`/`day` instead of `slug`/`id`.
  */
 export interface TargetMatcher {
-  readonly nodeKind: "content" | "content-type-archive" | "term" | "author";
+  readonly nodeKind:
+    "content" | "content-type-archive" | "term" | "author" | "date";
   readonly type: string;
   readonly slug?: string;
   readonly id?: number;
+  /** Date-archive narrowing (`forDate`); each is exact when set. */
+  readonly year?: number;
+  readonly month?: number;
+  readonly day?: number;
   /**
    * A runtime predicate over the resolved data (`whereMeta`/`where`/`named`),
    * evaluated after the identity match. Data-dependent, so the resolver must be

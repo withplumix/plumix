@@ -17,6 +17,7 @@ import type {
 import type {
   ArchiveData,
   AuthorArchiveData,
+  DateArchiveData,
   EntryData,
   ErrorData,
   FrontPageData,
@@ -61,6 +62,11 @@ export function author(
   template: TemplateEntry<AuthorArchiveData>,
 ): TemplateRule {
   return rule("author", template);
+}
+
+/** A date archive (any year/month/day). */
+export function date(template: TemplateEntry<DateArchiveData>): TemplateRule {
+  return rule("date", template);
 }
 
 /** The static front page. */
@@ -280,5 +286,40 @@ export function forAuthor(): AuthorBuilder {
     template: (t) => matchRule({ nodeKind: "author", type: "author" }, t),
     slug: (slug) => authorNode({ slug }),
     id: (id) => authorNode({ id }),
+  };
+}
+
+interface DateSelector {
+  /** Bind the template for the selected period. */
+  template(t: TemplateEntry<DateArchiveData>): TemplateRule;
+}
+
+/**
+ * Target one date archive. Date components are hierarchical (a month has no
+ * meaning without a year), so `forDate` takes them positionally and matches the
+ * archive of that exact granularity: `forDate(2026)` → the year archive,
+ * `forDate(2026, 7)` → that month, `forDate(2026, 7, 21)` → that day. The
+ * generic `date()` tier styles every date archive.
+ */
+export function forDate(year: number): DateSelector;
+export function forDate(year: number, month: number): DateSelector;
+export function forDate(year: number, month: number, day: number): DateSelector;
+export function forDate(
+  year: number,
+  month?: number,
+  day?: number,
+): DateSelector {
+  return {
+    template: (t) =>
+      matchRule(
+        {
+          nodeKind: "date",
+          type: "date",
+          year,
+          ...(month !== undefined ? { month } : {}),
+          ...(day !== undefined ? { day } : {}),
+        },
+        t,
+      ),
   };
 }

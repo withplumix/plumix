@@ -14,6 +14,7 @@ import type { AssetManifest } from "./render/asset-manifest.js";
 import type {
   ArchiveData,
   AuthorArchiveData,
+  DateArchiveData,
   EntryData,
   FrontPageData,
   SearchData,
@@ -21,7 +22,16 @@ import type {
 } from "./render/resolved-entry.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
-import { and, desc, eq, inArray, isNotNull, sql } from "../db/index.js";
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  lt,
+  sql,
+} from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
@@ -31,6 +41,7 @@ import { getAutosave } from "../revisions/repository.js";
 import { stripReservedMeta } from "../revisions/snapshot-envelope.js";
 import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
 import { notFound, permanentRedirect } from "../runtime/http.js";
+import { dateRange } from "./date-range.js";
 import { resolveEditMode } from "./edit-mode.js";
 import { paginate } from "./paginate.js";
 import { findEntryByPath, findTermByPath } from "./path-chain.js";
@@ -51,6 +62,9 @@ declare module "../hooks/types.js" {
     "resolve:author:data": (
       data: AuthorArchiveData,
     ) => AuthorArchiveData | Promise<AuthorArchiveData>;
+    "resolve:date:data": (
+      data: DateArchiveData,
+    ) => DateArchiveData | Promise<DateArchiveData>;
     "resolve:front-page:data": (
       data: FrontPageData,
     ) => FrontPageData | Promise<FrontPageData>;
@@ -61,6 +75,18 @@ declare module "../hooks/types.js" {
 }
 
 const DEFAULT_ARCHIVE_PER_PAGE = 20;
+
+/**
+ * The public, non-hierarchical entry types — a site's posts, not its standalone
+ * pages. The front page, author archives, and date archives all list this set.
+ */
+function publicListingTypes(ctx: AppContext): string[] {
+  return Array.from(ctx.plugins.entryTypes.entries())
+    .filter(
+      ([, spec]) => spec.isPublic !== false && spec.isHierarchical !== true,
+    )
+    .map(([key]) => key);
+}
 
 // `renderThroughTheme` returns `null` when the theme has no rule for the node
 // and no `fallback` — a 404, per the router-style resolution model.
@@ -128,6 +154,15 @@ export async function resolvePublicRoute(
         templateDeps,
         assetManifest,
       );
+    case "date":
+      return resolveDate(
+        ctx,
+        match.params,
+        theme,
+        document,
+        templateDeps,
+        assetManifest,
+      );
     case "search":
       return resolveSearch(
         ctx,
@@ -152,11 +187,7 @@ async function resolveFrontPage(
   // The latest-posts front feed excludes hierarchical types (pages) — they
   // are standalone content, not blog entries. (A configurable front-page /
   // posts-page model is the larger follow-up.)
-  const publicTypes = Array.from(ctx.plugins.entryTypes.entries())
-    .filter(
-      ([, spec]) => spec.isPublic !== false && spec.isHierarchical !== true,
-    )
-    .map(([key]) => key);
+  const publicTypes = publicListingTypes(ctx);
   const where =
     publicTypes.length === 0
       ? null
@@ -379,11 +410,7 @@ async function resolveAuthor(
   const page = parsePageParam(params.page);
   // Author archives list the same public, non-hierarchical type set as the
   // front page — a person's posts, not their standalone pages.
-  const publicTypes = Array.from(ctx.plugins.entryTypes.entries())
-    .filter(
-      ([, spec]) => spec.isPublic !== false && spec.isHierarchical !== true,
-    )
-    .map(([key]) => key);
+  const publicTypes = publicListingTypes(ctx);
   const where =
     publicTypes.length === 0
       ? null
@@ -432,6 +459,84 @@ async function resolveAuthor(
     title: data.author.name ?? data.author.slug,
   });
   return htmlResponseOrNotFound(html, "public-author-no-template");
+}
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function dateTitle(
+  year: number,
+  month: number | null,
+  day: number | null,
+): string {
+  if (month === null) return String(year);
+  if (day === null) return `${String(year)}-${pad2(month)}`;
+  return `${String(year)}-${pad2(month)}-${pad2(day)}`;
+}
+
+async function resolveDate(
+  ctx: AppContext,
+  params: Record<string, string>,
+  theme: ThemeDescriptor,
+  document: DocumentManifest,
+  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
+  assetManifest: AssetManifest,
+): Promise<Response> {
+  const year = Number(params.year);
+  const month = params.month === undefined ? null : Number(params.month);
+  const day = params.day === undefined ? null : Number(params.day);
+  const range = dateRange(year, month, day);
+  if (range === null) return notFound("public-date-invalid");
+
+  const page = parsePageParam(params.page);
+  // Date archives list the same public, non-hierarchical type set as the front
+  // page, filtered to a published-at window.
+  const publicTypes = publicListingTypes(ctx);
+  const where =
+    publicTypes.length === 0
+      ? null
+      : and(
+          eq(entries.status, "published"),
+          isNotNull(entries.publishedAt),
+          gte(entries.publishedAt, range.start),
+          lt(entries.publishedAt, range.end),
+          inArray(entries.type, publicTypes),
+        );
+  const result = await paginatedEntries(
+    ctx,
+    where,
+    page,
+    DEFAULT_ARCHIVE_PER_PAGE,
+  );
+  if (result.outOfRange) return notFound("public-date-page-out-of-range");
+
+  const initial: DateArchiveData = {
+    kind: "date",
+    year,
+    month,
+    day,
+    entries: await buildResolvedEntries(ctx, result.rows),
+    pagination: {
+      page,
+      perPage: DEFAULT_ARCHIVE_PER_PAGE,
+      total: result.total,
+      pageCount: result.pageCount,
+    },
+  };
+  const data = await ctx.hooks.applyFilter("resolve:date:data", initial);
+  const html = await renderThroughTheme({
+    ctx,
+    theme,
+    document,
+    templateDeps,
+    assetManifest,
+
+    node: { kind: "date", year, month, day },
+    data,
+    title: dateTitle(year, month, day),
+  });
+  return htmlResponseOrNotFound(html, "public-date-no-template");
 }
 
 async function resolveSingle(

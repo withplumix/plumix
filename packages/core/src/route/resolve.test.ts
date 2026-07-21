@@ -808,6 +808,135 @@ describe("resolvePublicRoute — author archive", () => {
   });
 });
 
+describe("resolvePublicRoute — date archive", () => {
+  // Seeds one post per given ISO date, titled by its slug.
+  async function seedDated(
+    h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+    dates: readonly string[],
+  ): Promise<void> {
+    const author = await h.seedUser("admin");
+    for (const iso of dates) {
+      await h.factory.entry.create({
+        type: "post",
+        slug: `post-${iso}`,
+        title: `Post ${iso}`,
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(`${iso}T12:00:00Z`),
+      });
+    }
+  }
+
+  test("/YYYY lists the year's posts and excludes other years", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    await seedDated(h, [
+      "2026-03-10",
+      "2026-11-02",
+      "2025-12-31",
+      "2027-01-01",
+    ]);
+    const response = await h.dispatch(new Request("https://cms.example/2026"));
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("Post 2026-03-10");
+    expect(body).toContain("Post 2026-11-02");
+    expect(body).not.toContain("Post 2025-12-31");
+    expect(body).not.toContain("Post 2027-01-01");
+  });
+
+  test("/YYYY/MM narrows to the month; boundaries are half-open", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    // Month boundaries: Jul 1 in, Jun 30 out, Aug 1 out.
+    await seedDated(h, [
+      "2026-07-01",
+      "2026-07-31",
+      "2026-06-30",
+      "2026-08-01",
+    ]);
+    const response = await h.dispatch(
+      new Request("https://cms.example/2026/07"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("Post 2026-07-01");
+    expect(body).toContain("Post 2026-07-31");
+    expect(body).not.toContain("Post 2026-06-30");
+    expect(body).not.toContain("Post 2026-08-01");
+  });
+
+  test("/YYYY/MM/DD narrows to the single day", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    await seedDated(h, ["2026-07-21", "2026-07-20", "2026-07-22"]);
+    const response = await h.dispatch(
+      new Request("https://cms.example/2026/07/21"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain("Post 2026-07-21");
+    expect(body).not.toContain("Post 2026-07-20");
+    expect(body).not.toContain("Post 2026-07-22");
+  });
+
+  test("an empty period renders the archive (200), not a 404", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const response = await h.dispatch(new Request("https://cms.example/1999"));
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("No entries yet.");
+  });
+
+  test("an impossible date returns 404", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    expect(
+      (await h.dispatch(new Request("https://cms.example/2026/13"))).status,
+    ).toBe(404);
+    expect(
+      (await h.dispatch(new Request("https://cms.example/2026/02/30"))).status,
+    ).toBe(404);
+    expect(
+      (await h.dispatch(new Request("https://cms.example/2026/00"))).status,
+    ).toBe(404);
+  });
+
+  test("pagination: /YYYY/page/2 returns the offset slice", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const dates = Array.from(
+      { length: 25 },
+      (_, i) => `2026-01-${String(i + 1).padStart(2, "0")}`,
+    );
+    await seedDated(h, dates);
+    const response = await h.dispatch(
+      new Request("https://cms.example/2026/page/2"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    // 25 posts, perPage 20 → page 2 has the 5 oldest.
+    expect(body).toContain("Post 2026-01-05");
+    expect(body).toContain("Post 2026-01-01");
+    expect(body).not.toContain("Post 2026-01-25");
+  });
+
+  test("out-of-range page returns 404", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    await seedDated(h, ["2026-05-05"]);
+    const response = await h.dispatch(
+      new Request("https://cms.example/2026/page/9"),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  test("explicit /page/1 canonical-redirects (301) to the bare period", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const response = await h.dispatch(
+      new Request("https://cms.example/2026/07/page/1"),
+    );
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(
+      "https://cms.example/2026/07",
+    );
+  });
+});
+
 const taxonomyPlugin = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",
