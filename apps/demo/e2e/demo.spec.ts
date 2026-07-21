@@ -107,6 +107,32 @@ test("the visual editor boots inside the demo — blocks are selectable, no demo
   await expect(canvas.locator("#plumix-demo-toolbar")).toHaveCount(0);
 });
 
+// Author archives: the post byline links to `/authors/{slug}`, which lists that
+// author's published posts. Public, cookieless — no demo session needed.
+test("the author byline links to the author archive of the author's posts", async ({
+  page,
+}) => {
+  await page.goto("/");
+  // Every post card's meta line carries the author byline as a link.
+  const byline = page.getByTestId("post-meta-author").first();
+  await expect(byline).toBeVisible();
+  await expect(byline).toHaveText("The Plumix Editors");
+  await byline.click();
+
+  // Lands on the author archive, which renders the heading + the author's posts.
+  await page.waitForURL(/\/authors\/the-plumix-editors/);
+  await expect(page.getByTestId("post-list")).toContainText(
+    "Posts by The Plumix Editors",
+  );
+  await expect(page.getByTestId("post-card").first()).toBeVisible();
+});
+
+// A bogus author slug 404s (parity with the other archives).
+test("an unknown author slug returns 404", async ({ page }) => {
+  const res = await page.request.get("/authors/nobody");
+  expect(res.status()).toBe(404);
+});
+
 // Companion guard: the demo pill still appears on an ordinary public page for a
 // session holder — the fix narrows where it's suppressed, it doesn't remove it.
 test("the demo pill still shows on the public site for a session holder", async ({

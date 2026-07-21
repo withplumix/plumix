@@ -7,9 +7,9 @@ import { single } from "./templates/single";
 import { DEFAULT_TOKENS } from "./tokens";
 
 // The `fallback` rule renders every listing route — front page, archive,
-// category, tag, search — by discriminating the data shape. `entry` gives posts
-// the richer article view (and, later, comments); `page` overrides it for the
-// `page` type with a metadata-free layout.
+// category, tag, author, search — by discriminating the data shape. `entry`
+// gives posts the richer article view (and, later, comments); `page` overrides
+// it for the `page` type with a metadata-free layout.
 export const blogTheme = defineTheme({
   templates: [
     fallback(fallbackTemplate),

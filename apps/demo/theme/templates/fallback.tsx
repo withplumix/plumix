@@ -35,7 +35,10 @@ function listingCopy(data: ListingData): {
   }
   if ("contentType" in data) return { heading: "Posts" };
   if ("author" in data) {
-    return { heading: `Posts by ${data.author.name ?? data.author.slug}` };
+    return {
+      heading: `Posts by ${data.author.name ?? data.author.slug}`,
+      emptyMessage: "No posts by this author yet.",
+    };
   }
   return {};
 }

@@ -22,6 +22,7 @@ const AUTHOR_ID = 1;
 const author = {
   id: AUTHOR_ID,
   email: "editorial@plumix.example",
+  slug: "the-plumix-editors",
   name: "The Plumix Editors",
   avatarUrl: "https://i.pravatar.cc/160?img=15",
   role: "admin",
@@ -408,7 +409,7 @@ emit("");
 
 emit("-- Author");
 emit(
-  `INSERT OR IGNORE INTO users (id, email, name, avatar_url, role, meta) VALUES (${author.id}, ${q(author.email)}, ${q(author.name)}, ${q(author.avatarUrl)}, ${q(author.role)}, '{}');`,
+  `INSERT OR IGNORE INTO users (id, email, slug, name, avatar_url, role, meta) VALUES (${author.id}, ${q(author.email)}, ${q(author.slug)}, ${q(author.name)}, ${q(author.avatarUrl)}, ${q(author.role)}, '{}');`,
 );
 emit("");
 
