@@ -1,5 +1,16 @@
 # plumix
 
+## 0.4.0
+
+### Patch Changes
+
+- Updated dependencies [[`47ec8e2`](https://github.com/withplumix/plumix/commit/47ec8e293dc3c0dd54da34c63c449182a302745e), [`e96e27d`](https://github.com/withplumix/plumix/commit/e96e27d5b6e378fb049431871386c7dcc643bff1), [`0ad5a4b`](https://github.com/withplumix/plumix/commit/0ad5a4bd85c8a57b2fe4cc6bc8803795775c6140), [`39b02e8`](https://github.com/withplumix/plumix/commit/39b02e8595e2d28291014d47bfa8f65d16f976f2)]:
+  - @plumix/core@0.4.0
+  - @plumix/blocks@0.4.0
+  - @plumix/admin@0.4.0
+  - @plumix/admin-editor@0.4.0
+  - @plumix/admin-ui@0.4.0
+
 ## 0.3.0
 
 ### Patch Changes

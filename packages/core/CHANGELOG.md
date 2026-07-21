@@ -1,5 +1,96 @@
 # @plumix/core
 
+## 0.4.0
+
+### Minor Changes
+
+- [#1471](https://github.com/withplumix/plumix/pull/1471) [`47ec8e2`](https://github.com/withplumix/plumix/commit/47ec8e293dc3c0dd54da34c63c449182a302745e) Thanks [@nasyrov](https://github.com/nasyrov)! - Add author archives end-to-end: `/authors/{slug}` renders a paginated list of a given author's published entries, themeable like any other archive.
+
+  The full seam is wired: a new `author` `RouteIntent`, framework routes for `/authors/:slug` (+ `/page/:n`), a `resolveAuthor` resolver (the author's published, public-type entries — unknown slug or out-of-range page → 404), an `author` `ResolvedNode`, a generic `author()` template tier, a `forAuthor(slug)` / `forAuthor(id)` targeted builder, and a typed `AuthorArchiveData { author; entries; pagination }`. An author RSS/Atom feed is served at `/authors/{slug}/feed`, and author-archive pages advertise it via `<link rel="alternate">`.
+
+  ```ts
+  defineTheme({
+    templates: [
+      author(AuthorArchive), // every author archive
+      forAuthor().slug("jane").template(JaneArchive), // one author, by slug
+      forAuthor().id(1).template(FounderArchive), // or by id
+    ],
+  });
+  ```
+
+  Authors are addressed by a new **`users.slug`** column (globally unique, mirroring `terms.slug` / `entries.slug`). It is derived from the user's name via `slugify` at creation — falling back to `user`, de-duplicated with a numeric suffix (`jane`, `jane-1`, `jane-2`), and never derived from the email — and is stable across later name changes. `ResolvedAuthor` now carries `slug`, so `data.author` / `entry.author` can link to an author archive.
+
+- [#1474](https://github.com/withplumix/plumix/pull/1474) [`e96e27d`](https://github.com/withplumix/plumix/commit/e96e27d5b6e378fb049431871386c7dcc643bff1) Thanks [@nasyrov](https://github.com/nasyrov)! - Add date archives end-to-end: `/YYYY`, `/YYYY/MM`, and `/YYYY/MM/DD` render paginated lists of entries published in that period.
+
+  The same seam as author archives: a `date` `RouteIntent`, numeric-constrained framework routes for the three granularities (+ `/page/:n`), a `resolveDate` resolver (a half-open `publishedAt` range query — an empty period renders the archive, an impossible date like Feb 30 or an out-of-range page → 404), a `date` `ResolvedNode`, a generic `date()` template tier, a `forDate(year[, month[, day]])` targeted builder, and a typed `DateArchiveData { year; month; day; entries; pagination }`. RSS/Atom feeds are served at `/YYYY[/MM[/DD]]/feed` and advertised on the archive page via `<link rel="alternate">`.
+
+  ```ts
+  defineTheme({
+    templates: [
+      date(DateArchive), // every date archive
+      forDate(2026).template(YearInReview), // the /2026 year archive
+      forDate(2026, 12, 25).template(Holiday), // the /2026/12/25 day archive
+    ],
+  });
+  ```
+
+  `forDate` matches one exact granularity — `forDate(2026)` targets the year archive, not that year's month/day archives.
+
+- [#1475](https://github.com/withplumix/plumix/pull/1475) [`0ad5a4b`](https://github.com/withplumix/plumix/commit/0ad5a4bd85c8a57b2fe4cc6bc8803795775c6140) Thanks [@nasyrov](https://github.com/nasyrov)! - Let plugins register their own archive types — a URL pattern set + resolver + typed data + builder + feed — with no core changes, opening the previously-closed `RouteIntent`/resolver seam.
+
+  `ctx.registerArchiveType(name, { routes, resolve, feed? })` adds a whole archive: matched URLs dispatch to the resolver (which returns `{ data, title }` or `null` → 404), and the data templates through `forArchiveType(name)` — a targeted builder that autocompletes and types `data` from an augmentable `ArchiveTypeRegistry`, exactly like `forEntryType` / `forTermTaxonomy`.
+
+  ```ts
+  // plugin
+  ctx.registerArchiveType("event-series", {
+    routes: ["/events/:series", "/events/:series/page/:page(\\d+)"],
+    resolve: (ctx, params) =>
+      params.series
+        ? { data: { kind: "custom", name: "event-series", series: params.series, ... }, title: `…` }
+        : null,
+    feed: { routes: ["/events/:series/feed"], filter: (ctx, params) => /* SQL | null */ },
+  });
+
+  // typing (declare once)
+  declare module "@plumix/core" {
+    interface ArchiveTypeRegistry {
+      "event-series": { data: EventSeriesData };
+    }
+  }
+
+  // theme
+  defineTheme({ templates: [forArchiveType("event-series").template(EventArchive)] })
+  ```
+
+  The five built-in archives (single/archive/taxonomy/author/date) are unchanged and keep working — the generalization adds a `custom` `RouteIntent` + `ResolvedNode` kind alongside them.
+
+  Also reworks the feed subsystem: a registered archive can own an RSS/Atom feed (its base route serves both formats), and **nested-term feeds no longer 404** — a nested term's feed is served at its nested path (`/region/europe/france/feed`) when the taxonomy exposes hierarchical URLs.
+
+- [#1469](https://github.com/withplumix/plumix/pull/1469) [`39b02e8`](https://github.com/withplumix/plumix/commit/39b02e8595e2d28291014d47bfa8f65d16f976f2) Thanks [@nasyrov](https://github.com/nasyrov)! - Give `forTermTaxonomy` the same predicate/named-template selectors `forEntryType` already has, so a template can target term archives by term meta or an arbitrary predicate:
+
+  ```ts
+  defineTheme({
+    templates: [
+      forTermTaxonomy("category")
+        .whereMeta("featured", true)
+        .template(FeaturedArchive),
+      forTermTaxonomy("category")
+        .where((data) => data.term.meta.pinned === 1)
+        .template(PinnedArchive),
+      forTermTaxonomy("category")
+        .named("spotlight", "Spotlight")
+        .template(Spotlight),
+    ],
+  });
+  ```
+
+  `whereMeta` keys and values are typed against the taxonomy's meta projection (declare `meta` in `TermTaxonomyRegistry` alongside `registerTermTaxonomy`, exported as `TermMetaOf<K>`); `where` receives the resolved `TaxonomyData`; `named` registers an author-selectable term template matched from stored term meta. Like entry predicates, a term predicate rule never matches when the resolved data is absent.
+
+### Patch Changes
+
+- Updated dependencies [[`47ec8e2`](https://github.com/withplumix/plumix/commit/47ec8e293dc3c0dd54da34c63c449182a302745e)]:
+  - @plumix/blocks@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
