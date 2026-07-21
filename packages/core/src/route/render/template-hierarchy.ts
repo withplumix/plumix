@@ -20,7 +20,6 @@ export type ResolvedNode =
   | ResolvedContentNode
   | ResolvedContentTypeArchive
   | ResolvedFrontPage
-  | ResolvedPostsPage
   | ResolvedSearch;
 
 interface ResolvedTermNode {
@@ -46,15 +45,6 @@ interface ResolvedFrontPage {
   readonly kind: "front-page";
 }
 
-/**
- * The "posts page" — when a site assigns a page as the blog home in
- * Settings → Reading. Falls through to `home` then `index`. Distinct from
- * `front-page` because the front page may or may not be the posts page.
- */
-interface ResolvedPostsPage {
-  readonly kind: "posts-page";
-}
-
 interface ResolvedSearch {
   readonly kind: "search";
 }
@@ -67,7 +57,6 @@ const GENERIC_TIER_FOR_NODE: Record<ResolvedNode["kind"], GenericTier> = {
   "content-type-archive": "archive",
   term: "taxonomy",
   "front-page": "frontPage",
-  "posts-page": "postsPage",
   search: "search",
 };
 

@@ -14,8 +14,6 @@ export function templateNodeLabel(node: ResolvedNode): string {
       return `${node.entryType} archive`;
     case "front-page":
       return "front page";
-    case "posts-page":
-      return "posts page";
     case "search":
       return "search";
   }

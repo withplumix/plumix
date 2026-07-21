@@ -61,13 +61,6 @@ export function frontPage(
   return rule("frontPage", template);
 }
 
-/** The posts listing (blog home). */
-export function postsPage(
-  template: TemplateEntry<FrontPageData>,
-): TemplateRule {
-  return rule("postsPage", template);
-}
-
 /** Search results. */
 export function search(template: TemplateEntry<SearchData>): TemplateRule {
   return rule("search", template);
