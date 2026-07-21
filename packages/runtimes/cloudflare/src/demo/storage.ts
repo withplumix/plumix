@@ -11,6 +11,23 @@ const SAFE_IDENTIFIER = /^[a-z_][a-z0-9_]*$/i;
 /** Marker table written after a successful bootstrap, checked for idempotency. */
 const READY_TABLE = "_plumix_demo_ready";
 
+/**
+ * A stable version tag for the bootstrap SQL (schema migrations + seed),
+ * stamped into the ready marker. When a deploy changes the schema or seed the
+ * tag changes, so a DO persisted with the old bootstrap re-initializes on its
+ * next request instead of serving a stale schema (which would break any query
+ * touching a new column). FNV-1a — cheap, synchronous, dependency-free; only
+ * change-detection is needed, not cryptographic strength.
+ */
+function bootstrapVersion(bootstrapSql: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < bootstrapSql.length; i += 1) {
+    hash ^= bootstrapSql.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16);
+}
+
 export interface DemoSqlExecutor {
   /** Run a single SQL statement (no bindings). */
   exec(sql: string): Promise<void>;
@@ -67,26 +84,33 @@ function stripStatement(statement: string): string {
 
 /**
  * Apply the bootstrap SQL (schema migrations + seed content, concatenated)
- * to a fresh demo database. Idempotent: a database that already has user
- * tables is left untouched, so re-entry (a second request racing the first,
- * or a persisted DO revived after eviction) neither throws nor duplicates
- * seed rows. Returns whether it initialized.
+ * to a demo database. Idempotent *at a version*: a database already bootstrapped
+ * from the same SQL is left untouched, so re-entry (a second request racing the
+ * first, or a persisted DO revived after eviction) neither throws nor duplicates
+ * seed rows. When the bootstrap SQL differs from what the marker records — a
+ * deploy changed the schema or seed — the stale tables are dropped and the new
+ * bootstrap is applied, so a persisted showcase DO heals itself rather than
+ * serving an outdated schema. Returns whether it (re)initialized.
  */
 export async function initializeDemoStorage(
   sql: DemoSqlExecutor,
   bootstrapSql: string,
 ): Promise<boolean> {
-  if (await isInitialized(sql)) return false;
-  // Clear any tables a previously-failed bootstrap left behind, so a retry
-  // starts from an empty database rather than tripping `CREATE TABLE` on an
-  // already-existing table. A no-op on a fresh DO.
+  const version = bootstrapVersion(bootstrapSql);
+  if (await isInitializedAtVersion(sql, version)) return false;
+  // Fresh DO, a previously-failed partial bootstrap, or a stale schema/seed
+  // from an earlier deploy: drop everything (including any old marker) so the
+  // re-apply starts clean rather than tripping `CREATE TABLE` on an existing
+  // table. Dropping the stale schema is what heals a persisted showcase DO.
   await dropDemoTables(sql);
   for (const statement of splitStatements(bootstrapSql)) {
     await sql.exec(statement);
   }
-  // Written last: only a fully-applied bootstrap is marked ready, so a partial
-  // failure leaves no marker and the next attempt re-runs from scratch.
-  await sql.exec(`CREATE TABLE ${READY_TABLE} (ready INTEGER)`);
+  // Written last and stamped with the version: only a fully-applied bootstrap
+  // is marked ready (a partial failure leaves no marker and re-runs), and a
+  // later deploy whose SQL differs sees the mismatch and re-bootstraps.
+  await sql.exec(`CREATE TABLE ${READY_TABLE} (version TEXT NOT NULL)`);
+  await sql.exec(`INSERT INTO ${READY_TABLE} (version) VALUES ('${version}')`);
   return true;
 }
 
@@ -113,11 +137,19 @@ export async function dropDemoTables(sql: DemoSqlExecutor): Promise<void> {
   await sql.exec("PRAGMA foreign_keys = ON");
 }
 
-async function isInitialized(sql: DemoSqlExecutor): Promise<boolean> {
-  const rows = await sql.query(
-    `SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '${READY_TABLE}' LIMIT 1`,
-  );
-  return rows.length > 0;
+async function isInitializedAtVersion(
+  sql: DemoSqlExecutor,
+  version: string,
+): Promise<boolean> {
+  try {
+    const rows = await sql.query(`SELECT version FROM ${READY_TABLE} LIMIT 1`);
+    return rows[0]?.version === version;
+  } catch {
+    // No marker table (a fresh DO), or a pre-versioning marker with no
+    // `version` column (bootstrapped by an older deploy) — either way, treat
+    // it as stale and (re)bootstrap from the current SQL.
+    return false;
+  }
 }
 
 async function listUserTables(sql: DemoSqlExecutor): Promise<string[]> {
