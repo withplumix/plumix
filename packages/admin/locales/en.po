@@ -638,6 +638,11 @@ msgstr ""
 #~ msgstr "Zoom out"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+#~ msgid "userEdit.slug.format"
+#~ msgstr "Slug must be lowercase letters, numbers, and dashes."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -1037,6 +1042,11 @@ msgstr "Author"
 #: src/lib/user-role-labels.ts
 msgid "userRole.long.author"
 msgstr "Author — publish own entries"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.slug.label"
+msgstr "Author slug"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -3494,6 +3504,11 @@ msgid "termForm.slug.format"
 msgstr "Slug may only contain lowercase letters, digits, and hyphens."
 
 #. js-lingui-explicit-id
+#: src/lib/slug.ts
+msgid "admin.slug.format"
+msgstr "Slug must be lowercase letters, numbers, and dashes."
+
+#. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.keyword.smtp"
 msgstr "smtp"
@@ -3614,6 +3629,11 @@ msgstr "That account is disabled."
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.accountDisabled"
 msgstr "That account is disabled."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.slugTaken"
+msgstr "That author slug is already taken. Choose a different one."
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
@@ -4020,6 +4040,11 @@ msgstr "Use the bare domain — no protocol, no path."
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.useTheirs"
 msgstr "Use theirs"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.slug.description"
+msgstr "Used in this author's archive URL under /authors/. Changing it breaks existing links to the old address."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
