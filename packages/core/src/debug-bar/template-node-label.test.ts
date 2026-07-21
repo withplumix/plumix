@@ -24,7 +24,6 @@ describe("templateNodeLabel", () => {
       templateNodeLabel({ kind: "content-type-archive", entryType: "post" }),
     ).toBe("post archive");
     expect(templateNodeLabel({ kind: "front-page" })).toBe("front page");
-    expect(templateNodeLabel({ kind: "posts-page" })).toBe("posts page");
     expect(templateNodeLabel({ kind: "search" })).toBe("search");
   });
 });

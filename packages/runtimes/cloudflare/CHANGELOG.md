@@ -1,5 +1,13 @@
 # @plumix/runtime-cloudflare
 
+## 0.5.0
+
+### Minor Changes
+
+- [#1467](https://github.com/withplumix/plumix/pull/1467) [`bff5961`](https://github.com/withplumix/plumix/commit/bff5961e126add12728750da995507f1a1124ae7) Thanks [@nasyrov](https://github.com/nasyrov)! - Move the demo sandbox's "Try the editor" call-to-action into the floating demo pill and redesign the loading interstitial.
+
+  Anonymous visitors on the read-only showcase now get a "Try the editor" button in the demo pill (previously it lived in the example theme's header), while session holders keep the countdown / reset / deploy pill. The pill is now injected for anonymous requests too, with the variant chosen per request from the demo session cookie. The `/demo` provisioning screen is a centered, on-brand card with a single loading indicator, replacing the browser-default text pinned to the top-left.
+
 ## 0.4.0
 
 ### Minor Changes

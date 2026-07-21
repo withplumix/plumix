@@ -45,7 +45,6 @@ export {
   frontPage,
   NAMED_TEMPLATE_META_KEY,
   notFound,
-  postsPage,
   search,
   serverError,
   taxonomy,
