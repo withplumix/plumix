@@ -55,6 +55,7 @@ export type {
   EntryTypeName,
   EntryTypeRegistry,
   MetaOf,
+  TermMetaOf,
   TermTaxonomyName,
   TermTaxonomyRegistry,
   TermProjection,

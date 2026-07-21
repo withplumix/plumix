@@ -121,7 +121,7 @@ declare module "../../template-registry.js" {
     product: { entry: Product; meta: { onSale: boolean } };
   }
   interface TermTaxonomyRegistry {
-    brand: { term: Brand };
+    brand: { term: Brand; meta: { featured: boolean } };
   }
 }
 
@@ -254,6 +254,25 @@ describe("targeted builders — name checking and data typing", () => {
     // @ts-expect-error - onSale is a boolean, not a string
     forEntryType("product").whereMeta("onSale", "yes");
   });
+
+  test("forTermTaxonomy.whereMeta types keys and values against the meta projection", () => {
+    forTermTaxonomy("brand")
+      .whereMeta("featured", true)
+      .template(() => null);
+    // @ts-expect-error - "nope" is not a meta key of brand
+    forTermTaxonomy("brand").whereMeta("nope", true);
+    // @ts-expect-error - featured is a boolean, not a string
+    forTermTaxonomy("brand").whereMeta("featured", "yes");
+  });
+
+  test("forTermTaxonomy.where types data from the term projection", () => {
+    forTermTaxonomy("brand")
+      .where((data) => {
+        expectTypeOf(data).toEqualTypeOf<TaxonomyData<Brand>>();
+        return data.term.logoUrl !== null;
+      })
+      .template(() => null);
+  });
 });
 
 describe("resolveTemplate — predicate rules (whereMeta / where / named)", () => {
@@ -325,6 +344,72 @@ describe("resolveTemplate — predicate rules (whereMeta / where / named)", () =
       entry(() => null),
     ];
     expect(resolveTemplate(rules, postNode)?.tier).toBe("entry");
+  });
+});
+
+describe("resolveTemplate — term predicate rules (whereMeta / where / named)", () => {
+  const catTerm: ResolvedNode = {
+    kind: "term",
+    taxonomy: "category",
+    slug: "news",
+    databaseId: 1,
+  };
+  const termData = (meta: Record<string, unknown>): TemplateData =>
+    ({ kind: "taxonomy", term: { meta } }) as unknown as TemplateData;
+
+  test("whereMeta matches when the term-meta value equals; else falls through", () => {
+    const rules = [
+      forTermTaxonomy("category")
+        .whereMeta("featured", true)
+        .template(() => null),
+      taxonomy(() => null),
+    ];
+    expect(
+      resolveTemplate(rules, catTerm, termData({ featured: true }))?.match,
+    ).toBeDefined();
+    expect(
+      resolveTemplate(rules, catTerm, termData({ featured: false }))?.tier,
+    ).toBe("taxonomy");
+  });
+
+  test("where evaluates an arbitrary predicate over the resolved data", () => {
+    const rules = [
+      forTermTaxonomy("category")
+        .where((data) => data.term.meta.pinned === 1)
+        .template(() => null),
+      taxonomy(() => null),
+    ];
+    expect(
+      resolveTemplate(rules, catTerm, termData({ pinned: 1 }))?.match,
+    ).toBeDefined();
+    expect(resolveTemplate(rules, catTerm, termData({ pinned: 0 }))?.tier).toBe(
+      "taxonomy",
+    );
+  });
+
+  test("named matches the stored template choice and carries its label", () => {
+    const rule = forTermTaxonomy("category")
+      .named("spotlight", "Spotlight")
+      .template(() => null);
+    expect(rule.match?.named).toEqual({ id: "spotlight", label: "Spotlight" });
+    expect(
+      resolveTemplate(
+        [rule],
+        catTerm,
+        termData({ [NAMED_TEMPLATE_META_KEY]: "spotlight" }),
+      ),
+    ).toBe(rule);
+    expect(resolveTemplate([rule], catTerm, termData({}))).toBeUndefined();
+  });
+
+  test("a predicate rule never matches when data is absent", () => {
+    const rules = [
+      forTermTaxonomy("category")
+        .whereMeta("featured", true)
+        .template(() => null),
+      taxonomy(() => null),
+    ];
+    expect(resolveTemplate(rules, catTerm)?.tier).toBe("taxonomy");
   });
 });
 
