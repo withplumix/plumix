@@ -1,5 +1,16 @@
 # plumix
 
+## 0.3.0
+
+### Patch Changes
+
+- Updated dependencies [[`4cdb59e`](https://github.com/withplumix/plumix/commit/4cdb59ed70c2d83d5b1461a754970709cba92910)]:
+  - @plumix/core@0.3.0
+  - @plumix/admin@0.3.0
+  - @plumix/admin-editor@0.3.0
+  - @plumix/blocks@0.3.0
+  - @plumix/admin-ui@0.3.0
+
 ## 0.2.0
 
 ### Patch Changes
