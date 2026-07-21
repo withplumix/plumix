@@ -3,15 +3,10 @@ import { DEMO_EXPIRES_COOKIE_NAME } from "./session.js";
 /** Where "Deploy your own" sends the visitor. */
 const DEPLOY_URL = "https://github.com/withplumix/plumix";
 
-/**
- * A floating pill injected into the demo's HTML responses: a "Demo" badge, a
- * live countdown to session expiry, a reset control, and a deploy CTA. Plain
- * HTML + inline styles + a small script — no dependencies. The countdown is
- * client-side: it reads the readable `plumix_demo_expires` cookie (an epoch-ms
- * expiry set alongside the session) rather than any server-rendered time.
- */
-export function renderDemoToolbar(): string {
-  return `
+// Shared chrome for both pill variants: the dark rounded bar pinned bottom
+// centre. `.pdt-note` is the anonymous tagline; `.pdt-time` the session
+// countdown (tabular so it doesn't jitter as digits change).
+const TOOLBAR_STYLE = `
 <style>
   #plumix-demo-toolbar {
     position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
@@ -25,6 +20,7 @@ export function renderDemoToolbar(): string {
   }
   #plumix-demo-toolbar .pdt-brand { font-weight: 700; }
   #plumix-demo-toolbar .pdt-time { opacity: 0.7; font-variant-numeric: tabular-nums; }
+  #plumix-demo-toolbar .pdt-note { opacity: 0.7; }
   #plumix-demo-toolbar .pdt-sep { width: 1px; height: 16px; background: rgba(255, 255, 255, 0.18); }
   #plumix-demo-toolbar a { color: #fff; }
   #plumix-demo-toolbar .pdt-reset {
@@ -38,11 +34,17 @@ export function renderDemoToolbar(): string {
   #plumix-demo-toolbar .pdt-deploy-short { display: none; }
   @media (max-width: 420px) {
     #plumix-demo-toolbar { gap: 8px; padding: 6px 6px 6px 13px; font-size: 12px; }
+    #plumix-demo-toolbar .pdt-note { display: none; }
     #plumix-demo-toolbar .pdt-deploy { padding: 6px 12px; }
     #plumix-demo-toolbar .pdt-deploy-full { display: none; }
     #plumix-demo-toolbar .pdt-deploy-short { display: inline; }
   }
-</style>
+</style>`;
+
+// Session-holder pill: a live countdown to expiry, a reset control, and a
+// deploy CTA. The countdown is client-side — it reads the readable
+// `plumix_demo_expires` cookie rather than any server-rendered time.
+const SESSION_TOOLBAR = `
 <div id="plumix-demo-toolbar" role="region" aria-label="Plumix demo">
   <span class="pdt-brand">Demo</span>
   <span class="pdt-time" id="plumix-demo-time">—</span>
@@ -69,29 +71,44 @@ export function renderDemoToolbar(): string {
   setInterval(tick, 30000);
 })();
 </script>`;
+
+// Anonymous pill: the read-only showcase's single entry point into the editor.
+// "Try the editor" hits `/demo`, which mints a session and redirects to admin.
+const ANONYMOUS_TOOLBAR = `
+<div id="plumix-demo-toolbar" role="region" aria-label="Plumix demo">
+  <span class="pdt-brand">Demo</span>
+  <span class="pdt-note">read-only preview</span>
+  <span class="pdt-sep"></span>
+  <a class="pdt-deploy" href="/demo" data-testid="try-editor">Try the editor</a>
+</div>`;
+
+/**
+ * A floating pill injected into the demo's HTML responses. Plain HTML + inline
+ * styles + a small script — no dependencies. A session holder gets the
+ * countdown/reset/deploy pill; an anonymous visitor on the read-only showcase
+ * gets the "Try the editor" CTA.
+ */
+export function renderDemoToolbar(hasSession: boolean): string {
+  return `${TOOLBAR_STYLE}${hasSession ? SESSION_TOOLBAR : ANONYMOUS_TOOLBAR}`;
 }
 
 /** Insert the toolbar just before `</body>`; a no-op on non-HTML documents. */
-export function injectDemoToolbar(html: string): string {
+export function injectDemoToolbar(html: string, hasSession: boolean): string {
   if (!html.includes("</body>")) return html;
-  return html.replace("</body>", `${renderDemoToolbar()}</body>`);
+  return html.replace("</body>", `${renderDemoToolbar(hasSession)}</body>`);
 }
 
 /**
  * Whether the floating demo toolbar belongs on this request's document. It's a
- * session-holder's public-site affordance, so it's skipped for:
- *   - cookieless traffic (the anonymous showcase) — `hasSession` is false;
+ * public-site affordance (the CTA for anonymous visitors, the session pill for
+ * session holders), so it's skipped only for:
  *   - the admin (`/_plumix/*`);
  *   - the editor's canvas iframe — that loads the entry's *public* route with
  *     `?plumix.edit`, so it isn't under `/_plumix/*`, yet a fixed pill would
  *     float inside the editing surface. This is the load-bearing case: without
  *     the `plumix.edit` check the pill leaks into the visual editor.
  */
-export function shouldInjectDemoToolbar(
-  request: Request,
-  hasSession: boolean,
-): boolean {
-  if (!hasSession) return false;
+export function shouldInjectDemoToolbar(request: Request): boolean {
   const url = new URL(request.url);
   if (url.pathname.startsWith("/_plumix/")) return false;
   if (url.searchParams.has("plumix.edit")) return false;

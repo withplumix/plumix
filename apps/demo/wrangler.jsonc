@@ -11,6 +11,12 @@
   // deploys reconciled.
   "workers_dev": false,
   "routes": [{ "pattern": "demo.plumix.dev", "custom_domain": true }],
+  // Turnstile site key: public (it ships in the loading page HTML), so it lives
+  // in config as the source of truth rather than a dashboard var that a deploy
+  // would sweep. The matching secret key stays a Worker secret (never in git).
+  "vars": {
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAD52mjpzgTFuaf0I",
+  },
   "d1_databases": [
     {
       "binding": "DB",

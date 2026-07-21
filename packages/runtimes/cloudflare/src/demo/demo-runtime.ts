@@ -126,8 +126,8 @@ export function demoRuntime(
         }
 
         const response = await handle(request, env, ctx);
-        return shouldInjectDemoToolbar(request, hasSession)
-          ? injectToolbar(response)
+        return shouldInjectDemoToolbar(request)
+          ? injectToolbar(response, hasSession)
           : response;
       };
     },
@@ -155,7 +155,10 @@ function activeTurnstile(
 }
 
 /** Inject the demo toolbar into HTML responses; pass everything else through. */
-async function injectToolbar(response: Response): Promise<Response> {
+async function injectToolbar(
+  response: Response,
+  hasSession: boolean,
+): Promise<Response> {
   // Skip null-body statuses (204/304/…) — `new Response(body, { status })`
   // throws for those — and any non-HTML payload.
   if (
@@ -164,7 +167,7 @@ async function injectToolbar(response: Response): Promise<Response> {
   ) {
     return response;
   }
-  const html = injectDemoToolbar(await response.text());
+  const html = injectDemoToolbar(await response.text(), hasSession);
   const headers = new Headers(response.headers);
   headers.delete("content-length");
   return new Response(html, { status: response.status, headers });

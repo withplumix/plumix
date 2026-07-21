@@ -23,7 +23,8 @@ const SHOWCASE_SLUG = "typography-and-elements-a-theme-test-sheet";
 test("visitor enters the demo, creates a post, and it persists", async ({
   page,
 }) => {
-  // The public showcase renders for cookieless visitors, carrying the CTA.
+  // The public showcase renders for cookieless visitors; the demo pill carries
+  // the "Try the editor" CTA (it used to live in the theme header).
   await page.goto("/");
   await expect(page.getByTestId("try-editor")).toBeVisible();
   await expect(page.getByTestId("post-card").first()).toBeVisible();
@@ -54,8 +55,8 @@ test("visitor enters the demo, creates a post, and it persists", async ({
     page.locator(CONTENT_ROWS).filter({ hasText: POST_TITLE }).first(),
   ).toBeVisible();
 
-  // With a live session, the public site no longer offers the "Try the
-  // editor" CTA — it's the anonymous showcase's entry point only.
+  // With a live session, the pill swaps to the session controls — the "Try the
+  // editor" CTA is the anonymous showcase's entry point only.
   await page.goto("/");
   await expect(page.getByTestId("post-card").first()).toBeVisible();
   await expect(page.getByTestId("try-editor")).toHaveCount(0);
