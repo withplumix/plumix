@@ -77,7 +77,7 @@ export type TemplateEntry<Data extends TemplateData> =
 /**
  * The fixed set of generic tiers a theme's `templates` array can declare. Each
  * matches one resolved-node kind (`entry`→content, `archive`→content-type
- * archive, `taxonomy`→term, `frontPage`/`postsPage`/`search`), plus `fallback`
+ * archive, `taxonomy`→term, `frontPage`/`search`), plus `fallback`
  * (the universal catch-all) and the `notFound`/`serverError` condition handlers.
  * Type/term-specific matchers arrive in a later slice.
  */
@@ -87,7 +87,6 @@ export type GenericTier =
   | "archive"
   | "taxonomy"
   | "frontPage"
-  | "postsPage"
   | "search"
   | "notFound"
   | "serverError";

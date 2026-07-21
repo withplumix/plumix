@@ -18,7 +18,6 @@ import {
   frontPage,
   NAMED_TEMPLATE_META_KEY,
   notFound,
-  postsPage,
   search,
   serverError,
   taxonomy,
@@ -43,7 +42,6 @@ describe("resolveTemplate — generic tiers", () => {
     archive(() => null),
     taxonomy(() => null),
     frontPage(() => null),
-    postsPage(() => null),
     search(() => null),
     fallback(() => null),
   ];
@@ -56,7 +54,6 @@ describe("resolveTemplate — generic tiers", () => {
       "taxonomy",
     ],
     [{ kind: "front-page" }, "frontPage"],
-    [{ kind: "posts-page" }, "postsPage"],
     [{ kind: "search" }, "search"],
   ])("resolves a node to its matching generic tier (#%#)", (node, tier) => {
     expect(resolveTemplate(rules, node)?.tier).toBe(tier);
