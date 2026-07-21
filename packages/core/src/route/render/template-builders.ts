@@ -2,6 +2,7 @@ import type {
   EntryProjection,
   EntryTypeName,
   MetaOf,
+  TermMetaOf,
   TermProjection,
   TermTaxonomyName,
 } from "../../template-registry.js";
@@ -126,6 +127,14 @@ function metaEquals(
   return (data) => "entry" in data && data.entry.meta[key] === value;
 }
 
+/** A predicate matching when a resolved term's meta value equals `value`. */
+function termMetaEquals(
+  key: string,
+  value: unknown,
+): (data: TemplateData) => boolean {
+  return (data) => "term" in data && data.term.meta[key] === value;
+}
+
 interface EntrySelector<K extends EntryTypeName> {
   /** Bind the template for the selected entry. */
   template(t: TemplateEntry<EntryData<EntryProjection<K>>>): TemplateRule;
@@ -200,6 +209,17 @@ interface TermTaxonomyBuilder<
   slug(slug: string): TaxonomySelector<K>;
   /** Narrow to one term by numeric id. */
   id(id: number): TaxonomySelector<K>;
+  /** Narrow by a term-meta value, typed against the taxonomy's meta projection. */
+  whereMeta<M extends keyof TermMetaOf<K>>(
+    key: M,
+    value: TermMetaOf<K>[M],
+  ): TaxonomySelector<K>;
+  /** Narrow by an arbitrary predicate over the resolved taxonomy data. */
+  where(
+    predicate: (data: TaxonomyData<TermProjection<K>>) => boolean,
+  ): TaxonomySelector<K>;
+  /** Register an author-selectable template, matched from stored term meta. */
+  named(id: string, label: string): TaxonomySelector<K>;
 }
 
 /**
@@ -209,13 +229,24 @@ interface TermTaxonomyBuilder<
 export function forTermTaxonomy<K extends TermTaxonomyName>(
   name: K,
 ): TermTaxonomyBuilder<K> {
+  // Each selector adds its narrowing to the shared term-node prefix.
+  const term = (extra?: Partial<TargetMatcher>): TaxonomySelector<K> => ({
+    template: (t) => matchRule({ nodeKind: "term", type: name, ...extra }, t),
+  });
   return {
     template: (t) => matchRule({ nodeKind: "term", type: name }, t),
-    slug: (slug) => ({
-      template: (t) => matchRule({ nodeKind: "term", type: name, slug }, t),
-    }),
-    id: (id) => ({
-      template: (t) => matchRule({ nodeKind: "term", type: name, id }, t),
-    }),
+    slug: (slug) => term({ slug }),
+    id: (id) => term({ id }),
+    whereMeta: (key, value) =>
+      term({ predicate: termMetaEquals(String(key), value) }),
+    where: (predicate) =>
+      term({
+        predicate: predicate as unknown as (d: TemplateData) => boolean,
+      }),
+    named: (id, label) =>
+      term({
+        named: { id, label },
+        predicate: termMetaEquals(NAMED_TEMPLATE_META_KEY, id),
+      }),
   };
 }

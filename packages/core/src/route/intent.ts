@@ -3,9 +3,6 @@
  * into a Response by the public-route resolver. URL params (slug, term,
  * page) live on `RouteMatch.params`, not on the intent itself — the
  * intent describes the *route shape*, the match carries the request.
- *
- * `search` / `front-page` / `handler` / `redirect` land when a plugin
- * actually needs them.
  */
 export type RouteIntent =
   | { readonly kind: "single"; readonly entryType: string }
