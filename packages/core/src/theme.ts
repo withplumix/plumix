@@ -93,7 +93,7 @@ export type GenericTier =
   | "serverError";
 
 /**
- * How a targeted rule (from `forEntryType`/`forTaxonomy`) matches a resolved
+ * How a targeted rule (from `forEntryType`/`forTermTaxonomy`) matches a resolved
  * node: by node kind + type name, optionally narrowed to one entry/term by
  * `slug` or `id`.
  */

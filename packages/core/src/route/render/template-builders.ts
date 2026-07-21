@@ -2,8 +2,8 @@ import type {
   EntryProjection,
   EntryTypeName,
   MetaOf,
-  TaxonomyName,
   TermProjection,
+  TermTaxonomyName,
 } from "../../template-registry.js";
 import type {
   GenericTier,
@@ -98,7 +98,7 @@ export function templateRules(
 }
 
 // ── Targeted builders ───────────────────────────────────────────────────────
-// `forEntryType`/`forTaxonomy` produce match rules keyed off the registered
+// `forEntryType`/`forTermTaxonomy` produce match rules keyed off the registered
 // names. Each selector types the template to the tier's data shape (with the
 // registry projection) and erases to the union like the generic builders above.
 
@@ -188,12 +188,14 @@ export function forEntryType<K extends EntryTypeName>(
   };
 }
 
-interface TaxonomySelector<K extends TaxonomyName> {
+interface TaxonomySelector<K extends TermTaxonomyName> {
   /** Bind the template for the selected term(s). */
   template(t: TemplateEntry<TaxonomyData<TermProjection<K>>>): TemplateRule;
 }
 
-interface TaxonomyBuilder<K extends TaxonomyName> extends TaxonomySelector<K> {
+interface TermTaxonomyBuilder<
+  K extends TermTaxonomyName,
+> extends TaxonomySelector<K> {
   /** Narrow to one term by slug. */
   slug(slug: string): TaxonomySelector<K>;
   /** Narrow to one term by numeric id. */
@@ -204,9 +206,9 @@ interface TaxonomyBuilder<K extends TaxonomyName> extends TaxonomySelector<K> {
  * Target a registered taxonomy. `name` autocompletes and rejects typos; the
  * template's `data.term` is typed from the taxonomy's term projection.
  */
-export function forTaxonomy<K extends TaxonomyName>(
+export function forTermTaxonomy<K extends TermTaxonomyName>(
   name: K,
-): TaxonomyBuilder<K> {
+): TermTaxonomyBuilder<K> {
   return {
     template: (t) => matchRule({ nodeKind: "term", type: name }, t),
     slug: (slug) => ({

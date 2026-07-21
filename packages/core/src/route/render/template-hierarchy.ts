@@ -1,6 +1,6 @@
 /**
  * Template resolution for the array-based `templates`. `resolveTemplate` walks a
- * theme's rules — targeted matchers (`forEntryType`/`forTaxonomy`) in
+ * theme's rules — targeted matchers (`forEntryType`/`forTermTaxonomy`) in
  * declaration order, then the generic tier for the node's kind, then the
  * universal `fallback`. `resolveErrorTemplate` looks up the 404/500 tiers.
  *
@@ -114,7 +114,7 @@ function matchesNode(
 
 /**
  * Resolve a node to its template rule from a theme's `templates` array:
- * (1) targeted rules (`forEntryType`/`forTaxonomy`, incl. `whereMeta`/`where`/
+ * (1) targeted rules (`forEntryType`/`forTermTaxonomy`, incl. `whereMeta`/`where`/
  * `named` predicates) in declaration order, first match wins; (2) the generic
  * tier for the node's kind; (3) the universal `fallback`. Returns `undefined`
  * when nothing matches — the caller then renders the `notFound` (404) template.

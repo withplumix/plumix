@@ -29,13 +29,13 @@ export interface EntryTypeRegistry {
  * can span multiple entry types, so `data.entries` stays the base
  * `ResolvedEntry[]`, narrowable per-template.
  */
-export interface TaxonomyRegistry {
+export interface TermTaxonomyRegistry {
   category: { term: ResolvedTerm };
   tag: { term: ResolvedTerm };
 }
 
 export type EntryTypeName = keyof EntryTypeRegistry;
-export type TaxonomyName = keyof TaxonomyRegistry;
+export type TermTaxonomyName = keyof TermTaxonomyRegistry;
 
 /** The entry projection for a registered type, defaulting to `ResolvedEntry`. */
 export type EntryProjection<K extends EntryTypeName> =
@@ -44,8 +44,8 @@ export type EntryProjection<K extends EntryTypeName> =
     : ResolvedEntry;
 
 /** The term projection for a registered taxonomy, defaulting to `ResolvedTerm`. */
-export type TermProjection<K extends TaxonomyName> =
-  TaxonomyRegistry[K] extends { term: infer T extends ResolvedTerm }
+export type TermProjection<K extends TermTaxonomyName> =
+  TermTaxonomyRegistry[K] extends { term: infer T extends ResolvedTerm }
     ? T
     : ResolvedTerm;
 
