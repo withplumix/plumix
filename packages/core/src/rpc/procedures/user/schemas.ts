@@ -1,6 +1,7 @@
 import * as v from "valibot";
 
 import { USER_ROLES } from "../../../db/schema/users.js";
+import { slugSchema } from "../../schemas.js";
 import {
   emailField,
   idParam,
@@ -45,6 +46,10 @@ export const userInviteInputSchema = v.object({
 export const userUpdateInputSchema = v.object({
   id: idParam,
   name: v.optional(v.nullable(nameField)),
+  // Author-archive identifier (`/authors/{slug}`). Hand-editable unlike
+  // the auto-dedup at creation — a taken slug surfaces a `slug_taken`
+  // CONFLICT rather than silently appending a suffix.
+  slug: v.optional(slugSchema),
   avatarUrl: v.optional(v.nullable(avatarUrlSchema)),
   role: v.optional(roleSchema),
   meta: v.optional(metaInputSchema),

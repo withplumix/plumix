@@ -64,6 +64,17 @@ export const nameField = v.pipe(
 );
 
 /**
+ * Canonical slug bounds — lowercase ASCII alphanumerics in single-dash
+ * groups, no leading/trailing/double dashes, non-empty, capped length.
+ * Exported as raw building blocks (not a full schema) so the server
+ * `slugSchema` (`procedures/schemas.ts`) and the admin client forms
+ * (`lib/slug.ts`) validate identical rules from one source — a drift here
+ * would let a client-valid slug fail server validation on shape alone.
+ */
+export const SLUG_MAX_LENGTH = 200;
+export const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
  * Canonical row-id shape for RPC inputs. MAX_SAFE_INTEGER cap rejects
  * integer-valued numbers like `1e21` that pass `v.integer()` but lose
  * precision in cache keys and DB comparisons.

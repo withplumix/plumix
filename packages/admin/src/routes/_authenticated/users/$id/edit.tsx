@@ -16,6 +16,7 @@ import { UserEmailField } from "@/components/profile/user-email-field.js";
 import { hasCap } from "@/lib/caps.js";
 import { visibleUserMetaBoxes } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { slugField } from "@/lib/slug.js";
 import { useLabel } from "@/lib/use-label.js";
 import { ROLE_LABEL, ROLE_LABEL_LONG } from "@/lib/user-role-labels.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
@@ -52,6 +53,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -142,6 +144,7 @@ async function invalidateUserCaches(
 
 const profileFormSchema = v.object({
   name: v.pipe(v.string(), v.trim(), v.maxLength(100)),
+  slug: slugField,
   role: v.picklist(USER_ROLES),
   meta: v.record(v.string(), v.unknown()),
 });
@@ -260,12 +263,16 @@ function useUserUpdateMutation({
   return useMutation({
     mutationFn: (values: {
       name: string;
+      slug: string;
       role: UserRole;
       meta: Readonly<Record<string, unknown>>;
     }) =>
       orpc.user.update.call({
         id: target.id,
         name: values.name.length > 0 ? values.name : null,
+        // Only send the slug when it actually changed — skips a needless
+        // column write on name-only edits.
+        ...(values.slug !== target.slug ? { slug: values.slug } : {}),
         // Only send role if the caller can change it AND it actually
         // differs — avoids a needless `user:promote` cap check on the
         // server for name-only edits.
@@ -329,6 +336,7 @@ function UserEditForm({
     resolver: valibotResolver(profileFormSchema),
     defaultValues: {
       name: target.name ?? "",
+      slug: target.slug,
       role: target.role,
       meta: seedFromMetaBoxes(metaBoxes, target.meta),
     },
@@ -409,6 +417,34 @@ function UserEditForm({
                         {...field}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans id="userEdit.slug.label" message="Author slug" />
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        autoComplete="off"
+                        disabled={updateUser.isPending || !canSave}
+                        data-testid="user-edit-slug-input"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      <Trans
+                        id="userEdit.slug.description"
+                        message="Used in this author's archive URL under /authors/. Changing it breaks existing links to the old address."
+                      />
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -841,6 +877,10 @@ const UPDATE_ERROR_MESSAGES: ErrorMessages = {
   email_taken: defineMessage({
     id: "userEdit.error.emailTaken",
     message: "A user with that email already exists.",
+  }),
+  slug_taken: defineMessage({
+    id: "userEdit.error.slugTaken",
+    message: "That author slug is already taken. Choose a different one.",
   }),
 };
 const STATUS_ERROR_MESSAGES: ErrorMessages = {
