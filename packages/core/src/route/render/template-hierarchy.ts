@@ -148,3 +148,87 @@ export function resolveErrorTemplate(
 ): TemplateRule | undefined {
   return rules.find((r) => r.tier === tier);
 }
+
+/**
+ * A short human label for a rule — its tier, or (for a targeted rule) the type
+ * plus any `:slug` / `#id` narrowing. Used by the debug bar and as the
+ * normalize-error slot name.
+ */
+export function ruleLabel(rule: TemplateRule): string {
+  if (rule.tier !== undefined) return rule.tier;
+  const m = rule.match;
+  if (m === undefined) return "?";
+  let sel = "";
+  if (m.slug !== undefined) sel = `:${m.slug}`;
+  else if (m.id !== undefined) sel = `#${m.id}`;
+  const prefix = m.nodeKind === "content-type-archive" ? "archive:" : "";
+  return `${prefix}${m.type}${sel}`;
+}
+
+/** What happened to a rule during resolution. */
+type ResolutionStatus = "matched" | "skipped" | "never-evaluated";
+
+export interface ResolutionStep {
+  readonly label: string;
+  readonly status: ResolutionStatus;
+  /**
+   * Present for a targeted rule carrying a `whereMeta`/`where`/`named`
+   * predicate. `fired` is whether the predicate function actually ran (its
+   * rule's identity matched and `data` was present); `result` is its return.
+   */
+  readonly predicate?: { readonly fired: boolean; readonly result: boolean };
+}
+
+export interface ResolutionTrace {
+  readonly steps: readonly ResolutionStep[];
+  /** The winning rule's label, or `null` when nothing matched (a 404). */
+  readonly winner: string | null;
+}
+
+/**
+ * Replay `resolveTemplate` and classify every rule for the debug bar: which one
+ * won, which targeted rules were evaluated-but-skipped (with their predicate
+ * result), and which were never reached because an earlier zone already won.
+ * Dev-only — `resolveTemplate` stays allocation-free on the render hot path.
+ */
+export function explainTemplateResolution(
+  rules: readonly TemplateRule[],
+  node: ResolvedNode,
+  data?: TemplateData,
+): ResolutionTrace {
+  const winner = resolveTemplate(rules, node, data);
+  // The targeted walk stops at the first matching targeted rule. If the winner
+  // is targeted, only rules up to it were evaluated; otherwise every targeted
+  // rule was tried and skipped.
+  const winnerIsTargeted = winner?.match !== undefined;
+  const winnerIndex = winner ? rules.indexOf(winner) : -1;
+
+  const steps = rules.map((rule, index): ResolutionStep => {
+    const label = ruleLabel(rule);
+    let status: ResolutionStatus;
+    if (rule === winner) {
+      status = "matched";
+    } else if (rule.match !== undefined) {
+      const evaluated = !winnerIsTargeted || index < winnerIndex;
+      status = evaluated ? "skipped" : "never-evaluated";
+    } else {
+      status = "never-evaluated";
+    }
+
+    const match = rule.match;
+    if (match?.predicate !== undefined && status !== "never-evaluated") {
+      // A predicate only runs after identity matches and when data is present.
+      if (data !== undefined && matchesIdentity(match, node)) {
+        return {
+          label,
+          status,
+          predicate: { fired: true, result: match.predicate(data) },
+        };
+      }
+      return { label, status, predicate: { fired: false, result: false } };
+    }
+    return { label, status };
+  });
+
+  return { steps, winner: winner ? ruleLabel(winner) : null };
+}

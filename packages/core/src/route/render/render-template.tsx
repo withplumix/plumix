@@ -22,7 +22,6 @@ import type {
   DocumentMeta,
   DocumentScript,
   TemplateData,
-  TemplateRule,
   ThemeDescriptor,
 } from "../../theme.js";
 import type { EditModeDecision } from "../edit-mode.js";
@@ -49,7 +48,12 @@ import { bundledCssTags, devThemeStylesTag } from "./asset-manifest.js";
 import { injectEditorBootstrap } from "./inject-editor-bootstrap.js";
 import { injectIslandsBootstrap } from "./inject-islands-bootstrap.js";
 import { templateRules } from "./template-builders.js";
-import { resolveErrorTemplate, resolveTemplate } from "./template-hierarchy.js";
+import {
+  explainTemplateResolution,
+  resolveErrorTemplate,
+  resolveTemplate,
+  ruleLabel,
+} from "./template-hierarchy.js";
 
 declare module "../../hooks/types.js" {
   interface FilterRegistry {
@@ -104,15 +108,16 @@ async function renderThroughThemeInner({
   title,
   editMode = LIVE_EDIT_MODE,
 }: RenderArgs): Promise<string | null> {
-  const matched = resolveTemplate(templateRules(theme.templates), node, data);
+  const rules = templateRules(theme.templates);
+  const matched = resolveTemplate(rules, node, data);
   if (matched === undefined) return null;
-  const template = normalizeTemplate(matched.template, pickedLabel(matched));
-  // Dev-only: surface the resolution in the debug bar. `ctx.debug` is the no-op
-  // collector in prod, so this branch tree-shakes.
+  const template = normalizeTemplate(matched.template, ruleLabel(matched));
+  // Dev-only: surface the full resolution walk in the debug bar. `ctx.debug` is
+  // the no-op collector in prod, so this branch tree-shakes.
   if (process.env.PLUMIX_DEV) {
     ctx.debug.record(TEMPLATE_PANEL_ID, {
       nodeLabel: templateNodeLabel(node),
-      picked: pickedLabel(matched),
+      ...explainTemplateResolution(rules, node, data),
     });
   }
   const deps = await loadTemplateDeps(
@@ -589,20 +594,6 @@ function escapeHtml(value: string): string {
 
 function escapeAttr(value: string): string {
   return escapeHtml(value).replace(/"/g, "&quot;");
-}
-
-// A short human label for a matched rule, for the dev debug bar and the
-// normalize-error slot name. Tier rules use their tier; match rules use the
-// type plus any slug/id narrowing.
-function pickedLabel(rule: TemplateRule): string {
-  if (rule.tier !== undefined) return rule.tier;
-  const m = rule.match;
-  if (m === undefined) return "?";
-  let sel = "";
-  if (m.slug !== undefined) sel = `:${m.slug}`;
-  else if (m.id !== undefined) sel = `#${m.id}`;
-  const prefix = m.nodeKind === "content-type-archive" ? "archive:" : "";
-  return `${prefix}${m.type}${sel}`;
 }
 
 function DefaultNotFound() {

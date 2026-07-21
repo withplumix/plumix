@@ -49,7 +49,7 @@ export function DebugKV({
   );
 }
 
-/** A columnar table for list-shaped panel data (queries, spans, candidates). */
+/** A columnar table for list-shaped panel data (queries, spans, resolution rules). */
 export function DebugTable({
   headers,
   rows,

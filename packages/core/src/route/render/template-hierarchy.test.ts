@@ -23,7 +23,12 @@ import {
   serverError,
   taxonomy,
 } from "./template-builders.js";
-import { resolveErrorTemplate, resolveTemplate } from "./template-hierarchy.js";
+import {
+  explainTemplateResolution,
+  resolveErrorTemplate,
+  resolveTemplate,
+  ruleLabel,
+} from "./template-hierarchy.js";
 
 const contentNode: ResolvedNode = {
   kind: "content",
@@ -323,5 +328,197 @@ describe("resolveTemplate — predicate rules (whereMeta / where / named)", () =
       entry(() => null),
     ];
     expect(resolveTemplate(rules, postNode)?.tier).toBe("entry");
+  });
+});
+
+describe("ruleLabel", () => {
+  test("a tier rule is labelled by its tier", () => {
+    expect(ruleLabel(fallback(() => null))).toBe("fallback");
+    expect(ruleLabel(entry(() => null))).toBe("entry");
+    expect(ruleLabel(notFound(() => null))).toBe("notFound");
+  });
+
+  test("a targeted rule is labelled by type plus any slug/id narrowing", () => {
+    expect(ruleLabel(forEntryType("post").template(() => null))).toBe("post");
+    expect(
+      ruleLabel(
+        forEntryType("post")
+          .slug("hello")
+          .template(() => null),
+      ),
+    ).toBe("post:hello");
+    expect(
+      ruleLabel(
+        forEntryType("post")
+          .id(42)
+          .template(() => null),
+      ),
+    ).toBe("post#42");
+    expect(ruleLabel(forEntryType("post").archive.template(() => null))).toBe(
+      "archive:post",
+    );
+  });
+});
+
+describe("explainTemplateResolution", () => {
+  const postNode: ResolvedNode = {
+    kind: "content",
+    entryType: "post",
+    slug: "hello",
+    databaseId: 1,
+  };
+  const entryData = (meta: Record<string, unknown>): TemplateData =>
+    ({ kind: "entry", entry: { meta } }) as unknown as TemplateData;
+
+  test("a targeted rule wins; the generic tier and fallback are never evaluated", () => {
+    const rules = [
+      fallback(() => null),
+      entry(() => null),
+      forEntryType("post").template(() => null),
+    ];
+    const trace = explainTemplateResolution(rules, postNode);
+    expect(trace.winner).toBe("post");
+    expect(trace.steps).toEqual([
+      { label: "fallback", status: "never-evaluated" },
+      { label: "entry", status: "never-evaluated" },
+      { label: "post", status: "matched" },
+    ]);
+  });
+
+  test("targeted rules before the winner are skipped; those after are never evaluated", () => {
+    const rules = [
+      forEntryType("post")
+        .slug("other")
+        .template(() => null),
+      forEntryType("post").template(() => null),
+      forEntryType("post")
+        .slug("hello")
+        .template(() => null),
+    ];
+    const trace = explainTemplateResolution(rules, postNode);
+    expect(trace.winner).toBe("post");
+    expect(trace.steps.map((s) => s.status)).toEqual([
+      "skipped",
+      "matched",
+      "never-evaluated",
+    ]);
+  });
+
+  test("the generic tier wins when no targeted rule matches", () => {
+    const rules = [
+      forEntryType("post")
+        .slug("nope")
+        .template(() => null),
+      entry(() => null),
+      fallback(() => null),
+    ];
+    const trace = explainTemplateResolution(rules, postNode);
+    expect(trace.winner).toBe("entry");
+    expect(trace.steps.map((s) => [s.label, s.status])).toEqual([
+      ["post:nope", "skipped"],
+      ["entry", "matched"],
+      ["fallback", "never-evaluated"],
+    ]);
+  });
+
+  test("fallback wins when neither a targeted rule nor the node's tier is present", () => {
+    const rules = [
+      forEntryType("post")
+        .slug("nope")
+        .template(() => null),
+      fallback(() => null),
+    ];
+    const trace = explainTemplateResolution(rules, postNode);
+    expect(trace.winner).toBe("fallback");
+    expect(trace.steps.map((s) => s.status)).toEqual(["skipped", "matched"]);
+  });
+
+  test("no match and no fallback yields a null winner (a 404)", () => {
+    const trace = explainTemplateResolution([archive(() => null)], postNode);
+    expect(trace.winner).toBeNull();
+    expect(trace.steps).toEqual([
+      { label: "archive", status: "never-evaluated" },
+    ]);
+  });
+
+  test("a predicate that fires and passes marks the rule matched with its result", () => {
+    const rules = [
+      forEntryType("post")
+        .whereMeta("featured", true)
+        .template(() => null),
+      entry(() => null),
+    ];
+    const trace = explainTemplateResolution(
+      rules,
+      postNode,
+      entryData({ featured: true }),
+    );
+    expect(trace.winner).toBe("post");
+    expect(trace.steps[0]).toEqual({
+      label: "post",
+      status: "matched",
+      predicate: { fired: true, result: true },
+    });
+    expect(trace.steps[1]?.status).toBe("never-evaluated");
+  });
+
+  test("a predicate that fires and fails is skipped with its result recorded", () => {
+    const rules = [
+      forEntryType("post")
+        .whereMeta("featured", true)
+        .template(() => null),
+      entry(() => null),
+    ];
+    const trace = explainTemplateResolution(
+      rules,
+      postNode,
+      entryData({ featured: false }),
+    );
+    expect(trace.winner).toBe("entry");
+    expect(trace.steps[0]).toEqual({
+      label: "post",
+      status: "skipped",
+      predicate: { fired: true, result: false },
+    });
+  });
+
+  test("a predicate does not fire when the identity does not match", () => {
+    // The rule targets `page`, but the node is a `post` — identity fails before
+    // the predicate is ever consulted.
+    const rules = [
+      forEntryType("page")
+        .whereMeta("featured", true)
+        .template(() => null),
+      entry(() => null),
+    ];
+    const trace = explainTemplateResolution(
+      rules,
+      postNode,
+      entryData({ featured: true }),
+    );
+    expect(trace.winner).toBe("entry");
+    expect(trace.steps[0]).toEqual({
+      label: "page",
+      status: "skipped",
+      predicate: { fired: false, result: false },
+    });
+  });
+
+  test("a predicate does not fire when data is absent", () => {
+    // Identity matches, but with no `data` the predicate can't be consulted —
+    // so it never fires, mirroring `resolveTemplate`'s own short-circuit.
+    const rules = [
+      forEntryType("post")
+        .whereMeta("featured", true)
+        .template(() => null),
+      entry(() => null),
+    ];
+    const trace = explainTemplateResolution(rules, postNode);
+    expect(trace.winner).toBe("entry");
+    expect(trace.steps[0]).toEqual({
+      label: "post",
+      status: "skipped",
+      predicate: { fired: false, result: false },
+    });
   });
 });
