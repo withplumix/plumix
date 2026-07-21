@@ -638,6 +638,11 @@ msgstr ""
 #~ msgstr "缩小"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+#~ msgid "userEdit.slug.format"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — 子项无法被选为父项。"
@@ -3499,8 +3504,8 @@ msgid "termForm.slug.format"
 msgstr "别名只能包含小写字母、数字和连字符。"
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/$id/edit.tsx
-msgid "userEdit.slug.format"
+#: src/lib/slug.ts
+msgid "admin.slug.format"
 msgstr ""
 
 #. js-lingui-explicit-id

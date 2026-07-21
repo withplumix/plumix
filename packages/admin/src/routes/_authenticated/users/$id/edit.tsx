@@ -16,6 +16,7 @@ import { UserEmailField } from "@/components/profile/user-email-field.js";
 import { hasCap } from "@/lib/caps.js";
 import { visibleUserMetaBoxes } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
+import { slugField } from "@/lib/slug.js";
 import { useLabel } from "@/lib/use-label.js";
 import { ROLE_LABEL, ROLE_LABEL_LONG } from "@/lib/user-role-labels.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
@@ -69,7 +70,7 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
-import { idPathParam, vMessage } from "@plumix/core/validation";
+import { idPathParam } from "@plumix/core/validation";
 
 import {
   isUserRole,
@@ -123,10 +124,6 @@ const M = {
     id: "userEdit.delete.reassign.keepAsIs",
     message: "Keep entries as-is (none to reassign)",
   }),
-  slugFormat: defineMessage({
-    id: "userEdit.slug.format",
-    message: "Slug must be lowercase letters, numbers, and dashes.",
-  }),
 } satisfies Record<string, MessageDescriptor>;
 
 // Radix Select forbids an empty-string item value, so "keep entries as-is"
@@ -145,19 +142,9 @@ async function invalidateUserCaches(
   ]);
 }
 
-// Mirrors the server's `slugSchema` so the client rejects a bad slug
-// before the round trip.
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 const profileFormSchema = v.object({
   name: v.pipe(v.string(), v.trim(), v.maxLength(100)),
-  slug: v.pipe(
-    v.string(),
-    v.trim(),
-    v.minLength(1, vMessage(M.slugFormat)),
-    v.maxLength(200),
-    v.regex(SLUG_PATTERN, vMessage(M.slugFormat)),
-  ),
+  slug: slugField,
   role: v.picklist(USER_ROLES),
   meta: v.record(v.string(), v.unknown()),
 });

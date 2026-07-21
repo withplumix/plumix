@@ -638,6 +638,11 @@ msgstr ""
 #~ msgstr "تصغير"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+#~ msgid "userEdit.slug.format"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — لا يمكن اختيار الأبناء كأب."
@@ -3499,8 +3504,8 @@ msgid "termForm.slug.format"
 msgstr "Slug يحتوي فقط على أحرف صغيرة وأرقام وشرطات."
 
 #. js-lingui-explicit-id
-#: src/routes/_authenticated/users/$id/edit.tsx
-msgid "userEdit.slug.format"
+#: src/lib/slug.ts
+msgid "admin.slug.format"
 msgstr ""
 
 #. js-lingui-explicit-id
