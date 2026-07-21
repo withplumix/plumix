@@ -695,6 +695,11 @@ msgstr ""
 msgid "entries.list.noTitle"
 msgstr "(بدون عنوان)"
 
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.template.default"
+msgstr ""
+
 #. browser: e.g. 'Safari', 'Chrome'; os: e.g. 'macOS', 'Windows 11'. Vendor names interpolate verbatim; the connector word is localizable.
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
@@ -3587,6 +3592,11 @@ msgstr "التصنيفات"
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.keyword.team"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.template"
 msgstr ""
 
 #. js-lingui-explicit-id

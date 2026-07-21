@@ -5,6 +5,7 @@ import type {
   DashboardWidgetManifestEntry,
   EntryMetaBoxManifestEntry,
   EntryTypeManifestEntry,
+  NamedTemplateChoice,
   PatternManifestEntry,
   PlumixManifest,
   SettingsGroupManifestEntry,
@@ -109,6 +110,18 @@ export function findEntryTypeByName(
   source: PlumixManifest = manifest,
 ): EntryTypeManifestEntry | undefined {
   return (source.entryTypes ?? []).find((pt) => pt.name === name);
+}
+
+/**
+ * The theme-registered `named` templates selectable for an entry type,
+ * feeding the editor's template picker. Empty when the type has none or is
+ * unknown — the caller renders just the "theme default" option.
+ */
+export function namedTemplatesForType(
+  name: string,
+  source: PlumixManifest = manifest,
+): readonly NamedTemplateChoice[] {
+  return findEntryTypeByName(name, source)?.namedTemplates ?? [];
 }
 
 export function visibleEntryTypes(

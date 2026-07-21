@@ -15,6 +15,7 @@ import {
   findTermTaxonomyByName,
   getPatterns,
   groupsForSettingsPage,
+  namedTemplatesForType,
   readManifest,
   visibleDashboardWidgets,
   visibleEntryTypes,
@@ -175,6 +176,31 @@ describe("findEntryTypeBySlug", () => {
 
   test("returns undefined when no entry matches", () => {
     expect(findEntryTypeBySlug("nope", source)).toBeUndefined();
+  });
+});
+
+describe("namedTemplatesForType", () => {
+  const source: PlumixManifest = {
+    entryTypes: [
+      {
+        name: "page",
+        adminSlug: "pages",
+        label: "Pages",
+        namedTemplates: [{ id: "landing", label: "Landing Page" }],
+      },
+      { name: "post", adminSlug: "posts", label: "Posts" },
+    ],
+  };
+
+  test("returns the type's named templates", () => {
+    expect(namedTemplatesForType("page", source)).toEqual([
+      { id: "landing", label: "Landing Page" },
+    ]);
+  });
+
+  test("returns an empty list for a type with none or an unknown type", () => {
+    expect(namedTemplatesForType("post", source)).toEqual([]);
+    expect(namedTemplatesForType("nope", source)).toEqual([]);
   });
 });
 

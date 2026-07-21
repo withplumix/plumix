@@ -12,7 +12,11 @@ import {
   assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
 } from "./content.js";
-import { stripUndefined } from "./helpers.js";
+import {
+  applyTemplateChoiceToMeta,
+  stripUndefined,
+  withTemplateChoice,
+} from "./helpers.js";
 import {
   applyEntryBeforeSave,
   captureRevisionIfSupported,
@@ -228,8 +232,13 @@ export const update = base
               : existing.excerpt,
           // Autosave's meta bag tracks the in-progress edits; merge
           // the caller's patch over the live row's current meta so
-          // unchanged keys persist across draft saves.
-          meta: { ...existing.meta, ...(filtered.meta ?? {}) },
+          // unchanged keys persist across draft saves. The framework
+          // template choice rides along so the preview overlay can honor
+          // an unsaved pick.
+          meta: applyTemplateChoiceToMeta(
+            { ...existing.meta, ...(filtered.meta ?? {}) },
+            filtered.template,
+          ),
         },
       });
       await fireEntryAutosaveSaved(context, autosave, existing);
@@ -269,12 +278,13 @@ export const update = base
       id: _id,
       terms: termsPatch,
       meta: metaInput,
+      template: templateChoice,
       expectedLiveUpdatedAt: _expectedLiveUpdatedAt,
       saveAs: _saveAs,
       publishedAt: publishedAtInput,
       ...changes
     } = filtered;
-    const metaPatch = sanitizeMetaForRpc(
+    let metaPatch = sanitizeMetaForRpc(
       context.plugins,
       existing.type,
       metaInput,
@@ -295,6 +305,9 @@ export const update = base
         errors,
       );
     }
+    // Fold the framework-owned template choice in after plugin-field
+    // validation — it bypasses the meta-box sanitizer by design.
+    metaPatch = withTemplateChoice(metaPatch, templateChoice);
     if (termsPatch !== undefined) {
       await assertTermsPatchValid(
         context,

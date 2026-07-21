@@ -39,6 +39,21 @@ describe("stripReservedMeta", () => {
       stripReservedMeta({ [SNAPSHOT_META_KEY]: { slug: "x", parentId: null } }),
     ).toEqual({});
   });
+
+  test("keeps reserved keys named in the exemption list", () => {
+    const stripped = stripReservedMeta(
+      {
+        seoTitle: "Hello",
+        __plumix_template: "landing",
+        [SNAPSHOT_META_KEY]: { slug: "x", parentId: null },
+      },
+      ["__plumix_template"],
+    );
+    expect(stripped).toEqual({
+      seoTitle: "Hello",
+      __plumix_template: "landing",
+    });
+  });
 });
 
 describe("revision message decoder", () => {

@@ -128,6 +128,33 @@ function matchRule<Data extends TemplateData>(
  */
 export const NAMED_TEMPLATE_META_KEY = "__plumix_template";
 
+/** An author-selectable `named` template, surfaced to the editor picker. */
+export interface NamedTemplateChoice {
+  readonly id: string;
+  readonly label: string;
+}
+
+/**
+ * Extract the theme's `named` entry templates grouped by entry-type name, for
+ * the editor's template picker. Only content (entry) rules are collected —
+ * term/author/archive named templates aren't author-selectable per entry.
+ * Duplicate ids within a type keep the first declaration (resolution order).
+ */
+export function collectNamedTemplates(
+  templates: ThemeDescriptor["templates"],
+): Record<string, readonly NamedTemplateChoice[]> {
+  const out: Record<string, NamedTemplateChoice[]> = {};
+  for (const rule of templateRules(templates)) {
+    const match = rule.match;
+    if (!match?.named || match.nodeKind !== "content" || !match.type) continue;
+    const named = match.named;
+    const list = (out[match.type] ??= []);
+    if (list.some((c) => c.id === named.id)) continue;
+    list.push({ id: named.id, label: named.label });
+  }
+  return out;
+}
+
 /** A predicate matching when a content entry's meta value equals `value`. */
 function metaEquals(
   key: string,

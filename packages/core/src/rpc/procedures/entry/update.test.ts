@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../../../plugin/manifest.js";
+import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 // SEO meta box fixture used by the partial-write and null-clear tests.
@@ -638,6 +639,66 @@ describe("entry.update", () => {
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "view_private_notes" },
+    });
+  });
+});
+
+describe("entry.update — named template choice", () => {
+  test("persists the choice to the reserved template meta key", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "tpl",
+    });
+    const updated = await h.client.entry.update({
+      id: own.id,
+      template: "landing",
+    });
+    expect(updated.meta[NAMED_TEMPLATE_META_KEY]).toBe("landing");
+  });
+
+  test("template: null clears a previously stored choice", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "tpl-clear",
+    });
+    await h.client.entry.update({ id: own.id, template: "landing" });
+    const cleared = await h.client.entry.update({ id: own.id, template: null });
+    expect(cleared.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
+  });
+
+  test("omitting template leaves an existing choice untouched", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "tpl-keep",
+    });
+    await h.client.entry.update({ id: own.id, template: "landing" });
+    const renamed = await h.client.entry.update({
+      id: own.id,
+      title: "renamed",
+    });
+    expect(renamed.meta[NAMED_TEMPLATE_META_KEY]).toBe("landing");
+  });
+
+  test("the reserved key can't be smuggled through the plugin meta bag", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "tpl-smuggle",
+    });
+    // `__plumix_template` isn't a registered meta box, so the sanitizer
+    // still rejects it on the plugin `meta` path — only the dedicated
+    // `template` field writes it.
+    await expect(
+      h.client.entry.update({
+        id: own.id,
+        meta: { [NAMED_TEMPLATE_META_KEY]: "landing" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_not_registered" },
     });
   });
 });

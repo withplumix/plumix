@@ -49,6 +49,7 @@ import { buildTermArchiveUrl } from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
 import { buildResolvedEntries } from "./render/build-resolved-entries.js";
 import { renderThroughTheme } from "./render/render-template.js";
+import { NAMED_TEMPLATE_META_KEY } from "./render/template-builders.js";
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
@@ -744,7 +745,9 @@ async function overlayPreviewAutosave(
     title: autosave.title,
     content: autosave.content,
     excerpt: autosave.excerpt,
-    meta: stripReservedMeta(autosave.meta),
+    // Keep the reserved template key so an unsaved `named`-template pick still
+    // drives resolution — otherwise preview would fall back to the default.
+    meta: stripReservedMeta(autosave.meta, [NAMED_TEMPLATE_META_KEY]),
   };
 }
 

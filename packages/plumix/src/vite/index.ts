@@ -22,6 +22,7 @@ import type {
 } from "@plumix/core";
 import {
   buildManifest,
+  collectNamedTemplates,
   generateSchemaSource,
   generateWorkerSource,
   HookRegistry,
@@ -403,6 +404,7 @@ async function regenerate(
     {
       tokens: config.theme.tokens,
       breakpoints: config.theme.breakpoints,
+      namedTemplates: collectNamedTemplates(config.theme.templates),
       i18n: config.i18n,
     },
     cwd,
@@ -432,6 +434,7 @@ async function computeManifestAndRegistry(
   options: {
     readonly tokens?: ThemeTokens;
     readonly breakpoints?: ThemeBreakpoints;
+    readonly namedTemplates?: ReturnType<typeof collectNamedTemplates>;
     readonly i18n?: ResolvedI18n;
   },
   projectRoot: string,
