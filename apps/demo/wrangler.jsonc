@@ -17,6 +17,12 @@
   "vars": {
     "TURNSTILE_SITE_KEY": "0x4AAAAAAD52mjpzgTFuaf0I",
   },
+  // Declares the secret's name (never its value — that stays a Worker secret
+  // set out-of-band). `wrangler deploy` fails loudly if it isn't configured,
+  // so a missing key can't silently 403 every session like the site key did.
+  "secrets": {
+    "required": ["TURNSTILE_SECRET_KEY"],
+  },
   "d1_databases": [
     {
       "binding": "DB",
