@@ -63,7 +63,7 @@ describe("initializeDemoStorage", () => {
     expect(rows[0]?.label).toBe("demo");
   });
 
-  test("is idempotent: re-initializing an existing database is a no-op", async () => {
+  test("is idempotent: re-initializing with the same SQL is a no-op", async () => {
     const sql = memoryExecutor();
     const first = await initializeDemoStorage(sql, BOOTSTRAP);
     const second = await initializeDemoStorage(sql, BOOTSTRAP);
@@ -72,6 +72,47 @@ describe("initializeDemoStorage", () => {
     // Seed was not re-applied — still exactly one row.
     const rows = await sql.query("SELECT id FROM widget");
     expect(rows).toHaveLength(1);
+  });
+
+  test("re-bootstraps when the schema/seed changes (heals a stale DO)", async () => {
+    const sql = memoryExecutor();
+    await initializeDemoStorage(sql, BOOTSTRAP);
+
+    // A later deploy adds a column and reseeds — the version tag differs.
+    const NEXT_SCHEMA =
+      "CREATE TABLE widget (id INTEGER PRIMARY KEY, label TEXT, color TEXT);";
+    const NEXT_SEED =
+      "INSERT INTO widget (label, color) VALUES ('demo', 'red');";
+    const reinit = await initializeDemoStorage(
+      sql,
+      `${NEXT_SCHEMA} ${NEXT_SEED}`,
+    );
+    expect(reinit).toBe(true);
+
+    // The new column exists (a query touching it no longer throws) and the old
+    // seed row was replaced, not duplicated.
+    const rows = await sql.query("SELECT color FROM widget");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.color).toBe("red");
+
+    // ...and it's now idempotent at the new version.
+    expect(
+      await initializeDemoStorage(sql, `${NEXT_SCHEMA} ${NEXT_SEED}`),
+    ).toBe(false);
+  });
+
+  test("heals a DO carrying a pre-versioning `ready` marker", async () => {
+    const sql = memoryExecutor();
+    // Simulate an old deploy's marker: the legacy `(ready INTEGER)` shape with
+    // no `version` column, alongside stale data.
+    await sql.exec("CREATE TABLE widget (id INTEGER PRIMARY KEY, label TEXT)");
+    await sql.exec("CREATE TABLE _plumix_demo_ready (ready INTEGER)");
+
+    const reinit = await initializeDemoStorage(sql, BOOTSTRAP);
+    expect(reinit).toBe(true);
+    const rows = await sql.query("SELECT label FROM widget");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.label).toBe("demo");
   });
 });
 
