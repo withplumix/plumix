@@ -9,6 +9,7 @@ import type {
 import type {
   ArchiveData,
   AuthorArchiveData,
+  CustomArchiveData,
   DateArchiveData,
   EntryData,
   ErrorData,
@@ -46,6 +47,7 @@ export type TemplateData =
   | TaxonomyData
   | AuthorArchiveData
   | DateArchiveData
+  | CustomArchiveData
   | FrontPageData
   | SearchData
   | ErrorData;
@@ -64,6 +66,9 @@ export function isAuthor(data: TemplateData): data is AuthorArchiveData {
 }
 export function isDate(data: TemplateData): data is DateArchiveData {
   return data.kind === "date";
+}
+export function isCustom(data: TemplateData): data is CustomArchiveData {
+  return data.kind === "custom";
 }
 export function isFrontPage(data: TemplateData): data is FrontPageData {
   return data.kind === "frontPage";
@@ -111,7 +116,7 @@ export type GenericTier =
  */
 export interface TargetMatcher {
   readonly nodeKind:
-    "content" | "content-type-archive" | "term" | "author" | "date";
+    "content" | "content-type-archive" | "term" | "author" | "date" | "custom";
   readonly type: string;
   readonly slug?: string;
   readonly id?: number;

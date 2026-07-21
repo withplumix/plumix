@@ -184,21 +184,53 @@ describe("term feed routes", () => {
     res.assertStatus(404);
   });
 
-  test("a nested (child) term has no feed — top-level terms only", async () => {
+  const blogWithNestedTaxonomyPlugin = definePlugin("blog-nested", (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerTermTaxonomy("region", {
+      label: "Regions",
+      entryTypes: ["post"],
+      isHierarchical: true,
+    });
+  });
+
+  test("a nested term's feed is served at its nested path (regression: no more 404)", async () => {
     const h = await createDispatcherHarness({
-      plugins: [blogWithTaxonomyPlugin],
+      plugins: [blogWithNestedTaxonomyPlugin],
     });
-    const parent = await h.factory.category.create({
-      slug: "news",
-      name: "News",
+    const author = await h.seedUser("admin");
+    const europe = await h.factory.term.create({
+      taxonomy: "region",
+      slug: "europe",
+      name: "Europe",
     });
-    await h.factory.category.create({
-      slug: "local",
-      name: "Local",
-      parentId: parent.id,
+    const france = await h.factory.term.create({
+      taxonomy: "region",
+      slug: "france",
+      name: "France",
+      parentId: europe.id,
     });
-    const res = await h.fetch("/category/local/feed");
-    res.assertStatus(404);
+    const post = await h.factory.entry.create({
+      type: "post",
+      slug: "paris",
+      title: "Paris Post",
+      content: null,
+      status: "published",
+      authorId: author.id,
+    });
+    await h.factory.entryTerm.create({ entryId: post.id, termId: france.id });
+
+    // The nested URL serves the child term's entries.
+    const nested = await h.fetch("/region/europe/france/feed");
+    nested.assertStatus(200);
+    expect(await nested.text()).toContain("Paris Post");
+
+    // The flat URL for the nested term does not resolve (it isn't a top-level
+    // term), so it stays a 404.
+    (await h.fetch("/region/france/feed")).assertStatus(404);
   });
 
   test("a non-taxonomy /<x>/<y>/feed path falls through to public routing", async () => {

@@ -1,3 +1,5 @@
+import type { SQL } from "drizzle-orm";
+
 import type {
   BlockNode,
   BlockPattern,
@@ -23,6 +25,7 @@ import type { Label } from "../i18n/label.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { McpTool } from "../mcp/tool.js";
 import type { RouteIntent } from "../route/intent.js";
+import type { CustomArchiveData } from "../route/render/resolved-entry.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
 import type { PluginI18nSlot } from "./define.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
@@ -995,6 +998,46 @@ export interface RegisteredRewriteRule {
   readonly registeredBy: string | null;
 }
 
+/** The render payload a custom-archive resolver produces, or `null` for a 404. */
+export interface CustomArchiveResolution {
+  readonly data: CustomArchiveData;
+  readonly title: string;
+}
+
+/** The RSS/Atom feed a `registerArchiveType` archive can own. */
+export interface ArchiveTypeFeed {
+  /** URLPattern pathnames the feed answers (e.g. `/events/:series/feed`). */
+  readonly routes: readonly string[];
+  /** SQL row filter for the feed's entries, or `null` → 404. */
+  readonly filter: (
+    ctx: AppContext,
+    params: Record<string, string>,
+  ) => Promise<SQL | null> | SQL | null;
+}
+
+/**
+ * `registerArchiveType` options — a URL pattern set + resolver (+ optional feed)
+ * that adds a whole archive type without patching core. The resolver returns the
+ * render payload (`{ data, title }`) or `null` (404); `data` extends
+ * {@link CustomArchiveData} and is typed via `ArchiveTypeRegistry`.
+ */
+export interface ArchiveTypeOptions {
+  /** URLPattern pathnames that dispatch to this archive (`/events/:series`). */
+  readonly routes: readonly string[];
+  /** Route priority (lower wins); defaults to the rewrite-rule priority. */
+  readonly priority?: number;
+  readonly resolve: (
+    ctx: AppContext,
+    params: Record<string, string>,
+  ) => Promise<CustomArchiveResolution | null> | CustomArchiveResolution | null;
+  readonly feed?: ArchiveTypeFeed;
+}
+
+export interface RegisteredArchiveType extends ArchiveTypeOptions {
+  readonly name: string;
+  readonly registeredBy: string | null;
+}
+
 /**
  * Reference to a React component contributed by a plugin. The string is
  * the export name on the plugin's `adminEntry` module — the plumix vite
@@ -1312,6 +1355,7 @@ export interface PluginRegistry {
   readonly settingsGroups: ReadonlyMap<string, RegisteredSettingsGroup>;
   readonly settingsPages: ReadonlyMap<string, RegisteredSettingsPage>;
   readonly rewriteRules: readonly RegisteredRewriteRule[];
+  readonly archiveTypes: ReadonlyMap<string, RegisteredArchiveType>;
   readonly rpcRouters: ReadonlyMap<string, PluginRpcRouter>;
   readonly mcpTools: ReadonlyMap<string, RegisteredMcpTool>;
   readonly rawRoutes: readonly RegisteredRawRoute[];
@@ -1340,6 +1384,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly settingsGroups: Map<string, RegisteredSettingsGroup>;
   readonly settingsPages: Map<string, RegisteredSettingsPage>;
   readonly rewriteRules: RegisteredRewriteRule[];
+  readonly archiveTypes: Map<string, RegisteredArchiveType>;
   readonly rpcRouters: Map<string, PluginRpcRouter>;
   readonly mcpTools: Map<string, RegisteredMcpTool>;
   readonly rawRoutes: RegisteredRawRoute[];
@@ -1369,6 +1414,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     settingsGroups: new Map(),
     settingsPages: new Map(),
     rewriteRules: [],
+    archiveTypes: new Map(),
     rpcRouters: new Map(),
     mcpTools: new Map(),
     rawRoutes: [],

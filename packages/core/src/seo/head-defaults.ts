@@ -103,18 +103,21 @@ export async function applyHeadMeta(
 ): Promise<DocumentManifest> {
   const site = await loadSiteSettings(ctx);
   const siteIsPrivate = site.public === false;
-  const excerpt = "entry" in data ? nonEmpty(data.entry.excerpt) : null;
+  // Discriminate on `kind`, not duck-typed field presence — a plugin archive's
+  // (`CustomArchiveData`) payload is arbitrary and could carry an `entry` or
+  // `query` field that a `"… in data"` check would misread.
+  const excerpt = data.kind === "entry" ? nonEmpty(data.entry.excerpt) : null;
   const description = excerpt ?? nonEmpty(site.tagline);
   const withMeta = seoHeadDefaults(manifest, {
     canonical: canonicalUrl(ctx),
     title,
     description,
-    ogType: "entry" in data ? "article" : "website",
+    ogType: data.kind === "entry" ? "article" : "website",
     ogImage: nonEmpty(site.default_og_image),
     siteName: nonEmpty(site.title),
     ogLocale: toOgLocale(ctx.locale.code),
     // Search-results pages are thin; keep them out of the index.
-    noindex: "query" in data,
+    noindex: data.kind === "search",
     siteIsPrivate,
   });
   return applyFeedDiscovery(withMeta, data, ctx, { siteIsPrivate });

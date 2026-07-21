@@ -17,7 +17,7 @@ export function matchRoute(
   return null;
 }
 
-function extractParams(
+export function extractParams(
   pathname: URLPatternComponentResult,
 ): Record<string, string> {
   const out: Record<string, string> = {};

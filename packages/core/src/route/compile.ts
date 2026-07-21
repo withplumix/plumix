@@ -147,6 +147,21 @@ export function compileRouteMap(
     });
   }
 
+  // Plugin-registered archive types (`registerArchiveType`): each route becomes
+  // a rule carrying the `custom` intent that `resolvePublicRoute` looks the
+  // resolver up by. Default to the rewrite-rule priority.
+  for (const archive of registry.archiveTypes.values()) {
+    for (const rawPattern of archive.routes) {
+      rules.push({
+        pattern: new URLPattern({ pathname: rawPattern }),
+        rawPattern,
+        intent: { kind: "custom", name: archive.name },
+        priority: archive.priority ?? DEFAULT_REWRITE_RULE_PRIORITY,
+        registeredBy: archive.registeredBy,
+      });
+    }
+  }
+
   assertUniquePatterns(rules);
   rules.sort((a, b) => a.priority - b.priority);
   return rules;
@@ -209,7 +224,7 @@ function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
  * segment pattern even when the data is hierarchical — same opt-out the
  * outbound permalink helpers honor.
  */
-function exposesHierarchicalUrls(spec: {
+export function exposesHierarchicalUrls(spec: {
   readonly isHierarchical?: boolean;
   readonly rewrite?: { readonly isHierarchical?: boolean };
 }): boolean {

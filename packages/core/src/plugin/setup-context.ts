@@ -29,6 +29,7 @@ import type { TemplateDepRegistry } from "../template.js";
 import type { LookupAdapterOptions } from "./lookup.js";
 import type {
   AdminPageOptions,
+  ArchiveTypeOptions,
   DashboardWidgetOptions,
   EntryMetaBoxOptions,
   EntryTypeOptions,
@@ -173,6 +174,16 @@ export interface PluginSetupContextBase {
     intent: RouteIntent,
     options?: { readonly priority?: number },
   ): void;
+
+  /**
+   * Register a whole archive type — URL pattern(s) + a resolver (+ an optional
+   * feed) — so a plugin can add an archive (e.g. `/events/:series`) that
+   * dispatches and templates like a built-in one, with no core changes. The
+   * resolver returns `{ data, title }` or `null` (404). Augment
+   * `ArchiveTypeRegistry` with the same `name` so `forArchiveType(name)` types
+   * the template's `data`. Registering the same name twice throws.
+   */
+  registerArchiveType(name: string, options: ArchiveTypeOptions): void;
 
   /** Mounted at `/_plumix/rpc/<pluginId>/*`. */
   registerRpcRouter(router: PluginRpcRouter): void;
@@ -496,6 +507,19 @@ export function createPluginSetupContext({
         pattern,
         intent,
         priority: options?.priority ?? DEFAULT_REWRITE_RULE_PRIORITY,
+        registeredBy: pluginId,
+      });
+    },
+
+    registerArchiveType: (name, options) => {
+      if (registry.archiveTypes.has(name))
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: "archive type",
+          identifier: name,
+        });
+      registry.archiveTypes.set(name, {
+        ...options,
+        name,
         registeredBy: pluginId,
       });
     },

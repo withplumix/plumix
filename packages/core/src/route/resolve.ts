@@ -163,6 +163,16 @@ export async function resolvePublicRoute(
         templateDeps,
         assetManifest,
       );
+    case "custom":
+      return resolveCustom(
+        ctx,
+        match.intent,
+        match.params,
+        theme,
+        document,
+        templateDeps,
+        assetManifest,
+      );
     case "search":
       return resolveSearch(
         ctx,
@@ -537,6 +547,40 @@ async function resolveDate(
     title: dateTitle(year, month, day),
   });
   return htmlResponseOrNotFound(html, "public-date-no-template");
+}
+
+// The open seam: a plugin-registered archive type (`registerArchiveType`). The
+// resolver comes from the registry, produces the `{ data, title }` payload (or
+// `null` → 404), and templates via a `forArchiveType(name)` rule or `fallback`.
+async function resolveCustom(
+  ctx: AppContext,
+  intent: Extract<RouteIntent, { kind: "custom" }>,
+  params: Record<string, string>,
+  theme: ThemeDescriptor,
+  document: DocumentManifest,
+  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
+  assetManifest: AssetManifest,
+): Promise<Response> {
+  const archive = ctx.plugins.archiveTypes.get(intent.name);
+  // A compiled route always names a registered archive; the guard is a
+  // defensive 404 rather than a throw if the two ever drift.
+  if (!archive) return notFound("public-custom-archive-not-registered");
+
+  const result = await archive.resolve(ctx, params);
+  if (result === null) return notFound("public-custom-archive-not-found");
+
+  const html = await renderThroughTheme({
+    ctx,
+    theme,
+    document,
+    templateDeps,
+    assetManifest,
+
+    node: { kind: "custom", name: intent.name },
+    data: result.data,
+    title: result.title,
+  });
+  return htmlResponseOrNotFound(html, "public-custom-archive-no-template");
 }
 
 async function resolveSingle(

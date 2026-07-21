@@ -1,4 +1,6 @@
 import type {
+  ArchiveDataOf,
+  ArchiveTypeName,
   EntryProjection,
   EntryTypeName,
   MetaOf,
@@ -321,5 +323,24 @@ export function forDate(
         },
         t,
       ),
+  };
+}
+
+interface ArchiveTypeSelector<K extends ArchiveTypeName> {
+  /** Bind the template for the selected archive type. */
+  template(t: TemplateEntry<ArchiveDataOf<K>>): TemplateRule;
+}
+
+/**
+ * Target a plugin-registered archive type (`registerArchiveType`). `name`
+ * autocompletes against `ArchiveTypeRegistry` and types the template's `data`
+ * from the registered projection — the same shape as `forEntryType` /
+ * `forTermTaxonomy`, for archives that live in a plugin rather than core.
+ */
+export function forArchiveType<K extends ArchiveTypeName>(
+  name: K,
+): ArchiveTypeSelector<K> {
+  return {
+    template: (t) => matchRule({ nodeKind: "custom", type: name }, t),
   };
 }
