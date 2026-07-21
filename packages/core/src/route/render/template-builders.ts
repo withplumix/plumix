@@ -16,6 +16,7 @@ import type {
 } from "../../theme.js";
 import type {
   ArchiveData,
+  AuthorArchiveData,
   EntryData,
   ErrorData,
   FrontPageData,
@@ -53,6 +54,13 @@ export function archive(template: TemplateEntry<ArchiveData>): TemplateRule {
 /** A term archive (any taxonomy). */
 export function taxonomy(template: TemplateEntry<TaxonomyData>): TemplateRule {
   return rule("taxonomy", template);
+}
+
+/** An author archive (any author). */
+export function author(
+  template: TemplateEntry<AuthorArchiveData>,
+): TemplateRule {
+  return rule("author", template);
 }
 
 /** The static front page. */
@@ -241,5 +249,36 @@ export function forTermTaxonomy<K extends TermTaxonomyName>(
         named: { id, label },
         predicate: termMetaEquals(NAMED_TEMPLATE_META_KEY, id),
       }),
+  };
+}
+
+interface AuthorSelector {
+  /** Bind the template for the selected author. */
+  template(t: TemplateEntry<AuthorArchiveData>): TemplateRule;
+}
+
+interface AuthorBuilder extends AuthorSelector {
+  /** Narrow to one author by slug. */
+  slug(slug: string): AuthorSelector;
+  /** Narrow to one author by numeric id. */
+  id(id: number): AuthorSelector;
+}
+
+/**
+ * Target author archives. There is a single author "kind" (no registry to
+ * autocomplete), so `forAuthor()` takes no name — chain `.slug(...)` / `.id(...)`
+ * to narrow to one author, mirroring `forEntryType` / `forTermTaxonomy`. The
+ * bare `.template()` matches every author archive (like the `author()` tier).
+ */
+export function forAuthor(): AuthorBuilder {
+  // Each selector adds its narrowing to the shared author-node prefix.
+  const authorNode = (extra?: Partial<TargetMatcher>): AuthorSelector => ({
+    template: (t) =>
+      matchRule({ nodeKind: "author", type: "author", ...extra }, t),
+  });
+  return {
+    template: (t) => matchRule({ nodeKind: "author", type: "author" }, t),
+    slug: (slug) => authorNode({ slug }),
+    id: (id) => authorNode({ id }),
   };
 }

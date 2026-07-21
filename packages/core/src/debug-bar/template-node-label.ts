@@ -10,6 +10,8 @@ export function templateNodeLabel(node: ResolvedNode): string {
       return `${node.entryType}: ${node.slug}`;
     case "term":
       return `${node.taxonomy}: ${node.slug}`;
+    case "author":
+      return `author: ${node.slug}`;
     case "content-type-archive":
       return `${node.entryType} archive`;
     case "front-page":

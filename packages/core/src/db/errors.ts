@@ -72,3 +72,27 @@ export function isUniqueConstraintError(error: unknown): boolean {
   }
   return false;
 }
+
+/**
+ * True when the unique violation is on a specific `table.column` constraint —
+ * e.g. `isUniqueConstraintErrorOn(err, "users.slug")` to tell a slug collision
+ * apart from an email one. Column identity only rides on SQLite's message
+ * (`UNIQUE constraint failed: users.slug`), so this is message-only, unlike the
+ * code-first `isUniqueConstraintError`; every driver surfaces that phrase.
+ */
+export function isUniqueConstraintErrorOn(
+  error: unknown,
+  qualifiedColumn: string,
+): boolean {
+  const needle = `UNIQUE constraint failed: ${qualifiedColumn}`;
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH && current; depth++) {
+    if (seen.has(current)) return false; // cycle guard
+    seen.add(current);
+    const message = (current as { message?: unknown }).message;
+    if (typeof message === "string" && message.includes(needle)) return true;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
+}

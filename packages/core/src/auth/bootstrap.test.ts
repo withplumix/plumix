@@ -36,5 +36,9 @@ describe("first-user-admin bootstrap", () => {
     expect(admins).toHaveLength(1);
     const bootstrapped = results.filter((r) => r.bootstrapped);
     expect(bootstrapped).toHaveLength(1);
+    // All three derive the same `user` base concurrently; the slug-race retry
+    // must still hand each a distinct slug.
+    const slugs = results.map((r) => r.user.slug);
+    expect(new Set(slugs).size).toBe(3);
   });
 });

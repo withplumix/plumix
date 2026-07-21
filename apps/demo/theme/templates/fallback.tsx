@@ -1,5 +1,6 @@
 import type {
   ArchiveData,
+  AuthorArchiveData,
   FrontPageData,
   SearchData,
   TaxonomyData,
@@ -11,7 +12,8 @@ import { Layout } from "../components/Layout";
 import { paginationInfo } from "../components/Pagination";
 import { PostList } from "../components/PostList";
 
-type ListingData = ArchiveData | FrontPageData | SearchData | TaxonomyData;
+type ListingData =
+  ArchiveData | AuthorArchiveData | FrontPageData | SearchData | TaxonomyData;
 
 // Title + empty-state copy for each listing node; the front page has neither.
 function listingCopy(data: ListingData): {
@@ -32,6 +34,9 @@ function listingCopy(data: ListingData): {
     return { heading: `${label}: ${data.term.name}` };
   }
   if ("contentType" in data) return { heading: "Posts" };
+  if ("author" in data) {
+    return { heading: `Posts by ${data.author.name ?? data.author.slug}` };
+  }
   return {};
 }
 

@@ -1,7 +1,11 @@
 import { generateToken, hashToken } from "../../../auth/tokens.js";
-import { isUniqueConstraintError } from "../../../db/index.js";
+import {
+  isUniqueConstraintError,
+  isUniqueConstraintErrorOn,
+} from "../../../db/index.js";
 import { authTokens } from "../../../db/schema/auth_tokens.js";
 import { users } from "../../../db/schema/users.js";
+import { deriveUserSlug, MAX_SLUG_ATTEMPTS } from "../../../users/slug.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { userInviteInputSchema } from "./schemas.js";
@@ -25,21 +29,32 @@ export const invite = base
     const tokenHash = await hashToken(token);
     const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
 
+    // Retry a lost slug race (concurrent creates deriving the same base); a
+    // `users.email` collision is a real conflict, reported as `email_taken`.
     let created;
-    try {
-      [created] = await context.db
-        .insert(users)
-        .values({
-          email: filtered.email,
-          name: filtered.name ?? null,
-          role: filtered.role,
-        })
-        .returning();
-    } catch (error) {
-      if (isUniqueConstraintError(error)) {
-        throw errors.CONFLICT({ data: { reason: "email_taken" } });
+    for (let attempt = 1; ; attempt++) {
+      const slug = await deriveUserSlug(context.db, filtered.name);
+      try {
+        [created] = await context.db
+          .insert(users)
+          .values({
+            email: filtered.email,
+            slug,
+            name: filtered.name ?? null,
+            role: filtered.role,
+          })
+          .returning();
+        break;
+      } catch (error) {
+        const slugRace = isUniqueConstraintErrorOn(error, "users.slug");
+        if (slugRace && attempt < MAX_SLUG_ATTEMPTS) continue;
+        // A non-slug unique violation is the email collision (the only other
+        // unique column on this insert).
+        if (!slugRace && isUniqueConstraintError(error)) {
+          throw errors.CONFLICT({ data: { reason: "email_taken" } });
+        }
+        throw error;
       }
-      throw error;
     }
     if (!created) {
       throw errors.CONFLICT({ data: { reason: "insert_failed" } });

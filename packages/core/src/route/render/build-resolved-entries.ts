@@ -29,7 +29,12 @@ export async function buildResolvedEntries(
   const authorIds = Array.from(new Set(rows.map((r) => r.authorId)));
   const [authorRows, joinRows] = await Promise.all([
     ctx.db
-      .select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl })
+      .select({
+        id: users.id,
+        slug: users.slug,
+        name: users.name,
+        avatarUrl: users.avatarUrl,
+      })
       .from(users)
       .where(inArray(users.id, authorIds)),
     ctx.db

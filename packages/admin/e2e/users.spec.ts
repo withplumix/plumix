@@ -21,6 +21,7 @@ import {
 
 function user(overrides: Partial<User> & { id: number; email: string }): User {
   return {
+    slug: `user-${String(overrides.id)}`,
     name: null,
     avatarUrl: null,
     role: "subscriber",

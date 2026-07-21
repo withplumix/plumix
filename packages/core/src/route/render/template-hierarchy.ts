@@ -19,12 +19,19 @@ export type ResolvedNode =
   | ResolvedTermNode
   | ResolvedContentNode
   | ResolvedContentTypeArchive
+  | ResolvedAuthorNode
   | ResolvedFrontPage
   | ResolvedSearch;
 
 interface ResolvedTermNode {
   readonly kind: "term";
   readonly taxonomy: string;
+  readonly slug: string;
+  readonly databaseId: number;
+}
+
+interface ResolvedAuthorNode {
+  readonly kind: "author";
   readonly slug: string;
   readonly databaseId: number;
 }
@@ -56,6 +63,7 @@ const GENERIC_TIER_FOR_NODE: Record<ResolvedNode["kind"], GenericTier> = {
   content: "entry",
   "content-type-archive": "archive",
   term: "taxonomy",
+  author: "author",
   "front-page": "frontPage",
   search: "search",
 };
@@ -78,6 +86,14 @@ function matchesIdentity(match: TargetMatcher, node: ResolvedNode): boolean {
     case "term":
       return (
         match.type === node.taxonomy &&
+        (match.slug === undefined || match.slug === node.slug) &&
+        (match.id === undefined || match.id === node.databaseId)
+      );
+    case "author":
+      // Author matchers carry a fixed `type` of "author"; identity narrows by
+      // slug/id like a term.
+      return (
+        match.type === "author" &&
         (match.slug === undefined || match.slug === node.slug) &&
         (match.id === undefined || match.id === node.databaseId)
       );

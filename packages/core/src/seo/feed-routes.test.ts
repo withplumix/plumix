@@ -226,3 +226,89 @@ describe("term feed routes", () => {
     );
   });
 });
+
+describe("author feed routes", () => {
+  test("GET /authors/<slug>/feed returns that author's published posts", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
+    const john = await h.factory.author.create({ name: "John", slug: "john" });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "by-jane",
+      title: "By Jane",
+      content: null,
+      status: "published",
+      authorId: jane.id,
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "by-john",
+      title: "By John",
+      content: null,
+      status: "published",
+      authorId: john.id,
+    });
+
+    const res = await h.fetch("/authors/jane/feed");
+    res.assertStatus(200);
+    expect(res.headers.get("content-type")).toContain("application/rss+xml");
+    const body = await res.text();
+    expect(body).toContain(
+      '<atom:link href="https://cms.example/authors/jane/feed" rel="self"',
+    );
+    expect(body).toContain("<title>By Jane</title>");
+    expect(body).not.toContain("<title>By John</title>");
+  });
+
+  test("GET /authors/<slug>/feed/atom returns an Atom feed", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    await h.factory.author.create({ name: "Jane", slug: "jane" });
+    const atom = await h.fetch("/authors/jane/feed/atom");
+    atom.assertStatus(200);
+    expect(await atom.text()).toContain(
+      "<id>https://cms.example/authors/jane/feed/atom</id>",
+    );
+  });
+
+  test("an unknown author slug 404s", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const res = await h.fetch("/authors/nobody/feed");
+    res.assertStatus(404);
+  });
+
+  test("only published entries appear in the author feed", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const jane = await h.factory.author.create({ name: "Jane", slug: "jane" });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "live",
+      title: "Live One",
+      content: null,
+      status: "published",
+      authorId: jane.id,
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "wip",
+      title: "Draft One",
+      content: null,
+      status: "draft",
+      authorId: jane.id,
+    });
+    const body = await (await h.fetch("/authors/jane/feed")).text();
+    expect(body).toContain("Live One");
+    expect(body).not.toContain("Draft One");
+  });
+
+  test("author-archive pages emit the matching feed-discovery tags", async () => {
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    await h.factory.author.create({ name: "Jane", slug: "jane" });
+    const body = await (await h.fetch("/authors/jane")).text();
+    expect(body).toContain(
+      '<link rel="alternate" type="application/rss+xml" href="https://cms.example/authors/jane/feed"',
+    );
+    expect(body).toContain(
+      '<link rel="alternate" type="application/atom+xml" href="https://cms.example/authors/jane/feed/atom"',
+    );
+  });
+});

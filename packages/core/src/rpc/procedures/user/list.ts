@@ -58,6 +58,7 @@ export const list = base
       .select({
         id: users.id,
         email: users.email,
+        slug: users.slug,
         name: users.name,
         avatarUrl: users.avatarUrl,
         role: users.role,

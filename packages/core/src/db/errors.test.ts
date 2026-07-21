@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { isUniqueConstraintError } from "./errors.js";
+import {
+  isUniqueConstraintError,
+  isUniqueConstraintErrorOn,
+} from "./errors.js";
 
 // Synthetic driver error shapes — each mirrors what the real driver emits
 // for a UNIQUE violation. We keep them in-file so adding a new runtime
@@ -169,5 +172,29 @@ describe("isUniqueConstraintError — negatives", () => {
       head = wrapper;
     }
     expect(isUniqueConstraintError(head)).toBe(false);
+  });
+});
+
+describe("isUniqueConstraintErrorOn — column-specific", () => {
+  test("matches the named column, through a wrapped cause chain", () => {
+    const driver = new Error("UNIQUE constraint failed: users.slug");
+    const wrapped = new Error("Failed query: insert into users …");
+    (wrapped as unknown as { cause: unknown }).cause = driver;
+    expect(isUniqueConstraintErrorOn(wrapped, "users.slug")).toBe(true);
+  });
+
+  test("tells one column's violation apart from another's", () => {
+    const err = new Error("UNIQUE constraint failed: users.email");
+    expect(isUniqueConstraintErrorOn(err, "users.email")).toBe(true);
+    expect(isUniqueConstraintErrorOn(err, "users.slug")).toBe(false);
+  });
+
+  test("non-error and code-only shapes are not column-attributable", () => {
+    expect(isUniqueConstraintErrorOn(null, "users.slug")).toBe(false);
+    // Code without the SQLite message carries no column identity.
+    const codeOnly = Object.assign(new Error("insert failed"), {
+      code: "SQLITE_CONSTRAINT_UNIQUE",
+    });
+    expect(isUniqueConstraintErrorOn(codeOnly, "users.slug")).toBe(false);
   });
 });

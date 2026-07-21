@@ -41,6 +41,10 @@ export function pageTags(sources: PageTagSources): string[] {
       return sources.frontPageEntryTypes().map(typeTag);
     case "taxonomy":
       return sources.taxonomyEntryTypes(intent.taxonomy).map(typeTag);
+    case "author":
+      // An author archive lists the same public, non-hierarchical type set as
+      // the front page, so any publish of those types can change it.
+      return sources.frontPageEntryTypes().map(typeTag);
     case "search":
       return [];
   }

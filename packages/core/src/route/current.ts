@@ -8,13 +8,13 @@ import type { AppContext } from "../context/app.js";
  *
  * Archive routes set the `archive` variant carrying the entry type
  * being listed. Single routes set the `entry` variant with the resolved
- * row id. Term-archive routes will set `term` once the route module
- * supports them — the variant is declared now so consumers can branch
- * on it without a future migration.
+ * row id. Term-archive routes set `term`; author archives set `author`
+ * with the resolved user id.
  */
 export type ResolvedEntity =
   | { readonly kind: "entry"; readonly id: number }
   | { readonly kind: "term"; readonly id: number }
+  | { readonly kind: "author"; readonly id: number }
   | { readonly kind: "archive"; readonly entryType: string };
 
 /**

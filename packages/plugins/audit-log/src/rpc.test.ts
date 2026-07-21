@@ -69,6 +69,7 @@ function buildContext(role: UserRole): AppContext {
   const user: User = {
     id: 1,
     email: "alice@example.com",
+    slug: "alice",
     role,
     name: null,
     avatarUrl: null,
