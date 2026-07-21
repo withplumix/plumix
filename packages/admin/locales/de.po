@@ -1039,6 +1039,11 @@ msgid "userRole.long.author"
 msgstr "Autor — eigene Beiträge veröffentlichen"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.slug.label"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.title"
 msgstr "CLI-Zugriff autorisieren"
@@ -3494,6 +3499,11 @@ msgid "termForm.slug.format"
 msgstr "Slug darf nur Kleinbuchstaben, Ziffern und Bindestriche enthalten."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.slug.format"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.keyword.smtp"
 msgstr ""
@@ -3614,6 +3624,11 @@ msgstr "Dieses Konto ist deaktiviert."
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.accountDisabled"
 msgstr "Dieses Konto ist deaktiviert."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.slugTaken"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
@@ -4020,6 +4035,11 @@ msgstr "Verwenden Sie die nackte Domain — kein Protokoll, kein Pfad."
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.useTheirs"
 msgstr "Ihre verwenden"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.slug.description"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx

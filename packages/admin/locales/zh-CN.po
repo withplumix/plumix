@@ -1039,6 +1039,11 @@ msgid "userRole.long.author"
 msgstr "作者 — 发布自己的文章"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.slug.label"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.title"
 msgstr "授权 CLI 访问"
@@ -3494,6 +3499,11 @@ msgid "termForm.slug.format"
 msgstr "别名只能包含小写字母、数字和连字符。"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.slug.format"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.keyword.smtp"
 msgstr ""
@@ -3614,6 +3624,11 @@ msgstr "此账户已停用。"
 #: src/lib/oauth-errors.ts
 msgid "oauth.error.accountDisabled"
 msgstr "此账户已停用。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.error.slugTaken"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/email-change-errors.ts
@@ -4020,6 +4035,11 @@ msgstr "仅使用裸域名 — 不含协议,不含路径。"
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.useTheirs"
 msgstr "使用他们的"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/$id/edit.tsx
+msgid "userEdit.slug.description"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx

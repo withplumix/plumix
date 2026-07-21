@@ -219,6 +219,53 @@ describe("user.update", () => {
     expect(updated.role).toBe("editor");
   });
 
+  test("subscriber can edit own author slug", async () => {
+    const h = await createRpcHarness({ authAs: "subscriber" });
+    const updated = await h.client.user.update({
+      id: h.user.id,
+      slug: "renamed-author",
+    });
+    expect(updated.slug).toBe("renamed-author");
+  });
+
+  test("admin can edit another user's slug", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const target = await h.factory.user.create({ email: "t@example.test" });
+    const updated = await h.client.user.update({
+      id: target.id,
+      slug: "new-slug",
+    });
+    expect(updated.slug).toBe("new-slug");
+  });
+
+  test("taking another user's slug → CONFLICT slug_taken (no silent dedup)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await h.factory.user.create({ email: "other@example.test", slug: "taken" });
+    await expect(
+      h.client.user.update({ id: h.user.id, slug: "taken" }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "slug_taken" },
+    });
+  });
+
+  test("re-saving a user's own slug unchanged is a no-op, not a conflict", async () => {
+    const h = await createRpcHarness({ authAs: "subscriber" });
+    const current = await h.client.user.get({ id: h.user.id });
+    const updated = await h.client.user.update({
+      id: h.user.id,
+      slug: current.slug,
+    });
+    expect(updated.slug).toBe(current.slug);
+  });
+
+  test("rejects a slug that isn't URL-safe kebab-case", async () => {
+    const h = await createRpcHarness({ authAs: "subscriber" });
+    await expect(
+      h.client.user.update({ id: h.user.id, slug: "Not A Slug" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
   // `email` is intentionally NOT in `user.update`'s schema — silent
   // email changes would let a hijacked admin / self session redirect
   // a user's recovery address. The `email_taken` CONFLICT lives on

@@ -52,6 +52,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -68,7 +69,7 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
-import { idPathParam } from "@plumix/core/validation";
+import { idPathParam, vMessage } from "@plumix/core/validation";
 
 import {
   isUserRole,
@@ -122,6 +123,10 @@ const M = {
     id: "userEdit.delete.reassign.keepAsIs",
     message: "Keep entries as-is (none to reassign)",
   }),
+  slugFormat: defineMessage({
+    id: "userEdit.slug.format",
+    message: "Slug must be lowercase letters, numbers, and dashes.",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 // Radix Select forbids an empty-string item value, so "keep entries as-is"
@@ -140,8 +145,19 @@ async function invalidateUserCaches(
   ]);
 }
 
+// Mirrors the server's `slugSchema` so the client rejects a bad slug
+// before the round trip.
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 const profileFormSchema = v.object({
   name: v.pipe(v.string(), v.trim(), v.maxLength(100)),
+  slug: v.pipe(
+    v.string(),
+    v.trim(),
+    v.minLength(1, vMessage(M.slugFormat)),
+    v.maxLength(200),
+    v.regex(SLUG_PATTERN, vMessage(M.slugFormat)),
+  ),
   role: v.picklist(USER_ROLES),
   meta: v.record(v.string(), v.unknown()),
 });
@@ -260,12 +276,16 @@ function useUserUpdateMutation({
   return useMutation({
     mutationFn: (values: {
       name: string;
+      slug: string;
       role: UserRole;
       meta: Readonly<Record<string, unknown>>;
     }) =>
       orpc.user.update.call({
         id: target.id,
         name: values.name.length > 0 ? values.name : null,
+        // Only send the slug when it actually changed — skips a needless
+        // column write on name-only edits.
+        ...(values.slug !== target.slug ? { slug: values.slug } : {}),
         // Only send role if the caller can change it AND it actually
         // differs — avoids a needless `user:promote` cap check on the
         // server for name-only edits.
@@ -329,6 +349,7 @@ function UserEditForm({
     resolver: valibotResolver(profileFormSchema),
     defaultValues: {
       name: target.name ?? "",
+      slug: target.slug,
       role: target.role,
       meta: seedFromMetaBoxes(metaBoxes, target.meta),
     },
@@ -409,6 +430,34 @@ function UserEditForm({
                         {...field}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans id="userEdit.slug.label" message="Author slug" />
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        autoComplete="off"
+                        disabled={updateUser.isPending || !canSave}
+                        data-testid="user-edit-slug-input"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      <Trans
+                        id="userEdit.slug.description"
+                        message="Used in this author's archive URL under /authors/. Changing it breaks existing links to the old address."
+                      />
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -841,6 +890,10 @@ const UPDATE_ERROR_MESSAGES: ErrorMessages = {
   email_taken: defineMessage({
     id: "userEdit.error.emailTaken",
     message: "A user with that email already exists.",
+  }),
+  slug_taken: defineMessage({
+    id: "userEdit.error.slugTaken",
+    message: "That author slug is already taken. Choose a different one.",
   }),
 };
 const STATUS_ERROR_MESSAGES: ErrorMessages = {

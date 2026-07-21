@@ -1,7 +1,12 @@
 import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { NewUser, User } from "../../../db/schema/users.js";
 import { invalidateAllSessionsForUser } from "../../../auth/sessions.js";
-import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
+import {
+  and,
+  eq,
+  isUniqueConstraintError,
+  isUniqueConstraintErrorOn,
+} from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
@@ -27,6 +32,7 @@ interface AccessGuards {
 }
 
 interface UserWriteGuards {
+  readonly slugTaken: () => never;
   readonly emailTaken: () => never;
   readonly lastAdmin: () => never;
   readonly updateFailed: () => never;
@@ -76,6 +82,11 @@ async function writeUserColumns(
       .where(whereClause)
       .returning();
   } catch (error) {
+    // Two unique columns can trip here — an explicit slug edit collides on
+    // `users.slug`, so map that first. `users.email` isn't writable via this
+    // RPC (email goes through the confirmation flow), but keep the fallback
+    // defensive against a plugin filter that reintroduces it.
+    if (isUniqueConstraintErrorOn(error, "users.slug")) guards.slugTaken();
     if (isUniqueConstraintError(error)) guards.emailTaken();
     throw error;
   }
@@ -152,6 +163,9 @@ export const update = base
         patch,
         demotingAdmin,
         {
+          slugTaken: () => {
+            throw errors.CONFLICT({ data: { reason: "slug_taken" } });
+          },
           emailTaken: () => {
             throw errors.CONFLICT({ data: { reason: "email_taken" } });
           },
