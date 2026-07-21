@@ -252,6 +252,19 @@ export const DEBUG_BAR_CSS =
       margin: 0;
       color: #8a929a;
     }
+    /* Template panel — per-rule resolution status */
+    .plumix-debug-bar__status {
+      font-weight: 600;
+    }
+    .plumix-debug-bar__status--matched {
+      color: #7ee787;
+    }
+    .plumix-debug-bar__status--skipped {
+      color: #d29922;
+    }
+    .plumix-debug-bar__status--never-evaluated {
+      color: #8a929a;
+    }
     /* Timeline panel — SVG waterfall */
     .plumix-debug-bar__timeline {
       display: block;

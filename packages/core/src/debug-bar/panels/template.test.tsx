@@ -13,18 +13,55 @@ function ctxWith(resolution?: TemplateResolution): AppContext {
 }
 
 describe("templatePanel", () => {
-  test("renders the resolved node label and the matched rule", () => {
+  test("renders the resolution table: node, winner, and each rule's status", () => {
     const ctx = ctxWith({
       nodeLabel: "post: hello-world",
-      picked: "page",
+      winner: "post",
+      steps: [
+        { label: "fallback", status: "never-evaluated" },
+        {
+          label: "post",
+          status: "matched",
+          predicate: { fired: true, result: true },
+        },
+        {
+          label: "post:draft",
+          status: "skipped",
+          predicate: { fired: true, result: false },
+        },
+        {
+          label: "page",
+          status: "skipped",
+          predicate: { fired: false, result: false },
+        },
+      ],
     });
 
     const html = renderToStaticMarkup(<>{templatePanel.render(ctx)}</>);
 
-    // Pin the exact `DebugKV` value cells — "post" is too common a substring
-    // to assert bare.
+    // Node + winner in their exact `DebugKV` value cells.
     expect(html).toContain("<dd>post: hello-world</dd>");
-    expect(html).toContain("<dd>page</dd>");
+    expect(html).toContain("<dd>post</dd>");
+    // Every rule's status class is emitted.
+    expect(html).toContain("plumix-debug-bar__status--matched");
+    expect(html).toContain("plumix-debug-bar__status--never-evaluated");
+    expect(html).toContain("plumix-debug-bar__status--skipped");
+    // Predicate outcomes: passed / failed / never-ran.
+    expect(html).toContain("passed");
+    expect(html).toContain("failed");
+    expect(html).toContain("n/a");
+  });
+
+  test("marks a 404 when no rule matched", () => {
+    const ctx = ctxWith({
+      nodeLabel: "post: orphan",
+      winner: null,
+      steps: [{ label: "archive", status: "never-evaluated" }],
+    });
+
+    const html = renderToStaticMarkup(<>{templatePanel.render(ctx)}</>);
+
+    expect(html).toContain("no match → 404");
   });
 
   test("shows an n/a state when no template was resolved (e.g. an error page)", () => {
