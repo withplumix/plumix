@@ -126,9 +126,9 @@ export function LinkField({
   const entryTypes = publicEntryTypeNames();
 
   // Only published entries have a permalink worth storing — a draft's
-  // URL would 404 (and go stale on slug edits). Typed so the status
-  // literal tracks the `EntryStatus` vocabulary.
-  const scope: EntryFieldScope = { entryTypes, status: "published" };
+  // URL would 404 (and go stale on slug edits). `satisfies` keeps the
+  // status literal tracking the `EntryStatus` vocabulary.
+  const scope = { entryTypes, status: "published" } satisfies EntryFieldScope;
   const listQuery = useQuery({
     ...orpc.lookup.list.queryOptions({
       input: {

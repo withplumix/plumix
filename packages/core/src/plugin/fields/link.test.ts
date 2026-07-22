@@ -168,6 +168,7 @@ describe("link registers and round-trips the manifest", () => {
 describe("link phantom value typing", () => {
   test("unadorned reads `LinkValue | undefined`; .required()/.default() narrow", () => {
     const _unadorned = link("cta");
+    expectTypeOf<(typeof _unadorned)["_key"]>().toEqualTypeOf<"cta">();
     expectTypeOf<(typeof _unadorned)["_value"]>().toEqualTypeOf<
       LinkValue | undefined
     >();
@@ -181,6 +182,22 @@ describe("link phantom value typing", () => {
     // Narrowing survives later chained calls.
     const _chained = link("cta").required().span(6).label("CTA");
     expectTypeOf<(typeof _chained)["_value"]>().toEqualTypeOf<LinkValue>();
+  });
+
+  test("stored shape narrows on .required() but not .default()", () => {
+    const _plain = link("cta");
+    expectTypeOf<(typeof _plain)["_stored"]>().toEqualTypeOf<
+      LinkValue | undefined
+    >();
+
+    // Storage can still lack the key — defaults apply at decode time.
+    const _defaulted = link("cta").default({ url: "/pricing" });
+    expectTypeOf<(typeof _defaulted)["_stored"]>().toEqualTypeOf<
+      LinkValue | undefined
+    >();
+
+    const _required = link("cta").required();
+    expectTypeOf<(typeof _required)["_stored"]>().toEqualTypeOf<LinkValue>();
   });
 
   test(".sanitize()/.validate() callbacks receive the narrowed value type", () => {

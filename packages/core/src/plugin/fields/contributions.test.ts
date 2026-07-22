@@ -15,7 +15,9 @@ import type {
   TermMetaOf,
   UserMetaOf,
 } from "./contributions.js";
+import type { LinkValue } from "./link.js";
 import { text, textarea } from "./builder.js";
+import { link } from "./link.js";
 
 // Fixture field sets. Registered under test-only entry types / taxonomies so
 // the module augmentations (global across the compilation) can't interfere
@@ -177,6 +179,18 @@ describe("InferFields / InferStoredFields", () => {
     expectTypeOf<Stored["subtitle"]>().toEqualTypeOf<string | undefined>();
     expectTypeOf<Stored["badge"]>().toEqualTypeOf<string | undefined>();
     expectTypeOf<Stored["heroCredit"]>().toEqualTypeOf<string>();
+  });
+
+  test("link() folds its LinkValue shape into the typed record", () => {
+    const _ctaFields = [link("cta"), link("banner").required()] as const;
+
+    type Read = InferFields<typeof _ctaFields>;
+    expectTypeOf<Read["cta"]>().toEqualTypeOf<LinkValue | undefined>();
+    expectTypeOf<Read["banner"]>().toEqualTypeOf<LinkValue>();
+
+    type Stored = InferStoredFields<typeof _ctaFields>;
+    expectTypeOf<Stored["cta"]>().toEqualTypeOf<LinkValue | undefined>();
+    expectTypeOf<Stored["banner"]>().toEqualTypeOf<LinkValue>();
   });
 
   test("non-builder definitions contribute nothing to the typed record", () => {

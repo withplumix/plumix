@@ -18,15 +18,22 @@ type LinkFieldState = Omit<StringFieldState, "default" | "maxLength"> & {
 
 /**
  * Fluent chain for the `link` field — see `StringFieldBuilder` for the
- * chassis conventions (immutability, phantom `V`, `build()` seam). `V`
- * is `LinkValue | undefined` unadorned, narrowed to `LinkValue` by
- * `.required()` / `.default()`.
+ * chassis conventions (immutability, phantom `K`/`V`/`S`, `build()`
+ * seam). `V` is `LinkValue | undefined` unadorned, narrowed to
+ * `LinkValue` by `.required()` / `.default()`; `S` is the stored shape,
+ * narrowed by `.required()` only (defaults apply at decode time).
  */
 export class LinkFieldBuilder<
+  K extends string = string,
   V extends LinkValue | undefined = LinkValue | undefined,
+  S extends LinkValue | undefined = LinkValue | undefined,
 > implements FieldBuilder<LinkMetaBoxField> {
+  /** Phantom literal key of the field — type-level only, never assigned. */
+  declare readonly _key: K;
   /** Phantom read type of the field — type-level only, never assigned. */
   declare readonly _value: V;
+  /** Phantom stored shape of the field — type-level only, never assigned. */
+  declare readonly _stored: S;
 
   readonly #key: string;
   readonly #state: LinkFieldState;
@@ -36,62 +43,68 @@ export class LinkFieldBuilder<
     this.#state = state;
   }
 
-  #fork<V2 extends LinkValue | undefined = V>(
-    patch: Partial<LinkFieldState>,
-  ): LinkFieldBuilder<V2> {
-    return new LinkFieldBuilder<V2>(this.#key, { ...this.#state, ...patch });
+  #fork<
+    V2 extends LinkValue | undefined = V,
+    S2 extends LinkValue | undefined = S,
+  >(patch: Partial<LinkFieldState>): LinkFieldBuilder<K, V2, S2> {
+    return new LinkFieldBuilder<K, V2, S2>(this.#key, {
+      ...this.#state,
+      ...patch,
+    });
   }
 
   /** Override the derived (humanized-key) label. */
-  label(label: Label): LinkFieldBuilder<V> {
+  label(label: Label): LinkFieldBuilder<K, V, S> {
     return this.#fork({ label });
   }
 
   /** Help text rendered under the label. */
-  description(description: Label): LinkFieldBuilder<V> {
+  description(description: Label): LinkFieldBuilder<K, V, S> {
     return this.#fork({ description });
   }
 
   /** Placeholder for the control's URL input. */
-  placeholder(placeholder: Label): LinkFieldBuilder<V> {
+  placeholder(placeholder: Label): LinkFieldBuilder<K, V, S> {
     return this.#fork({ placeholder });
   }
 
   /** Static adornment rendered before the input. */
-  prepend(prepend: Label): LinkFieldBuilder<V> {
+  prepend(prepend: Label): LinkFieldBuilder<K, V, S> {
     return this.#fork({ prepend });
   }
 
   /** Static adornment rendered after the input. */
-  append(append: Label): LinkFieldBuilder<V> {
+  append(append: Label): LinkFieldBuilder<K, V, S> {
     return this.#fork({ append });
   }
 
-  /** Admin-form prefill for unsaved keys — narrows the read type to `LinkValue`. */
-  default(value: LinkValue): LinkFieldBuilder<LinkValue> {
-    return this.#fork<LinkValue>({ default: value });
+  /** Default for absent keys, applied at read decode (and seeded into
+   * the admin form) — narrows the read type to `LinkValue`; the stored
+   * shape stays optional. */
+  default(value: LinkValue): LinkFieldBuilder<K, LinkValue, S> {
+    return this.#fork<LinkValue, S>({ default: value });
   }
 
-  /** Mark the field required — narrows the read type to `LinkValue`. */
-  required(): LinkFieldBuilder<LinkValue> {
-    return this.#fork<LinkValue>({ required: true });
+  /** Mark the field required — narrows the read and stored types to `LinkValue`. */
+  required(): LinkFieldBuilder<K, LinkValue, LinkValue> {
+    return this.#fork<LinkValue, LinkValue>({ required: true });
   }
 
   /**
    * Column span within the box's 12-column grid — a universal layout
    * hint; surfaces that can't honor it (the entry editor rail) ignore it.
    */
-  span(span: MetaBoxFieldSpan): LinkFieldBuilder<V> {
+  span(span: MetaBoxFieldSpan): LinkFieldBuilder<K, V, S> {
     return this.#fork({ span });
   }
 
   /** Capability gate for this field — see `MetaBoxFieldBase.capability`. */
-  capability(capability: string): LinkFieldBuilder<V> {
+  capability(capability: string): LinkFieldBuilder<K, V, S> {
     return this.#fork({ capability });
   }
 
   /** Opt this field's value into public REST responses (default-deny). */
-  showInApi(): LinkFieldBuilder<V> {
+  showInApi(): LinkFieldBuilder<K, V, S> {
     return this.#fork({ showInApi: true });
   }
 
@@ -101,7 +114,7 @@ export class LinkFieldBuilder<
    */
   sanitize(
     sanitize: (value: NonNullable<V>) => NonNullable<V>,
-  ): LinkFieldBuilder<V> {
+  ): LinkFieldBuilder<K, V, S> {
     return this.#fork({ sanitize: sanitize as (value: unknown) => unknown });
   }
 
@@ -112,7 +125,7 @@ export class LinkFieldBuilder<
    */
   validate(
     validate: (value: NonNullable<V>) => true | Label | Promise<true | Label>,
-  ): LinkFieldBuilder<V> {
+  ): LinkFieldBuilder<K, V, S> {
     return this.#fork({ validate: validate as MetaBoxFieldValidate });
   }
 
@@ -136,7 +149,7 @@ export class LinkFieldBuilder<
 }
 
 /** CTA-style link field — internal entry URL or external URL, optional label + new-tab. */
-export function link(key: string): LinkFieldBuilder {
+export function link<K extends string>(key: K): LinkFieldBuilder<K> {
   return new LinkFieldBuilder(key);
 }
 
