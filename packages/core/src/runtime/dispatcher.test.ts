@@ -1280,6 +1280,53 @@ describe("dispatcher — telemetry consumers", () => {
     expect(snapshot?.dropped).toEqual({ spans: 0, records: {} });
   });
 
+  test("db query spans reach the snapshot with sql/params/rows — repeats (N+1) visible", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const blog = definePlugin("test-blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blog],
+      theme: defineTheme({ templates: [fallback(() => null)] }),
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    await h.dispatch(new Request("https://cms.example/post/hello"));
+    await h.drainDeferred();
+
+    const [snapshot] = snapshots;
+    const flatten = (spans: readonly TelemetrySpan[]): TelemetrySpan[] =>
+      spans.flatMap((span) => [span, ...flatten(span.children)]);
+
+    // The resolve step runs several selects; each is one attributed span, so
+    // an N+1 pattern shows up as repeated `db: select` spans in one request.
+    const selects = flatten(snapshot?.spans ?? []).filter(
+      (span) => span.name === "db: select",
+    );
+    expect(selects.length).toBeGreaterThanOrEqual(2);
+    const entryQuery = selects.find((s) => {
+      const sqlAttr = s.attributes["db.sql"];
+      return typeof sqlAttr === "string" && sqlAttr.includes("entries");
+    });
+    expect(entryQuery).toBeDefined();
+    expect(Array.isArray(entryQuery?.attributes["db.params"])).toBe(true);
+    expect(entryQuery?.attributes["db.rows"]).toBeTypeOf("number");
+  });
+
   test("a slow consumer never delays the response — export waits in the defer queue", async () => {
     let finishExport!: () => void;
     const exportDone = new Promise<void>((r) => (finishExport = r));

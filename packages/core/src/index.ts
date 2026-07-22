@@ -9,9 +9,10 @@ export * from "./config.js";
 export * from "./context/index.js";
 export * from "./db/index.js";
 export * from "./db/schema/index.js";
-// Dev-only debug bar's query logger — exposed for runtime adapters (D1) to
-// wire into their `drizzle(...)` call behind the `PLUMIX_DEV` gate.
-export { createDebugSqlLogger } from "./debug-bar/db-query.js";
+// Driver-agnostic query-span helpers — runtime adapters (D1, demo) wrap their
+// driver's execution path with these so every `ctx.db` query is traced.
+export { traceDbBatch, traceDbQuery } from "./db/trace.js";
+export type { TracedQuery } from "./db/trace.js";
 export * from "./hooks/index.js";
 export * from "./i18n/index.js";
 export * from "./mcp/index.js";

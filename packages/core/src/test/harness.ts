@@ -7,8 +7,7 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 import * as schema from "../db/schema/index.js";
-import { createDebugSqlLogger } from "../debug-bar/db-query.js";
-import { traceSqlClient } from "../debug-bar/trace-libsql.js";
+import { traceSqlClient } from "../db/trace-libsql.js";
 
 type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 
@@ -39,16 +38,9 @@ async function compileSchemaSql(): Promise<string[]> {
  * Pure JS — works on Node, Bun, Deno, CI without native deps.
  */
 export async function createTestDb(): Promise<TestDb> {
-  const raw = createClient({ url: ":memory:" });
-  // Mirror the real adapter: dev-gated per-query span timing for the Timeline.
-  const client = process.env.PLUMIX_DEV ? traceSqlClient(raw) : raw;
-  const db = drizzle(client, {
-    schema,
-    casing: "snake_case",
-    // Mirrors the real adapters: dev-gated debug-bar query logging, so the
-    // Database panel can be exercised end-to-end through the harness.
-    logger: process.env.PLUMIX_DEV ? createDebugSqlLogger() : undefined,
-  });
+  // Mirror the real adapter: unconditional per-query span tracing.
+  const client = traceSqlClient(createClient({ url: ":memory:" }));
+  const db = drizzle(client, { schema, casing: "snake_case" });
   const statements = await compileSchemaSql();
   for (const stmt of statements) await db.run(sql.raw(stmt));
   return db;

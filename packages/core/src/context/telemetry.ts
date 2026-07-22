@@ -74,7 +74,7 @@ export interface TelemetryCollector {
   /**
    * Append an entry under `namespace` (for the debug bar: the panel's id).
    * A function entry is a lazy payload: the active collector evaluates it once
-   * at record time; the no-op (and a denylisted namespace) never does.
+   * at record time; the no-op never does.
    */
   record(namespace: string, entry: unknown): void;
   /** Time `fn`, record a span, and return `fn`'s result unchanged. */

@@ -80,13 +80,3 @@ export function tokenizeSql(sql: string): readonly SqlToken[] {
   }
   return tokens;
 }
-
-export type QueryKind = "select" | "insert" | "update" | "delete" | "other";
-
-const KNOWN_KINDS = new Set(["select", "insert", "update", "delete"]);
-
-/** The leading statement kind, for the per-query badge/color. */
-export function queryKind(sql: string): QueryKind {
-  const first = sql.trimStart().split(/\s/, 1)[0]?.toLowerCase() ?? "";
-  return (KNOWN_KINDS.has(first) ? first : "other") as QueryKind;
-}

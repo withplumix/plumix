@@ -4,6 +4,7 @@ import type { AppContext } from "../context/app.js";
 import type { PlumixApp } from "./app.js";
 import { registerCorePurgeInvalidator } from "../cache/purge.js";
 import { requestStore } from "../context/stores.js";
+import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { entryFactory, userFactory } from "../test/factories.js";
@@ -47,6 +48,7 @@ describe("scheduled publish purges the edge cache", () => {
       hooks,
       plugins: registry,
       cache: { match: vi.fn(), put: vi.fn(), purgeTags },
+      telemetry: NOOP_TELEMETRY,
       defer: (p: Promise<unknown>) => {
         void p;
       },
@@ -87,6 +89,7 @@ describe("scheduled publish purges the edge cache", () => {
       hooks,
       plugins: registry,
       cache: undefined,
+      telemetry: NOOP_TELEMETRY,
       defer,
       logger: silentLogger,
     } as unknown as AppContext;

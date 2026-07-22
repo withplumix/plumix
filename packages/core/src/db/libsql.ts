@@ -4,9 +4,8 @@ import { drizzle } from "drizzle-orm/libsql";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type { EnvInput } from "../runtime/env-input.js";
 import type { DatabaseAdapter } from "../runtime/slots.js";
-import { createDebugSqlLogger } from "../debug-bar/db-query.js";
-import { traceSqlClient } from "../debug-bar/trace-libsql.js";
 import { resolveEnvInput } from "../runtime/env-input.js";
+import { traceSqlClient } from "./trace-libsql.js";
 
 export interface LibsqlConfig {
   /**
@@ -48,20 +47,17 @@ export function libsql(config: LibsqlConfigInput): LibsqlDatabaseAdapter {
     connect: (env, _request, schema) => {
       if (!client) {
         const resolved = resolveEnvInput(config, env as PlumixEnv);
-        const raw = createClient({
-          url: resolved.url,
-          authToken: resolved.authToken,
-        });
-        // Dev-only: time each query as a span for the Timeline panel.
-        client = process.env.PLUMIX_DEV ? traceSqlClient(raw) : raw;
+        // Unconditional: spans are no-ops unless a telemetry consumer
+        // sampled the request, so production without consumers pays nothing.
+        client = traceSqlClient(
+          createClient({
+            url: resolved.url,
+            authToken: resolved.authToken,
+          }),
+        );
       }
       return {
-        db: drizzle(client, {
-          schema,
-          casing: "snake_case",
-          // Dev-only: feed the debug bar's Database panel. Tree-shaken in prod.
-          logger: process.env.PLUMIX_DEV ? createDebugSqlLogger() : undefined,
-        }),
+        db: drizzle(client, { schema, casing: "snake_case" }),
       };
     },
   };
