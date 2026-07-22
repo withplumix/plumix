@@ -15,7 +15,6 @@ import {
   json,
   multiselect,
   number,
-  password,
   radio,
   range,
   repeater,
@@ -31,38 +30,12 @@ import {
   userList,
 } from "./index.js";
 
-// One combined suite for the seven straightforward variants whose
-// shape mirrors `text()`. The dedicated `text.test.ts` covers the full
-// matrix (option carry-over, sanitize identity, type-level rejection,
-// manifest round-trip); these tests focus on the per-variant
-// guarantees that diverge from `text` (notably `type` for `number` /
-// `checkbox` and required `options` for `select` / `radio`).
-
-describe("textarea() builder", () => {
-  test("pins inputType + type, carries options", () => {
-    const field = textarea({
-      key: "bio",
-      label: "Bio",
-      placeholder: "Tell us about yourself",
-      maxLength: 500,
-      required: true,
-    });
-    expect(field.inputType).toBe("textarea");
-    expect(field.type).toBe("string");
-    expect(field.placeholder).toBe("Tell us about yourself");
-    expect(field.maxLength).toBe(500);
-    expect(field.required).toBe(true);
-  });
-
-  test("rejects non-text-shaped options at the type level", () => {
-    textarea({
-      key: "bio",
-      label: "Bio",
-      // @ts-expect-error — `min` belongs to `number` fields.
-      min: 5,
-    });
-  });
-});
+// One combined suite for the straightforward flat-options variants.
+// The string scalar fields (`text`, `textarea`, `email`, `url`,
+// `password`) are fluent builders covered by `builder.test.ts`; these
+// tests focus on the per-variant guarantees of the factories that
+// still take flat options (notably `type` for `number` / `checkbox`
+// and required `options` for `select` / `radio`).
 
 describe("number() builder", () => {
   test("pins inputType + type, carries min/max/step", () => {
@@ -93,71 +66,6 @@ describe("number() builder", () => {
     number({
       key: "n",
       label: "n",
-      // @ts-expect-error — `options` belongs to select/radio.
-      options: [{ value: "a", label: "A" }],
-    });
-  });
-});
-
-describe("email() builder", () => {
-  test("pins inputType + type and carries text-shaped options", () => {
-    const field = email({
-      key: "contact",
-      label: "Contact email",
-      placeholder: "you@example.com",
-      maxLength: 254,
-    });
-    expect(field.inputType).toBe("email");
-    expect(field.type).toBe("string");
-    expect(field.placeholder).toBe("you@example.com");
-    expect(field.maxLength).toBe(254);
-  });
-
-  test("rejects number-shaped options at the type level", () => {
-    email({
-      key: "e",
-      label: "e",
-      // @ts-expect-error — `min` belongs to `number` fields.
-      min: 1,
-    });
-  });
-});
-
-describe("url() builder", () => {
-  test("pins inputType + type and carries text-shaped options", () => {
-    const field = url({ key: "website", label: "Website" });
-    expect(field.inputType).toBe("url");
-    expect(field.type).toBe("string");
-  });
-});
-
-describe("password() builder", () => {
-  test("pins inputType + type and carries text-shaped options", () => {
-    const field = password({
-      key: "pin",
-      label: "Display PIN",
-      placeholder: "••••",
-      maxLength: 32,
-      required: true,
-    });
-    expect(field.inputType).toBe("password");
-    expect(field.type).toBe("string");
-    expect(field.placeholder).toBe("••••");
-    expect(field.maxLength).toBe(32);
-    expect(field.required).toBe(true);
-  });
-
-  test("rejects non-text-shaped options at the type level", () => {
-    password({
-      key: "p",
-      label: "p",
-      // @ts-expect-error — `min` is a number-bound, not a text option.
-      min: 1,
-    });
-
-    password({
-      key: "p",
-      label: "p",
       // @ts-expect-error — `options` belongs to select/radio.
       options: [{ value: "a", label: "A" }],
     });
@@ -500,10 +408,10 @@ describe("manifest round-trip across all built-in builders", () => {
       ctx.registerSettingsGroup("everything", {
         label: "Everything",
         fields: [
-          textarea({ key: "bio", label: "Bio", maxLength: 500 }),
+          textarea("bio").label("Bio").maxLength(500),
           number({ key: "age", label: "Age", min: 0, max: 120 }),
-          email({ key: "contact", label: "Contact" }),
-          url({ key: "website", label: "Website" }),
+          email("contact").label("Contact"),
+          url("website").label("Website"),
           select({
             key: "size",
             label: "Size",
@@ -1055,10 +963,7 @@ describe("repeater() builder", () => {
       label: "Links",
       min: 1,
       max: 5,
-      subFields: [
-        text({ key: "label", label: "Label" }),
-        text({ key: "href", label: "URL" }),
-      ],
+      subFields: [text("label"), text("href").label("URL")],
     });
     expect(field.inputType).toBe("repeater");
     expect(field.type).toBe("json");
@@ -1080,14 +985,14 @@ describe("repeater() builder", () => {
       repeater({
         key: "rows",
         label: "Rows",
-        subFields: [text({ key: "__proto__", label: "Bad" })],
+        subFields: [text("__proto__")],
       }),
     ).toThrow(/forbidden/);
     expect(() =>
       repeater({
         key: "rows",
         label: "Rows",
-        subFields: [text({ key: "constructor", label: "Bad" })],
+        subFields: [text("constructor")],
       }),
     ).toThrow(/forbidden/);
   });
@@ -1097,7 +1002,7 @@ describe("repeater() builder", () => {
       repeater({
         key: "rows",
         label: "Rows",
-        subFields: [text({ key: "with space", label: "Bad" })],
+        subFields: [text("with space")],
       }),
     ).toThrow(/must match/);
   });
@@ -1107,10 +1012,7 @@ describe("repeater() builder", () => {
       repeater({
         key: "rows",
         label: "Rows",
-        subFields: [
-          text({ key: "label", label: "Label" }),
-          text({ key: "label", label: "Other" }),
-        ],
+        subFields: [text("label"), text("label").label("Other")],
       }),
     ).toThrow(/declares subField "label" more than once/);
   });
@@ -1124,7 +1026,7 @@ describe("repeater() builder", () => {
           repeater({
             key: "inner",
             label: "Inner",
-            subFields: [text({ key: "v", label: "Value" })],
+            subFields: [text("v").label("Value")],
           }),
         ],
       }),
@@ -1140,10 +1042,7 @@ describe("repeater() builder", () => {
           repeater({
             key: "links",
             label: "Links",
-            subFields: [
-              text({ key: "label", label: "Label", maxLength: 80 }),
-              text({ key: "href", label: "URL" }),
-            ],
+            subFields: [text("label").maxLength(80), text("href").label("URL")],
           }),
         ],
       });

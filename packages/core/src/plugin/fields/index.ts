@@ -1,27 +1,26 @@
-// Typed builder helpers for meta-box field registration. Each builder
-// returns the narrowed variant of `MetaBoxField` matching its input
-// type (e.g. `text()` → `TextMetaBoxField`), so the rest of the field
-// schema is type-checked against options that actually apply to the
-// renderer — `text({ min: 5 })` is a compile error.
-//
-// Builders are the recommended path for plugin authors going forward;
-// existing object-literal registrations continue to compile against
-// the broad `LegacyMetaBoxField` shape during the migration window.
+// Typed builder helpers for meta-box field registration. The string
+// scalar fields (`text`, `textarea`, `email`, `url`, `password`) are
+// fluent builders: the constructor takes the key alone and every
+// option is a chained call (`text("subtitle").maxLength(120)`), each
+// returning a fresh immutable instance that compiles to the narrowed
+// `MetaBoxField` variant at registration. The remaining factories
+// still take flat option objects, each returning the narrowed variant
+// matching its input type — `number({ maxLength: 5 })` is a compile
+// error. They convert to fluent chains ticket by ticket.
 //
 // Re-exported as a public surface from `plumix/fields`.
 
-export { text } from "./text.js";
-export type { TextFieldOptions } from "./text.js";
-export { textarea } from "./textarea.js";
-export type { TextareaFieldOptions } from "./textarea.js";
+export {
+  email,
+  password,
+  StringFieldBuilder,
+  text,
+  textarea,
+  url,
+} from "./builder.js";
+export type { StringInputType } from "./builder.js";
 export { number } from "./number.js";
 export type { NumberFieldOptions } from "./number.js";
-export { email } from "./email.js";
-export type { EmailFieldOptions } from "./email.js";
-export { url } from "./url.js";
-export type { UrlFieldOptions } from "./url.js";
-export { password } from "./password.js";
-export type { PasswordFieldOptions } from "./password.js";
 export { date } from "./date.js";
 export type { DateFieldOptions } from "./date.js";
 export { datetime } from "./datetime.js";

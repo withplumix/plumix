@@ -43,9 +43,13 @@ export function walkRepeaterRows(
       let hasValue = false;
       for (const sf of subFields) {
         const raw = inputRow[sf.key];
-        const sanitized = sf.sanitize
-          ? runSubSanitize(sf, raw, `[${i}].${sf.key}`)
-          : raw;
+        // Absent values skip sanitize, mirroring the top-level pipeline
+        // (null/undefined are deletions there) — the fluent chain types
+        // callbacks against the present value, so they must never see one.
+        const sanitized =
+          sf.sanitize && raw !== null && raw !== undefined
+            ? runSubSanitize(sf, raw, `[${i}].${sf.key}`)
+            : raw;
         if (sanitized !== null && sanitized !== undefined && sanitized !== "") {
           hasValue = true;
         }
