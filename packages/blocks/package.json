@@ -1,6 +1,6 @@
 {
   "name": "@plumix/blocks",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "description": "Plumix block primitives and renderer",
   "license": "MIT",
