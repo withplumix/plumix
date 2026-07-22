@@ -6,7 +6,6 @@ import type {
 } from "../manifest.js";
 import { compileMetaBoxFields } from "../manifest.js";
 import { FieldConfigError } from "./errors.js";
-import { walkRepeaterRows } from "./repeater-validate.js";
 
 export interface RepeaterFieldOptions {
   readonly key: string;
@@ -83,9 +82,5 @@ export function repeater(options: RepeaterFieldOptions): RepeaterMetaBoxField {
     default: options.default,
     span: options.span,
     capability: options.capability,
-    sanitize: walkRepeaterRows(subFields, {
-      min: options.min,
-      max: options.max,
-    }),
   };
 }

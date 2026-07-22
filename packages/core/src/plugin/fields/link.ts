@@ -131,55 +131,43 @@ export class LinkFieldBuilder<
 
   /** Compile the chain into the wire/manifest field definition. */
   build(): LinkMetaBoxField {
-    const { sanitize, ...state } = this.#state;
     return {
-      ...state,
+      ...this.#state,
       key: this.#key,
-      label: state.label ?? humanizeFieldKey(this.#key),
+      label: this.#state.label ?? humanizeFieldKey(this.#key),
       type: "json",
       inputType: "link",
-      // The built-in shape/URL check always runs first so a chained
-      // `.sanitize()` callback can trust its typed `LinkValue` parameter.
-      sanitize: (value) => {
-        const coerced = coerceLinkValue(value);
-        return sanitize ? sanitize(coerced) : coerced;
-      },
     };
   }
 }
 
-/** CTA-style link field — internal entry URL or external URL, optional label + new-tab. */
+/** CTA-style link field — internal entry URL or external URL, optional
+ *  label + new-tab. Shape and URL are enforced server-side by the
+ *  constraint walker. */
 export function link<K extends string>(key: K): LinkFieldBuilder<K> {
   return new LinkFieldBuilder(key);
 }
 
-function coerceLinkValue(value: unknown): LinkValue {
+/**
+ * Parse an incoming link value into its canonical `LinkValue` shape, or
+ * `null` when malformed. Rebuilds from the known keys so unrecognized
+ * properties never persist. The URL gate is `SAFE_HREF_RE` (shared with
+ * richtext link marks): relative forms (`/pricing` — what the admin's
+ * entry picker stores — plus `#`, `?`, `./`) and `https?` / `mailto:` /
+ * `tel:` absolutes. Script-bearing schemes (`javascript:`, `data:`)
+ * hard-fail — the value is destined for rendered anchor hrefs.
+ */
+export function parseLinkValue(value: unknown): LinkValue | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw invalidLink();
+    return null;
   }
   const { url, label, newTab } = value as Record<string, unknown>;
-  if (typeof url !== "string" || !isValidLinkUrl(url)) throw invalidLink();
-  if (label !== undefined && typeof label !== "string") throw invalidLink();
-  if (newTab !== undefined && typeof newTab !== "boolean") throw invalidLink();
-  // Rebuild from the known keys so unrecognized properties never persist.
+  if (typeof url !== "string" || !SAFE_HREF_RE.test(url)) return null;
+  if (label !== undefined && typeof label !== "string") return null;
+  if (newTab !== undefined && typeof newTab !== "boolean") return null;
   return {
     url,
     ...(label !== undefined ? { label } : {}),
     ...(newTab !== undefined ? { newTab } : {}),
   };
-}
-
-// URL gate shared with richtext link marks (`SAFE_HREF_RE`): relative
-// forms (`/pricing` — what the admin's entry picker stores — plus `#`,
-// `?`, `./`) and `https?` / `mailto:` / `tel:` absolutes. Script-bearing
-// schemes (`javascript:`, `data:`) hard-fail — the value is destined
-// for rendered anchor hrefs.
-function isValidLinkUrl(url: string): boolean {
-  return SAFE_HREF_RE.test(url);
-}
-
-// Sanitizer flow-control sentinel — the write pipeline translates any
-// sanitize throw into a `meta_invalid_value` CONFLICT envelope.
-function invalidLink(): Error {
-  return new Error("invalid_value");
 }

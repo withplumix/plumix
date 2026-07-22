@@ -113,7 +113,7 @@ export class RangeFieldBuilder<
     return this.#fork({ step });
   }
 
-  /** Normalising transform — replaces the default bounds sanitizer. */
+  /** Normalising transform, applied after coercion and before persistence. */
   sanitize(
     sanitize: (value: NonNullable<V>) => NonNullable<V>,
   ): RangeFieldBuilder<K, V, S> {
@@ -152,32 +152,15 @@ export class RangeFieldBuilder<
       inputType: "range",
       min,
       max,
-      sanitize: this.#state.sanitize ?? buildBoundsSanitizer(min, max),
     };
   }
 }
 
 /**
  * Bounded numeric slider. `.min()` and `.max()` are required;
- * `min <= max` is enforced at registration time.
+ * `min <= max` is enforced at registration time. Bounds are enforced
+ * server-side by the constraint walker.
  */
 export function range<K extends string>(key: K): RangeFieldBuilder<K> {
   return new RangeFieldBuilder(key);
-}
-
-function buildBoundsSanitizer(
-  min: number,
-  max: number,
-): (value: unknown) => number {
-  return (value) => {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      // eslint-disable-next-line no-restricted-syntax -- sanitizer flow-control sentinel; migrated in the field-sanitizer-error slice
-      throw new Error("invalid_value");
-    }
-    if (value < min || value > max) {
-      // eslint-disable-next-line no-restricted-syntax -- sanitizer flow-control sentinel; migrated in the field-sanitizer-error slice
-      throw new Error("invalid_value");
-    }
-    return value;
-  };
 }

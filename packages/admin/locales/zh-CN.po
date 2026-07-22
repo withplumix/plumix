@@ -923,6 +923,11 @@ msgid "metaBox.repeater.addAnother"
 msgstr "再添加一个"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.minRows"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.title"
 msgstr "添加域名"
@@ -2024,6 +2029,11 @@ msgid "userInvite.email.invalid"
 msgstr "输入有效的电子邮箱地址"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidEmail"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "输入有效的电子邮箱地址。"
@@ -2052,6 +2062,11 @@ msgstr "输入有效的电子邮箱地址。"
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.invalid"
 msgstr "输入有效的主机名（例如 example.com）。"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidUrl"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-validation-i18n.ts
@@ -2250,6 +2265,11 @@ msgstr "继承角色"
 #: src/components/meta-box/meta-box-field.tsx
 msgid "metaBox.field.json.invalid"
 msgstr "无效的 JSON"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalid"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2512,6 +2532,31 @@ msgstr "已移至回收站。"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "移动中…"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.min"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxLength"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.max"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.minTemporal"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxTemporal"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -3317,9 +3362,19 @@ msgid "metaBox.reference.selectIdle"
 msgstr "选择"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidOption"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.selectAllAria"
 msgstr "选择本页所有条目"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxItems"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3893,6 +3948,11 @@ msgid "metaBox.pluginField.crashed"
 msgstr "此字段渲染失败。详细信息见浏览器控制台。"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.required"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.tokenExpired"
 msgstr "此邀请链接已过期。请要求管理员发送新的邀请。"
@@ -4075,6 +4135,11 @@ msgstr "URL"
 #: src/routes/_auth/login.tsx
 msgid "login.description"
 msgstr "使用 Passkey、获取一次性邮件链接,或使用提供商继续。"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxRows"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx

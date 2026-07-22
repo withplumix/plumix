@@ -1,3 +1,4 @@
+import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -13,6 +14,7 @@ import {
   findTermTaxonomyByName,
   termMetaBoxesForTermTaxonomy,
 } from "@/lib/manifest.js";
+import { extractMetaFieldErrors } from "@/lib/meta-field-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { termTaxonomyLabel } from "@/lib/type-labels.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -219,6 +221,9 @@ function EditTermContent({
   const renderLabel = useLabel();
   const mapTermError = useTermErrorMessage();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [serverFieldErrors, setServerFieldErrors] = useState<
+    readonly MetaFieldServerError[] | null
+  >(null);
   const { user } = Route.useRouteContext();
   const metaBoxes = termMetaBoxesForTermTaxonomy(
     taxonomy.name,
@@ -246,6 +251,7 @@ function EditTermContent({
       }),
     onMutate: () => {
       setServerError(null);
+      setServerFieldErrors(null);
     },
     onSuccess: async () => {
       // List variants are scoped by `taxonomy` so sibling termTaxonomies
@@ -264,6 +270,13 @@ function EditTermContent({
       ]);
     },
     onError: (err) => {
+      // Path-addressed meta rejections render inline on the offending
+      // inputs; everything else keeps the banner mapping.
+      const fieldErrors = extractMetaFieldErrors(err);
+      if (fieldErrors) {
+        setServerFieldErrors(fieldErrors);
+        return;
+      }
       setServerError(mapTermError(err, renderLabel(M.saveFallback)));
     },
   });
@@ -306,6 +319,7 @@ function EditTermContent({
             parentOptions={parentOptions}
             isSubmitting={updateTerm.isPending || !canEdit}
             serverError={serverError}
+            serverFieldErrors={serverFieldErrors}
             submitLabel={renderLabel(M.submit)}
             metaBoxes={metaBoxes}
             onSubmit={(values) => {

@@ -108,7 +108,7 @@ export function MetaBoxField({
                   {renderLabel(field.description)}
                 </FormDescription>
               ) : null}
-              <FormMessage />
+              <FormMessage data-testid={`${testIdPrefix}-error`} />
             </FormItem>
           );
         }
@@ -147,7 +147,7 @@ export function MetaBoxField({
                   {renderLabel(field.description)}
                 </FormDescription>
               ) : null}
-              <FormMessage />
+              <FormMessage data-testid={`${testIdPrefix}-error`} />
             </FormItem>
           );
         }
@@ -199,7 +199,7 @@ export function MetaBoxField({
                   {renderLabel(field.description)}
                 </FormDescription>
               ) : null}
-              <FormMessage />
+              <FormMessage data-testid={`${testIdPrefix}-error`} />
             </FormItem>
           );
         }
@@ -221,7 +221,7 @@ export function MetaBoxField({
                 {renderLabel(field.description)}
               </FormDescription>
             ) : null}
-            <FormMessage />
+            <FormMessage data-testid={`${testIdPrefix}-error`} />
           </FormItem>
         );
       }}

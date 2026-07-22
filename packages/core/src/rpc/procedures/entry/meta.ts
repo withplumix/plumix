@@ -16,12 +16,12 @@ import {
 export type { MetaChanges as EntryMetaChanges } from "../../meta/core.js";
 
 /** RPC-facing sanitizer for an entry's meta input, scoped by entry type. */
-export function sanitizeMetaForRpc(
+export async function sanitizeMetaForRpc(
   registry: PluginRegistry,
   entryType: string,
   input: Record<string, unknown> | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
-): MetaPatch | null {
+): Promise<MetaPatch | null> {
   return sanitizeMetaForRpcCore(
     (key) => findEntryMetaField(registry, entryType, key),
     input,
@@ -109,7 +109,7 @@ export async function sanitizeAndValidateEntryMeta(
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2] &
     Parameters<typeof assertEntryMetaCapabilities>[4],
 ): Promise<MetaPatch | null> {
-  const patch = sanitizeMetaForRpc(ctx.plugins, entryType, input, errors);
+  const patch = await sanitizeMetaForRpc(ctx.plugins, entryType, input, errors);
   if (!patch) return null;
   assertEntryMetaCapabilities(ctx.plugins, entryType, patch, ctx.auth, errors);
   await validateEntryMetaReferences(ctx, entryType, patch, errors);

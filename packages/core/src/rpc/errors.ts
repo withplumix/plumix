@@ -31,6 +31,26 @@ export const RPC_ERRORS = {
       // reasons that pinpoint a specific field/row (e.g. `meta_*` reasons
       // set this to the offending meta key); omitted otherwise.
       key: v.optional(v.string()),
+      // Path-addressed field rejections from the meta constraint walker.
+      // `path` dot-joins from the top-level meta key into nested repeater
+      // cells (`sections.2.heading`); `message` is either a plain string
+      // (custom `.validate()` verdicts) or an i18n message descriptor the
+      // admin resolves against its catalog. `looseObject` keeps the
+      // descriptor's `values` interpolations on the wire.
+      errors: v.optional(
+        v.array(
+          v.object({
+            path: v.string(),
+            message: v.union([
+              v.string(),
+              v.looseObject({
+                id: v.string(),
+                message: v.optional(v.string()),
+              }),
+            ]),
+          }),
+        ),
+      ),
     }),
   },
   PAYLOAD_TOO_LARGE: {
