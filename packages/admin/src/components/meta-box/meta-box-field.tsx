@@ -797,7 +797,9 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
 
   if (field.referenceTarget?.multiple === true) {
     const value = Array.isArray(rhf.value)
-      ? rhf.value.filter((v): v is string => typeof v === "string")
+      ? rhf.value
+          .map(referenceValueId)
+          .filter((id): id is string => id !== null)
       : [];
     return (
       <MultiReferencePicker
@@ -824,8 +826,7 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
       field.inputType === "entry" ||
       field.inputType === "term")
   ) {
-    const value =
-      typeof rhf.value === "string" && rhf.value !== "" ? rhf.value : null;
+    const value = referenceValueId(rhf.value);
     return (
       <ReferencePicker
         value={value}
@@ -848,6 +849,19 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
   if (postReference) return postReference(ctx);
 
   return renderTextLikeField(ctx);
+}
+
+// Reference reads hydrate at the server (#1507): a stored id arrives
+// as the adapter's `{ id, ... }` payload. The pickers operate on ids —
+// extract it, and keep accepting the bare-id shape (drafts in-flight
+// before a save, `.returns("id")` opt-outs).
+function referenceValueId(value: unknown): string | null {
+  if (typeof value === "string" && value !== "") return value;
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    const id = (value as { readonly id?: unknown }).id;
+    if (typeof id === "string" && id !== "") return id;
+  }
+  return null;
 }
 
 // Tolerant coercion for inputs that display strings. Meta values

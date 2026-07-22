@@ -35,6 +35,60 @@ export interface LookupResult {
   readonly href?: string;
 }
 
+/**
+ * Minimum shape of a batched-hydration payload. `id` is the stored
+ * reference id (string form) so a hydrated value posted back through
+ * a meta write self-heals to the plain id — the same `{ id, ... }`
+ * extraction that migrates legacy snapshot values.
+ */
+export interface HydratedReference {
+  readonly id: string;
+}
+
+export interface LookupHydrateOptions<TScope = unknown> {
+  readonly ids: readonly string[];
+  readonly scope?: TScope;
+}
+
+/**
+ * Read-shape registry for reference kinds, keyed by adapter `kind`.
+ * Core declares its own kinds; plugins augment via declaration
+ * merging (`declare module "plumix/plugin"`), so the typed-meta layer
+ * can resolve a reference field's hydrated value without core knowing
+ * plugin-provided kinds.
+ */
+export interface ReferenceHydrationShapes {
+  readonly entry: EntryReferenceSummary;
+  readonly term: TermReferenceSummary;
+  readonly user: UserReferenceSummary;
+}
+
+/** Hydrated shape of an `entry` reference — enough to render a link. */
+export interface EntryReferenceSummary extends HydratedReference {
+  readonly type: string;
+  /** `null` mirrors `LookupResult.label`: no human-authored title. */
+  readonly title: string | null;
+  readonly slug: string;
+  /** Permalink; `null` when the entry has no public URL. */
+  readonly url: string | null;
+}
+
+/** Hydrated shape of a `term` reference. */
+export interface TermReferenceSummary extends HydratedReference {
+  readonly taxonomy: string;
+  readonly name: string;
+  readonly slug: string;
+  /** Archive URL; `null` for private taxonomies / nested terms. */
+  readonly url: string | null;
+}
+
+/** Hydrated shape of a `user` reference — public-safe columns only. */
+export interface UserReferenceSummary extends HydratedReference {
+  readonly name: string | null;
+  readonly slug: string;
+  readonly avatarUrl: string | null;
+}
+
 export interface LookupListOptions<TScope = unknown> {
   readonly query?: string;
   readonly scope?: TScope;
@@ -59,7 +113,7 @@ export interface LookupListOptions<TScope = unknown> {
  * Two methods, one round-trip per call regardless of selection size:
  *  - `list` covers search/browse (no `ids`, optional `query`) and
  *    resolve-by-id batch (`ids` set, `query` ignored). The meta
- *    pipeline (`validateMetaReferences` + `filterMetaOrphans`)
+ *    pipeline (`validateMetaReferences` + `hydrateMetaBags`)
  *    groups all reference fields by `(kind, scope)` and issues one
  *    `list({ ids })` per group, eliminating per-field N+1 on both
  *    reads and writes. The `MultiReferencePicker` batches the same
@@ -80,6 +134,19 @@ export interface LookupAdapter<TScope = unknown> {
     id: string,
     scope?: TScope,
   ): Promise<LookupResult | null>;
+
+  /**
+   * Batched read-time hydration: resolve `ids` (subject to `scope`)
+   * into this kind's hydrated shape (`ReferenceHydrationShapes[kind]`)
+   * in one query. Ids that are gone or out of scope are simply absent
+   * from the result — the meta pipeline reads absence as an orphan.
+   * Optional: kinds without it read as plain ids (orphan-stripped via
+   * `list({ ids })`, the pre-hydration behavior).
+   */
+  hydrate?(
+    ctx: AppContext,
+    options: LookupHydrateOptions<TScope>,
+  ): Promise<readonly HydratedReference[]>;
 }
 
 // `RegisteredLookupAdapter` extends `LookupAdapterOptions` so plugin-

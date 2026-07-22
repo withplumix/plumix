@@ -17,8 +17,10 @@ export interface TracedContext {
  * sampled on — for unit tests that assert how many queries a service
  * function issues (request-memo coverage, N+1 guards).
  */
-export async function createTracedContext(): Promise<TracedContext> {
-  const harness = await createDispatcherHarness();
+export async function createTracedContext(
+  options: Parameters<typeof createDispatcherHarness>[0] = {},
+): Promise<TracedContext> {
+  const harness = await createDispatcherHarness(options);
   const ctx = createAppContext({
     db: harness.db,
     env: harness.env,

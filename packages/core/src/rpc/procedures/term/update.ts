@@ -8,7 +8,7 @@ import { stripUndefined } from "../entry/helpers.js";
 import { parentWouldCreateCycle, taxonomyCapability } from "./helpers.js";
 import {
   assertTermMetaCapabilities,
-  decodeMetaBag,
+  hydrateTermMeta,
   loadTermMeta,
   sanitizeMetaForRpc,
   validateTermMetaReferences,
@@ -89,8 +89,8 @@ export const update = base
     // Nothing to write anywhere? Return the existing row with its
     // decoded meta for a consistent response shape.
     if (Object.keys(patch).length === 0 && isEmptyMetaPatch(metaPatch)) {
-      const meta = decodeMetaBag(
-        context.plugins,
+      const meta = await hydrateTermMeta(
+        context,
         existing.taxonomy,
         existing.meta,
       );
@@ -127,7 +127,7 @@ export const update = base
       await writeTermMeta(context, updated, metaPatch);
       meta = await loadTermMeta(context, updated);
     } else {
-      meta = decodeMetaBag(context.plugins, updated.taxonomy, updated.meta);
+      meta = await hydrateTermMeta(context, updated.taxonomy, updated.meta);
     }
 
     if (rowWritten) {

@@ -1,7 +1,13 @@
-import type { LookupAdapter, LookupResult, SQL } from "plumix/plugin";
+import type {
+  HydratedReference,
+  LookupAdapter,
+  LookupResult,
+  SQL,
+} from "plumix/plugin";
 import { and, desc, entries, eq, inArray, like, sql } from "plumix/plugin";
 
 import { parseMediaMeta } from "./meta.js";
+import { resolveMediaUrl, thumbnailFor } from "./read-service.js";
 
 const MEDIA_ENTRY_TYPE = "media";
 
@@ -31,11 +37,33 @@ export interface MediaFieldScope {
 }
 
 /**
+ * Hydrated shape of a `media` reference — the read pipeline resolves
+ * stored ids into this at read time, so themes can render a media meta
+ * field (URL included) without a manual fetch. `id` stays the stored
+ * string id so a hydrated value posted back through a meta write
+ * self-heals to the plain id.
+ */
+export interface MediaReference extends HydratedReference {
+  readonly title: string;
+  readonly mime: string;
+  readonly size: number;
+  readonly alt: string | null;
+  readonly url: string;
+  readonly thumbnailUrl: string;
+  readonly width: number | null;
+  readonly height: number | null;
+}
+
+declare module "plumix/plugin" {
+  interface ReferenceHydrationShapes {
+    readonly media: MediaReference;
+  }
+}
+
+/**
  * Server-side adapter for the `media` reference field. Storage is the
- * cached-object shape (`{ id, mime, filename }`) — the meta pipeline
- * pulls `cached` from `LookupResult` and merges it into the stored
- * value on every write so reads render thumbnails without an extra
- * resolve round-trip.
+ * plain media id; `hydrate` resolves ids into `MediaReference` (URL
+ * included) at read time through the shared meta pipeline.
  *
  * Queries:
  *  - `list({ ids })`: PK lookup via `inArray(entries.id, …)` + the
@@ -55,7 +83,9 @@ export interface MediaFieldScope {
  * `media.confirm` (flips to published) — referencing one would point
  * at an asset whose bytes haven't been verified.
  */
-export const mediaLookupAdapter: LookupAdapter<MediaFieldScope> = {
+// `satisfies` keeps `hydrate`'s concrete `MediaReference` return type
+// visible instead of widening to the contract's `HydratedReference`.
+export const mediaLookupAdapter = {
   async list(ctx, options) {
     const conditions: SQL[] = [
       eq(entries.type, MEDIA_ENTRY_TYPE),
@@ -95,7 +125,7 @@ export const mediaLookupAdapter: LookupAdapter<MediaFieldScope> = {
     return results;
   },
 
-  async resolve(ctx, id, scope) {
+  async resolve(ctx, id, scope?) {
     const numericId = parseMediaId(id);
     if (numericId === null) return null;
     const conditions: SQL[] = [
@@ -115,7 +145,56 @@ export const mediaLookupAdapter: LookupAdapter<MediaFieldScope> = {
     if (!meta) return null;
     return toLookupResult(row.id, row.title, meta.mime);
   },
-};
+
+  async hydrate(ctx, options) {
+    const numericIds = options.ids
+      .map((id) => parseMediaId(id))
+      .filter((id): id is number => id !== null);
+    if (numericIds.length === 0) return [];
+    const conditions: SQL[] = [
+      eq(entries.type, MEDIA_ENTRY_TYPE),
+      eq(entries.status, "published"),
+      inArray(entries.id, numericIds),
+    ];
+    const acceptCondition = buildAcceptCondition(options.scope?.accept);
+    if (acceptCondition) conditions.push(acceptCondition);
+    const rows = await ctx.db
+      .select(MEDIA_ROW_COLUMNS)
+      .from(entries)
+      .where(and(...conditions))
+      .limit(numericIds.length);
+    const parsed = rows.flatMap((row) => {
+      const meta = parseMediaMeta(row.meta);
+      return meta ? [{ row, meta }] : [];
+    });
+    // `storage.url()` can be a signing round-trip — resolve the batch
+    // concurrently. Same URL resolution as `buildMediaItem`
+    // (read-service) so a hydrated reference and `media.get` agree.
+    return Promise.all(
+      parsed.map(async ({ row, meta }): Promise<MediaReference> => {
+        const url = ctx.storage
+          ? await resolveMediaUrl(
+              ctx.storage,
+              meta.storageKey,
+              row.id,
+              ctx.basePath,
+            )
+          : meta.storageKey;
+        return {
+          id: String(row.id),
+          title: row.title,
+          mime: meta.mime,
+          size: meta.size,
+          alt: meta.alt,
+          url,
+          thumbnailUrl: thumbnailFor(ctx, url, meta.mime),
+          width: meta.width,
+          height: meta.height,
+        };
+      }),
+    );
+  },
+} satisfies LookupAdapter<MediaFieldScope>;
 
 function parseMediaId(id: string): number | null {
   if (!/^[1-9]\d{0,15}$/.test(id)) return null;

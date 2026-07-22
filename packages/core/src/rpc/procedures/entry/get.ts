@@ -3,7 +3,7 @@ import { getAutosave } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryCapability } from "./lifecycle.js";
-import { decodeMetaBag } from "./meta.js";
+import { hydrateEntryMeta } from "./meta.js";
 import { toRpcEntryReadError } from "./read-errors.js";
 import { entryGetInputSchema } from "./schemas.js";
 
@@ -47,7 +47,7 @@ export const get = base
             title: autosave.title,
             content: autosave.content,
             excerpt: autosave.excerpt,
-            meta: decodeMetaBag(context.plugins, live, autosave.meta),
+            meta: await hydrateEntryMeta(context, live, autosave.meta),
           }
         : live;
       return await context.hooks.applyFilter("rpc:entry.get:output", {

@@ -10,6 +10,7 @@ import { memoBatch } from "../../context/memo.js";
 import { entryTerm } from "../../db/schema/entry_term.js";
 import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
+import { hydrateEntriesMeta } from "../../rpc/procedures/entry/meta.js";
 import {
   buildEntryPermalinkSync,
   buildTermArchiveUrlSync,
@@ -32,7 +33,7 @@ export async function buildResolvedEntries(
   // related-posts loader hydrate the same author in one request — the
   // second call replays the row, and a mixed batch still costs a single
   // `IN(...)` query.
-  const [authorRows, joinRows] = await Promise.all([
+  const [authorRows, joinRows, metaBags] = await Promise.all([
     memoBatch(
       ctx.memo,
       authorIds,
@@ -65,6 +66,9 @@ export async function buildResolvedEntries(
       .from(entryTerm)
       .innerJoin(terms, eq(entryTerm.termId, terms.id))
       .where(inArray(entryTerm.entryId, entryIds)),
+    // Templates read `entry.meta.<field>` as the adapter's hydrated
+    // shape — one level deep; a summary carries no meta of its own.
+    hydrateEntriesMeta(ctx, rows),
   ]);
   const authorById = new Map(
     authorRows.filter((a) => a !== null).map((a) => [a.id, a]),
@@ -76,7 +80,7 @@ export async function buildResolvedEntries(
     bucket.push(term);
     termsByEntryId.set(entryId, bucket);
   }
-  return rows.map((row) => {
+  return rows.map((row, rowIdx) => {
     const author = authorById.get(row.authorId);
     if (!author) {
       // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
@@ -86,6 +90,7 @@ export async function buildResolvedEntries(
     }
     return {
       ...row,
+      meta: metaBags[rowIdx] ?? {},
       contentBlocks: isEntryContent(row.content) ? row.content : null,
       // Sync term URLs — no per-term CTE (nested terms get null, like entries).
       terms: (termsByEntryId.get(row.id) ?? []).map((term) => ({

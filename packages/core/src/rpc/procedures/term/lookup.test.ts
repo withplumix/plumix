@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { categoryTerm, tagTerm, termFactory } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { termLookupAdapter } from "./lookup.js";
@@ -179,5 +180,45 @@ describe("termLookupAdapter", () => {
     expect(
       await termLookupAdapter.resolve(h.context, String(t.id), CATEGORY),
     ).toBeNull();
+  });
+
+  test("hydrate() resolves ids into term summaries with archive urls", async () => {
+    // Registered public taxonomy gives the summary an archive url.
+    const registry = createPluginRegistry();
+    registry.termTaxonomies.set("category", {
+      name: "category",
+      label: "Categories",
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ plugins: registry });
+    const t = await categoryTerm
+      .transient({ db: h.context.db })
+      .create({ name: "Guides" });
+    const rows = await termLookupAdapter.hydrate(h.context, {
+      ids: [String(t.id)],
+      scope: CATEGORY,
+    });
+    expect(rows).toEqual([
+      {
+        id: String(t.id),
+        taxonomy: "category",
+        name: "Guides",
+        slug: t.slug,
+        url: `/category/${t.slug}`,
+      },
+    ]);
+  });
+
+  test("hydrate() omits missing and out-of-scope ids", async () => {
+    const h = await createRpcHarness();
+    const category = await categoryTerm
+      .transient({ db: h.context.db })
+      .create();
+    const tag = await tagTerm.transient({ db: h.context.db }).create();
+    const rows = await termLookupAdapter.hydrate(h.context, {
+      ids: [String(category.id), String(tag.id), "999999", "abc"],
+      scope: CATEGORY,
+    });
+    expect(rows.map((row) => row.id)).toEqual([String(category.id)]);
   });
 });

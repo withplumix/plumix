@@ -15,7 +15,7 @@ import {
   loadReadableParent,
 } from "./lifecycle.js";
 import {
-  decodeMetaBag,
+  hydrateEntryMeta,
   loadEntryMeta,
   sanitizeAndValidateEntryMeta,
   writeEntryMeta,
@@ -155,7 +155,7 @@ export const create = base
     } else {
       // No write path — `created.meta` is the default `{}`. Decode inline
       // to save the round trip.
-      meta = decodeMetaBag(context.plugins, created, created.meta);
+      meta = await hydrateEntryMeta(context, created, created.meta);
     }
 
     await fireEntryTransition(context, created, "draft");

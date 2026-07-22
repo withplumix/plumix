@@ -18,7 +18,13 @@ import { isConditionHidden } from "../../plugin/fields/condition.js";
 import { anchorTemporalUtc } from "../../plugin/manifest.js";
 import { MetaReferenceError } from "./errors.js";
 import { META_FIELD_MESSAGES } from "./field-messages.js";
-import { isRepeaterField, runFieldPipeline } from "./field-pipeline.js";
+import {
+  extractStringId,
+  healReferenceValue,
+  isRepeaterField,
+  referenceTargetOf,
+  runFieldPipeline,
+} from "./field-pipeline.js";
 
 // Shared meta plumbing for every entity that stores a `meta` JSON
 // column (entries, terms, and — eventually — users). The storage
@@ -223,7 +229,7 @@ export async function sanitizeMetaForRpc(
  * TOCTOU note: validate runs in a separate query from the eventual
  * `applyMetaPatch`, and callers don't share a transaction. A
  * concurrent delete between validate and apply leaves an orphan id
- * in the meta bag; `filterMetaOrphans` masks it on read. Wrap the
+ * in the meta bag; `hydrateMetaBags` masks it on read. Wrap the
  * validate/apply pair in `ctx.db.transaction()` if a caller needs
  * serializable consistency.
  */
@@ -491,16 +497,6 @@ function referenceItemId(key: string, item: unknown): string {
   throw MetaSanitizationError.invalidValue({ key });
 }
 
-// Returns the `id` string of a `{ id: string, ... }` object, or null
-// for any other shape (string, array, null, primitive, missing key).
-function extractStringId(value: unknown): string | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return null;
-  }
-  const id = (value as { readonly id?: unknown }).id;
-  return typeof id === "string" ? id : null;
-}
-
 function fieldMax(field: MetaBoxField | undefined): number | undefined {
   return (field as { readonly max?: number } | undefined)?.max;
 }
@@ -538,23 +534,19 @@ export async function validateMetaReferencesForRpc(
   }
 }
 
-/**
- * Resolve reference fields in a decoded meta bag, dropping any
- * stored ID whose target is gone (or no longer matches scope).
- * Single-reference orphans become `null`; multi-reference orphans
- * are removed from the array (which stays dense, in order). Caller
- * passes a freshly-decoded bag (e.g. from `decodeMetaBag`); the
- * returned bag is a shallow copy with orphans handled. Non-reference
- * keys pass through untouched.
- *
- * Two-pass: first walk groups every reference key by `(kind, scope)`
- * and issues one `LookupAdapter.list({ ids })` per group; second
- * walk applies the live-id sets. So a meta bag with five user-refs,
- * three entry-refs, and two term-refs costs three queries total —
- * not ten. Adapter `list` honours `scope` (`entryTypes`,
- * `termTaxonomies`, `roles`, …) so out-of-scope ids fall out of the
- * result naturally and read as orphans.
- */
+// The read-time hydration + orphan pass. `hydrateMetaBags` resolves
+// reference fields across every bag in a response in one traversal:
+// stored ids become the adapter's hydrated shapes (media item with
+// URL, entry/term/user summaries), and any id whose target is gone or
+// out of scope reads as absent — single refs `null`, multi refs
+// dropped from the array (which stays dense, in order). Ids aggregate
+// across all reference fields of all bags, then resolve with one
+// in-query per `(kind, scope)` group regardless of entry/field count.
+// Adapter `hydrate`/`list` honours `scope` (`entryTypes`,
+// `termTaxonomies`, `roles`, …) so out-of-scope ids fall out of the
+// result naturally and read as orphans. Callers pass freshly-decoded
+// bags (from `decodeMetaBag`); returned bags are shallow copies.
+// Non-reference keys pass through untouched.
 interface ReferenceOccurrence {
   /** Top-level meta key — the storage location and error key. */
   readonly key: string;
@@ -570,7 +562,7 @@ interface ReferenceOccurrence {
 /**
  * Yield every reference-field occurrence in a decoded meta bag: top-level
  * reference fields, plus reference subFields inside each repeater row. One
- * structural walk so the orphan-strip pass doesn't reinline the
+ * structural walk so the hydration pass doesn't reinline the
  * top-level/repeater traversal twice.
  */
 function* referenceOccurrences(
@@ -603,15 +595,52 @@ function* referenceOccurrences(
   }
 }
 
-export async function filterMetaOrphans(
+/**
+ * A decoded meta bag plus the field lookup that scopes it — the unit
+ * `hydrateMetaBags` operates on. Multi-entity responses pass one per
+ * entity so ids aggregate across the whole response.
+ */
+export interface HydratableBag {
+  readonly findField: (key: string) => MetaBoxField | undefined;
+  readonly decoded: MetaMap;
+}
+
+/** Single-bag convenience over {@link hydrateMetaBags}. */
+export async function hydrateMetaReferences(
   ctx: AppContext,
   findField: (key: string) => MetaBoxField | undefined,
   decoded: MetaMap,
 ): Promise<MetaMap> {
-  // Pass 1: classify each reference key, cache the per-key triple, and
-  // accumulate ids per `(kind, scope)` group. Pass 3 walks the cache
-  // directly so it doesn't redo the findField / registry lookups.
+  const [bag] = await hydrateMetaBags(ctx, [{ findField, decoded }]);
+  // hydrateMetaBags returns one bag per input by construction.
+  return bag ?? decoded;
+}
+
+/**
+ * How a `(kind, scope)` group resolved in Pass 2: adapters with the
+ * `hydrate` contract yield payloads keyed by id (values become the
+ * hydrated shapes); adapters without it yield the live-id set only
+ * (values stay plain ids, orphan-stripped — the pre-hydration read).
+ * Either way, an id absent from the result reads as an orphan:
+ * single refs null, multi refs drop the item (array stays dense).
+ */
+type GroupResolution =
+  | { readonly kind: "hydrated"; readonly byId: ReadonlyMap<string, unknown> }
+  | { readonly kind: "ids"; readonly liveIds: ReadonlySet<string> };
+
+export async function hydrateMetaBags(
+  ctx: AppContext,
+  bags: readonly HydratableBag[],
+): Promise<MetaMap[]> {
+  // Pass 1: shallow-copy each bag into its output slot, classify each
+  // reference occurrence, and accumulate ids per `(kind, scope)`
+  // group. Candidates carry their bag references so Pass 3 is a
+  // straight walk with no findField / registry re-lookups.
   interface Candidate {
+    /** The shallow output copy of the candidate's bag. */
+    readonly outBag: MetaMap;
+    /** The caller's original decoded bag (for lazy row cloning). */
+    readonly decoded: MetaMap;
     /** Top-level meta key — the storage location for top-level refs. */
     readonly key: string;
     readonly multiple: boolean;
@@ -632,69 +661,152 @@ export async function filterMetaOrphans(
       readonly ids: Set<string>;
     }
   >();
-  // Top-level refs and repeater-row subField refs get identical orphan-strip
-  // treatment, so the single `referenceOccurrences` walk feeds both. Nested
-  // candidates carry their `rowIdx`/`subKey`; Pass 3 rewrites the row slot in
-  // a per-key clone so the caller's `decoded` bag stays untouched.
-  for (const occ of referenceOccurrences(Object.entries(decoded), findField)) {
-    const registered = ctx.plugins.lookupAdapters.get(occ.target.kind);
-    if (!registered) continue;
-    const ids = orphanCandidateIds(occ.target, occ.value);
-    if (ids === null) continue; // non-array multi / non-string single — leave untouched
-    const groupKey = referenceGroupKey(occ.target);
-    candidates.push({
-      key: occ.key,
-      multiple: occ.target.multiple === true,
-      groupKey,
-      ids,
-      nested: occ.nested,
-    });
-    if (ids.length === 0) continue;
-    let group = groups.get(groupKey);
-    if (!group) {
-      group = { registered, scope: occ.target.scope, ids: new Set() };
-      groups.set(groupKey, group);
+  // Top-level refs and repeater-row subField refs get identical
+  // treatment, so the single `referenceOccurrences` walk feeds both.
+  // Nested candidates carry their `rowIdx`/`subKey`; Pass 3 rewrites
+  // the row slot in a per-key clone so callers' bags stay untouched.
+  const out: MetaMap[] = [];
+  for (const bag of bags) {
+    const outBag: MetaMap = { ...bag.decoded };
+    out.push(outBag);
+    for (const occ of referenceOccurrences(
+      Object.entries(bag.decoded),
+      bag.findField,
+    )) {
+      const registered = ctx.plugins.lookupAdapters.get(occ.target.kind);
+      if (!registered) continue;
+      const ids = referenceCandidateIds(occ.target, occ.value);
+      if (ids === null) continue; // non-array multi / non-string single — leave untouched
+      const groupKey = referenceGroupKey(occ.target);
+      candidates.push({
+        outBag,
+        decoded: bag.decoded,
+        key: occ.key,
+        multiple: occ.target.multiple === true,
+        groupKey,
+        ids,
+        nested: occ.nested,
+      });
+      if (ids.length === 0) continue;
+      let group = groups.get(groupKey);
+      if (!group) {
+        group = { registered, scope: occ.target.scope, ids: new Set() };
+        groups.set(groupKey, group);
+      }
+      for (const id of ids) group.ids.add(id);
     }
-    for (const id of ids) group.ids.add(id);
   }
 
-  // Pass 2: one `list({ ids })` per group, keyed for O(1) apply lookup.
-  const liveIdsByGroup = new Map<string, ReadonlySet<string>>();
-  for (const [groupKey, group] of groups) {
-    const liveIds = await fetchLiveIds(
-      ctx,
-      group.registered,
-      group.scope,
-      group.ids,
-      "filterMetaOrphans",
-    );
-    liveIdsByGroup.set(groupKey, liveIds);
-  }
+  // Pass 2: one `hydrate({ ids })` (or `list({ ids })` fallback) per
+  // group, keyed for O(1) apply lookup. Groups are independent, so a
+  // bag mixing entry + user + media refs resolves them concurrently.
+  const resolutions = new Map<string, GroupResolution>(
+    await Promise.all(
+      [...groups].map(
+        async ([groupKey, group]): Promise<[string, GroupResolution]> => [
+          groupKey,
+          await resolveGroup(
+            ctx,
+            group.registered.adapter,
+            group.scope,
+            group.ids,
+          ),
+        ],
+      ),
+    ),
+  );
 
-  // Pass 3: apply the filter. Multi refs filter the string[] dense
-  // and in order; single refs null on missing. Nested-in-repeater
-  // candidates rewrite the row's subField slot in a per-key cloned
-  // array so the input bag stays untouched.
-  const out: MetaMap = { ...decoded };
-  const empty: ReadonlySet<string> = new Set();
+  // Pass 3: apply. Hydrated groups replace ids with their payloads;
+  // id-only groups keep ids. Multi refs stay dense and in stored
+  // order; single refs null on missing. Nested-in-repeater candidates
+  // rewrite the row's subField slot in a per-key cloned array.
+  const emptyResolution: GroupResolution = { kind: "ids", liveIds: new Set() };
   for (const candidate of candidates) {
-    const { key, multiple, groupKey, ids, nested } = candidate;
-    const liveIds = liveIdsByGroup.get(groupKey) ?? empty;
+    const { outBag, decoded, key, multiple, groupKey, ids, nested } = candidate;
+    const resolution = resolutions.get(groupKey) ?? emptyResolution;
     if (nested !== undefined) {
-      const rowObj = takeWritableRow(out, decoded, key, nested.rowIdx);
+      const rowObj = takeWritableRow(outBag, decoded, key, nested.rowIdx);
       if (!rowObj) continue;
-      applyOrphanToSlot(rowObj, nested.subKey, multiple, ids, liveIds);
+      applyResolutionToSlot(rowObj, nested.subKey, multiple, ids, resolution);
       continue;
     }
-    if (multiple) {
-      out[key] = ids.filter((id) => liveIds.has(id));
-      continue;
-    }
-    const [singleId] = ids;
-    if (singleId === undefined) continue; // single non-string already filtered upstream
-    if (!liveIds.has(singleId)) out[key] = null;
+    applyResolutionToSlot(outBag, key, multiple, ids, resolution);
   }
   return out;
+}
+
+// Resolve one `(kind, scope)` group's aggregated ids. Chunked at
+// `HYDRATION_QUERY_ID_LIMIT` per in-query: a response-level group can
+// legitimately aggregate more ids than one query may carry (a
+// 100-entry archive × multi-reference fields), and a read-path throw
+// would kill the render — unlike the write-side `fetchLiveIds`, which
+// keeps throwing because a single patch exceeding the ceiling is a
+// caller bug. Ids are de-duped before chunking, so per-query batches
+// stay bounded and nothing is truncated.
+async function resolveGroup(
+  ctx: AppContext,
+  adapter: LookupAdapter,
+  scope: unknown,
+  ids: ReadonlySet<string>,
+): Promise<GroupResolution> {
+  const idList = [...ids];
+  if (adapter.hydrate) {
+    const byId = new Map<string, unknown>();
+    for (const chunk of chunkIds(idList)) {
+      const payloads = await adapter.hydrate(ctx, { ids: chunk, scope });
+      for (const payload of payloads) byId.set(payload.id, payload);
+    }
+    return { kind: "hydrated", byId };
+  }
+  const liveIds = new Set<string>();
+  for (const chunk of chunkIds(idList)) {
+    const rows = await adapter.list(ctx, {
+      ids: chunk,
+      scope,
+      limit: chunk.length,
+    });
+    for (const row of rows) liveIds.add(row.id);
+  }
+  return { kind: "ids", liveIds };
+}
+
+// Per-query id cap for the read path. 100 (not the 1000 aggregate
+// ceiling) because Cloudflare D1 caps bound parameters at 100 per
+// statement and `inArray` binds one per id — a bigger chunk works on
+// local SQLite and dies in production.
+const HYDRATION_QUERY_ID_LIMIT = 100;
+
+function* chunkIds(ids: readonly string[]): Generator<readonly string[]> {
+  for (let i = 0; i < ids.length; i += HYDRATION_QUERY_ID_LIMIT) {
+    yield ids.slice(i, i + HYDRATION_QUERY_ID_LIMIT);
+  }
+}
+
+// Write one candidate's resolved value into its slot (top-level bag
+// key or repeater-row subKey — same shape either way).
+function applyResolutionToSlot(
+  slot: Record<string, unknown>,
+  key: string,
+  multiple: boolean,
+  ids: readonly string[],
+  resolution: GroupResolution,
+): void {
+  if (multiple) {
+    slot[key] =
+      resolution.kind === "hydrated"
+        ? ids
+            .map((id) => resolution.byId.get(id))
+            .filter((payload) => payload !== undefined)
+        : ids.filter((id) => resolution.liveIds.has(id));
+    return;
+  }
+  const [singleId] = ids;
+  if (singleId === undefined) return; // single non-string already filtered upstream
+  if (resolution.kind === "hydrated") {
+    slot[key] = resolution.byId.get(singleId) ?? null;
+    return;
+  }
+  if (!resolution.liveIds.has(singleId)) slot[key] = null;
 }
 
 function takeWritableRow(
@@ -723,29 +835,13 @@ function takeWritableRow(
   return row as Record<string, unknown>;
 }
 
-function applyOrphanToSlot(
-  rowObj: Record<string, unknown>,
-  subKey: string,
-  multiple: boolean,
-  ids: readonly string[],
-  liveIds: ReadonlySet<string>,
-): void {
-  if (multiple) {
-    rowObj[subKey] = ids.filter((id) => liveIds.has(id));
-    return;
-  }
-  const [singleId] = ids;
-  if (singleId === undefined) return;
-  if (!liveIds.has(singleId)) rowObj[subKey] = null;
-}
-
 // Returns `null` to mean "no candidates from this key" (skip), or
 // the ids to feed into the group's batch query. Mirrors the storage-
 // shape guards in the apply step so we don't enqueue work that's
 // going to be skipped. Callers pass values already decoded through
 // `decodeMetaBag`, so legacy object shapes have been healed to plain
 // ids by the time this runs.
-function orphanCandidateIds(
+function referenceCandidateIds(
   target: ReferenceTarget,
   value: unknown,
 ): readonly string[] | null {
@@ -754,14 +850,6 @@ function orphanCandidateIds(
     return value.filter((id): id is string => typeof id === "string");
   }
   return typeof value === "string" ? [value] : null;
-}
-
-function referenceTargetOf(
-  field: MetaBoxField | undefined,
-): ReferenceTarget | undefined {
-  if (!field) return undefined;
-  return (field as { readonly referenceTarget?: ReferenceTarget })
-    .referenceTarget;
 }
 
 /**
@@ -824,19 +912,6 @@ function projectTemporalDate(
   if (typeof value !== "string" || value === "") return undefined;
   const parsed = new Date(anchorTemporalUtc(inputType, value));
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-}
-
-function healReferenceValue(target: ReferenceTarget, value: unknown): unknown {
-  if (target.multiple) {
-    if (!Array.isArray(value)) return value;
-    // Identity-preserving on the already-plain path — `healRepeaterRow`
-    // clones a row only when the healed slot differs.
-    if (!value.some((item: unknown) => extractStringId(item) !== null)) {
-      return value;
-    }
-    return value.map((item: unknown) => extractStringId(item) ?? item);
-  }
-  return extractStringId(value) ?? value;
 }
 
 function healRepeaterRow(field: RepeaterMetaBoxField, row: unknown): unknown {

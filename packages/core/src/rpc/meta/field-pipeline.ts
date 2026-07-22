@@ -5,6 +5,7 @@ import type {
   MetaBoxField,
   MetaBoxFieldOption,
   MetaScalarType,
+  ReferenceTarget,
   RepeaterMetaBoxField,
   RichtextMetaBoxField,
   TemporalInputType,
@@ -68,6 +69,13 @@ export async function runFieldPipeline(
     }
     raw = formatTemporalValue(field.inputType, raw);
   }
+  // Same round-trip reality for references: reads hydrate to
+  // `{ id, ... }` payloads and untouched fields come back as them —
+  // heal to the stored plain-id shape before coercion rejects the
+  // object. Repeater cells recurse through here, so nested refs heal
+  // too.
+  const target = referenceTargetOf(field);
+  if (target) raw = healReferenceValue(target, raw);
   const coerced = coerceValue(field.type, raw);
   if (!coerced.ok) {
     return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
@@ -133,6 +141,49 @@ export function isRepeaterField(
   field: MetaBoxField | undefined,
 ): field is RepeaterMetaBoxField {
   return field?.inputType === "repeater" && "subFields" in field;
+}
+
+// --- reference healing --------------------------------------------------
+
+export function referenceTargetOf(
+  field: MetaBoxField | undefined,
+): ReferenceTarget | undefined {
+  if (!field) return undefined;
+  return (field as { readonly referenceTarget?: ReferenceTarget })
+    .referenceTarget;
+}
+
+/**
+ * Returns the `id` string of a `{ id: string, ... }` object, or null
+ * for any other shape (string, array, null, primitive, missing key).
+ */
+export function extractStringId(value: unknown): string | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const id = (value as { readonly id?: unknown }).id;
+  return typeof id === "string" ? id : null;
+}
+
+/**
+ * Collapse a reference slot to the stored plain-id shape: hydrated
+ * payloads (and legacy write-time snapshots) read/write as their `id`;
+ * already-plain values pass through identity-preserving.
+ */
+export function healReferenceValue(
+  target: ReferenceTarget,
+  value: unknown,
+): unknown {
+  if (target.multiple) {
+    if (!Array.isArray(value)) return value;
+    // Identity-preserving on the already-plain path — `healRepeaterRow`
+    // clones a row only when the healed slot differs.
+    if (!value.some((item: unknown) => extractStringId(item) !== null)) {
+      return value;
+    }
+    return value.map((item: unknown) => extractStringId(item) ?? item);
+  }
+  return extractStringId(value) ?? value;
 }
 
 // A row every cell of which reads empty is an authoring affordance, not

@@ -157,4 +157,32 @@ describe("userLookupAdapter", () => {
       }),
     ).toBeNull();
   });
+
+  test("hydrate() resolves ids into public-safe user summaries", async () => {
+    const h = await createRpcHarness();
+    const u = await userFactory
+      .transient({ db: h.context.db })
+      .create({ name: "Eva" });
+    const rows = await userLookupAdapter.hydrate(h.context, {
+      ids: [String(u.id)],
+    });
+    // Exact-object equality doubles as a leak pin: hydrated user
+    // summaries flow into public render + REST, so email/role must
+    // never appear.
+    expect(rows).toEqual([
+      { id: String(u.id), name: "Eva", slug: u.slug, avatarUrl: null },
+    ]);
+  });
+
+  test("hydrate() omits missing and out-of-scope ids", async () => {
+    const h = await createRpcHarness();
+    const author = await userFactory
+      .transient({ db: h.context.db })
+      .create({ role: "author" });
+    const rows = await userLookupAdapter.hydrate(h.context, {
+      ids: [String(author.id), "999999", "abc"],
+      scope: { roles: ["admin"] },
+    });
+    expect(rows).toEqual([]);
+  });
 });

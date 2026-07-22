@@ -6,7 +6,7 @@ import { findTermMetaField } from "../../../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
-  filterMetaOrphans as filterMetaOrphansCore,
+  hydrateMetaReferences as hydrateMetaReferencesCore,
   isEmptyMetaPatch,
   loadMeta,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
@@ -62,14 +62,18 @@ export function assertTermMetaCapabilities(
   );
 }
 
-export function decodeMetaBag(
-  registry: PluginRegistry,
+/** Decode + hydrate one term's meta bag for a read response. */
+export async function hydrateTermMeta(
+  ctx: AppContext,
   taxonomy: string,
   raw: Readonly<Record<string, unknown>> | null | undefined,
-): Record<string, unknown> {
-  return decodeMetaBagCore(
-    (key) => findTermMetaField(registry, taxonomy, key),
-    raw,
+): Promise<Record<string, unknown>> {
+  const findField = (key: string) =>
+    findTermMetaField(ctx.plugins, taxonomy, key);
+  return hydrateMetaReferencesCore(
+    ctx,
+    findField,
+    decodeMetaBagCore(findField, raw),
   );
 }
 
@@ -80,7 +84,7 @@ export async function loadTermMeta(
   const decoded = await loadMeta(ctx, terms, terms.id, term.id, (key) =>
     findTermMetaField(ctx.plugins, term.taxonomy, key),
   );
-  return filterMetaOrphansCore(
+  return hydrateMetaReferencesCore(
     ctx,
     (key) => findTermMetaField(ctx.plugins, term.taxonomy, key),
     decoded,

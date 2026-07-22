@@ -6,7 +6,7 @@ import { findUserMetaField } from "../../../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
-  filterMetaOrphans as filterMetaOrphansCore,
+  hydrateMetaReferences as hydrateMetaReferencesCore,
   isEmptyMetaPatch,
   loadMeta,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
@@ -60,11 +60,17 @@ export function assertUserMetaCapabilities(
   );
 }
 
-export function decodeMetaBag(
-  registry: PluginRegistry,
+/** Decode + hydrate one user's meta bag for a read response. */
+export async function hydrateUserMeta(
+  ctx: AppContext,
   raw: Readonly<Record<string, unknown>> | null | undefined,
-): Record<string, unknown> {
-  return decodeMetaBagCore((key) => findUserMetaField(registry, key), raw);
+): Promise<Record<string, unknown>> {
+  const findField = (key: string) => findUserMetaField(ctx.plugins, key);
+  return hydrateMetaReferencesCore(
+    ctx,
+    findField,
+    decodeMetaBagCore(findField, raw),
+  );
 }
 
 export async function loadUserMeta(
@@ -74,7 +80,7 @@ export async function loadUserMeta(
   const decoded = await loadMeta(ctx, users, users.id, user.id, (key) =>
     findUserMetaField(ctx.plugins, key),
   );
-  return filterMetaOrphansCore(
+  return hydrateMetaReferencesCore(
     ctx,
     (key) => findUserMetaField(ctx.plugins, key),
     decoded,

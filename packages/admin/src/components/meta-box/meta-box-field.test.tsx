@@ -333,6 +333,51 @@ describe("MetaBoxField dispatcher", () => {
     ).toHaveTextContent("2 / 2");
   });
 
+  test("single reference: a hydrated object value reads as its id", () => {
+    // Read responses hydrate reference meta (#1507) — the picker
+    // extracts the id so the selection doesn't render empty (and a
+    // subsequent save doesn't clear the field).
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "user",
+          required: true,
+          referenceTarget: { kind: "user" },
+        })}
+        initial={{ id: "42", name: "Eva", slug: "eva", avatarUrl: null }}
+      />,
+    );
+    // Required + populated → no Clear button, same as initial="42".
+    expect(
+      screen.queryByTestId("meta-box-field-k-input-clear"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("meta-box-field-k-input-empty"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("multi reference: hydrated object values read as their ids", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "userList",
+          type: "json",
+          referenceTarget: { kind: "user", multiple: true },
+          max: 2,
+        })}
+        initial={[
+          { id: "1", name: "A", slug: "a", avatarUrl: null },
+          { id: "2", name: "B", slug: "b", avatarUrl: null },
+        ]}
+      />,
+    );
+    const addBtn = screen.getByTestId("meta-box-field-k-input-add");
+    expect(addBtn).toBeDisabled();
+    expect(
+      screen.getByTestId("meta-box-field-k-input-count"),
+    ).toHaveTextContent("2 / 2");
+  });
+
   test("multiselect: clicking a toggle item emits the updated array", async () => {
     const onChange = vi.fn();
     renderWithI18n(
