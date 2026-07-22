@@ -100,15 +100,27 @@ export async function loadTemplateDeps(
   registry: ReadonlyMap<string, RegisteredTemplateDep>,
   ctx: AppContext,
 ): Promise<Record<string, Record<string, unknown>>> {
-  const pending: Promise<readonly [string, Record<string, unknown>]>[] = [];
-  for (const [kind, loader] of registry) {
-    const declared = template[kind];
-    if (!Array.isArray(declared) || declared.length === 0) continue;
-    const slugs = declared as readonly string[];
-    pending.push(loadOne(kind, slugs, loader, ctx));
+  const declared: {
+    kind: string;
+    slugs: readonly string[];
+    dep: RegisteredTemplateDep;
+  }[] = [];
+  for (const [kind, dep] of registry) {
+    const slugs = template[kind];
+    if (!Array.isArray(slugs) || slugs.length === 0) continue;
+    declared.push({ kind, slugs: slugs as readonly string[], dep });
   }
-  if (pending.length === 0) return {};
-  return Object.fromEntries(await Promise.all(pending));
+  if (declared.length === 0) return {};
+  // Spanned only when there's work: an undeclared template skips the span so
+  // ordinary requests don't carry a 0ms `render: deps` row.
+  return ctx.telemetry.span("render: deps", async (s) => {
+    s.set("deps.kinds", () => declared.map((d) => d.kind));
+    return Object.fromEntries(
+      await Promise.all(
+        declared.map((d) => loadOne(d.kind, d.slugs, d.dep, ctx)),
+      ),
+    );
+  });
 }
 
 async function loadOne(

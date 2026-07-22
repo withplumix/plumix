@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { RegisteredTemplateDep } from "./template-deps.js";
 import { auth } from "./auth/config.js";
 import { plumix } from "./config.js";
+import { NOOP_TELEMETRY } from "./context/telemetry.js";
 import { settings as settingsSchema } from "./db/schema/settings.js";
 import { definePlugin } from "./plugin/define.js";
 import { DuplicateRegistrationError } from "./plugin/errors.js";
@@ -182,6 +183,7 @@ describe("loadTemplateDeps", () => {
     const start = Date.now();
     const deps = await loadTemplateDeps(template, registry, {
       logger: ctx.logger,
+      telemetry: NOOP_TELEMETRY,
     } as unknown as Parameters<typeof loadTemplateDeps>[2]);
     const elapsed = Date.now() - start;
     expect(deps["test-thing"]).toEqual({ a: { value: "thing-a" } });
@@ -197,6 +199,7 @@ describe("loadTemplateDeps", () => {
     const ctx = captureLogger();
     const deps = await loadTemplateDeps(template, registry, {
       logger: ctx.logger,
+      telemetry: NOOP_TELEMETRY,
     } as unknown as Parameters<typeof loadTemplateDeps>[2]);
     expect(deps["test-thing"]).toEqual({
       present: { value: "yes" },
@@ -212,6 +215,7 @@ describe("loadTemplateDeps", () => {
     const ctx = captureLogger();
     const deps = await loadTemplateDeps(template, registry, {
       logger: ctx.logger,
+      telemetry: NOOP_TELEMETRY,
     } as unknown as Parameters<typeof loadTemplateDeps>[2]);
     expect(deps["test-thing"]).toEqual({});
     expect(ctx.errors[0]?.msg).toBe("template_dep_load_failed");
