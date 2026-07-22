@@ -671,6 +671,29 @@ describe("getMenuByName", () => {
     });
   });
 
+  test("resolves entry refs in one adapter read — no published pre-filter query (#1519)", async () => {
+    const post = await factories.entry.create({
+      type: "post",
+      slug: "solo",
+      title: "Solo",
+      status: "published",
+      authorId,
+    });
+    const termId = await seedMenu("lean");
+    await seedItems(termId, [
+      { title: "ignored", meta: { kind: "entry", entryId: post.id } },
+    ]);
+
+    const select = vi.spyOn(ctx.db, "select");
+    const menu = await getMenuByName(ctx, "lean");
+    expect(menu?.items.map((i) => i.label)).toEqual(["Solo"]);
+    // terms + menu items + one adapter batch read. The published
+    // constraint rides the adapter's own WHERE via scope.status, not a
+    // separate pre-filter query over the same ids.
+    expect(select.mock.calls.length).toBe(3);
+    select.mockRestore();
+  });
+
   test("excludes non-published menu items (draft, trash, scheduled)", async () => {
     const termId = await seedMenu("status");
     await seedItems(termId, [

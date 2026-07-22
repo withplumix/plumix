@@ -216,18 +216,13 @@ async function resolveEntryRefs(
   if (eligibleTypes.length === 0) return new Map();
 
   // The entry adapter excludes trash by default but admits drafts and
-  // scheduled — fine for the picker (editors want to link to drafts), wrong
-  // for public nav. Pre-filter to published ids so a draft that was added
-  // to a menu doesn't render until it ships.
-  const publishedIds = await ctx.db
-    .select({ id: entries.id })
-    .from(entries)
-    .where(and(inArray(entries.id, [...ids]), eq(entries.status, "published")));
-  if (publishedIds.length === 0) return new Map();
-
+  // scheduled — fine for the picker (editors want to link to drafts),
+  // wrong for public nav. scope.status pushes the published constraint
+  // into the adapter's own WHERE so a draft that was added to a menu
+  // doesn't render until it ships (#1519).
   const results = await adapter.list(ctx, {
-    scope: { entryTypes: eligibleTypes },
-    ids: publishedIds.map((r) => String(r.id)),
+    scope: { entryTypes: eligibleTypes, status: "published" },
+    ids: [...ids].map(String),
   });
   return refMapFromResults(results);
 }

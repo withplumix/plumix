@@ -4,7 +4,7 @@ import type { AppContext } from "../../../context/app.js";
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type { LookupAdapter, LookupResult } from "../../../plugin/lookup.js";
 import { and, eq, inArray, like, ne } from "../../../db/index.js";
-import { entries } from "../../../db/schema/entries.js";
+import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
 import { buildEntryPermalink } from "../../../route/permalink.js";
 import { LookupScopeError } from "../lookup.errors.js";
 
@@ -100,7 +100,15 @@ function scopeConditions(scope: EntryFieldScope | undefined): SQL[] {
   const conditions: SQL[] = [
     inArray(entries.type, scope.entryTypes as string[]),
   ];
-  if (!scope.includeTrashed) {
+  if (scope.status !== undefined) {
+    // Same wire-side reality as `entryTypes` above: the lookup RPC
+    // forwards scope untyped, so a non-member value must fail as a
+    // named scope error, not a driver-level bind failure.
+    if (!ENTRY_STATUSES.includes(scope.status)) {
+      throw LookupScopeError.invalidEntryStatus();
+    }
+    conditions.push(eq(entries.status, scope.status));
+  } else if (!scope.includeTrashed) {
     conditions.push(ne(entries.status, "trash"));
   }
   return conditions;

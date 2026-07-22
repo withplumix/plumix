@@ -1,3 +1,4 @@
+import type { EntryStatus } from "../../db/schema/entries.js";
 import type { Label } from "../../i18n/label.js";
 import type {
   EntryReferenceMetaBoxField,
@@ -22,6 +23,13 @@ export interface EntryFieldScope {
    * entries are usually invalid reference targets.
    */
   readonly includeTrashed?: boolean;
+  /**
+   * Restrict matches to exactly this lifecycle status; supersedes the
+   * `includeTrashed` default. Public-render consumers (e.g. menu nav)
+   * pass `"published"` so drafts never surface; the admin picker leaves
+   * it unset and keeps admitting drafts/scheduled.
+   */
+  readonly status?: EntryStatus;
 }
 
 export interface EntryFieldOptions {
