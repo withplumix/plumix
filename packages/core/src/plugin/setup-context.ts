@@ -168,6 +168,11 @@ export interface PluginSetupContextBase {
    * route map at `buildApp`; `URLPattern` pathname syntax (e.g. `/:slug`,
    * `/docs/:category/:slug`). `priority` defaults to 10 — lower wins,
    * auto-generated archive/single rules from `registerEntryType` sit at 50.
+   *
+   * Paths with a static-asset extension (`.ico`, `.js`, `.png`, fonts, …)
+   * 404 before the route map runs (#1491), so a pattern ending in one of
+   * those can never match. Content-plausible extensions (`.txt`, `.xml`,
+   * `.json`, `.html`) stay routable.
    */
   registerRewriteRule(
     pattern: string,

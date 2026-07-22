@@ -205,7 +205,18 @@ const ERROR_VARIANTS = {
   },
 } as const;
 
-export async function renderErrorThroughTheme({
+export function renderErrorThroughTheme(
+  args: RenderErrorArgs,
+): Promise<string> {
+  // Same phase span as the happy path — without it the error render's queries
+  // dangle directly under `dispatch` in the trace (#1491).
+  return args.ctx.telemetry.span("render", (s) => {
+    s.set("render.node", `error: ${ERROR_VARIANTS[args.kind].tier}`);
+    return renderErrorThroughThemeInner(args);
+  });
+}
+
+async function renderErrorThroughThemeInner({
   ctx,
   theme,
   document,
