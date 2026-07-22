@@ -5,6 +5,7 @@ import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 import { MultiSelect } from "@/components/form/multi-select.js";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
+import { useVisibleFields } from "@/components/meta-box/use-visible-fields.js";
 import {
   META_FORM_BASE_PATH,
   useApplyMetaFieldErrors,
@@ -118,7 +119,6 @@ function DocumentMetaBoxes({
   readonly onMetaChange: (next: Record<string, unknown>) => void;
   readonly fieldErrors?: readonly MetaFieldServerError[] | null;
 }): ReactElement {
-  const renderLabel = useLabel();
   const form = useForm<{ meta: Record<string, unknown> }>({
     defaultValues: { meta: initialMeta },
   });
@@ -134,22 +134,35 @@ function DocumentMetaBoxes({
   return (
     <Form {...form}>
       {boxes.map((box) => (
-        <section
-          key={box.id}
-          className="flex flex-col gap-3"
-          data-testid={`entry-meta-box-${box.id}`}
-        >
-          <h3 className="text-sm font-medium">{renderLabel(box.label)}</h3>
-          {box.fields.map((field) => (
-            <MetaBoxField
-              key={field.key}
-              field={field}
-              name={`meta.${field.key}`}
-            />
-          ))}
-        </section>
+        <DocumentMetaBoxSection key={box.id} box={box} />
       ))}
     </Form>
+  );
+}
+
+// Per-box component so the conditional-visibility hook keeps a stable
+// hook order regardless of how many boxes the entry type registers.
+function DocumentMetaBoxSection({
+  box,
+}: {
+  readonly box: EntryMetaBoxManifestEntry;
+}): ReactElement {
+  const renderLabel = useLabel();
+  const visibleFields = useVisibleFields(box.fields, { name: "meta" });
+  return (
+    <section
+      className="flex flex-col gap-3"
+      data-testid={`entry-meta-box-${box.id}`}
+    >
+      <h3 className="text-sm font-medium">{renderLabel(box.label)}</h3>
+      {visibleFields.map((field) => (
+        <MetaBoxField
+          key={field.key}
+          field={field}
+          name={`meta.${field.key}`}
+        />
+      ))}
+    </section>
   );
 }
 

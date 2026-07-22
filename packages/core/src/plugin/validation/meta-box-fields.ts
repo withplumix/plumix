@@ -57,4 +57,20 @@ export function assertMetaBoxFields(
     }
     seen.add(field.key);
   }
+  // Second pass so declaration order doesn't matter — a condition may
+  // reference a driver declared later in the same box.
+  for (const field of fields) {
+    for (const group of field.visibleWhen ?? []) {
+      for (const rule of group) {
+        if (!seen.has(rule.key)) {
+          throw PluginContextError.metaBoxFieldUnknownConditionDriver({
+            kind,
+            id,
+            fieldKey: field.key,
+            driverKey: rule.key,
+          });
+        }
+      }
+    }
+  }
 }

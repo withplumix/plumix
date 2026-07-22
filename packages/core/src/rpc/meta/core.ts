@@ -14,6 +14,7 @@ import type {
 } from "../../plugin/manifest.js";
 import type { MetaFieldError } from "./field-pipeline.js";
 import { eq } from "../../db/index.js";
+import { isConditionHidden } from "../../plugin/fields/condition.js";
 import { anchorTemporalUtc } from "../../plugin/manifest.js";
 import { MetaReferenceError } from "./errors.js";
 import { META_FIELD_MESSAGES } from "./field-messages.js";
@@ -161,6 +162,7 @@ export async function sanitizeMetaInput(
     if (!field) {
       throw MetaSanitizationError.notRegistered({ key });
     }
+    if (isConditionHidden(field, input)) continue;
     const result = await runFieldPipeline(field, rawValue, key);
     if (result.errors.length > 0) {
       fieldErrors.push(...result.errors);

@@ -11,6 +11,12 @@
 //
 // Re-exported as a public surface from `plumix/fields`.
 
+export { isFieldVisible } from "./condition.js";
+export type {
+  MetaFieldCondition,
+  MetaFieldConditionOperator,
+  MetaFieldConditionRule,
+} from "./condition.js";
 export {
   email,
   password,

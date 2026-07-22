@@ -5,6 +5,7 @@ type FieldConfigErrorCode =
   | "repeater_sub_field_key_forbidden"
   | "repeater_sub_field_key_invalid"
   | "repeater_sub_field_duplicate"
+  | "repeater_sub_field_condition_not_supported"
   | "temporal_bound_invalid";
 
 interface FieldConfigErrorFields {
@@ -112,6 +113,18 @@ export class FieldConfigError extends Error {
       `field "${ctx.fieldKey}": .${ctx.bound}("${ctx.value}") is not a valid ` +
         `temporal bound — use the field's stored ISO shape.`,
       { fieldKey: ctx.fieldKey },
+    );
+  }
+
+  static repeaterSubFieldCondition(ctx: {
+    repeaterKey: string;
+    subFieldKey: string;
+  }): FieldConfigError {
+    return new FieldConfigError(
+      "repeater_sub_field_condition_not_supported",
+      `repeater("${ctx.repeaterKey}") subField "${ctx.subFieldKey}" does not ` +
+        `support visibleWhen — row-scoped conditions are not implemented.`,
+      ctx,
     );
   }
 
