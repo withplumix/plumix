@@ -3,9 +3,10 @@ import type { ReactNode } from "react";
 import type { AppContext } from "../../context/app.js";
 import type { DbQueryEntry } from "../db-query.js";
 import type { DebugPanel } from "../types.js";
+import { queryKind } from "../../db/query-kind.js";
 import { DB_PANEL_ID } from "../db-query.js";
 import { describeSqlParam } from "../format-param.js";
-import { queryKind, tokenizeSql } from "../highlight-sql.js";
+import { tokenizeSql } from "../highlight-sql.js";
 import { DebugSection } from "../primitives.js";
 
 function HighlightedSql({ sql }: { readonly sql: string }): ReactNode {
