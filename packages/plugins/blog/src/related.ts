@@ -2,7 +2,7 @@ import type { ResolvedEntry } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
 import { and, desc, eq, inArray, isNotNull, ne } from "drizzle-orm";
-import { buildResolvedEntries } from "plumix";
+import { buildResolvedEntries, readEntryType } from "plumix";
 import { entries, entryTerm } from "plumix/schema";
 
 // Augment the template-dep registry so a theme can declare
@@ -33,18 +33,14 @@ export async function findRelatedEntries(
   ctx: AppContext,
   currentId: number,
 ): Promise<readonly Entry[]> {
-  const [selfRows, termRows] = await Promise.all([
-    ctx.db
-      .select({ type: entries.type })
-      .from(entries)
-      .where(eq(entries.id, currentId)),
+  const [selfType, termRows] = await Promise.all([
+    readEntryType(ctx, currentId),
     ctx.db
       .select({ termId: entryTerm.termId })
       .from(entryTerm)
       .where(eq(entryTerm.entryId, currentId)),
   ]);
-  const self = selfRows[0];
-  if (!self) return [];
+  if (selfType === null) return [];
   const termIds = termRows.map((r) => r.termId);
   if (termIds.length === 0) return [];
 
@@ -66,7 +62,7 @@ export async function findRelatedEntries(
     .where(
       and(
         inArray(entries.id, siblingIds),
-        eq(entries.type, self.type),
+        eq(entries.type, selfType),
         eq(entries.status, "published"),
         isNotNull(entries.publishedAt),
       ),

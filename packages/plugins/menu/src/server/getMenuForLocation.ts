@@ -17,20 +17,17 @@ const MENU_LOCATIONS_GROUP = "menu_locations";
  * when the bound menu has been deleted.
  *
  * Calling this twice for the same location within a single request hits
- * a request-scoped cache stashed on `AppContext` so header + footer +
- * breadcrumb consumers all share one resolve pass.
+ * the request memo (`ctx.memo`, #1493) so header + footer + breadcrumb
+ * consumers all share one resolve pass; `getMenuByName` memoizes its
+ * query cluster by slug on the same primitive.
  */
 export async function getMenuForLocation(
   ctx: AppContext,
   location: string,
 ): Promise<ResolvedMenu | null> {
-  const cache = getOrCreateRequestCache(ctx);
-  if (cache.has(location)) {
-    return cache.get(location) ?? null;
-  }
-  const resolved = await resolveLocation(ctx, location);
-  cache.set(location, resolved);
-  return resolved;
+  return ctx.memo(`menu:location:${location}`, () =>
+    resolveLocation(ctx, location),
+  );
 }
 
 async function resolveLocation(
@@ -53,24 +50,4 @@ async function resolveLocation(
 function parseTermSlug(value: unknown): string | null {
   if (typeof value === "string" && value.length > 0) return value;
   return null;
-}
-
-// WeakMap keyed by ctx identity. If a caller reused an `AppContext` across
-// requests (no current code path does, but nothing in the type forbids it),
-// they'd leak menu state via the cache. WeakMap means the cache dies with
-// the ctx, and a non-registry Symbol can't collide with another module.
-const requestCaches = new WeakMap<
-  AppContext,
-  Map<string, ResolvedMenu | null>
->();
-
-function getOrCreateRequestCache(
-  ctx: AppContext,
-): Map<string, ResolvedMenu | null> {
-  let cache = requestCaches.get(ctx);
-  if (!cache) {
-    cache = new Map();
-    requestCaches.set(ctx, cache);
-  }
-  return cache;
 }

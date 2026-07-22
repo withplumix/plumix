@@ -8,6 +8,7 @@ import {
 } from "plumix/plugin";
 import {
   adminUser,
+  createRequestMemo,
   createTestDb,
   entryFactory,
   entryTermFactory,
@@ -42,6 +43,7 @@ function ctxFor(
     hooks: bundle.hooks,
     request: new Request("https://test.example/"),
     resolvedEntity: null,
+    memo: createRequestMemo(),
   } as unknown as AppContext;
 }
 

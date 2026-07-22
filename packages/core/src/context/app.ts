@@ -27,6 +27,7 @@ import type {
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
+import type { RequestMemo } from "./memo.js";
 import type {
   TelemetryCollector,
   TelemetryConfig,
@@ -40,6 +41,7 @@ import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
+import { createRequestMemo } from "./memo.js";
 import { NOOP_TELEMETRY } from "./telemetry.js";
 import { createTracedFetch } from "./traced-fetch.js";
 import {
@@ -151,6 +153,17 @@ export interface AppContextBase<
    */
   readonly shortcodes: ShortcodeRegistry;
   readonly logger: Logger;
+  /**
+   * Request-scoped read-through memo for repeated reads (issue #1493).
+   * `memo(key, load)` runs `load` once per key per request and replays
+   * the settled value to later callers — hot single-row lookups
+   * (settings group, author row, entry type, menu cluster) dedupe
+   * inside the service functions without new API surface. The cache
+   * dies with the context; rejections are not memoized. No invalidation
+   * on writes, and `withUser` derivations share it — see the contract
+   * notes on {@link RequestMemo}.
+   */
+  readonly memo: RequestMemo;
   /**
    * Request-scoped telemetry collector — spans + records for what happened
    * during this request. Core and plugins record via `ctx.telemetry.record`/
@@ -443,6 +456,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     marks: args.marks ?? EMPTY_MARK_LIST,
     shortcodes: args.shortcodes ?? EMPTY_SHORTCODE_REGISTRY,
     logger: args.logger ?? consoleLogger,
+    memo: createRequestMemo(),
     auth: {
       can: makeAuthCan(resolver, user, tokenScopes),
     },

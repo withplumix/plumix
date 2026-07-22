@@ -38,6 +38,13 @@ export type {
   CreateDispatcherHarnessOptions,
 } from "./dispatcher.js";
 
+export { createTracedContext } from "./traced-context.js";
+export type { TracedContext } from "./traced-context.js";
+
+// Real request-memo implementation for hand-rolled AppContext stand-ins —
+// service functions read through `ctx.memo`, so a stand-in needs one.
+export { createRequestMemo } from "../context/memo.js";
+
 export { createDeferQueue } from "./defer.js";
 export type { DeferQueue } from "./defer.js";
 

@@ -9,8 +9,9 @@ import {
   entryListInputSchema,
 } from "../rpc/procedures/entry/schemas.js";
 import { createRpcHarness } from "../test/rpc.js";
+import { createTracedContext } from "../test/traced-context.js";
 import { EntryReadError } from "./errors.js";
-import { getEntry, listEntries } from "./read-service.js";
+import { getEntry, listEntries, readEntryType } from "./read-service.js";
 
 function authedCtx(h: AuthenticatedRpcHarness): AppContext {
   return withUser(h.context, h.user, null);
@@ -210,5 +211,38 @@ describe("getEntry", () => {
     await expect(
       getEntry(ctx, getInput({ id: theirs.id })),
     ).rejects.toMatchObject({ data: { code: "not_found" } });
+  });
+});
+
+describe("readEntryType", () => {
+  test("repeated reads of the same entry run one query per request", async () => {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext();
+    const author = await harness.factory.user.create({});
+    const post = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+    });
+
+    const [first, second] = await run(async () => [
+      await readEntryType(ctx, post.id),
+      await readEntryType(ctx, post.id),
+    ]);
+
+    expect(first).toBe("post");
+    expect(second).toBe("post");
+    expect(dbQueryCount()).toBe(1);
+  });
+
+  test("a missing entry reads as null and is memoized too", async () => {
+    const { ctx, run, dbQueryCount } = await createTracedContext();
+
+    const [first, second] = await run(async () => [
+      await readEntryType(ctx, 999),
+      await readEntryType(ctx, 999),
+    ]);
+
+    expect(first).toBeNull();
+    expect(second).toBeNull();
+    expect(dbQueryCount()).toBe(1);
   });
 });

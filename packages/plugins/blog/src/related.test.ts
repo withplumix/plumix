@@ -1,14 +1,20 @@
 import type { AppContext } from "plumix/plugin";
-import { createTestDb, factoriesFor } from "plumix/test";
+import { readEntryType } from "plumix";
+import {
+  createRequestMemo,
+  createTestDb,
+  createTracedContext,
+  factoriesFor,
+} from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import { findRelatedEntries } from "./related.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
-/** Minimal AppContext stand-in — `findRelatedEntries` reads only `db`. */
+/** Minimal AppContext stand-in — `findRelatedEntries` reads `db` + `memo`. */
 function ctxFor(db: TestDb): AppContext {
-  return { db } as unknown as AppContext;
+  return { db, memo: createRequestMemo() } as unknown as AppContext;
 }
 
 describe("findRelatedEntries", () => {
@@ -68,5 +74,39 @@ describe("findRelatedEntries", () => {
     });
 
     expect(await findRelatedEntries(ctxFor(db), entry.id)).toEqual([]);
+  });
+
+  test("shares the current entry's type read with earlier consumers in the request", async () => {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext();
+    const f = harness.factory;
+    const author = await f.user.create({});
+    const topic = await f.term.create({ taxonomy: "category" });
+    const current = await f.entry.create({
+      type: "post",
+      status: "published",
+      publishedAt: new Date(2000),
+      authorId: author.id,
+    });
+    const sibling = await f.entry.create({
+      type: "post",
+      status: "published",
+      publishedAt: new Date(1000),
+      authorId: author.id,
+    });
+    await f.entryTerm.create({ entryId: current.id, termId: topic.id });
+    await f.entryTerm.create({ entryId: sibling.id, termId: topic.id });
+
+    const related = await run(async () => {
+      // e.g. the comments plugin's enablement gate, earlier in the render.
+      await readEntryType(ctx, current.id);
+      const before = dbQueryCount();
+      const rows = await findRelatedEntries(ctx, current.id);
+      // Terms, sibling ids, and the final list — the type read replays
+      // from the request memo instead of re-querying.
+      expect(dbQueryCount() - before).toBe(3);
+      return rows;
+    });
+
+    expect(related.map((e) => e.id)).toEqual([sibling.id]);
   });
 });

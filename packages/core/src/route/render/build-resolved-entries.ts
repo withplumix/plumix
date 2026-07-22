@@ -5,7 +5,8 @@ import { isEntryContent } from "@plumix/blocks";
 import type { AppContext } from "../../context/app.js";
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
-import type { ResolvedEntry } from "./resolved-entry.js";
+import type { ResolvedAuthor, ResolvedEntry } from "./resolved-entry.js";
+import { memoBatch } from "../../context/memo.js";
 import { entryTerm } from "../../db/schema/entry_term.js";
 import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
@@ -27,16 +28,28 @@ export async function buildResolvedEntries(
   if (rows.length === 0) return [];
   const entryIds = rows.map((r) => r.id);
   const authorIds = Array.from(new Set(rows.map((r) => r.authorId)));
+  // Per-author request memo (#1493): entry resolution and the blog
+  // related-posts loader hydrate the same author in one request — the
+  // second call replays the row, and a mixed batch still costs a single
+  // `IN(...)` query.
   const [authorRows, joinRows] = await Promise.all([
-    ctx.db
-      .select({
-        id: users.id,
-        slug: users.slug,
-        name: users.name,
-        avatarUrl: users.avatarUrl,
-      })
-      .from(users)
-      .where(inArray(users.id, authorIds)),
+    memoBatch(
+      ctx.memo,
+      authorIds,
+      (id) => `core:author:${String(id)}`,
+      async () => {
+        const authors: ResolvedAuthor[] = await ctx.db
+          .select({
+            id: users.id,
+            slug: users.slug,
+            name: users.name,
+            avatarUrl: users.avatarUrl,
+          })
+          .from(users)
+          .where(inArray(users.id, authorIds));
+        return new Map(authors.map((a) => [a.id, a]));
+      },
+    ),
     ctx.db
       .select({
         entryId: entryTerm.entryId,
@@ -53,7 +66,9 @@ export async function buildResolvedEntries(
       .innerJoin(terms, eq(entryTerm.termId, terms.id))
       .where(inArray(entryTerm.entryId, entryIds)),
   ]);
-  const authorById = new Map(authorRows.map((a) => [a.id, a]));
+  const authorById = new Map(
+    authorRows.filter((a) => a !== null).map((a) => [a.id, a]),
+  );
   const termsByEntryId = new Map<number, Term[]>();
   for (const row of joinRows) {
     const { entryId, ...term } = row;

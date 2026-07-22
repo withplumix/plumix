@@ -1,4 +1,5 @@
 import type { AppContext } from "plumix/plugin";
+import { createRequestMemo } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import type { CommentsTestDb } from "./test/db.js";
@@ -17,6 +18,7 @@ function ctxWith(
     db,
     resolvedEntity,
     plugins: { entryTypes: new Map() },
+    memo: createRequestMemo(),
   } as unknown as AppContext;
 }
 

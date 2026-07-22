@@ -26,6 +26,25 @@ import { EntryReadError } from "./errors.js";
 const PUBLIC_STATUS: EntryStatus = "published";
 const TRASH_STATUS: EntryStatus = "trash";
 
+/**
+ * The `type` of an entry by id, `null` when the entry doesn't exist.
+ * Request-memoized (#1493): the comments template dep and the blog
+ * related-posts loader both gate on the resolved entry's type in one
+ * render — sharing this read collapses their duplicate queries.
+ */
+export async function readEntryType(
+  ctx: AppContext,
+  id: number,
+): Promise<string | null> {
+  return ctx.memo(`core:entry-type:${String(id)}`, async () => {
+    const [row] = await ctx.db
+      .select({ type: entries.type })
+      .from(entries)
+      .where(eq(entries.id, id));
+    return row?.type ?? null;
+  });
+}
+
 type EntryRead = Omit<Entry, "meta"> & {
   readonly meta: Record<string, unknown>;
   readonly terms: Record<string, number[]>;
