@@ -1404,11 +1404,16 @@ describe("dispatcher — telemetry consumers", () => {
     await h.drainDeferred();
 
     const [snapshot] = snapshots;
-    const render = flattenSpans(snapshot?.spans ?? []).find(
-      (span) => span.name === "render",
-    );
+    const spans = flattenSpans(snapshot?.spans ?? []);
+    const render = spans.find((span) => span.name === "render");
     expect(render?.status).toBe("error");
     expect(render?.error?.message).toBe("render kaboom");
+    // The motivating question is about the failure path: the resolve span must
+    // still carry what had resolved before the throw.
+    const resolve = spans.find((span) => span.name === "resolve");
+    expect(resolve?.status).toBe("error");
+    expect(resolve?.attributes["route.intent"]).toBe("front-page");
+    expect(resolve?.attributes["template.matched"]).toBe("fallback");
   });
 
   test("session-cookie auth resolution appears as an auth span with the resolved user", async () => {

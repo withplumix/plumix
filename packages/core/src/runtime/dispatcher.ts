@@ -555,14 +555,20 @@ async function renderPublicRoute(
   try {
     ctx = await loadUserForPublicRequest(ctx);
     const response = await ctx.telemetry.span("resolve", async (s) => {
-      const resolved = await resolvePublicRouteOrFallback(app, ctx, url, match);
-      // Attributes read post-resolution: the resolver writes `resolvedEntity`
-      // / `resolvedTemplate` onto ctx during the render it encloses. Lazy
-      // thunks, so the no-op collector never evaluates them.
-      s.set("route.intent", () => publicIntent(match, url)?.kind ?? "none");
-      if (ctx.resolvedEntity) s.set("resolve.entity", ctx.resolvedEntity);
-      if (ctx.resolvedTemplate) s.set("template.matched", ctx.resolvedTemplate);
-      return resolved;
+      try {
+        return await resolvePublicRouteOrFallback(app, ctx, url, match);
+      } finally {
+        // Attributes read post-resolution: the resolver writes
+        // `resolvedEntity` / `resolvedTemplate` onto ctx during the render it
+        // encloses. In a `finally` so a throwing render still stamps whatever
+        // had resolved — the failure path is the trace that matters most.
+        // Lazy thunks, so the no-op collector never evaluates them.
+        s.set("route.intent", () => publicIntent(match, url)?.kind ?? "none");
+        if (ctx.resolvedEntity) s.set("resolve.entity", ctx.resolvedEntity);
+        if (ctx.resolvedTemplate) {
+          s.set("template.matched", ctx.resolvedTemplate);
+        }
+      }
     });
     if (response.status === 404) {
       const html = await renderErrorThroughTheme({

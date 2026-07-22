@@ -276,6 +276,13 @@ export interface AppContextBase<
    */
   readonly resHeaders?: Headers;
   /**
+   * Unique id for this execution (request or cron run), minted at context
+   * creation so mid-request consumers — logs, error hooks, the debug bar —
+   * and the post-response telemetry snapshot all correlate on one value.
+   * The snapshot envelope's `requestId` is this id.
+   */
+  readonly requestId: string;
+  /**
    * Set by the public-route resolver after URL → entity matching;
    * `null` for non-public routes (admin, RPC, etc.) and on cold-start.
    * Consumers (breadcrumbs, canonical tags, menu plugin's `isCurrent`)
@@ -283,13 +290,6 @@ export interface AppContextBase<
    * Mutable by design — the resolver writes once between cookie auth
    * and response rendering, and read paths see the populated value.
    */
-  /**
-   * Unique id for this execution (request or cron run), minted at context
-   * creation so mid-request consumers — logs, error hooks, the debug bar —
-   * and the post-response telemetry snapshot all correlate on one value.
-   * The snapshot envelope's `requestId` is this id.
-   */
-  readonly requestId: string;
   resolvedEntity: ResolvedEntity | null;
   /**
    * The template rule that won resolution (its `ruleLabel`), written by the
