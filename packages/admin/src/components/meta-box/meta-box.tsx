@@ -21,6 +21,7 @@ import {
 
 import { MetaBoxField } from "./meta-box-field.js";
 import { metaBoxFieldColSpanClass } from "./meta-box-grid.js";
+import { useVisibleFields } from "./use-visible-fields.js";
 
 // `MetaBoxCard` serves the page-width surfaces (term + user edit). The
 // entry editor rail uses `MetaBoxAccordionItem`, and settings groups
@@ -97,6 +98,7 @@ export function MetaBoxAccordionItem({
   disabled = false,
 }: MetaBoxAccordionItemProps): ReactNode {
   const renderLabel = useLabel();
+  const visibleFields = useVisibleFields(box.fields, { name: basePath });
   return (
     <AccordionItem value={box.id} data-testid={`meta-box-${box.id}`}>
       <AccordionTrigger
@@ -112,7 +114,7 @@ export function MetaBoxAccordionItem({
           </p>
         ) : null}
         <div className="flex flex-col gap-4">
-          {box.fields.map((field) => (
+          {visibleFields.map((field) => (
             <MetaBoxField
               key={field.key}
               field={field}
@@ -131,9 +133,10 @@ function MetaBoxFieldsGrid({
   basePath,
   disabled,
 }: MetaBoxProps): ReactNode {
+  const visibleFields = useVisibleFields(box.fields, { name: basePath });
   return (
     <div className="grid grid-cols-12 gap-4">
-      {box.fields.map((field) => (
+      {visibleFields.map((field) => (
         <MetaBoxField
           key={field.key}
           field={field}

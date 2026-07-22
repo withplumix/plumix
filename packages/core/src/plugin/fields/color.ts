@@ -5,9 +5,14 @@ import type {
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
 } from "../manifest.js";
+import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
 import { humanizeFieldKey } from "./builder.js";
 
 interface ColorFieldState {
+  readonly visibleWhen?: MetaFieldCondition;
   readonly label?: Label;
   readonly description?: Label;
   readonly default?: string;
@@ -97,6 +102,46 @@ export class ColorFieldBuilder<
   /** Opt this field's value into public REST responses (default-deny). */
   showInApi(): ColorFieldBuilder<K, V, S> {
     return this.#fork({ showInApi: true });
+  }
+
+  /** Rule factory: this field's value equals `value` — pass the rule
+   *  to a dependent field's `.visibleWhen()`. */
+  is(value: string): MetaFieldConditionRule {
+    return { key: this.#key, op: "eq", value };
+  }
+
+  /** Rule factory: this field's value differs from `value`. */
+  isNot(value: string): MetaFieldConditionRule {
+    return { key: this.#key, op: "neq", value };
+  }
+
+  /** Rule factory: this field has no value (unset or cleared). */
+  isEmpty(): MetaFieldConditionRule {
+    return { key: this.#key, op: "empty" };
+  }
+
+  /** Rule factory: this field has a value. */
+  isNotEmpty(): MetaFieldConditionRule {
+    return { key: this.#key, op: "not_empty" };
+  }
+
+  /**
+   * Show this field only when every rule passes (one AND group) —
+   * rules come from sibling fields' condition factories. Replaces any
+   * previously declared condition; `.orVisibleWhen()` adds
+   * alternatives.
+   */
+  visibleWhen(...rules: MetaFieldConditionRule[]): ColorFieldBuilder<K, V, S> {
+    return this.#fork({ visibleWhen: [rules] });
+  }
+
+  /** Add an OR alternative — one more AND group of rules. */
+  orVisibleWhen(
+    ...rules: MetaFieldConditionRule[]
+  ): ColorFieldBuilder<K, V, S> {
+    return this.#fork({
+      visibleWhen: [...(this.#state.visibleWhen ?? []), rules],
+    });
   }
 
   /** Normalising transform, applied after coercion and before persistence. */

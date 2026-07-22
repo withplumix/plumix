@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import type { NewSetting } from "../../../db/schema/settings.js";
 import { and, eq, inArray } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
+import { isConditionHidden } from "../../../plugin/fields/condition.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import {
@@ -28,9 +29,21 @@ export const upsert = base
       input,
     );
 
+    // Settings have no per-field validation pipeline, but condition-
+    // hidden fields still must not persist values the editor cannot
+    // see — same drop as the entry/term/user meta write path.
+    // Unregistered groups (and keys) keep the laissez-faire write.
+    const groupFields = new Map(
+      (context.plugins.settingsGroups.get(filtered.group)?.fields ?? []).map(
+        (f) => [f.key, f],
+      ),
+    );
+
     const deletes: string[] = [];
     const upsertRows: NewSetting[] = [];
     for (const [key, value] of Object.entries(filtered.values)) {
+      const field = groupFields.get(key);
+      if (field && isConditionHidden(field, filtered.values)) continue;
       if (value === null || value === undefined) {
         deletes.push(key);
         continue;

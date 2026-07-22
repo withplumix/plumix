@@ -5,6 +5,7 @@ import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { FormEditSkeleton } from "@/components/form/edit-skeleton.js";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
 import { metaBoxFieldColSpanClass } from "@/components/meta-box/meta-box-grid.js";
+import { useVisibleFields } from "@/components/meta-box/use-visible-fields.js";
 import { hasCap } from "@/lib/caps.js";
 import {
   findSettingsPageByName,
@@ -179,6 +180,11 @@ function SettingsGroupCard({
   const form = useForm({
     defaultValues: seedFromMetaBoxes([group], stored),
   });
+  // The settings card owns its form (no ancestor provider), so the
+  // visibility hook needs the control handed over explicitly.
+  const visibleFields = useVisibleFields(group.fields, {
+    control: form.control,
+  });
 
   const save = useMutation({
     mutationFn: (next: Record<string, unknown>) =>
@@ -234,7 +240,7 @@ function SettingsGroupCard({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid grid-cols-12 gap-4">
-              {group.fields.map((field) => (
+              {visibleFields.map((field) => (
                 <MetaBoxField
                   key={field.key}
                   field={field}

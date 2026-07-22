@@ -32,6 +32,7 @@ type PluginContextErrorCode =
   | "meta_box_field_invalid_key"
   | "meta_box_field_duplicate_key"
   | "meta_box_field_reserved_key"
+  | "meta_box_field_unknown_condition_driver"
   | "template_dep_kind_reserved";
 
 interface PluginContextErrorFields {
@@ -49,6 +50,7 @@ interface PluginContextErrorFields {
   minRole?: string;
   existingMinRole?: string;
   fieldKey?: string;
+  driverKey?: string;
   pattern?: string;
   count?: number;
   maxLength?: number;
@@ -564,6 +566,21 @@ export class PluginContextError extends Error {
       `${ctx.kind} "${ctx.id}" declares field "${ctx.fieldKey}" with the ` +
         `reserved \`__plumix_\` prefix. That namespace is owned by the core ` +
         `runtime (e.g. revision snapshot envelopes) — rename the field.`,
+      ctx,
+    );
+  }
+
+  static metaBoxFieldUnknownConditionDriver(ctx: {
+    kind: string;
+    id: string;
+    fieldKey: string;
+    driverKey: string;
+  }): PluginContextError {
+    return new PluginContextError(
+      "meta_box_field_unknown_condition_driver",
+      `${ctx.kind} "${ctx.id}" field "${ctx.fieldKey}" condition references ` +
+        `"${ctx.driverKey}", which is not a field in the same box — ` +
+        `visibility rules can only drive off sibling fields.`,
       ctx,
     );
   }

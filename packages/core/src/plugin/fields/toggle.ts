@@ -5,9 +5,14 @@ import type {
   MetaBoxFieldValidate,
   ToggleMetaBoxField,
 } from "../manifest.js";
+import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
 import { humanizeFieldKey } from "./builder.js";
 
 interface ToggleFieldState {
+  readonly visibleWhen?: MetaFieldCondition;
   readonly onText?: Label;
   readonly offText?: Label;
   readonly label?: Label;
@@ -104,6 +109,57 @@ export class ToggleFieldBuilder<
   /** Opt this field's value into public REST responses (default-deny). */
   showInApi(): ToggleFieldBuilder<K, V, S> {
     return this.#fork({ showInApi: true });
+  }
+
+  /** Rule factory: this field's value equals `value` — pass the rule
+   *  to a dependent field's `.visibleWhen()`. */
+  is(value: boolean): MetaFieldConditionRule {
+    return { key: this.#key, op: "eq", value };
+  }
+
+  /** Rule factory: this field's value differs from `value`. */
+  isNot(value: boolean): MetaFieldConditionRule {
+    return { key: this.#key, op: "neq", value };
+  }
+
+  /** Rule factory: this field has no value (unset or cleared). */
+  isEmpty(): MetaFieldConditionRule {
+    return { key: this.#key, op: "empty" };
+  }
+
+  /** Rule factory: this field has a value. */
+  isNotEmpty(): MetaFieldConditionRule {
+    return { key: this.#key, op: "not_empty" };
+  }
+
+  /** Rule factory: the switch is on. */
+  isOn(): MetaFieldConditionRule {
+    return { key: this.#key, op: "eq", value: true };
+  }
+
+  /** Rule factory: the switch is off. `neq true` rather than
+   *  `eq false`, so an unset toggle (which renders as off) counts. */
+  isOff(): MetaFieldConditionRule {
+    return { key: this.#key, op: "neq", value: true };
+  }
+
+  /**
+   * Show this field only when every rule passes (one AND group) —
+   * rules come from sibling fields' condition factories. Replaces any
+   * previously declared condition; `.orVisibleWhen()` adds
+   * alternatives.
+   */
+  visibleWhen(...rules: MetaFieldConditionRule[]): ToggleFieldBuilder<K, V, S> {
+    return this.#fork({ visibleWhen: [rules] });
+  }
+
+  /** Add an OR alternative — one more AND group of rules. */
+  orVisibleWhen(
+    ...rules: MetaFieldConditionRule[]
+  ): ToggleFieldBuilder<K, V, S> {
+    return this.#fork({
+      visibleWhen: [...(this.#state.visibleWhen ?? []), rules],
+    });
   }
 
   /** Normalising transform, applied after coercion and before persistence. */

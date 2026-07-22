@@ -5,8 +5,10 @@ import {
   date,
   datetime,
   repeater,
+  select,
   text,
   time,
+  url,
 } from "../../plugin/fields/index.js";
 import {
   decodeMetaBag,
@@ -67,6 +69,64 @@ describe("sanitizeMetaInput (constraint enforcement)", () => {
   test("unregistered keys still fail fast with the legacy error", async () => {
     await expect(
       sanitizeMetaInput(findField, { ghost: "x" }),
+    ).rejects.toThrowError(MetaSanitizationError);
+  });
+});
+
+describe("sanitizeMetaInput (condition-hidden fields)", () => {
+  const layout = select("layout").options(["standard", "video"]);
+  const fields = new Map<string, MetaBoxField>([
+    ["layout", layout.build()],
+    ["videoUrl", url("videoUrl").visibleWhen(layout.is("video")).build()],
+  ]);
+  const findField = (key: string): MetaBoxField | undefined => fields.get(key);
+
+  test("a hidden field's invalid value is dropped, not rejected", async () => {
+    const patch = await sanitizeMetaInput(findField, {
+      layout: "standard",
+      videoUrl: { not: "a string" },
+    });
+    expect(patch?.upserts.has("videoUrl")).toBe(false);
+    expect(patch?.upserts.get("layout")).toBe("standard");
+  });
+
+  test("a hidden field's deletion request is dropped too", async () => {
+    const patch = await sanitizeMetaInput(findField, {
+      layout: "standard",
+      videoUrl: null,
+    });
+    expect(patch?.deletes).toEqual([]);
+  });
+
+  test("a visible field is validated and written as usual", async () => {
+    const patch = await sanitizeMetaInput(findField, {
+      layout: "video",
+      videoUrl: "https://example.com/v.mp4",
+    });
+    expect(patch?.upserts.get("videoUrl")).toBe("https://example.com/v.mp4");
+
+    await expect(
+      sanitizeMetaInput(findField, {
+        layout: "video",
+        videoUrl: { not: "a string" },
+      }),
+    ).rejects.toThrowError(MetaValidationError);
+  });
+
+  test("a patch that omits the driver validates the field as if visible", async () => {
+    await expect(
+      sanitizeMetaInput(findField, { videoUrl: { not: "a string" } }),
+    ).rejects.toThrowError(MetaValidationError);
+
+    const patch = await sanitizeMetaInput(findField, {
+      videoUrl: "https://example.com/v.mp4",
+    });
+    expect(patch?.upserts.get("videoUrl")).toBe("https://example.com/v.mp4");
+  });
+
+  test("hidden fields must still be registered keys", async () => {
+    await expect(
+      sanitizeMetaInput(findField, { layout: "standard", ghost: "x" }),
     ).rejects.toThrowError(MetaSanitizationError);
   });
 });
