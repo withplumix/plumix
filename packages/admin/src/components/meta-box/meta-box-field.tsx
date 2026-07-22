@@ -6,7 +6,10 @@ import { getPluginFieldType } from "@/lib/plugin-registry.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 
-import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
+import type {
+  MetaBoxFieldManifestEntry,
+  TemporalInputType,
+} from "@plumix/core/manifest";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
 import { ColorPicker } from "@plumix/admin-ui/color-picker";
 import {
@@ -29,6 +32,7 @@ import {
 import { Slider } from "@plumix/admin-ui/slider";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
+import { formatTemporalValue } from "@plumix/core/manifest";
 
 import { LinkField } from "./link-field.js";
 import { MultiReferencePicker } from "./multi-reference-picker.js";
@@ -464,7 +468,14 @@ function renderDateTimeField(ctx: NativeInputContext): ReactNode {
     <Input
       {...nativeCommonProps(ctx)}
       type={htmlType}
-      value={asString(rhf.value)}
+      value={
+        rhf.value instanceof Date
+          ? asTemporalInputValue(
+              field.inputType as TemporalInputType,
+              rhf.value,
+            )
+          : asString(rhf.value)
+      }
       min={field.min}
       max={field.max}
       onChange={(e) => {
@@ -689,6 +700,19 @@ function asString(value: unknown): string {
     return String(value);
   }
   return "";
+}
+
+// A `.returns("date")` temporal field reads as a JS `Date` whose
+// wall-clock components anchor to UTC — `formatTemporalValue` (the
+// same formatter the server's write encoder uses) keeps the display
+// timezone-invariant. Invalid Dates drop to empty.
+function asTemporalInputValue(
+  inputType: TemporalInputType,
+  value: Date,
+): string {
+  return Number.isNaN(value.getTime())
+    ? ""
+    : formatTemporalValue(inputType, value);
 }
 
 // `<input type="number">` needs an empty string (not `0`) to render an

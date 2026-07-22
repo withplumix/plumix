@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import type { MetaBoxField } from "../../plugin/manifest.js";
-import { decodeMetaBag, MetaSanitizationError } from "./core.js";
+import { date, datetime, time } from "../../plugin/fields/index.js";
+import {
+  decodeMetaBag,
+  MetaSanitizationError,
+  sanitizeMetaInput,
+} from "./core.js";
 
 describe("MetaSanitizationError", () => {
   test("error.name is the class name, not 'Error'", () => {
@@ -82,5 +87,103 @@ describe("decodeMetaBag (legacy reference self-heal)", () => {
       hero: { mime: "image/png" },
     });
     expect(decoded.hero).toEqual({ mime: "image/png" });
+  });
+});
+
+describe('decodeMetaBag (.returns("date") projection)', () => {
+  const fields = new Map<string, MetaBoxField>([
+    ["publishedOn", date("publishedOn").returns("date").build()],
+    ["startsAt", datetime("startsAt").returns("date").build()],
+    ["opensAt", time("opensAt").returns("date").build()],
+    ["plainDate", date("plainDate").build()],
+  ]);
+  const findField = (key: string): MetaBoxField | undefined => fields.get(key);
+
+  test("date projects the stored YYYY-MM-DD to a UTC-midnight Date", () => {
+    const decoded = decodeMetaBag(findField, { publishedOn: "2026-05-03" });
+    expect(decoded.publishedOn).toBeInstanceOf(Date);
+    // UTC anchoring: components are timezone-invariant — the same
+    // stored string projects to the same instant on every deployment.
+    expect(decoded.publishedOn).toEqual(new Date("2026-05-03T00:00Z"));
+  });
+
+  test("datetime projects the stored naive string as UTC wall-clock", () => {
+    const decoded = decodeMetaBag(findField, { startsAt: "2026-05-03T09:30" });
+    expect(decoded.startsAt).toEqual(new Date("2026-05-03T09:30Z"));
+  });
+
+  test("time anchors to 1970-01-01 UTC", () => {
+    const decoded = decodeMetaBag(findField, { opensAt: "09:30" });
+    expect(decoded.opensAt).toEqual(new Date("1970-01-01T09:30Z"));
+  });
+
+  test("default remains the ISO string without .returns('date')", () => {
+    const decoded = decodeMetaBag(findField, { plainDate: "2026-05-03" });
+    expect(decoded.plainDate).toBe("2026-05-03");
+  });
+
+  test("unparseable stored values round to no value", () => {
+    expect(
+      decodeMetaBag(findField, { publishedOn: "garbage" }).publishedOn,
+    ).toBeUndefined();
+    expect(
+      decodeMetaBag(findField, { opensAt: "25:99x" }).opensAt,
+    ).toBeUndefined();
+  });
+});
+
+// The admin form reads decoded meta and writes the untouched bag back
+// on save — with `.returns("date")` that means a `Date` instance can
+// arrive on the write side. Temporal fields accept it and store the
+// field's ISO shape from UTC components, so read-projected values
+// round-trip without corruption on any deployment timezone.
+describe("sanitizeMetaInput (Date acceptance on temporal fields)", () => {
+  const fields = new Map<string, MetaBoxField>([
+    ["publishedOn", date("publishedOn").build()],
+    ["startsAt", datetime("startsAt").build()],
+    ["opensAt", time("opensAt").build()],
+  ]);
+  const findField = (key: string): MetaBoxField | undefined => fields.get(key);
+
+  test("a Date on a date field stores YYYY-MM-DD from UTC components", () => {
+    const patch = sanitizeMetaInput(findField, {
+      publishedOn: new Date(Date.UTC(2026, 4, 3, 12, 0)),
+    });
+    expect(patch?.upserts.get("publishedOn")).toBe("2026-05-03");
+  });
+
+  test("a Date on a datetime field stores YYYY-MM-DDTHH:MM, seconds only when nonzero", () => {
+    const patch = sanitizeMetaInput(findField, {
+      startsAt: new Date(Date.UTC(2026, 4, 3, 9, 30)),
+    });
+    expect(patch?.upserts.get("startsAt")).toBe("2026-05-03T09:30");
+
+    const withSeconds = sanitizeMetaInput(findField, {
+      startsAt: new Date(Date.UTC(2026, 4, 3, 9, 30, 15)),
+    });
+    expect(withSeconds?.upserts.get("startsAt")).toBe("2026-05-03T09:30:15");
+  });
+
+  test("a Date on a time field stores HH:MM", () => {
+    const patch = sanitizeMetaInput(findField, {
+      opensAt: new Date(Date.UTC(1970, 0, 1, 6, 5)),
+    });
+    expect(patch?.upserts.get("opensAt")).toBe("06:05");
+  });
+
+  test("an invalid Date is rejected as invalid_value", () => {
+    expect(() =>
+      sanitizeMetaInput(findField, { publishedOn: new Date("garbage") }),
+    ).toThrowError(MetaSanitizationError);
+  });
+
+  test("decode → write round-trips the stored string exactly", () => {
+    const projected = new Map<string, MetaBoxField>([
+      ["startsAt", datetime("startsAt").returns("date").build()],
+    ]);
+    const find = (key: string): MetaBoxField | undefined => projected.get(key);
+    const decoded = decodeMetaBag(find, { startsAt: "2026-05-03T09:30" });
+    const patch = sanitizeMetaInput(find, { startsAt: decoded.startsAt });
+    expect(patch?.upserts.get("startsAt")).toBe("2026-05-03T09:30");
   });
 });

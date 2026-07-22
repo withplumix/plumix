@@ -1,4 +1,5 @@
 type FieldConfigErrorCode =
+  | "range_missing_bounds"
   | "range_min_greater_than_max"
   | "repeater_nested_not_supported"
   | "repeater_sub_field_key_forbidden"
@@ -40,6 +41,15 @@ export class FieldConfigError extends Error {
     this.min = fields.min;
     this.max = fields.max;
     this.pattern = fields.pattern;
+  }
+
+  static rangeMissingBounds(ctx: { fieldKey: string }): FieldConfigError {
+    return new FieldConfigError(
+      "range_missing_bounds",
+      `range field "${ctx.fieldKey}": both .min() and .max() are required ` +
+        `so the slider has a concrete range.`,
+      ctx,
+    );
   }
 
   static rangeMinGreaterThanMax(ctx: {

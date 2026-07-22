@@ -448,47 +448,76 @@ export interface NumberMetaBoxField extends MetaBoxFieldBase {
   readonly step?: number;
 }
 
+/** The three temporal input types sharing one field shape. */
+export type TemporalInputType = "date" | "datetime" | "time";
+
 /**
- * Date-only field. Stored as `YYYY-MM-DD` (ISO 8601 calendar date,
- * no time, no timezone). Optional `min` / `max` bounds use the same
- * format and are enforced as registration-time validation only —
- * server-side bound enforcement is deferred to a later release.
+ * Shared shape of the three temporal variants produced by the fluent
+ * builders — they differ only in their `inputType` literal and the
+ * ISO shape of the stored string. `min` / `max` bounds use the same
+ * format as the stored value and are enforced client-side only —
+ * server-side bound enforcement is deferred to the constraint-walker
+ * slice.
+ *
+ * `returns: "date"` opts the field's reads into a decode-time
+ * projection: the stored ISO string is handed to consumers as a JS
+ * `Date` with its wall-clock components anchored to UTC (a `time`
+ * value anchors to 1970-01-01 UTC). Storage and the write contract
+ * stay ISO strings either way.
  */
-export interface DateMetaBoxField extends MetaBoxFieldBase {
-  readonly inputType: "date";
+export interface TemporalMetaBoxField<
+  I extends TemporalInputType = TemporalInputType,
+> extends MetaBoxFieldBase {
+  readonly inputType: I;
   readonly type: "string";
   readonly min?: string;
   readonly max?: string;
+  readonly returns?: "date";
 }
+
+/**
+ * Format a UTC-anchored `Date` into the ISO string shape a temporal
+ * field stores (`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM[:SS]`, `HH:MM[:SS]`).
+ * Seconds appear only when nonzero, mirroring what the native inputs
+ * emit. Shared by the server-side meta write encoder and the admin's
+ * input prefill so the two can't drift; callers guard invalid Dates.
+ */
+export function formatTemporalValue(
+  inputType: TemporalInputType,
+  value: Date,
+): string {
+  const pad = (n: number): string => String(n).padStart(2, "0");
+  const day = `${String(value.getUTCFullYear()).padStart(4, "0")}-${pad(value.getUTCMonth() + 1)}-${pad(value.getUTCDate())}`;
+  if (inputType === "date") return day;
+  const seconds = value.getUTCSeconds();
+  const clock =
+    `${pad(value.getUTCHours())}:${pad(value.getUTCMinutes())}` +
+    (seconds === 0 ? "" : `:${pad(seconds)}`);
+  return inputType === "time" ? clock : `${day}T${clock}`;
+}
+
+/**
+ * Date-only field. Stored as `YYYY-MM-DD` (ISO 8601 calendar date,
+ * no time, no timezone).
+ */
+export type DateMetaBoxField = TemporalMetaBoxField<"date">;
 
 /**
  * Date + time field. Stored as a partial ISO 8601 string
  * (`YYYY-MM-DDTHH:MM` with optional `:SS`) reflecting whatever the
- * author's browser produced via `<input type="datetime-local">`. A
- * future iteration may bake in the browser's timezone offset so the
- * wall-clock semantics survive cross-region reads; today's storage is
- * naive local time and consumers anchor to a timezone explicitly via
- * `parseMetaDate` + their own `Temporal.ZonedDateTime` shaping if
- * needed.
+ * author's browser produced via `<input type="datetime-local">` —
+ * naive local time, no timezone offset baked in. Consumers who need
+ * timezone semantics anchor explicitly via `parseMetaDate` + their
+ * own `Temporal.ZonedDateTime` shaping.
  */
-export interface DateTimeMetaBoxField extends MetaBoxFieldBase {
-  readonly inputType: "datetime";
-  readonly type: "string";
-  readonly min?: string;
-  readonly max?: string;
-}
+export type DateTimeMetaBoxField = TemporalMetaBoxField<"datetime">;
 
 /**
  * Time-only field. Stored as `HH:MM` (with optional `:SS`). No date
  * anchor, no timezone — useful for "open at 09:00" style values where
  * the calendar date is supplied separately.
  */
-export interface TimeMetaBoxField extends MetaBoxFieldBase {
-  readonly inputType: "time";
-  readonly type: "string";
-  readonly min?: string;
-  readonly max?: string;
-}
+export type TimeMetaBoxField = TemporalMetaBoxField<"time">;
 
 /**
  * Hex color picker. Stored as a `#xxxxxx` string (the format the
@@ -692,8 +721,8 @@ export interface MediaListMetaBoxField extends MetaBoxFieldBase {
  * toolbar surfaces only the buttons that match the allowlist.
  *
  * Replaces the dropped `markdown` and `code` standalone field types —
- * `richtext({ nodes: ["codeBlock"] })` covers code-in-meta;
- * `richtext({ marks: ["bold","italic","link"], nodes: ["bulletList","orderedList"] })`
+ * `richtext("body").nodes(["codeBlock"])` covers code-in-meta;
+ * `richtext("body").marks(["bold","italic","link"]).nodes(["bulletList","orderedList"])`
  * covers markdown-shaped formatting.
  */
 export interface RichtextMetaBoxField extends MetaBoxFieldBase {
@@ -805,9 +834,7 @@ export interface LegacyMetaBoxField extends MetaBoxFieldBase {
 export type MetaBoxField =
   | StringMetaBoxField
   | NumberMetaBoxField
-  | DateMetaBoxField
-  | DateTimeMetaBoxField
-  | TimeMetaBoxField
+  | TemporalMetaBoxField
   | ColorMetaBoxField
   | RangeMetaBoxField
   | MultiselectMetaBoxField

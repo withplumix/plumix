@@ -230,6 +230,30 @@ describe("MetaBoxField dispatcher", () => {
     expect(onChange).toHaveBeenLastCalledWith(null);
   });
 
+  test("date / datetime / time: a Date value (`.returns('date')` fields) prefills the input", () => {
+    // UTC components — the server anchors decode/encode to UTC, so
+    // the input formats with UTC getters regardless of browser zone.
+    const value = new Date(Date.UTC(2026, 4, 3, 9, 30));
+    const { rerender } = renderWithI18n(
+      <Harness fieldDef={field({ inputType: "date" })} initial={value} />,
+    );
+    expect(screen.getByTestId("meta-box-field-k-input")).toHaveValue(
+      "2026-05-03",
+    );
+
+    rerender(
+      <Harness fieldDef={field({ inputType: "datetime" })} initial={value} />,
+    );
+    expect(screen.getByTestId("meta-box-field-k-input")).toHaveValue(
+      "2026-05-03T09:30",
+    );
+
+    rerender(
+      <Harness fieldDef={field({ inputType: "time" })} initial={value} />,
+    );
+    expect(screen.getByTestId("meta-box-field-k-input")).toHaveValue("09:30");
+  });
+
   test("user reference: empty state shows 'None selected' + 'Select' button", () => {
     renderWithI18n(
       <Harness

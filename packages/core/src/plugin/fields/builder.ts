@@ -10,7 +10,8 @@ import type {
 export type { StringInputType } from "../manifest.js";
 
 // "heroImage" → "Hero image", "site_title" → "Site title". Derived
-// default for fields authored without `.label()`.
+// default for fields authored without `.label()`. Shared by every
+// fluent builder in this directory.
 export function humanizeFieldKey(key: string): string {
   const spaced = key
     .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
