@@ -97,6 +97,25 @@ export async function validateEntryMetaReferences(
   );
 }
 
+/**
+ * Full RPC gate for caller-supplied entry meta: sanitize the input,
+ * then enforce field capabilities and reference integrity on the
+ * resulting patch.
+ */
+export async function sanitizeAndValidateEntryMeta(
+  ctx: AppContext,
+  entryType: string,
+  input: Record<string, unknown> | undefined,
+  errors: Parameters<typeof sanitizeMetaForRpcCore>[2] &
+    Parameters<typeof assertEntryMetaCapabilities>[4],
+): Promise<MetaPatch | null> {
+  const patch = sanitizeMetaForRpc(ctx.plugins, entryType, input, errors);
+  if (!patch) return null;
+  assertEntryMetaCapabilities(ctx.plugins, entryType, patch, ctx.auth, errors);
+  await validateEntryMetaReferences(ctx, entryType, patch, errors);
+  return patch;
+}
+
 export function decodeMetaBag(
   registry: PluginRegistry,
   entry: { readonly type: string },

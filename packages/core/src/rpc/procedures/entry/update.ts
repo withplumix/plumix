@@ -30,11 +30,9 @@ import {
   wouldCreateParentCycle,
 } from "./lifecycle.js";
 import {
-  assertEntryMetaCapabilities,
   decodeMetaBag,
   loadEntryMeta,
-  sanitizeMetaForRpc,
-  validateEntryMetaReferences,
+  sanitizeAndValidateEntryMeta,
   writeEntryMeta,
 } from "./meta.js";
 import { scheduledDateInvalid } from "./publish-scheduled.js";
@@ -217,6 +215,27 @@ export const update = base
           data: { reason: "autosave_requires_published" },
         });
       }
+      // `entry.publish` promotes the autosave bag onto live verbatim,
+      // so this write is the only gate between client input and the
+      // published row — validate exactly like the live path.
+      const autosaveMetaPatch = await sanitizeAndValidateEntryMeta(
+        context,
+        existing.type,
+        filtered.meta,
+        errors,
+      );
+      // Autosave's meta bag tracks the in-progress edits; merge the
+      // sanitized patch over the live row's current meta so unchanged
+      // keys persist across draft saves.
+      const autosaveMeta: Record<string, unknown> = { ...existing.meta };
+      if (autosaveMetaPatch) {
+        for (const key of autosaveMetaPatch.deletes) {
+          delete autosaveMeta[key];
+        }
+        for (const [key, value] of autosaveMetaPatch.upserts) {
+          autosaveMeta[key] = value;
+        }
+      }
       const autosave = await upsertAutosave(context.db, {
         entry: existing,
         authorId: context.user.id,
@@ -230,15 +249,10 @@ export const update = base
             filtered.excerpt !== undefined
               ? filtered.excerpt
               : existing.excerpt,
-          // Autosave's meta bag tracks the in-progress edits; merge
-          // the caller's patch over the live row's current meta so
-          // unchanged keys persist across draft saves. The framework
-          // template choice rides along so the preview overlay can honor
-          // an unsaved pick.
-          meta: applyTemplateChoiceToMeta(
-            { ...existing.meta, ...(filtered.meta ?? {}) },
-            filtered.template,
-          ),
+          // The framework template choice rides along (bypassing the
+          // meta-box sanitizer by design) so the preview overlay can
+          // honor an unsaved pick.
+          meta: applyTemplateChoiceToMeta(autosaveMeta, filtered.template),
         },
       });
       await fireEntryAutosaveSaved(context, autosave, existing);
@@ -284,27 +298,12 @@ export const update = base
       publishedAt: publishedAtInput,
       ...changes
     } = filtered;
-    let metaPatch = sanitizeMetaForRpc(
-      context.plugins,
+    let metaPatch = await sanitizeAndValidateEntryMeta(
+      context,
       existing.type,
       metaInput,
       errors,
     );
-    if (metaPatch) {
-      assertEntryMetaCapabilities(
-        context.plugins,
-        existing.type,
-        metaPatch,
-        context.auth,
-        errors,
-      );
-      await validateEntryMetaReferences(
-        context,
-        existing.type,
-        metaPatch,
-        errors,
-      );
-    }
     // Fold the framework-owned template choice in after plugin-field
     // validation — it bypasses the meta-box sanitizer by design.
     metaPatch = withTemplateChoice(metaPatch, templateChoice);
