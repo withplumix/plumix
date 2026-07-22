@@ -267,21 +267,14 @@ function refMapFromResults(
   for (const result of results) {
     const numericId = Number(result.id);
     if (!Number.isFinite(numericId)) continue;
-    const cached = (result.cached ?? {}) as {
-      readonly label?: unknown;
-      readonly href?: unknown;
-    };
-    const href = typeof cached.href === "string" ? cached.href : null;
+    const href = result.href ?? null;
     if (!href) continue; // No public URL → can't render in nav
     // `result.label` may be `null` for entries the upstream adapter
     // didn't title — fall through to the menu's own "(unnamed)" rather
     // than ship a stale English "Untitled <type>" into the SSR-rendered
     // nav. Content-i18n of `"(unnamed)"` is the deferred theme-layer
     // concern, not chrome.
-    const label =
-      typeof cached.label === "string" && cached.label.length > 0
-        ? cached.label
-        : (result.label ?? "(unnamed)");
+    const label = result.label ?? "(unnamed)";
     map.set(numericId, { label, href });
   }
   return map;

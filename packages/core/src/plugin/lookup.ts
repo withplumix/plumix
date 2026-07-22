@@ -28,16 +28,11 @@ export interface LookupResult {
   readonly targetType?: string;
   readonly subtitle?: string;
   /**
-   * Adapter-provided cached fields. When the field's
-   * `referenceTarget.valueShape === "object"`, the meta pipeline
-   * merges these into the stored value on every write so reads can
-   * render without a resolve round-trip. Examples: `mime`,
-   * `filename` for media; could be `width`/`height` later.
-   *
-   * Picker UIs may also read `cached` to render preview thumbnails
-   * (e.g. `cached.mime` to decide image vs file icon).
+   * Public URL for the row, when it has one — entry permalink, term
+   * archive. Read-time consumers (menu resolution) render links from
+   * it; adapters whose rows have no public URL omit it.
    */
-  readonly cached?: Readonly<Record<string, unknown>>;
+  readonly href?: string;
 }
 
 export interface LookupListOptions<TScope = unknown> {

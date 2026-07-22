@@ -5,8 +5,4 @@
 // core.
 
 export { media, mediaList } from "./builder.js";
-export type {
-  MediaFieldOptions,
-  MediaListFieldOptions,
-  MediaValue,
-} from "./builder.js";
+export type { MediaFieldOptions, MediaListFieldOptions } from "./builder.js";

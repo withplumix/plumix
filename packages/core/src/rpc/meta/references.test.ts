@@ -649,23 +649,29 @@ describe("entryList / termList multi-reference pipeline", () => {
   });
 });
 
-// Cached-object reference fields (`referenceTarget.valueShape ===
-// "object"`): the validator merges adapter-supplied cached fields
-// into the stored value on write. The user-submitted shape can be
-// either a bare id string or an `{ id, ... }` object — both rewrite
-// to the canonical `{ id, ...cached }` shape.
-describe("validateMetaReferences (cached-object shape)", () => {
-  function registryWithCachedRef(
-    cached: Readonly<Record<string, unknown>>,
-    options: { liveIds?: ReadonlySet<string> } = {},
+// Reference storage is plain ids — a bare id string (single) or a
+// dense id array (multi). Legacy clients and legacy stored bags may
+// still round-trip the old cached-object shape (`{ id, ... }`); the
+// validator extracts the id and persists the plain form, so old
+// values self-heal on the entity's next save.
+describe("validateMetaReferences (plain-id normalization)", () => {
+  function registryWithStubRef(
+    options: {
+      liveIds?: ReadonlySet<string>;
+      multiple?: boolean;
+      max?: number;
+    } = {},
   ) {
     const registry: MutablePluginRegistry = createPluginRegistry();
     const fullField = {
       key: "hero",
       label: "Hero",
       type: "json",
-      inputType: "media",
-      referenceTarget: { kind: "stub", valueShape: "object" },
+      inputType: options.multiple ? "mediaList" : "media",
+      referenceTarget: options.multiple
+        ? { kind: "stub", multiple: true }
+        : { kind: "stub" },
+      max: options.max,
     } as MetaBoxField;
     registry.userMetaBoxes.set("hero", {
       id: "hero",
@@ -684,12 +690,10 @@ describe("validateMetaReferences (cached-object shape)", () => {
           Promise.resolve(
             (opts.ids ?? [])
               .filter(isLive)
-              .map((id) => ({ id, label: `stub-${id}`, cached })),
+              .map((id) => ({ id, label: `stub-${id}` })),
           ),
         resolve: (_ctx, id) =>
-          Promise.resolve(
-            isLive(id) ? { id, label: `stub-${id}`, cached } : null,
-          ),
+          Promise.resolve(isLive(id) ? { id, label: `stub-${id}` } : null),
       },
     });
     return {
@@ -699,47 +703,30 @@ describe("validateMetaReferences (cached-object shape)", () => {
     };
   }
 
-  test("rewrites a bare-id input to the canonical { id, ...cached } shape", async () => {
-    const { registry, findField } = registryWithCachedRef({
-      mime: "image/png",
-      filename: "cat.png",
-    });
+  test("persists a bare-id input as the plain id", async () => {
+    const { registry, findField } = registryWithStubRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const patch = sanitizeMetaInput(findField, { hero: "42" });
     if (!patch) throw new Error("patch should not be null");
     await validateMetaReferences(h.context, findField, patch);
-    expect(patch.upserts.get("hero")).toEqual({
-      id: "42",
-      mime: "image/png",
-      filename: "cat.png",
-    });
+    expect(patch.upserts.get("hero")).toBe("42");
   });
 
-  test("rewrites an { id } object input to include cached fields, dropping spoofed extras", async () => {
-    const { registry, findField } = registryWithCachedRef({
-      mime: "image/png",
-      filename: "cat.png",
-    });
+  test("normalizes a legacy { id, ... } object input to the plain id", async () => {
+    const { registry, findField } = registryWithStubRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const patch = sanitizeMetaInput(findField, {
-      // `mime` here is a lie — the adapter is authoritative and overwrites.
       hero: { id: "42", mime: "image/jpeg", spoofed: "ignored" },
     });
     if (!patch) throw new Error("patch should not be null");
     await validateMetaReferences(h.context, findField, patch);
-    expect(patch.upserts.get("hero")).toEqual({
-      id: "42",
-      mime: "image/png",
-      filename: "cat.png",
-    });
+    expect(patch.upserts.get("hero")).toBe("42");
   });
 
-  test("rejects a missing id under the cached-object shape", async () => {
-    // Empty live-id set — every input looks like an orphan.
-    const { registry, findField } = registryWithCachedRef(
-      {},
-      { liveIds: new Set() },
-    );
+  test("rejects a missing id under either input shape", async () => {
+    const { registry, findField } = registryWithStubRef({
+      liveIds: new Set(),
+    });
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const patch = sanitizeMetaInput(findField, {
       hero: { id: "999999" },
@@ -750,181 +737,54 @@ describe("validateMetaReferences (cached-object shape)", () => {
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
-  test("filterMetaOrphans nulls out a cached-object whose id is gone", async () => {
-    const { registry, findField } = registryWithCachedRef(
-      {},
-      { liveIds: new Set() },
-    );
+  test("multi: persists an array of bare ids unchanged", async () => {
+    const { registry, findField } = registryWithStubRef({ multiple: true });
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const filtered = await filterMetaOrphans(h.context, findField, {
-      hero: { id: "999999", mime: "image/png", filename: "cat.png" },
-    });
-    expect(filtered.hero).toBeNull();
-  });
-
-  test("filterMetaOrphans keeps a cached-object whose id is live without refreshing cache", async () => {
-    // v0.1 contract: read-time orphan filter checks existence only;
-    // the stored cached fields are NOT refreshed. Re-saving the entry
-    // refreshes via the validator's normalize step.
-    const { registry, findField } = registryWithCachedRef({
-      // Adapter would tell us the canonical mime is image/jpeg, but
-      // the stored value already has image/png. Reads keep the stored
-      // snapshot intact.
-      mime: "image/jpeg",
-    });
-    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const stored = { id: "42", mime: "image/png", filename: "cat.png" };
-    const filtered = await filterMetaOrphans(h.context, findField, {
-      hero: stored,
-    });
-    expect(filtered.hero).toEqual(stored);
-  });
-});
-
-// Multi + cached-object shape (`mediaList`). Same architecture as
-// single + cached-object — adapter-supplied cached fields are merged
-// into each entry on write; read keeps the stored snapshot dense by
-// dropping orphans.
-describe("validateMetaReferences (multi cached-object shape)", () => {
-  function registryWithCachedListRef(
-    cached: Readonly<Record<string, unknown>>,
-    options: { liveIds?: ReadonlySet<string>; max?: number } = {},
-  ) {
-    const registry: MutablePluginRegistry = createPluginRegistry();
-    const fullField = {
-      key: "gallery",
-      label: "Gallery",
-      type: "json",
-      inputType: "mediaList",
-      referenceTarget: {
-        kind: "stub",
-        valueShape: "object",
-        multiple: true,
-      },
-      max: options.max,
-    } as MetaBoxField;
-    registry.userMetaBoxes.set("gallery", {
-      id: "gallery",
-      label: "Gallery",
-      fields: [fullField],
-      registeredBy: null,
-    });
-    const isLive = (id: string) =>
-      options.liveIds === undefined || options.liveIds.has(id);
-    registry.lookupAdapters.set("stub", {
-      kind: "stub",
-      capability: null,
-      registeredBy: null,
-      adapter: {
-        list: (_ctx, opts) =>
-          Promise.resolve(
-            (opts.ids ?? [])
-              .filter(isLive)
-              .map((id) => ({ id, label: `stub-${id}`, cached })),
-          ),
-        resolve: (_ctx, id) =>
-          Promise.resolve(
-            isLive(id) ? { id, label: `stub-${id}`, cached } : null,
-          ),
-      },
-    });
-    return {
-      registry,
-      findField: (key: string) =>
-        key === fullField.key ? fullField : undefined,
-    };
-  }
-
-  test("rewrites an array of bare-id strings to canonical { id, ...cached }[] shape", async () => {
-    const { registry, findField } = registryWithCachedListRef({
-      mime: "image/png",
-    });
-    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, { gallery: ["42", "43"] });
+    const patch = sanitizeMetaInput(findField, { hero: ["42", "43"] });
     if (!patch) throw new Error("patch should not be null");
     await validateMetaReferences(h.context, findField, patch);
-    expect(patch.upserts.get("gallery")).toEqual([
-      { id: "42", mime: "image/png" },
-      { id: "43", mime: "image/png" },
-    ]);
+    expect(patch.upserts.get("hero")).toEqual(["42", "43"]);
   });
 
-  test("rewrites an array of { id } objects, dropping spoofed extras", async () => {
-    const { registry, findField } = registryWithCachedListRef({
-      mime: "image/png",
-      filename: "shared.png",
-    });
+  test("multi: normalizes legacy { id } items to plain ids, keeping order", async () => {
+    const { registry, findField } = registryWithStubRef({ multiple: true });
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const patch = sanitizeMetaInput(findField, {
-      gallery: [
+      hero: [
         { id: "42", spoofed: "ignored" },
-        { id: "43", mime: "image/jpeg" },
+        "43",
+        { id: "44", mime: "image/png" },
       ],
     });
     if (!patch) throw new Error("patch should not be null");
     await validateMetaReferences(h.context, findField, patch);
-    expect(patch.upserts.get("gallery")).toEqual([
-      { id: "42", mime: "image/png", filename: "shared.png" },
-      { id: "43", mime: "image/png", filename: "shared.png" },
-    ]);
+    expect(patch.upserts.get("hero")).toEqual(["42", "43", "44"]);
   });
 
-  test("rejects when any item id is missing from live results", async () => {
-    const { registry, findField } = registryWithCachedListRef(
-      {},
-      { liveIds: new Set(["42"]) },
-    );
-    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, {
-      gallery: ["42", "999"],
+  test("multi: rejects when any item id is missing from live results", async () => {
+    const { registry, findField } = registryWithStubRef({
+      multiple: true,
+      liveIds: new Set(["42"]),
     });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, { hero: ["42", "999"] });
     if (!patch) throw new Error("patch should not be null");
     await expect(
       validateMetaReferences(h.context, findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
-  test("enforces the field's max length cap on the multi-object shape", async () => {
-    const { registry, findField } = registryWithCachedListRef({}, { max: 2 });
-    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, {
-      gallery: ["1", "2", "3"],
+  test("multi: enforces the field's max length cap", async () => {
+    const { registry, findField } = registryWithStubRef({
+      multiple: true,
+      max: 2,
     });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = sanitizeMetaInput(findField, { hero: ["1", "2", "3"] });
     if (!patch) throw new Error("patch should not be null");
     await expect(
       validateMetaReferences(h.context, findField, patch),
     ).rejects.toBeInstanceOf(MetaSanitizationError);
-  });
-
-  test("filterMetaOrphans drops missing entries from the array, keeping order", async () => {
-    const { registry, findField } = registryWithCachedListRef(
-      {},
-      { liveIds: new Set(["42", "44"]) },
-    );
-    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const filtered = await filterMetaOrphans(h.context, findField, {
-      gallery: [
-        { id: "42", mime: "image/png", filename: "a.png" },
-        { id: "43", mime: "image/png", filename: "b.png" }, // orphan
-        { id: "44", mime: "image/png", filename: "c.png" },
-      ],
-    });
-    expect(filtered.gallery).toEqual([
-      { id: "42", mime: "image/png", filename: "a.png" },
-      { id: "44", mime: "image/png", filename: "c.png" },
-    ]);
-  });
-
-  test("filterMetaOrphans returns an empty array when every entry is gone", async () => {
-    const { registry, findField } = registryWithCachedListRef(
-      {},
-      { liveIds: new Set() },
-    );
-    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const filtered = await filterMetaOrphans(h.context, findField, {
-      gallery: [{ id: "42" }, { id: "43" }],
-    });
-    expect(filtered.gallery).toEqual([]);
   });
 });
 
@@ -1026,12 +886,10 @@ describe("validateMetaReferences (repeater subFields)", () => {
     }
   });
 
-  test("rewrites a nested cached-object subField with the adapter's cached snapshot", async () => {
-    // Media-shaped (`valueShape: "object"`) refs inside repeater rows
-    // weren't normalized before — they round-tripped as the user's raw
-    // input, with no `mime` / `filename` snapshot. The new walk applies
-    // the same merge top-level fields receive: spoofed extras drop,
-    // adapter-supplied cached fields land.
+  test("normalizes nested legacy object subField values to plain ids", async () => {
+    // Legacy bags stored media refs inside repeater rows as cached
+    // objects. The nested walk applies the same normalization as
+    // top-level fields: extract the id, persist the plain form.
     const registry: MutablePluginRegistry = createPluginRegistry();
     registry.lookupAdapters.set("stub", {
       kind: "stub",
@@ -1040,11 +898,7 @@ describe("validateMetaReferences (repeater subFields)", () => {
       adapter: {
         list: (_ctx, opts) =>
           Promise.resolve(
-            (opts.ids ?? []).map((id) => ({
-              id,
-              label: `stub-${id}`,
-              cached: { mime: "image/png", filename: "cat.png" },
-            })),
+            (opts.ids ?? []).map((id) => ({ id, label: `stub-${id}` })),
           ),
         resolve: () => Promise.resolve(null),
       },
@@ -1054,7 +908,7 @@ describe("validateMetaReferences (repeater subFields)", () => {
       label: "Hero",
       type: "json",
       inputType: "media",
-      referenceTarget: { kind: "stub", valueShape: "object" },
+      referenceTarget: { kind: "stub" },
     };
     const repeaterField: MetaBoxField = {
       key: "rows",
@@ -1074,9 +928,9 @@ describe("validateMetaReferences (repeater subFields)", () => {
 
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const rows: { hero: unknown }[] = [
-      // Lenient input: bare id string.
+      // Plain id passes through untouched.
       { hero: "1" },
-      // Spoofed extras must drop after normalize.
+      // Legacy cached-object shape self-heals to the plain id.
       { hero: { id: "2", mime: "image/jpeg", spoofed: "ignored" } },
     ];
     const patch = {
@@ -1086,16 +940,8 @@ describe("validateMetaReferences (repeater subFields)", () => {
 
     await validateMetaReferences(h.context, findField, patch);
 
-    expect(rows[0]?.hero).toEqual({
-      id: "1",
-      mime: "image/png",
-      filename: "cat.png",
-    });
-    expect(rows[1]?.hero).toEqual({
-      id: "2",
-      mime: "image/png",
-      filename: "cat.png",
-    });
+    expect(rows[0]?.hero).toBe("1");
+    expect(rows[1]?.hero).toBe("2");
   });
 
   test("groups top-level and nested refs of the same (kind, scope) into one adapter.list call", async () => {

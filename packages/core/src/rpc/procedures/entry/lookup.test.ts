@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
+import type { MutablePluginRegistry } from "../../../plugin/manifest.js";
+import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { entryFactory } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { entryLookupAdapter } from "./lookup.js";
@@ -194,7 +196,16 @@ describe("entryLookupAdapter", () => {
   });
 
   test("resolve() returns the lookup result for valid in-scope ids", async () => {
-    const h = await createRpcHarness({ authAs: "admin" });
+    // A registered public entry type gives the row a permalink, so
+    // this test pins the `href` contract too.
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    registry.entryTypes.set("post", {
+      name: "post",
+      label: "Posts",
+      isPublic: true,
+      registeredBy: null,
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const e = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, title: "Specific" });
@@ -210,6 +221,9 @@ describe("entryLookupAdapter", () => {
     // per type. Drop this field and the admin silently regresses
     // every row's "Untitled" fallback to the generic descriptor.
     expect(result?.targetType).toBe("post");
+    // `href` is the public permalink — menu resolution renders links
+    // from it at read time.
+    expect(result?.href).toBe(`/post/${e.slug}`);
   });
 
   test("resolve() returns null when the id exists but fails scope", async () => {
@@ -233,9 +247,5 @@ describe("entryLookupAdapter", () => {
       POST,
     );
     expect(result?.label).toBeNull();
-    // cached.label snapshots the wire shape — null too — so menu items +
-    // reference fields render their own deletion-resilient fallback
-    // rather than ship a stale English "Untitled post" in stored meta.
-    expect((result?.cached as { label?: unknown }).label).toBeNull();
   });
 });

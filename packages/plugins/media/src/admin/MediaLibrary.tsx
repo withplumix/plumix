@@ -21,6 +21,8 @@ import {
 } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
 
+import { pluginBasePath, rpcCall } from "./rpc.js";
+
 // Descriptors that need runtime indirection — used outside JSX (aria
 // strings, native attribute values). JSX-text strings stay inline at
 // their `<Trans>` callsite for extraction discoverability.
@@ -197,44 +199,6 @@ interface ConfirmResponse {
   readonly mime: string;
   readonly size: number;
   readonly storageKey: string;
-}
-
-// Hand-rolled oRPC POST. Plugin `media/*` procedures don't surface in the
-// admin's typed client (`AppRouterClient` covers core only), so we speak
-// the StandardRPC envelope `{ json, meta: [] }` directly.
-// The subdirectory mount the host exposes (see plumix-globals), used to prefix
-// the worker-routed `/_plumix/...` URLs this file builds in two scopes.
-function pluginBasePath(): string {
-  return (
-    (globalThis as { plumix?: { basePath?: string } }).plumix?.basePath ?? ""
-  );
-}
-
-async function rpcCall<TOutput>(
-  procedure: string,
-  input: Record<string, unknown>,
-): Promise<TOutput> {
-  const res = await fetch(`${pluginBasePath()}/_plumix/rpc/${procedure}`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-plumix-request": "1",
-    },
-    body: JSON.stringify({ json: input, meta: [] }),
-  });
-  const envelope = (await res.json().catch(() => null)) as {
-    json?: unknown;
-    meta?: unknown;
-  } | null;
-  if (!res.ok) {
-    const error = envelope?.json as
-      { message?: string; data?: { reason?: string } } | undefined;
-    const reason =
-      error?.data?.reason ?? error?.message ?? `rpc_${String(res.status)}`;
-    // eslint-disable-next-line no-restricted-syntax -- admin-side rpc envelope rethrow; server-derived message is the discriminator
-    throw new Error(reason);
-  }
-  return envelope?.json as TOutput;
 }
 
 // Browser PUT with progress reporting. `fetch()` in 2026 still doesn't

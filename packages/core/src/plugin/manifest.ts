@@ -544,26 +544,12 @@ export interface ReferenceTarget<TScope = unknown> {
   readonly kind: string;
   readonly scope?: TScope;
   /**
-   * Storage cardinality. `false`/absent → single value (string or
-   * cached object). `true` → array (of strings or cached objects).
-   * The server-side write validator and read-side orphan filter
-   * dispatch on this flag to handle both shapes uniformly.
+   * Storage cardinality. `false`/absent → single bare id string.
+   * `true` → array of bare id strings. The server-side write
+   * validator and read-side orphan filter dispatch on this flag to
+   * handle both shapes uniformly.
    */
   readonly multiple?: boolean;
-  /**
-   * Storage shape per item. `"id"` (default) → bare id string —
-   * every read needs a join/resolve to get a label. `"object"` →
-   * `{ id, ...cachedFields, ...userFields }` — the meta pipeline
-   * normalizes cached fields from the adapter on every write so
-   * reads can render without a join. Used by `media` (where the
-   * thumbnail/mime/filename are needed on every render and a
-   * resolve per render is wasteful on the edge).
-   *
-   * The cached fields come from `LookupResult.cached` returned by
-   * the adapter; user-supplied keys (e.g. per-usage `alt`) survive
-   * the merge so editors can override per-usage metadata.
-   */
-  readonly valueShape?: "id" | "object";
 }
 
 /**
@@ -652,13 +638,9 @@ export interface TermListMetaBoxField extends MetaBoxFieldBase {
 }
 
 /**
- * Single media reference with cached metadata. Storage is the
- * `MediaValue` object — `{ id, mime?, filename?, alt? }` — not a
- * bare id, so admin renders show a thumbnail + filename without an
- * extra resolve round-trip per render. `referenceTarget.valueShape`
- * is `"object"`; the meta pipeline overwrites the cached fields
- * (mime/filename) from the lookup adapter on every write but lets
- * user-supplied keys (e.g. per-usage `alt`) survive the merge.
+ * Single media reference. Storage is the bare media id as a string;
+ * reads return `null` for orphans / scope mismatches, and admin
+ * renders resolve labels through the lookup path.
  *
  * Lives in core so the typed builder narrows correctly at call
  * sites — same convention as `entry` / `term`. The actual builder
@@ -671,13 +653,10 @@ export interface MediaMetaBoxField extends MetaBoxFieldBase {
 }
 
 /**
- * Multi media reference. Storage is a JSON array of `MediaValue`
- * objects — `[{ id, mime?, filename? }, ...]` — extending the cached-
- * object pattern from `MediaMetaBoxField` to the array shape. The
- * meta pipeline rewrites each entry's cached fields on every write,
- * so admin renders thumbnails for every item without a per-item
- * resolve. `referenceTarget.multiple` is `true`, `valueShape` is
- * `"object"`; `max` caps the array length at write time.
+ * Multi media reference. Storage is a JSON array of bare media ids;
+ * reads filter out orphans the same way `EntryListMetaBoxField`
+ * does. `referenceTarget.multiple` is `true`; `max` caps the array
+ * length at write time.
  */
 export interface MediaListMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "mediaList";
