@@ -643,6 +643,16 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+#~ msgid "metaBox.link.loading"
+#~ msgstr "Завантаження…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+#~ msgid "metaBox.link.noMatches"
+#~ msgstr "Збігів немає"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -2318,6 +2328,11 @@ msgid "profile.passkeys.lastUsed"
 msgstr "Востаннє використано {date}"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.text"
+msgstr "Текст посилання"
+
+#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemsList"
 msgstr "Список"
@@ -2784,6 +2799,11 @@ msgid "editor.preview.tooltip"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.newTab"
+msgstr "Відкривати в новій вкладці"
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.loading"
 msgstr ""
@@ -2884,6 +2904,11 @@ msgstr "Особисті токени доступу для CLI, MCP-серве�
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.description.hierarchical"
 msgstr "Виберіть батьківський, щоб укласти цей термін, або залиште порожнім для терміна кореневого рівня."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.pick"
+msgstr "Вибрати запис"
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -3232,9 +3257,19 @@ msgid "metaBox.reference.dialogDescription"
 msgstr "Знайдіть і виберіть {kind}"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.dialogDescription"
+msgstr "Знайдіть і виберіть запис для посилання"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "Пошук за email…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.searchPlaceholder"
+msgstr "Пошук записів…"
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
@@ -4030,6 +4065,11 @@ msgstr "Оновлено"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemUpdated"
 msgstr "Оновлено"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.url"
+msgstr "URL"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx

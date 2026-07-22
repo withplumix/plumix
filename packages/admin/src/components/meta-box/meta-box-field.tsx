@@ -30,6 +30,7 @@ import { Slider } from "@plumix/admin-ui/slider";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 
+import { LinkField } from "./link-field.js";
 import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
 import { ReferencePicker } from "./reference-picker.js";
@@ -357,6 +358,17 @@ function renderRepeaterField({
   );
 }
 
+function renderLinkField({
+  field,
+  rhf,
+  disabled,
+  testId,
+}: NativeInputContext): ReactNode {
+  return (
+    <LinkField field={field} rhf={rhf} disabled={disabled} testId={testId} />
+  );
+}
+
 function renderMultiselectField({
   field,
   rhf,
@@ -516,7 +528,7 @@ function renderTextLikeField(ctx: NativeInputContext): ReactNode {
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/richtext/repeater/user/userList/entry/entryList/term/termList/select/radio/checkbox).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/richtext/repeater/user/userList/entry/entryList/term/termList/select/radio/checkbox/link).`,
     );
   }
 
@@ -570,6 +582,7 @@ const POST_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
   datetime: renderDateTimeField,
   time: renderDateTimeField,
   radio: renderRadioField,
+  link: renderLinkField,
 };
 
 function renderNativeInput(ctx: NativeInputContext): ReactNode {

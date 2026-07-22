@@ -542,6 +542,26 @@ describe("MetaBoxField dispatcher", () => {
     expect(onChange).toHaveBeenCalledWith(true);
   });
 
+  test("link: renders url + label inputs and a new-tab switch, url edits emit the value", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={field({ inputType: "link", type: "json" })}
+        initial={null}
+        onChangeSpy={onChange}
+      />,
+    );
+    const url = screen.getByTestId("meta-box-field-k-input-url");
+    expect(screen.getByTestId("meta-box-field-k-input-label")).toBeVisible();
+    expect(screen.getByTestId("meta-box-field-k-input-newtab")).toBeVisible();
+
+    await userEvent.type(url, "/pricing");
+    expect(onChange).toHaveBeenLastCalledWith({ url: "/pricing" });
+
+    await userEvent.clear(url);
+    expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
   test("unknown inputType: falls back to text input + logs a dev warning", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {
       // silence expected warning

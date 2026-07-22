@@ -1,7 +1,7 @@
 // Typed builder helpers for meta-box field registration. The string
-// scalar fields (`text`, `textarea`, `email`, `url`, `password`) are
-// fluent builders: the constructor takes the key alone and every
-// option is a chained call (`text("subtitle").maxLength(120)`), each
+// scalar fields (`text`, `textarea`, `email`, `url`, `password`) and
+// `link` are fluent builders: the constructor takes the key alone and
+// every option is a chained call (`text("subtitle").maxLength(120)`), each
 // returning a fresh immutable instance that compiles to the narrowed
 // `MetaBoxField` variant at registration. The remaining factories
 // still take flat option objects, each returning the narrowed variant
@@ -19,6 +19,8 @@ export {
   url,
 } from "./builder.js";
 export type { StringInputType } from "./builder.js";
+export { link, LinkFieldBuilder } from "./link.js";
+export type { LinkValue } from "./link.js";
 export { number } from "./number.js";
 export type { NumberFieldOptions } from "./number.js";
 export { date } from "./date.js";

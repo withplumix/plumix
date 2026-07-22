@@ -15,7 +15,11 @@ import type {
   UserMetaBoxManifestEntry,
 } from "@plumix/core/manifest";
 import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
-import { byPriorityThen, MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
+import {
+  byPriorityThen,
+  MANIFEST_SCRIPT_ID,
+  manifestEntryVisibility,
+} from "@plumix/core/manifest";
 
 export function readManifest(doc: Document = document): PlumixManifest {
   const el = doc.getElementById(MANIFEST_SCRIPT_ID);
@@ -139,6 +143,19 @@ export function visibleEntryTypes(
     const cap = `entry:${pt.capabilityType ?? pt.name}:edit_own`;
     return caps.has(cap);
   });
+}
+
+/**
+ * Names of the entry types with a public URL surface — the universe the
+ * link field's internal-entry picker searches (only public entries
+ * resolve to a permalink worth storing).
+ */
+export function publicEntryTypeNames(
+  source: PlumixManifest = manifest,
+): readonly string[] {
+  return (source.entryTypes ?? [])
+    .filter((pt) => manifestEntryVisibility(pt).isPublic)
+    .map((pt) => pt.name);
 }
 
 export function findTermTaxonomyByName(

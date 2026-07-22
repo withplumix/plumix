@@ -184,12 +184,12 @@ export function ReferencePicker({
           data-testid={`${testId}-search`}
         />
         <CommandList>
-          {renderListBody({
+          {renderLookupListBody({
             isLoading: listQuery.isLoading,
             items,
             testId,
-            onSelect: (id) => {
-              onChange(id);
+            onSelect: (item) => {
+              onChange(item.id);
               setOpen(false);
             },
             untitledLabel,
@@ -200,11 +200,13 @@ export function ReferencePicker({
   );
 }
 
-interface LookupItem {
+export interface LookupItem {
   readonly id: string;
   readonly label: string | null;
   readonly targetType?: string;
   readonly subtitle?: string;
+  /** Public URL of the row, when it has one — see `LookupResult.href`. */
+  readonly href?: string;
 }
 
 function renderDisplay({
@@ -269,7 +271,10 @@ function renderDisplay({
   );
 }
 
-function renderListBody({
+// Shared loading / empty / item-list body for lookup-backed pickers —
+// the reference pickers select by `item.id`, the link field's entry
+// picker by `item.href`.
+export function renderLookupListBody({
   isLoading,
   items,
   testId,
@@ -279,7 +284,7 @@ function renderListBody({
   isLoading: boolean;
   items: readonly LookupItem[];
   testId: string;
-  onSelect: (id: string) => void;
+  onSelect: (item: LookupItem) => void;
   untitledLabel: ReturnType<typeof useUntitledLabel>;
 }): ReactNode {
   if (isLoading) {
@@ -301,7 +306,7 @@ function renderListBody({
       key={item.id}
       value={`${item.label ?? ""} ${item.subtitle ?? ""}`}
       onSelect={() => {
-        onSelect(item.id);
+        onSelect(item);
       }}
       data-testid={`${testId}-option-${item.id}`}
     >

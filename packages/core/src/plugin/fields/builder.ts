@@ -11,7 +11,7 @@ export type { StringInputType } from "../manifest.js";
 
 // "heroImage" → "Hero image", "site_title" → "Site title". Derived
 // default for fields authored without `.label()`.
-function humanizeFieldKey(key: string): string {
+export function humanizeFieldKey(key: string): string {
   const spaced = key
     .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replaceAll(/[_:-]+/g, " ")
@@ -20,7 +20,7 @@ function humanizeFieldKey(key: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-interface StringFieldState {
+export interface StringFieldState {
   readonly label?: Label;
   readonly description?: Label;
   readonly placeholder?: Label;
