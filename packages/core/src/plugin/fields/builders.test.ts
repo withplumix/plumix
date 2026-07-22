@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { HookRegistry } from "../../hooks/registry.js";
 import { definePlugin } from "../define.js";
@@ -30,23 +30,19 @@ import {
   userList,
 } from "./index.js";
 
-// One combined suite for the straightforward flat-options variants.
-// The string scalar fields (`text`, `textarea`, `email`, `url`,
-// `password`) are fluent builders covered by `builder.test.ts`; these
-// tests focus on the per-variant guarantees of the factories that
-// still take flat options (notably `type` for `number` / `checkbox`
-// and required `options` for `select` / `radio`).
+// One combined suite for the per-variant builder guarantees. The
+// universal-chain + immutability behavior shared by every fluent
+// builder is covered by `builder.test.ts` (string scalars as the
+// reference); these tests focus on what each variant adds — per-type
+// option chains, injected sanitizers, `.returns("date")`, and the
+// factories still taking flat options (`select` / `radio` /
+// `checkbox` / references).
 
 describe("number() builder", () => {
-  test("pins inputType + type, carries min/max/step", () => {
-    const field = number({
-      key: "rating",
-      label: "Rating",
-      min: 1,
-      max: 5,
-      step: 0.5,
-      default: 3,
-    });
+  test("chains min/max/step/default into a number definition", () => {
+    const field = number("rating").min(1).max(5).step(0.5).default(3).build();
+    expect(field.key).toBe("rating");
+    expect(field.label).toBe("Rating");
     expect(field.inputType).toBe("number");
     expect(field.type).toBe("number");
     expect(field.min).toBe(1);
@@ -55,32 +51,53 @@ describe("number() builder", () => {
     expect(field.default).toBe(3);
   });
 
-  test("rejects text-shaped options at the type level", () => {
-    number({
-      key: "n",
-      label: "n",
-      // @ts-expect-error — `maxLength` belongs to text-shaped fields.
-      maxLength: 5,
+  test("universal chain carries through", () => {
+    const field = number("rating")
+      .label("Score")
+      .placeholder("0–5")
+      .required()
+      .span(6)
+      .build();
+    expect(field).toMatchObject({
+      label: "Score",
+      placeholder: "0–5",
+      required: true,
+      span: 6,
     });
+  });
 
-    number({
-      key: "n",
-      label: "n",
-      // @ts-expect-error — `options` belongs to select/radio.
-      options: [{ value: "a", label: "A" }],
-    });
+  test("rejects text-shaped chains at the type level", () => {
+    // `maxLength` belongs to text-shaped fields; `options` to select/radio.
+    expectTypeOf(number("n")).not.toHaveProperty("maxLength");
+    expectTypeOf(number("n")).not.toHaveProperty("options");
+  });
+
+  test("phantom typing: unadorned reads number | undefined; .required()/.default() narrow", () => {
+    const _unadorned = number("n");
+    expectTypeOf<(typeof _unadorned)["_key"]>().toEqualTypeOf<"n">();
+    expectTypeOf<(typeof _unadorned)["_value"]>().toEqualTypeOf<
+      number | undefined
+    >();
+    const _required = number("n").required();
+    expectTypeOf<(typeof _required)["_value"]>().toEqualTypeOf<number>();
+    expectTypeOf<(typeof _required)["_stored"]>().toEqualTypeOf<number>();
+    // `.default()` narrows the read type only — storage can lack the key.
+    const _defaulted = number("n").default(3);
+    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<number>();
+    expectTypeOf<(typeof _defaulted)["_stored"]>().toEqualTypeOf<
+      number | undefined
+    >();
   });
 });
 
 describe("date() builder", () => {
-  test("pins inputType + type and accepts ISO date bounds", () => {
-    const field = date({
-      key: "publishedOn",
-      label: "Publish date",
-      min: "2024-01-01",
-      max: "2030-12-31",
-      default: "2026-05-03",
-    });
+  test("chains ISO date bounds into a date definition", () => {
+    const field = date("publishedOn")
+      .label("Publish date")
+      .min("2024-01-01")
+      .max("2030-12-31")
+      .default("2026-05-03")
+      .build();
     expect(field.inputType).toBe("date");
     expect(field.type).toBe("string");
     expect(field.min).toBe("2024-01-01");
@@ -88,53 +105,34 @@ describe("date() builder", () => {
     expect(field.default).toBe("2026-05-03");
   });
 
-  test("rejects numeric bounds at the type level", () => {
-    date({
-      key: "d",
-      label: "d",
-      // @ts-expect-error — date bounds are ISO strings, not numbers.
-      min: 0,
-    });
-
-    date({
-      key: "d",
-      label: "d",
-      // @ts-expect-error — `step` doesn't apply to date.
-      step: 1,
-    });
+  test("rejects numeric bounds and non-applicable chains at the type level", () => {
+    // Date bounds are ISO strings, not numbers; `step` doesn't apply.
+    expectTypeOf(date("d"))
+      .toHaveProperty("min")
+      .parameter(0)
+      .toEqualTypeOf<string>();
+    expectTypeOf(date("d")).not.toHaveProperty("step");
   });
 });
 
 describe("datetime() builder", () => {
-  test("pins inputType + type and carries ISO bounds", () => {
-    const field = datetime({
-      key: "startsAt",
-      label: "Starts at",
-      min: "2026-01-01T00:00",
-    });
+  test("chains ISO bounds into a datetime definition", () => {
+    const field = datetime("startsAt").min("2026-01-01T00:00").build();
     expect(field.inputType).toBe("datetime");
     expect(field.type).toBe("string");
+    expect(field.label).toBe("Starts at");
     expect(field.min).toBe("2026-01-01T00:00");
   });
 
-  test("rejects placeholder / maxLength at the type level", () => {
-    datetime({
-      key: "d",
-      label: "d",
-      // @ts-expect-error — text-shaped option, not datetime.
-      placeholder: "soon",
-    });
+  test("rejects text-shaped chains at the type level", () => {
+    // `placeholder` is a text-shaped option, not a datetime one.
+    expectTypeOf(datetime("d")).not.toHaveProperty("placeholder");
   });
 });
 
 describe("time() builder", () => {
-  test("pins inputType + type and carries HH:MM bounds", () => {
-    const field = time({
-      key: "opensAt",
-      label: "Opens at",
-      min: "06:00",
-      max: "23:00",
-    });
+  test("chains HH:MM bounds into a time definition", () => {
+    const field = time("opensAt").min("06:00").max("23:00").build();
     expect(field.inputType).toBe("time");
     expect(field.type).toBe("string");
     expect(field.min).toBe("06:00");
@@ -142,54 +140,97 @@ describe("time() builder", () => {
   });
 
   test("rejects numeric bounds at the type level", () => {
-    time({
-      key: "t",
-      label: "t",
-      // @ts-expect-error — `min` for `time` is a string.
-      min: 0,
-    });
+    // `min` for `time` is an ISO string, not a number.
+    expectTypeOf(time("t"))
+      .toHaveProperty("min")
+      .parameter(0)
+      .toEqualTypeOf<string>();
+  });
+});
+
+describe('.returns("date") on temporal builders', () => {
+  test("carries returns onto the definition; default omits it", () => {
+    expect(date("d").returns("date").build().returns).toBe("date");
+    expect(datetime("d").returns("date").build().returns).toBe("date");
+    expect(time("t").returns("date").build().returns).toBe("date");
+    expect(date("d").build().returns).toBeUndefined();
+  });
+
+  test("phantom typing: ISO string by default, Date after .returns('date'), order-independent", () => {
+    const _iso = date("d");
+    expectTypeOf<(typeof _iso)["_value"]>().toEqualTypeOf<string | undefined>();
+
+    const _projected = date("d").returns("date");
+    expectTypeOf<(typeof _projected)["_value"]>().toEqualTypeOf<
+      Date | undefined
+    >();
+
+    const _requiredFirst = datetime("d").required().returns("date");
+    expectTypeOf<(typeof _requiredFirst)["_value"]>().toEqualTypeOf<Date>();
+
+    const _returnsFirst = time("t").returns("date").required();
+    expectTypeOf<(typeof _returnsFirst)["_value"]>().toEqualTypeOf<Date>();
+
+    const _defaulted = date("d").default("2026-01-01").returns("date");
+    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<Date>();
+  });
+
+  test("phantom stored shape stays the ISO string through .returns('date')", () => {
+    // `whereMeta` and the write contract keep typing on storage.
+    const _projected = date("d").returns("date");
+    expectTypeOf<(typeof _projected)["_stored"]>().toEqualTypeOf<
+      string | undefined
+    >();
+    const _required = datetime("d").required().returns("date");
+    expectTypeOf<(typeof _required)["_stored"]>().toEqualTypeOf<string>();
+  });
+
+  test(".sanitize()/.validate() stay typed on the stored ISO string even after .returns('date')", () => {
+    date("d")
+      .returns("date")
+      .sanitize((value) => {
+        expectTypeOf(value).toEqualTypeOf<string>();
+        return value;
+      })
+      .validate((value) => {
+        expectTypeOf(value).toEqualTypeOf<string>();
+        return true;
+      });
   });
 });
 
 describe("color() builder", () => {
-  test("pins inputType + type and ships a default hex sanitizer", () => {
-    const field = color({ key: "brand", label: "Brand color" });
+  test("compiles with a derived label and a default hex sanitizer", () => {
+    const field = color("brandColor").build();
     expect(field.inputType).toBe("color");
     expect(field.type).toBe("string");
+    expect(field.label).toBe("Brand color");
     expect(field.sanitize).toBeTypeOf("function");
   });
 
   test("default sanitizer accepts hex shorthand and full form, lowercases", () => {
-    const field = color({ key: "brand", label: "Brand color" });
+    const field = color("brand").build();
     expect(field.sanitize?.("#FFA500")).toBe("#ffa500");
     expect(field.sanitize?.("#abc")).toBe("#abc");
   });
 
   test("default sanitizer rejects non-hex values", () => {
-    const field = color({ key: "brand", label: "Brand color" });
+    const field = color("brand").build();
     expect(() => field.sanitize?.("not-a-color")).toThrow();
     expect(() => field.sanitize?.("#xyz123")).toThrow();
     expect(() => field.sanitize?.(123)).toThrow();
     expect(() => field.sanitize?.(null)).toThrow();
   });
 
-  test("custom sanitize replaces the default", () => {
-    const custom = (v: unknown): unknown => `wrapped:${String(v)}`;
-    const field = color({
-      key: "brand",
-      label: "Brand color",
-      sanitize: custom,
-    });
+  test("custom .sanitize() replaces the default", () => {
+    const custom = (v: string): string => v;
+    const field = color("brand").sanitize(custom).build();
     expect(field.sanitize).toBe(custom);
   });
 
-  test("rejects non-applicable options at the type level", () => {
-    color({
-      key: "c",
-      label: "c",
-      // @ts-expect-error — `min` doesn't apply to color.
-      min: 0,
-    });
+  test("rejects non-applicable chains at the type level", () => {
+    // `min` doesn't apply to color.
+    expectTypeOf(color("c")).not.toHaveProperty("min");
   });
 });
 
@@ -248,54 +289,55 @@ describe("multiselect() builder", () => {
 });
 
 describe("json() builder", () => {
-  test("pins inputType + json type", () => {
-    const field = json({ key: "config", label: "Config" });
+  test("compiles to a json definition with a derived label", () => {
+    const field = json("config").build();
     expect(field.inputType).toBe("json");
     expect(field.type).toBe("json");
+    expect(field.label).toBe("Config");
   });
 
-  test("forwards a custom sanitize", () => {
+  test("forwards a custom .sanitize() and a json default", () => {
     const sanitize = (v: unknown): unknown => v;
-    const field = json({ key: "x", label: "x", sanitize });
+    const field = json("x")
+      .default({ theme: "dark" })
+      .sanitize(sanitize)
+      .build();
     expect(field.sanitize).toBe(sanitize);
+    expect(field.default).toEqual({ theme: "dark" });
   });
 
-  test("rejects non-json options at the type level", () => {
-    json({
-      key: "x",
-      label: "x",
-      // @ts-expect-error — `options` doesn't apply to json.
-      options: [{ value: "a", label: "A" }],
-    });
+  test("rejects non-json chains at the type level", () => {
+    // `options` doesn't apply to json.
+    expectTypeOf(json("x")).not.toHaveProperty("options");
   });
 });
 
 describe("range() builder", () => {
-  test("pins inputType + type and carries bounds", () => {
-    const field = range({
-      key: "rating",
-      label: "Rating",
-      min: 1,
-      max: 5,
-      step: 0.5,
-      default: 3,
-    });
+  test("chains bounds/step/default into a range definition", () => {
+    const field = range("rating").min(1).max(5).step(0.5).default(3).build();
     expect(field.inputType).toBe("range");
     expect(field.type).toBe("number");
+    expect(field.label).toBe("Rating");
     expect(field.min).toBe(1);
     expect(field.max).toBe(5);
     expect(field.step).toBe(0.5);
     expect(field.default).toBe(3);
   });
 
+  test("rejects missing bounds at registration time", () => {
+    expect(() => range("r").build()).toThrowError(/min.*max/);
+    expect(() => range("r").min(0).build()).toThrowError(/min.*max/);
+    expect(() => range("r").max(10).build()).toThrowError(/min.*max/);
+  });
+
   test("rejects min > max at registration time", () => {
-    expect(() => range({ key: "r", label: "r", min: 10, max: 5 })).toThrowError(
+    expect(() => range("r").min(10).max(5).build()).toThrowError(
       /min .* must be <= max/,
     );
   });
 
   test("default sanitizer enforces bounds and rejects NaN", () => {
-    const field = range({ key: "r", label: "r", min: 0, max: 100 });
+    const field = range("r").min(0).max(100).build();
     expect(field.sanitize?.(50)).toBe(50);
     expect(() => field.sanitize?.(-1)).toThrow();
     expect(() => field.sanitize?.(101)).toThrow();
@@ -303,15 +345,15 @@ describe("range() builder", () => {
     expect(() => field.sanitize?.("50")).toThrow();
   });
 
-  test("rejects non-applicable options at the type level", () => {
-    range({
-      key: "r",
-      label: "r",
-      min: 0,
-      max: 10,
-      // @ts-expect-error — `placeholder` doesn't apply to range.
-      placeholder: "go",
-    });
+  test("custom .sanitize() replaces the default bounds sanitizer", () => {
+    const custom = (v: number): number => v;
+    const field = range("r").min(0).max(10).sanitize(custom).build();
+    expect(field.sanitize).toBe(custom);
+  });
+
+  test("rejects non-applicable chains at the type level", () => {
+    // `placeholder` doesn't apply to range.
+    expectTypeOf(range("r")).not.toHaveProperty("placeholder");
   });
 });
 
@@ -409,7 +451,7 @@ describe("manifest round-trip across all built-in builders", () => {
         label: "Everything",
         fields: [
           textarea("bio").label("Bio").maxLength(500),
-          number({ key: "age", label: "Age", min: 0, max: 120 }),
+          number("age").label("Age").min(0).max(120),
           email("contact").label("Contact"),
           url("website").label("Website"),
           select({
@@ -889,14 +931,12 @@ describe("termList() builder", () => {
 });
 
 describe("richtext() builder", () => {
-  test("pins inputType + json type and carries the allowlist arrays", () => {
-    const field = richtext({
-      key: "body",
-      label: "Body",
-      marks: ["bold", "italic", "link"],
-      nodes: ["heading", "bulletList", "orderedList"],
-      blocks: ["my-callout"],
-    });
+  test("chains the allowlist arrays into a richtext definition", () => {
+    const field = richtext("body")
+      .marks(["bold", "italic", "link"])
+      .nodes(["heading", "bulletList", "orderedList"])
+      .blocks(["my-callout"])
+      .build();
     expect(field.inputType).toBe("richtext");
     expect(field.type).toBe("json");
     expect(field.marks).toEqual(["bold", "italic", "link"]);
@@ -905,26 +945,35 @@ describe("richtext() builder", () => {
   });
 
   test("supports omitted allowlists (strict — denies everything except the implicit doc/paragraph/text)", () => {
-    const field = richtext({ key: "body", label: "Body" });
+    const field = richtext("body").build();
     expect(field.marks).toBeUndefined();
     expect(field.nodes).toBeUndefined();
     expect(field.blocks).toBeUndefined();
   });
 
-  test("rejects non-applicable options at the type level", () => {
-    richtext({
-      key: "b",
-      label: "b",
-      // @ts-expect-error — `placeholder` is a text-shaped option.
-      placeholder: "type here",
-    });
+  test("always injects the allowlist-walking sanitizer", () => {
+    const field = richtext("body").marks(["bold"]).build();
+    expect(field.sanitize).toBeTypeOf("function");
+    // A doc using a disallowed mark is rejected by the injected walker.
+    expect(() =>
+      field.sanitize?.({
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "x", marks: [{ type: "italic" }] }],
+          },
+        ],
+      }),
+    ).toThrow();
+  });
 
-    richtext({
-      key: "b",
-      label: "b",
-      // @ts-expect-error — `options` belongs to select/radio.
-      options: [{ value: "a", label: "A" }],
-    });
+  test("rejects non-applicable chains at the type level", () => {
+    // `placeholder` is text-shaped; `options` belongs to select/radio;
+    // a custom `.sanitize()` would clobber the allowlist walker.
+    expectTypeOf(richtext("b")).not.toHaveProperty("placeholder");
+    expectTypeOf(richtext("b")).not.toHaveProperty("options");
+    expectTypeOf(richtext("b")).not.toHaveProperty("sanitize");
   });
 
   test("manifest round-trip preserves all three allowlist arrays on the wire", async () => {
@@ -933,13 +982,10 @@ describe("richtext() builder", () => {
       ctx.registerSettingsGroup("blog", {
         label: "Blog",
         fields: [
-          richtext({
-            key: "summary",
-            label: "Summary",
-            marks: ["bold", "italic"],
-            nodes: ["heading"],
-            blocks: ["my-block"],
-          }),
+          richtext("summary")
+            .marks(["bold", "italic"])
+            .nodes(["heading"])
+            .blocks(["my-block"]),
         ],
       });
     });

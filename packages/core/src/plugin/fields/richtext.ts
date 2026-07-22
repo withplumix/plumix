@@ -1,47 +1,146 @@
 import type { Label } from "../../i18n/label.js";
-import type { MetaBoxFieldSpan, RichtextMetaBoxField } from "../manifest.js";
+import type {
+  FieldBuilder,
+  MetaBoxFieldSpan,
+  MetaBoxFieldValidate,
+  RichtextMetaBoxField,
+} from "../manifest.js";
+import { humanizeFieldKey } from "./builder.js";
 import { walkRichtextDoc } from "./richtext-validate.js";
 
-/** Per-field options for `richtext()`. See `RichtextMetaBoxField`. */
-export interface RichtextFieldOptions {
-  readonly key: string;
-  readonly label: Label;
-  readonly required?: boolean;
+interface RichtextFieldState {
+  readonly label?: Label;
   readonly description?: Label;
   readonly default?: unknown;
+  readonly required?: true;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
+  readonly showInApi?: true;
   readonly marks?: readonly string[];
   readonly nodes?: readonly string[];
   readonly blocks?: readonly string[];
+  readonly validate?: MetaBoxFieldValidate;
 }
 
 /**
- * Build a typed `richtext` meta-box field. Storage is Tiptap's
+ * Fluent chain for the `richtext` field. Storage is Tiptap's
  * ProseMirror JSON shape, round-tripped through the `json` storage
- * primitive. The `sanitize` validator is auto-injected so the meta
- * pipeline rejects nodes/marks/blocks outside the allowlist (and
- * unsafe link hrefs) without the consumer wiring anything — errors
- * surface as `meta_invalid_value` via `runSanitize`.
+ * primitive. `build()` always injects the `walkRichtextDoc` sanitizer
+ * so the meta pipeline rejects nodes/marks/blocks outside the
+ * allowlist (and unsafe link hrefs) — there is deliberately no
+ * `.sanitize()` on this chain, since a custom callback would replace
+ * that enforcement.
  */
-export function richtext(options: RichtextFieldOptions): RichtextMetaBoxField {
-  return {
-    key: options.key,
-    label: options.label,
-    type: "json",
-    inputType: "richtext",
-    marks: options.marks,
-    nodes: options.nodes,
-    blocks: options.blocks,
-    required: options.required,
-    description: options.description,
-    default: options.default,
-    span: options.span,
-    capability: options.capability,
-    sanitize: walkRichtextDoc({
-      marks: options.marks,
-      nodes: options.nodes,
-      blocks: options.blocks,
-    }),
-  };
+export class RichtextFieldBuilder<
+  K extends string = string,
+> implements FieldBuilder<RichtextMetaBoxField> {
+  /** Phantom literal key of the field — type-level only, never assigned. */
+  declare readonly _key: K;
+  /** Phantom read type of the field — type-level only, never assigned. */
+  declare readonly _value: unknown;
+  /** Phantom stored shape of the field — type-level only, never assigned. */
+  declare readonly _stored: unknown;
+
+  readonly #key: string;
+  readonly #state: RichtextFieldState;
+
+  constructor(key: string, state: RichtextFieldState = {}) {
+    this.#key = key;
+    this.#state = state;
+  }
+
+  #fork(patch: Partial<RichtextFieldState>): RichtextFieldBuilder<K> {
+    return new RichtextFieldBuilder<K>(this.#key, {
+      ...this.#state,
+      ...patch,
+    });
+  }
+
+  /** Override the derived (humanized-key) label. */
+  label(label: Label): RichtextFieldBuilder<K> {
+    return this.#fork({ label });
+  }
+
+  /** Help text rendered under the label. */
+  description(description: Label): RichtextFieldBuilder<K> {
+    return this.#fork({ description });
+  }
+
+  /** Default for absent keys — a ProseMirror doc JSON value, applied
+   * at read decode (and seeded into the admin form). */
+  default(value: unknown): RichtextFieldBuilder<K> {
+    return this.#fork({ default: value });
+  }
+
+  /** Mark the field required. */
+  required(): RichtextFieldBuilder<K> {
+    return this.#fork({ required: true });
+  }
+
+  /**
+   * Column span within the box's 12-column grid — a universal layout
+   * hint; surfaces that can't honor it (the entry editor rail) ignore it.
+   */
+  span(span: MetaBoxFieldSpan): RichtextFieldBuilder<K> {
+    return this.#fork({ span });
+  }
+
+  /** Capability gate for this field — see `MetaBoxFieldBase.capability`. */
+  capability(capability: string): RichtextFieldBuilder<K> {
+    return this.#fork({ capability });
+  }
+
+  /** Opt this field's value into public REST responses (default-deny). */
+  showInApi(): RichtextFieldBuilder<K> {
+    return this.#fork({ showInApi: true });
+  }
+
+  /** Mark allowlist (`bold`, `italic`, `link`, …). Omitted = deny all. */
+  marks(marks: readonly string[]): RichtextFieldBuilder<K> {
+    return this.#fork({ marks });
+  }
+
+  /** Node allowlist (`heading`, `bulletList`, …). Omitted = deny all but doc/paragraph/text. */
+  nodes(nodes: readonly string[]): RichtextFieldBuilder<K> {
+    return this.#fork({ nodes });
+  }
+
+  /** Embedded-block allowlist. Omitted = deny all. */
+  blocks(blocks: readonly string[]): RichtextFieldBuilder<K> {
+    return this.#fork({ blocks });
+  }
+
+  /**
+   * Custom validation — `true` for valid, or an i18n-able failure
+   * message (sync or async). Runs after the injected allowlist walker.
+   */
+  validate(
+    validate: (value: unknown) => true | Label | Promise<true | Label>,
+  ): RichtextFieldBuilder<K> {
+    return this.#fork({ validate });
+  }
+
+  /** Compile the chain into the wire/manifest field definition. */
+  build(): RichtextMetaBoxField {
+    return {
+      ...this.#state,
+      key: this.#key,
+      label: this.#state.label ?? humanizeFieldKey(this.#key),
+      type: "json",
+      inputType: "richtext",
+      sanitize: walkRichtextDoc({
+        marks: this.#state.marks,
+        nodes: this.#state.nodes,
+        blocks: this.#state.blocks,
+      }),
+    };
+  }
+}
+
+/**
+ * Rich text stored as ProseMirror JSON, constrained by the
+ * `.marks()` / `.nodes()` / `.blocks()` allowlists.
+ */
+export function richtext<K extends string>(key: K): RichtextFieldBuilder<K> {
+  return new RichtextFieldBuilder(key);
 }

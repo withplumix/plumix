@@ -8,8 +8,11 @@ import type {
   MetaBoxField,
   MetaScalarType,
   ReferenceTarget,
+  TemporalInputType,
+  TemporalMetaBoxField,
 } from "../../plugin/manifest.js";
 import { eq } from "../../db/index.js";
+import { formatTemporalValue } from "../../plugin/manifest.js";
 import { MetaReferenceError } from "./errors.js";
 
 // Shared meta plumbing for every entity that stores a `meta` JSON
@@ -120,7 +123,14 @@ export function sanitizeMetaInput(
       deletes.push(key);
       continue;
     }
-    const coerced = coerceToType(field.type, key, rawValue);
+    // `.returns("date")` hands the admin form a `Date`, and an
+    // untouched field comes back as one on save — encode it to the
+    // field's stored ISO shape before the string coercion rejects it.
+    const normalized =
+      rawValue instanceof Date && isTemporalField(field)
+        ? encodeTemporalDate(field.inputType, key, rawValue)
+        : rawValue;
+    const coerced = coerceToType(field.type, key, normalized);
     const sanitized = field.sanitize
       ? runSanitize(field.sanitize, key, coerced)
       : coerced;
@@ -770,7 +780,63 @@ function decodeFieldValue(field: MetaBoxField, value: unknown): unknown {
   if (isRepeaterField(field) && Array.isArray(value)) {
     return value.map((row) => healRepeaterRow(field, row));
   }
+  if (isTemporalField(field) && field.returns === "date") {
+    return projectTemporalDate(field.inputType, value);
+  }
   return coerceOnRead(field.type, value);
+}
+
+function isTemporalField(field: MetaBoxField): field is TemporalMetaBoxField {
+  return (
+    field.inputType === "date" ||
+    field.inputType === "datetime" ||
+    field.inputType === "time"
+  );
+}
+
+// `.returns("date")` decode projection. All three variants anchor to
+// UTC — `date` at UTC midnight, `time` on 1970-01-01 UTC — so the
+// wall-clock components survive every server/browser timezone
+// combination (decode runs server-side, often UTC on Workers, while
+// the admin formats in the viewer's browser). Consumers read the
+// parts back with `getUTC*` or `timeZone: "UTC"` formatting; the
+// projection is the exact inverse of `encodeTemporalDate`.
+// Unparseable stored values round to "no value", matching the
+// forgiving-read posture of `coerceOnRead`.
+function projectTemporalDate(
+  inputType: TemporalInputType,
+  value: unknown,
+): Date | undefined {
+  if (typeof value !== "string" || value === "") return undefined;
+  let candidate: string;
+  switch (inputType) {
+    case "date":
+      candidate = `${value}T00:00Z`;
+      break;
+    case "datetime":
+      candidate = `${value}Z`;
+      break;
+    case "time":
+      candidate = `1970-01-01T${value}Z`;
+      break;
+  }
+  const parsed = new Date(candidate);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+// Write-side inverse of `projectTemporalDate`: a `Date` arriving for a
+// temporal field encodes to the field's stored ISO shape from UTC
+// components (`formatTemporalValue`), so the stored wall-clock is
+// deployment-timezone invariant.
+function encodeTemporalDate(
+  inputType: TemporalInputType,
+  key: string,
+  value: Date,
+): string {
+  if (Number.isNaN(value.getTime())) {
+    throw MetaSanitizationError.invalidValue({ key });
+  }
+  return formatTemporalValue(inputType, value);
 }
 
 function healReferenceValue(target: ReferenceTarget, value: unknown): unknown {

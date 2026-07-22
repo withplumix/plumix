@@ -1,12 +1,11 @@
-// Typed builder helpers for meta-box field registration. The string
-// scalar fields (`text`, `textarea`, `email`, `url`, `password`) and
+// Typed builder helpers for meta-box field registration. The scalar
+// fields (string, numeric, temporal, color, richtext, json) and
 // `link` are fluent builders: the constructor takes the key alone and
-// every option is a chained call (`text("subtitle").maxLength(120)`), each
-// returning a fresh immutable instance that compiles to the narrowed
-// `MetaBoxField` variant at registration. The remaining factories
-// still take flat option objects, each returning the narrowed variant
-// matching its input type — `number({ maxLength: 5 })` is a compile
-// error. They convert to fluent chains ticket by ticket.
+// every option is a chained call (`text("subtitle").maxLength(120)`,
+// `number("rating").min(1).max(5)`), each returning a fresh immutable
+// instance that compiles to the narrowed `MetaBoxField` variant at
+// registration. The choice and reference factories still take flat
+// option objects; they convert to fluent chains ticket by ticket.
 //
 // Re-exported as a public surface from `plumix/fields`.
 
@@ -21,25 +20,16 @@ export {
 export type { StringInputType } from "./builder.js";
 export { link, LinkFieldBuilder } from "./link.js";
 export type { LinkValue } from "./link.js";
-export { number } from "./number.js";
-export type { NumberFieldOptions } from "./number.js";
-export { date } from "./date.js";
-export type { DateFieldOptions } from "./date.js";
-export { datetime } from "./datetime.js";
-export type { DateTimeFieldOptions } from "./datetime.js";
-export { time } from "./time.js";
-export type { TimeFieldOptions } from "./time.js";
+export { number, NumberFieldBuilder } from "./number.js";
+export { date, datetime, TemporalFieldBuilder, time } from "./temporal.js";
+export type { TemporalInputType } from "./temporal.js";
 export { parseMetaDate } from "./parse-date.js";
-export { color } from "./color.js";
-export type { ColorFieldOptions } from "./color.js";
-export { range } from "./range.js";
-export type { RangeFieldOptions } from "./range.js";
+export { color, ColorFieldBuilder } from "./color.js";
+export { range, RangeFieldBuilder } from "./range.js";
 export { multiselect } from "./multiselect.js";
 export type { MultiselectFieldOptions } from "./multiselect.js";
-export { json } from "./json.js";
-export type { JsonFieldOptions } from "./json.js";
-export { richtext } from "./richtext.js";
-export type { RichtextFieldOptions } from "./richtext.js";
+export { json, JsonFieldBuilder } from "./json.js";
+export { richtext, RichtextFieldBuilder } from "./richtext.js";
 export { repeater } from "./repeater.js";
 export type { RepeaterFieldOptions } from "./repeater.js";
 export { select } from "./select.js";
