@@ -73,13 +73,13 @@ export function traceDbQuery<T>(
 /**
  * Times a driver-level batch — one round-trip, so one span (labelled by kind
  * when uniform, `db: batch` otherwise), with the per-statement sql/params under
- * a `db.batch` attribute and the summed row count.
+ * a `db.batch` attribute and the row counts summed across results.
  */
-export function traceDbBatch<T>(
+export function traceDbBatch<R>(
   queries: readonly TracedQuery[],
-  run: () => Promise<T>,
-  countRows: (result: T) => number,
-): Promise<T> {
+  run: () => Promise<R[]>,
+  countRows: (result: R) => number,
+): Promise<R[]> {
   const kinds = new Set(queries.map((query) => queryKind(query.sql)));
   const kind = kinds.size === 1 ? [...kinds][0] : "batch";
   return dbSpan(
@@ -93,6 +93,7 @@ export function traceDbBatch<T>(
       );
     },
     run,
-    countRows,
+    (results) =>
+      results.reduce((total, result) => total + countRows(result), 0),
   );
 }

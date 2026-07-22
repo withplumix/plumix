@@ -4,11 +4,7 @@ import type {
   RequestScopedDbArgs,
 } from "plumix";
 import { drizzle } from "drizzle-orm/d1";
-import {
-  createDebugSqlLogger,
-  isSecureRequest,
-  readSessionCookie,
-} from "plumix";
+import { isSecureRequest, readSessionCookie } from "plumix";
 
 import {
   buildBookmarkCookie,
@@ -16,6 +12,7 @@ import {
   isValidBookmark,
 } from "./d1-session.js";
 import { D1Error } from "./errors.js";
+import { traceD1Client } from "./trace-d1.js";
 
 type D1SessionMode = "disabled" | "auto" | "primary-first";
 
@@ -47,13 +44,8 @@ export function d1(config: D1Config): D1DatabaseAdapter {
     config,
     requiredBindings: [config.binding],
     connect: (env, _request, schema) => {
-      const binding = getBinding(env, config.binding);
-      const db = drizzle(binding, {
-        schema,
-        casing: "snake_case",
-        // Dev-only: feed the debug bar's Database panel. Tree-shaken in prod.
-        logger: process.env.PLUMIX_DEV ? createDebugSqlLogger() : undefined,
-      });
+      const binding = traceD1Client(getBinding(env, config.binding));
+      const db = drizzle(binding, { schema, casing: "snake_case" });
       return { db };
     },
     connectRequest: sessionEnabled
@@ -93,12 +85,10 @@ function connectRequestScoped(
   }
 
   const session = binding.withSession(constraint);
-  const sessionAsBinding = session as unknown as D1Database;
+  const sessionAsBinding = traceD1Client(session as unknown as D1Database);
   const db = drizzle(sessionAsBinding, {
     schema: args.schema,
     casing: "snake_case",
-    // Dev-only: feed the debug bar's Database panel. Tree-shaken in prod.
-    logger: process.env.PLUMIX_DEV ? createDebugSqlLogger() : undefined,
   });
 
   const secure = isSecureRequest(args.request);

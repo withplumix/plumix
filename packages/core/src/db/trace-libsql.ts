@@ -37,8 +37,7 @@ function wrapQueryTarget<T extends QueryTarget>(target: T): T {
     traceDbBatch(
       stmts.map(stmtQuery),
       () => rawBatch(stmts, ...rest),
-      (results) =>
-        results.reduce((total, result) => total + resultRows(result), 0),
+      resultRows,
     );
 
   return target;

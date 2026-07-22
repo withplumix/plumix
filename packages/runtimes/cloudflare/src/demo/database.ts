@@ -1,5 +1,6 @@
 import type { DatabaseAdapter } from "plumix";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
+import { traceDbBatch, traceDbQuery } from "plumix";
 
 import { DEMO_SHOWCASE_NAME, demoStub, readDemoToken } from "./session.js";
 
@@ -39,12 +40,22 @@ export function demoDatabase(config: DemoDatabaseConfig): DatabaseAdapter {
       // `casing`) is read only from the third argument, so the batch callback
       // must be passed even though it also, usefully, enables `db.batch()`.
       const db = drizzle(
-        async (sqlText, params, method) => ({
-          rows: shape((await stub.query(sqlText, params)).rows, method),
-        }),
+        async (sqlText, params, method) => {
+          const result = await traceDbQuery(
+            { sql: sqlText, params },
+            () => stub.query(sqlText, params),
+            (r) => r.rows.length,
+          );
+          return { rows: shape(result.rows, method) };
+        },
         async (queries) => {
-          const results = await stub.batch(
-            queries.map((q) => ({ sql: q.sql, params: q.params })),
+          const results = await traceDbBatch(
+            queries,
+            () =>
+              stub.batch(
+                queries.map((q) => ({ sql: q.sql, params: q.params })),
+              ),
+            (result: { rows: SqlStorageValue[][] }) => result.rows.length,
           );
           return queries.map((query, i) => ({
             rows: shape(results[i]?.rows ?? [], query.method),

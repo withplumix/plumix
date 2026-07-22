@@ -6,7 +6,7 @@ import type {
 } from "plumix";
 import { sql } from "drizzle-orm";
 import { requestStore } from "plumix";
-import { afterEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import { d1 } from "./d1.js";
 
@@ -86,60 +86,141 @@ describe("d1() adapter — session config", () => {
   });
 });
 
-// A minimal D1 binding that lets drizzle prepare/bind/run a query so the
-// dev-gated logger fires. Returns empty result sets.
-function loggingBinding(): D1Database {
+// Captures spans through the TelemetrySpanHandle contract — the same surface
+// the real collector implements — so assertions stay driver-level.
+function spanCapture(): {
+  ctx: unknown;
+  spans: { name: string; attributes: Record<string, unknown> }[];
+} {
+  const spans: { name: string; attributes: Record<string, unknown> }[] = [];
+  const telemetry = {
+    span: (name: string, fn: (s: unknown) => unknown) => {
+      const attributes: Record<string, unknown> = {};
+      spans.push({ name, attributes });
+      return fn({
+        set: (key: string, value: unknown) => {
+          attributes[key] =
+            typeof value === "function" ? (value as () => unknown)() : value;
+        },
+      });
+    },
+  };
+  return { ctx: { telemetry }, spans };
+}
+
+function resultBinding(results: unknown[] = []): D1Database {
   const stmt = {
     bind: () => stmt,
-    run: () => Promise.resolve({ results: [], success: true, meta: {} }),
-    all: () => Promise.resolve({ results: [], success: true, meta: {} }),
+    run: () =>
+      Promise.resolve({ results, success: true, meta: { changes: 0 } }),
+    all: () =>
+      Promise.resolve({ results, success: true, meta: { changes: 0 } }),
     first: () => Promise.resolve(null),
     raw: () => Promise.resolve([]),
   };
   return { prepare: () => stmt } as unknown as D1Database;
 }
 
-// Runs one query through a freshly connected d1 adapter inside a request whose
-// debug collector captures whatever the drizzle logger records to the database
-// bucket. Toggle PLUMIX_DEV in the caller to exercise the dev gate.
-async function recordQueriesForOneRun(): Promise<unknown[]> {
-  const recorded: unknown[] = [];
-  const ctx = {
-    telemetry: {
-      record: (namespace: string, entry: unknown) => {
-        if (namespace === "database") recorded.push(entry);
+describe("d1() adapter — query span tracing", () => {
+  test("times each query as a db span with sql/params/rows attributes", async () => {
+    const { ctx, spans } = spanCapture();
+    const db = d1({ binding: "DB" }).connect(
+      { DB: resultBinding([{ id: 1 }, { id: 2 }]) },
+      new Request("https://cms.example"),
+      {},
+    ).db as { all(query: SQL): Promise<unknown> };
+
+    await requestStore.run(ctx as never, async () => {
+      await db.all(sql`select id from posts where id = ${7}`);
+    });
+
+    expect(spans.map((s) => s.name)).toEqual(["db: select"]);
+    expect(spans[0]?.attributes).toEqual({
+      "db.sql": "select id from posts where id = ?",
+      "db.params": [7],
+      "db.rows": 2,
+    });
+  });
+
+  test("queries inside a transaction are timed spans", async () => {
+    const { ctx, spans } = spanCapture();
+    const db = d1({ binding: "DB" }).connect(
+      { DB: resultBinding() },
+      new Request("https://cms.example"),
+      {},
+    ).db as {
+      transaction(fn: (tx: unknown) => Promise<void>): Promise<void>;
+    };
+
+    await requestStore.run(ctx as never, () =>
+      db.transaction(async (tx) => {
+        await (tx as { run(query: SQL): Promise<unknown> }).run(
+          sql`update posts set title = ${"t"}`,
+        );
+      }),
+    );
+
+    // begin / update / commit each flow through prepare and get timed.
+    expect(spans.map((s) => s.name)).toContain("db: update");
+    const update = spans.find((s) => s.name === "db: update");
+    expect(update?.attributes["db.sql"]).toBe("update posts set title = ?");
+    expect(update?.attributes["db.params"]).toEqual(["t"]);
+  });
+
+  test("batch times one span and hands the real bound statements to the binding", async () => {
+    const { ctx, spans } = spanCapture();
+    const bound: unknown[] = [];
+    const received: unknown[][] = [];
+    const binding = {
+      prepare: () => ({
+        bind: (..._args: unknown[]) => {
+          const stmt = {
+            run: () =>
+              Promise.resolve({
+                results: [],
+                success: true,
+                meta: { changes: 0 },
+              }),
+          };
+          bound.push(stmt);
+          return stmt;
+        },
+      }),
+      batch: (stmts: unknown[]) => {
+        received.push(stmts);
+        return Promise.resolve(
+          stmts.map(() => ({
+            results: [{}],
+            success: true,
+            meta: { changes: 0 },
+          })),
+        );
       },
-    },
-  };
-  const db = d1({ binding: "DB" }).connect(
-    { DB: loggingBinding() },
-    new Request("https://cms.example"),
-    {},
-  ).db as { run(query: SQL): Promise<unknown> };
+    } as unknown as D1Database;
+    const db = d1({ binding: "DB" }).connect(
+      { DB: binding },
+      new Request("https://cms.example"),
+      {},
+    ).db as {
+      batch(queries: unknown[]): Promise<unknown>;
+      run(query: SQL): Promise<unknown>;
+    };
 
-  await requestStore.run(ctx as never, async () => {
-    await db.run(sql`select 1`);
-  });
-  return recorded;
-}
+    await requestStore.run(ctx as never, () =>
+      db.batch([db.run(sql`select 1`), db.run(sql`select 2`)]),
+    );
 
-describe("d1() adapter — debug bar query logging", () => {
-  const original = process.env.PLUMIX_DEV;
-  afterEach(() => {
-    if (original === undefined) delete process.env.PLUMIX_DEV;
-    else process.env.PLUMIX_DEV = original;
-  });
-
-  test("records queries to the request debug collector when PLUMIX_DEV is set", async () => {
-    process.env.PLUMIX_DEV = "1";
-    expect(await recordQueriesForOneRun()).toEqual([
-      { sql: "select 1", params: [] },
-    ]);
-  });
-
-  test("records nothing when PLUMIX_DEV is unset", async () => {
-    delete process.env.PLUMIX_DEV;
-    expect(await recordQueriesForOneRun()).toEqual([]);
+    expect(spans.map((s) => s.name)).toEqual(["db: select (2)"]);
+    expect(spans[0]?.attributes).toEqual({
+      "db.batch": [
+        { sql: "select 1", params: [] },
+        { sql: "select 2", params: [] },
+      ],
+      "db.rows": 2,
+    });
+    // The unwrap contract: the binding receives the bound originals, never
+    // the traced wrappers.
+    expect(received).toEqual([bound]);
   });
 });
 

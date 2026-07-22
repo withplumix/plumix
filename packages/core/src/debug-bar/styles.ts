@@ -306,6 +306,11 @@ export const DEBUG_BAR_CSS =
       gap: 6px;
       align-items: baseline;
     }
+    .plumix-debug-bar__query-ms {
+      flex: 0 0 auto;
+      margin-left: auto;
+      color: #8a929a;
+    }
     .plumix-debug-bar__kind {
       flex: 0 0 auto;
       font-size: 9px;

@@ -4,7 +4,6 @@ import { drizzle } from "drizzle-orm/libsql";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type { EnvInput } from "../runtime/env-input.js";
 import type { DatabaseAdapter } from "../runtime/slots.js";
-import { createDebugSqlLogger } from "../debug-bar/db-query.js";
 import { resolveEnvInput } from "../runtime/env-input.js";
 import { traceSqlClient } from "./trace-libsql.js";
 
@@ -58,12 +57,7 @@ export function libsql(config: LibsqlConfigInput): LibsqlDatabaseAdapter {
         );
       }
       return {
-        db: drizzle(client, {
-          schema,
-          casing: "snake_case",
-          // Dev-only: feed the debug bar's Database panel. Tree-shaken in prod.
-          logger: process.env.PLUMIX_DEV ? createDebugSqlLogger() : undefined,
-        }),
+        db: drizzle(client, { schema, casing: "snake_case" }),
       };
     },
   };
