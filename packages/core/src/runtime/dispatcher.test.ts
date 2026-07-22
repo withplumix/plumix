@@ -722,6 +722,7 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
     expect(response.headers.get("content-type")).toBe(
       "text/plain; charset=utf-8",
     );
+    expect(response.headers.get("cache-control")).toBe("public, max-age=300");
     // The whole point: no route resolution, no themed render, no DB work.
     const spans = flattenSpans(snapshots[0]?.spans ?? []);
     expect(spans.some((s) => s.name === "resolve")).toBe(false);
@@ -766,6 +767,8 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
     expect(response.headers.get("content-type")).toBe(
       "text/plain; charset=utf-8",
     );
+    // A content 404 may become a real page at any moment — never cacheable.
+    expect(response.headers.get("cache-control")).toBeNull();
   });
 
   test("a browser-shaped Accept header still gets the themed 404 page", async () => {

@@ -468,7 +468,13 @@ async function tryPublicRoutes(
   // themed render. The SEO assets above (robots.txt, sitemap*.xml) have
   // already had their chance.
   if (STATIC_ASSET_EXT.test(pathname)) {
-    return notFound("static-asset");
+    // Cacheable because the extension check makes the path permanently
+    // unroutable — a short TTL only bounds "a deploy added this asset". The
+    // edge cache stores GET+200 only, so this reaches browsers/CDNs, not the
+    // shared read-through layer.
+    const response = notFound("static-asset");
+    response.headers.set("cache-control", "public, max-age=300");
+    return response;
   }
 
   // Normalize a public page URL to its canonical (slash-less) shape before
