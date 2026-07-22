@@ -1,6 +1,6 @@
 {
   "name": "@plumix/runtime-cloudflare",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "description": "Cloudflare Workers runtime adapter for Plumix",
   "license": "MIT",
