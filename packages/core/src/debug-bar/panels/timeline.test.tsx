@@ -2,20 +2,27 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../../context/app.js";
-import type { TraceSpan } from "../../context/stores.js";
+import type { TelemetrySpan } from "../../context/telemetry.js";
 import { timelinePanel } from "./timeline.js";
 
 function span(
   name: string,
   startedAt: number,
   durationMs: number,
-  children: TraceSpan[] = [],
-): TraceSpan {
-  return { name, startedAt, durationMs, children, annotations: {} };
+  children: TelemetrySpan[] = [],
+): TelemetrySpan {
+  return {
+    name,
+    startedAt,
+    durationMs,
+    children,
+    status: "ok",
+    attributes: {},
+  };
 }
 
-function render(spans: readonly TraceSpan[]): string {
-  const ctx = { debug: { getSpans: () => spans } } as unknown as AppContext;
+function render(spans: readonly TelemetrySpan[]): string {
+  const ctx = { telemetry: { getSpans: () => spans } } as unknown as AppContext;
   return renderToStaticMarkup(<>{timelinePanel.render(ctx)}</>);
 }
 

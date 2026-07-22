@@ -27,15 +27,15 @@ import type {
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
-import type { DebugCollector } from "./debug.js";
+import type { TelemetryCollector } from "./telemetry.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolveMailer } from "../auth/mailer/resolve.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
-import { createDebugCollector } from "../debug-bar/collector.js";
+import { createTelemetryCollector } from "../debug-bar/collector.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
-import { NOOP_DEBUG } from "./debug.js";
 import { ContextError } from "./errors.js";
+import { NOOP_TELEMETRY } from "./telemetry.js";
 
 const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
@@ -140,12 +140,13 @@ export interface AppContextBase<
   readonly shortcodes: ShortcodeRegistry;
   readonly logger: Logger;
   /**
-   * Request-scoped debug collector. Core and plugins record per-request data
-   * for the dev debug bar via `ctx.debug.record`/`span`. Always present: the
-   * real collector in dev, {@link NOOP_DEBUG} in prod (so call sites are safe
-   * and the debug-bar module tree-shakes out of prod builds).
+   * Request-scoped telemetry collector — spans + records for what happened
+   * during this request. Core and plugins record via `ctx.telemetry.record`/
+   * `span`. Always present: the real collector in dev, {@link NOOP_TELEMETRY}
+   * in prod (so call sites are safe and the debug-bar module tree-shakes out
+   * of prod builds).
    */
-  readonly debug: DebugCollector;
+  readonly telemetry: TelemetryCollector;
   readonly auth: AuthNamespace;
   /**
    * Resolved request authenticator — same instance the dispatcher
@@ -422,10 +423,10 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     basePath: args.basePath ?? "",
     debugBar: args.debugBar,
     // Real collector only in dev; `process.env.PLUMIX_DEV` is Vite-empty in a
-    // build, so the prod branch keeps NOOP_DEBUG and tree-shakes the rest.
-    debug: process.env.PLUMIX_DEV
-      ? createDebugCollector(args.debugBar)
-      : NOOP_DEBUG,
+    // build, so the prod branch keeps NOOP_TELEMETRY and tree-shakes the rest.
+    telemetry: process.env.PLUMIX_DEV
+      ? createTelemetryCollector(args.debugBar)
+      : NOOP_TELEMETRY,
     siteName: args.siteName,
   };
   // Spread plugin-contributed entries onto the base. The cast is the

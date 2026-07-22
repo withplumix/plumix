@@ -1,4 +1,4 @@
-import type { TraceSpan } from "../context/stores.js";
+import type { TelemetrySpan } from "../context/telemetry.js";
 
 /** A span flattened into a single waterfall row. */
 interface TimelineRow {
@@ -19,12 +19,12 @@ export interface Timeline {
 /**
  * Flattens a trace-span tree into an ordered list of waterfall rows, each
  * positioned relative to the request's overall time window. Pure — the panel
- * feeds it {@link TraceSpan} roots from the collector and renders the result.
+ * feeds it {@link TelemetrySpan} roots from the collector and renders the result.
  */
-export function buildTimeline(roots: readonly TraceSpan[]): Timeline {
+export function buildTimeline(roots: readonly TelemetrySpan[]): Timeline {
   let windowStart = Infinity;
   let windowEnd = -Infinity;
-  const visit = (span: TraceSpan): void => {
+  const visit = (span: TelemetrySpan): void => {
     windowStart = Math.min(windowStart, span.startedAt);
     windowEnd = Math.max(windowEnd, span.startedAt + span.durationMs);
     for (const child of span.children) visit(child);
@@ -33,7 +33,7 @@ export function buildTimeline(roots: readonly TraceSpan[]): Timeline {
   if (roots.length === 0) return { rows: [], totalMs: 0 };
 
   const rows: TimelineRow[] = [];
-  const flatten = (span: TraceSpan, depth: number): void => {
+  const flatten = (span: TelemetrySpan, depth: number): void => {
     rows.push({
       name: span.name,
       depth,

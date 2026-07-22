@@ -1,4 +1,5 @@
 import type { AppContext } from "../../context/app.js";
+import type { TelemetrySpan } from "../../context/telemetry.js";
 import type {
   ResolutionStep,
   ResolutionTrace,
@@ -7,10 +8,25 @@ import type { DebugPanel } from "../types.js";
 import { DebugKV, DebugSection, DebugTable } from "../primitives.js";
 import { TEMPLATE_PANEL_ID } from "../template-node-label.js";
 
-/** Recorded by the renderer; read by the panel. */
+/** Set as the `template` span's `resolution` attribute by the renderer. */
 export interface TemplateResolution extends ResolutionTrace {
   /** Human label for the resolved route node, e.g. "post: hello-world". */
   readonly nodeLabel: string;
+}
+
+// Matches on the resolution attribute too, so an unrelated span that happens
+// to share the `template` name can't shadow the renderer's span.
+function findResolutionSpan(
+  spans: readonly TelemetrySpan[],
+): TelemetrySpan | undefined {
+  for (const span of spans) {
+    if (span.name === TEMPLATE_PANEL_ID && "resolution" in span.attributes) {
+      return span;
+    }
+    const nested = findResolutionSpan(span.children);
+    if (nested) return nested;
+  }
+  return undefined;
 }
 
 /** How a predicate reads in the table — or an em dash when the rule has none. */
@@ -31,12 +47,12 @@ export const templatePanel: DebugPanel = {
   title: "Template",
   order: 15,
   render: (ctx: AppContext) => {
-    const resolution = ctx.debug.get(TEMPLATE_PANEL_ID)[0] as
-      TemplateResolution | undefined;
+    const resolution = findResolutionSpan(ctx.telemetry.getSpans())?.attributes
+      .resolution as unknown as TemplateResolution | undefined;
     if (!resolution) {
       return (
         <p className="plumix-debug-bar__empty">
-          No template resolution — this is likely an error page.
+          No template resolution recorded — error pages don&apos;t resolve one.
         </p>
       );
     }

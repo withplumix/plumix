@@ -13,6 +13,7 @@ import { resolveBlockLoaders } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
+import type { JsonValue } from "../../context/telemetry.js";
 import type { TransformOpts } from "../../runtime/slots.js";
 import type { RegisteredTemplateDep } from "../../template-deps.js";
 import type { Template } from "../../template.js";
@@ -91,10 +92,10 @@ interface RenderArgs {
  * declares no matching tier and no `fallback` — the caller then renders 404.
  */
 export function renderThroughTheme(args: RenderArgs): Promise<string | null> {
-  // Dev-only: time the render phase for the Timeline. `ctx.debug` is the no-op
+  // Dev-only: time the render phase for the Timeline. `ctx.telemetry` is the no-op
   // collector in prod, so span() is a pass-through and this tree-shakes to a
   // plain call.
-  return args.ctx.debug.span("render", () => renderThroughThemeInner(args));
+  return args.ctx.telemetry.span("render", () => renderThroughThemeInner(args));
 }
 
 async function renderThroughThemeInner({
@@ -109,17 +110,25 @@ async function renderThroughThemeInner({
   editMode = LIVE_EDIT_MODE,
 }: RenderArgs): Promise<string | null> {
   const rules = templateRules(theme.templates);
-  const matched = resolveTemplate(rules, node, data);
+  // The resolution walk is a `template` span (nested under `render`) carrying
+  // the full explain as a lazy attribute — the Template panel reads it back
+  // from the span tree, and an inactive collector never pays for the explain.
+  const matched = ctx.telemetry.span(TEMPLATE_PANEL_ID, (s) => {
+    // Resolve first so the explain (which re-runs user predicates) keeps the
+    // old resolve-then-explain order for any stateful predicate.
+    const result = resolveTemplate(rules, node, data);
+    s.set(
+      "resolution",
+      () =>
+        ({
+          nodeLabel: templateNodeLabel(node),
+          ...explainTemplateResolution(rules, node, data),
+        }) as unknown as JsonValue,
+    );
+    return result;
+  });
   if (matched === undefined) return null;
   const template = normalizeTemplate(matched.template, ruleLabel(matched));
-  // Dev-only: surface the full resolution walk in the debug bar. `ctx.debug` is
-  // the no-op collector in prod, so this branch tree-shakes.
-  if (process.env.PLUMIX_DEV) {
-    ctx.debug.record(TEMPLATE_PANEL_ID, {
-      nodeLabel: templateNodeLabel(node),
-      ...explainTemplateResolution(rules, node, data),
-    });
-  }
   const deps = await loadTemplateDeps(
     mergeTemplateDepDeclarations(
       theme,
