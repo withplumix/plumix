@@ -4,7 +4,8 @@ type FieldConfigErrorCode =
   | "repeater_nested_not_supported"
   | "repeater_sub_field_key_forbidden"
   | "repeater_sub_field_key_invalid"
-  | "repeater_sub_field_duplicate";
+  | "repeater_sub_field_duplicate"
+  | "temporal_bound_invalid";
 
 interface FieldConfigErrorFields {
   fieldKey?: string;
@@ -98,6 +99,19 @@ export class FieldConfigError extends Error {
       `repeater("${ctx.repeaterKey}") subField key "${ctx.subFieldKey}" must match ` +
         `/${ctx.pattern}/.`,
       ctx,
+    );
+  }
+
+  static temporalBoundInvalid(ctx: {
+    fieldKey: string;
+    bound: "min" | "max";
+    value: string;
+  }): FieldConfigError {
+    return new FieldConfigError(
+      "temporal_bound_invalid",
+      `field "${ctx.fieldKey}": .${ctx.bound}("${ctx.value}") is not a valid ` +
+        `temporal bound — use the field's stored ISO shape.`,
+      { fieldKey: ctx.fieldKey },
     );
   }
 

@@ -1,12 +1,75 @@
 import { describe, expect, test } from "vitest";
 
 import type { MetaBoxField } from "../../plugin/manifest.js";
-import { date, datetime, time } from "../../plugin/fields/index.js";
+import {
+  date,
+  datetime,
+  repeater,
+  text,
+  time,
+} from "../../plugin/fields/index.js";
 import {
   decodeMetaBag,
   MetaSanitizationError,
+  MetaValidationError,
   sanitizeMetaInput,
 } from "./core.js";
+import { META_FIELD_MESSAGES } from "./field-messages.js";
+
+// The write path funnels every value through the field pipeline and
+// aggregates `{ path, message }` rejections across the whole patch into
+// one `MetaValidationError` — the RPC layer ships them to the admin
+// form, which maps each onto the addressed input.
+describe("sanitizeMetaInput (constraint enforcement)", () => {
+  const fields = new Map<string, MetaBoxField>([
+    ["subtitle", text("subtitle").maxLength(5).build()],
+    ["tagline", text("tagline").required().build()],
+    [
+      "sections",
+      repeater({
+        key: "sections",
+        label: "Sections",
+        subFields: [text("heading").required(), text("body")],
+      }),
+    ],
+  ]);
+  const findField = (key: string): MetaBoxField | undefined => fields.get(key);
+
+  test("aggregates path-addressed errors across fields, writing nothing", async () => {
+    const error = await sanitizeMetaInput(findField, {
+      subtitle: "way too long",
+      tagline: null, // deletion of a required field
+      sections: [{ heading: "", body: "kept" }],
+    }).then(
+      () => null,
+      (thrown: unknown) => thrown,
+    );
+    expect(error).toBeInstanceOf(MetaValidationError);
+    expect((error as MetaValidationError).errors).toEqual([
+      {
+        path: "subtitle",
+        message: { ...META_FIELD_MESSAGES.maxLength, values: { max: 5 } },
+      },
+      { path: "tagline", message: META_FIELD_MESSAGES.required },
+      { path: "sections.0.heading", message: META_FIELD_MESSAGES.required },
+    ]);
+  });
+
+  test("a passing patch keeps upserts and deletes as before", async () => {
+    const patch = await sanitizeMetaInput(findField, {
+      subtitle: "ok",
+      sections: null,
+    });
+    expect(patch?.upserts.get("subtitle")).toBe("ok");
+    expect(patch?.deletes).toEqual(["sections"]);
+  });
+
+  test("unregistered keys still fail fast with the legacy error", async () => {
+    await expect(
+      sanitizeMetaInput(findField, { ghost: "x" }),
+    ).rejects.toThrowError(MetaSanitizationError);
+  });
+});
 
 describe("MetaSanitizationError", () => {
   test("error.name is the class name, not 'Error'", () => {
@@ -145,45 +208,45 @@ describe("sanitizeMetaInput (Date acceptance on temporal fields)", () => {
   ]);
   const findField = (key: string): MetaBoxField | undefined => fields.get(key);
 
-  test("a Date on a date field stores YYYY-MM-DD from UTC components", () => {
-    const patch = sanitizeMetaInput(findField, {
+  test("a Date on a date field stores YYYY-MM-DD from UTC components", async () => {
+    const patch = await sanitizeMetaInput(findField, {
       publishedOn: new Date(Date.UTC(2026, 4, 3, 12, 0)),
     });
     expect(patch?.upserts.get("publishedOn")).toBe("2026-05-03");
   });
 
-  test("a Date on a datetime field stores YYYY-MM-DDTHH:MM, seconds only when nonzero", () => {
-    const patch = sanitizeMetaInput(findField, {
+  test("a Date on a datetime field stores YYYY-MM-DDTHH:MM, seconds only when nonzero", async () => {
+    const patch = await sanitizeMetaInput(findField, {
       startsAt: new Date(Date.UTC(2026, 4, 3, 9, 30)),
     });
     expect(patch?.upserts.get("startsAt")).toBe("2026-05-03T09:30");
 
-    const withSeconds = sanitizeMetaInput(findField, {
+    const withSeconds = await sanitizeMetaInput(findField, {
       startsAt: new Date(Date.UTC(2026, 4, 3, 9, 30, 15)),
     });
     expect(withSeconds?.upserts.get("startsAt")).toBe("2026-05-03T09:30:15");
   });
 
-  test("a Date on a time field stores HH:MM", () => {
-    const patch = sanitizeMetaInput(findField, {
+  test("a Date on a time field stores HH:MM", async () => {
+    const patch = await sanitizeMetaInput(findField, {
       opensAt: new Date(Date.UTC(1970, 0, 1, 6, 5)),
     });
     expect(patch?.upserts.get("opensAt")).toBe("06:05");
   });
 
-  test("an invalid Date is rejected as invalid_value", () => {
-    expect(() =>
+  test("an invalid Date is rejected with a path-addressed error", async () => {
+    await expect(
       sanitizeMetaInput(findField, { publishedOn: new Date("garbage") }),
-    ).toThrowError(MetaSanitizationError);
+    ).rejects.toThrowError(MetaValidationError);
   });
 
-  test("decode → write round-trips the stored string exactly", () => {
+  test("decode → write round-trips the stored string exactly", async () => {
     const projected = new Map<string, MetaBoxField>([
       ["startsAt", datetime("startsAt").returns("date").build()],
     ]);
     const find = (key: string): MetaBoxField | undefined => projected.get(key);
     const decoded = decodeMetaBag(find, { startsAt: "2026-05-03T09:30" });
-    const patch = sanitizeMetaInput(find, { startsAt: decoded.startsAt });
+    const patch = await sanitizeMetaInput(find, { startsAt: decoded.startsAt });
     expect(patch?.upserts.get("startsAt")).toBe("2026-05-03T09:30");
   });
 });

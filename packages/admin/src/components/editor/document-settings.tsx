@@ -1,9 +1,14 @@
 import type { MultiSelectOption } from "@/components/form/multi-select.js";
+import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 import { MultiSelect } from "@/components/form/multi-select.js";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
+import {
+  META_FORM_BASE_PATH,
+  useApplyMetaFieldErrors,
+} from "@/lib/meta-field-errors.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { useForm, useWatch } from "react-hook-form";
@@ -93,6 +98,9 @@ interface DocumentSettingsPanelProps {
     readonly boxes: readonly EntryMetaBoxManifestEntry[];
     readonly initialMeta: Record<string, unknown>;
     readonly onMetaChange: (next: Record<string, unknown>) => void;
+    /** Path-addressed rejections from the last autosave — pinned onto
+     *  the addressed inputs; cleared when the next save succeeds. */
+    readonly fieldErrors?: readonly MetaFieldServerError[] | null;
   };
 }
 
@@ -103,15 +111,18 @@ function DocumentMetaBoxes({
   boxes,
   initialMeta,
   onMetaChange,
+  fieldErrors,
 }: {
   readonly boxes: readonly EntryMetaBoxManifestEntry[];
   readonly initialMeta: Record<string, unknown>;
   readonly onMetaChange: (next: Record<string, unknown>) => void;
+  readonly fieldErrors?: readonly MetaFieldServerError[] | null;
 }): ReactElement {
   const renderLabel = useLabel();
   const form = useForm<{ meta: Record<string, unknown> }>({
     defaultValues: { meta: initialMeta },
   });
+  useApplyMetaFieldErrors(form, META_FORM_BASE_PATH, fieldErrors);
   const watchedMeta = useWatch({ control: form.control, name: "meta" });
   const onMetaChangeRef = useRef(onMetaChange);
   useEffect(() => {
@@ -305,6 +316,7 @@ export function DocumentSettingsPanel({
           boxes={metaBoxes.boxes}
           initialMeta={metaBoxes.initialMeta}
           onMetaChange={metaBoxes.onMetaChange}
+          fieldErrors={metaBoxes.fieldErrors}
         />
       ) : null}
     </div>

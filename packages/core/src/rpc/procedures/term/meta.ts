@@ -17,12 +17,12 @@ import { assertMetaCapabilities } from "../entry/meta.js";
 export type { MetaChanges as TermMetaChanges } from "../../meta/core.js";
 
 /** RPC-facing sanitizer for a term's meta input, scoped by taxonomy. */
-export function sanitizeMetaForRpc(
+export async function sanitizeMetaForRpc(
   registry: PluginRegistry,
   taxonomy: string,
   input: Record<string, unknown> | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
-): MetaPatch | null {
+): Promise<MetaPatch | null> {
   return sanitizeMetaForRpcCore(
     (key) => findTermMetaField(registry, taxonomy, key),
     input,

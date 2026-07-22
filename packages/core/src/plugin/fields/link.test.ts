@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, test, vi } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { LinkValue } from "./index.js";
 import { decodeMetaBag, sanitizeMetaInput } from "../../rpc/meta/core.js";
@@ -60,19 +60,19 @@ describe("link server validation and round-trip", () => {
   const field = link("cta").build();
   const findField = (key: string) => (key === "cta" ? field : undefined);
 
-  function write(value: unknown): unknown {
-    const patch = sanitizeMetaInput(findField, { cta: value });
+  async function write(value: unknown): Promise<unknown> {
+    const patch = await sanitizeMetaInput(findField, { cta: value });
     return patch?.upserts.get("cta");
   }
 
-  test("a full link value round-trips through write and read", () => {
+  test("a full link value round-trips through write and read", async () => {
     const value = { url: "https://example.com/x", label: "Go", newTab: true };
-    const stored = write(value);
+    const stored = await write(value);
     expect(stored).toEqual(value);
     expect(decodeMetaBag(findField, { cta: stored })).toEqual({ cta: value });
   });
 
-  test("relative forms and safe non-http schemes are accepted", () => {
+  test("relative forms and safe non-http schemes are accepted", async () => {
     for (const url of [
       "/pricing",
       "#contact",
@@ -81,48 +81,46 @@ describe("link server validation and round-trip", () => {
       "mailto:hi@example.com",
       "tel:+15551234567",
     ]) {
-      expect(write({ url })).toEqual({ url });
+      expect(await write({ url })).toEqual({ url });
     }
   });
 
-  test("malformed URLs, unsafe schemes, and bad shapes reject as invalid_value", () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    try {
-      for (const bad of [
-        { url: "not a url" },
-        { url: "" },
-        // Script-bearing schemes must hard-fail — the url reaches
-        // rendered anchor hrefs (same gate as richtext link marks).
-        { url: "javascript:alert(1)" },
-        { url: "JavaScript:alert(1)" },
-        { url: "data:text/html,<script>x</script>" },
-        { url: 42 },
-        {},
-        "https://example.com",
-        ["https://example.com"],
-        { url: "/x", label: 7 },
-        { url: "/x", newTab: "yes" },
-      ]) {
-        expect(() => sanitizeMetaInput(findField, { cta: bad })).toThrow(
-          /invalid_value/,
-        );
-      }
-    } finally {
-      spy.mockRestore();
+  test("malformed URLs, unsafe schemes, and bad shapes reject with a path-addressed error", async () => {
+    for (const bad of [
+      { url: "not a url" },
+      { url: "" },
+      // Script-bearing schemes must hard-fail — the url reaches
+      // rendered anchor hrefs (same gate as richtext link marks).
+      { url: "javascript:alert(1)" },
+      { url: "JavaScript:alert(1)" },
+      { url: "data:text/html,<script>x</script>" },
+      { url: 42 },
+      {},
+      "https://example.com",
+      ["https://example.com"],
+      { url: "/x", label: 7 },
+      { url: "/x", newTab: "yes" },
+    ]) {
+      await expect(
+        sanitizeMetaInput(findField, { cta: bad }),
+      ).rejects.toMatchObject({
+        name: "MetaValidationError",
+        errors: [{ path: "cta", message: { id: "metaField.invalid" } }],
+      });
     }
   });
 
-  test("unrecognized properties are stripped before persistence", () => {
+  test("unrecognized properties are stripped before persistence", async () => {
     expect(
-      write({ url: "/x", label: "Go", tracking: "utm_source=evil" }),
+      await write({ url: "/x", label: "Go", tracking: "utm_source=evil" }),
     ).toEqual({ url: "/x", label: "Go" });
   });
 
-  test("a chained .sanitize() runs after the shape check on the typed value", () => {
+  test("a chained .sanitize() runs after the shape check on the typed value", async () => {
     const trimmed = link("cta")
       .sanitize((value) => ({ ...value, label: value.label?.trim() }))
       .build();
-    const patch = sanitizeMetaInput(
+    const patch = await sanitizeMetaInput(
       (key) => (key === "cta" ? trimmed : undefined),
       { cta: { url: "/x", label: "  Go  " } },
     );

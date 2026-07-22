@@ -8,12 +8,16 @@ import type {
   MetaBoxField,
   MetaScalarType,
   ReferenceTarget,
+  RepeaterMetaBoxField,
   TemporalInputType,
   TemporalMetaBoxField,
 } from "../../plugin/manifest.js";
+import type { MetaFieldError } from "./field-pipeline.js";
 import { eq } from "../../db/index.js";
-import { formatTemporalValue } from "../../plugin/manifest.js";
+import { anchorTemporalUtc } from "../../plugin/manifest.js";
 import { MetaReferenceError } from "./errors.js";
+import { META_FIELD_MESSAGES } from "./field-messages.js";
+import { isRepeaterField, runFieldPipeline } from "./field-pipeline.js";
 
 // Shared meta plumbing for every entity that stores a `meta` JSON
 // column (entries, terms, and — eventually — users). The storage
@@ -87,7 +91,13 @@ export class MetaSanitizationError extends Error {
  * `errors` in and TS matches on shape.
  */
 interface RpcErrorsForMeta {
-  CONFLICT: (args: { data: { reason: string; key?: string } }) => Error;
+  CONFLICT: (args: {
+    data: {
+      reason: string;
+      key?: string;
+      errors?: MetaFieldError[];
+    };
+  }) => Error;
 }
 
 /**
@@ -101,88 +111,93 @@ export interface MetaChanges {
 }
 
 /**
+ * The whole-patch rejection produced by `sanitizeMetaInput` when any
+ * field's pipeline reports errors: every `{ path, message }` across
+ * every key of the request, so the admin form can address each
+ * offending input in one round-trip. Nothing is written when this
+ * throws.
+ */
+export class MetaValidationError extends Error {
+  static {
+    MetaValidationError.prototype.name = "MetaValidationError";
+  }
+
+  readonly errors: readonly MetaFieldError[];
+
+  constructor(errors: readonly MetaFieldError[]) {
+    super(
+      `meta validation failed: ${errors.map((error) => error.path).join(", ")}`,
+    );
+    this.errors = errors;
+  }
+}
+
+/**
  * Validate an incoming meta map against a field-lookup fn produced by
  * the caller (entry vs term differ only in which registry they walk).
- * Unregistered keys and type-coercion failures throw so the caller can
- * surface them as 4xx before any write. `null` / `undefined` values
- * are deletion requests; everything else is coerced + sanitized.
+ * `null` / `undefined` values are deletion requests; everything else
+ * runs the per-field pipeline (coercion → `.sanitize()` → declarative
+ * constraints → `.validate()`). Pipeline rejections aggregate across
+ * the whole patch into one `MetaValidationError`; unregistered keys
+ * and oversized values keep the legacy fail-fast
+ * `MetaSanitizationError` surface.
  */
-export function sanitizeMetaInput(
+export async function sanitizeMetaInput(
   findField: (key: string) => MetaBoxField | undefined,
   input: MetaMap | undefined,
-): MetaPatch | null {
+): Promise<MetaPatch | null> {
   if (input === undefined) return null;
   const upserts = new Map<string, unknown>();
   const deletes: string[] = [];
+  const fieldErrors: MetaFieldError[] = [];
   for (const [key, rawValue] of Object.entries(input)) {
     const field = findField(key);
     if (!field) {
       throw MetaSanitizationError.notRegistered({ key });
     }
-    if (rawValue === null || rawValue === undefined) {
+    const result = await runFieldPipeline(field, rawValue, key);
+    if (result.errors.length > 0) {
+      fieldErrors.push(...result.errors);
+      continue;
+    }
+    if (result.isDeletion === true) {
       deletes.push(key);
       continue;
     }
-    // `.returns("date")` hands the admin form a `Date`, and an
-    // untouched field comes back as one on save — encode it to the
-    // field's stored ISO shape before the string coercion rejects it.
-    const normalized =
-      rawValue instanceof Date && isTemporalField(field)
-        ? encodeTemporalDate(field.inputType, key, rawValue)
-        : rawValue;
-    const coerced = coerceToType(field.type, key, normalized);
-    const sanitized = field.sanitize
-      ? runSanitize(field.sanitize, key, coerced)
-      : coerced;
-    assertEncodedSize(key, sanitized);
-    upserts.set(key, sanitized);
+    assertEncodedSize(key, result.value);
+    upserts.set(key, result.value);
+  }
+  if (fieldErrors.length > 0) {
+    throw new MetaValidationError(fieldErrors);
   }
   return { upserts, deletes };
 }
 
 /**
- * Run a field's sanitize callback inside a try/catch — any thrown
- * `MetaSanitizationError` propagates as-is (so callbacks that already
- * use the precise error type can opt into specific reasons), but
- * generic errors (including plain `Error("invalid_value")` thrown
- * from builder-injected default sanitizers) are translated into a
- * uniform `invalid_value` failure. Callbacks therefore stay free to
- * throw vanilla errors without importing the package-internal error
- * class.
+ * Thin wrapper that translates thrown meta errors into the RPC
+ * handler's CONFLICT envelope. Pipeline rejections ship their
+ * `{ path, message }` list under `data.errors` (with `key` pointing
+ * at the first error's top-level field for legacy consumers); the
+ * fail-fast `MetaSanitizationError` reasons keep their existing
+ * `data.reason`/`data.key` shape.
  */
-function runSanitize(
-  sanitize: (value: unknown) => unknown,
-  key: string,
-  value: unknown,
-): unknown {
-  try {
-    return sanitize(value);
-  } catch (error) {
-    if (error instanceof MetaSanitizationError) throw error;
-    // Buggy sanitize callbacks otherwise round to a generic
-    // `invalid_value` envelope, which is fine for the editor's UX
-    // but loses the underlying stack. Log it before translating so
-    // server logs preserve the diagnostic trail.
-    console.error(
-      `[plumix] sanitize callback for meta key ${JSON.stringify(key)} threw:`,
-      error,
-    );
-    throw MetaSanitizationError.invalidValue({ key });
-  }
-}
-
-/**
- * Thin wrapper that translates a thrown `MetaSanitizationError` into
- * the RPC handler's CONFLICT envelope.
- */
-export function sanitizeMetaForRpc(
+export async function sanitizeMetaForRpc(
   findField: (key: string) => MetaBoxField | undefined,
   input: MetaMap | undefined,
   errors: RpcErrorsForMeta,
-): MetaPatch | null {
+): Promise<MetaPatch | null> {
   try {
-    return sanitizeMetaInput(findField, input);
+    return await sanitizeMetaInput(findField, input);
   } catch (error) {
+    if (error instanceof MetaValidationError) {
+      throw errors.CONFLICT({
+        data: {
+          reason: "meta_invalid_value",
+          key: error.errors[0]?.path.split(".")[0],
+          errors: [...error.errors],
+        },
+      });
+    }
     if (error instanceof MetaSanitizationError) {
       throw errors.CONFLICT({
         data: { reason: `meta_${error.reason}`, key: error.key },
@@ -284,22 +299,10 @@ export async function validateMetaReferences(
   }
 }
 
-interface RepeaterFieldShape {
-  readonly inputType: "repeater";
-  readonly subFields: readonly MetaBoxField[];
-}
-
-function isRepeaterField(
-  field: MetaBoxField | undefined,
-): field is MetaBoxField & RepeaterFieldShape {
-  if (!field) return false;
-  return (field as { readonly inputType?: unknown }).inputType === "repeater";
-}
-
 function collectRepeaterReferences(
   ctx: AppContext,
   topKey: string,
-  field: MetaBoxField & RepeaterFieldShape,
+  field: RepeaterMetaBoxField,
   rows: readonly unknown[],
   groups: Map<string, ReferenceGroup>,
 ): void {
@@ -517,7 +520,16 @@ export async function validateMetaReferencesForRpc(
   } catch (error) {
     if (error instanceof MetaSanitizationError) {
       throw errors.CONFLICT({
-        data: { reason: `meta_${error.reason}`, key: error.key },
+        data: {
+          reason: `meta_${error.reason}`,
+          key: error.key,
+          // Reference failures address the top-level field (row/subKey
+          // detail stays in the server log) — shipping them under
+          // `errors` too lets the admin form surface them inline.
+          errors: [
+            { path: error.key, message: META_FIELD_MESSAGES.invalidOption },
+          ],
+        },
       });
     }
     throw error;
@@ -800,43 +812,16 @@ function isTemporalField(field: MetaBoxField): field is TemporalMetaBoxField {
 // combination (decode runs server-side, often UTC on Workers, while
 // the admin formats in the viewer's browser). Consumers read the
 // parts back with `getUTC*` or `timeZone: "UTC"` formatting; the
-// projection is the exact inverse of `encodeTemporalDate`.
-// Unparseable stored values round to "no value", matching the
-// forgiving-read posture of `coerceOnRead`.
+// projection is the exact inverse of the write-side `Date` encoding
+// (`formatTemporalValue`). Unparseable stored values round to "no
+// value", matching the forgiving-read posture of `coerceOnRead`.
 function projectTemporalDate(
   inputType: TemporalInputType,
   value: unknown,
 ): Date | undefined {
   if (typeof value !== "string" || value === "") return undefined;
-  let candidate: string;
-  switch (inputType) {
-    case "date":
-      candidate = `${value}T00:00Z`;
-      break;
-    case "datetime":
-      candidate = `${value}Z`;
-      break;
-    case "time":
-      candidate = `1970-01-01T${value}Z`;
-      break;
-  }
-  const parsed = new Date(candidate);
+  const parsed = new Date(anchorTemporalUtc(inputType, value));
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-}
-
-// Write-side inverse of `projectTemporalDate`: a `Date` arriving for a
-// temporal field encodes to the field's stored ISO shape from UTC
-// components (`formatTemporalValue`), so the stored wall-clock is
-// deployment-timezone invariant.
-function encodeTemporalDate(
-  inputType: TemporalInputType,
-  key: string,
-  value: Date,
-): string {
-  if (Number.isNaN(value.getTime())) {
-    throw MetaSanitizationError.invalidValue({ key });
-  }
-  return formatTemporalValue(inputType, value);
 }
 
 function healReferenceValue(target: ReferenceTarget, value: unknown): unknown {
@@ -852,10 +837,7 @@ function healReferenceValue(target: ReferenceTarget, value: unknown): unknown {
   return extractStringId(value) ?? value;
 }
 
-function healRepeaterRow(
-  field: MetaBoxField & RepeaterFieldShape,
-  row: unknown,
-): unknown {
+function healRepeaterRow(field: RepeaterMetaBoxField, row: unknown): unknown {
   if (!row || typeof row !== "object" || Array.isArray(row)) return row;
   const rowObj = row as Record<string, unknown>;
   let healed: Record<string, unknown> | null = null;
@@ -938,71 +920,6 @@ export async function loadMeta<TTable extends { meta: SQLiteColumn }>(
 }
 
 // --- internals below ---------------------------------------------------
-
-function coerceToType(
-  type: MetaScalarType,
-  key: string,
-  value: unknown,
-): unknown {
-  switch (type) {
-    case "string":
-      return coerceString(key, value);
-    case "number":
-      return coerceNumber(key, value);
-    case "boolean":
-      return coerceBoolean(key, value);
-    case "json":
-      return coerceJson(key, value);
-  }
-}
-
-function coerceString(key: string, value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  if (typeof value === "boolean") return String(value);
-  throw MetaSanitizationError.invalidValue({ key });
-}
-
-function coerceNumber(key: string, value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    // Empty string comes from cleared form inputs; the admin dispatcher
-    // already sends `null` for those, but a direct RPC caller might send
-    // "" — reject here so we don't silently coerce to 0 (`Number("") === 0`).
-    if (value.trim() === "") {
-      throw MetaSanitizationError.invalidValue({ key });
-    }
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  if (typeof value === "boolean") return value ? 1 : 0;
-  throw MetaSanitizationError.invalidValue({ key });
-}
-
-function coerceBoolean(key: string, value: unknown): boolean {
-  if (typeof value === "boolean") return value;
-  if (value === 1 || value === "1" || value === "true") return true;
-  if (value === 0 || value === "0" || value === "false") return false;
-  throw MetaSanitizationError.invalidValue({ key });
-}
-
-function coerceJson(key: string, value: unknown): unknown {
-  // json keys take anything round-trippable through JSON.stringify —
-  // we reject values that throw (BigInt) or silently drop (functions,
-  // Symbols) so reads don't hand back `undefined` for something a
-  // plugin thought it stored. TS types JSON.stringify as always-
-  // string, but at runtime it returns `undefined` for unserializable
-  // inputs — hence the cast.
-  try {
-    const encoded = JSON.stringify(value) as string | undefined;
-    if (encoded === undefined) {
-      throw MetaSanitizationError.invalidValue({ key });
-    }
-    return JSON.parse(encoded);
-  } catch {
-    throw MetaSanitizationError.invalidValue({ key });
-  }
-}
 
 function assertEncodedSize(key: string, value: unknown): void {
   const encoded = JSON.stringify(value) as string | undefined;

@@ -263,15 +263,10 @@ export class SelectFieldBuilder<
     ? MultiSelectMetaBoxField
     : SingleSelectMetaBoxField {
     const { multiple, ...state } = this.#state;
-    // Multi-value fields keep multiselect's default option-membership
-    // sanitizer (reject out-of-list values, de-dupe) unless the chain
-    // supplied its own transform.
-    const sanitize =
-      state.sanitize ??
-      (multiple ? buildOptionSanitizer(state.options) : undefined);
+    // Option membership, de-dupe, and `.max()` selection counts are
+    // enforced server-side by the constraint walker.
     const common = {
       ...state,
-      ...(sanitize ? { sanitize } : {}),
       key: this.#key,
       label: state.label ?? humanizeFieldKey(this.#key),
       inputType: "select",
@@ -286,25 +281,6 @@ export class SelectFieldBuilder<
       ? MultiSelectMetaBoxField
       : SingleSelectMetaBoxField;
   }
-}
-
-function buildOptionSanitizer(
-  optionList: readonly MetaBoxFieldOption[],
-): (value: unknown) => readonly string[] {
-  const allowed = new Set(optionList.map((opt) => opt.value));
-  return (value) => {
-    // eslint-disable-next-line no-restricted-syntax -- sanitizer flow-control sentinel; migrated in the field-sanitizer-error slice
-    if (!Array.isArray(value)) throw new Error("invalid_value");
-    const seen = new Set<string>();
-    for (const item of value) {
-      if (typeof item !== "string" || !allowed.has(item)) {
-        // eslint-disable-next-line no-restricted-syntax -- sanitizer flow-control sentinel; migrated in the field-sanitizer-error slice
-        throw new Error("invalid_value");
-      }
-      seen.add(item);
-    }
-    return [...seen];
-  };
 }
 
 /**

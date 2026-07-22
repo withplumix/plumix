@@ -1,3 +1,4 @@
+import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -28,6 +29,7 @@ import {
   namedTemplatesForType,
   visibleTermTaxonomies,
 } from "@/lib/manifest.js";
+import { extractMetaFieldErrors } from "@/lib/meta-field-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { getRegisteredBlocks } from "@/lib/plugin-registry.js";
 import { buildEditorTermOptions } from "@/lib/terms.js";
@@ -282,6 +284,11 @@ function EntryEditor({
   // Latches once an autosave genuinely fails so the author is told exactly once
   // (not on every debounce tick); cleared on the next successful save.
   const autosaveFailedRef = useRef(false);
+  // Path-addressed meta rejections from the last failed autosave —
+  // rendered inline on the document panel's metabox inputs.
+  const [metaFieldErrors, setMetaFieldErrors] = useState<
+    readonly MetaFieldServerError[] | null
+  >(null);
   const seedContent = isEntryContent(entry.content)
     ? entry.content
     : defineEntryContent([]);
@@ -354,6 +361,9 @@ function EntryEditor({
         if (outcome.updatedAt) liveUpdatedAtRef.current = outcome.updatedAt;
         return;
       }
+      // Meta constraint rejections carry field paths — pin them onto
+      // the document panel's inputs alongside the one-time toast.
+      setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
       if (!autosaveFailedRef.current) {
         autosaveFailedRef.current = true;
         toastError(renderLabel(M.autosaveFailed));
@@ -407,6 +417,7 @@ function EntryEditor({
           if (metaChanged) lastSavedMetaRef.current = serializedMeta;
           if (templateChanged) lastSavedTemplateRef.current = nextTemplate;
           autosaveFailedRef.current = false;
+          setMetaFieldErrors(null);
         } catch (err) {
           await handleAutosaveError(err);
         }
@@ -645,6 +656,7 @@ function EntryEditor({
                 boxes: metaBoxes,
                 initialMeta: entry.meta,
                 onMetaChange: handleMetaChange,
+                fieldErrors: metaFieldErrors,
               }
             : undefined
         }
@@ -667,6 +679,7 @@ function EntryEditor({
       metaBoxes,
       entry.meta,
       handleMetaChange,
+      metaFieldErrors,
     ],
   );
 

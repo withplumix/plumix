@@ -111,6 +111,21 @@ describe("date() builder", () => {
       .toEqualTypeOf<string>();
     expectTypeOf(date("d")).not.toHaveProperty("step");
   });
+
+  test("rejects malformed bounds at registration time", () => {
+    // A typo'd bound would otherwise silently reject every value —
+    // ISO shapes compare lexicographically, so "March 1" beats any
+    // "2026-…" string. Newly load-bearing now that the walker
+    // enforces bounds server-side.
+    expect(() => date("d").min("March 1").build()).toThrowError(
+      /temporal bound/,
+    );
+    expect(() => date("d").max("2026-13-45").build()).toThrowError(
+      /temporal bound/,
+    );
+    expect(() => time("t").min("25:99").build()).toThrowError(/temporal bound/);
+    expect(() => date("d").min("2026-01-01").build()).not.toThrow();
+  });
 });
 
 describe("datetime() builder", () => {
@@ -198,29 +213,17 @@ describe('.returns("date") on temporal builders', () => {
 });
 
 describe("color() builder", () => {
-  test("compiles with a derived label and a default hex sanitizer", () => {
+  test("compiles with a derived label and no injected sanitizer", () => {
+    // Hex enforcement + lowercasing live in the constraint walker
+    // (field-pipeline suite), not in a builder-injected sanitize.
     const field = color("brandColor").build();
     expect(field.inputType).toBe("color");
     expect(field.type).toBe("string");
     expect(field.label).toBe("Brand color");
-    expect(field.sanitize).toBeTypeOf("function");
+    expect(field.sanitize).toBeUndefined();
   });
 
-  test("default sanitizer accepts hex shorthand and full form, lowercases", () => {
-    const field = color("brand").build();
-    expect(field.sanitize?.("#FFA500")).toBe("#ffa500");
-    expect(field.sanitize?.("#abc")).toBe("#abc");
-  });
-
-  test("default sanitizer rejects non-hex values", () => {
-    const field = color("brand").build();
-    expect(() => field.sanitize?.("not-a-color")).toThrow();
-    expect(() => field.sanitize?.("#xyz123")).toThrow();
-    expect(() => field.sanitize?.(123)).toThrow();
-    expect(() => field.sanitize?.(null)).toThrow();
-  });
-
-  test("custom .sanitize() replaces the default", () => {
+  test("a custom .sanitize() is carried as-is", () => {
     const custom = (v: string): string => v;
     const field = color("brand").sanitize(custom).build();
     expect(field.sanitize).toBe(custom);
@@ -280,16 +283,16 @@ describe("range() builder", () => {
     );
   });
 
-  test("default sanitizer enforces bounds and rejects NaN", () => {
+  test("carries bounds on the definition with no injected sanitizer", () => {
+    // Bounds are enforced by the constraint walker (field-pipeline
+    // suite); the definition just declares them.
     const field = range("r").min(0).max(100).build();
-    expect(field.sanitize?.(50)).toBe(50);
-    expect(() => field.sanitize?.(-1)).toThrow();
-    expect(() => field.sanitize?.(101)).toThrow();
-    expect(() => field.sanitize?.(Number.NaN)).toThrow();
-    expect(() => field.sanitize?.("50")).toThrow();
+    expect(field.min).toBe(0);
+    expect(field.max).toBe(100);
+    expect(field.sanitize).toBeUndefined();
   });
 
-  test("custom .sanitize() replaces the default bounds sanitizer", () => {
+  test("a custom .sanitize() is carried as-is", () => {
     const custom = (v: number): number => v;
     const field = range("r").min(0).max(10).sanitize(custom).build();
     expect(field.sanitize).toBe(custom);
@@ -800,21 +803,12 @@ describe("richtext() builder", () => {
     expect(field.blocks).toBeUndefined();
   });
 
-  test("always injects the allowlist-walking sanitizer", () => {
+  test("carries the allowlists with no injected sanitizer", () => {
+    // Allowlist enforcement moved to the constraint walker
+    // (field-pipeline suite) — the definition just declares them.
     const field = richtext("body").marks(["bold"]).build();
-    expect(field.sanitize).toBeTypeOf("function");
-    // A doc using a disallowed mark is rejected by the injected walker.
-    expect(() =>
-      field.sanitize?.({
-        type: "doc",
-        content: [
-          {
-            type: "paragraph",
-            content: [{ type: "text", text: "x", marks: [{ type: "italic" }] }],
-          },
-        ],
-      }),
-    ).toThrow();
+    expect(field.marks).toEqual(["bold"]);
+    expect(field.sanitize).toBeUndefined();
   });
 
   test("rejects non-applicable chains at the type level", () => {

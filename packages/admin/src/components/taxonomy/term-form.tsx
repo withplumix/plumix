@@ -1,6 +1,11 @@
+import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { MetaBoxCard } from "@/components/meta-box/meta-box.js";
+import {
+  META_FORM_BASE_PATH,
+  useApplyMetaFieldErrors,
+} from "@/lib/meta-field-errors.js";
 import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
@@ -97,6 +102,7 @@ export function TermForm({
   parentOptions,
   isSubmitting,
   serverError,
+  serverFieldErrors,
   submitLabel,
   metaBoxes,
   onSubmit,
@@ -109,6 +115,9 @@ export function TermForm({
   /** Server-side error. Pass a localized descriptor (`Label`) or a raw
    *  `err.message` string; resolved through `useLabel()` at render. */
   readonly serverError: Label | null;
+  /** Path-addressed meta write rejections from the server — pinned
+   *  onto the addressed inputs inline (`meta.<path>`). */
+  readonly serverFieldErrors?: readonly MetaFieldServerError[] | null;
   /** Submit-button copy when not pending. Caller picks "Create" vs
    *  "Save changes" and passes a localized `Label`. */
   readonly submitLabel: Label;
@@ -125,6 +134,7 @@ export function TermForm({
     resolver: valibotResolver(termFormSchema),
     defaultValues: initialValues,
   });
+  useApplyMetaFieldErrors(form, META_FORM_BASE_PATH, serverFieldErrors);
 
   const handleSubmit = form.handleSubmit((value) => {
     onSubmit(value);
