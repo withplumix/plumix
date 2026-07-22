@@ -276,6 +276,13 @@ export interface AppContextBase<
    */
   readonly resHeaders?: Headers;
   /**
+   * Unique id for this execution (request or cron run), minted at context
+   * creation so mid-request consumers — logs, error hooks, the debug bar —
+   * and the post-response telemetry snapshot all correlate on one value.
+   * The snapshot envelope's `requestId` is this id.
+   */
+  readonly requestId: string;
+  /**
    * Set by the public-route resolver after URL → entity matching;
    * `null` for non-public routes (admin, RPC, etc.) and on cold-start.
    * Consumers (breadcrumbs, canonical tags, menu plugin's `isCurrent`)
@@ -284,6 +291,13 @@ export interface AppContextBase<
    * and response rendering, and read paths see the populated value.
    */
   resolvedEntity: ResolvedEntity | null;
+  /**
+   * The template rule that won resolution (its `ruleLabel`), written by the
+   * theme renderer once a rule matches; `null` before render and on paths
+   * that never render a template. Same write-once-mutable design as
+   * `resolvedEntity` — the resolve phase span reads it back post-render.
+   */
+  resolvedTemplate: string | null;
 }
 
 export type AppContext<TSchema extends Record<string, unknown> = CoreSchema> =
@@ -437,7 +451,9 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     oauthProviders: args.oauthProviders ?? [],
     authenticator: args.authenticator ?? defaultAuthenticator(),
     bootstrapAllowed: args.bootstrapAllowed ?? false,
+    requestId: crypto.randomUUID(),
     resolvedEntity: null,
+    resolvedTemplate: null,
     // Best-effort fallback for tests / runtimes that don't pass an
     // explicit origin: derive from the inbound request URL. Production
     // always passes the canonical operator-set origin so URLs in

@@ -1,4 +1,4 @@
-import type { Db } from "../context/app.js";
+import type { AppContext, Db } from "../context/app.js";
 import type { User } from "../db/schema/users.js";
 import { validateApiToken } from "./api-tokens.js";
 import { readSessionCookie } from "./cookies.js";
@@ -105,6 +105,24 @@ export function sessionAuthenticator(): RequestAuthenticator {
       return readSessionCookie(request) !== null;
     },
   };
+}
+
+/**
+ * Run an authenticator inside an `auth` telemetry span, so session/token
+ * resolution shows up in the request's span tree with its outcome. The
+ * single traced entry point for every auth choke point — public render,
+ * admin shell, RPC middleware, and the bearer surfaces (MCP, REST).
+ */
+export function authenticateTraced(
+  ctx: AppContext,
+  authenticator: RequestAuthenticator,
+): Promise<AuthResult | null> {
+  return ctx.telemetry.span("auth", async (s) => {
+    const result = await authenticator.authenticate(ctx.request, ctx.db);
+    s.set("auth.authenticated", result !== null);
+    if (result) s.set("auth.user.id", result.user.id);
+    return result;
+  });
 }
 
 /**

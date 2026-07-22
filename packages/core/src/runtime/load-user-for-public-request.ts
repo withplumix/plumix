@@ -1,5 +1,8 @@
 import type { AppContext } from "../context/app.js";
-import { requestHasSession } from "../auth/authenticator.js";
+import {
+  authenticateTraced,
+  requestHasSession,
+} from "../auth/authenticator.js";
 import { withUser } from "../context/app.js";
 
 export async function loadUserForPublicRequest(
@@ -11,7 +14,7 @@ export async function loadUserForPublicRequest(
   if (!requestHasSession(ctx.authenticator, ctx.request)) {
     return ctx;
   }
-  const result = await ctx.authenticator.authenticate(ctx.request, ctx.db);
+  const result = await authenticateTraced(ctx, ctx.authenticator);
   if (result === null) {
     return ctx;
   }

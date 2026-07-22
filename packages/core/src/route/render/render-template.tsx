@@ -92,10 +92,13 @@ interface RenderArgs {
  * declares no matching tier and no `fallback` — the caller then renders 404.
  */
 export function renderThroughTheme(args: RenderArgs): Promise<string | null> {
-  // Dev-only: time the render phase for the Timeline. `ctx.telemetry` is the no-op
-  // collector in prod, so span() is a pass-through and this tree-shakes to a
-  // plain call.
-  return args.ctx.telemetry.span("render", () => renderThroughThemeInner(args));
+  // The render phase span. With no consumer sampled, `ctx.telemetry` is the
+  // no-op collector: span() is a pass-through and the lazy label thunk is
+  // never evaluated.
+  return args.ctx.telemetry.span("render", (s) => {
+    s.set("render.node", () => templateNodeLabel(args.node));
+    return renderThroughThemeInner(args);
+  });
 }
 
 async function renderThroughThemeInner({
@@ -128,7 +131,9 @@ async function renderThroughThemeInner({
     return result;
   });
   if (matched === undefined) return null;
-  const template = normalizeTemplate(matched.template, ruleLabel(matched));
+  const matchedLabel = ruleLabel(matched);
+  ctx.resolvedTemplate = matchedLabel;
+  const template = normalizeTemplate(matched.template, matchedLabel);
   const deps = await loadTemplateDeps(
     mergeTemplateDepDeclarations(
       theme,

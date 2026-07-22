@@ -1,3 +1,4 @@
+import type { TelemetryCollector } from "../context/telemetry.js";
 import type {
   ActionArgs,
   ActionFn,
@@ -8,7 +9,8 @@ import type {
   FilterRest,
   HookOptions,
 } from "./types.js";
-import { hookStore } from "../context/stores.js";
+import { hookStore, tryGetContext } from "../context/stores.js";
+import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { HookExecutionError } from "./errors.js";
 import { DEFAULT_HOOK_PRIORITY } from "./types.js";
 
@@ -143,12 +145,13 @@ export class HookRegistry implements HookExecutor {
     if (!entries || entries.length === 0) return input;
 
     const sorted = sortEntries(entries);
+    const telemetry = requestTelemetry();
     let current: unknown = input;
     for (const entry of sorted) {
       // structuredClone isolates each filter — mutations inside one filter
       // can't leak into the next. Clone cost is negligible vs. hook work.
       const snapshot = structuredClone(current);
-      current = await hookStore.run({ hook: name, plugin: entry.plugin }, () =>
+      current = await runHandlerTraced(telemetry, name, entry.plugin, () =>
         entry.fn(snapshot, ...(rest as unknown[])),
       );
     }
@@ -227,8 +230,9 @@ export class HookRegistry implements HookExecutor {
     if (!entries || entries.length === 0) return;
 
     const sorted = sortEntries(entries);
+    const telemetry = requestTelemetry();
     const invocations = sorted.map((entry) =>
-      hookStore.run({ hook: name, plugin: entry.plugin }, () =>
+      runHandlerTraced(telemetry, name, entry.plugin, () =>
         Promise.resolve().then(() => entry.fn(...(args as unknown[]))),
       ),
     );
@@ -248,6 +252,28 @@ export class HookRegistry implements HookExecutor {
       }
     }
   }
+}
+
+// The registry is app-scoped while telemetry is request-scoped; the request
+// context store bridges the two. Outside a request (build time, tests calling
+// hooks directly) the no-op collector applies and handlers run untraced.
+function requestTelemetry(): TelemetryCollector {
+  return tryGetContext()?.telemetry ?? NOOP_TELEMETRY;
+}
+
+// One handler execution = one `hook:` span wrapping the existing hookStore
+// frame — shared by the traced pipelines (applyFilter, doAction).
+function runHandlerTraced<T>(
+  telemetry: TelemetryCollector,
+  name: string,
+  plugin: string | null,
+  fn: () => T,
+): T {
+  return telemetry.span(`hook: ${name}`, (s) => {
+    s.set("hook.name", name);
+    s.set("hook.plugin", plugin);
+    return hookStore.run({ hook: name, plugin }, fn);
+  });
 }
 
 function isPromiseLike(value: unknown): value is PromiseLike<unknown> {

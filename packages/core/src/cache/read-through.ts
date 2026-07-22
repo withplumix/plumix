@@ -1,8 +1,9 @@
 import type { DeferFn } from "../context/app.js";
+import type { TelemetryCollector } from "../context/telemetry.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { ConnectedCache } from "../runtime/slots.js";
 import {
-  requestIsCacheable,
+  cacheBypassReason,
   requestIsPrivileged,
   responseIsStorable,
 } from "./decision.js";
@@ -16,6 +17,8 @@ interface ReadThroughArgs {
   readonly intentKind: RouteIntent["kind"] | null;
   readonly cache: ConnectedCache;
   readonly defer: DeferFn;
+  /** Records the cache decision + reason as a durationless `cache` fact. */
+  readonly telemetry: TelemetryCollector;
   /** Renders the page live. Called once on a miss, never on a hit. */
   readonly render: () => Promise<Response>;
   /**
@@ -33,24 +36,31 @@ interface ReadThroughArgs {
  * and touch the cache not at all.
  */
 export async function readThrough(args: ReadThroughArgs): Promise<Response> {
-  const { request, intentKind, cache, defer, render, tags } = args;
+  const { request, intentKind, cache, defer, telemetry, render, tags } = args;
 
-  if (
-    intentKind === null ||
-    !requestIsCacheable({
-      method: request.method,
-      isPrivileged: requestIsPrivileged(request),
-      intentKind,
-    })
-  ) {
+  const reason =
+    intentKind === null
+      ? "no-route"
+      : cacheBypassReason({
+          method: request.method,
+          isPrivileged: requestIsPrivileged(request),
+          intentKind,
+        });
+  if (reason !== null) {
+    telemetry.record("cache", { decision: "bypass", reason });
     return render();
   }
 
   const hit = await cache.match(request);
-  if (hit) return hit;
+  if (hit) {
+    telemetry.record("cache", { decision: "hit" });
+    return hit;
+  }
 
   const fresh = await render();
-  if (responseIsStorable(request.method, fresh.status)) {
+  const stored = responseIsStorable(request.method, fresh.status);
+  telemetry.record("cache", { decision: "miss", stored });
+  if (stored) {
     defer(cache.put(request, fresh.clone(), tags()));
   }
   return fresh;

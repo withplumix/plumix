@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { AuthResult } from "../auth/authenticator.js";
 import type { AppContext, AuthenticatedUser } from "../context/app.js";
+import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
@@ -22,6 +23,7 @@ describe("loadUserForPublicRequest", () => {
     const ctx = {
       request: new Request("https://example.com/"),
       user: null,
+      telemetry: NOOP_TELEMETRY,
       authenticator: { authenticate },
     } as unknown as AppContext;
 
@@ -41,6 +43,7 @@ describe("loadUserForPublicRequest", () => {
       user: null,
       plugins: createPluginRegistry(),
       i18n,
+      telemetry: NOOP_TELEMETRY,
       authenticator: { authenticate },
     } as unknown as AppContext;
 
@@ -64,6 +67,7 @@ describe("loadUserForPublicRequest", () => {
       user: null,
       plugins: createPluginRegistry(),
       i18n,
+      telemetry: NOOP_TELEMETRY,
       authenticator: { authenticate },
     } as unknown as AppContext;
 
@@ -91,6 +95,7 @@ describe("loadUserForPublicRequest", () => {
       user: null,
       plugins: createPluginRegistry(),
       i18n,
+      telemetry: NOOP_TELEMETRY,
       authenticator: {
         authenticate,
         hasSession: (request: Request) =>
@@ -111,6 +116,7 @@ describe("loadUserForPublicRequest", () => {
         headers: { Cookie: "plumix_demo=session-token" },
       }),
       user: null,
+      telemetry: NOOP_TELEMETRY,
       authenticator: {
         authenticate,
         hasSession: () => false,

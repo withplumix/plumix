@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import { definePlugin } from "../plugin/define.js";
@@ -419,5 +420,33 @@ describe("MCP endpoint — term tools", () => {
     expect(rows).toContainEqual(
       expect.objectContaining({ name: "category", isHierarchical: true }),
     );
+  });
+});
+
+describe("MCP endpoint — telemetry", () => {
+  test("a tools/call produces an mcp span plus the bearer auth span in the snapshot", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const h = await mcpHarness({
+      plugins: [blog],
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    const secret = await mintPat(h);
+
+    await callTool(h, secret, 1, "schema_describe", {});
+    await h.drainDeferred();
+
+    const [snapshot] = snapshots;
+    const flatten = (spans: readonly TelemetrySpan[]): TelemetrySpan[] =>
+      spans.flatMap((span) => [span, ...flatten(span.children)]);
+    const spans = flatten(snapshot?.spans ?? []);
+    const tool = spans.find((s) => s.name === "mcp: schema_describe");
+    expect(tool?.status).toBe("ok");
+    expect(tool?.attributes).toEqual({ "mcp.tool": "schema_describe" });
+    const auth = spans.find((s) => s.name === "auth");
+    expect(auth?.attributes["auth.authenticated"]).toBe(true);
   });
 });

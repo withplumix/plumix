@@ -21,5 +21,17 @@ export function buildRpcHandler(
   }
   return new RPCHandler(mergedRouter as unknown as typeof appRouter, {
     plugins: [new ResponseHeadersPlugin()],
+    // One span per matched procedure — plugin routers included, since they
+    // merge into this handler. Middleware (auth) runs inside the call, so its
+    // spans nest under the procedure's.
+    clientInterceptors: [
+      (options) => {
+        const procedure = options.path.join(".");
+        return options.context.telemetry.span(`rpc: ${procedure}`, (s) => {
+          s.set("rpc.procedure", procedure);
+          return options.next();
+        });
+      },
+    ],
   });
 }

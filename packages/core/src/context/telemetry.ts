@@ -91,6 +91,8 @@ export interface TelemetryCollector {
 
 /**
  * The finished request's identity and outcome, as a consumer sees it.
+ * `requestId` is `ctx.requestId`, minted at context creation — mid-request
+ * reads (logs, error hooks) correlate with the snapshot on the same value.
  * `startedAt`/`durationMs` span the dispatch of the request — context
  * creation and the sampling vote happen just before the clock starts.
  * @public consumer-facing (imported by exporters, not core)
