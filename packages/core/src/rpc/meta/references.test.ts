@@ -59,7 +59,9 @@ describe("validateMetaReferences", () => {
     });
     const target = await userFactory.transient({ db: h.context.db }).create();
 
-    const patch = sanitizeMetaInput(findField, { owner: String(target.id) });
+    const patch = await sanitizeMetaInput(findField, {
+      owner: String(target.id),
+    });
     if (!patch) throw new Error("patch should not be null");
 
     await expect(
@@ -70,7 +72,7 @@ describe("validateMetaReferences", () => {
   test("rejects upserts with non-existent reference targets", async () => {
     const { findField, registry } = registryWithUserRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, { owner: "999999" });
+    const patch = await sanitizeMetaInput(findField, { owner: "999999" });
     if (!patch) throw new Error("patch should not be null");
 
     await expect(
@@ -86,7 +88,9 @@ describe("validateMetaReferences", () => {
     const author = await userFactory
       .transient({ db: h.context.db })
       .create({ role: "author" });
-    const patch = sanitizeMetaInput(findField, { owner: String(author.id) });
+    const patch = await sanitizeMetaInput(findField, {
+      owner: String(author.id),
+    });
     if (!patch) throw new Error("patch should not be null");
 
     await expect(
@@ -99,7 +103,7 @@ describe("validateMetaReferences", () => {
       referenceTarget: { kind: "nonexistent-kind" },
     });
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, { owner: "1" });
+    const patch = await sanitizeMetaInput(findField, { owner: "1" });
     if (!patch) throw new Error("patch should not be null");
 
     await expect(
@@ -325,7 +329,7 @@ describe("validateMetaReferences (multi)", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const a = await userFactory.transient({ db: h.context.db }).create();
     const b = await userFactory.transient({ db: h.context.db }).create();
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       owners: [String(a.id), String(b.id)],
     });
     if (!patch) throw new Error("patch should not be null");
@@ -338,7 +342,7 @@ describe("validateMetaReferences (multi)", () => {
     const { registry, findField } = registryWithUserListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const a = await userFactory.transient({ db: h.context.db }).create();
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       owners: [String(a.id), "999999"],
     });
     if (!patch) throw new Error("patch should not be null");
@@ -350,7 +354,7 @@ describe("validateMetaReferences (multi)", () => {
   test("rejects a non-array value for a multi field", async () => {
     const { registry, findField } = registryWithUserListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, { owners: "1" });
+    const patch = await sanitizeMetaInput(findField, { owners: "1" });
     if (!patch) throw new Error("patch should not be null");
     await expect(
       validateMetaReferences(h.context, findField, patch),
@@ -360,7 +364,7 @@ describe("validateMetaReferences (multi)", () => {
   test("rejects an array containing non-string entries", async () => {
     const { registry, findField } = registryWithUserListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       owners: ["1", 2 as unknown as string],
     });
     if (!patch) throw new Error("patch should not be null");
@@ -374,7 +378,7 @@ describe("validateMetaReferences (multi)", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const a = await userFactory.transient({ db: h.context.db }).create();
     const b = await userFactory.transient({ db: h.context.db }).create();
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       owners: [String(a.id), String(b.id)],
     });
     if (!patch) throw new Error("patch should not be null");
@@ -386,7 +390,7 @@ describe("validateMetaReferences (multi)", () => {
   test("accepts an empty array", async () => {
     const { registry, findField } = registryWithUserListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, { owners: [] });
+    const patch = await sanitizeMetaInput(findField, { owners: [] });
     if (!patch) throw new Error("patch should not be null");
     await expect(
       validateMetaReferences(h.context, findField, patch),
@@ -442,7 +446,7 @@ describe("validateMetaReferences (multi)", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const owner = await userFactory.transient({ db: h.context.db }).create();
     const reviewer = await userFactory.transient({ db: h.context.db }).create();
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       owner: String(owner.id),
       reviewer: String(reviewer.id),
     });
@@ -463,7 +467,7 @@ describe("validateMetaReferences (multi)", () => {
     const { registry, findField } = registryWithUserListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const oversized = Array.from({ length: 101 }, (_, i) => String(i + 1));
-    const patch = sanitizeMetaInput(findField, { owners: oversized });
+    const patch = await sanitizeMetaInput(findField, { owners: oversized });
     if (!patch) throw new Error("patch should not be null");
     await expect(
       validateMetaReferences(h.context, findField, patch),
@@ -575,7 +579,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     const b = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "post" });
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       related: [String(a.id), String(b.id)],
     });
     if (!patch) throw new Error("patch should not be null");
@@ -593,7 +597,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     const page = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "page" });
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       related: [String(post.id), String(page.id)],
     });
     if (!patch) throw new Error("patch should not be null");
@@ -611,7 +615,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     const b = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "post" });
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       related: [String(a.id), String(b.id)],
     });
     if (!patch) throw new Error("patch should not be null");
@@ -643,7 +647,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const a = await categoryTerm.transient({ db: h.context.db }).create();
     const b = await categoryTerm.transient({ db: h.context.db }).create();
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       tags: [String(a.id), String(b.id)],
     });
     if (!patch) throw new Error("patch should not be null");
@@ -657,7 +661,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const cat = await categoryTerm.transient({ db: h.context.db }).create();
     const tag = await tagTerm.transient({ db: h.context.db }).create();
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       tags: [String(cat.id), String(tag.id)],
     });
     if (!patch) throw new Error("patch should not be null");
@@ -683,7 +687,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const a = await categoryTerm.transient({ db: h.context.db }).create();
     const b = await categoryTerm.transient({ db: h.context.db }).create();
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       tags: [String(a.id), String(b.id)],
     });
     if (!patch) throw new Error("patch should not be null");
@@ -762,7 +766,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     const e1 = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "post" });
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       owners: [String(u1.id), String(u2.id)],
       related: [String(e1.id)],
     });
@@ -781,20 +785,20 @@ describe("entryList / termList multi-reference pipeline", () => {
 // validator extracts the id and persists the plain form, so old
 // values self-heal on the entity's next save.
 describe("sanitizeMetaInput (hydrated-value healing)", () => {
-  test("a hydrated single-reference object heals to its plain id", () => {
+  test("a hydrated single-reference object heals to its plain id", async () => {
     // Hydrated reads round-trip through the admin form untouched —
     // the write must accept the `{ id, ... }` payload and persist the
     // plain id, or editing any other field on the entry breaks.
     const { findField } = registryWithUserRef();
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       owner: { id: "42", name: "Eva", slug: "eva", avatarUrl: null },
     });
     expect(patch?.upserts.get("owner")).toBe("42");
   });
 
-  test("a hydrated multi-reference array heals to plain ids", () => {
+  test("a hydrated multi-reference array heals to plain ids", async () => {
     const { findField } = registryWithUserListRef();
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       owners: [
         { id: "1", name: "A", slug: "a", avatarUrl: null },
         "2",
@@ -857,7 +861,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
   test("persists a bare-id input as the plain id", async () => {
     const { registry, findField } = registryWithStubRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, { hero: "42" });
+    const patch = await sanitizeMetaInput(findField, { hero: "42" });
     if (!patch) throw new Error("patch should not be null");
     await validateMetaReferences(h.context, findField, patch);
     expect(patch.upserts.get("hero")).toBe("42");
@@ -866,7 +870,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
   test("normalizes a legacy { id, ... } object input to the plain id", async () => {
     const { registry, findField } = registryWithStubRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       hero: { id: "42", mime: "image/jpeg", spoofed: "ignored" },
     });
     if (!patch) throw new Error("patch should not be null");
@@ -879,7 +883,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
       liveIds: new Set(),
     });
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       hero: { id: "999999" },
     });
     if (!patch) throw new Error("patch should not be null");
@@ -891,7 +895,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
   test("multi: persists an array of bare ids unchanged", async () => {
     const { registry, findField } = registryWithStubRef({ multiple: true });
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, { hero: ["42", "43"] });
+    const patch = await sanitizeMetaInput(findField, { hero: ["42", "43"] });
     if (!patch) throw new Error("patch should not be null");
     await validateMetaReferences(h.context, findField, patch);
     expect(patch.upserts.get("hero")).toEqual(["42", "43"]);
@@ -900,7 +904,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
   test("multi: normalizes legacy { id } items to plain ids, keeping order", async () => {
     const { registry, findField } = registryWithStubRef({ multiple: true });
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, {
+    const patch = await sanitizeMetaInput(findField, {
       hero: [
         { id: "42", spoofed: "ignored" },
         "43",
@@ -918,7 +922,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
       liveIds: new Set(["42"]),
     });
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, { hero: ["42", "999"] });
+    const patch = await sanitizeMetaInput(findField, { hero: ["42", "999"] });
     if (!patch) throw new Error("patch should not be null");
     await expect(
       validateMetaReferences(h.context, findField, patch),
@@ -931,7 +935,7 @@ describe("validateMetaReferences (plain-id normalization)", () => {
       max: 2,
     });
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const patch = sanitizeMetaInput(findField, { hero: ["1", "2", "3"] });
+    const patch = await sanitizeMetaInput(findField, { hero: ["1", "2", "3"] });
     if (!patch) throw new Error("patch should not be null");
     await expect(
       validateMetaReferences(h.context, findField, patch),

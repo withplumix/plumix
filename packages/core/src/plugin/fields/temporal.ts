@@ -6,7 +6,9 @@ import type {
   TemporalInputType,
   TemporalMetaBoxField,
 } from "../manifest.js";
+import { isValidTemporalValue } from "../manifest.js";
 import { humanizeFieldKey } from "./builder.js";
+import { FieldConfigError } from "./errors.js";
 
 export type { TemporalInputType } from "../manifest.js";
 
@@ -119,12 +121,12 @@ export class TemporalFieldBuilder<
     return this.#fork({ showInApi: true });
   }
 
-  /** Lower bound in the field's stored ISO shape. Applied client-side. */
+  /** Lower bound in the field's stored ISO shape, enforced by the constraint walker. */
   min(min: string): TemporalFieldBuilder<Input, K, V, S> {
     return this.#fork({ min });
   }
 
-  /** Upper bound in the field's stored ISO shape. Applied client-side. */
+  /** Upper bound in the field's stored ISO shape, enforced by the constraint walker. */
   max(max: string): TemporalFieldBuilder<Input, K, V, S> {
     return this.#fork({ max });
   }
@@ -165,6 +167,22 @@ export class TemporalFieldBuilder<
 
   /** Compile the chain into the wire/manifest field definition. */
   build(): TemporalMetaBoxField<Input> {
+    // A typo'd bound would otherwise silently reject every write —
+    // bounds compare lexicographically against the stored shape, so a
+    // malformed one sorts nonsensically. Fail loudly at registration.
+    for (const bound of ["min", "max"] as const) {
+      const value = this.#state[bound];
+      if (
+        value !== undefined &&
+        !isValidTemporalValue(this.#inputType, value)
+      ) {
+        throw FieldConfigError.temporalBoundInvalid({
+          fieldKey: this.#key,
+          bound,
+          value,
+        });
+      }
+    }
     return {
       ...this.#state,
       key: this.#key,

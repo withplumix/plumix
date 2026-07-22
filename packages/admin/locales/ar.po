@@ -923,6 +923,11 @@ msgid "metaBox.repeater.addAnother"
 msgstr "إضافة أخرى"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.minRows"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.title"
 msgstr "إضافة نطاق"
@@ -2024,6 +2029,11 @@ msgid "userInvite.email.invalid"
 msgstr "أدخل بريداً إلكترونياً صالحاً"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidEmail"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "أدخل بريداً إلكترونياً صالحاً."
@@ -2052,6 +2062,11 @@ msgstr "أدخل بريداً إلكترونياً صالحاً."
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.invalid"
 msgstr "أدخل اسم مضيف صالح (مثل example.com)."
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidUrl"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-validation-i18n.ts
@@ -2250,6 +2265,11 @@ msgstr "وراثة الدور"
 #: src/components/meta-box/meta-box-field.tsx
 msgid "metaBox.field.json.invalid"
 msgstr "JSON غير صالح"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalid"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2512,6 +2532,31 @@ msgstr "تم النقل إلى سلة المهملات."
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "جارٍ النقل…"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.min"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxLength"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.max"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.minTemporal"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxTemporal"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -3317,9 +3362,19 @@ msgid "metaBox.reference.selectIdle"
 msgstr "اختيار"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidOption"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.selectAllAria"
 msgstr "تحديد كل الإدخالات في هذه الصفحة"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxItems"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3893,6 +3948,11 @@ msgid "metaBox.pluginField.crashed"
 msgstr "تعذّر عرض هذا الحقل. تحقق من وحدة تحكم المتصفح للتفاصيل."
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.required"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.tokenExpired"
 msgstr "انتهت صلاحية رابط الدعوة. اطلب من المدير إرسال آخر."
@@ -4075,6 +4135,11 @@ msgstr "عنوان URL"
 #: src/routes/_auth/login.tsx
 msgid "login.description"
 msgstr "استخدم passkey، أو احصل على رابط برسالة لمرة واحدة، أو تابع مع مزود."
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxRows"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx

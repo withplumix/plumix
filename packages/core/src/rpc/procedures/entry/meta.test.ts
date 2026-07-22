@@ -13,7 +13,7 @@ import {
 import { createRpcHarness } from "../../../test/rpc.js";
 import {
   applyMetaPatch,
-  MetaSanitizationError,
+  MetaValidationError,
   sanitizeMetaInput,
 } from "../../meta/core.js";
 import { loadEntryMeta } from "./meta.js";
@@ -60,101 +60,103 @@ function findField(registry: MutablePluginRegistry, entryType: string) {
 }
 
 describe("sanitizeMetaInput", () => {
-  test("returns null when the input map is absent (no patch to apply)", () => {
+  test("returns null when the input map is absent (no patch to apply)", async () => {
     const registry = registryWithMeta({});
-    expect(
+    await expect(
       sanitizeMetaInput(findField(registry, "post"), undefined),
-    ).toBeNull();
+    ).resolves.toBeNull();
   });
 
-  test("empty object produces an empty patch (valid — just nothing to do)", () => {
+  test("empty object produces an empty patch (valid — just nothing to do)", async () => {
     const registry = registryWithMeta({});
-    const patch = sanitizeMetaInput(findField(registry, "post"), {});
+    const patch = await sanitizeMetaInput(findField(registry, "post"), {});
     expect(patch).toEqual({ upserts: new Map(), deletes: [] });
   });
 
-  test("string meta passes through as a decoded string in the patch", () => {
+  test("string meta passes through as a decoded string in the patch", async () => {
     const registry = registryWithMeta({ title: { type: "string" } });
-    const patch = sanitizeMetaInput(findField(registry, "post"), {
+    const patch = await sanitizeMetaInput(findField(registry, "post"), {
       title: "Hello",
     });
     expect(patch?.upserts.get("title")).toBe("Hello");
   });
 
-  test("number meta rejects NaN / Infinity (they would poison JSON)", () => {
+  test("number meta rejects NaN / Infinity with a path-addressed error", async () => {
     const registry = registryWithMeta({ count: { type: "number" } });
-    expect(() =>
+    await expect(
       sanitizeMetaInput(findField(registry, "post"), { count: Number.NaN }),
-    ).toThrow(MetaSanitizationError);
-    expect(() =>
+    ).rejects.toThrow(MetaValidationError);
+    await expect(
       sanitizeMetaInput(findField(registry, "post"), {
         count: Number.POSITIVE_INFINITY,
       }),
-    ).toThrow(MetaSanitizationError);
+    ).rejects.toMatchObject({
+      errors: [{ path: "count", message: { id: "metaField.invalid" } }],
+    });
   });
 
-  test("number meta coerces numeric strings (admin may ship form-value strings)", () => {
+  test("number meta coerces numeric strings (admin may ship form-value strings)", async () => {
     const registry = registryWithMeta({ count: { type: "number" } });
-    const patch = sanitizeMetaInput(findField(registry, "post"), {
+    const patch = await sanitizeMetaInput(findField(registry, "post"), {
       count: "42",
     });
     expect(patch?.upserts.get("count")).toBe(42);
   });
 
-  test("number meta rejects empty string (would silently coerce to 0 via Number(''))", () => {
+  test("number meta rejects empty string (would silently coerce to 0 via Number(''))", async () => {
     const registry = registryWithMeta({ count: { type: "number" } });
-    expect(() =>
+    await expect(
       sanitizeMetaInput(findField(registry, "post"), { count: "" }),
-    ).toThrow(MetaSanitizationError);
-    expect(() =>
+    ).rejects.toThrow(MetaValidationError);
+    await expect(
       sanitizeMetaInput(findField(registry, "post"), { count: "   " }),
-    ).toThrow(MetaSanitizationError);
+    ).rejects.toThrow(MetaValidationError);
   });
 
-  test("boolean meta accepts every common truthy/falsy form callers send", () => {
+  test("boolean meta accepts every common truthy/falsy form callers send", async () => {
     const registry = registryWithMeta({ featured: { type: "boolean" } });
     for (const truthy of [true, 1, "1", "true"]) {
-      const patch = sanitizeMetaInput(findField(registry, "post"), {
+      const patch = await sanitizeMetaInput(findField(registry, "post"), {
         featured: truthy,
       });
       expect(patch?.upserts.get("featured")).toBe(true);
     }
     for (const falsy of [false, 0, "0", "false"]) {
-      const patch = sanitizeMetaInput(findField(registry, "post"), {
+      const patch = await sanitizeMetaInput(findField(registry, "post"), {
         featured: falsy,
       });
       expect(patch?.upserts.get("featured")).toBe(false);
     }
-    expect(() =>
+    await expect(
       sanitizeMetaInput(findField(registry, "post"), { featured: "yes" }),
-    ).toThrow(MetaSanitizationError);
+    ).rejects.toThrow(MetaValidationError);
   });
 
-  test("json meta accepts nested structures, rejects non-serializable values", () => {
+  test("json meta accepts nested structures, rejects non-serializable values", async () => {
     const registry = registryWithMeta({ config: { type: "json" } });
-    const patch = sanitizeMetaInput(findField(registry, "post"), {
+    const patch = await sanitizeMetaInput(findField(registry, "post"), {
       config: { nested: { arr: [1, 2] } },
     });
     expect(patch?.upserts.get("config")).toEqual({ nested: { arr: [1, 2] } });
-    expect(() =>
+    await expect(
       sanitizeMetaInput(findField(registry, "post"), { config: () => 1 }),
-    ).toThrow(MetaSanitizationError);
+    ).rejects.toThrow(MetaValidationError);
   });
 
-  test("value exceeding the encoded-byte cap is rejected (DoS guard)", () => {
+  test("value exceeding the encoded-byte cap is rejected (DoS guard)", async () => {
     const registry = registryWithMeta({ blob: { type: "string" } });
     const tooBig = "x".repeat(260 * 1024);
-    expect(() =>
+    await expect(
       sanitizeMetaInput(findField(registry, "post"), { blob: tooBig }),
-    ).toThrow(expect.objectContaining({ reason: "value_too_large" }));
+    ).rejects.toThrow(expect.objectContaining({ reason: "value_too_large" }));
   });
 
-  test("null / undefined values queue a delete rather than an upsert", () => {
+  test("null / undefined values queue a delete rather than an upsert", async () => {
     const registry = registryWithMeta({
       a: { type: "string" },
       b: { type: "string" },
     });
-    const patch = sanitizeMetaInput(findField(registry, "post"), {
+    const patch = await sanitizeMetaInput(findField(registry, "post"), {
       a: null,
       b: undefined,
     });
@@ -162,11 +164,11 @@ describe("sanitizeMetaInput", () => {
     expect(patch?.upserts.size).toBe(0);
   });
 
-  test("unregistered key → NOT_REGISTERED error (protects against typos)", () => {
+  test("unregistered key → NOT_REGISTERED error (protects against typos)", async () => {
     const registry = registryWithMeta({});
-    expect(() =>
+    await expect(
       sanitizeMetaInput(findField(registry, "post"), { mystery: "x" }),
-    ).toThrow(
+    ).rejects.toThrow(
       expect.objectContaining({
         key: "mystery",
         reason: "not_registered",
@@ -174,7 +176,7 @@ describe("sanitizeMetaInput", () => {
     );
   });
 
-  test("key registered for a different entry type is NOT_REGISTERED when queried for the other scope", () => {
+  test("key registered for a different entry type is NOT_REGISTERED when queried for the other scope", async () => {
     // Scope enforcement is now a property of the field-finder (the
     // caller passes a scope-specific finder), so a key visible for
     // `product` simply isn't visible for `post` — identical to "never
@@ -182,9 +184,9 @@ describe("sanitizeMetaInput", () => {
     const registry = registryWithMeta({
       product_sku: { type: "string", entryTypes: ["product"] },
     });
-    expect(() =>
+    await expect(
       sanitizeMetaInput(findField(registry, "post"), { product_sku: "ABC" }),
-    ).toThrow(
+    ).rejects.toThrow(
       expect.objectContaining({
         key: "product_sku",
         reason: "not_registered",
@@ -192,7 +194,7 @@ describe("sanitizeMetaInput", () => {
     );
   });
 
-  test("custom sanitize fn runs after type coercion", () => {
+  test("custom sanitize fn runs after type coercion", async () => {
     const registry = registryWithMeta({
       slug: {
         type: "string",
@@ -200,29 +202,13 @@ describe("sanitizeMetaInput", () => {
           typeof value === "string" ? value.toLowerCase() : value,
       },
     });
-    const patch = sanitizeMetaInput(findField(registry, "post"), {
+    const patch = await sanitizeMetaInput(findField(registry, "post"), {
       slug: "HELLO",
     });
     expect(patch?.upserts.get("slug")).toBe("hello");
   });
 
-  test("MetaSanitizationError from sanitize propagates with the original key + reason", () => {
-    const registry = registryWithMeta({
-      tag: {
-        type: "string",
-        sanitize: () => {
-          throw MetaSanitizationError.valueTooLarge({ key: "tag" });
-        },
-      },
-    });
-    expect(() =>
-      sanitizeMetaInput(findField(registry, "post"), { tag: "x" }),
-    ).toThrow(
-      expect.objectContaining({ key: "tag", reason: "value_too_large" }),
-    );
-  });
-
-  test("plain Error from sanitize translates into a generic invalid_value envelope and logs", () => {
+  test("a throwing sanitize fn becomes a path-addressed invalid error and logs", async () => {
     const registry = registryWithMeta({
       tag: {
         type: "string",
@@ -232,21 +218,21 @@ describe("sanitizeMetaInput", () => {
       },
     });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
-      // silence the diagnostic log we expect runSanitize to emit
+      // silence the diagnostic log the pipeline emits
     });
     try {
-      expect(() =>
+      await expect(
         sanitizeMetaInput(findField(registry, "post"), { tag: "x" }),
-      ).toThrow(
-        expect.objectContaining({ key: "tag", reason: "invalid_value" }),
-      );
+      ).rejects.toMatchObject({
+        errors: [{ path: "tag", message: { id: "metaField.invalid" } }],
+      });
       expect(errorSpy).toHaveBeenCalled();
     } finally {
       errorSpy.mockRestore();
     }
   });
 
-  test("non-Error throw (e.g. string) from sanitize still translates to invalid_value", () => {
+  test("non-Error throw (e.g. string) from sanitize still becomes an invalid error", async () => {
     const registry = registryWithMeta({
       tag: {
         type: "string",
@@ -259,11 +245,9 @@ describe("sanitizeMetaInput", () => {
       // silence the diagnostic log
     });
     try {
-      expect(() =>
+      await expect(
         sanitizeMetaInput(findField(registry, "post"), { tag: "x" }),
-      ).toThrow(
-        expect.objectContaining({ key: "tag", reason: "invalid_value" }),
-      );
+      ).rejects.toThrow(MetaValidationError);
     } finally {
       errorSpy.mockRestore();
     }
@@ -284,7 +268,7 @@ describe("applyMetaPatch + loadEntryMeta", () => {
       meta: { untouched: "keep" },
     });
 
-    const patch = sanitizeMetaInput(findField(plugins, post.type), {
+    const patch = await sanitizeMetaInput(findField(plugins, post.type), {
       title: "Written",
       count: 7,
     });
@@ -306,10 +290,10 @@ describe("applyMetaPatch + loadEntryMeta", () => {
       slug: "upsert",
     });
 
-    const first = sanitizeMetaInput(findField(plugins, post.type), {
+    const first = await sanitizeMetaInput(findField(plugins, post.type), {
       title: "v1",
     });
-    const second = sanitizeMetaInput(findField(plugins, post.type), {
+    const second = await sanitizeMetaInput(findField(plugins, post.type), {
       title: "v2",
     });
     if (!first || !second) throw new Error("patches should not be null");
@@ -327,10 +311,10 @@ describe("applyMetaPatch + loadEntryMeta", () => {
       slug: "delete",
     });
 
-    const set = sanitizeMetaInput(findField(plugins, post.type), {
+    const set = await sanitizeMetaInput(findField(plugins, post.type), {
       title: "x",
     });
-    const clear = sanitizeMetaInput(findField(plugins, post.type), {
+    const clear = await sanitizeMetaInput(findField(plugins, post.type), {
       title: null,
     });
     if (!set || !clear) throw new Error("patches should not be null");
@@ -351,7 +335,7 @@ describe("applyMetaPatch + loadEntryMeta", () => {
       slug: "path-escapes",
     });
 
-    const patch = sanitizeMetaInput(findField(plugins, post.type), {
+    const patch = await sanitizeMetaInput(findField(plugins, post.type), {
       "og:title": "Hello",
       "seo-description": "A page",
     });
@@ -363,7 +347,7 @@ describe("applyMetaPatch + loadEntryMeta", () => {
       "seo-description": "A page",
     });
 
-    const clear = sanitizeMetaInput(findField(plugins, post.type), {
+    const clear = await sanitizeMetaInput(findField(plugins, post.type), {
       "og:title": null,
       "seo-description": null,
     });
@@ -379,7 +363,7 @@ describe("applyMetaPatch + loadEntryMeta", () => {
       authorId: h.user.id,
       slug: "delete-then-set",
     });
-    const seed = sanitizeMetaInput(findField(plugins, post.type), {
+    const seed = await sanitizeMetaInput(findField(plugins, post.type), {
       title: "old",
     });
     if (!seed) throw new Error("seed should not be null");

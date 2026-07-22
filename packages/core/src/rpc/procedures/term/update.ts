@@ -62,7 +62,7 @@ export const update = base
     }
 
     const { id: _id, meta: metaInput, ...changes } = filtered;
-    const metaPatch = sanitizeMetaForRpc(
+    const metaPatch = await sanitizeMetaForRpc(
       context.plugins,
       existing.taxonomy,
       metaInput,

@@ -6,7 +6,6 @@ import type {
   RichtextMetaBoxField,
 } from "../manifest.js";
 import { humanizeFieldKey } from "./builder.js";
-import { walkRichtextDoc } from "./richtext-validate.js";
 
 interface RichtextFieldState {
   readonly label?: Label;
@@ -25,11 +24,10 @@ interface RichtextFieldState {
 /**
  * Fluent chain for the `richtext` field. Storage is Tiptap's
  * ProseMirror JSON shape, round-tripped through the `json` storage
- * primitive. `build()` always injects the `walkRichtextDoc` sanitizer
- * so the meta pipeline rejects nodes/marks/blocks outside the
- * allowlist (and unsafe link hrefs) — there is deliberately no
- * `.sanitize()` on this chain, since a custom callback would replace
- * that enforcement.
+ * primitive. The constraint walker rejects nodes/marks/blocks outside
+ * the allowlist (and unsafe link hrefs) server-side — there is
+ * deliberately no `.sanitize()` on this chain, so a custom callback
+ * can never bypass that enforcement.
  */
 export class RichtextFieldBuilder<
   K extends string = string,
@@ -128,11 +126,6 @@ export class RichtextFieldBuilder<
       label: this.#state.label ?? humanizeFieldKey(this.#key),
       type: "json",
       inputType: "richtext",
-      sanitize: walkRichtextDoc({
-        marks: this.#state.marks,
-        nodes: this.#state.nodes,
-        blocks: this.#state.blocks,
-      }),
     };
   }
 }

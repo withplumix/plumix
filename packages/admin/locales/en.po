@@ -923,6 +923,11 @@ msgid "metaBox.repeater.addAnother"
 msgstr "Add another"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.minRows"
+msgstr "Add at least {min} row(s)."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.title"
 msgstr "Add domain"
@@ -2024,6 +2029,11 @@ msgid "userInvite.email.invalid"
 msgstr "Enter a valid email address"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidEmail"
+msgstr "Enter a valid email address."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "Enter a valid email address."
@@ -2052,6 +2062,11 @@ msgstr "Enter a valid email address."
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.invalid"
 msgstr "Enter a valid hostname (e.g. example.com)."
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidUrl"
+msgstr "Enter a valid URL."
 
 #. js-lingui-explicit-id
 #: src/lib/core-validation-i18n.ts
@@ -2250,6 +2265,11 @@ msgstr "Inherit role"
 #: src/components/meta-box/meta-box-field.tsx
 msgid "metaBox.field.json.invalid"
 msgstr "Invalid JSON"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalid"
+msgstr "Invalid value."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2512,6 +2532,31 @@ msgstr "Moved to trash."
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "Moving…"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.min"
+msgstr "Must be at least {min}."
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxLength"
+msgstr "Must be at most {max} characters."
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.max"
+msgstr "Must be at most {max}."
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.minTemporal"
+msgstr "Must be on or after {min}."
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxTemporal"
+msgstr "Must be on or before {max}."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -3317,9 +3362,19 @@ msgid "metaBox.reference.selectIdle"
 msgstr "Select"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidOption"
+msgstr "Select a valid option."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.selectAllAria"
 msgstr "Select all entries on this page"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxItems"
+msgstr "Select at most {max}."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3893,6 +3948,11 @@ msgid "metaBox.pluginField.crashed"
 msgstr "This field couldn’t render. Check the browser console for details."
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.required"
+msgstr "This field is required."
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.tokenExpired"
 msgstr "This invite link has expired. Ask your admin to send a new one."
@@ -4075,6 +4135,11 @@ msgstr "URL"
 #: src/routes/_auth/login.tsx
 msgid "login.description"
 msgstr "Use a passkey, get a one-time email link, or continue with a provider."
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxRows"
+msgstr "Use at most {max} row(s)."
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx

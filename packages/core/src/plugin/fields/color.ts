@@ -19,14 +19,13 @@ interface ColorFieldState {
   readonly validate?: MetaBoxFieldValidate;
 }
 
-const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+export const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 /**
  * Fluent chain for the `color` field. Storage is the hex string the
- * native `<input type="color">` produces (`#rrggbb`). `build()`
- * injects a default sanitizer that rejects non-hex values on write —
- * a custom `.sanitize()` replaces it entirely, so authors taking over
- * validation should re-check the hex shape themselves.
+ * native `<input type="color">` produces (`#rrggbb`). The constraint
+ * walker enforces the hex shape (and lowercases) server-side — a
+ * custom `.sanitize()` transforms but can never bypass that gate.
  */
 export class ColorFieldBuilder<
   K extends string = string,
@@ -100,7 +99,7 @@ export class ColorFieldBuilder<
     return this.#fork({ showInApi: true });
   }
 
-  /** Normalising transform — replaces the default hex sanitizer. */
+  /** Normalising transform, applied after coercion and before persistence. */
   sanitize(
     sanitize: (value: NonNullable<V>) => NonNullable<V>,
   ): ColorFieldBuilder<K, V, S> {
@@ -126,20 +125,13 @@ export class ColorFieldBuilder<
       label: this.#state.label ?? humanizeFieldKey(this.#key),
       type: "string",
       inputType: "color",
-      sanitize: this.#state.sanitize ?? defaultColorSanitize,
     };
   }
 }
 
-/** Hex color picker storing the `#rrggbb` string the native input produces. */
+/** Hex color picker storing the `#rrggbb` string the native input
+ *  produces. The hex format is enforced (and the value lowercased)
+ *  server-side by the constraint walker. */
 export function color<K extends string>(key: K): ColorFieldBuilder<K> {
   return new ColorFieldBuilder(key);
-}
-
-function defaultColorSanitize(value: unknown): string {
-  if (typeof value !== "string" || !HEX_COLOR.test(value)) {
-    // eslint-disable-next-line no-restricted-syntax -- sanitizer flow-control sentinel; migrated in the field-sanitizer-error slice
-    throw new Error("invalid_value");
-  }
-  return value.toLowerCase();
 }

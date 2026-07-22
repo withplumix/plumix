@@ -1,3 +1,4 @@
+import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -15,6 +16,11 @@ import { SessionsCard } from "@/components/profile/sessions-card.js";
 import { UserEmailField } from "@/components/profile/user-email-field.js";
 import { hasCap } from "@/lib/caps.js";
 import { visibleUserMetaBoxes } from "@/lib/manifest.js";
+import {
+  extractMetaFieldErrors,
+  META_FORM_BASE_PATH,
+  useApplyMetaFieldErrors,
+} from "@/lib/meta-field-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { slugField } from "@/lib/slug.js";
 import { useLabel } from "@/lib/use-label.js";
@@ -253,12 +259,16 @@ function useUserUpdateMutation({
   metaBoxes,
   queryClient,
   setServerError,
+  setServerFieldErrors,
 }: {
   target: User;
   canPromote: boolean;
   metaBoxes: readonly UserMetaBoxManifestEntry[];
   queryClient: QueryClient;
   setServerError: (message: MessageDescriptor | null) => void;
+  setServerFieldErrors: (
+    errors: readonly MetaFieldServerError[] | null,
+  ) => void;
 }) {
   return useMutation({
     mutationFn: (values: {
@@ -283,6 +293,7 @@ function useUserUpdateMutation({
       }),
     onMutate: () => {
       setServerError(null);
+      setServerFieldErrors(null);
     },
     onSuccess: async () => {
       // Parent route remounts via the target.updatedAt key on refetch,
@@ -291,6 +302,13 @@ function useUserUpdateMutation({
       await invalidateUserCaches(queryClient, target.id);
     },
     onError: (err) => {
+      // Path-addressed meta rejections render inline on the offending
+      // inputs; everything else keeps the banner mapping.
+      const fieldErrors = extractMetaFieldErrors(err);
+      if (fieldErrors) {
+        setServerFieldErrors(fieldErrors);
+        return;
+      }
       setServerError(
         mapUserError(err, UPDATE_ERROR_MESSAGES, M.errUpdateFallback),
       );
@@ -323,6 +341,9 @@ function UserEditForm({
   const [serverError, setServerError] = useState<MessageDescriptor | null>(
     null,
   );
+  const [serverFieldErrors, setServerFieldErrors] = useState<
+    readonly MetaFieldServerError[] | null
+  >(null);
 
   const updateUser = useUserUpdateMutation({
     target,
@@ -330,6 +351,7 @@ function UserEditForm({
     metaBoxes,
     queryClient,
     setServerError,
+    setServerFieldErrors,
   });
 
   const form = useForm({
@@ -341,6 +363,7 @@ function UserEditForm({
       meta: seedFromMetaBoxes(metaBoxes, target.meta),
     },
   });
+  useApplyMetaFieldErrors(form, META_FORM_BASE_PATH, serverFieldErrors);
 
   const onSubmit = form.handleSubmit((value) => {
     updateUser.mutate(value);

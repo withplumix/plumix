@@ -105,18 +105,14 @@ describe("select().multiple() — cardinality axis", () => {
     ).toBe("buttons");
   });
 
-  test(".multiple() carries the option-membership sanitizer (multiselect parity)", () => {
+  test(".multiple() ships no injected sanitizer (membership moved to the walker)", () => {
+    // Option membership, de-dupe, and `.max()` counts are enforced by
+    // the constraint walker (field-pipeline suite).
     const field = select("tags").options(["a", "b", "c"]).multiple().build();
-    expect(field.sanitize?.([])).toEqual([]);
-    expect(field.sanitize?.(["a", "c"])).toEqual(["a", "c"]);
-    expect(field.sanitize?.(["a", "a", "b"])).toEqual(["a", "b"]);
-    expect(() => field.sanitize?.(["a", "z"])).toThrow();
-    expect(() => field.sanitize?.([1])).toThrow();
-    expect(() => field.sanitize?.("a")).toThrow();
-    expect(() => field.sanitize?.(null)).toThrow();
+    expect(field.sanitize).toBeUndefined();
   });
 
-  test("a custom .sanitize() replaces the membership default", () => {
+  test("a custom .sanitize() is carried as-is", () => {
     const custom = (value: readonly ("a" | "b")[]): readonly ("a" | "b")[] =>
       value;
     const field = select("tags")

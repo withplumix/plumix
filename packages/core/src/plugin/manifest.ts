@@ -362,9 +362,9 @@ export interface MetaBoxFieldBase {
    */
   readonly sanitize?: (value: unknown) => unknown;
   /**
-   * Custom validation predicate — see `MetaBoxFieldValidate`. Carried
-   * on the definition today; server-side execution lands with the
-   * generic enforcement walker.
+   * Custom validation predicate — see `MetaBoxFieldValidate`. Executed
+   * server-side by the constraint walker, after `.sanitize()` and the
+   * declarative constraints.
    */
   readonly validate?: MetaBoxFieldValidate;
   /** Static adornment rendered before the input (e.g. a URL scheme). */
@@ -455,9 +455,9 @@ export type TemporalInputType = "date" | "datetime" | "time";
  * Shared shape of the three temporal variants produced by the fluent
  * builders — they differ only in their `inputType` literal and the
  * ISO shape of the stored string. `min` / `max` bounds use the same
- * format as the stored value and are enforced client-side only —
- * server-side bound enforcement is deferred to the constraint-walker
- * slice.
+ * format as the stored value; the constraint walker enforces them
+ * server-side (ISO shapes compare lexicographically in temporal
+ * order).
  *
  * `returns: "date"` opts the field's reads into a decode-time
  * projection: the stored ISO string is handed to consumers as a JS
@@ -496,6 +496,54 @@ export function formatTemporalValue(
   return inputType === "time" ? clock : `${day}T${clock}`;
 }
 
+export function isTemporalInputType(
+  inputType: string,
+): inputType is TemporalInputType {
+  return (
+    inputType === "date" || inputType === "datetime" || inputType === "time"
+  );
+}
+
+// Stored ISO shapes the native temporal inputs produce. The regex pins
+// the shape; the UTC-anchored `Date` parse rejects impossible
+// wall-clock values (`2026-13-45`, `25:99`) the shape alone admits.
+const TEMPORAL_SHAPES: Record<TemporalInputType, RegExp> = {
+  date: /^\d{4}-\d{2}-\d{2}$/,
+  datetime: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/,
+  time: /^\d{2}:\d{2}(:\d{2})?$/,
+};
+
+/**
+ * Anchor a stored temporal string to a UTC-parseable form — `date` at
+ * UTC midnight, `time` on 1970-01-01 UTC. The single source of the
+ * anchoring rule shared by the read-side `Date` projection and the
+ * write-side validity check, which must stay exact inverses of
+ * `formatTemporalValue`.
+ */
+export function anchorTemporalUtc(
+  inputType: TemporalInputType,
+  value: string,
+): string {
+  switch (inputType) {
+    case "date":
+      return `${value}T00:00Z`;
+    case "datetime":
+      return `${value}Z`;
+    case "time":
+      return `1970-01-01T${value}Z`;
+  }
+}
+
+/** Whether a string is a well-formed stored value (shape + real
+ *  wall-clock) for the given temporal input type. */
+export function isValidTemporalValue(
+  inputType: TemporalInputType,
+  value: string,
+): boolean {
+  if (!TEMPORAL_SHAPES[inputType].test(value)) return false;
+  return !Number.isNaN(new Date(anchorTemporalUtc(inputType, value)).getTime());
+}
+
 /**
  * Date-only field. Stored as `YYYY-MM-DD` (ISO 8601 calendar date,
  * no time, no timezone).
@@ -521,9 +569,8 @@ export type TimeMetaBoxField = TemporalMetaBoxField<"time">;
 
 /**
  * Hex color picker. Stored as a `#xxxxxx` string (the format the
- * native `<input type="color">` produces). The builder injects a
- * default sanitizer that rejects values that don't match the hex
- * shape on write.
+ * native `<input type="color">` produces). The constraint walker
+ * rejects non-hex values (and lowercases) on write.
  */
 export interface ColorMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "color";
@@ -533,8 +580,8 @@ export interface ColorMetaBoxField extends MetaBoxFieldBase {
 /**
  * Bounded numeric slider. Renders as `<input type="range">`. `min` /
  * `max` are required so the slider has a concrete range; `step`
- * defaults to `1`. The builder injects a default sanitizer that
- * enforces the bounds on write.
+ * defaults to `1`. The constraint walker enforces the bounds on
+ * write.
  */
 export interface RangeMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "range";
@@ -729,11 +776,11 @@ export interface RichtextMetaBoxField extends MetaBoxFieldBase {
  * case appears).
  *
  * Storage rides on the `json` primitive so any JSON-serialisable row
- * shape survives the wire. The auto-injected sanitizer drops rows
- * where every subfield value is empty (`null` / `undefined` / `""`),
- * then enforces optional `min` / `max` row counts. "Empty" is strictly
+ * shape survives the wire. The constraint walker drops rows where
+ * every subfield value is empty (`null` / `undefined` / `""`), then
+ * enforces optional `min` / `max` row counts. "Empty" is strictly
  * those three: a row whose only populated subfield is `0` (number) or
- * `false` (checkbox) survives — those are real values.
+ * `false` (toggle) survives — those are real values.
  */
 export interface RepeaterMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "repeater";

@@ -18,11 +18,11 @@ export type { MetaChanges as UserMetaChanges } from "../../meta/core.js";
 
 /** RPC-facing sanitizer for a user's meta input. User meta is a flat
  *  keyspace — no scope argument. */
-export function sanitizeMetaForRpc(
+export async function sanitizeMetaForRpc(
   registry: PluginRegistry,
   input: Record<string, unknown> | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
-): MetaPatch | null {
+): Promise<MetaPatch | null> {
   return sanitizeMetaForRpcCore(
     (key) => findUserMetaField(registry, key),
     input,

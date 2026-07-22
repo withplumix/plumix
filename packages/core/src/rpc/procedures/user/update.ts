@@ -132,7 +132,11 @@ export const update = base
     // `meta` isn't a users.* column — split it out and validate up
     // front so a bad key fails before any write.
     const { id: _id, meta: metaInput, ...changes } = filtered;
-    const metaPatch = sanitizeMetaForRpc(context.plugins, metaInput, errors);
+    const metaPatch = await sanitizeMetaForRpc(
+      context.plugins,
+      metaInput,
+      errors,
+    );
     if (metaPatch) {
       assertUserMetaCapabilities(
         context.plugins,

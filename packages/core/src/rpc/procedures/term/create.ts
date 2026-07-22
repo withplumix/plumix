@@ -47,7 +47,7 @@ export const create = base
 
     // Validate meta up-front so a bad key fails before the term insert —
     // keeps the DB clean when the client sends a typo in a meta key.
-    const metaPatch = sanitizeMetaForRpc(
+    const metaPatch = await sanitizeMetaForRpc(
       context.plugins,
       filtered.taxonomy,
       filtered.meta,

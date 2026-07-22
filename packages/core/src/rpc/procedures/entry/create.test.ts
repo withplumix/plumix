@@ -340,6 +340,52 @@ describe("entry.create", () => {
     });
   });
 
+  test("meta: constraint violations ship { path, message } errors on the CONFLICT envelope", async () => {
+    const { text, repeater } = await import("../../../plugin/fields/index.js");
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("box", {
+      id: "box",
+      label: "Article",
+      entryTypes: ["post"],
+      fields: [
+        text("subtitle").maxLength(5).build(),
+        repeater({
+          key: "sections",
+          label: "Sections",
+          subFields: [text("heading").required(), text("body")],
+        }),
+      ],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    await expect(
+      h.client.entry.create({
+        title: "bad-constraints",
+        slug: "bad-constraints",
+        meta: {
+          subtitle: "way too long",
+          sections: [{ heading: "", body: "kept" }],
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: {
+        reason: "meta_invalid_value",
+        key: "subtitle",
+        errors: [
+          {
+            path: "subtitle",
+            message: { id: "metaField.maxLength", values: { max: 5 } },
+          },
+          {
+            path: "sections.0.heading",
+            message: { id: "metaField.required" },
+          },
+        ],
+      },
+    });
+  });
+
   test("meta: reference field rejects an upsert pointing at a missing user", async () => {
     // Smoke test for the validateEntryMetaReferences wiring in
     // create.ts — confirms the LookupAdapter pipeline runs before the

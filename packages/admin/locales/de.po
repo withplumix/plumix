@@ -923,6 +923,11 @@ msgid "metaBox.repeater.addAnother"
 msgstr "Weiteres hinzufügen"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.minRows"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.title"
 msgstr "Domain hinzufügen"
@@ -2024,6 +2029,11 @@ msgid "userInvite.email.invalid"
 msgstr "Gültige E-Mail-Adresse eingeben"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidEmail"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "Gültige E-Mail-Adresse eingeben."
@@ -2052,6 +2062,11 @@ msgstr "Gültige E-Mail-Adresse eingeben."
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.domain.invalid"
 msgstr "Gültigen Hostnamen eingeben (z. B. example.com)."
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidUrl"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-validation-i18n.ts
@@ -2250,6 +2265,11 @@ msgstr "Rolle erben"
 #: src/components/meta-box/meta-box-field.tsx
 msgid "metaBox.field.json.invalid"
 msgstr "Ungültiges JSON"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalid"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2512,6 +2532,31 @@ msgstr "In den Papierkorb verschoben."
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.trashDialog.moving"
 msgstr "Wird verschoben…"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.min"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxLength"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.max"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.minTemporal"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxTemporal"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -3317,9 +3362,19 @@ msgid "metaBox.reference.selectIdle"
 msgstr "Auswählen"
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidOption"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.selectAllAria"
 msgstr "Alle Einträge auf dieser Seite auswählen"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxItems"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3893,6 +3948,11 @@ msgid "metaBox.pluginField.crashed"
 msgstr "Dieses Feld konnte nicht gerendert werden. Details in der Browser-Konsole."
 
 #. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.required"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.tokenExpired"
 msgstr "Dieser Einladungslink ist abgelaufen. Bitten Sie Ihren Administrator, einen neuen zu senden."
@@ -4075,6 +4135,11 @@ msgstr "URL"
 #: src/routes/_auth/login.tsx
 msgid "login.description"
 msgstr "Verwenden Sie einen Passkey, holen Sie sich einen einmaligen E-Mail-Link oder fahren Sie mit einem Anbieter fort."
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.maxRows"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
