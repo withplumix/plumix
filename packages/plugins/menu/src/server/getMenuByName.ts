@@ -44,8 +44,10 @@ export async function getMenuByName(
   name: string,
   options?: { readonly location?: string | null },
 ): Promise<ResolvedMenu | null> {
-  const resolved = await resolveMenus(ctx, [name], options?.location ?? null);
-  return resolved.get(name) ?? null;
+  const [resolved] = await resolveMenus(ctx, [
+    { slug: name, location: options?.location ?? null },
+  ]);
+  return resolved ?? null;
 }
 
 /**
@@ -59,36 +61,49 @@ export async function getMenusByName(
   ctx: AppContext,
   names: readonly string[],
 ): Promise<Record<string, ResolvedMenu | null>> {
-  const resolved = await resolveMenus(ctx, names, null);
-  return Object.fromEntries(resolved);
+  const unique = [...new Set(names)];
+  const resolved = await resolveMenus(
+    ctx,
+    unique.map((slug) => ({ slug, location: null })),
+  );
+  return Object.fromEntries(
+    unique.map((slug, i) => [slug, resolved[i] ?? null]),
+  );
 }
 
-async function resolveMenus(
-  ctx: AppContext,
-  slugs: readonly string[],
-  location: string | null,
-): Promise<Map<string, ResolvedMenu | null>> {
-  const result = new Map<string, ResolvedMenu | null>();
-  for (const slug of slugs) result.set(slug, null);
-  if (result.size === 0) return result;
+interface MenuRequest {
+  readonly slug: string;
+  readonly location: string | null;
+}
 
+/**
+ * Internal seam shared with `getMenusForLocations` — not part of the
+ * package surface. Results align with `requests` by index. Locations are
+ * per request — two locations bound to the same slug share one query
+ * cluster but get their own hook pass, each seeing its own `location`
+ * (#1518).
+ */
+export async function resolveMenus(
+  ctx: AppContext,
+  requests: readonly MenuRequest[],
+): Promise<(ResolvedMenu | null)[]> {
   // Per-slug request memo over the batched load (#1493): the `menus`
   // template dep and a `getMenuForLocation` render both resolving the
   // same menu share one query cluster. Only the cluster is memoized —
   // hooks (`menu:item`, `menu:tree`) and `isCurrent` still run per call
   // with that call's own `location` / `resolvedEntity` context.
-  const unique = [...result.keys()];
+  const unique = [...new Set(requests.map((r) => r.slug))];
   const clusters = await memoBatch(
     ctx.memo,
-    unique,
+    requests.map((r) => r.slug),
     (slug) => `menu:data:${slug}`,
     () => loadMenuData(ctx, unique),
   );
 
-  await Promise.all(
-    unique.map(async (slug, i) => {
+  return Promise.all(
+    requests.map(async ({ location }, i) => {
       const data = clusters[i];
-      if (!data) return;
+      if (!data) return null;
       const { tree } = buildTree(data.rows);
       const resolved = await Promise.all(
         tree.map((node) => toResolvedItem(ctx, node, data.refs)),
@@ -102,15 +117,14 @@ async function resolveMenus(
         termId: data.term.id,
       });
 
-      result.set(slug, {
+      return {
         termId: data.term.id,
         name: data.term.name,
         slug: data.term.slug,
         items: filtered,
-      });
+      };
     }),
   );
-  return result;
 }
 
 interface MenuData {

@@ -16,11 +16,14 @@ import {
   entryTermFactory,
   factoriesFor,
 } from "plumix/test";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { menu } from "../index.js";
 import { getMenuByName } from "./getMenuByName.js";
-import { getMenuForLocation } from "./getMenuForLocation.js";
+import {
+  getMenuForLocation,
+  getMenusForLocations,
+} from "./getMenuForLocation.js";
 import { clearRegisteredLocations } from "./locations.js";
 
 interface TestRegistryBundle {
@@ -165,6 +168,69 @@ describe("getMenuForLocation", () => {
 
     const viaName = await getMenuByName(ctx, "main");
     expect(viaName?.items.map((i) => i.label)).toEqual(["Home"]);
+  });
+
+  describe("getMenusForLocations", () => {
+    test("query count stays flat as the location count grows", async () => {
+      const locations = ["primary", "footer", "sidebar"];
+      for (const location of locations) {
+        await seedMenuWithItem(`menu-${location}`, "Home", `/${location}`);
+        await bind(location, `menu-${location}`);
+      }
+
+      const select = vi.spyOn(db, "select");
+      await getMenusForLocations(ctxFor(db, bundle), ["primary"]);
+      const singleCount = select.mock.calls.length;
+      select.mockClear();
+
+      await getMenusForLocations(ctxFor(db, bundle), locations);
+      expect(select.mock.calls.length).toBe(singleCount);
+      select.mockRestore();
+    });
+
+    test("resolves multiple locations in one call, null for unbound", async () => {
+      await seedMenuWithItem("main", "Home", "/");
+      await seedMenuWithItem("legal", "Privacy", "/privacy");
+      await bind("primary", "main");
+      await bind("footer", "legal");
+
+      const result = await getMenusForLocations(ctx, [
+        "primary",
+        "footer",
+        "unbound",
+      ]);
+      expect(result.primary?.slug).toBe("main");
+      expect(result.primary?.items.map((i) => i.label)).toEqual(["Home"]);
+      expect(result.footer?.items.map((i) => i.label)).toEqual(["Privacy"]);
+      expect(result.unbound).toBeNull();
+    });
+
+    test("two locations bound to the same menu each see their own location in menu:tree", async () => {
+      await seedMenuWithItem("shared", "Home", "/");
+      await bind("primary", "shared");
+      await bind("footer", "shared");
+
+      const seen: (string | null)[] = [];
+      bundle.hooks.addFilter("menu:tree", (items, { location }) => {
+        seen.push(location);
+        return items;
+      });
+
+      const result = await getMenusForLocations(ctx, ["primary", "footer"]);
+      expect(result.primary?.slug).toBe("shared");
+      expect(result.footer?.slug).toBe("shared");
+      expect(seen.sort()).toEqual(["footer", "primary"]);
+    });
+
+    test("getMenuForLocation shares the batch's memo entry", async () => {
+      await seedMenuWithItem("main", "Home", "/");
+      await bind("primary", "main");
+
+      const batch = await getMenusForLocations(ctx, ["primary"]);
+      const single = await getMenuForLocation(ctx, "primary");
+      expect(single).not.toBeNull();
+      expect(single).toBe(batch.primary);
+    });
   });
 
   test("a fresh ctx does not share the cache", async () => {
