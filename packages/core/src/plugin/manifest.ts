@@ -748,6 +748,30 @@ export interface CheckboxMetaBoxField extends MetaBoxFieldBase {
 }
 
 /**
+ * Stored value of a `link` field — a CTA-shaped destination. `url` is
+ * either an internal path (starts with `/`, produced by the admin's
+ * entry picker resolving an entry to its permalink) or an external
+ * absolute URL. `label` is the optional link text; `newTab` opts the
+ * rendered anchor into `target="_blank"`.
+ */
+export interface LinkValue {
+  readonly url: string;
+  readonly label?: string;
+  readonly newTab?: boolean;
+}
+
+/**
+ * CTA-style link field authored via `link()`. Storage rides on the
+ * `json` primitive as a `LinkValue`; the injected sanitizer rejects
+ * malformed shapes and URLs on write.
+ */
+export interface LinkMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "link";
+  readonly type: "json";
+  readonly placeholder?: Label;
+}
+
+/**
  * Catch-all variant for any `inputType` not narrowed into a dedicated
  * variant above — primarily plugin-registered custom types arriving via
  * `registerFieldType`. Object-literal registrations using built-in
@@ -801,6 +825,7 @@ export type MetaBoxField =
   | SelectMetaBoxField
   | RadioMetaBoxField
   | CheckboxMetaBoxField
+  | LinkMetaBoxField
   | LegacyMetaBoxField;
 
 /**
