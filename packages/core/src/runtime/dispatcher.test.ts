@@ -390,24 +390,32 @@ describe("dispatcher — CSRF", () => {
     expect(body.reason).toBe("csrf_origin_mismatch");
   });
 
-  test("dev localhost CSRF: any loopback origin is allowed when the app opts in", async () => {
-    const h = await createDispatcherHarness({ devCsrfLocalhost: true });
-    for (const origin of [
-      "http://localhost:5174",
-      "http://127.0.0.1:8787",
-      "http://127.0.0.2:8787",
-      "http://[::1]:5173",
-    ]) {
-      const response = await h.dispatch(
-        plumixRequest("/_plumix/rpc/entry/list", {
-          method: "POST",
-          headers: { "content-type": "application/json", origin },
-          body: JSON.stringify({ json: {} }),
-        }),
-      );
-      expect(response.status, origin).not.toBe(403);
-    }
-  });
+  // Extended timeout: this is the first request in the file to pass the CSRF
+  // gate, so it pays `loadRpcHandler`'s one-time source-resolved import of the
+  // whole oRPC router graph (~0.3s idle, 5s+ on a contended CI runner) —
+  // every later RPC dispatch in the process is ~20ms.
+  test(
+    "dev localhost CSRF: any loopback origin is allowed when the app opts in",
+    { timeout: 15_000 },
+    async () => {
+      const h = await createDispatcherHarness({ devCsrfLocalhost: true });
+      for (const origin of [
+        "http://localhost:5174",
+        "http://127.0.0.1:8787",
+        "http://127.0.0.2:8787",
+        "http://[::1]:5173",
+      ]) {
+        const response = await h.dispatch(
+          plumixRequest("/_plumix/rpc/entry/list", {
+            method: "POST",
+            headers: { "content-type": "application/json", origin },
+            body: JSON.stringify({ json: {} }),
+          }),
+        );
+        expect(response.status, origin).not.toBe(403);
+      }
+    },
+  );
 
   test("dev localhost CSRF: the relaxation cannot bypass the header gate", async () => {
     const h = await createDispatcherHarness({ devCsrfLocalhost: true });
