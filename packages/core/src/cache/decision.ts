@@ -36,14 +36,21 @@ export function requestIsPrivileged(request: Request): boolean {
   return new URL(request.url).searchParams.has("preview");
 }
 
+/** Why the edge cache refused to participate in a request. */
+export type CacheBypassReason = "method" | "privileged" | "intent";
+
 /**
- * Whether the edge cache may participate in this request at all — the gate for
- * both reading a stored response and storing a fresh one.
+ * The gate for whether the edge cache may participate in this request at all —
+ * both reading a stored response and storing a fresh one. Returns `null` when
+ * the request is cacheable, otherwise the first failing check — the reason the
+ * telemetry `cache` record carries.
  */
-export function requestIsCacheable(req: CacheableRequest): boolean {
-  if (req.method !== "GET" && req.method !== "HEAD") return false;
-  if (req.isPrivileged) return false;
-  return CACHEABLE_INTENTS.has(req.intentKind);
+export function cacheBypassReason(
+  req: CacheableRequest,
+): CacheBypassReason | null {
+  if (req.method !== "GET" && req.method !== "HEAD") return "method";
+  if (req.isPrivileged) return "privileged";
+  return CACHEABLE_INTENTS.has(req.intentKind) ? null : "intent";
 }
 
 /**

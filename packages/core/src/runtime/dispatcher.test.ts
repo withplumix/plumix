@@ -9,6 +9,7 @@ import type {
 } from "../context/telemetry.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
+import type { ConnectedCache } from "./slots.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
@@ -1214,6 +1215,11 @@ describe("dispatcher — public read-through edge cache", () => {
   });
 });
 
+// Depth-first span-tree walk shared by the telemetry assertions below.
+function flattenSpans(spans: readonly TelemetrySpan[]): TelemetrySpan[] {
+  return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);
+}
+
 describe("dispatcher — telemetry consumers", () => {
   // A plugin that observes mid-request whether the collector is live: an
   // active collector already holds the dispatch span during render.
@@ -1233,6 +1239,7 @@ describe("dispatcher — telemetry consumers", () => {
 
   test("a registered consumer receives the finished snapshot: envelope, span tree, records, dropped counters", async () => {
     const snapshots: TelemetrySnapshot[] = [];
+    const seenCtx: AppContext[] = [];
     const recorder = definePlugin("telemetry-recorder", (ctx) => {
       ctx.addFilter("render:document", (manifest, _data, appCtx) => {
         appCtx.telemetry.record("telemetry-recorder", {
@@ -1247,8 +1254,9 @@ describe("dispatcher — telemetry consumers", () => {
         consumers: [
           {
             id: "in-test",
-            onRequestEnd: (snapshot) => {
+            onRequestEnd: (snapshot, ctx) => {
               snapshots.push(snapshot);
+              seenCtx.push(ctx);
             },
           },
         ],
@@ -1266,6 +1274,10 @@ describe("dispatcher — telemetry consumers", () => {
       status: response.status,
     });
     expect(snapshot?.request.requestId).toMatch(/[0-9a-f-]{36}/);
+    // The envelope id is the context's request id — minted at context
+    // creation, so mid-request consumers (logs, error hooks) and the finished
+    // snapshot correlate on the same value.
+    expect(snapshot?.request.requestId).toBe(seenCtx[0]?.requestId);
     expect(snapshot?.request.startedAt).toBeTypeOf("number");
     expect(snapshot?.request.durationMs).toBeGreaterThanOrEqual(0);
     expect(snapshot?.spans.map((s) => s.name)).toEqual(["dispatch"]);
@@ -1309,12 +1321,10 @@ describe("dispatcher — telemetry consumers", () => {
     await h.drainDeferred();
 
     const [snapshot] = snapshots;
-    const flatten = (spans: readonly TelemetrySpan[]): TelemetrySpan[] =>
-      spans.flatMap((span) => [span, ...flatten(span.children)]);
 
     // The resolve step runs several selects; each is one attributed span, so
     // an N+1 pattern shows up as repeated `db: select` spans in one request.
-    const selects = flatten(snapshot?.spans ?? []).filter(
+    const selects = flattenSpans(snapshot?.spans ?? []).filter(
       (span) => span.name === "db: select",
     );
     expect(selects.length).toBeGreaterThanOrEqual(2);
@@ -1325,6 +1335,212 @@ describe("dispatcher — telemetry consumers", () => {
     expect(entryQuery).toBeDefined();
     expect(Array.isArray(entryQuery?.attributes["db.params"])).toBe(true);
     expect(entryQuery?.attributes["db.rows"]).toBeTypeOf("number");
+  });
+
+  test("phase spans carry attributes: dispatch status, resolve entity+template, render node", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const blog = definePlugin("test-blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blog],
+      theme: defineTheme({ templates: [fallback(() => null)] }),
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    const author = await h.seedUser("admin");
+    const entry = await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    await h.dispatch(new Request("https://cms.example/post/hello"));
+    await h.drainDeferred();
+
+    const [snapshot] = snapshots;
+    const spans = flattenSpans(snapshot?.spans ?? []);
+    const byName = (name: string): TelemetrySpan | undefined =>
+      spans.find((span) => span.name === name);
+
+    expect(byName("dispatch")?.attributes["http.response.status_code"]).toBe(
+      200,
+    );
+    const resolve = byName("resolve");
+    expect(resolve?.attributes["route.intent"]).toBe("single");
+    expect(resolve?.attributes["resolve.entity"]).toEqual({
+      kind: "entry",
+      id: entry.id,
+    });
+    expect(resolve?.attributes["template.matched"]).toBe("fallback");
+    expect(byName("render")?.attributes["render.node"]).toBe("post: hello");
+  });
+
+  test("a throwing render marks the failing phase spans as errors in the snapshot", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const h = await createDispatcherHarness({
+      theme: defineTheme({
+        templates: [
+          fallback(() => {
+            throw new Error("render kaboom");
+          }),
+        ],
+      }),
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+
+    await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+
+    const [snapshot] = snapshots;
+    const render = flattenSpans(snapshot?.spans ?? []).find(
+      (span) => span.name === "render",
+    );
+    expect(render?.status).toBe("error");
+    expect(render?.error?.message).toBe("render kaboom");
+  });
+
+  test("session-cookie auth resolution appears as an auth span with the resolved user", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const h = await createDispatcherHarness({
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    const user = await h.seedUser("admin");
+    const request = await h.authenticateRequest(
+      new Request("https://cms.example/"),
+      user.id,
+    );
+
+    await h.dispatch(request);
+    await h.drainDeferred();
+
+    const [snapshot] = snapshots;
+    const auth = flattenSpans(snapshot?.spans ?? []).find(
+      (span) => span.name === "auth",
+    );
+    expect(auth).toBeDefined();
+    expect(auth?.attributes).toEqual({
+      "auth.authenticated": true,
+      "auth.user.id": user.id,
+    });
+  });
+
+  test("filter execution appears as a hook span attributed with hook name and owning plugin", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const decorator = definePlugin("test-decorator", (ctx) => {
+      ctx.addFilter("render:document", (manifest) => manifest);
+    });
+    const h = await createDispatcherHarness({
+      plugins: [decorator],
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+
+    await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+
+    const [snapshot] = snapshots;
+    const hook = flattenSpans(snapshot?.spans ?? []).find(
+      (span) => span.name === "hook: render:document",
+    );
+    expect(hook).toBeDefined();
+    expect(hook?.attributes).toEqual({
+      "hook.name": "render:document",
+      "hook.plugin": "test-decorator",
+    });
+  });
+
+  test("edge-cache decisions land in the snapshot as records: miss, hit, bypass with reason", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const store = new Map<string, Response>();
+    const cache: ConnectedCache = {
+      match: (req) => Promise.resolve(store.get(req.url)?.clone()),
+      put: (req, res) => {
+        store.set(req.url, res);
+        return Promise.resolve();
+      },
+      purgeTags: () => Promise.resolve(),
+    };
+    const h = await createDispatcherHarness({
+      cache,
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+
+    // Anonymous front page: miss then stored, so the second request hits.
+    await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+    await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+    // A session cookie makes the request privileged: the cache is bypassed.
+    const user = await h.seedUser("admin");
+    await h.dispatch(
+      await h.authenticateRequest(new Request("https://cms.example/"), user.id),
+    );
+    await h.drainDeferred();
+
+    const decisions = snapshots.map((s) => s.records.cache?.map((r) => r.data));
+    expect(decisions).toEqual([
+      [{ decision: "miss", stored: true }],
+      [{ decision: "hit" }],
+      [{ decision: "bypass", reason: "privileged" }],
+    ]);
+  });
+
+  test("an admin RPC call produces an rpc procedure span in the snapshot", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const h = await createDispatcherHarness({
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    const user = await h.seedUser("admin");
+    const request = await h.authenticateRequest(
+      plumixRequest("/_plumix/rpc/entry/list", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ json: {} }),
+      }),
+      user.id,
+    );
+
+    const response = await h.dispatch(request);
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    const [snapshot] = snapshots;
+    const spans = flattenSpans(snapshot?.spans ?? []);
+    const rpc = spans.find((s) => s.name === "rpc: entry.list");
+    expect(rpc?.status).toBe("ok");
+    expect(rpc?.attributes).toEqual({ "rpc.procedure": "entry.list" });
+    // The authenticated middleware runs inside the procedure call, so the
+    // auth span nests within the rpc span.
+    expect(flattenSpans(rpc ? [rpc] : []).some((s) => s.name === "auth")).toBe(
+      true,
+    );
   });
 
   test("a slow consumer never delays the response — export waits in the defer queue", async () => {

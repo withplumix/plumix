@@ -34,31 +34,43 @@ export function buildMcpServer(
 
   server.setRequestHandler(
     CallToolRequestSchema,
-    async (request): Promise<CallToolResult> => {
-      const tool = tools.get(request.params.name);
-      if (tool === undefined) {
-        throw new McpError(
-          ErrorCode.MethodNotFound,
-          `unknown tool: "${request.params.name}"`,
-        );
-      }
+    (request): Promise<CallToolResult> =>
+      // One span per tool call — validation included, so an unknown tool or a
+      // bad argument shows up as an error span attributed to the tool name.
+      ctx.telemetry.span(
+        `mcp: ${request.params.name}`,
+        async (s): Promise<CallToolResult> => {
+          s.set("mcp.tool", request.params.name);
+          const tool = tools.get(request.params.name);
+          if (tool === undefined) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `unknown tool: "${request.params.name}"`,
+            );
+          }
 
-      const parsed = v.safeParse(
-        tool.inputSchema,
-        request.params.arguments ?? {},
-      );
-      if (!parsed.success) {
-        throw new McpError(ErrorCode.InvalidParams, v.summarize(parsed.issues));
-      }
+          const parsed = v.safeParse(
+            tool.inputSchema,
+            request.params.arguments ?? {},
+          );
+          if (!parsed.success) {
+            throw new McpError(
+              ErrorCode.InvalidParams,
+              v.summarize(parsed.issues),
+            );
+          }
 
-      try {
-        const result = await tool.run(ctx, parsed.output);
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
-      } catch (error) {
-        if (error instanceof McpToolError) return toToolErrorResult(error);
-        throw error;
-      }
-    },
+          try {
+            const result = await tool.run(ctx, parsed.output);
+            return {
+              content: [{ type: "text", text: JSON.stringify(result) }],
+            };
+          } catch (error) {
+            if (error instanceof McpToolError) return toToolErrorResult(error);
+            throw error;
+          }
+        },
+      ),
   );
 
   return server;

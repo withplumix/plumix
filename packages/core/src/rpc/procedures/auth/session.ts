@@ -1,4 +1,5 @@
 import type { AuthSessionOutput } from "./schemas.js";
+import { authenticateTraced } from "../../../auth/authenticator.js";
 import { capabilitiesForRole } from "../../../auth/rbac.js";
 import { users } from "../../../db/schema/users.js";
 import { base } from "../../base.js";
@@ -10,10 +11,7 @@ import { base } from "../../base.js";
 // needs bootstrapping so we can route to /bootstrap vs /login in one round-trip.
 export const session = base.handler(
   async ({ context }): Promise<AuthSessionOutput> => {
-    const result = await context.authenticator.authenticate(
-      context.request,
-      context.db,
-    );
+    const result = await authenticateTraced(context, context.authenticator);
     if (result) {
       const { id, email, name, avatarUrl, role } = result.user;
       return {

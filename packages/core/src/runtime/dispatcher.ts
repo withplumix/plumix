@@ -1,11 +1,11 @@
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { AppContext } from "../context/app.js";
-import type { TelemetrySnapshot } from "../context/telemetry.js";
 import type * as McpDispatch from "../mcp/dispatch.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RouteMatch } from "../route/match.js";
 import type { PlumixApp } from "./app.js";
+import { authenticateTraced } from "../auth/authenticator.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
 import { parseOAuthPath } from "../auth/oauth/match.js";
@@ -40,6 +40,7 @@ import {
   permanentRedirect,
 } from "./http.js";
 import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
+import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
 
 const RPC_PREFIX = "/_plumix/rpc";
 const ADMIN_PREFIX = "/_plumix/admin";
@@ -129,7 +130,11 @@ export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
     try {
       // The top-level span. `ctx.telemetry` is the no-op collector unless a
       // consumer sampled this request, so span() is then a pass-through.
-      response = await ctx.telemetry.span("dispatch", () => route(app, ctx));
+      response = await ctx.telemetry.span("dispatch", async (s) => {
+        const routed = await route(app, ctx);
+        s.set("http.response.status_code", routed.status);
+        return routed;
+      });
       // Request-end seam: fire one batched edge-cache purge for whatever
       // entry mutations this request accumulated.
       flushPurgeTags(ctx);
@@ -141,49 +146,9 @@ export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
       });
       response = jsonResponse({ error: "internal_error" }, { status: 500 });
     }
-    deliverTelemetrySnapshot(ctx, response, startedAt);
+    deliverTelemetrySnapshot(ctx, response.status, startedAt);
     return response;
   };
-}
-
-/**
- * Post-response seam: hand each sampled consumer the finished snapshot via
- * `ctx.defer` (CF Workers' `waitUntil`), so awaited export I/O never blocks
- * the response. Consumers are isolated — one rejecting doesn't starve the
- * rest, and `wrapDefer` logs the rejection. Runs on the error path too: a
- * 500 is exactly the request a consumer wants to see.
- */
-function deliverTelemetrySnapshot(
-  ctx: AppContext,
-  response: Response,
-  startedAt: number,
-): void {
-  const deliveries = (ctx.telemetryConsumers ?? []).flatMap((c) =>
-    c.onRequestEnd ? [c.onRequestEnd] : [],
-  );
-  if (deliveries.length === 0) return;
-  const snapshot: TelemetrySnapshot = {
-    request: {
-      requestId: crypto.randomUUID(),
-      method: ctx.request.method,
-      url: ctx.request.url,
-      status: response.status,
-      startedAt,
-      durationMs: Date.now() - startedAt,
-    },
-    // getRecords/getDropped return copies; spans are copied here because
-    // getSpans stays the live mid-request read (the debug bar's). Detachment
-    // matters: post-response work through the same ctx must not grow the
-    // arrays a consumer is serializing.
-    spans: [...ctx.telemetry.getSpans()],
-    records: ctx.telemetry.getRecords(),
-    dropped: ctx.telemetry.getDropped(),
-  };
-  for (const onRequestEnd of deliveries) {
-    // `.then` defers the callback past the dispatcher's return and folds a
-    // synchronous throw into the promise the defer wrapper logs.
-    ctx.defer(Promise.resolve().then(() => onRequestEnd(snapshot, ctx)));
-  }
 }
 
 function enforcePlumixCsrf(app: PlumixApp, ctx: AppContext): Response | null {
@@ -560,6 +525,7 @@ async function dispatchPublicRoute(
     intentKind: intent?.kind ?? null,
     cache,
     defer: ctx.defer,
+    telemetry: ctx.telemetry,
     render: () => renderPublicRoute(app, ctx, url, match),
     // Evaluated post-render so `ctx.resolvedEntity` (the entry id) is set.
     // The source thunks run only for the intent kind that needs them.
@@ -588,9 +554,16 @@ async function renderPublicRoute(
   const assetManifest = app.assetManifest;
   try {
     ctx = await loadUserForPublicRequest(ctx);
-    const response = await ctx.telemetry.span("resolve", () =>
-      resolvePublicRouteOrFallback(app, ctx, url, match),
-    );
+    const response = await ctx.telemetry.span("resolve", async (s) => {
+      const resolved = await resolvePublicRouteOrFallback(app, ctx, url, match);
+      // Attributes read post-resolution: the resolver writes `resolvedEntity`
+      // / `resolvedTemplate` onto ctx during the render it encloses. Lazy
+      // thunks, so the no-op collector never evaluates them.
+      s.set("route.intent", () => publicIntent(match, url)?.kind ?? "none");
+      if (ctx.resolvedEntity) s.set("resolve.entity", ctx.resolvedEntity);
+      if (ctx.resolvedTemplate) s.set("template.matched", ctx.resolvedTemplate);
+      return resolved;
+    });
     if (response.status === 404) {
       const html = await renderErrorThroughTheme({
         ctx,
@@ -721,7 +694,7 @@ async function dispatchPluginRawRoute(
   // operator override (e.g. `cfAccess()`) when configured. Plugin
   // route handlers don't need to know which guard is active; they just
   // declare `auth: "authenticated"` and the dispatcher delegates.
-  const result = await ctx.authenticator.authenticate(ctx.request, ctx.db);
+  const result = await authenticateTraced(ctx, ctx.authenticator);
   if (!result) return jsonResponse({ error: "unauthorized" }, { status: 401 });
 
   const { id, email, name, role, meta } = result.user;
@@ -786,7 +759,7 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   // `api_tokens.lastUsedAt` on every cross-site GET navigation. Anonymous
   // visitors hit the cookie + Accept-Language tiers of the resolver chain.
   const auth = readSessionCookie(ctx.request)
-    ? await ctx.authenticator.authenticate(ctx.request, ctx.db)
+    ? await authenticateTraced(ctx, ctx.authenticator)
     : null;
   const locale = resolveLocale({
     request: ctx.request,

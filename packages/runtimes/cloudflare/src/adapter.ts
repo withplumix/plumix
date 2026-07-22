@@ -304,6 +304,9 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
       imageDelivery: connectImageDelivery(app, env),
       imageRemotePatterns: app.config.images?.remotePatterns,
       debugBar: app.config.debugBar,
+      // Cron runs collect through the same consumer gate as requests; the
+      // snapshot delivery inside `runScheduledTasks` rides `defer` → waitUntil.
+      telemetry: app.config.telemetry,
       mailer: app.config.mailer,
       i18n: app.config.i18n,
       oauthProviders: app.oauthProviders,

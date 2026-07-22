@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
+import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
 import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
@@ -860,5 +861,31 @@ describe("REST API — bearer PAT auth", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toContain("no-store");
+  });
+});
+
+describe("REST API — telemetry", () => {
+  test("a REST request produces a rest procedure span in the snapshot", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const h = await restHarness({
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/posts"));
+    await h.drainDeferred();
+
+    expect(res.status).toBe(200);
+    const [snapshot] = snapshots;
+    const flatten = (spans: readonly TelemetrySpan[]): TelemetrySpan[] =>
+      spans.flatMap((span) => [span, ...flatten(span.children)]);
+    const rest = flatten(snapshot?.spans ?? []).find(
+      (s) => s.name === "rest: collectionList",
+    );
+    expect(rest?.status).toBe("ok");
+    expect(rest?.attributes).toEqual({ "rest.procedure": "collectionList" });
   });
 });

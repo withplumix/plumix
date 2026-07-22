@@ -1,58 +1,58 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  requestIsCacheable,
+  cacheBypassReason,
   requestIsPrivileged,
   responseIsStorable,
 } from "./decision.js";
 
-describe("requestIsCacheable", () => {
+describe("cacheBypassReason", () => {
   it("caches an anonymous GET to a public entry permalink", () => {
     expect(
-      requestIsCacheable({
+      cacheBypassReason({
         method: "GET",
         isPrivileged: false,
         intentKind: "single",
       }),
-    ).toBe(true);
+    ).toBe(null);
   });
 
   it("caches anonymous GETs to archive, taxonomy, and front-page intents", () => {
     for (const intentKind of ["archive", "taxonomy", "front-page"] as const) {
       expect(
-        requestIsCacheable({ method: "GET", isPrivileged: false, intentKind }),
-      ).toBe(true);
+        cacheBypassReason({ method: "GET", isPrivileged: false, intentKind }),
+      ).toBe(null);
     }
   });
 
   it("bypasses a privileged request", () => {
     expect(
-      requestIsCacheable({
+      cacheBypassReason({
         method: "GET",
         isPrivileged: true,
         intentKind: "single",
       }),
-    ).toBe(false);
+    ).toBe("privileged");
   });
 
   it("bypasses search pages", () => {
     expect(
-      requestIsCacheable({
+      cacheBypassReason({
         method: "GET",
         isPrivileged: false,
         intentKind: "search",
       }),
-    ).toBe(false);
+    ).toBe("intent");
   });
 
   it("bypasses non-GET/HEAD methods", () => {
     expect(
-      requestIsCacheable({
+      cacheBypassReason({
         method: "POST",
         isPrivileged: false,
         intentKind: "single",
       }),
-    ).toBe(false);
+    ).toBe("method");
   });
 });
 

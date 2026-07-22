@@ -43,7 +43,20 @@ export function buildRestDispatcher(
     ...restRouter,
     ...buildPluginRestRouter(registry.restResources),
   };
-  const handler = new OpenAPIHandler(router);
+  const handler = new OpenAPIHandler(router, {
+    // One span per matched procedure — plugin resources included, since they
+    // share this handler. Errors thrown by the procedure stamp the span before
+    // propagating into oRPC's error mapping.
+    clientInterceptors: [
+      (options) => {
+        const procedure = options.path.join(".");
+        return options.context.telemetry.span(`rest: ${procedure}`, (s) => {
+          s.set("rest.procedure", procedure);
+          return options.next();
+        });
+      },
+    ],
+  });
   const varyByOrigin = isOriginDependent(cors);
   // Generated once per isolate, on first request for the spec.
   let spec: Promise<OpenAPI.Document> | undefined;

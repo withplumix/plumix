@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ConnectedCache } from "../runtime/slots.js";
+import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { readThrough } from "./read-through.js";
 
 // `defer` swallows the promise here so tests can drive the store-write path
@@ -33,6 +34,7 @@ describe("readThrough", () => {
       intentKind: "single",
       cache,
       defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
       render,
       tags: () => ["e:7"],
     });
@@ -54,6 +56,7 @@ describe("readThrough", () => {
       intentKind: "front-page",
       cache,
       defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
       render,
       tags: noTags,
     });
@@ -75,6 +78,7 @@ describe("readThrough", () => {
       intentKind: "single",
       cache,
       defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
       render,
       tags: noTags,
     });
@@ -95,6 +99,7 @@ describe("readThrough", () => {
       intentKind: null,
       cache,
       defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
       render,
       tags: noTags,
     });
@@ -114,6 +119,7 @@ describe("readThrough", () => {
       intentKind: "single",
       cache,
       defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
       render,
       tags: noTags,
     });
