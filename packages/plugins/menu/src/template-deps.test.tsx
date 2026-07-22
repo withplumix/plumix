@@ -10,6 +10,7 @@ import {
 import {
   adminUser,
   createDispatcherHarness,
+  createRequestMemo,
   createTestDb,
   entryFactory,
   entryTermFactory,
@@ -58,6 +59,7 @@ async function bundle(): Promise<TestBundle> {
     hooks,
     request: new Request("https://test.example/"),
     resolvedEntity: null,
+    memo: createRequestMemo(),
   } as unknown as AppContext;
   const dep = registry.templateDeps.get("menus");
   if (!dep) throw new Error("menus template dep not registered");

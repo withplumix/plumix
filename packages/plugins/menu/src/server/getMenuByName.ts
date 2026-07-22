@@ -1,5 +1,6 @@
 import type { AppContext, LookupResult } from "plumix/plugin";
 import { and, eq, inArray } from "drizzle-orm";
+import { memoBatch } from "plumix";
 import { entries, entryTerm, isCurrentSource, terms } from "plumix/plugin";
 
 import type { TreeNode } from "./buildTree.js";
@@ -71,13 +72,67 @@ async function resolveMenus(
   for (const slug of slugs) result.set(slug, null);
   if (result.size === 0) return result;
 
+  // Per-slug request memo over the batched load (#1493): the `menus`
+  // template dep and a `getMenuForLocation` render both resolving the
+  // same menu share one query cluster. Only the cluster is memoized —
+  // hooks (`menu:item`, `menu:tree`) and `isCurrent` still run per call
+  // with that call's own `location` / `resolvedEntity` context.
+  const unique = [...result.keys()];
+  const clusters = await memoBatch(
+    ctx.memo,
+    unique,
+    (slug) => `menu:data:${slug}`,
+    () => loadMenuData(ctx, unique),
+  );
+
+  await Promise.all(
+    unique.map(async (slug, i) => {
+      const data = clusters[i];
+      if (!data) return;
+      const { tree } = buildTree(data.rows);
+      const resolved = await Promise.all(
+        tree.map((node) => toResolvedItem(ctx, node, data.refs)),
+      );
+      const items = resolved.filter(
+        (item): item is ResolvedMenuItem => item !== null,
+      );
+
+      const filtered = await ctx.hooks.applyFilter("menu:tree", items, {
+        location,
+        termId: data.term.id,
+      });
+
+      result.set(slug, {
+        termId: data.term.id,
+        name: data.term.name,
+        slug: data.term.slug,
+        items: filtered,
+      });
+    }),
+  );
+  return result;
+}
+
+interface MenuData {
+  readonly term: {
+    readonly id: number;
+    readonly name: string;
+    readonly slug: string;
+  };
+  readonly rows: readonly MenuItemRow[];
+  readonly refs: ResolvedRefs;
+}
+
+async function loadMenuData(
+  ctx: AppContext,
+  slugs: readonly string[],
+): Promise<Map<string, MenuData>> {
+  const data = new Map<string, MenuData>();
   const termRows = await ctx.db
     .select({ id: terms.id, name: terms.name, slug: terms.slug })
     .from(terms)
-    .where(
-      and(eq(terms.taxonomy, "menu"), inArray(terms.slug, [...result.keys()])),
-    );
-  if (termRows.length === 0) return result;
+    .where(and(eq(terms.taxonomy, "menu"), inArray(terms.slug, [...slugs])));
+  if (termRows.length === 0) return data;
 
   const rows = await ctx.db
     .select({
@@ -112,32 +167,16 @@ async function resolveMenus(
     else rowsByTerm.set(termId, [row]);
   }
 
+  // `refs` is the union across the batch; per-slug items look up by id.
   const refs = await resolveRefs(ctx, rows);
-
-  await Promise.all(
-    termRows.map(async (term) => {
-      const { tree } = buildTree(rowsByTerm.get(term.id) ?? []);
-      const resolved = await Promise.all(
-        tree.map((node) => toResolvedItem(ctx, node, refs)),
-      );
-      const items = resolved.filter(
-        (item): item is ResolvedMenuItem => item !== null,
-      );
-
-      const filtered = await ctx.hooks.applyFilter("menu:tree", items, {
-        location,
-        termId: term.id,
-      });
-
-      result.set(term.slug, {
-        termId: term.id,
-        name: term.name,
-        slug: term.slug,
-        items: filtered,
-      });
-    }),
-  );
-  return result;
+  for (const term of termRows) {
+    data.set(term.slug, {
+      term,
+      rows: rowsByTerm.get(term.id) ?? [],
+      refs,
+    });
+  }
+  return data;
 }
 
 interface ResolvedRefs {

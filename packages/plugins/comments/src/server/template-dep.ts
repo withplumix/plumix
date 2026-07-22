@@ -1,6 +1,5 @@
 import type { AppContext } from "plumix/plugin";
-import { eq } from "drizzle-orm";
-import { entries } from "plumix/schema";
+import { readEntryType } from "plumix";
 
 import type { ResolvedCommentsConfig } from "../config.js";
 import type { ResolvedThread } from "./load-thread.js";
@@ -23,14 +22,11 @@ export function createCommentsThreadLoader(config: ResolvedCommentsConfig) {
     const resolved = ctx.resolvedEntity;
     if (resolved?.kind !== "entry") return {};
 
-    const [row] = await ctx.db
-      .select({ type: entries.type })
-      .from(entries)
-      .where(eq(entries.id, resolved.id));
-    if (!row) return {};
+    const type = await readEntryType(ctx, resolved.id);
+    if (type === null) return {};
 
-    const supports = ctx.plugins.entryTypes.get(row.type)?.supports;
-    if (!isCommentingEnabled(row.type, supports, config)) return {};
+    const supports = ctx.plugins.entryTypes.get(type)?.supports;
+    if (!isCommentingEnabled(type, supports, config)) return {};
 
     // First (newest) page; older roots load via GET /_plumix/comments/list.
     const thread = await loadThread(ctx, resolved.id, {
