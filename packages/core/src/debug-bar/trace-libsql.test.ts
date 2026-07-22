@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
-import { createDebugCollector } from "./collector.js";
+import { createTelemetryCollector } from "./collector.js";
 import { traceSqlClient } from "./trace-libsql.js";
 
 describe("traceSqlClient", () => {
@@ -15,20 +15,20 @@ describe("traceSqlClient", () => {
   }
 
   test("times each execute as a kind-named db span", async () => {
-    const debug = createDebugCollector(undefined);
-    const ctx = { debug } as unknown as AppContext;
+    const telemetry = createTelemetryCollector(undefined);
+    const ctx = { telemetry } as unknown as AppContext;
     const client = traceSqlClient(fakeClient());
 
     await requestStore.run(ctx, () =>
       client.execute({ sql: "select * from posts", args: [] }),
     );
 
-    expect(debug.getSpans().map((s) => s.name)).toEqual(["db: select"]);
+    expect(telemetry.getSpans().map((s) => s.name)).toEqual(["db: select"]);
   });
 
   test("times a batch as one span, labelled by kind and count", async () => {
-    const debug = createDebugCollector(undefined);
-    const ctx = { debug } as unknown as AppContext;
+    const telemetry = createTelemetryCollector(undefined);
+    const ctx = { telemetry } as unknown as AppContext;
     const client = traceSqlClient(fakeClient());
 
     await requestStore.run(ctx, () =>
@@ -38,7 +38,7 @@ describe("traceSqlClient", () => {
       ]),
     );
 
-    expect(debug.getSpans().map((s) => s.name)).toEqual(["db: select (2)"]);
+    expect(telemetry.getSpans().map((s) => s.name)).toEqual(["db: select (2)"]);
   });
 
   test("passes calls straight through outside a request context", async () => {

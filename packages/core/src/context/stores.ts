@@ -4,6 +4,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { AppContext } from "./app.js";
+import type { TelemetrySpan } from "./telemetry.js";
 import { ContextError } from "./errors.js";
 
 export const requestStore = new AsyncLocalStorage<AppContext>();
@@ -15,16 +16,7 @@ export interface HookFrame {
 
 export const hookStore = new AsyncLocalStorage<HookFrame>();
 
-export interface TraceSpan {
-  readonly name: string;
-  readonly startedAt: number;
-  /** Wall-clock duration; set when the span's work completes. */
-  durationMs: number;
-  readonly children: TraceSpan[];
-  readonly annotations: Record<string, unknown>;
-}
-
-export const traceStore = new AsyncLocalStorage<TraceSpan>();
+export const traceStore = new AsyncLocalStorage<TelemetrySpan>();
 
 export const txStore = new AsyncLocalStorage<unknown>();
 

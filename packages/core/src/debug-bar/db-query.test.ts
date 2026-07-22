@@ -2,20 +2,20 @@ import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
-import { createDebugCollector } from "./collector.js";
+import { createTelemetryCollector } from "./collector.js";
 import { createDebugSqlLogger } from "./db-query.js";
 
 describe("createDebugSqlLogger", () => {
   test("records each query drizzle logs to the database bucket", () => {
-    const debug = createDebugCollector(undefined);
-    const ctx = { debug } as unknown as AppContext;
+    const telemetry = createTelemetryCollector(undefined);
+    const ctx = { telemetry } as unknown as AppContext;
     const logger = createDebugSqlLogger();
 
     requestStore.run(ctx, () => {
       logger.logQuery("select * from t where id = ?", [7]);
     });
 
-    expect(debug.get("database")).toEqual([
+    expect(telemetry.get("database").map((r) => r.data)).toEqual([
       { sql: "select * from t where id = ?", params: [7] },
     ]);
   });

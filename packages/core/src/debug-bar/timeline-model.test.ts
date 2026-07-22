@@ -1,15 +1,22 @@
 import { describe, expect, test } from "vitest";
 
-import type { TraceSpan } from "../context/stores.js";
+import type { TelemetrySpan } from "../context/telemetry.js";
 import { buildTimeline } from "./timeline-model.js";
 
 function span(
   name: string,
   startedAt: number,
   durationMs: number,
-  children: TraceSpan[] = [],
-): TraceSpan {
-  return { name, startedAt, durationMs, children, annotations: {} };
+  children: TelemetrySpan[] = [],
+): TelemetrySpan {
+  return {
+    name,
+    startedAt,
+    durationMs,
+    children,
+    status: "ok",
+    attributes: {},
+  };
 }
 
 describe("buildTimeline", () => {

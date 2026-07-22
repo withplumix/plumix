@@ -85,7 +85,7 @@ export const timelinePanel: DebugPanel = {
   title: "Timeline",
   order: 50,
   render: (ctx: AppContext) => {
-    const timeline = buildTimeline(ctx.debug.getSpans());
+    const timeline = buildTimeline(ctx.telemetry.getSpans());
     if (timeline.rows.length === 0) {
       return <p className="plumix-debug-bar__empty">No spans recorded.</p>;
     }

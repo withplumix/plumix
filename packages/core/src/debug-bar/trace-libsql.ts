@@ -4,7 +4,7 @@ import { tryGetContext } from "../context/stores.js";
 import { queryKind } from "./highlight-sql.js";
 
 /**
- * Wraps a libsql client so every `execute` runs inside a timed `ctx.debug.span`
+ * Wraps a libsql client so every `execute` runs inside a timed `ctx.telemetry.span`
  * — the Timeline panel's source of per-query durations, which drizzle's logger
  * contract can't provide. Dev-only (call it behind the `PLUMIX_DEV` gate); a
  * no-op outside a request, and tree-shaken from prod along with its callers.
@@ -27,7 +27,7 @@ export function traceSqlClient(client: Client): Client {
     const ctx = tryGetContext();
     const run = (): ReturnType<typeof rawExecute> => rawExecute(stmt);
     if (!ctx) return run();
-    return ctx.debug.span(`db: ${queryKind(stmtSql(stmt))}`, run);
+    return ctx.telemetry.span(`db: ${queryKind(stmtSql(stmt))}`, run);
   };
 
   // Relational reads and transactions run as one batched round-trip; time the
@@ -40,7 +40,7 @@ export function traceSqlClient(client: Client): Client {
     if (!ctx || !Array.isArray(stmts)) return run();
     const kinds = new Set(stmts.map((stmt) => queryKind(stmtSql(stmt))));
     const label = kinds.size === 1 ? `db: ${[...kinds][0]}` : "db: batch";
-    return ctx.debug.span(`${label} (${stmts.length})`, run);
+    return ctx.telemetry.span(`${label} (${stmts.length})`, run);
   };
 
   return client;

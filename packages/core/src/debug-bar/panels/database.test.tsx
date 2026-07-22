@@ -2,15 +2,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../../context/app.js";
-import { createDebugCollector } from "../collector.js";
+import { createTelemetryCollector } from "../collector.js";
 import { databasePanel } from "./database.js";
 
 function ctxWithQueries(
   queries: readonly { sql: string; params: readonly unknown[] }[],
 ): AppContext {
-  const debug = createDebugCollector(undefined);
-  for (const q of queries) debug.record("database", q);
-  return { debug } as unknown as AppContext;
+  const telemetry = createTelemetryCollector(undefined);
+  for (const q of queries) telemetry.record("database", q);
+  return { telemetry } as unknown as AppContext;
 }
 
 describe("databasePanel", () => {

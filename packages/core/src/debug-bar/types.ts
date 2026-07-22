@@ -16,7 +16,7 @@ export interface DebugPanel {
   readonly order?: number;
   /**
    * Rendered in isolation (its own SSR pass) so a throw can't crash the host
-   * page. Read request data off `ctx` (and `ctx.debug.get(id)` for your own
+   * page. Read request data off `ctx` (and `ctx.telemetry.get(id)` for your own
    * recorded entries) — outer React context providers are NOT visible across
    * the isolated render, so don't rely on `useContext` from the page tree.
    */

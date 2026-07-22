@@ -2,14 +2,25 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../../context/app.js";
+import type { JsonValue } from "../../context/telemetry.js";
 import type { TemplateResolution } from "./template.js";
-import { createDebugCollector } from "../collector.js";
+import { createTelemetryCollector } from "../collector.js";
+import { TEMPLATE_PANEL_ID } from "../template-node-label.js";
 import { templatePanel } from "./template.js";
 
+// The renderer stores the resolution walk as an attribute on the `template`
+// span (nested under `render`, as in a real request) — the panel reads it back
+// from the span tree.
 function ctxWith(resolution?: TemplateResolution): AppContext {
-  const debug = createDebugCollector(undefined);
-  if (resolution) debug.record("template", resolution);
-  return { debug } as unknown as AppContext;
+  const telemetry = createTelemetryCollector(undefined);
+  telemetry.span("render", () => {
+    if (resolution) {
+      telemetry.span(TEMPLATE_PANEL_ID, (s) => {
+        s.set("resolution", resolution as unknown as JsonValue);
+      });
+    }
+  });
+  return { telemetry } as unknown as AppContext;
 }
 
 describe("templatePanel", () => {

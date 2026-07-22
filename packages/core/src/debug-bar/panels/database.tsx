@@ -35,7 +35,9 @@ export const databasePanel: DebugPanel = {
   title: "Database",
   order: 20,
   render: (ctx: AppContext) => {
-    const queries = ctx.debug.get(DB_PANEL_ID) as readonly DbQueryEntry[];
+    const queries = ctx.telemetry
+      .get(DB_PANEL_ID)
+      .map((r) => r.data as DbQueryEntry);
     if (queries.length === 0) {
       return <p className="plumix-debug-bar__empty">No queries recorded.</p>;
     }

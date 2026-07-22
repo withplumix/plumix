@@ -15,7 +15,7 @@ export interface DbQueryEntry {
  * option to `drizzle(...)` (dev-gated) — one uniform mechanism across every
  * driver, giving the `?`-form SQL plus the bound params. It reaches the
  * request's collector via the request-store ALS, so it's a no-op outside a
- * request (and in prod, where `ctx.debug` is the no-op collector). Per-query
+ * request (and in prod, where `ctx.telemetry` is the no-op collector). Per-query
  * timing is not part of drizzle's logger contract; the Timeline panel measures
  * it via spans instead.
  *
@@ -25,7 +25,7 @@ export interface DbQueryEntry {
 export function createDebugSqlLogger(): Logger {
   return {
     logQuery(sql, params) {
-      tryGetContext()?.debug.record(DB_PANEL_ID, { sql, params });
+      tryGetContext()?.telemetry.record(DB_PANEL_ID, { sql, params });
     },
   };
 }

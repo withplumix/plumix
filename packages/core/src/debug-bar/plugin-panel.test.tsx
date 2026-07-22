@@ -17,7 +17,7 @@ const demoPlugin = definePlugin("debug-demo", (ctx) => {
     hasArchive: true,
   });
   ctx.addFilter("render:document", (manifest, _data, appCtx) => {
-    appCtx.debug.record("debug-demo", { note: "recorded during render" });
+    appCtx.telemetry.record("debug-demo", { note: "recorded during render" });
     return manifest;
   });
   ctx.addFilter("debug_bar:panels", (panels) => [
@@ -30,9 +30,9 @@ const demoPlugin = definePlugin("debug-demo", (ctx) => {
         <DebugSection title="Demo">
           <DebugTable
             headers={["note"]}
-            rows={appCtx.debug
+            rows={appCtx.telemetry
               .get("debug-demo")
-              .map((e) => [String((e as { note: string }).note)])}
+              .map((r) => [String((r.data as { note: string }).note)])}
           />
         </DebugSection>
       ),
