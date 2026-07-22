@@ -20,7 +20,7 @@ export function humanizeFieldKey(key: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-interface StringFieldState {
+export interface StringFieldState {
   readonly label?: Label;
   readonly description?: Label;
   readonly placeholder?: Label;

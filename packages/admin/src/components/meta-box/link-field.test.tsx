@@ -144,7 +144,7 @@ describe("LinkField", () => {
     expect(lookupList).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: "entry",
-        scope: { entryTypes: ["post", "page"] },
+        scope: { entryTypes: ["post", "page"], status: "publish" },
       }),
     );
     expect(
@@ -158,6 +158,25 @@ describe("LinkField", () => {
     expect(screen.getByTestId("meta-box-field-cta-input-url")).toHaveValue(
       "/pricing",
     );
+  });
+
+  test("a URL-less draft emits null but keeps the typed text in the UI", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(<Harness initial={null} onChangeSpy={onChange} />);
+
+    const label = screen.getByTestId("meta-box-field-cta-input-label");
+    await userEvent.type(label, "Go");
+    // Half-filled: nothing valid to store yet — the form must hold
+    // null (saving deletes the key) rather than `{ url: "" }` (which
+    // the server rejects and would block the whole entry save).
+    expect(onChange).toHaveBeenLastCalledWith(null);
+    expect(label).toHaveValue("Go");
+
+    await userEvent.type(
+      screen.getByTestId("meta-box-field-cta-input-url"),
+      "/x",
+    );
+    expect(onChange).toHaveBeenLastCalledWith({ url: "/x", label: "Go" });
   });
 
   test("no public entry types hides the Pick button", () => {

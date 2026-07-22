@@ -14,19 +14,20 @@ import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { Button } from "@plumix/admin-ui/button";
 import {
   CommandDialog,
-  CommandEmpty,
   CommandInput,
-  CommandItem,
   CommandList,
 } from "@plumix/admin-ui/command";
 import { Input } from "@plumix/admin-ui/input";
 import { Switch } from "@plumix/admin-ui/switch";
 
+import { renderLookupListBody } from "./reference-picker.js";
+
 // Admin control for the `link` field — a CTA-shaped `{ url, label?,
 // newTab? }` value. The URL is authored either by typing an external
-// URL or by picking an internal entry, which resolves to its permalink
-// via the lookup RPC's `href` and stores that plain URL (no reference,
-// no hydration — renaming the entry does not retarget the link).
+// URL or by picking a published internal entry, which resolves to its
+// permalink via the lookup RPC's `href` and stores that plain URL (no
+// reference, no hydration — renaming the entry does not retarget the
+// link).
 
 const M = {
   url: defineMessage({
@@ -36,10 +37,6 @@ const M = {
   linkText: defineMessage({
     id: "metaBox.link.text",
     message: "Link text",
-  }),
-  newTab: defineMessage({
-    id: "metaBox.link.newTab",
-    message: "Open in new tab",
   }),
   pick: defineMessage({
     id: "metaBox.link.pick",
@@ -55,8 +52,8 @@ const M = {
   }),
 } satisfies Record<string, MessageDescriptor>;
 
-// Display-state view of the stored value. Absent optionals render as
-// empty string / off so the inputs stay controlled.
+// Display-state view of the value. Absent optionals render as empty
+// string / off so the inputs stay controlled.
 interface LinkDraft {
   readonly url: string;
   readonly label: string;
@@ -75,6 +72,10 @@ function toDraft(value: unknown): LinkDraft {
   };
 }
 
+function sameDraft(a: LinkDraft, b: LinkDraft): boolean {
+  return a.url === b.url && a.label === b.label && a.newTab === b.newTab;
+}
+
 export function LinkField({
   field,
   rhf,
@@ -91,7 +92,36 @@ export function LinkField({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  const draft = toDraft(rhf.value);
+  // The inputs edit a local draft so a half-filled state (link text
+  // typed before the URL) survives in the UI while the form value
+  // stays valid: a draft without a URL emits `null` (the server
+  // rejects `{ url: "" }`, and an absent key is a deletion on save).
+  // External resyncs (`form.reset()` post-save) are detected with the
+  // state-during-render snapshot pattern — see `JsonControl`.
+  const externalDraft = toDraft(rhf.value);
+  const [draft, setDraft] = useState(externalDraft);
+  const [lastSynced, setLastSynced] = useState(externalDraft);
+  if (!sameDraft(externalDraft, lastSynced)) {
+    setLastSynced(externalDraft);
+    setDraft(externalDraft);
+  }
+
+  const update = (next: LinkDraft): void => {
+    setDraft(next);
+    const value =
+      next.url === ""
+        ? null
+        : {
+            url: next.url,
+            ...(next.label !== "" ? { label: next.label } : {}),
+            ...(next.newTab ? { newTab: true } : {}),
+          };
+    // Track what we emitted so the resync branch only fires for
+    // changes made outside this control.
+    setLastSynced(toDraft(value));
+    rhf.onChange(value);
+  };
+
   const entryTypes = publicEntryTypeNames();
 
   const listQuery = useQuery({
@@ -99,7 +129,9 @@ export function LinkField({
       input: {
         kind: "entry",
         query: query.trim() || undefined,
-        scope: { entryTypes },
+        // Only published entries have a permalink worth storing — a
+        // draft's URL would 404 (and go stale on slug edits).
+        scope: { entryTypes, status: "publish" },
         limit: 20,
       },
     }),
@@ -109,20 +141,6 @@ export function LinkField({
   const items = (listQuery.data?.items ?? []).filter(
     (item) => item.href !== undefined,
   );
-
-  // A fully-empty draft clears the key (deletion on save) instead of
-  // persisting `{ url: "" }`, which the server would reject.
-  const emit = (next: LinkDraft): void => {
-    if (next.url === "" && next.label === "" && !next.newTab) {
-      rhf.onChange(null);
-      return;
-    }
-    rhf.onChange({
-      url: next.url,
-      ...(next.label !== "" ? { label: next.label } : {}),
-      ...(next.newTab ? { newTab: true } : {}),
-    });
-  };
 
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
@@ -139,7 +157,7 @@ export function LinkField({
           disabled={disabled}
           onBlur={rhf.onBlur}
           onChange={(e) => {
-            emit({ ...draft, url: e.target.value });
+            update({ ...draft, url: e.target.value });
           }}
           aria-label={labelFn(M.url)}
           data-testid={`${testId}-url`}
@@ -165,7 +183,7 @@ export function LinkField({
         value={draft.label}
         disabled={disabled}
         onChange={(e) => {
-          emit({ ...draft, label: e.target.value });
+          update({ ...draft, label: e.target.value });
         }}
         aria-label={labelFn(M.linkText)}
         placeholder={labelFn(M.linkText)}
@@ -176,9 +194,8 @@ export function LinkField({
           checked={draft.newTab}
           disabled={disabled}
           onCheckedChange={(checked) => {
-            emit({ ...draft, newTab: checked });
+            update({ ...draft, newTab: checked });
           }}
-          aria-label={labelFn(M.newTab)}
           data-testid={`${testId}-newtab`}
         />
         <Trans id="metaBox.link.newTab" message="Open in new tab" />
@@ -196,13 +213,13 @@ export function LinkField({
           data-testid={`${testId}-search`}
         />
         <CommandList>
-          {renderListBody({
+          {renderLookupListBody({
             isLoading: listQuery.isLoading,
             items,
             testId,
             untitledLabel,
-            onSelect: (href) => {
-              emit({ ...draft, url: href });
+            onSelect: (item) => {
+              if (item.href !== undefined) update({ ...draft, url: item.href });
               setOpen(false);
             },
           })}
@@ -210,60 +227,4 @@ export function LinkField({
       </CommandDialog>
     </div>
   );
-}
-
-interface LinkLookupItem {
-  readonly id: string;
-  readonly label: string | null;
-  readonly targetType?: string;
-  readonly subtitle?: string;
-  readonly href?: string;
-}
-
-function renderListBody({
-  isLoading,
-  items,
-  testId,
-  untitledLabel,
-  onSelect,
-}: {
-  isLoading: boolean;
-  items: readonly LinkLookupItem[];
-  testId: string;
-  untitledLabel: ReturnType<typeof useUntitledLabel>;
-  onSelect: (href: string) => void;
-}): ReactNode {
-  if (isLoading) {
-    return (
-      <CommandEmpty>
-        <Trans id="metaBox.link.loading" message="Loading…" />
-      </CommandEmpty>
-    );
-  }
-  if (items.length === 0) {
-    return (
-      <CommandEmpty>
-        <Trans id="metaBox.link.noMatches" message="No matches" />
-      </CommandEmpty>
-    );
-  }
-  return items.map((item) => (
-    <CommandItem
-      key={item.id}
-      value={`${item.label ?? ""} ${item.subtitle ?? ""}`}
-      onSelect={() => {
-        if (item.href !== undefined) onSelect(item.href);
-      }}
-      data-testid={`${testId}-option-${item.id}`}
-    >
-      <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium">
-          {untitledLabel(item.label, item.targetType)}
-        </span>
-        {item.subtitle ? (
-          <span className="text-muted-foreground text-xs">{item.subtitle}</span>
-        ) : null}
-      </div>
-    </CommandItem>
-  ));
 }

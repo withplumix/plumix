@@ -6,24 +6,15 @@ import type {
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
 } from "../manifest.js";
+import type { StringFieldState } from "./builder.js";
 import { humanizeFieldKey } from "./builder.js";
+import { SAFE_HREF_RE } from "./richtext-validate.js";
 
 export type { LinkValue } from "../manifest.js";
 
-interface LinkFieldState {
-  readonly label?: Label;
-  readonly description?: Label;
-  readonly placeholder?: Label;
-  readonly prepend?: Label;
-  readonly append?: Label;
+type LinkFieldState = Omit<StringFieldState, "default" | "maxLength"> & {
   readonly default?: LinkValue;
-  readonly required?: true;
-  readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
-  readonly showInApi?: true;
-  readonly sanitize?: (value: unknown) => unknown;
-  readonly validate?: MetaBoxFieldValidate;
-}
+};
 
 /**
  * Fluent chain for the `link` field — see `StringFieldBuilder` for the
@@ -134,7 +125,12 @@ export class LinkFieldBuilder<
       label: state.label ?? humanizeFieldKey(this.#key),
       type: "json",
       inputType: "link",
-      sanitize: buildLinkSanitize(sanitize),
+      // The built-in shape/URL check always runs first so a chained
+      // `.sanitize()` callback can trust its typed `LinkValue` parameter.
+      sanitize: (value) => {
+        const coerced = coerceLinkValue(value);
+        return sanitize ? sanitize(coerced) : coerced;
+      },
     };
   }
 }
@@ -142,17 +138,6 @@ export class LinkFieldBuilder<
 /** CTA-style link field — internal entry URL or external URL, optional label + new-tab. */
 export function link(key: string): LinkFieldBuilder {
   return new LinkFieldBuilder(key);
-}
-
-// The built-in shape/URL check always runs first so a chained
-// `.sanitize()` callback can trust its typed `LinkValue` parameter.
-function buildLinkSanitize(
-  userSanitize: ((value: unknown) => unknown) | undefined,
-): (value: unknown) => unknown {
-  return (value) => {
-    const coerced = coerceLinkValue(value);
-    return userSanitize ? userSanitize(coerced) : coerced;
-  };
 }
 
 function coerceLinkValue(value: unknown): LinkValue {
@@ -171,13 +156,13 @@ function coerceLinkValue(value: unknown): LinkValue {
   };
 }
 
-// Accepted URL forms: a site-relative path (`/pricing` — what the
-// admin's entry picker stores; `//host/x` protocol-relative also
-// passes) or an absolute URL the WHATWG parser accepts
-// (`https://…`, `mailto:…`, `tel:…`).
+// URL gate shared with richtext link marks (`SAFE_HREF_RE`): relative
+// forms (`/pricing` — what the admin's entry picker stores — plus `#`,
+// `?`, `./`) and `https?` / `mailto:` / `tel:` absolutes. Script-bearing
+// schemes (`javascript:`, `data:`) hard-fail — the value is destined
+// for rendered anchor hrefs.
 function isValidLinkUrl(url: string): boolean {
-  if (url.startsWith("/")) return true;
-  return URL.canParse(url);
+  return SAFE_HREF_RE.test(url);
 }
 
 // Sanitizer flow-control sentinel — the write pipeline translates any

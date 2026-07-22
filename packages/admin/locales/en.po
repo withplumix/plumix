@@ -643,6 +643,16 @@ msgstr ""
 #~ msgstr "Slug must be lowercase letters, numbers, and dashes."
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+#~ msgid "metaBox.link.loading"
+#~ msgstr "Loading…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+#~ msgid "metaBox.link.noMatches"
+#~ msgstr "No matches"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -2414,11 +2424,6 @@ msgid "profile.sessions.loading"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/link-field.tsx
-msgid "metaBox.link.loading"
-msgstr "Loading…"
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.loading"
 msgstr "Loading…"
@@ -2666,11 +2671,6 @@ msgstr "No mailer adapter is configured. Pass a `mailer:` to `plumix({...})` (e.
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
-msgstr "No matches"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/link-field.tsx
-msgid "metaBox.link.noMatches"
 msgstr "No matches"
 
 #. js-lingui-explicit-id

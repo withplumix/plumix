@@ -643,6 +643,16 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+#~ msgid "metaBox.link.loading"
+#~ msgstr "Wird geladen…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+#~ msgid "metaBox.link.noMatches"
+#~ msgstr "Keine Treffer"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
@@ -2414,11 +2424,6 @@ msgid "profile.sessions.loading"
 msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/link-field.tsx
-msgid "metaBox.link.loading"
-msgstr "Wird geladen…"
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.loading"
 msgstr "Wird geladen…"
@@ -2666,11 +2671,6 @@ msgstr "Kein Mailer-Adapter konfiguriert. Übergeben Sie einen `mailer:` an `plu
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
-msgstr "Keine Treffer"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/link-field.tsx
-msgid "metaBox.link.noMatches"
 msgstr "Keine Treffer"
 
 #. js-lingui-explicit-id

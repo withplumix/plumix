@@ -643,6 +643,16 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+#~ msgid "metaBox.link.loading"
+#~ msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+#~ msgid "metaBox.link.noMatches"
+#~ msgstr "لا مطابقات"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — لا يمكن اختيار الأبناء كأب."
@@ -2414,11 +2424,6 @@ msgid "profile.sessions.loading"
 msgstr "جارٍ التحميل…"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/link-field.tsx
-msgid "metaBox.link.loading"
-msgstr "جارٍ التحميل…"
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.loading"
 msgstr "جارٍ التحميل…"
@@ -2666,11 +2671,6 @@ msgstr "لم يتم تكوين محوّل بريد. مرّر `mailer:` إلى `p
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
-msgstr "لا مطابقات"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/link-field.tsx
-msgid "metaBox.link.noMatches"
 msgstr "لا مطابقات"
 
 #. js-lingui-explicit-id

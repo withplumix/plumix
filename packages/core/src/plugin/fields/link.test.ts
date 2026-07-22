@@ -72,19 +72,30 @@ describe("link server validation and round-trip", () => {
     expect(decodeMetaBag(findField, { cta: stored })).toEqual({ cta: value });
   });
 
-  test("internal paths and non-http schemes are accepted", () => {
-    expect(write({ url: "/pricing" })).toEqual({ url: "/pricing" });
-    expect(write({ url: "mailto:hi@example.com" })).toEqual({
-      url: "mailto:hi@example.com",
-    });
+  test("relative forms and safe non-http schemes are accepted", () => {
+    for (const url of [
+      "/pricing",
+      "#contact",
+      "?page=2",
+      "./sibling",
+      "mailto:hi@example.com",
+      "tel:+15551234567",
+    ]) {
+      expect(write({ url })).toEqual({ url });
+    }
   });
 
-  test("malformed URLs and shapes are rejected as invalid_value", () => {
+  test("malformed URLs, unsafe schemes, and bad shapes reject as invalid_value", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {
       for (const bad of [
         { url: "not a url" },
         { url: "" },
+        // Script-bearing schemes must hard-fail — the url reaches
+        // rendered anchor hrefs (same gate as richtext link marks).
+        { url: "javascript:alert(1)" },
+        { url: "JavaScript:alert(1)" },
+        { url: "data:text/html,<script>x</script>" },
         { url: 42 },
         {},
         "https://example.com",

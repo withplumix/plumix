@@ -45,7 +45,7 @@ function expandAliases(allowlist: readonly string[]): readonly string[] {
  * `vbscript:`, `file:` and their variants. Fragment / query-only /
  * relative refs pass.
  */
-const SAFE_HREF_RE = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
+export const SAFE_HREF_RE = /^(https?:\/\/|mailto:|tel:|\/|#|\?|\.\.?\/)/i;
 
 /**
  * Maximum nesting depth the validator will recurse through. The

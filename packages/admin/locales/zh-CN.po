@@ -643,6 +643,16 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+#~ msgid "metaBox.link.loading"
+#~ msgstr "加载中…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+#~ msgid "metaBox.link.noMatches"
+#~ msgstr "无匹配项"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — 子项无法被选为父项。"
@@ -2414,11 +2424,6 @@ msgid "profile.sessions.loading"
 msgstr "加载中…"
 
 #. js-lingui-explicit-id
-#: src/components/meta-box/link-field.tsx
-msgid "metaBox.link.loading"
-msgstr "加载中…"
-
-#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.loading"
 msgstr "加载中…"
@@ -2666,11 +2671,6 @@ msgstr "未配置邮件发送器适配器。请向 `plumix({...})` 传入 `maile
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.noMatch"
-msgstr "无匹配项"
-
-#. js-lingui-explicit-id
-#: src/components/meta-box/link-field.tsx
-msgid "metaBox.link.noMatches"
 msgstr "无匹配项"
 
 #. js-lingui-explicit-id
