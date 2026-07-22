@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { Slider } from "@plumix/admin-ui/slider";
+import { Switch } from "@plumix/admin-ui/switch";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import { formatTemporalValue } from "@plumix/core/manifest";
@@ -112,8 +113,49 @@ export function MetaBoxField({
           );
         }
 
+        if (field.inputType === "toggle") {
+          // Toggles carry their label inline beside the switch (like
+          // checkboxes) plus optional on/off state text that tracks the
+          // current value.
+          const stateText = rhf.value === true ? field.onText : field.offText;
+          return (
+            <FormItem className={className} data-testid={testIdPrefix}>
+              <div className="flex items-center gap-2">
+                <FormControl>
+                  <Switch
+                    name={rhf.name}
+                    checked={rhf.value === true}
+                    required={field.required}
+                    disabled={disabled}
+                    onBlur={rhf.onBlur}
+                    onCheckedChange={rhf.onChange}
+                    data-testid={inputTestId}
+                  />
+                </FormControl>
+                <FormLabel>{labelText}</FormLabel>
+                {stateText ? (
+                  <span
+                    className="text-muted-foreground text-sm"
+                    data-testid={`${inputTestId}-state`}
+                  >
+                    {renderLabel(stateText)}
+                  </span>
+                ) : null}
+              </div>
+              {field.description ? (
+                <FormDescription data-testid={`${testIdPrefix}-description`}>
+                  {renderLabel(field.description)}
+                </FormDescription>
+              ) : null}
+              <FormMessage />
+            </FormItem>
+          );
+        }
+
         if (
           field.inputType === "select" &&
+          field.multiple !== true &&
+          (field.appearance ?? "select") === "select" &&
           getPluginFieldType(field.inputType) === undefined
         ) {
           // Radix Select needs <FormControl> wrapping the trigger (not the
@@ -373,7 +415,27 @@ function renderLinkField({
   );
 }
 
-function renderMultiselectField({
+// Dispatch for the non-dropdown `select` variants. The dropdown case
+// (single + appearance "select", the default) never reaches this table —
+// it's handled in the FormField render callback because Radix Select
+// needs <FormControl> around its trigger. Everything else lands here:
+// single radio/buttons, multi buttons (the multi default) / checkboxes.
+function renderSelectChoiceField(ctx: NativeInputContext): ReactNode {
+  const { field } = ctx;
+  if (field.multiple === true) {
+    return field.appearance === "checkboxes"
+      ? renderCheckboxListField(ctx)
+      : renderMultiButtonsField(ctx);
+  }
+  return field.appearance === "radio"
+    ? renderRadioField(ctx)
+    : renderSingleButtonsField(ctx);
+}
+
+// Single-value toggle-button group — `appearance: "buttons"`. Radix
+// gives single-type items radio semantics (role=radio), matching the
+// control's one-of-many meaning.
+function renderSingleButtonsField({
   field,
   rhf,
   disabled,
@@ -381,6 +443,95 @@ function renderMultiselectField({
   renderLabel,
 }: NativeInputContext): ReactNode {
   const labelText = renderLabel(field.label);
+  return (
+    <ToggleGroup
+      type="single"
+      variant="outline"
+      spacing={1}
+      value={encodeOptionValue(asString(rhf.value))}
+      disabled={disabled}
+      onValueChange={(next) => {
+        // Radix emits "" when the active item is clicked again
+        // (deselect); a one-of-many control keeps its selection, like
+        // a radio group.
+        if (next !== "") rhf.onChange(decodeOptionValue(next));
+      }}
+      onBlur={rhf.onBlur}
+      aria-label={labelText}
+      data-testid={testId}
+    >
+      {(field.options ?? []).map((opt) => (
+        <ToggleGroupItem
+          key={opt.value}
+          value={encodeOptionValue(opt.value)}
+          data-testid={`${testId}-${opt.value}`}
+        >
+          {renderLabel(opt.label)}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
+
+// Multi-value checkbox list — `appearance: "checkboxes"`. Selection
+// state lives in the value array; emitted arrays follow the declared
+// option order so storage stays stable regardless of click order.
+function renderCheckboxListField({
+  field,
+  rhf,
+  disabled,
+  testId,
+  renderLabel,
+}: NativeInputContext): ReactNode {
+  const labelText = renderLabel(field.label);
+  const selected = new Set(
+    Array.isArray(rhf.value)
+      ? rhf.value.filter((v): v is string => typeof v === "string")
+      : [],
+  );
+  const options = field.options ?? [];
+  return (
+    <div
+      role="group"
+      aria-label={labelText}
+      className="flex flex-col gap-1"
+      data-testid={testId}
+    >
+      {options.map((opt) => (
+        <div key={opt.value} className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={selected.has(opt.value)}
+            disabled={disabled}
+            onBlur={rhf.onBlur}
+            onCheckedChange={(checked) => {
+              const next = new Set(selected);
+              if (checked === true) next.add(opt.value);
+              else next.delete(opt.value);
+              rhf.onChange(
+                options.filter((o) => next.has(o.value)).map((o) => o.value),
+              );
+            }}
+            id={`${testId}-${opt.value}`}
+            data-testid={`${testId}-${opt.value}`}
+          />
+          <label htmlFor={`${testId}-${opt.value}`}>
+            {renderLabel(opt.label)}
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function renderMultiButtonsField({
+  field,
+  rhf,
+  disabled,
+  testId,
+  renderLabel,
+}: NativeInputContext): ReactNode {
+  const labelText = renderLabel(field.label);
+  const options = field.options ?? [];
   const selected = Array.isArray(rhf.value)
     ? rhf.value.filter((v): v is string => typeof v === "string")
     : [];
@@ -392,13 +543,19 @@ function renderMultiselectField({
       value={selected}
       disabled={disabled}
       onValueChange={(next) => {
-        rhf.onChange(next);
+        // Emit in declared-option order (Radix reports click order), so
+        // the stored array is identical across the multi appearances —
+        // appearance is a pure-UI axis, ordering included.
+        const picked = new Set(next);
+        rhf.onChange(
+          options.filter((o) => picked.has(o.value)).map((o) => o.value),
+        );
       }}
       onBlur={rhf.onBlur}
       aria-label={labelText}
       data-testid={testId}
     >
-      {(field.options ?? []).map((opt) => (
+      {options.map((opt) => (
         <ToggleGroupItem
           key={opt.value}
           value={opt.value}
@@ -539,7 +696,7 @@ function renderTextLikeField(ctx: NativeInputContext): ReactNode {
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/multiselect/json/richtext/repeater/user/userList/entry/entryList/term/termList/select/radio/checkbox/link).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/json/richtext/repeater/user/userList/entry/entryList/term/termList/select/toggle/link).`,
     );
   }
 
@@ -583,10 +740,14 @@ const PRE_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
 
 // Input types keyed purely on `inputType`, dispatched *after* the
 // reference-target branches — a field carrying a `referenceTarget` reaches the
-// reference pickers first. `select` is absent: it's handled in the FormField
-// render callback (it needs <FormControl> around the Radix trigger).
+// reference pickers first. The `select` entry covers the non-dropdown
+// appearances only; the dropdown case is handled in the FormField render
+// callback (it needs <FormControl> around the Radix trigger). The bare
+// `multiselect` / `radio` keys keep object-literal registrations using the
+// retired input types rendering.
 const POST_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
-  multiselect: renderMultiselectField,
+  select: renderSelectChoiceField,
+  multiselect: renderMultiButtonsField,
   json: renderJsonField,
   richtext: renderRichtextField,
   date: renderDateTimeField,

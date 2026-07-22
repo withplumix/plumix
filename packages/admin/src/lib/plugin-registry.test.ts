@@ -59,6 +59,7 @@ describe("plugin field-type registry", () => {
     expect(() => registerPluginFieldType("text", Stub)).toThrow(/reserved/);
     expect(() => registerPluginFieldType("number", Stub)).toThrow(/reserved/);
     expect(() => registerPluginFieldType("checkbox", Stub)).toThrow(/reserved/);
+    expect(() => registerPluginFieldType("toggle", Stub)).toThrow(/reserved/);
     expect(() => registerPluginFieldType("user", Stub)).toThrow(/reserved/);
     expect(() => registerPluginFieldType("entry", Stub)).toThrow(/reserved/);
     expect(() => registerPluginFieldType("term", Stub)).toThrow(/reserved/);
