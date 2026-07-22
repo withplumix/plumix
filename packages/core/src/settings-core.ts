@@ -101,7 +101,7 @@ export function registerCoreSettings(registry: MutablePluginRegistry): void {
       {
         key: "public",
         type: "boolean",
-        inputType: "checkbox",
+        inputType: "toggle",
         label: D.publicSite,
         default: true,
       },

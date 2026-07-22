@@ -126,6 +126,7 @@ const RESERVED_INPUT_TYPES: ReadonlySet<string> = new Set([
   "select",
   "radio",
   "checkbox",
+  "toggle",
   "user",
   "userList",
   "entry",

@@ -586,6 +586,173 @@ describe("MetaBoxField dispatcher", () => {
     expect(onChange).toHaveBeenLastCalledWith(null);
   });
 
+  test("toggle: renders a switch with state text, toggles emit the boolean", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "toggle",
+          type: "boolean",
+          label: "Published",
+          onText: "Live",
+          offText: "Draft",
+        })}
+        initial={false}
+        onChangeSpy={onChange}
+      />,
+    );
+    // shadcn Switch is a Radix switch button (role=switch), not a native
+    // checkbox input.
+    const sw = screen.getByTestId("meta-box-field-k-input");
+    expect(sw).toHaveAttribute("role", "switch");
+    expect(
+      screen.getByTestId("meta-box-field-k-input-state"),
+    ).toHaveTextContent("Draft");
+
+    await userEvent.click(sw);
+    expect(onChange).toHaveBeenCalledWith(true);
+    expect(
+      screen.getByTestId("meta-box-field-k-input-state"),
+    ).toHaveTextContent("Live");
+  });
+
+  test("toggle: omits the state text element when no on/off text is declared", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={field({ inputType: "toggle", type: "boolean" })}
+        initial
+      />,
+    );
+    expect(screen.getByTestId("meta-box-field-k-input")).toHaveAttribute(
+      "role",
+      "switch",
+    );
+    expect(
+      screen.queryByTestId("meta-box-field-k-input-state"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("select appearance=radio: renders a radio group, click fires onChange", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "select",
+          appearance: "radio",
+          options: [
+            { value: "a", label: "Alpha" },
+            { value: "b", label: "Bravo" },
+          ],
+        })}
+        initial="a"
+        onChangeSpy={onChange}
+      />,
+    );
+    const bravo = screen.getByTestId("meta-box-field-k-input-b");
+    expect(bravo).toHaveAttribute("role", "radio");
+
+    await userEvent.click(bravo);
+    expect(onChange).toHaveBeenCalledWith("b");
+  });
+
+  test("select appearance=buttons: single-value toggle group emits the picked value", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "select",
+          appearance: "buttons",
+          options: [
+            { value: "a", label: "Alpha" },
+            { value: "b", label: "Bravo" },
+          ],
+        })}
+        initial="a"
+        onChangeSpy={onChange}
+      />,
+    );
+    const bravo = screen.getByTestId("meta-box-field-k-input-b");
+    expect(bravo).toHaveAttribute("role", "radio");
+
+    await userEvent.click(bravo);
+    expect(onChange).toHaveBeenCalledWith("b");
+  });
+
+  test("select multiple: defaults to the buttons control, emits the updated array", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "select",
+          type: "json",
+          multiple: true,
+          options: [
+            { value: "news", label: "News" },
+            { value: "sport", label: "Sport" },
+          ],
+        })}
+        initial={["news"]}
+        onChangeSpy={onChange}
+      />,
+    );
+    const sport = screen.getByTestId("meta-box-field-k-input-sport");
+    await userEvent.click(sport);
+    expect(onChange).toHaveBeenCalledWith(["news", "sport"]);
+  });
+
+  test("select multiple: emitted arrays follow declared option order, not click order", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "select",
+          type: "json",
+          multiple: true,
+          options: [
+            { value: "news", label: "News" },
+            { value: "sport", label: "Sport" },
+          ],
+        })}
+        initial={[]}
+        onChangeSpy={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("meta-box-field-k-input-sport"));
+    await userEvent.click(screen.getByTestId("meta-box-field-k-input-news"));
+    expect(onChange).toHaveBeenLastCalledWith(["news", "sport"]);
+  });
+
+  test("select multiple appearance=checkboxes: renders a checkbox list, emits the updated array", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "select",
+          type: "json",
+          multiple: true,
+          appearance: "checkboxes",
+          options: [
+            { value: "news", label: "News" },
+            { value: "sport", label: "Sport" },
+            { value: "music", label: "Music" },
+          ],
+        })}
+        initial={["news"]}
+        onChangeSpy={onChange}
+      />,
+    );
+    const sport = screen.getByTestId("meta-box-field-k-input-sport");
+    expect(sport).toHaveAttribute("role", "checkbox");
+
+    await userEvent.click(sport);
+    expect(onChange).toHaveBeenCalledWith(["news", "sport"]);
+
+    // Unchecking removes the value while preserving option order.
+    const news = screen.getByTestId("meta-box-field-k-input-news");
+    await userEvent.click(news);
+    expect(onChange).toHaveBeenLastCalledWith(["sport"]);
+  });
+
   test("unknown inputType: falls back to text input + logs a dev warning", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {
       // silence expected warning
