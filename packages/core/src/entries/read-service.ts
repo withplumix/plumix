@@ -28,9 +28,8 @@ const TRASH_STATUS: EntryStatus = "trash";
 
 /**
  * The `type` of an entry by id, `null` when the entry doesn't exist.
- * Request-memoized (#1493): the comments template dep and the blog
- * related-posts loader both gate on the resolved entry's type in one
- * render — sharing this read collapses their duplicate queries.
+ * Request-memoized (#1493): unrelated consumers gating on the resolved
+ * entry's type in one render share a single query through this read.
  */
 export async function readEntryType(
   ctx: AppContext,

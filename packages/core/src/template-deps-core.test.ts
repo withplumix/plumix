@@ -1,16 +1,21 @@
 import { describe, expect, test } from "vitest";
 
-import { settings } from "./db/schema/settings.js";
 import { settingsLoader } from "./template-deps-core.js";
 import { createTracedContext } from "./test/traced-context.js";
 
 describe("settingsLoader request memoization", () => {
   test("repeated reads of the same group run one query per request", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext();
-    await harness.db.insert(settings).values([
-      { group: "site", key: "title", value: "Plumix Demo" },
-      { group: "site", key: "tagline", value: "hello" },
-    ]);
+    await harness.factory.setting.create({
+      group: "site",
+      key: "title",
+      value: "Plumix Demo",
+    });
+    await harness.factory.setting.create({
+      group: "site",
+      key: "tagline",
+      value: "hello",
+    });
 
     const [first, second] = await run(async () => [
       await settingsLoader(["site"], ctx),
@@ -26,10 +31,16 @@ describe("settingsLoader request memoization", () => {
 
   test("a later call only queries the groups not yet memoized", async () => {
     const { harness, ctx, run, dbQueryCount } = await createTracedContext();
-    await harness.db.insert(settings).values([
-      { group: "site", key: "title", value: "Plumix Demo" },
-      { group: "author-info", key: "name", value: "Ada" },
-    ]);
+    await harness.factory.setting.create({
+      group: "site",
+      key: "title",
+      value: "Plumix Demo",
+    });
+    await harness.factory.setting.create({
+      group: "author-info",
+      key: "name",
+      value: "Ada",
+    });
 
     const [mixed, subset] = await run(async () => {
       await settingsLoader(["site"], ctx);

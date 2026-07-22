@@ -78,7 +78,7 @@ async function resolveMenus(
   // hooks (`menu:item`, `menu:tree`) and `isCurrent` still run per call
   // with that call's own `location` / `resolvedEntity` context.
   const unique = [...result.keys()];
-  const datas = await memoBatch(
+  const clusters = await memoBatch(
     ctx.memo,
     unique,
     (slug) => `menu:data:${slug}`,
@@ -87,7 +87,7 @@ async function resolveMenus(
 
   await Promise.all(
     unique.map(async (slug, i) => {
-      const data = datas[i];
+      const data = clusters[i];
       if (!data) return;
       const { tree } = buildTree(data.rows);
       const resolved = await Promise.all(

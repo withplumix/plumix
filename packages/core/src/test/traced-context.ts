@@ -1,5 +1,4 @@
 import type { AppContext } from "../context/app.js";
-import type { CreateDispatcherHarnessOptions } from "./dispatcher.js";
 import { createAppContext } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
 import { createDispatcherHarness } from "./dispatcher.js";
@@ -18,10 +17,8 @@ export interface TracedContext {
  * sampled on — for unit tests that assert how many queries a service
  * function issues (request-memo coverage, N+1 guards).
  */
-export async function createTracedContext(
-  options?: CreateDispatcherHarnessOptions,
-): Promise<TracedContext> {
-  const harness = await createDispatcherHarness(options);
+export async function createTracedContext(): Promise<TracedContext> {
+  const harness = await createDispatcherHarness();
   const ctx = createAppContext({
     db: harness.db,
     env: harness.env,
