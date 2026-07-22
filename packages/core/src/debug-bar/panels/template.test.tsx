@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import type { AppContext } from "../../context/app.js";
 import type { JsonValue } from "../../context/telemetry.js";
 import type { TemplateResolution } from "./template.js";
-import { createTelemetryCollector } from "../collector.js";
+import { createTelemetryCollector } from "../../context/collector.js";
 import { TEMPLATE_PANEL_ID } from "../template-node-label.js";
 import { templatePanel } from "./template.js";
 
@@ -12,7 +12,7 @@ import { templatePanel } from "./template.js";
 // span (nested under `render`, as in a real request) — the panel reads it back
 // from the span tree.
 function ctxWith(resolution?: TemplateResolution): AppContext {
-  const telemetry = createTelemetryCollector(undefined);
+  const telemetry = createTelemetryCollector();
   telemetry.span("render", () => {
     if (resolution) {
       telemetry.span(TEMPLATE_PANEL_ID, (s) => {

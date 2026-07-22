@@ -2,8 +2,8 @@ import type { Client } from "@libsql/client";
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
+import { createTelemetryCollector } from "../context/collector.js";
 import { requestStore } from "../context/stores.js";
-import { createTelemetryCollector } from "./collector.js";
 import { traceSqlClient } from "./trace-libsql.js";
 
 describe("traceSqlClient", () => {
@@ -15,7 +15,7 @@ describe("traceSqlClient", () => {
   }
 
   test("times each execute as a kind-named db span", async () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
     const ctx = { telemetry } as unknown as AppContext;
     const client = traceSqlClient(fakeClient());
 
@@ -27,7 +27,7 @@ describe("traceSqlClient", () => {
   });
 
   test("times a batch as one span, labelled by kind and count", async () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
     const ctx = { telemetry } as unknown as AppContext;
     const client = traceSqlClient(fakeClient());
 

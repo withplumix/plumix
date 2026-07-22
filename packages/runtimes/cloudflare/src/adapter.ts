@@ -218,6 +218,9 @@ function buildFetch(app: PlumixApp): FetchHandler {
         imageDelivery: connectImageDelivery(app, env),
         imageRemotePatterns: app.config.images?.remotePatterns,
         debugBar: app.config.debugBar,
+        // Registered consumers head-sample at context creation; snapshot
+        // delivery then rides `defer` → `waitUntil`, off the response path.
+        telemetry: app.config.telemetry,
         mailer: app.config.mailer,
         i18n: app.config.i18n,
         oauthProviders: app.oauthProviders,

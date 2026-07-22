@@ -7,6 +7,7 @@ describe("NOOP_TELEMETRY", () => {
     NOOP_TELEMETRY.record("anything", { label: "x" });
 
     expect(NOOP_TELEMETRY.get("anything")).toEqual([]);
+    expect(NOOP_TELEMETRY.getRecords()).toEqual({});
     expect(NOOP_TELEMETRY.getSpans()).toEqual([]);
     expect(NOOP_TELEMETRY.span("work", () => 7)).toBe(7);
   });

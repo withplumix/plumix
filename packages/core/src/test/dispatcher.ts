@@ -9,7 +9,8 @@ import type {
   ApiConfig,
   InterfaceToggle,
 } from "../config.js";
-import type { AppContext } from "../context/app.js";
+import type { AppContext, DeferFn } from "../context/app.js";
+import type { TelemetryConfig } from "../context/telemetry.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type { DebugBarInput } from "../debug-bar/config.js";
 import type {
@@ -42,6 +43,7 @@ import { requestStore } from "../context/stores.js";
 import { buildApp } from "../runtime/app.js";
 import { createPlumixDispatcher } from "../runtime/dispatcher.js";
 import { defaultTestTheme } from "./default-theme.js";
+import { createDeferQueue } from "./defer.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
 import { buildRequest, TestResponse } from "./request.js";
@@ -137,6 +139,12 @@ export interface CreateDispatcherHarnessOptions {
   readonly api?: ApiConfig;
   /** Dev debug-bar config; set to exercise disable/collection gating. */
   readonly debugBar?: DebugBarInput;
+  /**
+   * Telemetry consumers — the config seam telemetry tests assert through.
+   * Register an in-test consumer, dispatch, then `drainDeferred()` to
+   * receive the snapshot.
+   */
+  readonly telemetry?: TelemetryConfig;
   /** `<Image>` remote-host allowlist; tests exercising remote optimization set it. */
   readonly images?: { readonly remotePatterns?: readonly RemotePattern[] };
   /**
@@ -187,6 +195,12 @@ export interface DispatcherHarness {
   readonly spyFilter: <TName extends FilterName>(
     name: TName,
   ) => FilterSpy<FilterInput<TName>, FilterRest<TName>>;
+  /**
+   * Await everything routed through `ctx.defer` so far (telemetry snapshot
+   * delivery, edge-cache purges). Mirrors the platform's `waitUntil`: call
+   * after a dispatch, before asserting on deferred side effects.
+   */
+  readonly drainDeferred: () => Promise<void>;
 }
 
 const noop = (): void => undefined;
@@ -204,10 +218,12 @@ function withRequest(
   assets: AssetsBinding | undefined,
   storage: ConnectedObjectStorage | undefined,
   cache: ConnectedCache | undefined,
+  defer: DeferFn,
   request: Request,
   user: User | null,
 ): AppContext {
   return createAppContext({
+    defer,
     db,
     env,
     request,
@@ -234,6 +250,7 @@ function withRequest(
     basePath: app.basePath,
     siteName: app.config.auth.magicLink?.siteName,
     debugBar: app.config.debugBar,
+    telemetry: app.config.telemetry,
   });
 }
 
@@ -264,6 +281,7 @@ export async function createDispatcherHarness(
     mcp: options.mcp,
     api: options.api,
     debugBar: options.debugBar,
+    telemetry: options.telemetry,
     images: options.images,
     theme: options.theme ?? defaultTestTheme,
   });
@@ -273,6 +291,7 @@ export async function createDispatcherHarness(
   });
   const dispatcher = createPlumixDispatcher(app);
   const { assets, storage, cache } = options;
+  const { defer, drainDeferred } = createDeferQueue();
 
   const harness: DispatcherHarness = {
     db,
@@ -286,6 +305,7 @@ export async function createDispatcherHarness(
         assets,
         storage,
         cache,
+        defer,
         request,
         user,
       );
@@ -303,6 +323,7 @@ export async function createDispatcherHarness(
         assets,
         storage,
         cache,
+        defer,
         request,
         fetchOptions.as ?? null,
       );
@@ -320,6 +341,7 @@ export async function createDispatcherHarness(
     factory: factoriesFor(db),
     spyAction: (name) => spyAction(app.hooks, name),
     spyFilter: (name) => spyFilter(app.hooks, name),
+    drainDeferred,
   };
   return harness;
 }

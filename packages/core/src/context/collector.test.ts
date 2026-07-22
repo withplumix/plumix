@@ -4,7 +4,7 @@ import { createTelemetryCollector } from "./collector.js";
 
 describe("createTelemetryCollector", () => {
   test("records timestamped entries per namespace and reads them back in order", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
 
     telemetry.record("blog", { label: "a" });
     telemetry.record("blog", { label: "b" });
@@ -21,8 +21,24 @@ describe("createTelemetryCollector", () => {
     expect(telemetry.get("empty")).toEqual([]);
   });
 
+  test("getRecords returns every namespace's entries keyed by namespace", () => {
+    const telemetry = createTelemetryCollector();
+
+    telemetry.record("blog", { label: "a" });
+    telemetry.record("blog", { label: "b" });
+    telemetry.record("media", { label: "c" });
+
+    const records = telemetry.getRecords();
+    expect(Object.keys(records)).toEqual(["blog", "media"]);
+    expect(records.blog?.map((r) => r.data)).toEqual([
+      { label: "a" },
+      { label: "b" },
+    ]);
+    expect(records.media?.map((r) => r.data)).toEqual([{ label: "c" }]);
+  });
+
   test("a thunk entry is evaluated once at record time", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
     let calls = 0;
 
     telemetry.record("blog", () => {
@@ -36,56 +52,8 @@ describe("createTelemetryCollector", () => {
     ]);
   });
 
-  test("a thunk entry for a denylisted namespace is never evaluated", () => {
-    const telemetry = createTelemetryCollector({ disable: ["blog"] });
-    let calls = 0;
-
-    telemetry.record("blog", () => {
-      calls += 1;
-      return { label: "never" };
-    });
-
-    expect(calls).toBe(0);
-    expect(telemetry.get("blog")).toEqual([]);
-  });
-
-  test("is a no-op collector when the bar is disabled", () => {
-    const telemetry = createTelemetryCollector(false);
-
-    telemetry.record("blog", { label: "a" });
-
-    expect(telemetry.get("blog")).toEqual([]);
-  });
-
-  test("drops records for a namespace in the disable denylist", () => {
-    const telemetry = createTelemetryCollector({ disable: ["blog"] });
-
-    telemetry.record("blog", { label: "a" });
-    telemetry.record("media", { label: "b" });
-
-    expect(telemetry.get("blog")).toEqual([]);
-    expect(telemetry.get("media").map((r) => r.data)).toEqual([{ label: "b" }]);
-  });
-
-  test("a span with a denylisted name is not collected and never evaluates attributes", () => {
-    const telemetry = createTelemetryCollector({ disable: ["template"] });
-    let calls = 0;
-
-    const result = telemetry.span("template", (s) => {
-      s.set("resolution", () => {
-        calls += 1;
-        return "never";
-      });
-      return 5;
-    });
-
-    expect(result).toBe(5);
-    expect(telemetry.getSpans()).toEqual([]);
-    expect(calls).toBe(0);
-  });
-
   test("a thrown value whose serialization fails still propagates unchanged", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
     // No prototype → String(hostile) itself throws.
     const hostile: unknown = Object.create(null);
     let caught: unknown;
@@ -103,7 +71,7 @@ describe("createTelemetryCollector", () => {
   });
 
   test("getDropped returns a snapshot, not the live counters", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
     for (let i = 0; i < 1000; i++) telemetry.record("blog", { i });
 
     telemetry.record("blog", { over: 1 });
@@ -115,7 +83,7 @@ describe("createTelemetryCollector", () => {
   });
 
   test("caps records per namespace, counts the dropped, and never evaluates dropped thunks", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
     for (let i = 0; i < 1000; i++) telemetry.record("blog", { i });
     let calls = 0;
 
@@ -132,7 +100,7 @@ describe("createTelemetryCollector", () => {
   });
 
   test("caps spans per request, counts the dropped, and still runs their functions", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
     for (let i = 0; i < 2000; i++) telemetry.span(`s${i}`, () => undefined);
     let attrCalls = 0;
 
@@ -151,13 +119,13 @@ describe("createTelemetryCollector", () => {
   });
 
   test("dropped counters start at zero", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
 
     expect(telemetry.getDropped()).toEqual({ spans: 0, records: {} });
   });
 
   test("span returns the function result and records a named span", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
 
     const result = telemetry.span("db-query", () => 42);
 
@@ -169,7 +137,7 @@ describe("createTelemetryCollector", () => {
   });
 
   test("span passes a handle that sets attributes on the span", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
 
     telemetry.span("resolve", (s) => {
       s.set("template", "post");
@@ -183,7 +151,7 @@ describe("createTelemetryCollector", () => {
   });
 
   test("span handle evaluates lazy attribute values exactly once", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
     let calls = 0;
 
     telemetry.span("resolve", (s) => {
@@ -200,7 +168,7 @@ describe("createTelemetryCollector", () => {
   });
 
   test("span awaits async work before timing it", async () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
 
     const result = await telemetry.span("io", async () => {
       await new Promise((r) => setTimeout(r, 10));
@@ -212,7 +180,7 @@ describe("createTelemetryCollector", () => {
   });
 
   test("a successful span has ok status and no error", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
 
     telemetry.span("fine", () => 1);
 
@@ -221,7 +189,7 @@ describe("createTelemetryCollector", () => {
   });
 
   test("a throwing span is stamped error status + serialized error, then rethrows", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
 
     expect(() =>
       telemetry.span("boom", () => {
@@ -237,7 +205,7 @@ describe("createTelemetryCollector", () => {
   });
 
   test("an async rejecting span is stamped error status and re-rejects", async () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
 
     await expect(
       telemetry.span("io-boom", async () => {
@@ -253,7 +221,7 @@ describe("createTelemetryCollector", () => {
   });
 
   test("a non-Error throw is serialized from its string form", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
 
     expect(() =>
       telemetry.span("odd", () => {
@@ -268,7 +236,7 @@ describe("createTelemetryCollector", () => {
   });
 
   test("nested spans form a parent/child tree", () => {
-    const telemetry = createTelemetryCollector(undefined);
+    const telemetry = createTelemetryCollector();
 
     telemetry.span("render", () => {
       telemetry.span("query-users", () => undefined);

@@ -1,5 +1,6 @@
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { AppContext } from "../context/app.js";
+import type { TelemetrySnapshot } from "../context/telemetry.js";
 import type * as McpDispatch from "../mcp/dispatch.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { RouteIntent } from "../route/intent.js";
@@ -123,25 +124,66 @@ export type PlumixDispatcher = (ctx: AppContext) => Promise<Response>;
 
 export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
   return async (ctx) => {
+    const startedAt = Date.now();
+    let response: Response;
     try {
-      // Dev-only: the top-level Timeline span. `ctx.telemetry` is the no-op
-      // collector in prod, so span() is a pass-through with no timing.
-      const response = await ctx.telemetry.span("dispatch", () =>
-        route(app, ctx),
-      );
+      // The top-level span. `ctx.telemetry` is the no-op collector unless a
+      // consumer sampled this request, so span() is then a pass-through.
+      response = await ctx.telemetry.span("dispatch", () => route(app, ctx));
       // Request-end seam: fire one batched edge-cache purge for whatever
       // entry mutations this request accumulated.
       flushPurgeTags(ctx);
-      return response;
     } catch (error) {
       ctx.logger.error("dispatch_failed", {
         error,
         url: ctx.request.url,
         method: ctx.request.method,
       });
-      return jsonResponse({ error: "internal_error" }, { status: 500 });
+      response = jsonResponse({ error: "internal_error" }, { status: 500 });
     }
+    deliverTelemetrySnapshot(ctx, response, startedAt);
+    return response;
   };
+}
+
+/**
+ * Post-response seam: hand each sampled consumer the finished snapshot via
+ * `ctx.defer` (CF Workers' `waitUntil`), so awaited export I/O never blocks
+ * the response. Consumers are isolated — one rejecting doesn't starve the
+ * rest, and `wrapDefer` logs the rejection. Runs on the error path too: a
+ * 500 is exactly the request a consumer wants to see.
+ */
+function deliverTelemetrySnapshot(
+  ctx: AppContext,
+  response: Response,
+  startedAt: number,
+): void {
+  const deliveries = (ctx.telemetryConsumers ?? []).flatMap((c) =>
+    c.onRequestEnd ? [c.onRequestEnd] : [],
+  );
+  if (deliveries.length === 0) return;
+  const snapshot: TelemetrySnapshot = {
+    request: {
+      requestId: crypto.randomUUID(),
+      method: ctx.request.method,
+      url: ctx.request.url,
+      status: response.status,
+      startedAt,
+      durationMs: Date.now() - startedAt,
+    },
+    // getRecords/getDropped return copies; spans are copied here because
+    // getSpans stays the live mid-request read (the debug bar's). Detachment
+    // matters: post-response work through the same ctx must not grow the
+    // arrays a consumer is serializing.
+    spans: [...ctx.telemetry.getSpans()],
+    records: ctx.telemetry.getRecords(),
+    dropped: ctx.telemetry.getDropped(),
+  };
+  for (const onRequestEnd of deliveries) {
+    // `.then` defers the callback past the dispatcher's return and folds a
+    // synchronous throw into the promise the defer wrapper logs.
+    ctx.defer(Promise.resolve().then(() => onRequestEnd(snapshot, ctx)));
+  }
 }
 
 function enforcePlumixCsrf(app: PlumixApp, ctx: AppContext): Response | null {

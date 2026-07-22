@@ -56,6 +56,11 @@ const APP_CONTEXT_BASE_KEYS: ReadonlySet<string> = new Set([
   "hooks",
   "plugins",
   "logger",
+  "telemetry",
+  // Assigned after the extension spread when a consumer samples, so the
+  // request-time `key in target` shadow check never sees it — this
+  // registration-time rejection is the only guard.
+  "telemetryConsumers",
   "auth",
   "authenticator",
   "bootstrapAllowed",

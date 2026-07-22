@@ -2,6 +2,7 @@ import type {
   DatabaseAdapter,
   RequestScopedDb,
   RequestScopedDbArgs,
+  TelemetrySnapshot,
 } from "plumix";
 import {
   auth as authConfig,
@@ -93,6 +94,46 @@ describe("cloudflare adapter — buildFetchHandler", () => {
       {},
     );
     expect(response.status).toBe(404);
+  });
+
+  test("telemetry consumers get the snapshot through waitUntil, off the response path", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const config = plumix({
+      runtime: cloudflare(),
+      database: stubDatabase,
+      auth,
+      theme,
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    const app = await buildApp(config);
+    const waited: Promise<unknown>[] = [];
+    const executionCtx = {
+      waitUntil: (promise: Promise<unknown>) => void waited.push(promise),
+      passThroughOnException: () => undefined,
+      props: {},
+    } as ExecutionContext;
+
+    const response = await cloudflare().buildFetchHandler(app)(
+      new Request("https://cms.example/unknown"),
+      {},
+      executionCtx,
+    );
+
+    // Delivery was routed through waitUntil — never awaited before returning.
+    expect(waited.length).toBeGreaterThan(0);
+    await Promise.all(waited);
+    expect(snapshots).toHaveLength(1);
+    const [snapshot] = snapshots;
+    expect(snapshot?.request).toMatchObject({
+      method: "GET",
+      url: "https://cms.example/unknown",
+      status: response.status,
+    });
+    expect(snapshot?.spans.map((s) => s.name)).toEqual(["dispatch"]);
   });
 
   test("passes the env + request through to the database adapter", async () => {
