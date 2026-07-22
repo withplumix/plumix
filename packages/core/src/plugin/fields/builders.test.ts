@@ -5,7 +5,6 @@ import { definePlugin } from "../define.js";
 import { buildManifest } from "../manifest.js";
 import { installPlugins } from "../register.js";
 import {
-  checkbox,
   color,
   date,
   datetime,
@@ -13,9 +12,7 @@ import {
   entry,
   entryList,
   json,
-  multiselect,
   number,
-  radio,
   range,
   repeater,
   richtext,
@@ -25,6 +22,7 @@ import {
   text,
   textarea,
   time,
+  toggle,
   url,
   user,
   userList,
@@ -33,10 +31,10 @@ import {
 // One combined suite for the per-variant builder guarantees. The
 // universal-chain + immutability behavior shared by every fluent
 // builder is covered by `builder.test.ts` (string scalars as the
-// reference); these tests focus on what each variant adds — per-type
-// option chains, injected sanitizers, `.returns("date")`, and the
-// factories still taking flat options (`select` / `radio` /
-// `checkbox` / references).
+// reference), and the choice builders in `select.test.ts` /
+// `toggle.test.ts`; these tests focus on what each variant adds —
+// per-type option chains, injected sanitizers, `.returns("date")`,
+// and the reference factories still taking flat options.
 
 describe("number() builder", () => {
   test("chains min/max/step/default into a number definition", () => {
@@ -234,60 +232,6 @@ describe("color() builder", () => {
   });
 });
 
-describe("multiselect() builder", () => {
-  test("pins inputType + json type and carries options", () => {
-    const field = multiselect({
-      key: "tags",
-      label: "Tags",
-      options: [
-        { value: "news", label: "News" },
-        { value: "sport", label: "Sport" },
-      ],
-    });
-    expect(field.inputType).toBe("multiselect");
-    expect(field.type).toBe("json");
-    expect(field.options).toHaveLength(2);
-    expect(field.sanitize).toBeTypeOf("function");
-  });
-
-  test("default sanitizer accepts subset of declared options and de-dupes", () => {
-    const field = multiselect({
-      key: "t",
-      label: "t",
-      options: [
-        { value: "a", label: "A" },
-        { value: "b", label: "B" },
-        { value: "c", label: "C" },
-      ],
-    });
-    expect(field.sanitize?.([])).toEqual([]);
-    expect(field.sanitize?.(["a", "c"])).toEqual(["a", "c"]);
-    expect(field.sanitize?.(["a", "a", "b"])).toEqual(["a", "b"]);
-  });
-
-  test("default sanitizer rejects values outside the option list", () => {
-    const field = multiselect({
-      key: "t",
-      label: "t",
-      options: [{ value: "a", label: "A" }],
-    });
-    expect(() => field.sanitize?.(["a", "z"])).toThrow();
-    expect(() => field.sanitize?.([1])).toThrow();
-    expect(() => field.sanitize?.("a")).toThrow();
-    expect(() => field.sanitize?.(null)).toThrow();
-  });
-
-  test("rejects non-applicable options at the type level", () => {
-    multiselect({
-      key: "t",
-      label: "t",
-      options: [{ value: "a", label: "A" }],
-      // @ts-expect-error — `placeholder` doesn't apply to multiselect.
-      placeholder: "pick",
-    });
-  });
-});
-
 describe("json() builder", () => {
   test("compiles to a json definition with a derived label", () => {
     const field = json("config").build();
@@ -357,92 +301,6 @@ describe("range() builder", () => {
   });
 });
 
-describe("select() builder", () => {
-  test("requires options and pins discriminators", () => {
-    const field = select({
-      key: "size",
-      label: "Size",
-      options: [
-        { value: "s", label: "Small" },
-        { value: "m", label: "Medium" },
-        { value: "l", label: "Large" },
-      ],
-    });
-    expect(field.inputType).toBe("select");
-    expect(field.type).toBe("string");
-    expect(field.options).toHaveLength(3);
-    expect(field.options[0]).toEqual({ value: "s", label: "Small" });
-  });
-
-  test("rejects text/number-shaped options at the type level", () => {
-    select({
-      key: "s",
-      label: "s",
-      options: [{ value: "a", label: "A" }],
-      // @ts-expect-error — `maxLength` belongs to text-shaped fields.
-      maxLength: 5,
-    });
-
-    // @ts-expect-error — `options` is required.
-    select({ key: "s", label: "s" });
-  });
-});
-
-describe("radio() builder", () => {
-  test("requires options and pins discriminators", () => {
-    const field = radio({
-      key: "yesno",
-      label: "Yes or no",
-      options: [
-        { value: "yes", label: "Yes" },
-        { value: "no", label: "No" },
-      ],
-    });
-    expect(field.inputType).toBe("radio");
-    expect(field.type).toBe("string");
-    expect(field.options).toHaveLength(2);
-  });
-
-  test("rejects options that don't apply at the type level", () => {
-    radio({
-      key: "r",
-      label: "r",
-      options: [{ value: "a", label: "A" }],
-      // @ts-expect-error — `placeholder` doesn't apply to radio.
-      placeholder: "pick",
-    });
-  });
-});
-
-describe("checkbox() builder", () => {
-  test("pins inputType + type to boolean", () => {
-    const field = checkbox({
-      key: "subscribed",
-      label: "Subscribe to newsletter",
-      default: true,
-    });
-    expect(field.inputType).toBe("checkbox");
-    expect(field.type).toBe("boolean");
-    expect(field.default).toBe(true);
-  });
-
-  test("rejects non-boolean options at the type level", () => {
-    checkbox({
-      key: "c",
-      label: "c",
-      // @ts-expect-error — `placeholder` doesn't apply to checkbox.
-      placeholder: "...",
-    });
-
-    checkbox({
-      key: "c",
-      label: "c",
-      // @ts-expect-error — `options` doesn't apply to checkbox.
-      options: [{ value: "a", label: "A" }],
-    });
-  });
-});
-
 describe("manifest round-trip across all built-in builders", () => {
   test("each builder produces a field that survives manifest serialization", async () => {
     const hooks = new HookRegistry();
@@ -454,20 +312,11 @@ describe("manifest round-trip across all built-in builders", () => {
           number("age").label("Age").min(0).max(120),
           email("contact").label("Contact"),
           url("website").label("Website"),
-          select({
-            key: "size",
-            label: "Size",
-            options: [{ value: "m", label: "M" }],
-          }),
-          radio({
-            key: "yn",
-            label: "Yes/No",
-            options: [
-              { value: "y", label: "Y" },
-              { value: "n", label: "N" },
-            ],
-          }),
-          checkbox({ key: "agreed", label: "Agreed", default: false }),
+          select("size")
+            .options([{ value: "m", label: "M" }])
+            .label("Size"),
+          select("yn").options(["y", "n"]).appearance("radio").label("Yes/No"),
+          toggle("agreed").label("Agreed").default(false),
         ],
       });
     });
@@ -482,8 +331,8 @@ describe("manifest round-trip across all built-in builders", () => {
       "email",
       "url",
       "select",
-      "radio",
-      "checkbox",
+      "select",
+      "toggle",
     ]);
     expect(fields.map((f) => f.type)).toEqual([
       "string",

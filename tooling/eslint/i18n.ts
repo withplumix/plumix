@@ -102,7 +102,7 @@ export const i18nStrictOverrides: Linter.Config = {
           // (user/entry/term/userList/entryList/termList). Used as
           // protocol values across the input dispatcher + registry,
           // never user copy.
-          "^(text|password|email|url|number|tel|search|date|datetime|time|color|file|range|checkbox|radio|textarea|select|multiselect|richtext|repeater|json|user|entry|term|userList|entryList|termList)$",
+          "^(text|password|email|url|number|tel|search|date|datetime|time|color|file|range|checkbox|radio|toggle|textarea|select|multiselect|richtext|repeater|json|user|entry|term|userList|entryList|termList)$",
           // Container-query Tailwind responsive variants used in the
           // meta-box grid dict — `@sm:col-span-N`, `@md:col-span-N`,
           // `@lg:col-span-N`. Pure CSS class tokens.

@@ -545,19 +545,6 @@ export interface RangeMetaBoxField extends MetaBoxFieldBase {
 }
 
 /**
- * Multi-value picker over a fixed option list. Storage is a JSON
- * array of option `value` strings. Renders as a toggle group in the
- * admin so authors see all options at once. The builder ships a
- * default sanitizer that rejects values outside the declared
- * options.
- */
-export interface MultiselectMetaBoxField extends MetaBoxFieldBase {
-  readonly inputType: "multiselect";
-  readonly type: "json";
-  readonly options: readonly MetaBoxFieldOption[];
-}
-
-/**
  * Free-form JSON value. Storage round-trips through the JSON
  * serializer so any structure that survives `JSON.stringify`
  * survives the wire.
@@ -756,24 +743,58 @@ export interface RepeaterMetaBoxField extends MetaBoxFieldBase {
   readonly max?: number;
 }
 
-/** Single-value dropdown picker; `options` is required. */
-export interface SelectMetaBoxField extends MetaBoxFieldBase {
+/**
+ * Pure-UI control axis for choice fields. Maps to the admin's existing
+ * controls — dropdown, radio group, toggle-button group, checkbox
+ * list — and never changes the value shape. Cardinality restricts the
+ * legal values (`radio` is single-only, `checkboxes` multi-only); the
+ * fluent builder enforces that at compile time. Absent means the
+ * cardinality default: dropdown for single, buttons for multiple.
+ */
+export type SelectAppearance = "select" | "radio" | "buttons" | "checkboxes";
+
+/** Single-value choice — storage is the selected option value string. */
+export interface SingleSelectMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "select";
   readonly type: "string";
   readonly options: readonly MetaBoxFieldOption[];
+  readonly multiple?: false;
+  readonly appearance?: SelectAppearance;
 }
 
-/** Single-value radio group; `options` is required. */
-export interface RadioMetaBoxField extends MetaBoxFieldBase {
-  readonly inputType: "radio";
-  readonly type: "string";
+/** Multi-value choice — storage is a JSON array of option value strings. */
+export interface MultiSelectMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "select";
+  readonly type: "json";
   readonly options: readonly MetaBoxFieldOption[];
+  readonly multiple: true;
+  /**
+   * Selection-count cap. Carried on the definition and the wire today;
+   * server-side enforcement lands with the generic constraint walker.
+   */
+  readonly max?: number;
+  readonly appearance?: SelectAppearance;
 }
 
-/** Boolean checkbox — storage type pinned to `boolean`. */
-export interface CheckboxMetaBoxField extends MetaBoxFieldBase {
-  readonly inputType: "checkbox";
+/**
+ * Choice field over a fixed option list. Cardinality and storage type
+ * are correlated variants — `multiple` requires `type: "json"` — so an
+ * object literal can't declare an array-emitting control over scalar
+ * storage.
+ */
+export type SelectMetaBoxField =
+  SingleSelectMetaBoxField | MultiSelectMetaBoxField;
+
+/**
+ * Boolean switch — storage type pinned to `boolean`. Renders as the
+ * admin's switch control; `onText` / `offText` label the current state
+ * beside it.
+ */
+export interface ToggleMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "toggle";
   readonly type: "boolean";
+  readonly onText?: Label;
+  readonly offText?: Label;
 }
 
 /**
@@ -837,7 +858,6 @@ export type MetaBoxField =
   | TemporalMetaBoxField
   | ColorMetaBoxField
   | RangeMetaBoxField
-  | MultiselectMetaBoxField
   | JsonMetaBoxField
   | UserMetaBoxField
   | UserListMetaBoxField
@@ -850,8 +870,7 @@ export type MetaBoxField =
   | RichtextMetaBoxField
   | RepeaterMetaBoxField
   | SelectMetaBoxField
-  | RadioMetaBoxField
-  | CheckboxMetaBoxField
+  | ToggleMetaBoxField
   | LinkMetaBoxField
   | LegacyMetaBoxField;
 
@@ -1608,6 +1627,13 @@ export interface MetaBoxFieldManifestEntry {
   readonly max?: number | string;
   readonly step?: number;
   readonly options?: readonly MetaBoxFieldOption[];
+  /** Choice-field cardinality — `select` fields store an array when set. */
+  readonly multiple?: boolean;
+  /** Choice-field control variant — see `SelectAppearance`. */
+  readonly appearance?: SelectAppearance;
+  /** Toggle switch state labels — see `ToggleMetaBoxField`. */
+  readonly onText?: Label;
+  readonly offText?: Label;
   readonly default?: unknown;
   readonly span?: MetaBoxFieldSpan;
   /**
@@ -2857,6 +2883,10 @@ interface MetaBoxFieldOptionView {
   readonly max?: number | string;
   readonly step?: number;
   readonly options?: readonly MetaBoxFieldOption[];
+  readonly multiple?: boolean;
+  readonly appearance?: SelectAppearance;
+  readonly onText?: Label;
+  readonly offText?: Label;
   readonly referenceTarget?: ReferenceTarget;
   readonly marks?: readonly string[];
   readonly nodes?: readonly string[];
@@ -2883,6 +2913,10 @@ function toEntryMetaBoxFieldEntry(
     max: view.max,
     step: view.step,
     options: view.options,
+    multiple: view.multiple,
+    appearance: view.appearance,
+    onText: view.onText,
+    offText: view.offText,
     default: field.default,
     referenceTarget: view.referenceTarget,
     marks: view.marks,

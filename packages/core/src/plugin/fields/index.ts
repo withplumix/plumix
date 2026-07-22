@@ -1,11 +1,13 @@
 // Typed builder helpers for meta-box field registration. The scalar
-// fields (string, numeric, temporal, color, richtext, json) and
-// `link` are fluent builders: the constructor takes the key alone and
-// every option is a chained call (`text("subtitle").maxLength(120)`,
+// fields (string, numeric, temporal, color, richtext, json), `link`,
+// the choice field (`select` — `.multiple()` for arrays,
+// `.appearance()` for the control), and the boolean switch (`toggle`)
+// are fluent builders: the constructor takes the key alone and every
+// option is a chained call (`text("subtitle").maxLength(120)`,
 // `number("rating").min(1).max(5)`), each returning a fresh immutable
 // instance that compiles to the narrowed `MetaBoxField` variant at
-// registration. The choice and reference factories still take flat
-// option objects; they convert to fluent chains ticket by ticket.
+// registration. The reference factories still take flat option
+// objects; they convert to fluent chains ticket by ticket.
 //
 // Re-exported as a public surface from `plumix/fields`.
 
@@ -26,18 +28,13 @@ export type { TemporalInputType } from "./temporal.js";
 export { parseMetaDate } from "./parse-date.js";
 export { color, ColorFieldBuilder } from "./color.js";
 export { range, RangeFieldBuilder } from "./range.js";
-export { multiselect } from "./multiselect.js";
-export type { MultiselectFieldOptions } from "./multiselect.js";
 export { json, JsonFieldBuilder } from "./json.js";
 export { richtext, RichtextFieldBuilder } from "./richtext.js";
 export { repeater } from "./repeater.js";
 export type { RepeaterFieldOptions } from "./repeater.js";
-export { select } from "./select.js";
-export type { SelectFieldOptions } from "./select.js";
-export { radio } from "./radio.js";
-export type { RadioFieldOptions } from "./radio.js";
-export { checkbox } from "./checkbox.js";
-export type { CheckboxFieldOptions } from "./checkbox.js";
+export { select, SelectFieldBuilder, SelectFieldSeed } from "./select.js";
+export type { SelectOptionInput } from "./select.js";
+export { toggle, ToggleFieldBuilder } from "./toggle.js";
 export { user } from "./user.js";
 export type { UserFieldOptions, UserFieldScope } from "./user.js";
 export { userList } from "./user-list.js";
