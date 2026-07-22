@@ -6,11 +6,7 @@ import {
 } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
-import type {
-  MediaFieldOptions,
-  MediaListFieldOptions,
-  MediaValue,
-} from "./fields.js";
+import type { MediaFieldOptions, MediaListFieldOptions } from "./fields.js";
 import type { MediaFieldScope } from "./index.js";
 import { media, mediaList } from "./fields.js";
 import { media as mediaPlugin } from "./index.js";
@@ -22,27 +18,27 @@ import { media as mediaPlugin } from "./index.js";
 const _typeSurface: {
   readonly opts: MediaFieldOptions;
   readonly listOpts: MediaListFieldOptions;
-  readonly value: MediaValue;
   readonly scope: MediaFieldScope;
 } = {
   opts: {
     key: "hero",
     label: "Hero",
     accept: ["image/png"],
+    default: "42",
   },
   listOpts: {
     key: "gallery",
     label: "Gallery",
     accept: "image/",
     max: 12,
+    default: ["42", "43"],
   },
-  value: { id: "42", mime: "image/png", filename: "cat.png" },
   scope: { accept: "image/" },
 };
 void _typeSurface;
 
 describe("media() builder", () => {
-  test("pins inputType + json type and emits a media-kind referenceTarget with valueShape='object'", () => {
+  test("pins inputType + json type and emits a media-kind referenceTarget", () => {
     const field = media({
       key: "hero",
       label: "Hero",
@@ -53,7 +49,6 @@ describe("media() builder", () => {
     expect(field.referenceTarget).toEqual({
       kind: "media",
       scope: { accept: "image/" },
-      valueShape: "object",
     });
   });
 
@@ -77,7 +72,6 @@ describe("media() builder", () => {
     expect(field.referenceTarget).toEqual({
       kind: "media",
       scope: { accept: undefined },
-      valueShape: "object",
     });
   });
 
@@ -97,7 +91,7 @@ describe("media() builder", () => {
     });
   });
 
-  test("manifest round-trip preserves cached-object referenceTarget on the wire shape", async () => {
+  test("manifest round-trip preserves the referenceTarget on the wire shape", async () => {
     const hooks = new HookRegistry();
     const userPlugin = definePlugin("test", (ctx) => {
       ctx.registerSettingsGroup("branding", {
@@ -123,7 +117,6 @@ describe("media() builder", () => {
       referenceTarget: {
         kind: "media",
         scope: { accept: "image/" },
-        valueShape: "object",
       },
     });
   });
@@ -143,7 +136,6 @@ describe("mediaList() builder", () => {
     expect(field.referenceTarget).toEqual({
       kind: "media",
       scope: { accept: "image/" },
-      valueShape: "object",
       multiple: true,
     });
   });
@@ -157,7 +149,6 @@ describe("mediaList() builder", () => {
     expect(field.referenceTarget).toEqual({
       kind: "media",
       scope: { accept: undefined },
-      valueShape: "object",
       multiple: true,
     });
   });
@@ -206,7 +197,6 @@ describe("mediaList() builder", () => {
       referenceTarget: {
         kind: "media",
         scope: { accept: "image/" },
-        valueShape: "object",
         multiple: true,
       },
     });

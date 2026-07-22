@@ -3,7 +3,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 import type { AppContext } from "../../context/app.js";
-import type { LookupAdapter, LookupResult } from "../../plugin/lookup.js";
+import type { LookupAdapter } from "../../plugin/lookup.js";
 import type {
   MetaBoxField,
   MetaScalarType,
@@ -33,10 +33,9 @@ type MetaMap = Record<string, unknown>;
  * doesn't have to double-parse. `applyMetaPatch` JSON-encodes at the
  * last moment, before the UPDATE.
  *
- * `upserts` is mutable: `validateMetaReferences` rewrites values for
- * cached-object reference fields (`referenceTarget.valueShape ===
- * "object"`) to merge adapter-supplied cached fields into the
- * stored shape. Other callers should treat it as read-only.
+ * `upserts` is mutable: `validateMetaReferences` normalizes reference
+ * values to the plain-id storage form (a legacy `{ id, ... }` object
+ * self-heals to its id). Other callers should treat it as read-only.
  */
 export interface MetaPatch {
   readonly upserts: Map<string, unknown>;
@@ -221,26 +220,12 @@ export async function validateMetaReferences(
         target,
         fieldMax(field),
       );
+      // Normalize eagerly — a validation failure below aborts the whole
+      // save, so a rewritten patch never persists on the failure path.
+      patch.upserts.set(key, target.multiple ? ids : ids[0]);
       const group = upsertGroup(groups, target, registered);
       for (const id of ids) group.ids.add(id);
-      group.contributions.push({
-        errorKey: key,
-        ids,
-        applyNormalize: (rowsById) => {
-          if (target.valueShape !== "object") return;
-          if (target.multiple) {
-            patch.upserts.set(
-              key,
-              ids.map((id) => buildCachedReference(id, rowsById)),
-            );
-            return;
-          }
-          const [singleId] = ids;
-          if (singleId !== undefined) {
-            patch.upserts.set(key, buildCachedReference(singleId, rowsById));
-          }
-        },
-      });
+      group.contributions.push({ errorKey: key, ids });
       continue;
     }
     // Repeater fields don't carry a `referenceTarget` themselves but
@@ -255,17 +240,16 @@ export async function validateMetaReferences(
   }
   for (const group of groups.values()) {
     if (group.ids.size === 0) continue;
-    const liveRows = await fetchLiveRows(
+    const liveIds = await fetchLiveIds(
       ctx,
       group.registered,
       group.scope,
       group.ids,
       "validateMetaReferences",
     );
-    const rowsById = new Map(liveRows.map((r) => [r.id, r]));
     for (const contribution of group.contributions) {
       for (const id of contribution.ids) {
-        if (!rowsById.has(id)) {
+        if (!liveIds.has(id)) {
           if (contribution.diagnostic !== undefined) {
             // Wire error keys on the top-level field; this log line
             // is the only place the row index + subKey surface, so
@@ -286,7 +270,6 @@ export async function validateMetaReferences(
           });
         }
       }
-      contribution.applyNormalize(rowsById);
     }
   }
 }
@@ -332,30 +315,16 @@ function collectRepeaterReferences(
         target,
         fieldMax(subField),
       );
+      // Normalize the row's slot in place — the top-level upsert array
+      // is the live storage shape, so mutating an object inside it is
+      // what the caller will serialize.
+      rowObj[subField.key] = target.multiple ? ids : ids[0];
       const group = upsertGroup(groups, target, registered);
       for (const id of ids) group.ids.add(id);
-      const subKey = subField.key;
       group.contributions.push({
         errorKey: topKey,
         ids,
-        diagnostic: { rowIdx, subKey },
-        applyNormalize: (rowsById) => {
-          if (target.valueShape !== "object") return;
-          // Rewrite the row's cached-object value in place — the
-          // top-level upsert array is the live storage shape, so
-          // mutating an object inside it is what the caller will
-          // serialize.
-          if (target.multiple) {
-            rowObj[subKey] = ids.map((id) =>
-              buildCachedReference(id, rowsById),
-            );
-            return;
-          }
-          const [singleId] = ids;
-          if (singleId !== undefined) {
-            rowObj[subKey] = buildCachedReference(singleId, rowsById);
-          }
-        },
+        diagnostic: { rowIdx, subKey: subField.key },
       });
     }
   }
@@ -380,30 +349,14 @@ function upsertGroup(
   return group;
 }
 
-// Adapter cached fields override anything; user-supplied non-id keys
-// don't survive. Per-usage user fields (e.g. alt overrides) are a
-// post-v0.1 feature — when added, this is where they'd merge in.
-function buildCachedReference(
-  id: string,
-  rowsById: ReadonlyMap<
-    string,
-    { readonly cached?: Readonly<Record<string, unknown>> }
-  >,
-): Readonly<Record<string, unknown>> {
-  const row = rowsById.get(id);
-  return { id, ...(row?.cached ?? {}) };
-}
-
 interface ReferenceGroup {
   readonly registered: { readonly adapter: LookupAdapter };
   readonly scope: unknown;
   // De-duped ids across every field in this group — one query
   // resolves them all regardless of how many fields reference them.
   readonly ids: Set<string>;
-  // Per-contribution error attribution + normalize callback. Top-level
-  // and nested-in-repeater contributions share this shape; the
-  // callback closes over the storage location so the validator
-  // doesn't need to rebranch on shape during apply.
+  // Per-contribution error attribution. Top-level and
+  // nested-in-repeater contributions share this shape.
   readonly contributions: ReferenceContribution[];
 }
 
@@ -411,10 +364,6 @@ interface ReferenceContribution {
   /** The top-level key surfaced in `MetaSanitizationError`. */
   readonly errorKey: string;
   readonly ids: readonly string[];
-  /** Rewrite the storage location for cached-object refs. No-op for id-shape. */
-  readonly applyNormalize: (
-    rowsById: ReadonlyMap<string, LookupResult>,
-  ) => void;
   /**
    * Diagnostic only — set for nested-in-repeater contributions so
    * server logs identify the offending row/subField. The wire error
@@ -462,17 +411,13 @@ function referenceGroupKey(target: ReferenceTarget): string {
 // 100, so we only hit the ceiling when many fields share `(kind, scope)`
 // and aggregate — at which point throwing beats silent truncation
 // (truncation would either reject valid writes or hide live targets).
-//
-// Returns `LookupResult[]` rather than just live ids so the validator
-// can read `cached` for the cached-object normalize step. Callers that
-// only care about presence build a `Set` from the row ids.
-async function fetchLiveRows(
+async function fetchLiveIds(
   ctx: AppContext,
   registered: { readonly adapter: LookupAdapter },
   scope: unknown,
   ids: ReadonlySet<string>,
   callsite: string,
-): Promise<readonly LookupResult[]> {
+): Promise<ReadonlySet<string>> {
   if (ids.size > MAX_REFERENCE_GROUP_BATCH) {
     throw MetaReferenceError.batchSizeExceeded(
       callsite,
@@ -481,11 +426,12 @@ async function fetchLiveRows(
     );
   }
   const idList = [...ids];
-  return registered.adapter.list(ctx, {
+  const rows = await registered.adapter.list(ctx, {
     ids: idList,
     scope,
     limit: idList.length,
   });
+  return new Set(rows.map((row) => row.id));
 }
 
 // Defensive upper bound on multi-reference array length, applied
@@ -497,18 +443,11 @@ async function fetchLiveRows(
 const HARD_MULTI_REFERENCE_LIMIT = 100;
 
 // Validates the wire shape of a reference value and returns the ids
-// to feed into the group's batched `list({ ids })` call. Four shapes
-// are accepted, dispatching on `target.multiple` + `target.valueShape`:
-//
-//  - multi=true,  valueShape="id"  (default): string[] of non-empty ids
-//  - multi=true,  valueShape="object":        `{ id }[]` — each item a
-//                                             cached-object reference
-//                                             (or bare strings for
-//                                             leniency on first write)
-//  - multi=false, valueShape="id"  (default): bare string id
-//  - multi=false, valueShape="object":        `{ id: string, ... }`
-//                                             (or a bare string for
-//                                             leniency on first write)
+// to feed into the group's batched `list({ ids })` call. Storage is
+// plain ids — a bare string (single) or string[] (multi) — but each
+// slot leniently accepts the retired cached-object shape
+// (`{ id, ... }`) so legacy values self-heal to the plain form on
+// the entity's next save.
 function referenceIdsForValidation(
   key: string,
   value: unknown,
@@ -525,45 +464,16 @@ function referenceIdsForValidation(
     if (max !== undefined && value.length > max) {
       throw MetaSanitizationError.invalidValue({ key });
     }
-    if (target.valueShape === "object") {
-      // Lenient on input: each item can be `"42"` (first-write
-      // convenience) or `{ id: "42", ... }`. Always rewritten to the
-      // canonical `{ id, ...cached }` shape after the live-id check.
-      const ids: string[] = [];
-      for (const item of value) {
-        if (typeof item === "string" && item !== "") {
-          ids.push(item);
-          continue;
-        }
-        const id = extractStringId(item);
-        if (id !== null && id !== "") {
-          ids.push(id);
-          continue;
-        }
-        throw MetaSanitizationError.invalidValue({ key });
-      }
-      return ids;
-    }
-    for (const item of value) {
-      if (typeof item !== "string" || item === "") {
-        throw MetaSanitizationError.invalidValue({ key });
-      }
-    }
-    return value as readonly string[];
+    return value.map((item) => referenceItemId(key, item));
   }
-  if (target.valueShape === "object") {
-    // Lenient on input: accept either `"42"` (first-write convenience)
-    // or `{ id: "42", ... }`. Always rewritten to the canonical
-    // `{ id, ...cached }` shape after the live-id check.
-    if (typeof value === "string" && value !== "") return [value];
-    const id = extractStringId(value);
-    if (id !== null && id !== "") return [id];
-    throw MetaSanitizationError.invalidValue({ key });
-  }
-  if (typeof value !== "string") {
-    throw MetaSanitizationError.invalidValue({ key });
-  }
-  return [value];
+  return [referenceItemId(key, value)];
+}
+
+function referenceItemId(key: string, item: unknown): string {
+  if (typeof item === "string" && item !== "") return item;
+  const id = extractStringId(item);
+  if (id !== null && id !== "") return id;
+  throw MetaSanitizationError.invalidValue({ key });
 }
 
 // Returns the `id` string of a `{ id: string, ... }` object, or null
@@ -681,7 +591,6 @@ export async function filterMetaOrphans(
     /** Top-level meta key — the storage location for top-level refs. */
     readonly key: string;
     readonly multiple: boolean;
-    readonly valueShape: "id" | "object";
     readonly groupKey: string;
     readonly ids: readonly string[];
     /** When set, the candidate is a reference subField inside a repeater row. */
@@ -712,7 +621,6 @@ export async function filterMetaOrphans(
     candidates.push({
       key: occ.key,
       multiple: occ.target.multiple === true,
-      valueShape: occ.target.valueShape ?? "id",
       groupKey,
       ids,
       nested: occ.nested,
@@ -729,51 +637,32 @@ export async function filterMetaOrphans(
   // Pass 2: one `list({ ids })` per group, keyed for O(1) apply lookup.
   const liveIdsByGroup = new Map<string, ReadonlySet<string>>();
   for (const [groupKey, group] of groups) {
-    const rows = await fetchLiveRows(
+    const liveIds = await fetchLiveIds(
       ctx,
       group.registered,
       group.scope,
       group.ids,
       "filterMetaOrphans",
     );
-    liveIdsByGroup.set(groupKey, new Set(rows.map((row) => row.id)));
+    liveIdsByGroup.set(groupKey, liveIds);
   }
 
-  // Pass 3: apply the filter. Orphan handling differs by shape:
-  //  - multi + id: filter the string[] in place, dropping missing
-  //  - multi + object: filter the object[] preserving order
-  //  - single + id: null on missing
-  //  - single + object: null on missing; otherwise keep the stored
-  //    cached value as-is (no read-time refresh — write rewrites)
-  // Nested-in-repeater candidates rewrite the row's subField slot in
-  // a per-key cloned array so the input bag stays untouched.
+  // Pass 3: apply the filter. Multi refs filter the string[] dense
+  // and in order; single refs null on missing. Nested-in-repeater
+  // candidates rewrite the row's subField slot in a per-key cloned
+  // array so the input bag stays untouched.
   const out: MetaMap = { ...decoded };
   const empty: ReadonlySet<string> = new Set();
   for (const candidate of candidates) {
-    const { key, multiple, valueShape, groupKey, ids, nested } = candidate;
+    const { key, multiple, groupKey, ids, nested } = candidate;
     const liveIds = liveIdsByGroup.get(groupKey) ?? empty;
     if (nested !== undefined) {
       const rowObj = takeWritableRow(out, decoded, key, nested.rowIdx);
       if (!rowObj) continue;
-      applyOrphanToSlot(
-        rowObj,
-        nested.subKey,
-        multiple,
-        valueShape,
-        ids,
-        liveIds,
-      );
+      applyOrphanToSlot(rowObj, nested.subKey, multiple, ids, liveIds);
       continue;
     }
     if (multiple) {
-      if (valueShape === "object") {
-        const stored = decoded[key] as readonly unknown[];
-        out[key] = stored.filter((item) => {
-          const id = extractStringId(item);
-          return id !== null && liveIds.has(id);
-        });
-        continue;
-      }
       out[key] = ids.filter((id) => liveIds.has(id));
       continue;
     }
@@ -814,19 +703,10 @@ function applyOrphanToSlot(
   rowObj: Record<string, unknown>,
   subKey: string,
   multiple: boolean,
-  valueShape: "id" | "object",
   ids: readonly string[],
   liveIds: ReadonlySet<string>,
 ): void {
   if (multiple) {
-    if (valueShape === "object") {
-      const stored = rowObj[subKey] as readonly unknown[];
-      rowObj[subKey] = stored.filter((item) => {
-        const id = extractStringId(item);
-        return id !== null && liveIds.has(id);
-      });
-      return;
-    }
     rowObj[subKey] = ids.filter((id) => liveIds.has(id));
     return;
   }
@@ -838,29 +718,16 @@ function applyOrphanToSlot(
 // Returns `null` to mean "no candidates from this key" (skip), or
 // the ids to feed into the group's batch query. Mirrors the storage-
 // shape guards in the apply step so we don't enqueue work that's
-// going to be skipped. Cached-object values (`valueShape === "object"`)
-// extract `id` from the object — the rest of the cached fields are
-// trusted on read (refresh happens on next write via the validator's
-// normalize step, not on every render).
+// going to be skipped. Callers pass values already decoded through
+// `decodeMetaBag`, so legacy object shapes have been healed to plain
+// ids by the time this runs.
 function orphanCandidateIds(
   target: ReferenceTarget,
   value: unknown,
 ): readonly string[] | null {
   if (target.multiple) {
     if (!Array.isArray(value)) return null;
-    if (target.valueShape === "object") {
-      const ids: string[] = [];
-      for (const item of value) {
-        const id = extractStringId(item);
-        if (id !== null) ids.push(id);
-      }
-      return ids;
-    }
     return value.filter((id): id is string => typeof id === "string");
-  }
-  if (target.valueShape === "object") {
-    const id = extractStringId(value);
-    return id !== null ? [id] : null;
   }
   return typeof value === "string" ? [value] : null;
 }
@@ -888,9 +755,55 @@ export function decodeMetaBag(
   const out: MetaMap = {};
   for (const [key, value] of Object.entries(raw)) {
     const field = findField(key);
-    out[key] = field ? coerceOnRead(field.type, value) : value;
+    out[key] = field ? decodeFieldValue(field, value) : value;
   }
   return out;
+}
+
+// Reference storage is plain ids, but bags written before the
+// write-time snapshot machinery was removed may hold `{ id, ... }`
+// objects. Reads yield the id; the next save persists the plain form
+// (`referenceItemId` accepts the legacy shape on write).
+function decodeFieldValue(field: MetaBoxField, value: unknown): unknown {
+  const target = referenceTargetOf(field);
+  if (target) return healReferenceValue(target, value);
+  if (isRepeaterField(field) && Array.isArray(value)) {
+    return value.map((row) => healRepeaterRow(field, row));
+  }
+  return coerceOnRead(field.type, value);
+}
+
+function healReferenceValue(target: ReferenceTarget, value: unknown): unknown {
+  if (target.multiple) {
+    if (!Array.isArray(value)) return value;
+    // Identity-preserving on the already-plain path — `healRepeaterRow`
+    // clones a row only when the healed slot differs.
+    if (!value.some((item: unknown) => extractStringId(item) !== null)) {
+      return value;
+    }
+    return value.map((item: unknown) => extractStringId(item) ?? item);
+  }
+  return extractStringId(value) ?? value;
+}
+
+function healRepeaterRow(
+  field: MetaBoxField & RepeaterFieldShape,
+  row: unknown,
+): unknown {
+  if (!row || typeof row !== "object" || Array.isArray(row)) return row;
+  const rowObj = row as Record<string, unknown>;
+  let healed: Record<string, unknown> | null = null;
+  for (const subField of field.subFields) {
+    const target = referenceTargetOf(subField);
+    if (!target) continue;
+    const value = rowObj[subField.key];
+    const next = healReferenceValue(target, value);
+    if (next !== value) {
+      healed ??= { ...rowObj };
+      healed[subField.key] = next;
+    }
+  }
+  return healed ?? row;
 }
 
 export function isEmptyMetaPatch(patch: MetaPatch | null): boolean {

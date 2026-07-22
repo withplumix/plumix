@@ -49,7 +49,6 @@ describe("resolvePluginFieldType", () => {
     const field = seen.mock.calls[0]?.[0];
     expect(field.inputType).toBe("media");
     expect(field.referenceTarget?.scope?.accept).toBe("image/");
-    expect(field.referenceTarget?.valueShape).toBe("object");
   });
 
   test("forwards the rhf binding so edits reach the block attr", () => {

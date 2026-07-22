@@ -9,7 +9,7 @@ const termMeta = { kind: "term" as const, termId: 7 };
 const lookup: LookupResult = {
   id: "42",
   label: "About",
-  cached: { href: "/about" },
+  href: "/about",
 };
 
 describe("mapItemState", () => {

@@ -9,9 +9,8 @@ type PluginFieldComponent = NonNullable<ReturnType<typeof getPluginFieldType>>;
 
 // Adapt a block input onto the metabox field-manifest shape plugin field
 // renderers already expect, so one `registerPluginFieldType` registration
-// serves both the metabox form and the block inspector. Only the fields the
-// reference pickers read are projected — the reference `scope` (accept) and
-// the object value shape.
+// serves both the metabox form and the block inspector. Only the field the
+// reference pickers read is projected — the reference `scope` (accept).
 function inputToField(input: BlockInput): MetaBoxFieldManifestEntry {
   return {
     key: input.name,
@@ -21,8 +20,6 @@ function inputToField(input: BlockInput): MetaBoxFieldManifestEntry {
     referenceTarget: {
       kind: input.type,
       scope: input.accept === undefined ? undefined : { accept: input.accept },
-      // eslint-disable-next-line lingui/no-unlocalized-strings -- value shape, not UI copy
-      valueShape: "object",
     },
   };
 }

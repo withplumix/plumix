@@ -44,7 +44,7 @@ async function harnessWithMediaPlugin() {
 }
 
 describe("mediaLookupAdapter", () => {
-  test("list({ ids }) returns published rows with cached fields", async () => {
+  test("list({ ids }) returns published rows with label + mime subtitle", async () => {
     const h = await harnessWithMediaPlugin();
     const a = await seedMedia(h, {
       title: "cat.png",
@@ -66,7 +66,6 @@ describe("mediaLookupAdapter", () => {
       label: "cat.png",
       targetType: "media",
       subtitle: "image/png",
-      cached: { mime: "image/png", filename: "cat.png" },
     });
   });
 
@@ -166,7 +165,7 @@ describe("mediaLookupAdapter", () => {
     expect(rows[0]?.id).toBe(String(png.id));
   });
 
-  test("resolve() returns the row with cached fields when in scope", async () => {
+  test("resolve() returns the row when in scope", async () => {
     const h = await harnessWithMediaPlugin();
     const a = await seedMedia(h, {
       title: "logo.svg",
@@ -179,7 +178,6 @@ describe("mediaLookupAdapter", () => {
       label: "logo.svg",
       targetType: "media",
       subtitle: "image/svg+xml",
-      cached: { mime: "image/svg+xml", filename: "logo.svg" },
     });
   });
 

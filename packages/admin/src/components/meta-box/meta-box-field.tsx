@@ -593,8 +593,8 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
         // Resetting on value change lets the boundary recover after a
         // bad render — a user who picks a different (valid) value
         // re-attempts instead of staying stuck on the placeholder.
-        // String coercion handles both bare-id (string) and cached-
-        // object (object) shapes via JSON.stringify.
+        // JSON.stringify covers both id (string) and block-attr
+        // snapshot (object) value shapes.
         resetKey={stringifyForResetKey(rhf.value)}
       >
         <PluginRenderer

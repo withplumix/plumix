@@ -165,25 +165,12 @@ function enrich(
   const lookupResult = lookupsByKind.get(meta.kind)?.get(id) ?? null;
   const state = mapItemState({ meta, lookupResult, canAccessKind });
 
-  // Label preference: row.title (override) → resolver result → cached
-  // snapshot in meta → "(unnamed)". Same shape for href, minus the
-  // override (entries don't carry an href column).
-  const cached = (lookupResult?.cached ?? {}) as {
-    readonly label?: unknown;
-    readonly href?: unknown;
-  };
-  const resolverLabel =
-    typeof cached.label === "string" && cached.label.length > 0
-      ? cached.label
-      : (lookupResult?.label ?? null);
-  const resolverHref =
-    typeof cached.href === "string" && cached.href.length > 0
-      ? cached.href
-      : null;
-
+  // Label preference: row.title (override) → resolver result →
+  // last-known snapshot in meta → "(unnamed)". Same shape for href,
+  // minus the override (entries don't carry an href column).
   const label =
     (row.title.length > 0 ? row.title : null) ??
-    resolverLabel ??
+    lookupResult?.label ??
     meta.lastLabel ??
     "(unnamed)";
 
@@ -192,7 +179,7 @@ function enrich(
     resolved: {
       state,
       label,
-      href: hrefFor(state, resolverHref, meta.lastHref ?? null),
+      href: hrefFor(state, lookupResult?.href ?? null, meta.lastHref ?? null),
       lastHref: meta.lastHref ?? null,
     },
   };

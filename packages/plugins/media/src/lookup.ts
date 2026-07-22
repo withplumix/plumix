@@ -156,8 +156,7 @@ function buildAcceptCondition(
 function toLookupResult(id: number, title: string, mime: string): LookupResult {
   // Mirror the entry adapter's `null` contract for empty/whitespace
   // titles so admin pickers render a localized "Untitled" descriptor
-  // rather than an empty `<p>`. `cached.filename` keeps the raw value
-  // (deletion-resilient consumers may still want the original token).
+  // rather than an empty `<p>`.
   const trimmedTitle = title.trim();
   const label = trimmedTitle !== "" ? trimmedTitle : null;
   return {
@@ -165,6 +164,5 @@ function toLookupResult(id: number, title: string, mime: string): LookupResult {
     label,
     targetType: MEDIA_ENTRY_TYPE,
     subtitle: mime,
-    cached: { mime, filename: title },
   };
 }

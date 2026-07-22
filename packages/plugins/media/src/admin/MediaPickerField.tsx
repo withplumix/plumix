@@ -7,6 +7,7 @@ import { Trans, useLingui } from "plumix/i18n";
 import type { MediaSelection } from "./MediaLibrary.js";
 import { MediaLibrary } from "./MediaLibrary.js";
 import { M } from "./messages.js";
+import { useMediaLabels } from "./rpc.js";
 
 export { M } from "./messages.js";
 
@@ -14,12 +15,12 @@ export { M } from "./messages.js";
 // plugin-field-type registry on module load (see admin/index.tsx),
 // dispatched from the meta-box-field renderer's plugin path.
 //
-// Reads value as a `MediaValue`-shaped object: `{ id, mime?, filename? }`.
-// Renders the cached snapshot directly — zero resolve round-trips per
-// render. The "Select" / "Change" button opens a fixed-position modal
-// containing `<MediaLibrary mode="picker" accept={accept} />`; on
-// confirm the modal closes and writes back the bare id (the meta
-// pipeline normalizes to the cached-object shape on save).
+// Meta storage is the plain media id — the preview resolves its label
+// through the lookup path. Block attrs keep the full `MediaSelection`
+// snapshot (`{ id, url, alt, ... }`) for render, so object values
+// display straight from the snapshot. The "Select" / "Change" button
+// opens a fixed-position modal containing
+// `<MediaLibrary mode="picker" accept={accept} />`.
 
 interface MediaValue {
   readonly id: string;
@@ -29,7 +30,10 @@ interface MediaValue {
   readonly alt?: string | null;
 }
 
-function normalizeValue(raw: unknown): MediaValue | null {
+export function normalizeValue(raw: unknown): MediaValue | null {
+  if (typeof raw === "string") {
+    return raw === "" ? null : { id: raw };
+  }
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
   if (typeof obj.id !== "string" || obj.id === "") return null;
@@ -40,6 +44,15 @@ function normalizeValue(raw: unknown): MediaValue | null {
     url: typeof obj.url === "string" ? obj.url : undefined,
     alt: typeof obj.alt === "string" ? obj.alt : null,
   };
+}
+
+// Metabox fields store the plain id; block-attr fields keep the full
+// snapshot — the block renderer reads `url`/`alt` directly from attrs.
+export function selectionWriteValue(
+  selection: MediaSelection,
+  inBlockEditor: boolean,
+): MediaSelection | string {
+  return inBlockEditor ? selection : selection.id;
 }
 
 // Clear is offered only for standalone metabox fields. In the block editor
@@ -93,11 +106,7 @@ export function MediaPickerField({
   const required = field.required === true;
 
   const handleSelect = (selection: MediaSelection): void => {
-    // Write back the resolved snapshot ({ id, url, alt, mime, filename }).
-    // The block editor stores url/alt directly for render; the metabox meta
-    // pipeline reads `id` and re-normalizes to the cached-object shape on
-    // save, ignoring the extra keys.
-    rhf.onChange(selection);
+    rhf.onChange(selectionWriteValue(selection, attrs !== undefined));
     setOpen(false);
     rhf.onBlur();
   };
@@ -165,17 +174,10 @@ function MediaPreview({
   readonly value: MediaValue;
   readonly testId: string;
 }): ReactNode {
-  const { i18n } = useLingui();
-  // The cached storage gives us `mime` + `filename` directly — no
-  // resolve round-trip per render. If they're missing (interim
-  // bare-string state right after pick), fall back to "Selected: <id>"
-  // until the next save normalizes the shape.
+  // Block-attr snapshots carry `filename` and render directly; plain
+  // ids (meta storage) resolve their label through the lookup path.
   if (!value.filename) {
-    return (
-      <p className="text-sm" data-testid={`${testId}-pending`}>
-        {i18n._(M.pending.id, { id: value.id }, { message: M.pending.message })}
-      </p>
-    );
+    return <ResolvedPreview id={value.id} testId={testId} />;
   }
   return (
     <div className="min-w-0 text-sm">
@@ -188,6 +190,41 @@ function MediaPreview({
       </p>
       {value.mime ? (
         <p className="text-muted-foreground text-xs">{value.mime}</p>
+      ) : null}
+    </div>
+  );
+}
+
+// Own component so the lookup query only mounts for id-shaped values.
+// While loading — or when the target is gone — fall back to the
+// "Selected (id N)" placeholder.
+function ResolvedPreview({
+  id,
+  testId,
+}: {
+  readonly id: string;
+  readonly testId: string;
+}): ReactNode {
+  const { i18n } = useLingui();
+  const item = useMediaLabels([id]).get(id);
+  if (!item?.label) {
+    return (
+      <p className="text-sm" data-testid={`${testId}-pending`}>
+        {i18n._(M.pending.id, { id }, { message: M.pending.message })}
+      </p>
+    );
+  }
+  return (
+    <div className="min-w-0 text-sm">
+      <p
+        className="truncate font-medium"
+        data-testid={`${testId}-filename`}
+        title={item.label}
+      >
+        {item.label}
+      </p>
+      {item.subtitle ? (
+        <p className="text-muted-foreground text-xs">{item.subtitle}</p>
       ) : null}
     </div>
   );

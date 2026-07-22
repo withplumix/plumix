@@ -109,22 +109,18 @@ async function toLookupResult(
   ctx: AppContext,
   row: TermLookupRow,
 ): Promise<LookupResult> {
-  // Same `cached.{label,href}` contract as the entry adapter — the meta
-  // pipeline merges these into stored meta on every write, giving menu
-  // items + reference fields a last-known fallback when the linked term
-  // is later deleted.
+  // Same `href` contract as the entry adapter — menu resolution
+  // renders links from it at read time.
   const href = await buildTermArchiveUrl(ctx, {
     taxonomy: row.taxonomy,
     slug: row.slug,
     parentId: row.parentId,
   });
-  const cached: Record<string, unknown> = { label: row.name };
-  if (href !== null) cached.href = href;
   return {
     id: String(row.id),
     label: row.name,
     targetType: row.taxonomy,
     subtitle: `${row.taxonomy} · ${row.slug}`,
-    cached,
+    ...(href !== null ? { href } : {}),
   };
 }

@@ -6,7 +6,9 @@ import { Button, Dialog, DialogContent, DialogTitle } from "plumix/admin/ui";
 import { useLingui } from "plumix/i18n";
 
 import type { MediaSelection } from "./MediaLibrary.js";
+import type { MediaLookupItem } from "./rpc.js";
 import { MediaLibrary } from "./MediaLibrary.js";
+import { useMediaLabels } from "./rpc.js";
 
 const M = {
   empty: {
@@ -47,51 +49,33 @@ const M = {
   },
 } satisfies Record<string, MessageDescriptor>;
 
-// `mediaList` field admin renderer. Reads the value as
-// `MediaValue[]` — `[{ id, mime?, filename? }, ...]`. Renders each
-// entry as a row in a vertical strip with Up / Down / Remove
-// buttons; "Add more" opens MediaLibrary in modal/picker mode.
+// `mediaList` field admin renderer. Storage is a dense array of
+// plain media ids; row labels resolve in one batched lookup call.
+// Renders each entry as a row in a vertical strip with Up / Down /
+// Remove buttons; "Add more" opens MediaLibrary in modal/picker mode.
 //
 // Picker stays open across selections (the modal doesn't close on
-// pick — only on Cancel or when the array hits `max`). Cached
-// storage means each row's preview renders directly from the
-// stored snapshot — zero resolve roundtrips per render.
+// pick — only on Cancel or when the array hits `max`).
 //
 // Drag-reorder is deferred to a follow-up — exposing dnd-kit as a
 // shared runtime module to plugin chunks needs separate work, and
 // up/down buttons satisfy the keyboard-reorder acceptance criterion
 // for v0.1.
 
-interface MediaValue {
-  readonly id: string;
-  readonly mime?: string;
-  readonly filename?: string;
-}
-
-function normalizeArray(raw: unknown): readonly MediaValue[] {
+// Legacy bags stored `{ id, ... }` snapshots; reads heal to plain ids
+// server-side, but the form value can still carry the old shape until
+// the next load — extract the id either way.
+export function normalizeIds(raw: unknown): readonly string[] {
   if (!Array.isArray(raw)) return [];
-  const out: MediaValue[] = [];
+  const out: string[] = [];
   for (const item of raw) {
     if (typeof item === "string" && item !== "") {
-      // Interim bare-string state right after a pick, before the
-      // meta pipeline normalizes on save. Treat as `{ id }` so the
-      // row still renders (with a "Selected (id N)" placeholder).
-      out.push({ id: item });
+      out.push(item);
       continue;
     }
-    if (
-      typeof item === "object" &&
-      item !== null &&
-      typeof (item as { readonly id?: unknown }).id === "string"
-    ) {
-      const obj = item as Record<string, unknown>;
-      const id = obj.id as string;
-      if (id === "") continue;
-      out.push({
-        id,
-        mime: typeof obj.mime === "string" ? obj.mime : undefined,
-        filename: typeof obj.filename === "string" ? obj.filename : undefined,
-      });
+    if (typeof item === "object" && item !== null) {
+      const id = (item as { readonly id?: unknown }).id;
+      if (typeof id === "string" && id !== "") out.push(id);
     }
   }
   return out;
@@ -133,12 +117,13 @@ export function MediaListPickerField({
 }): ReactNode {
   const { i18n } = useLingui();
   const [open, setOpen] = useState(false);
-  const value = normalizeArray(rhf.value);
+  const value = normalizeIds(rhf.value);
+  const labels = useMediaLabels(value);
   const accept = readAccept(field);
   const max = readMax(field);
   const atMax = max !== undefined && value.length >= max;
 
-  const updateAt = (next: readonly MediaValue[]): void => {
+  const updateAt = (next: readonly string[]): void => {
     rhf.onChange(next);
     rhf.onBlur();
     // Auto-close when the array hits `max` — picker shouldn't stay
@@ -153,12 +138,11 @@ export function MediaListPickerField({
     // Admin-side dedup: the picker rejects re-adding an id that's
     // already in the array. The server-side meta pipeline does NOT
     // dedup — an API caller submitting `[id1, id1]` over the wire
-    // gets `[{id:id1, ...}, {id:id1, ...}]` stored. The contract:
-    // the picker enforces the common case, the API stays minimal.
-    // Re-saving an API-supplied duplicate through the admin will
-    // collapse it.
-    if (value.some((v) => v.id === id)) return;
-    updateAt([...value, { id }]);
+    // gets `[id1, id1]` stored. The contract: the picker enforces
+    // the common case, the API stays minimal. Re-saving an
+    // API-supplied duplicate through the admin will collapse it.
+    if (value.includes(id)) return;
+    updateAt([...value, id]);
   };
 
   const handleRemove = (idx: number): void => {
@@ -190,15 +174,16 @@ export function MediaListPickerField({
         </p>
       ) : (
         <ul className="flex flex-col gap-1" data-testid={`${testId}-list`}>
-          {value.map((item, idx) => (
+          {value.map((id, idx) => (
             // `key` is the bare id, NOT id+idx. `handlePick` rejects
             // duplicate ids (admin-side dedup) so id is unique per
             // array. Reordering then preserves React identity for
             // each row — Tab focus stays on the button the user just
             // clicked instead of resetting on every move.
             <MediaListItem
-              key={item.id}
-              item={item}
+              key={id}
+              id={id}
+              item={labels.get(id)}
               index={idx}
               count={value.length}
               testId={testId}
@@ -244,6 +229,7 @@ export function MediaListPickerField({
 }
 
 function MediaListItem({
+  id,
   item,
   index,
   count,
@@ -252,7 +238,8 @@ function MediaListItem({
   onMove,
   onRemove,
 }: {
-  readonly item: MediaValue;
+  readonly id: string;
+  readonly item: MediaLookupItem | undefined;
   readonly index: number;
   readonly count: number;
   readonly testId: string;
@@ -261,8 +248,8 @@ function MediaListItem({
   readonly onRemove: (idx: number) => void;
 }): ReactNode {
   const { i18n } = useLingui();
-  const rowTestId = `${testId}-row-${item.id}`;
-  const displayName = item.filename ?? item.id;
+  const rowTestId = `${testId}-row-${id}`;
+  const displayName = item?.label ?? id;
   const ariaValues = { name: displayName };
   return (
     <li
@@ -270,22 +257,18 @@ function MediaListItem({
       data-testid={rowTestId}
     >
       <div className="min-w-0 flex-1 text-sm">
-        {item.filename ? (
+        {item?.label ? (
           <>
-            <p className="truncate font-medium" title={item.filename}>
-              {item.filename}
+            <p className="truncate font-medium" title={item.label}>
+              {item.label}
             </p>
-            {item.mime ? (
-              <p className="text-muted-foreground text-xs">{item.mime}</p>
+            {item.subtitle ? (
+              <p className="text-muted-foreground text-xs">{item.subtitle}</p>
             ) : null}
           </>
         ) : (
           <p data-testid={`${rowTestId}-pending`}>
-            {i18n._(
-              M.pending.id,
-              { id: item.id },
-              { message: M.pending.message },
-            )}
+            {i18n._(M.pending.id, { id }, { message: M.pending.message })}
           </p>
         )}
       </div>
