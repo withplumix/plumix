@@ -6,7 +6,7 @@ import { lookupResolveInputSchema, requireAdapter } from "./schemas.js";
 // (e.g. when an entry's saved meta points at user id "42", the form
 // loads showing the user's name + role rather than the bare "42").
 // Returns `{ result: null }` when the target is gone or no longer
-// matches scope — same orphan semantics as `filterMetaOrphans`
+// matches scope — same orphan semantics as `hydrateMetaBags`
 // applies here.
 
 export const resolve = base

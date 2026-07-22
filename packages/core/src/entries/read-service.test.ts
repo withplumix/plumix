@@ -4,10 +4,13 @@ import { describe, expect, test } from "vitest";
 import type { AppContext } from "../context/app.js";
 import type { AuthenticatedRpcHarness } from "../test/rpc.js";
 import { withUser } from "../context/app.js";
+import { definePlugin } from "../plugin/define.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
 import {
   entryGetInputSchema,
   entryListInputSchema,
 } from "../rpc/procedures/entry/schemas.js";
+import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { createTracedContext } from "../test/traced-context.js";
 import { EntryReadError } from "./errors.js";
@@ -244,5 +247,126 @@ describe("readEntryType", () => {
     expect(first).toBeNull();
     expect(second).toBeNull();
     expect(dbQueryCount()).toBe(1);
+  });
+});
+
+// Reference meta hydration in the shared read pipeline (#1507): admin
+// oRPC reads and REST projection both ride these two functions, so
+// hydrated values asserted here cover both surfaces' data.
+describe("reference meta hydration", () => {
+  // Raw field defs (not the flat factories) keep both fields'
+  // `referenceTarget.scope` undefined → one `(kind, scope)` group.
+  const OWNER_FIELD = {
+    key: "owner",
+    label: "Owner",
+    inputType: "user",
+    type: "string",
+    referenceTarget: { kind: "user" },
+  } as const;
+  const REVIEWERS_FIELD = {
+    key: "reviewers",
+    label: "Reviewers",
+    inputType: "userList",
+    type: "json",
+    referenceTarget: { kind: "user", multiple: true },
+  } as const;
+
+  function registryWithUserRefs() {
+    const registry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    registry.entryMetaBoxes.set("relations", {
+      id: "relations",
+      label: "Relations",
+      entryTypes: ["post"],
+      fields: [OWNER_FIELD, REVIEWERS_FIELD],
+      registeredBy: null,
+    });
+    return registry;
+  }
+
+  test("getEntry hydrates reference meta into the adapter's summary shape", async () => {
+    const h = await createRpcHarness({
+      authAs: "admin",
+      plugins: registryWithUserRefs(),
+    });
+    const owner = await h.factory.user.create({ name: "Owner One" });
+    const e = await h.factory.published.create({
+      authorId: h.user.id,
+      meta: { owner: String(owner.id), reviewers: [String(owner.id)] },
+    });
+
+    const read = await getEntry(authedCtx(h), getInput({ id: e.id }));
+
+    expect(read.meta.owner).toEqual({
+      id: String(owner.id),
+      name: "Owner One",
+      slug: owner.slug,
+      avatarUrl: null,
+    });
+    expect(read.meta.reviewers).toEqual([read.meta.owner]);
+  });
+
+  test("getEntry reads a deleted referenced entity as absent", async () => {
+    const h = await createRpcHarness({
+      authAs: "admin",
+      plugins: registryWithUserRefs(),
+    });
+    const e = await h.factory.published.create({
+      authorId: h.user.id,
+      meta: { owner: "999999", reviewers: ["999999"] },
+    });
+
+    const read = await getEntry(authedCtx(h), getInput({ id: e.id }));
+
+    expect(read.meta.owner).toBeNull();
+    expect(read.meta.reviewers).toEqual([]);
+  });
+
+  test("listEntries hydrates the page with one in-query per (kind, scope) group", async () => {
+    const refsPlugin = definePlugin("test-refs", (ctx) => {
+      ctx.registerEntryMetaBox("relations", {
+        label: "Relations",
+        entryTypes: ["post"],
+        fields: [OWNER_FIELD, REVIEWERS_FIELD],
+      });
+    });
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext({
+      plugins: [refsPlugin],
+    });
+    const users = await Promise.all(
+      Array.from({ length: 3 }, () => harness.factory.user.create({})),
+    );
+    for (const [i, owner] of users.entries()) {
+      await harness.factory.entry.create({
+        authorId: owner.id,
+        type: "post",
+        status: "published",
+        slug: `post-${String(i)}`,
+        meta: {
+          owner: String(owner.id),
+          reviewers: users.map((u) => String(u.id)),
+        },
+      });
+    }
+
+    const admin = await harness.factory.user.create({ role: "admin" });
+    const rows = await run(() =>
+      listEntries(withUser(ctx, admin), listInput()),
+    );
+
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      const meta = row.meta as {
+        owner: { id: string } | null;
+        reviewers: readonly { id: string }[];
+      };
+      expect(meta.owner?.id).toBeDefined();
+      expect(meta.reviewers.map((u) => u.id)).toEqual(
+        users.map((u) => String(u.id)),
+      );
+    }
+    // One SELECT for the page + one aggregated user in-query for every
+    // reference field of every entry in the response — never per-row.
+    expect(dbQueryCount()).toBe(2);
   });
 });

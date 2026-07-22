@@ -2,11 +2,12 @@ import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { findEntryMetaField } from "../../../plugin/manifest.js";
 import { upsertAutosave } from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { isEmptyMetaPatch } from "../../meta/core.js";
+import { healMetaBagReferences, isEmptyMetaPatch } from "../../meta/core.js";
 import { assertExpectedLiveUpdatedAt } from "./concurrency.js";
 import {
   assertContentValidAgainstRegistries,
@@ -31,7 +32,7 @@ import {
 } from "./lifecycle.js";
 import {
   assertEntryMetaCapabilities,
-  decodeMetaBag,
+  hydrateEntryMeta,
   loadEntryMeta,
   sanitizeMetaForRpc,
   validateEntryMetaReferences,
@@ -234,15 +235,22 @@ export const update = base
           // the caller's patch over the live row's current meta so
           // unchanged keys persist across draft saves. The framework
           // template choice rides along so the preview overlay can honor
-          // an unsaved pick.
+          // an unsaved pick. Heal reference slots first — hydrated
+          // `{ id, ... }` payloads round-tripped from a read must
+          // store as plain ids.
           meta: applyTemplateChoiceToMeta(
-            { ...existing.meta, ...(filtered.meta ?? {}) },
+            healMetaBagReferences(
+              (key) => findEntryMetaField(context.plugins, existing.type, key),
+              { ...existing.meta, ...(filtered.meta ?? {}) },
+            ),
             filtered.template,
           ),
         },
       });
       await fireEntryAutosaveSaved(context, autosave, existing);
-      const decoded = decodeMetaBag(context.plugins, autosave, autosave.meta);
+      // Decode + hydrate against the LIVE row's type — the autosave
+      // row's own reserved type matches no registered meta fields.
+      const decoded = await hydrateEntryMeta(context, existing, autosave.meta);
       return context.hooks.applyFilter("rpc:entry.update:output", {
         ...autosave,
         meta: decoded,
@@ -351,7 +359,7 @@ export const update = base
       termsPatch === undefined &&
       isEmptyMetaPatch(metaPatch)
     ) {
-      const meta = decodeMetaBag(context.plugins, existing, existing.meta);
+      const meta = await hydrateEntryMeta(context, existing, existing.meta);
       return context.hooks.applyFilter("rpc:entry.update:output", {
         ...existing,
         meta,
@@ -390,7 +398,7 @@ export const update = base
       await writeEntryMeta(context, updated, metaPatch);
       meta = await loadEntryMeta(context, updated);
     } else {
-      meta = decodeMetaBag(context.plugins, updated, updated.meta);
+      meta = await hydrateEntryMeta(context, updated, updated.meta);
     }
 
     if (postColumnsWritten) {

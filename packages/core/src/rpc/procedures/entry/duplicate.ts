@@ -5,7 +5,7 @@ import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { canReadEntry, entryCapability } from "./lifecycle.js";
-import { decodeMetaBag } from "./meta.js";
+import { hydrateEntryMeta } from "./meta.js";
 import { entryDuplicateInputSchema } from "./schemas.js";
 import { applyTermPatch, loadEntryTerms } from "./terms.js";
 
@@ -90,7 +90,7 @@ export const duplicate = base
       await applyTermPatch(context, created.id, sourceTerms);
     }
 
-    const meta = decodeMetaBag(context.plugins, created, created.meta);
+    const meta = await hydrateEntryMeta(context, created, created.meta);
 
     return context.hooks.applyFilter("rpc:entry.duplicate:output", {
       ...created,

@@ -2,7 +2,11 @@ import type { SQL } from "drizzle-orm";
 
 import type { AppContext } from "../../../context/app.js";
 import type { TermFieldScope } from "../../../plugin/fields/term.js";
-import type { LookupAdapter, LookupResult } from "../../../plugin/lookup.js";
+import type {
+  LookupAdapter,
+  LookupResult,
+  TermReferenceSummary,
+} from "../../../plugin/lookup.js";
 import { and, eq, inArray, like, or } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { buildTermArchiveUrl } from "../../../route/permalink.js";
@@ -27,7 +31,9 @@ interface TermLookupRow {
   readonly parentId: number | null;
 }
 
-export const termLookupAdapter: LookupAdapter<TermFieldScope> = {
+// `satisfies` keeps `hydrate`'s concrete `TermReferenceSummary` return
+// type visible instead of widening to the contract's `HydratedReference`.
+export const termLookupAdapter = {
   async list(ctx, options) {
     const conditions = scopeConditions(options.scope);
     let limit: number;
@@ -65,7 +71,7 @@ export const termLookupAdapter: LookupAdapter<TermFieldScope> = {
     return Promise.all(rows.map((row) => toLookupResult(ctx, row)));
   },
 
-  async resolve(ctx, id, scope) {
+  async resolve(ctx, id, scope?) {
     const numericId = parseTermId(id);
     if (numericId === null) return null;
     const [row] = await ctx.db
@@ -75,7 +81,22 @@ export const termLookupAdapter: LookupAdapter<TermFieldScope> = {
       .limit(1);
     return row ? toLookupResult(ctx, row) : null;
   },
-};
+
+  async hydrate(ctx, options) {
+    const numericIds = options.ids
+      .map((id) => parseTermId(id))
+      .filter((id): id is number => id !== null);
+    if (numericIds.length === 0) return [];
+    const conditions = scopeConditions(options.scope);
+    conditions.push(inArray(terms.id, numericIds));
+    const rows = await ctx.db
+      .select(TERM_ROW_COLUMNS)
+      .from(terms)
+      .where(and(...conditions))
+      .limit(numericIds.length);
+    return Promise.all(rows.map((row) => toTermSummary(ctx, row)));
+  },
+} satisfies LookupAdapter<TermFieldScope>;
 
 function parseTermId(id: string): number | null {
   // terms.id is autoincrement; reject anything that isn't a positive integer.
@@ -122,5 +143,18 @@ async function toLookupResult(
     targetType: row.taxonomy,
     subtitle: `${row.taxonomy} · ${row.slug}`,
     ...(href !== null ? { href } : {}),
+  };
+}
+
+async function toTermSummary(
+  ctx: AppContext,
+  row: TermLookupRow,
+): Promise<TermReferenceSummary> {
+  return {
+    id: String(row.id),
+    taxonomy: row.taxonomy,
+    name: row.name,
+    slug: row.slug,
+    url: await buildTermArchiveUrl(ctx, row),
   };
 }

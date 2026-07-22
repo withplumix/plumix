@@ -689,6 +689,44 @@ describe("REST API — meta visibility (default-deny)", () => {
     expect(body.meta).toEqual({});
   });
 
+  test("a whitelisted reference field projects its hydrated value", async () => {
+    const refs = definePlugin("test-refs", (ctx) => {
+      ctx.registerEntryMetaBox("relations", {
+        label: "Relations",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "owner",
+            label: "Owner",
+            inputType: "user",
+            type: "string",
+            referenceTarget: { kind: "user" },
+            showInApi: true,
+          },
+        ],
+      });
+    });
+    const h = await restHarness({ plugins: [blog, refs] });
+    const owner = await h.factory.user.create({ name: "Owner One" });
+    const id = await seedWithMeta(h, { owner: String(owner.id) });
+
+    const itemRes = await h.dispatch(apiGet(`/_plumix/api/v1/posts/${id}`));
+    const item = (await itemRes.json()) as { meta: Record<string, unknown> };
+    // Public-safe summary — never email/role.
+    expect(item.meta.owner).toEqual({
+      id: String(owner.id),
+      name: "Owner One",
+      slug: owner.slug,
+      avatarUrl: null,
+    });
+
+    const listRes = await h.dispatch(apiGet("/_plumix/api/v1/posts"));
+    const list = (await listRes.json()) as {
+      data: readonly { meta: Record<string, unknown> }[];
+    };
+    expect(list.data[0]?.meta.owner).toEqual(item.meta.owner);
+  });
+
   test("a PAT-authed read applies the same meta whitelist", async () => {
     const h = await restHarness();
     const id = await seedWithMeta(h, {

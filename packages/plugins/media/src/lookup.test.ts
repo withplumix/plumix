@@ -235,4 +235,56 @@ describe("mediaLookupAdapter", () => {
     });
     expect(rows.map((r) => r.id)).toEqual([String(image.id)]);
   });
+
+  test("hydrate() resolves ids into media items with a URL", async () => {
+    const h = await harnessWithMediaPlugin();
+    const a = await seedMedia(h, {
+      title: "cat.png",
+      mime: "image/png",
+      authorId: h.user.id,
+    });
+    const rows = await mediaLookupAdapter.hydrate(h.context, {
+      ids: [String(a.id)],
+    });
+    expect(rows).toEqual([
+      {
+        id: String(a.id),
+        title: "cat.png",
+        mime: "image/png",
+        size: 1024,
+        alt: null,
+        // No storage adapter in the harness → same storageKey fallback
+        // as `buildMediaItem`, keeping hydrate and media.get in agreement.
+        url: "media/cat.png",
+        thumbnailUrl: "media/cat.png",
+        width: null,
+        height: null,
+      },
+    ]);
+  });
+
+  test("hydrate() omits drafts and ids failing the accept scope", async () => {
+    const h = await harnessWithMediaPlugin();
+    const image = await seedMedia(h, {
+      title: "ok.png",
+      mime: "image/png",
+      authorId: h.user.id,
+    });
+    const pdf = await seedMedia(h, {
+      title: "doc.pdf",
+      mime: "application/pdf",
+      authorId: h.user.id,
+    });
+    const draft = await seedMedia(h, {
+      title: "wip.png",
+      mime: "image/png",
+      status: "draft",
+      authorId: h.user.id,
+    });
+    const rows = await mediaLookupAdapter.hydrate(h.context, {
+      ids: [String(image.id), String(pdf.id), String(draft.id)],
+      scope: { accept: "image/" },
+    });
+    expect(rows.map((r) => r.id)).toEqual([String(image.id)]);
+  });
 });

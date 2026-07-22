@@ -2,11 +2,16 @@ import type { SQL } from "drizzle-orm";
 
 import type { AppContext } from "../../../context/app.js";
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
-import type { LookupAdapter, LookupResult } from "../../../plugin/lookup.js";
-import { and, eq, inArray, like, ne } from "../../../db/index.js";
+import type {
+  EntryReferenceSummary,
+  LookupAdapter,
+  LookupResult,
+} from "../../../plugin/lookup.js";
+import { and, eq, inArray, like, ne, or } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
 import { buildEntryPermalink } from "../../../route/permalink.js";
 import { LookupScopeError } from "../lookup.errors.js";
+import { entryCapability } from "./lifecycle.js";
 
 const DEFAULT_LIST_LIMIT = 20;
 const MAX_LIST_LIMIT = 100;
@@ -29,7 +34,10 @@ interface EntryLookupRow {
   readonly parentId: number | null;
 }
 
-export const entryLookupAdapter: LookupAdapter<EntryFieldScope> = {
+// `satisfies` (not an annotation) keeps `hydrate`'s concrete
+// `EntryReferenceSummary` return type visible to callers instead of
+// widening it to the contract's `HydratedReference`.
+export const entryLookupAdapter = {
   async list(ctx, options) {
     const conditions = scopeConditions(options.scope);
     let limit: number;
@@ -62,7 +70,7 @@ export const entryLookupAdapter: LookupAdapter<EntryFieldScope> = {
     return Promise.all(rows.map((row) => toLookupResult(ctx, row)));
   },
 
-  async resolve(ctx, id, scope) {
+  async resolve(ctx, id, scope?) {
     const numericId = parseEntryId(id);
     if (numericId === null) return null;
     const [row] = await ctx.db
@@ -72,7 +80,44 @@ export const entryLookupAdapter: LookupAdapter<EntryFieldScope> = {
       .limit(1);
     return row ? toLookupResult(ctx, row) : null;
   },
-};
+
+  async hydrate(ctx, options) {
+    const numericIds = options.ids
+      .map((id) => parseEntryId(id))
+      .filter((id): id is number => id !== null);
+    if (numericIds.length === 0) return [];
+    const conditions = scopeConditions(options.scope);
+    // Viewer-visibility clamp: hydration feeds public render and
+    // anonymous REST, where an unpublished referenced entry must stay
+    // invisible (pre-hydration reads exposed only an opaque id). The
+    // picker-shaped default of `scopeConditions` (drafts admitted)
+    // only survives for viewers who could see the draft in the admin
+    // anyway — per referenced type, gated on `edit_any`. An explicit
+    // `scope.status` is the field author's call and passes through.
+    if (options.scope?.status === undefined) {
+      const types = options.scope?.entryTypes ?? [];
+      const visibleUnpublished = types.filter((type) =>
+        ctx.auth.can(entryCapability(type, "edit_any")),
+      );
+      if (visibleUnpublished.length < types.length) {
+        const published = eq(entries.status, "published");
+        conditions.push(
+          visibleUnpublished.length === 0
+            ? published
+            : (or(published, inArray(entries.type, visibleUnpublished)) ??
+                published),
+        );
+      }
+    }
+    conditions.push(inArray(entries.id, numericIds));
+    const rows = await ctx.db
+      .select(ENTRY_ROW_COLUMNS)
+      .from(entries)
+      .where(and(...conditions))
+      .limit(numericIds.length);
+    return Promise.all(rows.map((row) => toEntrySummary(ctx, row)));
+  },
+} satisfies LookupAdapter<EntryFieldScope>;
 
 function parseEntryId(id: string): number | null {
   // entries.id is autoincrement; reject anything that isn't a positive integer.
@@ -140,5 +185,20 @@ async function toLookupResult(
     targetType: row.type,
     subtitle: `${row.type} · ${row.status}`,
     ...(href !== null ? { href } : {}),
+  };
+}
+
+async function toEntrySummary(
+  ctx: AppContext,
+  row: EntryLookupRow,
+): Promise<EntryReferenceSummary> {
+  const trimmedTitle = row.title.trim();
+  return {
+    id: String(row.id),
+    type: row.type,
+    // `null` mirrors `LookupResult.label` — consumers localize the fallback.
+    title: trimmedTitle !== "" ? trimmedTitle : null,
+    slug: row.slug,
+    url: await buildEntryPermalink(ctx, row),
   };
 }

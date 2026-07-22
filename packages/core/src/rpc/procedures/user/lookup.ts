@@ -2,7 +2,11 @@ import type { SQL } from "drizzle-orm";
 
 import type { UserRole } from "../../../db/schema/users.js";
 import type { UserFieldScope } from "../../../plugin/fields/user.js";
-import type { LookupAdapter, LookupResult } from "../../../plugin/lookup.js";
+import type {
+  LookupAdapter,
+  LookupResult,
+  UserReferenceSummary,
+} from "../../../plugin/lookup.js";
 import { and, eq, inArray, isNull, like, or, sql } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 
@@ -16,7 +20,9 @@ const USER_ROW_COLUMNS = {
   role: users.role,
 } as const;
 
-export const userLookupAdapter: LookupAdapter<UserFieldScope> = {
+// `satisfies` keeps `hydrate`'s concrete `UserReferenceSummary` return
+// type visible instead of widening to the contract's `HydratedReference`.
+export const userLookupAdapter = {
   async list(ctx, options) {
     const conditions = scopeConditions(options.scope);
     let limit: number;
@@ -54,7 +60,7 @@ export const userLookupAdapter: LookupAdapter<UserFieldScope> = {
     return rows.map(toLookupResult);
   },
 
-  async resolve(ctx, id, scope) {
+  async resolve(ctx, id, scope?) {
     const numericId = parseUserId(id);
     if (numericId === null) return null;
     const [row] = await ctx.db
@@ -64,7 +70,34 @@ export const userLookupAdapter: LookupAdapter<UserFieldScope> = {
       .limit(1);
     return row ? toLookupResult(row) : null;
   },
-};
+
+  async hydrate(ctx, options) {
+    const numericIds = options.ids
+      .map((id) => parseUserId(id))
+      .filter((id): id is number => id !== null);
+    if (numericIds.length === 0) return [];
+    const conditions = scopeConditions(options.scope);
+    conditions.push(inArray(users.id, numericIds));
+    // Public-safe columns only — hydrated summaries flow into public
+    // render and REST, so email/role never leave the adapter.
+    const rows = await ctx.db
+      .select({
+        id: users.id,
+        name: users.name,
+        slug: users.slug,
+        avatarUrl: users.avatarUrl,
+      })
+      .from(users)
+      .where(and(...conditions))
+      .limit(numericIds.length);
+    return rows.map((row): UserReferenceSummary => ({
+      id: String(row.id),
+      name: row.name,
+      slug: row.slug,
+      avatarUrl: row.avatarUrl,
+    }));
+  },
+} satisfies LookupAdapter<UserFieldScope>;
 
 function parseUserId(id: string): number | null {
   // users.id is autoincrement; reject anything that isn't a positive integer.

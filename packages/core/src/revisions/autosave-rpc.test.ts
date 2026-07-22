@@ -2,7 +2,9 @@ import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
+import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { createRpcHarness } from "../test/rpc.js";
+import { getAutosave } from "./repository.js";
 
 function registryWithAutosave() {
   const plugins = createPluginRegistry();
@@ -279,5 +281,56 @@ describe("entry.discardDraft", () => {
     // Second call — nothing to discard, no hook fire.
     await h.client.entry.discardDraft({ id: h.entryId });
     expect(discards).toHaveLength(1);
+  });
+
+  test("autosave meta persists plain ids for hydrated reference values", async () => {
+    // Reads hydrate reference meta to `{ id, ... }` payloads; an
+    // untouched field rides back through the autosave write in that
+    // shape. Storage must stay plain ids — never hydrated snapshots.
+    const plugins = registryWithAutosave();
+    registerCoreLookupAdapters(plugins);
+    plugins.entryMetaBoxes.set("relations", {
+      id: "relations",
+      label: "Relations",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "owner",
+          label: "Owner",
+          inputType: "user",
+          type: "string",
+          referenceTarget: { kind: "user" },
+        },
+      ],
+      registeredBy: null,
+    });
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const created = await h.client.entry.create({
+      title: "Live",
+      slug: "live-ref",
+      status: "published",
+    });
+    const target = await h.factory.user.create({ name: "Owner One" });
+
+    await h.client.entry.update({
+      id: created.id,
+      title: "Draft",
+      meta: {
+        owner: {
+          id: String(target.id),
+          name: "Owner One",
+          slug: target.slug,
+          avatarUrl: null,
+        },
+      },
+    });
+
+    const autosave = await getAutosave(h.context.db, {
+      entryId: created.id,
+      authorId: h.user.id,
+    });
+    expect((autosave?.meta as Record<string, unknown> | null)?.owner).toBe(
+      String(target.id),
+    );
   });
 });

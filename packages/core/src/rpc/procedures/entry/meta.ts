@@ -6,7 +6,8 @@ import { findEntryMetaField } from "../../../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
-  filterMetaOrphans as filterMetaOrphansCore,
+  hydrateMetaBags as hydrateMetaBagsCore,
+  hydrateMetaReferences as hydrateMetaReferencesCore,
   isEmptyMetaPatch,
   loadMeta,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
@@ -97,14 +98,41 @@ export async function validateEntryMetaReferences(
   );
 }
 
-export function decodeMetaBag(
-  registry: PluginRegistry,
+/**
+ * Decode + hydrate one entry's meta bag for a read response. Use
+ * {@link hydrateEntriesMeta} for multi-entry responses so ids
+ * aggregate into one in-query per `(kind, scope)` group.
+ */
+export async function hydrateEntryMeta(
+  ctx: AppContext,
   entry: { readonly type: string },
   raw: Readonly<Record<string, unknown>> | null | undefined,
-): Record<string, unknown> {
-  return decodeMetaBagCore(
-    (key) => findEntryMetaField(registry, entry.type, key),
-    raw,
+): Promise<Record<string, unknown>> {
+  const [bag] = await hydrateEntriesMeta(ctx, [
+    { type: entry.type, meta: raw },
+  ]);
+  return bag ?? {};
+}
+
+/**
+ * Decode + hydrate meta bags for a whole read response, one result per
+ * row (index-aligned). All reference ids across all rows resolve
+ * through the shared batched pipeline.
+ */
+export async function hydrateEntriesMeta(
+  ctx: AppContext,
+  rows: readonly {
+    readonly type: string;
+    readonly meta: Readonly<Record<string, unknown>> | null | undefined;
+  }[],
+): Promise<Record<string, unknown>[]> {
+  return hydrateMetaBagsCore(
+    ctx,
+    rows.map((row) => {
+      const findField = (key: string) =>
+        findEntryMetaField(ctx.plugins, row.type, key);
+      return { findField, decoded: decodeMetaBagCore(findField, row.meta) };
+    }),
   );
 }
 
@@ -115,7 +143,7 @@ export async function loadEntryMeta(
   const decoded = await loadMeta(ctx, entries, entries.id, entry.id, (key) =>
     findEntryMetaField(ctx.plugins, entry.type, key),
   );
-  return filterMetaOrphansCore(
+  return hydrateMetaReferencesCore(
     ctx,
     (key) => findEntryMetaField(ctx.plugins, entry.type, key),
     decoded,

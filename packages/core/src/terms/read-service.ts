@@ -7,7 +7,7 @@ import type {
 import { and, asc, eq, isNull, like } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
 import { taxonomyCapability } from "../rpc/procedures/term/helpers.js";
-import { decodeMetaBag } from "../rpc/procedures/term/meta.js";
+import { hydrateTermMeta } from "../rpc/procedures/term/meta.js";
 import { TermReadError } from "./errors.js";
 
 type TermRead = Omit<Term, "meta"> & { readonly meta: Record<string, unknown> };
@@ -63,6 +63,6 @@ export async function getTerm(
     throw TermReadError.termNotFound(input.id);
   }
 
-  const meta = decodeMetaBag(ctx.plugins, row.taxonomy, row.meta);
+  const meta = await hydrateTermMeta(ctx, row.taxonomy, row.meta);
   return { ...row, meta };
 }

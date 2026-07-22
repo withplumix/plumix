@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import type { MutablePluginRegistry } from "../../../plugin/manifest.js";
+import { withUser } from "../../../context/app.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { entryFactory } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -234,6 +235,117 @@ describe("entryLookupAdapter", () => {
     expect(
       await entryLookupAdapter.resolve(h.context, String(e.id), PAGE),
     ).toBeNull();
+  });
+
+  test("hydrate() resolves ids into entry summaries with permalinks", async () => {
+    // Register the public entry type so the summary carries a permalink.
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    registry.entryTypes.set("post", {
+      name: "post",
+      label: "Posts",
+      isPublic: true,
+      registeredBy: null,
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const e = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, title: "Referenced", type: "post" });
+    const rows = await entryLookupAdapter.hydrate(
+      withUser(h.context, h.user, null),
+      {
+        ids: [String(e.id)],
+        scope: POST,
+      },
+    );
+    expect(rows).toEqual([
+      {
+        id: String(e.id),
+        type: "post",
+        title: "Referenced",
+        slug: e.slug,
+        url: `/post/${e.slug}`,
+      },
+    ]);
+  });
+
+  test("hydrate() omits missing, malformed, and out-of-scope ids", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const post = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post" });
+    const trashed = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "trash" });
+    const rows = await entryLookupAdapter.hydrate(
+      withUser(h.context, h.user, null),
+      {
+        ids: [String(post.id), String(trashed.id), "999999", "abc"],
+        scope: POST,
+      },
+    );
+    expect(rows.map((row) => row.id)).toEqual([String(post.id)]);
+  });
+
+  test("hydrate() honours a status scope constraint", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const draft = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "draft" });
+    const published = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "published" });
+    const rows = await entryLookupAdapter.hydrate(h.context, {
+      ids: [String(draft.id), String(published.id)],
+      scope: { ...POST, status: "published" },
+    });
+    expect(rows.map((row) => row.id)).toEqual([String(published.id)]);
+  });
+
+  test("hydrate() clamps unpublished entries away from draft-incapable viewers", async () => {
+    // Hydration feeds public render and anonymous REST — a referenced
+    // draft must stay invisible there (pre-hydration reads exposed
+    // only an opaque id). Editors keep seeing drafts, matching the
+    // admin picker.
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    const adminHarness = await createRpcHarness({
+      authAs: "admin",
+      plugins: registry,
+    });
+    const draft = await entryFactory
+      .transient({ db: adminHarness.context.db })
+      .create({
+        authorId: adminHarness.user.id,
+        type: "post",
+        status: "draft",
+      });
+
+    const anonymous = await entryLookupAdapter.hydrate(adminHarness.context, {
+      ids: [String(draft.id)],
+      scope: POST,
+    });
+    // adminHarness.context is the unauthenticated base context.
+    expect(anonymous).toEqual([]);
+
+    const asAdmin = await entryLookupAdapter.hydrate(
+      withUser(adminHarness.context, adminHarness.user, null),
+      { ids: [String(draft.id)], scope: POST },
+    );
+    expect(asAdmin.map((row) => row.id)).toEqual([String(draft.id)]);
+  });
+
+  test("hydrate() maps an empty title to a null summary title", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const e = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, title: "   " });
+    const rows = await entryLookupAdapter.hydrate(
+      withUser(h.context, h.user, null),
+      {
+        ids: [String(e.id)],
+        scope: POST,
+      },
+    );
+    expect(rows[0]?.title).toBeNull();
   });
 
   test("returns null label when title is empty so the admin can localize", async () => {

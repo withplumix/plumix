@@ -15,7 +15,10 @@ import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { isReservedType } from "../revisions/slug-codec.js";
 import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
-import { decodeMetaBag } from "../rpc/procedures/entry/meta.js";
+import {
+  hydrateEntriesMeta,
+  hydrateEntryMeta,
+} from "../rpc/procedures/entry/meta.js";
 import {
   escapeLikePattern,
   tokenizeSearchQuery,
@@ -109,13 +112,15 @@ export async function listEntries(
   const primary = input.order === "asc" ? asc(orderCol) : desc(orderCol);
   // `entries.id` is always a desc tiebreaker — pagination must be stable
   // across ties on the user-selected order column.
-  return ctx.db
+  const rows = await ctx.db
     .select()
     .from(entries)
     .where(and(...conditions))
     .orderBy(primary, desc(entries.id))
     .limit(input.limit)
     .offset(input.offset);
+  const bags = await hydrateEntriesMeta(ctx, rows);
+  return rows.map((row, i) => ({ ...row, meta: bags[i] ?? {} }));
 }
 
 /**
@@ -146,7 +151,7 @@ export async function getEntry(
     if (!canSeeAny && !ownsAndCanEdit) throw EntryReadError.notFound(input.id);
   }
 
-  const meta = decodeMetaBag(ctx.plugins, row, row.meta);
+  const meta = await hydrateEntryMeta(ctx, row, row.meta);
   const entryTerms = await loadEntryTerms(ctx, row.id);
   return { ...row, meta, terms: entryTerms };
 }
