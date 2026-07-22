@@ -10,6 +10,7 @@ import {
 } from "plumix/plugin";
 import {
   adminUser,
+  createRequestMemo,
   createTestDb,
   entryFactory,
   entryTermFactory,
@@ -48,6 +49,7 @@ function ctxFor(
     request: new Request("https://test.example/"),
     resolvedEntity: null,
     basePath: "",
+    memo: createRequestMemo(),
   } as unknown as AppContext;
 }
 
@@ -312,13 +314,18 @@ describe("getMenuByName", () => {
     const before = await getMenuByName(ctx, "rename");
     expect(before?.items[0]?.label).toBe("First name");
 
-    // Rename the source entry — no menu save in between.
+    // Rename the source entry — no menu save in between. The next
+    // request (fresh ctx — within one request the cluster is memoized)
+    // must see the live title.
     await db
       .update(entriesTable)
       .set({ title: "New name", slug: "second" })
       .where(eq(entriesTable.id, post.id));
 
-    const after = await getMenuByName(ctx, "rename");
+    const after = await getMenuByName(
+      ctxFor(db, await defaultRegistry()),
+      "rename",
+    );
     expect(after?.items[0]?.label).toBe("New name");
     expect(after?.items[0]?.href).toBe("/post/second");
   });
@@ -404,6 +411,7 @@ describe("getMenuByName", () => {
         request: new Request(url),
         resolvedEntity: resolved,
         basePath: "",
+        memo: createRequestMemo(),
       } as unknown as AppContext;
     }
 
@@ -690,5 +698,29 @@ describe("getMenuByName", () => {
 
     const menu = await getMenuByName(ctx, "status");
     expect(menu?.items.map((i) => i.label)).toEqual(["Published"]);
+  });
+
+  test("replays the query cluster within one request instead of re-reading", async () => {
+    const termId = await seedMenu("main");
+    await seedItems(termId, [
+      { title: "Home", meta: { kind: "custom", url: "/" } },
+    ]);
+
+    const first = await getMenuByName(ctx, "main");
+    expect(first?.items.map((i) => i.label)).toEqual(["Home"]);
+
+    // Wipe the backing rows: a second resolve in the same request must
+    // come from the request memo, not the database.
+    await db.delete(entriesTable).where(eq(entriesTable.type, "menu_item"));
+
+    const second = await getMenuByName(ctx, "main");
+    expect(second?.items.map((i) => i.label)).toEqual(["Home"]);
+
+    // A fresh request sees the change.
+    const fresh = await getMenuByName(
+      ctxFor(db, await defaultRegistry()),
+      "main",
+    );
+    expect(fresh?.items).toEqual([]);
   });
 });

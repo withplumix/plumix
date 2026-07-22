@@ -1,6 +1,8 @@
 import type { AppContext, PluginRegistry } from "plumix/plugin";
+import { eq } from "drizzle-orm";
 import {
   createPluginRegistry,
+  entries,
   HookRegistry,
   installPlugins,
   registerCoreLookupAdapters,
@@ -17,6 +19,7 @@ import {
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { menu } from "../index.js";
+import { getMenuByName } from "./getMenuByName.js";
 import { getMenuForLocation } from "./getMenuForLocation.js";
 import { clearRegisteredLocations } from "./locations.js";
 
@@ -147,6 +150,21 @@ describe("getMenuForLocation", () => {
     const second = await getMenuForLocation(ctx, "primary");
     expect(first).not.toBeNull();
     expect(second).toBe(first);
+  });
+
+  test("the template dep's direct getMenuByName reuses the location resolve's cluster", async () => {
+    await seedMenuWithItem("main", "Home", "/");
+    await bind("primary", "main");
+
+    const viaLocation = await getMenuForLocation(ctx, "primary");
+    expect(viaLocation?.items.map((i) => i.label)).toEqual(["Home"]);
+
+    // Wipe the backing rows: the `menus` template dep resolves the same
+    // menu by slug in the same request and must not re-run the cluster.
+    await db.delete(entries).where(eq(entries.type, "menu_item"));
+
+    const viaName = await getMenuByName(ctx, "main");
+    expect(viaName?.items.map((i) => i.label)).toEqual(["Home"]);
   });
 
   test("a fresh ctx does not share the cache", async () => {
