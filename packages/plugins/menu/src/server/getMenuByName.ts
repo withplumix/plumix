@@ -43,22 +43,53 @@ export async function getMenuByName(
   name: string,
   options?: { readonly location?: string | null },
 ): Promise<ResolvedMenu | null> {
-  const [term] = await ctx.db
+  const resolved = await resolveMenus(ctx, [name], options?.location ?? null);
+  return resolved.get(name) ?? null;
+}
+
+/**
+ * Batched `getMenuByName`: resolves every slug with a query count flat in
+ * the number of menus — one term lookup, one item read, and one ref
+ * resolution pass shared across all of them. This is the seam the `menus`
+ * template dep loads through, so a site rendering header + footer +
+ * sidebar navs pays one resolve pass per request, not one per location.
+ */
+export async function getMenusByName(
+  ctx: AppContext,
+  names: readonly string[],
+): Promise<Record<string, ResolvedMenu | null>> {
+  const resolved = await resolveMenus(ctx, names, null);
+  return Object.fromEntries(resolved);
+}
+
+async function resolveMenus(
+  ctx: AppContext,
+  slugs: readonly string[],
+  location: string | null,
+): Promise<Map<string, ResolvedMenu | null>> {
+  const result = new Map<string, ResolvedMenu | null>();
+  for (const slug of slugs) result.set(slug, null);
+  if (result.size === 0) return result;
+
+  const termRows = await ctx.db
     .select({ id: terms.id, name: terms.name, slug: terms.slug })
     .from(terms)
-    .where(and(eq(terms.taxonomy, "menu"), eq(terms.slug, name)))
-    .limit(1);
-  if (!term) return null;
+    .where(
+      and(eq(terms.taxonomy, "menu"), inArray(terms.slug, [...result.keys()])),
+    );
+  if (termRows.length === 0) return result;
 
-  const rows: readonly MenuItemRow[] = await ctx.db
+  const rows = await ctx.db
     .select({
       id: entries.id,
       parentId: entries.parentId,
       sortOrder: entries.sortOrder,
       title: entries.title,
       meta: entries.meta,
+      termId: entryTerm.termId,
     })
     .from(entries)
+    .innerJoin(entryTerm, eq(entryTerm.entryId, entries.id))
     .where(
       and(
         eq(entries.type, "menu_item"),
@@ -67,36 +98,46 @@ export async function getMenuByName(
         // the admin (slice 7+) introduces a drafting flow, revisit.
         eq(entries.status, "published"),
         inArray(
-          entries.id,
-          ctx.db
-            .select({ id: entryTerm.entryId })
-            .from(entryTerm)
-            .where(eq(entryTerm.termId, term.id)),
+          entryTerm.termId,
+          termRows.map((t) => t.id),
         ),
       ),
     )
     .orderBy(entries.parentId, entries.sortOrder, entries.id);
 
+  const rowsByTerm = new Map<number, MenuItemRow[]>();
+  for (const { termId, ...row } of rows) {
+    const bucket = rowsByTerm.get(termId);
+    if (bucket) bucket.push(row);
+    else rowsByTerm.set(termId, [row]);
+  }
+
   const refs = await resolveRefs(ctx, rows);
-  const { tree } = buildTree(rows);
-  const resolved = await Promise.all(
-    tree.map((node) => toResolvedItem(ctx, node, refs)),
-  );
-  const items = resolved.filter(
-    (item): item is ResolvedMenuItem => item !== null,
-  );
 
-  const filtered = await ctx.hooks.applyFilter("menu:tree", items, {
-    location: options?.location ?? null,
-    termId: term.id,
-  });
+  await Promise.all(
+    termRows.map(async (term) => {
+      const { tree } = buildTree(rowsByTerm.get(term.id) ?? []);
+      const resolved = await Promise.all(
+        tree.map((node) => toResolvedItem(ctx, node, refs)),
+      );
+      const items = resolved.filter(
+        (item): item is ResolvedMenuItem => item !== null,
+      );
 
-  return {
-    termId: term.id,
-    name: term.name,
-    slug: term.slug,
-    items: filtered,
-  };
+      const filtered = await ctx.hooks.applyFilter("menu:tree", items, {
+        location,
+        termId: term.id,
+      });
+
+      result.set(term.slug, {
+        termId: term.id,
+        name: term.name,
+        slug: term.slug,
+        items: filtered,
+      });
+    }),
+  );
+  return result;
 }
 
 interface ResolvedRefs {

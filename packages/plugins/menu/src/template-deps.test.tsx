@@ -16,7 +16,7 @@ import {
   factoriesFor,
 } from "plumix/test";
 import { defineTemplate, defineTheme } from "plumix/theme";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { MenuItemMeta, ResolvedMenu } from "./server/types.js";
 import { menu } from "./index.js";
@@ -93,7 +93,7 @@ describe("@plumix/plugin-menu — menus template dep loader", () => {
     b = await bundle();
   });
 
-  test("resolves a single declared slug via getMenuByName", async () => {
+  test("resolves a single declared slug", async () => {
     const term = await b.factories.term.create({
       taxonomy: "menu",
       slug: "primary",
@@ -135,6 +135,32 @@ describe("@plumix/plugin-menu — menus template dep loader", () => {
   test("returns null for a slug with no matching menu term", async () => {
     const result = await b.load(["nope"], b.ctx);
     expect(result.nope).toBeNull();
+  });
+
+  test("query count stays flat as declared slugs grow", async () => {
+    for (const [index, slug] of ["primary", "footer", "aside"].entries()) {
+      const term = await b.factories.term.create({
+        taxonomy: "menu",
+        slug,
+        name: slug,
+      });
+      await seedMenuItem(
+        b,
+        term.id,
+        "Home",
+        { kind: "custom", url: "/" },
+        index,
+      );
+    }
+
+    const select = vi.spyOn(b.ctx.db, "select");
+    await b.load(["primary"], b.ctx);
+    const singleCount = select.mock.calls.length;
+    select.mockClear();
+
+    await b.load(["primary", "footer", "aside"], b.ctx);
+    expect(select.mock.calls.length).toBe(singleCount);
+    select.mockRestore();
   });
 });
 

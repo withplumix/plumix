@@ -15,10 +15,10 @@ import {
   entryTermFactory,
   factoriesFor,
 } from "plumix/test";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { MenuItemMeta } from "./types.js";
-import { getMenuByName } from "./getMenuByName.js";
+import { getMenuByName, getMenusByName } from "./getMenuByName.js";
 
 interface TestBundle {
   readonly registry: PluginRegistry;
@@ -576,6 +576,91 @@ describe("getMenuByName", () => {
     await seedMenu("empty");
     const menu = await getMenuByName(ctx, "empty");
     expect(menu?.items).toEqual([]);
+  });
+
+  describe("getMenusByName", () => {
+    test("resolves multiple slugs in one call, null for missing", async () => {
+      const primaryId = await seedMenu("primary", "Primary nav");
+      const footerId = await seedMenu("footer", "Footer nav");
+      await seedItems(primaryId, [
+        { title: "Home", meta: { kind: "custom", url: "/" } },
+        { title: "About", meta: { kind: "custom", url: "/about" } },
+      ]);
+      await seedItems(footerId, [
+        { title: "Privacy", meta: { kind: "custom", url: "/privacy" } },
+      ]);
+
+      const result = await getMenusByName(ctx, ["primary", "footer", "nope"]);
+      expect(result.primary?.name).toBe("Primary nav");
+      expect(result.primary?.items.map((i) => i.label)).toEqual([
+        "Home",
+        "About",
+      ]);
+      expect(result.footer?.items.map((i) => i.label)).toEqual(["Privacy"]);
+      expect(result.nope).toBeNull();
+    });
+
+    test("resolves entry and term refs living in different menus", async () => {
+      const post = await factories.entry.create({
+        type: "post",
+        slug: "p",
+        title: "Post",
+        status: "published",
+        authorId,
+      });
+      const category = await factories.term.create({
+        taxonomy: "category",
+        slug: "news",
+        name: "News",
+      });
+      const headerId = await seedMenu("header");
+      const asideId = await seedMenu("aside");
+      await seedItems(headerId, [
+        { title: "ignored", meta: { kind: "entry", entryId: post.id } },
+      ]);
+      await seedItems(asideId, [
+        { title: "ignored", meta: { kind: "term", termId: category.id } },
+      ]);
+
+      const result = await getMenusByName(ctx, ["header", "aside"]);
+      expect(result.header?.items[0]).toMatchObject({
+        label: "Post",
+        href: "/post/p",
+        source: { kind: "entry", id: post.id },
+      });
+      expect(result.aside?.items[0]).toMatchObject({
+        label: "News",
+        href: "/category/news",
+        source: { kind: "term", id: category.id },
+      });
+    });
+
+    test("query count stays flat as the menu count grows", async () => {
+      const slugs = ["one", "two", "three"];
+      for (const slug of slugs) {
+        const termId = await seedMenu(slug);
+        const post = await factories.entry.create({
+          type: "post",
+          slug: `post-${slug}`,
+          title: `Post ${slug}`,
+          status: "published",
+          authorId,
+        });
+        await seedItems(termId, [
+          { title: "Home", meta: { kind: "custom", url: `/${slug}` } },
+          { title: "ignored", meta: { kind: "entry", entryId: post.id } },
+        ]);
+      }
+
+      const select = vi.spyOn(ctx.db, "select");
+      await getMenusByName(ctx, ["one"]);
+      const singleCount = select.mock.calls.length;
+      select.mockClear();
+
+      await getMenusByName(ctx, slugs);
+      expect(select.mock.calls.length).toBe(singleCount);
+      select.mockRestore();
+    });
   });
 
   test("excludes non-published menu items (draft, trash, scheduled)", async () => {

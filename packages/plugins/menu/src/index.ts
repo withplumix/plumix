@@ -6,13 +6,9 @@ import type {
 } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
-import type {
-  MenuLocationOptions,
-  ResolvedMenu,
-  ResolvedMenuItem,
-} from "./server/types.js";
+import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter } from "./rpc.js";
-import { getMenuByName } from "./server/getMenuByName.js";
+import { getMenusByName } from "./server/getMenuByName.js";
 import {
   clearRegisteredLocations,
   recordLocation,
@@ -221,15 +217,7 @@ export function menu(
       });
 
       ctx.registerTemplateDep("menus", {
-        load: async (slugs, appCtx) => {
-          const result: Record<string, ResolvedMenu | null> = {};
-          await Promise.all(
-            slugs.map(async (slug) => {
-              result[slug] = await getMenuByName(appCtx, slug);
-            }),
-          );
-          return result;
-        },
+        load: (slugs, appCtx) => getMenusByName(appCtx, slugs),
       });
 
       ctx.registerRpcRouter(createMenuRouter());
