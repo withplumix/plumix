@@ -1114,6 +1114,30 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
     expect(response.status).toBe(200);
   });
 
+  test("an asset-shaped miss outside the base (/favicon.ico) gets the cacheable plain 404", async () => {
+    // The browser's favicon probe targets the domain root, not the mount —
+    // it must hit the same cacheable asset-404 path as in-base misses (#1514).
+    const h = await createDispatcherHarness({ basePath: "/custom-directory" });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/favicon.ico"),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("public, max-age=300");
+  });
+
+  test("a non-asset miss outside the base stays uncached", async () => {
+    const h = await createDispatcherHarness({ basePath: "/custom-directory" });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/whatever"),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBeNull();
+  });
+
   test("the sitemap index lists base-prefixed sub-sitemap URLs", async () => {
     const h = await createDispatcherHarness({
       basePath: "/custom-directory",
