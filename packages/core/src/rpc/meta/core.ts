@@ -945,38 +945,6 @@ function encodeTemporalDate(
   return formatTemporalValue(inputType, value);
 }
 
-/**
- * Heal every reference slot in a meta bag to the stored plain-id
- * shape — top-level fields and repeater rows — leaving all other keys
- * untouched. For write paths that persist a bag wholesale (autosave
- * merge) rather than through `sanitizeMetaInput`, so hydrated
- * round-tripped values never land in storage.
- */
-export function healMetaBagReferences(
-  findField: (key: string) => MetaBoxField | undefined,
-  bag: Readonly<Record<string, unknown>>,
-): Record<string, unknown> {
-  const out: MetaMap = {};
-  for (const [key, value] of Object.entries(bag)) {
-    const field = findField(key);
-    if (!field) {
-      out[key] = value;
-      continue;
-    }
-    const target = referenceTargetOf(field);
-    if (target) {
-      out[key] = healReferenceValue(target, value);
-      continue;
-    }
-    if (isRepeaterField(field) && Array.isArray(value)) {
-      out[key] = value.map((row) => healRepeaterRow(field, row));
-      continue;
-    }
-    out[key] = value;
-  }
-  return out;
-}
-
 function healReferenceValue(target: ReferenceTarget, value: unknown): unknown {
   if (target.multiple) {
     if (!Array.isArray(value)) return value;

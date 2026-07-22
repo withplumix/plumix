@@ -15,11 +15,9 @@ import {
   loadReadableParent,
 } from "./lifecycle.js";
 import {
-  assertEntryMetaCapabilities,
   hydrateEntryMeta,
   loadEntryMeta,
-  sanitizeMetaForRpc,
-  validateEntryMetaReferences,
+  sanitizeAndValidateEntryMeta,
   writeEntryMeta,
 } from "./meta.js";
 import { scheduledDateInvalid } from "./publish-scheduled.js";
@@ -88,27 +86,12 @@ export const create = base
 
     // Validate meta up-front so a bad key fails before the entry insert —
     // keeps the DB clean when the client sends a typo in a meta key.
-    const metaPatch = sanitizeMetaForRpc(
-      context.plugins,
+    const metaPatch = await sanitizeAndValidateEntryMeta(
+      context,
       filtered.type,
       filtered.meta,
       errors,
     );
-    if (metaPatch) {
-      assertEntryMetaCapabilities(
-        context.plugins,
-        filtered.type,
-        metaPatch,
-        context.auth,
-        errors,
-      );
-      await validateEntryMetaReferences(
-        context,
-        filtered.type,
-        metaPatch,
-        errors,
-      );
-    }
 
     // Same up-front validation: a bad term reference shouldn't leave a
     // half-created entry behind.
