@@ -1,10 +1,7 @@
 import { describe, expect, expectTypeOf, test, vi } from "vitest";
 
 import type { LinkValue } from "./index.js";
-import {
-  decodeMetaBag,
-  sanitizeMetaInput,
-} from "../../rpc/meta/core.js";
+import { decodeMetaBag, sanitizeMetaInput } from "../../rpc/meta/core.js";
 import { link } from "./index.js";
 
 describe("link field builder", () => {

@@ -2318,6 +2318,11 @@ msgid "profile.passkeys.lastUsed"
 msgstr "Zuletzt verwendet {date}"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.text"
+msgstr "Linktext"
+
+#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemsList"
 msgstr "Liste"
@@ -2406,6 +2411,11 @@ msgstr "Wird geladen…"
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.loading"
+msgstr "Wird geladen…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.loading"
 msgstr "Wird geladen…"
 
 #. js-lingui-explicit-id
@@ -2659,6 +2669,11 @@ msgid "type.generic.noMatch"
 msgstr "Keine Treffer"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.noMatches"
+msgstr "Keine Treffer"
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.noMatches"
 msgstr "Keine Treffer"
@@ -2784,6 +2799,11 @@ msgid "editor.preview.tooltip"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.newTab"
+msgstr "In neuem Tab öffnen"
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.loading"
 msgstr ""
@@ -2884,6 +2904,11 @@ msgstr "Persönliche Zugriffstokens für CLIs, MCP-Server, CI-Bots oder andere N
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.description.hierarchical"
 msgstr "Wählen Sie einen übergeordneten Begriff, um diesen zu verschachteln, oder lassen Sie das Feld leer für einen Begriff auf Stammebene."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.pick"
+msgstr "Beitrag auswählen"
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -3232,9 +3257,19 @@ msgid "metaBox.reference.dialogDescription"
 msgstr "{kind} suchen und auswählen"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.dialogDescription"
+msgstr "Beitrag zum Verlinken suchen und auswählen"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "Nach E-Mail suchen…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.searchPlaceholder"
+msgstr "Beiträge suchen…"
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
@@ -4030,6 +4065,11 @@ msgstr "Aktualisiert"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemUpdated"
 msgstr "Aktualisiert"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.url"
+msgstr "URL"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx

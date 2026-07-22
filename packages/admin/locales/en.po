@@ -2318,6 +2318,11 @@ msgid "profile.passkeys.lastUsed"
 msgstr "Last used {date}"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.text"
+msgstr "Link text"
+
+#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemsList"
 msgstr "List"
@@ -2406,6 +2411,11 @@ msgstr "Loading…"
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.loading"
+msgstr "Loading…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.loading"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
@@ -2659,6 +2669,11 @@ msgid "type.generic.noMatch"
 msgstr "No matches"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.noMatches"
+msgstr "No matches"
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.noMatches"
 msgstr "No matches"
@@ -2784,6 +2799,11 @@ msgid "editor.preview.tooltip"
 msgstr "Open a preview in a new tab"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.newTab"
+msgstr "Open in new tab"
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.loading"
 msgstr "Opening the editor…"
@@ -2884,6 +2904,11 @@ msgstr "Personal access tokens for CLIs, MCP servers, CI bots, or any other non-
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.description.hierarchical"
 msgstr "Pick a parent to nest this term, or leave empty for a root-level term."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.pick"
+msgstr "Pick entry"
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -3232,9 +3257,19 @@ msgid "metaBox.reference.dialogDescription"
 msgstr "Search and pick a {kind}"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.dialogDescription"
+msgstr "Search and pick an entry to link to"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "Search by email…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.searchPlaceholder"
+msgstr "Search entries…"
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
@@ -4030,6 +4065,11 @@ msgstr "Updated"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemUpdated"
 msgstr "Updated"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.url"
+msgstr "URL"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx

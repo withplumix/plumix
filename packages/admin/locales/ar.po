@@ -2318,6 +2318,11 @@ msgid "profile.passkeys.lastUsed"
 msgstr "آخر استخدام {date}"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.text"
+msgstr "نص الرابط"
+
+#. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemsList"
 msgstr "قائمة"
@@ -2406,6 +2411,11 @@ msgstr "جارٍ التحميل…"
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.loading"
+msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.loading"
 msgstr "جارٍ التحميل…"
 
 #. js-lingui-explicit-id
@@ -2659,6 +2669,11 @@ msgid "type.generic.noMatch"
 msgstr "لا مطابقات"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.noMatches"
+msgstr "لا مطابقات"
+
+#. js-lingui-explicit-id
 #: src/components/meta-box/multi-reference-picker.tsx
 msgid "metaBox.multiReference.noMatches"
 msgstr "لا مطابقات"
@@ -2784,6 +2799,11 @@ msgid "editor.preview.tooltip"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.newTab"
+msgstr "فتح في علامة تبويب جديدة"
+
+#. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.loading"
 msgstr ""
@@ -2884,6 +2904,11 @@ msgstr "رموز وصول شخصية لـ CLI، خوادم MCP، بوتات CI،
 #: src/routes/_authenticated/terms/$name/create.tsx
 msgid "terms.create.description.hierarchical"
 msgstr "اختر أباً لتعشيش هذا المصطلح، أو اتركه فارغاً لمصطلح في المستوى الجذر."
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.pick"
+msgstr "اختيار منشور"
 
 #. js-lingui-explicit-id
 #: src/lib/plugin-error-boundary.tsx
@@ -3232,9 +3257,19 @@ msgid "metaBox.reference.dialogDescription"
 msgstr "ابحث واختر {kind}"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.dialogDescription"
+msgstr "ابحث واختر منشورًا للربط به"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.searchPlaceholder"
 msgstr "البحث بالبريد…"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.searchPlaceholder"
+msgstr "البحث في المنشورات…"
 
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
@@ -4030,6 +4065,11 @@ msgstr "آخر تحديث"
 #: src/lib/core-type-labels-i18n.ts
 msgid "type.generic.itemUpdated"
 msgstr "تم التحديث"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/link-field.tsx
+msgid "metaBox.link.url"
+msgstr "عنوان URL"
 
 #. js-lingui-explicit-id
 #: src/routes/_auth/login.tsx
