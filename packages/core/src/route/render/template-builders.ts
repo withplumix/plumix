@@ -1,11 +1,13 @@
 import type {
+  ResolvedEntryFor,
+  ResolvedTermFor,
+  StoredMetaOf,
+  StoredTermMetaOf,
+} from "../../plugin/fields/contributions.js";
+import type {
   ArchiveDataOf,
   ArchiveTypeName,
-  EntryProjection,
   EntryTypeName,
-  MetaOf,
-  TermMetaOf,
-  TermProjection,
   TermTaxonomyName,
 } from "../../template-registry.js";
 import type {
@@ -173,7 +175,7 @@ function termMetaEquals(
 
 interface EntrySelector<K extends EntryTypeName> {
   /** Bind the template for the selected entry. */
-  template(t: TemplateEntry<EntryData<EntryProjection<K>>>): TemplateRule;
+  template(t: TemplateEntry<EntryData<ResolvedEntryFor<K>>>): TemplateRule;
 }
 
 interface EntryTypeBuilder<K extends EntryTypeName> extends EntrySelector<K> {
@@ -181,20 +183,24 @@ interface EntryTypeBuilder<K extends EntryTypeName> extends EntrySelector<K> {
   slug(slug: string): EntrySelector<K>;
   /** Narrow to one entry by numeric id. */
   id(id: number): EntrySelector<K>;
-  /** Narrow by an entry-meta value, typed against the type's meta projection. */
-  whereMeta<M extends keyof MetaOf<K>>(
+  /**
+   * Narrow by an entry-meta value, typed against the type's folded
+   * stored meta shape (what actually sits in the meta JSON — decode-time
+   * defaults and hydration don't apply here).
+   */
+  whereMeta<M extends keyof StoredMetaOf<K>>(
     key: M,
-    value: MetaOf<K>[M],
+    value: StoredMetaOf<K>[M],
   ): EntrySelector<K>;
   /** Narrow by an arbitrary predicate over the resolved data. */
   where(
-    predicate: (data: EntryData<EntryProjection<K>>) => boolean,
+    predicate: (data: EntryData<ResolvedEntryFor<K>>) => boolean,
   ): EntrySelector<K>;
   /** Register an author-selectable template, matched from stored entry meta. */
   named(id: string, label: string): EntrySelector<K>;
   /** The content-type archive listing. */
   readonly archive: {
-    template(t: TemplateEntry<ArchiveData<EntryProjection<K>>>): TemplateRule;
+    template(t: TemplateEntry<ArchiveData<ResolvedEntryFor<K>>>): TemplateRule;
   };
 }
 
@@ -235,7 +241,7 @@ export function forEntryType<K extends EntryTypeName>(
 
 interface TaxonomySelector<K extends TermTaxonomyName> {
   /** Bind the template for the selected term(s). */
-  template(t: TemplateEntry<TaxonomyData<TermProjection<K>>>): TemplateRule;
+  template(t: TemplateEntry<TaxonomyData<ResolvedTermFor<K>>>): TemplateRule;
 }
 
 interface TermTaxonomyBuilder<
@@ -245,14 +251,14 @@ interface TermTaxonomyBuilder<
   slug(slug: string): TaxonomySelector<K>;
   /** Narrow to one term by numeric id. */
   id(id: number): TaxonomySelector<K>;
-  /** Narrow by a term-meta value, typed against the taxonomy's meta projection. */
-  whereMeta<M extends keyof TermMetaOf<K>>(
+  /** Narrow by a term-meta value, typed against the taxonomy's folded stored meta shape. */
+  whereMeta<M extends keyof StoredTermMetaOf<K>>(
     key: M,
-    value: TermMetaOf<K>[M],
+    value: StoredTermMetaOf<K>[M],
   ): TaxonomySelector<K>;
   /** Narrow by an arbitrary predicate over the resolved taxonomy data. */
   where(
-    predicate: (data: TaxonomyData<TermProjection<K>>) => boolean,
+    predicate: (data: TaxonomyData<ResolvedTermFor<K>>) => boolean,
   ): TaxonomySelector<K>;
   /** Register an author-selectable template, matched from stored term meta. */
   named(id: string, label: string): TaxonomySelector<K>;

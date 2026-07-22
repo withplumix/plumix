@@ -130,6 +130,34 @@ describe("phantom value typing", () => {
     expectTypeOf<(typeof _chained)["_value"]>().toEqualTypeOf<string>();
   });
 
+  test("the key literal is captured and survives chained calls", () => {
+    const _plain = text("subtitle");
+    expectTypeOf<(typeof _plain)["_key"]>().toEqualTypeOf<"subtitle">();
+
+    const _chained = textarea("bio").required().maxLength(200);
+    expectTypeOf<(typeof _chained)["_key"]>().toEqualTypeOf<"bio">();
+  });
+
+  test("stored shape stays `| undefined` under .default(); .required() narrows it", () => {
+    // Unadorned: absent in storage and absent at read.
+    const _plain = text("subtitle");
+    expectTypeOf<(typeof _plain)["_stored"]>().toEqualTypeOf<
+      string | undefined
+    >();
+
+    // .default() applies at decode time — reads narrow, storage can
+    // still lack the key.
+    const _defaulted = text("subtitle").default("none");
+    expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<string>();
+    expectTypeOf<(typeof _defaulted)["_stored"]>().toEqualTypeOf<
+      string | undefined
+    >();
+
+    // .required() is write-enforced, so the stored shape narrows too.
+    const _required = text("subtitle").required();
+    expectTypeOf<(typeof _required)["_stored"]>().toEqualTypeOf<string>();
+  });
+
   test(".sanitize()/.validate() callbacks receive the narrowed value type", () => {
     text("subtitle").sanitize((value) => {
       expectTypeOf(value).toEqualTypeOf<string>();

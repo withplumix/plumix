@@ -40,16 +40,25 @@ interface StringFieldState {
  * Fluent chain for the string scalar fields (`text`, `textarea`,
  * `email`, `url`, `password`). Immutable — every call returns a fresh
  * instance, so a shared base chain can be forked without aliasing.
- * `V` is the phantom value type the field reads as: `string |
- * undefined` unadorned, narrowed to `string` by `.required()` /
- * `.default()`. Purely type-level — nothing at runtime carries it.
+ * `K` is the literal field key; `V` is the phantom value type the
+ * field reads as: `string | undefined` unadorned, narrowed to `string`
+ * by `.required()` / `.default()`; `S` is the phantom stored shape —
+ * `.required()` narrows it (write-enforced) but `.default()` does not
+ * (defaults apply at decode time; storage can still lack the key).
+ * Purely type-level — nothing at runtime carries them.
  */
 export class StringFieldBuilder<
   Input extends StringInputType = StringInputType,
+  K extends string = string,
   V extends string | undefined = string | undefined,
+  S extends string | undefined = string | undefined,
 > implements FieldBuilder<StringMetaBoxField<Input>> {
+  /** Phantom literal key of the field — type-level only, never assigned. */
+  declare readonly _key: K;
   /** Phantom read type of the field — type-level only, never assigned. */
   declare readonly _value: V;
+  /** Phantom stored shape of the field — type-level only, never assigned. */
+  declare readonly _stored: S;
 
   readonly #inputType: Input;
   readonly #key: string;
@@ -61,75 +70,81 @@ export class StringFieldBuilder<
     this.#state = state;
   }
 
-  #fork<V2 extends string | undefined = V>(
+  #fork<V2 extends string | undefined = V, S2 extends string | undefined = S>(
     patch: Partial<StringFieldState>,
-  ): StringFieldBuilder<Input, V2> {
-    return new StringFieldBuilder<Input, V2>(this.#inputType, this.#key, {
-      ...this.#state,
-      ...patch,
-    });
+  ): StringFieldBuilder<Input, K, V2, S2> {
+    return new StringFieldBuilder<Input, K, V2, S2>(
+      this.#inputType,
+      this.#key,
+      {
+        ...this.#state,
+        ...patch,
+      },
+    );
   }
 
   /** Override the derived (humanized-key) label. */
-  label(label: Label): StringFieldBuilder<Input, V> {
+  label(label: Label): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ label });
   }
 
   /** Help text rendered under the label. */
-  description(description: Label): StringFieldBuilder<Input, V> {
+  description(description: Label): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ description });
   }
 
-  placeholder(placeholder: Label): StringFieldBuilder<Input, V> {
+  placeholder(placeholder: Label): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ placeholder });
   }
 
   /** Static adornment rendered before the input. */
-  prepend(prepend: Label): StringFieldBuilder<Input, V> {
+  prepend(prepend: Label): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ prepend });
   }
 
   /** Static adornment rendered after the input. */
-  append(append: Label): StringFieldBuilder<Input, V> {
+  append(append: Label): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ append });
   }
 
-  /** Admin-form prefill for unsaved keys — narrows the read type to `string`. */
-  default(value: string): StringFieldBuilder<Input, string> {
-    return this.#fork<string>({ default: value });
+  /** Default for absent keys, applied at read decode (and seeded into
+   * the admin form) — narrows the read type to `string`; the stored
+   * shape stays optional. */
+  default(value: string): StringFieldBuilder<Input, K, string, S> {
+    return this.#fork<string, S>({ default: value });
   }
 
-  /** Mark the field required — narrows the read type to `string`. */
-  required(): StringFieldBuilder<Input, string> {
-    return this.#fork<string>({ required: true });
+  /** Mark the field required — narrows the read and stored types to `string`. */
+  required(): StringFieldBuilder<Input, K, string, string> {
+    return this.#fork<string, string>({ required: true });
   }
 
   /**
    * Column span within the box's 12-column grid — a universal layout
    * hint; surfaces that can't honor it (the entry editor rail) ignore it.
    */
-  span(span: MetaBoxFieldSpan): StringFieldBuilder<Input, V> {
+  span(span: MetaBoxFieldSpan): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ span });
   }
 
   /** Capability gate for this field — see `MetaBoxFieldBase.capability`. */
-  capability(capability: string): StringFieldBuilder<Input, V> {
+  capability(capability: string): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ capability });
   }
 
   /** Opt this field's value into public REST responses (default-deny). */
-  showInApi(): StringFieldBuilder<Input, V> {
+  showInApi(): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ showInApi: true });
   }
 
-  maxLength(maxLength: number): StringFieldBuilder<Input, V> {
+  maxLength(maxLength: number): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ maxLength });
   }
 
   /** Normalising transform, applied after coercion and before persistence. */
   sanitize(
     sanitize: (value: NonNullable<V>) => NonNullable<V>,
-  ): StringFieldBuilder<Input, V> {
+  ): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ sanitize: sanitize as (value: unknown) => unknown });
   }
 
@@ -140,7 +155,7 @@ export class StringFieldBuilder<
    */
   validate(
     validate: (value: NonNullable<V>) => true | Label | Promise<true | Label>,
-  ): StringFieldBuilder<Input, V> {
+  ): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ validate: validate as MetaBoxFieldValidate });
   }
 
@@ -157,26 +172,32 @@ export class StringFieldBuilder<
 }
 
 /** Single-line text input. */
-export function text(key: string): StringFieldBuilder<"text"> {
+export function text<K extends string>(key: K): StringFieldBuilder<"text", K> {
   return new StringFieldBuilder("text", key);
 }
 
 /** Multi-line text input. Storage shape mirrors `text`. */
-export function textarea(key: string): StringFieldBuilder<"textarea"> {
+export function textarea<K extends string>(
+  key: K,
+): StringFieldBuilder<"textarea", K> {
   return new StringFieldBuilder("textarea", key);
 }
 
 /** RFC-5322-shaped email input. */
-export function email(key: string): StringFieldBuilder<"email"> {
+export function email<K extends string>(
+  key: K,
+): StringFieldBuilder<"email", K> {
   return new StringFieldBuilder("email", key);
 }
 
 /** URL input. */
-export function url(key: string): StringFieldBuilder<"url"> {
+export function url<K extends string>(key: K): StringFieldBuilder<"url", K> {
   return new StringFieldBuilder("url", key);
 }
 
 /** Masked-input password field — see `PasswordMetaBoxField`. */
-export function password(key: string): StringFieldBuilder<"password"> {
+export function password<K extends string>(
+  key: K,
+): StringFieldBuilder<"password", K> {
   return new StringFieldBuilder("password", key);
 }

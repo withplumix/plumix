@@ -74,26 +74,3 @@ export type TermProjection<K extends TermTaxonomyName> =
   TermTaxonomyRegistry[K] extends { term: infer T extends ResolvedTerm }
     ? T
     : ResolvedTerm;
-
-/**
- * The meta shape for a registered entry type, used to type `whereMeta` keys and
- * values. Degrades to a permissive record when the type declares no `meta`
- * projection (as core's `post`/`page` do).
- */
-export type MetaOf<K extends EntryTypeName> = EntryTypeRegistry[K] extends {
-  meta: infer M;
-}
-  ? M
-  : Record<string, unknown>;
-
-/**
- * The meta shape for a registered taxonomy, used to type `whereMeta` keys and
- * values on term archives. Degrades to a permissive record when the taxonomy
- * declares no `meta` projection (as core's `category`/`tag` do).
- */
-export type TermMetaOf<K extends TermTaxonomyName> =
-  TermTaxonomyRegistry[K] extends {
-    meta: infer M;
-  }
-    ? M
-    : Record<string, unknown>;
