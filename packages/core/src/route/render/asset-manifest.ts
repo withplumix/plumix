@@ -33,7 +33,16 @@ export type ViteCommand = "serve" | "build";
 // controllable. Themes that need a specific cascade should declare
 // CSS via `document.link[]` (emits before bundled CSS) and rely on
 // CSS specificity for the rest.
-export function bundledCssTags(manifest: AssetManifest, basePath = ""): string {
+//
+// No-op in serve: a manifest left on disk by a prior `plumix build`
+// points at hashed URLs the dev server doesn't serve, so every link
+// would 404. Dev styling arrives via `devThemeStylesTag`.
+export function bundledCssTags(
+  manifest: AssetManifest,
+  command: ViteCommand,
+  basePath = "",
+): string {
+  if (command !== "build") return "";
   const css = new Set<string>();
   const visited = new Set<string>();
   for (const [key, entry] of Object.entries(manifest)) {
