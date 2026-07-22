@@ -474,7 +474,7 @@ function renderTree({
     hoisted +
     titleFallback +
     voidTagsToHtml("link", document.link) +
-    bundledCssTags(assetManifest, ctx.basePath) +
+    bundledCssTags(assetManifest, command, ctx.basePath) +
     devThemeStylesTag(command, ctx.basePath) +
     voidTagsToHtml("meta", document.meta) +
     scripts.headEnd.map(scriptToHtml).join("");

@@ -12,7 +12,7 @@ describe("bundledCssTags", () => {
         css: ["_plumix/assets/theme-def456.css"],
       },
     };
-    expect(bundledCssTags(manifest)).toBe(
+    expect(bundledCssTags(manifest, "build")).toBe(
       '<link rel="stylesheet" href="/_plumix/assets/theme-def456.css" />',
     );
   });
@@ -25,7 +25,7 @@ describe("bundledCssTags", () => {
         css: ["assets/theme-def456.css"],
       },
     };
-    expect(bundledCssTags(manifest, "/custom-directory")).toBe(
+    expect(bundledCssTags(manifest, "build", "/custom-directory")).toBe(
       '<link rel="stylesheet" href="/custom-directory/assets/theme-def456.css" />',
     );
   });
@@ -37,11 +37,11 @@ describe("bundledCssTags", () => {
         isEntry: true,
       },
     };
-    expect(bundledCssTags(manifest)).toBe("");
+    expect(bundledCssTags(manifest, "build")).toBe("");
   });
 
   test("emits nothing for an empty manifest", () => {
-    expect(bundledCssTags({})).toBe("");
+    expect(bundledCssTags({}, "build")).toBe("");
   });
 
   test("deduplicates css files when multiple entries share the same bundle", () => {
@@ -57,7 +57,7 @@ describe("bundledCssTags", () => {
         css: ["shared-abc.css"],
       },
     };
-    const html = bundledCssTags(manifest);
+    const html = bundledCssTags(manifest, "build");
     expect(html).toBe('<link rel="stylesheet" href="/shared-abc.css" />');
     // Exact-match above already pins this; the count check guards
     // against a future refactor accidentally emitting duplicate tags.
@@ -82,7 +82,7 @@ describe("bundledCssTags", () => {
         css: ["_chunks/vendor-xyz.css"],
       },
     };
-    const html = bundledCssTags(manifest);
+    const html = bundledCssTags(manifest, "build");
     expect(html).toContain(
       '<link rel="stylesheet" href="/assets/theme-abc.css" />',
     );
@@ -103,7 +103,7 @@ describe("bundledCssTags", () => {
         css: ["_chunks/lazy.css"],
       },
     };
-    expect(bundledCssTags(manifest)).toBe(
+    expect(bundledCssTags(manifest, "build")).toBe(
       '<link rel="stylesheet" href="/_chunks/lazy.css" />',
     );
   });
@@ -129,7 +129,7 @@ describe("bundledCssTags", () => {
         css: ["_chunks/b.css"],
       },
     };
-    const html = bundledCssTags(manifest);
+    const html = bundledCssTags(manifest, "build");
     expect(html).toContain('<link rel="stylesheet" href="/_chunks/a.css" />');
     expect(html).toContain('<link rel="stylesheet" href="/_chunks/b.css" />');
   });
@@ -146,9 +146,22 @@ describe("bundledCssTags", () => {
         css: ["_plumix/assets/internal.css"],
       },
     };
-    expect(bundledCssTags(manifest)).toBe(
+    expect(bundledCssTags(manifest, "build")).toBe(
       '<link rel="stylesheet" href="/_plumix/assets/theme.css" />',
     );
+  });
+
+  test("serve mode emits nothing even when a stale build manifest is present", () => {
+    // #1492: a manifest left on disk by a prior `plumix build` must not
+    // emit links the dev server would 404 on.
+    const manifest: AssetManifest = {
+      "src/theme/index.ts": {
+        file: "_plumix/assets/theme-abc123.js",
+        isEntry: true,
+        css: ["_plumix/assets/theme-def456.css"],
+      },
+    };
+    expect(bundledCssTags(manifest, "serve")).toBe("");
   });
 });
 
