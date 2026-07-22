@@ -149,11 +149,11 @@ async function renderThroughThemeInner({
     data,
     ctx,
   );
-  const renderDocument = await applyHeadMeta(
-    applyCanonical(filtered, ctx),
-    data,
-    ctx,
-    title,
+  // Head assembly reads site settings from the DB — worth its own row in the
+  // waterfall. The `render:document` subscribers above are already traced per
+  // handler as `hook:` spans.
+  const renderDocument = await ctx.telemetry.span("render: head", () =>
+    applyHeadMeta(applyCanonical(filtered, ctx), data, ctx, title),
   );
   const loaderData = await prefetchEntryLoaders(ctx, data, template);
   return renderTree({
@@ -272,24 +272,29 @@ async function prefetchEntryLoaders(
 ): Promise<ResolvedBlockLoaders | undefined> {
   const blocks = collectLoaderBlocks(data, template);
   if (blocks.length === 0) return undefined;
-  return resolveBlockLoaders(blocks, ctx.blocks, ctx, {
-    // Fire-and-forget bridge into the framework filter so plugins can
-    // subscribe via `addFilter("blocks:loader:error", ...)`. `applyFilter`
-    // is async; we don't await (the loader resolver shouldn't back-pressure
-    // on observability), but we DO catch — a throwing subscriber would
-    // otherwise surface as an unhandledRejection and on workers that
-    // kills the request. `LoaderErrorEvent` shape matches `BlockLoaderErrorContext`.
-    onLoaderError: (event: LoaderErrorEvent) => {
-      ctx.hooks
-        .applyFilter("blocks:loader:error", undefined, event)
-        .catch((hookError: unknown) => {
-          ctx.logger.error("[plumix] blocks:loader:error hook threw", {
-            hookError,
-            blockName: event.spec.name,
-            nodeId: event.node.id,
+  // Loader fan-out gets its own span so the DB/fetch work it triggers nests
+  // here instead of parenting onto `render` directly.
+  return ctx.telemetry.span("render: loaders", (s) => {
+    s.set("loaders.blocks", blocks.length);
+    return resolveBlockLoaders(blocks, ctx.blocks, ctx, {
+      // Fire-and-forget bridge into the framework filter so plugins can
+      // subscribe via `addFilter("blocks:loader:error", ...)`. `applyFilter`
+      // is async; we don't await (the loader resolver shouldn't back-pressure
+      // on observability), but we DO catch — a throwing subscriber would
+      // otherwise surface as an unhandledRejection and on workers that
+      // kills the request. `LoaderErrorEvent` shape matches `BlockLoaderErrorContext`.
+      onLoaderError: (event: LoaderErrorEvent) => {
+        ctx.hooks
+          .applyFilter("blocks:loader:error", undefined, event)
+          .catch((hookError: unknown) => {
+            ctx.logger.error("[plumix] blocks:loader:error hook threw", {
+              hookError,
+              blockName: event.spec.name,
+              nodeId: event.node.id,
+            });
           });
-        });
-    },
+      },
+    });
   });
 }
 
@@ -436,7 +441,10 @@ function renderTree({
       : null,
     createElement(TemplateAdapter),
   );
-  const rendered = renderToString(templateTree);
+  // The bulk of `render` self-time (#1494).
+  const rendered = ctx.telemetry.span("render: react", () =>
+    renderToString(templateTree),
+  );
   const { hoisted, body } = splitHoistedMetadata(rendered);
 
   const scripts = groupScriptsByPosition(document.script);

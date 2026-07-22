@@ -42,6 +42,12 @@ import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
 import { NOOP_TELEMETRY } from "./telemetry.js";
 import { createTracedFetch } from "./traced-fetch.js";
+import {
+  traceAssets,
+  traceCache,
+  traceMailer,
+  traceStorage,
+} from "./traced-slots.js";
 
 const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
@@ -424,6 +430,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
   const tokenScopes = args.tokenScopes ?? null;
   const i18n = args.i18n ?? DEFAULT_I18N;
   const locale = resolveLocale({ request: args.request, user, i18n });
+  const mailer = resolveMailer(args.mailer, args.env);
   const base: AppContextBase<TSchema> = {
     db: args.db,
     env: args.env,
@@ -440,12 +447,14 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
       can: makeAuthCan(resolver, user, tokenScopes),
     },
     defer: wrapDefer(args.logger ?? consoleLogger, args.defer),
-    assets: args.assets,
-    storage: args.storage,
-    cache: args.cache,
+    // I/O slots wrapped once here so every consumer gets spans; the getters
+    // read `base.telemetry` per call like `fetch` below.
+    assets: args.assets && traceAssets(args.assets, () => base.telemetry),
+    storage: args.storage && traceStorage(args.storage, () => base.telemetry),
+    cache: args.cache && traceCache(args.cache, () => base.telemetry),
     imageDelivery: args.imageDelivery,
     imageRemotePatterns: args.imageRemotePatterns,
-    mailer: resolveMailer(args.mailer, args.env),
+    mailer: mailer && traceMailer(mailer, () => base.telemetry),
     i18n,
     locale,
     oauthProviders: args.oauthProviders ?? [],

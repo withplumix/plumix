@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { defineBlock } from "@plumix/blocks";
+
 import type { AnyPluginDescriptor } from "../config.js";
 import type { AppContext } from "../context/app.js";
 import type {
@@ -12,9 +14,18 @@ import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { ConnectedCache } from "./slots.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
+import { defineTemplate } from "../template.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
 import { matchPluginRawRoute } from "./dispatcher.js";
+
+// Augment the registry so the typed `registerTemplateDep("probe-dep", ...)`
+// call in the render-interior telemetry test compiles.
+declare module "../template.js" {
+  interface TemplateDepRegistry {
+    "probe-dep": { slug: string; result: { value: string } };
+  }
+}
 
 // Track when the dispatcher dynamic-imports the MCP module: the factory runs
 // once on first import, so `loadCount` is the no-load assertion for the
@@ -1556,6 +1567,74 @@ describe("dispatcher — telemetry consumers", () => {
     const spans = flattenSpans(snapshot?.spans ?? []);
     const render = spans.find((span) => span.name === "render");
     expect(render?.attributes["render.node"]).toBe("error: notFound");
+    // The error render shares the interior instrumentation: the React SSR
+    // pass is a `render: react` child, not invisible render self-time.
+    expect(render?.children.map((c) => c.name)).toContain("render: react");
+  });
+
+  test("render interior phases appear as children: deps, head, loaders, react", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const probe = definePlugin("test-probe", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTemplateDep("probe-dep", {
+        load: (slugs) =>
+          Promise.resolve(
+            Object.fromEntries(slugs.map((s) => [s, { value: s }])),
+          ),
+      });
+      ctx.registerBlock(
+        defineBlock({
+          name: "acme/probe",
+          loaders: { marker: () => Promise.resolve("loaded") },
+          render: () => null,
+        }),
+      );
+    });
+    const h = await createDispatcherHarness({
+      plugins: [probe],
+      theme: defineTheme({
+        templates: [
+          fallback(defineTemplate({ "probe-dep": ["a"], render: () => null })),
+        ],
+      }),
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "traced",
+      title: "Traced",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "n", name: "acme/probe", attrs: {} }],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    await h.dispatch(new Request("https://cms.example/post/traced"));
+    await h.drainDeferred();
+
+    const [snapshot] = snapshots;
+    const render = flattenSpans(snapshot?.spans ?? []).find(
+      (span) => span.name === "render",
+    );
+    const childNames = render?.children.map((c) => c.name) ?? [];
+    expect(childNames).toContain("render: deps");
+    expect(childNames).toContain("render: head");
+    expect(childNames).toContain("render: loaders");
+    expect(childNames).toContain("render: react");
+    const byName = (name: string): TelemetrySpan | undefined =>
+      render?.children.find((c) => c.name === name);
+    expect(byName("render: deps")?.attributes["deps.kinds"]).toEqual([
+      "probe-dep",
+    ]);
+    expect(byName("render: loaders")?.attributes["loaders.blocks"]).toBe(1);
   });
 
   test("session-cookie auth resolution appears as an auth span with the resolved user", async () => {
@@ -1653,6 +1732,17 @@ describe("dispatcher — telemetry consumers", () => {
       [{ decision: "hit" }],
       [{ decision: "bypass", reason: "privileged" }],
     ]);
+
+    // The lookup/store latency itself is spanned (#1494): the miss carries
+    // `cache: match` + `cache: put`, the hit just `cache: match` with the
+    // outcome stamped.
+    const spanNames = snapshots.map((s) =>
+      flattenSpans(s.spans)
+        .map((span) => span.name)
+        .filter((name) => name.startsWith("cache: ")),
+    );
+    expect(spanNames[0]).toEqual(["cache: match", "cache: put"]);
+    expect(spanNames[1]).toEqual(["cache: match"]);
   });
 
   test("an admin RPC call produces an rpc procedure span in the snapshot", async () => {
