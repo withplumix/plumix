@@ -88,6 +88,14 @@ function loadAuthFlowRoutes(): Promise<typeof AuthFlowRoutes> {
 // with a dot-suffix after the last slash. Deep-link SPA routes never match.
 const ASSET_LIKE = /\.[^/]+$/;
 
+// Extensions that only ever name static assets (favicon.ico, hashed chunks,
+// images, fonts). Slugs are slug-shaped by schema — never contain dots — so no
+// entry or term URL can collide (#1491). Deliberately excludes
+// content-plausible extensions (`.txt`, `.xml`, `.json`, `.html`) so routes
+// like an `ads.txt` or podcast-feed plugin keep working.
+const STATIC_ASSET_EXT =
+  /\.(?:ico|css|js|mjs|map|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf|eot|wasm)$/i;
+
 type RouteHandler = (ctx: AppContext, app: PlumixApp) => Promise<Response>;
 // Maps a path to its handler accessor on the lazily-loaded module, so the map
 // itself pulls no handler code into the eager graph — only the matching paths.
@@ -455,6 +463,14 @@ async function tryPublicRoutes(
     }
   }
 
+  // Asset-shaped misses (favicon.ico, /assets/* the platform's asset layer
+  // didn't own) 404 cheaply before route resolution — no slug lookup, no
+  // themed render. The SEO assets above (robots.txt, sitemap*.xml) have
+  // already had their chance.
+  if (STATIC_ASSET_EXT.test(pathname)) {
+    return notFound("static-asset");
+  }
+
   // Normalize a public page URL to its canonical (slash-less) shape before
   // routing — the 301 target shares `canonicalUrl` with the rel=canonical tag.
   const canonical = canonicalRedirectTarget(ctx);
@@ -570,7 +586,7 @@ async function renderPublicRoute(
         }
       }
     });
-    if (response.status === 404) {
+    if (response.status === 404 && acceptsHtml(ctx.request)) {
       const html = await renderErrorThroughTheme({
         ctx,
         theme,
@@ -594,34 +610,50 @@ async function renderPublicRoute(
       url: url.href,
       err: err instanceof Error ? err.message : String(err),
     });
-    try {
-      const html = await renderErrorThroughTheme({
-        ctx,
-        theme,
-        document,
-        templateDeps,
-        assetManifest,
-        kind: "server-error",
-        data: { kind: "error", request: ctx.request },
-      });
-      return new Response(html, {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
-    } catch (templateErr) {
-      ctx.logger.error("error_template_failed", {
-        url: url.href,
-        err:
-          templateErr instanceof Error
-            ? templateErr.message
-            : String(templateErr),
-      });
-      return new Response("Internal Server Error", {
-        status: 500,
-        headers: { "content-type": "text/plain; charset=utf-8" },
-      });
+    if (acceptsHtml(ctx.request)) {
+      try {
+        const html = await renderErrorThroughTheme({
+          ctx,
+          theme,
+          document,
+          templateDeps,
+          assetManifest,
+          kind: "server-error",
+          data: { kind: "error", request: ctx.request },
+        });
+        return new Response(html, {
+          status: 500,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        });
+      } catch (templateErr) {
+        ctx.logger.error("error_template_failed", {
+          url: url.href,
+          err:
+            templateErr instanceof Error
+              ? templateErr.message
+              : String(templateErr),
+        });
+      }
     }
+    return new Response("Internal Server Error", {
+      status: 500,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
   }
+}
+
+// Whether an error response should render through the theme at all. A missing
+// Accept header or `*/*` (curl, bare fetch, browser subresource probes) keeps
+// the themed page; only a client that explicitly negotiates away from HTML
+// (`Accept: application/json`) gets the cheap plain-text error instead (#1491).
+function acceptsHtml(request: Request): boolean {
+  const accept = request.headers.get("accept");
+  if (accept === null) return true;
+  return (
+    accept.includes("text/html") ||
+    accept.includes("application/xhtml+xml") ||
+    accept.includes("*/*")
+  );
 }
 
 async function resolvePublicRouteOrFallback(

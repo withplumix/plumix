@@ -697,6 +697,122 @@ describe("dispatcher — error boundary", () => {
   });
 });
 
+describe("dispatcher — asset-shaped 404 short-circuit", () => {
+  test("a static-asset miss (/favicon.ico) returns a plain 404 with no resolution and no themed render", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const blog = definePlugin("test-blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blog],
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/favicon.ico"),
+    );
+    await h.drainDeferred();
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("static-asset");
+    expect(response.headers.get("content-type")).toBe(
+      "text/plain; charset=utf-8",
+    );
+    // The whole point: no route resolution, no themed render, no DB work.
+    const spans = flattenSpans(snapshots[0]?.spans ?? []);
+    expect(spans.some((s) => s.name === "resolve")).toBe(false);
+    expect(spans.some((s) => s.name === "render")).toBe(false);
+    expect(spans.some((s) => s.name.startsWith("db:"))).toBe(false);
+  });
+
+  test("the short-circuit beats a hierarchical catch-all route that would otherwise claim the path", async () => {
+    // The #1491 trace: a pages-style `:path+` route matched `favicon.ico` and
+    // paid a slug lookup. The extension check must win over the route map.
+    const pages = definePlugin("test-pages", (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [pages] });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/assets/chunk-abc.js"),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("static-asset");
+  });
+
+  test("a 404 for a client that doesn't accept HTML skips the themed render", async () => {
+    const blog = definePlugin("test-blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    });
+    const h = await createDispatcherHarness({ plugins: [blog] });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/nope", {
+        headers: { accept: "application/json" },
+      }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-plumix-hint")).toBe("public-post-not-found");
+    expect(response.headers.get("content-type")).toBe(
+      "text/plain; charset=utf-8",
+    );
+  });
+
+  test("a browser-shaped Accept header still gets the themed 404 page", async () => {
+    const blog = definePlugin("test-blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    });
+    const h = await createDispatcherHarness({ plugins: [blog] });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/nope", {
+        headers: {
+          accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toBe(
+      "text/html; charset=utf-8",
+    );
+  });
+
+  test("a 500 for a client that doesn't accept HTML skips the themed error render", async () => {
+    const h = await createDispatcherHarness({
+      theme: defineTheme({
+        templates: [
+          fallback(() => {
+            throw new Error("render kaboom");
+          }),
+        ],
+      }),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/", {
+        headers: { accept: "application/json" },
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toBe(
+      "text/plain; charset=utf-8",
+    );
+  });
+});
+
 describe("matchPluginRawRoute", () => {
   const route = (
     partial: Pick<RegisteredRawRoute, "pluginId" | "method" | "path">,
@@ -1215,7 +1331,7 @@ describe("dispatcher — public read-through edge cache", () => {
   });
 });
 
-// Depth-first span-tree walk shared by the telemetry assertions below.
+// Depth-first span-tree walk shared by the telemetry assertions.
 function flattenSpans(spans: readonly TelemetrySpan[]): TelemetrySpan[] {
   return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);
 }
@@ -1414,6 +1530,29 @@ describe("dispatcher — telemetry consumers", () => {
     expect(resolve?.status).toBe("error");
     expect(resolve?.attributes["route.intent"]).toBe("front-page");
     expect(resolve?.attributes["template.matched"]).toBe("fallback");
+  });
+
+  test("a themed 404 render appears as a render span — its queries don't dangle under dispatch", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const blog = definePlugin("test-blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blog],
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+
+    await h.dispatch(new Request("https://cms.example/post/nope"));
+    await h.drainDeferred();
+
+    const [snapshot] = snapshots;
+    const spans = flattenSpans(snapshot?.spans ?? []);
+    const render = spans.find((span) => span.name === "render");
+    expect(render?.attributes["render.node"]).toBe("error: notFound");
   });
 
   test("session-cookie auth resolution appears as an auth span with the resolved user", async () => {
