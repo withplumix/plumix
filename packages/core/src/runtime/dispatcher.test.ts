@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { AnyPluginDescriptor } from "../config.js";
+import type { AppContext } from "../context/app.js";
 import type {
   TelemetryConsumer,
   TelemetrySnapshot,
+  TelemetrySpan,
 } from "../context/telemetry.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
+import type { DispatcherHarness } from "../test/dispatcher.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
@@ -1415,5 +1418,148 @@ describe("dispatcher — telemetry consumers", () => {
 
       expect(seen()).toBe(0);
     });
+  });
+});
+
+describe("dispatcher — ctx.fetch tracing", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function findSpan(
+    spans: readonly TelemetrySpan[],
+    name: string,
+  ): TelemetrySpan | undefined {
+    for (const span of spans) {
+      if (span.name === name) return span;
+      const nested = findSpan(span.children, name);
+      if (nested) return nested;
+    }
+    return undefined;
+  }
+
+  // A plugin whose render-path filter performs the outbound call — the same
+  // "real request through the dispatcher" seam the consumer tests use.
+  function outboundCaller(
+    call: (appCtx: AppContext) => Promise<unknown>,
+  ): AnyPluginDescriptor {
+    return definePlugin("outbound-caller", (ctx) => {
+      ctx.addFilter("render:document", async (manifest, _data, appCtx) => {
+        await call(appCtx);
+        return manifest;
+      });
+    });
+  }
+
+  async function harnessWithSnapshots(plugin: AnyPluginDescriptor): Promise<{
+    h: DispatcherHarness;
+    snapshots: TelemetrySnapshot[];
+  }> {
+    const snapshots: TelemetrySnapshot[] = [];
+    const h = await createDispatcherHarness({
+      plugins: [plugin],
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    return { h, snapshots };
+  }
+
+  test("a route calling an external API via ctx.fetch produces a span with method, URL, and status", async () => {
+    const stub = vi.fn(() =>
+      Promise.resolve(new Response("pong", { status: 201 })),
+    );
+    vi.stubGlobal("fetch", stub);
+    const { h, snapshots } = await harnessWithSnapshots(
+      outboundCaller((appCtx) =>
+        appCtx.fetch("https://api.example.com/v1/items", { method: "POST" }),
+      ),
+    );
+
+    await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+
+    expect(stub).toHaveBeenCalledOnce();
+    const span = findSpan(
+      snapshots[0]?.spans ?? [],
+      "fetch: POST api.example.com",
+    );
+    expect(span).toBeDefined();
+    expect(span?.status).toBe("ok");
+    expect(span?.durationMs).toBeGreaterThanOrEqual(0);
+    expect(span?.attributes).toEqual({
+      "http.request.method": "POST",
+      "url.full": "https://api.example.com/v1/items",
+      "http.response.status_code": 201,
+    });
+  });
+
+  test("a ctx.fetch span nests under the enclosing semantic span", async () => {
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve(new Response("pong", { status: 200 })),
+    );
+    const { h, snapshots } = await harnessWithSnapshots(
+      outboundCaller((appCtx) =>
+        appCtx.telemetry.span("load external items", () =>
+          appCtx.fetch("https://api.example.com/v1/items"),
+        ),
+      ),
+    );
+
+    await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+
+    const outer = findSpan(snapshots[0]?.spans ?? [], "load external items");
+    expect(outer?.children.map((s) => s.name)).toEqual([
+      "fetch: GET api.example.com",
+    ]);
+  });
+
+  test("a rejecting fetch marks its span with error status and the failure propagates to the caller", async () => {
+    vi.stubGlobal("fetch", () =>
+      Promise.reject(new TypeError("getaddrinfo ENOTFOUND api.example.com")),
+    );
+    let caught: unknown;
+    const { h, snapshots } = await harnessWithSnapshots(
+      outboundCaller(async (appCtx) => {
+        // A degrading plugin swallows the failure; the span still records it.
+        try {
+          await appCtx.fetch("https://api.example.com/v1/items");
+        } catch (error) {
+          caught = error;
+        }
+      }),
+    );
+
+    await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+
+    expect(caught).toBeInstanceOf(TypeError);
+    const span = findSpan(
+      snapshots[0]?.spans ?? [],
+      "fetch: GET api.example.com",
+    );
+    expect(span?.status).toBe("error");
+    expect(span?.error?.message).toBe("getaddrinfo ENOTFOUND api.example.com");
+    expect(span?.attributes).toEqual({
+      "http.request.method": "GET",
+      "url.full": "https://api.example.com/v1/items",
+    });
+  });
+
+  test("ctx.fetch never patches the global: bare fetch stays the platform's own", async () => {
+    const stub = (): Promise<Response> => Promise.resolve(new Response("pong"));
+    vi.stubGlobal("fetch", stub);
+    const h = await createDispatcherHarness({
+      plugins: [
+        outboundCaller((appCtx) => appCtx.fetch("https://api.example.com/")),
+      ],
+    });
+
+    await h.dispatch(new Request("https://cms.example/"));
+
+    expect(globalThis.fetch).toBe(stub);
   });
 });
