@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { EntryFieldScope } from "../../../plugin/fields/entry.js";
 import { entryFactory } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { entryLookupAdapter } from "./lookup.js";
@@ -12,7 +13,7 @@ const PAGE = { entryTypes: ["page"] } as const;
 async function existsViaList(
   h: Awaited<ReturnType<typeof createRpcHarness>>,
   id: string,
-  scope: { entryTypes: readonly string[]; includeTrashed?: boolean },
+  scope: EntryFieldScope,
 ): Promise<boolean> {
   const rows = await entryLookupAdapter.list(h.context, {
     ids: [id],
@@ -66,6 +67,35 @@ describe("entryLookupAdapter", () => {
         includeTrashed: true,
       }),
     ).toBe(true);
+  });
+
+  test("list({ ids }) honours a status scope constraint", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const draft = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, status: "draft" });
+    const published = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, status: "published" });
+
+    const publishedOnly = { ...POST, status: "published" } as const;
+    expect(await existsViaList(h, String(draft.id), publishedOnly)).toBe(false);
+    expect(await existsViaList(h, String(published.id), publishedOnly)).toBe(
+      true,
+    );
+    // Default (no status) keeps admitting drafts — the admin picker's shape.
+    expect(await existsViaList(h, String(draft.id), POST)).toBe(true);
+  });
+
+  test("rejects a status value outside ENTRY_STATUSES (wire-side garbage)", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    // The lookup RPC forwards scope as an untyped record — a wire caller
+    // can send any value. Non-member statuses must fail as a named scope
+    // error, not a driver-level bind failure.
+    const garbage = { ...POST, status: {} } as unknown as EntryFieldScope;
+    await expect(
+      entryLookupAdapter.list(h.context, { ids: ["1"], scope: garbage }),
+    ).rejects.toThrow(/scope.status/);
   });
 
   test("list({ ids }) batches multiple ids in one query", async () => {

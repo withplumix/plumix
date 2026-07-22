@@ -1,4 +1,5 @@
-type LookupScopeErrorCode = "entry_types_required" | "term_taxonomies_required";
+type LookupScopeErrorCode =
+  "entry_types_required" | "term_taxonomies_required" | "invalid_entry_status";
 
 /**
  * A lookup adapter was called without the scope filter that enforces
@@ -22,6 +23,13 @@ export class LookupScopeError extends Error {
     return new LookupScopeError(
       "entry_types_required",
       "entry adapter: scope.entryTypes is required and must be non-empty",
+    );
+  }
+
+  static invalidEntryStatus(): LookupScopeError {
+    return new LookupScopeError(
+      "invalid_entry_status",
+      "entry adapter: scope.status must be a known entry status",
     );
   }
 
