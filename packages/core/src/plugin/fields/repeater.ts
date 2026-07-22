@@ -67,6 +67,15 @@ export function repeater(options: RepeaterFieldOptions): RepeaterMetaBoxField {
         subFieldKey: sf.key,
       });
     }
+    // Row-scoped conditions don't exist: the admin renderer and the
+    // row-walk validator both ignore subField visibleWhen, so accepting
+    // one would register a silent no-op.
+    if (sf.visibleWhen !== undefined) {
+      throw FieldConfigError.repeaterSubFieldCondition({
+        repeaterKey: options.key,
+        subFieldKey: sf.key,
+      });
+    }
     seen.add(sf.key);
   }
   return {

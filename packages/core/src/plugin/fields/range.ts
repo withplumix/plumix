@@ -5,10 +5,15 @@ import type {
   MetaBoxFieldValidate,
   RangeMetaBoxField,
 } from "../manifest.js";
+import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
 import { humanizeFieldKey } from "./builder.js";
 import { FieldConfigError } from "./errors.js";
 
 interface RangeFieldState {
+  readonly visibleWhen?: MetaFieldCondition;
   readonly label?: Label;
   readonly description?: Label;
   readonly default?: number;
@@ -97,6 +102,56 @@ export class RangeFieldBuilder<
   /** Opt this field's value into public REST responses (default-deny). */
   showInApi(): RangeFieldBuilder<K, V, S> {
     return this.#fork({ showInApi: true });
+  }
+
+  /** Rule factory: this field's value equals `value` — pass the rule
+   *  to a dependent field's `.visibleWhen()`. */
+  is(value: number): MetaFieldConditionRule {
+    return { key: this.#key, op: "eq", value };
+  }
+
+  /** Rule factory: this field's value differs from `value`. */
+  isNot(value: number): MetaFieldConditionRule {
+    return { key: this.#key, op: "neq", value };
+  }
+
+  /** Rule factory: this field has no value (unset or cleared). */
+  isEmpty(): MetaFieldConditionRule {
+    return { key: this.#key, op: "empty" };
+  }
+
+  /** Rule factory: this field has a value. */
+  isNotEmpty(): MetaFieldConditionRule {
+    return { key: this.#key, op: "not_empty" };
+  }
+
+  /** Rule factory: this field's value is greater than `value`. */
+  gt(value: number): MetaFieldConditionRule {
+    return { key: this.#key, op: "gt", value };
+  }
+
+  /** Rule factory: this field's value is less than `value`. */
+  lt(value: number): MetaFieldConditionRule {
+    return { key: this.#key, op: "lt", value };
+  }
+
+  /**
+   * Show this field only when every rule passes (one AND group) —
+   * rules come from sibling fields' condition factories. Replaces any
+   * previously declared condition; `.orVisibleWhen()` adds
+   * alternatives.
+   */
+  visibleWhen(...rules: MetaFieldConditionRule[]): RangeFieldBuilder<K, V, S> {
+    return this.#fork({ visibleWhen: [rules] });
+  }
+
+  /** Add an OR alternative — one more AND group of rules. */
+  orVisibleWhen(
+    ...rules: MetaFieldConditionRule[]
+  ): RangeFieldBuilder<K, V, S> {
+    return this.#fork({
+      visibleWhen: [...(this.#state.visibleWhen ?? []), rules],
+    });
   }
 
   /** Slider lower bound. Required — `build()` throws without it. */

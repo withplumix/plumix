@@ -9,6 +9,10 @@ import type {
   SelectMetaBoxField,
   SingleSelectMetaBoxField,
 } from "../manifest.js";
+import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
 import { humanizeFieldKey } from "./builder.js";
 
 /**
@@ -32,6 +36,7 @@ type AppearanceFor<Multiple extends boolean> = Multiple extends true
   : "select" | "radio" | "buttons";
 
 interface SelectFieldState {
+  readonly visibleWhen?: MetaFieldCondition;
   readonly options: readonly MetaBoxFieldOption[];
   readonly multiple?: true;
   readonly max?: number;
@@ -236,6 +241,82 @@ export class SelectFieldBuilder<
   /** Opt this field's value into public REST responses (default-deny). */
   showInApi(): SelectFieldBuilder<O, K, Multiple, A, V, S> {
     return this.#fork({ showInApi: true });
+  }
+
+  /** Rule factory: this field's value equals `value` — pass the rule
+   *  to a dependent field's `.visibleWhen()`. The comparand is typed
+   *  by the chain's cardinality: one option value, or the exact
+   *  selection array after `.multiple()`. */
+  is(value: NonNullable<S>): MetaFieldConditionRule {
+    return { key: this.#key, op: "eq", value };
+  }
+
+  /** Rule factory: this field's value differs from `value`. */
+  isNot(value: NonNullable<S>): MetaFieldConditionRule {
+    return { key: this.#key, op: "neq", value };
+  }
+
+  /** Rule factory: this field has no value (unset or cleared). */
+  isEmpty(): MetaFieldConditionRule {
+    return { key: this.#key, op: "empty" };
+  }
+
+  /** Rule factory: this field has a value. */
+  isNotEmpty(): MetaFieldConditionRule {
+    return { key: this.#key, op: "not_empty" };
+  }
+
+  /** Rule factory: the selection includes `value` — multi-value only. */
+  contains(
+    this: SelectFieldBuilder<O, K, true, A, V, S>,
+    value: O,
+  ): MetaFieldConditionRule {
+    return { key: this.#key, op: "contains", value };
+  }
+
+  /** Rule factory: the selection does not include `value` — multi-value only. */
+  notContains(
+    this: SelectFieldBuilder<O, K, true, A, V, S>,
+    value: O,
+  ): MetaFieldConditionRule {
+    return { key: this.#key, op: "not_contains", value };
+  }
+
+  /** Rule factory: more than `count` options selected — multi-value only. */
+  countGt(
+    this: SelectFieldBuilder<O, K, true, A, V, S>,
+    count: number,
+  ): MetaFieldConditionRule {
+    return { key: this.#key, op: "count_gt", value: count };
+  }
+
+  /** Rule factory: fewer than `count` options selected — multi-value only. */
+  countLt(
+    this: SelectFieldBuilder<O, K, true, A, V, S>,
+    count: number,
+  ): MetaFieldConditionRule {
+    return { key: this.#key, op: "count_lt", value: count };
+  }
+
+  /**
+   * Show this field only when every rule passes (one AND group) —
+   * rules come from sibling fields' condition factories. Replaces any
+   * previously declared condition; `.orVisibleWhen()` adds
+   * alternatives.
+   */
+  visibleWhen(
+    ...rules: MetaFieldConditionRule[]
+  ): SelectFieldBuilder<O, K, Multiple, A, V, S> {
+    return this.#fork({ visibleWhen: [rules] });
+  }
+
+  /** Add an OR alternative — one more AND group of rules. */
+  orVisibleWhen(
+    ...rules: MetaFieldConditionRule[]
+  ): SelectFieldBuilder<O, K, Multiple, A, V, S> {
+    return this.#fork({
+      visibleWhen: [...(this.#state.visibleWhen ?? []), rules],
+    });
   }
 
   /** Normalising transform, applied after coercion and before persistence. */

@@ -7,6 +7,7 @@ import type {
   MetaBoxFieldValidate,
 } from "../manifest.js";
 import type { StringFieldState } from "./builder.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import { humanizeFieldKey } from "./builder.js";
 import { SAFE_HREF_RE } from "./richtext-validate.js";
 
@@ -106,6 +107,44 @@ export class LinkFieldBuilder<
   /** Opt this field's value into public REST responses (default-deny). */
   showInApi(): LinkFieldBuilder<K, V, S> {
     return this.#fork({ showInApi: true });
+  }
+
+  /** Rule factory: this field's value equals `value` — pass the rule
+   *  to a dependent field's `.visibleWhen()`. */
+  is(value: LinkValue): MetaFieldConditionRule {
+    return { key: this.#key, op: "eq", value };
+  }
+
+  /** Rule factory: this field's value differs from `value`. */
+  isNot(value: LinkValue): MetaFieldConditionRule {
+    return { key: this.#key, op: "neq", value };
+  }
+
+  /** Rule factory: this field has no value (unset or cleared). */
+  isEmpty(): MetaFieldConditionRule {
+    return { key: this.#key, op: "empty" };
+  }
+
+  /** Rule factory: this field has a value. */
+  isNotEmpty(): MetaFieldConditionRule {
+    return { key: this.#key, op: "not_empty" };
+  }
+
+  /**
+   * Show this field only when every rule passes (one AND group) —
+   * rules come from sibling fields' condition factories. Replaces any
+   * previously declared condition; `.orVisibleWhen()` adds
+   * alternatives.
+   */
+  visibleWhen(...rules: MetaFieldConditionRule[]): LinkFieldBuilder<K, V, S> {
+    return this.#fork({ visibleWhen: [rules] });
+  }
+
+  /** Add an OR alternative — one more AND group of rules. */
+  orVisibleWhen(...rules: MetaFieldConditionRule[]): LinkFieldBuilder<K, V, S> {
+    return this.#fork({
+      visibleWhen: [...(this.#state.visibleWhen ?? []), rules],
+    });
   }
 
   /**

@@ -29,6 +29,7 @@ import type { CustomArchiveData } from "../route/render/resolved-entry.js";
 import type { NamedTemplateChoice } from "../route/render/template-builders.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
 import type { PluginI18nSlot } from "./define.js";
+import type { MetaFieldCondition } from "./fields/condition.js";
 import type { RegisteredLookupAdapter } from "./lookup.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
@@ -340,6 +341,15 @@ export type MetaBoxFieldSpan =
       readonly lg?: number;
     };
 
+// Conditional-visibility rule model + evaluator — the wire shape
+// carries these; the admin evaluates them via this subpath.
+export type {
+  MetaFieldCondition,
+  MetaFieldConditionOperator,
+  MetaFieldConditionRule,
+} from "./fields/condition.js";
+export { isFieldVisible } from "./fields/condition.js";
+
 /**
  * Shared shape for every meta-box field variant — properties carried
  * regardless of `inputType`. Each narrowed variant of `MetaBoxField`
@@ -398,6 +408,13 @@ export interface MetaBoxFieldBase {
    * so internal fields never leak by default. Has no effect on the admin RPC.
    */
   readonly showInApi?: boolean;
+  /**
+   * Conditional visibility — OR-of-AND rule groups addressing sibling
+   * driver fields by key, authored via the builders'
+   * `.visibleWhen()` / `.orVisibleWhen()` chains. Semantics live in
+   * `isFieldVisible`.
+   */
+  readonly visibleWhen?: MetaFieldCondition;
 }
 
 /** The five string-scalar input types sharing one field shape. */
@@ -1709,6 +1726,10 @@ export interface MetaBoxFieldManifestEntry {
    * Capability gate for the individual field. See `MetaBoxFieldBase.capability`.
    */
   readonly capability?: string;
+  /**
+   * Conditional visibility rules. See `MetaBoxFieldBase.visibleWhen`.
+   */
+  readonly visibleWhen?: MetaFieldCondition;
 }
 
 /**
@@ -2970,6 +2991,7 @@ function toEntryMetaBoxFieldEntry(
     nodes: view.nodes,
     blocks: view.blocks,
     capability: field.capability,
+    visibleWhen: field.visibleWhen,
     // Repeater subfields recurse through the same projection — the
     // wire shape is uniform end to end, span dropped (rows are
     // full-width), sanitize callbacks stripped (server-only).

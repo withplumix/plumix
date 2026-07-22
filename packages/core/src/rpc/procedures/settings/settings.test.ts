@@ -2,6 +2,10 @@ import { describe, expect, test } from "vitest";
 
 import { and, eq } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
+import { HookRegistry } from "../../../hooks/registry.js";
+import { definePlugin } from "../../../plugin/define.js";
+import { select, url } from "../../../plugin/fields/index.js";
+import { installPlugins } from "../../../plugin/register.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 describe("settings.get", () => {
@@ -229,5 +233,55 @@ describe("settings.upsert", () => {
       );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.value).toBe("v2");
+  });
+});
+
+// Settings have no per-field validation pipeline, but condition-hidden
+// fields still must not persist stale values the editor cannot see —
+// mirroring the entry/term/user meta skip.
+describe("settings.upsert (condition-hidden fields)", () => {
+  async function harnessWithConditionalGroup(): Promise<
+    Awaited<ReturnType<typeof createRpcHarness>>
+  > {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      const layout = select("layout").options(["standard", "video"]);
+      ctx.registerSettingsGroup("video", {
+        label: "Video",
+        fields: [layout, url("videoUrl").visibleWhen(layout.is("video"))],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    return createRpcHarness({ authAs: "admin", plugins: registry, hooks });
+  }
+
+  test("a hidden field's value is dropped from the write", async () => {
+    const h = await harnessWithConditionalGroup();
+    const bag = await h.client.settings.upsert({
+      group: "video",
+      values: { layout: "standard", videoUrl: "https://example.com/v.mp4" },
+    });
+    expect(bag).toEqual({ layout: "standard" });
+  });
+
+  test("a visible field's value persists", async () => {
+    const h = await harnessWithConditionalGroup();
+    const bag = await h.client.settings.upsert({
+      group: "video",
+      values: { layout: "video", videoUrl: "https://example.com/v.mp4" },
+    });
+    expect(bag).toEqual({
+      layout: "video",
+      videoUrl: "https://example.com/v.mp4",
+    });
+  });
+
+  test("unregistered groups keep the laissez-faire write path", async () => {
+    const h = await harnessWithConditionalGroup();
+    const bag = await h.client.settings.upsert({
+      group: "general",
+      values: { anything: "goes" },
+    });
+    expect(bag).toEqual({ anything: "goes" });
   });
 });
