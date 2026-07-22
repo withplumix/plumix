@@ -86,9 +86,10 @@ interface MetaBoxAccordionItemProps {
  * inside an `<Accordion>` parent; `box.id` is the accordion value.
  *
  * Fields always occupy the full row — the rail is fixed at 256px and
- * side-by-side layouts don't fit legibly. `EntryMetaBoxField` drops
- * `span` from the type, and this renderer ignores it besides, so a
- * runtime-loaded plugin can't force a squished layout.
+ * side-by-side layouts don't fit legibly. `span` is a universal hint
+ * this surface doesn't honor: the entry wire projection strips it and
+ * this renderer ignores it besides, so a runtime-loaded plugin can't
+ * force a squished layout.
  */
 export function MetaBoxAccordionItem({
   box,

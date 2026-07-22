@@ -1,9 +1,10 @@
 import type { Label } from "../../i18n/label.js";
 import type {
-  MetaBoxField,
+  MetaBoxFieldInput,
   MetaBoxFieldSpan,
   RepeaterMetaBoxField,
 } from "../manifest.js";
+import { compileMetaBoxFields } from "../manifest.js";
 import { FieldConfigError } from "./errors.js";
 import { walkRepeaterRows } from "./repeater-validate.js";
 
@@ -15,7 +16,7 @@ export interface RepeaterFieldOptions {
   readonly default?: unknown;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
-  readonly subFields: readonly MetaBoxField[];
+  readonly subFields: readonly MetaBoxFieldInput[];
   readonly min?: number;
   readonly max?: number;
 }
@@ -39,8 +40,9 @@ const FORBIDDEN_SUBFIELD_KEYS: ReadonlySet<string> = new Set([
 // Subfield keys are also validated here for shape + uniqueness — the
 // top-level `assertMetaBoxFields` only walks the outer fields array.
 export function repeater(options: RepeaterFieldOptions): RepeaterMetaBoxField {
+  const subFields = compileMetaBoxFields(options.subFields);
   const seen = new Set<string>();
-  for (const sf of options.subFields) {
+  for (const sf of subFields) {
     if (sf.inputType === "repeater") {
       throw FieldConfigError.repeaterNestedNotSupported({
         repeaterKey: options.key,
@@ -73,7 +75,7 @@ export function repeater(options: RepeaterFieldOptions): RepeaterMetaBoxField {
     label: options.label,
     type: "json",
     inputType: "repeater",
-    subFields: options.subFields,
+    subFields,
     min: options.min,
     max: options.max,
     required: options.required,
@@ -81,7 +83,7 @@ export function repeater(options: RepeaterFieldOptions): RepeaterMetaBoxField {
     default: options.default,
     span: options.span,
     capability: options.capability,
-    sanitize: walkRepeaterRows(options.subFields, {
+    sanitize: walkRepeaterRows(subFields, {
       min: options.min,
       max: options.max,
     }),

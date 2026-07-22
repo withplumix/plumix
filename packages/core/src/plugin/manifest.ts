@@ -307,6 +307,16 @@ export function manifestEntryVisibility(
 
 export type MetaScalarType = "string" | "number" | "boolean" | "json";
 
+/**
+ * Stored shape of a field's `.validate()` callback. Sync or async;
+ * `true` means valid, a `Label` is the failure message surfaced to the
+ * editor. The fluent chain types the parameter with the field's
+ * narrowed value type; the definition stores it broad.
+ */
+export type MetaBoxFieldValidate = (
+  value: unknown,
+) => true | Label | Promise<true | Label>;
+
 export interface MetaBoxFieldOption {
   readonly value: string;
   readonly label: Label;
@@ -351,6 +361,16 @@ export interface MetaBoxFieldBase {
    * whitelisting, or normalising shape.
    */
   readonly sanitize?: (value: unknown) => unknown;
+  /**
+   * Custom validation predicate — see `MetaBoxFieldValidate`. Carried
+   * on the definition today; server-side execution lands with the
+   * generic enforcement walker.
+   */
+  readonly validate?: MetaBoxFieldValidate;
+  /** Static adornment rendered before the input (e.g. a URL scheme). */
+  readonly prepend?: Label;
+  /** Static adornment rendered after the input (e.g. a unit suffix). */
+  readonly append?: Label;
   /** Default surfaced in the admin form when the key has no saved value. */
   readonly default?: unknown;
   /** Optional help text rendered under the label on every input type. */
@@ -380,27 +400,43 @@ export interface MetaBoxFieldBase {
   readonly showInApi?: boolean;
 }
 
+/** The five string-scalar input types sharing one field shape. */
+export type StringInputType =
+  "text" | "textarea" | "email" | "url" | "password";
+
 /**
- * The narrowed `text` field variant produced by the `text()` builder
- * helper exported from `plumix/fields`. The builder rejects options
- * that don't apply to a text input (e.g. `min`, `step`, `options`) at
- * the type level; downstream consumers can rely on the narrowed shape
- * via the `inputType` discriminator.
+ * Shared shape of the five string scalar variants produced by the
+ * fluent builders exported from `plumix/fields` — they differ only in
+ * their `inputType` literal. Downstream consumers rely on the narrowed
+ * shape via the `inputType` discriminator.
  */
-export interface TextMetaBoxField extends MetaBoxFieldBase {
-  readonly inputType: "text";
+export interface StringMetaBoxField<
+  I extends StringInputType = StringInputType,
+> extends MetaBoxFieldBase {
+  readonly inputType: I;
   readonly type: "string";
   readonly placeholder?: Label;
   readonly maxLength?: number;
 }
 
+/** Single-line text input. */
+export type TextMetaBoxField = StringMetaBoxField<"text">;
+
 /** Multi-line text input. Storage shape mirrors `text`. */
-export interface TextareaMetaBoxField extends MetaBoxFieldBase {
-  readonly inputType: "textarea";
-  readonly type: "string";
-  readonly placeholder?: Label;
-  readonly maxLength?: number;
-}
+export type TextareaMetaBoxField = StringMetaBoxField<"textarea">;
+
+/** RFC-5322-shaped email input. */
+export type EmailMetaBoxField = StringMetaBoxField<"email">;
+
+/** URL input. */
+export type UrlMetaBoxField = StringMetaBoxField<"url">;
+
+/**
+ * Masked-input password field. Visually hides characters in the admin
+ * so values aren't shoulder-surfable in shared sessions; storage
+ * shape mirrors `text`.
+ */
+export type PasswordMetaBoxField = StringMetaBoxField<"password">;
 
 /** Numeric input with optional `min` / `max` / `step` bounds. */
 export interface NumberMetaBoxField extends MetaBoxFieldBase {
@@ -410,34 +446,6 @@ export interface NumberMetaBoxField extends MetaBoxFieldBase {
   readonly min?: number;
   readonly max?: number;
   readonly step?: number;
-}
-
-/** RFC-5322-shaped email input. */
-export interface EmailMetaBoxField extends MetaBoxFieldBase {
-  readonly inputType: "email";
-  readonly type: "string";
-  readonly placeholder?: Label;
-  readonly maxLength?: number;
-}
-
-/** URL input. */
-export interface UrlMetaBoxField extends MetaBoxFieldBase {
-  readonly inputType: "url";
-  readonly type: "string";
-  readonly placeholder?: Label;
-  readonly maxLength?: number;
-}
-
-/**
- * Masked-input password field. Visually hides characters in the admin
- * so values aren't shoulder-surfable in shared sessions; storage
- * shape mirrors `text`.
- */
-export interface PasswordMetaBoxField extends MetaBoxFieldBase {
-  readonly inputType: "password";
-  readonly type: "string";
-  readonly placeholder?: Label;
-  readonly maxLength?: number;
 }
 
 /**
@@ -585,9 +593,8 @@ export interface UserListMetaBoxField extends MetaBoxFieldBase {
  * trashed. `referenceTarget.scope` carries `entryTypes` (the only
  * entry-type names this field accepts).
  *
- * Naming note: the `Reference` infix avoids the collision with
- * `EntryMetaBoxField` further down — the latter is the per-variant
- * Omit-distributive union for fields inside an entry meta box.
+ * Naming note: the `Reference` infix keeps the name clear of the
+ * entry-meta-box option types (`EntryMetaBoxOptions` and friends).
  */
 export interface EntryReferenceMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "entry";
@@ -772,12 +779,8 @@ export interface LegacyMetaBoxField extends MetaBoxFieldBase {
  * compiling unchanged.
  */
 export type MetaBoxField =
-  | TextMetaBoxField
-  | TextareaMetaBoxField
+  | StringMetaBoxField
   | NumberMetaBoxField
-  | EmailMetaBoxField
-  | UrlMetaBoxField
-  | PasswordMetaBoxField
   | DateMetaBoxField
   | DateTimeMetaBoxField
   | TimeMetaBoxField
@@ -799,6 +802,32 @@ export type MetaBoxField =
   | RadioMetaBoxField
   | CheckboxMetaBoxField
   | LegacyMetaBoxField;
+
+/**
+ * A fluent field builder — an immutable chain that compiles to a
+ * narrowed `MetaBoxField` variant. Chain method names (`label`,
+ * `default`, `sanitize`, …) collide with the definition's data
+ * properties, so a builder can't structurally *be* its definition;
+ * registration surfaces accept either shape and call `build()` on
+ * builders at registration time.
+ */
+export interface FieldBuilder<F extends MetaBoxField = MetaBoxField> {
+  build(): F;
+}
+
+/**
+ * What `fields` arrays accept on every registration surface: a fluent
+ * builder or a compiled field definition (object-literal authoring and
+ * `registerFieldType` custom fields).
+ */
+export type MetaBoxFieldInput = MetaBoxField | FieldBuilder;
+
+/** Compile a `fields` array down to definitions — builders build, plain definitions pass through. */
+export function compileMetaBoxFields(
+  fields: readonly MetaBoxFieldInput[],
+): readonly MetaBoxField[] {
+  return fields.map((field) => ("build" in field ? field.build() : field));
+}
 
 /**
  * Shared base for every "card of fields" registration surface — entry
@@ -823,60 +852,18 @@ export interface MetaBoxBaseOptions {
   readonly description?: Label;
   readonly priority?: number;
   readonly capability?: string;
-  readonly fields: readonly MetaBoxField[];
+  readonly fields: readonly MetaBoxFieldInput[];
 }
-
-/**
- * Field shape for entry meta boxes. Drops `span` from the shared
- * `MetaBoxField` — the editor's document rail is a fixed 256px column,
- * so side-by-side layouts can't fit legibly. Compile-time signal to
- * plugin authors that spans are a page-width affordance only (term,
- * user, settings).
- *
- * `Omit<MetaBoxField, "span">` would normally distribute over the
- * union, but TS's excess-property check across a many-variant
- * distributed `Omit` gets pessimistic and starts rejecting options
- * that exist only on a subset of variants. The explicit per-variant
- * union below preserves the same shape with stable inference.
- */
-export type EntryMetaBoxField =
-  | Omit<TextMetaBoxField, "span">
-  | Omit<TextareaMetaBoxField, "span">
-  | Omit<NumberMetaBoxField, "span">
-  | Omit<EmailMetaBoxField, "span">
-  | Omit<UrlMetaBoxField, "span">
-  | Omit<PasswordMetaBoxField, "span">
-  | Omit<DateMetaBoxField, "span">
-  | Omit<DateTimeMetaBoxField, "span">
-  | Omit<TimeMetaBoxField, "span">
-  | Omit<ColorMetaBoxField, "span">
-  | Omit<RangeMetaBoxField, "span">
-  | Omit<MultiselectMetaBoxField, "span">
-  | Omit<JsonMetaBoxField, "span">
-  | Omit<UserMetaBoxField, "span">
-  | Omit<UserListMetaBoxField, "span">
-  | Omit<EntryReferenceMetaBoxField, "span">
-  | Omit<EntryListMetaBoxField, "span">
-  | Omit<TermReferenceMetaBoxField, "span">
-  | Omit<TermListMetaBoxField, "span">
-  | Omit<MediaMetaBoxField, "span">
-  | Omit<MediaListMetaBoxField, "span">
-  | Omit<RichtextMetaBoxField, "span">
-  | Omit<RepeaterMetaBoxField, "span">
-  | Omit<SelectMetaBoxField, "span">
-  | Omit<RadioMetaBoxField, "span">
-  | Omit<CheckboxMetaBoxField, "span">
-  | Omit<LegacyMetaBoxField, "span">;
 
 /**
  * Meta box shown on the entry editor. Scoped by `entryTypes`. Renders
  * as a collapsible section in the editor's document rail, which is
- * fixed at 256px — fields always occupy the full row.
+ * fixed at 256px — fields always occupy the full row. `span` is
+ * accepted like on every other surface but ignored at render (a
+ * universal hint narrow surfaces don't honor), and stripped from the
+ * entry wire projection.
  */
-export interface EntryMetaBoxOptions extends Omit<
-  MetaBoxBaseOptions,
-  "fields"
-> {
+export interface EntryMetaBoxOptions extends MetaBoxBaseOptions {
   /**
    * @deprecated The entry editor no longer partitions meta boxes by
    * location — every registered box renders as a collapsible section in
@@ -886,7 +873,6 @@ export interface EntryMetaBoxOptions extends Omit<
    */
   readonly location?: "bottom" | "sidebar";
   readonly entryTypes: readonly string[];
-  readonly fields: readonly EntryMetaBoxField[];
 }
 
 /** Meta box shown on the termTaxonomy term edit form. Scoped by `termTaxonomies`. */
@@ -937,24 +923,32 @@ export interface RegisteredTermTaxonomy extends TermTaxonomyOptions {
   readonly registeredBy: string | null;
 }
 
+// Registered shapes hold *compiled* fields — fluent builders are
+// built at registration time, so everything downstream (write
+// pipeline, manifest projection) sees plain `MetaBoxField` values.
+
 export interface RegisteredEntryMetaBox extends EntryMetaBoxOptions {
   readonly id: string;
   readonly registeredBy: string | null;
+  readonly fields: readonly MetaBoxField[];
 }
 
 export interface RegisteredTermMetaBox extends TermMetaBoxOptions {
   readonly id: string;
   readonly registeredBy: string | null;
+  readonly fields: readonly MetaBoxField[];
 }
 
 export interface RegisteredUserMetaBox extends UserMetaBoxOptions {
   readonly id: string;
   readonly registeredBy: string | null;
+  readonly fields: readonly MetaBoxField[];
 }
 
 export interface RegisteredSettingsGroup extends SettingsGroupOptions {
   readonly name: string;
   readonly registeredBy: string | null;
+  readonly fields: readonly MetaBoxField[];
 }
 
 export interface RegisteredSettingsPage extends SettingsPageOptions {
@@ -1547,6 +1541,9 @@ export interface MetaBoxFieldManifestEntry {
   readonly inputType: string;
   readonly description?: Label;
   readonly required?: boolean;
+  /** Static input adornments — see `MetaBoxFieldBase.prepend` / `.append`. */
+  readonly prepend?: Label;
+  readonly append?: Label;
   readonly placeholder?: Label;
   readonly maxLength?: number;
   /**
@@ -1603,8 +1600,9 @@ export interface MetaBoxBaseManifestEntry {
 }
 
 /**
- * Wire-side mirror of `EntryMetaBoxField` — drops `span` from the
- * shared `MetaBoxFieldManifestEntry`. See `EntryMetaBoxField` for why.
+ * Entry-box wire field — drops `span` from the shared
+ * `MetaBoxFieldManifestEntry`. The editor rail can't honor the hint
+ * (see `EntryMetaBoxOptions`), so shipping it would just bloat the wire.
  */
 export type EntryMetaBoxFieldManifestEntry = Omit<
   MetaBoxFieldManifestEntry,
@@ -2815,7 +2813,7 @@ interface MetaBoxFieldOptionView {
 }
 
 function toEntryMetaBoxFieldEntry(
-  field: EntryMetaBoxField,
+  field: MetaBoxField,
 ): EntryMetaBoxFieldManifestEntry {
   const view = field as MetaBoxFieldOptionView;
   return {
@@ -2825,6 +2823,8 @@ function toEntryMetaBoxFieldEntry(
     inputType: field.inputType,
     description: field.description,
     required: field.required,
+    prepend: field.prepend,
+    append: field.append,
     placeholder: view.placeholder,
     maxLength: view.maxLength,
     min: view.min,

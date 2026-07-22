@@ -35,7 +35,7 @@ import type {
   EntryTypeOptions,
   FieldTypeOptions,
   LoginLinkOptions,
-  MetaBoxField,
+  MetaBoxFieldInput,
   MutablePluginRegistry,
   PluginRouteAuth,
   PluginRouteMethod,
@@ -58,6 +58,7 @@ import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
 import { RESERVED_DEP_KIND_NAMES } from "../template-deps.js";
 import { DuplicateRegistrationError, PluginContextError } from "./errors.js";
+import { compileMetaBoxFields } from "./manifest.js";
 import {
   assertComponentRef,
   assertMetaBoxFields,
@@ -478,9 +479,11 @@ export function createPluginSetupContext({
           identifier: name,
         });
       }
-      assertMetaBoxFields("settings group", name, options.fields);
+      const fields = compileMetaBoxFields(options.fields);
+      assertMetaBoxFields("settings group", name, fields);
       registry.settingsGroups.set(name, {
         ...options,
+        fields,
         name,
         registeredBy: pluginId,
       });
@@ -789,26 +792,31 @@ export function createPluginSetupContext({
 // Three meta-box registrations (entry/term/user) only differ in their
 // target Map and the human-facing kind label — extracted into a
 // factory so the call sites read as data, not three near-identical
-// blocks.
-function makeMetaBoxRegistrar<
-  T extends { readonly id: string; readonly fields: readonly MetaBoxField[] },
->(
-  map: Map<string, T & { registeredBy: string | null }>,
+// blocks. Fluent builders in `options.fields` compile to plain
+// definitions here, so the registered shape (and everything
+// downstream) carries `MetaBoxField` only.
+function makeMetaBoxRegistrar<R extends { readonly id: string }>(
+  map: Map<string, R>,
   kind: string,
   pluginId: string,
-): (id: string, options: Omit<T, "id">) => void {
+): (
+  id: string,
+  options: { readonly fields: readonly MetaBoxFieldInput[] },
+) => void {
   return (id, options) => {
     if (map.has(id))
       throw DuplicateRegistrationError.alreadyRegistered({
         kind,
         identifier: id,
       });
-    assertMetaBoxFields(kind, id, options.fields);
+    const fields = compileMetaBoxFields(options.fields);
+    assertMetaBoxFields(kind, id, fields);
     map.set(id, {
-      ...(options as unknown as T),
+      ...options,
+      fields,
       id,
       registeredBy: pluginId,
-    });
+    } as unknown as R);
   };
 }
 

@@ -152,6 +152,26 @@ describe("walkRepeaterRows — subfield sanitize dispatch", () => {
     throw new Error("expected throw");
   });
 
+  test("absent subfield values skip sanitize — mirrors top-level deletion semantics", () => {
+    // The fluent chain types sanitize callbacks `(value: string) => string`;
+    // the walker must uphold that by never feeding them null/undefined
+    // (an omitted optional subfield would otherwise reject the write).
+    const calls: unknown[] = [];
+    const validate = walkRepeaterRows([
+      stubField({ key: "label" }),
+      stubField({
+        key: "href",
+        sanitize: (v) => {
+          calls.push(v);
+          return (v as string).trim();
+        },
+      }),
+    ]);
+    const out = validate([{ label: "a" }, { label: "b", href: null }]);
+    expect(out).toEqual([{ label: "a" }, { label: "b", href: null }]);
+    expect(calls).toEqual([]);
+  });
+
   test("missing subfield key in input passes undefined into the row (and is treated empty)", () => {
     const validate = walkRepeaterRows([
       stubField({ key: "label" }),
