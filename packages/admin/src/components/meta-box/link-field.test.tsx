@@ -144,7 +144,7 @@ describe("LinkField", () => {
     expect(lookupList).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: "entry",
-        scope: { entryTypes: ["post", "page"], status: "publish" },
+        scope: { entryTypes: ["post", "page"], status: "published" },
       }),
     );
     expect(

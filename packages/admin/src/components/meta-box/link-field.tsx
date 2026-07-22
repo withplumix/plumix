@@ -10,6 +10,7 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 
+import type { EntryFieldScope } from "@plumix/core/fields";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -124,14 +125,16 @@ export function LinkField({
 
   const entryTypes = publicEntryTypeNames();
 
+  // Only published entries have a permalink worth storing — a draft's
+  // URL would 404 (and go stale on slug edits). Typed so the status
+  // literal tracks the `EntryStatus` vocabulary.
+  const scope: EntryFieldScope = { entryTypes, status: "published" };
   const listQuery = useQuery({
     ...orpc.lookup.list.queryOptions({
       input: {
         kind: "entry",
         query: query.trim() || undefined,
-        // Only published entries have a permalink worth storing — a
-        // draft's URL would 404 (and go stale on slug edits).
-        scope: { entryTypes, status: "publish" },
+        scope,
         limit: 20,
       },
     }),
