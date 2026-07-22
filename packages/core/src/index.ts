@@ -68,12 +68,26 @@ export type {
   EntryProjection,
   EntryTypeName,
   EntryTypeRegistry,
-  MetaOf,
-  TermMetaOf,
   TermTaxonomyName,
   TermTaxonomyRegistry,
   TermProjection,
 } from "./template-registry.js";
+export type {
+  EntryMetaContributions,
+  InferFields,
+  InferStoredFields,
+  MetaOf,
+  ResolvedEntryFor,
+  ResolvedTermFor,
+  SettingsContributions,
+  SettingsOf,
+  StoredMetaOf,
+  StoredTermMetaOf,
+  TermMetaContributions,
+  TermMetaOf,
+  UserMetaContributions,
+  UserMetaOf,
+} from "./plugin/fields/contributions.js";
 export {
   resolveErrorTemplate,
   resolveTemplate,

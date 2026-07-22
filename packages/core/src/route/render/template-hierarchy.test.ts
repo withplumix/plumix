@@ -12,6 +12,7 @@ import type {
   TaxonomyData,
 } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
+import { text } from "../../plugin/fields/builder.js";
 import {
   archive,
   author,
@@ -144,13 +145,34 @@ interface GalleryData extends CustomArchiveData {
 }
 declare module "../../template-registry.js" {
   interface EntryTypeRegistry {
-    product: { entry: Product; meta: { onSale: boolean } };
+    product: { entry: Product };
   }
   interface TermTaxonomyRegistry {
-    brand: { term: Brand; meta: { featured: boolean } };
+    brand: { term: Brand };
   }
   interface ArchiveTypeRegistry {
     gallery: { data: GalleryData };
+  }
+}
+
+// Meta contribution fixtures: typed reads come from the contribution
+// registries, folded per target by `MetaOf` / `TermMetaOf`.
+const _productFields = [text("badge").default("none"), text("tier").required()];
+const _editorialFields = [text("featured"), text("premium")];
+const _brandFields = [text("brandBadge")];
+const _categoryFields = [text("featured"), text("pinned")];
+
+declare module "../../plugin/fields/contributions.js" {
+  interface EntryMetaContributions {
+    productCard: { entryTypes: "product"; fields: typeof _productFields };
+    editorial: { entryTypes: "post" | "page"; fields: typeof _editorialFields };
+  }
+  interface TermMetaContributions {
+    brandBox: { termTaxonomies: "brand"; fields: typeof _brandFields };
+    categoryCard: {
+      termTaxonomies: "category";
+      fields: typeof _categoryFields;
+    };
   }
 }
 
@@ -239,30 +261,48 @@ describe("resolveTemplate — targeted rules (Zone 1)", () => {
 });
 
 describe("targeted builders — name checking and data typing", () => {
-  test("forEntryType types data.entry from the registry projection", () => {
+  test("forEntryType types data.entry from the registry projection with folded meta", () => {
     forEntryType("post").template(({ data }) => {
-      expectTypeOf(data.entry).toEqualTypeOf<ResolvedEntry>();
+      expectTypeOf(data.entry.slug).toEqualTypeOf<string>();
+      expectTypeOf(data.entry.meta.featured).toEqualTypeOf<
+        string | undefined
+      >();
+      // @ts-expect-error - "nope" is not a declared meta field of post
+      void data.entry.meta.nope;
       return null;
     });
     forEntryType("product").template(({ data }) => {
-      expectTypeOf(data.entry).toEqualTypeOf<Product>();
+      expectTypeOf(data.entry.price).toEqualTypeOf<number>();
+      // Read shape: .default() and .required() both narrow away undefined.
+      expectTypeOf(data.entry.meta.badge).toEqualTypeOf<string>();
+      expectTypeOf(data.entry.meta.tier).toEqualTypeOf<string>();
+      // @ts-expect-error - "nope" is not a declared meta field of product
+      void data.entry.meta.nope;
       return null;
     });
-    forEntryType("product").archive.template(({ data }) => {
-      expectTypeOf(data.entries).toEqualTypeOf<readonly Product[]>();
+    forEntryType("product").archive.template(({ data: _data }) => {
+      type ArchiveEntry = (typeof _data.entries)[number];
+      expectTypeOf<ArchiveEntry["price"]>().toEqualTypeOf<number>();
+      expectTypeOf<ArchiveEntry["meta"]["badge"]>().toEqualTypeOf<string>();
       return null;
     });
   });
 
-  test("forTermTaxonomy types data.term from the registry projection", () => {
+  test("forTermTaxonomy types data.term from the registry projection with folded meta", () => {
     forTermTaxonomy("category").template(({ data }) => {
-      expectTypeOf(data.term).toEqualTypeOf<ResolvedTerm>();
+      expectTypeOf(data.term.slug).toEqualTypeOf<string>();
+      expectTypeOf(data.term.meta.pinned).toEqualTypeOf<string | undefined>();
       return null;
     });
     forTermTaxonomy("brand")
       .slug("acme")
       .template(({ data }) => {
-        expectTypeOf(data.term).toEqualTypeOf<Brand>();
+        expectTypeOf(data.term.logoUrl).toEqualTypeOf<string | null>();
+        expectTypeOf(data.term.meta.brandBadge).toEqualTypeOf<
+          string | undefined
+        >();
+        // @ts-expect-error - "nope" is not a declared meta field of brand
+        void data.term.meta.nope;
         return null;
       });
   });
@@ -274,30 +314,40 @@ describe("targeted builders — name checking and data typing", () => {
     forTermTaxonomy("nope");
   });
 
-  test("whereMeta types keys and values against the meta projection", () => {
+  test("whereMeta types keys and values against the stored meta shapes", () => {
     forEntryType("product")
-      .whereMeta("onSale", true)
+      .whereMeta("tier", "gold")
       .template(() => null);
+    // Stored shape, not read shape: .default() applies at decode time,
+    // so storage can still lack the key.
+    forEntryType("product")
+      .whereMeta("badge", undefined)
+      .template(() => null);
+    // @ts-expect-error - required fields store non-optional values
+    forEntryType("product").whereMeta("tier", undefined);
     // @ts-expect-error - "nope" is not a meta key of product
-    forEntryType("product").whereMeta("nope", true);
-    // @ts-expect-error - onSale is a boolean, not a string
-    forEntryType("product").whereMeta("onSale", "yes");
+    forEntryType("product").whereMeta("nope", "x");
+    // @ts-expect-error - badge stores a string, not a number
+    forEntryType("product").whereMeta("badge", 5);
   });
 
-  test("forTermTaxonomy.whereMeta types keys and values against the meta projection", () => {
+  test("forTermTaxonomy.whereMeta types keys and values against the stored meta shapes", () => {
     forTermTaxonomy("brand")
-      .whereMeta("featured", true)
+      .whereMeta("brandBadge", "gold")
       .template(() => null);
     // @ts-expect-error - "nope" is not a meta key of brand
-    forTermTaxonomy("brand").whereMeta("nope", true);
-    // @ts-expect-error - featured is a boolean, not a string
-    forTermTaxonomy("brand").whereMeta("featured", "yes");
+    forTermTaxonomy("brand").whereMeta("nope", "x");
+    // @ts-expect-error - brandBadge stores a string, not a number
+    forTermTaxonomy("brand").whereMeta("brandBadge", 5);
   });
 
-  test("forTermTaxonomy.where types data from the term projection", () => {
+  test("forTermTaxonomy.where types data from the term projection with folded meta", () => {
     forTermTaxonomy("brand")
       .where((data) => {
-        expectTypeOf(data).toEqualTypeOf<TaxonomyData<Brand>>();
+        expectTypeOf(data.term.logoUrl).toEqualTypeOf<string | null>();
+        expectTypeOf(data.term.meta.brandBadge).toEqualTypeOf<
+          string | undefined
+        >();
         return data.term.logoUrl !== null;
       })
       .template(() => null);
@@ -317,30 +367,30 @@ describe("resolveTemplate — predicate rules (whereMeta / where / named)", () =
   test("whereMeta matches when the entry-meta value equals; else falls through", () => {
     const rules = [
       forEntryType("post")
-        .whereMeta("featured", true)
+        .whereMeta("featured", "yes")
         .template(() => null),
       entry(() => null),
     ];
     expect(
-      resolveTemplate(rules, postNode, entryData({ featured: true }))?.match,
+      resolveTemplate(rules, postNode, entryData({ featured: "yes" }))?.match,
     ).toBeDefined();
     expect(
-      resolveTemplate(rules, postNode, entryData({ featured: false }))?.tier,
+      resolveTemplate(rules, postNode, entryData({ featured: "no" }))?.tier,
     ).toBe("entry");
   });
 
   test("where evaluates an arbitrary predicate over the resolved data", () => {
     const rules = [
       forEntryType("post")
-        .where((data) => data.entry.meta.premium === 1)
+        .where((data) => data.entry.meta.premium === "1")
         .template(() => null),
       entry(() => null),
     ];
     expect(
-      resolveTemplate(rules, postNode, entryData({ premium: 1 }))?.match,
+      resolveTemplate(rules, postNode, entryData({ premium: "1" }))?.match,
     ).toBeDefined();
     expect(
-      resolveTemplate(rules, postNode, entryData({ premium: 0 }))?.tier,
+      resolveTemplate(rules, postNode, entryData({ premium: "0" }))?.tier,
     ).toBe("entry");
   });
 
@@ -368,7 +418,7 @@ describe("resolveTemplate — predicate rules (whereMeta / where / named)", () =
   test("a predicate rule never matches when data is absent", () => {
     const rules = [
       forEntryType("post")
-        .whereMeta("featured", true)
+        .whereMeta("featured", "yes")
         .template(() => null),
       entry(() => null),
     ];
@@ -389,31 +439,31 @@ describe("resolveTemplate — term predicate rules (whereMeta / where / named)",
   test("whereMeta matches when the term-meta value equals; else falls through", () => {
     const rules = [
       forTermTaxonomy("category")
-        .whereMeta("featured", true)
+        .whereMeta("featured", "yes")
         .template(() => null),
       taxonomy(() => null),
     ];
     expect(
-      resolveTemplate(rules, catTerm, termData({ featured: true }))?.match,
+      resolveTemplate(rules, catTerm, termData({ featured: "yes" }))?.match,
     ).toBeDefined();
     expect(
-      resolveTemplate(rules, catTerm, termData({ featured: false }))?.tier,
+      resolveTemplate(rules, catTerm, termData({ featured: "no" }))?.tier,
     ).toBe("taxonomy");
   });
 
   test("where evaluates an arbitrary predicate over the resolved data", () => {
     const rules = [
       forTermTaxonomy("category")
-        .where((data) => data.term.meta.pinned === 1)
+        .where((data) => data.term.meta.pinned === "1")
         .template(() => null),
       taxonomy(() => null),
     ];
     expect(
-      resolveTemplate(rules, catTerm, termData({ pinned: 1 }))?.match,
+      resolveTemplate(rules, catTerm, termData({ pinned: "1" }))?.match,
     ).toBeDefined();
-    expect(resolveTemplate(rules, catTerm, termData({ pinned: 0 }))?.tier).toBe(
-      "taxonomy",
-    );
+    expect(
+      resolveTemplate(rules, catTerm, termData({ pinned: "0" }))?.tier,
+    ).toBe("taxonomy");
   });
 
   test("named matches the stored template choice and carries its label", () => {
@@ -434,7 +484,7 @@ describe("resolveTemplate — term predicate rules (whereMeta / where / named)",
   test("a predicate rule never matches when data is absent", () => {
     const rules = [
       forTermTaxonomy("category")
-        .whereMeta("featured", true)
+        .whereMeta("featured", "yes")
         .template(() => null),
       taxonomy(() => null),
     ];
@@ -688,14 +738,14 @@ describe("explainTemplateResolution", () => {
   test("a predicate that fires and passes marks the rule matched with its result", () => {
     const rules = [
       forEntryType("post")
-        .whereMeta("featured", true)
+        .whereMeta("featured", "yes")
         .template(() => null),
       entry(() => null),
     ];
     const trace = explainTemplateResolution(
       rules,
       postNode,
-      entryData({ featured: true }),
+      entryData({ featured: "yes" }),
     );
     expect(trace.winner).toBe("post");
     expect(trace.steps[0]).toEqual({
@@ -709,14 +759,14 @@ describe("explainTemplateResolution", () => {
   test("a predicate that fires and fails is skipped with its result recorded", () => {
     const rules = [
       forEntryType("post")
-        .whereMeta("featured", true)
+        .whereMeta("featured", "yes")
         .template(() => null),
       entry(() => null),
     ];
     const trace = explainTemplateResolution(
       rules,
       postNode,
-      entryData({ featured: false }),
+      entryData({ featured: "no" }),
     );
     expect(trace.winner).toBe("entry");
     expect(trace.steps[0]).toEqual({
@@ -731,14 +781,14 @@ describe("explainTemplateResolution", () => {
     // the predicate is ever consulted.
     const rules = [
       forEntryType("page")
-        .whereMeta("featured", true)
+        .whereMeta("featured", "yes")
         .template(() => null),
       entry(() => null),
     ];
     const trace = explainTemplateResolution(
       rules,
       postNode,
-      entryData({ featured: true }),
+      entryData({ featured: "yes" }),
     );
     expect(trace.winner).toBe("entry");
     expect(trace.steps[0]).toEqual({
@@ -753,7 +803,7 @@ describe("explainTemplateResolution", () => {
     // so it never fires, mirroring `resolveTemplate`'s own short-circuit.
     const rules = [
       forEntryType("post")
-        .whereMeta("featured", true)
+        .whereMeta("featured", "yes")
         .template(() => null),
       entry(() => null),
     ];

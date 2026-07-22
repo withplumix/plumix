@@ -26,6 +26,12 @@ import type {
   TemplateDepLoader,
 } from "../template-deps.js";
 import type { TemplateDepRegistry } from "../template.js";
+import type {
+  EntryMetaBoxDrift,
+  SettingsGroupDrift,
+  TermMetaBoxDrift,
+  UserMetaBoxDrift,
+} from "./fields/contributions.js";
 import type { LookupAdapterOptions } from "./lookup.js";
 import type {
   AdminPageOptions,
@@ -118,14 +124,20 @@ export interface PluginSetupContextBase {
    * collision; `buildManifest` rejects two boxes writing to the same
    * `(entryType, field.key)` pair.
    */
-  registerEntryMetaBox(id: string, options: EntryMetaBoxOptions): void;
+  registerEntryMetaBox<Id extends string, const O extends EntryMetaBoxOptions>(
+    id: Id,
+    options: O & EntryMetaBoxDrift<Id, O>,
+  ): void;
   /**
    * Same model as `registerEntryMetaBox`, but scoped to termTaxonomies and
    * rendered on the term edit form as one stacked shadcn `<Card>` per
    * box. `registerTermMeta` is not a separate step — the box's fields
    * are the meta key contract.
    */
-  registerTermMetaBox(id: string, options: TermMetaBoxOptions): void;
+  registerTermMetaBox<Id extends string, const O extends TermMetaBoxOptions>(
+    id: Id,
+    options: O & TermMetaBoxDrift<Id, O>,
+  ): void;
 
   /**
    * Same model as `registerEntryMetaBox`, but rendered on the user
@@ -133,7 +145,10 @@ export interface PluginSetupContextBase {
    * all registered boxes target every user; use `capability` to gate
    * which boxes the viewer sees.
    */
-  registerUserMetaBox(id: string, options: UserMetaBoxOptions): void;
+  registerUserMetaBox<Id extends string, const O extends UserMetaBoxOptions>(
+    id: Id,
+    options: O & UserMetaBoxDrift<Id, O>,
+  ): void;
   registerCapability(name: string, minRole: UserRole): void;
   registerCapability(
     name: string,
@@ -152,7 +167,13 @@ export interface PluginSetupContextBase {
    * group from one or more `registerSettingsPage` calls to surface it
    * in the admin.
    */
-  registerSettingsGroup(name: string, options: SettingsGroupOptions): void;
+  registerSettingsGroup<
+    Name extends string,
+    const O extends SettingsGroupOptions,
+  >(
+    name: Name,
+    options: O & SettingsGroupDrift<Name, O>,
+  ): void;
 
   /**
    * Declare a settings page (admin URL `/settings/<name>`) that
