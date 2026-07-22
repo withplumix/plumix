@@ -1,8 +1,15 @@
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
+import type { AnyPluginDescriptor } from "../config.js";
+import type {
+  TelemetryConsumer,
+  TelemetrySnapshot,
+} from "../context/telemetry.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import { definePlugin } from "../plugin/define.js";
+import { fallback } from "../route/render/template-builders.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
+import { defineTheme } from "../theme.js";
 import { matchPluginRawRoute } from "./dispatcher.js";
 
 // Track when the dispatcher dynamic-imports the MCP module: the factory runs
@@ -1201,5 +1208,212 @@ describe("dispatcher — public read-through edge cache", () => {
 
     expect(await response.text()).not.toBe("CACHED");
     expect(match).not.toHaveBeenCalled();
+  });
+});
+
+describe("dispatcher — telemetry consumers", () => {
+  // A plugin that observes mid-request whether the collector is live: an
+  // active collector already holds the dispatch span during render.
+  function spanObserver(): {
+    plugin: AnyPluginDescriptor;
+    seen: () => number | undefined;
+  } {
+    let spansSeenDuringRender: number | undefined;
+    const plugin = definePlugin("telemetry-observer", (ctx) => {
+      ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+        spansSeenDuringRender = appCtx.telemetry.getSpans().length;
+        return manifest;
+      });
+    });
+    return { plugin, seen: () => spansSeenDuringRender };
+  }
+
+  test("a registered consumer receives the finished snapshot: envelope, span tree, records, dropped counters", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const recorder = definePlugin("telemetry-recorder", (ctx) => {
+      ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+        appCtx.telemetry.record("telemetry-recorder", {
+          note: "during render",
+        });
+        return manifest;
+      });
+    });
+    const h = await createDispatcherHarness({
+      plugins: [recorder],
+      telemetry: {
+        consumers: [
+          {
+            id: "in-test",
+            onRequestEnd: (snapshot) => {
+              snapshots.push(snapshot);
+            },
+          },
+        ],
+      },
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+
+    expect(snapshots).toHaveLength(1);
+    const [snapshot] = snapshots;
+    expect(snapshot?.request).toMatchObject({
+      method: "GET",
+      url: "https://cms.example/",
+      status: response.status,
+    });
+    expect(snapshot?.request.requestId).toMatch(/[0-9a-f-]{36}/);
+    expect(snapshot?.request.startedAt).toBeTypeOf("number");
+    expect(snapshot?.request.durationMs).toBeGreaterThanOrEqual(0);
+    expect(snapshot?.spans.map((s) => s.name)).toEqual(["dispatch"]);
+    expect(snapshot?.records["telemetry-recorder"]?.map((r) => r.data)).toEqual(
+      [{ note: "during render" }],
+    );
+    expect(
+      snapshot?.records["telemetry-recorder"]?.every(
+        (r) => typeof r.at === "number",
+      ),
+    ).toBe(true);
+    expect(snapshot?.dropped).toEqual({ spans: 0, records: {} });
+  });
+
+  test("a slow consumer never delays the response — export waits in the defer queue", async () => {
+    let finishExport!: () => void;
+    const exportDone = new Promise<void>((r) => (finishExport = r));
+    let exported = false;
+    const h = await createDispatcherHarness({
+      telemetry: {
+        consumers: [
+          {
+            id: "slow",
+            onRequestEnd: async () => {
+              await exportDone;
+              exported = true;
+            },
+          },
+        ],
+      },
+    });
+
+    // The response resolves while the export is still pending — delivery is
+    // deferred (the platform's `waitUntil`), never awaited on the hot path.
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    expect(response.status).toBeTypeOf("number");
+    expect(exported).toBe(false);
+    finishExport();
+    await h.drainDeferred();
+    expect(exported).toBe(true);
+  });
+
+  test("sample: () => false means nothing is collected or delivered for the request", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const { plugin, seen } = spanObserver();
+    const h = await createDispatcherHarness({
+      plugins: [plugin],
+      telemetry: {
+        consumers: [
+          {
+            id: "opt-out",
+            sample: () => false,
+            onRequestEnd: (s) => void snapshots.push(s),
+          },
+        ],
+      },
+    });
+
+    await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+
+    expect(snapshots).toHaveLength(0);
+    expect(seen()).toBe(0);
+  });
+
+  test("with no consumers registered the collector is the no-op", async () => {
+    const { plugin, seen } = spanObserver();
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+
+    await h.dispatch(new Request("https://cms.example/"));
+
+    expect(seen()).toBe(0);
+  });
+
+  test("one yes vote activates collection; a no-voting consumer gets no snapshot", async () => {
+    const received: string[] = [];
+    const consumer = (
+      id: string,
+      sample: () => boolean,
+    ): TelemetryConsumer => ({
+      id,
+      sample,
+      onRequestEnd: () => void received.push(id),
+    });
+    const h = await createDispatcherHarness({
+      telemetry: {
+        consumers: [consumer("yes", () => true), consumer("no", () => false)],
+      },
+    });
+
+    await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+
+    expect(received).toEqual(["yes"]);
+  });
+
+  test("a 500 request still delivers its snapshot, status and error included", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const h = await createDispatcherHarness({
+      theme: defineTheme({
+        templates: [
+          fallback(() => {
+            throw new Error("render kaboom");
+          }),
+        ],
+      }),
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+
+    expect(response.status).toBe(500);
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]?.request.status).toBe(500);
+  });
+
+  describe("dev debug-bar consumer", () => {
+    const original = process.env.PLUMIX_DEV;
+    afterEach(() => {
+      if (original === undefined) delete process.env.PLUMIX_DEV;
+      else process.env.PLUMIX_DEV = original;
+    });
+
+    test("in dev the bar registers as a consumer: collection is active with no config consumers", async () => {
+      process.env.PLUMIX_DEV = "1";
+      const { plugin, seen } = spanObserver();
+      const h = await createDispatcherHarness({ plugins: [plugin] });
+
+      await h.dispatch(new Request("https://cms.example/"));
+
+      // The live dispatch span is visible mid-request — the bar's reads work.
+      expect(seen()).toBeGreaterThan(0);
+    });
+
+    test("a disabled bar registers no consumer: dev collects nothing", async () => {
+      process.env.PLUMIX_DEV = "1";
+      const { plugin, seen } = spanObserver();
+      const h = await createDispatcherHarness({
+        plugins: [plugin],
+        debugBar: false,
+      });
+
+      await h.dispatch(new Request("https://cms.example/"));
+
+      expect(seen()).toBe(0);
+    });
   });
 });

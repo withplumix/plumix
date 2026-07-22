@@ -1,3 +1,5 @@
+import type { AppContext } from "./app.js";
+
 /** Attribute and record values must be JSON-serializable — enforced by type only. */
 export type JsonValue =
   | string
@@ -65,8 +67,8 @@ export interface TelemetryDropped {
  * happened during a request. Core and plugins record spans (anything with a
  * duration) and records (durationless facts) under a namespace; consumers such
  * as the dev debug bar read them back. Two implementations:
- * {@link NOOP_TELEMETRY} (always present in core, prod-safe) and the real
- * accumulating collector in the dev-gated debug-bar module.
+ * {@link NOOP_TELEMETRY} (used whenever no consumer sampled the request) and
+ * the real accumulating collector, activated by consumer vote.
  */
 export interface TelemetryCollector {
   /**
@@ -79,10 +81,75 @@ export interface TelemetryCollector {
   span<T>(name: string, fn: (s: TelemetrySpanHandle) => T): T;
   /** Timestamped entries recorded under `namespace`, in record order. */
   get(namespace: string): readonly TelemetryRecord[];
+  /** Every namespace's entries, keyed by namespace — the snapshot read. */
+  getRecords(): Readonly<Record<string, readonly TelemetryRecord[]>>;
   /** The collected span tree (the Timeline panel consumes this). */
   getSpans(): readonly TelemetrySpan[];
   /** Counts of entries discarded by the per-request caps. */
   getDropped(): TelemetryDropped;
+}
+
+/**
+ * The finished request's identity and outcome, as a consumer sees it.
+ * `startedAt`/`durationMs` span the dispatch of the request — context
+ * creation and the sampling vote happen just before the clock starts.
+ * @public consumer-facing (imported by exporters, not core)
+ */
+export interface TelemetryRequestEnvelope {
+  readonly requestId: string;
+  readonly method: string;
+  readonly url: string;
+  readonly status: number;
+  readonly startedAt: number;
+  readonly durationMs: number;
+}
+
+/**
+ * The finished, JSON-serializable view of a collected request: envelope, root
+ * spans, timestamped records by namespace, and what the caps discarded.
+ * Serializability is enforced by type only — no runtime validation. The
+ * envelope `url` is the full request URL, query string included — an
+ * exporter shipping snapshots off-box owns scrubbing query-borne secrets.
+ * @public consumer-facing (imported by exporters, not core)
+ */
+export interface TelemetrySnapshot {
+  readonly request: TelemetryRequestEnvelope;
+  readonly spans: readonly TelemetrySpan[];
+  readonly records: Readonly<Record<string, readonly TelemetryRecord[]>>;
+  readonly dropped: TelemetryDropped;
+}
+
+/**
+ * A telemetry export destination, registered once in app config
+ * (`telemetry.consumers`). A request collects iff at least one registered
+ * consumer votes yes; with no consumers the collector stays the no-op and
+ * production pays nothing.
+ */
+export interface TelemetryConsumer {
+  readonly id: string;
+  /**
+   * Head-sampling vote, called once at context creation (before any
+   * collection — `ctx.telemetry` is not yet active). Omitted = always yes.
+   * Runs pre-auth: on public requests `ctx.user` is null even when a
+   * session cookie is present. A throwing vote fails the request — decide
+   * from cheap request-shaped facts and don't throw.
+   */
+  readonly sample?: (ctx: AppContext) => boolean;
+  /**
+   * Receives the finished snapshot after the response (via `waitUntil` on
+   * Workers), so export latency never adds to response time. Errors live in
+   * the span tree — there is no separate error callback; an error-hook
+   * consumer may read the live `ctx.telemetry` mid-request instead.
+   */
+  readonly onRequestEnd?: (
+    snapshot: TelemetrySnapshot,
+    ctx: AppContext,
+  ) => void | Promise<void>;
+}
+
+/** The `telemetry` app-config slot. */
+export interface TelemetryConfig {
+  readonly consumers?: readonly TelemetryConsumer[];
 }
 
 /** Shared no-op span handle: attributes (lazy or not) are never evaluated. */
@@ -92,14 +159,16 @@ export const NOOP_HANDLE: TelemetrySpanHandle = {
 
 /**
  * The permanent no-op collector. Lives in core proper so plugin `ctx.telemetry`
- * call sites stay safe in production: `record` drops the entry, `span` calls
+ * call sites stay safe everywhere: `record` drops the entry, `span` calls
  * through and returns the result, reads are empty. The real collector is
- * swapped in only under the dev gate.
+ * swapped in only when at least one registered consumer votes to sample the
+ * request — a site with no consumers pays nothing, in dev or prod.
  */
 export const NOOP_TELEMETRY: TelemetryCollector = {
   record: () => undefined,
   span: (_name, fn) => fn(NOOP_HANDLE),
   get: () => [],
+  getRecords: () => ({}),
   getSpans: () => [],
   getDropped: () => ({ spans: 0, records: {} }),
 };

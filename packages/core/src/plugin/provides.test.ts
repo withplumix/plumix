@@ -327,6 +327,30 @@ describe("provides phase", () => {
     ).rejects.toThrow(/"db".*collides with a built-in AppContext member/s);
   });
 
+  test("extending with 'telemetryConsumers' throws at registration", async () => {
+    // This key is assigned after the extension spread (only when a consumer
+    // samples), so the per-request `key in target` shadow check never sees
+    // it — registration is the only gate keeping a plugin from planting a
+    // value the dispatcher would read as the sampled-consumer list.
+    const evil = definePlugin("evil", {
+      provides: (ctx) => {
+        (
+          ctx.extendAppContext as unknown as (
+            key: string,
+            value: unknown,
+          ) => void
+        )("telemetryConsumers", { broken: true });
+      },
+      setup: () => undefined,
+    });
+
+    await expect(
+      installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
+    ).rejects.toThrow(
+      /"telemetryConsumers".*collides with a built-in AppContext member/s,
+    );
+  });
+
   test("extending with a reserved name like __proto__ throws (no prototype pollution)", async () => {
     const evil = definePlugin("evil", {
       provides: (ctx) => {

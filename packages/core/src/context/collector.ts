@@ -3,11 +3,9 @@ import type {
   TelemetryRecord,
   TelemetrySpan,
   TelemetrySpanHandle,
-} from "../context/telemetry.js";
-import type { DebugBarInput } from "./config.js";
-import { traceStore } from "../context/stores.js";
-import { NOOP_HANDLE, NOOP_TELEMETRY } from "../context/telemetry.js";
-import { normalizeDebugBar } from "./config.js";
+} from "./telemetry.js";
+import { traceStore } from "./stores.js";
+import { NOOP_HANDLE } from "./telemetry.js";
 
 function isThenable(value: unknown): value is PromiseLike<unknown> {
   return (
@@ -32,17 +30,12 @@ const MAX_SPANS = 2000;
 const MAX_RECORDS_PER_NAMESPACE = 1000;
 
 /**
- * The real, dev-only telemetry collector. Accumulates per-namespace entries and
- * a span tree for the request. Created only under the dev gate; production uses
- * {@link NOOP_TELEMETRY} instead, so this module tree-shakes out of prod builds.
+ * The real telemetry collector. Accumulates per-namespace entries and a span
+ * tree for the request. Always present in production bundles; created only
+ * when at least one registered consumer votes to sample the request, so a
+ * site with no consumers stays on the no-op and pays nothing.
  */
-export function createTelemetryCollector(
-  debugBar: DebugBarInput | undefined,
-): TelemetryCollector {
-  const { enabled, disabled } = normalizeDebugBar(debugBar);
-  // Globally disabled in dev: skip all collection overhead, not just render.
-  if (!enabled) return NOOP_TELEMETRY;
-
+export function createTelemetryCollector(): TelemetryCollector {
   const entries = new Map<string, TelemetryRecord[]>();
   const roots: TelemetrySpan[] = [];
   let spanCount = 0;
@@ -51,10 +44,6 @@ export function createTelemetryCollector(
 
   return {
     record(namespace, entry) {
-      // A disabled panel stops collecting too (not just rendering): its
-      // namespace is its panel id, so denylisted namespaces drop at the source
-      // — before a lazy entry is ever evaluated.
-      if (disabled.has(namespace)) return;
       const bucket = entries.get(namespace);
       if (bucket && bucket.length >= MAX_RECORDS_PER_NAMESPACE) {
         droppedRecords[namespace] = (droppedRecords[namespace] ?? 0) + 1;
@@ -68,9 +57,6 @@ export function createTelemetryCollector(
       else entries.set(namespace, [record]);
     },
     span(name, fn) {
-      // Same source-drop rule as record(): a span named after a denylisted
-      // panel id is not collected and its lazy attributes never evaluate.
-      if (disabled.has(name)) return fn(NOOP_HANDLE);
       // Over the cap: the work still runs and returns unchanged, but no span
       // is allocated and lazy attributes are never evaluated.
       if (spanCount >= MAX_SPANS) {
@@ -136,6 +122,13 @@ export function createTelemetryCollector(
     },
     get(namespace) {
       return entries.get(namespace) ?? [];
+    },
+    getRecords() {
+      // Copies, not the live buckets — this is the snapshot read, and a
+      // captured snapshot must not grow under post-response recording.
+      return Object.fromEntries(
+        [...entries].map(([namespace, bucket]) => [namespace, [...bucket]]),
+      );
     },
     getSpans() {
       return roots;

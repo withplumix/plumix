@@ -27,13 +27,18 @@ import type {
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
-import type { TelemetryCollector } from "./telemetry.js";
+import type {
+  TelemetryCollector,
+  TelemetryConfig,
+  TelemetryConsumer,
+} from "./telemetry.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolveMailer } from "../auth/mailer/resolve.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
-import { createTelemetryCollector } from "../debug-bar/collector.js";
+import { debugBarTelemetryConsumer } from "../debug-bar/consumer.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
+import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
 import { NOOP_TELEMETRY } from "./telemetry.js";
 
@@ -142,11 +147,17 @@ export interface AppContextBase<
   /**
    * Request-scoped telemetry collector — spans + records for what happened
    * during this request. Core and plugins record via `ctx.telemetry.record`/
-   * `span`. Always present: the real collector in dev, {@link NOOP_TELEMETRY}
-   * in prod (so call sites are safe and the debug-bar module tree-shakes out
-   * of prod builds).
+   * `span`. Always present: the real collector when at least one registered
+   * consumer voted to sample this request, {@link NOOP_TELEMETRY} otherwise
+   * (so call sites are safe and a site with no consumers pays nothing).
    */
   readonly telemetry: TelemetryCollector;
+  /**
+   * Consumers whose head-sampling vote said yes for this request — the
+   * targets of post-response snapshot delivery. Absent when nothing sampled
+   * (and `telemetry` is the no-op). Internal to the dispatcher.
+   */
+  readonly telemetryConsumers?: readonly TelemetryConsumer[];
   readonly auth: AuthNamespace;
   /**
    * Resolved request authenticator — same instance the dispatcher
@@ -294,6 +305,8 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly origin?: string;
   readonly basePath?: string;
   readonly debugBar?: DebugBarInput;
+  /** App-config telemetry slot — registered consumers vote per request. */
+  readonly telemetry?: TelemetryConfig;
   readonly siteName?: string;
   readonly logger?: Logger;
   readonly defer?: DeferFn;
@@ -422,11 +435,10 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     origin: args.origin ?? new URL(args.request.url).origin,
     basePath: args.basePath ?? "",
     debugBar: args.debugBar,
-    // Real collector only in dev; `process.env.PLUMIX_DEV` is Vite-empty in a
-    // build, so the prod branch keeps NOOP_TELEMETRY and tree-shakes the rest.
-    telemetry: process.env.PLUMIX_DEV
-      ? createTelemetryCollector(args.debugBar)
-      : NOOP_TELEMETRY,
+    // Provisional no-op — swapped for the real collector below iff a consumer
+    // votes to sample this request. Consumers see the assembled context when
+    // voting, so `telemetry` must exist (inactive) before the vote runs.
+    telemetry: NOOP_TELEMETRY,
     siteName: args.siteName,
   };
   // Spread plugin-contributed entries onto the base. The cast is the
@@ -447,7 +459,45 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
       target[key] = entry.value;
     }
   }
-  return base as AppContext<TSchema>;
+  const ctx = base as AppContext<TSchema>;
+  // Consumers are declared against the core schema; a custom-schema context
+  // is structurally the same at the seam, so the double cast is safe.
+  const sampled = sampleTelemetryConsumers(
+    ctx as unknown as AppContext,
+    args.debugBar,
+    args.telemetry,
+  );
+  if (sampled.length > 0) {
+    // The context is frozen-by-type, not by object — createAppContext owns
+    // construction, so activating the collector post-vote is a private step.
+    const mutable = base as {
+      telemetry: TelemetryCollector;
+      telemetryConsumers?: readonly TelemetryConsumer[];
+    };
+    mutable.telemetry = createTelemetryCollector();
+    mutable.telemetryConsumers = sampled;
+  }
+  return ctx;
+}
+
+/**
+ * The gate: which registered consumers want this request collected. In dev
+ * the debug bar registers first (the `PLUMIX_DEV` branch is Vite-empty in a
+ * build, so the bar and its config never reach production bundles); config
+ * consumers follow. A consumer without `sample` always votes yes.
+ */
+function sampleTelemetryConsumers(
+  ctx: AppContext,
+  debugBar: DebugBarInput | undefined,
+  config: TelemetryConfig | undefined,
+): readonly TelemetryConsumer[] {
+  const consumers: TelemetryConsumer[] = [];
+  if (process.env.PLUMIX_DEV) {
+    const bar = debugBarTelemetryConsumer(debugBar);
+    if (bar) consumers.push(bar);
+  }
+  consumers.push(...(config?.consumers ?? []));
+  return consumers.filter((c) => c.sample?.(ctx) ?? true);
 }
 
 export function withUser<TSchema extends Record<string, unknown>>(

@@ -105,7 +105,7 @@ function loggingBinding(): D1Database {
 async function recordQueriesForOneRun(): Promise<unknown[]> {
   const recorded: unknown[] = [];
   const ctx = {
-    debug: {
+    telemetry: {
       record: (namespace: string, entry: unknown) => {
         if (namespace === "database") recorded.push(entry);
       },

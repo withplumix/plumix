@@ -3,6 +3,7 @@ import type { RemotePattern } from "@plumix/blocks/renderer";
 
 import type { PlumixAuthConfig } from "./auth/config.js";
 import type { MailerInput } from "./auth/mailer/resolve.js";
+import type { TelemetryConfig } from "./context/telemetry.js";
 import type { DebugBarInput } from "./debug-bar/config.js";
 import type { I18nInput, ResolvedI18n } from "./i18n/locale-registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
@@ -123,6 +124,13 @@ export interface PlumixConfigInput {
    */
   readonly debugBar?: DebugBarInput;
   /**
+   * Telemetry consumers, registered once here. Each consumer head-samples
+   * per request and receives a serializable snapshot post-response; with no
+   * consumers the collector stays a no-op and production pays nothing. The
+   * dev debug bar registers itself as the first consumer automatically.
+   */
+  readonly telemetry?: TelemetryConfig;
+  /**
    * Block-system configuration. Today only exposes the operator-
    * configurable `core/html` allowlist override; future block-level
    * settings (per-block disable, etc.) slot in here too.
@@ -162,6 +170,7 @@ export interface PlumixConfig {
   readonly mcp?: InterfaceToggle;
   readonly api?: ApiConfig;
   readonly debugBar?: DebugBarInput;
+  readonly telemetry?: TelemetryConfig;
   readonly blocks?: {
     readonly htmlAllowlist?: HtmlAllowlistOverride;
   };
@@ -196,6 +205,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     mcp: config.mcp,
     api: config.api,
     debugBar: config.debugBar,
+    telemetry: config.telemetry,
     blocks: config.blocks,
     images: config.images,
     vite: config.vite,
