@@ -96,6 +96,16 @@ const ASSET_LIKE = /\.[^/]+$/;
 const STATIC_ASSET_EXT =
   /\.(?:ico|css|js|mjs|map|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf|eot|wasm)$/i;
 
+// Cacheable because the extension check makes the path permanently
+// unroutable — a short TTL only bounds "a deploy added this asset". The
+// edge cache stores GET+200 only, so this reaches browsers/CDNs, not the
+// shared read-through layer.
+function cacheableAssetNotFound(hint: string): Response {
+  const response = notFound(hint);
+  response.headers.set("cache-control", "public, max-age=300");
+  return response;
+}
+
 type RouteHandler = (ctx: AppContext, app: PlumixApp) => Promise<Response>;
 // Maps a path to its handler accessor on the lazily-loaded module, so the map
 // itself pulls no handler code into the eager graph — only the matching paths.
@@ -232,7 +242,13 @@ function stripBasePathOrReject(
   if (app.basePath === "") return ctx;
   const rawUrl = new URL(ctx.request.url);
   const stripped = stripBasePath(rawUrl.pathname, app.basePath);
-  if (stripped === null) return notFound("outside-base-path");
+  if (stripped === null) {
+    // Asset-shaped misses (chiefly the browser's root favicon probe, which
+    // targets the domain root, not the mount) get the cacheable 404 (#1514).
+    return STATIC_ASSET_EXT.test(rawUrl.pathname)
+      ? cacheableAssetNotFound("outside-base-path")
+      : notFound("outside-base-path");
+  }
   rawUrl.pathname = stripped;
   return { ...ctx, request: new Request(rawUrl, ctx.request) };
 }
@@ -468,13 +484,7 @@ async function tryPublicRoutes(
   // themed render. The SEO assets above (robots.txt, sitemap*.xml) have
   // already had their chance.
   if (STATIC_ASSET_EXT.test(pathname)) {
-    // Cacheable because the extension check makes the path permanently
-    // unroutable — a short TTL only bounds "a deploy added this asset". The
-    // edge cache stores GET+200 only, so this reaches browsers/CDNs, not the
-    // shared read-through layer.
-    const response = notFound("static-asset");
-    response.headers.set("cache-control", "public, max-age=300");
-    return response;
+    return cacheableAssetNotFound("static-asset");
   }
 
   // Normalize a public page URL to its canonical (slash-less) shape before
