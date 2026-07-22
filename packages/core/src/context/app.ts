@@ -41,6 +41,7 @@ import { resolveLocale } from "../i18n/resolve-locale.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
 import { NOOP_TELEMETRY } from "./telemetry.js";
+import { createTracedFetch } from "./traced-fetch.js";
 
 const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
@@ -152,6 +153,15 @@ export interface AppContextBase<
    * (so call sites are safe and a site with no consumers pays nothing).
    */
   readonly telemetry: TelemetryCollector;
+  /**
+   * Traced outbound HTTP — same signature as global `fetch`, one telemetry
+   * span per call with method, URL, and response status. Core and plugins
+   * make external calls through this so a slow third-party API shows up in
+   * the request waterfall. Bare global `fetch` is an untraced platform
+   * boundary (the same line drawn for DB connections not obtained from
+   * `ctx.db`) — nothing is patched globally.
+   */
+  readonly fetch: typeof globalThis.fetch;
   /**
    * Consumers whose head-sampling vote said yes for this request — the
    * targets of post-response snapshot delivery. Absent when nothing sampled
@@ -439,6 +449,9 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     // votes to sample this request. Consumers see the assembled context when
     // voting, so `telemetry` must exist (inactive) before the vote runs.
     telemetry: NOOP_TELEMETRY,
+    // Reads `base.telemetry` per call, so the post-vote collector swap below
+    // is observed without rebinding.
+    fetch: createTracedFetch(() => base.telemetry),
     siteName: args.siteName,
   };
   // Spread plugin-contributed entries onto the base. The cast is the
