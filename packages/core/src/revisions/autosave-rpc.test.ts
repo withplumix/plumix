@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 
+import type { MetaBoxField } from "../plugin/manifest.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
+import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { createRpcHarness } from "../test/rpc.js";
 
 function registryWithAutosave() {
@@ -28,19 +30,34 @@ function registryWithoutAutosave() {
   return plugins;
 }
 
-async function publishedPostFixture(): Promise<
-  Awaited<ReturnType<typeof createRpcHarness>> & { entryId: number }
-> {
-  const h = await createRpcHarness({
-    authAs: "editor",
-    plugins: registryWithAutosave(),
+function registryWithMetaField(field: MetaBoxField) {
+  const plugins = registryWithAutosave();
+  plugins.entryMetaBoxes.set("test-box", {
+    id: "test-box",
+    label: "Test box",
+    entryTypes: ["post"],
+    fields: [field],
+    registeredBy: "test",
   });
+  return plugins;
+}
+
+async function publishedPostFixture(plugins = registryWithAutosave()): Promise<
+  Awaited<ReturnType<typeof createRpcHarness>> & {
+    entryId: number;
+    liveUpdatedAt: Date;
+  }
+> {
+  const h = await createRpcHarness({ authAs: "editor", plugins });
   const created = await h.client.entry.create({
     title: "Live",
     slug: "live",
     status: "published",
   });
-  return Object.assign(h, { entryId: created.id });
+  return Object.assign(h, {
+    entryId: created.id,
+    liveUpdatedAt: created.updatedAt,
+  });
 }
 
 describe("entry.update saveAs", () => {
@@ -127,6 +144,100 @@ describe("entry.update saveAs", () => {
     ).rejects.toMatchObject({
       code: "BAD_REQUEST",
       data: { reason: "autosave_requires_published" },
+    });
+  });
+
+  test("autosave write runs field sanitizers so publish promotes the sanitized value", async () => {
+    const h = await publishedPostFixture(
+      registryWithMetaField({
+        key: "accent_color",
+        label: "Accent color",
+        type: "string",
+        inputType: "text",
+        sanitize: (value) => String(value).toLowerCase(),
+      }),
+    );
+    const autosave = await h.client.entry.update({
+      id: h.entryId,
+      meta: { accent_color: "#FFA500" },
+    });
+    expect(autosave.type).toBe("autosave");
+    expect(autosave.meta.accent_color).toBe("#ffa500");
+    const promoted = await h.client.entry.publish({
+      id: h.entryId,
+      expectedLiveUpdatedAt: h.liveUpdatedAt,
+    });
+    expect(promoted.meta.accent_color).toBe("#ffa500");
+  });
+
+  test("null meta value on autosave deletes the key from the promoted live row (not a literal null)", async () => {
+    const h = await publishedPostFixture(
+      registryWithMetaField({
+        key: "accent_color",
+        label: "Accent color",
+        type: "string",
+        inputType: "text",
+      }),
+    );
+    await h.client.entry.update({
+      id: h.entryId,
+      meta: { accent_color: "#abc" },
+      saveAs: "live",
+    });
+    const live = await h.client.entry.get({ id: h.entryId });
+    expect(live.meta.accent_color).toBe("#abc");
+    const autosave = await h.client.entry.update({
+      id: h.entryId,
+      meta: { accent_color: null },
+    });
+    expect(autosave.type).toBe("autosave");
+    expect("accent_color" in autosave.meta).toBe(false);
+    const promoted = await h.client.entry.publish({
+      id: h.entryId,
+      expectedLiveUpdatedAt: live.updatedAt,
+    });
+    expect("accent_color" in promoted.meta).toBe(false);
+  });
+
+  test("autosave write rejects a capability-gated meta field with FORBIDDEN", async () => {
+    const h = await publishedPostFixture(
+      registryWithMetaField({
+        key: "private_note",
+        label: "Private note",
+        type: "string",
+        inputType: "text",
+        capability: "view_private_notes",
+      }),
+    );
+    await expect(
+      h.client.entry.update({
+        id: h.entryId,
+        meta: { private_note: "leaked" },
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "view_private_notes" },
+    });
+  });
+
+  test("autosave write rejects a dangling reference id with CONFLICT", async () => {
+    const plugins = registryWithMetaField({
+      key: "owner",
+      label: "Owner",
+      type: "string",
+      inputType: "user",
+      referenceTarget: { kind: "user" },
+    });
+    registerCoreLookupAdapters(plugins);
+    const h = await publishedPostFixture(plugins);
+    await expect(
+      h.client.entry.update({
+        id: h.entryId,
+        meta: { owner: "999999" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value", key: "owner" },
     });
   });
 
