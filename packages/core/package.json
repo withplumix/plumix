@@ -68,6 +68,10 @@
     "./slugify": {
       "types": "./dist/slugify.d.ts",
       "default": "./dist/slugify.js"
+    },
+    "./telemetry-otel": {
+      "types": "./dist/telemetry-otel.d.ts",
+      "default": "./dist/telemetry-otel.js"
     }
   },
   "files": [
