@@ -11,6 +11,7 @@ import {
   isEmptyMetaPatch,
   loadMeta,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
+  sanitizeRegisteredMetaBag,
   validateMetaReferencesForRpc,
 } from "../../meta/core.js";
 
@@ -115,6 +116,23 @@ export async function sanitizeAndValidateEntryMeta(
   assertEntryMetaCapabilities(ctx.plugins, entryType, patch, ctx.auth, errors);
   await validateEntryMetaReferences(ctx, entryType, patch, errors);
   return patch;
+}
+
+/**
+ * Re-sanitize a stored entry-meta bag before `entry.publish` promotes it
+ * onto the live row — the permanent second gate for autosaves persisted
+ * before the write-time sanitizer (#1533) existed. See
+ * {@link sanitizeRegisteredMetaBag}.
+ */
+export async function sanitizePromotedEntryMeta(
+  ctx: AppContext,
+  entryType: string,
+  bag: Readonly<Record<string, unknown>>,
+): Promise<Record<string, unknown>> {
+  return sanitizeRegisteredMetaBag(
+    (key) => findEntryMetaField(ctx.plugins, entryType, key),
+    bag,
+  );
 }
 
 /**
