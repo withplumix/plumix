@@ -333,10 +333,13 @@ describe("MetaBoxField dispatcher", () => {
     ).toHaveTextContent("2 / 2");
   });
 
-  test("single reference: a hydrated object value reads as its id", () => {
+  test("single reference: a hydrated object value prefills its label without a lookup round-trip", () => {
     // Read responses hydrate reference meta (#1507) — the picker
     // extracts the id so the selection doesn't render empty (and a
-    // subsequent save doesn't clear the field).
+    // subsequent save doesn't clear the field). The hydrated summary
+    // also prefills the visible label: this harness wires no fetcher,
+    // so the label can only come from the hydrated value, not a
+    // `lookup.resolve` call.
     renderWithI18n(
       <Harness
         fieldDef={field({
@@ -347,6 +350,13 @@ describe("MetaBoxField dispatcher", () => {
         initial={{ id: "42", name: "Eva", slug: "eva", avatarUrl: null }}
       />,
     );
+    // Prefilled selection: label paints, no resolving skeleton.
+    expect(
+      screen.getByTestId("meta-box-field-k-input-selected"),
+    ).toHaveTextContent("Eva");
+    expect(
+      screen.queryByTestId("meta-box-field-k-input-resolving"),
+    ).not.toBeInTheDocument();
     // Required + populated → no Clear button, same as initial="42".
     expect(
       screen.queryByTestId("meta-box-field-k-input-clear"),
@@ -356,7 +366,30 @@ describe("MetaBoxField dispatcher", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("multi reference: hydrated object values read as their ids", () => {
+  test("single reference: a hydrated value with no label falls through to the resolve", () => {
+    // A null name/title means the lookup RPC has a richer fallback (a
+    // user's email, an entry's untitled chrome) the public summary
+    // omits — so we must NOT short-circuit it. With no fetcher wired,
+    // that shows up as the resolving skeleton rather than a prefilled
+    // (and misleading "Untitled") chip.
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "user",
+          referenceTarget: { kind: "user" },
+        })}
+        initial={{ id: "42", name: null, slug: "eva", avatarUrl: null }}
+      />,
+    );
+    expect(
+      screen.getByTestId("meta-box-field-k-input-resolving"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("meta-box-field-k-input-selected"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("multi reference: hydrated object values prefill labels without a lookup round-trip", () => {
     renderWithI18n(
       <Harness
         fieldDef={field({
@@ -366,11 +399,19 @@ describe("MetaBoxField dispatcher", () => {
           max: 2,
         })}
         initial={[
-          { id: "1", name: "A", slug: "a", avatarUrl: null },
-          { id: "2", name: "B", slug: "b", avatarUrl: null },
+          { id: "1", name: "Ada", slug: "ada", avatarUrl: null },
+          { id: "2", name: "Bo", slug: "bo", avatarUrl: null },
         ]}
       />,
     );
+    // Harness wires no fetcher — the labels can only come from the
+    // hydrated values, and no row shows a resolving skeleton.
+    const picker = screen.getByTestId("meta-box-field-k-input");
+    expect(picker).toHaveTextContent("Ada");
+    expect(picker).toHaveTextContent("Bo");
+    expect(
+      screen.queryByTestId("meta-box-field-k-input-resolving-1"),
+    ).not.toBeInTheDocument();
     const addBtn = screen.getByTestId("meta-box-field-k-input-add");
     expect(addBtn).toBeDisabled();
     expect(

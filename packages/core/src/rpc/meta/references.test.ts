@@ -155,6 +155,22 @@ describe("hydrateMetaReferences", () => {
     expect(hydrated.owner).toBeNull();
   });
 
+  test('.returns("id") fields keep the bare stored id — no hydration, no orphan-strip', async () => {
+    // The opt-out skips the read-time join entirely: a live id passes
+    // through unresolved, and even a dead id survives (no orphan check).
+    const { findField, registry } = registryWithUserRef({ returns: "id" });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const target = await adminUser.transient({ db: h.context.db }).create();
+    expect(
+      await hydrateMetaReferences(h.context, findField, {
+        owner: String(target.id),
+      }),
+    ).toEqual({ owner: String(target.id) });
+    expect(
+      await hydrateMetaReferences(h.context, findField, { owner: "999999" }),
+    ).toEqual({ owner: "999999" });
+  });
+
   test("nulls out values that exist but fail scope", async () => {
     const { findField, registry } = registryWithUserRef({
       referenceTarget: { kind: "user", scope: { roles: ["admin"] } },

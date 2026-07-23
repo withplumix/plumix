@@ -642,6 +642,14 @@ interface ReferenceOccurrence {
   readonly value: unknown;
 }
 
+// A reference field authored with `.returns("id")` reads the bare
+// stored id — the hydration walk skips it so no lookup query runs and
+// the id survives untouched. `"returns" in field` narrows to the field
+// variants that carry the flag (temporal's `"date"` never matches).
+function readsRawReferenceId(field: MetaBoxField | undefined): boolean {
+  return field !== undefined && "returns" in field && field.returns === "id";
+}
+
 /**
  * Yield every reference-field occurrence in a decoded meta bag: top-level
  * reference fields, plus references nested inside repeater rows and
@@ -668,7 +676,9 @@ function* fieldOccurrences(
 ): Generator<ReferenceOccurrence> {
   const target = referenceTargetOf(field);
   if (target) {
-    yield { path, target, value };
+    // `.returns("id")` opts out of the hydration join at any depth —
+    // leave the stored id(s) untouched (no resolve, no orphan-strip).
+    if (!readsRawReferenceId(field)) yield { path, target, value };
     return;
   }
   if (isRepeaterField(field)) {

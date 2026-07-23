@@ -1,5 +1,10 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type {
+  EntryReferenceSummary,
+  TermReferenceSummary,
+  UserReferenceSummary,
+} from "../lookup.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { definePlugin } from "../define.js";
 import { buildManifest } from "../manifest.js";
@@ -10,7 +15,6 @@ import {
   datetime,
   email,
   entry,
-  entryList,
   group,
   json,
   number,
@@ -19,14 +23,12 @@ import {
   richtext,
   select,
   term,
-  termList,
   text,
   textarea,
   time,
   toggle,
   url,
   user,
-  userList,
 } from "./index.js";
 
 // One combined suite for the per-variant builder guarantees. The
@@ -35,7 +37,7 @@ import {
 // reference), and the choice builders in `select.test.ts` /
 // `toggle.test.ts`; these tests focus on what each variant adds —
 // per-type option chains, injected sanitizers, `.returns("date")`,
-// and the reference factories still taking flat options.
+// and the reference builders' scope / cardinality / hydration typing.
 
 describe("number() builder", () => {
   test("chains min/max/step/default into a number definition", () => {
@@ -356,45 +358,42 @@ describe("manifest round-trip across all built-in builders", () => {
 
 describe("user() builder", () => {
   test("pins inputType + type and emits a user-kind referenceTarget", () => {
-    const field = user({
-      key: "owner",
-      label: "Owner",
-      roles: ["editor", "admin"],
-    });
+    const field = user("owner")
+      .label("Owner")
+      .roles(["editor", "admin"])
+      .build();
     expect(field.inputType).toBe("user");
     expect(field.type).toBe("string");
+    expect(field.label).toBe("Owner");
     expect(field.referenceTarget).toEqual({
       kind: "user",
-      scope: { roles: ["editor", "admin"], includeDisabled: undefined },
+      scope: { roles: ["editor", "admin"] },
     });
   });
 
-  test("packages includeDisabled into the scope", () => {
-    const field = user({
-      key: "owner",
-      label: "Owner",
-      includeDisabled: true,
-    });
-    expect(field.referenceTarget.scope).toEqual({
-      roles: undefined,
-      includeDisabled: true,
+  test("derives the label from the key and chains includeDisabled into scope", () => {
+    const field = user("siteOwner").includeDisabled().build();
+    expect(field.label).toBe("Site owner");
+    expect(field.referenceTarget.scope).toEqual({ includeDisabled: true });
+  });
+
+  test(".multiple() flips to a json array target with an optional max", () => {
+    const field = user("owners").roles(["admin"]).multiple().max(5).build();
+    expect(field.inputType).toBe("userList");
+    expect(field.type).toBe("json");
+    expect(field.max).toBe(5);
+    expect(field.referenceTarget).toEqual({
+      kind: "user",
+      scope: { roles: ["admin"] },
+      multiple: true,
     });
   });
 
-  test("rejects non-applicable options at the type level", () => {
-    user({
-      key: "u",
-      label: "u",
-      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
-      placeholder: "pick",
-    });
-
-    user({
-      key: "u",
-      label: "u",
-      // @ts-expect-error — `options` belongs to select/radio.
-      options: [{ value: "a", label: "A" }],
-    });
+  test("rejects non-applicable chains at the type level", () => {
+    // `placeholder` is text-shaped; `options` belongs to select/radio.
+    // (`.max()` / `.contains()` exist but are `this`-gated to multi.)
+    expectTypeOf(user("u")).not.toHaveProperty("placeholder");
+    expectTypeOf(user("u")).not.toHaveProperty("options");
   });
 
   test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
@@ -402,7 +401,7 @@ describe("user() builder", () => {
     const plugin = definePlugin("test", (ctx) => {
       ctx.registerSettingsGroup("identity", {
         label: "Site identity",
-        fields: [user({ key: "owner", label: "Owner", roles: ["admin"] })],
+        fields: [user("owner").label("Owner").roles(["admin"])],
       });
     });
 
@@ -422,49 +421,43 @@ describe("user() builder", () => {
 });
 
 describe("entry() builder", () => {
-  test("pins inputType + type and emits an entry-kind referenceTarget", () => {
-    const field = entry({
-      key: "related",
-      label: "Related post",
-      entryTypes: ["post"],
-    });
+  test("takes the entry-type scope in the constructor and emits an entry-kind referenceTarget", () => {
+    const field = entry("related", ["post"]).label("Related post").build();
     expect(field.inputType).toBe("entry");
     expect(field.type).toBe("string");
     expect(field.referenceTarget).toEqual({
       kind: "entry",
-      scope: { entryTypes: ["post"], includeTrashed: undefined },
+      scope: { entryTypes: ["post"] },
     });
   });
 
-  test("packages includeTrashed into the scope", () => {
-    const field = entry({
-      key: "related",
-      label: "Related post",
-      entryTypes: ["post"],
-      includeTrashed: true,
-    });
+  test("chains includeTrashed / status into the scope", () => {
+    const field = entry("related", ["post"])
+      .includeTrashed()
+      .status("published")
+      .build();
     expect(field.referenceTarget.scope).toEqual({
       entryTypes: ["post"],
       includeTrashed: true,
+      status: "published",
     });
   });
 
-  test("rejects non-applicable options at the type level", () => {
-    entry({
-      key: "e",
-      label: "e",
-      entryTypes: ["post"],
-      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
-      placeholder: "pick",
+  test(".multiple() flips to a json array target with an optional max", () => {
+    const field = entry("related", ["post"]).multiple().max(4).build();
+    expect(field.inputType).toBe("entryList");
+    expect(field.type).toBe("json");
+    expect(field.max).toBe(4);
+    expect(field.referenceTarget).toEqual({
+      kind: "entry",
+      scope: { entryTypes: ["post"] },
+      multiple: true,
     });
+  });
 
-    entry({
-      key: "e",
-      label: "e",
-      entryTypes: ["post"],
-      // @ts-expect-error — `options` belongs to select/radio.
-      options: [{ value: "a", label: "A" }],
-    });
+  test("rejects non-applicable chains at the type level", () => {
+    expectTypeOf(entry("e", ["post"])).not.toHaveProperty("placeholder");
+    expectTypeOf(entry("e", ["post"])).not.toHaveProperty("options");
   });
 
   test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
@@ -472,13 +465,7 @@ describe("entry() builder", () => {
     const plugin = definePlugin("test", (ctx) => {
       ctx.registerSettingsGroup("blog", {
         label: "Blog",
-        fields: [
-          entry({
-            key: "homepage",
-            label: "Homepage",
-            entryTypes: ["page"],
-          }),
-        ],
+        fields: [entry("homepage", ["page"]).label("Homepage")],
       });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -493,12 +480,10 @@ describe("entry() builder", () => {
 });
 
 describe("term() builder", () => {
-  test("pins inputType + type and emits a term-kind referenceTarget", () => {
-    const field = term({
-      key: "primary",
-      label: "Primary category",
-      termTaxonomies: ["category"],
-    });
+  test("takes the taxonomy scope in the constructor and emits a term-kind referenceTarget", () => {
+    const field = term("primary", ["category"])
+      .label("Primary category")
+      .build();
     expect(field.inputType).toBe("term");
     expect(field.type).toBe("string");
     expect(field.referenceTarget).toEqual({
@@ -507,14 +492,21 @@ describe("term() builder", () => {
     });
   });
 
-  test("rejects non-applicable options at the type level", () => {
-    term({
-      key: "t",
-      label: "t",
-      termTaxonomies: ["category"],
-      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
-      placeholder: "pick",
+  test(".multiple() flips to a json array target with an optional max", () => {
+    const field = term("tags", ["tag", "category"]).multiple().build();
+    expect(field.inputType).toBe("termList");
+    expect(field.type).toBe("json");
+    expect(field.max).toBeUndefined();
+    expect(field.referenceTarget).toEqual({
+      kind: "term",
+      scope: { termTaxonomies: ["tag", "category"] },
+      multiple: true,
     });
+  });
+
+  test("rejects non-applicable chains at the type level", () => {
+    expectTypeOf(term("t", ["category"])).not.toHaveProperty("placeholder");
+    expectTypeOf(term("t", ["category"])).not.toHaveProperty("options");
   });
 
   test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
@@ -522,13 +514,7 @@ describe("term() builder", () => {
     const plugin = definePlugin("test", (ctx) => {
       ctx.registerSettingsGroup("classification", {
         label: "Classification",
-        fields: [
-          term({
-            key: "section",
-            label: "Section",
-            termTaxonomies: ["category"],
-          }),
-        ],
+        fields: [term("section", ["category"]).label("Section")],
       });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -545,241 +531,78 @@ describe("term() builder", () => {
   });
 });
 
-describe("userList() builder", () => {
-  test("pins inputType + json type and emits a multi user-kind referenceTarget", () => {
-    const field = userList({
-      key: "owners",
-      label: "Owners",
-      roles: ["editor", "admin"],
-      max: 5,
-    });
-    expect(field.inputType).toBe("userList");
-    expect(field.type).toBe("json");
-    expect(field.max).toBe(5);
-    expect(field.referenceTarget).toEqual({
-      kind: "user",
-      scope: { roles: ["editor", "admin"], includeDisabled: undefined },
-      multiple: true,
-    });
+describe("reference builder phantom typing", () => {
+  test("keys are the literal key argument", () => {
+    const _u = user("owner");
+    expectTypeOf<(typeof _u)["_key"]>().toEqualTypeOf<"owner">();
+    const _e = entry("related", ["post"]);
+    expectTypeOf<(typeof _e)["_key"]>().toEqualTypeOf<"related">();
+    const _t = term("primary", ["category"]);
+    expectTypeOf<(typeof _t)["_key"]>().toEqualTypeOf<"primary">();
   });
 
-  test("packages includeDisabled into the scope and supports unbounded max", () => {
-    const field = userList({
-      key: "owners",
-      label: "Owners",
-      includeDisabled: true,
-    });
-    expect(field.max).toBeUndefined();
-    expect(field.referenceTarget.scope).toEqual({
-      roles: undefined,
-      includeDisabled: true,
-    });
+  test("single reads default to the hydrated summary and stay optional even under .required()", () => {
+    const _u = user("owner");
+    expectTypeOf<(typeof _u)["_value"]>().toEqualTypeOf<
+      UserReferenceSummary | undefined
+    >();
+    // A single reference orphans, so the read stays `| undefined`.
+    const _required = user("owner").required();
+    expectTypeOf<(typeof _required)["_value"]>().toEqualTypeOf<
+      UserReferenceSummary | undefined
+    >();
+    // But `.required()` narrows the stored (whereMeta) shape.
+    expectTypeOf<(typeof _u)["_stored"]>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<(typeof _required)["_stored"]>().toEqualTypeOf<string>();
+
+    const _e = entry("related", ["post"]);
+    expectTypeOf<(typeof _e)["_value"]>().toEqualTypeOf<
+      EntryReferenceSummary | undefined
+    >();
+    const _t = term("primary", ["category"]);
+    expectTypeOf<(typeof _t)["_value"]>().toEqualTypeOf<
+      TermReferenceSummary | undefined
+    >();
   });
 
-  test("rejects non-applicable options at the type level", () => {
-    userList({
-      key: "u",
-      label: "u",
-      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
-      placeholder: "pick",
-    });
-
-    userList({
-      key: "u",
-      label: "u",
-      // @ts-expect-error — `options` belongs to select/radio.
-      options: [{ value: "a", label: "A" }],
-    });
+  test('.returns("id") swaps the hydrated read for the bare id, storage unchanged', () => {
+    const _id = entry("related", ["post"]).returns("id");
+    expectTypeOf<(typeof _id)["_value"]>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<(typeof _id)["_stored"]>().toEqualTypeOf<string | undefined>();
   });
 
-  test("manifest round-trip preserves multi referenceTarget + max on the wire shape", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("identity", {
-        label: "Site identity",
-        fields: [
-          userList({
-            key: "owners",
-            label: "Owners",
-            roles: ["admin"],
-            max: 3,
-          }),
-        ],
-      });
-    });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    const manifest = buildManifest(registry);
-    expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
-      key: "owners",
-      inputType: "userList",
-      type: "json",
-      max: 3,
-      referenceTarget: {
-        kind: "user",
-        scope: { roles: ["admin"] },
-        multiple: true,
-      },
-    });
-  });
-});
+  test(".multiple() reads a dense hydrated array; .required() drops the array's optionality", () => {
+    const _multi = entry("related", ["post"]).multiple();
+    expectTypeOf<(typeof _multi)["_value"]>().toEqualTypeOf<
+      readonly EntryReferenceSummary[] | undefined
+    >();
+    expectTypeOf<(typeof _multi)["_stored"]>().toEqualTypeOf<
+      readonly string[] | undefined
+    >();
 
-describe("entryList() builder", () => {
-  test("pins inputType + json type and emits a multi entry-kind referenceTarget", () => {
-    const field = entryList({
-      key: "related",
-      label: "Related",
-      entryTypes: ["post"],
-      max: 5,
-    });
-    expect(field.inputType).toBe("entryList");
-    expect(field.type).toBe("json");
-    expect(field.max).toBe(5);
-    expect(field.referenceTarget).toEqual({
-      kind: "entry",
-      scope: { entryTypes: ["post"], includeTrashed: undefined },
-      multiple: true,
-    });
+    const _requiredMulti = entry("related", ["post"]).multiple().required();
+    expectTypeOf<(typeof _requiredMulti)["_value"]>().toEqualTypeOf<
+      readonly EntryReferenceSummary[]
+    >();
+    expectTypeOf<(typeof _requiredMulti)["_stored"]>().toEqualTypeOf<
+      readonly string[]
+    >();
+
+    const _idMulti = entry("related", ["post"]).multiple().returns("id");
+    expectTypeOf<(typeof _idMulti)["_value"]>().toEqualTypeOf<
+      readonly string[] | undefined
+    >();
   });
 
-  test("packages includeTrashed into the scope and supports unbounded max", () => {
-    const field = entryList({
-      key: "related",
-      label: "Related",
-      entryTypes: ["post", "page"],
-      includeTrashed: true,
-    });
-    expect(field.max).toBeUndefined();
-    expect(field.referenceTarget.scope).toEqual({
-      entryTypes: ["post", "page"],
-      includeTrashed: true,
-    });
-  });
-
-  test("rejects non-applicable options at the type level", () => {
-    entryList({
-      key: "x",
-      label: "x",
-      entryTypes: ["post"],
-      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
-      placeholder: "pick",
-    });
-
-    entryList({
-      key: "x",
-      label: "x",
-      entryTypes: ["post"],
-      // @ts-expect-error — `options` belongs to select/radio.
-      options: [{ value: "a", label: "A" }],
-    });
-  });
-
-  test("manifest round-trip preserves multi referenceTarget + max on the wire shape", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("blog", {
-        label: "Blog",
-        fields: [
-          entryList({
-            key: "related",
-            label: "Related",
-            entryTypes: ["post"],
-            max: 4,
-          }),
-        ],
-      });
-    });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    const manifest = buildManifest(registry);
-    expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
-      key: "related",
-      inputType: "entryList",
-      type: "json",
-      max: 4,
-      referenceTarget: {
-        kind: "entry",
-        scope: { entryTypes: ["post"] },
-        multiple: true,
-      },
-    });
-  });
-});
-
-describe("termList() builder", () => {
-  test("pins inputType + json type and emits a multi term-kind referenceTarget", () => {
-    const field = termList({
-      key: "tags",
-      label: "Tags",
-      termTaxonomies: ["tag"],
-      max: 10,
-    });
-    expect(field.inputType).toBe("termList");
-    expect(field.type).toBe("json");
-    expect(field.max).toBe(10);
-    expect(field.referenceTarget).toEqual({
-      kind: "term",
-      scope: { termTaxonomies: ["tag"] },
-      multiple: true,
-    });
-  });
-
-  test("supports unbounded max", () => {
-    const field = termList({
-      key: "tags",
-      label: "Tags",
-      termTaxonomies: ["tag", "category"],
-    });
-    expect(field.max).toBeUndefined();
-    expect(field.referenceTarget.scope).toEqual({
-      termTaxonomies: ["tag", "category"],
-    });
-  });
-
-  test("rejects non-applicable options at the type level", () => {
-    termList({
-      key: "x",
-      label: "x",
-      termTaxonomies: ["tag"],
-      // @ts-expect-error — `placeholder` doesn't apply to a reference field.
-      placeholder: "pick",
-    });
-
-    termList({
-      key: "x",
-      label: "x",
-      termTaxonomies: ["tag"],
-      // @ts-expect-error — `options` belongs to select/radio.
-      options: [{ value: "a", label: "A" }],
-    });
-  });
-
-  test("manifest round-trip preserves multi referenceTarget + max on the wire shape", async () => {
-    const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("blog", {
-        label: "Blog",
-        fields: [
-          termList({
-            key: "tags",
-            label: "Tags",
-            termTaxonomies: ["tag"],
-            max: 6,
-          }),
-        ],
-      });
-    });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    const manifest = buildManifest(registry);
-    expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
-      key: "tags",
-      inputType: "termList",
-      type: "json",
-      max: 6,
-      referenceTarget: {
-        kind: "term",
-        scope: { termTaxonomies: ["tag"] },
-        multiple: true,
-      },
-    });
+  test("order-independent: .required() before or after .multiple() lands the same", () => {
+    const _a = user("owners").multiple().required();
+    const _b = user("owners").multiple().max(3);
+    expectTypeOf<(typeof _a)["_value"]>().toEqualTypeOf<
+      readonly UserReferenceSummary[]
+    >();
+    expectTypeOf<(typeof _b)["_value"]>().toEqualTypeOf<
+      readonly UserReferenceSummary[] | undefined
+    >();
   });
 });
 

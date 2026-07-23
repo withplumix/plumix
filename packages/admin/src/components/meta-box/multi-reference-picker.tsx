@@ -19,6 +19,8 @@ import {
 import { Skeleton } from "@plumix/admin-ui/skeleton";
 import { SortableList } from "@plumix/admin-ui/sortable";
 
+import type { LookupItem } from "./reference-picker.js";
+
 // Multi-value counterpart to `ReferencePicker`. Shares the same
 // `kind` / `scope` dispatch shape — same lookup RPC, same adapter
 // — but the UX is different: selected rows render as a sortable
@@ -84,6 +86,13 @@ interface MultiReferencePickerProps {
   readonly required?: boolean;
   readonly label: string;
   readonly testId: string;
+  /**
+   * Read-time-hydrated summaries for the initial `value` (reference
+   * reads hydrate by default, #1507). When every selected id is
+   * covered, the labels paint on first render and the batch
+   * `lookup.list` resolve is skipped entirely.
+   */
+  readonly initialSelected?: readonly LookupItem[];
 }
 
 export function MultiReferencePicker({
@@ -96,6 +105,7 @@ export function MultiReferencePicker({
   required = false,
   label,
   testId,
+  initialSelected = [],
 }: MultiReferencePickerProps): ReactNode {
   const { i18n } = useLingui();
   const labelFn = useLabel();
@@ -103,32 +113,37 @@ export function MultiReferencePicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  // Single batch round-trip to resolve every selected ID. The
-  // adapter's `list` honours the `ids` filter and returns one row
-  // per live target — orphans simply don't come back. We map by id
-  // below so the sortable list still iterates `value` in order.
-  // `limit` is omitted: the adapter sizes the result to the parsed-id
-  // count for the `ids` path. Spread to drop `readonly` — the wire
-  // schema produces a mutable `string[]` and TS won't narrow.
+  // Labels handed over already-hydrated by the read. When they cover
+  // every selected id, the resolve round-trip is unnecessary.
+  const prefillById = useMemo(() => {
+    const map = new Map<string, LookupItem>();
+    for (const row of initialSelected) map.set(row.id, row);
+    return map;
+  }, [initialSelected]);
+  const allPrefilled =
+    value.length > 0 && value.every((id) => prefillById.has(id));
+
+  // Single batch round-trip to resolve every selected ID that the
+  // hydrated prefill didn't cover (a freshly-picked id, a
+  // `.returns("id")` opt-out). The adapter's `list` honours the `ids`
+  // filter and returns one row per live target — orphans simply don't
+  // come back. We map by id below so the sortable list still iterates
+  // `value` in order. `limit` is omitted: the adapter sizes the result
+  // to the parsed-id count for the `ids` path. Spread to drop
+  // `readonly` — the wire schema produces a mutable `string[]`.
   const resolveQuery = useQuery({
     ...orpc.lookup.list.queryOptions({
       input: { kind, scope, ids: [...value] },
     }),
-    enabled: value.length > 0,
+    enabled: value.length > 0 && !allPrefilled,
   });
   const resolvedById = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        id: string;
-        label: string | null;
-        targetType?: string;
-        subtitle?: string;
-      }
-    >();
+    const map = new Map<string, LookupItem>();
+    // Hydrated prefill first; a live resolve (when one ran) overrides.
+    for (const row of prefillById.values()) map.set(row.id, row);
     for (const row of resolveQuery.data?.items ?? []) map.set(row.id, row);
     return map;
-  }, [resolveQuery.data]);
+  }, [prefillById, resolveQuery.data]);
 
   const listQuery = useQuery({
     ...orpc.lookup.list.queryOptions({
