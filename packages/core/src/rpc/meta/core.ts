@@ -3,7 +3,10 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 import type { AppContext } from "../../context/app.js";
-import type { LookupAdapter } from "../../plugin/lookup.js";
+import type {
+  LookupAdapter,
+  ReferenceHydrationShapes,
+} from "../../plugin/lookup.js";
 import type {
   MetaBoxField,
   MetaScalarType,
@@ -13,6 +16,7 @@ import type {
   TemporalMetaBoxField,
 } from "../../plugin/manifest.js";
 import type { MetaFieldError } from "./field-pipeline.js";
+import { accumulateEmbeddedTags } from "../../cache/embedded-tags.js";
 import { eq } from "../../db/index.js";
 import { isConditionHidden } from "../../plugin/fields/condition.js";
 import { anchorTemporalUtc } from "../../plugin/manifest.js";
@@ -772,6 +776,46 @@ export async function hydrateMetaBags(
   return out;
 }
 
+/**
+ * Batched, tag-accounted hydration of a raw id set for one reference kind
+ * — the theme-facing counterpart to the meta pipeline's hydration (#1508).
+ * A theme holding an id-only reference field (a field declared
+ * `.returns("id")`, or one contributed by a third-party plugin) resolves
+ * it here instead of hand-rolled per-item fetches: ids resolve through the
+ * adapter's batched `hydrate` (chunked, one in-query per chunk) and every
+ * resolved entity folds its cache tag into the page through the same
+ * accumulator the meta pipeline uses, so the page is purged when an
+ * embedded entity changes.
+ *
+ * Returns the hydrated payloads dense and in the requested id order — ids
+ * that are gone or out of scope are dropped, mirroring multi-reference
+ * field hydration. An unregistered kind, an adapter without the `hydrate`
+ * contract, or an empty id set yields `[]`.
+ */
+export async function hydrateReferences<
+  K extends keyof ReferenceHydrationShapes,
+>(
+  ctx: AppContext,
+  kind: K,
+  ids: readonly string[],
+  options: { readonly scope?: unknown } = {},
+): Promise<ReferenceHydrationShapes[K][]> {
+  const registered = ctx.plugins.lookupAdapters.get(kind);
+  if (!registered?.adapter.hydrate) return [];
+  const unique = new Set(ids.filter((id) => id !== ""));
+  if (unique.size === 0) return [];
+  const resolution = await resolveGroup(
+    ctx,
+    registered.adapter,
+    options.scope,
+    unique,
+  );
+  if (resolution.kind !== "hydrated") return [];
+  return ids
+    .map((id) => resolution.byId.get(id))
+    .filter((p): p is ReferenceHydrationShapes[K] => p !== undefined);
+}
+
 // Resolve one `(kind, scope)` group's aggregated ids. Chunked at
 // `HYDRATION_QUERY_ID_LIMIT` per in-query: a response-level group can
 // legitimately aggregate more ids than one query may carry (a
@@ -791,7 +835,16 @@ async function resolveGroup(
     const byId = new Map<string, unknown>();
     for (const chunk of chunkIds(idList)) {
       const payloads = await adapter.hydrate(ctx, { ids: chunk, scope });
-      for (const payload of payloads) byId.set(payload.id, payload);
+      for (const payload of payloads) {
+        byId.set(payload.id, payload);
+        // Fold this embedded entity's cache tag into the page's tags so
+        // a change to it purges the page that hydrated it (#1508). Runs
+        // on every read surface; only the public read-through reads the
+        // accumulator back, so admin/REST reads populate it harmlessly.
+        if (adapter.embeddedCacheTags) {
+          accumulateEmbeddedTags(ctx, adapter.embeddedCacheTags(payload));
+        }
+      }
     }
     return { kind: "hydrated", byId };
   }

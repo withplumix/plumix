@@ -1377,6 +1377,99 @@ describe("dispatcher — public read-through edge cache", () => {
   });
 });
 
+describe("dispatcher — embedded reference cache tags (#1508)", () => {
+  function cacheStub() {
+    const match = vi.fn(() => Promise.resolve(undefined));
+    const put = vi.fn(() => Promise.resolve());
+    const purgeTags = vi.fn(() => Promise.resolve());
+    return { cache: { match, put, purgeTags }, put };
+  }
+
+  // A blog whose posts carry a single `featured` entry-reference meta
+  // field — hydrating it during render is what feeds the accumulator.
+  const featuringBlog = definePlugin("test-featuring-blog", (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerEntryMetaBox("featuring", {
+      label: "Featuring",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "featured",
+          label: "Featured",
+          type: "string",
+          inputType: "entry",
+          referenceTarget: { kind: "entry", scope: { entryTypes: ["post"] } },
+        },
+      ],
+    });
+  });
+
+  test("a permalink embedding a referenced entry carries that entity's tag", async () => {
+    const { cache, put } = cacheStub();
+    const h = await createDispatcherHarness({
+      plugins: [featuringBlog],
+      cache,
+    });
+    const author = await h.seedUser("admin");
+    const featured = await h.factory.entry.create({
+      type: "post",
+      slug: "featured-post",
+      title: "Featured Post",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    const page = await h.factory.entry.create({
+      type: "post",
+      slug: "host-post",
+      title: "Host Post",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+      meta: { featured: String(featured.id) },
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/host-post"),
+    );
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    expect(put).toHaveBeenCalledOnce();
+    const tags = (put.mock.calls[0] as unknown[])[2] as readonly string[];
+    // Own route tags plus the embedded entity's tag — so editing the
+    // featured post (which enqueues `e:<id>` through the purge pipeline)
+    // busts this page.
+    expect(tags).toContain(`e:${String(featured.id)}`);
+    expect(tags).toContain(`e:${String(page.id)}`);
+    expect(tags).toContain("t:post");
+  });
+
+  test("a permalink embedding nothing is tagged exactly as before", async () => {
+    const { cache, put } = cacheStub();
+    const h = await createDispatcherHarness({
+      plugins: [featuringBlog],
+      cache,
+    });
+    const author = await h.seedUser("admin");
+    const plain = await h.factory.entry.create({
+      type: "post",
+      slug: "plain-post",
+      title: "Plain Post",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    await h.dispatch(new Request("https://cms.example/post/plain-post"));
+    await h.drainDeferred();
+
+    expect(put).toHaveBeenCalledOnce();
+    const tags = (put.mock.calls[0] as unknown[])[2] as readonly string[];
+    expect(tags).toEqual(["t:post", `e:${String(plain.id)}`]);
+  });
+});
+
 // Depth-first span-tree walk shared by the telemetry assertions.
 function flattenSpans(spans: readonly TelemetrySpan[]): TelemetrySpan[] {
   return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);
