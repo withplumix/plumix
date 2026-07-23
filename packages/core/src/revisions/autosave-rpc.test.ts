@@ -1,11 +1,14 @@
 import { describe, expect, test } from "vitest";
 
+import type { Entry } from "../db/schema/entries.js";
 import type { MetaBoxField } from "../plugin/manifest.js";
+import { eq } from "../db/index.js";
+import { entries } from "../db/schema/entries.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { createRpcHarness } from "../test/rpc.js";
-import { getAutosave } from "./repository.js";
+import { getAutosave, upsertAutosave } from "./repository.js";
 
 function registryWithAutosave() {
   const plugins = createPluginRegistry();
@@ -329,6 +332,98 @@ describe("entry.publish", () => {
       entryId: h.entryId,
     });
     expect(revisions.revisions.length).toBeGreaterThanOrEqual(1);
+  });
+
+  // The write-time gate (#1533) only canonicalizes autosaves written
+  // *after* it deployed. `upsertAutosave` stores the raw bag verbatim,
+  // so it stands in for a draft persisted *before* the gate existed —
+  // exactly the rows publish must re-sanitize.
+  async function stalePendingAutosave(
+    h: Awaited<ReturnType<typeof publishedPostFixture>>,
+    meta: Record<string, unknown>,
+  ): Promise<Entry> {
+    const live = await h.db.query.entries.findFirst({
+      where: eq(entries.id, h.entryId),
+    });
+    if (!live) throw new Error("expected a live entry fixture");
+    if (!h.user) throw new Error("expected an authenticated user");
+    await upsertAutosave(h.db, {
+      entry: live,
+      authorId: h.user.id,
+      patch: {
+        title: live.title,
+        content: live.content,
+        excerpt: live.excerpt,
+        meta,
+      },
+    });
+    return live;
+  }
+
+  test("re-sanitizes a registered meta key promoted from a pre-#1533 autosave", async () => {
+    const h = await publishedPostFixture(
+      registryWithMetaField({
+        key: "accent_color",
+        label: "Accent color",
+        type: "string",
+        inputType: "text",
+        sanitize: (value) => String(value).toLowerCase(),
+      }),
+    );
+    const live = await stalePendingAutosave(h, { accent_color: "#FFA500" });
+    const promoted = await h.client.entry.publish({
+      id: h.entryId,
+      expectedLiveUpdatedAt: live.updatedAt,
+    });
+    expect(promoted.meta.accent_color).toBe("#ffa500");
+  });
+
+  test("passes an unregistered meta key from a stale autosave through untouched", async () => {
+    const h = await publishedPostFixture(
+      registryWithMetaField({
+        key: "accent_color",
+        label: "Accent color",
+        type: "string",
+        inputType: "text",
+        sanitize: (value) => String(value).toLowerCase(),
+      }),
+    );
+    // `from_uninstalled_plugin` resolves to no field — `decodeMetaBag`
+    // preserves it and re-sanitize must not reject it as
+    // `meta_not_registered`, only canonicalize the registered sibling.
+    const live = await stalePendingAutosave(h, {
+      accent_color: "#FFA500",
+      from_uninstalled_plugin: { keep: 1 },
+    });
+    const promoted = await h.client.entry.publish({
+      id: h.entryId,
+      expectedLiveUpdatedAt: live.updatedAt,
+    });
+    expect(promoted.meta.accent_color).toBe("#ffa500");
+    expect(promoted.meta.from_uninstalled_plugin).toEqual({ keep: 1 });
+  });
+
+  test("promotes a schema-drifted registered value leniently instead of aborting the publish", async () => {
+    // The live write path already gates user intent; a value that now
+    // fails validation is schema drift or a legacy row. Re-validating the
+    // whole promoted bag must not block an unrelated publish over a field
+    // the caller never touched — so a failing value is kept, not rejected.
+    const h = await publishedPostFixture(
+      registryWithMetaField({
+        key: "rating",
+        label: "Rating",
+        type: "number",
+        inputType: "number",
+        min: 1,
+        max: 5,
+      }),
+    );
+    const live = await stalePendingAutosave(h, { rating: 99 });
+    const promoted = await h.client.entry.publish({
+      id: h.entryId,
+      expectedLiveUpdatedAt: live.updatedAt,
+    });
+    expect(promoted.meta.rating).toBe(99);
   });
 
   test("returns CONFLICT when expectedLiveUpdatedAt is stale", async () => {

@@ -220,6 +220,43 @@ export async function sanitizeMetaForRpc(
 }
 
 /**
+ * Re-canonicalize a *stored* meta bag before `entry.publish` promotes it
+ * onto the live row — a permanent second gate for drafts persisted
+ * before the write-time sanitizer existed, whose values never met a
+ * `.sanitize()`. Runs each *registered* key through its field pipeline
+ * and keeps the canonical result; passes *unregistered* keys through
+ * untouched (live bags legitimately carry keys from uninstalled plugins
+ * that `decodeMetaBag` preserves and `sanitizeMetaInput` would reject).
+ *
+ * Forgiving by design, like the read path (`decodeMetaBag`): a whole
+ * autosave bag is promoted, not a caller's touched patch, so a value
+ * that fails validation is schema drift or a legacy row — the live write
+ * path already gated user intent, so here we keep the stored value rather
+ * than abort an unrelated publish. Only `.sanitize()`'s canonical output
+ * replaces a value; a deletion (`null`) drops the key. Field capabilities
+ * and reference existence are likewise not re-checked: a whole-bag gate
+ * would block a publisher over a co-author's field, and read-time
+ * hydration already masks dangling refs.
+ */
+export async function sanitizeRegisteredMetaBag(
+  findField: (key: string) => MetaBoxField | undefined,
+  bag: Readonly<Record<string, unknown>>,
+): Promise<Record<string, unknown>> {
+  const out: MetaMap = {};
+  for (const [key, value] of Object.entries(bag)) {
+    const field = findField(key);
+    if (!field) {
+      out[key] = value;
+      continue;
+    }
+    const result = await runFieldPipeline(field, value, key);
+    if (result.isDeletion === true) continue;
+    out[key] = result.errors.length > 0 ? value : result.value;
+  }
+  return out;
+}
+
+/**
  * Walk a sanitized patch, group every reference upsert by
  * `(kind, scope)`, and issue one `LookupAdapter.list({ ids })`
  * query per group to confirm all upserted IDs are real and in

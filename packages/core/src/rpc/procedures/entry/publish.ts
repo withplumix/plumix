@@ -15,6 +15,7 @@ import {
   fireEntryTransition,
   fireEntryUpdated,
 } from "./lifecycle.js";
+import { sanitizePromotedEntryMeta } from "./meta.js";
 
 const publishInput = v.object({
   id: idParam,
@@ -74,10 +75,14 @@ export const publish = base
       title: autosave.title,
       content: autosave.content,
       excerpt: autosave.excerpt,
-      // Autosave's meta carries the snapshot envelope — strip it
-      // before writing back so the live row doesn't accrue a stale
-      // envelope reference.
-      meta: stripSnapshotEnvelope(autosave.meta),
+      // Strip the snapshot envelope, then re-sanitize the registered
+      // keys before promoting — the second gate for autosaves written
+      // before the write-time sanitizer (#1533) existed.
+      meta: await sanitizePromotedEntryMeta(
+        context,
+        live.type,
+        stripSnapshotEnvelope(autosave.meta),
+      ),
     };
     const prepared = await applyEntryBeforeSave(context, live.type, {
       ...live,
