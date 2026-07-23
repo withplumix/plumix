@@ -998,7 +998,7 @@ describe("validateMetaReferences (repeater subFields)", () => {
     ).rejects.toMatchObject({ reason: "invalid_value", key: "rows" });
   });
 
-  test("logs row index and subKey on nested rejection so debug logs aren't blind", async () => {
+  test("logs the nested cell path on rejection so debug logs aren't blind", async () => {
     // The wire error keys on the top-level repeater field per the
     // slice's acceptance, so engineers reading server logs would
     // otherwise have no idea which row or which subField rejected.
@@ -1032,8 +1032,8 @@ describe("validateMetaReferences (repeater subFields)", () => {
         (line) =>
           line.includes("rows") &&
           line.includes("999999") &&
-          line.includes("owner") &&
-          /row\s*1/.test(line),
+          // The dotted cell path pins the exact row + subField.
+          line.includes("rows.1.owner"),
       );
       expect(matched).toBeDefined();
     } finally {
@@ -1213,6 +1213,106 @@ describe("hydrateMetaReferences (repeater subFields)", () => {
 
     const rows = hydrated.rows as readonly { readonly owner: unknown }[];
     expect(rows).toHaveLength(2);
+    expect((rows[0]?.owner as { id?: string }).id).toBe(String(live.id));
+    expect(rows[1]?.owner).toBeNull();
+  });
+});
+
+describe("references nested in groups + deep repeaters", () => {
+  // A `user` reference living inside a group, and inside a repeater row
+  // nested in another repeater — both must validate on write and hydrate
+  // on read, so the declared nested type is honoured at runtime.
+  const ownerRef: MetaBoxField = {
+    key: "owner",
+    label: "Owner",
+    type: "string",
+    inputType: "user",
+    referenceTarget: { kind: "user" },
+  };
+
+  function registryWith(field: MetaBoxField): {
+    registry: MutablePluginRegistry;
+    findField: (key: string) => MetaBoxField | undefined;
+  } {
+    const registry: MutablePluginRegistry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    registry.userMetaBoxes.set("box", {
+      id: "box",
+      label: "Box",
+      fields: [field],
+      registeredBy: null,
+    });
+    return {
+      registry,
+      findField: (key: string) => (key === field.key ? field : undefined),
+    };
+  }
+
+  const groupField: MetaBoxField = {
+    key: "meta",
+    label: "Meta",
+    type: "json",
+    inputType: "group",
+    fields: [ownerRef],
+  };
+
+  const deepRepeater: MetaBoxField = {
+    key: "sections",
+    label: "Sections",
+    type: "json",
+    inputType: "repeater",
+    subFields: [
+      {
+        key: "rows",
+        label: "Rows",
+        type: "json",
+        inputType: "repeater",
+        subFields: [ownerRef],
+      },
+    ],
+  };
+
+  test("validate rejects a dead ref inside a group", async () => {
+    const { findField, registry } = registryWith(groupField);
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const patch = {
+      upserts: new Map<string, unknown>([["meta", { owner: "999999" }]]),
+      deletes: [] as readonly string[],
+    };
+    await expect(
+      validateMetaReferences(h.context, findField, patch),
+    ).rejects.toBeInstanceOf(MetaSanitizationError);
+  });
+
+  test("hydrates a ref inside a group", async () => {
+    const { findField, registry } = registryWith(groupField);
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const live = await userFactory.transient({ db: h.context.db }).create();
+
+    const hydrated = await hydrateMetaReferences(h.context, findField, {
+      meta: { owner: String(live.id) },
+    });
+    const meta = hydrated.meta as { owner: { id?: string } };
+    expect(meta.owner.id).toBe(String(live.id));
+    // The caller's decoded bag is untouched (copy-on-write).
+  });
+
+  test("hydrates a ref two repeaters deep and nulls a nested orphan", async () => {
+    const { findField, registry } = registryWith(deepRepeater);
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const live = await userFactory.transient({ db: h.context.db }).create();
+
+    const hydrated = await hydrateMetaReferences(h.context, findField, {
+      sections: [
+        {
+          rows: [{ owner: String(live.id) }, { owner: "999999" }],
+        },
+      ],
+    });
+    const sections = hydrated.sections as readonly {
+      rows: readonly { owner: unknown }[];
+    }[];
+    const rows = sections[0]?.rows ?? [];
     expect((rows[0]?.owner as { id?: string }).id).toBe(String(live.id));
     expect(rows[1]?.owner).toBeNull();
   });

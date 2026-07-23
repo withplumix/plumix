@@ -36,8 +36,12 @@ export { color, ColorFieldBuilder } from "./color.js";
 export { range, RangeFieldBuilder } from "./range.js";
 export { json, JsonFieldBuilder } from "./json.js";
 export { richtext, RichtextFieldBuilder } from "./richtext.js";
-export { repeater } from "./repeater.js";
-export type { RepeaterFieldOptions } from "./repeater.js";
+export {
+  repeater,
+  RepeaterFieldBuilder,
+  RepeaterFieldSeed,
+} from "./repeater.js";
+export { group, GroupFieldBuilder, GroupFieldSeed } from "./group.js";
 export { select, SelectFieldBuilder, SelectFieldSeed } from "./select.js";
 export type { SelectOptionInput } from "./select.js";
 export { toggle, ToggleFieldBuilder } from "./toggle.js";

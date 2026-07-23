@@ -35,6 +35,7 @@ import { Textarea } from "@plumix/admin-ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import { formatTemporalValue } from "@plumix/core/manifest";
 
+import { GroupField } from "./group-field.js";
 import { LinkField } from "./link-field.js";
 import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
@@ -404,6 +405,22 @@ function renderRepeaterField({
   );
 }
 
+function renderGroupField({
+  field,
+  rhf,
+  disabled,
+  testId,
+}: NativeInputContext): ReactNode {
+  return (
+    <GroupField
+      field={field}
+      name={rhf.name}
+      disabled={disabled}
+      testId={testId}
+    />
+  );
+}
+
 function renderLinkField({
   field,
   rhf,
@@ -736,6 +753,7 @@ const PRE_REFERENCE_RENDERERS: Partial<Record<string, NativeInputRenderer>> = {
   color: renderColorField,
   range: renderRangeField,
   repeater: renderRepeaterField,
+  group: renderGroupField,
 };
 
 // Input types keyed purely on `inputType`, dispatched *after* the

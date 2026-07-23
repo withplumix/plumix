@@ -2,6 +2,7 @@ import { EMAIL_REGEX } from "valibot";
 
 import type { Label } from "../../i18n/label.js";
 import type {
+  GroupMetaBoxField,
   MetaBoxField,
   MetaBoxFieldOption,
   MetaScalarType,
@@ -83,6 +84,9 @@ export async function runFieldPipeline(
   if (isRepeaterField(field)) {
     return runRepeaterPipeline(field, coerced.value, path);
   }
+  if (isGroupField(field)) {
+    return runGroupPipeline(field, coerced.value, path);
+  }
   // Structural normalization is part of coercion: it runs before the
   // author's `.sanitize()` so the callback can trust its typed
   // parameter (a `LinkValue`, a `string[]` of option values, …).
@@ -141,6 +145,63 @@ export function isRepeaterField(
   field: MetaBoxField | undefined,
 ): field is RepeaterMetaBoxField {
   return field?.inputType === "repeater" && "subFields" in field;
+}
+
+export function isGroupField(
+  field: MetaBoxField | undefined,
+): field is GroupMetaBoxField {
+  return field?.inputType === "group" && "fields" in field;
+}
+
+// --- group members ------------------------------------------------------
+
+/**
+ * Recurse the pipeline into each member of a group, addressing errors
+ * by `${path}.${memberKey}` (nested repeaters/groups extend the path
+ * further). A group all of whose members read empty is dropped (a
+ * deletion) unless the group is `.required()`. Members are stored back
+ * as a nested object keyed by member field key — no key-flattening.
+ */
+async function runGroupPipeline(
+  field: GroupMetaBoxField,
+  value: unknown,
+  path: string,
+): Promise<FieldPipelineResult> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
+  }
+  const source = value as Record<string, unknown>;
+  // Mirrors the repeater's blank-row strip, and must run BEFORE member
+  // validation: an all-empty group is an authoring affordance, not data,
+  // so it's dropped (optional) or rejected at the group path (required)
+  // without ever validating members. Otherwise a `.required()` member on
+  // an untouched optional group would error and make the group
+  // impossible to clear. "Empty" is strictly `null` / `undefined` / `""`
+  // per `isBlankRow`; `0` / `false` are real values.
+  if (isBlankRow(field.fields, source)) {
+    if (field.required === true) {
+      return { errors: [{ path, message: META_FIELD_MESSAGES.required }] };
+    }
+    return { errors: [], isDeletion: true };
+  }
+  // A populated group keeps every member (blank cells included) and
+  // validates each — a required member left empty in a non-empty group
+  // is a real error, just as in a non-blank repeater row.
+  const errors: MetaFieldError[] = [];
+  const next: Record<string, unknown> = {};
+  for (const member of field.fields) {
+    const cell = await runFieldPipeline(
+      member,
+      source[member.key],
+      `${path}.${member.key}`,
+    );
+    errors.push(...cell.errors);
+    if (cell.errors.length === 0 && cell.isDeletion !== true) {
+      next[member.key] = cell.value;
+    }
+  }
+  if (errors.length > 0) return { errors };
+  return { errors: [], value: next };
 }
 
 // --- reference healing --------------------------------------------------

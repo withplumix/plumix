@@ -1040,4 +1040,135 @@ describe("MetaBoxField — repeater dispatch", () => {
       screen.getByTestId("meta-box-field-links-input-empty"),
     ).toBeInTheDocument();
   });
+
+  test("addLabel overrides the default add-button text", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={repeaterField({ addLabel: "Add link" })}
+        initial={[]}
+      />,
+    );
+    expect(
+      screen.getByTestId("meta-box-field-links-input-add"),
+    ).toHaveTextContent("Add link");
+  });
+
+  test("layout is surfaced as a data attribute and table renders a header", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={repeaterField({ layout: "table" })}
+        initial={[{ label: "", href: "" }]}
+      />,
+    );
+    expect(screen.getByTestId("meta-box-field-links-input")).toHaveAttribute(
+      "data-layout",
+      "table",
+    );
+    expect(
+      screen.getByTestId("meta-box-field-links-input-header"),
+    ).toBeInTheDocument();
+  });
+
+  test("collapsed rows show the chosen subfield's value and hide fields until expanded", async () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={repeaterField({ collapsed: "label" })}
+        initial={[{ label: "Home", href: "/" }]}
+      />,
+    );
+    // The summary shows the collapsed subfield's value; fields are hidden.
+    expect(
+      screen.getByTestId("meta-box-field-links-input-row-0-summary-label"),
+    ).toHaveTextContent("Home");
+    expect(
+      screen.queryByTestId("meta-box-field-label-input"),
+    ).not.toBeInTheDocument();
+    // Expanding reveals the row's fields.
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-links-input-row-0-summary"),
+    );
+    expect(
+      screen.getByTestId("meta-box-field-label-input"),
+    ).toBeInTheDocument();
+  });
+
+  test("a nested repeater renders through the same recursive dispatcher", async () => {
+    const nested = repeaterField({
+      subFields: [
+        { key: "heading", label: "Heading", type: "string", inputType: "text" },
+        {
+          key: "callouts",
+          label: "Callouts",
+          type: "json",
+          inputType: "repeater",
+          subFields: [
+            { key: "tone", label: "Tone", type: "string", inputType: "text" },
+          ],
+        },
+      ],
+    });
+    renderWithI18n(
+      <Harness fieldDef={nested} initial={[{ heading: "", callouts: [] }]} />,
+    );
+    // The inner repeater renders its own add button, nested under the row.
+    expect(
+      screen.getByTestId("meta-box-field-callouts-input-add"),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("MetaBoxField — group dispatch", () => {
+  function groupField(
+    overrides?: Partial<MetaBoxFieldManifestEntry>,
+  ): MetaBoxFieldManifestEntry {
+    return field({
+      key: "seo",
+      label: "SEO",
+      type: "json",
+      inputType: "group",
+      subFields: [
+        { key: "title", label: "Title", type: "string", inputType: "text" },
+        {
+          key: "description",
+          label: "Description",
+          type: "string",
+          inputType: "textarea",
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  test("renders each member through the dispatcher", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={groupField()}
+        initial={{ title: "", description: "" }}
+      />,
+    );
+    expect(screen.getByTestId("meta-box-field-seo-input")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("meta-box-field-title-input"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("meta-box-field-description-input"),
+    ).toBeInTheDocument();
+  });
+
+  test("typing into a member writes to the nested object path", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={groupField()}
+        initial={{ title: "", description: "" }}
+        onChangeSpy={onChange}
+      />,
+    );
+    await userEvent.type(
+      screen.getByTestId("meta-box-field-title-input"),
+      "Hi",
+    );
+    // The member value lands under the group's nested key — no flattening.
+    expect(onChange).toHaveBeenLastCalledWith({ title: "Hi", description: "" });
+  });
 });

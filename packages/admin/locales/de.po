@@ -2029,11 +2029,6 @@ msgid "userInvite.email.invalid"
 msgstr "Gültige E-Mail-Adresse eingeben"
 
 #. js-lingui-explicit-id
-#: src/lib/meta-field-i18n.ts
-msgid "metaField.invalidEmail"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "Gültige E-Mail-Adresse eingeben."
@@ -2052,6 +2047,11 @@ msgstr "Gültige E-Mail-Adresse eingeben."
 #: src/lib/magic-link.ts
 msgid "magicLinkRequest.error.invalidInput"
 msgstr "Gültige E-Mail-Adresse eingeben."
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidEmail"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
@@ -3196,6 +3196,12 @@ msgstr "Rolle"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.role.label"
 msgstr "Rolle"
+
+#. n: 1-based index of an unlabelled collapsed repeater row
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.rowSummaryEmpty"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx

@@ -21,6 +21,7 @@ import { META_FIELD_MESSAGES } from "./field-messages.js";
 import {
   extractStringId,
   healReferenceValue,
+  isGroupField,
   isRepeaterField,
   referenceTargetOf,
   runFieldPipeline,
@@ -298,15 +299,15 @@ export async function validateMetaReferences(
       group.contributions.push({ errorKey: key, ids });
       continue;
     }
-    // Repeater fields don't carry a `referenceTarget` themselves but
-    // their rows can. Walk into rows so nested `entry` / `term` /
-    // `user` / `media` refs flow through the same `(kind, scope)`
-    // batch as top-level fields. Errors attribute to the top-level
-    // repeater key — the row index + subKey live in the developer
-    // log, not the wire response (per slice acceptance).
-    if (!isRepeaterField(field)) continue;
-    if (!Array.isArray(value)) continue;
-    collectRepeaterReferences(ctx, key, field, value, groups);
+    // Composite fields (repeater / group) don't carry a
+    // `referenceTarget` themselves but their rows / members can, at any
+    // nesting depth. Walk them so nested `entry` / `term` / `user` /
+    // `media` refs flow through the same `(kind, scope)` batch as
+    // top-level fields. Errors attribute to the top-level key — the
+    // dotted sub-path lives in the developer log, not the wire response.
+    if (isRepeaterField(field) || isGroupField(field)) {
+      collectCompositeReferences(ctx, key, key, field, value, groups);
+    }
   }
   for (const group of groups.values()) {
     if (group.ids.size === 0) continue;
@@ -322,16 +323,14 @@ export async function validateMetaReferences(
         if (!liveIds.has(id)) {
           if (contribution.diagnostic !== undefined) {
             // Wire error keys on the top-level field; this log line
-            // is the only place the row index + subKey surface, so
-            // an engineer debugging a `meta_invalid_value` on a
-            // repeater can locate the offending subField without
-            // bisecting the saved bag. `JSON.stringify(id)` escapes
-            // control characters so a user-supplied id with newlines
-            // can't poison the log stream.
+            // is the only place the nested sub-path surfaces, so an
+            // engineer debugging a `meta_invalid_value` on a composite
+            // field can locate the offending cell without bisecting the
+            // saved bag. `JSON.stringify` escapes control characters so
+            // a user-supplied id with newlines can't poison the log.
             console.error(
-              `[plumix] meta repeater ${JSON.stringify(contribution.errorKey)} ` +
-                `row ${String(contribution.diagnostic.rowIdx)} ` +
-                `subField ${JSON.stringify(contribution.diagnostic.subKey)} ` +
+              `[plumix] meta composite ${JSON.stringify(contribution.errorKey)} ` +
+                `at ${JSON.stringify(contribution.diagnostic.path)} ` +
                 `references missing id ${JSON.stringify(id)}`,
             );
           }
@@ -344,24 +343,53 @@ export async function validateMetaReferences(
   }
 }
 
-function collectRepeaterReferences(
+// Walk a composite field's live value, collecting + normalizing every
+// nested reference in place. `path` is the dotted address of `field`
+// from the top-level key (developer-log only). Recurses through nested
+// repeaters and groups, so a reference at any depth flows through the
+// same `(kind, scope)` batch and is orphan-checked at write time.
+function collectCompositeReferences(
   ctx: AppContext,
   topKey: string,
-  field: RepeaterMetaBoxField,
-  rows: readonly unknown[],
+  path: string,
+  field: MetaBoxField,
+  value: unknown,
   groups: Map<string, ReferenceGroup>,
 ): void {
-  // Nested repeaters are rejected at registration by `repeater()`, so
-  // any subField that's itself a repeater wouldn't get here in
-  // practice. We don't recurse into subField repeaters either way —
-  // single-source-of-truth on the registration guard.
-  for (const [rowIdx, row] of rows.entries()) {
-    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
-    const rowObj = row as Record<string, unknown>;
-    for (const subField of field.subFields) {
-      const target = referenceTargetOf(subField);
-      if (!target) continue;
-      const subValue = rowObj[subField.key];
+  if (isRepeaterField(field)) {
+    if (!Array.isArray(value)) return;
+    for (const [rowIdx, row] of value.entries()) {
+      if (!isPlainObject(row)) continue;
+      collectMemberReferences(
+        ctx,
+        topKey,
+        `${path}.${String(rowIdx)}`,
+        field.subFields,
+        row,
+        groups,
+      );
+    }
+    return;
+  }
+  if (isGroupField(field)) {
+    if (!isPlainObject(value)) return;
+    collectMemberReferences(ctx, topKey, path, field.fields, value, groups);
+  }
+}
+
+function collectMemberReferences(
+  ctx: AppContext,
+  topKey: string,
+  path: string,
+  members: readonly MetaBoxField[],
+  container: Record<string, unknown>,
+  groups: Map<string, ReferenceGroup>,
+): void {
+  for (const member of members) {
+    const memberPath = `${path}.${member.key}`;
+    const subValue = container[member.key];
+    const target = referenceTargetOf(member);
+    if (target) {
       if (subValue === undefined || subValue === null) continue;
       const registered = ctx.plugins.lookupAdapters.get(target.kind);
       if (!registered) {
@@ -371,19 +399,30 @@ function collectRepeaterReferences(
         topKey,
         subValue,
         target,
-        fieldMax(subField),
+        fieldMax(member),
       );
-      // Normalize the row's slot in place — the top-level upsert array
-      // is the live storage shape, so mutating an object inside it is
-      // what the caller will serialize.
-      rowObj[subField.key] = target.multiple ? ids : ids[0];
+      // Normalize the cell in place — the top-level upsert value is the
+      // live storage shape, so mutating an object inside it is what the
+      // caller serializes.
+      container[member.key] = target.multiple ? ids : ids[0];
       const group = upsertGroup(groups, target, registered);
       for (const id of ids) group.ids.add(id);
       group.contributions.push({
         errorKey: topKey,
         ids,
-        diagnostic: { rowIdx, subKey: subField.key },
+        diagnostic: { path: memberPath },
       });
+      continue;
+    }
+    if (isRepeaterField(member) || isGroupField(member)) {
+      collectCompositeReferences(
+        ctx,
+        topKey,
+        memberPath,
+        member,
+        subValue,
+        groups,
+      );
     }
   }
 }
@@ -423,14 +462,14 @@ interface ReferenceContribution {
   readonly errorKey: string;
   readonly ids: readonly string[];
   /**
-   * Diagnostic only — set for nested-in-repeater contributions so
-   * server logs identify the offending row/subField. The wire error
-   * always keys on the top-level field per slice acceptance, but
-   * engineers debugging a save need to know which row.
+   * Diagnostic only — set for nested (repeater row / group member)
+   * contributions so server logs identify the offending cell by its
+   * dotted sub-path (e.g. `sections.2.hero`). The wire error always
+   * keys on the top-level field, but engineers debugging a save need to
+   * know which cell.
    */
   readonly diagnostic?: {
-    readonly rowIdx: number;
-    readonly subKey: string;
+    readonly path: string;
   };
 }
 
@@ -584,50 +623,68 @@ export async function validateMetaReferencesForRpc(
 // result naturally and read as orphans. Callers pass freshly-decoded
 // bags (from `decodeMetaBag`); returned bags are shallow copies.
 // Non-reference keys pass through untouched.
+/** A path segment from the bag root: object key (string) or array index (number). */
+type PathSegment = string | number;
+
 interface ReferenceOccurrence {
-  /** Top-level meta key — the storage location and error key. */
-  readonly key: string;
+  /**
+   * Full path from the bag root to the reference slot. `[key]` for a
+   * top-level field; `[key, rowIdx, subKey, …]` for references nested
+   * in repeater rows and groups at any depth. The last segment is
+   * always the leaf object key.
+   */
+  readonly path: readonly PathSegment[];
   readonly target: ReferenceTarget;
   readonly value: unknown;
-  /** Set when the reference is a subField inside a repeater row. */
-  readonly nested?: {
-    readonly rowIdx: number;
-    readonly subKey: string;
-  };
 }
 
 /**
  * Yield every reference-field occurrence in a decoded meta bag: top-level
- * reference fields, plus reference subFields inside each repeater row. One
- * structural walk so the hydration pass doesn't reinline the
- * top-level/repeater traversal twice.
+ * reference fields, plus references nested inside repeater rows and
+ * groups at any depth. One structural walk so the hydration pass doesn't
+ * reinline the traversal twice.
  */
 function* referenceOccurrences(
   entries: Iterable<readonly [string, unknown]>,
   findField: (key: string) => MetaBoxField | undefined,
 ): Generator<ReferenceOccurrence> {
   for (const [key, value] of entries) {
-    const field = findField(key);
-    const target = referenceTargetOf(field);
-    if (target) {
-      yield { key, target, value };
-      continue;
-    }
-    if (!isRepeaterField(field)) continue;
-    if (!Array.isArray(value)) continue;
+    yield* fieldOccurrences([key], findField(key), value);
+  }
+}
+
+// Recurse a single field's decoded value, yielding reference occurrences
+// with their full path. Nested field definitions come straight off the
+// composite field (`subFields` / `fields`) — `findField` only resolves
+// top-level keys.
+function* fieldOccurrences(
+  path: readonly PathSegment[],
+  field: MetaBoxField | undefined,
+  value: unknown,
+): Generator<ReferenceOccurrence> {
+  const target = referenceTargetOf(field);
+  if (target) {
+    yield { path, target, value };
+    return;
+  }
+  if (isRepeaterField(field)) {
+    if (!Array.isArray(value)) return;
     for (const [rowIdx, row] of value.entries()) {
-      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
-      const rowObj = row as Record<string, unknown>;
+      if (!isPlainObject(row)) continue;
       for (const subField of field.subFields) {
-        const subTarget = referenceTargetOf(subField);
-        if (!subTarget) continue;
-        yield {
-          key,
-          target: subTarget,
-          value: rowObj[subField.key],
-          nested: { rowIdx, subKey: subField.key },
-        };
+        yield* fieldOccurrences(
+          [...path, rowIdx, subField.key],
+          subField,
+          row[subField.key],
+        );
       }
+    }
+    return;
+  }
+  if (isGroupField(field)) {
+    if (!isPlainObject(value)) return;
+    for (const member of field.fields) {
+      yield* fieldOccurrences([...path, member.key], member, value[member.key]);
     }
   }
 }
@@ -676,18 +733,13 @@ export async function hydrateMetaBags(
   interface Candidate {
     /** The shallow output copy of the candidate's bag. */
     readonly outBag: MetaMap;
-    /** The caller's original decoded bag (for lazy row cloning). */
+    /** The caller's original decoded bag (for lazy copy-on-write). */
     readonly decoded: MetaMap;
-    /** Top-level meta key — the storage location for top-level refs. */
-    readonly key: string;
+    /** Full path from the bag root to the reference slot. */
+    readonly path: readonly PathSegment[];
     readonly multiple: boolean;
     readonly groupKey: string;
     readonly ids: readonly string[];
-    /** When set, the candidate is a reference subField inside a repeater row. */
-    readonly nested?: {
-      readonly rowIdx: number;
-      readonly subKey: string;
-    };
   }
   const candidates: Candidate[] = [];
   const groups = new Map<
@@ -698,10 +750,10 @@ export async function hydrateMetaBags(
       readonly ids: Set<string>;
     }
   >();
-  // Top-level refs and repeater-row subField refs get identical
+  // Top-level refs and nested (repeater / group) refs get identical
   // treatment, so the single `referenceOccurrences` walk feeds both.
-  // Nested candidates carry their `rowIdx`/`subKey`; Pass 3 rewrites
-  // the row slot in a per-key clone so callers' bags stay untouched.
+  // Every candidate carries its full path; Pass 3 rewrites the slot in a
+  // per-path copy-on-write so callers' bags stay untouched.
   const out: MetaMap[] = [];
   for (const bag of bags) {
     const outBag: MetaMap = { ...bag.decoded };
@@ -718,11 +770,10 @@ export async function hydrateMetaBags(
       candidates.push({
         outBag,
         decoded: bag.decoded,
-        key: occ.key,
+        path: occ.path,
         multiple: occ.target.multiple === true,
         groupKey,
         ids,
-        nested: occ.nested,
       });
       if (ids.length === 0) continue;
       let group = groups.get(groupKey);
@@ -755,19 +806,15 @@ export async function hydrateMetaBags(
 
   // Pass 3: apply. Hydrated groups replace ids with their payloads;
   // id-only groups keep ids. Multi refs stay dense and in stored
-  // order; single refs null on missing. Nested-in-repeater candidates
-  // rewrite the row's subField slot in a per-key cloned array.
+  // order; single refs null on missing. Nested candidates copy-on-write
+  // each container down their path so callers' bags stay untouched.
   const emptyResolution: GroupResolution = { kind: "ids", liveIds: new Set() };
   for (const candidate of candidates) {
-    const { outBag, decoded, key, multiple, groupKey, ids, nested } = candidate;
+    const { outBag, decoded, path, multiple, groupKey, ids } = candidate;
     const resolution = resolutions.get(groupKey) ?? emptyResolution;
-    if (nested !== undefined) {
-      const rowObj = takeWritableRow(outBag, decoded, key, nested.rowIdx);
-      if (!rowObj) continue;
-      applyResolutionToSlot(rowObj, nested.subKey, multiple, ids, resolution);
-      continue;
-    }
-    applyResolutionToSlot(outBag, key, multiple, ids, resolution);
+    const slot = takeWritableSlot(outBag, decoded, path);
+    if (!slot) continue;
+    applyResolutionToSlot(slot.parent, slot.leafKey, multiple, ids, resolution);
   }
   return out;
 }
@@ -819,8 +866,8 @@ function* chunkIds(ids: readonly string[]): Generator<readonly string[]> {
   }
 }
 
-// Write one candidate's resolved value into its slot (top-level bag
-// key or repeater-row subKey — same shape either way).
+// Write one candidate's resolved value into its slot — the leaf object
+// key of a container reached by walking the candidate's path.
 function applyResolutionToSlot(
   slot: Record<string, unknown>,
   key: string,
@@ -846,30 +893,79 @@ function applyResolutionToSlot(
   if (!resolution.liveIds.has(singleId)) slot[key] = null;
 }
 
-function takeWritableRow(
-  out: MetaMap,
+// Walk the candidate's path from the output bag to the parent container
+// of its leaf slot, copy-on-writing each container the first time it's
+// descended so the caller's `decoded` bag stays untouched. Containers
+// cloned by an earlier candidate (identity no longer matches `decoded`)
+// are reused, so sibling references in the same row/group land in one
+// clone. Returns the writable parent object and the leaf key, or null if
+// any segment's runtime shape doesn't match the declared structure
+// (hand-edited / migrated bags).
+function takeWritableSlot(
+  outBag: MetaMap,
   decoded: MetaMap,
-  key: string,
-  rowIdx: number,
-): Record<string, unknown> | null {
-  // Lazily clone the rows array (and the targeted row inside it) on
-  // first nested write so the caller's `decoded` bag stays untouched.
-  // Subsequent nested writes hit the same cloned array.
-  let arr: unknown = out[key];
-  if (arr === decoded[key]) {
-    if (!Array.isArray(arr)) return null;
-    const cloned: unknown[] = arr.map((row: unknown) =>
-      row && typeof row === "object" && !Array.isArray(row)
-        ? { ...(row as Record<string, unknown>) }
-        : row,
-    );
-    out[key] = cloned;
-    arr = cloned;
+  path: readonly PathSegment[],
+): {
+  readonly parent: Record<string, unknown>;
+  readonly leafKey: string;
+} | null {
+  let outContainer: unknown = outBag;
+  let decContainer: unknown = decoded;
+  for (let i = 0; i < path.length - 1; i++) {
+    const seg = path[i];
+    if (seg === undefined) return null;
+    const outChild = readSegment(outContainer, seg);
+    const decChild = readSegment(decContainer, seg);
+    let writable = outChild;
+    // Still the shared decoded child → clone it into the output tree.
+    if (outChild === decChild) {
+      const clone = cloneContainer(outChild);
+      if (clone === null) return null;
+      writeSegment(outContainer, seg, clone);
+      writable = clone;
+    }
+    outContainer = writable;
+    decContainer = decChild;
   }
-  if (!Array.isArray(arr)) return null;
-  const row: unknown = arr[rowIdx];
-  if (!row || typeof row !== "object" || Array.isArray(row)) return null;
-  return row as Record<string, unknown>;
+  const leaf = path[path.length - 1];
+  if (typeof leaf !== "string") return null;
+  if (!isPlainObject(outContainer)) return null;
+  return { parent: outContainer, leafKey: leaf };
+}
+
+function readSegment(container: unknown, seg: PathSegment): unknown {
+  if (typeof seg === "number") {
+    return Array.isArray(container) ? container[seg] : undefined;
+  }
+  return isPlainObject(container) ? container[seg] : undefined;
+}
+
+function writeSegment(
+  container: unknown,
+  seg: PathSegment,
+  value: unknown,
+): void {
+  if (typeof seg === "number") {
+    if (Array.isArray(container)) container[seg] = value;
+    return;
+  }
+  if (isPlainObject(container)) container[seg] = value;
+}
+
+// Shallow clone an array or plain object; null for any other shape (the
+// path expected a container but the stored value isn't one).
+function cloneContainer(
+  value: unknown,
+): unknown[] | Record<string, unknown> | null {
+  // `Array.isArray` widens to `any[]`; cast before spread so the clone
+  // stays `unknown[]` rather than leaking `any` into the walk.
+  if (Array.isArray(value)) return [...(value as readonly unknown[])];
+  if (isPlainObject(value)) return { ...value };
+  return null;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 // Returns `null` to mean "no candidates from this key" (skip), or

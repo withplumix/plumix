@@ -17,7 +17,9 @@ import type {
 } from "./contributions.js";
 import type { LinkValue } from "./link.js";
 import { text, textarea } from "./builder.js";
+import { group } from "./group.js";
 import { link } from "./link.js";
+import { repeater } from "./repeater.js";
 
 // Fixture field sets. Registered under test-only entry types / taxonomies so
 // the module augmentations (global across the compilation) can't interfere
@@ -40,11 +42,19 @@ const _brandingFields = [text("tagline").default("")];
 
 const _brandCardFields = [text("brandBadge")];
 
+// Composite fields: a group namespaces into a nested record, a repeater
+// folds into a typed row array — both recurse into `MetaOf`.
+const _structuredFields = [
+  group("seo").fields([text("title").required(), textarea("description")]),
+  repeater("sections").fields([text("heading").required()]),
+];
+
 declare module "../../template-registry.js" {
   interface EntryTypeRegistry {
     recipe: { entry: ResolvedEntry };
     landing: { entry: ResolvedEntry };
     bare: { entry: ResolvedEntry };
+    structured: { entry: ResolvedEntry };
   }
   interface TermTaxonomyRegistry {
     cuisine: { term: ResolvedTerm };
@@ -57,6 +67,10 @@ declare module "./contributions.js" {
     cxArticle: { entryTypes: "recipe"; fields: typeof _articleFields };
     cxSeo: { entryTypes: "recipe" | "landing"; fields: typeof _seoFields };
     cxLandingOnly: { entryTypes: "landing"; fields: typeof _landingFields };
+    cxStructured: {
+      entryTypes: "structured";
+      fields: typeof _structuredFields;
+    };
   }
   interface TermMetaContributions {
     cxBrandCard: { termTaxonomies: "cuisine"; fields: typeof _brandCardFields };
@@ -225,6 +239,17 @@ describe("MetaOf fold", () => {
     type Stored = StoredMetaOf<"recipe">;
     expectTypeOf<Stored["badge"]>().toEqualTypeOf<string | undefined>();
     expectTypeOf<Stored["heroCredit"]>().toEqualTypeOf<string>();
+  });
+
+  test("folds composite fields as typed nested records / row arrays", () => {
+    type M = MetaOf<"structured">;
+    // `group()` reads as a typed nested object under its own key.
+    expectTypeOf<M["seo"]>().toEqualTypeOf<
+      { title: string; description: string | undefined } | undefined
+    >();
+    // `repeater()` reads as a typed row array; the row type recurses.
+    type Sections = NonNullable<M["sections"]>;
+    expectTypeOf<Sections[number]["heading"]>().toEqualTypeOf<string>();
   });
 });
 
