@@ -349,11 +349,10 @@ describe("entry.create", () => {
       entryTypes: ["post"],
       fields: [
         text("subtitle").maxLength(5).build(),
-        repeater({
-          key: "sections",
-          label: "Sections",
-          subFields: [text("heading").required(), text("body")],
-        }),
+        repeater("sections")
+          .fields([text("heading").required(), text("body")])
+          .label("Sections")
+          .build(),
       ],
       registeredBy: "test",
     });
