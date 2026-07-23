@@ -628,6 +628,15 @@ export interface JsonMetaBoxField extends MetaBoxFieldBase {
  * that calls the lookup RPC with `{ kind, scope }` — picker UI is
  * one component, target-specific knowledge lives in the adapter.
  */
+/**
+ * Read-projection opt-out carried on a reference field. `"id"` makes the
+ * field's reads yield the bare stored id(s) instead of the resolved
+ * summary — the read pipeline skips the batched hydration join (and its
+ * orphan-stripping) for that field. Storage and the write contract are
+ * unaffected. Authored via the builder's `.returns("id")`.
+ */
+export type ReferenceReadProjection = "id";
+
 export interface ReferenceTarget<TScope = unknown> {
   readonly kind: string;
   readonly scope?: TScope;
@@ -650,6 +659,8 @@ export interface UserMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "user";
   readonly type: "string";
   readonly referenceTarget: ReferenceTarget;
+  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time hydration join. See {@link ReferenceReadProjection}. */
+  readonly returns?: ReferenceReadProjection;
 }
 
 /**
@@ -663,6 +674,8 @@ export interface UserListMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "userList";
   readonly type: "json";
   readonly referenceTarget: ReferenceTarget;
+  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time hydration join. See {@link ReferenceReadProjection}. */
+  readonly returns?: ReferenceReadProjection;
   /** Max items allowed in the array. Omitted = unbounded. */
   readonly max?: number;
 }
@@ -680,6 +693,8 @@ export interface EntryReferenceMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "entry";
   readonly type: "string";
   readonly referenceTarget: ReferenceTarget;
+  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time hydration join. See {@link ReferenceReadProjection}. */
+  readonly returns?: ReferenceReadProjection;
 }
 
 /**
@@ -693,6 +708,8 @@ export interface EntryListMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "entryList";
   readonly type: "json";
   readonly referenceTarget: ReferenceTarget;
+  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time hydration join. See {@link ReferenceReadProjection}. */
+  readonly returns?: ReferenceReadProjection;
   /** Max items allowed in the array. Omitted = unbounded. */
   readonly max?: number;
 }
@@ -707,6 +724,8 @@ export interface TermReferenceMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "term";
   readonly type: "string";
   readonly referenceTarget: ReferenceTarget;
+  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time hydration join. See {@link ReferenceReadProjection}. */
+  readonly returns?: ReferenceReadProjection;
 }
 
 /**
@@ -720,6 +739,8 @@ export interface TermListMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "termList";
   readonly type: "json";
   readonly referenceTarget: ReferenceTarget;
+  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time hydration join. See {@link ReferenceReadProjection}. */
+  readonly returns?: ReferenceReadProjection;
   /** Max items allowed in the array. Omitted = unbounded. */
   readonly max?: number;
 }
@@ -737,6 +758,8 @@ export interface MediaMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "media";
   readonly type: "json";
   readonly referenceTarget: ReferenceTarget;
+  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time hydration join. See {@link ReferenceReadProjection}. */
+  readonly returns?: ReferenceReadProjection;
 }
 
 /**
@@ -749,6 +772,8 @@ export interface MediaListMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "mediaList";
   readonly type: "json";
   readonly referenceTarget: ReferenceTarget;
+  /** `.returns("id")`: reads yield the bare stored id, skipping the read-time hydration join. See {@link ReferenceReadProjection}. */
+  readonly returns?: ReferenceReadProjection;
   /** Max items allowed in the array. Omitted = unbounded. */
   readonly max?: number;
 }

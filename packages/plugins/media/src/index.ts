@@ -11,7 +11,7 @@ import { createMediaRouter } from "./rpc.js";
 import { handleMediaServe } from "./serve-route.js";
 import { handleWorkerUpload } from "./upload-route.js";
 
-export type { MediaFieldScope } from "./lookup.js";
+export type { MediaFieldScope, MediaReference } from "./lookup.js";
 
 export { DEFAULT_ACCEPTED_TYPES };
 

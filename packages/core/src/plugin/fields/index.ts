@@ -1,13 +1,14 @@
 // Typed builder helpers for meta-box field registration. The scalar
 // fields (string, numeric, temporal, color, richtext, json), `link`,
 // the choice field (`select` — `.multiple()` for arrays,
-// `.appearance()` for the control), and the boolean switch (`toggle`)
-// are fluent builders: the constructor takes the key alone and every
-// option is a chained call (`text("subtitle").maxLength(120)`,
-// `number("rating").min(1).max(5)`), each returning a fresh immutable
-// instance that compiles to the narrowed `MetaBoxField` variant at
-// registration. The reference factories still take flat option
-// objects; they convert to fluent chains ticket by ticket.
+// `.appearance()` for the control), the boolean switch (`toggle`), and
+// the reference fields (`entry` / `term` / `user` — `.multiple()` for
+// id arrays, `.returns("id")` to opt out of read-time hydration) are
+// fluent builders: the constructor takes the key (plus a required
+// scope for `entry` / `term`) and every option is a chained call
+// (`text("subtitle").maxLength(120)`, `entry("hero", ["post"]).required()`),
+// each returning a fresh immutable instance that compiles to the
+// narrowed `MetaBoxField` variant at registration.
 //
 // Re-exported as a public surface from `plumix/fields`.
 
@@ -41,15 +42,10 @@ export type { RepeaterFieldOptions } from "./repeater.js";
 export { select, SelectFieldBuilder, SelectFieldSeed } from "./select.js";
 export type { SelectOptionInput } from "./select.js";
 export { toggle, ToggleFieldBuilder } from "./toggle.js";
+export { ReferenceFieldBuilder } from "./reference.js";
 export { user } from "./user.js";
-export type { UserFieldOptions, UserFieldScope } from "./user.js";
-export { userList } from "./user-list.js";
-export type { UserListFieldOptions } from "./user-list.js";
+export type { UserFieldScope } from "./user.js";
 export { entry } from "./entry.js";
-export type { EntryFieldOptions, EntryFieldScope } from "./entry.js";
-export { entryList } from "./entry-list.js";
-export type { EntryListFieldOptions } from "./entry-list.js";
+export type { EntryFieldScope } from "./entry.js";
 export { term } from "./term.js";
-export type { TermFieldOptions, TermFieldScope } from "./term.js";
-export { termList } from "./term-list.js";
-export type { TermListFieldOptions } from "./term-list.js";
+export type { TermFieldScope } from "./term.js";

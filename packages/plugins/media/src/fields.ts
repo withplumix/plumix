@@ -4,5 +4,4 @@
 // package root. Mirrors the `plumix/fields` subpath convention from
 // core.
 
-export { media, mediaList } from "./builder.js";
-export type { MediaFieldOptions, MediaListFieldOptions } from "./builder.js";
+export { media, MediaFieldBuilder } from "./builder.js";

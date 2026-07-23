@@ -83,6 +83,13 @@ interface ReferencePickerProps {
   readonly required?: boolean;
   readonly label: string;
   readonly testId: string;
+  /**
+   * The read-time-hydrated summary for the initial `value`, when the
+   * form loaded one (reference reads hydrate by default, #1507). Used
+   * to paint the selected label on first render — no `lookup.resolve`
+   * round-trip while the initial id is unchanged.
+   */
+  readonly initialSelected?: LookupItem | null;
 }
 
 export function ReferencePicker({
@@ -94,6 +101,7 @@ export function ReferencePicker({
   required = false,
   label,
   testId,
+  initialSelected = null,
 }: ReferencePickerProps): ReactNode {
   const { i18n } = useLingui();
   const labelFn = useLabel();
@@ -101,15 +109,21 @@ export function ReferencePicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  // Resolve the currently-selected id to its label/subtitle. Skips
-  // when value is null. Stale-data tolerant — if the target was
-  // deleted server-side, `result` comes back null and we render a
-  // "Missing" badge so the author knows to re-pick.
+  // The initial value already arrived hydrated, so its label is in hand
+  // — skip the resolve entirely while the id is untouched. A change
+  // moves the value off `initialSelected.id` and the query takes over.
+  const hasPrefill =
+    value !== null && initialSelected !== null && initialSelected.id === value;
+
+  // Resolve the currently-selected id to its label/subtitle. Skips when
+  // value is null or already prefilled. Stale-data tolerant — if the
+  // target was deleted server-side, `result` comes back null and we
+  // render a "Missing" badge so the author knows to re-pick.
   const resolveQuery = useQuery({
     ...orpc.lookup.resolve.queryOptions({
       input: { kind, id: value ?? "", scope },
     }),
-    enabled: value !== null,
+    enabled: value !== null && !hasPrefill,
   });
 
   const listQuery = useQuery({
@@ -119,7 +133,12 @@ export function ReferencePicker({
     enabled: open,
   });
 
-  const selected = value !== null ? (resolveQuery.data?.result ?? null) : null;
+  const selected =
+    value === null
+      ? null
+      : hasPrefill
+        ? initialSelected
+        : (resolveQuery.data?.result ?? null);
   const items = listQuery.data?.items ?? [];
 
   const dialogDescription = i18n._(
