@@ -4,6 +4,7 @@ import type {
   MetaBoxField,
   MutablePluginRegistry,
 } from "../../plugin/manifest.js";
+import { embeddedPageTags } from "../../cache/embedded-tags.js";
 import { createPluginRegistry } from "../../plugin/manifest.js";
 import {
   adminUser,
@@ -17,6 +18,7 @@ import { registerCoreLookupAdapters } from "../procedures/lookup-adapters.js";
 import {
   hydrateMetaBags,
   hydrateMetaReferences,
+  hydrateReferences,
   MetaSanitizationError,
   sanitizeMetaInput,
   validateMetaReferences,
@@ -511,6 +513,29 @@ describe("hydrateMetaReferences (multi)", () => {
 // as `userList`. These tests cover the kind-routing + scope-required
 // guards on the entry/term adapters specifically — adding a new kind
 // shouldn't bypass either.
+function registryWithEntryRef(field: Partial<MetaBoxField> = {}) {
+  const registry: MutablePluginRegistry = createPluginRegistry();
+  registerCoreLookupAdapters(registry);
+  const fullField = {
+    key: "featured",
+    label: "Featured",
+    type: "string",
+    inputType: "entry",
+    referenceTarget: { kind: "entry", scope: { entryTypes: ["post"] } },
+    ...field,
+  } as MetaBoxField;
+  registry.userMetaBoxes.set("featuring", {
+    id: "featuring",
+    label: "Featuring",
+    fields: [fullField],
+    registeredBy: null,
+  });
+  return {
+    registry,
+    findField: (key: string) => (key === fullField.key ? fullField : undefined),
+  };
+}
+
 function registryWithEntryListRef(
   field: Partial<MetaBoxField & { readonly max?: number }> = {},
 ) {
@@ -1315,5 +1340,150 @@ describe("references nested in groups + deep repeaters", () => {
     const rows = sections[0]?.rows ?? [];
     expect((rows[0]?.owner as { id?: string }).id).toBe(String(live.id));
     expect(rows[1]?.owner).toBeNull();
+  });
+});
+
+describe("embedded cache tags (hydration tag accounting)", () => {
+  test("hydrating a single entry reference accumulates its entry tag", async () => {
+    const { registry, findField } = registryWithEntryRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const target = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "published" });
+
+    await hydrateMetaReferences(h.context, findField, {
+      featured: String(target.id),
+    });
+
+    expect(embeddedPageTags(h.context)).toEqual([`e:${String(target.id)}`]);
+  });
+
+  test("hydrating a multi entry reference accumulates a tag per live target", async () => {
+    const { registry, findField } = registryWithEntryListRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const a = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "published" });
+    const b = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "published" });
+
+    await hydrateMetaReferences(h.context, findField, {
+      related: [String(a.id), String(b.id), "999999"],
+    });
+
+    // Orphan `999999` hydrates to nothing, so it contributes no tag.
+    expect([...embeddedPageTags(h.context)].sort()).toEqual(
+      [`e:${String(a.id)}`, `e:${String(b.id)}`].sort(),
+    );
+  });
+
+  test("a user reference contributes no cache tag (no per-entity purge identity)", async () => {
+    const { registry, findField } = registryWithUserRef();
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const owner = await adminUser.transient({ db: h.context.db }).create();
+
+    await hydrateMetaReferences(h.context, findField, {
+      owner: String(owner.id),
+    });
+
+    expect(embeddedPageTags(h.context)).toEqual([]);
+  });
+
+  test("a page that hydrates nothing accumulates no tags", async () => {
+    const registry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+
+    await hydrateMetaReferences(h.context, () => undefined, {
+      title: "Plain",
+      count: 3,
+    });
+
+    expect(embeddedPageTags(h.context)).toEqual([]);
+  });
+});
+
+describe("hydrateReferences (theme-facing id-only helper)", () => {
+  test("resolves an id set into hydrated payloads and accumulates their tags", async () => {
+    const registry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const a = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "published" });
+    const b = await entryFactory
+      .transient({ db: h.context.db })
+      .create({ authorId: h.user.id, type: "post", status: "published" });
+
+    const resolved = await hydrateReferences(
+      h.context,
+      "entry",
+      [String(a.id), String(b.id), "999999"],
+      { scope: { entryTypes: ["post"] } },
+    );
+
+    // Dense, in requested order, orphans dropped.
+    expect(resolved.map((r) => r.id)).toEqual([String(a.id), String(b.id)]);
+    expect([...embeddedPageTags(h.context)].sort()).toEqual(
+      [`e:${String(a.id)}`, `e:${String(b.id)}`].sort(),
+    );
+  });
+
+  test("resolves ids through the batched adapter path in one in-query", async () => {
+    const registry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    const entryAdapter = registry.lookupAdapters.get("entry");
+    const baseHydrate = entryAdapter?.adapter.hydrate?.bind(
+      entryAdapter.adapter,
+    );
+    if (!entryAdapter || !baseHydrate) {
+      throw new Error("entry adapter should expose hydrate");
+    }
+    let hydrateCalls = 0;
+    registry.lookupAdapters.set("entry", {
+      ...entryAdapter,
+      adapter: {
+        ...entryAdapter.adapter,
+        hydrate: (ctx, options) => {
+          hydrateCalls += 1;
+          return baseHydrate(ctx, options);
+        },
+      },
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    const targets = await Promise.all(
+      Array.from({ length: 3 }, () =>
+        entryFactory
+          .transient({ db: h.context.db })
+          .create({ authorId: h.user.id, type: "post", status: "published" }),
+      ),
+    );
+
+    const resolved = await hydrateReferences(
+      h.context,
+      "entry",
+      targets.map((t) => String(t.id)),
+      { scope: { entryTypes: ["post"] } },
+    );
+
+    expect(resolved).toHaveLength(3);
+    expect(hydrateCalls).toBe(1);
+  });
+
+  test("returns an empty array for an unregistered kind", async () => {
+    const registry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    expect(await hydrateReferences(h.context, "nope" as never, ["1"])).toEqual(
+      [],
+    );
+  });
+
+  test("returns an empty array when given no ids", async () => {
+    const registry = createPluginRegistry();
+    registerCoreLookupAdapters(registry);
+    const h = await createRpcHarness({ authAs: "admin", plugins: registry });
+    expect(await hydrateReferences(h.context, "entry", [])).toEqual([]);
   });
 });
