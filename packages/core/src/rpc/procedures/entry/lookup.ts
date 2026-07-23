@@ -7,6 +7,7 @@ import type {
   LookupAdapter,
   LookupResult,
 } from "../../../plugin/lookup.js";
+import { entryTag } from "../../../cache/tags.js";
 import { and, eq, inArray, like, ne, or } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
 import { buildEntryPermalink } from "../../../route/permalink.js";
@@ -116,6 +117,17 @@ export const entryLookupAdapter = {
       .where(and(...conditions))
       .limit(numericIds.length);
     return Promise.all(rows.map((row) => toEntrySummary(ctx, row)));
+  },
+
+  // A page embedding entry B carries B's precise entry tag, so B's
+  // lifecycle (`entryPurgeTags` enqueues `e:<id>` on publish/edit/
+  // meta-change/trash/restore/delete) purges the embedding page. The
+  // coarse `t:<type>` tag is deliberately omitted — it would purge the
+  // page on any publish of that type, and `e:<id>` alone already covers
+  // every change to this specific entry.
+  embeddedCacheTags(payload) {
+    const numericId = parseEntryId(payload.id);
+    return numericId === null ? [] : [entryTag(numericId)];
   },
 } satisfies LookupAdapter<EntryFieldScope>;
 

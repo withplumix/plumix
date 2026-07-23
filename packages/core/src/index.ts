@@ -37,6 +37,7 @@ export { runScheduledTasks } from "./runtime/scheduled.js";
 export type * from "./runtime/slots.js";
 export { slugify } from "./slugify.js";
 export { buildResolvedEntries } from "./route/render/build-resolved-entries.js";
+export { hydrateReferences } from "./rpc/meta/core.js";
 export { readEntryType } from "./entries/read-service.js";
 export { memoBatch } from "./context/memo.js";
 export type { RequestMemo } from "./context/memo.js";

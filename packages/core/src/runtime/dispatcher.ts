@@ -10,6 +10,7 @@ import { readSessionCookie } from "../auth/cookies.js";
 import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
 import { parseOAuthPath } from "../auth/oauth/match.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
+import { embeddedPageTags } from "../cache/embedded-tags.js";
 import { flushPurgeTags } from "../cache/purge.js";
 import { readThrough } from "../cache/read-through.js";
 import { pageTags } from "../cache/tags.js";
@@ -559,18 +560,27 @@ async function dispatchPublicRoute(
     defer: ctx.defer,
     telemetry: ctx.telemetry,
     render: () => renderPublicRoute(app, ctx, url, match),
-    // Evaluated post-render so `ctx.resolvedEntity` (the entry id) is set.
-    // The source thunks run only for the intent kind that needs them.
-    tags: () =>
-      intent === null
-        ? []
-        : pageTags({
-            intent,
-            resolvedEntity: ctx.resolvedEntity,
-            frontPageEntryTypes: () => frontPageEntryTypes(ctx),
-            taxonomyEntryTypes: (taxonomy) =>
-              ctx.plugins.termTaxonomies.get(taxonomy)?.entryTypes ?? [],
-          }),
+    // Evaluated post-render so `ctx.resolvedEntity` (the entry id) is set
+    // and read-time hydration has finished accumulating the tags of the
+    // entities embedded in the page (#1508). The source thunks run only
+    // for the intent kind that needs them.
+    tags: () => {
+      const routeTags =
+        intent === null
+          ? []
+          : pageTags({
+              intent,
+              resolvedEntity: ctx.resolvedEntity,
+              frontPageEntryTypes: () => frontPageEntryTypes(ctx),
+              taxonomyEntryTypes: (taxonomy) =>
+                ctx.plugins.termTaxonomies.get(taxonomy)?.entryTypes ?? [],
+            });
+      const embedded = embeddedPageTags(ctx);
+      // A page that embedded nothing is tagged exactly as before.
+      return embedded.length === 0
+        ? routeTags
+        : [...new Set([...routeTags, ...embedded])];
+    },
   });
 }
 

@@ -147,6 +147,19 @@ export interface LookupAdapter<TScope = unknown> {
     ctx: AppContext,
     options: LookupHydrateOptions<TScope>,
   ): Promise<readonly HydratedReference[]>;
+
+  /**
+   * Cache tags a hydrated payload contributes to the page that embeds it,
+   * so editing or deleting the referenced entity purges the pages that
+   * hydrated it (#1508). Called once per hydrated payload during
+   * read-time hydration; the tags fold into the embedding page's stored
+   * cache tags. Return the same tag the entity's own purge enqueues —
+   * the entry adapter returns `e:<id>`, the precise per-entity tag. Kinds
+   * whose entities carry no per-entity purge identity (e.g. `user`) omit
+   * this method; their references embed without a cache-tag dependency.
+   * Optional.
+   */
+  embeddedCacheTags?(payload: HydratedReference): readonly string[];
 }
 
 // `RegisteredLookupAdapter` extends `LookupAdapterOptions` so plugin-
