@@ -1,9 +1,5 @@
 import type { EntryStatus } from "../../db/schema/entries.js";
-import type { Label } from "../../i18n/label.js";
-import type {
-  EntryReferenceMetaBoxField,
-  MetaBoxFieldSpan,
-} from "../manifest.js";
+import { ReferenceFieldBuilder } from "./reference.js";
 
 /**
  * Public scope shape for the `entry()` reference field. Carried on
@@ -15,56 +11,40 @@ export interface EntryFieldScope {
   /**
    * Restrict matches to these entry types. Required at the field
    * level — entry references without a type filter would surface
-   * the entire content table to pickers.
+   * the entire content table to pickers. Seeded from the `entry()`
+   * constructor argument.
    */
   readonly entryTypes: readonly string[];
   /**
    * Whether to surface trashed entries. Default `false` — trashed
-   * entries are usually invalid reference targets.
+   * entries are usually invalid reference targets. Set via
+   * `.includeTrashed()`.
    */
   readonly includeTrashed?: boolean;
   /**
    * Restrict matches to exactly this lifecycle status; supersedes the
    * `includeTrashed` default. Public-render consumers (e.g. menu nav)
-   * pass `"published"` so drafts never surface; the admin picker leaves
-   * it unset and keeps admitting drafts/scheduled.
+   * pass `"published"` via `.status()` so drafts never surface; the
+   * admin picker leaves it unset and keeps admitting drafts/scheduled.
    */
   readonly status?: EntryStatus;
 }
 
-export interface EntryFieldOptions {
-  readonly key: string;
-  readonly label: Label;
-  readonly required?: boolean;
-  readonly description?: Label;
-  readonly default?: string;
-  readonly span?: MetaBoxFieldSpan;
-  readonly capability?: string;
-  readonly entryTypes: readonly string[];
-  readonly includeTrashed?: boolean;
-}
-
 /**
- * Build a typed `entry` reference field. Storage is the bare entry
- * id; reads return the resolved label/subtitle (or `null` for
- * orphans). The admin renders a picker that calls the lookup RPC
- * with `{ kind: "entry", scope: { entryTypes, includeTrashed } }`.
+ * Build a typed `entry` reference field —
+ * `entry("related", ["post"])`. The required entry-type scope is the
+ * constructor's second argument; `.includeTrashed()` / `.status()`
+ * refine it, `.multiple()` flips to an id array.
+ *
+ * Storage is the bare entry id (an id array under `.multiple()`).
+ * Reads hydrate to the entry summary by default (`.returns("id")`
+ * opts back to the bare id); single reads stay optional (a target can
+ * orphan). The admin renders a picker that calls the lookup RPC with
+ * `{ kind: "entry", scope }`.
  */
-export function entry(options: EntryFieldOptions): EntryReferenceMetaBoxField {
-  const scope: EntryFieldScope = {
-    entryTypes: options.entryTypes,
-    includeTrashed: options.includeTrashed,
-  };
-  return {
-    key: options.key,
-    label: options.label,
-    type: "string",
-    inputType: "entry",
-    referenceTarget: { kind: "entry", scope },
-    required: options.required,
-    description: options.description,
-    default: options.default,
-    span: options.span,
-    capability: options.capability,
-  };
+export function entry<K extends string>(
+  key: K,
+  entryTypes: readonly string[],
+): ReferenceFieldBuilder<"entry", K> {
+  return new ReferenceFieldBuilder("entry", key, { entryTypes });
 }

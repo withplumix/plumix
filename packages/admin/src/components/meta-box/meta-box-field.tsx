@@ -35,6 +35,7 @@ import { Textarea } from "@plumix/admin-ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import { formatTemporalValue } from "@plumix/core/manifest";
 
+import type { LookupItem } from "./reference-picker.js";
 import { LinkField } from "./link-field.js";
 import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
@@ -796,11 +797,13 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
   if (preReference) return preReference(ctx);
 
   if (field.referenceTarget?.multiple === true) {
-    const value = Array.isArray(rhf.value)
-      ? rhf.value
-          .map(referenceValueId)
-          .filter((id): id is string => id !== null)
-      : [];
+    const rows = Array.isArray(rhf.value) ? rhf.value : [];
+    const value = rows
+      .map(referenceValueId)
+      .filter((id): id is string => id !== null);
+    const initialSelected = rows
+      .map(referenceValueSummary)
+      .filter((row): row is LookupItem => row !== null);
     return (
       <MultiReferencePicker
         value={value}
@@ -816,6 +819,7 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
         required={field.required}
         label={labelText}
         testId={testId}
+        initialSelected={initialSelected}
       />
     );
   }
@@ -841,6 +845,7 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
         required={field.required}
         label={labelText}
         testId={testId}
+        initialSelected={referenceValueSummary(rhf.value)}
       />
     );
   }
@@ -862,6 +867,35 @@ function referenceValueId(value: unknown): string | null {
     if (typeof id === "string" && id !== "") return id;
   }
   return null;
+}
+
+// Map a hydrated reference read (`{ id, title|name, ... }`) to the
+// picker's `LookupItem` so the selected label paints on first render —
+// no `lookup.resolve` round-trip. The summary key names differ per kind
+// (entry `title`, term/user `name`), so read both spellings.
+//
+// Returns null (→ the picker resolves the id itself) for the bare-id
+// shape (drafts, `.returns("id")` opt-outs) AND when the hydrated label
+// is absent: a null title/name means the resolve RPC has a richer
+// fallback to offer (an entry's untitled chrome, a user's email) that
+// the public-safe summary intentionally omits, so it's worth the query.
+// Only the label is carried — the summary lacks the admin-only subtitle
+// bits (`type · status`, `email · role`) the resolve shows, and a
+// mismatched subtitle would mislead more than an absent one.
+function referenceValueSummary(value: unknown): LookupItem | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const summary = value as Record<string, unknown>;
+  if (typeof summary.id !== "string" || summary.id === "") return null;
+  const label =
+    typeof summary.title === "string"
+      ? summary.title
+      : typeof summary.name === "string"
+        ? summary.name
+        : null;
+  if (label === null) return null;
+  return { id: summary.id, label };
 }
 
 // Tolerant coercion for inputs that display strings. Meta values

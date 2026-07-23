@@ -4,48 +4,23 @@ import {
   HookRegistry,
   installPlugins,
 } from "plumix/plugin";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
-import type { MediaFieldOptions, MediaListFieldOptions } from "./fields.js";
-import type { MediaFieldScope } from "./index.js";
-import { media, mediaList } from "./fields.js";
+import type { MediaFieldScope, MediaReference } from "./index.js";
+import { media } from "./fields.js";
 import { media as mediaPlugin } from "./index.js";
 
-// Public type exports get a type-level smoke test so the package
-// surface stays consumable by external plugin authors. The body
-// values are intentionally small — TypeScript checks the assignment
-// shape at compile time, which is what we care about here.
-const _typeSurface: {
-  readonly opts: MediaFieldOptions;
-  readonly listOpts: MediaListFieldOptions;
-  readonly scope: MediaFieldScope;
-} = {
-  opts: {
-    key: "hero",
-    label: "Hero",
-    accept: ["image/png"],
-    default: "42",
-  },
-  listOpts: {
-    key: "gallery",
-    label: "Gallery",
-    accept: "image/",
-    max: 12,
-    default: ["42", "43"],
-  },
-  scope: { accept: "image/" },
-};
-void _typeSurface;
+// Public type export gets a type-level smoke test so the package
+// surface stays consumable by external plugin authors.
+const _scope: MediaFieldScope = { accept: "image/" };
+void _scope;
 
 describe("media() builder", () => {
-  test("pins inputType + json type and emits a media-kind referenceTarget", () => {
-    const field = media({
-      key: "hero",
-      label: "Hero",
-      accept: "image/",
-    });
+  test("derives the label, pins inputType + json type, emits a media referenceTarget", () => {
+    const field = media("heroImage").accept("image/").build();
     expect(field.inputType).toBe("media");
     expect(field.type).toBe("json");
+    expect(field.label).toBe("Hero image");
     expect(field.referenceTarget).toEqual({
       kind: "media",
       scope: { accept: "image/" },
@@ -53,42 +28,61 @@ describe("media() builder", () => {
   });
 
   test("supports an exact MIME whitelist via array accept", () => {
-    const field = media({
-      key: "doc",
-      label: "Doc",
-      accept: ["image/png", "application/pdf"],
-    });
+    const field = media("doc")
+      .label("Doc")
+      .accept(["image/png", "application/pdf"])
+      .build();
     expect(field.referenceTarget.scope).toEqual({
       accept: ["image/png", "application/pdf"],
     });
   });
 
   test("omits accept entirely when no filter is configured", () => {
-    const field = media({ key: "hero", label: "Hero" });
-    // Scope object exists but with `accept: undefined` — JSON.stringify
-    // drops the key, so this is identical on the wire to no scope at
-    // all. The adapter's `buildAcceptMatcher` returns null on
-    // undefined.
+    const field = media("hero").build();
+    expect(field.referenceTarget).toEqual({ kind: "media", scope: {} });
+  });
+
+  test(".multiple() flips to a multi media target with an optional max", () => {
+    const field = media("gallery").accept("image/").multiple().max(6).build();
+    expect(field.inputType).toBe("mediaList");
+    expect(field.type).toBe("json");
+    expect(field.max).toBe(6);
     expect(field.referenceTarget).toEqual({
       kind: "media",
-      scope: { accept: undefined },
+      scope: { accept: "image/" },
+      multiple: true,
     });
   });
 
-  test("rejects non-applicable options at the type level", () => {
-    media({
-      key: "h",
-      label: "h",
-      // @ts-expect-error — placeholder doesn't apply to a reference field.
-      placeholder: "pick",
-    });
+  test("rejects non-applicable chains at the type level", () => {
+    expectTypeOf(media("h")).not.toHaveProperty("placeholder");
+    expectTypeOf(media("h")).not.toHaveProperty("options");
+  });
 
-    media({
-      key: "h",
-      label: "h",
-      // @ts-expect-error — options belongs to select/radio.
-      options: [{ value: "a", label: "A" }],
-    });
+  test("phantom typing: hydrated MediaReference by default, id after .returns('id')", () => {
+    const _single = media("hero");
+    expectTypeOf<(typeof _single)["_key"]>().toEqualTypeOf<"hero">();
+    expectTypeOf<(typeof _single)["_value"]>().toEqualTypeOf<
+      MediaReference | undefined
+    >();
+    // A single reference orphans, so the read stays optional under .required().
+    const _required = media("hero").required();
+    expectTypeOf<(typeof _required)["_value"]>().toEqualTypeOf<
+      MediaReference | undefined
+    >();
+    expectTypeOf<(typeof _required)["_stored"]>().toEqualTypeOf<string>();
+
+    const _id = media("hero").returns("id");
+    expectTypeOf<(typeof _id)["_value"]>().toEqualTypeOf<string | undefined>();
+
+    const _multi = media("gallery").multiple();
+    expectTypeOf<(typeof _multi)["_value"]>().toEqualTypeOf<
+      readonly MediaReference[] | undefined
+    >();
+    const _requiredMulti = media("gallery").multiple().required();
+    expectTypeOf<(typeof _requiredMulti)["_value"]>().toEqualTypeOf<
+      readonly MediaReference[]
+    >();
   });
 
   test("manifest round-trip preserves the referenceTarget on the wire shape", async () => {
@@ -96,13 +90,7 @@ describe("media() builder", () => {
     const userPlugin = definePlugin("test", (ctx) => {
       ctx.registerSettingsGroup("branding", {
         label: "Branding",
-        fields: [
-          media({
-            key: "hero",
-            label: "Hero image",
-            accept: "image/",
-          }),
-        ],
+        fields: [media("hero").label("Hero image").accept("image/")],
       });
     });
     const { registry } = await installPlugins({
@@ -120,54 +108,6 @@ describe("media() builder", () => {
       },
     });
   });
-});
-
-describe("mediaList() builder", () => {
-  test("pins inputType + json type and emits a multi media referenceTarget", () => {
-    const field = mediaList({
-      key: "gallery",
-      label: "Gallery",
-      accept: "image/",
-      max: 6,
-    });
-    expect(field.inputType).toBe("mediaList");
-    expect(field.type).toBe("json");
-    expect(field.max).toBe(6);
-    expect(field.referenceTarget).toEqual({
-      kind: "media",
-      scope: { accept: "image/" },
-      multiple: true,
-    });
-  });
-
-  test("supports unbounded max (no cap declared)", () => {
-    const field = mediaList({
-      key: "gallery",
-      label: "Gallery",
-    });
-    expect(field.max).toBeUndefined();
-    expect(field.referenceTarget).toEqual({
-      kind: "media",
-      scope: { accept: undefined },
-      multiple: true,
-    });
-  });
-
-  test("rejects non-applicable options at the type level", () => {
-    mediaList({
-      key: "g",
-      label: "g",
-      // @ts-expect-error — placeholder doesn't apply to a reference field.
-      placeholder: "pick",
-    });
-
-    mediaList({
-      key: "g",
-      label: "g",
-      // @ts-expect-error — options belongs to select/radio.
-      options: [{ value: "a", label: "A" }],
-    });
-  });
 
   test("manifest round-trip preserves multi referenceTarget + max on the wire shape", async () => {
     const hooks = new HookRegistry();
@@ -175,12 +115,11 @@ describe("mediaList() builder", () => {
       ctx.registerSettingsGroup("branding", {
         label: "Branding",
         fields: [
-          mediaList({
-            key: "carousel",
-            label: "Hero carousel",
-            accept: "image/",
-            max: 8,
-          }),
+          media("carousel")
+            .label("Hero carousel")
+            .accept("image/")
+            .multiple()
+            .max(8),
         ],
       });
     });
