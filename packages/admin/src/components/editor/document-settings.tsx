@@ -107,8 +107,10 @@ interface DocumentSettingsPanelProps {
 
 // MetaBoxField expects an ancestor react-hook-form <Form> provider —
 // this wrapper owns that form and forwards every change into the
-// route's autosave path.
-function DocumentMetaBoxes({
+// route's autosave path. Exported for the integration test that pins the
+// load-bearing "foreign keys survive an edit untouched" behavior the
+// autosave diff relies on.
+export function DocumentMetaBoxes({
   boxes,
   initialMeta,
   onMetaChange,

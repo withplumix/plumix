@@ -35,12 +35,16 @@ function registryWithoutAutosave() {
 }
 
 function registryWithMetaField(field: MetaBoxField) {
+  return registryWithMetaFields([field]);
+}
+
+function registryWithMetaFields(fields: readonly MetaBoxField[]) {
   const plugins = registryWithAutosave();
   plugins.entryMetaBoxes.set("test-box", {
     id: "test-box",
     label: "Test box",
     entryTypes: ["post"],
-    fields: [field],
+    fields,
     registeredBy: "test",
   });
   return plugins;
@@ -261,6 +265,81 @@ describe("entry.update saveAs", () => {
     });
     expect(autosaveFires).toHaveLength(1);
     expect(updatedFires).toHaveLength(0);
+  });
+
+  test("consecutive partial draft writes accumulate (a later patch keeps an earlier key)", async () => {
+    // The editor autosaves only what changed, so a later meta patch carries a
+    // different key than an earlier one. The draft must accumulate both rather
+    // than rebase each patch on the live row (which would drop the earlier key).
+    const h = await publishedPostFixture(
+      registryWithMetaFields([
+        {
+          key: "subtitle",
+          label: "Subtitle",
+          type: "string",
+          inputType: "text",
+        },
+        { key: "accent", label: "Accent", type: "string", inputType: "text" },
+      ]),
+    );
+    await h.client.entry.update({ id: h.entryId, meta: { subtitle: "hi" } });
+    const draft = await h.client.entry.update({
+      id: h.entryId,
+      meta: { accent: "#abc" },
+    });
+    expect(draft.type).toBe("autosave");
+    expect(draft.meta.subtitle).toBe("hi");
+    expect(draft.meta.accent).toBe("#abc");
+  });
+
+  test("a draft write tracks a title edited on live, so publish keeps it", async () => {
+    // Title is written straight to the live row (the editor's structural path),
+    // never through the draft — so the draft's title must mirror the *current*
+    // live row, not stay frozen at draft-creation time, or promote reverts it.
+    const h = await publishedPostFixture(
+      registryWithMetaField({
+        key: "subtitle",
+        label: "Subtitle",
+        type: "string",
+        inputType: "text",
+      }),
+    );
+    await h.client.entry.update({ id: h.entryId, meta: { subtitle: "a" } });
+    const live = await h.client.entry.update({
+      id: h.entryId,
+      title: "New Title",
+      saveAs: "live",
+    });
+    const draft = await h.client.entry.update({
+      id: h.entryId,
+      meta: { subtitle: "b" },
+    });
+    expect(draft.type).toBe("autosave");
+    expect(draft.title).toBe("New Title");
+    const promoted = await h.client.entry.publish({
+      id: h.entryId,
+      expectedLiveUpdatedAt: live.updatedAt,
+    });
+    expect(promoted.title).toBe("New Title");
+  });
+
+  test("a meta-only draft write keeps an excerpt edited in an earlier draft write", async () => {
+    const h = await publishedPostFixture(
+      registryWithMetaField({
+        key: "subtitle",
+        label: "Subtitle",
+        type: "string",
+        inputType: "text",
+      }),
+    );
+    await h.client.entry.update({ id: h.entryId, excerpt: "draft excerpt" });
+    const draft = await h.client.entry.update({
+      id: h.entryId,
+      meta: { subtitle: "later" },
+    });
+    expect(draft.type).toBe("autosave");
+    expect(draft.meta.subtitle).toBe("later");
+    expect(draft.excerpt).toBe("draft excerpt");
   });
 });
 

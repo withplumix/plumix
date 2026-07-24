@@ -2,8 +2,10 @@ import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
-import { upsertAutosave } from "../../../revisions/repository.js";
+import { getAutosave, upsertAutosave } from "../../../revisions/repository.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
+import { stripReservedMeta } from "../../../revisions/snapshot-envelope.js";
+import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { isEmptyMetaPatch } from "../../meta/core.js";
@@ -224,10 +226,24 @@ export const update = base
         filtered.meta,
         errors,
       );
-      // Autosave's meta bag tracks the in-progress edits; merge the
-      // sanitized patch over the live row's current meta so unchanged
-      // keys persist across draft saves.
-      const autosaveMeta: Record<string, unknown> = { ...existing.meta };
+      // The autosave row accumulates the author's in-progress edits, so base
+      // each write on the *existing draft* (falling back to the live row for
+      // the first write) and apply only this patch on top. Rebasing on live
+      // every time would drop keys/fields an earlier partial autosave changed
+      // — the editor sends only what changed. The optimistic token above
+      // guards against a diverged live row, so the frozen base is safe.
+      const currentDraft = await getAutosave(context.db, {
+        entryId: existing.id,
+        authorId: context.user.id,
+      });
+      const draftBase = currentDraft ?? existing;
+      // Reserved envelope keys (snapshot, revision message) are re-derived by
+      // `upsertAutosave`; drop them from the base, but keep the template pick so
+      // a prior unsaved choice survives a write that doesn't change it.
+      const autosaveMeta: Record<string, unknown> = stripReservedMeta(
+        draftBase.meta,
+        [NAMED_TEMPLATE_META_KEY],
+      );
       if (autosaveMetaPatch) {
         for (const key of autosaveMetaPatch.deletes) {
           delete autosaveMeta[key];
@@ -240,15 +256,20 @@ export const update = base
         entry: existing,
         authorId: context.user.id,
         patch: {
+          // Title stays anchored to the *live* row, not the draft: the editor
+          // writes title straight to live (its structural path), never through
+          // the draft, so a frozen draft base would revert a live title edit at
+          // promote. Content/excerpt/meta below flow through the draft, so they
+          // accumulate on it.
           title: filtered.title ?? existing.title,
           content:
             filtered.content !== undefined
               ? filtered.content
-              : existing.content,
+              : draftBase.content,
           excerpt:
             filtered.excerpt !== undefined
               ? filtered.excerpt
-              : existing.excerpt,
+              : draftBase.excerpt,
           // The framework template choice rides along (bypassing the
           // meta-box sanitizer by design) so the preview overlay can
           // honor an unsaved pick.

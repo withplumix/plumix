@@ -1,3 +1,4 @@
+import type { SaveQueue } from "@/editor/save-queue.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
@@ -10,6 +11,7 @@ import {
 } from "@/editor/autosave.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
+import { diffMetaBag } from "@/editor/meta-diff.js";
 import { registerCoreBlocks } from "@/editor/register-core-blocks.js";
 import {
   resolveEditorMode,
@@ -18,6 +20,7 @@ import {
 } from "@/editor/resolve-editor-mode.js";
 import { resolvePluginFieldType } from "@/editor/resolve-plugin-field-type.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
+import { createSaveQueue } from "@/editor/save-queue.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import {
@@ -281,6 +284,13 @@ function EntryEditor({
   const [hasLocalDraft, setHasLocalDraft] = useState(false);
 
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
+  // Serializes the two autosave debouncers' writes so they can't overlap and
+  // clobber the shared optimistic token — a live write must not bump
+  // `liveUpdatedAtRef` while a draft write reading the old value is still in
+  // flight (that raced them into `409` conflicts and dropped edits).
+  const saveQueueRef = useRef<SaveQueue | null>(null);
+  saveQueueRef.current ??= createSaveQueue();
+  const saveQueue = saveQueueRef.current;
   // Latches once an autosave genuinely fails so the author is told exactly once
   // (not on every debounce tick); cleared on the next successful save.
   const autosaveFailedRef = useRef(false);
@@ -300,7 +310,10 @@ function EntryEditor({
   const excerptRef = useRef(excerpt);
   const lastSavedExcerptRef = useRef<string>(entry.excerpt ?? "");
   const metaRef = useRef<Record<string, unknown>>(entry.meta);
-  const lastSavedMetaRef = useRef<string>(JSON.stringify(entry.meta));
+  // The last meta bag we successfully sent, kept as an object so autosave can
+  // diff against it and send only the changed keys (never re-sending untouched
+  // foreign keys like `featuredImage`, which would fail write-time validation).
+  const lastSavedMetaRef = useRef<Record<string, unknown>>(entry.meta);
   // Named-template pick — a reserved meta key, but sent as the dedicated
   // `template` field (the meta bag sanitizer rejects reserved keys). `null`
   // = theme default. Rides the same autosave debouncer as content/meta.
@@ -354,12 +367,15 @@ function EntryEditor({
   // Surface a genuine autosave failure so a rejected save (e.g. content
   // referencing an unknown block) isn't silently swallowed and lost; a
   // recoverable stale-token conflict just re-anchors and stays quiet.
+  // Returns `true` when the error was a recoverable stale-token conflict (token
+  // re-anchored, edit intact) so the caller can retry the pending write; `false`
+  // when the write genuinely failed and the author was told.
   const handleAutosaveError = useCallback(
-    async (err: unknown): Promise<void> => {
+    async (err: unknown): Promise<boolean> => {
       const outcome = await classifyAutosaveError(err, queryClient, id);
       if (outcome.kind === "recovered") {
         if (outcome.updatedAt) liveUpdatedAtRef.current = outcome.updatedAt;
-        return;
+        return true;
       }
       // Meta constraint rejections carry field paths — pin them onto
       // the document panel's inputs alongside the one-time toast.
@@ -368,32 +384,38 @@ function EntryEditor({
         autosaveFailedRef.current = true;
         toastError(renderLabel(M.autosaveFailed));
       }
+      return false;
     },
     [queryClient, id, renderLabel],
   );
 
   /* eslint-disable react-hooks/refs -- callbacks fire post-keystroke, not during render */
-  const contentDebouncer = useMemo(
-    () =>
-      createDebouncer(async () => {
-        const blocks = contentRef.current.blocks;
-        const serializedBlocks = JSON.stringify(blocks);
-        const contentChanged = serializedBlocks !== lastSavedContentRef.current;
-        const nextExcerpt = excerptRef.current;
-        const excerptChanged = nextExcerpt !== lastSavedExcerptRef.current;
-        const serializedMeta = JSON.stringify(metaRef.current);
-        const metaChanged = serializedMeta !== lastSavedMetaRef.current;
-        const nextTemplate = templateRef.current;
-        const templateChanged = nextTemplate !== lastSavedTemplateRef.current;
-        if (
-          !contentChanged &&
-          !excerptChanged &&
-          !metaChanged &&
-          !templateChanged
-        )
-          return;
-        try {
-          const updated = await orpc.entry.update.call({
+  const contentDebouncer = useMemo(() => {
+    const save = async (attempt = 0): Promise<void> => {
+      const blocks = contentRef.current.blocks;
+      const serializedBlocks = JSON.stringify(blocks);
+      const contentChanged = serializedBlocks !== lastSavedContentRef.current;
+      const nextExcerpt = excerptRef.current;
+      const excerptChanged = nextExcerpt !== lastSavedExcerptRef.current;
+      // Snapshot the bag we diff/send so a keystroke landing mid-write doesn't
+      // get marked saved before it's persisted.
+      const metaSnapshot = metaRef.current;
+      const metaPatch = diffMetaBag(lastSavedMetaRef.current, metaSnapshot);
+      const metaChanged = Object.keys(metaPatch).length > 0;
+      const nextTemplate = templateRef.current;
+      const templateChanged = nextTemplate !== lastSavedTemplateRef.current;
+      if (
+        !contentChanged &&
+        !excerptChanged &&
+        !metaChanged &&
+        !templateChanged
+      )
+        return;
+      try {
+        // Read the token and re-anchor it inside the serialized task, so the
+        // next queued write sees the post-write value rather than a stale one.
+        const updated = await saveQueue.run(async () => {
+          const res = await orpc.entry.update.call({
             id,
             ...(contentChanged
               ? { content: { version: "plumix.v2", blocks } }
@@ -401,59 +423,64 @@ function EntryEditor({
             ...(excerptChanged
               ? { excerpt: nextExcerpt.length === 0 ? null : nextExcerpt }
               : {}),
-            ...(metaChanged ? { meta: metaRef.current } : {}),
+            ...(metaChanged ? { meta: metaPatch } : {}),
             ...(templateChanged ? { template: nextTemplate } : {}),
             expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
-          if (updated.type === entry.type) {
-            liveUpdatedAtRef.current = updated.updatedAt;
-          } else {
-            // The write landed on the per-user autosave row — a pending draft
-            // now exists. Surface it so the draft actions wake without a reload.
-            setHasLocalDraft(true);
-          }
-          if (contentChanged) lastSavedContentRef.current = serializedBlocks;
-          if (excerptChanged) lastSavedExcerptRef.current = nextExcerpt;
-          if (metaChanged) lastSavedMetaRef.current = serializedMeta;
-          if (templateChanged) lastSavedTemplateRef.current = nextTemplate;
-          autosaveFailedRef.current = false;
-          setMetaFieldErrors(null);
-        } catch (err) {
-          await handleAutosaveError(err);
+          if (res.type === entry.type) liveUpdatedAtRef.current = res.updatedAt;
+          return res;
+        });
+        if (updated.type !== entry.type) {
+          // The write landed on the per-user autosave row — a pending draft
+          // now exists. Surface it so the draft actions wake without a reload.
+          setHasLocalDraft(true);
         }
-      }, AUTOSAVE_DEBOUNCE_MS),
-    [id, entry.type, handleAutosaveError],
-  );
-  const structuralDebouncer = useMemo(
-    () =>
-      createDebouncer(async () => {
-        const nextTitle = titleRef.current.trim();
-        const nextSlug = slugRef.current.trim();
-        const nextParent = parentRef.current;
-        const nextTerms = termsRef.current;
-        const savedTerms = lastSavedTermsRef.current;
-        const changedTaxonomies = Object.keys(nextTerms).filter(
-          (tax) =>
-            JSON.stringify(nextTerms[tax]) !==
-            JSON.stringify(savedTerms[tax] ?? []),
-        );
-        const titleChanged =
-          nextTitle.length > 0 && nextTitle !== lastSavedTitleRef.current;
-        const slugChanged =
-          nextSlug.length > 0 && nextSlug !== lastSavedSlugRef.current;
-        const parentChanged = nextParent !== lastSavedParentRef.current;
-        const termsChanged = changedTaxonomies.length > 0;
-        if (!titleChanged && !slugChanged && !parentChanged && !termsChanged) {
-          return;
-        }
-        const termsPatch = Object.fromEntries(
-          changedTaxonomies.map((tax) => [
-            tax,
-            (nextTerms[tax] ?? []).map(Number),
-          ]),
-        );
-        try {
-          const updated = await orpc.entry.update.call({
+        if (contentChanged) lastSavedContentRef.current = serializedBlocks;
+        if (excerptChanged) lastSavedExcerptRef.current = nextExcerpt;
+        if (metaChanged) lastSavedMetaRef.current = metaSnapshot;
+        if (templateChanged) lastSavedTemplateRef.current = nextTemplate;
+        autosaveFailedRef.current = false;
+        setMetaFieldErrors(null);
+      } catch (err) {
+        const recovered = await handleAutosaveError(err);
+        // A recovered stale-token conflict re-anchored the token but didn't
+        // persist this edit — retry once with the fresh token so the pending
+        // change isn't silently dropped if the author stops editing.
+        if (recovered && attempt === 0) await save(1);
+      }
+    };
+    return createDebouncer(() => save(), AUTOSAVE_DEBOUNCE_MS);
+  }, [id, entry.type, handleAutosaveError, saveQueue]);
+  const structuralDebouncer = useMemo(() => {
+    const save = async (attempt = 0): Promise<void> => {
+      const nextTitle = titleRef.current.trim();
+      const nextSlug = slugRef.current.trim();
+      const nextParent = parentRef.current;
+      const nextTerms = termsRef.current;
+      const savedTerms = lastSavedTermsRef.current;
+      const changedTaxonomies = Object.keys(nextTerms).filter(
+        (tax) =>
+          JSON.stringify(nextTerms[tax]) !==
+          JSON.stringify(savedTerms[tax] ?? []),
+      );
+      const titleChanged =
+        nextTitle.length > 0 && nextTitle !== lastSavedTitleRef.current;
+      const slugChanged =
+        nextSlug.length > 0 && nextSlug !== lastSavedSlugRef.current;
+      const parentChanged = nextParent !== lastSavedParentRef.current;
+      const termsChanged = changedTaxonomies.length > 0;
+      if (!titleChanged && !slugChanged && !parentChanged && !termsChanged) {
+        return;
+      }
+      const termsPatch = Object.fromEntries(
+        changedTaxonomies.map((tax) => [
+          tax,
+          (nextTerms[tax] ?? []).map(Number),
+        ]),
+      );
+      try {
+        const updated = await saveQueue.run(async () => {
+          const res = await orpc.entry.update.call({
             id,
             ...(titleChanged ? { title: nextTitle } : {}),
             ...(slugChanged ? { slug: nextSlug } : {}),
@@ -462,25 +489,28 @@ function EntryEditor({
             saveAs: "live",
             expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
-          liveUpdatedAtRef.current = updated.updatedAt;
-          if (titleChanged) lastSavedTitleRef.current = updated.title;
-          if (slugChanged) lastSavedSlugRef.current = updated.slug;
-          if (parentChanged) lastSavedParentRef.current = updated.parentId;
-          if (termsChanged) {
-            lastSavedTermsRef.current = {
-              ...savedTerms,
-              ...Object.fromEntries(
-                changedTaxonomies.map((tax) => [tax, nextTerms[tax] ?? []]),
-              ),
-            };
-          }
-          autosaveFailedRef.current = false;
-        } catch (err) {
-          await handleAutosaveError(err);
+          liveUpdatedAtRef.current = res.updatedAt;
+          return res;
+        });
+        if (titleChanged) lastSavedTitleRef.current = updated.title;
+        if (slugChanged) lastSavedSlugRef.current = updated.slug;
+        if (parentChanged) lastSavedParentRef.current = updated.parentId;
+        if (termsChanged) {
+          lastSavedTermsRef.current = {
+            ...savedTerms,
+            ...Object.fromEntries(
+              changedTaxonomies.map((tax) => [tax, nextTerms[tax] ?? []]),
+            ),
+          };
         }
-      }, AUTOSAVE_DEBOUNCE_MS),
-    [id, handleAutosaveError],
-  );
+        autosaveFailedRef.current = false;
+      } catch (err) {
+        const recovered = await handleAutosaveError(err);
+        if (recovered && attempt === 0) await save(1);
+      }
+    };
+    return createDebouncer(() => save(), AUTOSAVE_DEBOUNCE_MS);
+  }, [id, handleAutosaveError, saveQueue]);
   /* eslint-enable react-hooks/refs */
   useEffect(
     () => () => {
@@ -535,7 +565,9 @@ function EntryEditor({
   const handleMetaChange = useCallback(
     (next: Record<string, unknown>): void => {
       metaRef.current = next;
-      if (JSON.stringify(next) === lastSavedMetaRef.current) return;
+      // Skip scheduling a write when nothing the editor owns actually changed.
+      if (Object.keys(diffMetaBag(lastSavedMetaRef.current, next)).length === 0)
+        return;
       contentDebouncer.call();
     },
     [contentDebouncer],
