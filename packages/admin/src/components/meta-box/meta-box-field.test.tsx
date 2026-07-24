@@ -1038,7 +1038,7 @@ describe("MetaBoxField — repeater dispatch", () => {
     ).toBeInTheDocument();
   });
 
-  test("Add row appends a row whose subfields render via the same dispatcher", async () => {
+  test("Add row appends a row and opens its editor dialog", async () => {
     const onChange = vi.fn();
     renderWithI18n(
       <Harness
@@ -1048,16 +1048,16 @@ describe("MetaBoxField — repeater dispatch", () => {
       />,
     );
     await userEvent.click(screen.getByTestId("meta-box-field-links-input-add"));
-    // Row 0's subfields render with dot-pathed names through the
-    // recursive dispatcher.
+    // Add opens the new row's dialog; its subfields render there with
+    // dot-pathed names through the recursive dispatcher.
     expect(
-      screen.getByTestId("meta-box-field-label-input"),
+      await screen.findByTestId("meta-box-field-label-input"),
     ).toBeInTheDocument();
     expect(screen.getByTestId("meta-box-field-href-input")).toBeInTheDocument();
     expect(onChange).toHaveBeenLastCalledWith([{ label: null, href: null }]);
   });
 
-  test("typing into a subfield writes to the form's nested path", async () => {
+  test("editing a row's subfield writes to the form's nested path", async () => {
     const onChange = vi.fn();
     renderWithI18n(
       <Harness
@@ -1066,8 +1066,12 @@ describe("MetaBoxField — repeater dispatch", () => {
         onChangeSpy={onChange}
       />,
     );
+    // Fields live in the dialog — open it via the row's Edit button first.
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-links-input-row-0-edit"),
+    );
     await userEvent.type(
-      screen.getByTestId("meta-box-field-label-input"),
+      await screen.findByTestId("meta-box-field-label-input"),
       "Home",
     );
     expect(onChange).toHaveBeenLastCalledWith([{ label: "Home", href: "" }]);
@@ -1119,43 +1123,67 @@ describe("MetaBoxField — repeater dispatch", () => {
     ).toHaveTextContent("Add link");
   });
 
-  test("layout is surfaced as a data attribute and table renders a header", () => {
+  test("rows show a summary and keep their fields in the dialog until opened", async () => {
     renderWithI18n(
       <Harness
-        fieldDef={repeaterField({ layout: "table" })}
-        initial={[{ label: "", href: "" }]}
-      />,
-    );
-    expect(screen.getByTestId("meta-box-field-links-input")).toHaveAttribute(
-      "data-layout",
-      "table",
-    );
-    expect(
-      screen.getByTestId("meta-box-field-links-input-header"),
-    ).toBeInTheDocument();
-  });
-
-  test("collapsed rows show the chosen subfield's value and hide fields until expanded", async () => {
-    renderWithI18n(
-      <Harness
-        fieldDef={repeaterField({ collapsed: "label" })}
+        fieldDef={repeaterField()}
         initial={[{ label: "Home", href: "/" }]}
       />,
     );
-    // The summary shows the collapsed subfield's value; fields are hidden.
+    // The summary shows the first non-empty subfield; fields stay in the
+    // (closed) dialog, not the rail.
     expect(
-      screen.getByTestId("meta-box-field-links-input-row-0-summary-label"),
+      screen.getByTestId("meta-box-field-links-input-row-0-summary"),
     ).toHaveTextContent("Home");
     expect(
       screen.queryByTestId("meta-box-field-label-input"),
     ).not.toBeInTheDocument();
-    // Expanding reveals the row's fields.
+    // Edit opens the dialog and reveals the row's fields.
     await userEvent.click(
-      screen.getByTestId("meta-box-field-links-input-row-0-summary"),
+      screen.getByTestId("meta-box-field-links-input-row-0-edit"),
     );
     expect(
-      screen.getByTestId("meta-box-field-label-input"),
+      await screen.findByTestId("meta-box-field-label-input"),
     ).toBeInTheDocument();
+  });
+
+  test("collapsed key overrides which subfield labels the summary row", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={repeaterField({ collapsed: "href" })}
+        initial={[{ label: "Home", href: "/docs" }]}
+      />,
+    );
+    expect(
+      screen.getByTestId("meta-box-field-links-input-row-0-summary"),
+    ).toHaveTextContent("/docs");
+  });
+
+  test("dialog lays subfields out honoring each one's span", async () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={repeaterField({
+          subFields: [
+            {
+              key: "label",
+              label: "Label",
+              type: "string",
+              inputType: "text",
+              span: 6,
+            },
+            { key: "href", label: "URL", type: "string", inputType: "url" },
+          ],
+        })}
+        initial={[{ label: "", href: "" }]}
+      />,
+    );
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-links-input-row-0-edit"),
+    );
+    // The span-6 field carries the six-column class inside the dialog grid;
+    // the inline rail dropped spans entirely before.
+    const labelItem = await screen.findByTestId("meta-box-field-label");
+    expect(labelItem.className).toContain("col-span-6");
   });
 
   test("a nested repeater renders through the same recursive dispatcher", async () => {
@@ -1176,9 +1204,13 @@ describe("MetaBoxField — repeater dispatch", () => {
     renderWithI18n(
       <Harness fieldDef={nested} initial={[{ heading: "", callouts: [] }]} />,
     );
-    // The inner repeater renders its own add button, nested under the row.
+    // Open the row's dialog; the inner repeater renders its own add button
+    // there, nested through the same recursive dispatcher.
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-links-input-row-0-edit"),
+    );
     expect(
-      screen.getByTestId("meta-box-field-callouts-input-add"),
+      await screen.findByTestId("meta-box-field-callouts-input-add"),
     ).toBeInTheDocument();
   });
 });

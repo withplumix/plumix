@@ -125,7 +125,7 @@ describe("inline display of path-addressed write errors", () => {
     ).toBe("Must be at most 5 characters.");
   });
 
-  test("a nested repeater cell shows the error on the addressed row input", async () => {
+  test("a nested repeater cell error flags its row's summary", async () => {
     renderWithI18n(
       <Harness
         fields={[
@@ -159,9 +159,21 @@ describe("inline display of path-addressed write errors", () => {
       />,
     );
     await userEvent.click(screen.getByTestId("apply-server-errors"));
-    const errors = screen.getAllByTestId("meta-box-field-heading-error");
-    expect(errors).toHaveLength(1);
-    expect(errors[0]?.textContent).toBe("This field is required.");
+    // Row fields live in a dialog; the errored row's summary is flagged so the
+    // author knows which to open. Only the addressed row (1) is flagged.
+    expect(
+      screen.getByTestId("meta-box-field-sections-input-row-1-error"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("meta-box-field-sections-input-row-0-error"),
+    ).not.toBeInTheDocument();
+    // The message itself renders once the row's dialog is opened.
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-sections-input-row-1-edit"),
+    );
+    expect(
+      (await screen.findByTestId("meta-box-field-heading-error")).textContent,
+    ).toBe("This field is required.");
   });
 
   test("a repeater-root error does not wipe its cell errors", async () => {
@@ -207,12 +219,14 @@ describe("inline display of path-addressed write errors", () => {
       />,
     );
     await userEvent.click(screen.getByTestId("apply-server-errors"));
-    expect(screen.getByTestId("meta-box-field-heading-error").textContent).toBe(
-      "This field is required.",
-    );
+    // The repeater-root error renders on the repeater's own message; the cell
+    // error still flags row 0's summary (shallow-first apply didn't wipe it).
     expect(
       screen.getByTestId("meta-box-field-sections-error").textContent,
     ).toBe("Add at least 2 row(s).");
+    expect(
+      screen.getByTestId("meta-box-field-sections-input-row-0-error"),
+    ).toBeInTheDocument();
   });
 
   test("plain-string messages (custom .validate() verdicts) pass through", async () => {
