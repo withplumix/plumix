@@ -67,4 +67,27 @@ describe("DocumentMetaBoxes foreign-key retention", () => {
     expect(patch).toEqual({ subtitle: "old!" });
     expect("featuredImage" in patch).toBe(false);
   });
+
+  // The route seeds `initialMeta`, `metaRef`, and the diff baseline from the
+  // same `seedEntryMetaForm` value, so a freshly-opened entry (defaults shown,
+  // no user edit) must produce an empty diff — otherwise opening an entry would
+  // autosave a spurious "change".
+  test("mounting with seeded defaults emits them unchanged, so the diff is empty", async () => {
+    const seeded = { subtitle: "old", accent: "#3366ff" };
+    const onMetaChange = vi.fn<(next: Record<string, unknown>) => void>();
+
+    const queryClient = createQueryClient();
+    renderWithI18n(
+      <QueryClientProvider client={queryClient}>
+        <DocumentMetaBoxes
+          boxes={[box]}
+          initialMeta={seeded}
+          onMetaChange={onMetaChange}
+        />
+      </QueryClientProvider>,
+    );
+
+    const emittedOnMount = onMetaChange.mock.calls.at(-1)?.[0];
+    expect(diffMetaBag(seeded, emittedOnMount ?? {})).toEqual({});
+  });
 });

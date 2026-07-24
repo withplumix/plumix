@@ -21,6 +21,7 @@ import {
 import { resolvePluginFieldType } from "@/editor/resolve-plugin-field-type.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { createSaveQueue } from "@/editor/save-queue.js";
+import { seedEntryMetaForm } from "@/editor/seed-entry-meta.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import {
@@ -309,11 +310,22 @@ function EntryEditor({
   const [excerpt, setExcerpt] = useState<string>(entry.excerpt ?? "");
   const excerptRef = useRef(excerpt);
   const lastSavedExcerptRef = useRef<string>(entry.excerpt ?? "");
-  const metaRef = useRef<Record<string, unknown>>(entry.meta);
+  const metaBoxes = useMemo(
+    () =>
+      entryTypeName ? entryMetaBoxesForType(entryTypeName, capabilities) : [],
+    [entryTypeName, capabilities],
+  );
+  // Defaults for display: the form, `metaRef`, and the diff baseline all seed
+  // from this identical value — see `seedEntryMetaForm`.
+  const seededMeta = useMemo(
+    () => seedEntryMetaForm(metaBoxes, entry.meta),
+    [metaBoxes, entry.meta],
+  );
+  const metaRef = useRef<Record<string, unknown>>(seededMeta);
   // The last meta bag we successfully sent, kept as an object so autosave can
   // diff against it and send only the changed keys (never re-sending untouched
   // foreign keys like `featuredImage`, which would fail write-time validation).
-  const lastSavedMetaRef = useRef<Record<string, unknown>>(entry.meta);
+  const lastSavedMetaRef = useRef<Record<string, unknown>>(seededMeta);
   // Named-template pick — a reserved meta key, but sent as the dedicated
   // `template` field (the meta bag sanitizer rejects reserved keys). `null`
   // = theme default. Rides the same autosave debouncer as content/meta.
@@ -591,11 +603,6 @@ function EntryEditor({
     });
   }, [contentDebouncer, structuralDebouncer, navigate, slug]);
 
-  const metaBoxes = useMemo(
-    () =>
-      entryTypeName ? entryMetaBoxesForType(entryTypeName, capabilities) : [],
-    [entryTypeName, capabilities],
-  );
   const templateOptions = useMemo(
     () => (entryTypeName ? namedTemplatesForType(entryTypeName) : []),
     [entryTypeName],
@@ -686,7 +693,7 @@ function EntryEditor({
           metaBoxes.length > 0
             ? {
                 boxes: metaBoxes,
-                initialMeta: entry.meta,
+                initialMeta: seededMeta,
                 onMetaChange: handleMetaChange,
                 fieldErrors: metaFieldErrors,
               }
@@ -709,7 +716,7 @@ function EntryEditor({
       handleTemplateChange,
       taxonomyPickers,
       metaBoxes,
-      entry.meta,
+      seededMeta,
       handleMetaChange,
       metaFieldErrors,
     ],

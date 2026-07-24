@@ -8,6 +8,7 @@ import { diffMetaBag } from "@/editor/meta-diff.js";
 import { PreviewButton } from "@/editor/PreviewButton.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { createSaveQueue } from "@/editor/save-queue.js";
+import { seedEntryMetaForm } from "@/editor/seed-entry-meta.js";
 import { entryMetaBoxesForType } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { entryTypeLabel } from "@/lib/type-labels.js";
@@ -54,14 +55,16 @@ export function PlainFormRouteInner({
   const saveQueueRef = useRef<SaveQueue | null>(null);
   saveQueueRef.current ??= createSaveQueue();
   const saveQueue = saveQueueRef.current;
+  const metaBoxes = entryMetaBoxesForType(entryType.name, capabilities);
+  // Defaults for display: the form and diff baseline share this value — see
+  // `seedEntryMetaForm`.
+  const seededMeta = seedEntryMetaForm(metaBoxes, entry.meta);
   // Last meta bag we persisted — autosave diffs against it and sends only the
   // changed keys, so untouched foreign keys aren't re-validated on every write.
-  const lastSavedMetaRef = useRef<Record<string, unknown>>(entry.meta);
+  const lastSavedMetaRef = useRef<Record<string, unknown>>(seededMeta);
   // String branch carries plugin-author `err.message` verbatim; the
   // descriptor branch surfaces the localized fallback.
   const [serverError, setServerError] = useState<Label | null>(null);
-
-  const metaBoxes = entryMetaBoxesForType(entryType.name, capabilities);
 
   const updateMutation = useMutation({
     mutationFn: async (values: {
@@ -138,7 +141,7 @@ export function PlainFormRouteInner({
     content: entry.content,
     excerpt: entry.excerpt ?? "",
     status: entry.status,
-    meta: entry.meta,
+    meta: seededMeta,
     terms: {},
     parentId: entry.parentId,
   };
