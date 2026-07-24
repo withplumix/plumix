@@ -10,13 +10,15 @@ import type { MetaBoxFieldInput } from "../manifest.js";
  * The typed-meta contribution registries. A meta box (or settings
  * group) registration is runtime-only — a `register*` call can't
  * augment a global interface — so typed reads cost one derived
- * declaration per box, merged from any package:
+ * declaration per box, merged from any package. The `EntryMeta` /
+ * `TermMeta` / `UserMeta` / `SettingsMeta` helpers author that
+ * declaration (see {@link EntryMeta} for the end-to-end walkthrough):
  *
  * ```ts
  * const articleFields = [text("subtitle").maxLength(120)];
  * declare module "plumix" {
  *   interface EntryMetaContributions {
- *     article: { entryTypes: "post"; fields: typeof articleFields };
+ *     article: EntryMeta<"post", typeof articleFields>;
  *   }
  * }
  * ```
@@ -46,6 +48,85 @@ export interface UserMetaContributions {}
 /** Settings-group contributions, keyed by group name. */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface SettingsContributions {}
+
+/**
+ * The shape of one entry meta-box contribution: the target entry type(s)
+ * plus the fields array. A named alias so authors reach for a checked
+ * two-generic helper instead of hand-writing the `{ entryTypes; fields }`
+ * object — misspelling a property (`entryType`) would otherwise leave the
+ * contribution structurally valid but silently unmatched by the fold, so
+ * the fields read as *absent* with no error. `EntryTypes` is constrained
+ * to registered names, so an unknown entry type errors at the declaration
+ * itself rather than only at the `registerEntryMetaBox` call.
+ *
+ * The full path from declaring fields to typed template reads:
+ *
+ * ```ts
+ * import { text } from "plumix/fields";
+ * import type { EntryMeta } from "plumix";
+ *
+ * // 1. Author the fields as a named const so both the declaration and
+ * //    the registration reference one source of truth.
+ * const articleFields = [text("subtitle"), text("heroCredit").required()];
+ *
+ * // 2. Declare the contribution — this is what crosses package
+ * //    boundaries so a theme in another package sees the meta shape.
+ * declare module "plumix" {
+ *   interface EntryMetaContributions {
+ *     article: EntryMeta<"post", typeof articleFields>;
+ *   }
+ * }
+ *
+ * // 3. Register the box; the call is typechecked against the declaration
+ * //    above (anti-drift), so the two can't diverge silently.
+ * ctx.registerEntryMetaBox("article", {
+ *   label: "Article",
+ *   entryTypes: ["post"],
+ *   fields: articleFields,
+ * });
+ *
+ * // 4. In the theme, a targeted template reads typed meta:
+ * //    `forEntryType("post").template(({ entry }) => entry.meta.subtitle)`
+ * //    — `subtitle` is `string | undefined`, a typo is a compile error.
+ * ```
+ */
+export interface EntryMeta<
+  EntryTypes extends EntryTypeName,
+  Fields extends readonly MetaBoxFieldInput[],
+> {
+  entryTypes: EntryTypes;
+  fields: Fields;
+}
+
+/**
+ * The shape of one term meta-box contribution — target taxonomy(s) plus
+ * fields. The {@link EntryMeta} analogue over `termTaxonomies`; folds
+ * through {@link TermMetaOf} for `forTaxonomy(...).template(...)` reads.
+ */
+export interface TermMeta<
+  Taxonomies extends TermTaxonomyName,
+  Fields extends readonly MetaBoxFieldInput[],
+> {
+  termTaxonomies: Taxonomies;
+  fields: Fields;
+}
+
+/**
+ * The shape of one user meta-box contribution. Users share a flat
+ * keyspace, so there is no target set — every declared contribution folds
+ * into {@link UserMetaOf}.
+ */
+export interface UserMeta<Fields extends readonly MetaBoxFieldInput[]> {
+  fields: Fields;
+}
+
+/**
+ * The shape of one settings-group contribution, keyed by group name in
+ * {@link SettingsContributions}; folds through {@link SettingsOf}.
+ */
+export interface SettingsMeta<Fields extends readonly MetaBoxFieldInput[]> {
+  fields: Fields;
+}
 
 // A fluent builder carrying the three phantoms the type flow reads.
 // Object-literal field definitions have none, so `Extract` drops them —
