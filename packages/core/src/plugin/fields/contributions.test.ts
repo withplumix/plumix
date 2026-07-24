@@ -6,13 +6,17 @@ import type {
 } from "../../route/render/resolved-entry.js";
 import type { PluginSetupContext } from "../setup-context.js";
 import type {
+  EntryMeta,
   InferFields,
   InferStoredFields,
   MetaOf,
+  SettingsMeta,
   SettingsOf,
   StoredMetaOf,
   StoredTermMetaOf,
+  TermMeta,
   TermMetaOf,
+  UserMeta,
   UserMetaOf,
 } from "./contributions.js";
 import type { LinkValue } from "./link.js";
@@ -42,6 +46,17 @@ const _brandingFields = [text("tagline").default("")];
 
 const _brandCardFields = [text("brandBadge")];
 
+// Helper-alias fixtures — the same contributions authored through the
+// `EntryMeta` / `TermMeta` / `UserMeta` / `SettingsMeta` shape helpers
+// instead of the hand-written `{ entryTypes; fields }` object type.
+const _helpedFields = [text("kicker").required(), text("deck")];
+
+const _helpedTermFields = [text("badgeText")];
+
+const _helpedUserFields = [text("pronouns")];
+
+const _helpedSettingsFields = [text("siteTagline").required()];
+
 // Composite fields: a group namespaces into a nested record, a repeater
 // folds into a typed row array — both recurse into `MetaOf`.
 const _structuredFields = [
@@ -55,10 +70,12 @@ declare module "../../template-registry.js" {
     landing: { entry: ResolvedEntry };
     bare: { entry: ResolvedEntry };
     structured: { entry: ResolvedEntry };
+    helped: { entry: ResolvedEntry };
   }
   interface TermTaxonomyRegistry {
     cuisine: { term: ResolvedTerm };
     bareTax: { term: ResolvedTerm };
+    helpedTax: { term: ResolvedTerm };
   }
 }
 
@@ -71,16 +88,22 @@ declare module "./contributions.js" {
       entryTypes: "structured";
       fields: typeof _structuredFields;
     };
+    // Authored through the `EntryMeta` helper — folds identically to the
+    // hand-written shapes above.
+    cxHelped: EntryMeta<"helped", typeof _helpedFields>;
   }
   interface TermMetaContributions {
     cxBrandCard: { termTaxonomies: "cuisine"; fields: typeof _brandCardFields };
+    cxHelpedTerm: TermMeta<"helpedTax", typeof _helpedTermFields>;
   }
   interface UserMetaContributions {
     cxProfile: { fields: typeof _profileFields };
     cxSocial: { fields: typeof _socialFields };
+    cxHelpedUser: UserMeta<typeof _helpedUserFields>;
   }
   interface SettingsContributions {
     cxBranding: { fields: typeof _brandingFields };
+    cxHelpedSettings: SettingsMeta<typeof _helpedSettingsFields>;
   }
 }
 
@@ -180,6 +203,34 @@ const _driftChecks = (ctx: PluginSetupContext) => {
     label: "Branding",
     fields: _profileFields,
   });
+
+  // Helper-authored declarations interoperate with the drift check exactly
+  // like the hand-written shapes — the registration typechecks against the
+  // `EntryMeta` / `TermMeta` / `UserMeta` / `SettingsMeta` contribution.
+  ctx.registerEntryMetaBox("cxHelped", {
+    label: "Helped",
+    entryTypes: ["helped"],
+    fields: _helpedFields,
+  });
+  // @ts-expect-error - drift still fires through a helper-authored declaration
+  ctx.registerEntryMetaBox("cxHelped", {
+    label: "Helped",
+    entryTypes: ["landing"],
+    fields: _helpedFields,
+  });
+  ctx.registerTermMetaBox("cxHelpedTerm", {
+    label: "Helped term",
+    termTaxonomies: ["helpedTax"],
+    fields: _helpedTermFields,
+  });
+  ctx.registerUserMetaBox("cxHelpedUser", {
+    label: "Helped user",
+    fields: _helpedUserFields,
+  });
+  ctx.registerSettingsGroup("cxHelpedSettings", {
+    label: "Helped settings",
+    fields: _helpedSettingsFields,
+  });
 };
 
 describe("InferFields / InferStoredFields", () => {
@@ -263,8 +314,10 @@ describe("term / user / settings folds", () => {
   });
 
   test("UserMetaOf folds every contribution (flat keyspace)", () => {
+    // `pronouns` comes from the `UserMeta`-helper-authored contribution —
+    // the flat user keyspace folds it in alongside the literal ones.
     expectTypeOf<keyof UserMetaOf>().toEqualTypeOf<
-      "displayName" | "mastodon"
+      "displayName" | "mastodon" | "pronouns"
     >();
     expectTypeOf<UserMetaOf["displayName"]>().toEqualTypeOf<string>();
   });
@@ -272,5 +325,43 @@ describe("term / user / settings folds", () => {
   test("SettingsOf types one group by name", () => {
     expectTypeOf<SettingsOf<"cxBranding">["tagline"]>().toEqualTypeOf<string>();
     expectTypeOf<keyof SettingsOf<"cxBranding">>().toEqualTypeOf<"tagline">();
+  });
+});
+
+describe("contribution shape helpers", () => {
+  test("each helper expands to the hand-written contribution shape", () => {
+    // The helpers are pure aliases — folding reads the same properties
+    // (`entryTypes` / `termTaxonomies` / `fields`) either way, so a typo'd
+    // property name is unreachable once an author goes through them.
+    expectTypeOf<EntryMeta<"helped", typeof _helpedFields>>().toEqualTypeOf<{
+      entryTypes: "helped";
+      fields: typeof _helpedFields;
+    }>();
+    expectTypeOf<
+      TermMeta<"helpedTax", typeof _helpedTermFields>
+    >().toEqualTypeOf<{
+      termTaxonomies: "helpedTax";
+      fields: typeof _helpedTermFields;
+    }>();
+    expectTypeOf<UserMeta<typeof _helpedUserFields>>().toEqualTypeOf<{
+      fields: typeof _helpedUserFields;
+    }>();
+    expectTypeOf<SettingsMeta<typeof _helpedSettingsFields>>().toEqualTypeOf<{
+      fields: typeof _helpedSettingsFields;
+    }>();
+  });
+
+  test("helper-authored contributions fold into MetaOf like literal ones", () => {
+    type M = MetaOf<"helped">;
+    expectTypeOf<keyof M>().toEqualTypeOf<"kicker" | "deck">();
+    expectTypeOf<M["kicker"]>().toEqualTypeOf<string>();
+    expectTypeOf<M["deck"]>().toEqualTypeOf<string | undefined>();
+  });
+
+  test("term / settings helpers fold through their own registries", () => {
+    expectTypeOf<keyof TermMetaOf<"helpedTax">>().toEqualTypeOf<"badgeText">();
+    expectTypeOf<
+      SettingsOf<"cxHelpedSettings">["siteTagline"]
+    >().toEqualTypeOf<string>();
   });
 });

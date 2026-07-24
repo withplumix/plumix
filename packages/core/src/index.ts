@@ -74,6 +74,7 @@ export type {
   TermProjection,
 } from "./template-registry.js";
 export type {
+  EntryMeta,
   EntryMetaContributions,
   InferFields,
   InferStoredFields,
@@ -81,11 +82,14 @@ export type {
   ResolvedEntryFor,
   ResolvedTermFor,
   SettingsContributions,
+  SettingsMeta,
   SettingsOf,
   StoredMetaOf,
   StoredTermMetaOf,
+  TermMeta,
   TermMetaContributions,
   TermMetaOf,
+  UserMeta,
   UserMetaContributions,
   UserMetaOf,
 } from "./plugin/fields/contributions.js";
