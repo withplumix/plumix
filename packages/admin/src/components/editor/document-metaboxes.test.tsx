@@ -6,8 +6,8 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
 
-import { diffMetaBag } from "../../editor/meta-diff.js";
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
+import { diffMetaBag } from "../../editor/meta-diff.js";
 import { DocumentMetaBoxes } from "./document-settings.js";
 
 afterEach(() => {
@@ -19,7 +19,9 @@ const box: EntryMetaBoxManifestEntry = {
   id: "showcase",
   label: "Showcase",
   entryTypes: ["post"],
-  fields: [{ key: "subtitle", label: "Subtitle", type: "string", inputType: "text" }],
+  fields: [
+    { key: "subtitle", label: "Subtitle", type: "string", inputType: "text" },
+  ],
 };
 
 describe("DocumentMetaBoxes foreign-key retention", () => {
@@ -31,7 +33,12 @@ describe("DocumentMetaBoxes foreign-key retention", () => {
   test("editing a registered field leaves a foreign key untouched, so the diff omits it", async () => {
     const initialMeta = {
       subtitle: "old",
-      featuredImage: { src: "/hero.jpg", alt: "Hero", width: 1200, height: 800 },
+      featuredImage: {
+        src: "/hero.jpg",
+        alt: "Hero",
+        width: 1200,
+        height: 800,
+      },
     };
     const onMetaChange = vi.fn<(next: Record<string, unknown>) => void>();
 
