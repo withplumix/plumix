@@ -222,7 +222,9 @@ function SettingsGroupCard({
       data-testid={`settings-group-card-${group.name}`}
     >
       <Form {...form}>
-        <form onSubmit={onSubmit}>
+        {/* <form> interposes between <Card> and its children, so it must carry
+            Card's own flex column gap or the sections collapse together. */}
+        <form onSubmit={onSubmit} className="flex flex-col gap-6">
           <CardHeader>
             <CardTitle>
               <h2
@@ -281,7 +283,7 @@ function SettingsGroupCard({
               </Alert>
             ) : null}
           </CardContent>
-          <div className="flex justify-end px-6 pb-6">
+          <div className="flex justify-end px-6">
             <Button
               type="submit"
               disabled={save.isPending}
