@@ -1775,12 +1775,13 @@ export interface MetaBoxFieldManifestEntry {
   /**
    * Child-field manifest for the composite field types — repeater row
    * schema and group members alike, keyed positionally, same shape as a
-   * top-level field minus `span` (children are full-width). Sanitize
-   * callbacks are stripped from the wire shape; the admin recurses
-   * through this list when rendering each row / group. The renderer
-   * dispatches on `inputType` (`repeater` vs `group`) to interpret it.
+   * top-level field. Children keep their `span`: the row-editor dialog and
+   * group grid lay them out on a 12-column grid that honours it. Sanitize
+   * callbacks are stripped from the wire shape; the admin recurses through
+   * this list when rendering each row / group. The renderer dispatches on
+   * `inputType` (`repeater` vs `group`) to interpret it.
    */
-  readonly subFields?: readonly EntryMetaBoxFieldManifestEntry[];
+  readonly subFields?: readonly MetaBoxFieldManifestEntry[];
   /** Repeater add-row button label — see {@link RepeaterMetaBoxField.addLabel}. */
   readonly addLabel?: Label;
   /** Repeater row layout — see {@link RepeaterLayout}. */
@@ -3065,17 +3066,21 @@ function toEntryMetaBoxFieldEntry(
     addLabel: view.addLabel,
     layout: view.layout,
     collapsed: view.collapsed,
-    // Repeater subfields and group members recurse through the same
-    // projection into the uniform wire `subFields` slot — span dropped
-    // (children are full-width), sanitize callbacks stripped
-    // (server-only). The renderer branches on `inputType` to read them
-    // as rows (repeater) or members (group).
+    // Repeater subfields and group members recurse through
+    // `toMetaBoxFieldEntry` into the uniform wire `subFields` slot — the same
+    // shape as a top-level field, keeping each child's `span` (the row-editor
+    // dialog / group grid honour it, unlike the entry rail that drops the
+    // top-level hint) and stripping sanitize callbacks (server-only). The
+    // renderer branches on `inputType` to read them as rows / members.
     subFields: (view.subFields ?? view.fields)?.map((sf) =>
-      toEntryMetaBoxFieldEntry(sf),
+      toMetaBoxFieldEntry(sf),
     ),
   };
 }
 
+// A subfield / member keeps its `span` (the entry projection drops it); the
+// composite editors lay children out on their own 12-column grid. Children
+// recurse via `toEntryMetaBoxFieldEntry`, which maps `subFields` back here.
 function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
   return { ...toEntryMetaBoxFieldEntry(field), span: field.span };
 }

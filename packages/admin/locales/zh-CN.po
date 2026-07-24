@@ -1897,6 +1897,11 @@ msgid "apiTokens.secret.done"
 msgstr "完成"
 
 #. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.done"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgctxt "entry status"
 msgid "entries.list.statusFilter.draft"
@@ -1937,6 +1942,11 @@ msgstr "编辑"
 msgid "type.generic.editItem"
 msgstr "编辑"
 
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.editRow.button"
+msgstr ""
+
 #. email: the user being edited
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1946,6 +1956,12 @@ msgstr "编辑 {email}"
 #. js-lingui-explicit-id
 #: src/components/shell/command-palette.tsx
 msgid "palette.command.profile"
+msgstr ""
+
+#. n: 1-based index of the repeater row being edited
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.editRow"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3197,7 +3213,7 @@ msgstr "角色"
 msgid "userEdit.role.label"
 msgstr "角色"
 
-#. n: 1-based index of an unlabelled collapsed repeater row
+#. n: 1-based index of an unlabelled repeater row
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.rowSummaryEmpty"
@@ -4002,6 +4018,11 @@ msgstr "此插件"
 #: src/editor/revisions/RevisionDiffDialog.tsx
 msgid "editor.revisions.diffDialog.pane.thisRevision"
 msgstr "此修订版本"
+
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.rowError"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx

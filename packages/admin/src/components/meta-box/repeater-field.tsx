@@ -2,21 +2,25 @@ import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useId, useState } from "react";
 import { useLabel } from "@/lib/use-label.js";
+import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
+import { useFormContext, useFormState } from "react-hook-form";
 
-import type {
-  MetaBoxFieldManifestEntry,
-  RepeaterLayout,
-} from "@plumix/core/manifest";
+import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { Button } from "@plumix/admin-ui/button";
 import {
-  ChevronDownIcon,
-  ChevronRight,
-  PlusIcon,
-} from "@plumix/admin-ui/icons";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@plumix/admin-ui/dialog";
+import { Pencil, PlusIcon, TriangleAlert } from "@plumix/admin-ui/icons";
 import { SortableList } from "@plumix/admin-ui/sortable";
 
 import { MetaBoxField } from "./meta-box-field.js";
+import { metaBoxFieldColSpanClass } from "./meta-box-grid.js";
 
 // Row ids are index-derived. dnd-kit only needs stability within a single
 // drag; controlled subfields live at `${rowName}.${subKey}` in RHF state, so
@@ -29,6 +33,13 @@ interface RepeaterRow {
   readonly index: number;
 }
 
+// Screen-reader name for the summary row's error triangle — the colour-only
+// button variant alone doesn't convey the error non-visually.
+const ROW_ERROR_LABEL = defineMessage({
+  id: "metaBox.repeater.rowError",
+  message: "This row has an error",
+});
+
 // Render-side tolerance for malformed rows from migration / hand-edited
 // DB rows. Bad rows drop from display but the validator still rejects
 // them on save, surfacing the error to the author at write time.
@@ -39,20 +50,6 @@ function asRows(raw: unknown): readonly Record<string, unknown>[] {
       typeof r === "object" && r !== null && !Array.isArray(r),
   );
 }
-
-// Row-container layout class per `.layout()`. `row` lays a single row's
-// fields out inline; `table` aligns them into columns under a shared
-// header; `block` (the default) stacks them vertically. Values are
-// Tailwind class strings + a layout enum, not display copy.
-/* eslint-disable lingui/no-unlocalized-strings -- CSS classes + layout enum */
-const ROW_LAYOUT_CLASS: Record<RepeaterLayout, string> = {
-  block: "flex flex-col gap-2",
-  row: "flex flex-row flex-wrap items-start gap-2",
-  table: "grid gap-2",
-};
-
-const DEFAULT_LAYOUT: RepeaterLayout = "block";
-/* eslint-enable lingui/no-unlocalized-strings */
 
 export function RepeaterField({
   field,
@@ -69,10 +66,20 @@ export function RepeaterField({
   const subFields = field.subFields ?? [];
   const max = typeof field.max === "number" ? field.max : undefined;
   const min = typeof field.min === "number" ? field.min : undefined;
-  const layout: RepeaterLayout = field.layout ?? DEFAULT_LAYOUT;
   const collapsedKey = field.collapsed;
   const rows = asRows(rhf.value);
   const idPrefix = useId();
+  // Which row's editor dialog is open (index into `rows`), or null.
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  // A row's fields live in its dialog, so a server / validation error on a
+  // sub-field would be invisible while the dialog is closed. Flag the summary
+  // rows that hold an error so the author knows which to open. `getFieldState`
+  // reads the subscribed `formState`, so the flags re-render as errors change.
+  const { control, getFieldState, clearErrors } = useFormContext();
+  const formState = useFormState({ control, name: rhf.name });
+  const rowHasError = (index: number): boolean =>
+    getFieldState(`${rhf.name}.${index}`, formState).invalid;
 
   const atMax = max !== undefined && rows.length >= max;
   const items: readonly RepeaterRow[] = rows.map((_, i) => ({
@@ -88,13 +95,22 @@ export function RepeaterField({
     rhf.onChange(nextRows);
   };
 
+  // Reorder / remove shift indices, so the open dialog would point at the
+  // wrong row — close it rather than silently editing a different row. The
+  // index-keyed errors don't shift with the array, so clear the repeater's
+  // error subtree too, otherwise a stale row indicator lands on the wrong row
+  // (the next save recomputes them).
   const handleReorder = (next: readonly RepeaterRow[]): void => {
+    setEditingIndex(null);
+    clearErrors(rhf.name);
     commit(next.map((n) => rows[n.index] ?? {}));
   };
 
   const handleRemove = (id: string): void => {
     const idx = items.findIndex((it) => it.id === id);
     if (idx === -1) return;
+    setEditingIndex(null);
+    clearErrors(rhf.name);
     const nextRows = [...rows];
     nextRows.splice(idx, 1);
     commit(nextRows);
@@ -107,25 +123,19 @@ export function RepeaterField({
       blank[sf.key] = sf.default ?? null;
     }
     commit([...rows, blank]);
+    // Open the editor on the row we just appended so authoring is one click.
+    setEditingIndex(rows.length);
   };
+
+  const editingRow = editingIndex !== null ? rows[editingIndex] : undefined;
+  const editingRowName =
+    editingIndex !== null ? `${rhf.name}.${editingIndex}` : null;
 
   return (
     <div
       data-testid={testId}
-      data-layout={layout}
       className="border-input flex flex-col gap-2 rounded-md border p-2"
     >
-      {layout === "table" && rows.length > 0 ? (
-        <div
-          className="text-muted-foreground grid gap-2 px-1 text-xs font-medium"
-          style={{ gridTemplateColumns: `repeat(${subFields.length}, 1fr)` }}
-          data-testid={`${testId}-header`}
-        >
-          {subFields.map((sf) => (
-            <span key={sf.key}>{renderLabel(sf.label)}</span>
-          ))}
-        </div>
-      ) : null}
       {rows.length === 0 ? (
         <p
           className="text-muted-foreground text-sm"
@@ -141,14 +151,18 @@ export function RepeaterField({
           disabled={disabled}
           testId={`${testId}-list`}
           renderItem={(item) => (
-            <RepeaterRowContent
-              subFields={subFields}
-              row={rows[item.index] ?? {}}
-              rowName={`${rhf.name}.${item.index}`}
-              layout={layout}
-              collapsedKey={collapsedKey}
+            <RepeaterSummaryRow
+              summary={rowSummary(
+                rows[item.index] ?? {},
+                subFields,
+                collapsedKey,
+              )}
               rowNumber={item.index + 1}
               disabled={disabled}
+              hasError={rowHasError(item.index)}
+              onEdit={() => {
+                setEditingIndex(item.index);
+              }}
               testId={`${testId}-row-${item.index}`}
             />
           )}
@@ -182,6 +196,115 @@ export function RepeaterField({
           </span>
         ) : null}
       </div>
+
+      {/* One shared dialog edits whichever row is open. The row's fields lay
+          out on the same 12-column grid the top-level box uses, honouring each
+          sub-field's `.span()` — the roomy surface a complex row can't get in
+          the narrow document rail. */}
+      <Dialog
+        open={editingRow !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setEditingIndex(null);
+        }}
+      >
+        <DialogContent
+          className="max-w-2xl"
+          aria-describedby={undefined}
+          data-testid={`${testId}-dialog`}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              <Trans
+                id="metaBox.repeater.editRow"
+                message="Edit row {n}"
+                values={{ n: (editingIndex ?? 0) + 1 }}
+                comment="n: 1-based index of the repeater row being edited"
+              />
+            </DialogTitle>
+          </DialogHeader>
+          {editingRowName ? (
+            <div className="@container">
+              <div className="grid grid-cols-12 gap-4">
+                {subFields.map((sf) => (
+                  <MetaBoxField
+                    key={sf.key}
+                    field={sf}
+                    name={`${editingRowName}.${sf.key}`}
+                    disabled={disabled}
+                    className={metaBoxFieldColSpanClass(sf.span)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button
+                type="button"
+                size="sm"
+                data-testid={`${testId}-dialog-done`}
+              >
+                <Trans id="metaBox.repeater.done" message="Done" />
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// One row in the rail: a scannable summary + an Edit button opening the
+// dialog. Drag-handle and remove come from the enclosing `SortableList`.
+function RepeaterSummaryRow({
+  summary,
+  rowNumber,
+  disabled,
+  hasError,
+  onEdit,
+  testId,
+}: {
+  readonly summary: string | null;
+  readonly rowNumber: number;
+  readonly disabled: boolean;
+  readonly hasError: boolean;
+  readonly onEdit: () => void;
+  readonly testId: string;
+}): ReactNode {
+  const renderLabel = useLabel();
+  return (
+    <div className="flex min-w-0 items-center gap-2" data-testid={testId}>
+      {hasError ? (
+        <TriangleAlert
+          className="text-destructive size-4 shrink-0"
+          data-testid={`${testId}-error`}
+          aria-label={renderLabel(ROW_ERROR_LABEL)}
+        />
+      ) : null}
+      <span
+        className="min-w-0 flex-1 truncate text-sm"
+        data-testid={`${testId}-summary`}
+      >
+        {summary ?? (
+          <Trans
+            id="metaBox.repeater.rowSummaryEmpty"
+            message="Row {n}"
+            values={{ n: rowNumber }}
+            comment="n: 1-based index of an unlabelled repeater row"
+          />
+        )}
+      </span>
+      <Button
+        type="button"
+        variant={hasError ? "destructive" : "ghost"}
+        size="sm"
+        disabled={disabled}
+        onClick={onEdit}
+        data-testid={`${testId}-edit`}
+      >
+        <Pencil className="size-4" />
+        <Trans id="metaBox.repeater.editRow.button" message="Edit" />
+      </Button>
     </div>
   );
 }
@@ -232,97 +355,26 @@ function CountSuffix({
   return null;
 }
 
-// One repeater row. When `collapsedKey` is set the row is collapsible and
-// defaults to collapsed, showing the chosen sub-field's value as its
-// summary so long lists stay scannable; otherwise the fields always
-// render. Collapsing never unmounts the inputs' RHF registration (they
-// live in form state, not the DOM), so a collapsed row still round-trips.
-function RepeaterRowContent({
-  subFields,
-  row,
-  rowName,
-  layout,
-  collapsedKey,
-  rowNumber,
-  disabled,
-  testId,
-}: {
-  readonly subFields: readonly MetaBoxFieldManifestEntry[];
-  readonly row: Record<string, unknown>;
-  readonly rowName: string;
-  readonly layout: RepeaterLayout;
-  readonly collapsedKey: string | undefined;
-  readonly rowNumber: number;
-  readonly disabled: boolean;
-  readonly testId: string;
-}): ReactNode {
-  const collapsible = collapsedKey !== undefined;
-  const [open, setOpen] = useState(false);
-  const showFields = !collapsible || open;
-  return (
-    <div className="flex flex-col gap-1" data-testid={testId}>
-      {collapsible ? (
-        <button
-          type="button"
-          onClick={() => {
-            setOpen((prev) => !prev);
-          }}
-          aria-expanded={open}
-          className="flex items-center gap-1 text-start text-sm font-medium"
-          data-testid={`${testId}-summary`}
-        >
-          {open ? (
-            <ChevronDownIcon className="size-4" />
-          ) : (
-            <ChevronRight className="size-4 rtl:rotate-180" />
-          )}
-          <span data-testid={`${testId}-summary-label`}>
-            {rowSummary(row, collapsedKey) ?? (
-              <Trans
-                id="metaBox.repeater.rowSummaryEmpty"
-                message="Row {n}"
-                values={{ n: rowNumber }}
-                comment="n: 1-based index of an unlabelled collapsed repeater row"
-              />
-            )}
-          </span>
-        </button>
-      ) : null}
-      {showFields ? (
-        <div
-          className={ROW_LAYOUT_CLASS[layout]}
-          // `table` rows share the header's column template so each cell
-          // lines up under its label.
-          style={
-            layout === "table"
-              ? { gridTemplateColumns: `repeat(${subFields.length}, 1fr)` }
-              : undefined
-          }
-        >
-          {subFields.map((sf) => (
-            <MetaBoxField
-              key={sf.key}
-              field={sf}
-              name={`${rowName}.${sf.key}`}
-              disabled={disabled}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-// The collapsed-row summary: the chosen sub-field's stored value as a
-// display string, or `null` when it's absent/blank (caller falls back to
-// the row number). Non-primitive values (a nested group/repeater picked
-// as the summary key) render nothing here.
+// The row summary: the explicit `.collapsed()` sub-field's value when set,
+// otherwise the first sub-field carrying a non-empty primitive, so a row is
+// recognisable at a glance. `null` when nothing suitable is present (caller
+// falls back to the row number).
 function rowSummary(
   row: Record<string, unknown>,
-  key: string | undefined,
+  subFields: readonly MetaBoxFieldManifestEntry[],
+  collapsedKey: string | undefined,
 ): string | null {
-  if (key === undefined) return null;
-  const value = row[key];
+  if (collapsedKey !== undefined) return primitiveToString(row[collapsedKey]);
+  for (const sf of subFields) {
+    const summary = primitiveToString(row[sf.key]);
+    if (summary !== null) return summary;
+  }
+  return null;
+}
+
+// A stored primitive as a display string, or null when it's absent/blank or
+// a non-primitive (a nested group/repeater/reference).
+function primitiveToString(value: unknown): string | null {
   if (typeof value === "string") return value === "" ? null : value;
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
