@@ -17,6 +17,34 @@ import { Form } from "@plumix/admin-ui/form";
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { MetaBoxField } from "./meta-box-field.js";
 
+// CodeMirror measures the DOM on mount, which jsdom can't satisfy; stub the
+// lazy editor with a controlled textarea so the JSON field's wiring (value
+// seeding + raw → parse → propagate) is testable here. The real editor is
+// verified in the browser; the parse logic itself in `json-draft.test.ts`.
+vi.mock("./json-code-editor.js", () => ({
+  default: ({
+    value,
+    onChange,
+    disabled,
+    ariaInvalid,
+    testId,
+  }: {
+    value: string;
+    onChange: (raw: string) => void;
+    disabled: boolean;
+    ariaInvalid?: boolean;
+    testId: string;
+  }) => (
+    <textarea
+      data-testid={testId}
+      value={value}
+      disabled={disabled}
+      aria-invalid={ariaInvalid}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  ),
+}));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -440,7 +468,7 @@ describe("MetaBoxField dispatcher", () => {
     expect(onChange).toHaveBeenCalledWith(["news", "sport"]);
   });
 
-  test("json: parses textarea on change, surfaces parse errors inline", async () => {
+  test("json: seeds the editor and parses input, surfacing errors inline", async () => {
     const onChange = vi.fn();
     renderWithI18n(
       <Harness
@@ -449,24 +477,21 @@ describe("MetaBoxField dispatcher", () => {
         onChangeSpy={onChange}
       />,
     );
-    const textarea = screen.getByTestId("meta-box-field-k-input");
-    expect(textarea.tagName).toBe("TEXTAREA");
-    expect(textarea).toHaveValue('{\n  "a": 1\n}');
+    // The editor is lazy-loaded (code-split); await its first render.
+    const editor = await screen.findByTestId("meta-box-field-k-input");
+    expect(editor).toHaveValue('{\n  "a": 1\n}');
 
-    // Replace with invalid JSON — error surfaces, form value untouched.
-    // userEvent.type treats `{` as a kbd shortcut delimiter; paste
-    // ensures the literal characters land in the textarea.
-    await userEvent.clear(textarea);
-    textarea.focus();
+    // Invalid JSON — error surfaces, form value untouched. `paste` avoids
+    // userEvent treating `{` as a kbd-shortcut delimiter.
+    await userEvent.clear(editor);
+    editor.focus();
     await userEvent.paste("{not-json");
     expect(
       screen.getByTestId("meta-box-field-k-input-error"),
     ).toBeInTheDocument();
 
-    // Replace with valid JSON — error clears, value propagates.
-    await userEvent.clear(textarea);
-    // userEvent.type interprets `{` and `[` as kbd shortcuts; pass
-    // them through paste to type literal characters.
+    // Valid JSON — error clears, parsed value propagates.
+    await userEvent.clear(editor);
     await userEvent.paste('{"b":2}');
     expect(onChange).toHaveBeenLastCalledWith({ b: 2 });
   });

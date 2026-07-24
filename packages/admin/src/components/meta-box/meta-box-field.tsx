@@ -39,6 +39,7 @@ import { formatTemporalValue } from "@plumix/core/manifest";
 
 import type { LookupItem } from "./reference-picker.js";
 import { GroupField } from "./group-field.js";
+import { evaluateJsonDraft } from "./json-draft.js";
 import { LinkField } from "./link-field.js";
 import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
@@ -54,6 +55,10 @@ const RichTextField = lazy(() =>
     default: m.RichTextField,
   })),
 );
+
+// CodeMirror (JSON syntax highlighting) is likewise code-split — a form
+// with no json field never pulls the editor chunk.
+const JsonCodeEditor = lazy(() => import("./json-code-editor.js"));
 
 const M = {
   invalidJson: defineMessage({
@@ -1040,43 +1045,57 @@ function JsonControl({
     setError(null);
   }
 
+  // Interpret each edit: blank clears to `null`, valid JSON propagates the
+  // parsed value, invalid JSON surfaces the parse message and leaves the last
+  // good value in place. `onBlur` is wired on the shell (CodeMirror has no
+  // single focusable input to hang it on) so rhf still marks the field touched.
+  const handleRaw = (raw: string): void => {
+    setDraft(raw);
+    const result = evaluateJsonDraft(raw);
+    if (result.kind === "empty") {
+      setError(null);
+      onChange(null);
+    } else if (result.kind === "value") {
+      setError(null);
+      onChange(result.value);
+    } else {
+      setError(result.message || labelFn(M.invalidJson));
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-1" data-testid={`${testId}-shell`}>
-      <Textarea
-        name={name}
-        value={draft}
-        disabled={disabled}
-        onBlur={onBlur}
-        onChange={(e) => {
-          const raw = e.target.value;
-          setDraft(raw);
-          if (raw.trim() === "") {
-            setError(null);
-            onChange(null);
-            return;
-          }
-          try {
-            const parsed: unknown = JSON.parse(raw);
-            setError(null);
-            onChange(parsed);
-          } catch (err) {
-            setError(
-              err instanceof Error ? err.message : labelFn(M.invalidJson),
-            );
-          }
-        }}
-        rows={6}
-        spellCheck={false}
-        aria-invalid={error ? true : undefined}
-        data-testid={testId}
-        className="min-h-32 font-mono text-xs"
-      />
+    <div
+      className="flex flex-col gap-1"
+      data-testid={`${testId}-shell`}
+      onBlur={onBlur}
+    >
+      <Suspense fallback={<JsonEditorSkeleton testId={testId} />}>
+        <JsonCodeEditor
+          value={draft}
+          onChange={handleRaw}
+          disabled={disabled}
+          ariaInvalid={error ? true : undefined}
+          ariaLabel={name}
+          testId={testId}
+        />
+      </Suspense>
       {error ? (
         <p className="text-destructive text-xs" data-testid={`${testId}-error`}>
           {error}
         </p>
       ) : null}
     </div>
+  );
+}
+
+// Footprint-matching placeholder while the CodeMirror chunk loads.
+function JsonEditorSkeleton({ testId }: { testId: string }): React.ReactNode {
+  return (
+    <div
+      className="bg-muted h-32 w-full animate-pulse rounded-md"
+      data-testid={`${testId}-loading`}
+      aria-busy="true"
+    />
   );
 }
 
