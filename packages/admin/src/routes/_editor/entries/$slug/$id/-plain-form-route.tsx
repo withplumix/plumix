@@ -1,9 +1,13 @@
+import type { SaveQueue } from "@/editor/save-queue.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
 import { PlainFormLayout } from "@/components/editor/plain-form-layout.js";
+import { classifyAutosaveError } from "@/editor/autosave.js";
+import { diffMetaBag } from "@/editor/meta-diff.js";
 import { PreviewButton } from "@/editor/PreviewButton.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
+import { createSaveQueue } from "@/editor/save-queue.js";
 import { entryMetaBoxesForType } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { entryTypeLabel } from "@/lib/type-labels.js";
@@ -45,6 +49,14 @@ export function PlainFormRouteInner({
   );
   const queryClient = useQueryClient();
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
+  // Serializes writes so concurrent autosaves/submits can't race the shared
+  // optimistic token into `409` conflicts and drop edits.
+  const saveQueueRef = useRef<SaveQueue | null>(null);
+  saveQueueRef.current ??= createSaveQueue();
+  const saveQueue = saveQueueRef.current;
+  // Last meta bag we persisted — autosave diffs against it and sends only the
+  // changed keys, so untouched foreign keys aren't re-validated on every write.
+  const lastSavedMetaRef = useRef<Record<string, unknown>>(entry.meta);
   // String branch carries plugin-author `err.message` verbatim; the
   // descriptor branch surfaces the localized fallback.
   const [serverError, setServerError] = useState<Label | null>(null);
@@ -52,21 +64,47 @@ export function PlainFormRouteInner({
   const metaBoxes = entryMetaBoxesForType(entryType.name, capabilities);
 
   const updateMutation = useMutation({
-    mutationFn: (values: {
+    mutationFn: async (values: {
       title: string;
       status: string;
       meta: Record<string, unknown>;
-    }) =>
-      orpc.entry.update.call({
-        id,
-        title: values.title,
-        status: values.status as never,
-        meta: values.meta,
-        expectedLiveUpdatedAt: liveUpdatedAtRef.current,
-      }),
-    onSuccess: async (updated) => {
+    }) => {
+      // Send only the changed meta keys so untouched foreign keys aren't
+      // re-validated (an unregistered one would fail the whole write).
+      const metaPatch = diffMetaBag(lastSavedMetaRef.current, values.meta);
+      // Read the token and re-anchor it inside the serialized task so each
+      // queued write sees the post-write value, never a stale one.
+      const writeOnce = () =>
+        saveQueue.run(async () => {
+          const res = await orpc.entry.update.call({
+            id,
+            title: values.title,
+            status: values.status as never,
+            ...(Object.keys(metaPatch).length > 0 ? { meta: metaPatch } : {}),
+            expectedLiveUpdatedAt: liveUpdatedAtRef.current,
+          });
+          liveUpdatedAtRef.current = res.updatedAt;
+          return res;
+        });
+      const commit = async () => {
+        const res = await writeOnce();
+        lastSavedMetaRef.current = values.meta;
+        return res;
+      };
+      try {
+        return await commit();
+      } catch (err) {
+        // A recoverable stale-token conflict re-anchors and retries once, so a
+        // benign concurrency bump doesn't surface as a save failure or drop the
+        // edit.
+        const outcome = await classifyAutosaveError(err, queryClient, id);
+        if (outcome.kind !== "recovered") throw err;
+        if (outcome.updatedAt) liveUpdatedAtRef.current = outcome.updatedAt;
+        return await commit();
+      }
+    },
+    onSuccess: async () => {
       setServerError(null);
-      liveUpdatedAtRef.current = updated.updatedAt;
       await queryClient.invalidateQueries({
         queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
       });

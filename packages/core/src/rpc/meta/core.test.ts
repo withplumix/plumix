@@ -70,6 +70,19 @@ describe("sanitizeMetaInput (constraint enforcement)", () => {
       sanitizeMetaInput(findField, { ghost: "x" }),
     ).rejects.toThrowError(MetaSanitizationError);
   });
+
+  test("a deletion (null/undefined) of an unregistered key is a harmless no-op", async () => {
+    // A foreign key the field system doesn't own (e.g. `featuredImage` written
+    // by another plugin) must not fail the whole write when it arrives as a
+    // deletion — dropping something untracked can't corrupt registered state.
+    const patch = await sanitizeMetaInput(findField, {
+      subtitle: "ok",
+      ghost: null,
+      phantom: undefined,
+    });
+    expect(patch?.upserts.get("subtitle")).toBe("ok");
+    expect(patch?.deletes).toEqual([]);
+  });
 });
 
 describe("sanitizeMetaInput (condition-hidden fields)", () => {

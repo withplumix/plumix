@@ -165,6 +165,11 @@ export async function sanitizeMetaInput(
   for (const [key, rawValue] of Object.entries(input)) {
     const field = findField(key);
     if (!field) {
+      // A delete request (null/undefined) for a key the field system doesn't
+      // own is a harmless no-op — never fail the whole write over an untracked
+      // foreign key (e.g. one written by another plugin). Unknown *upserts*
+      // still reject so junk can't enter through this gate.
+      if (rawValue === null || rawValue === undefined) continue;
       throw MetaSanitizationError.notRegistered({ key });
     }
     if (isConditionHidden(field, input)) continue;
