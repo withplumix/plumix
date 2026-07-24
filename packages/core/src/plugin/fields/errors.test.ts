@@ -30,55 +30,60 @@ describe("FieldConfigError.rangeMinGreaterThanMax", () => {
   });
 });
 
-describe("FieldConfigError — repeater factories", () => {
-  test("repeaterNestedNotSupported", () => {
-    const err = FieldConfigError.repeaterNestedNotSupported({
-      repeaterKey: "items",
-      subFieldKey: "nested",
-    });
-    expect(err.code).toBe("repeater_nested_not_supported");
-    expect(err.repeaterKey).toBe("items");
-    expect(err.subFieldKey).toBe("nested");
-    expect(err.message).toContain(
-      'repeater("items") subFields contains a nested repeater',
-    );
-    expect(err.message).toContain('"nested"');
-  });
-
-  test("repeaterSubFieldKeyForbidden", () => {
-    const err = FieldConfigError.repeaterSubFieldKeyForbidden({
-      repeaterKey: "items",
+describe("FieldConfigError — sub-field factories", () => {
+  test("subFieldKeyForbidden carries container + attribution", () => {
+    const err = FieldConfigError.subFieldKeyForbidden({
+      container: "repeater",
+      containerKey: "items",
       subFieldKey: "__proto__",
     });
-    expect(err.code).toBe("repeater_sub_field_key_forbidden");
+    expect(err.code).toBe("sub_field_key_forbidden");
+    expect(err.container).toBe("repeater");
+    expect(err.containerKey).toBe("items");
+    expect(err.subFieldKey).toBe("__proto__");
     expect(err.message).toContain(
-      'repeater("items") subField key "__proto__" is forbidden',
+      'repeater("items") field key "__proto__" is forbidden',
     );
     expect(err.message).toContain("prototype-pollution risk");
   });
 
-  test("repeaterSubFieldKeyInvalid", () => {
-    const err = FieldConfigError.repeaterSubFieldKeyInvalid({
-      repeaterKey: "items",
+  test("subFieldKeyInvalid names the group container", () => {
+    const err = FieldConfigError.subFieldKeyInvalid({
+      container: "group",
+      containerKey: "seo",
       subFieldKey: "bad key!",
       pattern: "^[a-zA-Z0-9_:-]+$",
     });
-    expect(err.code).toBe("repeater_sub_field_key_invalid");
+    expect(err.code).toBe("sub_field_key_invalid");
+    expect(err.container).toBe("group");
     expect(err.pattern).toBe("^[a-zA-Z0-9_:-]+$");
     expect(err.message).toContain(
-      'repeater("items") subField key "bad key!" must match',
+      'group("seo") field key "bad key!" must match',
     );
     expect(err.message).toContain("^[a-zA-Z0-9_:-]+$");
   });
 
-  test("repeaterSubFieldDuplicate", () => {
-    const err = FieldConfigError.repeaterSubFieldDuplicate({
-      repeaterKey: "items",
+  test("subFieldDuplicate", () => {
+    const err = FieldConfigError.subFieldDuplicate({
+      container: "repeater",
+      containerKey: "items",
       subFieldKey: "title",
     });
-    expect(err.code).toBe("repeater_sub_field_duplicate");
+    expect(err.code).toBe("sub_field_duplicate");
     expect(err.message).toContain(
-      'repeater("items") declares subField "title" more than once',
+      'repeater("items") declares field "title" more than once',
+    );
+  });
+
+  test("subFieldCondition", () => {
+    const err = FieldConfigError.subFieldCondition({
+      container: "group",
+      containerKey: "seo",
+      subFieldKey: "title",
+    });
+    expect(err.code).toBe("sub_field_condition_not_supported");
+    expect(err.message).toContain(
+      'group("seo") field "title" does not support visibleWhen',
     );
   });
 });

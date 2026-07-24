@@ -810,12 +810,20 @@ export interface RichtextMetaBoxField extends MetaBoxFieldBase {
 }
 
 /**
- * Flat list of structured rows. Each row carries the same fixed schema
+ * Admin layout for a repeater's rows. `block` (the default) stacks each
+ * row's fields vertically in a bordered card; `row` lays a single row's
+ * fields out inline on one line; `table` renders the rows as aligned
+ * table lines with a shared subfield header. A pure-UI axis — the
+ * stored value shape is identical across layouts.
+ */
+export type RepeaterLayout = "block" | "row" | "table";
+
+/**
+ * List of structured rows. Each row carries the same fixed schema
  * declared via `subFields`; mixed-row "flexible content" is explicitly
- * out of scope. Subfields may be any registered field type *except*
- * another repeater — nesting is rejected at registration time so v0.1
- * doesn't ship recursive UX (lift later non-breakingly if a real use
- * case appears).
+ * out of scope. Subfields may be any registered field type, including
+ * nested repeaters and groups — types recurse through arbitrarily
+ * nested rows.
  *
  * Storage rides on the `json` primitive so any JSON-serialisable row
  * shape survives the wire. The constraint walker drops rows where
@@ -830,6 +838,29 @@ export interface RepeaterMetaBoxField extends MetaBoxFieldBase {
   readonly subFields: readonly MetaBoxField[];
   readonly min?: number;
   readonly max?: number;
+  /** Custom label for the add-row button (default "Add row"). */
+  readonly addLabel?: Label;
+  /** Admin row layout — see {@link RepeaterLayout}. Defaults to `block`. */
+  readonly layout?: RepeaterLayout;
+  /**
+   * Sub-field key whose stored value labels a collapsed row. Setting it
+   * makes rows collapsible in the admin and each collapsed row shows the
+   * chosen sub-field's value as its summary.
+   */
+  readonly collapsed?: string;
+}
+
+/**
+ * A named group of fields stored as a nested object under the group's
+ * own key — no key-flattening. `fields` declares the members; each
+ * member may be any registered field type, including nested repeaters
+ * and further groups (types recurse). Storage rides on the `json`
+ * primitive as a plain record keyed by member field key.
+ */
+export interface GroupMetaBoxField extends MetaBoxFieldBase {
+  readonly inputType: "group";
+  readonly type: "json";
+  readonly fields: readonly MetaBoxField[];
 }
 
 /**
@@ -958,6 +989,7 @@ export type MetaBoxField =
   | MediaListMetaBoxField
   | RichtextMetaBoxField
   | RepeaterMetaBoxField
+  | GroupMetaBoxField
   | SelectMetaBoxField
   | ToggleMetaBoxField
   | LinkMetaBoxField
@@ -1741,12 +1773,20 @@ export interface MetaBoxFieldManifestEntry {
   readonly nodes?: readonly string[];
   readonly blocks?: readonly string[];
   /**
-   * Repeater subfield manifest, keyed positionally — same shape as a
-   * top-level field minus `span` (rows are full-width). Sanitize
+   * Child-field manifest for the composite field types — repeater row
+   * schema and group members alike, keyed positionally, same shape as a
+   * top-level field minus `span` (children are full-width). Sanitize
    * callbacks are stripped from the wire shape; the admin recurses
-   * through this list when rendering each row.
+   * through this list when rendering each row / group. The renderer
+   * dispatches on `inputType` (`repeater` vs `group`) to interpret it.
    */
   readonly subFields?: readonly EntryMetaBoxFieldManifestEntry[];
+  /** Repeater add-row button label — see {@link RepeaterMetaBoxField.addLabel}. */
+  readonly addLabel?: Label;
+  /** Repeater row layout — see {@link RepeaterLayout}. */
+  readonly layout?: RepeaterLayout;
+  /** Repeater collapsed-row summary sub-field key — see {@link RepeaterMetaBoxField.collapsed}. */
+  readonly collapsed?: string;
   /**
    * Capability gate for the individual field. See `MetaBoxFieldBase.capability`.
    */
@@ -2985,6 +3025,11 @@ interface MetaBoxFieldOptionView {
   readonly nodes?: readonly string[];
   readonly blocks?: readonly string[];
   readonly subFields?: readonly MetaBoxField[];
+  /** Group member fields — projected into the wire `subFields` slot. */
+  readonly fields?: readonly MetaBoxField[];
+  readonly addLabel?: Label;
+  readonly layout?: RepeaterLayout;
+  readonly collapsed?: string;
 }
 
 function toEntryMetaBoxFieldEntry(
@@ -3017,10 +3062,17 @@ function toEntryMetaBoxFieldEntry(
     blocks: view.blocks,
     capability: field.capability,
     visibleWhen: field.visibleWhen,
-    // Repeater subfields recurse through the same projection — the
-    // wire shape is uniform end to end, span dropped (rows are
-    // full-width), sanitize callbacks stripped (server-only).
-    subFields: view.subFields?.map((sf) => toEntryMetaBoxFieldEntry(sf)),
+    addLabel: view.addLabel,
+    layout: view.layout,
+    collapsed: view.collapsed,
+    // Repeater subfields and group members recurse through the same
+    // projection into the uniform wire `subFields` slot — span dropped
+    // (children are full-width), sanitize callbacks stripped
+    // (server-only). The renderer branches on `inputType` to read them
+    // as rows (repeater) or members (group).
+    subFields: (view.subFields ?? view.fields)?.map((sf) =>
+      toEntryMetaBoxFieldEntry(sf),
+    ),
   };
 }
 

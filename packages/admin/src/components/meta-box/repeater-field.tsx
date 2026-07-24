@@ -1,11 +1,19 @@
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
-import { useId } from "react";
+import { useId, useState } from "react";
+import { useLabel } from "@/lib/use-label.js";
 import { Trans } from "@lingui/react";
 
-import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
+import type {
+  MetaBoxFieldManifestEntry,
+  RepeaterLayout,
+} from "@plumix/core/manifest";
 import { Button } from "@plumix/admin-ui/button";
-import { PlusIcon } from "@plumix/admin-ui/icons";
+import {
+  ChevronDownIcon,
+  ChevronRight,
+  PlusIcon,
+} from "@plumix/admin-ui/icons";
 import { SortableList } from "@plumix/admin-ui/sortable";
 
 import { MetaBoxField } from "./meta-box-field.js";
@@ -32,6 +40,20 @@ function asRows(raw: unknown): readonly Record<string, unknown>[] {
   );
 }
 
+// Row-container layout class per `.layout()`. `row` lays a single row's
+// fields out inline; `table` aligns them into columns under a shared
+// header; `block` (the default) stacks them vertically. Values are
+// Tailwind class strings + a layout enum, not display copy.
+/* eslint-disable lingui/no-unlocalized-strings -- CSS classes + layout enum */
+const ROW_LAYOUT_CLASS: Record<RepeaterLayout, string> = {
+  block: "flex flex-col gap-2",
+  row: "flex flex-row flex-wrap items-start gap-2",
+  table: "grid gap-2",
+};
+
+const DEFAULT_LAYOUT: RepeaterLayout = "block";
+/* eslint-enable lingui/no-unlocalized-strings */
+
 export function RepeaterField({
   field,
   rhf,
@@ -43,9 +65,12 @@ export function RepeaterField({
   readonly disabled: boolean;
   readonly testId: string;
 }): ReactNode {
+  const renderLabel = useLabel();
   const subFields = field.subFields ?? [];
   const max = typeof field.max === "number" ? field.max : undefined;
   const min = typeof field.min === "number" ? field.min : undefined;
+  const layout: RepeaterLayout = field.layout ?? DEFAULT_LAYOUT;
+  const collapsedKey = field.collapsed;
   const rows = asRows(rhf.value);
   const idPrefix = useId();
 
@@ -87,8 +112,20 @@ export function RepeaterField({
   return (
     <div
       data-testid={testId}
+      data-layout={layout}
       className="border-input flex flex-col gap-2 rounded-md border p-2"
     >
+      {layout === "table" && rows.length > 0 ? (
+        <div
+          className="text-muted-foreground grid gap-2 px-1 text-xs font-medium"
+          style={{ gridTemplateColumns: `repeat(${subFields.length}, 1fr)` }}
+          data-testid={`${testId}-header`}
+        >
+          {subFields.map((sf) => (
+            <span key={sf.key}>{renderLabel(sf.label)}</span>
+          ))}
+        </div>
+      ) : null}
       {rows.length === 0 ? (
         <p
           className="text-muted-foreground text-sm"
@@ -104,9 +141,13 @@ export function RepeaterField({
           disabled={disabled}
           testId={`${testId}-list`}
           renderItem={(item) => (
-            <RepeaterRowFields
+            <RepeaterRowContent
               subFields={subFields}
+              row={rows[item.index] ?? {}}
               rowName={`${rhf.name}.${item.index}`}
+              layout={layout}
+              collapsedKey={collapsedKey}
+              rowNumber={item.index + 1}
               disabled={disabled}
               testId={`${testId}-row-${item.index}`}
             />
@@ -123,7 +164,9 @@ export function RepeaterField({
           data-testid={`${testId}-add`}
         >
           <PlusIcon className="size-4" />
-          {rows.length === 0 ? (
+          {field.addLabel ? (
+            renderLabel(field.addLabel)
+          ) : rows.length === 0 ? (
             <Trans id="metaBox.repeater.addFirst" message="Add row" />
           ) : (
             <Trans id="metaBox.repeater.addAnother" message="Add another" />
@@ -189,27 +232,100 @@ function CountSuffix({
   return null;
 }
 
-function RepeaterRowFields({
+// One repeater row. When `collapsedKey` is set the row is collapsible and
+// defaults to collapsed, showing the chosen sub-field's value as its
+// summary so long lists stay scannable; otherwise the fields always
+// render. Collapsing never unmounts the inputs' RHF registration (they
+// live in form state, not the DOM), so a collapsed row still round-trips.
+function RepeaterRowContent({
   subFields,
+  row,
   rowName,
+  layout,
+  collapsedKey,
+  rowNumber,
   disabled,
   testId,
 }: {
   readonly subFields: readonly MetaBoxFieldManifestEntry[];
+  readonly row: Record<string, unknown>;
   readonly rowName: string;
+  readonly layout: RepeaterLayout;
+  readonly collapsedKey: string | undefined;
+  readonly rowNumber: number;
   readonly disabled: boolean;
   readonly testId: string;
 }): ReactNode {
+  const collapsible = collapsedKey !== undefined;
+  const [open, setOpen] = useState(false);
+  const showFields = !collapsible || open;
   return (
-    <div className="flex flex-col gap-2" data-testid={testId}>
-      {subFields.map((sf) => (
-        <MetaBoxField
-          key={sf.key}
-          field={sf}
-          name={`${rowName}.${sf.key}`}
-          disabled={disabled}
-        />
-      ))}
+    <div className="flex flex-col gap-1" data-testid={testId}>
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={() => {
+            setOpen((prev) => !prev);
+          }}
+          aria-expanded={open}
+          className="flex items-center gap-1 text-start text-sm font-medium"
+          data-testid={`${testId}-summary`}
+        >
+          {open ? (
+            <ChevronDownIcon className="size-4" />
+          ) : (
+            <ChevronRight className="size-4 rtl:rotate-180" />
+          )}
+          <span data-testid={`${testId}-summary-label`}>
+            {rowSummary(row, collapsedKey) ?? (
+              <Trans
+                id="metaBox.repeater.rowSummaryEmpty"
+                message="Row {n}"
+                values={{ n: rowNumber }}
+                comment="n: 1-based index of an unlabelled collapsed repeater row"
+              />
+            )}
+          </span>
+        </button>
+      ) : null}
+      {showFields ? (
+        <div
+          className={ROW_LAYOUT_CLASS[layout]}
+          // `table` rows share the header's column template so each cell
+          // lines up under its label.
+          style={
+            layout === "table"
+              ? { gridTemplateColumns: `repeat(${subFields.length}, 1fr)` }
+              : undefined
+          }
+        >
+          {subFields.map((sf) => (
+            <MetaBoxField
+              key={sf.key}
+              field={sf}
+              name={`${rowName}.${sf.key}`}
+              disabled={disabled}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
+}
+
+// The collapsed-row summary: the chosen sub-field's stored value as a
+// display string, or `null` when it's absent/blank (caller falls back to
+// the row number). Non-primitive values (a nested group/repeater picked
+// as the summary key) render nothing here.
+function rowSummary(
+  row: Record<string, unknown>,
+  key: string | undefined,
+): string | null {
+  if (key === undefined) return null;
+  const value = row[key];
+  if (typeof value === "string") return value === "" ? null : value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return null;
 }

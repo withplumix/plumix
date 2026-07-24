@@ -28,11 +28,10 @@ describe("sanitizeMetaInput (constraint enforcement)", () => {
     ["tagline", text("tagline").required().build()],
     [
       "sections",
-      repeater({
-        key: "sections",
-        label: "Sections",
-        subFields: [text("heading").required(), text("body")],
-      }),
+      repeater("sections")
+        .fields([text("heading").required(), text("body")])
+        .label("Sections")
+        .build(),
     ],
   ]);
   const findField = (key: string): MetaBoxField | undefined => fields.get(key);

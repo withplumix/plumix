@@ -139,14 +139,12 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
     );
   });
 
-  test("repeater subfields reject visibleWhen — row-scoped conditions are unsupported", () => {
+  test("repeater subfields reject visibleWhen — nested conditions are unsupported", () => {
     const hasCta = toggle("hasCta");
     expect(() =>
-      repeater({
-        key: "sections",
-        label: "Sections",
-        subFields: [hasCta, url("ctaUrl").visibleWhen(hasCta.isOn())],
-      }),
+      repeater("sections")
+        .fields([hasCta, url("ctaUrl").visibleWhen(hasCta.isOn())])
+        .label("Sections"),
     ).toThrow(/does not support visibleWhen/);
   });
 

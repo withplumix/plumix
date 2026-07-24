@@ -15,6 +15,7 @@ import {
   datetime,
   email,
   entry,
+  group,
   json,
   number,
   range,
@@ -669,18 +670,23 @@ describe("richtext() builder", () => {
 });
 
 describe("repeater() builder", () => {
-  test("pins inputType + json type and carries subFields, min, max", () => {
-    const field = repeater({
-      key: "links",
-      label: "Links",
-      min: 1,
-      max: 5,
-      subFields: [text("label"), text("href").label("URL")],
-    });
+  test("pins inputType + json type and carries subFields, min, max, UX affordances", () => {
+    const field = repeater("links")
+      .fields([text("label"), text("href").label("URL")])
+      .label("Links")
+      .min(1)
+      .max(5)
+      .addLabel("Add link")
+      .layout("table")
+      .collapsed("label")
+      .build();
     expect(field.inputType).toBe("repeater");
     expect(field.type).toBe("json");
     expect(field.min).toBe(1);
     expect(field.max).toBe(5);
+    expect(field.addLabel).toBe("Add link");
+    expect(field.layout).toBe("table");
+    expect(field.collapsed).toBe("label");
     expect(field.subFields).toHaveLength(2);
     expect(field.subFields[0]).toMatchObject({
       key: "label",
@@ -692,57 +698,74 @@ describe("repeater() builder", () => {
     });
   });
 
+  test("derives a humanized label when none is set", () => {
+    const field = repeater("callToActions")
+      .fields([text("label")])
+      .build();
+    expect(field.label).toBe("Call to actions");
+  });
+
+  test("chains are immutable — a shared base forks without aliasing", () => {
+    const base = repeater("rows").fields([text("v")]);
+    const required = base.required();
+    expect(base.build().required).toBeUndefined();
+    expect(required.build().required).toBe(true);
+  });
+
   test("rejects subField keys that risk prototype pollution", () => {
-    expect(() =>
-      repeater({
-        key: "rows",
-        label: "Rows",
-        subFields: [text("__proto__")],
-      }),
-    ).toThrow(/forbidden/);
-    expect(() =>
-      repeater({
-        key: "rows",
-        label: "Rows",
-        subFields: [text("constructor")],
-      }),
-    ).toThrow(/forbidden/);
+    expect(() => repeater("rows").fields([text("__proto__")])).toThrow(
+      /forbidden/,
+    );
+    expect(() => repeater("rows").fields([text("constructor")])).toThrow(
+      /forbidden/,
+    );
   });
 
   test("rejects a subField key that doesn't match the meta-key shape", () => {
-    expect(() =>
-      repeater({
-        key: "rows",
-        label: "Rows",
-        subFields: [text("with space")],
-      }),
-    ).toThrow(/must match/);
+    expect(() => repeater("rows").fields([text("with space")])).toThrow(
+      /must match/,
+    );
   });
 
   test("rejects duplicate subField keys at registration time", () => {
     expect(() =>
-      repeater({
-        key: "rows",
-        label: "Rows",
-        subFields: [text("label"), text("label").label("Other")],
-      }),
-    ).toThrow(/declares subField "label" more than once/);
+      repeater("rows").fields([text("label"), text("label").label("Other")]),
+    ).toThrow(/declares field "label" more than once/);
   });
 
-  test("rejects a nested repeater at registration time", () => {
-    expect(() =>
-      repeater({
-        key: "outer",
-        label: "Outer",
-        subFields: [
-          repeater({
-            key: "inner",
-            label: "Inner",
-            subFields: [text("v").label("Value")],
-          }),
-        ],
-      }),
-    ).toThrow(/nested repeater/i);
+  test("permits a nested repeater — the v0.1 nesting ban is lifted", () => {
+    const field = repeater("outer")
+      .fields([
+        text("title"),
+        repeater("inner").fields([text("v").label("Value")]),
+      ])
+      .build();
+    const inner = field.subFields[1];
+    expect(inner).toMatchObject({ key: "inner", inputType: "repeater" });
+  });
+
+  test("value type recurses through arbitrarily nested rows", () => {
+    const _sections = repeater("sections").fields([
+      text("heading").required(),
+      repeater("callouts").fields([select("tone").options(["a", "b"])]),
+    ]);
+    type Value = NonNullable<(typeof _sections)["_value"]>;
+    expectTypeOf<Value[number]["heading"]>().toEqualTypeOf<string>();
+    type Callouts = NonNullable<Value[number]["callouts"]>;
+    expectTypeOf<Callouts[number]["tone"]>().toEqualTypeOf<
+      "a" | "b" | undefined
+    >();
+  });
+
+  test("unadorned reads optional array; .required() narrows", () => {
+    const optional = repeater("rows").fields([text("v")]);
+    expectTypeOf(optional._value).toEqualTypeOf<
+      readonly { v: string | undefined }[] | undefined
+    >();
+    const required = optional.required();
+    expectTypeOf(required._value).toEqualTypeOf<
+      readonly { v: string | undefined }[]
+    >();
   });
 
   test("manifest round-trip recurses subFields with sanitize stripped + span dropped", async () => {
@@ -751,11 +774,10 @@ describe("repeater() builder", () => {
       ctx.registerSettingsGroup("blog", {
         label: "Blog",
         fields: [
-          repeater({
-            key: "links",
-            label: "Links",
-            subFields: [text("label").maxLength(80), text("href").label("URL")],
-          }),
+          repeater("links")
+            .fields([text("label").maxLength(80), text("href").label("URL")])
+            .label("Links")
+            .addLabel("Add link"),
         ],
       });
     });
@@ -766,6 +788,7 @@ describe("repeater() builder", () => {
       key: "links",
       inputType: "repeater",
       type: "json",
+      addLabel: "Add link",
     });
     expect(entry?.subFields).toHaveLength(2);
     expect(entry?.subFields?.[0]).toMatchObject({
@@ -779,5 +802,82 @@ describe("repeater() builder", () => {
         expect(typeof v).not.toBe("function");
       }
     }
+  });
+});
+
+describe("group() builder", () => {
+  test("pins inputType + json type and carries member fields", () => {
+    const field = group("seo")
+      .fields([text("title").maxLength(60), textarea("description")])
+      .label("SEO")
+      .build();
+    expect(field.inputType).toBe("group");
+    expect(field.type).toBe("json");
+    expect(field.fields).toHaveLength(2);
+    expect(field.fields[0]).toMatchObject({ key: "title", inputType: "text" });
+  });
+
+  test("reads as a typed nested record; .required() narrows away undefined", () => {
+    const optional = group("seo").fields([
+      text("title").required(),
+      textarea("description"),
+    ]);
+    expectTypeOf(optional._value).toEqualTypeOf<
+      { title: string; description: string | undefined } | undefined
+    >();
+    const required = optional.required();
+    expectTypeOf(required._value).toEqualTypeOf<{
+      title: string;
+      description: string | undefined;
+    }>();
+  });
+
+  test("nests repeaters and further groups; types recurse", () => {
+    const _field = group("layout").fields([
+      group("hero").fields([text("headline")]),
+      repeater("cards").fields([text("label")]),
+    ]);
+    type Value = NonNullable<(typeof _field)["_value"]>;
+    expectTypeOf<NonNullable<Value["hero"]>["headline"]>().toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf<NonNullable<Value["cards"]>[number]["label"]>().toEqualTypeOf<
+      string | undefined
+    >();
+  });
+
+  test("rejects duplicate member keys and prototype-pollution keys", () => {
+    expect(() => group("seo").fields([text("title"), text("title")])).toThrow(
+      /declares field "title" more than once/,
+    );
+    expect(() => group("seo").fields([text("__proto__")])).toThrow(/forbidden/);
+  });
+
+  test("manifest round-trip projects members into the wire subFields slot", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("blog", {
+        label: "Blog",
+        fields: [
+          group("seo")
+            .fields([text("title").maxLength(60), textarea("description")])
+            .label("SEO"),
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const manifest = buildManifest(registry);
+    const entry = manifest.settingsGroups[0]?.fields[0];
+    expect(entry).toMatchObject({
+      key: "seo",
+      inputType: "group",
+      type: "json",
+    });
+    expect(entry?.subFields).toHaveLength(2);
+    expect(entry?.subFields?.[0]).toMatchObject({
+      key: "title",
+      inputType: "text",
+      maxLength: 60,
+    });
   });
 });

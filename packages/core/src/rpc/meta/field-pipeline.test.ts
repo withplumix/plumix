@@ -4,6 +4,7 @@ import {
   color,
   date,
   email,
+  group,
   link,
   number,
   range,
@@ -273,14 +274,10 @@ describe("format checks", () => {
 });
 
 describe("repeater rows", () => {
-  const sections = repeater({
-    key: "sections",
-    label: "Sections",
-    subFields: [
-      text("heading").required().maxLength(10),
-      number("weight").min(1),
-    ],
-  });
+  const sections = repeater("sections")
+    .fields([text("heading").required().maxLength(10), number("weight").min(1)])
+    .label("Sections")
+    .build();
 
   test("subfield constraint errors carry the row-indexed path", async () => {
     const result = await runFieldPipeline(
@@ -340,13 +337,12 @@ describe("repeater rows", () => {
   });
 
   test("row-count bounds are enforced after the strip", async () => {
-    const bounded = repeater({
-      key: "faq",
-      label: "FAQ",
-      subFields: [text("q")],
-      min: 1,
-      max: 2,
-    });
+    const bounded = repeater("faq")
+      .fields([text("q")])
+      .label("FAQ")
+      .min(1)
+      .max(2)
+      .build();
     const under = await runFieldPipeline(bounded, [{ q: "" }], "faq");
     expect(under.errors).toEqual([
       {
@@ -387,6 +383,152 @@ describe("repeater rows", () => {
       "sections.0.heading",
       "sections.0.weight",
       "sections.1.heading",
+    ]);
+  });
+});
+
+describe("nested repeaters", () => {
+  const outer = repeater("sections")
+    .fields([
+      text("heading").required(),
+      repeater("callouts").fields([text("tone").required().maxLength(5)]),
+    ])
+    .build();
+
+  test("a constraint deep in a nested row carries its full path", async () => {
+    const result = await runFieldPipeline(
+      outer,
+      [{ heading: "Intro", callouts: [{ tone: "way too long" }] }],
+      "sections",
+    );
+    expect(result.errors).toEqual([
+      {
+        path: "sections.0.callouts.0.tone",
+        message: { ...META_FIELD_MESSAGES.maxLength, values: { max: 5 } },
+      },
+    ]);
+  });
+
+  test("stores the recursively stripped + coerced nested structure", async () => {
+    const result = await runFieldPipeline(
+      outer,
+      [
+        {
+          heading: "Intro",
+          callouts: [{ tone: "warm" }, { tone: "" }],
+        },
+      ],
+      "sections",
+    );
+    expect(result.errors).toHaveLength(0);
+    // The blank nested row is stripped; the kept one is coerced.
+    expect(result.value).toEqual([
+      { heading: "Intro", callouts: [{ tone: "warm" }] },
+    ]);
+  });
+});
+
+describe("group members", () => {
+  const seo = group("seo")
+    .fields([text("title").required().maxLength(5), text("description")])
+    .build();
+
+  test("stores a nested object keyed by member field (no flattening)", async () => {
+    const result = await runFieldPipeline(
+      seo,
+      { title: "Hi", description: "About" },
+      "seo",
+    );
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toEqual({ title: "Hi", description: "About" });
+  });
+
+  test("member constraint errors carry the group-scoped path", async () => {
+    const result = await runFieldPipeline(
+      seo,
+      { title: "way too long" },
+      "seo",
+    );
+    expect(result.errors).toEqual([
+      {
+        path: "seo.title",
+        message: { ...META_FIELD_MESSAGES.maxLength, values: { max: 5 } },
+      },
+    ]);
+  });
+
+  test("an all-empty optional group is dropped (a deletion)", async () => {
+    const optional = group("meta")
+      .fields([text("a"), text("b")])
+      .build();
+    const result = await runFieldPipeline(optional, { a: "", b: null }, "meta");
+    expect(result.errors).toHaveLength(0);
+    expect(result.isDeletion).toBe(true);
+  });
+
+  test("a blank optional group is dropped even with a required member", async () => {
+    // Regression: the all-empty strip must run before member validation,
+    // or a required member makes an untouched optional group impossible
+    // to clear — the same trap the repeater avoids by stripping blank
+    // rows first.
+    const withRequired = group("meta")
+      .fields([text("a").required(), text("b")])
+      .build();
+    const result = await runFieldPipeline(
+      withRequired,
+      { a: "", b: "" },
+      "meta",
+    );
+    expect(result.errors).toHaveLength(0);
+    expect(result.isDeletion).toBe(true);
+  });
+
+  test("a required member left empty in a populated group still errors", async () => {
+    const withRequired = group("meta")
+      .fields([text("a").required(), text("b")])
+      .build();
+    const result = await runFieldPipeline(
+      withRequired,
+      { a: "", b: "filled" },
+      "meta",
+    );
+    expect(result.errors).toEqual([
+      { path: "meta.a", message: META_FIELD_MESSAGES.required },
+    ]);
+  });
+
+  test("a required group with no populated members errors at the group path", async () => {
+    const required = group("meta")
+      .fields([text("a")])
+      .required()
+      .build();
+    const result = await runFieldPipeline(required, { a: "" }, "meta");
+    expect(result.errors).toEqual([
+      { path: "meta", message: META_FIELD_MESSAGES.required },
+    ]);
+  });
+
+  test("a non-object value is invalid at the group path", async () => {
+    const result = await runFieldPipeline(seo, "nope", "seo");
+    expect(result.errors).toEqual([
+      { path: "seo", message: META_FIELD_MESSAGES.invalid },
+    ]);
+  });
+
+  test("a group nested inside a repeater row carries the full path", async () => {
+    const rows = repeater("sections")
+      .fields([group("seo").fields([text("title").required().maxLength(3)])])
+      .build();
+    const result = await runFieldPipeline(
+      rows,
+      [{ seo: { title: "long" } }],
+      "sections",
+    );
+    expect(result.errors).toEqual([
+      {
+        path: "sections.0.seo.title",
+        message: { ...META_FIELD_MESSAGES.maxLength, values: { max: 3 } },
+      },
     ]);
   });
 });

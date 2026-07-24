@@ -2029,11 +2029,6 @@ msgid "userInvite.email.invalid"
 msgstr "输入有效的电子邮箱地址"
 
 #. js-lingui-explicit-id
-#: src/lib/meta-field-i18n.ts
-msgid "metaField.invalidEmail"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/mailer/index.tsx
 msgid "mailer.test.recipient.invalid"
 msgstr "输入有效的电子邮箱地址。"
@@ -2052,6 +2047,11 @@ msgstr "输入有效的电子邮箱地址。"
 #: src/lib/magic-link.ts
 msgid "magicLinkRequest.error.invalidInput"
 msgstr "输入有效的电子邮箱地址。"
+
+#. js-lingui-explicit-id
+#: src/lib/meta-field-i18n.ts
+msgid "metaField.invalidEmail"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx
@@ -3196,6 +3196,12 @@ msgstr "角色"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.role.label"
 msgstr "角色"
+
+#. n: 1-based index of an unlabelled collapsed repeater row
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.rowSummaryEmpty"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
