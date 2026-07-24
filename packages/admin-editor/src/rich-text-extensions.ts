@@ -21,6 +21,41 @@ import {
 import { coreMarkExtensions, HEADING_LEVELS } from "@plumix/blocks";
 
 /**
+ * Which marks / block nodes an editor instance admits. Mirrors the meta
+ * `richtext()` field's `.marks()` / `.nodes()` allowlists (and the
+ * server's constraint walker), so a constrained field's editor can only
+ * ever produce content the server would accept. An omitted axis denies
+ * everything on that axis; passing no options object at all admits the
+ * full set (the block editor's behavior).
+ */
+export interface RichTextExtensionOptions {
+  /** Allowed inline mark names (`bold`, `link`, …). Omitted = deny all marks. */
+  readonly marks?: readonly string[];
+  /** Allowed block node names (`heading`, `bulletList`, …). Omitted = paragraphs only. */
+  readonly nodes?: readonly string[];
+}
+
+/** Whether `name` is an admitted mark. No allowlist ⇒ everything is admitted. */
+export function allowsMark(
+  options: RichTextExtensionOptions | undefined,
+  name: string,
+): boolean {
+  return options === undefined
+    ? true
+    : (options.marks?.includes(name) ?? false);
+}
+
+/** Whether `name` is an admitted block node. No allowlist ⇒ everything is admitted. */
+export function allowsNode(
+  options: RichTextExtensionOptions | undefined,
+  name: string,
+): boolean {
+  return options === undefined
+    ? true
+    : (options.nodes?.includes(name) ?? false);
+}
+
+/**
  * Tiptap extensions for the rich-text rail. We import the exact set the body
  * uses instead of `@tiptap/starter-kit`: StarterKit bundles ~16 extensions but
  * we activated only these — the rest were either marks we replace with
@@ -41,23 +76,42 @@ import { coreMarkExtensions, HEADING_LEVELS } from "@plumix/blocks";
  *
  * Heading levels come from the shared `HEADING_LEVELS` (h1–h6), the single
  * source of truth the sanitiser allowlist also derives from.
+ *
+ * Pass {@link RichTextExtensionOptions} to constrain the schema to a meta
+ * field's allowlist — the block-level nodes and marks outside the list are
+ * dropped from the editor entirely (not just hidden), so they can't be
+ * produced. Called with no argument the set is unchanged.
  */
-export function richTextExtensions(): Extensions {
-  return [
-    Document,
-    Paragraph,
-    Text,
-    Heading.configure({ levels: [...HEADING_LEVELS] }),
-    Blockquote,
-    HardBreak,
-    BulletList,
-    OrderedList,
-    ListItem,
-    ListKeymap,
-    UndoRedo,
-    Dropcursor,
-    Gapcursor,
-    TrailingNode,
-    ...coreMarkExtensions,
-  ];
+export function richTextExtensions(
+  options?: RichTextExtensionOptions,
+): Extensions {
+  // Schema essentials + editing affordances that carry no content of their
+  // own (history, cursors, keymaps) are always present. Order matches the
+  // historical full set so the block editor's schema is byte-for-byte the
+  // same when called argument-free.
+  const extensions: Extensions = [Document, Paragraph, Text];
+
+  if (allowsNode(options, "heading")) {
+    extensions.push(Heading.configure({ levels: [...HEADING_LEVELS] }));
+  }
+  if (allowsNode(options, "blockquote")) {
+    extensions.push(Blockquote);
+  }
+  extensions.push(HardBreak);
+  if (allowsNode(options, "bulletList")) {
+    extensions.push(BulletList);
+  }
+  if (allowsNode(options, "orderedList")) {
+    extensions.push(OrderedList);
+  }
+  // A list node is nothing without its item + the keymap that makes
+  // Enter/Tab behave; pull them in whenever either list is admitted.
+  if (allowsNode(options, "bulletList") || allowsNode(options, "orderedList")) {
+    extensions.push(ListItem, ListKeymap);
+  }
+  extensions.push(UndoRedo, Dropcursor, Gapcursor, TrailingNode);
+  extensions.push(
+    ...coreMarkExtensions.filter((mark) => allowsMark(options, mark.name)),
+  );
+  return extensions;
 }

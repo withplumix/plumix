@@ -1,4 +1,4 @@
-import type { Editor } from "@tiptap/react";
+import type { Editor, JSONContent } from "@tiptap/react";
 import type { ReactElement, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Trans } from "@lingui/react";
@@ -37,16 +37,51 @@ import {
 import { Toggle } from "@plumix/admin-ui/toggle";
 import { HEADING_LEVELS } from "@plumix/blocks";
 
-import { richTextExtensions } from "./rich-text-extensions.js";
+import type { RichTextExtensionOptions } from "./rich-text-extensions.js";
+import {
+  allowsMark,
+  allowsNode,
+  richTextExtensions,
+} from "./rich-text-extensions.js";
 
-interface RichTextFieldProps {
-  /** The block's body as an HTML string. */
+// Re-exported so JSON-mode consumers (the metabox `richtext()` field) can
+// name the value type without taking a direct Tiptap dependency.
+export type { JSONContent } from "@tiptap/react";
+
+interface RichTextFieldCommonProps {
+  /** Stable testid for the field root (the inspector's per-input id). */
+  readonly testId: string;
+  /** Read-only when set — the toolbar and editor stop accepting input. */
+  readonly disabled?: boolean;
+  /** Accessible name for the contenteditable region (metabox fields have no host label). */
+  readonly ariaLabel?: string;
+  /**
+   * Restrict the schema + toolbar to an allowlist. Omitted admits the full
+   * set (the block editor); a metabox `richtext()` field passes its
+   * `.marks()` / `.nodes()` so the editor can only produce accepted content.
+   */
+  readonly allow?: RichTextExtensionOptions;
+}
+
+/** HTML-serialized variant (default) — the block editor stores an HTML string. */
+interface HtmlRichTextFieldProps extends RichTextFieldCommonProps {
+  readonly serialization?: "html";
+  /** The body as an HTML string. */
   readonly value: string;
   /** Emits the serialized HTML on every edit. */
   readonly onChange: (html: string) => void;
-  /** Stable testid for the field root (the inspector's per-input id). */
-  readonly testId: string;
 }
+
+/** JSON-serialized variant — metabox `richtext()` stores a ProseMirror doc. */
+interface JsonRichTextFieldProps extends RichTextFieldCommonProps {
+  readonly serialization: "json";
+  /** The body as a ProseMirror doc (or `null` when unset). */
+  readonly value: JSONContent | null;
+  /** Emits the ProseMirror doc JSON on every edit. */
+  readonly onChange: (doc: JSONContent) => void;
+}
+
+type RichTextFieldProps = HtmlRichTextFieldProps | JsonRichTextFieldProps;
 
 // The uniform marks: each toggles via toggleMark(name) and paints its pressed
 // state from isActive(name), so one table drives the toolbar and the selector.
@@ -108,41 +143,64 @@ interface ActiveState {
  * external value changes are pushed in without emitting an update — so typing
  * never loses focus across the live patch loop's re-renders.
  */
-export function RichTextField({
-  value,
-  onChange,
-  testId,
-}: RichTextFieldProps): ReactElement {
-  const onChangeRef = useRef(onChange);
+export function RichTextField(props: RichTextFieldProps): ReactElement {
+  const { testId, allow, ariaLabel } = props;
+  const disabled = props.disabled ?? false;
+
+  // Serialize + dispatch through a ref so the once-created editor's onUpdate
+  // always sees the latest props without re-creating the editor (which would
+  // drop focus). The serialization discriminates which getter/onChange runs.
+  const emitRef = useRef<(editor: Editor) => void>(() => undefined);
   useEffect(() => {
-    onChangeRef.current = onChange;
+    emitRef.current = (editor: Editor): void => {
+      if (props.serialization === "json") props.onChange(editor.getJSON());
+      else props.onChange(editor.getHTML());
+    };
   });
 
   const editor = useEditor({
-    extensions: richTextExtensions(),
-    content: value,
+    extensions: richTextExtensions(allow),
+    content: props.value,
+    editable: !disabled,
     immediatelyRender: false,
     editorProps: {
       attributes: {
         class:
           "min-h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [&_:focus]:outline-none",
         "data-testid": `${testId}-editor`,
+        ...(ariaLabel ? { "aria-label": ariaLabel } : {}),
       },
     },
-    onUpdate: ({ editor }) => onChangeRef.current(editor.getHTML()),
+    onUpdate: ({ editor }) => emitRef.current(editor),
   });
 
   // External value changes (undo/redo, switching to another block) sync into
-  // the editor without re-emitting. The guard compares against getHTML(), so the
-  // echo from our own onUpdate is a no-op and the caret never resets mid-type —
-  // this rests on the host storing back the exact getHTML() string; any
-  // re-serialization between onChange and `value` would defeat it.
+  // the editor without re-emitting. The guard compares the serialized form, so
+  // the echo from our own onUpdate is a no-op and the caret never resets
+  // mid-type — this rests on the host storing back the exact value we emit; any
+  // re-serialization between onChange and `value` would defeat it. A `null`
+  // value clears the editor (e.g. an RHF reset back to empty defaults) — in
+  // both modes, so the on-screen doc never lags behind a cleared field.
   useEffect(() => {
     if (!editor) return;
-    if (value !== editor.getHTML()) {
-      editor.commands.setContent(value, { emitUpdate: false });
+    if (props.serialization === "json") {
+      const next = props.value;
+      if (next == null) {
+        if (!editor.isEmpty)
+          editor.commands.setContent(null, { emitUpdate: false });
+      } else if (JSON.stringify(next) !== JSON.stringify(editor.getJSON())) {
+        editor.commands.setContent(next, { emitUpdate: false });
+      }
+    } else if (props.value !== editor.getHTML()) {
+      editor.commands.setContent(props.value, { emitUpdate: false });
     }
-  }, [editor, value]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- serialization is stable per instance; value drives the sync
+  }, [editor, props.value]);
+
+  // Toggling `disabled` flips the live editor's editability in place.
+  useEffect(() => {
+    editor?.setEditable(!disabled);
+  }, [editor, disabled]);
 
   const active = useEditorState({
     editor,
@@ -164,92 +222,116 @@ export function RichTextField({
         : null,
   });
 
+  // The toolbar mirrors the schema: a control shows only when its mark/node
+  // survives the allowlist (no allowlist ⇒ everything, the block editor).
+  // Otherwise a constrained field would offer buttons that produce content
+  // the editor can't hold and the server would reject.
+  const controlDisabled = !editor || disabled;
+  const visibleMarks = MARKS.filter(({ name }) => allowsMark(allow, name));
+  const showHeadings = allowsNode(allow, "heading");
+  const showBulletList = allowsNode(allow, "bulletList");
+  const showOrderedList = allowsNode(allow, "orderedList");
+  const showBlockquote = allowsNode(allow, "blockquote");
+  const showLink = allowsMark(allow, "link");
+
   return (
     <div className="flex flex-col gap-1.5" data-testid={testId}>
       <div className="flex flex-wrap items-center gap-0.5" role="toolbar">
-        <Select
-          disabled={!editor}
-          value={active?.headingLevel ? `h${active.headingLevel}` : "paragraph"}
-          onValueChange={(next) => setFormat(editor, next)}
-        >
-          <SelectTrigger
-            size="sm"
-            className="me-1"
-            aria-label="Text format"
-            data-testid={`${testId}-format`}
+        {showHeadings ? (
+          <Select
+            disabled={controlDisabled}
+            value={
+              active?.headingLevel ? `h${active.headingLevel}` : "paragraph"
+            }
+            onValueChange={(next) => setFormat(editor, next)}
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem
-              value="paragraph"
-              data-testid={`${testId}-format-paragraph`}
+            <SelectTrigger
+              size="sm"
+              className="me-1"
+              aria-label="Text format"
+              data-testid={`${testId}-format`}
             >
-              Paragraph
-            </SelectItem>
-            {HEADING_LEVELS.map((level) => (
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
               <SelectItem
-                key={level}
-                value={`h${level}`}
-                data-testid={`${testId}-format-h${level}`}
+                value="paragraph"
+                data-testid={`${testId}-format-paragraph`}
               >
-                Heading {level}
+                Paragraph
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {MARKS.map(({ name, icon: Icon, testId: suffix, label }) => (
+              {HEADING_LEVELS.map((level) => (
+                <SelectItem
+                  key={level}
+                  value={`h${level}`}
+                  data-testid={`${testId}-format-h${level}`}
+                >
+                  Heading {level}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+        {visibleMarks.map(({ name, icon: Icon, testId: suffix, label }) => (
           <ToolbarToggle
             key={name}
             testId={`${testId}-${suffix}`}
             label={label}
             pressed={active?.marks[name] ?? false}
-            disabled={!editor}
+            disabled={controlDisabled}
             onToggle={() => editor?.chain().focus().toggleMark(name).run()}
           >
             <Icon />
           </ToolbarToggle>
         ))}
-        <ToolbarToggle
-          testId={`${testId}-bullet-list`}
-          label="Bullet list"
-          pressed={active?.bulletList ?? false}
-          disabled={!editor}
-          onToggle={() => editor?.chain().focus().toggleBulletList().run()}
-        >
-          <List />
-        </ToolbarToggle>
-        <ToolbarToggle
-          testId={`${testId}-ordered-list`}
-          label="Numbered list"
-          pressed={active?.orderedList ?? false}
-          disabled={!editor}
-          onToggle={() => editor?.chain().focus().toggleOrderedList().run()}
-        >
-          <ListOrdered />
-        </ToolbarToggle>
-        <ToolbarToggle
-          testId={`${testId}-blockquote`}
-          label="Blockquote"
-          pressed={active?.blockquote ?? false}
-          disabled={!editor}
-          onToggle={() => editor?.chain().focus().toggleBlockquote().run()}
-        >
-          <Quote />
-        </ToolbarToggle>
-        <LinkPopover
-          editor={editor}
-          active={active?.link ?? false}
-          disabled={!editor}
-          testId={testId}
-        />
+        {showBulletList ? (
+          <ToolbarToggle
+            testId={`${testId}-bullet-list`}
+            label="Bullet list"
+            pressed={active?.bulletList ?? false}
+            disabled={controlDisabled}
+            onToggle={() => editor?.chain().focus().toggleBulletList().run()}
+          >
+            <List />
+          </ToolbarToggle>
+        ) : null}
+        {showOrderedList ? (
+          <ToolbarToggle
+            testId={`${testId}-ordered-list`}
+            label="Numbered list"
+            pressed={active?.orderedList ?? false}
+            disabled={controlDisabled}
+            onToggle={() => editor?.chain().focus().toggleOrderedList().run()}
+          >
+            <ListOrdered />
+          </ToolbarToggle>
+        ) : null}
+        {showBlockquote ? (
+          <ToolbarToggle
+            testId={`${testId}-blockquote`}
+            label="Blockquote"
+            pressed={active?.blockquote ?? false}
+            disabled={controlDisabled}
+            onToggle={() => editor?.chain().focus().toggleBlockquote().run()}
+          >
+            <Quote />
+          </ToolbarToggle>
+        ) : null}
+        {showLink ? (
+          <LinkPopover
+            editor={editor}
+            active={active?.link ?? false}
+            disabled={controlDisabled}
+            testId={testId}
+          />
+        ) : null}
         <Button
           type="button"
           variant="ghost"
           size="sm"
           className="size-8 p-0"
           data-testid={`${testId}-clear`}
-          disabled={!editor}
+          disabled={controlDisabled}
           onClick={() =>
             editor?.chain().focus().unsetAllMarks().clearNodes().run()
           }
