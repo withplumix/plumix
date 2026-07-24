@@ -43,6 +43,10 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@codemirror/lang-json": "^6.0.2",
+    "@uiw/react-codemirror": "^4.25.11"
+  },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
     "@babel/core": "^8.0.1",
