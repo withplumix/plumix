@@ -1,13 +1,15 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { getPluginFieldType } from "@/lib/plugin-registry.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 
+import type { JSONContent } from "@plumix/admin-editor/rich-text-field";
 import type {
   MetaBoxFieldManifestEntry,
+  RichtextMetaBoxField,
   TemporalInputType,
 } from "@plumix/core/manifest";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
@@ -42,6 +44,16 @@ import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
 import { ReferencePicker } from "./reference-picker.js";
 import { RepeaterField } from "./repeater-field.js";
+
+// The Tiptap editor is code-split: it pulls ProseMirror + the whole editor
+// chunk, so a form with no richtext field never pays for it. Loaded on first
+// render of a richtext field via a lazy subpath import (the block editor uses
+// the same shared component).
+const RichTextField = lazy(() =>
+  import("@plumix/admin-editor/rich-text-field").then((m) => ({
+    default: m.RichTextField,
+  })),
+);
 
 const M = {
   invalidJson: defineMessage({
@@ -609,23 +621,47 @@ function renderRichtextField({
   disabled,
   renderLabel,
 }: NativeInputContext): ReactNode {
-  // Standalone richtext outside a block input has no host today — the
-  // richtext surface lives only inside block inputs. Surfacing it inside
-  // a metabox needs a separate Tiptap host slice; until that lands, the
-  // field falls back to a JSON textarea so the value is at least authorable.
+  // The metabox richtext field hosts the shared Tiptap editor in JSON mode:
+  // it reads/writes the ProseMirror doc the field stores, and its `.marks()` /
+  // `.nodes()` allowlist constrains the editor schema + toolbar so the author
+  // can only produce content the server's constraint walker would accept.
+  const rt = field as RichtextMetaBoxField;
+  const testId = `meta-box-field-${field.key}`;
+  // The value is a stored ProseMirror doc (an object). Anything else — a
+  // legacy string from the old textarea fallback, say — becomes an empty
+  // editor rather than being mis-parsed as HTML by Tiptap's `content`.
+  const doc =
+    rhf.value && typeof rhf.value === "object"
+      ? (rhf.value as JSONContent)
+      : null;
   return (
-    <Textarea
-      className="font-mono text-xs"
-      value={
-        typeof rhf.value === "string" ? rhf.value : JSON.stringify(rhf.value)
-      }
-      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-        rhf.onChange(e.target.value)
-      }
-      disabled={disabled}
-      aria-label={renderLabel(field.label)}
-      data-testid={`meta-box-field-${field.key}-input`}
-    />
+    <Suspense fallback={<RichTextFieldSkeleton testId={testId} />}>
+      <RichTextField
+        serialization="json"
+        value={doc}
+        onChange={rhf.onChange}
+        disabled={disabled}
+        ariaLabel={renderLabel(field.label)}
+        allow={{ marks: rt.marks, nodes: rt.nodes }}
+        testId={testId}
+      />
+    </Suspense>
+  );
+}
+
+// Footprint-matching placeholder shown while the editor chunk loads, so the
+// form doesn't jump when Tiptap resolves. Mirrors the toolbar + min-height of
+// the real field.
+function RichTextFieldSkeleton({ testId }: { testId: string }): ReactNode {
+  return (
+    <div
+      className="flex flex-col gap-1.5"
+      data-testid={`${testId}-loading`}
+      aria-busy="true"
+    >
+      <div className="bg-muted h-8 w-full animate-pulse rounded-md" />
+      <div className="bg-muted h-32 w-full animate-pulse rounded-md" />
+    </div>
   );
 }
 

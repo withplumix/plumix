@@ -23,6 +23,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./rich-text-field": {
+      "types": "./dist/rich-text-field.d.ts",
+      "default": "./dist/rich-text-field.js"
     }
   },
   "files": [

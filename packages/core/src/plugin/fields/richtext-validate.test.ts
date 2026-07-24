@@ -20,6 +20,47 @@ describe("walkRichtextDoc — implicit baseline", () => {
     expect(validate(null)).toBeNull();
     expect(validate(undefined)).toBeUndefined();
   });
+
+  test("hardBreak is implicit — Shift+Enter works on any richtext field", () => {
+    // The shared editor always ships HardBreak (Shift+Enter is a universal
+    // gesture), so a line break must validate even when `.nodes()` is unset.
+    const validate = walkRichtextDoc({});
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "line one" },
+            { type: "hardBreak" },
+            { type: "text", text: "line two" },
+          ],
+        },
+      ],
+    };
+    expect(() => validate(doc)).not.toThrow();
+  });
+
+  test("listItem is implicit — a list only needs its list node allowlisted", () => {
+    // A list node pulls in `listItem` structurally; authors declare
+    // `.nodes(["bulletList"])`, not the item, so the item must be implicit.
+    const validate = walkRichtextDoc({ nodes: ["bulletList"] });
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [{ type: "paragraph", content: [] }],
+            },
+          ],
+        },
+      ],
+    };
+    expect(() => validate(doc)).not.toThrow();
+  });
 });
 
 describe("walkRichtextDoc — node allowlist", () => {

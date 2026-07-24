@@ -21,15 +21,21 @@ interface TiptapNodeShape {
 }
 
 /**
- * Always-allowed type names. ProseMirror requires `doc` / `text`; the
- * editor mounts an implicit paragraph regardless of the field's
- * `nodes` allowlist — mirrors `FIELD_MODE_IMPLICIT_BLOCK` in admin's
- * `tiptap-extensions.ts`.
+ * Always-allowed type names — the structural nodes the shared editor
+ * emits regardless of a field's `.nodes()` allowlist, so the editor's
+ * schema and this validator stay in lockstep. ProseMirror requires
+ * `doc` / `text`; the editor mounts an implicit paragraph; `hardBreak`
+ * is the universal Shift+Enter line break; and `listItem` is pulled in
+ * structurally by any allowed list (authors declare the list node, not
+ * its item). All are content-free wrappers / inline breaks — none can
+ * smuggle a script or href — so admitting them implicitly is safe.
  */
 const IMPLICIT_NODES: ReadonlySet<string> = new Set([
   "doc",
   "paragraph",
   "text",
+  "hardBreak",
+  "listItem",
 ]);
 
 // `legacyAliases` lived on the v1 BlockSpec; the v2 surface dropped it
