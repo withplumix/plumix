@@ -15,7 +15,7 @@ import type {
   TemporalInputType,
   TemporalMetaBoxField,
 } from "../../plugin/manifest.js";
-import type { MetaFieldError } from "./field-pipeline.js";
+import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
 import { accumulateEmbeddedTags } from "../../cache/embedded-tags.js";
 import { eq } from "../../db/index.js";
 import { isConditionHidden } from "../../plugin/fields/condition.js";
@@ -102,7 +102,7 @@ export class MetaSanitizationError extends Error {
  * helper doesn't have to import oRPC types — the handler passes its
  * `errors` in and TS matches on shape.
  */
-interface RpcErrorsForMeta {
+export interface RpcErrorsForMeta {
   CONFLICT: (args: {
     data: {
       reason: string;
@@ -157,6 +157,7 @@ export class MetaValidationError extends Error {
 export async function sanitizeMetaInput(
   findField: (key: string) => MetaBoxField | undefined,
   input: MetaMap | undefined,
+  mode: FieldPipelineMode = "strict",
 ): Promise<MetaPatch | null> {
   if (input === undefined) return null;
   const upserts = new Map<string, unknown>();
@@ -173,7 +174,7 @@ export async function sanitizeMetaInput(
       throw MetaSanitizationError.notRegistered({ key });
     }
     if (isConditionHidden(field, input)) continue;
-    const result = await runFieldPipeline(field, rawValue, key);
+    const result = await runFieldPipeline(field, rawValue, key, mode);
     if (result.errors.length > 0) {
       fieldErrors.push(...result.errors);
       continue;
@@ -199,22 +200,36 @@ export async function sanitizeMetaInput(
  * fail-fast `MetaSanitizationError` reasons keep their existing
  * `data.reason`/`data.key` shape.
  */
+/**
+ * Map a whole-patch meta validation failure onto the RPC `CONFLICT`
+ * envelope — one place so the wire shape (`key` at the first error's
+ * top-level field, the full `errors` list) can't drift between the write
+ * path and the publish gate.
+ */
+export function metaValidationConflict(
+  error: MetaValidationError,
+  errors: RpcErrorsForMeta,
+): Error {
+  return errors.CONFLICT({
+    data: {
+      reason: "meta_invalid_value",
+      key: error.errors[0]?.path.split(".")[0],
+      errors: [...error.errors],
+    },
+  });
+}
+
 export async function sanitizeMetaForRpc(
   findField: (key: string) => MetaBoxField | undefined,
   input: MetaMap | undefined,
   errors: RpcErrorsForMeta,
+  mode: FieldPipelineMode = "strict",
 ): Promise<MetaPatch | null> {
   try {
-    return await sanitizeMetaInput(findField, input);
+    return await sanitizeMetaInput(findField, input, mode);
   } catch (error) {
     if (error instanceof MetaValidationError) {
-      throw errors.CONFLICT({
-        data: {
-          reason: "meta_invalid_value",
-          key: error.errors[0]?.path.split(".")[0],
-          errors: [...error.errors],
-        },
-      });
+      throw metaValidationConflict(error, errors);
     }
     if (error instanceof MetaSanitizationError) {
       throw errors.CONFLICT({
@@ -226,39 +241,54 @@ export async function sanitizeMetaForRpc(
 }
 
 /**
- * Re-canonicalize a *stored* meta bag before `entry.publish` promotes it
- * onto the live row — a permanent second gate for drafts persisted
- * before the write-time sanitizer existed, whose values never met a
- * `.sanitize()`. Runs each *registered* key through its field pipeline
- * and keeps the canonical result; passes *unregistered* keys through
- * untouched (live bags legitimately carry keys from uninstalled plugins
- * that `decodeMetaBag` preserves and `sanitizeMetaInput` would reject).
+ * Strict publish gate: validate a whole *stored* meta bag against the full
+ * field list before `entry.publish` promotes it onto the live row. Draft
+ * autosaves are lenient (business rules skipped so work-in-progress always
+ * saves), so publish is where required fields, bounds, formats, option
+ * membership, and row counts are finally enforced. It walks the field
+ * *definitions*, not just the bag, so a required field ABSENT from the bag
+ * is caught as well as one stored empty — `runFieldPipeline` sees
+ * `undefined` and rejects it in strict mode.
  *
- * Forgiving by design, like the read path (`decodeMetaBag`): a whole
- * autosave bag is promoted, not a caller's touched patch, so a value
- * that fails validation is schema drift or a legacy row — the live write
- * path already gated user intent, so here we keep the stored value rather
- * than abort an unrelated publish. Only `.sanitize()`'s canonical output
- * replaces a value; a deletion (`null`) drops the key. Field capabilities
- * and reference existence are likewise not re-checked: a whole-bag gate
- * would block a publisher over a co-author's field, and read-time
- * hydration already masks dangling refs.
+ * Rejections aggregate across the bag into one `MetaValidationError` the
+ * RPC layer maps onto the admin inputs, blocking the publish. A passing bag
+ * comes back canonicalized (each registered value re-run through
+ * `.sanitize()`); a conditionally-hidden field can't be required, so it's
+ * skipped; keys the field system doesn't own (e.g. from an uninstalled
+ * plugin) pass through untouched, matching the read path. Field
+ * capabilities and reference existence are not re-checked here — a
+ * whole-bag gate would block a publisher over a co-author's field, and both
+ * were already enforced at write time.
  */
-export async function sanitizeRegisteredMetaBag(
-  findField: (key: string) => MetaBoxField | undefined,
+export async function validateAndPromoteMetaBag(
+  fields: readonly MetaBoxField[],
   bag: Readonly<Record<string, unknown>>,
 ): Promise<Record<string, unknown>> {
   const out: MetaMap = {};
-  for (const [key, value] of Object.entries(bag)) {
-    const field = findField(key);
-    if (!field) {
-      out[key] = value;
+  const owned = new Set<string>();
+  const fieldErrors: MetaFieldError[] = [];
+  for (const field of fields) {
+    owned.add(field.key);
+    // A hidden field is inactive, so it can't be required — but its stored
+    // value is kept untouched (not validated, not dropped), or the value a
+    // driver hides would be lost on publish and gone when the driver flips
+    // back.
+    if (isConditionHidden(field, bag)) {
+      if (field.key in bag) out[field.key] = bag[field.key];
       continue;
     }
-    const result = await runFieldPipeline(field, value, key);
+    const result = await runFieldPipeline(field, bag[field.key], field.key);
+    if (result.errors.length > 0) {
+      fieldErrors.push(...result.errors);
+      continue;
+    }
     if (result.isDeletion === true) continue;
-    out[key] = result.errors.length > 0 ? value : result.value;
+    out[field.key] = result.value;
   }
+  for (const [key, value] of Object.entries(bag)) {
+    if (!owned.has(key)) out[key] = value;
+  }
+  if (fieldErrors.length > 0) throw new MetaValidationError(fieldErrors);
   return out;
 }
 

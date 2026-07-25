@@ -59,6 +59,129 @@ describe("required", () => {
   });
 });
 
+// Draft mode (autosave) tolerates not-yet-valid content so a
+// work-in-progress save never fails: business-rule constraints
+// (required, min/max, maxLength, option membership, format, row counts,
+// `.validate()`) are skipped. Structural/security gates (coercion,
+// shape, url safe-href, temporal validity, `.sanitize()`) still run so
+// a draft can never hold corrupt or unsafe data. `strict` is the
+// default and enforces everything.
+describe("draft mode", () => {
+  test("keeps an empty required field instead of erroring", async () => {
+    const field = text("subtitle").required().build();
+    const result = await runFieldPipeline(field, "", "subtitle", "draft");
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toBe("");
+  });
+
+  test("treats a null required field as a deletion, not an error", async () => {
+    const field = text("subtitle").required().build();
+    const result = await runFieldPipeline(field, null, "subtitle", "draft");
+    expect(result.errors).toHaveLength(0);
+    expect(result.isDeletion).toBe(true);
+  });
+
+  test("skips numeric bounds", async () => {
+    const field = number("rating").min(1).max(5).build();
+    const result = await runFieldPipeline(field, 99, "rating", "draft");
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toBe(99);
+  });
+
+  test("skips maxLength", async () => {
+    const field = text("tagline").maxLength(3).build();
+    const result = await runFieldPipeline(
+      field,
+      "way too long",
+      "tag",
+      "draft",
+    );
+    expect(result.errors).toHaveLength(0);
+  });
+
+  test("skips select option membership", async () => {
+    const field = select("style").options(["card", "banner"]).build();
+    const result = await runFieldPipeline(field, "nonsense", "style", "draft");
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toBe("nonsense");
+  });
+
+  test("skips email format", async () => {
+    const field = email("contact").build();
+    const result = await runFieldPipeline(field, "not-an-email", "c", "draft");
+    expect(result.errors).toHaveLength(0);
+  });
+
+  test("skips temporal bounds but still rejects an invalid date shape", async () => {
+    const bounded = date("publishOn").min("2026-01-01").build();
+    const early = await runFieldPipeline(bounded, "2020-01-01", "d", "draft");
+    expect(early.errors).toHaveLength(0);
+
+    const garbage = await runFieldPipeline(bounded, "not-a-date", "d", "draft");
+    expect(garbage.errors).toEqual([
+      { path: "d", message: META_FIELD_MESSAGES.invalid },
+    ]);
+  });
+
+  test("still rejects uncoercible input", async () => {
+    const field = number("weight").build();
+    const result = await runFieldPipeline(field, "abc", "weight", "draft");
+    expect(result.errors).toEqual([
+      { path: "weight", message: META_FIELD_MESSAGES.invalid },
+    ]);
+  });
+
+  test("still hard-fails a script-bearing url (security gate)", async () => {
+    const field = url("homepage").build();
+    const result = await runFieldPipeline(
+      field,
+      "javascript:alert(1)",
+      "homepage",
+      "draft",
+    );
+    expect(result.errors).toEqual([
+      { path: "homepage", message: META_FIELD_MESSAGES.invalidUrl },
+    ]);
+  });
+
+  test("skips repeater min/max row counts but recurses cell structure", async () => {
+    const field = repeater("sections")
+      .fields([text("heading").required(), number("cols")])
+      .min(2)
+      .max(3)
+      .build();
+    // One row (below min) with an empty required cell — both are business
+    // rules, so draft tolerates them...
+    const lenient = await runFieldPipeline(
+      field,
+      [{ heading: "", cols: 2 }],
+      "sections",
+      "draft",
+    );
+    expect(lenient.errors).toHaveLength(0);
+    // ...but a cell with an uncoercible value is structural and still fails.
+    const structural = await runFieldPipeline(
+      field,
+      [{ heading: "Intro", cols: "abc" }],
+      "sections",
+      "draft",
+    );
+    expect(structural.errors).toEqual([
+      { path: "sections.0.cols", message: META_FIELD_MESSAGES.invalid },
+    ]);
+  });
+
+  test("strict mode (the default) still enforces every constraint", async () => {
+    const field = number("rating").min(1).max(5).build();
+    expect(
+      (await runFieldPipeline(field, 99, "rating", "strict")).errors,
+    ).toHaveLength(1);
+    expect((await runFieldPipeline(field, 99, "rating")).errors).toHaveLength(
+      1,
+    );
+  });
+});
+
 describe("coercion", () => {
   test("coerces a numeric string on a number field", async () => {
     const field = number("weight").build();

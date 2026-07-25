@@ -75,13 +75,15 @@ export const publish = base
       title: autosave.title,
       content: autosave.content,
       excerpt: autosave.excerpt,
-      // Strip the snapshot envelope, then re-sanitize the registered
-      // keys before promoting — the second gate for autosaves written
-      // before the write-time sanitizer (#1533) existed.
+      // Strip the snapshot envelope, then strict-validate the promoted
+      // bag: autosaves are draft-lenient, so publish is where required
+      // fields, bounds, and formats are finally enforced — a violation
+      // rejects the publish with per-field errors the admin surfaces.
       meta: await sanitizePromotedEntryMeta(
         context,
         live.type,
         stripSnapshotEnvelope(autosave.meta),
+        errors,
       ),
     };
     const prepared = await applyEntryBeforeSave(context, live.type, {

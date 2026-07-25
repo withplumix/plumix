@@ -2,8 +2,10 @@ import { describe, expect, test } from "vitest";
 
 import type { MetaBoxField } from "../../plugin/manifest.js";
 import {
+  color,
   date,
   datetime,
+  number,
   repeater,
   select,
   text,
@@ -15,6 +17,7 @@ import {
   MetaSanitizationError,
   MetaValidationError,
   sanitizeMetaInput,
+  validateAndPromoteMetaBag,
 } from "./core.js";
 import { META_FIELD_MESSAGES } from "./field-messages.js";
 
@@ -82,6 +85,64 @@ describe("sanitizeMetaInput (constraint enforcement)", () => {
     });
     expect(patch?.upserts.get("subtitle")).toBe("ok");
     expect(patch?.deletes).toEqual([]);
+  });
+});
+
+// Publish promotes a whole draft bag onto the live row. Draft autosaves
+// are lenient, so the bag may hold not-yet-valid content — this gate
+// re-runs it in strict mode against the full field list (so a required
+// field ABSENT from the bag is caught, not just an empty one), throwing
+// the same aggregated `MetaValidationError` the write path uses.
+describe("validateAndPromoteMetaBag (publish strict gate)", () => {
+  const fields: readonly MetaBoxField[] = [
+    text("heading").required().build(),
+    number("cols").min(1).max(4).build(),
+    color("tint").build(),
+  ];
+
+  test("rejects a required field absent from the bag", async () => {
+    const error = await validateAndPromoteMetaBag(fields, { cols: 2 }).then(
+      () => null,
+      (thrown: unknown) => thrown,
+    );
+    expect(error).toBeInstanceOf(MetaValidationError);
+    expect((error as MetaValidationError).errors).toContainEqual({
+      path: "heading",
+      message: META_FIELD_MESSAGES.required,
+    });
+  });
+
+  test("rejects a required field stored empty", async () => {
+    await expect(
+      validateAndPromoteMetaBag(fields, { heading: "", cols: 2 }),
+    ).rejects.toBeInstanceOf(MetaValidationError);
+  });
+
+  test("rejects a business-rule violation carried by a draft", async () => {
+    await expect(
+      validateAndPromoteMetaBag(fields, { heading: "Hi", cols: 99 }),
+    ).rejects.toBeInstanceOf(MetaValidationError);
+  });
+
+  test("canonicalizes registered values and passes unregistered keys through", async () => {
+    const bag = await validateAndPromoteMetaBag(fields, {
+      heading: "Hi",
+      cols: 2,
+      tint: "#ABCDEF",
+      legacyPluginKey: "kept",
+    });
+    expect(bag.tint).toBe("#abcdef");
+    expect(bag.legacyPluginKey).toBe("kept");
+    expect(bag.heading).toBe("Hi");
+  });
+
+  test("omits an absent optional field without erroring", async () => {
+    const optional: readonly MetaBoxField[] = [
+      text("heading").required().build(),
+      text("subtitle").build(),
+    ];
+    const bag = await validateAndPromoteMetaBag(optional, { heading: "Hi" });
+    expect(bag).toEqual({ heading: "Hi" });
   });
 });
 

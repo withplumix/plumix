@@ -38,6 +38,16 @@ function registryWithMetaField(field: MetaBoxField) {
   return registryWithMetaFields([field]);
 }
 
+// A bounded number field the draft-lenient / publish-strict tests share.
+const RATING_FIELD: MetaBoxField = {
+  key: "rating",
+  label: "Rating",
+  type: "number",
+  inputType: "number",
+  min: 1,
+  max: 5,
+};
+
 function registryWithMetaFields(fields: readonly MetaBoxField[]) {
   const plugins = registryWithAutosave();
   plugins.entryMetaBoxes.set("test-box", {
@@ -176,6 +186,32 @@ describe("entry.update saveAs", () => {
       expectedLiveUpdatedAt: h.liveUpdatedAt,
     });
     expect(promoted.meta.accent_color).toBe("#ffa500");
+  });
+
+  test("autosave is draft-lenient: keeps an out-of-bounds value instead of rejecting", async () => {
+    const h = await publishedPostFixture(registryWithMetaField(RATING_FIELD));
+    // A strict write rejects 99 (max 5); autosave tolerates it so a
+    // work-in-progress save never fails over a not-yet-finished value.
+    const autosave = await h.client.entry.update({
+      id: h.entryId,
+      meta: { rating: 99 },
+    });
+    expect(autosave.type).toBe("autosave");
+    expect(autosave.meta.rating).toBe(99);
+  });
+
+  test("a direct live write stays strict and rejects the same out-of-bounds value", async () => {
+    const h = await publishedPostFixture(registryWithMetaField(RATING_FIELD));
+    await expect(
+      h.client.entry.update({
+        id: h.entryId,
+        meta: { rating: 99 },
+        saveAs: "live",
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value" },
+    });
   });
 
   test("null meta value on autosave deletes the key from the promoted live row (not a literal null)", async () => {
@@ -482,27 +518,22 @@ describe("entry.publish", () => {
     expect(promoted.meta.from_uninstalled_plugin).toEqual({ keep: 1 });
   });
 
-  test("promotes a schema-drifted registered value leniently instead of aborting the publish", async () => {
-    // The live write path already gates user intent; a value that now
-    // fails validation is schema drift or a legacy row. Re-validating the
-    // whole promoted bag must not block an unrelated publish over a field
-    // the caller never touched — so a failing value is kept, not rejected.
-    const h = await publishedPostFixture(
-      registryWithMetaField({
-        key: "rating",
-        label: "Rating",
-        type: "number",
-        inputType: "number",
-        min: 1,
-        max: 5,
-      }),
-    );
+  test("aborts the publish when the promoted bag violates a constraint", async () => {
+    // Autosave is draft-lenient, so a draft can carry an out-of-bounds
+    // value. Publish is the strict gate: promoting the bag re-runs every
+    // constraint, so an invalid value rejects the publish with a per-field
+    // error the admin surfaces — invalid content never reaches the live row.
+    const h = await publishedPostFixture(registryWithMetaField(RATING_FIELD));
     const live = await stalePendingAutosave(h, { rating: 99 });
-    const promoted = await h.client.entry.publish({
-      id: h.entryId,
-      expectedLiveUpdatedAt: live.updatedAt,
+    await expect(
+      h.client.entry.publish({
+        id: h.entryId,
+        expectedLiveUpdatedAt: live.updatedAt,
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value" },
     });
-    expect(promoted.meta.rating).toBe(99);
   });
 
   test("returns CONFLICT when expectedLiveUpdatedAt is stale", async () => {

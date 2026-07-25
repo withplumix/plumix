@@ -44,6 +44,18 @@ export interface FieldPipelineResult {
 }
 
 /**
+ * Validation strictness. `strict` (the default) enforces every declared
+ * constraint. `draft` skips the business-rule layer — required, numeric /
+ * temporal bounds, `maxLength`, option membership, format checks, repeater /
+ * group row counts, and `.validate()` — so an autosave of work-in-progress
+ * never fails; the structural + security gates (coercion, shape
+ * normalization, `.sanitize()`, temporal validity, url safe-href) still run,
+ * so a draft can never persist corrupt or unsafe data. Publish re-runs the
+ * bag in `strict` mode.
+ */
+export type FieldPipelineMode = "draft" | "strict";
+
+/**
  * Run one value through the per-field write pipeline: coercion →
  * `.sanitize()` → declarative constraints → `.validate()`. Never
  * throws for value problems — they come back as `{ path, message }`
@@ -53,9 +65,10 @@ export async function runFieldPipeline(
   field: MetaBoxField,
   raw: unknown,
   path: string,
+  mode: FieldPipelineMode = "strict",
 ): Promise<FieldPipelineResult> {
   if (raw === null || raw === undefined) {
-    if (field.required) {
+    if (field.required && mode === "strict") {
       return { errors: [{ path, message: META_FIELD_MESSAGES.required }] };
     }
     return { errors: [], isDeletion: true };
@@ -82,10 +95,10 @@ export async function runFieldPipeline(
     return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
   }
   if (isRepeaterField(field)) {
-    return runRepeaterPipeline(field, coerced.value, path);
+    return runRepeaterPipeline(field, coerced.value, path, mode);
   }
   if (isGroupField(field)) {
-    return runGroupPipeline(field, coerced.value, path);
+    return runGroupPipeline(field, coerced.value, path, mode);
   }
   // Structural normalization is part of coercion: it runs before the
   // author's `.sanitize()` so the callback can trust its typed
@@ -112,12 +125,12 @@ export async function runFieldPipeline(
     if (!renormalized.ok) return { errors: [renormalized.error] };
     value = renormalized.value;
   }
-  if (field.required && isEmptyValue(value)) {
+  if (field.required && mode === "strict" && isEmptyValue(value)) {
     return { errors: [{ path, message: META_FIELD_MESSAGES.required }] };
   }
-  const constraintErrors = checkConstraints(field, value, path);
+  const constraintErrors = checkConstraints(field, value, path, mode);
   if (constraintErrors.length > 0) return { errors: constraintErrors };
-  if (field.validate) {
+  if (field.validate && mode === "strict") {
     try {
       const verdict = await field.validate(value);
       if (verdict !== true) {
@@ -166,6 +179,7 @@ async function runGroupPipeline(
   field: GroupMetaBoxField,
   value: unknown,
   path: string,
+  mode: FieldPipelineMode,
 ): Promise<FieldPipelineResult> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
@@ -179,7 +193,7 @@ async function runGroupPipeline(
   // impossible to clear. "Empty" is strictly `null` / `undefined` / `""`
   // per `isBlankRow`; `0` / `false` are real values.
   if (isBlankRow(field.fields, source)) {
-    if (field.required === true) {
+    if (field.required === true && mode === "strict") {
       return { errors: [{ path, message: META_FIELD_MESSAGES.required }] };
     }
     return { errors: [], isDeletion: true };
@@ -194,6 +208,7 @@ async function runGroupPipeline(
       member,
       source[member.key],
       `${path}.${member.key}`,
+      mode,
     );
     errors.push(...cell.errors);
     if (cell.errors.length === 0 && cell.isDeletion !== true) {
@@ -271,6 +286,7 @@ async function runRepeaterPipeline(
   field: RepeaterMetaBoxField,
   value: unknown,
   path: string,
+  mode: FieldPipelineMode,
 ): Promise<FieldPipelineResult> {
   if (!Array.isArray(value) || value.length > MAX_REPEATER_ROWS) {
     return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
@@ -297,6 +313,7 @@ async function runRepeaterPipeline(
         sf,
         rowObj[sf.key],
         `${path}.${String(idx)}.${sf.key}`,
+        mode,
       );
       errors.push(...cell.errors);
       if (cell.errors.length === 0 && cell.isDeletion !== true) {
@@ -305,20 +322,25 @@ async function runRepeaterPipeline(
     }
     rows.push(next);
   }
-  if (field.required === true && rows.length === 0) {
-    errors.push({ path, message: META_FIELD_MESSAGES.required });
-  }
-  if (field.min !== undefined && rows.length < field.min) {
-    errors.push({
-      path,
-      message: { ...META_FIELD_MESSAGES.minRows, values: { min: field.min } },
-    });
-  }
-  if (field.max !== undefined && rows.length > field.max) {
-    errors.push({
-      path,
-      message: { ...META_FIELD_MESSAGES.maxRows, values: { max: field.max } },
-    });
+  // Row counts are business rules — a draft may be mid-authoring with too
+  // few (or a transient too many) rows. Cell-level structural errors above
+  // still surface in draft mode.
+  if (mode === "strict") {
+    if (field.required === true && rows.length === 0) {
+      errors.push({ path, message: META_FIELD_MESSAGES.required });
+    }
+    if (field.min !== undefined && rows.length < field.min) {
+      errors.push({
+        path,
+        message: { ...META_FIELD_MESSAGES.minRows, values: { min: field.min } },
+      });
+    }
+    if (field.max !== undefined && rows.length > field.max) {
+      errors.push({
+        path,
+        message: { ...META_FIELD_MESSAGES.maxRows, values: { max: field.max } },
+      });
+    }
   }
   if (errors.length > 0) return { errors };
   return { errors: [], value: rows };
@@ -413,10 +435,22 @@ function checkConstraints(
   field: MetaBoxField,
   value: unknown,
   path: string,
+  mode: FieldPipelineMode,
 ): MetaFieldError[] {
   if (isTemporalInputType(field.inputType)) {
-    return checkTemporal(field.inputType, field, value, path);
+    return checkTemporal(field.inputType, field, value, path, mode);
   }
+  if (field.inputType === "url" && typeof value === "string") {
+    // Security gate, not a business rule — the value is destined for a
+    // rendered href, so script-bearing schemes hard-fail even in draft mode.
+    if (value !== "" && !SAFE_HREF_RE.test(value)) {
+      return [{ path, message: META_FIELD_MESSAGES.invalidUrl }];
+    }
+  }
+  // Everything below is a business-rule constraint: option membership,
+  // format, and length/count bounds. A draft may hold not-yet-valid content,
+  // so skip them — publish re-runs the bag in strict mode.
+  if (mode === "draft") return [];
   if (field.inputType === "select") {
     const select = field as {
       readonly options?: readonly MetaBoxFieldOption[];
@@ -430,13 +464,6 @@ function checkConstraints(
   if (field.inputType === "email" && typeof value === "string") {
     if (value !== "" && !EMAIL_REGEX.test(value)) {
       return [{ path, message: META_FIELD_MESSAGES.invalidEmail }];
-    }
-  }
-  if (field.inputType === "url" && typeof value === "string") {
-    // Same gate as link fields and richtext link marks — the value is
-    // destined for rendered hrefs, so script-bearing schemes hard-fail.
-    if (value !== "" && !SAFE_HREF_RE.test(value)) {
-      return [{ path, message: META_FIELD_MESSAGES.invalidUrl }];
     }
   }
   const errors: MetaFieldError[] = [];
@@ -510,10 +537,14 @@ function checkTemporal(
   field: MetaBoxField,
   value: unknown,
   path: string,
+  mode: FieldPipelineMode,
 ): MetaFieldError[] {
+  // Shape/validity is structural — a garbage date is always rejected.
   if (typeof value !== "string" || !isValidTemporalValue(inputType, value)) {
     return [{ path, message: META_FIELD_MESSAGES.invalid }];
   }
+  // Bounds are a business rule — a draft may sit outside them.
+  if (mode === "draft") return [];
   // ISO shapes compare lexicographically in temporal order, so the
   // bounds check is a plain string comparison against the authored
   // `min` / `max` (declared in the same stored shape).
