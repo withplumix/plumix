@@ -101,13 +101,14 @@ export function MetaBoxField({
       name={name}
       render={({ field: rhf }) => {
         if (field.inputType === "checkbox") {
-          // Checkbox keeps its label inline per the "☑ I agree" convention —
-          // unlike the toggle it won't midline-align with inputs in a grid
-          // row, intentionally. `FormControl` still provides the ARIA wiring +
-          // disabled state styling.
+          // Label-above like the toggle and every other grid field, so a
+          // checkbox sharing a row with text / number inputs lines up with
+          // them: the box centres in a control-height row to meet the
+          // neighbouring inputs' midline instead of floating at their label.
           return (
             <FormItem className={className} data-testid={testIdPrefix}>
-              <div className="flex items-center gap-2">
+              <FormLabel>{labelText}</FormLabel>
+              <div className="flex min-h-9 items-center gap-2">
                 <FormControl>
                   <Checkbox
                     name={rhf.name}
@@ -121,7 +122,6 @@ export function MetaBoxField({
                     data-testid={inputTestId}
                   />
                 </FormControl>
-                <FormLabel>{labelText}</FormLabel>
               </div>
               {field.description ? (
                 <FormDescription data-testid={`${testIdPrefix}-description`}>
