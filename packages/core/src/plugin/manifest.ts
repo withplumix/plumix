@@ -1636,6 +1636,25 @@ export function findEntryMetaField(
 }
 
 /**
+ * Every `MetaBoxField` registered for an entry type, across all its meta
+ * boxes. Used by the publish gate to validate a promoted bag against the
+ * full schema — so a required field ABSENT from the bag is caught, not
+ * just one stored empty. Key uniqueness per (entryType, key) holds at
+ * registration, so no de-duplication is needed.
+ */
+export function listEntryMetaFields(
+  registry: PluginRegistry,
+  entryType: string,
+): readonly MetaBoxField[] {
+  const fields: MetaBoxField[] = [];
+  for (const box of registry.entryMetaBoxes.values()) {
+    if (!box.entryTypes.includes(entryType)) continue;
+    fields.push(...box.fields);
+  }
+  return fields;
+}
+
+/**
  * Like `findEntryMetaField`, but for term meta. Scoped by termTaxonomy.
  */
 export function findTermMetaField(

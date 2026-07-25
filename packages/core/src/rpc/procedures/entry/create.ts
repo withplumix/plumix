@@ -86,11 +86,14 @@ export const create = base
 
     // Validate meta up-front so a bad key fails before the entry insert —
     // keeps the DB clean when the client sends a typo in a meta key.
+    // Creating a draft is lenient (business rules deferred to publish);
+    // creating straight to published/scheduled enforces them now.
     const metaPatch = await sanitizeAndValidateEntryMeta(
       context,
       filtered.type,
       filtered.meta,
       errors,
+      requiresPublishCap ? "strict" : "draft",
     );
 
     // Same up-front validation: a bad term reference shouldn't leave a

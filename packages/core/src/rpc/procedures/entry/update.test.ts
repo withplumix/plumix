@@ -32,6 +32,26 @@ function registerSeoMetaBox(
   });
 }
 
+function registerRequiredSubtitle(
+  plugins: ReturnType<typeof createPluginRegistry>,
+): void {
+  plugins.entryMetaBoxes.set("required-box", {
+    id: "required-box",
+    label: "Article",
+    entryTypes: ["post"],
+    fields: [
+      {
+        key: "subtitle",
+        label: "Subtitle",
+        type: "string",
+        inputType: "text",
+        required: true,
+      },
+    ],
+    registeredBy: "test",
+  });
+}
+
 describe("entry.update", () => {
   test("author can update their own draft via edit_own", async () => {
     const h = await createRpcHarness({ authAs: "author" });
@@ -410,6 +430,37 @@ describe("entry.update", () => {
       meta: { is_featured: null },
     });
     expect(updated.meta).toEqual({ meta_title: "keep" });
+  });
+
+  test("meta: editing a draft is lenient — an empty required field is kept", async () => {
+    const plugins = createPluginRegistry();
+    registerRequiredSubtitle(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const draft = await h.factory.draft.create({ authorId: h.user.id });
+    // A draft edit tolerates the empty required field so authoring never
+    // stalls; the value is stored as-is.
+    const updated = await h.client.entry.update({
+      id: draft.id,
+      meta: { subtitle: "" },
+    });
+    expect(updated.meta.subtitle).toBe("");
+  });
+
+  test("meta: publishing a draft enforces a required field it left empty", async () => {
+    const plugins = createPluginRegistry();
+    registerRequiredSubtitle(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const draft = await h.factory.draft.create({ authorId: h.user.id });
+    await h.client.entry.update({ id: draft.id, meta: { subtitle: "" } });
+    // The publish transition strict-validates the full stored bag, so the
+    // required field the draft left empty blocks the transition even though
+    // this patch carries no meta.
+    await expect(
+      h.client.entry.update({ id: draft.id, status: "published" }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_invalid_value" },
+    });
   });
 
   test("meta: bad key → CONFLICT, and the post row is untouched (validated pre-write)", async () => {

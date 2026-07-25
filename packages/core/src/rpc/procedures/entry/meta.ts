@@ -1,8 +1,12 @@
 import type { AppContext } from "../../../context/app.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
 import type { MetaPatch } from "../../meta/core.js";
+import type { FieldPipelineMode } from "../../meta/field-pipeline.js";
 import { entries } from "../../../db/schema/entries.js";
-import { findEntryMetaField } from "../../../plugin/manifest.js";
+import {
+  findEntryMetaField,
+  listEntryMetaFields,
+} from "../../../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
@@ -10,8 +14,10 @@ import {
   hydrateMetaReferences as hydrateMetaReferencesCore,
   isEmptyMetaPatch,
   loadMeta,
+  metaValidationConflict,
+  MetaValidationError,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
-  sanitizeRegisteredMetaBag,
+  validateAndPromoteMetaBag,
   validateMetaReferencesForRpc,
 } from "../../meta/core.js";
 
@@ -23,11 +29,13 @@ export async function sanitizeMetaForRpc(
   entryType: string,
   input: Record<string, unknown> | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
+  mode: FieldPipelineMode = "strict",
 ): Promise<MetaPatch | null> {
   return sanitizeMetaForRpcCore(
     (key) => findEntryMetaField(registry, entryType, key),
     input,
     errors,
+    mode,
   );
 }
 
@@ -110,8 +118,15 @@ export async function sanitizeAndValidateEntryMeta(
   input: Record<string, unknown> | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2] &
     Parameters<typeof assertEntryMetaCapabilities>[4],
+  mode: FieldPipelineMode = "strict",
 ): Promise<MetaPatch | null> {
-  const patch = await sanitizeMetaForRpc(ctx.plugins, entryType, input, errors);
+  const patch = await sanitizeMetaForRpc(
+    ctx.plugins,
+    entryType,
+    input,
+    errors,
+    mode,
+  );
   if (!patch) return null;
   assertEntryMetaCapabilities(ctx.plugins, entryType, patch, ctx.auth, errors);
   await validateEntryMetaReferences(ctx, entryType, patch, errors);
@@ -119,20 +134,34 @@ export async function sanitizeAndValidateEntryMeta(
 }
 
 /**
- * Re-sanitize a stored entry-meta bag before `entry.publish` promotes it
- * onto the live row — the permanent second gate for autosaves persisted
- * before the write-time sanitizer (#1533) existed. See
- * {@link sanitizeRegisteredMetaBag}.
+ * Strict-validate a stored entry-meta bag before `entry.publish` promotes
+ * it onto the live row. Draft autosaves are lenient, so this is the gate
+ * that finally enforces required fields, bounds, formats, and row counts;
+ * a violation aggregates into a `CONFLICT` the admin pins onto its inputs,
+ * blocking the publish. See {@link validateAndPromoteMetaBag}.
+ *
+ * Capability-gated fields the publisher can't write are excluded from the
+ * check: they can't fix such a field, so a co-author's required/invalid
+ * value must not block their publish (its stored value still passes through
+ * untouched, and was validated when whoever set it wrote it).
  */
 export async function sanitizePromotedEntryMeta(
   ctx: AppContext,
   entryType: string,
   bag: Readonly<Record<string, unknown>>,
+  errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
 ): Promise<Record<string, unknown>> {
-  return sanitizeRegisteredMetaBag(
-    (key) => findEntryMetaField(ctx.plugins, entryType, key),
-    bag,
+  const fields = listEntryMetaFields(ctx.plugins, entryType).filter(
+    (field) => !field.capability || ctx.auth.can(field.capability),
   );
+  try {
+    return await validateAndPromoteMetaBag(fields, bag);
+  } catch (error) {
+    if (error instanceof MetaValidationError) {
+      throw metaValidationConflict(error, errors);
+    }
+    throw error;
+  }
 }
 
 /**

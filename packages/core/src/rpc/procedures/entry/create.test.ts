@@ -365,10 +365,13 @@ describe("entry.create", () => {
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
+    // Creating straight to `published` runs the strict gate — a draft create
+    // is lenient (its own test below), so publish is what enforces here.
     await expect(
       h.client.entry.create({
         title: "bad-constraints",
         slug: "bad-constraints",
+        status: "published",
         meta: {
           subtitle: "way too long",
           sections: [{ heading: "", body: "kept" }],
@@ -391,6 +394,28 @@ describe("entry.create", () => {
         ],
       },
     });
+  });
+
+  test("meta: a draft create is lenient — an unmet constraint doesn't block it", async () => {
+    const { text } = await import("../../../plugin/fields/index.js");
+    const plugins = createPluginRegistry();
+    plugins.entryMetaBoxes.set("box", {
+      id: "box",
+      label: "Article",
+      entryTypes: ["post"],
+      fields: [text("subtitle").maxLength(5).build()],
+      registeredBy: "test",
+    });
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    // A brand-new draft is work-in-progress: an over-length value is kept
+    // rather than rejected, so authoring never hits a wall. Publish enforces.
+    const created = await h.client.entry.create({
+      title: "wip",
+      slug: "wip",
+      meta: { subtitle: "way too long" },
+    });
+    expect(created.status).toBe("draft");
+    expect(created.meta.subtitle).toBe("way too long");
   });
 
   test("meta: reference field rejects an upsert pointing at a missing user", async () => {

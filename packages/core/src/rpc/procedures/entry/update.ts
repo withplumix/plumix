@@ -35,6 +35,7 @@ import {
   hydrateEntryMeta,
   loadEntryMeta,
   sanitizeAndValidateEntryMeta,
+  sanitizePromotedEntryMeta,
   writeEntryMeta,
 } from "./meta.js";
 import { scheduledDateInvalid } from "./publish-scheduled.js";
@@ -217,14 +218,17 @@ export const update = base
           data: { reason: "autosave_requires_published" },
         });
       }
-      // `entry.publish` promotes the autosave bag onto live verbatim,
-      // so this write is the only gate between client input and the
-      // published row — validate exactly like the live path.
+      // Autosave is draft-lenient: a work-in-progress save must never fail
+      // over an empty required field or an out-of-bounds value the author
+      // hasn't finished. Structural + security gates still run; the
+      // business-rule constraints are re-enforced when `entry.publish`
+      // promotes this bag in strict mode.
       const autosaveMetaPatch = await sanitizeAndValidateEntryMeta(
         context,
         existing.type,
         filtered.meta,
         errors,
+        "draft",
       );
       // The autosave row accumulates the author's in-progress edits, so base
       // each write on the *existing draft* (falling back to the live row for
@@ -321,11 +325,22 @@ export const update = base
       publishedAt: publishedAtInput,
       ...changes
     } = filtered;
+    // A save that lands the entry as a draft is validated leniently:
+    // work-in-progress must never fail over an empty required field or a
+    // not-yet-valid value. Only a save that publishes or schedules the
+    // entry enforces the full constraint set — the same gate `entry.publish`
+    // applies when it promotes an autosave bag.
+    const targetStatus = filtered.status ?? existing.status;
+    const metaMode =
+      targetStatus === "published" || targetStatus === "scheduled"
+        ? "strict"
+        : "draft";
     let metaPatch = await sanitizeAndValidateEntryMeta(
       context,
       existing.type,
       metaInput,
       errors,
+      metaMode,
     );
     // Fold the framework-owned template choice in after plugin-field
     // validation — it bypasses the meta-box sanitizer by design.
@@ -335,6 +350,30 @@ export const update = base
         context,
         termsPatch,
         buildTermsPatchGuards(errors),
+      );
+    }
+
+    // Entering the live surface (publishing or scheduling) enforces the full
+    // resulting bag, not just this patch: a draft's meta was written
+    // leniently, so a required field it left empty — or any value it never
+    // re-touched — is caught here and blocks the transition. Editing an
+    // already-live entry only re-validates its own patch (above), so
+    // pre-existing schema drift on a co-author's field can't block an
+    // unrelated edit.
+    const nowScheduled =
+      filtered.status === "scheduled" && existing.status !== "scheduled";
+    if (isPublishTransition || nowScheduled) {
+      const resultingMeta: Record<string, unknown> = { ...existing.meta };
+      if (metaPatch) {
+        for (const [key, value] of metaPatch.upserts)
+          resultingMeta[key] = value;
+        for (const key of metaPatch.deletes) delete resultingMeta[key];
+      }
+      await sanitizePromotedEntryMeta(
+        context,
+        existing.type,
+        resultingMeta,
+        errors,
       );
     }
 

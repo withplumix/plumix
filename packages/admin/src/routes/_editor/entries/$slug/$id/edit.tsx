@@ -772,6 +772,17 @@ function EntryEditor({
       ]),
     [id, entryTypeName, queryClient],
   );
+  // Publish is the strict gate — a rejection carries the field paths that
+  // need fixing (an empty required field, an out-of-bounds value a draft
+  // tolerated). Pin them onto the document panel's inputs, not just a generic
+  // toast, so the author knows what to fix before retrying.
+  const handlePublishError = useCallback(
+    (err: unknown): void => {
+      setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
+      toastError(renderLabel(M.publishFailed));
+    },
+    [renderLabel],
+  );
   const publish = useMutation({
     mutationFn: async () => {
       const updated = await orpc.entry.update.call({
@@ -786,10 +797,13 @@ function EntryEditor({
       // A successful manual save persisted the content, so re-arm the autosave
       // failure latch — otherwise a later genuine autosave failure stays quiet.
       autosaveFailedRef.current = false;
+      // The promoted bag passed the strict gate, so clear any field pins a
+      // prior failed publish left behind.
+      setMetaFieldErrors(null);
       toastSuccess(renderLabel(M.published));
       return invalidateEntry();
     },
-    onError: () => toastError(renderLabel(M.publishFailed)),
+    onError: handlePublishError,
   });
   const publishDraft = useMutation({
     mutationFn: () =>
@@ -799,12 +813,15 @@ function EntryEditor({
       }),
     onSuccess: async (updated) => {
       autosaveFailedRef.current = false;
+      // The promoted bag passed the strict gate, so clear any field pins a
+      // prior failed publish left behind.
+      setMetaFieldErrors(null);
       toastSuccess(renderLabel(M.published));
       liveUpdatedAtRef.current = updated.updatedAt;
       setHasLocalDraft(false);
       await invalidateEntry();
     },
-    onError: () => toastError(renderLabel(M.publishFailed)),
+    onError: handlePublishError,
   });
   const discardDraft = useMutation({
     mutationFn: () => orpc.entry.discardDraft.call({ id }),
