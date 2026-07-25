@@ -18,6 +18,14 @@ describe("entry.create", () => {
     expect(created.publishedAt).toBeNull();
   });
 
+  test("creates an untitled draft — omitted title is stored as empty", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+    const created = await h.client.entry.create({ slug: "untitled-draft" });
+    // Read surfaces render a localized "Untitled" fallback for the "" title.
+    expect(created.title).toBe("");
+    expect(created.status).toBe("draft");
+  });
+
   test("author can schedule a future publish (status scheduled + publishedAt)", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     // Whole-second date — SQLite stores timestamps at second precision.

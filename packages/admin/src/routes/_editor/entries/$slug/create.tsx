@@ -15,10 +15,6 @@ import { Button } from "@plumix/admin-ui/button";
 import { slugify } from "@plumix/core/slugify";
 
 const M = {
-  untitled: defineMessage({
-    id: "editor.entry.create.untitled",
-    message: "Untitled",
-  }),
   // Noun-less pending indicator — replaces the "Creating new {singular}…"
   // substitution. Pre-redirect transient surface; the next view shows
   // the entry's own title or a per-type fallback via the lookup label
@@ -70,8 +66,11 @@ function CreateEntryRoute(): ReactNode {
     mutationFn: () =>
       orpc.entry.create.call({
         type: entryType.name,
-        // Persisted once at create — locale switches don't rewrite stored data.
-        title: renderLabel(M.untitled),
+        // Title omitted: created untitled (stored ""), so the editor shows its
+        // placeholder rather than a literal "Untitled" the author must delete.
+        // Read surfaces fall back to a localized label for the empty title —
+        // "(no title)" in the entry lists, "Untitled" in lookups
+        // (`useUntitledLabel`) and the public `<title>` (site name).
         // Random suffix: two creates in the same millisecond (parallel
         // tabs, double-click) would otherwise mint the same slug and
         // 409 on the unique constraint.

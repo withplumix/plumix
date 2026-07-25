@@ -46,6 +46,17 @@ describe("entry.update", () => {
     expect(updated.title).toBe("renamed");
   });
 
+  test("an empty title clears it (entries may be untitled)", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "clears",
+      title: "Has a title",
+    });
+    const updated = await h.client.entry.update({ id: own.id, title: "" });
+    expect(updated.title).toBe("");
+  });
+
   test("contributor cannot edit someone else's draft — FORBIDDEN reports the stronger cap (no authorship probe)", async () => {
     const h = await createRpcHarness({ authAs: "contributor" });
     const other = await h.factory.author.create();

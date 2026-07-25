@@ -115,7 +115,9 @@ export const create = base
 
     const candidate: NewEntry = {
       type: filtered.type,
-      title: filtered.title,
+      // Untitled drafts store "" (the column is NOT NULL); read surfaces
+      // render their own localized fallback for the empty title.
+      title: filtered.title ?? "",
       slug: filtered.slug,
       content: filtered.content ?? null,
       excerpt: filtered.excerpt ?? null,

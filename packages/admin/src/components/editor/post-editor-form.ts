@@ -6,7 +6,10 @@ import { idParam } from "@plumix/core/validation";
 import { slugField } from "../../lib/slug.js";
 
 export const postEditorSchema = v.object({
-  title: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(300)),
+  // Empty allowed — a draft may be untitled (matches the server's create /
+  // update schema). Without this, a freshly-created untitled entry is an
+  // invalid form state, so autosave / publish silently no-op.
+  title: v.pipe(v.string(), v.trim(), v.maxLength(300)),
   slug: slugField,
   content: v.nullable(v.unknown()),
   excerpt: v.optional(v.pipe(v.string(), v.maxLength(600)), ""),

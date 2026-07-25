@@ -55,6 +55,9 @@ const M = {
   }),
   placeholder: defineMessage({ id: "palette.placeholder", message: "Search…" }),
   empty: defineMessage({ id: "palette.empty", message: "No results found." }),
+  // Shared id with the entry list — an untitled result shows the same
+  // "(no title)" fallback instead of a blank row.
+  noTitle: defineMessage({ id: "entries.list.noTitle", message: "(no title)" }),
   navigation: defineMessage({
     id: "palette.group.navigation",
     message: "Navigation",
@@ -338,7 +341,7 @@ export function CommandPalette({
                       openResult(group.key, item.id);
                     }}
                   >
-                    <span>{item.title}</span>
+                    <span>{item.title || renderLabel(M.noTitle)}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>

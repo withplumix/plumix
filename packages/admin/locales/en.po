@@ -653,6 +653,11 @@ msgstr ""
 #~ msgstr "No matches"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+#~ msgid "editor.entry.create.untitled"
+#~ msgstr "Untitled"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -701,7 +706,9 @@ msgid "editor.document.parent.none"
 msgstr "(no parent)"
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
 #: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/routes/_authenticated/index.tsx
 msgid "entries.list.noTitle"
 msgstr "(no title)"
 
@@ -4112,11 +4119,6 @@ msgstr "Unknown device"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.unnamed"
 msgstr "Unnamed passkey"
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/create.tsx
-msgid "editor.entry.create.untitled"
-msgstr "Untitled"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts

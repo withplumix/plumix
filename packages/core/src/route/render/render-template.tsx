@@ -38,6 +38,7 @@ import {
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { applyCanonical } from "../../seo/canonical.js";
 import { applyHeadMeta } from "../../seo/head-defaults.js";
+import { loadSiteSettings, nonEmpty } from "../../seo/site-settings.js";
 import {
   loadTemplateDeps,
   mergeTemplateDepDeclarations,
@@ -156,12 +157,17 @@ async function renderThroughThemeInner({
     applyHeadMeta(applyCanonical(filtered, ctx), data, ctx, title),
   );
   const loaderData = await prefetchEntryLoaders(ctx, data, template);
+  // The `<title>` falls back to the resolver title, then the site name — so an
+  // untitled entry gets `<title>Site</title>`, not an empty one. Settings are
+  // request-memoized, so this re-read is free after `applyHeadMeta`.
+  const site = await loadSiteSettings(ctx);
+  const titleFallback = nonEmpty(title) ?? nonEmpty(site.title) ?? title;
   return renderTree({
     ctx,
     document: renderDocument,
     assetManifest,
     data,
-    title: composeTitle(renderDocument, title),
+    title: composeTitle(renderDocument, titleFallback),
     template,
     deps,
     loaderData,
@@ -174,7 +180,11 @@ async function renderThroughThemeInner({
 // String form falls back to the resolver title instead of substituting
 // `undefined`, dodging unhead's `"%s · Site"` → `" · Site"` orphan separator.
 function composeTitle(document: DocumentManifest, fallback: string): string {
-  const { title, titleTemplate } = document;
+  const { titleTemplate } = document;
+  // An empty title (an untitled entry) is treated as absent, so the fallback
+  // / the template's no-title branch applies instead of emitting an empty
+  // `<title>` or an orphaned " · Site" separator.
+  const title = document.title === "" ? undefined : document.title;
   if (typeof titleTemplate === "function") return titleTemplate(title);
   if (typeof titleTemplate === "string" && title !== undefined) {
     return titleTemplate.replaceAll("%s", title);

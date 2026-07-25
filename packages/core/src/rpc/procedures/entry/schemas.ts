@@ -13,6 +13,10 @@ const MAX_TERMS_PER_TAXONOMY = 200;
 const trimmedText = (max: number) =>
   v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
 
+// Entry titles may be empty — a draft can be untitled (read surfaces render
+// a localized fallback). Unlike `trimmedText`, no `minLength`.
+const titleText = v.pipe(v.string(), v.trim(), v.maxLength(300));
+
 // Content is a ProseMirror JSON document. The public renderer's walker
 // allowlists node types on render, so the RPC only rejects obvious
 // garbage (non-objects). Byte-size cap is enforced in the handler via
@@ -59,7 +63,10 @@ const postTermsSchema = v.record(
 export const entryCreateInputSchema = v.object({
   ...userSuppliableFields.entries,
   type: v.optional(trimmedText(100), "post"),
-  title: trimmedText(300),
+  // Optional — a fresh draft is created untitled (stored as ""), so the
+  // editor shows a placeholder instead of a literal "Untitled" the author
+  // must delete. Lists / lookups fall back to a localized "Untitled" label.
+  title: v.optional(titleText),
   slug: slugSchema,
   content: v.optional(contentSchema),
   excerpt: v.optional(excerptSchema),
@@ -74,7 +81,8 @@ export const entryCreateInputSchema = v.object({
 
 export const entryUpdateInputSchema = v.object({
   id: idParam,
-  title: v.optional(trimmedText(300)),
+  // Empty clears the title (untitled) — read surfaces render a fallback.
+  title: v.optional(titleText),
   slug: v.optional(slugSchema),
   content: v.optional(contentSchema),
   excerpt: v.optional(excerptSchema),
