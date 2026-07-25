@@ -101,9 +101,10 @@ export function MetaBoxField({
       name={name}
       render={({ field: rhf }) => {
         if (field.inputType === "checkbox") {
-          // Checkboxes carry their label inline and skip the shared
-          // label-above-input shell. `FormControl` still provides the
-          // ARIA wiring + disabled state styling.
+          // Checkbox keeps its label inline per the "☑ I agree" convention —
+          // unlike the toggle it won't midline-align with inputs in a grid
+          // row, intentionally. `FormControl` still provides the ARIA wiring +
+          // disabled state styling.
           return (
             <FormItem className={className} data-testid={testIdPrefix}>
               <div className="flex items-center gap-2">
@@ -133,13 +134,16 @@ export function MetaBoxField({
         }
 
         if (field.inputType === "toggle") {
-          // Toggles carry their label inline beside the switch (like
-          // checkboxes) plus optional on/off state text that tracks the
-          // current value.
+          // Label-above like every other grid field, so a toggle sharing a
+          // row with text / number inputs lines up with them instead of
+          // floating at the siblings' label height. The switch centres in a
+          // control-height row so it meets the neighbouring inputs' midline;
+          // optional on/off state text tracks the current value.
           const stateText = rhf.value === true ? field.onText : field.offText;
           return (
             <FormItem className={className} data-testid={testIdPrefix}>
-              <div className="flex items-center gap-2">
+              <FormLabel>{labelText}</FormLabel>
+              <div className="flex min-h-9 items-center gap-2">
                 <FormControl>
                   <Switch
                     name={rhf.name}
@@ -151,7 +155,6 @@ export function MetaBoxField({
                     data-testid={inputTestId}
                   />
                 </FormControl>
-                <FormLabel>{labelText}</FormLabel>
                 {stateText ? (
                   <span
                     className="text-muted-foreground text-sm"

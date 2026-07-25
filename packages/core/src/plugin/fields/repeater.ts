@@ -4,6 +4,7 @@ import type {
   MetaBoxField,
   MetaBoxFieldInput,
   MetaBoxFieldSpan,
+  RepeaterDialogSize,
   RepeaterLayout,
   RepeaterMetaBoxField,
 } from "../manifest.js";
@@ -30,6 +31,7 @@ interface RepeaterFieldState {
   readonly addLabel?: Label;
   readonly layout?: RepeaterLayout;
   readonly collapsed?: string;
+  readonly dialogSize?: RepeaterDialogSize;
 }
 
 /**
@@ -130,6 +132,14 @@ export class RepeaterFieldBuilder<
   /** Admin row layout — see {@link RepeaterLayout}. */
   layout(layout: RepeaterLayout): RepeaterFieldBuilder<F, K, V, S> {
     return this.#fork({ layout });
+  }
+
+  /**
+   * Width of the row-editor dialog — see {@link RepeaterDialogSize}.
+   * Widen it for dense, multi-column rows; default `md`.
+   */
+  dialogSize(dialogSize: RepeaterDialogSize): RepeaterFieldBuilder<F, K, V, S> {
+    return this.#fork({ dialogSize });
   }
 
   /**

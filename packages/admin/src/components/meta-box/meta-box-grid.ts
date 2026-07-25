@@ -1,6 +1,9 @@
 import { cn } from "@/lib/utils";
 
-import type { MetaBoxFieldSpan } from "@plumix/core/manifest";
+import type {
+  MetaBoxFieldSpan,
+  RepeaterDialogSize,
+} from "@plumix/core/manifest";
 
 type SpanValue = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
@@ -94,4 +97,23 @@ export function metaBoxFieldColSpanClass(
     span?.md !== undefined && MD[clamp(span.md)],
     span?.lg !== undefined && LG[clamp(span.lg)],
   );
+}
+
+// Row-editor dialog width per `RepeaterDialogSize`. The `sm:` prefix is
+// deliberate: `DialogContent` ships a built-in `sm:max-w-lg`, and only a
+// same-variant class lets tailwind-merge drop it — an unprefixed `max-w-*`
+// would lose to `sm:max-w-lg` from the `sm` breakpoint up (and below `sm`
+// would displace the primitive's own `max-w-[calc(100%-2rem)]` gutters). `md`
+// matches the width the row editor was always meant to have.
+const DIALOG_SIZE_CLASS: Record<RepeaterDialogSize, string> = {
+  sm: "sm:max-w-lg",
+  md: "sm:max-w-2xl",
+  lg: "sm:max-w-4xl",
+};
+
+/** Resolve a repeater's `dialogSize` (default `md`) to a max-width class. */
+export function repeaterDialogSizeClass(
+  size: RepeaterDialogSize | undefined,
+): string {
+  return DIALOG_SIZE_CLASS[size ?? "md"];
 }

@@ -1949,11 +1949,6 @@ msgstr "Edit"
 msgid "type.generic.editItem"
 msgstr "Edit"
 
-#. js-lingui-explicit-id
-#: src/components/meta-box/repeater-field.tsx
-msgid "metaBox.repeater.editRow.button"
-msgstr "Edit"
-
 #. email: the user being edited
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1964,6 +1959,12 @@ msgstr "Edit {email}"
 #: src/components/shell/command-palette.tsx
 msgid "palette.command.profile"
 msgstr "Edit profile"
+
+#. n: 1-based index of the repeater row
+#. js-lingui-explicit-id
+#: src/components/meta-box/repeater-field.tsx
+msgid "metaBox.repeater.editRow.button"
+msgstr "Edit row {n}"
 
 #. n: 1-based index of the repeater row being edited
 #. js-lingui-explicit-id

@@ -3,8 +3,8 @@ import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useId, useState } from "react";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
-import { Trans } from "@lingui/react";
-import { useFormContext, useFormState } from "react-hook-form";
+import { Trans, useLingui } from "@lingui/react";
+import { useFormContext, useFormState, useWatch } from "react-hook-form";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { Button } from "@plumix/admin-ui/button";
@@ -20,7 +20,10 @@ import { Pencil, PlusIcon, TriangleAlert } from "@plumix/admin-ui/icons";
 import { SortableList } from "@plumix/admin-ui/sortable";
 
 import { MetaBoxField } from "./meta-box-field.js";
-import { metaBoxFieldColSpanClass } from "./meta-box-grid.js";
+import {
+  metaBoxFieldColSpanClass,
+  repeaterDialogSizeClass,
+} from "./meta-box-grid.js";
 
 // Row ids are index-derived. dnd-kit only needs stability within a single
 // drag; controlled subfields live at `${rowName}.${subKey}` in RHF state, so
@@ -33,11 +36,20 @@ interface RepeaterRow {
   readonly index: number;
 }
 
-// Screen-reader name for the summary row's error triangle — the colour-only
-// button variant alone doesn't convey the error non-visually.
+// Screen-reader name for the summary row's error triangle — the icon alone
+// doesn't convey the error non-visually.
 const ROW_ERROR_LABEL = defineMessage({
   id: "metaBox.repeater.rowError",
   message: "This row has an error",
+});
+
+// Accessible name for the icon-only Edit button. Row-numbered so a
+// screen-reader rotor listing many rows' buttons can tell them apart —
+// the icon carries no text, and every row's button is otherwise identical.
+const EDIT_ROW_LABEL = defineMessage({
+  id: "metaBox.repeater.editRow.button",
+  message: "Edit row {n}",
+  comment: "n: 1-based index of the repeater row",
 });
 
 // Render-side tolerance for malformed rows from migration / hand-edited
@@ -67,16 +79,24 @@ export function RepeaterField({
   const max = typeof field.max === "number" ? field.max : undefined;
   const min = typeof field.min === "number" ? field.min : undefined;
   const collapsedKey = field.collapsed;
-  const rows = asRows(rhf.value);
   const idPrefix = useId();
   // Which row's editor dialog is open (index into `rows`), or null.
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  const { control, getFieldState, clearErrors } = useFormContext();
+  // Read the live array via `useWatch`, not the Controller's `rhf.value`
+  // snapshot: a subfield edited in the dialog writes a nested path
+  // (`${name}.${i}.${key}`) that doesn't re-render the parent Controller, so a
+  // stale `rhf.value` would show outdated summaries — and, worse, let the next
+  // add / remove / reorder commit an array missing the just-edited row's
+  // fields, dropping them.
+  const watched = useWatch({ control, name: rhf.name }) as unknown;
+  const rows = asRows(watched ?? rhf.value);
 
   // A row's fields live in its dialog, so a server / validation error on a
   // sub-field would be invisible while the dialog is closed. Flag the summary
   // rows that hold an error so the author knows which to open. `getFieldState`
   // reads the subscribed `formState`, so the flags re-render as errors change.
-  const { control, getFieldState, clearErrors } = useFormContext();
   const formState = useFormState({ control, name: rhf.name });
   const rowHasError = (index: number): boolean =>
     getFieldState(`${rhf.name}.${index}`, formState).invalid;
@@ -208,7 +228,7 @@ export function RepeaterField({
         }}
       >
         <DialogContent
-          className="max-w-2xl"
+          className={repeaterDialogSizeClass(field.dialogSize)}
           aria-describedby={undefined}
           data-testid={`${testId}-dialog`}
         >
@@ -224,7 +244,11 @@ export function RepeaterField({
           </DialogHeader>
           {editingRowName ? (
             <div className="@container">
-              <div className="grid grid-cols-12 gap-4">
+              {/* `items-start` so a field showing a validation message grows
+                  its own cell only — without it the grid stretches every
+                  cell in the row to match, vertically centring the siblings'
+                  controls out of line with the errored field. */}
+              <div className="grid grid-cols-12 items-start gap-4">
                 {subFields.map((sf) => (
                   <MetaBoxField
                     key={sf.key}
@@ -272,6 +296,16 @@ function RepeaterSummaryRow({
   readonly testId: string;
 }): ReactNode {
   const renderLabel = useLabel();
+  const { i18n } = useLingui();
+  // Values-bearing descriptor — `useLabel` renders the ICU template
+  // literally, so format the row number in via `i18n._` directly.
+  const editLabel = i18n._(
+    EDIT_ROW_LABEL.id,
+    { n: rowNumber },
+    {
+      message: EDIT_ROW_LABEL.message,
+    },
+  );
   return (
     <div className="flex min-w-0 items-center gap-2" data-testid={testId}>
       {hasError ? (
@@ -296,14 +330,15 @@ function RepeaterSummaryRow({
       </span>
       <Button
         type="button"
-        variant={hasError ? "destructive" : "ghost"}
-        size="sm"
+        variant="ghost"
+        size="icon-sm"
         disabled={disabled}
         onClick={onEdit}
+        aria-label={editLabel}
+        title={editLabel}
         data-testid={`${testId}-edit`}
       >
         <Pencil className="size-4" />
-        <Trans id="metaBox.repeater.editRow.button" message="Edit" />
       </Button>
     </div>
   );

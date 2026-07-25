@@ -819,6 +819,14 @@ export interface RichtextMetaBoxField extends MetaBoxFieldBase {
 export type RepeaterLayout = "block" | "row" | "table";
 
 /**
+ * Width of the admin row-editor dialog. A pure-UI hint: `sm` suits a
+ * couple of narrow fields, `md` (the default) the common case, `lg` a
+ * dense multi-column row. Maps to a max-width in the admin; the stored
+ * row shape is unaffected.
+ */
+export type RepeaterDialogSize = "sm" | "md" | "lg";
+
+/**
  * List of structured rows. Each row carries the same fixed schema
  * declared via `subFields`; mixed-row "flexible content" is explicitly
  * out of scope. Subfields may be any registered field type, including
@@ -848,6 +856,8 @@ export interface RepeaterMetaBoxField extends MetaBoxFieldBase {
    * chosen sub-field's value as its summary.
    */
   readonly collapsed?: string;
+  /** Row-editor dialog width — see {@link RepeaterDialogSize}. Defaults to `md`. */
+  readonly dialogSize?: RepeaterDialogSize;
 }
 
 /**
@@ -1788,6 +1798,8 @@ export interface MetaBoxFieldManifestEntry {
   readonly layout?: RepeaterLayout;
   /** Repeater collapsed-row summary sub-field key — see {@link RepeaterMetaBoxField.collapsed}. */
   readonly collapsed?: string;
+  /** Repeater row-editor dialog width — see {@link RepeaterDialogSize}. */
+  readonly dialogSize?: RepeaterDialogSize;
   /**
    * Capability gate for the individual field. See `MetaBoxFieldBase.capability`.
    */
@@ -3031,6 +3043,7 @@ interface MetaBoxFieldOptionView {
   readonly addLabel?: Label;
   readonly layout?: RepeaterLayout;
   readonly collapsed?: string;
+  readonly dialogSize?: RepeaterDialogSize;
 }
 
 function toEntryMetaBoxFieldEntry(
@@ -3066,6 +3079,7 @@ function toEntryMetaBoxFieldEntry(
     addLabel: view.addLabel,
     layout: view.layout,
     collapsed: view.collapsed,
+    dialogSize: view.dialogSize,
     // Repeater subfields and group members recurse through
     // `toMetaBoxFieldEntry` into the uniform wire `subFields` slot — the same
     // shape as a top-level field, keeping each child's `span` (the row-editor
