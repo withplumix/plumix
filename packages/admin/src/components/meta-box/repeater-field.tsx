@@ -154,7 +154,11 @@ export function RepeaterField({
   return (
     <div
       data-testid={testId}
-      className="border-input flex flex-col gap-2 rounded-md border p-2"
+      // `min-w-0` so a long summary (a wordy heading, a long option label)
+      // truncates within the rail instead of growing the row and blowing the
+      // meta panel's width — the field's grid cell has `min-width: auto`, so
+      // without this the content sizes the column.
+      className="border-input flex min-w-0 flex-col gap-2 rounded-md border p-2"
     >
       {rows.length === 0 ? (
         <p
@@ -176,6 +180,7 @@ export function RepeaterField({
                 rows[item.index] ?? {},
                 subFields,
                 collapsedKey,
+                renderLabel,
               )}
               rowNumber={item.index + 1}
               disabled={disabled}
@@ -398,13 +403,33 @@ function rowSummary(
   row: Record<string, unknown>,
   subFields: readonly MetaBoxFieldManifestEntry[],
   collapsedKey: string | undefined,
+  renderLabel: ReturnType<typeof useLabel>,
 ): string | null {
-  if (collapsedKey !== undefined) return primitiveToString(row[collapsedKey]);
+  if (collapsedKey !== undefined) {
+    const sf = subFields.find((f) => f.key === collapsedKey);
+    return cellSummary(row[collapsedKey], sf, renderLabel);
+  }
   for (const sf of subFields) {
-    const summary = primitiveToString(row[sf.key]);
+    const summary = cellSummary(row[sf.key], sf, renderLabel);
     if (summary !== null) return summary;
   }
   return null;
+}
+
+// A cell's stored value as a display string. For a select / radio the stored
+// option *value* is resolved to its (i18n) label, so the summary reads "Card"
+// rather than the raw stored "card"; other primitives render as-is. `null`
+// when the value is absent / blank or a non-primitive (nested
+// group/repeater/reference).
+function cellSummary(
+  value: unknown,
+  field: MetaBoxFieldManifestEntry | undefined,
+  renderLabel: ReturnType<typeof useLabel>,
+): string | null {
+  const raw = primitiveToString(value);
+  if (raw === null) return null;
+  const option = field?.options?.find((opt) => opt.value === raw);
+  return option ? renderLabel(option.label) : raw;
 }
 
 // A stored primitive as a display string, or null when it's absent/blank or

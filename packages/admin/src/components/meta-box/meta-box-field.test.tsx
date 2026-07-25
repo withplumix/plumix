@@ -659,7 +659,7 @@ describe("MetaBoxField dispatcher", () => {
     expect(onChange).toHaveBeenCalledWith("b");
   });
 
-  test("checkbox: renders as inline label, toggles emit the checked boolean", async () => {
+  test("checkbox: renders a labelled control, toggles emit the checked boolean", async () => {
     const onChange = vi.fn();
     renderWithI18n(
       <Harness
@@ -1211,6 +1211,32 @@ describe("MetaBoxField — repeater dispatch", () => {
     expect(
       screen.getByTestId("meta-box-field-links-input-row-0-summary"),
     ).toHaveTextContent("/docs");
+  });
+
+  test("summary resolves a select subfield's stored value to its option label", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={repeaterField({
+          subFields: [
+            {
+              key: "style",
+              label: "Style",
+              type: "string",
+              inputType: "select",
+              options: [
+                { value: "card", label: "Card" },
+                { value: "banner", label: "Banner" },
+              ],
+            },
+          ],
+        })}
+        initial={[{ style: "card" }]}
+      />,
+    );
+    // The stored option value is "card"; the summary reads the label "Card".
+    expect(
+      screen.getByTestId("meta-box-field-links-input-row-0-summary"),
+    ).toHaveTextContent("Card");
   });
 
   test("dialog lays subfields out honoring each one's span", async () => {
