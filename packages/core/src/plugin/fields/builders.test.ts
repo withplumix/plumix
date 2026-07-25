@@ -709,6 +709,21 @@ describe("repeater() builder", () => {
     expect(field.label).toBe("Call to actions");
   });
 
+  test("carries the chosen row-editor dialog size", () => {
+    const field = repeater("sections")
+      .fields([text("heading")])
+      .dialogSize("lg")
+      .build();
+    expect(field.dialogSize).toBe("lg");
+  });
+
+  test("omits dialogSize when unset — admin picks the default width", () => {
+    const field = repeater("sections")
+      .fields([text("heading")])
+      .build();
+    expect(field.dialogSize).toBeUndefined();
+  });
+
   test("chains are immutable — a shared base forks without aliasing", () => {
     const base = repeater("rows").fields([text("v")]);
     const required = base.required();

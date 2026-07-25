@@ -1103,6 +1103,34 @@ describe("MetaBoxField — repeater dispatch", () => {
     expect(onChange).toHaveBeenLastCalledWith([{ label: "Home", href: "" }]);
   });
 
+  test("adding a row after editing one preserves the edited row's fields", async () => {
+    const onChange = vi.fn();
+    renderWithI18n(
+      <Harness
+        fieldDef={repeaterField()}
+        initial={[{ label: "", href: "" }]}
+        onChangeSpy={onChange}
+      />,
+    );
+    // Edit row 0, then close and add a second row. The Add must commit the
+    // live array (row 0's edit intact), not a stale snapshot that drops it.
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-links-input-row-0-edit"),
+    );
+    await userEvent.type(
+      await screen.findByTestId("meta-box-field-label-input"),
+      "Home",
+    );
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-links-input-dialog-done"),
+    );
+    await userEvent.click(screen.getByTestId("meta-box-field-links-input-add"));
+    expect(onChange).toHaveBeenLastCalledWith([
+      { label: "Home", href: "" },
+      { label: null, href: null },
+    ]);
+  });
+
   test("max bound disables Add row at capacity", () => {
     renderWithI18n(
       <Harness

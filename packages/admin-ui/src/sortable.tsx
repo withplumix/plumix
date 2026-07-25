@@ -138,7 +138,9 @@ function SortableRow({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
+          size="icon-sm"
+          // Remove is the destructive action — muted until hovered, then red.
+          className="text-muted-foreground hover:text-destructive"
           disabled={disabled}
           onClick={() => {
             onRemove(id);

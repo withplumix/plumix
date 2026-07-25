@@ -107,6 +107,9 @@ export const i18nStrictOverrides: Linter.Config = {
           // meta-box grid dict — `@sm:col-span-N`, `@md:col-span-N`,
           // `@lg:col-span-N`. Pure CSS class tokens.
           "^@[a-z]+:col-span-(1[0-2]|[1-9])$",
+          // Repeater row-editor dialog width dict — `sm:max-w-{lg,2xl,4xl}`.
+          // Pure CSS class tokens.
+          "^sm:max-w-(lg|2xl|4xl)$",
           // Theme + sidebar / shadcn variant attribute values that
           // appear inside JSX prop expressions or top-level config:
           // `defaultTheme="system"`, `variant="inset"`, `collapsible="icon"`,
