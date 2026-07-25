@@ -45,7 +45,7 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
     const rating = number("rating");
     expect(rating.gt(3)).toEqual({ key: "rating", op: "gt", value: 3 });
     expect(rating.lt(5)).toEqual({ key: "rating", op: "lt", value: 5 });
-    const volume = range("volume");
+    const volume = range("volume").bounds(0, 100);
     expect(volume.gt(10)).toEqual({ key: "volume", op: "gt", value: 10 });
   });
 

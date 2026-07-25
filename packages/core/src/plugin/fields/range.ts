@@ -21,19 +21,41 @@ interface RangeFieldState {
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
   readonly showInApi?: true;
-  readonly min?: number;
-  readonly max?: number;
+  readonly min: number;
+  readonly max: number;
   readonly step?: number;
   readonly sanitize?: (value: unknown) => unknown;
   readonly validate?: MetaBoxFieldValidate;
 }
 
 /**
- * Fluent chain for the `range` slider field. Both `.min()` and
- * `.max()` are required — enforced when the chain compiles at
- * registration, along with `min <= max`. `build()` injects a default
- * sanitizer that rejects values outside `[min, max]` on write; a
- * custom `.sanitize()` replaces it entirely.
+ * Entry point of the `range()` chain — only `.bounds()` is available
+ * until the slider's `[min, max]` track is declared, so a range without
+ * bounds can't reach `build()` (registration surfaces require a `build`
+ * method). Forgetting the bounds is a compile error, not a runtime throw.
+ */
+export class RangeFieldSeed<K extends string = string> {
+  readonly #key: K;
+
+  constructor(key: K) {
+    this.#key = key;
+  }
+
+  /**
+   * Declare the slider's inclusive `[min, max]` track — both required.
+   * `min <= max` is enforced when the chain compiles at registration.
+   */
+  bounds(min: number, max: number): RangeFieldBuilder<K> {
+    return new RangeFieldBuilder<K>(this.#key, { min, max });
+  }
+}
+
+/**
+ * Fluent chain for the `range` slider field. Its `[min, max]` track is
+ * fixed by `.bounds()` on the seed (so the bounds are always present here);
+ * `min <= max` is enforced when the chain compiles at registration.
+ * `build()` injects a default sanitizer that rejects values outside
+ * `[min, max]` on write; a custom `.sanitize()` replaces it entirely.
  */
 export class RangeFieldBuilder<
   K extends string = string,
@@ -50,7 +72,7 @@ export class RangeFieldBuilder<
   readonly #key: string;
   readonly #state: RangeFieldState;
 
-  constructor(key: string, state: RangeFieldState = {}) {
+  constructor(key: string, state: RangeFieldState) {
     this.#key = key;
     this.#state = state;
   }
@@ -154,16 +176,6 @@ export class RangeFieldBuilder<
     });
   }
 
-  /** Slider lower bound. Required — `build()` throws without it. */
-  min(min: number): RangeFieldBuilder<K, V, S> {
-    return this.#fork({ min });
-  }
-
-  /** Slider upper bound. Required — `build()` throws without it. */
-  max(max: number): RangeFieldBuilder<K, V, S> {
-    return this.#fork({ max });
-  }
-
   step(step: number): RangeFieldBuilder<K, V, S> {
     return this.#fork({ step });
   }
@@ -189,9 +201,6 @@ export class RangeFieldBuilder<
   /** Compile the chain into the wire/manifest field definition. */
   build(): RangeMetaBoxField {
     const { min, max } = this.#state;
-    if (min === undefined || max === undefined) {
-      throw FieldConfigError.rangeMissingBounds({ fieldKey: this.#key });
-    }
     if (min > max) {
       throw FieldConfigError.rangeMinGreaterThanMax({
         fieldKey: this.#key,
@@ -205,17 +214,17 @@ export class RangeFieldBuilder<
       label: this.#state.label ?? humanizeFieldKey(this.#key),
       type: "number",
       inputType: "range",
-      min,
-      max,
     };
   }
 }
 
 /**
- * Bounded numeric slider. `.min()` and `.max()` are required;
- * `min <= max` is enforced at registration time. Bounds are enforced
- * server-side by the constraint walker.
+ * Bounded numeric slider — `range("opacity").bounds(0, 100)`. The
+ * `[min, max]` track is required: only `.bounds()` is available on the
+ * bare constructor, so omitting it is a compile error. `min <= max` is
+ * enforced at registration; bounds are enforced server-side by the
+ * constraint walker.
  */
-export function range<K extends string>(key: K): RangeFieldBuilder<K> {
-  return new RangeFieldBuilder(key);
+export function range<K extends string>(key: K): RangeFieldSeed<K> {
+  return new RangeFieldSeed(key);
 }

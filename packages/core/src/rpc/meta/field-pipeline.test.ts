@@ -100,7 +100,7 @@ describe("numeric bounds", () => {
   });
 
   test("range enforces its required bounds", async () => {
-    const field = range("opacity").min(0).max(100).build();
+    const field = range("opacity").bounds(0, 100).build();
     const result = await runFieldPipeline(field, 101, "opacity");
     expect(result.errors).toEqual([
       {
