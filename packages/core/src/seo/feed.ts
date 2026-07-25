@@ -21,6 +21,11 @@ import { xmlEscape } from "./xml.js";
 // turning the feed into a full archive (that's the sitemap's job).
 export const FEED_LIMIT = 20;
 
+// Feeds are consumed by aggregators, not rendered per request locale, so an
+// untitled entry's fallback title stays a fixed string rather than an i18n
+// message.
+const UNTITLED_FEED_TITLE = "Untitled";
+
 type FeedFormat = "rss2" | "atom";
 
 /**
@@ -296,7 +301,9 @@ export async function collectFeedItems(
     if (path === null) continue;
     const link = `${ctx.origin}${path}`;
     items.push({
-      title: row.title,
+      // Atom requires a non-empty item title; an untitled entry falls back so
+      // the feed stays valid rather than emitting `<title></title>`.
+      title: row.title.trim() === "" ? UNTITLED_FEED_TITLE : row.title,
       link,
       id: link,
       updated: row.updatedAt.toISOString(),

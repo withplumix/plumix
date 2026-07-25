@@ -653,6 +653,11 @@ msgstr ""
 #~ msgstr "لا مطابقات"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+#~ msgid "editor.entry.create.untitled"
+#~ msgstr "بدون عنوان"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — لا يمكن اختيار الأبناء كأب."
@@ -701,7 +706,9 @@ msgid "editor.document.parent.none"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
 #: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/routes/_authenticated/index.tsx
 msgid "entries.list.noTitle"
 msgstr "(بدون عنوان)"
 
@@ -4112,11 +4119,6 @@ msgstr "جهاز غير معروف"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.unnamed"
 msgstr "passkey بدون اسم"
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/create.tsx
-msgid "editor.entry.create.untitled"
-msgstr "بدون عنوان"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts

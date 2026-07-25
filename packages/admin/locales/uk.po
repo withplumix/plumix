@@ -653,6 +653,11 @@ msgstr ""
 #~ msgstr "Збігів немає"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+#~ msgid "editor.entry.create.untitled"
+#~ msgstr "Без назви"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -701,7 +706,9 @@ msgid "editor.document.parent.none"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
 #: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/routes/_authenticated/index.tsx
 msgid "entries.list.noTitle"
 msgstr "(без назви)"
 
@@ -4111,11 +4118,6 @@ msgstr "Невідомий пристрій"
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.unnamed"
-msgstr "Без назви"
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/create.tsx
-msgid "editor.entry.create.untitled"
 msgstr "Без назви"
 
 #. js-lingui-explicit-id

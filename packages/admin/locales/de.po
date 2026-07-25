@@ -653,6 +653,11 @@ msgstr ""
 #~ msgstr "Keine Treffer"
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/create.tsx
+#~ msgid "editor.entry.create.untitled"
+#~ msgstr "Ohne Titel"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
@@ -701,7 +706,9 @@ msgid "editor.document.parent.none"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/shell/command-palette.tsx
 #: src/routes/_authenticated/entries/$slug/index.tsx
+#: src/routes/_authenticated/index.tsx
 msgid "entries.list.noTitle"
 msgstr "(kein Titel)"
 
@@ -4112,11 +4119,6 @@ msgstr "Unbekanntes Gerät"
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.unnamed"
 msgstr "Unbenannter Passkey"
-
-#. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/create.tsx
-msgid "editor.entry.create.untitled"
-msgstr "Ohne Titel"
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts

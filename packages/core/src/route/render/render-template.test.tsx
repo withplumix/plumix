@@ -123,6 +123,31 @@ async function seedSiteSettings(
 }
 
 describe("SEO — default head meta", () => {
+  test("an untitled entry falls back for <title> — no empty or orphan-separator title", async () => {
+    const theme = defineTheme({ templates: [fallback(() => null)] });
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    await seedSiteSettings(h, { title: "Demo" });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "nameless",
+      title: "",
+      excerpt: "",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const head = await dispatchHead(h, "https://cms.example/post/nameless");
+
+    // The empty title is treated as absent: no `<title></title>` and no
+    // orphaned " · Demo" separator from a `%s`-substituted empty string.
+    const title = /<title>([^<]*)<\/title>/.exec(head)?.[1];
+    expect(title).toBeTruthy();
+    expect(title).not.toMatch(/^\s*·/);
+  });
+
   test("an entry page emits the singular default meta set", async () => {
     const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });

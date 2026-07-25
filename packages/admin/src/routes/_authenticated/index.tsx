@@ -181,7 +181,14 @@ function DashboardIndex(): ReactNode {
                   const tile = tiles.find((t) => t.name === row.type);
                   const inner = (
                     <>
-                      <span className="truncate">{row.title}</span>
+                      <span className="truncate">
+                        {row.title || (
+                          <Trans
+                            id="entries.list.noTitle"
+                            message="(no title)"
+                          />
+                        )}
+                      </span>
                       <span className="text-muted-foreground ms-auto shrink-0 text-xs">
                         {formatRelative(toDate(row.updatedAt))}
                       </span>

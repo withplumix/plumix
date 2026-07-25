@@ -789,6 +789,32 @@ describe("MetaBoxField dispatcher", () => {
     expect(onChange).toHaveBeenCalledWith("b");
   });
 
+  test("select appearance=buttons: no option is highlighted when the value is empty", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={field({
+          inputType: "select",
+          appearance: "buttons",
+          options: [
+            { value: "a", label: "Alpha" },
+            { value: "b", label: "Bravo" },
+          ],
+        })}
+        initial={undefined}
+      />,
+    );
+    // An unset single-select must show no selection — same as the radio
+    // control — not silently light up the first option.
+    expect(screen.getByTestId("meta-box-field-k-input-a")).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    expect(screen.getByTestId("meta-box-field-k-input-b")).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+  });
+
   test("select multiple: defaults to the buttons control, emits the updated array", async () => {
     const onChange = vi.fn();
     renderWithI18n(
