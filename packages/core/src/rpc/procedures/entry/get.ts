@@ -41,10 +41,13 @@ export const get = base
         entryId: live.id,
         authorId: context.user.id,
       });
+      // Overlay only the drafted fields. `title` (and `slug` / `parentId`) are
+      // live-only fields — the editor writes them straight to the live row and
+      // publish never promotes them — so they stay on `live`, keeping this
+      // hydration consistent with the public `?preview=` render and publish.
       const overlaid = autosave
         ? {
             ...live,
-            title: autosave.title,
             content: autosave.content,
             excerpt: autosave.excerpt,
             meta: await hydrateEntryMeta(context, live, autosave.meta),

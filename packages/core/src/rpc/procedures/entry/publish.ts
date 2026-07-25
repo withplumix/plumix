@@ -67,12 +67,12 @@ export const publish = base
       throw errors.BAD_REQUEST({ data: { reason: "no_pending_draft" } });
     }
 
-    // Copy the autosave fields onto the live row. Slug + parentId
-    // stay anchored to live (the autosave envelope carries them
-    // only for restore-from-revision flows, not for publish, which
-    // promotes content onto an already-existing slug).
+    // Copy the autosave's drafted fields onto the live row. Title, slug, and
+    // parentId stay anchored to live — title is a live-only field (the editor
+    // writes it straight to live and publish never promotes it), and the
+    // autosave envelope carries slug/parentId only for restore-from-revision,
+    // not publish (which promotes content onto an already-existing slug).
     const patch = {
-      title: autosave.title,
       content: autosave.content,
       excerpt: autosave.excerpt,
       // Strip the snapshot envelope, then strict-validate the promoted
@@ -91,7 +91,6 @@ export const publish = base
       ...patch,
     });
     const toWrite = {
-      title: prepared.title,
       content: prepared.content,
       excerpt: prepared.excerpt,
       meta: prepared.meta,

@@ -191,7 +191,7 @@ function registryWithAutosave(): ReturnType<typeof createPluginRegistry> {
 }
 
 describe("entry.revisions.restore — autosave destination (#292)", () => {
-  test("writes the revision's snapshot into the caller's autosave row, leaving live untouched", async () => {
+  test("restores the revision's drafted body into the caller's autosave row, anchoring title to live", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
       plugins: registryWithAutosave(),
@@ -200,17 +200,21 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
       title: "X1",
       slug: "x",
       status: "published",
+      excerpt: "e1",
     });
-    // Two edits to produce two revisions: "X2" then "X3" (revision
-    // capture happens *after* the update, snapshotting the new state).
+    // Two edits to produce two revisions with distinct titles + excerpts
+    // (revision capture happens *after* the update, snapshotting the new
+    // state).
     await h.client.entry.update({
       id: created.id,
       title: "X2",
+      excerpt: "e2",
       saveAs: "live",
     });
     await h.client.entry.update({
       id: created.id,
       title: "X3",
+      excerpt: "e3",
       saveAs: "live",
     });
     const revisions = await h.db.query.entries.findMany({
@@ -225,12 +229,18 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
 
     // Restored row is the autosave (type='autosave'), not live.
     expect(restored.type).toBe("autosave");
-    expect(restored.title).toBe("X2");
-    // Live still shows the latest title — restore didn't touch it.
+    // The drafted body restores from the revision...
+    expect(restored.excerpt).toBe("e2");
+    // ...but title is a live-only field: it anchors to the current live
+    // title ("X3"), not the revision's ("X2"), so a later publish can't
+    // revert the title to a stale snapshot.
+    expect(restored.title).toBe("X3");
+    // Live still shows the latest state — restore didn't touch it.
     const liveAfter = await h.db.query.entries.findFirst({
       where: eq(entries.id, created.id),
     });
     expect(liveAfter?.title).toBe("X3");
+    expect(liveAfter?.excerpt).toBe("e3");
   });
 
   test("fires entry:<type>:revision_restored AND entry:<type>:autosave_saved — but NOT entry:updated", async () => {

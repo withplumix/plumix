@@ -218,7 +218,11 @@ export const restore = base
         entry: live,
         authorId: context.user.id,
         patch: {
-          title: revision.title,
+          // Title is a live-only field, so it anchors to the current live
+          // row — never the revision — exactly like slug + parentId above.
+          // Only the drafted body (content/excerpt/meta) restores into the
+          // pending draft; the caller keeps editing the title on live.
+          title: live.title,
           content: revision.content,
           excerpt: revision.excerpt,
           meta: cleanedMeta,
