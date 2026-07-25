@@ -1,0 +1,7 @@
+# Changesets embeds an inline commit-hash reference into every generated
+# CHANGELOG entry — e.g. [`0a185ba`](…/commit/0a185ba…). `typos` reads the
+# trailing letters of a short hash ("ba" -> "by"/"be", "hda", …) as prose and
+# flags them. Ignore backtick-wrapped hex commit hashes so the surrounding
+# CHANGELOG prose is still spellchecked (URLs are ignored by typos already).
+[default]
+extend-ignore-re = ["`[0-9a-f]{7,40}`"]
