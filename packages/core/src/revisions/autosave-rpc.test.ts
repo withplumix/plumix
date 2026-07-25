@@ -83,17 +83,17 @@ describe("entry.update saveAs", () => {
     const h = await publishedPostFixture();
     const result = await h.client.entry.update({
       id: h.entryId,
-      title: "Draft title",
+      excerpt: "Draft excerpt",
     });
     // The returned row is the autosave (different id from live; type
     // `autosave`). Client can't see this directly because the type
     // declaration is `Entry` and `type` is a string — but the test
     // can read the persisted shape.
     expect(result.type).toBe("autosave");
-    expect(result.title).toBe("Draft title");
+    expect(result.excerpt).toBe("Draft excerpt");
     // Live is unchanged.
     const live = await h.client.entry.get({ id: h.entryId });
-    expect(live.title).toBe("Live");
+    expect(live.excerpt).toBeNull();
   });
 
   test("carries a named-template choice into the autosave row's meta (preview honors an unsaved pick)", async () => {
@@ -328,10 +328,11 @@ describe("entry.update saveAs", () => {
     expect(draft.meta.accent).toBe("#abc");
   });
 
-  test("a draft write tracks a title edited on live, so publish keeps it", async () => {
-    // Title is written straight to the live row (the editor's structural path),
-    // never through the draft — so the draft's title must mirror the *current*
-    // live row, not stay frozen at draft-creation time, or promote reverts it.
+  test("a draft write mirrors the current live title into the snapshot", async () => {
+    // Title is a live-only field: the editor writes it straight to the live
+    // row and publish never promotes it. Each draft write re-anchors the
+    // snapshot column to the *current* live title, so the pending draft row
+    // stays coherent even after a live title edit.
     const h = await publishedPostFixture(
       registryWithMetaField({
         key: "subtitle",
@@ -382,14 +383,35 @@ describe("entry.update saveAs", () => {
 describe("entry.get preview", () => {
   test("preview=true with an existing autosave overlays the pending fields and tags _preview source=autosave", async () => {
     const h = await publishedPostFixture();
-    await h.client.entry.update({ id: h.entryId, title: "Pending title" });
+    await h.client.entry.update({ id: h.entryId, excerpt: "Pending excerpt" });
     const previewed = await h.client.entry.get({
       id: h.entryId,
       preview: true,
     });
-    expect(previewed.title).toBe("Pending title");
+    expect(previewed.excerpt).toBe("Pending excerpt");
     expect(previewed._preview?.source).toBe("autosave");
     expect(previewed._preview?.autosaveUpdatedAt).not.toBeNull();
+  });
+
+  test("preview reads the live title, not a stale autosave snapshot", async () => {
+    // Title is a live-only field. A draft written before a live title edit
+    // holds a stale title snapshot; the preview overlay must show the current
+    // live title — consistent with the public `?preview=` render — rather than
+    // the frozen snapshot.
+    const h = await publishedPostFixture();
+    await h.client.entry.update({ id: h.entryId, excerpt: "draft excerpt" });
+    await h.client.entry.update({
+      id: h.entryId,
+      title: "New Title",
+      saveAs: "live",
+    });
+    const previewed = await h.client.entry.get({
+      id: h.entryId,
+      preview: true,
+    });
+    expect(previewed.title).toBe("New Title");
+    expect(previewed.excerpt).toBe("draft excerpt");
+    expect(previewed._preview?.source).toBe("autosave");
   });
 
   test("preview=true with no autosave returns the live row tagged _preview source=live", async () => {
@@ -428,13 +450,13 @@ describe("entry.publish", () => {
     const beforePublish = await h.client.entry.get({ id: h.entryId });
     await h.client.entry.update({
       id: h.entryId,
-      title: "Promoted title",
+      excerpt: "Promoted excerpt",
     });
     const promoted = await h.client.entry.publish({
       id: h.entryId,
       expectedLiveUpdatedAt: beforePublish.updatedAt,
     });
-    expect(promoted.title).toBe("Promoted title");
+    expect(promoted.excerpt).toBe("Promoted excerpt");
     expect(promoted.type).toBe("post");
     // Autosave is gone — preview now returns live with source=live.
     const previewed = await h.client.entry.get({
@@ -534,6 +556,26 @@ describe("entry.publish", () => {
       code: "CONFLICT",
       data: { reason: "meta_invalid_value" },
     });
+  });
+
+  test("keeps a title edited on live when publishing a draft written before that edit", async () => {
+    // The latent revert: draft a field (freezing the snapshot's title at the
+    // then-current live title), edit the title straight to live, then publish
+    // without touching the draft again. Title is a live-only field, so publish
+    // must leave the live title intact rather than promoting the stale snapshot.
+    const h = await publishedPostFixture();
+    await h.client.entry.update({ id: h.entryId, excerpt: "draft excerpt" });
+    const live = await h.client.entry.update({
+      id: h.entryId,
+      title: "New Title",
+      saveAs: "live",
+    });
+    const promoted = await h.client.entry.publish({
+      id: h.entryId,
+      expectedLiveUpdatedAt: live.updatedAt,
+    });
+    expect(promoted.title).toBe("New Title");
+    expect(promoted.excerpt).toBe("draft excerpt");
   });
 
   test("returns CONFLICT when expectedLiveUpdatedAt is stale", async () => {

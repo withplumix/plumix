@@ -260,12 +260,13 @@ export const update = base
         entry: existing,
         authorId: context.user.id,
         patch: {
-          // Title stays anchored to the *live* row, not the draft: the editor
-          // writes title straight to live (its structural path), never through
-          // the draft, so a frozen draft base would revert a live title edit at
-          // promote. Content/excerpt/meta below flow through the draft, so they
-          // accumulate on it.
-          title: filtered.title ?? existing.title,
+          // Title is a live-only field: the editor writes it straight to the
+          // live row (its structural path) and publish never promotes it, so
+          // anchor the snapshot column to the current live title and ignore any
+          // caller-supplied `title` on the draft branch — a drafted title would
+          // be a write that publish silently drops. Content/excerpt/meta below
+          // flow through the draft, so they accumulate on it.
+          title: existing.title,
           content:
             filtered.content !== undefined
               ? filtered.content
