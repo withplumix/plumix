@@ -3,6 +3,8 @@ import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
 import { createPreviewToken } from "../auth/preview-token.js";
+import { eq } from "../db/index.js";
+import { entries } from "../db/schema/entries.js";
 import { definePlugin } from "../plugin/define.js";
 import { upsertAutosave } from "../revisions/repository.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
@@ -334,7 +336,7 @@ describe("resolvePublicRoute — single", () => {
       entry: live,
       authorId: author.id,
       patch: {
-        title: "Draft Title",
+        title: "Live Title", // anchored to live, as the RPC always does
         content: {
           type: "doc",
           content: [
@@ -353,12 +355,13 @@ describe("resolvePublicRoute — single", () => {
       userId: author.id,
     });
 
-    // With the token, the preview renders the pending autosave.
+    // With the token, the preview overlays the pending draft's content while
+    // the title (a live field) tracks the live row.
     const preview = await h.dispatch(
       new Request(`https://cms.example/post/hello?preview=${token}`),
     );
     const previewBody = await preview.text();
-    expect(previewBody).toContain("<h1>Draft Title</h1>");
+    expect(previewBody).toContain("<h1>Live Title</h1>");
     expect(previewBody).toContain("Draft body.");
 
     // The same URL without the token renders the published row unchanged.
@@ -367,7 +370,61 @@ describe("resolvePublicRoute — single", () => {
     );
     const liveBody = await liveResp.text();
     expect(liveBody).toContain("<h1>Live Title</h1>");
-    expect(liveBody).not.toContain("Draft Title");
+    expect(liveBody).not.toContain("Draft body.");
+  });
+
+  test("a preview overlay reads the title from the live row, not the frozen autosave", async () => {
+    // The real editor sequence: content/excerpt/meta autosave as a draft
+    // (anchoring the autosave's title to the live title at that moment), then
+    // the title is edited with `saveAs: "live"` — a live-row write that never
+    // touches the autosave row. The preview must show the *fresh* live title,
+    // not the frozen snapshot, since the title is a live field, not a draft.
+    const h = await createDispatcherHarness({ plugins: [blogPlugin] });
+    const author = await h.seedUser("admin");
+    const live = await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Original Title",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+    });
+    await upsertAutosave(h.db, {
+      entry: live,
+      authorId: author.id,
+      patch: {
+        title: "Original Title", // anchored to live, as the RPC always does
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Draft body." }],
+            },
+          ],
+        },
+        excerpt: null,
+        meta: {},
+      },
+    });
+    // A `saveAs: "live"` title edit lands on the live row only.
+    await h.db
+      .update(entries)
+      .set({ title: "Fresh Title" })
+      .where(eq(entries.id, live.id));
+    const token = await createPreviewToken(h.db, {
+      entryId: live.id,
+      userId: author.id,
+    });
+
+    const preview = await h.dispatch(
+      new Request(`https://cms.example/post/hello?preview=${token}`),
+    );
+    const previewBody = await preview.text();
+    // Fresh live title, still with the drafted content overlaid.
+    expect(previewBody).toContain("<h1>Fresh Title</h1>");
+    expect(previewBody).toContain("Draft body.");
+    expect(previewBody).not.toContain("Original Title");
   });
 
   test("a preview overlay honors an unsaved named-template choice", async () => {

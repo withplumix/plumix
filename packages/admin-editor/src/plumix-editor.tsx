@@ -92,6 +92,11 @@ interface PlumixEditorProps {
   readonly onRefreshBlockLoader?: (
     blockId: string,
   ) => Promise<SerializedLoaderData>;
+  /** Monotonic token the host bumps after autosaving a template-rendered entry
+   *  field (title / excerpt / meta / …); each change reloads the canvas so
+   *  those fields refresh. Block content syncs over the bridge and needs no
+   *  reload. */
+  readonly previewRefreshToken?: number;
   /** Resolves plugin-registered block-input types (e.g. the media picker) to a
    *  control, wired from the app's field-type registry. Kept as a prop so this
    *  package stays decoupled from the registry. */
@@ -124,6 +129,7 @@ export function PlumixEditor({
   publish,
   overlay,
   onRefreshBlockLoader,
+  previewRefreshToken,
   resolvePluginFieldType,
 }: PlumixEditorProps): ReactElement {
   if (readOnly) {
@@ -217,6 +223,7 @@ export function PlumixEditor({
               origin={origin}
               registry={registry}
               capabilities={capabilities}
+              previewRefreshToken={previewRefreshToken}
             />
           </SidebarInset>
           <RightRail

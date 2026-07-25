@@ -112,6 +112,11 @@ const breakpoints = getThemeBreakpoints();
 // Theme tokens offered in the Styles tab's token-or-custom controls.
 const themeTokens = getThemeTokens();
 
+// How long to wait after a template-rendered field autosaves before reloading
+// the preview canvas — short, only to coalesce writes that land together (the
+// autosave debounce has already elapsed by the time this fires).
+const PREVIEW_REFRESH_DEBOUNCE_MS = 250;
+
 // Mint once and cache forever — each call writes a fresh preview token, and
 // the URL it returns is the canvas iframe's target for the editor's lifetime.
 const previewLinkQuery = (
@@ -283,6 +288,10 @@ function EntryEditor({
   const entryTypeName = entryType?.name;
   const capabilitySet = useMemo(() => new Set(capabilities), [capabilities]);
   const [hasLocalDraft, setHasLocalDraft] = useState(false);
+  // Bumped after a template-rendered field (title/excerpt/meta/template)
+  // autosaves; reloads the canvas so those fields — which live in the
+  // server-rendered shell, not the block store the bridge pushes — refresh.
+  const [previewRefreshToken, setPreviewRefreshToken] = useState(0);
 
   const liveUpdatedAtRef = useRef<Date>(entry.updatedAt);
   // Serializes the two autosave debouncers' writes so they can't overlap and
@@ -401,6 +410,17 @@ function EntryEditor({
     [queryClient, id, renderLabel],
   );
 
+  // Coalesce the preview reload: a content + structural save landing together
+  // (or a burst of meta edits) triggers a single canvas reload shortly after
+  // the writes persist, rather than one reload per field.
+  const refreshPreview = useMemo(
+    () =>
+      createDebouncer(
+        () => setPreviewRefreshToken((token) => token + 1),
+        PREVIEW_REFRESH_DEBOUNCE_MS,
+      ),
+    [],
+  );
   /* eslint-disable react-hooks/refs -- callbacks fire post-keystroke, not during render */
   const contentDebouncer = useMemo(() => {
     const save = async (attempt = 0): Promise<void> => {
@@ -453,6 +473,11 @@ function EntryEditor({
         if (templateChanged) lastSavedTemplateRef.current = nextTemplate;
         autosaveFailedRef.current = false;
         setMetaFieldErrors(null);
+        // Excerpt / meta / template render into the shell — reload to show
+        // them (block content is already live over the bridge).
+        if (excerptChanged || metaChanged || templateChanged) {
+          refreshPreview.call();
+        }
       } catch (err) {
         const recovered = await handleAutosaveError(err);
         // A recovered stale-token conflict re-anchored the token but didn't
@@ -462,7 +487,7 @@ function EntryEditor({
       }
     };
     return createDebouncer(() => save(), AUTOSAVE_DEBOUNCE_MS);
-  }, [id, entry.type, handleAutosaveError, saveQueue]);
+  }, [id, entry.type, handleAutosaveError, saveQueue, refreshPreview]);
   const structuralDebouncer = useMemo(() => {
     const save = async (attempt = 0): Promise<void> => {
       const nextTitle = titleRef.current.trim();
@@ -516,20 +541,27 @@ function EntryEditor({
           };
         }
         autosaveFailedRef.current = false;
+        // The title / parent / terms render into the theme shell; the slug
+        // only affects the permalink (the canvas loads a token URL), so a
+        // slug-only save doesn't need a reload.
+        if (titleChanged || parentChanged || termsChanged) {
+          refreshPreview.call();
+        }
       } catch (err) {
         const recovered = await handleAutosaveError(err);
         if (recovered && attempt === 0) await save(1);
       }
     };
     return createDebouncer(() => save(), AUTOSAVE_DEBOUNCE_MS);
-  }, [id, handleAutosaveError, saveQueue]);
+  }, [id, handleAutosaveError, saveQueue, refreshPreview]);
   /* eslint-enable react-hooks/refs */
   useEffect(
     () => () => {
       void contentDebouncer.flush();
       void structuralDebouncer.flush();
+      refreshPreview.cancel();
     },
-    [contentDebouncer, structuralDebouncer],
+    [contentDebouncer, structuralDebouncer, refreshPreview],
   );
 
   const handleChange = useCallback(
@@ -962,6 +994,7 @@ function EntryEditor({
       onRefreshBlockLoader={(blockId) =>
         orpc.entry.refreshBlockLoader.call({ id, blockId }).then((r) => r.data)
       }
+      previewRefreshToken={previewRefreshToken}
       resolvePluginFieldType={resolvePluginFieldType}
     />
   );

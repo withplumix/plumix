@@ -82,6 +82,62 @@ describe("CanvasFrame", () => {
     expect(iframe?.style.width).toBe("1280px"); // desktop default
   });
 
+  test("reloads the iframe when previewRefreshToken changes, and only then", () => {
+    const props = {
+      previewUrl: "about:blank",
+      origin: ORIGIN,
+      registry,
+      capabilities: NO_CAPS,
+    };
+    const { container, rerender } = render(
+      <Wrapper>
+        <CanvasFrame {...props} previewRefreshToken={0} />
+      </Wrapper>,
+    );
+    const frame = container.querySelector("iframe");
+    if (!frame) throw new Error("expected an iframe");
+    // jsdom's real `location.reload` is a non-configurable navigation no-op, so
+    // shadow `contentWindow` on the element with a stub to observe the call.
+    // The bridge / geometry effects already ran at mount off the real window;
+    // only the reload effect re-reads it on the token-change re-render.
+    const reload = vi.fn();
+    Object.defineProperty(frame, "contentWindow", {
+      configurable: true,
+      value: { location: { reload } },
+    });
+
+    // Title/excerpt/meta live in the shell, so the bridge can't push them —
+    // the token bump is the only refresh signal, and mounting isn't one.
+    rerender(
+      <Wrapper>
+        <CanvasFrame {...props} previewRefreshToken={0} />
+      </Wrapper>,
+    );
+    expect(reload).not.toHaveBeenCalled();
+
+    rerender(
+      <Wrapper>
+        <CanvasFrame {...props} previewRefreshToken={1} />
+      </Wrapper>,
+    );
+    expect(reload).toHaveBeenCalledTimes(1);
+
+    // A re-render at the same token must not reload again.
+    rerender(
+      <Wrapper>
+        <CanvasFrame {...props} previewRefreshToken={1} />
+      </Wrapper>,
+    );
+    expect(reload).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <Wrapper>
+        <CanvasFrame {...props} previewRefreshToken={2} />
+      </Wrapper>,
+    );
+    expect(reload).toHaveBeenCalledTimes(2);
+  });
+
   test("draws a selection overlay from the canvas's reported geometry", () => {
     const { queryByTestId } = render(
       <Wrapper>
