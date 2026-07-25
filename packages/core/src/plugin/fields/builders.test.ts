@@ -263,8 +263,8 @@ describe("json() builder", () => {
 });
 
 describe("range() builder", () => {
-  test("chains bounds/step/default into a range definition", () => {
-    const field = range("rating").min(1).max(5).step(0.5).default(3).build();
+  test("bounds/step/default chain into a range definition", () => {
+    const field = range("rating").bounds(1, 5).step(0.5).default(3).build();
     expect(field.inputType).toBe("range");
     expect(field.type).toBe("number");
     expect(field.label).toBe("Rating");
@@ -274,14 +274,18 @@ describe("range() builder", () => {
     expect(field.default).toBe(3);
   });
 
-  test("rejects missing bounds at registration time", () => {
-    expect(() => range("r").build()).toThrowError(/min.*max/);
-    expect(() => range("r").min(0).build()).toThrowError(/min.*max/);
-    expect(() => range("r").max(10).build()).toThrowError(/min.*max/);
+  test("bounds are compile-required — the seed can't build without them", () => {
+    // `range(key)` is a seed exposing only `.bounds()`; there's no `build()`
+    // (nor `min`/`max`) until the track is declared, so forgetting the bounds
+    // is a type error, not a runtime throw.
+    expectTypeOf(range("r")).toHaveProperty("bounds");
+    expectTypeOf(range("r")).not.toHaveProperty("build");
+    expectTypeOf(range("r")).not.toHaveProperty("min");
+    expectTypeOf(range("r")).not.toHaveProperty("max");
   });
 
   test("rejects min > max at registration time", () => {
-    expect(() => range("r").min(10).max(5).build()).toThrowError(
+    expect(() => range("r").bounds(10, 5).build()).toThrowError(
       /min .* must be <= max/,
     );
   });
@@ -289,7 +293,7 @@ describe("range() builder", () => {
   test("carries bounds on the definition with no injected sanitizer", () => {
     // Bounds are enforced by the constraint walker (field-pipeline
     // suite); the definition just declares them.
-    const field = range("r").min(0).max(100).build();
+    const field = range("r").bounds(0, 100).build();
     expect(field.min).toBe(0);
     expect(field.max).toBe(100);
     expect(field.sanitize).toBeUndefined();
@@ -297,13 +301,13 @@ describe("range() builder", () => {
 
   test("a custom .sanitize() is carried as-is", () => {
     const custom = (v: number): number => v;
-    const field = range("r").min(0).max(10).sanitize(custom).build();
+    const field = range("r").bounds(0, 10).sanitize(custom).build();
     expect(field.sanitize).toBe(custom);
   });
 
   test("rejects non-applicable chains at the type level", () => {
     // `placeholder` doesn't apply to range.
-    expectTypeOf(range("r")).not.toHaveProperty("placeholder");
+    expectTypeOf(range("r").bounds(0, 10)).not.toHaveProperty("placeholder");
   });
 });
 

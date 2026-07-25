@@ -34,7 +34,7 @@ export { date, datetime, TemporalFieldBuilder, time } from "./temporal.js";
 export type { TemporalInputType } from "./temporal.js";
 export { parseMetaDate } from "./parse-date.js";
 export { color, ColorFieldBuilder } from "./color.js";
-export { range, RangeFieldBuilder } from "./range.js";
+export { range, RangeFieldBuilder, RangeFieldSeed } from "./range.js";
 export { json, JsonFieldBuilder } from "./json.js";
 export { richtext, RichtextFieldBuilder } from "./richtext.js";
 export {
