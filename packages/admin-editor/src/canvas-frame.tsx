@@ -48,6 +48,14 @@ interface CanvasFrameProps {
   /** Preview mode: still render the pushed tree, but draw no selection /
    *  hover overlays, toolbar, drop indicators, or empty-state affordance. */
   readonly readOnly?: boolean;
+  /**
+   * Monotonic token the host bumps after autosaving an entry field the theme
+   * template renders (title, excerpt, meta, …). Each change reloads the
+   * iframe so those fields — which live in the server-rendered shell around
+   * the block-content island, not in the block store — refresh. Block content
+   * is pushed over the bridge and needs no reload.
+   */
+  readonly previewRefreshToken?: number;
 }
 
 const SELECTED_OUTLINE = "#2563eb";
@@ -66,6 +74,7 @@ export function CanvasFrame({
   registry,
   capabilities,
   readOnly = false,
+  previewRefreshToken,
 }: CanvasFrameProps): ReactElement {
   const { i18n } = useLingui();
   // The canvas has no i18n runtime, so resolve its chrome (the in-canvas "Add a
@@ -160,6 +169,18 @@ export function CanvasFrame({
     addBlockLabel,
     clipboard,
   ]);
+
+  // Reloading is safe (see the prop for why a reload is the mechanism): the
+  // iframe's WindowProxy survives the same-origin reload, so the bridge
+  // re-handshakes on the reloaded document's `canvas:ready` and the host
+  // re-pushes the current block tree — in-flight block edits aren't lost. The
+  // iframe keeps its measured height, so the canvas holds its scroll position.
+  const reloadedTokenRef = useRef(previewRefreshToken);
+  useEffect(() => {
+    if (reloadedTokenRef.current === previewRefreshToken) return;
+    reloadedTokenRef.current = previewRefreshToken;
+    iframeRef.current?.contentWindow?.location.reload();
+  }, [previewRefreshToken]);
 
   // Block clipboard shortcuts while focus is on the host chrome (the iframe
   // forwards its own via the bridge). Defers to native copy on a text selection

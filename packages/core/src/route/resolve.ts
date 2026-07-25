@@ -740,9 +740,12 @@ async function overlayPreviewAutosave(
     authorId: grant.userId,
   });
   if (!autosave) return entry;
+  // Overlay only the drafted fields. `title` / `slug` / `parentId` / terms are
+  // live fields (the editor writes them with `saveAs: "live"`), so they come
+  // from `entry` — the autosave's `title` column is a stale snapshot frozen at
+  // the last draft write and must not override a later live title edit.
   return {
     ...entry,
-    title: autosave.title,
     content: autosave.content,
     excerpt: autosave.excerpt,
     // Keep the reserved template key so an unsaved `named`-template pick still
