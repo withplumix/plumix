@@ -1,9 +1,4 @@
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+import { escapeHtml } from "../../escape-html.js";
 
 // Attribute-context escape: `href="..."` / `alt="..."` etc. Additionally
 // escapes the quote characters that would let untrusted input break out
