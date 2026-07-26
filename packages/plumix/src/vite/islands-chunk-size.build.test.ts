@@ -48,7 +48,17 @@ test(
     await build({
       root: dir,
       logLevel: "silent",
-      define: { "process.env.NODE_ENV": '"production"' },
+      // Build the islands the way `plumix build` does: the plugin substitutes
+      // `process.env.PLUMIX_DEV` to `""` for a production build (see the Vite
+      // plugin's `define`), which eliminates the dev-only island error overlay
+      // (#1603) — a lazy `import()` in the runtime that would otherwise pull
+      // React DOM out of the renderer entry into a shared chunk and break the
+      // negative guard below. Omitting it here would exercise a build shape
+      // that never ships.
+      define: {
+        "process.env.NODE_ENV": '"production"',
+        "process.env.PLUMIX_DEV": '""',
+      },
       build: {
         outDir,
         manifest: true,
