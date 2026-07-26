@@ -9,12 +9,12 @@ import type { DevErrorFrame } from "./contract.js";
  */
 export const DEV_ERROR_SOURCE_ENDPOINT = "/@plumix-dev-error-source";
 
-// A V8 stack line: `    at fn (file:line:col)` or `    at file:line:col`. The
-// optional first group captures the function name; the path is matched
-// greedily and backtracks so the trailing `:line:col` always wins, which keeps
-// `node:internal/...` and `file://` paths (whose own colons would otherwise
-// confuse a lazy match) intact.
-const FRAME = /^\s*at\s+(?:(.+?)\s+\()?(.+):(\d+):(\d+)\)?$/;
+// The trailing `:line:col` (with an optional closing paren) of a V8 frame.
+// Anchored, with non-overlapping `\d+` runs, so it can only ever scan the tail
+// once — no catch-all `.+` that could backtrack superlinearly on a hostile
+// stack (CodeQL ReDoS). Everything before it is sliced apart with plain string
+// ops, which keeps `node:internal/...` and `file://` colons intact for free.
+const LOCATION = /:(\d+):(\d+)\)?$/;
 
 /**
  * Parse a raw V8 stack string into structured frames. In `plumix dev` the
@@ -25,13 +25,27 @@ const FRAME = /^\s*at\s+(?:(.+?)\s+\()?(.+):(\d+):(\d+)\)?$/;
  */
 export function parseStackFrames(stack: string): DevErrorFrame[] {
   const frames: DevErrorFrame[] = [];
-  // Split on either newline style so a CRLF-terminated line's trailing `\r`
-  // doesn't defeat the `$`-anchored frame regex and drop the whole stack.
-  for (const line of stack.split(/\r?\n/)) {
-    const match = FRAME.exec(line);
-    if (!match) continue;
-    const [, functionName, rawFile, lineNo, columnNo] = match;
-    const file = stripFileUrl(rawFile ?? "");
+  for (const raw of stack.split(/\r?\n/)) {
+    // `trim()` also sheds any CRLF `\r` so it can't defeat the `$` anchor.
+    const line = raw.trim();
+    if (!line.startsWith("at ")) continue;
+    const location = LOCATION.exec(line);
+    if (!location) continue;
+    const [matched, lineNo, columnNo] = location;
+
+    // Between "at " and the trailing location: a bare path, or
+    // "functionName (path". Split on the first " (" — a V8 function name never
+    // contains one, but a path can, so first-match keeps the path whole.
+    const head = line.slice(3, line.length - matched.length);
+    const paren = head.indexOf(" (");
+    const functionName = paren >= 0 ? head.slice(0, paren) : undefined;
+    const afterParen = paren >= 0 ? head.slice(paren + 2) : head;
+    // Drop a leading "(" from the rare `at (path)` (anonymous-with-parens) form.
+    const rawFile = afterParen.startsWith("(")
+      ? afterParen.slice(1)
+      : afterParen;
+    const file = stripFileUrl(rawFile);
+
     frames.push({
       ...(functionName ? { functionName } : {}),
       file,

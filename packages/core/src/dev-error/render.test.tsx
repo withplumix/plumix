@@ -48,16 +48,16 @@ describe("renderDevErrorPage", () => {
   test("the inlined enhancement is self-contained and can't break out of the script tag", () => {
     const err = new Error("boom");
     err.stack = "Error: boom\n    at render (/proj/src/theme.tsx:12:7)";
-    const script = /<script>([\s\S]*?)<\/script>/.exec(renderDevErrorPage(err));
-    const body = script?.[1] ?? "";
+    const html = renderDevErrorPage(err);
 
-    expect(body.length).toBeGreaterThan(0);
-    // No `</script` sequence would prematurely close the inlined tag.
-    expect(body.toLowerCase()).not.toContain("</script");
+    expect(html).toContain("<script>");
+    // Exactly one closing tag: an inlined `</script>` would break the page out
+    // of its own script element, and would split this into three parts.
+    expect(html.toLowerCase().split("</script>")).toHaveLength(2);
     // Stringifying the function must not pull in downleveling helpers, which
     // would be undefined bindings once inlined (blocks targets native async).
     for (const helper of ["__awaiter", "__generator", "__spread", "__values"]) {
-      expect(body).not.toContain(helper);
+      expect(html).not.toContain(helper);
     }
   });
 

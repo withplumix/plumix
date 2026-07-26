@@ -90,9 +90,27 @@ describe("parseStackFrames", () => {
     ]);
   });
 
+  test("keeps a path containing parentheses whole (splits on the first ' (')", () => {
+    const stack = "Error: x\n    at fn (/repo/(group)/file.ts:5:3)";
+
+    expect(parseStackFrames(stack)).toEqual([
+      {
+        functionName: "fn",
+        file: "/repo/(group)/file.ts",
+        line: 5,
+        column: 3,
+        isVendor: false,
+      },
+    ]);
+  });
+
   test("returns an empty list for a stack with no frames", () => {
     expect(parseStackFrames("Error: just a message")).toEqual([]);
     expect(parseStackFrames("")).toEqual([]);
+    // A frame-like line with no location is dropped rather than mis-parsed.
+    expect(parseStackFrames("    at some.thing.without.a.location")).toEqual(
+      [],
+    );
   });
 });
 
