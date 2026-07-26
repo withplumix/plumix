@@ -58,6 +58,52 @@ export const DEV_ERROR_CSS = `
   word-break: break-word;
 }
 
+/* How-to-fix cards: a prominent, accent-led block above the stack. */
+.plumix-dev-error__hints {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 2rem;
+}
+
+.plumix-dev-error__hint {
+  padding: 1rem 1.25rem;
+  background: color-mix(
+    in srgb,
+    var(--plumix-deverr-accent) 8%,
+    var(--plumix-deverr-surface)
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--plumix-deverr-accent) 35%, var(--plumix-deverr-border));
+  border-left-width: 3px;
+  border-radius: var(--plumix-deverr-radius);
+}
+
+.plumix-dev-error__hint-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.plumix-dev-error__hint-body {
+  margin: 0.375rem 0 0;
+  font-size: 0.875rem;
+  color: var(--plumix-deverr-muted);
+}
+
+.plumix-dev-error__hint-docs {
+  margin: 0.625rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.plumix-dev-error__hint-doc {
+  font-size: 0.8125rem;
+  color: var(--plumix-deverr-accent);
+}
+
 .plumix-dev-error__stack {
   margin: 0;
 }

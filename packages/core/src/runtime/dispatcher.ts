@@ -16,6 +16,7 @@ import { readThrough } from "../cache/read-through.js";
 import { pageTags } from "../cache/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
+import { collectDevErrorHints } from "../dev-error/hints/collect.js";
 import { renderDevErrorPage } from "../dev-error/render.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { exposesHierarchicalUrls } from "../route/compile.js";
@@ -646,7 +647,11 @@ async function renderPublicRoute(
       // render falls through to the plain-text 500 (#1582).
       if (process.env.PLUMIX_DEV) {
         try {
-          return new Response(renderDevErrorPage(err), {
+          // Match "how to fix" hints for the caught error via the dev-only
+          // `error_page:hints` filter (core's typed + untyped matchers, plus
+          // any plugin subscribers) and surface them above the stack.
+          const hints = collectDevErrorHints(ctx.hooks, err, ctx);
+          return new Response(renderDevErrorPage(err, hints), {
             status: 500,
             headers: { "content-type": "text/html; charset=utf-8" },
           });

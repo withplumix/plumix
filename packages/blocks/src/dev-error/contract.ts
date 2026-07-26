@@ -15,6 +15,32 @@ export interface DevErrorInfo {
    * back to the raw {@link stack}.
    */
   readonly frames?: readonly DevErrorFrame[];
+  /**
+   * Actionable "how to fix" hints matched to this error (#1597). Collected
+   * server-side via the dev-only `error_page:hints` filter and rendered as a
+   * prominent card above the stack. Absent when nothing recognized the error —
+   * the page then shows no hint card at all.
+   */
+  readonly hints?: readonly DevErrorHint[];
+}
+
+/**
+ * One "how to fix" hint. `title` is a short imperative ("Run your migrations");
+ * `body` explains; `docs` links out to further reading. Plain strings — a
+ * dev-only, English surface matching the framework's error-message voice, not
+ * i18n `Label`s. Contributed and overridden through the `error_page:hints`
+ * filter, which is the plugin-facing hint API.
+ */
+export interface DevErrorHint {
+  readonly title: string;
+  readonly body?: string;
+  readonly docs?: readonly DevErrorHintDoc[];
+}
+
+/** A "read more" link on a {@link DevErrorHint}. */
+export interface DevErrorHintDoc {
+  readonly label: string;
+  readonly href: string;
 }
 
 /**

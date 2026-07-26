@@ -121,4 +121,59 @@ describe("DevErrorPage", () => {
     expect(html).toContain('data-testid="plumix-dev-error-vendor"');
     expect(html).toContain("react-dom/server.js");
   });
+
+  test("renders a how-to-fix card for each contributed hint, above the stack", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{
+          name: "ThemeRegistrationError",
+          message: "boom",
+          frames: [appFrame],
+          hints: [
+            {
+              title: "Register a theme",
+              body: "Every app renders through a theme.",
+              docs: [
+                { label: "Themes guide", href: "https://example.test/themes" },
+              ],
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-hints"');
+    expect(html).toContain('data-testid="plumix-dev-error-hint"');
+    expect(html).toContain("Register a theme");
+    expect(html).toContain("Every app renders through a theme.");
+    expect(html).toContain('href="https://example.test/themes"');
+    expect(html).toContain("Themes guide");
+    // The card sits above the stack/frames so the fix reads first.
+    expect(html.indexOf("Register a theme")).toBeLessThan(
+      html.indexOf('data-testid="plumix-dev-error-frames"'),
+    );
+  });
+
+  test("renders a hint with only a title — body and docs are optional", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{
+          name: "Error",
+          message: "boom",
+          hints: [{ title: "Run your migrations" }],
+        }}
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-hint"');
+    expect(html).toContain("Run your migrations");
+  });
+
+  test("renders no how-to-fix card when there are no hints", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage error={{ name: "TypeError", message: "boom" }} />,
+    );
+
+    expect(html).not.toContain('data-testid="plumix-dev-error-hints"');
+  });
 });

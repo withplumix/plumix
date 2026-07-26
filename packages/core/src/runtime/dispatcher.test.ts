@@ -2243,6 +2243,35 @@ describe("dispatcher — dev error page", () => {
     expect(body).toContain("theme is broken");
   });
 
+  test("a recognized error surfaces its how-to-fix hint card", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const noSuchTableTheme = defineTheme({
+      templates: [
+        fallback(() => {
+          throw new Error("D1_ERROR: no such table: posts: SQLITE_ERROR");
+        }),
+      ],
+    });
+    const h = await createDispatcherHarness({ theme: noSuchTableTheme });
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    const body = await response.text();
+    expect(body).toContain("plumix-dev-error-hints");
+    expect(body).toContain("Run your migrations");
+    expect(body).toContain("plumix migrate");
+  });
+
+  test("an unrecognized error renders no hint card", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    const body = await response.text();
+    // Still the dev page, but with nothing to suggest.
+    expect(body).toContain("plumix-dev-error");
+    expect(body).not.toContain("plumix-dev-error-hints");
+  });
+
   test("dev gate off: a throwing template returns the existing themed 500, unchanged", async () => {
     delete process.env.PLUMIX_DEV;
     const h = await createDispatcherHarness({ theme: throwingTheme });

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
-import type { DevErrorInfo } from "@plumix/blocks/dev-error";
+import type { DevErrorHint, DevErrorInfo } from "@plumix/blocks/dev-error";
 import {
   DEV_ERROR_CSS,
   DevErrorPage,
@@ -45,10 +45,18 @@ function toDevErrorInfo(err: unknown): DevErrorInfo {
  * with the token sheet inlined — no theme, no debug bar, no external
  * stylesheet. This is the body the dispatcher returns for a dev 5xx on an HTML
  * request. When frames were resolved, the client enhancement is inlined so
- * selecting a frame lazy-fetches its highlighted source excerpt.
+ * selecting a frame lazy-fetches its highlighted source excerpt. The dispatcher
+ * collects `hints` from the `error_page:hints` filter and passes them in; the
+ * renderer surfaces them as a "how to fix" card above the stack.
  */
-export function renderDevErrorPage(err: unknown): string {
-  const info = toDevErrorInfo(err);
+export function renderDevErrorPage(
+  err: unknown,
+  hints: readonly DevErrorHint[] = [],
+): string {
+  const info: DevErrorInfo = {
+    ...toDevErrorInfo(err),
+    ...(hints.length > 0 ? { hints } : {}),
+  };
   const body = renderToStaticMarkup(<DevErrorPage error={info} />);
   const title = escapeHtml(`${info.name}: ${info.message}`);
   const script =

@@ -81,6 +81,31 @@ describe("renderDevErrorPage", () => {
     expect(html.startsWith("<!DOCTYPE html>")).toBe(true);
   });
 
+  test("renders a how-to-fix card for each hint passed in", () => {
+    const html = renderDevErrorPage(new Error("no such table: posts"), [
+      { title: "Run your migrations", body: "Run `plumix migrate`." },
+    ]);
+
+    expect(html).toContain('data-testid="plumix-dev-error-hints"');
+    expect(html).toContain("Run your migrations");
+    expect(html).toContain("Run `plumix migrate`.");
+  });
+
+  test("renders no hint card when no hints are passed", () => {
+    const html = renderDevErrorPage(new Error("boom"));
+
+    expect(html).not.toContain('data-testid="plumix-dev-error-hints"');
+  });
+
+  test("escapes HTML in a hint so a matched message can't break out of the page", () => {
+    const html = renderDevErrorPage(new Error("boom"), [
+      { title: "<script>alert(1)</script>" },
+    ]);
+
+    expect(html).not.toContain("<script>alert(1)</script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
   test("escapes HTML in the exception message so it can't break out of the page", () => {
     const err = new Error("<script>alert(1)</script>");
     err.stack = "Error\n    at x (/proj/src/a.ts:1:1)";
