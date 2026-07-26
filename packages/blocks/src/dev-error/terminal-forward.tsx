@@ -9,6 +9,7 @@
 // level, and — like the overlay — pulled in only under the dev gate, so it
 // tree-shakes out of production island bundles.
 
+import { deriveLabel, detailOf } from "./event-detail.js";
 import { DEV_ERROR_TERMINAL_ENDPOINT } from "./frames.js";
 
 /** How much client output forwards. `warn` (default) is errors + warnings. */
@@ -54,16 +55,22 @@ export function parseForwardLevel(raw: string | undefined): ForwardLevel {
 }
 
 /**
- * Install terminal forwarding on `target` (defaults to `window`). Returns a
- * teardown that restores the patched console methods and removes the listeners.
- * A `level` of `off` is a no-op that returns an empty teardown.
+ * Install terminal forwarding on `window`. Returns a teardown that restores the
+ * patched console methods and removes the listeners. A `level` of `off` is a
+ * no-op that returns an empty teardown. Idempotent: a second call before teardown
+ * returns the existing forwarder's teardown, so an HMR re-run of the islands
+ * bootstrap never double-patches console or stacks listeners.
  */
+let active: TerminalForwarder | null = null;
+
 export function installTerminalForwarding(
   options: TerminalForwardOptions = {},
 ): () => void {
+  if (active) return active.teardown;
   const level = options.level ?? "warn";
   if (level === "off") return () => undefined;
-  return new TerminalForwarder(level, options).install();
+  active = new TerminalForwarder(level, options);
+  return active.install();
 }
 
 type ConsoleMethod = "error" | "warn";
@@ -111,7 +118,6 @@ class TerminalForwarder {
     // invoked with `.apply(console, …)`, so the unbound extraction is safe.
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const original = console[method];
-    const level = method;
     const patched = (...args: unknown[]): void => {
       original.apply(console, args);
       // Skip the framework's own re-log of an error already forwarded as an
@@ -121,7 +127,7 @@ class TerminalForwarder {
       if (args.some((arg) => this.alreadyForwarded(arg))) return;
       this.enqueue({
         kind: "console",
-        level,
+        level: method,
         message: args.map(formatArg).join(" "),
         ...withStack(callSiteStack(patched)),
       });
@@ -138,12 +144,8 @@ class TerminalForwarder {
   }
 
   private captureEvent(event: Event): void {
-    const detail = (event as CustomEvent<unknown>).detail;
-    const info =
-      detail !== null && typeof detail === "object"
-        ? (detail as { error?: unknown; element?: HTMLElement })
-        : {};
-    this.captureException(info.error, info.element);
+    const { error, element } = detailOf(event);
+    this.captureException(error, element);
   }
 
   private captureException(error: unknown, element?: HTMLElement): void {
@@ -199,11 +201,12 @@ class TerminalForwarder {
       .catch(() => undefined);
   }
 
-  private readonly teardown = (): void => {
+  readonly teardown = (): void => {
     for (const off of this.listeners) off();
     for (const restore of this.restores) restore();
     this.listeners.length = 0;
     this.restores.length = 0;
+    if (active === this) active = null;
   };
 }
 
@@ -251,9 +254,4 @@ function callSiteStack(
     return holder.stack;
   }
   return new Error().stack;
-}
-
-function deriveLabel(element?: HTMLElement): string | undefined {
-  const name = element?.getAttribute("component-export");
-  return name ? `<${name}>` : undefined;
 }

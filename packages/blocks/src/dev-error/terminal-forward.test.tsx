@@ -232,6 +232,29 @@ describe("installTerminalForwarding", () => {
     expect(forwarded().map((l) => l.message)).toEqual(["one", "two"]);
   });
 
+  test("is idempotent — a second install does not double-patch console", () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const first = installTerminalForwarding({
+      level: "warn",
+      endpoint: ENDPOINT,
+      schedule,
+    });
+    // A second bootstrap (e.g. HMR re-run) must reuse the first, not stack a
+    // second console wrapper and listener set.
+    const second = installTerminalForwarding({
+      level: "warn",
+      endpoint: ENDPOINT,
+      schedule,
+    });
+    uninstall = first;
+    expect(second).toBe(first);
+
+    console.error("once");
+    flush();
+
+    expect(forwarded()).toHaveLength(1);
+  });
+
   test("teardown restores console and stops forwarding", () => {
     const original = console.error;
     install();

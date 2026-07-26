@@ -376,7 +376,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       // never reach the worker.
       const usePostJson = (
         endpoint: string,
-        handle: (body: string) => Promise<{ status: number; body: string }>,
+        handle: (body: string) => Promise<{ status: number; body?: string }>,
       ): void => {
         server.middlewares.use((req, res, next) => {
           if (req.method !== "POST" || (req.url ?? "") !== endpoint) {
@@ -388,7 +388,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
             .then(({ status, body }) => {
               res.statusCode = status;
               res.setHeader("content-type", "application/json; charset=utf-8");
-              res.end(body);
+              res.end(body ?? "{}");
             })
             .catch(() => {
               res.statusCode = 500;
@@ -415,10 +415,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         print: (message) => server.config.logger.info(message),
         root: server.config.root,
       });
-      usePostJson(DEV_ERROR_TERMINAL_ENDPOINT, async (body) => ({
-        status: (await forwarder.handle(body)).status,
-        body: "{}",
-      }));
+      usePostJson(DEV_ERROR_TERMINAL_ENDPOINT, (body) =>
+        forwarder.handle(body),
+      );
       server.watcher.on("change", (path) => {
         if (!configPath || resolve(path) !== configPath) return;
         // Force-fresh: the whole point of the watcher is to pick up the edit,

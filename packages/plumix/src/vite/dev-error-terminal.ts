@@ -65,6 +65,11 @@ export function createTerminalForwarder(deps: TerminalForwardDeps): {
   let repeat = 0;
 
   async function emit(log: ForwardedLog): Promise<void> {
+    // Resolve frames BEFORE touching the collapse state, so the compare-and-print
+    // below is one synchronous critical section with no `await` inside it. Two
+    // overlapping POSTs (separate client flushes) then can't interleave
+    // `lastSignature`/`repeat` across a suspension point.
+    const frames = log.stack ? await deps.resolveStack(log.stack) : [];
     const signature = signatureOf(log);
     if (signature === lastSignature) {
       repeat += 1;
@@ -73,7 +78,6 @@ export function createTerminalForwarder(deps: TerminalForwardDeps): {
     }
     lastSignature = signature;
     repeat = 1;
-    const frames = log.stack ? await deps.resolveStack(log.stack) : [];
     deps.print(formatForwardedLog(log, frames, deps.root));
   }
 
@@ -135,8 +139,26 @@ function asForwardedLog(value: unknown): ForwardedLog | null {
   return {
     kind,
     level,
-    message,
+    // `message`/`label` are client-controlled (an island's thrown message or a
+    // `console.error` arg — possibly content-authored in a CMS), so strip control
+    // bytes before they reach the terminal: an ESC survives the JSON round-trip
+    // and would otherwise inject ANSI/OSC escapes into the developer's console.
+    message: stripControl(message),
     ...(typeof record.stack === "string" ? { stack: record.stack } : {}),
-    ...(typeof record.label === "string" ? { label: record.label } : {}),
+    ...(typeof record.label === "string"
+      ? { label: stripControl(record.label) }
+      : {}),
   };
+}
+
+// C0 control bytes + DEL are replaced with a space; a raw ESC survives the JSON
+// round-trip and would otherwise inject ANSI/OSC escapes into the dev terminal.
+// Frame paths are server-derived, so only `message`/`label` need this.
+function stripControl(value: string): string {
+  let out = "";
+  for (const ch of value) {
+    const code = ch.codePointAt(0) ?? 0;
+    out += code < 0x20 || code === 0x7f ? " " : ch;
+  }
+  return out;
 }

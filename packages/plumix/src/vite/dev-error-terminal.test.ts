@@ -206,6 +206,26 @@ describe("createTerminalForwarder", () => {
     expect(d.lines).toEqual([]);
   });
 
+  test("strips control characters from the client-controlled message and label", async () => {
+    const d = deps([]);
+    const forwarder = createTerminalForwarder(d);
+
+    // A raw ESC survives the JSON round-trip; each control byte becomes a space
+    // so no ANSI/OSC escape reaches the developer's terminal.
+    await forwarder.handle(
+      body([
+        {
+          kind: "exception",
+          level: "error",
+          message: "boom\u001b[2Jwiped",
+          label: "<Ev\u001bil>",
+        },
+      ]),
+    );
+
+    expect(d.lines).toEqual(["[browser] <Ev il> boom [2Jwiped"]);
+  });
+
   test("skips entries that don't look like a forwarded log", async () => {
     const d = deps([]);
     const forwarder = createTerminalForwarder(d);
