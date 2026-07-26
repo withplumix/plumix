@@ -1,9 +1,13 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockLoaderArgs } from "./loaders.js";
+import type { BlockLoaderArgs, LoaderErrorEvent } from "./loaders.js";
 import type { BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
-import { collectLoaderEntries, resolveBlockLoaders } from "./loaders.js";
+import {
+  BlockLoaderError,
+  collectLoaderEntries,
+  resolveBlockLoaders,
+} from "./loaders.js";
 
 describe("collectLoaderEntries", () => {
   test("returns empty list when no block in the tree declares loaders", () => {
@@ -233,5 +237,38 @@ describe("resolveBlockLoaders", () => {
 
     expect(seenCtx).toBe(ctx);
     expect(seenAttrs).toEqual({ foo: 1 });
+  });
+});
+
+describe("BlockLoaderError", () => {
+  const event = (error: unknown): LoaderErrorEvent => ({
+    spec: { name: "acme/posts", render: () => null },
+    node: { id: "n1", name: "acme/posts", attrs: {} },
+    key: "posts",
+    error,
+  });
+
+  test("names the block and loader key and carries the underlying message", () => {
+    const err = new BlockLoaderError(event(new Error("boom")));
+
+    expect(err.name).toBe("BlockLoaderError");
+    expect(err.message).toContain("acme/posts");
+    expect(err.message).toContain("posts");
+    expect(err.message).toContain("boom");
+  });
+
+  test("preserves the original as `cause` and adopts its stack", () => {
+    const cause = new Error("boom");
+    const err = new BlockLoaderError(event(cause));
+
+    expect(err.cause).toBe(cause);
+    expect(err.stack).toBe(cause.stack);
+  });
+
+  test("stringifies a non-Error rejection into the message", () => {
+    const err = new BlockLoaderError(event("plain string"));
+
+    expect(err.message).toContain("plain string");
+    expect(err.cause).toBe("plain string");
   });
 });

@@ -44,7 +44,11 @@ export { defineEntryContent, isEntryContent } from "./entry-content.js";
 export type { EntryContent } from "./entry-content.js";
 
 // ─── Per-block SSR loaders ──────────────────────────────────────────────────
-export { collectLoaderEntries, resolveBlockLoaders } from "./loaders.js";
+export {
+  BlockLoaderError,
+  collectLoaderEntries,
+  resolveBlockLoaders,
+} from "./loaders.js";
 export type {
   BlockLoaderArgs,
   BlockLoaderFn,
