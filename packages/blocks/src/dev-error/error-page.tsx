@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 
-import type { DevErrorFrame, DevErrorInfo } from "./contract.js";
+import type { DevErrorFrame, DevErrorHint, DevErrorInfo } from "./contract.js";
 import {
   commonBaseDir,
   DEV_ERROR_SOURCE_ENDPOINT,
@@ -30,6 +30,7 @@ export function DevErrorPage({
   // long absolute prefix doesn't dominate every line. Shared with the client
   // enhancement (which relativizes the excerpt header) via `data-base`.
   const base = commonBaseDir(frames);
+  const hints = error.hints ?? [];
 
   return (
     <div className="plumix-dev-error" data-testid="plumix-dev-error">
@@ -47,6 +48,17 @@ export function DevErrorPage({
           {error.message}
         </h1>
       </header>
+      {hints.length > 0 ? (
+        <section
+          className="plumix-dev-error__hints"
+          data-testid="plumix-dev-error-hints"
+          aria-label="How to fix"
+        >
+          {hints.map((hint, index) => (
+            <HintCard key={hintKey(hint, index)} hint={hint} />
+          ))}
+        </section>
+      ) : null}
       {frames.length > 0 ? (
         <section
           className="plumix-dev-error__frames"
@@ -105,6 +117,34 @@ export function DevErrorPage({
   );
 }
 
+function HintCard({ hint }: { readonly hint: DevErrorHint }): ReactElement {
+  const docs = hint.docs ?? [];
+  return (
+    <div className="plumix-dev-error__hint" data-testid="plumix-dev-error-hint">
+      <p className="plumix-dev-error__hint-title">{hint.title}</p>
+      {hint.body !== undefined ? (
+        <p className="plumix-dev-error__hint-body">{hint.body}</p>
+      ) : null}
+      {docs.length > 0 ? (
+        <ul className="plumix-dev-error__hint-docs">
+          {docs.map((doc) => (
+            <li key={doc.href}>
+              <a
+                className="plumix-dev-error__hint-doc"
+                href={doc.href}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {doc.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function FrameButton({
   frame,
   base,
@@ -133,4 +173,8 @@ function FrameButton({
 
 function frameKey(frame: DevErrorFrame, index: number): string {
   return `${index}:${frame.file}:${frame.line}`;
+}
+
+function hintKey(hint: DevErrorHint, index: number): string {
+  return `${index}:${hint.title}`;
 }
