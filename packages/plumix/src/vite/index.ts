@@ -20,6 +20,7 @@ import type {
   PlumixManifest,
   ResolvedI18n,
 } from "@plumix/core";
+import { DEV_ERROR_SOURCE_ENDPOINT } from "@plumix/blocks/dev-error";
 import {
   buildManifest,
   collectNamedTemplates,
@@ -39,6 +40,7 @@ import {
   assemblePluginAdminBundle,
 } from "./admin-plugin-bundle.js";
 import { generateClientEntrySource } from "./client-entry-codegen.js";
+import { handleDevErrorSourceRequest } from "./dev-error-source.js";
 import { generateEditorEntrySource } from "./editor-entry-codegen.js";
 import { VitePluginError } from "./errors.js";
 import {
@@ -288,6 +290,41 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     // contents directly from disk in dev, so file edits / additions are
     // picked up on next request without a re-stage.
     configureServer(server) {
+      // The dev source-frame resolver (#1583, #1596): the dev error page ships
+      // resolved `file:line` positions and lazy-fetches each frame's source
+      // excerpt from here, since the worker has no `fs`. Registered before the
+      // @cloudflare/vite-plugin proxy (plumix is ordered ahead of it), so this
+      // dev-only endpoint is answered here and never reaches the worker.
+      server.middlewares.use((req, res, next) => {
+        const rawUrl = req.url ?? "";
+        const isSourceRequest =
+          (req.method === "GET" || req.method === "HEAD") &&
+          (rawUrl === DEV_ERROR_SOURCE_ENDPOINT ||
+            rawUrl.startsWith(DEV_ERROR_SOURCE_ENDPOINT + "?"));
+        if (!isSourceRequest) {
+          next();
+          return;
+        }
+        // Vite's own dev fs allowlist — spans the workspace root, so symlinked
+        // monorepo packages resolve too.
+        const allow = server.config.server.fs.allow;
+        void handleDevErrorSourceRequest(rawUrl, allow, {
+          readFile: (path) => readFile(path, "utf8"),
+        })
+          .then(({ status, body }) => {
+            res.statusCode = status;
+            if (body === null) {
+              res.end();
+              return;
+            }
+            res.setHeader("content-type", "application/json; charset=utf-8");
+            res.end(body);
+          })
+          .catch(() => {
+            res.statusCode = 500;
+            res.end();
+          });
+      });
       server.watcher.on("change", (path) => {
         if (!configPath || resolve(path) !== configPath) return;
         // Force-fresh: the whole point of the watcher is to pick up the edit,
