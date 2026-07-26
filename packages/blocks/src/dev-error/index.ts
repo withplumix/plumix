@@ -11,6 +11,7 @@ export type {
   DevErrorTimeline,
   DevErrorTimelineRow,
 } from "./contract.js";
+export { buildEditorUrl, resolveEditorTemplate } from "./editor.js";
 export { enhanceDevError } from "./enhance.js";
 export { DevErrorPage } from "./error-page.js";
 export { DEV_ERROR_SOURCE_ENDPOINT, parseStackFrames } from "./frames.js";

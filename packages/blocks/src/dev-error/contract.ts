@@ -78,6 +78,15 @@ export interface DevErrorQuery {
   readonly durationMs?: number;
   /** True for the query whose span errored — the failing query the page flags. */
   readonly failed: boolean;
+  /**
+   * True for a statement that belonged to a batch that failed as a whole. A
+   * driver batch is one atomic round-trip: when a statement throws it rolls
+   * back the sequence, and neither D1 nor libsql reports which statement it
+   * was. So the page flags the group rather than claiming any single row
+   * {@link failed} — distinct because that would misread as "this exact
+   * statement threw."
+   */
+  readonly batchFailed?: boolean;
 }
 
 /** The request's span waterfall, flattened for a zero-JS bar chart. */

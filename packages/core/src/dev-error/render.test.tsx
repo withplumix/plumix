@@ -1,8 +1,51 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
 import { renderDevErrorPage } from "./render.js";
 
+function withStack(message: string): Error {
+  const err = new Error(message);
+  err.stack = `Error: ${message}\n    at render (/proj/src/theme.tsx:12:7)`;
+  return err;
+}
+
 describe("renderDevErrorPage", () => {
+  afterEach(() => {
+    delete process.env.PLUMIX_EDITOR;
+  });
+
+  test("links each frame to VS Code by default (PLUMIX_EDITOR unset)", () => {
+    delete process.env.PLUMIX_EDITOR;
+    const html = renderDevErrorPage(withStack("boom"));
+
+    expect(html).toContain('data-testid="plumix-dev-error-open"');
+    expect(html).toContain('href="vscode://file//proj/src/theme.tsx:12:7"');
+  });
+
+  test("honors the PLUMIX_EDITOR known-editor key", () => {
+    process.env.PLUMIX_EDITOR = "cursor";
+    const html = renderDevErrorPage(withStack("boom"));
+
+    expect(html).toContain('href="cursor://file//proj/src/theme.tsx:12:7"');
+  });
+
+  test("honors a custom PLUMIX_EDITOR {file}/{line} format string", () => {
+    process.env.PLUMIX_EDITOR = "myeditor://open?path={file}&line={line}";
+    const html = renderDevErrorPage(withStack("boom"));
+
+    expect(html).toContain(
+      'href="myeditor://open?path=/proj/src/theme.tsx&amp;line=12"',
+    );
+  });
+
+  test("renders no open-in-editor link when PLUMIX_EDITOR is off", () => {
+    process.env.PLUMIX_EDITOR = "off";
+    const html = renderDevErrorPage(withStack("boom"));
+
+    expect(html).not.toContain('data-testid="plumix-dev-error-open"');
+    // The frame itself still renders — only the editor link is dropped.
+    expect(html).toContain('data-testid="plumix-dev-error-frame"');
+  });
+
   test("emits a standalone HTML document with the exception name and message", () => {
     const err = new TypeError("cannot read properties of undefined");
     const html = renderDevErrorPage(err);

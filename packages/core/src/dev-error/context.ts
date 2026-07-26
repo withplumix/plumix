@@ -77,12 +77,18 @@ function collectQueries(spans: readonly TelemetrySpan[]): DevErrorQuery[] {
     if (typeof sql === "string") {
       rows.push({ sql, durationMs: span.durationMs, failed });
     } else if (isJsonArray(batch)) {
+      // A failed batch reports no statement index (see `batchFailed` on
+      // DevErrorQuery), so the group is flagged, never an individual row.
       for (const stmt of batch) {
         if (typeof stmt !== "object" || stmt === null || isJsonArray(stmt)) {
           continue;
         }
         if (typeof stmt.sql !== "string") continue;
-        rows.push({ sql: stmt.sql, failed });
+        rows.push({
+          sql: stmt.sql,
+          failed: false,
+          ...(failed ? { batchFailed: true } : {}),
+        });
       }
     }
     for (const child of span.children) visit(child);
