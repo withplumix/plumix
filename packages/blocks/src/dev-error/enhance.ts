@@ -1,11 +1,12 @@
 // The client enhancement for the dev error page's stack view (#1596). It is
 // deliberately self-contained — no imports, no references outside its own
 // scope — because core inlines it into the standalone page via
-// `enhanceDevError.toString()`, where module bindings don't exist. The zero-JS
-// baseline already lists every frame with its original `file:line` and hides
-// vendor frames behind a `<details>`; this layer adds selecting a frame to
-// lazy-fetch and highlight its source excerpt from the dev resolver, reading
-// the endpoint straight off the DOM (`data-endpoint`).
+// `enhanceDevError.toString()`, where module bindings don't exist (the client
+// island overlay imports it directly and runs it against its shadow root). The
+// zero-JS baseline already lists every frame with its original `file:line` and
+// hides vendor frames behind a `<details>`; this layer adds selecting a frame to
+// lazy-fetch and highlight its source excerpt from the dev resolver, reading the
+// endpoint straight off the DOM (`data-endpoint`).
 
 interface ExcerptResponse {
   readonly file: string;
@@ -17,24 +18,35 @@ interface ExcerptResponse {
   }[];
 }
 
-export function enhanceDevError(doc: Document, fetchImpl?: typeof fetch): void {
-  const root = doc.querySelector('[data-testid="plumix-dev-error-frames"]');
-  if (!root) return;
-  const endpoint = root.getAttribute("data-endpoint");
-  const found = root.querySelector('[data-testid="plumix-dev-error-source"]');
+export function enhanceDevError(
+  container: Document | ShadowRoot,
+  fetchImpl?: typeof fetch,
+): void {
+  // Derive the document for `createElement`/`defaultView`: the server page runs
+  // this against `document`, the client overlay against its shadow root.
+  const doc: Document =
+    container instanceof ShadowRoot ? container.ownerDocument : container;
+  const section = container.querySelector(
+    '[data-testid="plumix-dev-error-frames"]',
+  );
+  if (!section) return;
+  const endpoint = section.getAttribute("data-endpoint");
+  const found = section.querySelector(
+    '[data-testid="plumix-dev-error-source"]',
+  );
   if (!endpoint || !found) return;
   // Bound to a fresh const so the closures below keep the non-null type.
   const panel = found;
 
   const frames = Array.from(
-    root.querySelectorAll<HTMLElement>("[data-plumix-frame]"),
+    section.querySelectorAll<HTMLElement>("[data-plumix-frame]"),
   );
   const [firstFrame] = frames;
   if (!firstFrame) return;
 
   // Shared with the server render (`data-base` on the frames section): the
   // project-root prefix, so the excerpt header reads root-relative too.
-  const base = root.getAttribute("data-base") ?? "";
+  const base = section.getAttribute("data-base") ?? "";
 
   const view = doc.defaultView;
   const resolved = fetchImpl ?? (view ? view.fetch.bind(view) : undefined);

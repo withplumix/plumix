@@ -14,11 +14,13 @@
 
 import type { ReactElement } from "react";
 import type { Root } from "react-dom/client";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 
-import type { DevErrorInfo } from "./contract.js";
+import type { DevErrorFrame, DevErrorInfo } from "./contract.js";
+import { enhanceDevError } from "./enhance.js";
 import { DevErrorPage } from "./error-page.js";
+import { DEV_ERROR_STACK_ENDPOINT } from "./frames.js";
 import { DEV_ERROR_CSS } from "./tokens.js";
 
 const HOST_TAG = "plumix-dev-error-overlay";
@@ -47,7 +49,9 @@ export function installIslandErrorOverlay(target: Window = window): () => void {
 }
 
 class IslandErrorOverlay {
-  private readonly errors: CapturedError[] = [];
+  // Replaced (not mutated) on each change so React and the `ErrorBody` effect
+  // see a new reference and reconcile the resolved frames when they arrive.
+  private errors: CapturedError[] = [];
   // Identity dedup so a render loop or a doubly-dispatched failure (e.g. the
   // hydration path and the window `error` handler both seeing it) counts once.
   private readonly seenObjects = new WeakSet<object>();
@@ -56,6 +60,8 @@ class IslandErrorOverlay {
   private expanded = false;
   private host: HTMLElement | null = null;
   private root: Root | null = null;
+  // Set on teardown so a late `resolveFrames` POST can't remount the overlay.
+  private torndown = false;
   private readonly listeners: (() => void)[] = [];
 
   constructor(private readonly target: Window) {}
@@ -103,16 +109,49 @@ class IslandErrorOverlay {
   ): void {
     if (this.isDuplicate(error)) return;
     const label = deriveLabel(element);
-    this.errors.unshift({
+    const entry: CapturedError = {
       info: toDevErrorInfo(error, componentStack),
       ...(label ? { label } : {}),
-    });
+    };
+    this.errors = [entry, ...this.errors];
     // Newest error lands at index 0. A collapsed overlay points at it; an
     // expanded panel follows the entry the developer is reading as it shifts
     // down by one, so the panel never swaps out from under them.
     if (this.expanded) this.active += 1;
     else this.active = 0;
     this.render();
+    void this.resolveFrames(entry);
+  }
+
+  // Browser stacks are unmapped — they point at Vite's served module URLs, not
+  // original source — so POST the raw stack to the dev resolver (#1572) and swap
+  // in the original `file:line` frames when they return, giving the overlay the
+  // same frame view the (already-sourcemapped) server page shows.
+  private async resolveFrames(entry: CapturedError): Promise<void> {
+    const { stack } = entry.info;
+    if (!stack) return;
+    try {
+      const response = await this.target.fetch(DEV_ERROR_STACK_ENDPOINT, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ stack }),
+      });
+      if (!response.ok) return;
+      const { frames } = (await response.json()) as {
+        frames?: readonly DevErrorFrame[];
+      };
+      if (!frames || frames.length === 0) return;
+      const index = this.errors.indexOf(entry);
+      if (index < 0) return;
+      const resolved: CapturedError = {
+        ...entry,
+        info: { ...entry.info, frames },
+      };
+      this.errors = this.errors.map((e, i) => (i === index ? resolved : e));
+      this.render();
+    } catch {
+      // Keep the raw stack when the resolver is unreachable.
+    }
   }
 
   private isDuplicate(error: unknown): boolean {
@@ -128,12 +167,14 @@ class IslandErrorOverlay {
   }
 
   private render(): void {
+    if (this.torndown) return;
     if (!this.host) this.mountHost();
     this.root?.render(
       <Overlay
         errors={this.errors}
         active={this.active}
         expanded={this.expanded}
+        shadowRoot={this.host?.shadowRoot ?? null}
         onExpand={() => this.setExpanded(true)}
         onCollapse={() => this.setExpanded(false)}
         onPrev={() => this.step(-1)}
@@ -178,6 +219,7 @@ class IslandErrorOverlay {
   }
 
   readonly teardown = (): void => {
+    this.torndown = true;
     for (const off of this.listeners) off();
     this.listeners.length = 0;
     this.dispose();
@@ -189,6 +231,7 @@ function Overlay({
   errors,
   active,
   expanded,
+  shadowRoot,
   onExpand,
   onCollapse,
   onPrev,
@@ -197,6 +240,7 @@ function Overlay({
   readonly errors: readonly CapturedError[];
   readonly active: number;
   readonly expanded: boolean;
+  readonly shadowRoot: ShadowRoot | null;
   readonly onExpand: () => void;
   readonly onCollapse: () => void;
   readonly onPrev: () => void;
@@ -208,12 +252,12 @@ function Overlay({
     return (
       <button
         type="button"
-        className="plumix-island-overlay__badge"
+        className="plumix-island-overlay plumix-island-overlay__badge"
         data-testid="plumix-island-overlay-badge"
         onClick={onExpand}
       >
-        <span aria-hidden="true">▲</span>
-        {count} client {count === 1 ? "error" : "errors"}
+        <span className="plumix-island-overlay__badge-count">{count}</span>
+        {count === 1 ? "error" : "errors"}
       </button>
     );
   }
@@ -286,11 +330,39 @@ function Overlay({
           </button>
         </div>
         <div className="plumix-island-overlay__body">
-          {entry ? <DevErrorPage error={entry.info} /> : null}
+          {entry ? (
+            // Keyed by position so navigating remounts it — fresh DOM for the
+            // excerpt enhancer to wire, and no stale listeners from the last one.
+            <ErrorBody key={active} entry={entry} shadowRoot={shadowRoot} />
+          ) : null}
         </div>
       </div>
     </div>
   );
+}
+
+// Renders one captured error through the shared page and, once its resolved
+// frames have arrived and committed, wires frame-click → source excerpt against
+// the shadow root (the same enhancer the server page runs against `document`).
+function ErrorBody({
+  entry,
+  shadowRoot,
+}: {
+  readonly entry: CapturedError;
+  readonly shadowRoot: ShadowRoot | null;
+}): ReactElement {
+  const { frames } = entry.info;
+  // The enhancer wires click listeners and fires the first excerpt fetch; run it
+  // exactly once (a StrictMode double-invoke or dep change must not double-wire).
+  const enhanced = useRef(false);
+  useEffect(() => {
+    if (enhanced.current) return;
+    if (frames && frames.length > 0 && shadowRoot) {
+      enhanced.current = true;
+      enhanceDevError(shadowRoot);
+    }
+  }, [frames, shadowRoot]);
+  return <DevErrorPage error={entry.info} />;
 }
 
 // Any value can be thrown; a non-`Error` degrades to a named exception carrying
@@ -356,17 +428,30 @@ const OVERLAY_CSS = `
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.875rem;
-  background: #ff6b6b;
-  color: #16181d;
-  border: none;
+  padding: 0.375rem 0.75rem 0.375rem 0.375rem;
+  background: var(--plumix-ov-bg);
+  color: var(--plumix-ov-fg);
+  border: 1px solid var(--plumix-ov-border);
   border-radius: 999px;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.plumix-island-overlay__badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: var(--plumix-ov-accent);
+  color: #16181d;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .plumix-island-overlay__backdrop {
@@ -466,5 +551,14 @@ const OVERLAY_CSS = `
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   overflow-x: visible;
+}
+
+/* Give the code excerpt the room — a ~30/70 split in the modal, versus the
+   wide server page where a fixed frame column reads better. Gated on the same
+   width as the shared two-column rule so narrow viewports still stack. */
+@media (min-width: 60rem) {
+  .plumix-island-overlay__body .plumix-dev-error__frames {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
+  }
 }
 `;

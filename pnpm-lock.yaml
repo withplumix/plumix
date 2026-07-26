@@ -1746,6 +1746,9 @@ importers:
 
   packages/plumix:
     dependencies:
+      '@jridgewell/trace-mapping':
+        specifier: ^0.3.31
+        version: 0.3.31
       '@lingui/core':
         specifier: catalog:lingui
         version: 6.4.0

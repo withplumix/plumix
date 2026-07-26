@@ -137,7 +137,9 @@ export function DevErrorPage({
           </pre>
         </section>
       )}
-      {error.componentStack ? (
+      {error.componentStack && frames.length === 0 ? (
+        // Resolved frames already point at the failing component, so the raw
+        // React component stack is only useful as a fallback when none resolved.
         <section
           className="plumix-dev-error__component-stack"
           data-testid="plumix-dev-error-component-stack"

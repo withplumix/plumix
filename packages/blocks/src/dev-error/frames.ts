@@ -9,6 +9,16 @@ import type { DevErrorFrame } from "./contract.js";
  */
 export const DEV_ERROR_SOURCE_ENDPOINT = "/@plumix-dev-error-source";
 
+/**
+ * The dev-only endpoint the client island overlay (#1603) POSTs a raw browser
+ * stack to. Browser stacks carry transformed positions pointing at Vite's served
+ * module URLs (unlike server stacks, which arrive already sourcemapped), so the
+ * Node-side resolver maps each frame back to its original `file:line` via Vite's
+ * module graph before the shared renderer shows it. Shared here so the middleware
+ * (in `plumix/vite`) and the overlay (in `@plumix/blocks`) agree on the path.
+ */
+export const DEV_ERROR_STACK_ENDPOINT = "/@plumix-dev-error-stack";
+
 // The trailing `:line:col` (with an optional closing paren) of a V8 frame.
 // Anchored, with non-overlapping `\d+` runs, so it can only ever scan the tail
 // once — no catch-all `.+` that could backtrack superlinearly on a hostile
