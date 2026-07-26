@@ -29,6 +29,16 @@ export function bootstrapIslandRuntime(): void {
   const url = readRendererUrl();
   if (url) setRendererUrl(url);
   registerIslandElement();
+
+  // Dev-only client island error overlay (#1603). Lazily imported behind the
+  // dev gate so the React-DOM-client weight it carries — and the module itself
+  // — tree-shake out of production island bundles; `process.env.PLUMIX_DEV` is
+  // Vite-substituted to an empty string at build time, so the whole block dies.
+  if (process.env.PLUMIX_DEV) {
+    void import("./dev-error/island-overlay.js").then((overlay) => {
+      overlay.installIslandErrorOverlay();
+    });
+  }
 }
 
 function readRendererUrl(): string | null {

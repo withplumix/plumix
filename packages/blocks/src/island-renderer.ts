@@ -6,7 +6,7 @@
 // islands all defer below the fold. Mirrors Astro's renderer chunk
 // (`packages/integrations/react/src/client.ts`).
 
-import type { ComponentType } from "react";
+import type { ComponentType, ErrorInfo } from "react";
 import type { Root } from "react-dom/client";
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
@@ -30,7 +30,29 @@ export interface IslandRoot {
 }
 
 export function mount(element: HTMLElement): IslandRoot {
-  const root: Root = createRoot(element);
+  // In dev, surface a post-hydration component throw (render / effect, not
+  // caught by a user error boundary) to the island error overlay (#1603) with
+  // React's component stack, then still log it. `process.env.PLUMIX_DEV` is
+  // Vite-substituted at bundle time — empty in a production build, so this
+  // branch and the callback tree-shake out and `createRoot` keeps its default
+  // error handling. React unmounts only this root, so other islands and the
+  // rest of the page keep working.
+  const root: Root = process.env.PLUMIX_DEV
+    ? createRoot(element, {
+        onUncaughtError(error: unknown, info: ErrorInfo) {
+          window.dispatchEvent(
+            new CustomEvent("plumix:island-error", {
+              detail: {
+                error,
+                componentStack: info.componentStack ?? undefined,
+                element,
+              },
+            }),
+          );
+          console.error(error);
+        },
+      })
+    : createRoot(element);
   return {
     render(Component, props, slotHtml) {
       root.render(createElement(Component, mergeSlotProps(props, slotHtml)));

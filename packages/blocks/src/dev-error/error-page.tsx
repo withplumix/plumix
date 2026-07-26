@@ -137,6 +137,18 @@ export function DevErrorPage({
           </pre>
         </section>
       )}
+      {error.componentStack ? (
+        <section
+          className="plumix-dev-error__component-stack"
+          data-testid="plumix-dev-error-component-stack"
+          aria-label="Component stack"
+        >
+          <h2 className="plumix-dev-error__section-title">Component stack</h2>
+          <pre className="plumix-dev-error__component-stack-pre">
+            <code>{error.componentStack}</code>
+          </pre>
+        </section>
+      ) : null}
       {context ? <ContextSections context={context} /> : null}
     </div>
   );

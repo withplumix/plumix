@@ -123,6 +123,26 @@ export const DEV_ERROR_CSS = `
   tab-size: 2;
 }
 
+/* React component stack — surfaced by the client island overlay (#1603). */
+.plumix-dev-error__component-stack {
+  margin: 2rem 0 0;
+}
+
+.plumix-dev-error__component-stack-pre {
+  margin: 0.75rem 0 0;
+  padding: 1.25rem;
+  overflow-x: auto;
+  background: var(--plumix-deverr-surface);
+  border: 1px solid var(--plumix-deverr-border);
+  border-radius: var(--plumix-deverr-radius);
+  font-family: var(--plumix-deverr-mono);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: var(--plumix-deverr-muted);
+  white-space: pre;
+  tab-size: 2;
+}
+
 /* Stack-and-source: frame list beside the excerpt panel, stacked on narrow. */
 .plumix-dev-error__frames {
   display: grid;

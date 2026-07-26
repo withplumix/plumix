@@ -78,6 +78,32 @@ describe("DevErrorPage", () => {
     expect(html).toContain("theme.tsx:12:7");
   });
 
+  test("renders the React component stack as its own section when present", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{
+          name: "Error",
+          message: "boom",
+          componentStack: "\n    at Counter\n    at App",
+        }}
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-component-stack"');
+    expect(html).toContain("at Counter");
+    expect(html).toContain("at App");
+  });
+
+  test("omits the component-stack section when the error carried none", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage error={{ name: "Error", message: "boom" }} />,
+    );
+
+    expect(html).not.toContain(
+      'data-testid="plumix-dev-error-component-stack"',
+    );
+  });
+
   test("renders each frame as a button carrying its absolute file and line", () => {
     const html = renderToStaticMarkup(
       <DevErrorPage
