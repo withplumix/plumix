@@ -8,4 +8,27 @@ export interface DevErrorInfo {
   readonly message: string;
   /** The raw, unresolved stack trace, when the exception carried one. */
   readonly stack?: string;
+  /**
+   * The stack parsed into structured frames (original `file:line`, since the
+   * dev stack arrives already sourcemapped). Absent when the exception carried
+   * no stack or none of its lines were locatable — the renderer then falls
+   * back to the raw {@link stack}.
+   */
+  readonly frames?: readonly DevErrorFrame[];
+}
+
+/**
+ * One resolved stack frame. `file` is the original absolute source path; the
+ * dev source-frame resolver reads it (Node-side, with `fs`) to produce the
+ * excerpt the renderer highlights — the worker never touches the filesystem.
+ */
+export interface DevErrorFrame {
+  /** The enclosing function, when the stack named one. */
+  readonly functionName?: string;
+  /** The original source path (a real fs path once `file://` is stripped). */
+  readonly file: string;
+  readonly line: number;
+  readonly column?: number;
+  /** `node_modules` / `node:` frames — collapsed behind a toggle by default. */
+  readonly isVendor: boolean;
 }
