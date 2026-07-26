@@ -156,6 +156,71 @@ describe("installIslandErrorOverlay", () => {
     );
   });
 
+  async function openModal(): Promise<void> {
+    query("plumix-island-overlay-badge")?.click();
+    await tick();
+  }
+
+  test("closes the modal to the indicator on a backdrop press-and-release", async () => {
+    dispatchHydrationError(new Error("boom"), island("Counter"));
+    await tick();
+    await openModal();
+    expect(query("plumix-island-overlay-panel")).not.toBeNull();
+
+    const backdrop = query("plumix-island-overlay-backdrop");
+    backdrop?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    backdrop?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await tick();
+
+    expect(query("plumix-island-overlay-panel")).toBeNull();
+    expect(query("plumix-island-overlay-badge")).not.toBeNull();
+    // Errors are kept — the host stays in the DOM (the indicator remains).
+    expect(host()).not.toBeNull();
+  });
+
+  test("stays open when a drag starts in the modal and ends on the backdrop", async () => {
+    dispatchHydrationError(new Error("boom"), island("Counter"));
+    await tick();
+    await openModal();
+
+    // Press begins inside the modal (selecting stack text), released outside.
+    query("plumix-island-overlay-panel")?.dispatchEvent(
+      new MouseEvent("mousedown", { bubbles: true }),
+    );
+    query("plumix-island-overlay-backdrop")?.dispatchEvent(
+      new MouseEvent("click", { bubbles: true }),
+    );
+    await tick();
+
+    expect(query("plumix-island-overlay-panel")).not.toBeNull();
+  });
+
+  test("closes the modal to the indicator with the close button", async () => {
+    dispatchHydrationError(new Error("boom"), island("Counter"));
+    await tick();
+    await openModal();
+
+    query("plumix-island-overlay-collapse")?.click();
+    await tick();
+
+    expect(query("plumix-island-overlay-panel")).toBeNull();
+    expect(query("plumix-island-overlay-badge")).not.toBeNull();
+    expect(host()).not.toBeNull();
+  });
+
+  test("closes the modal on Escape, keeping the errors", async () => {
+    dispatchHydrationError(new Error("boom"), island("Counter"));
+    await tick();
+    await openModal();
+    expect(query("plumix-island-overlay-panel")).not.toBeNull();
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await tick();
+
+    expect(query("plumix-island-overlay-panel")).toBeNull();
+    expect(query("plumix-island-overlay-badge")).not.toBeNull();
+  });
+
   test("deduplicates the same error object dispatched twice", async () => {
     const error = new Error("same boom");
     dispatchHydrationError(error, island("Counter"));
@@ -187,44 +252,6 @@ describe("installIslandErrorOverlay", () => {
     window.dispatchEvent(new ErrorEvent("error", { message: "404 img" }));
     await tick();
     expect(host()).toBeNull();
-  });
-
-  test("dismisses the overlay and clears every captured error", async () => {
-    dispatchHydrationError(new Error("boom"), island("Counter"));
-    await tick();
-    query("plumix-island-overlay-badge")?.click();
-    await tick();
-
-    query("plumix-island-overlay-dismiss")?.click();
-    await tick();
-
-    // Dismissing clears every error, so the host leaves the DOM entirely.
-    expect(host()).toBeNull();
-  });
-
-  test("re-surfaces a dismissed error when the same value is dispatched again", async () => {
-    const rejectSame = (): void => {
-      const event = new Event("unhandledrejection") as Event & {
-        reason: unknown;
-      };
-      event.reason = "boom-string";
-      window.dispatchEvent(event);
-    };
-
-    rejectSame();
-    await tick();
-    expect(query("plumix-island-overlay-badge")?.textContent).toContain("1");
-
-    query("plumix-island-overlay-badge")?.click();
-    await tick();
-    query("plumix-island-overlay-dismiss")?.click();
-    await tick();
-    expect(host()).toBeNull();
-
-    // Dismiss cleared the dedup memory, so the same primitive surfaces again.
-    rejectSame();
-    await tick();
-    expect(query("plumix-island-overlay-badge")?.textContent).toContain("1");
   });
 
   test("uninstall removes the host and stops capturing", async () => {

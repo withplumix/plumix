@@ -1,17 +1,20 @@
-// The client island error overlay (#1603). A dev-only, non-blocking catch net
-// for island failures: it consumes the framework's `plumix:hydration-error`
-// event (hydration/mount), the `plumix:island-error` event that the island
-// renderer's React root callbacks emit (post-hydration render/effect errors),
-// and the global `error` / `unhandledrejection` events (async + event-handler
-// leaks). Each captured error becomes a corner badge that expands to the shared
-// `DevErrorPage` renderer inside a Shadow DOM root — never full-screen, so the
-// server-rendered HTML underneath stays usable. The whole module is pulled in
-// only under the dev gate (a lazy `import()` in the islands bootstrap), so it
-// tree-shakes out of production island bundles along with the React DOM client
-// weight it carries.
+// The client island error overlay (#1603). A dev-only catch net for island
+// failures: it consumes the framework's `plumix:hydration-error` event
+// (hydration/mount), the `plumix:island-error` event that the island renderer's
+// React root callbacks emit (post-hydration render/effect errors), and the
+// global `error` / `unhandledrejection` events (async + event-handler leaks).
+// Errors are counted on a small, non-blocking bottom-left indicator that opens
+// the shared `DevErrorPage` renderer in a centered modal over a dimmed backdrop
+// (the Next.js dev-overlay shape), inside a Shadow DOM root; Escape, the close
+// button, or a backdrop click returns to the indicator, and the page stays
+// visible behind — the server-rendered HTML is the floor. The whole module is
+// pulled in only under the dev gate (a lazy `import()` in the islands
+// bootstrap), so it tree-shakes out of production island bundles along with the
+// React DOM client weight it carries.
 
 import type { ReactElement } from "react";
 import type { Root } from "react-dom/client";
+import { useRef } from "react";
 import { createRoot } from "react-dom/client";
 
 import type { DevErrorInfo } from "./contract.js";
@@ -47,9 +50,8 @@ class IslandErrorOverlay {
   private readonly errors: CapturedError[] = [];
   // Identity dedup so a render loop or a doubly-dispatched failure (e.g. the
   // hydration path and the window `error` handler both seeing it) counts once.
-  // Reset on dismiss so a previously-seen error can surface again afterwards.
-  private seenObjects = new WeakSet<object>();
-  private seenPrimitives = new Set<string>();
+  private readonly seenObjects = new WeakSet<object>();
+  private readonly seenPrimitives = new Set<string>();
   private active = 0;
   private expanded = false;
   private host: HTMLElement | null = null;
@@ -80,6 +82,12 @@ class IslandErrorOverlay {
     });
     this.on("unhandledrejection", (event) => {
       this.capture((event as { reason?: unknown }).reason);
+    });
+    this.on("keydown", (event) => {
+      // Collapse to the indicator without discarding the captured errors.
+      if (this.expanded && (event as KeyboardEvent).key === "Escape") {
+        this.setExpanded(false);
+      }
     });
   }
 
@@ -120,10 +128,6 @@ class IslandErrorOverlay {
   }
 
   private render(): void {
-    if (this.errors.length === 0) {
-      this.dispose();
-      return;
-    }
     if (!this.host) this.mountHost();
     this.root?.render(
       <Overlay
@@ -132,7 +136,6 @@ class IslandErrorOverlay {
         expanded={this.expanded}
         onExpand={() => this.setExpanded(true)}
         onCollapse={() => this.setExpanded(false)}
-        onDismiss={() => this.dismiss()}
         onPrev={() => this.step(-1)}
         onNext={() => this.step(1)}
       />,
@@ -167,16 +170,6 @@ class IslandErrorOverlay {
     this.render();
   }
 
-  private dismiss(): void {
-    this.errors.length = 0;
-    this.active = 0;
-    this.expanded = false;
-    // Forget what was seen so a recurring error surfaces again after dismissal.
-    this.seenObjects = new WeakSet();
-    this.seenPrimitives = new Set();
-    this.dispose();
-  }
-
   private dispose(): void {
     this.root?.unmount();
     this.root = null;
@@ -198,7 +191,6 @@ function Overlay({
   expanded,
   onExpand,
   onCollapse,
-  onDismiss,
   onPrev,
   onNext,
 }: {
@@ -207,10 +199,10 @@ function Overlay({
   readonly expanded: boolean;
   readonly onExpand: () => void;
   readonly onCollapse: () => void;
-  readonly onDismiss: () => void;
   readonly onPrev: () => void;
   readonly onNext: () => void;
 }): ReactElement {
+  const pressedBackdrop = useRef(false);
   const count = errors.length;
   if (!expanded) {
     return (
@@ -228,67 +220,74 @@ function Overlay({
   const entry = errors[active] ?? errors[0];
   return (
     <div
-      className="plumix-island-overlay plumix-island-overlay__panel"
-      data-testid="plumix-island-overlay-panel"
-      role="dialog"
-      aria-label="Client error"
+      className="plumix-island-overlay plumix-island-overlay__backdrop"
+      data-testid="plumix-island-overlay-backdrop"
+      onMouseDown={(event) => {
+        // A backdrop `click` fires on the common ancestor of press + release, so
+        // a text selection that starts inside the modal and ends on the backdrop
+        // would otherwise close it. Only close when the press began here too.
+        pressedBackdrop.current = event.target === event.currentTarget;
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget && pressedBackdrop.current) {
+          onCollapse();
+        }
+      }}
     >
-      <div className="plumix-island-overlay__bar">
-        <span
-          className="plumix-island-overlay__label"
-          data-testid="plumix-island-overlay-label"
-        >
-          {entry?.label ?? "Uncaught error"}
-        </span>
-        {count > 1 ? (
-          <span className="plumix-island-overlay__nav">
-            <button
-              type="button"
-              className="plumix-island-overlay__btn"
-              data-testid="plumix-island-overlay-prev"
-              aria-label="Previous error"
-              onClick={onPrev}
-            >
-              ‹
-            </button>
-            <span
-              className="plumix-island-overlay__count"
-              data-testid="plumix-island-overlay-count"
-            >
-              {active + 1} / {count}
-            </span>
-            <button
-              type="button"
-              className="plumix-island-overlay__btn"
-              data-testid="plumix-island-overlay-next"
-              aria-label="Next error"
-              onClick={onNext}
-            >
-              ›
-            </button>
+      <div
+        className="plumix-island-overlay__modal"
+        data-testid="plumix-island-overlay-panel"
+        role="dialog"
+        aria-label="Client error"
+      >
+        <div className="plumix-island-overlay__bar">
+          <span
+            className="plumix-island-overlay__label"
+            data-testid="plumix-island-overlay-label"
+          >
+            {entry?.label ?? "Uncaught error"}
           </span>
-        ) : null}
-        <button
-          type="button"
-          className="plumix-island-overlay__btn"
-          data-testid="plumix-island-overlay-collapse"
-          aria-label="Minimize"
-          onClick={onCollapse}
-        >
-          –
-        </button>
-        <button
-          type="button"
-          className="plumix-island-overlay__btn"
-          data-testid="plumix-island-overlay-dismiss"
-          aria-label="Dismiss"
-          onClick={onDismiss}
-        >
-          ✕
-        </button>
-      </div>
-      <div className="plumix-island-overlay__body">
-        {entry ? <DevErrorPage error={entry.info} /> : null}
+          {count > 1 ? (
+            <span className="plumix-island-overlay__nav">
+              <button
+                type="button"
+                className="plumix-island-overlay__btn"
+                data-testid="plumix-island-overlay-prev"
+                aria-label="Previous error"
+                onClick={onPrev}
+              >
+                ‹
+              </button>
+              <span
+                className="plumix-island-overlay__count"
+                data-testid="plumix-island-overlay-count"
+              >
+                {active + 1} / {count}
+              </span>
+              <button
+                type="button"
+                className="plumix-island-overlay__btn"
+                data-testid="plumix-island-overlay-next"
+                aria-label="Next error"
+                onClick={onNext}
+              >
+                ›
+              </button>
+            </span>
+          ) : null}
+          <button
+            type="button"
+            className="plumix-island-overlay__btn"
+            data-testid="plumix-island-overlay-collapse"
+            aria-label="Close"
+            onClick={onCollapse}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="plumix-island-overlay__body">
+          {entry ? <DevErrorPage error={entry.info} /> : null}
+        </div>
       </div>
     </div>
   );
@@ -327,10 +326,11 @@ function detailOf(event: Event): ErrorDetail {
   return detail !== null && typeof detail === "object" ? detail : {};
 }
 
-// The overlay chrome — the corner badge and the expandable panel. The panel is
-// deliberately bounded (a fixed corner box, capped width/height) so it is never
-// a full-screen takeover, and it overrides the shared sheet's full-page metrics
-// on the `DevErrorPage` it wraps.
+// The overlay chrome — a small bottom-left indicator that opens a centered
+// modal over a dimmed backdrop (the Next.js dev-overlay shape). The modal is
+// bounded (capped width/height, margins around it), so the server-rendered page
+// stays visible behind it and closing returns to the indicator. It overrides the
+// shared sheet's full-page metrics on the `DevErrorPage` it wraps.
 const OVERLAY_CSS = `
 :host {
   all: initial;
@@ -369,19 +369,26 @@ const OVERLAY_CSS = `
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
-.plumix-island-overlay__panel {
+.plumix-island-overlay__backdrop {
   position: fixed;
-  left: 1rem;
-  bottom: 1rem;
+  inset: 0;
   z-index: 2147483647;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1rem, 5vh, 3rem) clamp(1rem, 5vw, 3rem);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.plumix-island-overlay__modal {
+  display: flex;
   flex-direction: column;
-  width: min(38rem, calc(100vw - 2rem));
-  max-height: min(80vh, 44rem);
+  width: min(44rem, 100%);
+  max-height: 100%;
   background: var(--plumix-ov-bg);
   border: 1px solid var(--plumix-ov-border);
-  border-radius: 10px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
   overflow: hidden;
 }
 
@@ -452,7 +459,7 @@ const OVERLAY_CSS = `
   padding: 1.25rem;
 }
 
-/* In the narrow panel, wrap long stack lines instead of a jarring horizontal
+/* In the modal, wrap long stack lines instead of a jarring horizontal
    scrollbar (the full-width server page keeps them on one line). */
 .plumix-island-overlay__body .plumix-dev-error__stack pre,
 .plumix-island-overlay__body .plumix-dev-error__component-stack-pre {
