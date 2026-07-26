@@ -24,6 +24,12 @@ describe("renderDevErrorPage", () => {
     expect(html).toContain(".plumix-dev-error");
   });
 
+  test("resets the document body so the full-height root doesn't overflow into a scroll", () => {
+    const html = renderDevErrorPage(new Error("boom"));
+
+    expect(html).toContain("html,body{margin:0}");
+  });
+
   test("normalizes a non-Error throw into a named exception", () => {
     const html = renderDevErrorPage("just a string");
 

@@ -35,7 +35,11 @@ export function renderDevErrorPage(err: unknown): string {
     `<meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width, initial-scale=1">` +
     `<title>${title}</title>` +
-    `<style>${DEV_ERROR_CSS}</style>` +
+    // Reset the document shell so the root's `min-height: 100vh` fills the
+    // viewport exactly — without this the default body margin makes the page
+    // `100vh + 16px` and scrolls over near-empty content. Kept on the page,
+    // not the shared sheet, which the Shadow-DOM overlay (#1603) also uses.
+    `<style>html,body{margin:0}${DEV_ERROR_CSS}</style>` +
     `</head><body>${body}</body></html>`
   );
 }
