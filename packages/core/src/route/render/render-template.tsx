@@ -9,7 +9,7 @@ import type {
   ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/blocks";
-import { resolveBlockLoaders } from "@plumix/blocks";
+import { BlockLoaderError, resolveBlockLoaders } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
@@ -283,9 +283,13 @@ async function prefetchEntryLoaders(
 ): Promise<ResolvedBlockLoaders | undefined> {
   const blocks = collectLoaderBlocks(data, template);
   if (blocks.length === 0) return undefined;
+  // Dev-only: the first loader rejection, captured so it can be escalated to a
+  // fatal error after the fan-out settles (prod leaves it `undefined` and keeps
+  // per-block isolation).
+  let firstLoaderError: LoaderErrorEvent | undefined;
   // Loader fan-out gets its own span so the DB/fetch work it triggers nests
   // here instead of parenting onto `render` directly.
-  return ctx.telemetry.span("render: loaders", (s) => {
+  const loaderData = await ctx.telemetry.span("render: loaders", (s) => {
     s.set("loaders.blocks", blocks.length);
     return resolveBlockLoaders(blocks, ctx.blocks, ctx, {
       // Fire-and-forget bridge into the framework filter so plugins can
@@ -295,6 +299,7 @@ async function prefetchEntryLoaders(
       // otherwise surface as an unhandledRejection and on workers that
       // kills the request. `LoaderErrorEvent` shape matches `BlockLoaderErrorContext`.
       onLoaderError: (event: LoaderErrorEvent) => {
+        firstLoaderError ??= event;
         ctx.hooks
           .applyFilter("blocks:loader:error", undefined, event)
           .catch((hookError: unknown) => {
@@ -307,6 +312,14 @@ async function prefetchEntryLoaders(
       },
     });
   });
+  // Dev-only: a throwing loader is fatal here — it propagates to the dispatcher
+  // catch, which serves the dev error page naming the culprit block, instead of
+  // silently degrading. `process.env.PLUMIX_DEV` is Vite-empty in prod builds,
+  // so this branch tree-shakes out and production keeps per-block isolation.
+  if (process.env.PLUMIX_DEV && firstLoaderError) {
+    throw new BlockLoaderError(firstLoaderError);
+  }
+  return loaderData;
 }
 
 function collectLoaderBlocks(

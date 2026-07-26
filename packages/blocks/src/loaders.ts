@@ -69,6 +69,30 @@ export interface LoaderErrorEvent {
   readonly error: unknown;
 }
 
+// Escalation wrapper for a rejected block loader (#1600); the render seam
+// throws it under the dev gate. The message embeds the block name, loader key,
+// and underlying failure text so the dev error page's hint matchers keep
+// working across the loader boundary; `cause` preserves the original for the
+// console chain, and the cause's stack is adopted so frames resolve to the
+// loader's failure site, not this wrapper.
+export class BlockLoaderError extends Error {
+  static {
+    BlockLoaderError.prototype.name = "BlockLoaderError";
+  }
+
+  constructor(event: LoaderErrorEvent) {
+    const cause = event.error;
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    super(
+      `Block loader "${event.key}" on "${event.spec.name}" threw: ${detail}`,
+      { cause },
+    );
+    // Adopt the loader's own stack so the dev error page resolves frames to the
+    // failure site inside the loader, not this escalation wrapper.
+    if (cause instanceof Error && cause.stack) this.stack = cause.stack;
+  }
+}
+
 export interface ResolveBlockLoadersOptions {
   // Fires once per rejected loader (not once per block). Used by the
   // core dispatcher to bridge into the `blocks:loader:error` filter —

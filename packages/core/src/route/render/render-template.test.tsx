@@ -1,9 +1,10 @@
 import { useId } from "react";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
 import { defineBlock } from "@plumix/blocks";
 import { BlockRenderer } from "@plumix/blocks/renderer";
 
+import type { AppContext } from "../../context/app.js";
 import type { ResolvedEntry } from "./resolved-entry.js";
 import { entries as entriesTable } from "../../db/schema/entries.js";
 import { definePlugin } from "../../plugin/define.js";
@@ -2136,6 +2137,147 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(response.status).toBe(200);
     const body = await response.text();
     expect(body).toContain("loaded-on-server");
+  });
+});
+
+// A block whose loader always rejects. In dev the failure must escalate to the
+// dev error page naming the block; in prod it stays isolated to the block and
+// the page still renders (#1600).
+const throwingLoaderPlugin = definePlugin("acme-throwing-loader", (ctx) => {
+  ctx.registerBlock(
+    defineBlock({
+      name: "acme/throwing-loader",
+      loaders: {
+        marker: () => Promise.reject(new Error("loader kaboom")),
+      },
+      // In prod the rejected loader routes here (per-block isolation); in dev
+      // the failure escalates before render, so this never runs.
+      errorFallback: () => <div data-testid="probe">degraded</div>,
+      render: ({ loaders }) => (
+        <div data-testid="probe">{String(loaders.marker)}</div>
+      ),
+    }),
+  );
+});
+
+// A block whose loader runs a traced DB query that fails. The failing query
+// span is recorded before the rejection escalates, so the dev error page's
+// database section can flag it — the "showing the failing query" half of #1600.
+const failingQueryPlugin = definePlugin("acme-failing-query", (ctx) => {
+  ctx.registerBlock(
+    defineBlock({
+      name: "acme/failing-query",
+      loaders: {
+        rows: ({ ctx: loaderCtx }: { ctx: unknown }) =>
+          (loaderCtx as AppContext).telemetry.span("db: query", (s) => {
+            s.set("db.sql", "select * from broken");
+            return Promise.reject(new Error("no such table: broken"));
+          }),
+      },
+      render: () => null,
+    }),
+  );
+});
+
+const throwingLoaderTheme = defineTheme({
+  templates: [
+    fallback(() => null),
+    entry(({ data }) =>
+      data.entry.contentBlocks ? (
+        <BlockRenderer content={data.entry.contentBlocks} />
+      ) : null,
+    ),
+  ],
+});
+
+async function seedLoaderPost(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  blockName: string,
+): Promise<void> {
+  const author = await h.seedUser("admin");
+  await h.factory.entry.create({
+    type: "post",
+    slug: "with-loader",
+    title: "Loader Block",
+    content: {
+      version: "plumix.v2",
+      blocks: [{ id: "boom", name: blockName, attrs: {} }],
+    },
+    status: "published",
+    authorId: author.id,
+    publishedAt: new Date(),
+  });
+}
+
+describe("resolvePublicRoute — block loader dev-fatal escalation (#1600)", () => {
+  const original = process.env.PLUMIX_DEV;
+  afterEach(() => {
+    if (original === undefined) delete process.env.PLUMIX_DEV;
+    else process.env.PLUMIX_DEV = original;
+  });
+
+  test("dev gate on: a throwing loader fails to the dev error page naming the block", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, throwingLoaderPlugin],
+      theme: throwingLoaderTheme,
+    });
+    await seedLoaderPost(h, "acme/throwing-loader");
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/with-loader"),
+    );
+
+    expect(response.status).toBe(500);
+    const body = await response.text();
+    // The standalone dev page, not the silently-degraded block.
+    expect(body).toContain("plumix-dev-error");
+    // It names the culprit block and surfaces the loader's own message.
+    expect(body).toContain("acme/throwing-loader");
+    expect(body).toContain("loader kaboom");
+    // The block never rendered its degraded fallback — the page is fatal.
+    expect(body).not.toContain("degraded");
+  });
+
+  test("dev gate off: the same loader failure stays isolated and the page renders", async () => {
+    delete process.env.PLUMIX_DEV;
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, throwingLoaderPlugin],
+      theme: throwingLoaderTheme,
+    });
+    await seedLoaderPost(h, "acme/throwing-loader");
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/with-loader"),
+    );
+
+    // Per-block isolation: the page renders, the block degrades to `{}`.
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain('data-testid="probe"');
+    expect(body).toContain("degraded");
+    expect(body).not.toContain("plumix-dev-error");
+  });
+
+  test("dev gate on: the failing loader query is surfaced, flagged as failed", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, failingQueryPlugin],
+      theme: throwingLoaderTheme,
+    });
+    await seedLoaderPost(h, "acme/failing-query");
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/with-loader"),
+    );
+
+    expect(response.status).toBe(500);
+    const body = await response.text();
+    expect(body).toContain("plumix-dev-error");
+    // The database section shows the query the loader ran, flagged as failed —
+    // the escalation throws only after the failing span is recorded.
+    expect(body).toContain("select * from broken");
+    expect(body).toContain('data-testid="plumix-dev-error-query-failed"');
   });
 });
 
