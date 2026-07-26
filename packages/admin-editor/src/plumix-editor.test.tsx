@@ -54,6 +54,23 @@ describe("PlumixEditor", () => {
     expect(getByTestId("block-inspector-empty")).toBeDefined();
   });
 
+  test("threads the revisions trigger into the header", () => {
+    const { getByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <PlumixEditor
+          previewUrl="about:blank"
+          origin="http://localhost:3000"
+          defaultValue={{ version: "plumix.v2", blocks: [] }}
+          registry={registry}
+          revisionsTrigger={
+            <button data-testid="revisions-slot">Revisions</button>
+          }
+        />
+      </I18nProvider>,
+    );
+    expect(getByTestId("revisions-slot")).toBeDefined();
+  });
+
   test("read-only mode hides the editing chrome and shows the preview banner", () => {
     const { getByTestId, queryByTestId } = render(
       <I18nProvider i18n={i18n}>

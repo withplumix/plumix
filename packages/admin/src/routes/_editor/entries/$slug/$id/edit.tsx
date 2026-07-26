@@ -20,6 +20,7 @@ import {
 } from "@/editor/resolve-editor-mode.js";
 import { resolvePluginFieldType } from "@/editor/resolve-plugin-field-type.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
+import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { createSaveQueue } from "@/editor/save-queue.js";
 import { seedEntryMetaForm } from "@/editor/seed-entry-meta.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
@@ -50,7 +51,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import * as v from "valibot";
 
 import type { EntryContent } from "@plumix/blocks";
@@ -278,7 +279,9 @@ function EntryEditor({
   onReseed,
 }: EntryEditorProps): ReactNode {
   const { slug, id } = Route.useParams();
-  const navigate = useNavigate();
+  // Route-scoped so the `?revision=<id>` search updater is typed against this
+  // route's search schema (the bare `useNavigate` infers it as `never`).
+  const navigate = Route.useNavigate();
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id, preview: true } }),
   );
@@ -635,6 +638,22 @@ function EntryEditor({
     });
   }, [contentDebouncer, structuralDebouncer, navigate, slug]);
 
+  // `EditorRoute` renders `?revision=<id>` as the read-only `RevisionPreview`,
+  // so previewing a revision is a search-param navigation. Mirrors the
+  // plain-form editor's history button.
+  const handleRevisionPreview = useCallback(
+    (revisionId: number): void => {
+      void navigate({ search: (prev) => ({ ...prev, revision: revisionId }) });
+    },
+    [navigate],
+  );
+  const revisionsTrigger = useRevisionsTrigger({
+    entryId: id,
+    enabled: supportsRevisions(entryType),
+    onPreview: handleRevisionPreview,
+    triggerVariant: "icon",
+  });
+
   const templateOptions = useMemo(
     () => (entryTypeName ? namedTemplatesForType(entryTypeName) : []),
     [entryTypeName],
@@ -990,6 +1009,7 @@ function EntryEditor({
       onChange={handleChange}
       documentPanel={documentPanel}
       publish={publishActions}
+      revisionsTrigger={revisionsTrigger}
       overlay={overlay}
       onRefreshBlockLoader={(blockId) =>
         orpc.entry.refreshBlockLoader.call({ id, blockId }).then((r) => r.data)

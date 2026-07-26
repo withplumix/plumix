@@ -84,6 +84,10 @@ interface PlumixEditorProps {
   readonly documentPanel?: ReactNode;
   /** Publish / save-draft / discard wiring for the toolbar (host mutations). */
   readonly publish?: PublishActions;
+  /** Host-rendered "Revisions" affordance for the header, opening the
+   *  revision-history sheet. Kept as a slot so the orpc-backed sheet lives in
+   *  the app; absent when the entry type doesn't support revisions. */
+  readonly revisionsTrigger?: ReactNode;
   /** Host-rendered overlay (e.g. the stale-draft resolution dialog). */
   readonly overlay?: ReactNode;
   /** Re-run the active block's loader(s) server-side (host orpc call). When set,
@@ -127,6 +131,7 @@ export function PlumixEditor({
   onChange,
   documentPanel,
   publish,
+  revisionsTrigger,
   overlay,
   onRefreshBlockLoader,
   previewRefreshToken,
@@ -180,6 +185,7 @@ export function PlumixEditor({
           publish={publish}
           previewLink={previewLink}
           liveUrl={liveUrl}
+          revisionsTrigger={revisionsTrigger}
         />
         <div className="flex min-h-0 flex-1">
           <Sidebar

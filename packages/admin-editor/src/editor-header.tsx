@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
@@ -36,6 +36,8 @@ export interface EditorHeaderProps {
   readonly previewLink?: string;
   /** Public permalink ("View live entry"); absent until first published. */
   readonly liveUrl?: string;
+  /** Host-rendered "Revisions" affordance, placed after undo/redo. */
+  readonly revisionsTrigger?: ReactNode;
 }
 
 /**
@@ -50,6 +52,7 @@ export function EditorHeader({
   publish,
   previewLink,
   liveUrl,
+  revisionsTrigger,
 }: EditorHeaderProps): ReactElement {
   const { i18n } = useLingui();
   const undoAvailable = useEditorStore((s) => canUndo(s.history));
@@ -126,6 +129,7 @@ export function EditorHeader({
         >
           <Redo2 />
         </Button>
+        {revisionsTrigger}
         <Button
           type="button"
           variant="ghost"

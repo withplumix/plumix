@@ -27,6 +27,46 @@ function wrap(child: React.ReactNode) {
   return <QueryClientProvider client={qc}>{child}</QueryClientProvider>;
 }
 
+describe("RevisionsSheet — trigger variants", () => {
+  function renderTrigger(triggerVariant?: "text" | "icon") {
+    return renderWithI18n(
+      wrap(
+        <RevisionsSheet
+          entryId={1}
+          triggerVariant={triggerVariant}
+          fetchPage={() => Promise.resolve({ revisions: [], nextCursor: null })}
+          relativeTime={() => "now"}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
+        />,
+      ),
+    );
+  }
+
+  test("defaults to a labelled text trigger", () => {
+    renderTrigger();
+    const trigger = screen.getByTestId("revisions-sheet-trigger");
+    expect(trigger.textContent).toContain("Revisions");
+  });
+
+  test("the icon variant renders an icon-only trigger with an aria-label", () => {
+    renderTrigger("icon");
+    const trigger = screen.getByTestId("revisions-sheet-trigger");
+    expect(trigger.textContent).toBe("");
+    expect(trigger.getAttribute("aria-label")).toBe("Revisions");
+  });
+
+  test("both variants open the sheet on click", async () => {
+    renderTrigger("icon");
+    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
+    await waitFor(() => {
+      expect(screen.getByTestId("revisions-tab-all")).toBeInTheDocument();
+    });
+  });
+});
+
 describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
   test("renders three tabs (All / Publishes / Autosaves) when open", async () => {
     renderWithI18n(

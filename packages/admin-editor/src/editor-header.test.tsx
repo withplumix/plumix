@@ -102,4 +102,20 @@ describe("EditorHeader", () => {
     fireEvent.click(getByTestId("plumix-editor-publish-button"));
     expect(onPublish).toHaveBeenCalledOnce();
   });
+
+  test("renders the revisions trigger slot when provided; absent otherwise", () => {
+    const { getByTestId, queryByTestId, rerender } = renderHeader({
+      revisionsTrigger: <button data-testid="my-revisions">Revisions</button>,
+    });
+    expect(getByTestId("my-revisions")).toBeDefined();
+
+    rerender(
+      <I18nProvider i18n={i18n}>
+        <EditorProvider initialTree={[]}>
+          <EditorHeader />
+        </EditorProvider>
+      </I18nProvider>,
+    );
+    expect(queryByTestId("my-revisions")).toBeNull();
+  });
 });
