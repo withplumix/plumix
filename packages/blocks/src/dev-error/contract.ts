@@ -22,6 +22,13 @@ export interface DevErrorInfo {
    * the page then shows no hint card at all.
    */
   readonly hints?: readonly DevErrorHint[];
+  /**
+   * The React component stack, when the error came from a component tree — the
+   * client island overlay (#1603) reads it off React's root error callbacks and
+   * the renderer shows it as its own section. Absent on server SSR errors, which
+   * carry no component stack.
+   */
+  readonly componentStack?: string;
 }
 
 /**
