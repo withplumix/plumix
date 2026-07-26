@@ -16,6 +16,7 @@ import { readThrough } from "../cache/read-through.js";
 import { pageTags } from "../cache/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
+import { renderDevErrorPage } from "../dev-error/render.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { exposesHierarchicalUrls } from "../route/compile.js";
 import { extractParams, matchRoute } from "../route/match.js";
@@ -637,28 +638,48 @@ async function renderPublicRoute(
       err: err instanceof Error ? err.message : String(err),
     });
     if (acceptsHtml(ctx.request)) {
-      try {
-        const html = await renderErrorThroughTheme({
-          ctx,
-          theme,
-          document,
-          templateDeps,
-          assetManifest,
-          kind: "server-error",
-          data: { kind: "error", request: ctx.request },
-        });
-        return new Response(html, {
-          status: 500,
-          headers: { "content-type": "text/html; charset=utf-8" },
-        });
-      } catch (templateErr) {
-        ctx.logger.error("error_template_failed", {
-          url: url.href,
-          err:
-            templateErr instanceof Error
-              ? templateErr.message
-              : String(templateErr),
-        });
+      // Dev-only: bypass the theme entirely and serve the standalone dev error
+      // page, which shows the exception and stack and renders even when the
+      // theme is what broke. `process.env.PLUMIX_DEV` is Vite-empty in prod
+      // builds, so this branch and `renderDevErrorPage` tree-shake out —
+      // production keeps the themed 500 below, unchanged. A failing dev-page
+      // render falls through to the plain-text 500 (#1582).
+      if (process.env.PLUMIX_DEV) {
+        try {
+          return new Response(renderDevErrorPage(err), {
+            status: 500,
+            headers: { "content-type": "text/html; charset=utf-8" },
+          });
+        } catch (devErr) {
+          ctx.logger.error("dev_error_page_failed", {
+            url: url.href,
+            err: devErr instanceof Error ? devErr.message : String(devErr),
+          });
+        }
+      } else {
+        try {
+          const html = await renderErrorThroughTheme({
+            ctx,
+            theme,
+            document,
+            templateDeps,
+            assetManifest,
+            kind: "server-error",
+            data: { kind: "error", request: ctx.request },
+          });
+          return new Response(html, {
+            status: 500,
+            headers: { "content-type": "text/html; charset=utf-8" },
+          });
+        } catch (templateErr) {
+          ctx.logger.error("error_template_failed", {
+            url: url.href,
+            err:
+              templateErr instanceof Error
+                ? templateErr.message
+                : String(templateErr),
+          });
+        }
       }
     }
     return new Response("Internal Server Error", {

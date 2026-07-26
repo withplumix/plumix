@@ -2188,3 +2188,73 @@ describe("dispatcher — ctx.fetch tracing", () => {
     expect(globalThis.fetch).toBe(stub);
   });
 });
+
+describe("dispatcher — dev error page", () => {
+  const original = process.env.PLUMIX_DEV;
+  afterEach(() => {
+    if (original === undefined) delete process.env.PLUMIX_DEV;
+    else process.env.PLUMIX_DEV = original;
+  });
+
+  const throwingTheme = defineTheme({
+    templates: [
+      fallback(() => {
+        throw new Error("render kaboom");
+      }),
+    ],
+  });
+
+  test("dev gate on: a throwing template returns the standalone dev error page, not the themed 500", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toBe(
+      "text/html; charset=utf-8",
+    );
+    const body = await response.text();
+    // The standalone dev page — theme-independent, shows the exception.
+    expect(body).toContain("plumix-dev-error");
+    expect(body).toContain("render kaboom");
+    // Not the themed fallback, and not the debug bar.
+    expect(body).not.toContain("Something went wrong while rendering");
+    expect(body).not.toContain("plumix-debug-bar");
+  });
+
+  test("dev page renders even when the theme itself is the culprit", async () => {
+    process.env.PLUMIX_DEV = "1";
+    // A theme whose every template throws stands in for a broken theme; the
+    // dev page must still render because it never re-enters the theme.
+    const brokenTheme = defineTheme({
+      templates: [
+        fallback(() => {
+          throw new TypeError("theme is broken");
+        }),
+      ],
+    });
+    const h = await createDispatcherHarness({ theme: brokenTheme });
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    expect(response.status).toBe(500);
+    const body = await response.text();
+    expect(body).toContain("plumix-dev-error");
+    expect(body).toContain("TypeError");
+    expect(body).toContain("theme is broken");
+  });
+
+  test("dev gate off: a throwing template returns the existing themed 500, unchanged", async () => {
+    delete process.env.PLUMIX_DEV;
+    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toBe(
+      "text/html; charset=utf-8",
+    );
+    const body = await response.text();
+    // The themed fallback, never the dev page.
+    expect(body).toContain("Something went wrong while rendering");
+    expect(body).not.toContain("plumix-dev-error");
+  });
+});

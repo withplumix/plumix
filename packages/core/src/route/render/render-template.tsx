@@ -36,6 +36,7 @@ import {
   templateNodeLabel,
 } from "../../debug-bar/template-node-label.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
+import { escapeHtml } from "../../escape-html.js";
 import { applyCanonical } from "../../seo/canonical.js";
 import { applyHeadMeta } from "../../seo/head-defaults.js";
 import { loadSiteSettings, nonEmpty } from "../../seo/site-settings.js";
@@ -626,13 +627,6 @@ const JSX_ATTR_MAP: Record<string, string> = {
 
 function jsxAttrToHtml(name: string): string {
   return JSX_ATTR_MAP[name] ?? name;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }
 
 function escapeAttr(value: string): string {

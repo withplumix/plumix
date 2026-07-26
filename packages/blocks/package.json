@@ -40,6 +40,10 @@
       "types": "./dist/renderer/index.d.ts",
       "default": "./dist/renderer/index.js"
     },
+    "./dev-error": {
+      "types": "./dist/dev-error/index.d.ts",
+      "default": "./dist/dev-error/index.js"
+    },
     "./island-runtime": {
       "types": "./dist/island-runtime.d.ts",
       "default": "./dist/island-runtime.js"
