@@ -179,7 +179,7 @@ export const DEV_ERROR_CSS = `
   display: block;
   flex: 1;
   min-width: 0;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5625rem 0.75rem;
   text-align: left;
   background: var(--plumix-deverr-surface);
   border: 1px solid var(--plumix-deverr-border);
@@ -231,6 +231,7 @@ export const DEV_ERROR_CSS = `
 
 .plumix-dev-error__frame-loc {
   display: block;
+  margin-top: 0.1875rem;
   overflow: hidden;
   font-family: var(--plumix-deverr-mono);
   font-size: 0.75rem;
