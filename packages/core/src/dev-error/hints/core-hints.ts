@@ -66,6 +66,22 @@ const UNTYPED_MATCHERS: readonly Matcher[] = [
 ];
 
 /**
+ * Runs core's typed and untyped matchers against a caught value and returns the
+ * hints that recognized it (typed first, then untyped), in match order. Pure and
+ * hook-free: the filter subscriber below appends its result to the running list,
+ * and the boot-error path (where no app — and so no hook filter — exists yet)
+ * calls it directly to hint config/registration throws (#1601).
+ */
+export function matchCoreErrorHints(error: unknown): DevErrorHint[] {
+  const matched: DevErrorHint[] = [];
+  for (const match of [...TYPED_MATCHERS, ...UNTYPED_MATCHERS]) {
+    const hint = match(error);
+    if (hint) matched.push(hint);
+  }
+  return matched;
+}
+
+/**
  * Registers core's built-in error-page hints. Wired at `buildApp` time behind
  * the dev gate, at low priority (10) so plugin hints (default priority 100)
  * rank after core's and can prepend to place their own first. Mirrors
@@ -74,18 +90,7 @@ const UNTYPED_MATCHERS: readonly Matcher[] = [
 export function registerCoreErrorHints(hooks: HookRegistry): void {
   hooks.addFilter(
     "error_page:hints",
-    (hints, error) => {
-      const matched: DevErrorHint[] = [];
-      for (const match of TYPED_MATCHERS) {
-        const hint = match(error);
-        if (hint) matched.push(hint);
-      }
-      for (const match of UNTYPED_MATCHERS) {
-        const hint = match(error);
-        if (hint) matched.push(hint);
-      }
-      return [...hints, ...matched];
-    },
+    (hints, error) => [...hints, ...matchCoreErrorHints(error)],
     { plugin: "core", priority: 10 },
   );
 }

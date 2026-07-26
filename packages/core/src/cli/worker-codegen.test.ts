@@ -70,4 +70,27 @@ describe("generateWorkerSource", () => {
     // undefined here doesn't blow up the scheduled invocation.
     expect(source).toContain("if (scheduledHandler) await scheduledHandler");
   });
+
+  test("guards app construction so a dev boot failure serves the dev error page", () => {
+    const source = generateWorkerSource({ configModule: "./config.ts" });
+    // The await is wrapped so a rejected buildApp is caught rather than crashing
+    // the request opaquely.
+    expect(source).toContain("try {");
+    expect(source).toContain("await appPromise");
+    expect(source).toContain("} catch (bootError) {");
+    // Dev-only: the whole branch is gated so it (and the imported renderer)
+    // tree-shakes out of production builds.
+    expect(source).toContain("if (process.env.PLUMIX_DEV)");
+    expect(source).toContain("renderDevBootErrorResponse(bootError)");
+    expect(source).toContain(
+      'import { buildApp, renderDevBootErrorResponse } from "plumix";',
+    );
+  });
+
+  test("rethrows a boot failure in production so the boot path is unchanged", () => {
+    const source = generateWorkerSource({ configModule: "./config.ts" });
+    // With the dev gate statically false in `plumix build`, the catch collapses
+    // to a bare rethrow — identical to having no guard at all.
+    expect(source).toContain("throw bootError;");
+  });
 });
