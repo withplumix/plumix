@@ -222,8 +222,11 @@ export const DEV_ERROR_CSS = `
 
 .plumix-dev-error__frame-fn {
   display: block;
+  overflow: hidden;
   font-size: 0.8125rem;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .plumix-dev-error__frame-loc {

@@ -104,6 +104,25 @@ describe("DevErrorPage", () => {
     );
   });
 
+  test("hides the component stack once resolved frames are present", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{
+          name: "Error",
+          message: "boom",
+          componentStack: "\n    at Counter",
+          frames: [appFrame],
+        }}
+      />,
+    );
+
+    // Frames supersede the component stack, so it isn't rendered alongside them.
+    expect(html).not.toContain(
+      'data-testid="plumix-dev-error-component-stack"',
+    );
+    expect(html).toContain('data-testid="plumix-dev-error-frame"');
+  });
+
   test("renders each frame as a button carrying its absolute file and line", () => {
     const html = renderToStaticMarkup(
       <DevErrorPage

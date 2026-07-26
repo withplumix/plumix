@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { installIslandErrorOverlay } from "./island-overlay.js";
 
@@ -252,6 +252,81 @@ describe("installIslandErrorOverlay", () => {
     window.dispatchEvent(new ErrorEvent("error", { message: "404 img" }));
     await tick();
     expect(host()).toBeNull();
+  });
+
+  test("resolves the raw browser stack into frames via the dev endpoint", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const body =
+        input === "/@plumix-dev-error-stack"
+          ? {
+              frames: [
+                {
+                  functionName: "Counter",
+                  file: "/proj/src/Counter.tsx",
+                  line: 14,
+                  column: 2,
+                  isVendor: false,
+                },
+              ],
+            }
+          : // The excerpt fetch the enhancer fires for the first frame.
+            { file: "/proj/src/Counter.tsx", line: 14, lines: [] };
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const error = new Error("render boom");
+    error.stack =
+      "Error: render boom\n    at Counter (http://localhost:5173/src/Counter.tsx?t=1:1:0)";
+    dispatchHydrationError(error, island("Counter"));
+    // capture → render (raw stack) → POST → resolve → re-render with frames.
+    await tick();
+    await tick();
+    query("plumix-island-overlay-badge")?.click();
+    await tick();
+
+    // The overlay now shows the shared frame view with the mapped location.
+    const frame = query("plumix-dev-error-frame");
+    expect(frame).not.toBeNull();
+    expect(frame?.getAttribute("data-file")).toBe("/proj/src/Counter.tsx");
+    expect(query("plumix-dev-error-stack")).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
+  test("a late frame resolution does not resurrect a torn-down overlay", async () => {
+    let resolveFetch: (value: unknown) => void = () => undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise((resolve) => (resolveFetch = resolve))),
+    );
+
+    const error = new Error("boom");
+    error.stack = "Error: boom\n    at fn (http://localhost:5173/src/a.ts:1:0)";
+    dispatchHydrationError(error, island("Counter"));
+    await tick();
+    expect(host()).not.toBeNull();
+
+    // Tear down while the frame-resolution POST is still in flight.
+    uninstall();
+    uninstall = () => undefined;
+    expect(host()).toBeNull();
+
+    // The POST resolves after teardown — it must not remount the overlay.
+    resolveFetch({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          frames: [
+            { functionName: "fn", file: "/src/a.ts", line: 1, isVendor: false },
+          ],
+        }),
+    });
+    await tick();
+    await tick();
+    expect(host()).toBeNull();
+
+    vi.unstubAllGlobals();
   });
 
   test("uninstall removes the host and stops capturing", async () => {

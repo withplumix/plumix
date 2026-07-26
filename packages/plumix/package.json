@@ -179,6 +179,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@jridgewell/trace-mapping": "^0.3.31",
     "@lingui/core": "catalog:lingui",
     "@lingui/react": "catalog:lingui",
     "@plumix/admin": "workspace:*",

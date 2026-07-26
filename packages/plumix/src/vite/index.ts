@@ -10,6 +10,8 @@ import {
 } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+import type { SourceMapInput } from "@jridgewell/trace-mapping";
+import type { IncomingMessage } from "node:http";
 import type { Plugin, UserConfig } from "vite";
 import { mergeConfig } from "vite";
 
@@ -20,7 +22,10 @@ import type {
   PlumixManifest,
   ResolvedI18n,
 } from "@plumix/core";
-import { DEV_ERROR_SOURCE_ENDPOINT } from "@plumix/blocks/dev-error";
+import {
+  DEV_ERROR_SOURCE_ENDPOINT,
+  DEV_ERROR_STACK_ENDPOINT,
+} from "@plumix/blocks/dev-error";
 import {
   buildManifest,
   collectNamedTemplates,
@@ -41,6 +46,7 @@ import {
 } from "./admin-plugin-bundle.js";
 import { generateClientEntrySource } from "./client-entry-codegen.js";
 import { handleDevErrorSourceRequest } from "./dev-error-source.js";
+import { handleDevErrorStackRequest } from "./dev-error-stack.js";
 import { generateEditorEntrySource } from "./editor-entry-codegen.js";
 import { VitePluginError } from "./errors.js";
 import {
@@ -324,6 +330,39 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
               res.end();
               return;
             }
+            res.setHeader("content-type", "application/json; charset=utf-8");
+            res.end(body);
+          })
+          .catch(() => {
+            res.statusCode = 500;
+            res.end();
+          });
+      });
+      // The client-stack resolver (#1572, #1603): the island error overlay POSTs
+      // its raw browser stack here to get original-source frames, since the
+      // worker (and the browser) can't map the transformed positions — only the
+      // dev server's per-module sourcemaps can. Registered ahead of the worker
+      // proxy, same as the source endpoint above.
+      server.middlewares.use((req, res, next) => {
+        const rawUrl = req.url ?? "";
+        if (req.method !== "POST" || rawUrl !== DEV_ERROR_STACK_ENDPOINT) {
+          next();
+          return;
+        }
+        const lookup = async (url: string) => {
+          const mod = await server.moduleGraph.getModuleByUrl(url);
+          if (!mod) return null;
+          // Vite's `SourceMap` is a valid encoded map at runtime; its type just
+          // diverges from trace-mapping's `SourceMapInput` (encoded vs decoded
+          // `mappings`). The resolver only reads it through `TraceMap`.
+          const map = (mod.transformResult?.map ??
+            null) as SourceMapInput | null;
+          return { map, file: mod.file };
+        };
+        readBody(req)
+          .then((body) => handleDevErrorStackRequest(body, { lookup }))
+          .then(({ status, body }) => {
+            res.statusCode = status;
             res.setHeader("content-type", "application/json; charset=utf-8");
             res.end(body);
           })
@@ -942,6 +981,28 @@ function satisfiesLoose(installed: string, range: string): boolean {
     return rMajor === iMajor && rMinor === iMinor;
   }
   return rMajor === iMajor;
+}
+
+// Read a request body to a string — the dev-error stack endpoint POSTs a small
+// JSON payload, so buffering it whole is fine, bounded so a stray large POST to
+// the dev server can't grow memory unchecked.
+const MAX_DEV_ERROR_BODY_BYTES = 1024 * 1024;
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let bytes = 0;
+    req.on("data", (chunk: Buffer) => {
+      bytes += chunk.length;
+      if (bytes > MAX_DEV_ERROR_BODY_BYTES) {
+        req.destroy();
+        reject(new Error("dev-error request body too large"));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    req.on("error", reject);
+  });
 }
 
 export { assemblePluginAdminBundle } from "./admin-plugin-bundle.js";
