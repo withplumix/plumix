@@ -71,6 +71,7 @@ export {
   GripVertical,
   Group,
   Highlighter,
+  History,
   Image,
   Italic,
   Key,

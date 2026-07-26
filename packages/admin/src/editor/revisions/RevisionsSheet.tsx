@@ -7,7 +7,11 @@ import { Trans } from "@lingui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { Button } from "@plumix/admin-ui/button";
-import { MessageCircle, MessageCircleMore } from "@plumix/admin-ui/icons";
+import {
+  History,
+  MessageCircle,
+  MessageCircleMore,
+} from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import {
   Sheet,
@@ -60,6 +64,10 @@ const M = {
     id: "editor.revisions.sheet.diffAriaLabel",
     message: "View JSON diff",
   }),
+  trigger: defineMessage({
+    id: "editor.revisions.sheet.trigger",
+    message: "Revisions",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 interface RevisionListItem {
@@ -90,6 +98,10 @@ interface DiffSnapshot {
 
 interface RevisionsSheetProps {
   readonly entryId: number;
+  // Trigger presentation. `text` (default) is the labelled outline button the
+  // plain-form editor uses; `icon` is the compact icon-only button for the
+  // visual editor's icon-heavy header.
+  readonly triggerVariant?: "text" | "icon";
   readonly fetchPage: (input: {
     readonly entryId: number;
     readonly cursor: string | null;
@@ -117,6 +129,7 @@ interface RevisionsSheetProps {
 
 export function RevisionsSheet({
   entryId,
+  triggerVariant = "text",
   fetchPage,
   relativeTime,
   fetchRevision,
@@ -124,6 +137,7 @@ export function RevisionsSheet({
   onPreview,
   onSaveMessage,
 }: RevisionsSheetProps): ReactElement {
+  const renderLabel = useLabel();
   const [open, setOpen] = useState(false);
   const query = useInfiniteQuery({
     queryKey: ["entry.revisions", entryId],
@@ -153,13 +167,25 @@ export function RevisionsSheet({
       }}
     >
       <SheetTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          data-testid="revisions-sheet-trigger"
-        >
-          <Trans id="editor.revisions.sheet.trigger" message="Revisions" />
-        </Button>
+        {triggerVariant === "icon" ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            data-testid="revisions-sheet-trigger"
+            aria-label={renderLabel(M.trigger)}
+          >
+            <History />
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            data-testid="revisions-sheet-trigger"
+          >
+            <Trans id="editor.revisions.sheet.trigger" message="Revisions" />
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent
         side="right"
@@ -197,29 +223,34 @@ export function RevisionsSheet({
           );
           return (
             <Tabs defaultValue="all" className="mt-2">
-              <TabsList className="w-full">
-                <TabsTrigger value="all" data-testid="revisions-tab-all">
-                  <Trans id="editor.revisions.sheet.tab.all" message="All" />
-                </TabsTrigger>
-                <TabsTrigger
-                  value="publishes"
-                  data-testid="revisions-tab-publishes"
-                >
-                  <Trans
-                    id="editor.revisions.sheet.tab.publishes"
-                    message="Publishes"
-                  />
-                </TabsTrigger>
-                <TabsTrigger
-                  value="autosaves"
-                  data-testid="revisions-tab-autosaves"
-                >
-                  <Trans
-                    id="editor.revisions.sheet.tab.autosaves"
-                    message="Autosaves"
-                  />
-                </TabsTrigger>
-              </TabsList>
+              {/* The tab strip carries its own horizontal inset so it lines up
+                  with the header (p-4) and the row list (px-4); padding the Tabs
+                  root instead would double up the list's own px-4. */}
+              <div className="px-4">
+                <TabsList className="w-full">
+                  <TabsTrigger value="all" data-testid="revisions-tab-all">
+                    <Trans id="editor.revisions.sheet.tab.all" message="All" />
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="publishes"
+                    data-testid="revisions-tab-publishes"
+                  >
+                    <Trans
+                      id="editor.revisions.sheet.tab.publishes"
+                      message="Publishes"
+                    />
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="autosaves"
+                    data-testid="revisions-tab-autosaves"
+                  >
+                    <Trans
+                      id="editor.revisions.sheet.tab.autosaves"
+                      message="Autosaves"
+                    />
+                  </TabsTrigger>
+                </TabsList>
+              </div>
               <TabsContent value="all">{listPanel}</TabsContent>
               <TabsContent value="publishes">{listPanel}</TabsContent>
               <TabsContent value="autosaves">

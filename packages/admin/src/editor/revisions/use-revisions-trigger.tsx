@@ -8,6 +8,9 @@ import { useQueryClient } from "@tanstack/react-query";
 interface UseRevisionsTriggerInput {
   readonly entryId: number;
   readonly enabled: boolean;
+  // Trigger presentation, forwarded to the sheet. `text` (default) for the
+  // plain-form editor; `icon` for the visual editor's icon header.
+  readonly triggerVariant?: "text" | "icon";
   // Fires when a row body is clicked — caller navigates the editor to
   // preview the chosen revision (`?revision=<id>`). Restore now lives
   // on the preview banner, not the sheet, so the sheet no longer
@@ -22,6 +25,7 @@ export function useRevisionsTrigger({
   entryId,
   enabled,
   onPreview,
+  triggerVariant,
 }: UseRevisionsTriggerInput): ReactNode {
   const queryClient = useQueryClient();
   const { formatRelative } = useFormatters();
@@ -30,6 +34,7 @@ export function useRevisionsTrigger({
     return (
       <RevisionsSheet
         entryId={entryId}
+        triggerVariant={triggerVariant}
         relativeTime={formatRelative}
         fetchPage={({ entryId, cursor }) =>
           orpc.entry.revisions.list.call({ entryId, cursor })
@@ -67,5 +72,12 @@ export function useRevisionsTrigger({
         }}
       />
     );
-  }, [entryId, enabled, onPreview, queryClient, formatRelative]);
+  }, [
+    entryId,
+    enabled,
+    onPreview,
+    triggerVariant,
+    queryClient,
+    formatRelative,
+  ]);
 }

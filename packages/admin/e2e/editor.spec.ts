@@ -1237,6 +1237,29 @@ test.describe("editor revision preview", () => {
         body: entryBody(revisionRow()),
       }),
     );
+    await page.route("**/_plumix/rpc/entry/revisions/list", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          json: {
+            revisions: [
+              {
+                id: 42,
+                title: "Snapshot title",
+                updatedAt: T_REV,
+                authorId: 1,
+                authorName: "Ada Lovelace",
+                authorEmail: "ada@example.test",
+                message: null,
+              },
+            ],
+            nextCursor: null,
+          },
+          meta: [[1, "revisions", 0, "updatedAt"]],
+        }),
+      }),
+    );
   }
 
   test("?revision=N renders the preview banner in read-only mode", async ({
@@ -1266,6 +1289,26 @@ test.describe("editor revision preview", () => {
     await expect(
       page.getByTestId("plumix-editor-publish-button"),
     ).toBeVisible();
+  });
+
+  // Regression guard for #1559: the visual editor's header must carry the
+  // revision-history trigger (it was dropped in the Puck-removal refactor), and
+  // selecting a row must open that revision via `?revision=<id>`.
+  test("the header Revisions button opens the sheet and a row previews a revision", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    await page.goto("entries/posts/1/edit");
+    const trigger = page.getByTestId("revisions-sheet-trigger");
+    // The visual editor uses the compact icon variant (an icon-only button
+    // labelled via aria-label), not the plain-form's text button — guards
+    // against the wiring dropping `triggerVariant: "icon"`.
+    await expect(trigger).toHaveAttribute("aria-label", "Revisions");
+    await trigger.click();
+    await expect(page.getByTestId("revisions-sheet-list")).toBeVisible();
+    await page.getByTestId("revisions-sheet-item-42-select").click();
+    await expect.poll(() => page.url()).toContain("revision=42");
+    await expect(page.getByTestId("revision-preview-banner")).toBeVisible();
   });
 });
 
