@@ -29,16 +29,26 @@ export function EditorProvider({
   device,
   zoom,
   breakpoints,
+  starterOpen,
   children,
 }: {
   readonly initialTree?: readonly BlockNode[];
   readonly device?: EditorDevice;
   readonly zoom?: number;
   readonly breakpoints?: ThemeBreakpoints;
+  /** Seeds the starter picker open (once) — the host sets this for a blank
+   *  entry that has eligible starters. */
+  readonly starterOpen?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
   const [store] = useState<EditorStoreApi>(() =>
-    createEditorStore({ tree: initialTree, device, zoom, breakpoints }),
+    createEditorStore({
+      tree: initialTree,
+      device,
+      zoom,
+      breakpoints,
+      starterOpen,
+    }),
   );
   const loaderPushRef = useRef<LoaderDataPush | null>(null);
 

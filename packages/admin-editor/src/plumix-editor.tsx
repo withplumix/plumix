@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactElement, ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Trans } from "@lingui/react";
 
 import type {
@@ -40,6 +40,8 @@ import {
   useEditorStore,
   useEditorStoreApi,
 } from "./provider.js";
+import { selectStarterPatterns } from "./select-starter-patterns.js";
+import { StarterModal } from "./starter-modal.js";
 import { StylesTab } from "./styles-tab.js";
 
 const NO_CAPABILITIES: ReadonlySet<string> = new Set();
@@ -57,6 +59,10 @@ interface PlumixEditorProps {
   readonly capabilities?: ReadonlySet<string>;
   /** Theme + plugin patterns offered in the inserter alongside the blocks. */
   readonly patterns?: readonly InserterPattern[];
+  /** The entry type being authored (e.g. `"post"`). Selects which `patterns`
+   *  qualify as starters for the blank-entry picker; without it, only
+   *  type-agnostic starters are offered. */
+  readonly entryType?: string;
   /** Theme breakpoints sizing the device-switch canvas widths. */
   readonly breakpoints?: ThemeBreakpoints;
   /** Theme tokens offered in the Styles tab's token-or-custom controls. */
@@ -119,6 +125,7 @@ export function PlumixEditor({
   registry,
   capabilities = NO_CAPABILITIES,
   patterns,
+  entryType,
   breakpoints,
   tokens,
   readOnly = false,
@@ -137,6 +144,14 @@ export function PlumixEditor({
   previewRefreshToken,
   resolvePluginFieldType,
 }: PlumixEditorProps): ReactElement {
+  // Starter patterns eligible for this entry type, offered to a blank entry.
+  const starterCandidates = useMemo(
+    () => selectStarterPatterns(patterns ?? [], entryType),
+    [patterns, entryType],
+  );
+  const seedStarterOpen =
+    (defaultValue?.blocks.length ?? 0) === 0 && starterCandidates.length > 0;
+
   if (readOnly) {
     return (
       <EditorProvider
@@ -164,6 +179,7 @@ export function PlumixEditor({
     <EditorProvider
       initialTree={defaultValue?.blocks}
       breakpoints={breakpoints}
+      starterOpen={seedStarterOpen}
     >
       {/* shadcn sidebar-16 pattern: a flex-col provider with a full-width
           header, then a flex row whose offcanvas rails (position: fixed) are
@@ -223,7 +239,7 @@ export function PlumixEditor({
             </Tabs>
           </Sidebar>
           <SidebarInset className="min-w-0">
-            <EditorToolbar />
+            <EditorToolbar hasStarters={starterCandidates.length > 0} />
             <CanvasFrame
               previewUrl={previewUrl}
               origin={origin}
@@ -243,6 +259,7 @@ export function PlumixEditor({
       </SidebarProvider>
       <EditorShortcuts />
       <JsonSourceDialog />
+      <StarterModal candidates={starterCandidates} />
       {overlay}
       {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}
     </EditorProvider>

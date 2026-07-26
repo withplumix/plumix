@@ -110,6 +110,9 @@ export interface EditorState {
   /** Whether the read-only JSON source dialog is open (header's source-code
    *  action opens it). */
   readonly jsonOpen: boolean;
+  /** Whether the starter-pattern picker is open. Seeded true for a blank entry
+   *  that has eligible starters; re-openable from the toolbar while empty. */
+  readonly starterOpen: boolean;
 }
 
 export interface EditorActions {
@@ -208,6 +211,7 @@ export interface EditorActions {
   toggleXray: () => void;
   setRightPanel: (panel: RightPanel) => void;
   setJsonOpen: (open: boolean) => void;
+  setStarterOpen: (open: boolean) => void;
   /** Set (or clear, with an empty string) a block's Layers-tree instance name. */
   setBlockLabel: (id: string, label: string) => void;
   /** Re-enable fit-to-width (the toolbar's "Fit" action). Also recenters. */
@@ -385,7 +389,10 @@ export type EditorStoreApi = ReturnType<typeof createEditorStore>;
 
 export function createEditorStore(
   initial?: Partial<
-    Pick<EditorState, "tree" | "device" | "zoom" | "breakpoints">
+    Pick<
+      EditorState,
+      "tree" | "device" | "zoom" | "breakpoints" | "starterOpen"
+    >
   >,
 ) {
   return createStore<EditorStore>((set) => ({
@@ -407,6 +414,7 @@ export function createEditorStore(
     history: initHistory(initial?.tree ?? []),
     rightPanel: "block",
     jsonOpen: false,
+    starterOpen: initial?.starterOpen ?? false,
 
     // Raw seed/programmatic setter — intentionally does not record history
     // (user edits go through insert/move/updateBlockAttrs).
@@ -702,6 +710,7 @@ export function createEditorStore(
     toggleXray: () => set((s) => ({ xray: !s.xray })),
     setRightPanel: (rightPanel) => set({ rightPanel }),
     setJsonOpen: (jsonOpen) => set({ jsonOpen }),
+    setStarterOpen: (starterOpen) => set({ starterOpen }),
     enableZoomFit: () => set({ zoomFit: true }),
     setPan: (panX, panY) => set({ panX, panY, zoomFit: false }),
     setView: ({ zoom, panX, panY }) =>

@@ -4,6 +4,7 @@ import { I18nProvider } from "@lingui/react";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
+import type { BlockNode } from "@plumix/blocks";
 import { SidebarProvider } from "@plumix/admin-ui/sidebar";
 
 import { EditorHeader } from "./editor-header.js";
@@ -26,12 +27,15 @@ function Capture(): null {
   return null;
 }
 
-function renderToolbar(): ReturnType<typeof render> {
+function renderToolbar(options?: {
+  readonly hasStarters?: boolean;
+  readonly tree?: readonly BlockNode[];
+}): ReturnType<typeof render> {
   return render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={[]}>
+      <EditorProvider initialTree={options?.tree ?? []}>
         <SidebarProvider>
-          <EditorToolbar />
+          <EditorToolbar hasStarters={options?.hasStarters} />
         </SidebarProvider>
         <EditorShortcuts />
         <Capture />
@@ -71,6 +75,27 @@ describe("EditorToolbar", () => {
     expect(getByTestId("plumix-xray-toggle").getAttribute("data-state")).toBe(
       "on",
     );
+  });
+
+  test("hides the pick-a-starter re-open when there are no starters", () => {
+    const { queryByTestId } = renderToolbar({ hasStarters: false });
+    expect(queryByTestId("plumix-editor-replace-starter")).toBeNull();
+  });
+
+  test("hides the pick-a-starter re-open once the canvas has blocks", () => {
+    const { queryByTestId } = renderToolbar({
+      hasStarters: true,
+      tree: [{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }],
+    });
+    expect(queryByTestId("plumix-editor-replace-starter")).toBeNull();
+  });
+
+  test("re-opens the starter picker from the toolbar while the canvas is empty", () => {
+    const { getByTestId } = renderToolbar({ hasStarters: true });
+
+    expect(storeApi?.getState().starterOpen).toBe(false);
+    fireEvent.click(getByTestId("plumix-editor-replace-starter"));
+    expect(storeApi?.getState().starterOpen).toBe(true);
   });
 });
 

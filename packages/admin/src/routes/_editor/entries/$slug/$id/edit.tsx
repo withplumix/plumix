@@ -999,6 +999,7 @@ function EntryEditor({
       registry={registry}
       capabilities={capabilitySet}
       patterns={patterns}
+      entryType={entryTypeName}
       breakpoints={breakpoints}
       tokens={themeTokens}
       previewLink={shareUrl}

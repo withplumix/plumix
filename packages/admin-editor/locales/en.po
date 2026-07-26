@@ -649,6 +649,16 @@ msgid "editor.catalog.patterns"
 msgstr "Patterns"
 
 #. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.pickStarter"
+msgstr "Pick a starter…"
+
+#. js-lingui-explicit-id
+#: src/starter-modal.tsx
+msgid "starterModal.description"
+msgstr "Pick a starting layout, or begin from a blank canvas."
+
+#. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.video.input.playsinline.label"
 msgstr "Plays inline (iOS)"
@@ -819,6 +829,16 @@ msgid "block.core.columns.input.stackAt.label"
 msgstr "Stack columns at"
 
 #. js-lingui-explicit-id
+#: src/starter-modal.tsx
+msgid "starterModal.title"
+msgstr "Start from a pattern"
+
+#. js-lingui-explicit-id
+#: src/starter-modal.tsx
+msgid "starterModal.startBlank"
+msgstr "Start from blank"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.strikethrough"
 msgstr "Strikethrough"
@@ -884,7 +904,7 @@ msgid "editor.styles.textShadow"
 msgstr "Text shadow"
 
 #. js-lingui-explicit-id
-#: src/canvas-frame.tsx
+#: src/use-canvas-drag.ts
 msgid "editor.canvas.cantPlaceHere"
 msgstr "This block can't be placed here."
 
