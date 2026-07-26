@@ -25,6 +25,80 @@ export interface DevErrorInfo {
 }
 
 /**
+ * The request-scoped context the server dev error page shows below the stack
+ * (#1598): the request itself, the entity/template that resolved, the executed
+ * queries, the timeline of spans, and the app/environment facts. Core builds it
+ * from the same request-scoped collectors the debug bar reads and passes it in.
+ *
+ * Absent on the surfaces that have no request context — the client island
+ * overlay and the boot-error fallback — where the page degrades to just the
+ * exception, hints, and stack. Each field also degrades on its own: an empty
+ * {@link queries}/{@link timeline} renders an explicit "nothing recorded" note
+ * rather than a blank gap.
+ */
+export interface DevErrorContext {
+  readonly request: DevErrorRequestInfo;
+  readonly route: DevErrorRoute;
+  readonly queries: readonly DevErrorQuery[];
+  readonly timeline: DevErrorTimeline;
+  /** Static app/environment facts (site, origin, locale, wired slots, plugins). */
+  readonly app: readonly DevErrorFact[];
+}
+
+/** The request as the router saw it — method, full URL, and every header. */
+export interface DevErrorRequestInfo {
+  readonly method: string;
+  readonly url: string;
+  readonly headers: readonly DevErrorFact[];
+}
+
+/**
+ * What the request resolved to render. Both optional: an error before (or
+ * instead of) resolution — a 404, a boot failure, a theme that threw before a
+ * node matched — leaves them unset, and the section shows an empty note.
+ */
+export interface DevErrorRoute {
+  /** The resolved entity, e.g. `entry #12` or `archive: post`. */
+  readonly entity?: string;
+  /** The template node that matched, when one did. */
+  readonly template?: string;
+}
+
+/** One executed query — its SQL, its timing, and whether it was the one that threw. */
+export interface DevErrorQuery {
+  readonly sql: string;
+  /** Round-trip time; absent for a statement timed only as part of a batch. */
+  readonly durationMs?: number;
+  /** True for the query whose span errored — the failing query the page flags. */
+  readonly failed: boolean;
+}
+
+/** The request's span waterfall, flattened for a zero-JS bar chart. */
+export interface DevErrorTimeline {
+  readonly rows: readonly DevErrorTimelineRow[];
+  /** Window span (latest end − earliest start), the denominator for bar widths. */
+  readonly totalMs: number;
+}
+
+/** One span flattened into a waterfall row. */
+export interface DevErrorTimelineRow {
+  readonly name: string;
+  /** Nesting depth; 0 for a root span. */
+  readonly depth: number;
+  /** Start offset from the window start, in ms — positions the bar. */
+  readonly offsetMs: number;
+  readonly durationMs: number;
+  /** True when this span errored — flags where the request died. */
+  readonly failed: boolean;
+}
+
+/** A labeled fact — a request header, or one app/environment line. */
+export interface DevErrorFact {
+  readonly label: string;
+  readonly value: string;
+}
+
+/**
  * One "how to fix" hint. `title` is a short imperative ("Run your migrations");
  * `body` explains; `docs` links out to further reading. Plain strings — a
  * dev-only, English surface matching the framework's error-message voice, not

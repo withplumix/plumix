@@ -1,6 +1,14 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 
-import type { DevErrorFrame, DevErrorHint, DevErrorInfo } from "./contract.js";
+import type {
+  DevErrorContext,
+  DevErrorFact,
+  DevErrorFrame,
+  DevErrorHint,
+  DevErrorInfo,
+  DevErrorQuery,
+  DevErrorTimeline,
+} from "./contract.js";
 import {
   commonBaseDir,
   DEV_ERROR_SOURCE_ENDPOINT,
@@ -20,8 +28,15 @@ import {
  */
 export function DevErrorPage({
   error,
+  context,
 }: {
   readonly error: DevErrorInfo;
+  /**
+   * The request-scoped context sections (#1598). Present on the server page,
+   * absent on the client overlay and the boot-error fallback — the page then
+   * shows just the exception, hints, and stack.
+   */
+  readonly context?: DevErrorContext;
 }): ReactElement {
   const frames = error.frames ?? [];
   const appFrames = frames.filter((frame) => !frame.isVendor);
@@ -113,8 +128,231 @@ export function DevErrorPage({
           </pre>
         </section>
       )}
+      {context ? <ContextSections context={context} /> : null}
     </div>
   );
+}
+
+/**
+ * The request-scoped context, read from the same collectors the debug bar uses
+ * but rendered by this page's own sections — the debug bar is never shown here.
+ * Each section degrades on its own: the request always has a method and URL, so
+ * it always renders; the data-driven ones show an explicit empty note when
+ * their collector recorded nothing.
+ */
+function ContextSections({
+  context,
+}: {
+  readonly context: DevErrorContext;
+}): ReactElement {
+  return (
+    <div className="plumix-dev-error__context">
+      <RequestSection context={context} />
+      <RouteSection context={context} />
+      <DatabaseSection queries={context.queries} />
+      <TimelineSection timeline={context.timeline} />
+      <ContextSection id="app" title="Application">
+        <FactList facts={context.app} />
+      </ContextSection>
+    </div>
+  );
+}
+
+function RequestSection({
+  context,
+}: {
+  readonly context: DevErrorContext;
+}): ReactElement {
+  const { request } = context;
+  return (
+    <ContextSection id="request" title="Request">
+      <FactList
+        facts={[
+          { label: "Method", value: request.method },
+          { label: "URL", value: request.url },
+        ]}
+      />
+      {request.headers.length > 0 ? (
+        <>
+          <h3 className="plumix-dev-error__subhead">Headers</h3>
+          <FactList facts={request.headers} />
+        </>
+      ) : null}
+    </ContextSection>
+  );
+}
+
+function RouteSection({
+  context,
+}: {
+  readonly context: DevErrorContext;
+}): ReactElement {
+  const { entity, template } = context.route;
+  if (entity === undefined && template === undefined) {
+    return (
+      <ContextSection id="route" title="Route">
+        <EmptyNote>No route resolved.</EmptyNote>
+      </ContextSection>
+    );
+  }
+  return (
+    <ContextSection id="route" title="Route">
+      <FactList
+        facts={[
+          { label: "Entity", value: entity ?? "—" },
+          { label: "Template", value: template ?? "—" },
+        ]}
+      />
+    </ContextSection>
+  );
+}
+
+function DatabaseSection({
+  queries,
+}: {
+  readonly queries: readonly DevErrorQuery[];
+}): ReactElement {
+  return (
+    <ContextSection
+      id="database"
+      title={
+        queries.length > 0
+          ? `Database — ${queries.length} ${queries.length === 1 ? "query" : "queries"}`
+          : "Database"
+      }
+    >
+      {queries.length === 0 ? (
+        <EmptyNote>No queries recorded.</EmptyNote>
+      ) : (
+        <ol className="plumix-dev-error__queries">
+          {queries.map((query, index) => (
+            <li
+              key={`${index}:${query.sql}`}
+              className={
+                query.failed
+                  ? "plumix-dev-error__query plumix-dev-error__query--failed"
+                  : "plumix-dev-error__query"
+              }
+            >
+              <code className="plumix-dev-error__sql">{query.sql}</code>
+              <span className="plumix-dev-error__query-meta">
+                {query.failed ? (
+                  <span
+                    className="plumix-dev-error__badge"
+                    data-testid="plumix-dev-error-query-failed"
+                  >
+                    failed
+                  </span>
+                ) : null}
+                {query.durationMs !== undefined ? (
+                  <span className="plumix-dev-error__query-ms">
+                    {query.durationMs}ms
+                  </span>
+                ) : null}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </ContextSection>
+  );
+}
+
+function TimelineSection({
+  timeline,
+}: {
+  readonly timeline: DevErrorTimeline;
+}): ReactElement {
+  if (timeline.rows.length === 0) {
+    return (
+      <ContextSection id="timeline" title="Timeline">
+        <EmptyNote>No spans recorded.</EmptyNote>
+      </ContextSection>
+    );
+  }
+  // Guard against a zero window so the bar math never divides by zero.
+  const total = timeline.totalMs || 1;
+  return (
+    <ContextSection id="timeline" title={`Timeline — ${timeline.totalMs}ms`}>
+      <ol className="plumix-dev-error__spans">
+        {timeline.rows.map((row, index) => (
+          <li
+            key={`${index}:${row.name}`}
+            className={
+              row.failed
+                ? "plumix-dev-error__span plumix-dev-error__span--failed"
+                : "plumix-dev-error__span"
+            }
+          >
+            <span
+              className="plumix-dev-error__span-name"
+              style={{ paddingLeft: `${row.depth * 0.75}rem` }}
+            >
+              {row.name}
+            </span>
+            <span className="plumix-dev-error__span-track">
+              <span
+                className="plumix-dev-error__span-bar"
+                style={{
+                  marginLeft: `${(row.offsetMs / total) * 100}%`,
+                  width: `${Math.max((row.durationMs / total) * 100, 1)}%`,
+                }}
+              />
+            </span>
+            <span className="plumix-dev-error__span-ms">
+              {row.durationMs}ms
+            </span>
+          </li>
+        ))}
+      </ol>
+    </ContextSection>
+  );
+}
+
+function ContextSection({
+  id,
+  title,
+  children,
+}: {
+  readonly id: string;
+  readonly title: string;
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <section
+      className="plumix-dev-error__section"
+      data-testid={`plumix-dev-error-${id}`}
+      aria-label={title}
+    >
+      <h2 className="plumix-dev-error__section-title">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function FactList({
+  facts,
+}: {
+  readonly facts: readonly DevErrorFact[];
+}): ReactElement {
+  return (
+    <dl className="plumix-dev-error__facts">
+      {facts.map((fact, index) => (
+        <div key={`${index}:${fact.label}`} className="plumix-dev-error__fact">
+          <dt className="plumix-dev-error__fact-label">{fact.label}</dt>
+          <dd className="plumix-dev-error__fact-value">{fact.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function EmptyNote({
+  children,
+}: {
+  readonly children: ReactNode;
+}): ReactElement {
+  return <p className="plumix-dev-error__empty">{children}</p>;
 }
 
 function HintCard({ hint }: { readonly hint: DevErrorHint }): ReactElement {

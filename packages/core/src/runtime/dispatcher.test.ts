@@ -2031,7 +2031,7 @@ describe("dispatcher — telemetry consumers", () => {
       expect(seen()).toBeGreaterThan(0);
     });
 
-    test("a disabled bar registers no consumer: dev collects nothing", async () => {
+    test("a disabled bar still collects in dev, so the error page has context (#1574)", async () => {
       process.env.PLUMIX_DEV = "1";
       const { plugin, seen } = spanObserver();
       const h = await createDispatcherHarness({
@@ -2041,7 +2041,10 @@ describe("dispatcher — telemetry consumers", () => {
 
       await h.dispatch(new Request("https://cms.example/"));
 
-      expect(seen()).toBe(0);
+      // Dev telemetry sampling is ensured independently of the debug bar: the
+      // dev error page reads the same collectors, so they must be active even
+      // when the bar is off.
+      expect(seen()).toBeGreaterThan(0);
     });
   });
 });
@@ -2270,6 +2273,29 @@ describe("dispatcher — dev error page", () => {
     // Still the dev page, but with nothing to suggest.
     expect(body).toContain("plumix-dev-error");
     expect(body).not.toContain("plumix-dev-error-hints");
+  });
+
+  test("the dev page shows the request/route/database/timeline/application context", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    const body = await response.text();
+    // The standalone dev page, not the themed 500.
+    expect(body).toContain("plumix-dev-error");
+    // Each context section renders from the request's collected data.
+    expect(body).toContain('data-testid="plumix-dev-error-request"');
+    expect(body).toContain('data-testid="plumix-dev-error-route"');
+    expect(body).toContain('data-testid="plumix-dev-error-database"');
+    expect(body).toContain('data-testid="plumix-dev-error-timeline"');
+    expect(body).toContain('data-testid="plumix-dev-error-app"');
+    // The request section carries the method and full URL.
+    expect(body).toContain("https://cms.example/");
+    // The timeline was collected even though the debug bar isn't configured —
+    // dev sampling is ensured independently of it (#1574).
+    expect(body).not.toContain("No spans recorded");
+    // Still no debug bar on the page.
+    expect(body).not.toContain("plumix-debug-bar");
   });
 
   test("dev gate off: a throwing template returns the existing themed 500, unchanged", async () => {

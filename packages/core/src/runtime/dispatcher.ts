@@ -16,6 +16,7 @@ import { readThrough } from "../cache/read-through.js";
 import { pageTags } from "../cache/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
+import { collectDevErrorContext } from "../dev-error/context.js";
 import { collectDevErrorHints } from "../dev-error/hints/collect.js";
 import { renderDevErrorPage } from "../dev-error/render.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
@@ -651,7 +652,12 @@ async function renderPublicRoute(
           // `error_page:hints` filter (core's typed + untyped matchers, plus
           // any plugin subscribers) and surface them above the stack.
           const hints = collectDevErrorHints(ctx.hooks, err, ctx);
-          return new Response(renderDevErrorPage(err, hints), {
+          // The request/route/database/timeline/application sections, read from
+          // the same request-scoped collectors the debug bar uses (#1598). Dev
+          // sampling is ensured regardless of the debug bar, so these are
+          // populated even when the bar is off.
+          const context = collectDevErrorContext(ctx);
+          return new Response(renderDevErrorPage(err, hints, context), {
             status: 500,
             headers: { "content-type": "text/html; charset=utf-8" },
           });

@@ -1,9 +1,42 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { DevErrorFrame } from "./contract.js";
+import type { DevErrorContext, DevErrorFrame } from "./contract.js";
 import { DEV_ERROR_SOURCE_ENDPOINT } from "./frames.js";
 import { DevErrorPage } from "./index.js";
+
+const fullContext: DevErrorContext = {
+  request: {
+    method: "GET",
+    url: "https://cms.example/blog/hello?draft=1",
+    headers: [
+      { label: "accept", value: "text/html" },
+      { label: "user-agent", value: "vitest" },
+    ],
+  },
+  route: { entity: "entry #12", template: "post: hello" },
+  queries: [
+    { sql: "select * from entries", durationMs: 3, failed: false },
+    { sql: "select * from missing", durationMs: 1, failed: true },
+  ],
+  timeline: {
+    totalMs: 20,
+    rows: [
+      {
+        name: "dispatch",
+        depth: 0,
+        offsetMs: 0,
+        durationMs: 20,
+        failed: false,
+      },
+      { name: "resolve", depth: 1, offsetMs: 2, durationMs: 15, failed: true },
+    ],
+  },
+  app: [
+    { label: "Site name", value: "Demo" },
+    { label: "Origin", value: "https://cms.example" },
+  ],
+};
 
 const appFrame: DevErrorFrame = {
   functionName: "render",
@@ -175,5 +208,129 @@ describe("DevErrorPage", () => {
     );
 
     expect(html).not.toContain('data-testid="plumix-dev-error-hints"');
+  });
+
+  test("renders no context sections when no context is passed", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage error={{ name: "TypeError", message: "boom" }} />,
+    );
+
+    expect(html).not.toContain('data-testid="plumix-dev-error-request"');
+    expect(html).not.toContain('data-testid="plumix-dev-error-database"');
+    expect(html).not.toContain('data-testid="plumix-dev-error-timeline"');
+  });
+
+  test("renders the request section with method, URL, and headers", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        context={fullContext}
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-request"');
+    expect(html).toContain("GET");
+    expect(html).toContain("https://cms.example/blog/hello?draft=1");
+    expect(html).toContain("user-agent");
+    expect(html).toContain("vitest");
+  });
+
+  test("renders the route section with the resolved entity and template", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        context={fullContext}
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-route"');
+    expect(html).toContain("entry #12");
+    expect(html).toContain("post: hello");
+  });
+
+  test("renders each query with its timing and flags the failing one", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        context={fullContext}
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-database"');
+    expect(html).toContain("select * from entries");
+    expect(html).toContain("select * from missing");
+    // Timings are present.
+    expect(html).toContain("3ms");
+    // The failing query carries a flag; the passing one does not.
+    expect(html).toContain('data-testid="plumix-dev-error-query-failed"');
+    expect(html).toContain("plumix-dev-error__query--failed");
+  });
+
+  test("renders the timeline section with a row per span, flagging the failed one", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        context={fullContext}
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-timeline"');
+    expect(html).toContain("dispatch");
+    expect(html).toContain("resolve");
+    expect(html).toContain("plumix-dev-error__span--failed");
+  });
+
+  test("renders the application section from its facts", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        context={fullContext}
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-app"');
+    expect(html).toContain("Site name");
+    expect(html).toContain("Demo");
+  });
+
+  test("degrades each section gracefully when its collector had no data", () => {
+    const empty: DevErrorContext = {
+      request: {
+        method: "GET",
+        url: "https://cms.example/",
+        headers: [],
+      },
+      route: {},
+      queries: [],
+      timeline: { rows: [], totalMs: 0 },
+      app: [],
+    };
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        context={empty}
+      />,
+    );
+
+    // The sections still render (the request always has a method/URL), and the
+    // data-less ones show an explicit empty note rather than a blank gap.
+    expect(html).toContain('data-testid="plumix-dev-error-request"');
+    expect(html).toContain('data-testid="plumix-dev-error-database"');
+    expect(html).toContain('data-testid="plumix-dev-error-timeline"');
+    expect(html).toContain("No queries recorded");
+    expect(html).toContain("No spans recorded");
+    // A failing query flag never appears when there are no queries.
+    expect(html).not.toContain('data-testid="plumix-dev-error-query-failed"');
+  });
+
+  test("does not render the debug bar on the page", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        context={fullContext}
+      />,
+    );
+
+    expect(html).not.toContain("plumix-debug-bar");
   });
 });
