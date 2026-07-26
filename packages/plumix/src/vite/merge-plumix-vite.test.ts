@@ -36,6 +36,34 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
     const merged = result as { plugins?: readonly { name?: string }[] };
     expect(merged.plugins?.map((p) => p.name)).toContain("tailwindcss-probe");
   });
+
+  test("defines process.env.PLUMIX_EDITOR from the dev machine's setting so the worker reads it", async () => {
+    const configPath = join(dir, "plumix.config.mjs");
+    writeFileSync(
+      configPath,
+      `export default {
+        runtime: { name: 'x', buildFetchHandler: () => () => new Response('ok') },
+        database: { kind: 'x' },
+        auth: { passkey: {} },
+      };`,
+      "utf8",
+    );
+    const previous = process.env.PLUMIX_EDITOR;
+    process.env.PLUMIX_EDITOR = "cursor";
+    try {
+      const plugin = plumix({ configFile: configPath });
+      const result = await (
+        plugin.config as (userConfig: unknown, env: unknown) => Promise<unknown>
+      )({ root: dir }, { command: "serve", mode: "development" });
+      const define = (result as { define?: Record<string, string> }).define;
+      expect(define?.["process.env.PLUMIX_EDITOR"]).toBe(
+        JSON.stringify("cursor"),
+      );
+    } finally {
+      if (previous === undefined) delete process.env.PLUMIX_EDITOR;
+      else process.env.PLUMIX_EDITOR = previous;
+    }
+  });
 });
 
 describe("plumix() vite plugin — island serialize virtual module", () => {

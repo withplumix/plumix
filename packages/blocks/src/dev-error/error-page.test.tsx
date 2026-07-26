@@ -133,6 +133,52 @@ describe("DevErrorPage", () => {
     expect(html.indexOf("react-dom/server.js")).toBeGreaterThan(detailsAt);
   });
 
+  test("renders an open-in-editor link per frame, using the resolved editor template", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{
+          name: "TypeError",
+          message: "boom",
+          frames: [appFrame, vendorFrame],
+        }}
+        editor="vscode://file/{file}:{line}:{column}"
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-open"');
+    // The app frame links to its file at its line/column in the editor.
+    expect(html).toContain('href="vscode://file//proj/src/theme.tsx:12:7"');
+    // The vendor frame gets a link too, inside its collapsed <details>.
+    expect(html).toContain(
+      "vscode://file//proj/node_modules/react-dom/server.js:100:5",
+    );
+  });
+
+  test("honors a custom {file}/{line}/{column} editor format string", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "TypeError", message: "boom", frames: [appFrame] }}
+        editor="myeditor://open?path={file}&line={line}&col={column}"
+      />,
+    );
+
+    // React serializes `&` in an attribute as `&amp;`; the browser decodes it
+    // back to `&` when following the link.
+    expect(html).toContain(
+      'href="myeditor://open?path=/proj/src/theme.tsx&amp;line=12&amp;col=7"',
+    );
+  });
+
+  test("renders no open-in-editor link when no editor is configured", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "TypeError", message: "boom", frames: [appFrame] }}
+      />,
+    );
+
+    expect(html).not.toContain('data-testid="plumix-dev-error-open"');
+  });
+
   test("exposes the source-resolver endpoint and an excerpt panel for the enhancement", () => {
     const html = renderToStaticMarkup(
       <DevErrorPage
