@@ -19,6 +19,16 @@ export const DEV_ERROR_SOURCE_ENDPOINT = "/@plumix-dev-error-source";
  */
 export const DEV_ERROR_STACK_ENDPOINT = "/@plumix-dev-error-stack";
 
+/**
+ * The dev-only endpoint the browser-errors-to-terminal forwarder (#1604) POSTs a
+ * batch of client failures to — uncaught exceptions plus `console.error`/`warn`.
+ * A Vite dev-server middleware (Node-side) sourcemaps each stack and prints the
+ * entries into the `plumix dev` terminal tagged `[browser]`. Shared here so the
+ * middleware (in `plumix/vite`) and the forwarder (in `@plumix/blocks`) agree on
+ * the path.
+ */
+export const DEV_ERROR_TERMINAL_ENDPOINT = "/@plumix-dev-error-terminal";
+
 // The trailing `:line:col` (with an optional closing paren) of a V8 frame.
 // Anchored, with non-overlapping `\d+` runs, so it can only ever scan the tail
 // once — no catch-all `.+` that could backtrack superlinearly on a hostile
