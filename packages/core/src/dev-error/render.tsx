@@ -27,21 +27,58 @@ import { escapeHtml } from "../escape-html.js";
 const ENHANCE_SCRIPT = `(${enhanceDevError.toString()})(document);`;
 
 // Any value can be thrown in JS; a non-`Error` degrades to a named exception
-// carrying its string form. When the exception carried a stack, it is parsed
-// into frames here (in `plumix dev` the stack is already sourcemapped to
-// original `file:line`), so the page shows the frame view; otherwise it falls
-// back to the raw stack.
-function toDevErrorInfo(err: unknown): DevErrorInfo {
+// carrying its string form. Shared by the HTML page and the JSON payload so the
+// two surfaces name and describe an exception identically.
+function toErrorBasics(err: unknown): {
+  name: string;
+  message: string;
+  stack?: string;
+} {
   if (err instanceof Error) {
-    const frames = err.stack ? parseStackFrames(err.stack) : [];
     return {
       name: err.name,
       message: err.message,
-      stack: err.stack,
-      ...(frames.length > 0 ? { frames } : {}),
+      ...(err.stack ? { stack: err.stack } : {}),
     };
   }
   return { name: "UnknownError", message: String(err) };
+}
+
+// When the exception carried a stack, it is parsed into frames here (in `plumix
+// dev` the stack is already sourcemapped to original `file:line`), so the page
+// shows the frame view; otherwise it falls back to the raw stack.
+function toDevErrorInfo(err: unknown): DevErrorInfo {
+  const basics = toErrorBasics(err);
+  const frames = basics.stack ? parseStackFrames(basics.stack) : [];
+  return { ...basics, ...(frames.length > 0 ? { frames } : {}) };
+}
+
+/** The dev-only JSON error payload — the wire shape {@link devErrorJson} returns. */
+export interface DevErrorJson {
+  /** The exception's name, e.g. `TypeError`. */
+  readonly error: string;
+  readonly message: string;
+  readonly stack?: string;
+  readonly hints?: readonly DevErrorHint[];
+}
+
+/**
+ * The dev-only JSON error payload the dispatcher returns for a 5xx on a request
+ * that negotiated away from HTML — an API or fetch call, which would otherwise
+ * get the bare "Internal Server Error" text (#1599). Behind the same dev gate as
+ * {@link renderDevErrorPage}, so it tree-shakes out of production.
+ */
+export function devErrorJson(
+  err: unknown,
+  hints: readonly DevErrorHint[] = [],
+): DevErrorJson {
+  const { name, message, stack } = toErrorBasics(err);
+  return {
+    error: name,
+    message,
+    ...(stack ? { stack } : {}),
+    ...(hints.length > 0 ? { hints } : {}),
+  };
 }
 
 /**
