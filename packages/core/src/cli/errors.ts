@@ -17,7 +17,8 @@ type CliErrorCode =
   | "i18n_verify_drift"
   | "i18n_init_no_package_json"
   | "i18n_init_invalid_package_json"
-  | "tooling_command_no_app";
+  | "tooling_command_no_app"
+  | "deferred_command_no_app";
 
 export class CliError extends Error {
   static {
@@ -199,6 +200,15 @@ export class CliError extends Error {
       "tooling_command_no_app",
       `plumix ${ctx.command}: ctx.app is not available — tooling commands run without a config`,
       "If this command needs the runtime app, dispatch it through the normal config-loading path.",
+      undefined,
+    );
+  }
+
+  static deferredCommandNoApp(ctx: { command: string }): CliError {
+    return new CliError(
+      "deferred_command_no_app",
+      `plumix ${ctx.command}: ctx.app is not available — this command builds the app in its own runtime`,
+      "Read the config from ctx.configPath instead, or clear `deferApp` if the command must consume the pre-built app.",
       undefined,
     );
   }
