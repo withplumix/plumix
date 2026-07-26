@@ -9,6 +9,7 @@ import type {
   TelemetrySnapshot,
   TelemetrySpan,
 } from "../context/telemetry.js";
+import type { DevErrorJson } from "../dev-error/render.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { ConnectedCache } from "./slots.js";
@@ -2311,5 +2312,82 @@ describe("dispatcher — dev error page", () => {
     // The themed fallback, never the dev page.
     expect(body).toContain("Something went wrong while rendering");
     expect(body).not.toContain("plumix-dev-error");
+  });
+});
+
+describe("dispatcher — dev JSON error (non-HTML 5xx)", () => {
+  const original = process.env.PLUMIX_DEV;
+  afterEach(() => {
+    if (original === undefined) delete process.env.PLUMIX_DEV;
+    else process.env.PLUMIX_DEV = original;
+  });
+
+  const throwingTheme = defineTheme({
+    templates: [
+      fallback(() => {
+        throw new Error("render kaboom");
+      }),
+    ],
+  });
+
+  // A request that explicitly negotiates away from HTML — an API/fetch call, as
+  // opposed to a browser navigation. `acceptsHtml` returns false for these, so
+  // they never see the themed page or the standalone dev HTML page.
+  const jsonRequest = () =>
+    new Request("https://cms.example/", {
+      headers: { accept: "application/json" },
+    });
+
+  test("dev gate on: a non-HTML 5xx returns JSON with error, message, and stack", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const response = await h.dispatch(jsonRequest());
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toBe(
+      "application/json; charset=utf-8",
+    );
+    const body = (await response.json()) as DevErrorJson;
+    expect(body.error).toBe("Error");
+    expect(body.message).toBe("render kaboom");
+    expect(typeof body.stack).toBe("string");
+    expect(body.stack).toContain("render kaboom");
+  });
+
+  test("a recognized error includes its how-to-fix hint", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const noSuchTableTheme = defineTheme({
+      templates: [
+        fallback(() => {
+          throw new Error("D1_ERROR: no such table: posts: SQLITE_ERROR");
+        }),
+      ],
+    });
+    const h = await createDispatcherHarness({ theme: noSuchTableTheme });
+    const response = await h.dispatch(jsonRequest());
+
+    const body = (await response.json()) as DevErrorJson;
+    expect(body.hints?.[0]?.title).toBe("Run your migrations");
+  });
+
+  test("an unrecognized error omits the hints field", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const response = await h.dispatch(jsonRequest());
+
+    const body = (await response.json()) as DevErrorJson;
+    expect(body.hints).toBeUndefined();
+  });
+
+  test("dev gate off: a non-HTML 5xx returns the plain-text response, unchanged", async () => {
+    delete process.env.PLUMIX_DEV;
+    const h = await createDispatcherHarness({ theme: throwingTheme });
+    const response = await h.dispatch(jsonRequest());
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toBe(
+      "text/plain; charset=utf-8",
+    );
+    expect(await response.text()).toBe("Internal Server Error");
   });
 });

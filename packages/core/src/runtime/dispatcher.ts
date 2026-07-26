@@ -18,7 +18,7 @@ import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
 import { collectDevErrorContext } from "../dev-error/context.js";
 import { collectDevErrorHints } from "../dev-error/hints/collect.js";
-import { renderDevErrorPage } from "../dev-error/render.js";
+import { devErrorJson, renderDevErrorPage } from "../dev-error/render.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { exposesHierarchicalUrls } from "../route/compile.js";
 import { extractParams, matchRoute } from "../route/match.js";
@@ -692,6 +692,14 @@ async function renderPublicRoute(
           });
         }
       }
+    } else if (process.env.PLUMIX_DEV) {
+      // Non-HTML request (an API/fetch call): return the exception as JSON so the
+      // caller sees what broke instead of the bare "Internal Server Error" text
+      // (#1599). Same dev gate as the HTML branch above, so it tree-shakes out.
+      return jsonResponse(
+        devErrorJson(err, collectDevErrorHints(ctx.hooks, err, ctx)),
+        { status: 500 },
+      );
     }
     return new Response("Internal Server Error", {
       status: 500,
