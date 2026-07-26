@@ -64,6 +64,10 @@ function parsePort(flag: string, raw: string): number {
 export const devCommand: CommandDefinition = {
   describe:
     "Start the Workers dev server (vite + @cloudflare/vite-plugin). Accepts --port and --inspector-port.",
+  // The worker builds the app itself, so skip the CLI's eager Node-side
+  // `buildApp`: a config/registration failure then renders the dev boot-error
+  // page in the browser instead of aborting the terminal before the server is up.
+  deferApp: true,
   async run(ctx) {
     const { port, inspectorPort } = parseDevArgs(ctx.argv);
     const vite = await import("vite");
