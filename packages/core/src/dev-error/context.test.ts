@@ -114,7 +114,9 @@ describe("collectDevErrorContext", () => {
       "select * from terms",
     ]);
     // A batch that succeeded flags nothing.
-    expect(context.queries.every((q) => !q.failed && !q.batchFailed)).toBe(true);
+    expect(context.queries.every((q) => !q.failed && !q.batchFailed)).toBe(
+      true,
+    );
   });
 
   test("flags a failed batch as a group, not each statement individually", () => {

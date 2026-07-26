@@ -270,8 +270,16 @@ describe("DevErrorPage", () => {
     const batchContext: DevErrorContext = {
       ...fullContext,
       queries: [
-        { sql: "insert into posts values (1)", failed: false, batchFailed: true },
-        { sql: "insert into posts values (1)", failed: false, batchFailed: true },
+        {
+          sql: "insert into posts values (1)",
+          failed: false,
+          batchFailed: true,
+        },
+        {
+          sql: "insert into posts values (1)",
+          failed: false,
+          batchFailed: true,
+        },
       ],
     };
     const html = renderToStaticMarkup(
