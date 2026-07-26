@@ -1,6 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
-import type { DevErrorHint, DevErrorInfo } from "@plumix/blocks/dev-error";
+import type {
+  DevErrorContext,
+  DevErrorHint,
+  DevErrorInfo,
+} from "@plumix/blocks/dev-error";
 import {
   DEV_ERROR_CSS,
   DevErrorPage,
@@ -47,17 +51,24 @@ function toDevErrorInfo(err: unknown): DevErrorInfo {
  * request. When frames were resolved, the client enhancement is inlined so
  * selecting a frame lazy-fetches its highlighted source excerpt. The dispatcher
  * collects `hints` from the `error_page:hints` filter and passes them in; the
- * renderer surfaces them as a "how to fix" card above the stack.
+ * renderer surfaces them as a "how to fix" card above the stack. When the
+ * dispatcher collected the request's context (`collectDevErrorContext`), it is
+ * passed in and rendered as the request / route / database / timeline /
+ * application sections below the stack (#1598); omitted on the boot-error path,
+ * where the page degrades to just the exception, hints, and stack.
  */
 export function renderDevErrorPage(
   err: unknown,
   hints: readonly DevErrorHint[] = [],
+  context?: DevErrorContext,
 ): string {
   const info: DevErrorInfo = {
     ...toDevErrorInfo(err),
     ...(hints.length > 0 ? { hints } : {}),
   };
-  const body = renderToStaticMarkup(<DevErrorPage error={info} />);
+  const body = renderToStaticMarkup(
+    <DevErrorPage error={info} context={context} />,
+  );
   const title = escapeHtml(`${info.name}: ${info.message}`);
   const script =
     info.frames && info.frames.length > 0

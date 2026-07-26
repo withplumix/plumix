@@ -270,4 +270,179 @@ export const DEV_ERROR_CSS = `
   flex: 1 1 auto;
   color: var(--plumix-deverr-fg);
 }
+
+/* Request / route / database / timeline / application context (#1598). */
+.plumix-dev-error__context {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+}
+
+.plumix-dev-error__section {
+  padding: 1.25rem;
+  background: var(--plumix-deverr-surface);
+  border: 1px solid var(--plumix-deverr-border);
+  border-radius: var(--plumix-deverr-radius);
+}
+
+.plumix-dev-error__section-title {
+  margin: 0 0 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--plumix-deverr-muted);
+}
+
+.plumix-dev-error__subhead {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--plumix-deverr-muted);
+}
+
+.plumix-dev-error__empty {
+  margin: 0;
+  color: var(--plumix-deverr-muted);
+  font-size: 0.8125rem;
+}
+
+/* Key/value facts — request lines, headers, app/environment info. */
+.plumix-dev-error__facts {
+  display: grid;
+  grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr);
+  gap: 0.375rem 1rem;
+  margin: 0;
+}
+
+.plumix-dev-error__fact {
+  display: contents;
+}
+
+.plumix-dev-error__fact-label {
+  font-size: 0.8125rem;
+  color: var(--plumix-deverr-muted);
+}
+
+.plumix-dev-error__fact-value {
+  margin: 0;
+  font-family: var(--plumix-deverr-mono);
+  font-size: 0.8125rem;
+  word-break: break-word;
+}
+
+/* Executed queries — SQL, timing, and a flag on the one that threw. */
+.plumix-dev-error__queries {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.plumix-dev-error__query {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--plumix-deverr-bg);
+  border: 1px solid var(--plumix-deverr-border);
+  border-radius: var(--plumix-deverr-radius);
+}
+
+.plumix-dev-error__query--failed {
+  border-color: var(--plumix-deverr-accent);
+  background: color-mix(
+    in srgb,
+    var(--plumix-deverr-accent) 12%,
+    var(--plumix-deverr-bg)
+  );
+}
+
+.plumix-dev-error__sql {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font-family: var(--plumix-deverr-mono);
+  font-size: 0.8125rem;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.plumix-dev-error__query-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.plumix-dev-error__query-ms {
+  font-family: var(--plumix-deverr-mono);
+  font-size: 0.75rem;
+  color: var(--plumix-deverr-muted);
+}
+
+.plumix-dev-error__badge {
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+  background: var(--plumix-deverr-accent);
+  color: #16181d;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Timeline waterfall — a proportional bar per span, drawn with zero JS. */
+.plumix-dev-error__spans {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.plumix-dev-error__span {
+  display: grid;
+  grid-template-columns: minmax(6rem, 10rem) minmax(0, 1fr) 3.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.plumix-dev-error__span-name {
+  font-family: var(--plumix-deverr-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plumix-dev-error__span-track {
+  display: block;
+  height: 0.5rem;
+  background: var(--plumix-deverr-bg);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.plumix-dev-error__span-bar {
+  display: block;
+  height: 100%;
+  background: var(--plumix-deverr-muted);
+  border-radius: 999px;
+}
+
+.plumix-dev-error__span--failed .plumix-dev-error__span-bar {
+  background: var(--plumix-deverr-accent);
+}
+
+.plumix-dev-error__span--failed .plumix-dev-error__span-name {
+  color: var(--plumix-deverr-accent);
+}
+
+.plumix-dev-error__span-ms {
+  font-family: var(--plumix-deverr-mono);
+  color: var(--plumix-deverr-muted);
+  text-align: right;
+}
 `;

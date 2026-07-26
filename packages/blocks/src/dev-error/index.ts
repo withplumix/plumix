@@ -1,8 +1,15 @@
 export type {
+  DevErrorContext,
+  DevErrorFact,
   DevErrorFrame,
   DevErrorHint,
   DevErrorHintDoc,
   DevErrorInfo,
+  DevErrorQuery,
+  DevErrorRequestInfo,
+  DevErrorRoute,
+  DevErrorTimeline,
+  DevErrorTimelineRow,
 } from "./contract.js";
 export { enhanceDevError } from "./enhance.js";
 export { DevErrorPage } from "./error-page.js";

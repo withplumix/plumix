@@ -37,6 +37,7 @@ import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolveMailer } from "../auth/mailer/resolve.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 import { debugBarTelemetryConsumer } from "../debug-bar/consumer.js";
+import { devErrorTelemetryConsumer } from "../dev-error/telemetry-consumer.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { createTelemetryCollector } from "./collector.js";
@@ -533,9 +534,11 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
 }
 
 /**
- * The gate: which registered consumers want this request collected. In dev
- * the debug bar registers first (the `PLUMIX_DEV` branch is Vite-empty in a
- * build, so the bar and its config never reach production bundles); config
+ * The gate: which registered consumers want this request collected. In dev the
+ * debug bar registers first (the `PLUMIX_DEV` branch is Vite-empty in a build,
+ * so the bar and its config never reach production bundles); when the bar is
+ * off, a minimal dev-error consumer takes its place so the collector still
+ * activates and the dev error page has context to show (#1574). Config
  * consumers follow. A consumer without `sample` always votes yes.
  */
 function sampleTelemetryConsumers(
@@ -545,8 +548,9 @@ function sampleTelemetryConsumers(
 ): readonly TelemetryConsumer[] {
   const consumers: TelemetryConsumer[] = [];
   if (process.env.PLUMIX_DEV) {
-    const bar = debugBarTelemetryConsumer(debugBar);
-    if (bar) consumers.push(bar);
+    consumers.push(
+      debugBarTelemetryConsumer(debugBar) ?? devErrorTelemetryConsumer(),
+    );
   }
   consumers.push(...(config?.consumers ?? []));
   return consumers.filter((c) => c.sample?.(ctx) ?? true);
