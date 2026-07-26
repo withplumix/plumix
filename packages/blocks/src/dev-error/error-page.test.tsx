@@ -312,6 +312,37 @@ describe("DevErrorPage", () => {
     expect(html).toContain("plumix-dev-error__query--failed");
   });
 
+  test("flags a failed batch as a group with a note, not each statement as failed", () => {
+    const batchContext: DevErrorContext = {
+      ...fullContext,
+      queries: [
+        {
+          sql: "insert into posts values (1)",
+          failed: false,
+          batchFailed: true,
+        },
+        {
+          sql: "insert into posts values (1)",
+          failed: false,
+          batchFailed: true,
+        },
+      ],
+    };
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        context={batchContext}
+      />,
+    );
+
+    // The group is flagged, not each row as an individual failure.
+    expect(html).toContain('data-testid="plumix-dev-error-query-batch-failed"');
+    expect(html).toContain("plumix-dev-error__query--batch-failed");
+    expect(html).not.toContain('data-testid="plumix-dev-error-query-failed"');
+    // A note explains the atomic-batch caveat.
+    expect(html).toContain('data-testid="plumix-dev-error-batch-note"');
+  });
+
   test("renders the timeline section with a row per span, flagging the failed one", () => {
     const html = renderToStaticMarkup(
       <DevErrorPage

@@ -233,38 +233,64 @@ function DatabaseSection({
       {queries.length === 0 ? (
         <EmptyNote>No queries recorded.</EmptyNote>
       ) : (
-        <ol className="plumix-dev-error__queries">
-          {queries.map((query, index) => (
-            <li
-              key={`${index}:${query.sql}`}
-              className={
-                query.failed
-                  ? "plumix-dev-error__query plumix-dev-error__query--failed"
-                  : "plumix-dev-error__query"
-              }
+        <>
+          <ol className="plumix-dev-error__queries">
+            {queries.map((query, index) => (
+              <li
+                key={`${index}:${query.sql}`}
+                className={queryClassName(query)}
+              >
+                <code className="plumix-dev-error__sql">{query.sql}</code>
+                <span className="plumix-dev-error__query-meta">
+                  {query.failed ? (
+                    <span
+                      className="plumix-dev-error__badge"
+                      data-testid="plumix-dev-error-query-failed"
+                    >
+                      failed
+                    </span>
+                  ) : null}
+                  {query.batchFailed ? (
+                    <span
+                      className="plumix-dev-error__badge plumix-dev-error__badge--muted"
+                      data-testid="plumix-dev-error-query-batch-failed"
+                    >
+                      batch failed
+                    </span>
+                  ) : null}
+                  {query.durationMs !== undefined ? (
+                    <span className="plumix-dev-error__query-ms">
+                      {query.durationMs}ms
+                    </span>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ol>
+          {queries.some((query) => query.batchFailed) ? (
+            <p
+              className="plumix-dev-error__query-note"
+              data-testid="plumix-dev-error-batch-note"
             >
-              <code className="plumix-dev-error__sql">{query.sql}</code>
-              <span className="plumix-dev-error__query-meta">
-                {query.failed ? (
-                  <span
-                    className="plumix-dev-error__badge"
-                    data-testid="plumix-dev-error-query-failed"
-                  >
-                    failed
-                  </span>
-                ) : null}
-                {query.durationMs !== undefined ? (
-                  <span className="plumix-dev-error__query-ms">
-                    {query.durationMs}ms
-                  </span>
-                ) : null}
-              </span>
-            </li>
-          ))}
-        </ol>
+              One statement in this batch threw and rolled back the whole group.
+              A batch is one atomic round-trip, so the driver does not report
+              which statement it was.
+            </p>
+          ) : null}
+        </>
       )}
     </ContextSection>
   );
+}
+
+function queryClassName(query: DevErrorQuery): string {
+  if (query.failed) {
+    return "plumix-dev-error__query plumix-dev-error__query--failed";
+  }
+  if (query.batchFailed) {
+    return "plumix-dev-error__query plumix-dev-error__query--batch-failed";
+  }
+  return "plumix-dev-error__query";
 }
 
 function TimelineSection({

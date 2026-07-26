@@ -113,6 +113,33 @@ describe("collectDevErrorContext", () => {
       "select * from posts",
       "select * from terms",
     ]);
+    // A batch that succeeded flags nothing.
+    expect(context.queries.every((q) => !q.failed && !q.batchFailed)).toBe(
+      true,
+    );
+  });
+
+  test("flags a failed batch as a group, not each statement individually", () => {
+    const telemetry = createTelemetryCollector();
+    // A batch is one atomic round-trip: the driver reports the whole sequence
+    // failed, never which statement threw. So no row is `failed` on its own;
+    // every row carries `batchFailed` instead.
+    expect(() =>
+      telemetry.span("db: batch", (s) => {
+        s.set("db.batch", [
+          { sql: "insert into posts values (1)", params: [] },
+          { sql: "insert into posts values (1)", params: [] },
+        ]);
+        throw new Error("UNIQUE constraint failed: posts.id");
+      }),
+    ).toThrow();
+    const context = collectDevErrorContext(ctxWith({ telemetry }));
+
+    expect(context.queries).toHaveLength(2);
+    for (const query of context.queries) {
+      expect(query.failed).toBe(false);
+      expect(query.batchFailed).toBe(true);
+    }
   });
 
   test("builds a timeline row per span, flagging the failed one", () => {

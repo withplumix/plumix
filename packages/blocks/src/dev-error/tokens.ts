@@ -385,6 +385,23 @@ export const DEV_ERROR_CSS = `
   );
 }
 
+/* A batch that failed as a group — softer than an individual failure, since
+   which statement threw is unknown. */
+.plumix-dev-error__query--batch-failed {
+  border-color: color-mix(
+    in srgb,
+    var(--plumix-deverr-accent) 45%,
+    var(--plumix-deverr-border)
+  );
+}
+
+/* The caveat under a failed batch — one statement threw, which is unknown. */
+.plumix-dev-error__query-note {
+  margin: 0.25rem 0 0;
+  color: var(--plumix-deverr-muted);
+  font-size: 0.8125rem;
+}
+
 .plumix-dev-error__sql {
   flex: 1 1 12rem;
   min-width: 0;
@@ -416,6 +433,12 @@ export const DEV_ERROR_CSS = `
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.plumix-dev-error__badge--muted {
+  background: transparent;
+  color: var(--plumix-deverr-muted);
+  border: 1px solid var(--plumix-deverr-border);
 }
 
 /* Timeline waterfall — a proportional bar per span, drawn with zero JS. */
