@@ -5,6 +5,7 @@ import { Trans, useLingui } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
+  LayoutTemplate,
   Monitor,
   Smartphone,
   SquareDashed,
@@ -76,7 +77,13 @@ export interface PublishActions {
 /** Canvas toolbar above the iframe: the rails toggle on the left, and the
  *  device/zoom controls centered over the canvas. Title, undo/redo, preview and
  *  publish live in the full-width header; blocks are added from the left rail. */
-export function EditorToolbar(): ReactElement {
+export function EditorToolbar({
+  hasStarters = false,
+}: {
+  /** Whether eligible starter patterns exist — gates the re-open affordance
+   *  (shown only while the canvas is still empty). */
+  readonly hasStarters?: boolean;
+}): ReactElement {
   return (
     <header
       // Horizontal inset (px-3) matches the editor header above, so the rails
@@ -100,11 +107,33 @@ export function EditorToolbar(): ReactElement {
           </TooltipContent>
         </Tooltip>
         <XrayToggle />
+        {hasStarters ? <PickStarterButton /> : null}
       </div>
       <DeviceZoomControls />
       {/* Empty flex-1 mirror so the device/zoom cluster stays centered. */}
       <div className="flex-1" aria-hidden />
     </header>
+  );
+}
+
+/** Re-summons the starter picker after a dismissal. Scoped to the empty canvas:
+ *  starters are blank-entry onboarding, so once the author has placed a block
+ *  the affordance retires rather than offer to prepend a layout to real work. */
+function PickStarterButton(): ReactElement | null {
+  const isEmpty = useEditorStore((s) => s.tree.length === 0);
+  const setStarterOpen = useEditorStore((s) => s.setStarterOpen);
+  if (!isEmpty) return null;
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      data-testid="plumix-editor-replace-starter"
+      onClick={() => setStarterOpen(true)}
+    >
+      <LayoutTemplate />
+      <Trans id="editor.toolbar.pickStarter" message="Pick a starter…" />
+    </Button>
   );
 }
 

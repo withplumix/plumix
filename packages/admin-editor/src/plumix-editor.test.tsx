@@ -93,6 +93,73 @@ describe("PlumixEditor", () => {
     expect(queryByTestId("plumix-editor-toolbar")).toBeNull();
     expect(queryByTestId("plumix-editor-left")).toBeNull();
   });
+
+  const starterPatterns = [
+    {
+      name: "starter/hero",
+      title: "Hero start",
+      target: "post-content" as const,
+      entryTypes: ["page"],
+      content: [{ id: "p", name: "core/heading", attrs: { text: "Hi" } }],
+    },
+  ];
+
+  test("opens the starter picker for a blank entry with eligible starters", () => {
+    const { getByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <PlumixEditor
+          previewUrl="about:blank"
+          origin="http://localhost:3000"
+          defaultValue={{ version: "plumix.v2", blocks: [] }}
+          registry={registry}
+          patterns={starterPatterns}
+          entryType="page"
+        />
+      </I18nProvider>,
+    );
+
+    expect(getByTestId("plumix-starter-modal")).toBeDefined();
+    expect(getByTestId("plumix-editor-replace-starter")).toBeDefined();
+  });
+
+  test("leaves the starter picker closed when the entry already has content", () => {
+    const { queryByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <PlumixEditor
+          previewUrl="about:blank"
+          origin="http://localhost:3000"
+          defaultValue={{
+            version: "plumix.v2",
+            blocks: [{ id: "h1", name: "core/heading", attrs: { text: "Hi" } }],
+          }}
+          registry={registry}
+          patterns={starterPatterns}
+          entryType="page"
+        />
+      </I18nProvider>,
+    );
+
+    expect(queryByTestId("plumix-starter-modal")).toBeNull();
+    expect(queryByTestId("plumix-editor-replace-starter")).toBeNull();
+  });
+
+  test("offers no starter picker when no pattern targets this entry type", () => {
+    const { queryByTestId } = render(
+      <I18nProvider i18n={i18n}>
+        <PlumixEditor
+          previewUrl="about:blank"
+          origin="http://localhost:3000"
+          defaultValue={{ version: "plumix.v2", blocks: [] }}
+          registry={registry}
+          patterns={starterPatterns}
+          entryType="product"
+        />
+      </I18nProvider>,
+    );
+
+    expect(queryByTestId("plumix-starter-modal")).toBeNull();
+    expect(queryByTestId("plumix-editor-replace-starter")).toBeNull();
+  });
 });
 
 describe("TreeChangeEmitter", () => {

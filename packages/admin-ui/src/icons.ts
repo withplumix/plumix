@@ -77,6 +77,7 @@ export {
   Key,
   Layout,
   LayoutDashboard,
+  LayoutTemplate,
   Link2,
   Link2Icon,
   List,

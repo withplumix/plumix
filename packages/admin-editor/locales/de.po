@@ -649,6 +649,16 @@ msgid "editor.catalog.patterns"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.pickStarter"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/starter-modal.tsx
+msgid "starterModal.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.video.input.playsinline.label"
 msgstr ""
@@ -819,6 +829,16 @@ msgid "block.core.columns.input.stackAt.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/starter-modal.tsx
+msgid "starterModal.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/starter-modal.tsx
+msgid "starterModal.startBlank"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.strikethrough"
 msgstr ""
@@ -884,7 +904,7 @@ msgid "editor.styles.textShadow"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/canvas-frame.tsx
+#: src/use-canvas-drag.ts
 msgid "editor.canvas.cantPlaceHere"
 msgstr ""
 

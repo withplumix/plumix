@@ -32,6 +32,22 @@ describe("editor store", () => {
     expect([...store.getState().selectedIds]).toEqual(["b"]);
   });
 
+  test("starterOpen defaults closed and is toggled by setStarterOpen", () => {
+    const store = createEditorStore();
+    expect(store.getState().starterOpen).toBe(false);
+
+    store.getState().setStarterOpen(true);
+    expect(store.getState().starterOpen).toBe(true);
+
+    store.getState().setStarterOpen(false);
+    expect(store.getState().starterOpen).toBe(false);
+  });
+
+  test("starterOpen can be seeded open at creation", () => {
+    const store = createEditorStore({ starterOpen: true });
+    expect(store.getState().starterOpen).toBe(true);
+  });
+
   test("additive select extends the set, keeping the latest as active", () => {
     const store = createEditorStore();
 
