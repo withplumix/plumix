@@ -10,6 +10,7 @@ import {
   DevErrorPage,
   enhanceDevError,
   parseStackFrames,
+  resolveEditorTemplate,
 } from "@plumix/blocks/dev-error";
 
 import { escapeHtml } from "../escape-html.js";
@@ -103,8 +104,12 @@ export function renderDevErrorPage(
     ...toDevErrorInfo(err),
     ...(hints.length > 0 ? { hints } : {}),
   };
+  // Resolve the open-in-editor scheme from `PLUMIX_EDITOR` (#1581) so each frame
+  // links to the file at its line in the developer's editor. Vite substitutes
+  // the literal at bundle time (see the plugin's `define`); unset → VS Code.
+  const editor = resolveEditorTemplate(process.env.PLUMIX_EDITOR);
   const body = renderToStaticMarkup(
-    <DevErrorPage error={info} context={context} />,
+    <DevErrorPage error={info} context={context} editor={editor} />,
   );
   const title = escapeHtml(`${info.name}: ${info.message}`);
   const script =

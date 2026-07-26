@@ -148,10 +148,17 @@ export const DEV_ERROR_CSS = `
   list-style: none;
 }
 
+.plumix-dev-error__frame-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+  margin: 0 0 0.25rem;
+}
+
 .plumix-dev-error__frame {
   display: block;
-  width: 100%;
-  margin: 0 0 0.25rem;
+  flex: 1;
+  min-width: 0;
   padding: 0.5rem 0.75rem;
   text-align: left;
   background: var(--plumix-deverr-surface);
@@ -164,6 +171,24 @@ export const DEV_ERROR_CSS = `
 
 .plumix-dev-error__frame:hover {
   border-color: var(--plumix-deverr-accent);
+}
+
+/* Open-in-editor: a compact icon link beside each frame (#1581). */
+.plumix-dev-error__open {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  background: var(--plumix-deverr-surface);
+  border: 1px solid var(--plumix-deverr-border);
+  border-radius: var(--plumix-deverr-radius);
+  color: var(--plumix-deverr-muted);
+}
+
+.plumix-dev-error__open:hover {
+  border-color: var(--plumix-deverr-accent);
+  color: var(--plumix-deverr-accent);
 }
 
 .plumix-dev-error__frame[aria-current="true"] {

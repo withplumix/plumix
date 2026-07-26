@@ -5,6 +5,8 @@ import { pathToFileURL } from "node:url";
 import type {
   CommandDefinition,
   CommandRegistry,
+  PlumixApp,
+  PlumixConfig,
   RuntimeAdapter,
 } from "@plumix/core";
 import { buildApp, CliError } from "@plumix/core";
@@ -129,20 +131,8 @@ export async function run(argv: readonly string[]): Promise<void> {
   if (args.command === "i18n") {
     const command = BUILT_IN_COMMANDS.get("i18n");
     if (!command) throw CliError.unknownCommand({ command: args.command });
-    // Proxy so any future refactor that reads `ctx.app` from i18n fails
-    // loud at the access site rather than silently NPE'ing inside a
-    // method call. The cast is structural (`app` is non-optional on
-    // CommandContext); the runtime guard is the real safety net.
-    const sentinel = new Proxy(
-      {},
-      {
-        get(): never {
-          throw CliError.toolingCommandNoApp({ command: "i18n" });
-        },
-      },
-    ) as never;
     await command.run({
-      app: sentinel,
+      app: appSentinel(() => CliError.toolingCommandNoApp({ command: "i18n" })),
       cwd: args.cwd,
       configPath: "",
       argv: args.rest,
@@ -161,7 +151,7 @@ export async function run(argv: readonly string[]): Promise<void> {
     throw CliError.unknownCommand({ command: args.command });
   }
 
-  const app = await buildApp(loaded.config);
+  const app = await resolveCommandApp(command, loaded.config, args.command);
   await command.run({
     app,
     cwd: args.cwd,
@@ -169,6 +159,41 @@ export async function run(argv: readonly string[]): Promise<void> {
     argv: args.rest,
     runtimeMigrate: runtimeModule.migrate,
   });
+}
+
+/**
+ * The app the command runs against: the eagerly built app, or — when the
+ * command opts out via {@link CommandDefinition.deferApp} — a throwing sentinel.
+ */
+export async function resolveCommandApp(
+  command: CommandDefinition,
+  config: PlumixConfig,
+  commandName: string,
+): Promise<PlumixApp> {
+  if (command.deferApp) {
+    return appSentinel(() =>
+      CliError.deferredCommandNoApp({ command: commandName }),
+    );
+  }
+  return buildApp(config);
+}
+
+// A stand-in `ctx.app` for commands that run without a built app. Any property
+// read throws at the access site — a future refactor that reaches for `ctx.app`
+// fails loud rather than silently NPE'ing inside a method call. `then` is
+// exempt: `await resolveCommandApp(...)` probes it to detect a thenable, and the
+// sentinel must pass through promise machinery unharmed. The cast is structural
+// (`app` is non-optional on CommandContext); the throw is the guard.
+function appSentinel(makeError: () => CliError): PlumixApp {
+  return new Proxy(
+    {},
+    {
+      get(_target, prop): unknown {
+        if (prop === "then") return undefined;
+        throw makeError();
+      },
+    },
+  ) as never;
 }
 
 async function printHelp(args: CliArgs): Promise<void> {

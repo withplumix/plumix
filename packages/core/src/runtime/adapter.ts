@@ -39,6 +39,17 @@ export interface CommandContext {
 
 export interface CommandDefinition {
   readonly describe: string;
+  /**
+   * Skip the CLI's eager, Node-side `buildApp` and hand the command a throwing
+   * `ctx.app` sentinel instead. Set by commands that construct the app in their
+   * own runtime rather than consuming the pre-built one — `dev`, whose worker
+   * builds the app itself, so a config/registration failure surfaces through the
+   * worker's dev boot-error page in the browser instead of rejecting in Node and
+   * aborting the terminal before the dev server is listening. Left unset by
+   * `build`/`deploy`, where the eager build doubles as fail-fast config
+   * validation before a bundle ships.
+   */
+  readonly deferApp?: boolean;
   run(ctx: CommandContext): Promise<void> | void;
 }
 

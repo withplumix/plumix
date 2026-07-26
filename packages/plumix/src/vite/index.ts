@@ -117,6 +117,13 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         "process.env.PLUMIX_DEV": JSON.stringify(
           env.command === "build" ? "" : "1",
         ),
+        // The dev-only open-in-editor scheme (#1581). Substituted from the dev
+        // machine's env at bundle time so the dev worker — whose `process.env`
+        // is empty — can read it when rendering the dev error page. Empty in a
+        // production build, where the whole dev-error path tree-shakes out.
+        "process.env.PLUMIX_EDITOR": JSON.stringify(
+          env.command === "build" ? "" : (process.env.PLUMIX_EDITOR ?? ""),
+        ),
       };
       // `build.manifest: true` makes Vite emit `<outDir>/.vite/manifest.json`,
       // which the worker imports through `virtual:plumix/asset-manifest` so

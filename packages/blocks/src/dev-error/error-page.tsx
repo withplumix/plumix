@@ -9,6 +9,7 @@ import type {
   DevErrorQuery,
   DevErrorTimeline,
 } from "./contract.js";
+import { buildEditorUrl } from "./editor.js";
 import {
   commonBaseDir,
   DEV_ERROR_SOURCE_ENDPOINT,
@@ -29,6 +30,7 @@ import {
 export function DevErrorPage({
   error,
   context,
+  editor,
 }: {
   readonly error: DevErrorInfo;
   /**
@@ -37,6 +39,13 @@ export function DevErrorPage({
    * shows just the exception, hints, and stack.
    */
   readonly context?: DevErrorContext;
+  /**
+   * The resolved open-in-editor URL template (#1581) — from `PLUMIX_EDITOR`,
+   * built by {@link resolveEditorTemplate}. When present, each frame renders an
+   * "Open in editor" link built from it; absent (no editor configured) drops the
+   * link and leaves the frame as a source-viewing button only.
+   */
+  readonly editor?: string;
 }): ReactElement {
   const frames = error.frames ?? [];
   const appFrames = frames.filter((frame) => !frame.isVendor);
@@ -85,7 +94,7 @@ export function DevErrorPage({
             <ol className="plumix-dev-error__app-frames">
               {appFrames.map((frame, index) => (
                 <li key={frameKey(frame, index)}>
-                  <FrameButton frame={frame} base={base} />
+                  <FrameButton frame={frame} base={base} editor={editor} />
                 </li>
               ))}
             </ol>
@@ -101,7 +110,7 @@ export function DevErrorPage({
                 <ol className="plumix-dev-error__vendor-frames">
                   {vendorFrames.map((frame, index) => (
                     <li key={frameKey(frame, index)}>
-                      <FrameButton frame={frame} base={base} />
+                      <FrameButton frame={frame} base={base} editor={editor} />
                     </li>
                   ))}
                 </ol>
@@ -412,26 +421,59 @@ function HintCard({ hint }: { readonly hint: DevErrorHint }): ReactElement {
 function FrameButton({
   frame,
   base,
+  editor,
 }: {
   readonly frame: DevErrorFrame;
   readonly base: string;
+  /** The resolved open-in-editor template; when set, renders the editor link. */
+  readonly editor?: string;
 }): ReactElement {
+  const location = `${relativeFramePath(frame.file, base)}:${frame.line}`;
   return (
-    <button
-      type="button"
-      className="plumix-dev-error__frame"
-      data-plumix-frame=""
-      data-file={frame.file}
-      data-line={String(frame.line)}
-      data-testid="plumix-dev-error-frame"
-    >
-      <span className="plumix-dev-error__frame-fn">
-        {frame.functionName ?? "(anonymous)"}
-      </span>
-      <span className="plumix-dev-error__frame-loc">
-        {relativeFramePath(frame.file, base)}:{frame.line}
-      </span>
-    </button>
+    <div className="plumix-dev-error__frame-row">
+      <button
+        type="button"
+        className="plumix-dev-error__frame"
+        data-plumix-frame=""
+        data-file={frame.file}
+        data-line={String(frame.line)}
+        data-testid="plumix-dev-error-frame"
+      >
+        <span className="plumix-dev-error__frame-fn">
+          {frame.functionName ?? "(anonymous)"}
+        </span>
+        <span className="plumix-dev-error__frame-loc">{location}</span>
+      </button>
+      {editor !== undefined ? (
+        // A plain anchor to the editor's URL scheme — zero-JS, no round-trip
+        // (#1581). The OS hands the `scheme://…` URL to the configured editor.
+        <a
+          className="plumix-dev-error__open"
+          href={buildEditorUrl(editor, frame)}
+          data-testid="plumix-dev-error-open"
+          aria-label={`Open ${location} in your editor`}
+          title="Open in editor"
+        >
+          <svg
+            className="plumix-dev-error__open-icon"
+            viewBox="0 0 16 16"
+            width="16"
+            height="16"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-3M9.5 2.5H14V7M13.5 2.5 7 9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </a>
+      ) : null}
+    </div>
   );
 }
 
