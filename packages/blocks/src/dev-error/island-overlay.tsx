@@ -20,6 +20,7 @@ import { createRoot } from "react-dom/client";
 import type { DevErrorFrame, DevErrorInfo } from "./contract.js";
 import { enhanceDevError } from "./enhance.js";
 import { DevErrorPage } from "./error-page.js";
+import { deriveLabel, detailOf } from "./event-detail.js";
 import { DEV_ERROR_STACK_ENDPOINT } from "./frames.js";
 import { DEV_ERROR_CSS } from "./tokens.js";
 
@@ -380,22 +381,6 @@ function toDevErrorInfo(error: unknown, componentStack?: string): DevErrorInfo {
     };
   }
   return { name: "UnknownError", message: String(error), ...componentPart };
-}
-
-function deriveLabel(element?: HTMLElement): string | undefined {
-  const name = element?.getAttribute("component-export");
-  return name ? `<${name}>` : undefined;
-}
-
-interface ErrorDetail {
-  readonly error?: unknown;
-  readonly element?: HTMLElement;
-  readonly componentStack?: string;
-}
-
-function detailOf(event: Event): ErrorDetail {
-  const detail = (event as CustomEvent<unknown>).detail;
-  return detail !== null && typeof detail === "object" ? detail : {};
 }
 
 // The overlay chrome — a small bottom-left indicator that opens a centered

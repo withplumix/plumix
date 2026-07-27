@@ -25,6 +25,7 @@ import type {
 import {
   DEV_ERROR_SOURCE_ENDPOINT,
   DEV_ERROR_STACK_ENDPOINT,
+  DEV_ERROR_TERMINAL_ENDPOINT,
 } from "@plumix/blocks/dev-error";
 import {
   buildManifest,
@@ -46,7 +47,11 @@ import {
 } from "./admin-plugin-bundle.js";
 import { generateClientEntrySource } from "./client-entry-codegen.js";
 import { handleDevErrorSourceRequest } from "./dev-error-source.js";
-import { handleDevErrorStackRequest } from "./dev-error-stack.js";
+import {
+  handleDevErrorStackRequest,
+  resolveClientStack,
+} from "./dev-error-stack.js";
+import { createTerminalForwarder } from "./dev-error-terminal.js";
 import { generateEditorEntrySource } from "./editor-entry-codegen.js";
 import { VitePluginError } from "./errors.js";
 import {
@@ -130,6 +135,15 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         "process.env.PLUMIX_EDITOR": JSON.stringify(
           env.command === "build" ? "" : (process.env.PLUMIX_EDITOR ?? ""),
         ),
+        // The dev-only browser-errors-to-terminal level (#1604). Substituted from
+        // the dev machine's env at bundle time so the islands runtime knows what
+        // to forward; empty in a production build, where the whole forwarder
+        // tree-shakes out under the `PLUMIX_DEV` gate.
+        "process.env.PLUMIX_FORWARD_ERRORS": JSON.stringify(
+          env.command === "build"
+            ? ""
+            : (process.env.PLUMIX_FORWARD_ERRORS ?? ""),
+        ),
       };
       // `build.manifest: true` makes Vite emit `<outDir>/.vite/manifest.json`,
       // which the worker imports through `virtual:plumix/asset-manifest` so
@@ -200,6 +214,13 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         build,
         environments,
         resolve: resolveOpts,
+        // Plumix ships its own dev browser-errors-to-terminal forwarder (#1604)
+        // — tagged `[browser]`, collapsing repeats, tuned by
+        // `PLUMIX_FORWARD_ERRORS`. Turn off Vite 8's native `forwardConsole` so
+        // client output isn't printed twice (Vite's default auto-enables it when
+        // it detects an AI agent driving the server). A user can re-enable it in
+        // their own `vite` config, which merges after this.
+        server: { forwardConsole: false },
       };
       if (userConfig.publicDir === undefined) {
         base.publicDir = ".plumix/public";
@@ -338,39 +359,65 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
             res.end();
           });
       });
+      // Shared by the two POST endpoints below: map a browser module URL to its
+      // dev transform sourcemap + file, so both surfaces resolve the same way.
+      const lookup = async (url: string) => {
+        const mod = await server.moduleGraph.getModuleByUrl(url);
+        if (!mod) return null;
+        // Vite's `SourceMap` is a valid encoded map at runtime; its type just
+        // diverges from trace-mapping's `SourceMapInput` (encoded vs decoded
+        // `mappings`). The resolver only reads it through `TraceMap`.
+        const map = (mod.transformResult?.map ?? null) as SourceMapInput | null;
+        return { map, file: mod.file };
+      };
+
+      // Register a dev-only endpoint that reads a JSON POST body and answers with
+      // JSON. Ordered ahead of the worker proxy (plumix precedes it), so these
+      // never reach the worker.
+      const usePostJson = (
+        endpoint: string,
+        handle: (body: string) => Promise<{ status: number; body?: string }>,
+      ): void => {
+        server.middlewares.use((req, res, next) => {
+          if (req.method !== "POST" || (req.url ?? "") !== endpoint) {
+            next();
+            return;
+          }
+          readBody(req)
+            .then(handle)
+            .then(({ status, body }) => {
+              res.statusCode = status;
+              res.setHeader("content-type", "application/json; charset=utf-8");
+              res.end(body ?? "{}");
+            })
+            .catch(() => {
+              res.statusCode = 500;
+              res.end();
+            });
+        });
+      };
+
       // The client-stack resolver (#1572, #1603): the island error overlay POSTs
       // its raw browser stack here to get original-source frames, since the
       // worker (and the browser) can't map the transformed positions — only the
-      // dev server's per-module sourcemaps can. Registered ahead of the worker
-      // proxy, same as the source endpoint above.
-      server.middlewares.use((req, res, next) => {
-        const rawUrl = req.url ?? "";
-        if (req.method !== "POST" || rawUrl !== DEV_ERROR_STACK_ENDPOINT) {
-          next();
-          return;
-        }
-        const lookup = async (url: string) => {
-          const mod = await server.moduleGraph.getModuleByUrl(url);
-          if (!mod) return null;
-          // Vite's `SourceMap` is a valid encoded map at runtime; its type just
-          // diverges from trace-mapping's `SourceMapInput` (encoded vs decoded
-          // `mappings`). The resolver only reads it through `TraceMap`.
-          const map = (mod.transformResult?.map ??
-            null) as SourceMapInput | null;
-          return { map, file: mod.file };
-        };
-        readBody(req)
-          .then((body) => handleDevErrorStackRequest(body, { lookup }))
-          .then(({ status, body }) => {
-            res.statusCode = status;
-            res.setHeader("content-type", "application/json; charset=utf-8");
-            res.end(body);
-          })
-          .catch(() => {
-            res.statusCode = 500;
-            res.end();
-          });
+      // dev server's per-module sourcemaps can.
+      usePostJson(DEV_ERROR_STACK_ENDPOINT, (body) =>
+        handleDevErrorStackRequest(body, { lookup }),
+      );
+
+      // Browser-errors-to-terminal (#1604): the islands runtime POSTs batches of
+      // client failures (uncaught exceptions + `console.error`/`warn`) here, and
+      // the forwarder sourcemaps each stack through the same `lookup` and prints
+      // it into this terminal tagged `[browser]`, collapsing consecutive
+      // identical entries. One instance per dev session holds the collapse state.
+      const forwarder = createTerminalForwarder({
+        resolveStack: (stack) => resolveClientStack(stack, { lookup }),
+        print: (message) => server.config.logger.info(message),
+        root: server.config.root,
       });
+      usePostJson(DEV_ERROR_TERMINAL_ENDPOINT, (body) =>
+        forwarder.handle(body),
+      );
       server.watcher.on("change", (path) => {
         if (!configPath || resolve(path) !== configPath) return;
         // Force-fresh: the whole point of the watcher is to pick up the edit,

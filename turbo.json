@@ -12,7 +12,13 @@
     "build": {
       "dependsOn": ["^build", "i18n:compile"],
       "outputs": [".cache/build.tsbuildinfo", "dist/**"],
-      "env": ["WORKERS_CI", "WORKERS_CI_BRANCH", "PLUMIX_DEV", "PLUMIX_EDITOR"]
+      "env": [
+        "WORKERS_CI",
+        "WORKERS_CI_BRANCH",
+        "PLUMIX_DEV",
+        "PLUMIX_EDITOR",
+        "PLUMIX_FORWARD_ERRORS"
+      ]
     },
     "dev": {
       "dependsOn": ["i18n:compile"],
