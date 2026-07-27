@@ -25,11 +25,6 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
-#~ msgid "editor.toolbar.discard"
-#~ msgstr "Discard"
-
-#. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
 #~ msgid "editor.toolbar.saveDraft"
 #~ msgstr "Save draft"
 
@@ -352,6 +347,16 @@ msgstr "Details"
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.device.group"
 msgstr "Device"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.toolbar.discard"
+msgstr "Discard"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.toolbar.discarding"
+msgstr "Discarding…"
 
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
@@ -942,6 +947,11 @@ msgstr "Undo"
 #: src/selection-toolbar.tsx
 msgid "editor.selection.ungroup"
 msgstr "Ungroup"
+
+#. js-lingui-explicit-id
+#: src/editor-header.tsx
+msgid "editor.toolbar.unpublishedChanges"
+msgstr "Unpublished changes"
 
 #. js-lingui-explicit-id
 #: src/editor-header.tsx

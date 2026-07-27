@@ -103,6 +103,61 @@ describe("EditorHeader", () => {
     expect(onPublish).toHaveBeenCalledOnce();
   });
 
+  function draftMode(
+    overrides: Partial<
+      NonNullable<EditorHeaderProps["publish"]>["draftMode"]
+    > = {},
+  ): EditorHeaderProps["publish"] {
+    return {
+      draftMode: {
+        hasPendingDraft: true,
+        onSaveDraft: vi.fn(),
+        onPublishDraft: vi.fn(),
+        onDiscardDraft: vi.fn(),
+        isSaving: false,
+        isPublishing: false,
+        isDiscarding: false,
+        ...overrides,
+      },
+    };
+  }
+
+  test("a pending draft shows the unpublished-changes indicator and Discard", () => {
+    const onDiscardDraft = vi.fn();
+    const { getByTestId } = renderHeader({
+      publish: draftMode({ onDiscardDraft }),
+    });
+    expect(getByTestId("editor-unpublished-changes")).toBeDefined();
+    fireEvent.click(getByTestId("editor-draft-discard"));
+    expect(onDiscardDraft).toHaveBeenCalledOnce();
+  });
+
+  test("with a pending draft, Publish calls onPublishDraft", () => {
+    const onPublishDraft = vi.fn();
+    const { getByTestId } = renderHeader({
+      publish: draftMode({ onPublishDraft }),
+    });
+    fireEvent.click(getByTestId("editor-draft-publish"));
+    expect(onPublishDraft).toHaveBeenCalledOnce();
+  });
+
+  test("no pending draft hides the indicator and Discard, and disables Publish", () => {
+    const { getByTestId, queryByTestId } = renderHeader({
+      publish: draftMode({ hasPendingDraft: false }),
+    });
+    expect(queryByTestId("editor-unpublished-changes")).toBeNull();
+    expect(queryByTestId("editor-draft-discard")).toBeNull();
+    expect(button(getByTestId("editor-draft-publish")).disabled).toBe(true);
+  });
+
+  test("while discarding, the Discard and Publish buttons are disabled", () => {
+    const { getByTestId } = renderHeader({
+      publish: draftMode({ isDiscarding: true }),
+    });
+    expect(button(getByTestId("editor-draft-discard")).disabled).toBe(true);
+    expect(button(getByTestId("editor-draft-publish")).disabled).toBe(true);
+  });
+
   test("renders the revisions trigger slot when provided; absent otherwise", () => {
     const { getByTestId, queryByTestId, rerender } = renderHeader({
       revisionsTrigger: <button data-testid="my-revisions">Revisions</button>,

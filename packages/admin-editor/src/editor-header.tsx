@@ -150,8 +150,11 @@ export function EditorHeader({
   );
 }
 
-/** A single Publish button. Drafts of an already-published entry stage via
- *  autosave, so the header shows no separate save/discard — just Publish. */
+/** Publish action for an entry. Edits to a published entry stage a per-user
+ *  autosave draft that leaves the live page untouched, so `draftMode` adds an
+ *  "unpublished changes" indicator and a Discard action (revert to live) beside
+ *  Publish; both appear only while a draft is actually pending. Autosave already
+ *  persists continuously, so there is no separate Save action. */
 function HeaderPublish({
   publish,
 }: {
@@ -162,15 +165,48 @@ function HeaderPublish({
     const busy =
       draftMode.isSaving || draftMode.isPublishing || draftMode.isDiscarding;
     return (
-      <Button
-        type="button"
-        size="sm"
-        data-testid="editor-draft-publish"
-        disabled={busy || !draftMode.hasPendingDraft}
-        onClick={draftMode.onPublishDraft}
-      >
-        <Trans id="editor.toolbar.publish" message="Publish" />
-      </Button>
+      <>
+        {draftMode.hasPendingDraft ? (
+          <>
+            <span
+              className="text-muted-foreground me-1 inline-flex items-center gap-1.5 text-xs"
+              data-testid="editor-unpublished-changes"
+            >
+              <span
+                className="size-1.5 rounded-full bg-amber-500"
+                aria-hidden
+              />
+              <Trans
+                id="editor.toolbar.unpublishedChanges"
+                message="Unpublished changes"
+              />
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              data-testid="editor-draft-discard"
+              disabled={busy}
+              onClick={draftMode.onDiscardDraft}
+            >
+              {draftMode.isDiscarding ? (
+                <Trans id="editor.toolbar.discarding" message="Discarding…" />
+              ) : (
+                <Trans id="editor.toolbar.discard" message="Discard" />
+              )}
+            </Button>
+          </>
+        ) : null}
+        <Button
+          type="button"
+          size="sm"
+          data-testid="editor-draft-publish"
+          disabled={busy || !draftMode.hasPendingDraft}
+          onClick={draftMode.onPublishDraft}
+        >
+          <Trans id="editor.toolbar.publish" message="Publish" />
+        </Button>
+      </>
     );
   }
   const { isPublishing = false, isPublished = false } = publish;

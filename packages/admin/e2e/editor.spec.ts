@@ -217,7 +217,7 @@ test.describe("editor route", () => {
     );
   });
 
-  test("a published autosave-type entry with a pending draft enables Publish", async ({
+  test("a published autosave-type entry with a pending draft shows Discard + Publish", async ({
     page,
   }) => {
     await mockManifest(page, {
@@ -249,14 +249,16 @@ test.describe("editor route", () => {
 
     await page.goto("entries/posts/1/edit");
 
-    // Draft mode: the header shows just Publish (staging is via autosave, so
-    // there's no separate save/discard); a pending autosave enables it.
+    // Draft mode: a pending autosave enables Publish, surfaces the
+    // unpublished-changes cue, and offers Discard (revert to live). Staging is
+    // continuous via autosave, so there is no separate Save action.
     await expect(page.getByTestId("plumix-editor-publish-button")).toHaveCount(
       0,
     );
     await expect(page.getByTestId("editor-draft-publish")).toBeEnabled();
+    await expect(page.getByTestId("editor-unpublished-changes")).toBeVisible();
+    await expect(page.getByTestId("editor-draft-discard")).toBeEnabled();
     await expect(page.getByTestId("editor-draft-save")).toHaveCount(0);
-    await expect(page.getByTestId("editor-draft-discard")).toHaveCount(0);
   });
 
   test("a failed preview mint surfaces the error placeholder, not a dead canvas", async ({
@@ -981,8 +983,10 @@ test.describe("editor draft of a published entry", () => {
     await mockPublishedEntry(page, { autosaveUpdatedAt: null });
 
     await page.goto("entries/posts/1/edit");
-    // No pending draft → Publish is disabled; no separate save/discard exist.
+    // No pending draft → Publish is disabled; no unpublished-changes cue and
+    // no separate save/discard exist.
     await expect(page.getByTestId("editor-draft-publish")).toBeDisabled();
+    await expect(page.getByTestId("editor-unpublished-changes")).toHaveCount(0);
     await expect(page.getByTestId("editor-draft-save")).toHaveCount(0);
     await expect(page.getByTestId("editor-draft-discard")).toHaveCount(0);
     await expect(page.getByTestId("plumix-editor-publish-button")).toHaveCount(
