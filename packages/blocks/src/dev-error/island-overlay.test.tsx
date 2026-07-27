@@ -234,8 +234,11 @@ describe("installIslandErrorOverlay", () => {
     window.dispatchEvent(
       new ErrorEvent("error", { error: new Error("async boom") }),
     );
-    await tick();
-    expect(query("plumix-island-overlay-badge")?.textContent).toContain("1");
+    // Poll rather than assume one macrotask flushed the render — CI load can
+    // stretch the async handler past a single tick.
+    await vi.waitFor(() =>
+      expect(query("plumix-island-overlay-badge")?.textContent).toContain("1"),
+    );
 
     // jsdom lacks a PromiseRejectionEvent constructor; a plain event with the
     // reason attached is what the listener reads.
@@ -244,8 +247,9 @@ describe("installIslandErrorOverlay", () => {
     };
     rejection.reason = new Error("rejected boom");
     window.dispatchEvent(rejection);
-    await tick();
-    expect(query("plumix-island-overlay-badge")?.textContent).toContain("2");
+    await vi.waitFor(() =>
+      expect(query("plumix-island-overlay-badge")?.textContent).toContain("2"),
+    );
   });
 
   test("ignores resource-load error events that carry no error object", async () => {
