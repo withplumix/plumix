@@ -25,13 +25,31 @@ describe("generateClientEntrySource", () => {
     expect(themeIdx).toBeGreaterThan(tailwindIdx);
   });
 
-  test("an empty array produces a valid ESM module with no imports", () => {
+  test("an empty array produces a valid ESM module with no CSS imports", () => {
     const source = generateClientEntrySource([]);
-    expect(source).not.toContain("import ");
-    // Must still be a module (no statements at all would have Vite
-    // treat the file as a script with implicit globals).
+    // No side-effect CSS import declarations.
+    expect(source).not.toContain('import "/');
+    expect(source).not.toContain(".css");
+    // Must still be a module (no static import/export at all would have Vite
+    // treat the file as a script with implicit globals — the overlay block is
+    // only a dynamic `import()` expression).
     expect(source).toContain("export {};");
   });
+
+  test.each([[[]], [["./src/global.css"]]])(
+    "always installs the dev-only compile-error overlay behind the hot gate (css: %j)",
+    (css) => {
+      const source = generateClientEntrySource(css);
+      // Gated on `import.meta.hot` so it tree-shakes out of a production build.
+      expect(source).toContain("if (import.meta.hot)");
+      expect(source).toContain('import("plumix/blocks/dev-error")');
+      expect(source).toContain(
+        "installCompileErrorOverlay(hot, { initialError: pending })",
+      );
+      // A synchronous listener buffers a pre-install vite:error to replay it.
+      expect(source).toContain('hot.on("vite:error", capture)');
+    },
+  );
 
   test("quotes paths via JSON.stringify so backslashes / quotes are escaped", () => {
     const source = generateClientEntrySource(['./weird"name.css']);
