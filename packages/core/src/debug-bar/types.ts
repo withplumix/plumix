@@ -2,12 +2,13 @@ import type { ReactNode } from "react";
 
 import type { AppContext } from "../context/app.js";
 import type { Label } from "../i18n/label.js";
+import type { DebugSnapshot } from "./snapshot.js";
 
 /**
  * A contributed debug-bar panel. Core registers its panels at `buildApp`
- * time; plugins add theirs via the `debug_bar:panels` filter. `render`
- * runs server-side when the bar is assembled and reads whatever it needs
- * off the request context (including its own collector bucket).
+ * time; plugins add theirs via the `debug_bar:panels` filter. `render` runs
+ * server-side over a serializable {@link DebugSnapshot}, never live request
+ * context.
  */
 export interface DebugPanel {
   readonly id: string;
@@ -16,11 +17,12 @@ export interface DebugPanel {
   readonly order?: number;
   /**
    * Rendered in isolation (its own SSR pass) so a throw can't crash the host
-   * page. Read request data off `ctx` (and `ctx.telemetry.get(id)` for your own
-   * recorded entries) — outer React context providers are NOT visible across
-   * the isolated render, so don't rely on `useContext` from the page tree.
+   * page. Read request data off the {@link DebugSnapshot} — its context
+   * projection and, for your own recorded entries, `snapshot.records[id]`.
+   * Outer React context providers are NOT visible across the isolated render,
+   * so don't rely on `useContext` from the page tree.
    */
-  readonly render: (ctx: AppContext) => ReactNode;
+  readonly render: (snapshot: DebugSnapshot) => ReactNode;
 }
 
 declare module "../hooks/types.js" {

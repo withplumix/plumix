@@ -26,13 +26,13 @@ const demoPlugin = definePlugin("debug-demo", (ctx) => {
       id: "debug-demo",
       title: "Demo",
       order: 50,
-      render: (appCtx) => (
+      render: (snapshot) => (
         <DebugSection title="Demo">
           <DebugTable
             headers={["note"]}
-            rows={appCtx.telemetry
-              .get("debug-demo")
-              .map((r) => [String((r.data as { note: string }).note)])}
+            rows={(snapshot.records["debug-demo"] ?? []).map((r) => [
+              String((r.data as { note: string }).note),
+            ])}
           />
         </DebugSection>
       ),

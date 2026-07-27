@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import type { AppContext } from "../../context/app.js";
+import type { DebugSnapshot } from "../snapshot.js";
 import type { Timeline } from "../timeline-model.js";
 import type { DebugPanel } from "../types.js";
 import { DebugSection } from "../primitives.js";
@@ -84,8 +84,8 @@ export const timelinePanel: DebugPanel = {
   id: TIMELINE_PANEL_ID,
   title: "Timeline",
   order: 50,
-  render: (ctx: AppContext) => {
-    const timeline = buildTimeline(ctx.telemetry.getSpans());
+  render: ({ spans }: DebugSnapshot) => {
+    const timeline = buildTimeline(spans);
     if (timeline.rows.length === 0) {
       return <p className="plumix-debug-bar__empty">No spans recorded.</p>;
     }

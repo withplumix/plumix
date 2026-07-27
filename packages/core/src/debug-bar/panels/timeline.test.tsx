@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app.js";
 import type { TelemetrySpan } from "../../context/telemetry.js";
+import { makeSnapshot } from "../snapshot-fixture.js";
 import { timelinePanel } from "./timeline.js";
 
 function span(
@@ -22,8 +22,9 @@ function span(
 }
 
 function render(spans: readonly TelemetrySpan[]): string {
-  const ctx = { telemetry: { getSpans: () => spans } } as unknown as AppContext;
-  return renderToStaticMarkup(<>{timelinePanel.render(ctx)}</>);
+  return renderToStaticMarkup(
+    <>{timelinePanel.render(makeSnapshot({ spans }))}</>,
+  );
 }
 
 describe("timelinePanel", () => {

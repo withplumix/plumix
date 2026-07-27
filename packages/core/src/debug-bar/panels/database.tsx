@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
-import type { AppContext } from "../../context/app.js";
 import type { JsonValue, TelemetrySpan } from "../../context/telemetry.js";
+import type { DebugSnapshot } from "../snapshot.js";
 import type { DebugPanel } from "../types.js";
 import { queryKind } from "../../db/query-kind.js";
 import { describeSqlParam } from "../format-param.js";
@@ -83,8 +83,8 @@ export const databasePanel: DebugPanel = {
   id: DB_PANEL_ID,
   title: "Database",
   order: 20,
-  render: (ctx: AppContext) => {
-    const queries = collectQueryRows(ctx.telemetry.getSpans());
+  render: ({ spans }: DebugSnapshot) => {
+    const queries = collectQueryRows(spans);
     if (queries.length === 0) {
       return <p className="plumix-debug-bar__empty">No queries recorded.</p>;
     }

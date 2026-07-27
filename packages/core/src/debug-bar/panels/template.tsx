@@ -1,9 +1,9 @@
-import type { AppContext } from "../../context/app.js";
 import type { TelemetrySpan } from "../../context/telemetry.js";
 import type {
   ResolutionStep,
   ResolutionTrace,
 } from "../../route/render/template-hierarchy.js";
+import type { DebugSnapshot } from "../snapshot.js";
 import type { DebugPanel } from "../types.js";
 import { DebugKV, DebugSection, DebugTable } from "../primitives.js";
 import { TEMPLATE_PANEL_ID } from "../template-node-label.js";
@@ -46,8 +46,8 @@ export const templatePanel: DebugPanel = {
   id: TEMPLATE_PANEL_ID,
   title: "Template",
   order: 15,
-  render: (ctx: AppContext) => {
-    const resolution = findResolutionSpan(ctx.telemetry.getSpans())?.attributes
+  render: ({ spans }: DebugSnapshot) => {
+    const resolution = findResolutionSpan(spans)?.attributes
       .resolution as unknown as TemplateResolution | undefined;
     if (!resolution) {
       return (
