@@ -127,4 +127,10 @@ export interface ErrorData {
   readonly kind: "error";
   readonly request: Request;
   readonly hint?: string;
+  /**
+   * Correlation id for a 5xx — the failing request's telemetry id, so a theme
+   * can print it and a user report maps back to the exact failure in the logs.
+   * Set only on the server-error path; a 404 leaves it undefined.
+   */
+  readonly errorId?: string;
 }

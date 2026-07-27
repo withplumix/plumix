@@ -654,6 +654,7 @@ async function renderPublicRoute(
     return response;
   } catch (err) {
     ctx.logger.error("dispatch_failed", {
+      requestId: ctx.requestId,
       url: url.href,
       err: err instanceof Error ? err.message : String(err),
     });
@@ -698,7 +699,11 @@ async function renderPublicRoute(
             templateDeps,
             assetManifest,
             kind: "server-error",
-            data: { kind: "error", request: ctx.request },
+            data: {
+              kind: "error",
+              request: ctx.request,
+              errorId: ctx.requestId,
+            },
           });
           return new Response(html, {
             status: 500,
