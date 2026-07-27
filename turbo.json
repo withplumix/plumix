@@ -17,6 +17,7 @@
         "WORKERS_CI_BRANCH",
         "PLUMIX_DEV",
         "PLUMIX_EDITOR",
+        "PLUMIX_EDITOR_PATH_MAP",
         "PLUMIX_FORWARD_ERRORS"
       ]
     },

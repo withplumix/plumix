@@ -11,6 +11,7 @@ function withStack(message: string): Error {
 describe("renderDevErrorPage", () => {
   afterEach(() => {
     delete process.env.PLUMIX_EDITOR;
+    delete process.env.PLUMIX_EDITOR_PATH_MAP;
   });
 
   test("links each frame to VS Code by default (PLUMIX_EDITOR unset)", () => {
@@ -34,6 +35,15 @@ describe("renderDevErrorPage", () => {
 
     expect(html).toContain(
       'href="myeditor://open?path=/proj/src/theme.tsx&amp;line=12"',
+    );
+  });
+
+  test("remaps the frame path via PLUMIX_EDITOR_PATH_MAP for a container dev server", () => {
+    process.env.PLUMIX_EDITOR_PATH_MAP = "/proj=>/Users/me/proj";
+    const html = renderDevErrorPage(withStack("boom"));
+
+    expect(html).toContain(
+      'href="vscode://file//Users/me/proj/src/theme.tsx:12:7"',
     );
   });
 
