@@ -70,6 +70,7 @@ export const DEBUG_BAR_CSS =
     .plumix-debug-bar section,
     .plumix-debug-bar label,
     .plumix-debug-bar input,
+    .plumix-debug-bar select,
     .plumix-debug-bar table,
     .plumix-debug-bar tbody,
     .plumix-debug-bar tr,
@@ -122,6 +123,24 @@ export const DEBUG_BAR_CSS =
     }
     .plumix-debug-bar > details[open] > summary::after {
       content: "▾";
+    }
+    /* History region (switcher + swappable panels). A full-width <select> sits
+       between the header and the tabs; this top border separates it from the
+       summary, and the tab row's border-top separates it from the panels below. */
+    .plumix-debug-bar__history {
+      border-top: 1px solid #3c434a;
+    }
+    .plumix-debug-bar__switcher {
+      display: block;
+      width: calc(100% - 24px);
+      margin: 8px 12px;
+      padding: 4px 6px;
+      color: #e6e6e6;
+      background: #2c3338;
+      border: 1px solid #3c434a;
+      border-radius: 4px;
+      font: inherit;
+      cursor: pointer;
     }
     .plumix-debug-bar__radio {
       position: absolute;
