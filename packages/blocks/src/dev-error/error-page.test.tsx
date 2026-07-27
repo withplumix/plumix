@@ -455,4 +455,64 @@ describe("DevErrorPage", () => {
 
     expect(html).not.toContain("plumix-debug-bar");
   });
+
+  test("renders each contributed panel as its own titled section below the context", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        context={fullContext}
+        panels={[
+          { id: "queue", title: "Queue", html: "<p>3 jobs pending</p>" },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-panels"');
+    expect(html).toContain('data-testid="plumix-dev-error-panel-queue"');
+    expect(html).toContain("Queue");
+    // The panel's own SSR output is inlined verbatim.
+    expect(html).toContain("<p>3 jobs pending</p>");
+    // Panels come after the built-in context sections.
+    expect(
+      html.indexOf('data-testid="plumix-dev-error-panel-queue"'),
+    ).toBeGreaterThan(html.indexOf('data-testid="plumix-dev-error-app"'));
+  });
+
+  test("renders panels even when no request context is present", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        panels={[{ id: "queue", title: "Queue", html: "<p>ok</p>" }]}
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-panel-queue"');
+    expect(html).toContain("<p>ok</p>");
+  });
+
+  test("renders no panels block when none were contributed", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        context={fullContext}
+        panels={[]}
+      />,
+    );
+
+    expect(html).not.toContain('data-testid="plumix-dev-error-panels"');
+  });
+
+  test("escapes a panel title so it can't break out of the page", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{ name: "Error", message: "boom" }}
+        panels={[
+          { id: "x", title: "<script>alert(1)</script>", html: "<p>ok</p>" },
+        ]}
+      />,
+    );
+
+    expect(html).not.toContain("<script>alert(1)</script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
 });

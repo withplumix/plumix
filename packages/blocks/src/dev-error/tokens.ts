@@ -327,6 +327,13 @@ export const DEV_ERROR_CSS = `
   margin-top: 2.5rem;
 }
 
+/* Plugin-contributed panels (#1626) — same section language as the context. */
+.plumix-dev-error__panels {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
 .plumix-dev-error__section {
   padding: 1.25rem;
   background: var(--plumix-deverr-surface);
