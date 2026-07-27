@@ -80,6 +80,18 @@ describe("formatForwardedLog", () => {
     );
   });
 
+  test("prints a console.log at the verbose level like any other console kind", () => {
+    const out = formatForwardedLog(
+      { kind: "console", level: "log", message: "hydrated 3 islands" },
+      [frame({ file: "/proj/src/app.tsx", line: 5, column: 1 })],
+      ROOT,
+    );
+
+    expect(out).toBe(
+      "[browser] console.log: hydrated 3 islands (src/app.tsx:5:1)",
+    );
+  });
+
   test("omits the location when no frames resolved", () => {
     const out = formatForwardedLog(
       { kind: "console", level: "error", message: "no stack here" },
@@ -192,6 +204,26 @@ describe("createTerminalForwarder", () => {
     expect(d.lines).toEqual([
       "[browser] console.warn: w",
       "[browser] console.warn: w (×2)",
+    ]);
+  });
+
+  test("accepts and prints the verbose log/info/debug levels", async () => {
+    const d = deps([]);
+    const forwarder = createTerminalForwarder(d);
+
+    const result = await forwarder.handle(
+      body([
+        { kind: "console", level: "log", message: "l" },
+        { kind: "console", level: "info", message: "i" },
+        { kind: "console", level: "debug", message: "d" },
+      ]),
+    );
+
+    expect(result.status).toBe(200);
+    expect(d.lines).toEqual([
+      "[browser] console.log: l",
+      "[browser] console.info: i",
+      "[browser] console.debug: d",
     ]);
   });
 

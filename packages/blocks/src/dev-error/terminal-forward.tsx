@@ -2,25 +2,30 @@
 // dev-only catch net that mirrors the island overlay's producers — uncaught
 // exceptions (`error` / `unhandledrejection`), and the island renderer's
 // `plumix:island-error` / `plumix:hydration-error` events — and additionally
-// patches `console.error` / `console.warn` (never `console.log`). Each captured
-// entry is batched and POSTed to the dev server, which sourcemaps it and prints
-// it into the `plumix dev` terminal tagged `[browser]`, so client failures show
-// up where the developer is already working. On by default, tunable via the
-// level, and — like the overlay — pulled in only under the dev gate, so it
-// tree-shakes out of production island bundles.
+// patches `console.error` / `console.warn`. The opt-in `log` level (#1625) also
+// patches `console.log` / `console.info` / `console.debug`; it is off by default
+// because plain logs are noisy. Each captured entry is batched and POSTed to the
+// dev server, which sourcemaps it and prints it into the `plumix dev` terminal
+// tagged `[browser]`, so client failures show up where the developer is already
+// working. On by default, tunable via the level, and — like the overlay — pulled
+// in only under the dev gate, so it tree-shakes out of production island bundles.
 
 import { deriveLabel, detailOf } from "./event-detail.js";
 import { DEV_ERROR_TERMINAL_ENDPOINT } from "./frames.js";
 
-/** How much client output forwards. `warn` (default) is errors + warnings. */
-export type ForwardLevel = "off" | "error" | "warn";
+/**
+ * How much client output forwards, from least to most verbose: `error`, `warn`
+ * (default — errors + warnings), then `log` (adds `console.log`/`info`/`debug`).
+ */
+export type ForwardLevel = "off" | "error" | "warn" | "log";
 
 /** One client failure forwarded to the terminal. Shared wire shape with the
  * Node-side printer (`plumix/vite`), which resolves {@link stack} to frames. */
 export interface ForwardedLog {
-  /** `exception` for an uncaught throw; `console` for a `console.error`/`warn`. */
+  /** `exception` for an uncaught throw; `console` for a patched console method. */
   readonly kind: "console" | "exception";
-  readonly level: "error" | "warn";
+  /** The console method for a `console` log; always `error` for an exception. */
+  readonly level: "error" | "warn" | "log" | "info" | "debug";
   /** The human message — for an exception, `Name: message`. */
   readonly message: string;
   /** The raw browser stack, resolved to source frames server-side. */
@@ -45,12 +50,14 @@ export interface TerminalForwardOptions {
 /**
  * Resolve the `PLUMIX_FORWARD_ERRORS` env value to a level. Default (unset/empty)
  * is `warn` — uncaught errors plus `console.error`/`console.warn`. `off`/`false`
- * disables forwarding; `error` drops warnings. `console.log` is never forwarded.
+ * disables forwarding; `error` drops warnings; `log` additionally forwards
+ * `console.log`/`console.info`/`console.debug`.
  */
 export function parseForwardLevel(raw: string | undefined): ForwardLevel {
   const value = (raw ?? "").trim().toLowerCase();
   if (value === "off" || value === "false") return "off";
   if (value === "error") return "error";
+  if (value === "log") return "log";
   return "warn";
 }
 
@@ -73,7 +80,14 @@ export function installTerminalForwarding(
   return active.install();
 }
 
-type ConsoleMethod = "error" | "warn";
+type ConsoleMethod = "error" | "warn" | "log" | "info" | "debug";
+
+// Which console methods each level patches, cumulative from `error` up.
+const CONSOLE_METHODS: Record<Exclude<ForwardLevel, "off">, ConsoleMethod[]> = {
+  error: ["error"],
+  warn: ["error", "warn"],
+  log: ["error", "warn", "log", "info", "debug"],
+};
 
 class TerminalForwarder {
   private readonly target: Window = window;
@@ -94,8 +108,7 @@ class TerminalForwarder {
   }
 
   install(): () => void {
-    this.patchConsole("error");
-    if (this.level === "warn") this.patchConsole("warn");
+    for (const method of CONSOLE_METHODS[this.level]) this.patchConsole(method);
 
     this.on("plumix:island-error", (event) => this.captureEvent(event));
     this.on("plumix:hydration-error", (event) => this.captureEvent(event));

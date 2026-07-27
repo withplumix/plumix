@@ -18,7 +18,7 @@ function schedule(run: () => void): void {
   flush = run;
 }
 
-function install(level: "off" | "error" | "warn" = "warn"): void {
+function install(level: "off" | "error" | "warn" | "log" = "warn"): void {
   uninstall = installTerminalForwarding({
     level,
     endpoint: ENDPOINT,
@@ -78,11 +78,59 @@ describe("installTerminalForwarding", () => {
     });
   });
 
-  test("does not forward console.log", () => {
+  test("does not forward console.log at the default (warn) level", () => {
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     install();
 
     console.log("just a log");
+    flush();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("forwards console.log, info, and debug at the log level", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const debug = vi
+      .spyOn(console, "debug")
+      .mockImplementation(() => undefined);
+    install("log");
+
+    console.log("chatty", 42);
+    console.info("informative");
+    console.debug("detail");
+    flush();
+
+    // The originals still run so browser devtools keep showing them.
+    expect(log).toHaveBeenCalledWith("chatty", 42);
+    expect(info).toHaveBeenCalledWith("informative");
+    expect(debug).toHaveBeenCalledWith("detail");
+    expect(forwarded()).toMatchObject([
+      { kind: "console", level: "log", message: "chatty 42" },
+      { kind: "console", level: "info", message: "informative" },
+      { kind: "console", level: "debug", message: "detail" },
+    ]);
+  });
+
+  test("the log level still forwards errors and warnings", () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    install("log");
+
+    console.error("boom");
+    console.warn("deprecated");
+    flush();
+
+    expect(forwarded().map((l) => l.level)).toEqual(["error", "warn"]);
+  });
+
+  test("does not forward console.info or debug below the log level", () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    vi.spyOn(console, "debug").mockImplementation(() => undefined);
+    install("warn");
+
+    console.info("informative");
+    console.debug("detail");
     flush();
 
     expect(fetchMock).not.toHaveBeenCalled();
@@ -285,6 +333,11 @@ describe("parseForwardLevel", () => {
 
   test("recognizes error-only", () => {
     expect(parseForwardLevel("error")).toBe("error");
+  });
+
+  test("recognizes log (the verbose level that adds log/info/debug)", () => {
+    expect(parseForwardLevel("log")).toBe("log");
+    expect(parseForwardLevel("LOG")).toBe("log");
   });
 
   test("treats any other value as the warn default", () => {
