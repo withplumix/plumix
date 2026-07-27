@@ -1,5 +1,59 @@
 # plumix
 
+## 0.8.0
+
+### Minor Changes
+
+- [#1621](https://github.com/withplumix/plumix/pull/1621) [`976fc4d`](https://github.com/withplumix/plumix/commit/976fc4dc102529c25c6509da89e6bce151945dd5) Thanks [@nasyrov](https://github.com/nasyrov)! - Forward browser/island errors to the dev terminal.
+
+  In `plumix dev`, client failures now also surface where the developer is already
+  working. A dev-only catch net mirrors the island error overlay's producers —
+  uncaught exceptions, unhandled rejections, and the island renderer's
+  `plumix:island-error` / `plumix:hydration-error` events — and additionally
+  patches `console.error` and `console.warn` (never `console.log`). Each entry is
+  batched and POSTed to a new Vite dev-server endpoint, which sourcemaps the stack
+  through the dev server's per-module sourcemaps and prints it tagged `[browser]`
+  with a project-relative `file:line`, application frames shown and framework
+  frames collapsed to a count. Consecutive identical entries collapse into a
+  running `(×N)` count.
+
+  On by default and tuned by `PLUMIX_FORWARD_ERRORS` (`off` disables, `error`
+  drops warnings, the default forwards both). Everything is gated on
+  `process.env.PLUMIX_DEV` and tree-shakes out of production island bundles.
+  Vite 8's native `forwardConsole` is disabled by the plugin so client output
+  isn't printed twice; a consumer can re-enable it in their own `vite` config.
+
+- [#1617](https://github.com/withplumix/plumix/pull/1617) [`9a1e88a`](https://github.com/withplumix/plumix/commit/9a1e88adb272f1f4795ddfd23e2958b4aa8b9443) Thanks [@nasyrov](https://github.com/nasyrov)! - Open a `plumix dev` error-page stack frame in your editor.
+
+  Each frame on the dev error page now carries an "open in editor" link that jumps
+  to the file at the offending line. It is a plain anchor to the editor's URL
+  scheme — zero-JS, no server round-trip. The editor is chosen by a dev-only
+  `PLUMIX_EDITOR` setting: a known-editor key (`vscode` — the default —
+  `vscode-insiders`, `cursor`, `windsurf`, `zed`, `idea`, `phpstorm`, `webstorm`,
+  `sublime`), a custom `{file}` / `{line}` / `{column}` format string for any other
+  editor, or `off` / `none` to drop the link. Everything stays gated on
+  `process.env.PLUMIX_DEV` and tree-shakes out of production.
+
+- [#1608](https://github.com/withplumix/plumix/pull/1608) [`3d269a3`](https://github.com/withplumix/plumix/commit/3d269a399f6e36e499ef60846abe02716103d7a0) Thanks [@nasyrov](https://github.com/nasyrov)! - Resolve dev error-page stack frames to original source with a code excerpt.
+
+  The `plumix dev` error page now parses the (already-sourcemapped) stack into
+  frames showing each original `file:line`, with application frames expanded and
+  framework/vendor frames collapsed behind a toggle. Selecting a frame shows a
+  source excerpt with the offending line highlighted — lazy-fetched from a new
+  dev-only source resolver mounted as a Vite middleware, so the worker (which has
+  no filesystem) never reads source itself. Paths are shown relative to the
+  project root the frames imply. Everything stays gated on `process.env.PLUMIX_DEV`
+  and tree-shakes out of production.
+
+### Patch Changes
+
+- Updated dependencies [[`976fc4d`](https://github.com/withplumix/plumix/commit/976fc4dc102529c25c6509da89e6bce151945dd5), [`4481cf2`](https://github.com/withplumix/plumix/commit/4481cf28a6b9feef66ddc4f002a2b1bdea9ab725), [`077c515`](https://github.com/withplumix/plumix/commit/077c515e47d3e807d61b5ed4a0ff7cbc94839eff), [`741c6b4`](https://github.com/withplumix/plumix/commit/741c6b4b0c731e3fe8efd1c316a0ea4fd23b6e0d), [`ec117ea`](https://github.com/withplumix/plumix/commit/ec117ea45ed6ff064807ae2d6cee4dfb5b67cf35), [`9a1e88a`](https://github.com/withplumix/plumix/commit/9a1e88adb272f1f4795ddfd23e2958b4aa8b9443), [`6fe5583`](https://github.com/withplumix/plumix/commit/6fe5583954947ba11093fb053c946640b703b4b0), [`3d269a3`](https://github.com/withplumix/plumix/commit/3d269a399f6e36e499ef60846abe02716103d7a0), [`112e1bd`](https://github.com/withplumix/plumix/commit/112e1bd6d0ab8f9579ef8a87651d3a996faf75b9), [`a5be41a`](https://github.com/withplumix/plumix/commit/a5be41a282fc4785c7cec582af0e97b3d99bed8a), [`f379b46`](https://github.com/withplumix/plumix/commit/f379b46b4c863bde6d4235a5753e7fd07926153c), [`5beb3ce`](https://github.com/withplumix/plumix/commit/5beb3ced84758f4255356f1118442a45ecaa01b6), [`154e9e4`](https://github.com/withplumix/plumix/commit/154e9e44c538a8a89056f6be6c5e6fbb1d305c36)]:
+  - @plumix/blocks@0.8.0
+  - @plumix/core@0.8.0
+  - @plumix/admin@0.8.0
+  - @plumix/admin-editor@0.8.0
+  - @plumix/admin-ui@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes
