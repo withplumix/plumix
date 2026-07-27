@@ -71,9 +71,31 @@ describe("debugHistoryConsumer", () => {
     expect(store.find("req-42")?.status).toBe(500);
   });
 
-  test("has no sample gate — it votes to collect every request", () => {
-    expect(
-      debugHistoryConsumer(createDebugHistoryStore()).sample,
-    ).toBeUndefined();
+  test("votes to collect an ordinary request", () => {
+    const consumer = debugHistoryConsumer(createDebugHistoryStore());
+    expect(consumer.sample?.(ctxWith())).toBe(true);
+  });
+
+  test("excludes its own read endpoint from capture (no self-pollution)", () => {
+    const consumer = debugHistoryConsumer(createDebugHistoryStore());
+    const onList = ctxWith({
+      request: new Request("https://cms.example/_plumix/debug/requests"),
+    });
+    const onDetail = ctxWith({
+      request: new Request("https://cms.example/_plumix/debug/requests/req-1"),
+    });
+
+    expect(consumer.sample?.(onList)).toBe(false);
+    expect(consumer.sample?.(onDetail)).toBe(false);
+  });
+
+  test("accounts for a base-path mount when excluding itself", () => {
+    const consumer = debugHistoryConsumer(createDebugHistoryStore());
+    const ctx = ctxWith({
+      request: new Request("https://cms.example/cms/_plumix/debug/requests"),
+      basePath: "/cms",
+    });
+
+    expect(consumer.sample?.(ctx)).toBe(false);
   });
 });

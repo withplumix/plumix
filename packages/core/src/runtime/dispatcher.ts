@@ -52,6 +52,12 @@ const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
 const MCP_PATH = "/_plumix/mcp";
 const API_PREFIX = "/_plumix/api";
+// Dev request-history read routes. Inlined rather than imported so the
+// dispatcher's eager graph references no debug-bar module at all — it reaches
+// the feature only through the dev-gated dynamic import below (Vite-empty in a
+// build, so the branch and its import drop out). Keep in step with
+// `DEBUG_REQUESTS_PATH`.
+const DEBUG_REQUESTS_PREFIX = "/_plumix/debug/requests";
 const ROBOTS_PATH = "/robots.txt";
 const SITEMAP_INDEX_PATH = "/sitemap.xml";
 // `/sitemap-<scope>-<page>.xml` — greedy scope so a hyphenated name keeps its
@@ -299,6 +305,17 @@ async function tryPlumixRoutes(
   if (pathname.startsWith(PLUMIX_PREFIX)) {
     const csrfFailure = enforcePlumixCsrf(app, ctx);
     if (csrfFailure) return csrfFailure;
+  }
+
+  // Dev-only: the captured request-history read routes (dead-code-eliminated
+  // in a build; see DEBUG_REQUESTS_PREFIX for the tree-shaking rationale).
+  if (
+    process.env.PLUMIX_DEV &&
+    (pathname === DEBUG_REQUESTS_PREFIX ||
+      pathname.startsWith(`${DEBUG_REQUESTS_PREFIX}/`))
+  ) {
+    const { handleDebugRequests } = await import("../debug-bar/read-routes.js");
+    return handleDebugRequests(ctx);
   }
 
   if (pathname === RPC_PREFIX || pathname.startsWith(`${RPC_PREFIX}/`)) {
