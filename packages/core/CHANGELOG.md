@@ -1,5 +1,95 @@
 # @plumix/core
 
+## 0.9.0
+
+### Minor Changes
+
+- [#1645](https://github.com/withplumix/plumix/pull/1645) [`24d9639`](https://github.com/withplumix/plumix/commit/24d96390631893c788b54fe6261c781ad798969c) Thanks [@nasyrov](https://github.com/nasyrov)! - Add a dev-only request history to the debug bar so a developer can inspect
+  requests that already finished — including RPC/REST/`/api` and 5xx responses
+  that never get an inline bar.
+
+  Every request the worker handles is captured, after the response, into a
+  bounded in-memory ring as a serializable `DebugSnapshot` (span tree, telemetry
+  records, and a small fixed projection of request context). Snapshots are
+  detached to inert JSON at capture, so holding recent requests never pins the
+  request graph, and oversized payloads are truncated to keep the footprint flat.
+
+  The bar's panels now render purely from a `DebugSnapshot`, so a stored request
+  replays identically to a live one and plugin panels support history for free.
+  Dev-only read routes expose the history over HTTP — `GET
+/_plumix/debug/requests` (newest-first metadata), `/<id>` (the snapshot JSON, a
+  future MCP tool's canonical source), and `/<id>?format=html` (the same snapshot
+  rendered to panel markup) — with the endpoint excluded from its own capture.
+
+  The bar gains a request switcher: a `<select>` of the recent requests
+  (method/path/status/duration, newest-first) with the current request
+  pre-selected. The current request is still server-rendered inline on page load
+  (no flash, zero-JS); selecting a past one is the bar's single client-JS
+  concession — a minimal listen → fetch → swap that fails soft, so a history
+  hiccup never breaks the host page. The whole subsystem — capture, store, routes,
+  switcher, and script — is gated on the dev flag and tree-shaken from production
+  builds.
+
+- [#1649](https://github.com/withplumix/plumix/pull/1649) [`09e89b8`](https://github.com/withplumix/plumix/commit/09e89b88a7e8cbabe96baf7413c3c38149db905e) Thanks [@nasyrov](https://github.com/nasyrov)! - Let plugins contribute panels to the `plumix dev` error page.
+
+  The dev error page already shows fixed request / route / database / timeline /
+  application context below the stack. A plugin can now add its own section
+  through a new dev-only `error_page:panels` filter, mirroring how it contributes
+  to the debug bar via `debug_bar:panels`:
+
+  ```ts
+  "error_page:panels": (
+    panels: readonly DevErrorPanel[],
+    error: unknown,
+    ctx: AppContext,
+  ) => readonly DevErrorPanel[];
+  ```
+
+  Each `DevErrorPanel` is `{ id, title, order?, render }`, where `render(error,
+ctx)` returns a `ReactNode` over the caught value and the live request context —
+  the same pair the `error_page:hints` filter receives. Core collects the filter
+  `applyFilterIsolated`-safe, dedupes by id (last wins), orders by ascending
+  `order`, and renders each panel in its own isolated SSR pass, so a throwing
+  subscriber or a panel that throws from `render` degrades to a notice rather than
+  crashing the very page meant to surface the error. Contributed panels appear as
+  their own sections below the built-in context.
+
+  Core registers none of its own — its built-in sections cover the common case —
+  so this filter is purely the plugin-facing panel API. The whole surface stays
+  behind the `PLUMIX_DEV` gate and tree-shakes out of production builds.
+
+- [#1651](https://github.com/withplumix/plumix/pull/1651) [`36ce243`](https://github.com/withplumix/plumix/commit/36ce24381eee89688b18cd77255bb9fb29429407) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds an open-in-editor path remap for container and remote dev servers.
+
+  The dev error page's "Open in editor" links use the file path as the dev server
+  sees it, which doesn't exist on your machine when the server runs in a container,
+  a devcontainer, or on a remote/SSH box. Set `PLUMIX_EDITOR_PATH_MAP` to a
+  `from=>to` mapping (e.g. `/workspace=>/Users/me/proj`) and the on-server path
+  prefix is rewritten to the editor-host path before each link is built, so the
+  links open the right file. Only the path prefix is remapped, on a path boundary;
+  paths outside it are left untouched. Like `PLUMIX_EDITOR`, it is read only in
+  `plumix dev` and tree-shakes out of production builds.
+
+- [#1650](https://github.com/withplumix/plumix/pull/1650) [`c16b2bc`](https://github.com/withplumix/plumix/commit/c16b2bcc112c82459a090a5e59fe263ee55ff658) Thanks [@nasyrov](https://github.com/nasyrov)! - Attach a correlation id to production 5xx responses so an operator can tie a
+  user's report to a specific failure without exposing a stack.
+
+  When a request throws at the dispatcher's public-render boundary in production,
+  the themed `500` now carries the failing request's telemetry id as an
+  `errorId`. It flows to the theme's error template via `ErrorData.errorId` and is
+  printed on the built-in `500` page (`Reference ID: …`) when the theme ships no
+  `500` template of its own. The id is the same value the telemetry envelope and
+  structured `dispatch_failed` log already record, so quoting it maps straight to
+  the request's snapshot and span — no new id is minted.
+
+  Nothing about the production error path's isolation changes: `ErrorData` still
+  exposes no `Error` field, and no stack, source, or exception message crosses the
+  boundary. A `404` leaves `errorId` undefined; the dev error surface is
+  unaffected.
+
+### Patch Changes
+
+- Updated dependencies [[`09e89b8`](https://github.com/withplumix/plumix/commit/09e89b88a7e8cbabe96baf7413c3c38149db905e), [`36ce243`](https://github.com/withplumix/plumix/commit/36ce24381eee89688b18cd77255bb9fb29429407), [`2d6753a`](https://github.com/withplumix/plumix/commit/2d6753a26e55df944bc194564190990db1b775ec), [`a9f5648`](https://github.com/withplumix/plumix/commit/a9f56484cb25875cd895538018139a706dc2ba80)]:
+  - @plumix/blocks@0.9.0
+
 ## 0.8.0
 
 ### Minor Changes
