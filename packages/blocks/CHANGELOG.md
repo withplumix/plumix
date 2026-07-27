@@ -1,5 +1,74 @@
 # @plumix/blocks
 
+## 0.9.0
+
+### Minor Changes
+
+- [#1649](https://github.com/withplumix/plumix/pull/1649) [`09e89b8`](https://github.com/withplumix/plumix/commit/09e89b88a7e8cbabe96baf7413c3c38149db905e) Thanks [@nasyrov](https://github.com/nasyrov)! - Let plugins contribute panels to the `plumix dev` error page.
+
+  The dev error page already shows fixed request / route / database / timeline /
+  application context below the stack. A plugin can now add its own section
+  through a new dev-only `error_page:panels` filter, mirroring how it contributes
+  to the debug bar via `debug_bar:panels`:
+
+  ```ts
+  "error_page:panels": (
+    panels: readonly DevErrorPanel[],
+    error: unknown,
+    ctx: AppContext,
+  ) => readonly DevErrorPanel[];
+  ```
+
+  Each `DevErrorPanel` is `{ id, title, order?, render }`, where `render(error,
+ctx)` returns a `ReactNode` over the caught value and the live request context —
+  the same pair the `error_page:hints` filter receives. Core collects the filter
+  `applyFilterIsolated`-safe, dedupes by id (last wins), orders by ascending
+  `order`, and renders each panel in its own isolated SSR pass, so a throwing
+  subscriber or a panel that throws from `render` degrades to a notice rather than
+  crashing the very page meant to surface the error. Contributed panels appear as
+  their own sections below the built-in context.
+
+  Core registers none of its own — its built-in sections cover the common case —
+  so this filter is purely the plugin-facing panel API. The whole surface stays
+  behind the `PLUMIX_DEV` gate and tree-shakes out of production builds.
+
+- [#1651](https://github.com/withplumix/plumix/pull/1651) [`36ce243`](https://github.com/withplumix/plumix/commit/36ce24381eee89688b18cd77255bb9fb29429407) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds an open-in-editor path remap for container and remote dev servers.
+
+  The dev error page's "Open in editor" links use the file path as the dev server
+  sees it, which doesn't exist on your machine when the server runs in a container,
+  a devcontainer, or on a remote/SSH box. Set `PLUMIX_EDITOR_PATH_MAP` to a
+  `from=>to` mapping (e.g. `/workspace=>/Users/me/proj`) and the on-server path
+  prefix is rewritten to the editor-host path before each link is built, so the
+  links open the right file. Only the path prefix is remapped, on a path boundary;
+  paths outside it are left untouched. Like `PLUMIX_EDITOR`, it is read only in
+  `plumix dev` and tree-shakes out of production builds.
+
+- [#1647](https://github.com/withplumix/plumix/pull/1647) [`2d6753a`](https://github.com/withplumix/plumix/commit/2d6753a26e55df944bc194564190990db1b775ec) Thanks [@nasyrov](https://github.com/nasyrov)! - Add an opt-in `log` level to the dev browser-errors-to-terminal forwarder.
+
+  The forwarder ([#1604](https://github.com/withplumix/plumix/issues/1604)) deliberately mirrors only `console.error`/`console.warn`
+  and uncaught exceptions to the `plumix dev` terminal, because plain logs are
+  noisy. Setting `PLUMIX_FORWARD_ERRORS=log` now additionally forwards
+  `console.log`, `console.info`, and `console.debug`, printed through the same
+  `[browser]`-tagged, sourcemapped, repeat-collapsing path as everything else — so
+  the verbose case stays on one contract rather than splitting output to Vite's
+  native `forwardConsole`. The default is unchanged (`warn`), and the whole path
+  remains dev-only and tree-shaken from production island bundles.
+
+- [#1643](https://github.com/withplumix/plumix/pull/1643) [`a9f5648`](https://github.com/withplumix/plumix/commit/a9f56484cb25875cd895538018139a706dc2ba80) Thanks [@nasyrov](https://github.com/nasyrov)! - Unify Vite's compile/import errors with the dev error surface.
+
+  In `plumix dev`, a syntax error or a bad import used to show Vite's own error
+  overlay — visually and behaviorally disjoint from the plumix dev error page and
+  the client island overlay. Plumix now disables Vite's built-in overlay
+  (`server.hmr.overlay: false`) and installs its own from the always-present dev
+  client entry: it intercepts Vite's `vite:error` HMR payload and renders it
+  through the _same_ shared `DevErrorPage` renderer and token sheet, in a Shadow
+  DOM modal over a dimmed backdrop. So compile errors now read like every other
+  plumix dev error — same header, code frame, and styling — and clear on their own
+  when the module recompiles (Escape, the close button, or a backdrop click also
+  dismiss). The whole surface is dev-only, gated on `import.meta.hot`, so it
+  tree-shakes out of the production client bundle; a user can re-enable Vite's own
+  overlay from their `vite` config.
+
 ## 0.8.0
 
 ### Minor Changes
