@@ -24,6 +24,7 @@ function ctxWith(
     hooks,
     telemetry: NOOP_TELEMETRY,
     request: new Request(url),
+    requestId: "req-current",
     debugBar,
     resolvedEntity: null,
     origin: "https://cms.example",
@@ -81,6 +82,19 @@ describe("PlumixDebugBar", () => {
     // Request panel surfaces this request's method and path.
     expect(html).toContain("GET");
     expect(html).toContain("/blog/hello");
+  });
+
+  test("renders a request switcher with the current request pre-selected", () => {
+    const html = renderToStaticMarkup(<PlumixDebugBar ctx={ctxWith(true)} />);
+
+    // The switcher and its dev-only swap script are present, and the panels
+    // live in the container the script swaps in place.
+    expect(html).toContain('data-testid="plumix-debug-switcher"');
+    expect(html).toContain('data-testid="plumix-debug-switcher-script"');
+    expect(html).toContain('data-testid="plumix-debug-panels"');
+    // The in-flight request leads the list, labelled and pre-selected.
+    expect(html).toContain("GET /blog/hello · current");
+    expect(html).toContain('value="req-current"');
   });
 
   test("renders nothing when config disables the bar", () => {
