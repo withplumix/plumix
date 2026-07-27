@@ -1,5 +1,58 @@
 # @plumix/admin
 
+## 0.8.0
+
+### Patch Changes
+
+- [#1557](https://github.com/withplumix/plumix/pull/1557) [`4481cf2`](https://github.com/withplumix/plumix/commit/4481cf28a6b9feef66ddc4f002a2b1bdea9ab725) Thanks [@nasyrov](https://github.com/nasyrov)! - Reflect title, excerpt, meta, and template edits in the editor's visual canvas.
+
+  The canvas iframe live-synced only block content over its bridge; the entry
+  fields the theme template renders around the blocks — title, excerpt, meta,
+  and a `named`-template pick — stayed at their load-time server render until a
+  manual reload. Now, after such a field autosaves, the host reloads the canvas
+  (debounced, coalescing a burst of edits into one reload; block content and the
+  scroll position are preserved), so the theme output tracks the edit.
+
+  Two paths fed the stale output, both fixed:
+
+  - The host never signaled the canvas to refresh for these fields. `PlumixEditor`
+    gains a `previewRefreshToken` the editor bumps after a title / excerpt / meta /
+    template autosave; `CanvasFrame` reloads the iframe when it changes.
+  - The `?preview=` render itself froze the title. `overlayPreviewAutosave` copied
+    `title` from the autosave snapshot, overriding a later live title edit — but
+    the title is a live field (written with `saveAs: "live"`, like slug / parent /
+    terms, which already came from the live row). The preview now overlays only
+    the drafted fields (content, excerpt, meta) and reads the title from live.
+
+- [#1607](https://github.com/withplumix/plumix/pull/1607) [`5beb3ce`](https://github.com/withplumix/plumix/commit/5beb3ced84758f4255356f1118442a45ecaa01b6) Thanks [@nasyrov](https://github.com/nasyrov)! - Reintroduce the starter picker for empty entries.
+
+  The Puck-removal refactor ([#1143](https://github.com/withplumix/plumix/issues/1143)) dropped the "Pick a starter…" onboarding shown
+  when authoring a blank entry, so new entries opened onto an empty canvas with no
+  offered starting points — even though the pattern data layer still marked
+  starter-eligible patterns (`target: "post-content"`, optional `entryTypes`,
+  `priority`). The bespoke editor now surfaces them again:
+
+  - `PlumixEditor` takes an `entryType` and, for a blank entry, opens a modal of
+    the eligible starter patterns (ordered by priority) plus a "Start from blank"
+    escape. Choosing one seeds the canvas with the pattern's blocks (fresh ids, a
+    single undoable step); the editor stays empty on "Start from blank".
+  - A toolbar "Pick a starter…" button re-summons the picker while the canvas is
+    still empty, so a dismissal isn't final.
+
+  Starter open state lives in the editor store; the read-only revision preview
+  omits the picker.
+
+- [#1605](https://github.com/withplumix/plumix/pull/1605) [`154e9e4`](https://github.com/withplumix/plumix/commit/154e9e44c538a8a89056f6be6c5e6fbb1d305c36) Thanks [@nasyrov](https://github.com/nasyrov)! - Restore the browse-revision-history button in the visual editor.
+
+  The Puck-removal refactor ([#1143](https://github.com/withplumix/plumix/issues/1143)) left the bespoke `PlumixEditor` header with no
+  slot for the revision-history affordance, so `edit.tsx` stopped wiring it for the
+  visual branch — revision history became reachable only by hand-crafting a
+  `?revision=<id>` URL. `PlumixEditor` (and its header) now take an optional
+  `revisionsTrigger` slot, rendered as a history icon just after undo/redo, and the
+  visual editor route wires `useRevisionsTrigger` into it — mirroring the plain-form
+  editor (which keeps its labelled text button via the sheet's `triggerVariant`).
+  The sheet's orpc calls stay in the app; the package only exposes the slot.
+
 ## 0.7.0
 
 ### Minor Changes

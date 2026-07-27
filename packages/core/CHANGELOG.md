@@ -1,5 +1,120 @@
 # @plumix/core
 
+## 0.8.0
+
+### Minor Changes
+
+- [#1609](https://github.com/withplumix/plumix/pull/1609) [`741c6b4`](https://github.com/withplumix/plumix/commit/741c6b4b0c731e3fe8efd1c316a0ea4fd23b6e0d) Thanks [@nasyrov](https://github.com/nasyrov)! - Show actionable "how to fix" hints on the `plumix dev` error page.
+
+  When a recognized error reaches the dev error page, it now surfaces a prominent
+  "how to fix" card above the stack. Core matches its own typed errors (e.g.
+  `ThemeRegistrationError`) and a curated set of common untyped pitfalls — a D1
+  `no such table` points at `plumix migrate`, a missing secret points at
+  `.dev.vars`, a missing binding points at `wrangler.jsonc`. Unrecognized errors
+  render no card.
+
+  Hints are contributed through a new dev-only `error_page:hints` filter that
+  mirrors `debug_bar:panels`: it runs on every dev 5xx with the caught error and
+  request context, and plugins subscribe to add or override hints. The shared
+  renderer at `@plumix/blocks/dev-error` gains the `DevErrorHint` shape and renders
+  the cards. Everything stays gated on `process.env.PLUMIX_DEV` and tree-shakes out
+  of production.
+
+- [#1613](https://github.com/withplumix/plumix/pull/1613) [`ec117ea`](https://github.com/withplumix/plumix/commit/ec117ea45ed6ff064807ae2d6cee4dfb5b67cf35) Thanks [@nasyrov](https://github.com/nasyrov)! - Make a throwing block loader dev-fatal in `plumix dev`, naming the block.
+
+  When a block's SSR loader rejects during development, the page now fails to the
+  dev error page — naming the culprit block and surfacing the loader's own
+  message and the failing query — instead of silently dropping that block from
+  the render. In production the same rejection stays isolated to the block
+  (degrading to its `errorFallback`, or nothing) and the page still renders, so
+  the resilience contract is unchanged.
+
+  The render path captures the first loader rejection and, behind the
+  `process.env.PLUMIX_DEV` gate, throws a new `BlockLoaderError` (exported from
+  `@plumix/blocks`) that propagates to the dispatcher catch. The wrapper names the
+  block and loader key, carries the underlying message so error-page hints keep
+  matching through the loader boundary, preserves the original via `cause`, and
+  adopts its stack so frames resolve to the failure site. The gate tree-shakes the
+  escalation out of production builds.
+
+- [#1617](https://github.com/withplumix/plumix/pull/1617) [`9a1e88a`](https://github.com/withplumix/plumix/commit/9a1e88adb272f1f4795ddfd23e2958b4aa8b9443) Thanks [@nasyrov](https://github.com/nasyrov)! - Open a `plumix dev` error-page stack frame in your editor.
+
+  Each frame on the dev error page now carries an "open in editor" link that jumps
+  to the file at the offending line. It is a plain anchor to the editor's URL
+  scheme — zero-JS, no server round-trip. The editor is chosen by a dev-only
+  `PLUMIX_EDITOR` setting: a known-editor key (`vscode` — the default —
+  `vscode-insiders`, `cursor`, `windsurf`, `zed`, `idea`, `phpstorm`, `webstorm`,
+  `sublime`), a custom `{file}` / `{line}` / `{column}` format string for any other
+  editor, or `off` / `none` to drop the link. Everything stays gated on
+  `process.env.PLUMIX_DEV` and tree-shakes out of production.
+
+- [#1606](https://github.com/withplumix/plumix/pull/1606) [`6fe5583`](https://github.com/withplumix/plumix/commit/6fe5583954947ba11093fb053c946640b703b4b0) Thanks [@nasyrov](https://github.com/nasyrov)! - Add a dev-only error page for render throws in `plumix dev`.
+
+  When a theme template throws during render in development, the visitor now gets
+  a self-contained, theme-independent 500 page showing the exception name,
+  message, and raw stack — instead of re-rendering the failure through the theme
+  (which blanks the screen when the theme itself is the culprit). The page is a
+  shared, zero-JS renderer exposed at `@plumix/blocks/dev-error` and SSR'd by core
+  at the dispatcher catch. It is gated on `process.env.PLUMIX_DEV`, so the page
+  and its styles tree-shake out of production builds — the existing themed 500 is
+  unchanged.
+
+- [#1608](https://github.com/withplumix/plumix/pull/1608) [`3d269a3`](https://github.com/withplumix/plumix/commit/3d269a399f6e36e499ef60846abe02716103d7a0) Thanks [@nasyrov](https://github.com/nasyrov)! - Resolve dev error-page stack frames to original source with a code excerpt.
+
+  The `plumix dev` error page now parses the (already-sourcemapped) stack into
+  frames showing each original `file:line`, with application frames expanded and
+  framework/vendor frames collapsed behind a toggle. Selecting a frame shows a
+  source excerpt with the offending line highlighted — lazy-fetched from a new
+  dev-only source resolver mounted as a Vite middleware, so the worker (which has
+  no filesystem) never reads source itself. Paths are shown relative to the
+  project root the frames imply. Everything stays gated on `process.env.PLUMIX_DEV`
+  and tree-shakes out of production.
+
+### Patch Changes
+
+- [#1557](https://github.com/withplumix/plumix/pull/1557) [`4481cf2`](https://github.com/withplumix/plumix/commit/4481cf28a6b9feef66ddc4f002a2b1bdea9ab725) Thanks [@nasyrov](https://github.com/nasyrov)! - Reflect title, excerpt, meta, and template edits in the editor's visual canvas.
+
+  The canvas iframe live-synced only block content over its bridge; the entry
+  fields the theme template renders around the blocks — title, excerpt, meta,
+  and a `named`-template pick — stayed at their load-time server render until a
+  manual reload. Now, after such a field autosaves, the host reloads the canvas
+  (debounced, coalescing a burst of edits into one reload; block content and the
+  scroll position are preserved), so the theme output tracks the edit.
+
+  Two paths fed the stale output, both fixed:
+
+  - The host never signaled the canvas to refresh for these fields. `PlumixEditor`
+    gains a `previewRefreshToken` the editor bumps after a title / excerpt / meta /
+    template autosave; `CanvasFrame` reloads the iframe when it changes.
+  - The `?preview=` render itself froze the title. `overlayPreviewAutosave` copied
+    `title` from the autosave snapshot, overriding a later live title edit — but
+    the title is a live field (written with `saveAs: "live"`, like slug / parent /
+    terms, which already came from the live row). The preview now overlays only
+    the drafted fields (content, excerpt, meta) and reads the title from live.
+
+- [#1569](https://github.com/withplumix/plumix/pull/1569) [`112e1bd`](https://github.com/withplumix/plumix/commit/112e1bd6d0ab8f9579ef8a87651d3a996faf75b9) Thanks [@nasyrov](https://github.com/nasyrov)! - Treat the entry title as a live-only field on every read and write path.
+
+  [#1544](https://github.com/withplumix/plumix/issues/1544) made the `?preview=` render read the live title, but three other paths
+  still read the frozen autosave/revision snapshot, so the title diverged
+  depending on where it was read:
+
+  - `entry.publish` promoted the autosave's snapshot title onto the live row. A
+    title edited on live after a content draft was written reverted to the stale
+    snapshot on publish. Publish now leaves the live title untouched.
+  - `entry.get` preview overlaid the snapshot title, so the editor form and the
+    public preview could disagree. It now keeps the live title.
+  - `entry.update`'s draft branch stored a caller-supplied title on the autosave
+    row. It now anchors the snapshot column to the live title and ignores a
+    drafted title (drafting a title independently of publishing is no longer a
+    capability — the editor writes title straight to live with `saveAs: "live"`).
+  - Restoring a revision onto an autosave-supporting type wrote the revision's
+    title into the draft, where nothing read it back. It now anchors title to
+    the live row, exactly like slug and parentId already do; only content,
+    excerpt, and meta restore into the draft.
+
+- Updated dependencies [[`976fc4d`](https://github.com/withplumix/plumix/commit/976fc4dc102529c25c6509da89e6bce151945dd5), [`077c515`](https://github.com/withplumix/plumix/commit/077c515e47d3e807d61b5ed4a0ff7cbc94839eff), [`741c6b4`](https://github.com/withplumix/plumix/commit/741c6b4b0c731e3fe8efd1c316a0ea4fd23b6e0d), [`ec117ea`](https://github.com/withplumix/plumix/commit/ec117ea45ed6ff064807ae2d6cee4dfb5b67cf35), [`9a1e88a`](https://github.com/withplumix/plumix/commit/9a1e88adb272f1f4795ddfd23e2958b4aa8b9443), [`6fe5583`](https://github.com/withplumix/plumix/commit/6fe5583954947ba11093fb053c946640b703b4b0), [`3d269a3`](https://github.com/withplumix/plumix/commit/3d269a399f6e36e499ef60846abe02716103d7a0), [`a5be41a`](https://github.com/withplumix/plumix/commit/a5be41a282fc4785c7cec582af0e97b3d99bed8a), [`f379b46`](https://github.com/withplumix/plumix/commit/f379b46b4c863bde6d4235a5753e7fd07926153c)]:
+  - @plumix/blocks@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes

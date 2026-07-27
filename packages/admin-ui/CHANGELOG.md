@@ -1,5 +1,38 @@
 # @plumix/admin-ui
 
+## 0.8.0
+
+### Patch Changes
+
+- [#1607](https://github.com/withplumix/plumix/pull/1607) [`5beb3ce`](https://github.com/withplumix/plumix/commit/5beb3ced84758f4255356f1118442a45ecaa01b6) Thanks [@nasyrov](https://github.com/nasyrov)! - Reintroduce the starter picker for empty entries.
+
+  The Puck-removal refactor ([#1143](https://github.com/withplumix/plumix/issues/1143)) dropped the "Pick a starter…" onboarding shown
+  when authoring a blank entry, so new entries opened onto an empty canvas with no
+  offered starting points — even though the pattern data layer still marked
+  starter-eligible patterns (`target: "post-content"`, optional `entryTypes`,
+  `priority`). The bespoke editor now surfaces them again:
+
+  - `PlumixEditor` takes an `entryType` and, for a blank entry, opens a modal of
+    the eligible starter patterns (ordered by priority) plus a "Start from blank"
+    escape. Choosing one seeds the canvas with the pattern's blocks (fresh ids, a
+    single undoable step); the editor stays empty on "Start from blank".
+  - A toolbar "Pick a starter…" button re-summons the picker while the canvas is
+    still empty, so a dismissal isn't final.
+
+  Starter open state lives in the editor store; the read-only revision preview
+  omits the picker.
+
+- [#1605](https://github.com/withplumix/plumix/pull/1605) [`154e9e4`](https://github.com/withplumix/plumix/commit/154e9e44c538a8a89056f6be6c5e6fbb1d305c36) Thanks [@nasyrov](https://github.com/nasyrov)! - Restore the browse-revision-history button in the visual editor.
+
+  The Puck-removal refactor ([#1143](https://github.com/withplumix/plumix/issues/1143)) left the bespoke `PlumixEditor` header with no
+  slot for the revision-history affordance, so `edit.tsx` stopped wiring it for the
+  visual branch — revision history became reachable only by hand-crafting a
+  `?revision=<id>` URL. `PlumixEditor` (and its header) now take an optional
+  `revisionsTrigger` slot, rendered as a history icon just after undo/redo, and the
+  visual editor route wires `useRevisionsTrigger` into it — mirroring the plain-form
+  editor (which keeps its labelled text button via the sheet's `triggerVariant`).
+  The sheet's orpc calls stay in the app; the package only exposes the slot.
+
 ## 0.7.0
 
 ### Patch Changes
