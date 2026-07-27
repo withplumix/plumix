@@ -3,9 +3,16 @@ import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
 import type { DebugBarInput } from "./config.js";
+import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { PlumixDebugBar } from "./component.js";
 import { registerCoreDebugPanels } from "./core-panels.js";
+
+const emptyPlugins = {
+  pluginIds: [],
+  entryTypes: new Map(),
+  termTaxonomies: new Map(),
+};
 
 function ctxWith(
   debugBar: DebugBarInput | undefined,
@@ -15,12 +22,14 @@ function ctxWith(
   registerCoreDebugPanels(hooks);
   return {
     hooks,
+    telemetry: NOOP_TELEMETRY,
     request: new Request(url),
     debugBar,
     resolvedEntity: null,
     origin: "https://cms.example",
     basePath: "",
     locale: { code: "en", direction: "ltr" },
+    plugins: emptyPlugins,
     user: null,
     tokenScopes: null,
   } as unknown as AppContext;
@@ -43,12 +52,14 @@ describe("PlumixDebugBar", () => {
     ]);
     const ctx = {
       hooks,
+      telemetry: NOOP_TELEMETRY,
       request: new Request("https://cms.example/x"),
       debugBar: true,
       resolvedEntity: null,
       origin: "https://cms.example",
       basePath: "",
       locale: { code: "en", direction: "ltr" },
+      plugins: emptyPlugins,
       user: null,
       tokenScopes: null,
     } as unknown as AppContext;

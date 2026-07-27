@@ -1,13 +1,10 @@
-import type { AppContext } from "../../context/app.js";
+import type { DebugSnapshot } from "../snapshot.js";
 import type { DebugPanel } from "../types.js";
 import { DebugKV, DebugSection } from "../primitives.js";
 
-const wired = (slot: unknown): string => (slot ? "✓" : "—");
+const wired = (on: boolean): string => (on ? "✓" : "—");
 
 const list = (values: readonly string[]): string => values.join(", ") || "—";
-
-const keys = (map: ReadonlyMap<string, unknown>): string =>
-  list([...map.keys()]);
 
 /**
  * The App panel: the site's static setup — the same across every page, so it's
@@ -18,45 +15,48 @@ export const appPanel: DebugPanel = {
   id: "app",
   title: "App",
   order: 40,
-  render: (ctx: AppContext) => (
+  render: ({ context }: DebugSnapshot) => (
     <>
       <DebugSection title="Config">
         <DebugKV
           rows={[
-            { label: "Site name", value: ctx.siteName ?? "—" },
-            { label: "Origin", value: ctx.origin },
-            { label: "Base path", value: ctx.basePath || "/" },
+            { label: "Site name", value: context.siteName ?? "—" },
+            { label: "Origin", value: context.origin },
+            { label: "Base path", value: context.basePath || "/" },
           ]}
         />
       </DebugSection>
       <DebugSection title="Locale">
         <DebugKV
           rows={[
-            { label: "Resolved", value: ctx.locale.code },
-            { label: "Direction", value: ctx.locale.direction },
+            { label: "Resolved", value: context.locale.code },
+            { label: "Direction", value: context.locale.direction },
           ]}
         />
       </DebugSection>
       <DebugSection title="Slots">
         <DebugKV
           rows={[
-            { label: "Cache", value: wired(ctx.cache) },
-            { label: "Storage", value: wired(ctx.storage) },
-            { label: "Mailer", value: wired(ctx.mailer) },
-            { label: "Images", value: wired(ctx.imageDelivery) },
+            { label: "Cache", value: wired(context.slots.cache) },
+            { label: "Storage", value: wired(context.slots.storage) },
+            { label: "Mailer", value: wired(context.slots.mailer) },
+            { label: "Images", value: wired(context.slots.images) },
           ]}
         />
       </DebugSection>
       <DebugSection title="Plugins">
         <DebugKV
-          rows={[{ label: "Installed", value: list(ctx.plugins.pluginIds) }]}
+          rows={[{ label: "Installed", value: list(context.plugins.ids) }]}
         />
       </DebugSection>
       <DebugSection title="Content types">
         <DebugKV
           rows={[
-            { label: "Entry types", value: keys(ctx.plugins.entryTypes) },
-            { label: "Taxonomies", value: keys(ctx.plugins.termTaxonomies) },
+            { label: "Entry types", value: list(context.plugins.entryTypes) },
+            {
+              label: "Taxonomies",
+              value: list(context.plugins.termTaxonomies),
+            },
           ]}
         />
       </DebugSection>

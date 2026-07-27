@@ -1,17 +1,17 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app.js";
 import type { JsonValue } from "../../context/telemetry.js";
 import type { TemplateResolution } from "./template.js";
 import { createTelemetryCollector } from "../../context/collector.js";
+import { makeSnapshot } from "../snapshot-fixture.js";
 import { TEMPLATE_PANEL_ID } from "../template-node-label.js";
 import { templatePanel } from "./template.js";
 
 // The renderer stores the resolution walk as an attribute on the `template`
 // span (nested under `render`, as in a real request) — the panel reads it back
-// from the span tree.
-function ctxWith(resolution?: TemplateResolution): AppContext {
+// from the snapshot's span tree.
+function render(resolution?: TemplateResolution): string {
   const telemetry = createTelemetryCollector();
   telemetry.span("render", () => {
     if (resolution) {
@@ -20,12 +20,13 @@ function ctxWith(resolution?: TemplateResolution): AppContext {
       });
     }
   });
-  return { telemetry } as unknown as AppContext;
+  const snapshot = makeSnapshot({ spans: telemetry.getSpans() });
+  return renderToStaticMarkup(<>{templatePanel.render(snapshot)}</>);
 }
 
 describe("templatePanel", () => {
   test("renders the resolution table: node, winner, and each rule's status", () => {
-    const ctx = ctxWith({
+    const html = render({
       nodeLabel: "post: hello-world",
       winner: "post",
       steps: [
@@ -48,8 +49,6 @@ describe("templatePanel", () => {
       ],
     });
 
-    const html = renderToStaticMarkup(<>{templatePanel.render(ctx)}</>);
-
     // Node + winner in their exact `DebugKV` value cells.
     expect(html).toContain("<dd>post: hello-world</dd>");
     expect(html).toContain("<dd>post</dd>");
@@ -64,19 +63,17 @@ describe("templatePanel", () => {
   });
 
   test("marks a 404 when no rule matched", () => {
-    const ctx = ctxWith({
+    const html = render({
       nodeLabel: "post: orphan",
       winner: null,
       steps: [{ label: "archive", status: "never-evaluated" }],
     });
 
-    const html = renderToStaticMarkup(<>{templatePanel.render(ctx)}</>);
-
     expect(html).toContain("no match → 404");
   });
 
   test("shows an n/a state when no template was resolved (e.g. an error page)", () => {
-    const html = renderToStaticMarkup(<>{templatePanel.render(ctxWith())}</>);
+    const html = render();
 
     expect(html).toContain("No template resolution");
   });

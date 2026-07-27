@@ -1,38 +1,27 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app.js";
+import type { DebugContext } from "../snapshot.js";
+import { makeSnapshot } from "../snapshot-fixture.js";
 import { appPanel } from "./app.js";
 
-function ctxWith(overrides: Record<string, unknown>): AppContext {
-  return {
-    origin: "https://cms.example",
-    basePath: "",
-    siteName: "My Site",
-    locale: { code: "en", direction: "ltr" },
-    plugins: {
-      pluginIds: [],
-      entryTypes: new Map(),
-      termTaxonomies: new Map(),
-    },
-    ...overrides,
-  } as unknown as AppContext;
+function render(context: Partial<DebugContext>): string {
+  return renderToStaticMarkup(
+    <>{appPanel.render(makeSnapshot({ context }))}</>,
+  );
 }
 
 describe("appPanel", () => {
   test("shows config, locale, plugins, and content types", () => {
-    const ctx = ctxWith({
+    const html = render({
+      siteName: "My Site",
+      locale: { code: "en", direction: "ltr" },
       plugins: {
-        pluginIds: ["blog", "media"],
-        entryTypes: new Map([
-          ["post", {}],
-          ["page", {}],
-        ]),
-        termTaxonomies: new Map([["category", {}]]),
+        ids: ["blog", "media"],
+        entryTypes: ["post", "page"],
+        termTaxonomies: ["category"],
       },
     });
-
-    const html = renderToStaticMarkup(<>{appPanel.render(ctx)}</>);
 
     expect(html).toContain("My Site"); // config
     expect(html).toContain("en"); // locale
@@ -43,9 +32,9 @@ describe("appPanel", () => {
   });
 
   test("marks wired slots and leaves unwired ones blank", () => {
-    const html = renderToStaticMarkup(
-      <>{appPanel.render(ctxWith({ cache: {} }))}</>,
-    );
+    const html = render({
+      slots: { cache: true, storage: false, mailer: false, images: false },
+    });
 
     // cache is wired, storage is not
     expect(html).toContain("Cache");
