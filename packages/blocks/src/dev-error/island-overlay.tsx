@@ -58,6 +58,9 @@ class IslandErrorOverlay {
   private readonly seenObjects = new WeakSet<object>();
   private readonly seenPrimitives = new Set<string>();
   private active = 0;
+  // Set by a genuine capture and consumed (reset) by the next `render`, so only
+  // that render pulses the count circle — not a reopen on a settled count.
+  private pulseNext = false;
   private expanded = false;
   private host: HTMLElement | null = null;
   private root: Root | null = null;
@@ -120,6 +123,8 @@ class IslandErrorOverlay {
     // down by one, so the panel never swaps out from under them.
     if (this.expanded) this.active += 1;
     else this.active = 0;
+    // A genuine new error just landed — let the next render pulse the circle.
+    this.pulseNext = true;
     this.render();
     void this.resolveFrames(entry);
   }
@@ -174,6 +179,7 @@ class IslandErrorOverlay {
       <Overlay
         errors={this.errors}
         active={this.active}
+        pulse={this.pulseNext}
         expanded={this.expanded}
         shadowRoot={this.host?.shadowRoot ?? null}
         onExpand={() => this.setExpanded(true)}
@@ -182,6 +188,9 @@ class IslandErrorOverlay {
         onNext={() => this.step(1)}
       />,
     );
+    // Consume the one-shot pulse: later renders (frame resolution, expand/
+    // collapse) must not re-fire the animation.
+    this.pulseNext = false;
   }
 
   private mountHost(): void {
@@ -231,6 +240,7 @@ class IslandErrorOverlay {
 function Overlay({
   errors,
   active,
+  pulse,
   expanded,
   shadowRoot,
   onExpand,
@@ -240,6 +250,9 @@ function Overlay({
 }: {
   readonly errors: readonly CapturedError[];
   readonly active: number;
+  // True only on the render that follows a genuine new capture, so the count
+  // circle animates the tick-up but a reopen on a settled count does not.
+  readonly pulse: boolean;
   readonly expanded: boolean;
   readonly shadowRoot: ShadowRoot | null;
   readonly onExpand: () => void;
@@ -257,7 +270,21 @@ function Overlay({
         data-testid="plumix-island-overlay-badge"
         onClick={onExpand}
       >
-        <span className="plumix-island-overlay__badge-count">{count}</span>
+        {/* Keyed on the count so each new error remounts the circle and replays
+            the pulse animation; `pulse` gates whether this render is a genuine
+            tick-up — the burst signal lives on the number itself, no second
+            element. */}
+        <span
+          key={count}
+          className={
+            pulse
+              ? "plumix-island-overlay__badge-count plumix-island-overlay__badge-count--pulse"
+              : "plumix-island-overlay__badge-count"
+          }
+          data-testid="plumix-island-overlay-badge-count"
+        >
+          {count}
+        </span>
         {count === 1 ? "error" : "errors"}
       </button>
     );
@@ -437,6 +464,35 @@ const OVERLAY_CSS = `
   font-size: 0.75rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+/* The circle pulses only when the count climbs (the modifier is applied for
+   that render, on a node remounted by its key), so a burst of errors makes the
+   number visibly throb while a settled count sits still — the "still arriving
+   vs. stable" signal, right on the badge (#1623). */
+.plumix-island-overlay__badge-count--pulse {
+  animation: plumix-island-overlay__count-pulse 420ms ease;
+}
+
+@keyframes plumix-island-overlay__count-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.5);
+  }
+  35% {
+    transform: scale(1.35);
+    box-shadow: 0 0 0 5px rgba(255, 107, 107, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plumix-island-overlay__badge-count--pulse {
+    animation: none;
+  }
 }
 
 .plumix-island-overlay__backdrop {

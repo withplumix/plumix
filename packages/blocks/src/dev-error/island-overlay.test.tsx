@@ -333,6 +333,44 @@ describe("installIslandErrorOverlay", () => {
     vi.unstubAllGlobals();
   });
 
+  function badgeCount(): HTMLElement | null {
+    return query("plumix-island-overlay-badge-count");
+  }
+
+  test("pulses the count circle when the error count climbs", async () => {
+    dispatchHydrationError(new Error("first"), island("Alpha"));
+    await tick();
+    expect(badgeCount()?.className).toContain(
+      "plumix-island-overlay__badge-count--pulse",
+    );
+
+    // A distinct error ticks the count up — the circle pulses again.
+    dispatchHydrationError(new Error("second"), island("Beta"));
+    await tick();
+    expect(badgeCount()?.textContent).toBe("2");
+    expect(badgeCount()?.className).toContain(
+      "plumix-island-overlay__badge-count--pulse",
+    );
+  });
+
+  test("does not re-pulse the circle when reopening on a settled count", async () => {
+    dispatchHydrationError(new Error("boom"), island("Counter"));
+    await tick();
+
+    // Open and close the modal without any new errors arriving.
+    query("plumix-island-overlay-badge")?.click();
+    await tick();
+    query("plumix-island-overlay-collapse")?.click();
+    await tick();
+
+    // The badge is back, but the count is unchanged — no false "arriving" pulse.
+    const circle = badgeCount();
+    expect(circle).not.toBeNull();
+    expect(circle?.className).not.toContain(
+      "plumix-island-overlay__badge-count--pulse",
+    );
+  });
+
   test("uninstall removes the host and stops capturing", async () => {
     dispatchHydrationError(new Error("boom"), island("Counter"));
     await tick();
