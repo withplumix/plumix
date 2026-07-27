@@ -99,6 +99,10 @@ const config: KnipConfig = {
         // can't see.
         "src/blocks/island-runtime.ts",
         "src/blocks/island-renderer.ts",
+        // The dev compile-error overlay entry is loaded by the consumer's
+        // generated `.plumix/client-entry.ts` via a dev-gated
+        // `import("plumix/blocks/dev-error")` — a runtime import knip can't see.
+        "src/blocks/dev-error.ts",
         // The editor runtime entry is loaded by the consumer's generated
         // `.plumix/editor-entry.ts` (`import { bootEditor } from
         // "plumix/editor-runtime"`) — a runtime import knip can't see.
