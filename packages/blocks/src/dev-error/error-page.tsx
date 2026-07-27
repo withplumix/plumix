@@ -8,6 +8,7 @@ import type {
   DevErrorInfo,
   DevErrorQuery,
   DevErrorTimeline,
+  RenderedDevErrorPanel,
 } from "./contract.js";
 import { buildEditorUrl } from "./editor.js";
 import {
@@ -30,6 +31,7 @@ import {
 export function DevErrorPage({
   error,
   context,
+  panels,
   editor,
 }: {
   readonly error: DevErrorInfo;
@@ -39,6 +41,13 @@ export function DevErrorPage({
    * shows just the exception, hints, and stack.
    */
   readonly context?: DevErrorContext;
+  /**
+   * Plugin-contributed panels, already rendered to isolated HTML (#1626).
+   * Shown as their own sections below the built-in context. Absent on surfaces
+   * with no live app to run the `error_page:panels` filter — the client overlay
+   * and the boot-error fallback.
+   */
+  readonly panels?: readonly RenderedDevErrorPanel[];
   /**
    * The resolved open-in-editor URL template (#1581) — from `PLUMIX_EDITOR`,
    * built by {@link resolveEditorTemplate}. When present, each frame renders an
@@ -152,6 +161,39 @@ export function DevErrorPage({
         </section>
       ) : null}
       {context ? <ContextSections context={context} /> : null}
+      {panels && panels.length > 0 ? <PanelSections panels={panels} /> : null}
+    </div>
+  );
+}
+
+/**
+ * The plugin-contributed panels (#1626), each rendered in its own section below
+ * the built-in context. The HTML is the plugin's own isolated SSR output —
+ * core renders it panel-by-panel so a throw yields a fallback rather than
+ * crashing this page — and is inlined verbatim; only the plugin-supplied
+ * {@link RenderedDevErrorPanel.title} is React-escaped as text.
+ */
+function PanelSections({
+  panels,
+}: {
+  readonly panels: readonly RenderedDevErrorPanel[];
+}): ReactElement {
+  return (
+    <div
+      className="plumix-dev-error__panels"
+      data-testid="plumix-dev-error-panels"
+    >
+      {panels.map((panel) => (
+        <section
+          key={panel.id}
+          className="plumix-dev-error__section"
+          data-testid={`plumix-dev-error-panel-${panel.id}`}
+          aria-label={panel.title}
+        >
+          <h2 className="plumix-dev-error__section-title">{panel.title}</h2>
+          <div dangerouslySetInnerHTML={{ __html: panel.html }} />
+        </section>
+      ))}
     </div>
   );
 }

@@ -134,6 +134,20 @@ export interface DevErrorHintDoc {
 }
 
 /**
+ * One plugin-contributed panel (#1626), already rendered to inert HTML — the
+ * section the dev error page shows below its built-in context. Collected and
+ * rendered by core's dev-only `error_page:panels` filter.
+ */
+export interface RenderedDevErrorPanel {
+  /** Stable id — the React key and the label in a failed-render notice. */
+  readonly id: string;
+  /** Section heading; a dev-only English string, like a {@link DevErrorHint}. */
+  readonly title: string;
+  /** The panel's isolated SSR output, inlined into the section. */
+  readonly html: string;
+}
+
+/**
  * One resolved stack frame. `file` is the original absolute source path; the
  * dev source-frame resolver reads it (Node-side, with `fs`) to produce the
  * excerpt the renderer highlights — the worker never touches the filesystem.

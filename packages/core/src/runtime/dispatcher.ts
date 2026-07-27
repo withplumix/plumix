@@ -18,6 +18,7 @@ import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
 import { collectDevErrorContext } from "../dev-error/context.js";
 import { collectDevErrorHints } from "../dev-error/hints/collect.js";
+import { collectDevErrorPanels } from "../dev-error/panels/collect.js";
 import { devErrorJson, renderDevErrorPage } from "../dev-error/render.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { exposesHierarchicalUrls } from "../route/compile.js";
@@ -674,7 +675,11 @@ async function renderPublicRoute(
           // sampling is ensured regardless of the debug bar, so these are
           // populated even when the bar is off.
           const context = collectDevErrorContext(ctx);
-          return new Response(renderDevErrorPage(err, hints, context), {
+          // Plugin-contributed panels via the dev-only `error_page:panels`
+          // filter (#1626), each rendered in isolation and shown below the
+          // context. No subscribers → an empty list and no extra sections.
+          const panels = collectDevErrorPanels(ctx.hooks, err, ctx);
+          return new Response(renderDevErrorPage(err, hints, context, panels), {
             status: 500,
             headers: { "content-type": "text/html; charset=utf-8" },
           });

@@ -4,6 +4,7 @@ import type {
   DevErrorContext,
   DevErrorHint,
   DevErrorInfo,
+  RenderedDevErrorPanel,
 } from "@plumix/blocks/dev-error";
 import {
   DEV_ERROR_CSS,
@@ -93,12 +94,15 @@ export function devErrorJson(
  * dispatcher collected the request's context (`collectDevErrorContext`), it is
  * passed in and rendered as the request / route / database / timeline /
  * application sections below the stack (#1598); omitted on the boot-error path,
- * where the page degrades to just the exception, hints, and stack.
+ * where the page degrades to just the exception, hints, and stack. Plugin
+ * `panels` collected from the `error_page:panels` filter (#1626) render as
+ * their own sections below the context; empty or omitted on the boot path.
  */
 export function renderDevErrorPage(
   err: unknown,
   hints: readonly DevErrorHint[] = [],
   context?: DevErrorContext,
+  panels: readonly RenderedDevErrorPanel[] = [],
 ): string {
   const info: DevErrorInfo = {
     ...toDevErrorInfo(err),
@@ -109,7 +113,12 @@ export function renderDevErrorPage(
   // the literal at bundle time (see the plugin's `define`); unset → VS Code.
   const editor = resolveEditorTemplate(process.env.PLUMIX_EDITOR);
   const body = renderToStaticMarkup(
-    <DevErrorPage error={info} context={context} editor={editor} />,
+    <DevErrorPage
+      error={info}
+      context={context}
+      panels={panels}
+      editor={editor}
+    />,
   );
   const title = escapeHtml(`${info.name}: ${info.message}`);
   const script =

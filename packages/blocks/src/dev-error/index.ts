@@ -10,6 +10,7 @@ export type {
   DevErrorRoute,
   DevErrorTimeline,
   DevErrorTimelineRow,
+  RenderedDevErrorPanel,
 } from "./contract.js";
 export type {
   HmrClient,

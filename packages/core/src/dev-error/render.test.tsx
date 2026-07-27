@@ -140,6 +140,22 @@ describe("renderDevErrorPage", () => {
     expect(html).not.toContain('data-testid="plumix-dev-error-hints"');
   });
 
+  test("renders each contributed panel's isolated HTML as a section", () => {
+    const html = renderDevErrorPage(new Error("boom"), [], undefined, [
+      { id: "queue", title: "Queue", html: "<p>3 jobs pending</p>" },
+    ]);
+
+    expect(html).toContain('data-testid="plumix-dev-error-panel-queue"');
+    expect(html).toContain("Queue");
+    expect(html).toContain("<p>3 jobs pending</p>");
+  });
+
+  test("renders no panels block when none are passed", () => {
+    const html = renderDevErrorPage(new Error("boom"));
+
+    expect(html).not.toContain('data-testid="plumix-dev-error-panels"');
+  });
+
   test("escapes HTML in a hint so a matched message can't break out of the page", () => {
     const html = renderDevErrorPage(new Error("boom"), [
       { title: "<script>alert(1)</script>" },
