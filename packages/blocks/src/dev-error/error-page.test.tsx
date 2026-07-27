@@ -224,6 +224,28 @@ describe("DevErrorPage", () => {
     expect(html).not.toContain('data-testid="plumix-dev-error-open"');
   });
 
+  test("remaps the frame path in the editor link when a path map is set", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{
+          name: "TypeError",
+          message: "boom",
+          frames: [appFrame, vendorFrame],
+        }}
+        editor="vscode://file/{file}:{line}:{column}"
+        editorPathMap={{ from: "/proj", to: "/Users/me/proj" }}
+      />,
+    );
+
+    // Both the app frame and the collapsed vendor frame get the remapped path.
+    expect(html).toContain(
+      'href="vscode://file//Users/me/proj/src/theme.tsx:12:7"',
+    );
+    expect(html).toContain(
+      "vscode://file//Users/me/proj/node_modules/react-dom/server.js:100:5",
+    );
+  });
+
   test("exposes the source-resolver endpoint and an excerpt panel for the enhancement", () => {
     const html = renderToStaticMarkup(
       <DevErrorPage

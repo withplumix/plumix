@@ -21,7 +21,12 @@ export {
   compileErrorToInfo,
   installCompileErrorOverlay,
 } from "./compile-overlay.js";
-export { buildEditorUrl, resolveEditorTemplate } from "./editor.js";
+export type { EditorPathMap } from "./editor.js";
+export {
+  buildEditorUrl,
+  resolveEditorPathMap,
+  resolveEditorTemplate,
+} from "./editor.js";
 export { enhanceDevError } from "./enhance.js";
 export { DevErrorPage } from "./error-page.js";
 export {

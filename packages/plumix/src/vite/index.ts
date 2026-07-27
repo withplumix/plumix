@@ -135,6 +135,15 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         "process.env.PLUMIX_EDITOR": JSON.stringify(
           env.command === "build" ? "" : (process.env.PLUMIX_EDITOR ?? ""),
         ),
+        // The dev-only open-in-editor path remap (#1627), for a dev server whose
+        // filesystem differs from the editor host's (container / remote / dev-
+        // container). Substituted from the dev machine's env at bundle time;
+        // empty in a production build, where the dev-error path tree-shakes out.
+        "process.env.PLUMIX_EDITOR_PATH_MAP": JSON.stringify(
+          env.command === "build"
+            ? ""
+            : (process.env.PLUMIX_EDITOR_PATH_MAP ?? ""),
+        ),
         // The dev-only browser-errors-to-terminal level (#1604). Substituted from
         // the dev machine's env at bundle time so the islands runtime knows what
         // to forward; empty in a production build, where the whole forwarder

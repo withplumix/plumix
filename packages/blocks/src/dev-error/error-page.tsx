@@ -10,6 +10,7 @@ import type {
   DevErrorTimeline,
   RenderedDevErrorPanel,
 } from "./contract.js";
+import type { EditorPathMap } from "./editor.js";
 import { buildEditorUrl } from "./editor.js";
 import {
   commonBaseDir,
@@ -33,6 +34,7 @@ export function DevErrorPage({
   context,
   panels,
   editor,
+  editorPathMap,
 }: {
   readonly error: DevErrorInfo;
   /**
@@ -55,6 +57,13 @@ export function DevErrorPage({
    * link and leaves the frame as a source-viewing button only.
    */
   readonly editor?: string;
+  /**
+   * An optional from→to path-prefix remap for the editor links (#1627) — from
+   * `PLUMIX_EDITOR_PATH_MAP`, parsed by {@link resolveEditorPathMap}. Applied to
+   * each frame's path so links resolve on the editor host when the dev server
+   * runs in a container or on a remote box with a different filesystem layout.
+   */
+  readonly editorPathMap?: EditorPathMap;
 }): ReactElement {
   const frames = error.frames ?? [];
   const appFrames = frames.filter((frame) => !frame.isVendor);
@@ -103,7 +112,12 @@ export function DevErrorPage({
             <ol className="plumix-dev-error__app-frames">
               {appFrames.map((frame, index) => (
                 <li key={frameKey(frame, index)}>
-                  <FrameButton frame={frame} base={base} editor={editor} />
+                  <FrameButton
+                    frame={frame}
+                    base={base}
+                    editor={editor}
+                    editorPathMap={editorPathMap}
+                  />
                 </li>
               ))}
             </ol>
@@ -119,7 +133,12 @@ export function DevErrorPage({
                 <ol className="plumix-dev-error__vendor-frames">
                   {vendorFrames.map((frame, index) => (
                     <li key={frameKey(frame, index)}>
-                      <FrameButton frame={frame} base={base} editor={editor} />
+                      <FrameButton
+                        frame={frame}
+                        base={base}
+                        editor={editor}
+                        editorPathMap={editorPathMap}
+                      />
                     </li>
                   ))}
                 </ol>
@@ -478,11 +497,14 @@ function FrameButton({
   frame,
   base,
   editor,
+  editorPathMap,
 }: {
   readonly frame: DevErrorFrame;
   readonly base: string;
   /** The resolved open-in-editor template; when set, renders the editor link. */
   readonly editor?: string;
+  /** The optional from→to path remap applied to the frame path (#1627). */
+  readonly editorPathMap?: EditorPathMap;
 }): ReactElement {
   const location = `${relativeFramePath(frame.file, base)}:${frame.line}`;
   return (
@@ -505,7 +527,7 @@ function FrameButton({
         // (#1581). The OS hands the `scheme://…` URL to the configured editor.
         <a
           className="plumix-dev-error__open"
-          href={buildEditorUrl(editor, frame)}
+          href={buildEditorUrl(editor, frame, editorPathMap)}
           data-testid="plumix-dev-error-open"
           aria-label={`Open ${location} in your editor`}
           title="Open in editor"

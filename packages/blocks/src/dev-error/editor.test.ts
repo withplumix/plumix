@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import { buildEditorUrl, resolveEditorTemplate } from "./editor.js";
+import {
+  buildEditorUrl,
+  resolveEditorPathMap,
+  resolveEditorTemplate,
+} from "./editor.js";
 
 describe("resolveEditorTemplate", () => {
   test("defaults to VS Code when the setting is unset", () => {
@@ -69,5 +73,90 @@ describe("buildEditorUrl", () => {
       column: 1,
     });
     expect(url).toBe("x:///a.ts?also=/a.ts");
+  });
+
+  test("remaps the file path prefix before filling the template", () => {
+    const url = buildEditorUrl(
+      "vscode://file/{file}:{line}:{column}",
+      { file: "/workspace/src/theme.tsx", line: 12, column: 7 },
+      { from: "/workspace", to: "/Users/me/proj" },
+    );
+    expect(url).toBe("vscode://file//Users/me/proj/src/theme.tsx:12:7");
+  });
+
+  test("leaves a path that does not start with the mapped prefix untouched", () => {
+    const url = buildEditorUrl(
+      "vscode://file/{file}:{line}:{column}",
+      { file: "/other/src/a.ts", line: 3, column: 1 },
+      { from: "/workspace", to: "/Users/me/proj" },
+    );
+    expect(url).toBe("vscode://file//other/src/a.ts:3:1");
+  });
+
+  test("remaps a path that equals the mapped prefix exactly", () => {
+    const url = buildEditorUrl(
+      "vscode://file/{file}:{line}:{column}",
+      { file: "/workspace", line: 1, column: 1 },
+      { from: "/workspace", to: "/Users/me/proj" },
+    );
+    expect(url).toBe("vscode://file//Users/me/proj:1:1");
+  });
+
+  test("only matches the prefix at a path boundary, not a partial segment", () => {
+    const url = buildEditorUrl(
+      "vscode://file/{file}:{line}:{column}",
+      { file: "/workspace-other/a.ts", line: 1, column: 1 },
+      { from: "/workspace", to: "/Users/me/proj" },
+    );
+    expect(url).toBe("vscode://file//workspace-other/a.ts:1:1");
+  });
+
+  test("URL-encodes the remapped path", () => {
+    const url = buildEditorUrl(
+      "vscode://file/{file}:{line}:{column}",
+      { file: "/workspace/a.ts", line: 1, column: 1 },
+      { from: "/workspace", to: "/Users/My Name/proj" },
+    );
+    expect(url).toBe("vscode://file//Users/My%20Name/proj/a.ts:1:1");
+  });
+});
+
+describe("resolveEditorPathMap", () => {
+  test("parses a `from=>to` mapping", () => {
+    expect(resolveEditorPathMap("/workspace=>/Users/me/proj")).toEqual({
+      from: "/workspace",
+      to: "/Users/me/proj",
+    });
+  });
+
+  test("returns undefined when unset or empty", () => {
+    expect(resolveEditorPathMap(undefined)).toBeUndefined();
+    expect(resolveEditorPathMap("")).toBeUndefined();
+  });
+
+  test("returns undefined when the `=>` separator is missing", () => {
+    expect(resolveEditorPathMap("/workspace")).toBeUndefined();
+  });
+
+  test("returns undefined when either side is empty", () => {
+    expect(resolveEditorPathMap("=>/Users/me/proj")).toBeUndefined();
+    expect(resolveEditorPathMap("/workspace=>")).toBeUndefined();
+  });
+
+  test("strips a trailing slash from both sides so `/ws/` and `/ws` behave alike", () => {
+    expect(resolveEditorPathMap("/workspace/=>/Users/me/proj/")).toEqual({
+      from: "/workspace",
+      to: "/Users/me/proj",
+    });
+  });
+
+  test("round-trips through buildEditorUrl", () => {
+    const map = resolveEditorPathMap("/workspace=>/Users/me/proj");
+    const url = buildEditorUrl(
+      "vscode://file/{file}:{line}:{column}",
+      { file: "/workspace/src/a.ts", line: 5 },
+      map,
+    );
+    expect(url).toBe("vscode://file//Users/me/proj/src/a.ts:5:1");
   });
 });

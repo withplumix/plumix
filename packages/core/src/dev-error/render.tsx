@@ -11,6 +11,7 @@ import {
   DevErrorPage,
   enhanceDevError,
   parseStackFrames,
+  resolveEditorPathMap,
   resolveEditorTemplate,
 } from "@plumix/blocks/dev-error";
 
@@ -112,12 +113,19 @@ export function renderDevErrorPage(
   // links to the file at its line in the developer's editor. Vite substitutes
   // the literal at bundle time (see the plugin's `define`); unset → VS Code.
   const editor = resolveEditorTemplate(process.env.PLUMIX_EDITOR);
+  // And the optional path remap from `PLUMIX_EDITOR_PATH_MAP` (#1627), which
+  // rewrites the on-server frame path to the editor host's when the dev server
+  // runs in a container or on a remote box.
+  const editorPathMap = resolveEditorPathMap(
+    process.env.PLUMIX_EDITOR_PATH_MAP,
+  );
   const body = renderToStaticMarkup(
     <DevErrorPage
       error={info}
       context={context}
       panels={panels}
       editor={editor}
+      editorPathMap={editorPathMap}
     />,
   );
   const title = escapeHtml(`${info.name}: ${info.message}`);

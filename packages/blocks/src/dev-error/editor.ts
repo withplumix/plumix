@@ -46,21 +46,72 @@ export function resolveEditorTemplate(
 }
 
 /**
+ * A from→to path-prefix remap for open-in-editor links (#1627). Applied to a
+ * frame's path before the scheme template is filled, so links open the right
+ * file when the dev server's filesystem differs from the editor host's — a
+ * container, a remote/SSH box, or a devcontainer. Parsed from
+ * `PLUMIX_EDITOR_PATH_MAP` by {@link resolveEditorPathMap}.
+ */
+export interface EditorPathMap {
+  readonly from: string;
+  readonly to: string;
+}
+
+/**
+ * Parse the `PLUMIX_EDITOR_PATH_MAP` setting — a single `from=>to` mapping, e.g.
+ * `/workspace=>/Users/me/proj` — into an {@link EditorPathMap}, or `undefined`
+ * when unset or malformed. A missing `=>`, or an empty side, yields `undefined`
+ * (links fall back to the verbatim path): an empty `from` would match every
+ * path, and an empty `to` would truncate every path to a broken root. A trailing
+ * slash on either side is stripped so `/workspace/` and `/workspace` behave alike.
+ */
+export function resolveEditorPathMap(
+  setting: string | undefined,
+): EditorPathMap | undefined {
+  if (!setting) return undefined;
+  const sep = setting.indexOf("=>");
+  if (sep === -1) return undefined;
+  const from = stripTrailingSlash(setting.slice(0, sep));
+  const to = stripTrailingSlash(setting.slice(sep + 2));
+  if (from === "" || to === "") return undefined;
+  return { from, to };
+}
+
+function stripTrailingSlash(path: string): string {
+  return path.endsWith("/") ? path.slice(0, -1) : path;
+}
+
+// Rewrite a frame path through the map when it lies under `from`. The prefix
+// must land on a path boundary — the whole path or a `/`-delimited segment — so
+// `/workspace` doesn't rewrite `/workspace-other`.
+function remapFilePath(file: string, map: EditorPathMap): string {
+  if (file === map.from) return map.to;
+  if (file.startsWith(`${map.from}/`)) {
+    return map.to + file.slice(map.from.length);
+  }
+  return file;
+}
+
+/**
  * Build the concrete open-in-editor href for a frame from a resolved template.
- * The path is escaped with `encodeURI` — spaces and non-ASCII escape, while the
- * `/` separators and a Windows drive colon stay intact (`vscode://file/C:/…`).
- * `encodeURI` leaves the URI-reserved set (`?`, `&`, `#`, `=`) unescaped, which
- * a path fed into the query-string templates (`idea`, `sublime`) could in
- * principle corrupt — accepted, since source paths practically never contain
- * those and the path-style VS Code family needs the reserved chars preserved.
- * `{column}` defaults to 1 when the frame carried no column.
+ * When a {@link EditorPathMap} is given, the frame path is remapped (#1627)
+ * before escaping. The path is escaped with `encodeURI` — spaces and non-ASCII
+ * escape, while the `/` separators and a Windows drive colon stay intact
+ * (`vscode://file/C:/…`). `encodeURI` leaves the URI-reserved set (`?`, `&`,
+ * `#`, `=`) unescaped, which a path fed into the query-string templates (`idea`,
+ * `sublime`) could in principle corrupt — accepted, since source paths
+ * practically never contain those and the path-style VS Code family needs the
+ * reserved chars preserved. `{column}` defaults to 1 when the frame carried no
+ * column.
  */
 export function buildEditorUrl(
   template: string,
   frame: Pick<DevErrorFrame, "file" | "line" | "column">,
+  pathMap?: EditorPathMap,
 ): string {
+  const file = pathMap ? remapFilePath(frame.file, pathMap) : frame.file;
   return template
-    .replaceAll("{file}", encodeURI(frame.file))
+    .replaceAll("{file}", encodeURI(file))
     .replaceAll("{line}", String(frame.line))
     .replaceAll("{column}", String(frame.column ?? 1));
 }
