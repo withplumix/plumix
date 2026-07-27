@@ -129,12 +129,18 @@ function shorten(file: string, root: string): string {
   return file.startsWith(base) ? file.slice(base.length) : file;
 }
 
+const FORWARD_LEVELS = new Set(["error", "warn", "log", "info", "debug"]);
+
+function isForwardLevel(value: unknown): value is ForwardedLog["level"] {
+  return typeof value === "string" && FORWARD_LEVELS.has(value);
+}
+
 function asForwardedLog(value: unknown): ForwardedLog | null {
   if (value === null || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;
   const { kind, level, message } = record;
   if (kind !== "console" && kind !== "exception") return null;
-  if (level !== "error" && level !== "warn") return null;
+  if (!isForwardLevel(level)) return null;
   if (typeof message !== "string") return null;
   return {
     kind,
