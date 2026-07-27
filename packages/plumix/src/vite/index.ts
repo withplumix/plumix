@@ -220,7 +220,12 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         // client output isn't printed twice (Vite's default auto-enables it when
         // it detects an AI agent driving the server). A user can re-enable it in
         // their own `vite` config, which merges after this.
-        server: { forwardConsole: false },
+        //
+        // Turn off Vite's built-in compile-error overlay (#1622): the client
+        // entry installs plumix's own overlay, which renders the same
+        // `vite:error` payload through the shared dev error surface — the two
+        // must not stack. A user can re-enable Vite's in their own config.
+        server: { forwardConsole: false, hmr: { overlay: false } },
       };
       if (userConfig.publicDir === undefined) {
         base.publicDir = ".plumix/public";

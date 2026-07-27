@@ -11,6 +11,15 @@ export type {
   DevErrorTimeline,
   DevErrorTimelineRow,
 } from "./contract.js";
+export type {
+  HmrClient,
+  InstallOptions,
+  ViteErrorPayload,
+} from "./compile-overlay.js";
+export {
+  compileErrorToInfo,
+  installCompileErrorOverlay,
+} from "./compile-overlay.js";
 export { buildEditorUrl, resolveEditorTemplate } from "./editor.js";
 export { enhanceDevError } from "./enhance.js";
 export { DevErrorPage } from "./error-page.js";
