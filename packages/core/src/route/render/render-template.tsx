@@ -655,11 +655,16 @@ function DefaultNotFound() {
   );
 }
 
-function DefaultServerError() {
+function DefaultServerError({ data }: { data: ErrorData }) {
   return (
     <main>
       <h1>Internal Server Error</h1>
       <p>Something went wrong while rendering this page.</p>
+      {data.errorId ? (
+        <p>
+          Reference ID: <code>{data.errorId}</code>
+        </p>
+      ) : null}
     </main>
   );
 }

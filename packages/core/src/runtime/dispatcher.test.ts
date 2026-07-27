@@ -2372,6 +2372,31 @@ describe("dispatcher — dev error page", () => {
     expect(body).toContain("Something went wrong while rendering");
     expect(body).not.toContain("plumix-dev-error");
   });
+
+  test("prod: the themed 500 surfaces a correlation id equal to the request's telemetry id", async () => {
+    delete process.env.PLUMIX_DEV;
+    const snapshots: TelemetrySnapshot[] = [];
+    const h = await createDispatcherHarness({
+      theme: throwingTheme,
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+
+    expect(response.status).toBe(500);
+    const body = await response.text();
+    // The id on the 500 page is the request's telemetry id — an operator can
+    // tie a report back to this failure, and nothing of the exception leaks.
+    const requestId = snapshots[0]?.request.requestId;
+    expect(requestId).toBeDefined();
+    expect(body).toContain(requestId ?? "");
+    expect(body).not.toContain("render kaboom");
+  });
 });
 
 describe("dispatcher — dev JSON error (non-HTML 5xx)", () => {

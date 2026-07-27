@@ -36,6 +36,8 @@ function headOf(body: string): string {
   return body.slice(body.indexOf("<head>"), body.indexOf("</head>"));
 }
 
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
+
 async function dispatchHead(
   h: Awaited<ReturnType<typeof createDispatcherHarness>>,
   url: string,
@@ -3932,6 +3934,7 @@ describe("resolvePublicRoute — error pages through theme", () => {
           <main data-testid="four-oh-four">
             <h1>Page missing</h1>
             <code data-testid="hint">{data.hint ?? ""}</code>
+            <code data-testid="error-id">{data.errorId ?? ""}</code>
           </main>
         )),
       ],
@@ -3945,6 +3948,8 @@ describe("resolvePublicRoute — error pages through theme", () => {
     const body = await response.text();
     expect(body).toContain('data-testid="four-oh-four"');
     expect(body).toContain("Page missing");
+    // A 404 is not a failure to correlate — no error id is threaded to it.
+    expect(body).toContain('data-testid="error-id"></code>');
   });
 
   test("themed 404 preserves the `x-plumix-hint` diagnostic header", async () => {
@@ -3990,6 +3995,7 @@ describe("resolvePublicRoute — error pages through theme", () => {
           <main data-testid="five-oh-oh">
             <h1>Server error</h1>
             <p data-testid="hint">{data.hint ?? ""}</p>
+            <p data-testid="error-id">{data.errorId ?? ""}</p>
           </main>
         )),
       ],
@@ -4013,7 +4019,10 @@ describe("resolvePublicRoute — error pages through theme", () => {
     expect(response.status).toBe(500);
     const body = await response.text();
     expect(body).toContain('data-testid="five-oh-oh"');
-    // Internal error text must never leak to clients.
+    // The 5xx payload reaches the theme with a correlation id, not exception detail.
+    expect(body).toMatch(
+      new RegExp(`data-testid="error-id">${UUID_RE.source}<`),
+    );
     expect(body).not.toContain("kaboom-secret-payload");
   });
 
@@ -4046,6 +4055,8 @@ describe("resolvePublicRoute — error pages through theme", () => {
     const body = await response.text();
     expect(body).toContain("<!doctype html>");
     expect(body).toContain("Internal Server Error");
+    // The built-in 500 page prints the correlation id even with no `500` template.
+    expect(body).toMatch(UUID_RE);
     expect(body).not.toContain("kaboom-different-payload");
   });
 
