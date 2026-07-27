@@ -13,6 +13,7 @@ import type { DevErrorJson } from "../dev-error/render.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { ConnectedCache } from "./slots.js";
+import { debugHistory } from "../debug-bar/history.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";
@@ -2046,6 +2047,64 @@ describe("dispatcher — telemetry consumers", () => {
       // dev error page reads the same collectors, so they must be active even
       // when the bar is off.
       expect(seen()).toBeGreaterThan(0);
+    });
+
+    test("captures a non-HTML (RPC) request into the history store", async () => {
+      process.env.PLUMIX_DEV = "1";
+      // An in-test consumer hands back the request id so we look the capture
+      // up precisely, immune to whatever else the shared singleton holds.
+      let requestId: string | undefined;
+      const h = await createDispatcherHarness({
+        telemetry: {
+          consumers: [
+            {
+              id: "id-probe",
+              onRequestEnd: (s) => void (requestId = s.request.requestId),
+            },
+          ],
+        },
+      });
+
+      const response = await h.dispatch(
+        plumixRequest("/_plumix/rpc/entry/list", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ json: {} }),
+        }),
+      );
+      await h.drainDeferred();
+
+      // The response is JSON, not HTML — exactly the request an inline bar can
+      // never show, so history is the only place it becomes inspectable.
+      expect(response.headers.get("content-type")).not.toContain("text/html");
+      const entry = debugHistory.find(requestId ?? "");
+      expect(entry).toBeDefined();
+      expect(entry?.snapshot.context.path).toBe("/_plumix/rpc/entry/list");
+      expect(entry?.snapshot.context.method).toBe("POST");
+      expect(entry?.status).toBe(response.status);
+    });
+
+    test("with the dev flag unset, nothing is captured", async () => {
+      delete process.env.PLUMIX_DEV;
+      let requestId: string | undefined;
+      const h = await createDispatcherHarness({
+        telemetry: {
+          consumers: [
+            {
+              id: "id-probe",
+              onRequestEnd: (s) => void (requestId = s.request.requestId),
+            },
+          ],
+        },
+      });
+
+      await h.dispatch(new Request("https://cms.example/"));
+      await h.drainDeferred();
+
+      // The probe fired (so the request finished), yet no history writer was
+      // registered without the dev gate.
+      expect(requestId).toBeDefined();
+      expect(debugHistory.find(requestId ?? "")).toBeUndefined();
     });
   });
 });
