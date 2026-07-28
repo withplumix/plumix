@@ -7,7 +7,11 @@ import type { RouteMatch } from "../route/match.js";
 import type { PlumixApp } from "./app.js";
 import { authenticateTraced } from "../auth/authenticator.js";
 import { readSessionCookie } from "../auth/cookies.js";
-import { hasCsrfHeader, hasMatchingOrigin } from "../auth/csrf.js";
+import {
+  hasCsrfHeader,
+  hasMatchingOrigin,
+  isLoopbackOrigin,
+} from "../auth/csrf.js";
 import { parseOAuthPath } from "../auth/oauth/match.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
 import { embeddedPageTags } from "../cache/embedded-tags.js";
@@ -223,19 +227,7 @@ function isSameOrigin(request: Request): boolean {
 
 function hasLocalhostOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
-  if (!origin) return false;
-  try {
-    const { hostname } = new URL(origin);
-    // The whole 127.0.0.0/8 block is loopback, not just 127.0.0.1.
-    // WHATWG URL always compresses IPv6 loopback to `[::1]`.
-    return (
-      hostname === "localhost" ||
-      hostname === "[::1]" ||
-      /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)
-    );
-  } catch {
-    return false;
-  }
+  return origin !== null && isLoopbackOrigin(origin);
 }
 
 // Strip the configured subdirectory prefix once, at the edge, by rewriting the
@@ -278,10 +270,15 @@ async function tryColdInterfaces(
   pathname: string,
 ): Promise<Response | null> {
   if (pathname === MCP_PATH) {
-    if (!interfaceEnabled(app.config.mcp)) return notFound("mcp-disabled");
+    // Default-off in production; auto-enabled in dev so a connected coding
+    // agent reaches it with no config flag. `devCsrfLocalhost` is statically
+    // false in production builds, so the auto-enable never applies there.
+    if (!interfaceEnabled(app.config.mcp) && !app.devCsrfLocalhost) {
+      return notFound("mcp-disabled");
+    }
     const { handleMcpRequest } = await (mcpModule ??=
       import("../mcp/dispatch.js"));
-    return handleMcpRequest(ctx);
+    return handleMcpRequest(ctx, app.devCsrfLocalhost);
   }
   if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {
     if (!interfaceEnabled(app.config.api)) return notFound("api-disabled");
