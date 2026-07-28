@@ -29,6 +29,17 @@ export const DEV_ERROR_STACK_ENDPOINT = "/@plumix-dev-error-stack";
  */
 export const DEV_ERROR_TERMINAL_ENDPOINT = "/@plumix-dev-error-terminal";
 
+/**
+ * The dev-only endpoint that reads back the client failures the terminal
+ * forwarder (#1604) retained — already sourcemapped, newest-first (#1656). A GET
+ * served by the same Vite dev-server middleware; the client never calls it (the
+ * forwarder only POSTs). Its reader is the worker-side MCP `error_list` tool
+ * (#1653), which merges these client entries with its server-side projection.
+ * Shared here so the middleware (in `plumix/vite`) and that reader agree on the
+ * path.
+ */
+export const DEV_ERROR_CLIENT_ERRORS_ENDPOINT = "/@plumix-dev-client-errors";
+
 // The trailing `:line:col` (with an optional closing paren) of a V8 frame.
 // Anchored, with non-overlapping `\d+` runs, so it can only ever scan the tail
 // once — no catch-all `.+` that could backtrack superlinearly on a hostile

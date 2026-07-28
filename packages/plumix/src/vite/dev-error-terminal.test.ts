@@ -275,3 +275,66 @@ describe("createTerminalForwarder", () => {
     expect(d.lines).toEqual(["[browser] console.error: ok"]);
   });
 });
+
+describe("createTerminalForwarder — retained read", () => {
+  function deps(frames: DevErrorFrame[] = []) {
+    const lines: string[] = [];
+    return {
+      lines,
+      resolveStack: vi.fn(() => Promise.resolve(frames)),
+      print: (line: string) => lines.push(line),
+      root: ROOT,
+    };
+  }
+
+  function body(logs: ForwardedLog[]): string {
+    return JSON.stringify({ logs });
+  }
+
+  test("read() returns retained entries newest-first with the resolved stack", async () => {
+    const d = deps([frame({ functionName: "Counter" })]);
+    const forwarder = createTerminalForwarder(d);
+
+    await forwarder.handle(
+      body([
+        {
+          kind: "exception",
+          level: "error",
+          message: "Error: render boom",
+          label: "<Counter>",
+          stack: "Error: render boom\n    at Counter (http://localhost/x:1:0)",
+        },
+        { kind: "console", level: "warn", message: "later" },
+      ]),
+    );
+
+    expect(forwarder.read()).toEqual([
+      { source: "client", level: "warn", message: "later", stack: [] },
+      {
+        source: "client",
+        level: "error",
+        message: "Error: render boom",
+        label: "<Counter>",
+        stack: [frame({ functionName: "Counter" })],
+      },
+    ]);
+  });
+
+  test("retains every forwarded entry, even collapsed terminal repeats", async () => {
+    const d = deps([]);
+    const forwarder = createTerminalForwarder(d);
+    const log: ForwardedLog = { kind: "console", level: "error", message: "x" };
+
+    await forwarder.handle(body([log, log, log]));
+
+    // Terminal collapses repeats into a running count, but each forwarded
+    // failure is a distinct retained entry.
+    expect(d.lines).toHaveLength(3);
+    expect(forwarder.read().map((e) => e.message)).toEqual(["x", "x", "x"]);
+  });
+
+  test("read() starts empty before anything is forwarded", () => {
+    const forwarder = createTerminalForwarder(deps());
+    expect(forwarder.read()).toEqual([]);
+  });
+});

@@ -1,5 +1,11 @@
 import type { DevErrorFrame, ForwardedLog } from "@plumix/blocks/dev-error";
 
+import type {
+  ClientErrorRing,
+  RetainedClientError,
+} from "./client-error-ring.js";
+import { createClientErrorRing } from "./client-error-ring.js";
+
 // Browser-errors-to-terminal (#1604, decisions #1573/#1579). The dev-only island
 // catch net POSTs client failures — uncaught exceptions plus `console.error` /
 // `console.warn` — here, and this prints them into the `plumix dev` terminal
@@ -54,15 +60,21 @@ function headerOf(log: ForwardedLog): string {
 
 /**
  * Create the stateful forwarder the Vite middleware holds for the dev session.
- * `handle` parses a POSTed `{ logs }` batch, resolves each stack, and prints —
+ * `handle` parses a POSTed `{ logs }` batch, resolves each stack, prints —
  * collapsing consecutive identical logs into a running `(×N)` count so a tight
- * loop doesn't re-dump the same block.
+ * loop doesn't re-dump the same block — and retains each resolved entry in a
+ * bounded ring. `read` returns those retained entries newest-first, so the
+ * dev-only MCP `error_list` tool (#1653/#1656) can read client failures back
+ * without re-running the browser. Retention rides alongside the print and never
+ * changes it.
  */
 export function createTerminalForwarder(deps: TerminalForwardDeps): {
   handle: (body: string) => Promise<{ readonly status: number }>;
+  read: () => readonly RetainedClientError[];
 } {
   let lastSignature: string | null = null;
   let repeat = 0;
+  const ring: ClientErrorRing = createClientErrorRing();
 
   async function emit(log: ForwardedLog): Promise<void> {
     // Resolve frames BEFORE touching the collapse state, so the compare-and-print
@@ -70,6 +82,9 @@ export function createTerminalForwarder(deps: TerminalForwardDeps): {
     // overlapping POSTs (separate client flushes) then can't interleave
     // `lastSignature`/`repeat` across a suspension point.
     const frames = log.stack ? await deps.resolveStack(log.stack) : [];
+    // Retain every forwarded entry (the terminal's `(×N)` collapse is a display
+    // concern; each failure is still a distinct entry the reader wants to see).
+    ring.add(retain(log, frames));
     const signature = signatureOf(log);
     if (signature === lastSignature) {
       repeat += 1;
@@ -82,6 +97,7 @@ export function createTerminalForwarder(deps: TerminalForwardDeps): {
   }
 
   return {
+    read: () => ring.get(),
     async handle(body: string): Promise<{ readonly status: number }> {
       let logs: unknown;
       try {
@@ -101,6 +117,23 @@ export function createTerminalForwarder(deps: TerminalForwardDeps): {
 
 function signatureOf(log: ForwardedLog): string {
   return `${log.kind}|${log.level}|${log.label ?? ""}|${log.message}`;
+}
+
+// Project a forwarded log plus its resolved frames into the flat entry the
+// reader observes: `source=client`, the level/message/label as forwarded, and
+// the sourcemapped frames as the stack. `kind` is a terminal-formatting concern
+// only, so it doesn't survive here.
+function retain(
+  log: ForwardedLog,
+  frames: readonly DevErrorFrame[],
+): RetainedClientError {
+  return {
+    source: "client",
+    level: log.level,
+    message: log.message,
+    stack: frames,
+    ...(log.label !== undefined ? { label: log.label } : {}),
+  };
 }
 
 // The first application frame, falling back to the first frame of any kind, so a
