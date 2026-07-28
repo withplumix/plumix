@@ -1,6 +1,7 @@
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { McpTool } from "./tool.js";
 import { contentGetTool, contentListTool } from "./content-tools.js";
+import { errorMcpTools } from "./error-tools.js";
 import { schemaDescribeTool } from "./schema-describe.js";
 import { telemetryMcpTools } from "./telemetry-tools.js";
 import { taxonomyListTool, termGetTool, termListTool } from "./term-tools.js";
@@ -37,6 +38,7 @@ export function buildMcpToolRegistry(
   // always-on `coreMcpTools`.
   if (process.env.PLUMIX_DEV) {
     for (const tool of telemetryMcpTools) tools.set(tool.name, tool);
+    for (const tool of errorMcpTools) tools.set(tool.name, tool);
   }
   for (const { tool } of plugins.mcpTools.values()) tools.set(tool.name, tool);
   return tools;
