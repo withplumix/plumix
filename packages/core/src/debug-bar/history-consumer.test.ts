@@ -89,6 +89,17 @@ describe("debugHistoryConsumer", () => {
     expect(consumer.sample?.(onDetail)).toBe(false);
   });
 
+  test("excludes the MCP endpoint — its telemetry tools are a second reader", () => {
+    const consumer = debugHistoryConsumer(createDebugHistoryStore());
+    const onMcp = ctxWith({
+      request: new Request("https://cms.example/_plumix/mcp", {
+        method: "POST",
+      }),
+    });
+
+    expect(consumer.sample?.(onMcp)).toBe(false);
+  });
+
   test("accounts for a base-path mount when excluding itself", () => {
     const consumer = debugHistoryConsumer(createDebugHistoryStore());
     const ctx = ctxWith({

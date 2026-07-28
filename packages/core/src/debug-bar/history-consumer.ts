@@ -5,6 +5,13 @@ import { debugHistory } from "./history.js";
 import { isDebugRequestsPath } from "./requests-path.js";
 import { projectDebugSnapshot } from "./snapshot.js";
 
+// The MCP endpoint is a second reader of the ring (the dev telemetry tracing
+// tools), so it is excluded from capture too — otherwise every list/inspect
+// call would evict a real request from the window the tools exist to expose.
+// Kept in step with the literal the dispatcher owns (`MCP_PATH`); duplicated
+// rather than imported for the same tree-shaking reason as DEBUG_REQUESTS_PATH.
+const MCP_PATH = "/_plumix/mcp";
+
 /**
  * The request-history writer: a telemetry consumer that, on request-end,
  * projects the finished snapshot ({@link projectDebugSnapshot}) and saves it to
@@ -29,7 +36,8 @@ export function debugHistoryConsumer(
         new URL(ctx.request.url).pathname,
         ctx.basePath,
       );
-      return stripped === null || !isDebugRequestsPath(stripped);
+      if (stripped === null) return true;
+      return !isDebugRequestsPath(stripped) && stripped !== MCP_PATH;
     },
     onRequestEnd: (snapshot, ctx) => {
       history.save({

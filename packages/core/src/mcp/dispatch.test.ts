@@ -1,10 +1,12 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import { definePlugin } from "../plugin/define.js";
+import { fallback } from "../route/render/template-builders.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
+import { defineTheme } from "../theme.js";
 
 // MCP is default-off; every test in this suite exercises the live endpoint,
 // so opt it in here rather than repeating `mcp: { enabled: true }` per call.
@@ -545,13 +547,208 @@ describe("MCP endpoint — telemetry", () => {
     await h.drainDeferred();
 
     const [snapshot] = snapshots;
-    const flatten = (spans: readonly TelemetrySpan[]): TelemetrySpan[] =>
-      spans.flatMap((span) => [span, ...flatten(span.children)]);
-    const spans = flatten(snapshot?.spans ?? []);
+    const spans = flattenSpans(snapshot?.spans ?? []);
     const tool = spans.find((s) => s.name === "mcp: schema_describe");
     expect(tool?.status).toBe("ok");
     expect(tool?.attributes).toEqual({ "mcp.tool": "schema_describe" });
     const auth = spans.find((s) => s.name === "auth");
     expect(auth?.attributes["auth.authenticated"]).toBe(true);
+  });
+});
+
+interface RequestListRow {
+  readonly id: string;
+  readonly method: string;
+  readonly path: string;
+  readonly status: number;
+  readonly durationMs: number;
+}
+
+interface RequestDetail {
+  readonly context: { readonly method: string; readonly path: string };
+  readonly spans: readonly TelemetrySpan[];
+  readonly records?: Readonly<Record<string, unknown>>;
+}
+
+function flattenSpans(spans: readonly TelemetrySpan[]): TelemetrySpan[] {
+  return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);
+}
+
+// Seed the ring through the harness's own capture path (dispatch → deferred
+// onRequestEnd, flushed by drainDeferred), then read it back via the list tool.
+async function seedAndList(
+  h: DispatcherHarness,
+  secret: string,
+  url: string,
+): Promise<RequestListRow[]> {
+  await h.dispatch(new Request(url));
+  await h.drainDeferred();
+  const list = await callTool(h, secret, 1, "telemetry_requests_list", {});
+  return parseToolResult<RequestListRow[]>(list.json);
+}
+
+// The tracing tools read the debug request-history ring, which only captures
+// under the `PLUMIX_DEV` gate — the same gate that registers the tools. So the
+// whole block runs with the dev signal on and seeds the ring by dispatching
+// real requests through the harness's own capture path (drainDeferred flushes
+// the deferred `onRequestEnd` write).
+describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
+  beforeEach(() => void vi.stubEnv("PLUMIX_DEV", "1"));
+  afterEach(() => void vi.unstubAllEnvs());
+
+  test("telemetry_requests_list returns recent requests newest-first with id/method/path/status/duration", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    await h.dispatch(new Request("https://cms.example/first"));
+    await h.drainDeferred();
+    await h.dispatch(new Request("https://cms.example/second"));
+    await h.drainDeferred();
+
+    const { json } = await callTool(
+      h,
+      secret,
+      1,
+      "telemetry_requests_list",
+      {},
+    );
+    const rows = parseToolResult<RequestListRow[]>(json);
+
+    // Newest-first: the last dispatched request leads.
+    expect(rows[0]?.path).toBe("/second");
+    expect(rows[1]?.path).toBe("/first");
+    expect(rows[0]?.method).toBe("GET");
+    expect(typeof rows[0]?.id).toBe("string");
+    expect(typeof rows[0]?.status).toBe("number");
+    expect(typeof rows[0]?.durationMs).toBe("number");
+  });
+
+  test("telemetry_request_get returns the span tree for a known id, records omitted by default", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    const rows = await seedAndList(h, secret, "https://cms.example/");
+    const id = rows[0]?.id ?? "";
+
+    const { json } = await callTool(h, secret, 2, "telemetry_request_get", {
+      id,
+    });
+    const detail = parseToolResult<RequestDetail>(json);
+
+    expect(detail.context.path).toBe("/");
+    expect(flattenSpans(detail.spans).some((s) => s.name === "dispatch")).toBe(
+      true,
+    );
+    // Records are opt-in — the key is absent from the default payload.
+    expect(detail.records).toBeUndefined();
+  });
+
+  test("include: ['records'] adds the records payload that is otherwise omitted", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    const rows = await seedAndList(h, secret, "https://cms.example/");
+    const id = rows[0]?.id ?? "";
+
+    const withRecords = await callTool(h, secret, 2, "telemetry_request_get", {
+      id,
+      include: ["records"],
+    });
+    const detail = parseToolResult<RequestDetail>(withRecords.json);
+
+    expect(detail.records).toBeDefined();
+    expect(typeof detail.records).toBe("object");
+  });
+
+  test("an unknown id comes back as a not_found envelope, not a crash", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    const { res, json } = await callTool(
+      h,
+      secret,
+      1,
+      "telemetry_request_get",
+      { id: "no-such-request" },
+    );
+
+    expect(res.status).toBe(200);
+    expect(json.result.isError).toBe(true);
+    expect(json.result.content[0]?.text).toContain("not_found");
+  });
+
+  test("a failing 5xx request's captured error is readable on its span", async () => {
+    const h = await mcpHarness({
+      plugins: [blog],
+      theme: defineTheme({
+        templates: [
+          fallback(() => {
+            throw new Error("render kaboom");
+          }),
+        ],
+      }),
+    });
+    const secret = await mintPat(h);
+
+    const seeded = await h.dispatch(new Request("https://cms.example/"));
+    await h.drainDeferred();
+    expect(seeded.status).toBe(500);
+
+    const list = await callTool(h, secret, 1, "telemetry_requests_list", {});
+    const failing = parseToolResult<RequestListRow[]>(list.json).find(
+      (row) => row.status === 500,
+    );
+    expect(failing).toBeDefined();
+
+    const { json } = await callTool(h, secret, 2, "telemetry_request_get", {
+      id: failing?.id ?? "",
+    });
+    const detail = parseToolResult<RequestDetail>(json);
+
+    const errored = flattenSpans(detail.spans).find(
+      (span) => span.status === "error",
+    );
+    expect(errored?.error?.name).toBe("Error");
+    expect(errored?.error?.message).toBe("render kaboom");
+    expect(typeof errored?.error?.stack).toBe("string");
+  });
+
+  test("the tracing tools are advertised in tools/list under the dev gate", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    const { json } = await callMcp<{ tools: ToolDescriptor[] }>(h, secret, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/list",
+    });
+
+    const names = json.result.tools.map((t) => t.name);
+    expect(names).toContain("telemetry_requests_list");
+    expect(names).toContain("telemetry_request_get");
+  });
+});
+
+describe("MCP endpoint — telemetry tracing tools absent in production", () => {
+  // Force the gate off regardless of an ambient PLUMIX_DEV, so the assertion
+  // is deterministic in any environment — an empty string is falsy.
+  beforeEach(() => void vi.stubEnv("PLUMIX_DEV", ""));
+  afterEach(() => void vi.unstubAllEnvs());
+
+  test("without the dev gate the tracing tools are not registered", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    const { json } = await callMcp<{ tools: ToolDescriptor[] }>(h, secret, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/list",
+    });
+
+    const names = json.result.tools.map((t) => t.name);
+    expect(names).not.toContain("telemetry_requests_list");
+    expect(names).not.toContain("telemetry_request_get");
+    // The always-on core tools are unaffected by the gate.
+    expect(names).toContain("schema_describe");
   });
 });
