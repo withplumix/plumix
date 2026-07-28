@@ -33,6 +33,28 @@ export function hasCsrfHeader(request: Request): boolean {
   return request.headers.get(CSRF_HEADER_NAME) === CSRF_HEADER_VALUE;
 }
 
+/**
+ * True for a loopback host: `localhost`, the WHATWG-compressed IPv6 loopback
+ * `[::1]`, or any address in the 127.0.0.0/8 block (not just `127.0.0.1`).
+ * Shared by the dev-CSRF relaxation and the MCP dev-trust gate.
+ */
+export function isLoopbackHostname(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "[::1]" ||
+    /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)
+  );
+}
+
+/** True when an Origin header value parses to a loopback host. */
+export function isLoopbackOrigin(origin: string): boolean {
+  try {
+    return isLoopbackHostname(new URL(origin).hostname);
+  } catch {
+    return false;
+  }
+}
+
 export interface OriginCheckOptions {
   /** Allowed origins (e.g. `https://cms.example.com`). Compared exactly. */
   readonly allowed: readonly string[];

@@ -69,15 +69,21 @@ async function mintPat(
 
 function mcpRequest(
   body: unknown,
-  init: { secret?: string; method?: string } = {},
+  init: {
+    secret?: string;
+    method?: string;
+    url?: string;
+    origin?: string;
+  } = {},
 ): Request {
   const headers: Record<string, string> = {
     "content-type": "application/json",
     accept: "application/json, text/event-stream",
   };
   if (init.secret) headers.authorization = `Bearer ${init.secret}`;
+  if (init.origin) headers.origin = init.origin;
   const method = init.method ?? "POST";
-  return new Request("https://cms.example/_plumix/mcp", {
+  return new Request(init.url ?? "https://cms.example/_plumix/mcp", {
     method,
     headers,
     body: method === "POST" ? JSON.stringify(body) : undefined,
@@ -239,6 +245,105 @@ describe("MCP endpoint — transport guards", () => {
     );
 
     const res = await h.dispatch(cookieReq);
+
+    expect(res.status).toBe(401);
+  });
+});
+
+// Dev-trust: over loopback a dev server auto-enables the endpoint and trusts the
+// local developer with no PAT, guarded by an Origin allowlist and a loopback
+// bind. Production (devCsrfLocalhost off) keeps the token requirement unchanged.
+describe("MCP endpoint — dev trust", () => {
+  test("a loopback request with no token reaches the tool registry", async () => {
+    const h = await mcpHarness({ plugins: [blog], devCsrfLocalhost: true });
+
+    const res = await h.dispatch(
+      mcpRequest(
+        { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        { url: "http://localhost/_plumix/mcp" },
+      ),
+    );
+
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as JsonRpcEnvelope<{
+      tools: ToolDescriptor[];
+    }>;
+    expect(json.result.tools.some((t) => t.name === "schema_describe")).toBe(
+      true,
+    );
+  });
+
+  test("a loopback Origin is allowed on the frictionless path", async () => {
+    const h = await mcpHarness({ plugins: [blog], devCsrfLocalhost: true });
+
+    const res = await h.dispatch(
+      mcpRequest(
+        { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        {
+          url: "http://localhost/_plumix/mcp",
+          origin: "http://127.0.0.1:5173",
+        },
+      ),
+    );
+
+    expect(res.status).toBe(200);
+  });
+
+  test("a cross-origin request is rejected even in dev", async () => {
+    const h = await mcpHarness({ plugins: [blog], devCsrfLocalhost: true });
+
+    const res = await h.dispatch(
+      mcpRequest(
+        { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        {
+          url: "http://localhost/_plumix/mcp",
+          origin: "https://evil.example",
+        },
+      ),
+    );
+
+    expect(res.status).toBe(403);
+  });
+
+  test("a non-loopback bind falls back to token auth (no token → 401)", async () => {
+    const h = await mcpHarness({ plugins: [blog], devCsrfLocalhost: true });
+
+    const res = await h.dispatch(
+      mcpRequest(
+        { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        { url: "https://cms.example/_plumix/mcp" },
+      ),
+    );
+
+    expect(res.status).toBe(401);
+  });
+
+  test("dev auto-enables the endpoint with no config flag", async () => {
+    // No `mcp: { enabled: true }` — the dev signal alone mounts the endpoint.
+    const h = await createDispatcherHarness({
+      plugins: [blog],
+      devCsrfLocalhost: true,
+    });
+
+    const res = await h.dispatch(
+      mcpRequest(
+        { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        { url: "http://localhost/_plumix/mcp" },
+      ),
+    );
+
+    expect(res.status).toBe(200);
+  });
+
+  test("production (dev trust off) still requires a token over loopback", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+
+    const res = await h.dispatch(
+      mcpRequest(
+        { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        { url: "http://localhost/_plumix/mcp" },
+      ),
+    );
 
     expect(res.status).toBe(401);
   });
