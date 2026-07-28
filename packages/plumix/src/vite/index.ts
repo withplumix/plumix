@@ -23,6 +23,7 @@ import type {
   ResolvedI18n,
 } from "@plumix/core";
 import {
+  DEV_ERROR_CLIENT_ERRORS_ENDPOINT,
   DEV_ERROR_SOURCE_ENDPOINT,
   DEV_ERROR_STACK_ENDPOINT,
   DEV_ERROR_TERMINAL_ENDPOINT,
@@ -432,6 +433,24 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       usePostJson(DEV_ERROR_TERMINAL_ENDPOINT, (body) =>
         forwarder.handle(body),
       );
+
+      // The retained-client-errors read endpoint (#1656): a GET that returns the
+      // forwarder's bounded ring of already-sourcemapped client failures,
+      // newest-first, for the dev-only MCP `error_list` tool (#1653) to merge
+      // with its server-side projection. Read-only, so no request body.
+      server.middlewares.use((req, res, next) => {
+        if (
+          req.method !== "GET" ||
+          (req.url ?? "") !== DEV_ERROR_CLIENT_ERRORS_ENDPOINT
+        ) {
+          next();
+          return;
+        }
+        res.statusCode = 200;
+        res.setHeader("content-type", "application/json; charset=utf-8");
+        res.end(JSON.stringify({ errors: forwarder.read() }));
+      });
+
       server.watcher.on("change", (path) => {
         if (!configPath || resolve(path) !== configPath) return;
         // Force-fresh: the whole point of the watcher is to pick up the edit,

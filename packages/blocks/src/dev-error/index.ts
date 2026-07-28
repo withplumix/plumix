@@ -30,6 +30,7 @@ export {
 export { enhanceDevError } from "./enhance.js";
 export { DevErrorPage } from "./error-page.js";
 export {
+  DEV_ERROR_CLIENT_ERRORS_ENDPOINT,
   DEV_ERROR_SOURCE_ENDPOINT,
   DEV_ERROR_STACK_ENDPOINT,
   DEV_ERROR_TERMINAL_ENDPOINT,
