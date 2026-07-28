@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "@plumix/blocks/dev-error";
+
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
@@ -729,14 +731,18 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   });
 });
 
-interface ErrorEntry {
+// One entry as read off the merged error_list stream — a superset of the server
+// and client shapes, so a single parse handles both. `requestId`/`path`/
+// `timestamp` are server-only; `label` and frame `stack` mark a client entry.
+interface MergedErrorRow {
   readonly source: string;
   readonly level: string;
   readonly message: string;
-  readonly stack?: string;
-  readonly path: string;
-  readonly timestamp: number;
-  readonly requestId: string;
+  readonly stack?: unknown;
+  readonly path?: string;
+  readonly timestamp?: number;
+  readonly requestId?: string;
+  readonly label?: string;
 }
 
 // A theme whose fallback template throws, so a plain GET renders a 500 the
@@ -783,7 +789,7 @@ describe("MCP endpoint — error_list (dev gate)", () => {
     expect(second.status).toBe(500);
 
     const { json } = await callTool(h, secret, 1, "error_list", {});
-    const errors = parseToolResult<ErrorEntry[]>(json);
+    const errors = parseToolResult<MergedErrorRow[]>(json);
 
     // Newest-first: the last failing request leads.
     expect(errors[0]?.path).toBe("/post/second");
@@ -810,7 +816,7 @@ describe("MCP endpoint — error_list (dev gate)", () => {
     await h.drainDeferred();
 
     const list = await callTool(h, secret, 1, "error_list", {});
-    const entry = parseToolResult<ErrorEntry[]>(list.json)[0];
+    const entry = parseToolResult<MergedErrorRow[]>(list.json)[0];
     expect(entry?.path).toBe("/post/broken");
 
     const { json } = await callTool(h, secret, 2, "telemetry_request_get", {
@@ -839,7 +845,7 @@ describe("MCP endpoint — error_list (dev gate)", () => {
     expect(ok.status).toBe(200);
 
     const { res, json } = await callTool(h, secret, 1, "error_list", {});
-    const errors = parseToolResult<ErrorEntry[]>(json);
+    const errors = parseToolResult<MergedErrorRow[]>(json);
 
     // The ring is a process-wide singleton shared across tests, so scope to the
     // seeded path (as the telemetry-tools tests do) rather than asserting global
@@ -862,6 +868,270 @@ describe("MCP endpoint — error_list (dev gate)", () => {
     });
 
     expect(json.result.tools.map((t) => t.name)).toContain("error_list");
+  });
+});
+
+// Stub the worker's outbound fetch so the client half of `error_list` reads a
+// fixed payload instead of a live dev endpoint (AC: the producer side is covered
+// by its own ticket). Only the client-error endpoint is intercepted; every other
+// URL falls through to the real fetch so nothing else in dispatch is disturbed.
+function stubClientErrorEndpoint(
+  respond: () => Response | Promise<Response>,
+): void {
+  const realFetch = globalThis.fetch;
+  vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith(DEV_ERROR_CLIENT_ERRORS_ENDPOINT)) {
+      return Promise.resolve(respond());
+    }
+    return realFetch(input, init);
+  });
+}
+
+function clientErrorsResponse(entries: readonly unknown[]): Response {
+  return new Response(JSON.stringify({ errors: entries }), {
+    headers: { "content-type": "application/json" },
+  });
+}
+
+// The client half: `error_list` also fetches the retained browser failures from
+// the dev read endpoint (#1656) and merges them into the same newest-first stream
+// as its server projection — closing the "why did this hydration error happen?"
+// loop. The worker-side merge is what this ticket adds; the fetch is stubbed here.
+describe("MCP endpoint — error_list client merge (dev gate)", () => {
+  beforeEach(() => void vi.stubEnv("PLUMIX_DEV", "1"));
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  test("merges client entries from the dev endpoint with server entries, each client entry source=client with level/message/stack/label and no requestId", async () => {
+    const h = await mcpHarness({
+      plugins: [blog],
+      theme: throwingTheme("server boom"),
+    });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.published.create({ authorId: author.id, slug: "srv" });
+    const secret = await mintPat(h);
+
+    stubClientErrorEndpoint(() =>
+      clientErrorsResponse([
+        {
+          source: "client",
+          level: "error",
+          message: "client kaboom",
+          stack: [{ file: "/app/src/Counter.tsx", line: 12, isVendor: false }],
+          label: "Counter",
+          // Server-only fields a malformed producer might send: the merge must
+          // field-pick, not spread, so neither rides onto the client entry.
+          requestId: "should-be-stripped",
+          path: "/should-be-stripped",
+        },
+      ]),
+    );
+
+    // Seed a server 5xx so both sources contribute to the merged stream.
+    const seeded = await h.dispatch(
+      new Request("https://cms.example/post/srv"),
+    );
+    await h.drainDeferred();
+    expect(seeded.status).toBe(500);
+
+    const { res, json } = await callTool(h, secret, 1, "error_list", {});
+    const errors = parseToolResult<MergedErrorRow[]>(json);
+
+    expect(res.status).toBe(200);
+    expect(json.result.isError).toBeUndefined();
+
+    const client = errors.find((e) => e.message === "client kaboom");
+    expect(client?.source).toBe("client");
+    expect(client?.level).toBe("error");
+    expect(client?.label).toBe("Counter");
+    expect(client?.stack).toEqual([
+      { file: "/app/src/Counter.tsx", line: 12, isVendor: false },
+    ]);
+    // A client failure has no server request behind it — the merge strips any
+    // server-only field the producer sent rather than leaking it through.
+    expect(client?.requestId).toBeUndefined();
+    expect(client?.path).toBeUndefined();
+
+    // The server projection is still present and unchanged, carrying its pivot.
+    const server = errors.find((e) => e.path === "/post/srv");
+    expect(server?.source).toBe("server");
+    expect(server?.message).toBe("server boom");
+    expect(typeof server?.requestId).toBe("string");
+  });
+
+  test("a captured hydration error is readable through error_list and names the offending component", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    stubClientErrorEndpoint(() =>
+      clientErrorsResponse([
+        {
+          source: "client",
+          level: "error",
+          message:
+            "Hydration failed because the server rendered HTML didn't match the client",
+          stack: [
+            { file: "/app/src/islands/Widget.tsx", line: 4, isVendor: false },
+          ],
+          label: "Widget",
+        },
+      ]),
+    );
+
+    const { json } = await callTool(h, secret, 1, "error_list", {});
+    const errors = parseToolResult<MergedErrorRow[]>(json);
+
+    const hydration = errors.find((e) =>
+      e.message.includes("Hydration failed"),
+    );
+    expect(hydration?.source).toBe("client");
+    expect(hydration?.label).toBe("Widget");
+  });
+
+  test("client entries lead the stream, ahead of the server projection", async () => {
+    const h = await mcpHarness({
+      plugins: [blog],
+      theme: throwingTheme("later server boom"),
+    });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.published.create({ authorId: author.id, slug: "lead" });
+    const secret = await mintPat(h);
+
+    stubClientErrorEndpoint(() =>
+      clientErrorsResponse([
+        {
+          source: "client",
+          level: "error",
+          message: "front of line",
+          stack: [],
+        },
+      ]),
+    );
+
+    const seeded = await h.dispatch(
+      new Request("https://cms.example/post/lead"),
+    );
+    await h.drainDeferred();
+    expect(seeded.status).toBe(500);
+
+    const { json } = await callTool(h, secret, 1, "error_list", {});
+    const errors = parseToolResult<MergedErrorRow[]>(json);
+
+    // The client run (freshly fetched, no per-entry clock) is concatenated ahead
+    // of the server run, so a client entry leads.
+    expect(errors[0]?.source).toBe("client");
+    expect(errors[0]?.message).toBe("front of line");
+  });
+
+  test("when the client endpoint is unavailable, error_list still returns the server entries (degrades, does not fail)", async () => {
+    const h = await mcpHarness({
+      plugins: [blog],
+      theme: throwingTheme("degrade boom"),
+    });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.published.create({ authorId: author.id, slug: "degrade" });
+    const secret = await mintPat(h);
+
+    stubClientErrorEndpoint(() =>
+      Promise.reject(new Error("dev endpoint down")),
+    );
+
+    const seeded = await h.dispatch(
+      new Request("https://cms.example/post/degrade"),
+    );
+    await h.drainDeferred();
+    expect(seeded.status).toBe(500);
+
+    const { res, json } = await callTool(h, secret, 1, "error_list", {});
+    const errors = parseToolResult<MergedErrorRow[]>(json);
+
+    expect(res.status).toBe(200);
+    expect(json.result.isError).toBeUndefined();
+    const server = errors.find((e) => e.path === "/post/degrade");
+    expect(server?.source).toBe("server");
+    expect(server?.message).toBe("degrade boom");
+  });
+
+  test("a non-200 from the client endpoint degrades to server-only, not an error", async () => {
+    const h = await mcpHarness({
+      plugins: [blog],
+      theme: throwingTheme("status boom"),
+    });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.published.create({ authorId: author.id, slug: "status" });
+    const secret = await mintPat(h);
+
+    stubClientErrorEndpoint(() => new Response("nope", { status: 503 }));
+
+    const seeded = await h.dispatch(
+      new Request("https://cms.example/post/status"),
+    );
+    await h.drainDeferred();
+    expect(seeded.status).toBe(500);
+
+    const { json } = await callTool(h, secret, 1, "error_list", {});
+    const errors = parseToolResult<MergedErrorRow[]>(json);
+
+    expect(json.result.isError).toBeUndefined();
+    expect(errors.some((e) => e.path === "/post/status")).toBe(true);
+  });
+
+  test("a malformed row is dropped and a valid one survives; a missing stack defaults to empty", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    stubClientErrorEndpoint(() =>
+      clientErrorsResponse([
+        // Not an object → dropped.
+        "not an entry",
+        // Non-string message → dropped (the field-pick's essentials guard).
+        { source: "client", level: "error", message: 42 },
+        // Valid but with no stack → survives with an empty frame list.
+        { source: "client", level: "warn", message: "stackless survivor" },
+      ]),
+    );
+
+    const { json } = await callTool(h, secret, 1, "error_list", {});
+    const errors = parseToolResult<MergedErrorRow[]>(json);
+
+    const survivors = errors.filter((e) => e.source === "client");
+    expect(survivors).toHaveLength(1);
+    expect(survivors[0]?.message).toBe("stackless survivor");
+    expect(survivors[0]?.stack).toEqual([]);
+  });
+
+  test("a non-array errors body degrades to server-only, not an error", async () => {
+    const h = await mcpHarness({
+      plugins: [blog],
+      theme: throwingTheme("shape boom"),
+    });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.published.create({ authorId: author.id, slug: "shape" });
+    const secret = await mintPat(h);
+
+    // A well-formed 200 whose body is the wrong shape (no `errors` array).
+    stubClientErrorEndpoint(
+      () =>
+        new Response(JSON.stringify({ errors: "nope" }), {
+          headers: { "content-type": "application/json" },
+        }),
+    );
+
+    const seeded = await h.dispatch(
+      new Request("https://cms.example/post/shape"),
+    );
+    await h.drainDeferred();
+    expect(seeded.status).toBe(500);
+
+    const { json } = await callTool(h, secret, 1, "error_list", {});
+    const errors = parseToolResult<MergedErrorRow[]>(json);
+
+    expect(json.result.isError).toBeUndefined();
+    expect(errors.some((e) => e.source === "client")).toBe(false);
+    expect(errors.some((e) => e.path === "/post/shape")).toBe(true);
   });
 });
 
