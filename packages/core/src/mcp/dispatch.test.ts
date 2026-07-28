@@ -729,13 +729,149 @@ describe("MCP endpoint — telemetry tracing tools (dev gate)", () => {
   });
 });
 
+interface ErrorEntry {
+  readonly source: string;
+  readonly level: string;
+  readonly message: string;
+  readonly stack?: string;
+  readonly path: string;
+  readonly timestamp: number;
+  readonly requestId: string;
+}
+
+// A theme whose fallback template throws, so a plain GET renders a 500 the
+// request-history ring captures with the error on its span — the exact seam the
+// server half of error_list projects from.
+function throwingTheme(message: string) {
+  return defineTheme({
+    templates: [
+      fallback(() => {
+        throw new Error(message);
+      }),
+    ],
+  });
+}
+
+// error_list is the server half of the dev-only error surface: a flat,
+// newest-first projection of failed requests over the same request-history ring
+// the tracing tools read, so it runs under the same PLUMIX_DEV gate and seeds
+// via the harness's own capture path (dispatch → deferred onRequestEnd).
+describe("MCP endpoint — error_list (dev gate)", () => {
+  beforeEach(() => void vi.stubEnv("PLUMIX_DEV", "1"));
+  afterEach(() => void vi.unstubAllEnvs());
+
+  test("returns server failures newest-first, each tagged source=server with message/stack/path/timestamp/requestId", async () => {
+    const h = await mcpHarness({
+      plugins: [blog],
+      theme: throwingTheme("boom"),
+    });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.published.create({ authorId: author.id, slug: "first" });
+    await h.factory.published.create({ authorId: author.id, slug: "second" });
+    const secret = await mintPat(h);
+
+    // A published post resolves and renders the throwing fallback → 500.
+    const first = await h.dispatch(
+      new Request("https://cms.example/post/first"),
+    );
+    await h.drainDeferred();
+    const second = await h.dispatch(
+      new Request("https://cms.example/post/second"),
+    );
+    await h.drainDeferred();
+    expect(first.status).toBe(500);
+    expect(second.status).toBe(500);
+
+    const { json } = await callTool(h, secret, 1, "error_list", {});
+    const errors = parseToolResult<ErrorEntry[]>(json);
+
+    // Newest-first: the last failing request leads.
+    expect(errors[0]?.path).toBe("/post/second");
+    expect(errors[1]?.path).toBe("/post/first");
+    const entry = errors[0];
+    expect(entry?.source).toBe("server");
+    expect(entry?.level).toBe("error");
+    expect(entry?.message).toBe("boom");
+    expect(typeof entry?.stack).toBe("string");
+    expect(typeof entry?.timestamp).toBe("number");
+    expect(typeof entry?.requestId).toBe("string");
+  });
+
+  test("an entry's requestId resolves in telemetry_request_get to the same request's trace", async () => {
+    const h = await mcpHarness({
+      plugins: [blog],
+      theme: throwingTheme("pivot me"),
+    });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.published.create({ authorId: author.id, slug: "broken" });
+    const secret = await mintPat(h);
+
+    await h.dispatch(new Request("https://cms.example/post/broken"));
+    await h.drainDeferred();
+
+    const list = await callTool(h, secret, 1, "error_list", {});
+    const entry = parseToolResult<ErrorEntry[]>(list.json)[0];
+    expect(entry?.path).toBe("/post/broken");
+
+    const { json } = await callTool(h, secret, 2, "telemetry_request_get", {
+      id: entry?.requestId ?? "",
+    });
+    const detail = parseToolResult<RequestDetail>(json);
+
+    // The pivot lands on the same request — telemetry answers "what led to it".
+    expect(detail.context.path).toBe("/post/broken");
+    const errored = flattenSpans(detail.spans).find(
+      (span) => span.status === "error",
+    );
+    expect(errored?.error?.message).toBe("pivot me");
+  });
+
+  test("a successful request contributes nothing — the tool returns a list, not an error", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.published.create({ authorId: author.id, slug: "healthy" });
+    const secret = await mintPat(h);
+
+    const ok = await h.dispatch(
+      new Request("https://cms.example/post/healthy"),
+    );
+    await h.drainDeferred();
+    expect(ok.status).toBe(200);
+
+    const { res, json } = await callTool(h, secret, 1, "error_list", {});
+    const errors = parseToolResult<ErrorEntry[]>(json);
+
+    // The ring is a process-wide singleton shared across tests, so scope to the
+    // seeded path (as the telemetry-tools tests do) rather than asserting global
+    // emptiness: a 2xx request is never projected as a failure, and a run with
+    // no failures at all yields this same empty array.
+    expect(res.status).toBe(200);
+    expect(json.result.isError).toBeUndefined();
+    expect(Array.isArray(errors)).toBe(true);
+    expect(errors.some((e) => e.path === "/post/healthy")).toBe(false);
+  });
+
+  test("error_list is advertised in tools/list under the dev gate", async () => {
+    const h = await mcpHarness({ plugins: [blog] });
+    const secret = await mintPat(h);
+
+    const { json } = await callMcp<{ tools: ToolDescriptor[] }>(h, secret, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/list",
+    });
+
+    expect(json.result.tools.map((t) => t.name)).toContain("error_list");
+  });
+});
+
 describe("MCP endpoint — telemetry tracing tools absent in production", () => {
   // Force the gate off regardless of an ambient PLUMIX_DEV, so the assertion
   // is deterministic in any environment — an empty string is falsy.
   beforeEach(() => void vi.stubEnv("PLUMIX_DEV", ""));
   afterEach(() => void vi.unstubAllEnvs());
 
-  test("without the dev gate the tracing tools are not registered", async () => {
+  test("without the dev gate the tracing and error tools are not registered", async () => {
     const h = await mcpHarness({ plugins: [blog] });
     const secret = await mintPat(h);
 
@@ -748,6 +884,7 @@ describe("MCP endpoint — telemetry tracing tools absent in production", () => 
     const names = json.result.tools.map((t) => t.name);
     expect(names).not.toContain("telemetry_requests_list");
     expect(names).not.toContain("telemetry_request_get");
+    expect(names).not.toContain("error_list");
     // The always-on core tools are unaffected by the gate.
     expect(names).toContain("schema_describe");
   });
