@@ -278,6 +278,113 @@ describe("island renderer mount()", () => {
     process.env.PLUMIX_DEV = prev;
   });
 
+  test("dev: an island with bridged slot children hydrates a live root with no mismatch", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    // Bridged slot HTML rides through <StaticHtml> as `dangerouslySetInnerHTML`,
+    // which React never routes through the `onRecoverableError` diagnostic — so
+    // a slot can never manufacture false mismatch noise, and the diagnostic only
+    // ever reflects the component's own render.
+    const Card = (props: Readonly<Record<string, unknown>>) => (
+      <div className="card">
+        <span>{String(props.label)}</span>
+        {props.children as never}
+      </div>
+    );
+    const el = document.createElement("div");
+    el.innerHTML =
+      '<div class="card"><span>A</span><plumix-static-slot data-plumix-slot="children"><strong>kid</strong></plumix-static-slot></div>';
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: true });
+    active.render(Card, { label: "A" }, { children: "<strong>kid</strong>" });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(events).toHaveLength(0);
+    expect(el.querySelector("plumix-static-slot")?.innerHTML).toBe(
+      "<strong>kid</strong>",
+    );
+
+    // Proof of life: a re-render flips the chrome (so the root is genuinely
+    // live, not adopted-and-inert) while the bridged slot content stays put.
+    active.render(Card, { label: "B" }, { children: "<strong>kid</strong>" });
+    await vi.waitFor(() =>
+      expect(el.querySelector(".card > span")?.textContent).toBe("B"),
+    );
+    expect(el.querySelector("plumix-static-slot")?.innerHTML).toBe(
+      "<strong>kid</strong>",
+    );
+    expect(events).toHaveLength(0);
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("dev: a parent's own divergence flags only its render, never the nested island in its slot", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    // The parent's own text diverges (server "SERVER" vs client "CLIENT"), so
+    // the diagnostic fires exactly once — proof the root hydrated. Its slot
+    // carries a nested <plumix-island>'s SSR markup, opaque to hydration through
+    // the StaticHtml bridge: it appears byte-identical in both captured renders,
+    // so a parent's settling never surfaces as a separate child mismatch. (The
+    // top-down `ssr` gate that keeps the child from hydrating before the parent
+    // settles lives in `island-element` and is covered by its suite.)
+    const childMarkup =
+      '<plumix-island ssr="" client="load"><span>child</span></plumix-island>';
+    const Wrapper = (props: Readonly<Record<string, unknown>>) => (
+      <section>
+        <span>{String(props.label)}</span>
+        {props.children as never}
+      </section>
+    );
+    const el = document.createElement("div");
+    el.innerHTML = `<section><span>SERVER</span><plumix-static-slot data-plumix-slot="children">${childMarkup}</plumix-static-slot></section>`;
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: true });
+    active.render(Wrapper, { label: "CLIENT" }, { children: childMarkup });
+
+    await vi.waitFor(() => expect(events).toHaveLength(1));
+    const detail = events[0]?.detail as { server?: string; client?: string };
+    // The single mismatch is the parent's text; the nested island markup rode
+    // through untouched on both sides of the captured diff.
+    expect(detail.server).toContain("<span>child</span>");
+    expect(detail.client).toContain("<span>child</span>");
+    expect(el.querySelector("plumix-island span")?.textContent).toBe("child");
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("dev: suppressHydrationWarning on a diverging node suppresses the mismatch signal", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    // The same text-only divergence that fires the diagnostic elsewhere, but
+    // the author marked the diverging node with React's
+    // `suppressHydrationWarning` — the documented escape hatch for intentional
+    // divergence. No signal fires and React keeps the server text for that
+    // subtree.
+    const Component = () => <span suppressHydrationWarning>CLIENT</span>;
+    const el = document.createElement("div");
+    el.innerHTML = "<span>SERVER</span>";
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: true });
+    active.render(Component, {}, {});
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(events).toHaveLength(0);
+    // Suppressed divergence keeps the server render for that node.
+    expect(el.textContent).toBe("SERVER");
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
   test("unmount() tears down the rendered tree", async () => {
     const Component = (props: Readonly<Record<string, unknown>>) => (
       <span>{String(props.label)}</span>
