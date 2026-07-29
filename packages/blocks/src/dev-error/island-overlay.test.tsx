@@ -114,6 +114,53 @@ describe("installIslandErrorOverlay", () => {
     );
   });
 
+  test("renders a hydration mismatch through the shared error page, named and labeled by island", async () => {
+    window.dispatchEvent(
+      new CustomEvent("plumix:island-hydration-mismatch", {
+        detail: {
+          element: island("Clock"),
+          componentStack: "\n    at Clock\n    at App",
+        },
+      }),
+    );
+    await tick();
+    expect(query("plumix-island-overlay-badge")?.textContent).toContain("1");
+
+    query("plumix-island-overlay-badge")?.click();
+    await tick();
+
+    // The shared DevErrorPage renders inside the panel, named as a mismatch…
+    expect(query("plumix-dev-error-name")?.textContent).toBe(
+      "Hydration mismatch",
+    );
+    // …the bar names the island that diverged…
+    expect(query("plumix-island-overlay-label")?.textContent).toContain(
+      "Clock",
+    );
+    // …and React's component stack points at it.
+    expect(query("plumix-dev-error-component-stack")?.textContent).toContain(
+      "at Clock",
+    );
+  });
+
+  test("counts a doubly-dispatched identical mismatch once", async () => {
+    const detail = {
+      element: island("Clock"),
+      componentStack: "\n    at Clock",
+    };
+    window.dispatchEvent(
+      new CustomEvent("plumix:island-hydration-mismatch", { detail }),
+    );
+    window.dispatchEvent(
+      new CustomEvent("plumix:island-hydration-mismatch", {
+        detail: { element: island("Clock"), componentStack: "\n    at Clock" },
+      }),
+    );
+    await tick();
+
+    expect(query("plumix-island-overlay-badge")?.textContent).toContain("1");
+  });
+
   test("counts and navigates between multiple distinct errors", async () => {
     dispatchHydrationError(new Error("first boom"), island("Alpha"));
     dispatchHydrationError(new Error("second boom"), island("Beta"));

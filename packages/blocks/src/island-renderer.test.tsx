@@ -132,6 +132,146 @@ describe("island renderer mount()", () => {
     process.env.PLUMIX_DEV = prev;
   });
 
+  const mismatchCleanups: (() => void)[] = [];
+  afterEach(() => {
+    for (const off of mismatchCleanups) off();
+    mismatchCleanups.length = 0;
+  });
+
+  // A window listener for the hydration-mismatch diagnostic, auto-removed each
+  // test. Returns the captured events so a case can assert count + detail.
+  function listenForMismatch(): CustomEvent[] {
+    const events: CustomEvent[] = [];
+    const listener = (event: Event): void => {
+      events.push(event as CustomEvent);
+    };
+    window.addEventListener("plumix:island-hydration-mismatch", listener);
+    mismatchCleanups.push(() =>
+      window.removeEventListener("plumix:island-hydration-mismatch", listener),
+    );
+    return events;
+  }
+
+  test("dev: a hydrating island with matching server HTML adopts it, emitting no mismatch", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    const Component = (props: Readonly<Record<string, unknown>>) => (
+      <span>{String(props.label)}</span>
+    );
+    const el = document.createElement("div");
+    // The server render the island hydrates against.
+    el.innerHTML = "<span>hi</span>";
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: true });
+    active.render(Component, { label: "hi" }, {});
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(events).toHaveLength(0);
+    expect(el.textContent).toBe("hi");
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("dev: a server/client mismatch dispatches the diagnostic with the component stack and does not throw", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    // Server said SERVER, client renders CLIENT — a text-only divergence, the
+    // most common non-determinism bug (e.g. a rendered `Date.now()`).
+    const Component = () => <span>CLIENT</span>;
+    const el = document.createElement("div");
+    el.innerHTML = "<span>SERVER</span>";
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: true });
+    active.render(Component, {}, {});
+
+    await vi.waitFor(() => expect(events).toHaveLength(1));
+    const detail = events[0]?.detail as {
+      element?: HTMLElement;
+      componentStack?: string;
+    };
+    expect(detail.element).toBe(el);
+    expect(detail.componentStack).toContain("Component");
+    // React recovered by client-rendering the subtree — the page did not crash.
+    expect(el.textContent).toBe("CLIENT");
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("dev: a later props change re-renders without re-hydrating", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    const Component = (props: Readonly<Record<string, unknown>>) => (
+      <span>{String(props.label)}</span>
+    );
+    const el = document.createElement("div");
+    el.innerHTML = "<span>A</span>";
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: true });
+    active.render(Component, { label: "A" }, {}); // first render hydrates
+    // The server text already reads "A", so let the hydration commit (a
+    // macrotask) before the props change — otherwise the second render would
+    // race the in-flight hydration rather than reconcile against it.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    active.render(Component, { label: "B" }, {}); // props change re-renders
+    await vi.waitFor(() => expect(el.textContent).toBe("B"));
+    // A re-render never reconciles against the server DOM, so nothing can
+    // register as a mismatch on a later `props` change.
+    expect(events).toHaveLength(0);
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("prod: a hydrating island mounts with createRoot and runs no diagnostic path", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    delete process.env.PLUMIX_DEV;
+    const events = listenForMismatch();
+
+    // The same divergence that fires the diagnostic in dev; under createRoot
+    // React silently replaces the server DOM and no mismatch signal exists.
+    const Component = () => <span>CLIENT</span>;
+    const el = document.createElement("div");
+    el.innerHTML = "<span>SERVER</span>";
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: true });
+    active.render(Component, {}, {});
+
+    await vi.waitFor(() => expect(el.textContent).toBe("CLIENT"));
+    expect(events).toHaveLength(0);
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
+  test("dev: a client-only island mounts with createRoot and emits no mismatch", async () => {
+    const prev = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    const events = listenForMismatch();
+
+    // Client-only ships no server output, so there is nothing to hydrate — it
+    // mounts fresh with createRoot even in dev and is never a mismatch source.
+    const Component = () => <span>fresh</span>;
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+
+    active = mount(el, { hydrate: false });
+    active.render(Component, {}, {});
+
+    await vi.waitFor(() => expect(el.textContent).toBe("fresh"));
+    expect(events).toHaveLength(0);
+
+    process.env.PLUMIX_DEV = prev;
+  });
+
   test("unmount() tears down the rendered tree", async () => {
     const Component = (props: Readonly<Record<string, unknown>>) => (
       <span>{String(props.label)}</span>

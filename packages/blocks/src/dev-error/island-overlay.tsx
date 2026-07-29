@@ -82,6 +82,13 @@ class IslandErrorOverlay {
       const { error, element, componentStack } = detailOf(event);
       this.capture(error, element, componentStack);
     });
+    this.on("plumix:island-hydration-mismatch", (event) => {
+      // A dev-hydrating island whose server and client renders disagreed
+      // (#1667). No thrown error — React recovered — so this renders as its own
+      // synthesized entry rather than through `toDevErrorInfo`.
+      const { element, componentStack } = detailOf(event);
+      this.captureMismatch(element, componentStack);
+    });
     this.on("error", (event) => {
       // Skip `error` events with no error object — a cross-origin
       // "Script error." or a resource-load 404 — nothing actionable to show.
@@ -112,11 +119,35 @@ class IslandErrorOverlay {
     componentStack?: string,
   ): void {
     if (this.isDuplicate(error)) return;
-    const label = deriveLabel(element);
-    const entry: CapturedError = {
-      info: toDevErrorInfo(error, componentStack),
-      ...(label ? { label } : {}),
+    const entry = this.addEntry(toDevErrorInfo(error, componentStack), element);
+    void this.resolveFrames(entry);
+  }
+
+  // A hydration mismatch (#1667) carries no thrown error and no JS stack —
+  // React's component stack is the signal — so it maps straight into the shared
+  // resolved-error contract and skips frame resolution.
+  private captureMismatch(
+    element?: HTMLElement,
+    componentStack?: string,
+  ): void {
+    // Dedup by island + React stack (no error object to key on), so a
+    // doubly-dispatched identical mismatch counts once.
+    const key = `hydration-mismatch:${deriveLabel(element) ?? ""}:${componentStack ?? ""}`;
+    if (this.seenPrimitives.has(key)) return;
+    this.seenPrimitives.add(key);
+    const info: DevErrorInfo = {
+      name: "Hydration mismatch",
+      message: HYDRATION_MISMATCH_MESSAGE,
+      ...(componentStack !== undefined ? { componentStack } : {}),
     };
+    this.addEntry(info, element);
+  }
+
+  // Push a resolved entry, point the overlay at it, and pulse the count. Shared
+  // by the error-capture paths (thrown errors, hydration mismatches).
+  private addEntry(info: DevErrorInfo, element?: HTMLElement): CapturedError {
+    const label = deriveLabel(element);
+    const entry: CapturedError = { info, ...(label ? { label } : {}) };
     this.errors = [entry, ...this.errors];
     // Newest error lands at index 0. A collapsed overlay points at it; an
     // expanded panel follows the entry the developer is reading as it shifts
@@ -126,7 +157,7 @@ class IslandErrorOverlay {
     // A genuine new error just landed — let the next render pulse the circle.
     this.pulseNext = true;
     this.render();
-    void this.resolveFrames(entry);
+    return entry;
   }
 
   // Browser stacks are unmapped — they point at Vite's served module URLs, not
@@ -392,6 +423,14 @@ function ErrorBody({
   }, [frames, shadowRoot]);
   return <DevErrorPage error={entry.info} />;
 }
+
+// The synthesized message for a hydration mismatch — React's own recoverable-
+// error wording is an internal we don't surface. A dev-only English string,
+// matching the framework's error voice, that names the usual culprit.
+const HYDRATION_MISMATCH_MESSAGE =
+  "The island's server and client renders disagreed. React recovered by " +
+  "re-rendering it on the client; the usual cause is a non-deterministic " +
+  "render — a Date.now(), Math.random(), or locale/timezone read.";
 
 // Any value can be thrown; a non-`Error` degrades to a named exception carrying
 // its string form. Browser stacks arrive raw (unlike the already-sourcemapped

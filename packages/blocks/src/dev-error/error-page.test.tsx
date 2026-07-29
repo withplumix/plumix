@@ -104,6 +104,36 @@ describe("DevErrorPage", () => {
     );
   });
 
+  test("omits the empty stack fallback when only a component stack is present", () => {
+    // A hydration mismatch (#1667) carries React's component stack but no JS
+    // stack — the "(no stack available)" fallback would be redundant noise
+    // above the component-stack section that actually names the island.
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{
+          name: "Hydration mismatch",
+          message: "the renders disagreed",
+          componentStack: "\n    at Clock\n    at App",
+        }}
+      />,
+    );
+
+    expect(html).not.toContain("(no stack available)");
+    expect(html).not.toContain('data-testid="plumix-dev-error-stack"');
+    expect(html).toContain('data-testid="plumix-dev-error-component-stack"');
+    expect(html).toContain("at Clock");
+  });
+
+  test("still shows the empty stack fallback when nothing else is available", () => {
+    // No frames, no stack, no component stack — the fallback is the only signal.
+    const html = renderToStaticMarkup(
+      <DevErrorPage error={{ name: "Error", message: "boom" }} />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-stack"');
+    expect(html).toContain("(no stack available)");
+  });
+
   test("hides the component stack once resolved frames are present", () => {
     const html = renderToStaticMarkup(
       <DevErrorPage

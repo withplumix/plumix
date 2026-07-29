@@ -9,7 +9,7 @@
 import type { ComponentType, ErrorInfo } from "react";
 import type { Root } from "react-dom/client";
 import { createElement } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 
 import { StaticHtml } from "./static-html.js";
 
@@ -29,37 +29,101 @@ export interface IslandRoot {
   unmount(): void;
 }
 
-export function mount(element: HTMLElement): IslandRoot {
-  // In dev, surface a post-hydration component throw (render / effect, not
-  // caught by a user error boundary) to the island error overlay (#1603) with
-  // React's component stack, then still log it. `process.env.PLUMIX_DEV` is
-  // Vite-substituted at bundle time — empty in a production build, so this
-  // branch and the callback tree-shake out and `createRoot` keeps its default
-  // error handling. React unmounts only this root, so other islands and the
-  // rest of the page keep working.
-  const root: Root = process.env.PLUMIX_DEV
-    ? createRoot(element, {
-        onUncaughtError(error: unknown, info: ErrorInfo) {
-          window.dispatchEvent(
-            new CustomEvent("plumix:island-error", {
-              detail: {
-                error,
-                componentStack: info.componentStack ?? undefined,
-                element,
-              },
-            }),
-          );
-          console.error(error);
-        },
-      })
-    : createRoot(element);
+export interface MountOptions {
+  /**
+   * In dev, hydrate the SSR DOM on the first render (default) so a server/client
+   * divergence surfaces as a {@link https://react.dev `hydrateRoot`}
+   * `onRecoverableError` — dispatched as a `plumix:island-hydration-mismatch`
+   * diagnostic (#1667). Pass `false` for a client-only island: it ships no
+   * server output, so there is nothing to hydrate and it mounts fresh with
+   * `createRoot`. Ignored in production, where every island mounts with
+   * `createRoot` unchanged.
+   */
+  readonly hydrate?: boolean;
+}
+
+export function mount(
+  element: HTMLElement,
+  options: MountOptions = {},
+): IslandRoot {
+  const hydrate = options.hydrate ?? true;
+  // Created lazily on the first `render`: `hydrateRoot` needs the initial React
+  // node at hydration time, and a later `props`-attribute change must reconcile
+  // as a plain re-render — never a re-hydration. A non-null `root` is that
+  // one-time "already mounted" distinction.
+  let root: Root | null = null;
   return {
     render(Component, props, slotHtml) {
-      root.render(createElement(Component, mergeSlotProps(props, slotHtml)));
+      const node = createElement(Component, mergeSlotProps(props, slotHtml));
+      if (root !== null) {
+        root.render(node);
+        return;
+      }
+      // In dev a hydrating island mounts with `hydrateRoot`, so React reconciles
+      // the client render against the server DOM and reports a divergence via
+      // `onRecoverableError` (it recovers by client-rendering — no crash). The
+      // mismatch flows to the island overlay (#1603) as its own diagnostic;
+      // `onUncaughtError` still forwards a component throw as before.
+      // `process.env.PLUMIX_DEV` is Vite-substituted at bundle time — empty in a
+      // production build — so this whole branch and `hydrateRoot` tree-shake out
+      // and production keeps `createRoot`, byte-for-byte unchanged.
+      if (process.env.PLUMIX_DEV && hydrate) {
+        // `hydrateRoot` renders `node` itself; there is no follow-up
+        // `root.render`.
+        root = hydrateRoot(element, node, {
+          onUncaughtError: reportIslandError(element),
+          onRecoverableError: reportIslandMismatch(element),
+        });
+        return;
+      }
+      // Production (both the `createRoot` default handling) and a dev client-only
+      // island (no server output to hydrate, but still wired to the overlay).
+      root = process.env.PLUMIX_DEV
+        ? createRoot(element, { onUncaughtError: reportIslandError(element) })
+        : createRoot(element);
+      root.render(node);
     },
     unmount() {
-      root.unmount();
+      root?.unmount();
+      root = null;
     },
+  };
+}
+
+// Dev-only: surface a component throw (render / effect, not caught by a user
+// error boundary) to the island error overlay (#1603) with React's component
+// stack, then still log it. React unmounts only this root, so other islands and
+// the rest of the page keep working.
+function reportIslandError(
+  element: HTMLElement,
+): (error: unknown, info: ErrorInfo) => void {
+  return (error, info) => {
+    window.dispatchEvent(
+      new CustomEvent("plumix:island-error", {
+        detail: {
+          error,
+          componentStack: info.componentStack ?? undefined,
+          element,
+        },
+      }),
+    );
+    console.error(error);
+  };
+}
+
+// Dev-only: a server/client divergence made React recover (client-render the
+// subtree — no crash) and fire one recoverable error. Surface it to the island
+// overlay (#1603) as its own diagnostic, carrying React's component stack. The
+// signal is the mismatch, not the error object, so the error is discarded.
+function reportIslandMismatch(
+  element: HTMLElement,
+): (error: unknown, info: ErrorInfo) => void {
+  return (_error, info) => {
+    window.dispatchEvent(
+      new CustomEvent("plumix:island-hydration-mismatch", {
+        detail: { element, componentStack: info.componentStack ?? undefined },
+      }),
+    );
   };
 }
 
