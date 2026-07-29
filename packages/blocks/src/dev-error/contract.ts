@@ -29,6 +29,22 @@ export interface DevErrorInfo {
    * carry no component stack.
    */
   readonly componentStack?: string;
+  /**
+   * The captured server-vs-client HTML pair for a dev island hydration mismatch
+   * (#1668) — the island's own markup before `hydrateRoot` (the server render)
+   * and after React's recovery re-render (the client render). Set only by the
+   * overlay's mismatch path; the page renders a diff section when present and
+   * every other dev-error surface leaves it unset.
+   */
+  readonly hydrationDiff?: DevErrorHydrationDiff;
+}
+
+/** The server/client HTML pair a hydration mismatch (#1668) diffs. */
+export interface DevErrorHydrationDiff {
+  /** The island's markup before `hydrateRoot` — the server (SSR) render. */
+  readonly server: string;
+  /** The island's markup after React's recovery re-render — the client render. */
+  readonly client: string;
 }
 
 /**

@@ -5,6 +5,7 @@ import type {
   DevErrorFact,
   DevErrorFrame,
   DevErrorHint,
+  DevErrorHydrationDiff,
   DevErrorInfo,
   DevErrorQuery,
   DevErrorTimeline,
@@ -171,9 +172,14 @@ export function DevErrorPage({
           </pre>
         </section>
       ) : null}
+      {error.hydrationDiff ? (
+        <HydrationDiff diff={error.hydrationDiff} />
+      ) : null}
       {error.componentStack && frames.length === 0 ? (
         // Resolved frames already point at the failing component, so the raw
         // React component stack is only useful as a fallback when none resolved.
+        // It sits below the hydration diff (#1668) — the diff shows *what*
+        // diverged and is the actionable signal; the stack is the fallback.
         <section
           className="plumix-dev-error__component-stack"
           data-testid="plumix-dev-error-component-stack"
@@ -188,6 +194,49 @@ export function DevErrorPage({
       {context ? <ContextSections context={context} /> : null}
       {panels && panels.length > 0 ? <PanelSections panels={panels} /> : null}
     </div>
+  );
+}
+
+/**
+ * The server-vs-client render pair for a hydration mismatch (#1668). Shows the
+ * island's captured markup before `hydrateRoot` against its markup after React's
+ * recovery re-render, so the developer sees *what* diverged, not just that it
+ * did. Both strings are the island's own HTML, rendered as React-escaped text —
+ * never re-parsed — so a diverging `<script>` can't run inside the overlay.
+ */
+function HydrationDiff({
+  diff,
+}: {
+  readonly diff: DevErrorHydrationDiff;
+}): ReactElement {
+  return (
+    <section
+      className="plumix-dev-error__section plumix-dev-error__hydration-diff"
+      data-testid="plumix-dev-error-hydration-diff"
+      aria-label="Hydration diff"
+    >
+      <h2 className="plumix-dev-error__section-title">Hydration diff</h2>
+      <div className="plumix-dev-error__hydration-panes">
+        <div
+          className="plumix-dev-error__hydration-pane"
+          data-testid="plumix-dev-error-hydration-server"
+        >
+          <h3 className="plumix-dev-error__subhead">Server (SSR)</h3>
+          <pre className="plumix-dev-error__hydration-pre">
+            <code>{diff.server}</code>
+          </pre>
+        </div>
+        <div
+          className="plumix-dev-error__hydration-pane"
+          data-testid="plumix-dev-error-hydration-client"
+        >
+          <h3 className="plumix-dev-error__subhead">Client (recovered)</h3>
+          <pre className="plumix-dev-error__hydration-pre">
+            <code>{diff.client}</code>
+          </pre>
+        </div>
+      </div>
+    </section>
   );
 }
 

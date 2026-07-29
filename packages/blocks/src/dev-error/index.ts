@@ -4,6 +4,7 @@ export type {
   DevErrorFrame,
   DevErrorHint,
   DevErrorHintDoc,
+  DevErrorHydrationDiff,
   DevErrorInfo,
   DevErrorQuery,
   DevErrorRequestInfo,

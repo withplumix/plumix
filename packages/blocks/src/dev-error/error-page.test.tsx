@@ -153,6 +153,46 @@ describe("DevErrorPage", () => {
     expect(html).toContain('data-testid="plumix-dev-error-frame"');
   });
 
+  test("renders a server-vs-client diff section when the hydration pair is present", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage
+        error={{
+          name: "Hydration mismatch",
+          message: "the renders disagreed",
+          componentStack: "\n    at Clock\n    at App",
+          hydrationDiff: {
+            server: "<span>SERVER</span>",
+            client: "<span>CLIENT</span>",
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain('data-testid="plumix-dev-error-hydration-diff"');
+    // Both captured renders show, each escaped as text (not re-rendered markup).
+    expect(html).toContain('data-testid="plumix-dev-error-hydration-server"');
+    expect(html).toContain('data-testid="plumix-dev-error-hydration-client"');
+    expect(html).toContain("&lt;span&gt;SERVER&lt;/span&gt;");
+    expect(html).toContain("&lt;span&gt;CLIENT&lt;/span&gt;");
+    // The raw HTML is escaped, so it can't inject a live element into the page.
+    expect(html).not.toContain("<span>SERVER</span>");
+    // The diff is the actionable "what diverged" and leads; the raw component
+    // stack is the fallback and sits below it.
+    expect(
+      html.indexOf('data-testid="plumix-dev-error-hydration-diff"'),
+    ).toBeLessThan(
+      html.indexOf('data-testid="plumix-dev-error-component-stack"'),
+    );
+  });
+
+  test("omits the diff section when the error carries no hydration pair", () => {
+    const html = renderToStaticMarkup(
+      <DevErrorPage error={{ name: "TypeError", message: "boom" }} />,
+    );
+
+    expect(html).not.toContain('data-testid="plumix-dev-error-hydration-diff"');
+  });
+
   test("renders each frame as a button carrying its absolute file and line", () => {
     const html = renderToStaticMarkup(
       <DevErrorPage
