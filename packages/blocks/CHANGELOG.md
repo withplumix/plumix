@@ -1,5 +1,44 @@
 # @plumix/blocks
 
+## 0.11.0
+
+### Minor Changes
+
+- [#1670](https://github.com/withplumix/plumix/pull/1670) [`77ef988`](https://github.com/withplumix/plumix/commit/77ef988411eed32144bd4d5fabcc497fbbbac9ef) Thanks [@nasyrov](https://github.com/nasyrov)! - Flag island hydration mismatches in development.
+
+  In `plumix dev`, a hydrating island now mounts with React `hydrateRoot` instead
+  of `createRoot`, so a non-deterministic render — a `Date.now()`, `Math.random()`,
+  or locale read that differs between the Worker SSR pass and the browser — no
+  longer fails silently. React recovers by client-rendering the subtree (no crash)
+  and reports the divergence, which the renderer dispatches as a
+  `plumix:island-hydration-mismatch` event carrying the island element and React's
+  component stack. The dev island-error overlay renders it through the shared
+  dev-error page, named and labeled by the island's component, so the offending
+  island is flagged by name.
+
+  Production is unchanged, byte-for-byte: the `hydrateRoot` swap and the whole
+  diagnostic stay gated on `process.env.PLUMIX_DEV` and tree-shake out of
+  production island bundles, where every island keeps mounting with `createRoot`.
+  A `client="only"` island ships no server output, so it also keeps mounting fresh
+  with `createRoot` and is never reported as a mismatch.
+
+- [#1672](https://github.com/withplumix/plumix/pull/1672) [`168466a`](https://github.com/withplumix/plumix/commit/168466a3e473a81ce77c0acff6678bbeac1dea9b) Thanks [@nasyrov](https://github.com/nasyrov)! - Show _what_ diverged on an island hydration mismatch, not just that it did.
+
+  When a dev-hydrating island's server and client renders disagree, the renderer
+  now captures the island's own HTML at two points — before `hydrateRoot` (the
+  server render) and after React's recovery re-render (the client render) — and
+  carries both on the `plumix:island-hydration-mismatch` signal. The shared
+  resolved-error contract (`DevErrorInfo`) gains one optional `hydrationDiff`
+  field for that server/client pair, and the dev-error page renders a
+  server-vs-client diff section when it is present — leading, above the raw
+  component stack — so the developer sees the exact markup that changed. Both
+  captured strings render as escaped text, never re-parsed.
+
+  Surfaces that do not set the field are unchanged: an SSR error, an island
+  component throw, or a mismatch with no captured pair renders exactly as before.
+  Production stays untouched — the capture lives inside the existing
+  `process.env.PLUMIX_DEV` branch and tree-shakes out.
+
 ## 0.10.0
 
 ### Minor Changes
