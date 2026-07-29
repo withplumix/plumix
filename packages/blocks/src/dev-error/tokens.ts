@@ -143,6 +143,49 @@ export const DEV_ERROR_CSS = `
   tab-size: 2;
 }
 
+/* Server-vs-client render pair for a hydration mismatch (#1668) — two panes
+   side by side on a wide page, stacked on narrow, so the diverging markup reads
+   next to its counterpart. */
+.plumix-dev-error__hydration-diff {
+  margin-top: 1.5rem;
+}
+
+.plumix-dev-error__hydration-panes {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 60rem) {
+  .plumix-dev-error__hydration-panes {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.plumix-dev-error__hydration-pane {
+  min-width: 0;
+}
+
+.plumix-dev-error__hydration-pane .plumix-dev-error__subhead {
+  margin-top: 0;
+}
+
+.plumix-dev-error__hydration-pre {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+  background: var(--plumix-deverr-bg);
+  border: 1px solid var(--plumix-deverr-border);
+  border-radius: var(--plumix-deverr-radius);
+  font-family: var(--plumix-deverr-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--plumix-deverr-fg);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+}
+
 /* Stack-and-source: frame list beside the excerpt panel, stacked on narrow. */
 .plumix-dev-error__frames {
   display: grid;

@@ -17,7 +17,11 @@ import type { Root } from "react-dom/client";
 import { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 
-import type { DevErrorFrame, DevErrorInfo } from "./contract.js";
+import type {
+  DevErrorFrame,
+  DevErrorHydrationDiff,
+  DevErrorInfo,
+} from "./contract.js";
 import { enhanceDevError } from "./enhance.js";
 import { DevErrorPage } from "./error-page.js";
 import { deriveLabel, detailOf } from "./event-detail.js";
@@ -85,9 +89,14 @@ class IslandErrorOverlay {
     this.on("plumix:island-hydration-mismatch", (event) => {
       // A dev-hydrating island whose server and client renders disagreed
       // (#1667). No thrown error — React recovered — so this renders as its own
-      // synthesized entry rather than through `toDevErrorInfo`.
-      const { element, componentStack } = detailOf(event);
-      this.captureMismatch(element, componentStack);
+      // synthesized entry rather than through `toDevErrorInfo`. The captured
+      // server/client pair (#1668) recombines into the diff the page renders.
+      const { element, componentStack, server, client } = detailOf(event);
+      const diff =
+        server !== undefined && client !== undefined
+          ? { server, client }
+          : undefined;
+      this.captureMismatch(element, componentStack, diff);
     });
     this.on("error", (event) => {
       // Skip `error` events with no error object — a cross-origin
@@ -125,10 +134,12 @@ class IslandErrorOverlay {
 
   // A hydration mismatch (#1667) carries no thrown error and no JS stack —
   // React's component stack is the signal — so it maps straight into the shared
-  // resolved-error contract and skips frame resolution.
+  // resolved-error contract and skips frame resolution. The captured server/
+  // client HTML pair (#1668), when present, becomes the diff the page renders.
   private captureMismatch(
     element?: HTMLElement,
     componentStack?: string,
+    hydrationDiff?: DevErrorHydrationDiff,
   ): void {
     // Dedup by island + React stack (no error object to key on), so a
     // doubly-dispatched identical mismatch counts once.
@@ -139,6 +150,7 @@ class IslandErrorOverlay {
       name: "Hydration mismatch",
       message: HYDRATION_MISMATCH_MESSAGE,
       ...(componentStack !== undefined ? { componentStack } : {}),
+      ...(hydrationDiff !== undefined ? { hydrationDiff } : {}),
     };
     this.addEntry(info, element);
   }

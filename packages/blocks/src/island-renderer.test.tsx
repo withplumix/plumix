@@ -194,9 +194,15 @@ describe("island renderer mount()", () => {
     const detail = events[0]?.detail as {
       element?: HTMLElement;
       componentStack?: string;
+      server?: string;
+      client?: string;
     };
     expect(detail.element).toBe(el);
     expect(detail.componentStack).toContain("Component");
+    // Both renders are captured: the server markup as it was before hydration,
+    // and the client markup React re-rendered on recovery (#1668).
+    expect(detail.server).toBe("<span>SERVER</span>");
+    expect(detail.client).toBe("<span>CLIENT</span>");
     // React recovered by client-rendering the subtree — the page did not crash.
     expect(el.textContent).toBe("CLIENT");
 

@@ -141,6 +141,34 @@ describe("installIslandErrorOverlay", () => {
     expect(query("plumix-dev-error-component-stack")?.textContent).toContain(
       "at Clock",
     );
+    // Without a captured HTML pair, the diff section is absent (#1668).
+    expect(query("plumix-dev-error-hydration-diff")).toBeNull();
+  });
+
+  test("renders the server-vs-client diff when the mismatch carried the HTML pair", async () => {
+    window.dispatchEvent(
+      new CustomEvent("plumix:island-hydration-mismatch", {
+        detail: {
+          element: island("Clock"),
+          componentStack: "\n    at Clock\n    at App",
+          server: "<span>SERVER</span>",
+          client: "<span>CLIENT</span>",
+        },
+      }),
+    );
+    await tick();
+    query("plumix-island-overlay-badge")?.click();
+    await tick();
+
+    const diff = query("plumix-dev-error-hydration-diff");
+    expect(diff).not.toBeNull();
+    // Both captured renders show, escaped as text rather than re-rendered.
+    expect(query("plumix-dev-error-hydration-server")?.textContent).toContain(
+      "<span>SERVER</span>",
+    );
+    expect(query("plumix-dev-error-hydration-client")?.textContent).toContain(
+      "<span>CLIENT</span>",
+    );
   });
 
   test("counts a doubly-dispatched identical mismatch once", async () => {

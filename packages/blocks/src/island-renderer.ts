@@ -68,11 +68,16 @@ export function mount(
       // production build — so this whole branch and `hydrateRoot` tree-shake out
       // and production keeps `createRoot`, byte-for-byte unchanged.
       if (process.env.PLUMIX_DEV && hydrate) {
+        // Capture the island's server markup before `hydrateRoot` touches it —
+        // on a mismatch React re-renders the subtree client-side in place, so
+        // this is the only point the SSR HTML still exists to pair against the
+        // recovered client HTML in the diagnostic (#1668).
+        const server = element.innerHTML;
         // `hydrateRoot` renders `node` itself; there is no follow-up
         // `root.render`.
         root = hydrateRoot(element, node, {
           onUncaughtError: reportIslandError(element),
-          onRecoverableError: reportIslandMismatch(element),
+          onRecoverableError: reportIslandMismatch(element, server),
         });
         return;
       }
@@ -113,15 +118,24 @@ function reportIslandError(
 
 // Dev-only: a server/client divergence made React recover (client-render the
 // subtree — no crash) and fire one recoverable error. Surface it to the island
-// overlay (#1603) as its own diagnostic, carrying React's component stack. The
-// signal is the mismatch, not the error object, so the error is discarded.
+// overlay (#1603) as its own diagnostic, carrying React's component stack plus
+// the captured server/client HTML pair the overlay diffs (#1668). The signal is
+// the mismatch, not the error object, so the error is discarded. By the time
+// this fires, React has already committed the recovered client render, so
+// `element.innerHTML` reads the post-recovery markup.
 function reportIslandMismatch(
   element: HTMLElement,
+  server: string,
 ): (error: unknown, info: ErrorInfo) => void {
   return (_error, info) => {
     window.dispatchEvent(
       new CustomEvent("plumix:island-hydration-mismatch", {
-        detail: { element, componentStack: info.componentStack ?? undefined },
+        detail: {
+          element,
+          componentStack: info.componentStack ?? undefined,
+          server,
+          client: element.innerHTML,
+        },
       }),
     );
   };
