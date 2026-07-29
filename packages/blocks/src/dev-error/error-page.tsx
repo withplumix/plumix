@@ -73,6 +73,12 @@ export function DevErrorPage({
   // enhancement (which relativizes the excerpt header) via `data-base`.
   const base = commonBaseDir(frames);
   const hints = error.hints ?? [];
+  // With no frames, fall back to the raw stack — unless the only signal is a
+  // component stack (a hydration mismatch, #1667), in which case the
+  // "(no stack available)" block is redundant noise above the component-stack
+  // section that names the offending island.
+  const showStackFallback =
+    error.stack !== undefined || error.componentStack === undefined;
 
   return (
     <div className="plumix-dev-error" data-testid="plumix-dev-error">
@@ -155,7 +161,7 @@ export function DevErrorPage({
             </p>
           </div>
         </section>
-      ) : (
+      ) : showStackFallback ? (
         <section
           className="plumix-dev-error__stack"
           data-testid="plumix-dev-error-stack"
@@ -164,7 +170,7 @@ export function DevErrorPage({
             <code>{error.stack ?? "(no stack available)"}</code>
           </pre>
         </section>
-      )}
+      ) : null}
       {error.componentStack && frames.length === 0 ? (
         // Resolved frames already point at the failing component, so the raw
         // React component stack is only useful as a fallback when none resolved.

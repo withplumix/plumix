@@ -16,7 +16,7 @@
 import type { ComponentType } from "react";
 
 import type { IslandPageMode } from "./island-mode.js";
-import type { IslandRoot } from "./island-renderer.js";
+import type { IslandRoot, MountOptions } from "./island-renderer.js";
 import { clientOnlyPlaceholderLabel, shouldHydrate } from "./island-mode.js";
 import { deserializeProps } from "./serialize.js";
 
@@ -25,7 +25,7 @@ import { deserializeProps } from "./serialize.js";
 // (erased at build) and fetched at runtime via `loadRenderer()` inside
 // `hydrate()`, so this element chunk stays React-free.
 interface RendererModule {
-  mount(element: HTMLElement): IslandRoot;
+  mount(element: HTMLElement, options?: MountOptions): IslandRoot;
 }
 
 // A strategy decides *when* to run `loadFn` (hydrate or prefetch). It may
@@ -277,7 +277,13 @@ export class PlumixIslandElement extends HTMLElement {
     }
     this.hydrated = true;
     this.component = Component;
-    this.root = renderer.mount(this);
+    // A client-only island ships no server output, so it mounts fresh with
+    // `createRoot`; every other island hydrates the SSR DOM in dev (#1667) to
+    // surface a server/client mismatch. The renderer strips this to `createRoot`
+    // in production either way.
+    this.root = renderer.mount(this, {
+      hydrate: this.getAttribute("client") !== "only",
+    });
     this.root.render(Component, readProps(this), readSlotHtml(this));
     // Clearing the `ssr` attribute signals any nested island awaiting
     // this parent that it's safe to hydrate now. See the MutationObserver
