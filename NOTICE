@@ -1,0 +1,118 @@
+Plumix — Third-Party Provenance & Attribution
+=============================================
+
+This is a curated record of source-level code that Plumix has copied or
+adapted from upstream projects, and where it deliberately diverges from a
+dependency. It is NOT a generated software bill of materials (SBOM): it does
+not enumerate the licenses of Plumix's npm dependencies, whose notices travel
+with the installed packages. It covers only code that lives in Plumix's own
+source tree by way of copying, porting, or adaptation.
+
+Every license below was verified from the upstream's own LICENSE at the source
+cited, not from memory. Plumix itself is MIT-licensed (see LICENSE).
+
+Entries are grouped by derivation depth:
+
+  1. Copied / adapted code — an upstream MIT notice is reproduced, as required.
+  2. Dependency divergence — Plumix's own code that replaces a dependency's
+     behavior; no upstream code is copied, so no notice is owed.
+  3. Prior art / inspiration — idea-level influence only; no code was copied
+     and no notice is owed. Listed for honesty, never as code derivation.
+
+
+1. Copied / adapted code
+------------------------
+
+shadcn/ui — MIT — Copyright (c) 2023 shadcn
+  Verified: https://github.com/shadcn-ui/ui/blob/main/LICENSE.md
+  Derived surface: packages/admin-ui/src/ — the vendored shadcn/ui primitive
+    components, kept byte-identical to upstream so `shadcn diff` upgrades apply
+    cleanly. See packages/admin-ui/src/NOTICE for the per-file detail and the
+    exceptions (components that are original Plumix work, not shadcn/ui).
+
+Astro — MIT — Copyright (c) 2021 Fred K. Schott
+  Verified: https://github.com/withastro/astro/blob/main/LICENSE
+  Derived surface:
+    - packages/blocks/src/island-element.ts   (port of `astro-island.ts`)
+    - packages/blocks/src/serialize.ts        (port of Astro's prop serializer;
+                                               PROP_TYPE codes + wire format)
+    - packages/blocks/src/static-html.tsx     (adaptation of Astro's `StaticHtml`)
+    - packages/blocks/src/island-strategies/  (hydration triggers, adapted)
+  Kept: the SSR/client island wire format and prop-serialization scheme, which
+    are a hard contract between server and client.
+  Diverged: chunk-retry on failed import, a cancelable hydration-error event,
+    event-replay on the interaction strategy, and strategy timeout handling.
+
+Nuxt — MIT — Copyright (c) 2016-present Nuxt Team
+  Verified: https://github.com/nuxt/nuxt/blob/main/LICENSE
+  Derived surface: packages/blocks/src/island-strategies/ — the `visible` and
+    `idle` hydration triggers are adapted alongside Astro's, with deliberate
+    deviations documented in each file (e.g. idle timeout, observing the
+    element rather than its children).
+
+emdash — MIT — Copyright (c) 2026 Cloudflare Inc.
+  Verified: https://github.com/emdash-cms/emdash/blob/main/LICENSE
+  Derived surface: packages/admin/src/components/meta-box/plugin-field-error-boundary.tsx
+    (adapted from emdash's PluginFieldErrorBoundary pattern — a React class
+    error boundary containing plugin-field render crashes).
+
+
+2. Dependency divergence
+------------------------
+
+@oslojs/crypto — MIT
+  Plumix reimplements SEC1-uncompressed public-key encoding in
+  packages/core/src/auth/passkey/register.ts (`encodeSec1Uncompressed`) rather
+  than using the dependency's `ECDSAPublicKey.encodeSEC1Uncompressed`, which
+  left-aligns the Y coordinate and silently corrupts ~1/256 of P-256 keys (a
+  leading-zero Y). This bug is still present in the latest release (1.0.1). The
+  reimplementation copies no upstream code — it produces the standard RFC 5480
+  §2.2 format that the dependency's own decoder reads back correctly. Remove it
+  once a fixed, usably-exposed upstream release ships.
+
+
+3. Prior art / inspiration (no code copied; not a derivation)
+-------------------------------------------------------------
+
+These influenced Plumix's design or behavior but contributed no copied code.
+No attribution is owed; they are listed for transparency.
+
+  - drizzle-query-logger (MIT, https://github.com/max-programming/drizzle-query-logger)
+      — the idea of syntax-highlighting SQL in logs; Plumix's
+        packages/core/src/debug-bar/highlight-sql.ts is an independent
+        implementation targeting CSS token spans.
+  - WordPress (GPL) — behavioral parity for hierarchical taxonomies, bulk
+      actions, and user-management UX. GPL code is NOT copied into Plumix, and
+      this parity must never be recorded as code derivation.
+  - Puck, Builder.io, Solid — concept-level references for the editor and
+      reactivity design.
+
+
+MIT permission notice (applies to each MIT upstream listed in section 1)
+-----------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+Known future scope (not covered here)
+-------------------------------------
+
+Attribution for dependency code that gets inlined into a shipped bundle (e.g.
+the precompiled admin browser bundle) is a distinct concern — a generated
+bundled-dependency SBOM — and is intentionally out of scope for this record.
