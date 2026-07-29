@@ -1,5 +1,12 @@
 # @plumix/core
 
+## 0.10.0
+
+### Patch Changes
+
+- Updated dependencies [[`5743bfc`](https://github.com/withplumix/plumix/commit/5743bfc95516d55c67d633f4b61a4c9a1e092f8d)]:
+  - @plumix/blocks@0.10.0
+
 ## 0.9.0
 
 ### Minor Changes
