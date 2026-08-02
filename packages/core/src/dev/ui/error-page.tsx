@@ -26,10 +26,14 @@ import {
  * each frame's original `file:line`, application frames expanded and framework
  * frames collapsed behind a toggle, plus an excerpt panel the client
  * enhancement fills by lazy-fetching source from the dev resolver (#1596). It
- * works even when the theme, layout, or document is what threw. The server page
- * (core) SSRs this into a standalone HTML document with the token sheet
- * inlined; the client overlay (#1603) will mount the same component inside a
- * Shadow DOM root.
+ * works even when the theme, layout, or document is what threw.
+ *
+ * This is the full server page (core SSRs it into a standalone HTML document
+ * with the token sheet inlined): the shared {@link DevErrorContent} plus the
+ * request-scoped {@link context} sections and plugin {@link panels}. The client
+ * island overlay (#1678) instead composes {@link DevErrorContent} alone inside
+ * its dialog — the server-only sections have no data on the client — so this
+ * full page is never mounted in an overlay.
  */
 export function DevErrorPage({
   error,
@@ -67,6 +71,59 @@ export function DevErrorPage({
    */
   readonly editorPathMap?: EditorPathMap;
 }): ReactElement {
+  return (
+    <div className="plumix-dev-error" data-testid="plumix-dev-error">
+      <DevErrorContent
+        error={error}
+        editor={editor}
+        editorPathMap={editorPathMap}
+      />
+      {context ? <ContextSections context={context} /> : null}
+      {panels && panels.length > 0 ? <PanelSections panels={panels} /> : null}
+    </div>
+  );
+}
+
+/**
+ * The slim client dialog body (#1678): the shared {@link DevErrorContent} inside
+ * the `.plumix-dev-error` wrapper the token sheet scopes onto, with none of the
+ * server-only context or panel sections. Both client overlays — the compile
+ * error overlay and the island hydration dialog — render this, so neither mounts
+ * the full {@link DevErrorPage}.
+ */
+export function DevErrorBody({
+  error,
+}: {
+  readonly error: DevErrorInfo;
+}): ReactElement {
+  return (
+    <div className="plumix-dev-error" data-testid="plumix-dev-error">
+      <DevErrorContent error={error} />
+    </div>
+  );
+}
+
+/**
+ * The shared dev-error body nodes: the exception header, how-to-fix hints, the
+ * stack view (resolved frames or the raw fallback), the hydration diff, and — as
+ * a fallback — the React component stack. This is everything every dev surface
+ * shows. The full {@link DevErrorPage} wraps it with the server-only context and
+ * panel sections; the client {@link DevErrorBody} wraps it alone.
+ *
+ * Returns the nodes without the outer `.plumix-dev-error` element so the page can
+ * place the context/panel sections as siblings inside that same wrapper.
+ */
+function DevErrorContent({
+  error,
+  editor,
+  editorPathMap,
+}: {
+  readonly error: DevErrorInfo;
+  /** The resolved open-in-editor template; when set, renders the editor link. */
+  readonly editor?: string;
+  /** The optional from→to path remap applied to each frame path (#1627). */
+  readonly editorPathMap?: EditorPathMap;
+}): ReactElement {
   const frames = error.frames ?? [];
   const appFrames = frames.filter((frame) => !frame.isVendor);
   const vendorFrames = frames.filter((frame) => frame.isVendor);
@@ -83,7 +140,7 @@ export function DevErrorPage({
     error.stack !== undefined || error.componentStack === undefined;
 
   return (
-    <div className="plumix-dev-error" data-testid="plumix-dev-error">
+    <>
       <header className="plumix-dev-error__header">
         <p
           className="plumix-dev-error__name"
@@ -192,9 +249,7 @@ export function DevErrorPage({
           </pre>
         </section>
       ) : null}
-      {context ? <ContextSections context={context} /> : null}
-      {panels && panels.length > 0 ? <PanelSections panels={panels} /> : null}
-    </div>
+    </>
   );
 }
 

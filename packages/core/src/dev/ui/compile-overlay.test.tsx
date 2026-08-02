@@ -129,11 +129,11 @@ describe("installCompileErrorOverlay", () => {
     );
     await tick();
 
-    expect(query("plumix-compile-overlay-panel")).not.toBeNull();
+    expect(query("plumix-dev-overlay-panel")).not.toBeNull();
     expect(query("plumix-dev-error-message")?.textContent).toBe(
       "Unexpected token",
     );
-    expect(query("plumix-compile-overlay-label")?.textContent).toBe(
+    expect(query("plumix-dev-overlay-label")?.textContent).toBe(
       "Compile error",
     );
     // The Vite code frame is shown in the shared stack view.
@@ -154,7 +154,7 @@ describe("installCompileErrorOverlay", () => {
     hot.emit("vite:error", viteError({ message: "Broken" }));
     await tick();
 
-    query("plumix-compile-overlay-close")?.click();
+    query("plumix-dev-overlay-close")?.click();
     await tick();
     expect(host()).toBeNull();
   });
@@ -173,7 +173,7 @@ describe("installCompileErrorOverlay", () => {
     hot.emit("vite:error", viteError({ message: "Broken" }));
     await tick();
 
-    const backdrop = query("plumix-compile-overlay-backdrop");
+    const backdrop = query("plumix-dev-overlay-backdrop");
     backdrop?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     backdrop?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await tick();
@@ -184,14 +184,14 @@ describe("installCompileErrorOverlay", () => {
     hot.emit("vite:error", viteError({ message: "Broken" }));
     await tick();
 
-    query("plumix-compile-overlay-panel")?.dispatchEvent(
+    query("plumix-dev-overlay-panel")?.dispatchEvent(
       new MouseEvent("mousedown", { bubbles: true }),
     );
-    query("plumix-compile-overlay-backdrop")?.dispatchEvent(
+    query("plumix-dev-overlay-backdrop")?.dispatchEvent(
       new MouseEvent("click", { bubbles: true }),
     );
     await tick();
-    expect(query("plumix-compile-overlay-panel")).not.toBeNull();
+    expect(query("plumix-dev-overlay-panel")).not.toBeNull();
   });
 
   test("replaces the shown error when a newer compile error arrives", async () => {
@@ -221,7 +221,7 @@ describe("installCompileErrorOverlay", () => {
   test("re-shows after a dismissal when a new error arrives", async () => {
     hot.emit("vite:error", viteError({ message: "First" }));
     await tick();
-    query("plumix-compile-overlay-close")?.click();
+    query("plumix-dev-overlay-close")?.click();
     await tick();
     expect(host()).toBeNull();
 
