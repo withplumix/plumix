@@ -12,7 +12,7 @@ import type {
 import type { AppContext, DeferFn } from "../context/app.js";
 import type { TelemetryConfig } from "../context/telemetry.js";
 import type { User, UserRole } from "../db/schema/users.js";
-import type { DebugBarInput } from "../debug-bar/config.js";
+import type { DebugBarInput } from "../dev/debug-bar/config.js";
 import type {
   ActionArgs,
   ActionName,

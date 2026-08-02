@@ -1,23 +1,67 @@
-// The shared dev-error token sheet (#1580 seed). One CSS-custom-property
-// palette plus the layout for the dev error page, scoped entirely under
-// `.plumix-dev-error` so it can be inlined into the standalone server page
-// (#1595) and later dropped into the client overlay's Shadow DOM (#1603)
-// without leaking either way. Authored as a plain string: core has no
-// bundler CSS pipeline, and the sheet ships as inline `<style>` text.
+// The shared dev-tooling token sheet. One place under `core/dev/ui` that owns
+// the colors, radii, and fonts every in-dev surface draws from, so a new dev
+// tool imports these tokens rather than starting yet another private copy. Two
+// families live here, each preserved at its exact prior values so every surface
+// renders as before: the warm full-page error surface (below, exposed as
+// `.plumix-dev-error` custom properties) and the cool WordPress-admin-style
+// debug bar. Converging them onto a single value set is a later design call,
+// deliberately out of scope for the relocation that consolidated them here.
+// Authored as plain strings: core has no bundler CSS pipeline, and each sheet
+// ships as inline `<style>` text.
+
+export const devTokens = {
+  /** Full-page dev error surface and its client overlays (#1580 seed). */
+  errorPage: {
+    bg: "#16181d",
+    surface: "#1e2128",
+    fg: "#e6e8eb",
+    muted: "#9aa0aa",
+    accent: "#ff6b6b",
+    border: "#2c3038",
+    radius: "8px",
+    fontSans:
+      'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    fontMono:
+      'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  },
+  /** Dev debug bar chrome — WordPress-admin-bar palette. */
+  bar: {
+    frame: "#1d2327",
+    panel: "#2c3338",
+    card: "#23282f",
+    border: "#3c434a",
+    fg: "#e6e6e6",
+    fgStrong: "#fff",
+    muted: "#8a929a",
+    label: "#b9c0c7",
+    sql: "#c9d1d9",
+    accent: "#6ea8fe",
+    green: "#7ee787",
+    yellow: "#e3b341",
+    amber: "#d29922",
+    red: "#f0a5a5",
+    cyan: "#56d4dd",
+    scrollbarHover: "#4a535b",
+    radiusFrame: "8px",
+    radiusControl: "4px",
+    radiusCard: "6px",
+    radiusBadge: "3px",
+    fontMono:
+      'ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace',
+  },
+} as const;
 
 export const DEV_ERROR_CSS = `
 .plumix-dev-error {
-  --plumix-deverr-bg: #16181d;
-  --plumix-deverr-surface: #1e2128;
-  --plumix-deverr-fg: #e6e8eb;
-  --plumix-deverr-muted: #9aa0aa;
-  --plumix-deverr-accent: #ff6b6b;
-  --plumix-deverr-border: #2c3038;
-  --plumix-deverr-radius: 8px;
-  --plumix-deverr-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    Roboto, Helvetica, Arial, sans-serif;
-  --plumix-deverr-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo,
-    Consolas, "Liberation Mono", monospace;
+  --plumix-deverr-bg: ${devTokens.errorPage.bg};
+  --plumix-deverr-surface: ${devTokens.errorPage.surface};
+  --plumix-deverr-fg: ${devTokens.errorPage.fg};
+  --plumix-deverr-muted: ${devTokens.errorPage.muted};
+  --plumix-deverr-accent: ${devTokens.errorPage.accent};
+  --plumix-deverr-border: ${devTokens.errorPage.border};
+  --plumix-deverr-radius: ${devTokens.errorPage.radius};
+  --plumix-deverr-font: ${devTokens.errorPage.fontSans};
+  --plumix-deverr-mono: ${devTokens.errorPage.fontMono};
 
   box-sizing: border-box;
   min-height: 100vh;

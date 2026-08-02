@@ -4,7 +4,7 @@ import type { RemotePattern } from "@plumix/blocks/renderer";
 import type { PlumixAuthConfig } from "./auth/config.js";
 import type { MailerInput } from "./auth/mailer/resolve.js";
 import type { TelemetryConfig } from "./context/telemetry.js";
-import type { DebugBarInput } from "./debug-bar/config.js";
+import type { DebugBarInput } from "./dev/debug-bar/config.js";
 import type { I18nInput, ResolvedI18n } from "./i18n/locale-registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";

@@ -7,7 +7,7 @@ import type {
 } from "../context/telemetry.js";
 import type { DevErrorFrame } from "../dev/ui/index.js";
 import type { McpTool } from "./tool.js";
-import { debugHistory } from "../debug-bar/history.js";
+import { debugHistory } from "../dev/debug-bar/history.js";
 import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 
 // The dev-only error surface: server 5xx failures (projected from the same

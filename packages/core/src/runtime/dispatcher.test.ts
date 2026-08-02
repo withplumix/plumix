@@ -13,7 +13,7 @@ import type { DevErrorJson } from "../dev/server/render.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { ConnectedCache } from "./slots.js";
-import { debugHistory } from "../debug-bar/history.js";
+import { debugHistory } from "../dev/debug-bar/history.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";

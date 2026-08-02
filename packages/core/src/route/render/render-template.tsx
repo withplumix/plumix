@@ -30,11 +30,11 @@ import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { PlumixAdminBar } from "../../admin-bar/component.js";
-import { PlumixDebugBar } from "../../debug-bar/component.js";
+import { PlumixDebugBar } from "../../dev/debug-bar/component.js";
 import {
   TEMPLATE_PANEL_ID,
   templateNodeLabel,
-} from "../../debug-bar/template-node-label.js";
+} from "../../dev/debug-bar/template-node-label.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { escapeHtml } from "../../escape-html.js";
 import { applyCanonical } from "../../seo/canonical.js";
