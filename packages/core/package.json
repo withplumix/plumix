@@ -37,6 +37,10 @@
       "types": "./dist/db/libsql.d.ts",
       "default": "./dist/db/libsql.js"
     },
+    "./dev-client": {
+      "types": "./dist/dev-client/index.d.ts",
+      "default": "./dist/dev-client/index.js"
+    },
     "./test": {
       "types": "./dist/test/index.d.ts",
       "default": "./dist/test/index.js"

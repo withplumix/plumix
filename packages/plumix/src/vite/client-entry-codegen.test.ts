@@ -31,21 +31,24 @@ describe("generateClientEntrySource", () => {
     expect(source).not.toContain('import "/');
     expect(source).not.toContain(".css");
     // Must still be a module (no static import/export at all would have Vite
-    // treat the file as a script with implicit globals — the overlay block is
+    // treat the file as a script with implicit globals — the install block is
     // only a dynamic `import()` expression).
     expect(source).toContain("export {};");
   });
 
   test.each([[[]], [["./src/global.css"]]])(
-    "always installs the dev-only compile-error overlay behind the hot gate (css: %j)",
+    "always installs the dev-only client tools via the core entry behind the hot gate (css: %j)",
     (css) => {
       const source = generateClientEntrySource(css);
       // Gated on `import.meta.hot` so it tree-shakes out of a production build.
       expect(source).toContain("if (import.meta.hot)");
-      expect(source).toContain('import("plumix/blocks/dev-error")');
+      // Installed from the single core-owned entry point (#1676), not from the
+      // blocks dev-error subpath.
+      expect(source).toContain('import("plumix/core/dev-client")');
       expect(source).toContain(
-        "installCompileErrorOverlay(hot, { initialError: pending })",
+        "installDevClient({ hot, initialCompileError: pending })",
       );
+      expect(source).not.toContain("plumix/blocks/dev-error");
       // A synchronous listener buffers a pre-install vite:error to replay it.
       expect(source).toContain('hot.on("vite:error", capture)');
     },
