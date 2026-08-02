@@ -1,4 +1,4 @@
-import type { DevErrorFrame, ForwardedLog } from "@plumix/blocks/dev-error";
+import type { DevErrorFrame, ForwardedLog } from "@plumix/core/dev-client";
 
 import type {
   ClientErrorRing,

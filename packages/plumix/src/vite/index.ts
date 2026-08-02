@@ -23,12 +23,6 @@ import type {
   ResolvedI18n,
 } from "@plumix/core";
 import {
-  DEV_ERROR_CLIENT_ERRORS_ENDPOINT,
-  DEV_ERROR_SOURCE_ENDPOINT,
-  DEV_ERROR_STACK_ENDPOINT,
-  DEV_ERROR_TERMINAL_ENDPOINT,
-} from "@plumix/blocks/dev-error";
-import {
   buildManifest,
   collectNamedTemplates,
   generateSchemaSource,
@@ -38,6 +32,12 @@ import {
   installPlugins,
   pluginCatalogStagedPath,
 } from "@plumix/core";
+import {
+  DEV_ERROR_CLIENT_ERRORS_ENDPOINT,
+  DEV_ERROR_SOURCE_ENDPOINT,
+  DEV_ERROR_STACK_ENDPOINT,
+  DEV_ERROR_TERMINAL_ENDPOINT,
+} from "@plumix/core/dev-client";
 
 import type { LoadConfigOptions } from "../cli/load-config.js";
 import type { DiscoveredIsland } from "./island-transform.js";

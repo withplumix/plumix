@@ -1,15 +1,14 @@
 import * as v from "valibot";
 
-import type { DevErrorFrame } from "@plumix/blocks/dev-error";
-import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "@plumix/blocks/dev-error";
-
 import type { AppContext } from "../context/app.js";
 import type {
   TelemetrySpan,
   TelemetrySpanError,
 } from "../context/telemetry.js";
+import type { DevErrorFrame } from "../dev/ui/index.js";
 import type { McpTool } from "./tool.js";
 import { debugHistory } from "../debug-bar/history.js";
+import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 
 // The dev-only error surface: server 5xx failures (projected from the same
 // request-history ring the tracing tools read — no new capture) merged with

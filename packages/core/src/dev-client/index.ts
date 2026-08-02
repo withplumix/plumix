@@ -5,11 +5,11 @@
  * itself.
  *
  * `@plumix/blocks` now only hydrates islands and dispatches `plumix:island-*`
- * events; this module is the single listener/installer. The dependency runs
- * core → blocks (the allowed direction), and this file imports ONLY the
- * browser-safe `@plumix/blocks/dev-error` implementations — never core
- * internals — so the `@plumix/core/dev-client` subpath carries no
- * `node:async_hooks` into the client bundle.
+ * events; this module is the single listener/installer. It imports ONLY the
+ * browser-safe `core/dev/ui` implementations — never core server internals — so
+ * the `@plumix/core/dev-client` subpath carries no `node:async_hooks` into the
+ * client bundle. The island event contract it reads still lives in
+ * `@plumix/blocks` (`@plumix/blocks/island-events`), consumed core → blocks.
  *
  * Everything is gated so it tree-shakes out of production: the caller wraps the
  * dynamic import in `import.meta.hot` (undefined in a build), and the island
@@ -17,15 +17,27 @@
  * (Vite-substituted to an empty string in a build).
  */
 
-import type { HmrClient, InstallOptions } from "@plumix/blocks/dev-error";
+import type { HmrClient, InstallOptions } from "../dev/ui/index.js";
 import {
   installCompileErrorOverlay,
   installIslandErrorOverlay,
   installTerminalForwarding,
   parseForwardLevel,
-} from "@plumix/blocks/dev-error";
+} from "../dev/ui/index.js";
 
-export type { HmrClient, ViteErrorPayload } from "@plumix/blocks/dev-error";
+export type { HmrClient, ViteErrorPayload } from "../dev/ui/index.js";
+
+// Re-exported for the plumix Vite plugin — the dev-server side of these
+// endpoints, the one external consumer that used to reach them through
+// `@plumix/blocks/dev-error`. They are the browser↔dev-server contract: the
+// client posts to these endpoints carrying these payload shapes.
+export {
+  DEV_ERROR_CLIENT_ERRORS_ENDPOINT,
+  DEV_ERROR_SOURCE_ENDPOINT,
+  DEV_ERROR_STACK_ENDPOINT,
+  DEV_ERROR_TERMINAL_ENDPOINT,
+} from "../dev/ui/index.js";
+export type { DevErrorFrame, ForwardedLog } from "../dev/ui/index.js";
 
 export interface DevClientOptions {
   /**

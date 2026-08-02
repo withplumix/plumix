@@ -28,7 +28,7 @@ export type { PlumixApp } from "./runtime/app.js";
 // Dev-only: the generated worker entry references this under its
 // `process.env.PLUMIX_DEV` gate to serve the dev error page when app
 // construction throws; it tree-shakes out of production builds (#1601).
-export { renderDevBootErrorResponse } from "./dev-error/boot.js";
+export { renderDevBootErrorResponse } from "./dev/server/boot.js";
 export type * from "./runtime/bindings.js";
 export { createPlumixDispatcher } from "./runtime/dispatcher.js";
 export type { PlumixDispatcher } from "./runtime/dispatcher.js";

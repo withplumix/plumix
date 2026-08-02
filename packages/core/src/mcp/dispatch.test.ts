@@ -1,10 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "@plumix/blocks/dev-error";
-
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
+import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";

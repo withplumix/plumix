@@ -9,7 +9,7 @@ import type {
   TelemetrySnapshot,
   TelemetrySpan,
 } from "../context/telemetry.js";
-import type { DevErrorJson } from "../dev-error/render.js";
+import type { DevErrorJson } from "../dev/server/render.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { ConnectedCache } from "./slots.js";
