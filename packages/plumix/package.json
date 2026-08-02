@@ -129,10 +129,6 @@
       "types": "./dist/blocks/island-renderer.d.ts",
       "default": "./dist/blocks/island-renderer.js"
     },
-    "./blocks/dev-error": {
-      "types": "./dist/blocks/dev-error.d.ts",
-      "default": "./dist/blocks/dev-error.js"
-    },
     "./core/dev-client": {
       "types": "./dist/core/dev-client.d.ts",
       "default": "./dist/core/dev-client.js"
