@@ -1,23 +1,23 @@
 /// <reference lib="dom" />
 // The client compile/import error overlay (#1622). Vite owns compile and import
 // errors, and its built-in overlay is visually and behaviorally disjoint from
-// the plumix dev error surface (the server `DevErrorPage` and the island
-// overlay). This module intercepts Vite's HMR `vite:error` payload and renders
-// it through the *same* shared `DevErrorPage` renderer + token sheet, inside a
-// Shadow DOM modal, so a syntax error or a bad import reads like every other
-// dev error. Plumix disables Vite's own overlay (`server.hmr.overlay: false`)
-// so the two never stack. The whole module is pulled in only behind the dev
-// gate (a lazy `import()` from the generated client entry, guarded by
-// `import.meta.hot`), so it — and the React DOM client weight it carries —
-// tree-shakes out of the production client bundle.
+// the plumix dev error surface (the server dev error page and the island
+// dialog). This module intercepts Vite's HMR `vite:error` payload and renders it
+// through the *same* shared error renderer + token sheet, inside the shared
+// overlay shell's Shadow DOM modal (#1678), so a syntax error or a bad import
+// reads like every other dev error. Plumix disables Vite's own overlay
+// (`server.hmr.overlay: false`) so the two never stack. The whole module is
+// pulled in only behind the dev gate (a lazy `import()` from the generated
+// client entry, guarded by `import.meta.hot`), so it — and the React DOM client
+// weight it carries — tree-shakes out of the production client bundle.
 
 import type { ReactElement } from "react";
 import type { Root } from "react-dom/client";
-import { useRef } from "react";
 import { createRoot } from "react-dom/client";
 
 import type { DevErrorInfo } from "./contract.js";
-import { DevErrorPage } from "./error-page.js";
+import { DevErrorBody } from "./error-page.js";
+import { DEV_OVERLAY_CSS, DevOverlayShell } from "./overlay-shell.js";
 import { DEV_ERROR_CSS } from "./tokens.js";
 
 const HOST_TAG = "plumix-compile-error-overlay";
@@ -198,7 +198,7 @@ class CompileErrorOverlay {
     const host = this.target.document.createElement(HOST_TAG);
     const shadow = host.attachShadow({ mode: "open" });
     const style = this.target.document.createElement("style");
-    style.textContent = `${DEV_ERROR_CSS}\n${OVERLAY_CSS}`;
+    style.textContent = `${DEV_ERROR_CSS}\n${DEV_OVERLAY_CSS}`;
     const mount = this.target.document.createElement("div");
     shadow.append(style, mount);
     this.target.document.body.appendChild(host);
@@ -229,9 +229,11 @@ class CompileErrorOverlay {
   };
 }
 
-// The overlay chrome — a centered modal over a dimmed backdrop (the same shape
-// as the island overlay), inside a Shadow DOM root. The body renders the shared
-// `DevErrorPage`, so the compile error reads like every other dev error.
+// The compile surface composes the shared overlay shell (#1678): a static
+// "Compile error" window title — the body header already carries the specific
+// error name and plugin — over the shared slim body. `DevErrorBody` (not the full
+// `DevErrorPage`) renders the exception + code frame, so the overlay never mounts
+// the server-only context sections.
 function CompileModal({
   info,
   onClose,
@@ -239,158 +241,13 @@ function CompileModal({
   readonly info: DevErrorInfo;
   readonly onClose: () => void;
 }): ReactElement {
-  const pressedBackdrop = useRef(false);
   return (
-    <div
-      className="plumix-compile-overlay plumix-compile-overlay__backdrop"
-      data-testid="plumix-compile-overlay-backdrop"
-      onMouseDown={(event) => {
-        // Only close on a press that both began and ended on the backdrop, so a
-        // text selection dragged out of the modal doesn't dismiss it.
-        pressedBackdrop.current = event.target === event.currentTarget;
-      }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget && pressedBackdrop.current) {
-          onClose();
-        }
-      }}
+    <DevOverlayShell
+      label="Compile error"
+      ariaLabel="Compile error"
+      onClose={onClose}
     >
-      <div
-        className="plumix-compile-overlay__modal"
-        data-testid="plumix-compile-overlay-panel"
-        role="dialog"
-        aria-label="Compile error"
-      >
-        <div className="plumix-compile-overlay__bar">
-          {/* A static window title — the body header already carries the
-              specific error name and plugin, so echoing it here would double up. */}
-          <span
-            className="plumix-compile-overlay__label"
-            data-testid="plumix-compile-overlay-label"
-          >
-            Compile error
-          </span>
-          <button
-            type="button"
-            className="plumix-compile-overlay__btn"
-            data-testid="plumix-compile-overlay-close"
-            aria-label="Dismiss"
-            onClick={onClose}
-          >
-            ✕
-          </button>
-        </div>
-        <div className="plumix-compile-overlay__body">
-          <DevErrorPage error={info} />
-        </div>
-      </div>
-    </div>
+      <DevErrorBody error={info} />
+    </DevOverlayShell>
   );
 }
-
-// The modal/backdrop shell deliberately duplicates `island-overlay.tsx`'s
-// chrome rather than sharing it: the two diverge in their per-surface class
-// prefixes and extra parts (that overlay's badge/nav), so a shared sheet would
-// be a prefix-parameterized generator — harder to read than these two flat
-// strings, and unifying it would mean editing that already-shipped, tested
-// overlay. Kept separate on purpose; revisit only as a dedicated refactor.
-const OVERLAY_CSS = `
-:host {
-  all: initial;
-}
-
-.plumix-compile-overlay {
-  --plumix-ov-bg: #16181d;
-  --plumix-ov-surface: #1e2128;
-  --plumix-ov-fg: #e6e8eb;
-  --plumix-ov-muted: #9aa0aa;
-  --plumix-ov-accent: #ff6b6b;
-  --plumix-ov-border: #2c3038;
-  --plumix-ov-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
-  font-family: var(--plumix-ov-font);
-}
-
-.plumix-compile-overlay__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 2147483647;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(1rem, 5vh, 3rem) clamp(1rem, 5vw, 3rem);
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.plumix-compile-overlay__modal {
-  display: flex;
-  flex-direction: column;
-  width: min(44rem, 100%);
-  max-height: 100%;
-  background: var(--plumix-ov-bg);
-  border: 1px solid var(--plumix-ov-border);
-  border-radius: 12px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
-  overflow: hidden;
-}
-
-.plumix-compile-overlay__bar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.625rem;
-  border-bottom: 1px solid var(--plumix-ov-border);
-  background: var(--plumix-ov-surface);
-}
-
-.plumix-compile-overlay__label {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--plumix-ov-fg);
-}
-
-.plumix-compile-overlay__btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.75rem;
-  height: 1.75rem;
-  padding: 0 0.375rem;
-  background: transparent;
-  color: var(--plumix-ov-muted);
-  border: 1px solid var(--plumix-ov-border);
-  border-radius: 6px;
-  font-family: inherit;
-  font-size: 0.9375rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.plumix-compile-overlay__btn:hover {
-  color: var(--plumix-ov-fg);
-  border-color: var(--plumix-ov-accent);
-}
-
-.plumix-compile-overlay__body {
-  overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--plumix-ov-border) transparent;
-}
-
-.plumix-compile-overlay__body .plumix-dev-error {
-  min-height: 0;
-  padding: 1.25rem;
-}
-
-/* Wrap the code frame instead of a jarring horizontal scrollbar. */
-.plumix-compile-overlay__body .plumix-dev-error__stack pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  overflow-x: visible;
-}
-`;
