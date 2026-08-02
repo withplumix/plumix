@@ -2,7 +2,7 @@ import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
 import type { SourceMapInput } from "@jridgewell/trace-mapping";
 import { originalPositionFor, TraceMap } from "@jridgewell/trace-mapping";
 
-import type { DevErrorFrame } from "@plumix/blocks/dev-error";
+import type { DevErrorFrame } from "@plumix/core/dev-client";
 
 // The client-stack resolver (#1572, #1583): the Node-side half of the island
 // overlay's frame view. A browser stack carries transformed positions pointing

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { DevErrorFrame } from "@plumix/blocks/dev-error";
+import type { DevErrorFrame } from "@plumix/core/dev-client";
 
 import type { RetainedClientError } from "./client-error-ring.js";
 import { createClientErrorRing } from "./client-error-ring.js";

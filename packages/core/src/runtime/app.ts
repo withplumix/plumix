@@ -40,7 +40,7 @@ import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import { registerCorePurgeInvalidator } from "../cache/purge.js";
 import * as coreSchema from "../db/schema/index.js";
 import { registerCoreDebugPanels } from "../debug-bar/core-panels.js";
-import { registerCoreErrorHints } from "../dev-error/hints/core-hints.js";
+import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";

@@ -38,7 +38,7 @@ import { resolveMailer } from "../auth/mailer/resolve.js";
 import { createCapabilityResolver } from "../auth/rbac.js";
 import { debugBarTelemetryConsumer } from "../debug-bar/consumer.js";
 import { debugHistoryConsumer } from "../debug-bar/history-consumer.js";
-import { devErrorTelemetryConsumer } from "../dev-error/telemetry-consumer.js";
+import { devErrorTelemetryConsumer } from "../dev/server/telemetry-consumer.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { createTelemetryCollector } from "./collector.js";
