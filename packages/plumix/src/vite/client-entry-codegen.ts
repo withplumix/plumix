@@ -18,9 +18,11 @@ export function generateClientEntrySource(themeCss: readonly string[]): string {
   for (const path of themeCss) {
     lines.push(`import ${JSON.stringify(toClientEntryImport(path))};`);
   }
-  // Install the dev-only compile/import error overlay (#1622) from the one dev
-  // script injected on every public page (`devThemeStylesTag`).
-  lines.push("", DEV_OVERLAY_INSTALL);
+  // Install the dev-only client error tools (island dialog, terminal
+  // forwarder, compile/import overlay) from the one dev script injected on
+  // every public page (`devThemeStylesTag`), through the single core-owned
+  // install point (#1676).
+  lines.push("", DEV_CLIENT_INSTALL);
   if (themeCss.length === 0) {
     // Empty `export` keeps this file a module (TypeScript / Vite both
     // treat a bare file with zero statements as a script, which would
@@ -33,19 +35,22 @@ export function generateClientEntrySource(themeCss: readonly string[]): string {
 
 // `import.meta.hot` is the dev gate: Vite replaces it with `undefined` in a
 // production build, so this whole block — and the dynamic import it guards,
-// which carries the overlay's React DOM weight — is dead-code-eliminated from
-// the built client bundle. The overlay is imported lazily, so a `vite:error`
-// Vite already broadcast (the page loaded onto a broken module) would race the
-// import and be lost now that Vite's own overlay is disabled. A synchronous
-// listener buffers that error and hands it to the overlay to replay on install.
-const DEV_OVERLAY_INSTALL = [
+// which carries the client tools' React DOM weight — is dead-code-eliminated
+// from the built client bundle. The install runs lazily through the single
+// core-owned entry point (`@plumix/core/dev-client`, reached via the `plumix`
+// package), which wires up the island dialog, terminal forwarder, and compile
+// overlay. A `vite:error` Vite already broadcast (the page loaded onto a broken
+// module) would race the import and be lost now that Vite's own overlay is
+// disabled, so a synchronous listener buffers that error and hands it over to
+// replay on install.
+const DEV_CLIENT_INSTALL = [
   "if (import.meta.hot) {",
   "  const hot = import.meta.hot;",
   "  let pending = null;",
   "  const capture = (payload) => { pending = payload; };",
   '  hot.on("vite:error", capture);',
-  '  import("plumix/blocks/dev-error").then((mod) => {',
-  "    mod.installCompileErrorOverlay(hot, { initialError: pending });",
+  '  import("plumix/core/dev-client").then((mod) => {',
+  "    mod.installDevClient({ hot, initialCompileError: pending });",
   '    hot.off("vite:error", capture);',
   "  });",
   "}",

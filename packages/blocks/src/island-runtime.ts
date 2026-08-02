@@ -30,25 +30,10 @@ export function bootstrapIslandRuntime(): void {
   if (url) setRendererUrl(url);
   registerIslandElement();
 
-  // Dev-only client error surfaces, lazily imported behind the dev gate so the
-  // React-DOM-client weight the overlay carries — and both modules — tree-shake
-  // out of production island bundles; `process.env.PLUMIX_DEV` is Vite-substituted
-  // to an empty string at build time, so the whole block dies.
-  //   - The island error overlay (#1603): the on-page indicator + modal.
-  //   - Browser-errors-to-terminal forwarding (#1604): mirrors the same failures
-  //     (plus `console.error`/`warn`) to the dev terminal, on by default and
-  //     tuned by `PLUMIX_FORWARD_ERRORS` (Vite-substituted at bundle time).
-  if (process.env.PLUMIX_DEV) {
-    void Promise.all([
-      import("./dev-error/island-overlay.js"),
-      import("./dev-error/terminal-forward.js"),
-    ]).then(([overlay, forward]) => {
-      overlay.installIslandErrorOverlay();
-      forward.installTerminalForwarding({
-        level: forward.parseForwardLevel(process.env.PLUMIX_FORWARD_ERRORS),
-      });
-    });
-  }
+  // The island runtime only hydrates islands and dispatches `plumix:island-*`
+  // events (#1676). The dev-only client tools that react to them — the error
+  // dialog, terminal forwarder, and compile overlay — are installed elsewhere,
+  // by the plumix client bootstrap via `@plumix/core/dev-client`.
 }
 
 function readRendererUrl(): string | null {
