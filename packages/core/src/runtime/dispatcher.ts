@@ -312,7 +312,8 @@ async function tryPlumixRoutes(
     (pathname === DEBUG_REQUESTS_PREFIX ||
       pathname.startsWith(`${DEBUG_REQUESTS_PREFIX}/`))
   ) {
-    const { handleDebugRequests } = await import("../debug-bar/read-routes.js");
+    const { handleDebugRequests } =
+      await import("../dev/debug-bar/read-routes.js");
     return handleDebugRequests(ctx);
   }
 
