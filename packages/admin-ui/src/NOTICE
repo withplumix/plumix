@@ -1,0 +1,23 @@
+shadcn/ui components in this directory
+======================================
+
+Most primitive components in this directory are derived from shadcn/ui and are
+kept in sync with upstream on purpose (aside from the occasional short
+descriptive comment), so that `shadcn diff` upgrades apply without merge
+conflicts. For that reason they carry no per-file license header — this
+folder-level notice covers them instead.
+
+  Upstream:  shadcn/ui
+  License:   MIT
+  Copyright: Copyright (c) 2023 shadcn
+  Verified:  https://github.com/shadcn-ui/ui/blob/main/LICENSE.md
+
+The full MIT permission notice is reproduced in the repository-root NOTICE file,
+which is the canonical third-party provenance record for the project.
+
+Not derived from shadcn/ui (original Plumix components that happen to live here):
+
+  - sortable.tsx      — built on @dnd-kit
+  - color-picker.tsx  — built on react-colorful
+
+These are original works and are not covered by the shadcn/ui attribution above.

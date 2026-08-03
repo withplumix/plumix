@@ -33,7 +33,6 @@ pnpm add -g @pnpm/merge-driver
 pnpm dlx npm-merge-driver install --driver-name pnpm-merge-driver --driver "pnpm-merge-driver %A %O %B %P" --files pnpm-lock.yaml
 ```
 
-
 ## Development
 
 ```bash
@@ -85,6 +84,32 @@ Scopes are validated against workspace package names. Run `pnpm ls -r --depth -1
 1. Fork and create your branch from `main`
 2. Run `pnpm build && pnpm typecheck && pnpm lint` locally
 3. Open a PR — all PRs are squash-merged
+
+## Adapting third-party code
+
+When you copy, port, or adapt source code from another project, record its
+provenance so attribution stays correct. The repository-root [`NOTICE`](NOTICE)
+is the single source of truth — inline comments point at it rather than
+restating a license (a duplicated, guessed license string is exactly how an
+upstream once got mislabeled).
+
+1. **Verify the license from the upstream's own source** — read its `LICENSE`,
+   never rely on memory. Note the URL you read it at.
+2. **Add a `NOTICE` entry under the right tier:**
+   - _Copied / adapted code_ — you brought upstream code into our tree.
+     Reproduce its copyright + permission notice. Add a header comment on the
+     file naming the upstream and pointing at `NOTICE` (no license string in the
+     header). For a whole vendored directory kept byte-identical to upstream
+     (e.g. shadcn/ui), use one folder-level `NOTICE` instead of per-file headers.
+   - _Dependency divergence_ — you wrote your own code to replace a dependency's
+     behavior. No upstream code is copied, so no notice is owed; record why it
+     diverges and when it can be removed.
+   - _Prior art / inspiration_ — idea-level influence only, no code copied. No
+     attribution is owed. **Never** record idea-level parity as code derivation —
+     doing so for a copyleft project (e.g. GPL) would imply an obligation that
+     does not exist.
+3. **Ordinary npm dependencies need nothing here** — their notices ship with the
+   installed package; `NOTICE` tracks copied source only, not the dependency list.
 
 ## License
 

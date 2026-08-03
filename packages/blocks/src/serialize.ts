@@ -1,4 +1,4 @@
-// Port of Astro's prop serializer (Apache-2.0). PROP_TYPE integer
+// Port of Astro's prop serializer (upstream MIT — see /NOTICE). PROP_TYPE integer
 // codes AND payload shape match Astro byte-for-byte: nested collection
 // types (Map/Set/Array/typed-arrays) are encoded as nested arrays of
 // `[type, value]` tuples, NOT JSON-stringified strings. The single
