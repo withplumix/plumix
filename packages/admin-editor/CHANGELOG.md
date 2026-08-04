@@ -1,5 +1,14 @@
 # @plumix/admin-editor
 
+## 0.12.0
+
+### Patch Changes
+
+- Updated dependencies [[`b124789`](https://github.com/withplumix/plumix/commit/b1247897f2044ad4e7f975ce2d0b8294fd0939af)]:
+  - @plumix/core@0.12.0
+  - @plumix/blocks@0.12.0
+  - @plumix/admin-ui@0.12.0
+
 ## 0.11.0
 
 ### Patch Changes
