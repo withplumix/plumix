@@ -592,6 +592,8 @@ type PluginDefinitionErrorCode =
   | "define_plugin_legacy_third_arg"
   | "duplicate_plugin_id_in_config"
   | "meta_field_clash_across_boxes"
+  | "entry_has_multiple_featured_fields"
+  | "role_field_must_be_single"
   | "meta_box_references_unknown_scope"
   | "settings_page_references_unknown_group"
   | "admin_slug_derivation_failed"
@@ -606,6 +608,7 @@ interface PluginDefinitionErrorFields {
   firstBoxId?: string;
   secondBoxId?: string;
   scope?: string;
+  role?: string;
   boxKind?: string;
   boxId?: string;
   scopeKind?: string;
@@ -630,6 +633,7 @@ export class PluginDefinitionError extends Error {
   readonly firstBoxId: string | undefined;
   readonly secondBoxId: string | undefined;
   readonly scope: string | undefined;
+  readonly role: string | undefined;
   readonly boxKind: string | undefined;
   readonly boxId: string | undefined;
   readonly scopeKind: string | undefined;
@@ -654,6 +658,7 @@ export class PluginDefinitionError extends Error {
     this.firstBoxId = fields.firstBoxId;
     this.secondBoxId = fields.secondBoxId;
     this.scope = fields.scope;
+    this.role = fields.role;
     this.boxKind = fields.boxKind;
     this.boxId = fields.boxId;
     this.scopeKind = fields.scopeKind;
@@ -725,6 +730,32 @@ export class PluginDefinitionError extends Error {
         `"${ctx.scope}". Each key may appear in at most one box ` +
         `per scope.`,
       ctx,
+    );
+  }
+
+  static entryHasMultipleFeaturedFields(ctx: {
+    scope: string;
+    firstFieldKey: string;
+    secondFieldKey: string;
+  }): PluginDefinitionError {
+    return new PluginDefinitionError(
+      "entry_has_multiple_featured_fields",
+      `Entry type "${ctx.scope}" marks two fields featured ` +
+        `("${ctx.firstFieldKey}" and "${ctx.secondFieldKey}"). At most one ` +
+        `field per entry type may be the featured image.`,
+      { scope: ctx.scope, fieldKey: ctx.secondFieldKey },
+    );
+  }
+
+  static roleFieldMustBeSingle(ctx: {
+    fieldKey: string;
+    role: string;
+  }): PluginDefinitionError {
+    return new PluginDefinitionError(
+      "role_field_must_be_single",
+      `Field "${ctx.fieldKey}" is marked ${ctx.role} but stores multiple ` +
+        `values. A ${ctx.role} field must be a single media reference.`,
+      { fieldKey: ctx.fieldKey, role: ctx.role },
     );
   }
 

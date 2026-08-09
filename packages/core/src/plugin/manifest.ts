@@ -2216,6 +2216,7 @@ export function buildManifest(
   // User meta is a flat keyspace — one synthetic "user" scope keeps
   // the shared helper honest without inventing a second code path.
   assertUniqueFieldKeysPerScope(userMetaBoxes, getUserScope, "user");
+  assertSingleFeaturedPerEntryType(registry);
   const settingsGroups = Array.from(registry.settingsGroups.values())
     .map(toSettingsGroupEntry)
     .sort(byPriorityThen((g) => g.name));
@@ -2622,6 +2623,44 @@ function assertUniqueFieldKeysPerScope<
           });
         }
         seen.set(scopedKey, box.id);
+      }
+    }
+  }
+}
+
+// A media reference stores an id array when `referenceTarget.multiple` is set.
+function isMultipleField(field: MetaBoxField): boolean {
+  return "referenceTarget" in field && field.referenceTarget.multiple === true;
+}
+
+/**
+ * A `role`-tagged media field is the entry's single representative image, so at
+ * most one `featured` field may exist per entry type and no role field may be a
+ * multi-value reference. Reads the raw registry — `role` never reaches the wire
+ * projection. Fail at manifest-build so the plugin author sees it on boot.
+ */
+function assertSingleFeaturedPerEntryType(registry: PluginRegistry): void {
+  const featuredByType = new Map<string, string>();
+  for (const box of registry.entryMetaBoxes.values()) {
+    for (const field of box.fields) {
+      if (field.role === undefined) continue;
+      if (isMultipleField(field)) {
+        throw PluginDefinitionError.roleFieldMustBeSingle({
+          fieldKey: field.key,
+          role: field.role,
+        });
+      }
+      if (field.role !== "featured") continue;
+      for (const entryType of box.entryTypes) {
+        const existing = featuredByType.get(entryType);
+        if (existing !== undefined && existing !== field.key) {
+          throw PluginDefinitionError.entryHasMultipleFeaturedFields({
+            scope: entryType,
+            firstFieldKey: existing,
+            secondFieldKey: field.key,
+          });
+        }
+        featuredByType.set(entryType, field.key);
       }
     }
   }
