@@ -24,6 +24,7 @@ export {
   // Re-exported for the SSR shim the Vite plugin generates for
   // `"use client"` modules. Not intended for direct consumption.
   serializeProps,
+  IslandShim,
 } from "@plumix/blocks";
 export type { IslandProps, PlumixStrategy } from "@plumix/blocks";
 export type {

@@ -281,11 +281,12 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         return generateWorkerExportsSource(workerExports);
       }
       if (id === SERIALIZE_RESOLVED_ID) {
-        // Re-export `serializeProps` resolved from the project root, where
-        // `plumix` is always a dependency — so a "use client" island in any
-        // package (core `@plumix/blocks` included) gets a working import the
-        // SSR shim injected via SERIALIZE_VIRTUAL_ID.
-        return `export { serializeProps } from "plumix/blocks";`;
+        // Re-export `IslandShim` (the SSR island runtime) resolved from the
+        // project root, where `plumix` is always a dependency — so a "use
+        // client" island in any package (core `@plumix/blocks` included)
+        // gets a working import the SSR shim injected via
+        // SERIALIZE_VIRTUAL_ID.
+        return `export { IslandShim } from "plumix/blocks";`;
       }
       if (id === ASSET_MANIFEST_RESOLVED_ID) {
         // Read the manifest Vite emits to `<outDir>/.vite/manifest.json`.

@@ -26,6 +26,9 @@ export function CopyLink() {
     if (typeof result !== "object" || result === null || !("code" in result)) {
       throw new Error("transform returned unexpected shape");
     }
-    expect(result.code).toContain("plumix-island");
+    // The .js module is rewritten to a shim that delegates to IslandShim
+    // (which owns the `<plumix-island>` shape at render time).
+    expect(result.code).toContain("__IslandShim");
+    expect(result.code).toContain(`Component: __orig["CopyLink"]`);
   });
 });
