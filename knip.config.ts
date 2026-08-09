@@ -108,6 +108,11 @@ const config: KnipConfig = {
         // "plumix/editor-runtime"`) — a runtime import knip can't see.
         "src/editor-runtime.ts",
         "src/cli/index.ts",
+        // `plumix/db` groups the direct-write / ingest toolkit (drizzle
+        // operators + schema + introspection + edge-cache purge) on its own
+        // subpath; re-exports `@plumix/core/db`, not reachable from the root
+        // barrel's `export * from "@plumix/core"`.
+        "src/db/index.ts",
         // `plumix/db/libsql` re-exports the core libSQL adapter on its own
         // subpath; not reachable from `src/index.ts` (kept off the root
         // barrel so the driver stays out of unrelated bundles).
