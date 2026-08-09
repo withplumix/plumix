@@ -109,6 +109,21 @@ describe("media() builder", () => {
     });
   });
 
+  test(".featured() tags the field with the featured role", () => {
+    expect(media("hero").featured().build().role).toBe("featured");
+  });
+
+  test(".ogImage() tags the field with the ogImage override role", () => {
+    expect(media("share").ogImage().build().role).toBe("ogImage");
+  });
+
+  test("role markers reject multi-value fields at the type level", () => {
+    // @ts-expect-error — featured is single-only; .multiple() drops it
+    media("gallery").multiple().featured();
+    // @ts-expect-error — ogImage is single-only; .multiple() drops it
+    media("gallery").multiple().ogImage();
+  });
+
   test("manifest round-trip preserves multi referenceTarget + max on the wire shape", async () => {
     const hooks = new HookRegistry();
     const userPlugin = definePlugin("test", (ctx) => {

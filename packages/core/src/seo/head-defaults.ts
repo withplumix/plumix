@@ -1,5 +1,7 @@
 import type { AppContext } from "../context/app.js";
+import type { MetaBoxField, PluginRegistry } from "../plugin/manifest.js";
 import type { DocumentManifest, DocumentMeta, TemplateData } from "../theme.js";
+import { listEntryMetaFields } from "../plugin/manifest.js";
 import { canonicalUrl } from "./canonical.js";
 import { applyFeedDiscovery } from "./feed.js";
 import { loadSiteSettings, nonEmpty } from "./site-settings.js";
@@ -90,6 +92,53 @@ function toOgLocale(localeCode: string): string {
   return localeCode.replace("-", "_");
 }
 
+// A hydrated media reference exposes a string `url`; an orphaned single
+// reference hydrates to null. Read structurally — core can't import the media
+// plugin's `MediaReference` type.
+function mediaUrl(value: unknown): string | null {
+  if (value !== null && typeof value === "object" && "url" in value) {
+    return nonEmpty(value.url);
+  }
+  return null;
+}
+
+/**
+ * Resolve an entry's `og:image` from its role-tagged media fields: an explicit
+ * `.ogImage()` override outranks the `.featured()` image. Reads the hydrated
+ * `entry.meta` value structurally, so an orphaned reference (null) or a value
+ * with no usable url falls through. Returns null when nothing resolves, leaving
+ * the caller to fall back to the site-wide default.
+ */
+export function resolveEntryOgImage(
+  fields: readonly MetaBoxField[],
+  meta: Record<string, unknown>,
+): string | null {
+  for (const role of ["ogImage", "featured"] as const) {
+    for (const field of fields) {
+      if (field.role !== role) continue;
+      const url = mediaUrl(meta[field.key]);
+      if (url) return url;
+    }
+  }
+  return null;
+}
+
+/**
+ * The per-entity `og:image` for a request, or null for non-entry pages (which
+ * fall back to the site default). Scopes {@link resolveEntryOgImage} to the
+ * entry's own content-type fields.
+ */
+export function entryOgImage(
+  plugins: PluginRegistry,
+  data: TemplateData,
+): string | null {
+  if (data.kind !== "entry") return null;
+  return resolveEntryOgImage(
+    listEntryMetaFields(plugins, data.entry.type),
+    data.entry.meta,
+  );
+}
+
 /**
  * Fill the default head meta for a request. Reads the site settings (title,
  * tagline, default OG image) for the values it can't derive from the page, then
@@ -113,7 +162,7 @@ export async function applyHeadMeta(
     title,
     description,
     ogType: data.kind === "entry" ? "article" : "website",
-    ogImage: nonEmpty(site.default_og_image),
+    ogImage: entryOgImage(ctx.plugins, data) ?? nonEmpty(site.default_og_image),
     siteName: nonEmpty(site.title),
     ogLocale: toOgLocale(ctx.locale.code),
     // Search-results pages are thin; keep them out of the index.

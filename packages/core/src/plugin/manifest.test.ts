@@ -804,6 +804,89 @@ describe("buildManifest", () => {
     );
   });
 
+  test("rejects two featured fields on the same entry type", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("dupe-featured", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts" });
+      ctx.registerEntryMetaBox("box-a", {
+        label: "A",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "hero",
+            label: "Hero",
+            type: "json",
+            inputType: "media",
+            referenceTarget: { kind: "media", scope: {} },
+            role: "featured",
+          },
+        ],
+      });
+      ctx.registerEntryMetaBox("box-b", {
+        label: "B",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "cover",
+            label: "Cover",
+            type: "json",
+            inputType: "media",
+            referenceTarget: { kind: "media", scope: {} },
+            role: "featured",
+          },
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(() => buildManifest(registry)).toThrow(/featured/);
+  });
+
+  test("rejects a role-tagged field that stores multiple values", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("multi-role", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts" });
+      ctx.registerEntryMetaBox("box", {
+        label: "Box",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "gallery",
+            label: "Gallery",
+            type: "json",
+            inputType: "mediaList",
+            referenceTarget: { kind: "media", scope: {}, multiple: true },
+            role: "featured",
+          },
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(() => buildManifest(registry)).toThrow(/single/);
+  });
+
+  test("accepts a single featured field on an entry type", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("one-featured", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts" });
+      ctx.registerEntryMetaBox("box", {
+        label: "Box",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "hero",
+            label: "Hero",
+            type: "json",
+            inputType: "media",
+            referenceTarget: { kind: "media", scope: {} },
+            role: "featured",
+          },
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(() => buildManifest(registry)).not.toThrow();
+  });
+
   test("rejects a term meta box scoped to an unregistered taxonomy", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("unknown-scope", (ctx) => {
