@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app.js";
-import type { MetaBoxField } from "../plugin/manifest.js";
+import type { MetaBoxField, PluginRegistry } from "../plugin/manifest.js";
+import { listEntryMetaFields } from "../plugin/manifest.js";
 import type { DocumentManifest, DocumentMeta, TemplateData } from "../theme.js";
 import { canonicalUrl } from "./canonical.js";
 import { applyFeedDiscovery } from "./feed.js";
@@ -123,6 +124,22 @@ export function resolveEntryOgImage(
 }
 
 /**
+ * The per-entity `og:image` for a request, or null for non-entry pages (which
+ * fall back to the site default). Scopes {@link resolveEntryOgImage} to the
+ * entry's own content-type fields.
+ */
+export function entryOgImage(
+  plugins: PluginRegistry,
+  data: TemplateData,
+): string | null {
+  if (data.kind !== "entry") return null;
+  return resolveEntryOgImage(
+    listEntryMetaFields(plugins, data.entry.type),
+    data.entry.meta,
+  );
+}
+
+/**
  * Fill the default head meta for a request. Reads the site settings (title,
  * tagline, default OG image) for the values it can't derive from the page, then
  * gap-fills via {@link seoHeadDefaults}.
@@ -145,7 +162,7 @@ export async function applyHeadMeta(
     title,
     description,
     ogType: data.kind === "entry" ? "article" : "website",
-    ogImage: nonEmpty(site.default_og_image),
+    ogImage: entryOgImage(ctx.plugins, data) ?? nonEmpty(site.default_og_image),
     siteName: nonEmpty(site.title),
     ogLocale: toOgLocale(ctx.locale.code),
     // Search-results pages are thin; keep them out of the index.

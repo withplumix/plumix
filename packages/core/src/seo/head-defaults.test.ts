@@ -1,8 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import type { MetaBoxField } from "../plugin/manifest.js";
-import type { DocumentManifest, DocumentMeta } from "../theme.js";
-import { resolveEntryOgImage, seoHeadDefaults } from "./head-defaults.js";
+import type { MetaBoxField, PluginRegistry } from "../plugin/manifest.js";
+import type { DocumentManifest, DocumentMeta, TemplateData } from "../theme.js";
+import {
+  entryOgImage,
+  resolveEntryOgImage,
+  seoHeadDefaults,
+} from "./head-defaults.js";
 
 const baseInputs = {
   canonical: "https://cms.example/post/hello",
@@ -179,5 +183,40 @@ describe("resolveEntryOgImage", () => {
       { share: { id: "m1", url: "" }, hero: mediaRef("https://cdn/hero.jpg") },
     );
     expect(url).toBe("https://cdn/hero.jpg");
+  });
+});
+
+// A registry carrying one entry meta box, scoped to the given entry types.
+const registryWith = (
+  entryTypes: readonly string[],
+  fields: readonly MetaBoxField[],
+): PluginRegistry =>
+  ({
+    entryMetaBoxes: new Map([["box", { entryTypes, fields }]]),
+  }) as unknown as PluginRegistry;
+
+const entryData = (
+  type: string,
+  meta: Record<string, unknown>,
+): TemplateData =>
+  ({ kind: "entry", entry: { type, meta } }) as unknown as TemplateData;
+
+describe("entryOgImage", () => {
+  test("resolves the entry's role-tagged image scoped to its type", () => {
+    const registry = registryWith(["post"], [mediaField("hero", "featured")]);
+    const data = entryData("post", { hero: mediaRef("https://cdn/hero.jpg") });
+    expect(entryOgImage(registry, data)).toBe("https://cdn/hero.jpg");
+  });
+
+  test("returns null when the entry type has no registered fields", () => {
+    const registry = registryWith(["page"], [mediaField("hero", "featured")]);
+    const data = entryData("post", { hero: mediaRef("https://cdn/hero.jpg") });
+    expect(entryOgImage(registry, data)).toBeNull();
+  });
+
+  test("returns null for non-entry data", () => {
+    const registry = registryWith(["post"], [mediaField("hero", "featured")]);
+    const search = { kind: "search" } as unknown as TemplateData;
+    expect(entryOgImage(registry, search)).toBeNull();
   });
 });
