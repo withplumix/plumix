@@ -1,4 +1,5 @@
 import type { AppContext } from "../context/app.js";
+import type { MetaBoxField } from "../plugin/manifest.js";
 import type { DocumentManifest, DocumentMeta, TemplateData } from "../theme.js";
 import { canonicalUrl } from "./canonical.js";
 import { applyFeedDiscovery } from "./feed.js";
@@ -88,6 +89,37 @@ export function seoHeadDefaults(
 // `og:locale` wants `lang_TERRITORY`; the active locale code is `lang-TERRITORY`.
 function toOgLocale(localeCode: string): string {
   return localeCode.replace("-", "_");
+}
+
+// A hydrated media reference exposes a string `url`; an orphaned single
+// reference hydrates to null. Read structurally — core can't import the media
+// plugin's `MediaReference` type.
+function mediaUrl(value: unknown): string | null {
+  if (value !== null && typeof value === "object" && "url" in value) {
+    return nonEmpty((value as { url: unknown }).url);
+  }
+  return null;
+}
+
+/**
+ * Resolve an entry's `og:image` from its role-tagged media fields: an explicit
+ * `.ogImage()` override outranks the `.featured()` image. Reads the hydrated
+ * `entry.meta` value structurally, so an orphaned reference (null) or a value
+ * with no usable url falls through. Returns null when nothing resolves, leaving
+ * the caller to fall back to the site-wide default.
+ */
+export function resolveEntryOgImage(
+  fields: readonly MetaBoxField[],
+  meta: Record<string, unknown>,
+): string | null {
+  for (const role of ["ogImage", "featured"] as const) {
+    for (const field of fields) {
+      if (field.role !== role) continue;
+      const url = mediaUrl(meta[field.key]);
+      if (url) return url;
+    }
+  }
+  return null;
 }
 
 /**

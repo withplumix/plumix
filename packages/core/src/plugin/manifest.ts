@@ -415,6 +415,14 @@ export interface MetaBoxFieldBase {
    * `isFieldVisible`.
    */
   readonly visibleWhen?: MetaFieldCondition;
+  /**
+   * Semantic role a media field plays for its entry. `"featured"` marks
+   * the entry's representative image (its first consumer is `og:image`
+   * head wiring); `"ogImage"` is an explicit social-share override that
+   * outranks the featured field. Server-only — omitted from the wire
+   * manifest. Set via the media builder's `.featured()` / `.ogImage()`.
+   */
+  readonly role?: "featured" | "ogImage";
 }
 
 /** The five string-scalar input types sharing one field shape. */
