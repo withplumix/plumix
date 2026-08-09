@@ -89,8 +89,7 @@ export function IslandShim(shim: IslandShimProps): ReactNode {
   const rest: Record<string, unknown> = {};
   const wrapped: Record<string, unknown> = {};
   const slots: string[] = [];
-  for (const key of Object.keys(forwarded)) {
-    const value = forwarded[key];
+  for (const [key, value] of Object.entries(forwarded)) {
     if (isReactElementValue(value)) {
       slots.push(key);
       // Children/slots are composed in the *outer* scope and passed in — they
