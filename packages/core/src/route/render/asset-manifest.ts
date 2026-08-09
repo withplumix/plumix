@@ -68,6 +68,45 @@ export function devThemeStylesTag(command: ViteCommand, basePath = ""): string {
   return `<script type="module" src="${src}"></script>`;
 }
 
+// #1701: the client-entry `<script>` above injects the theme CSS as `<style>`
+// tags *after* it executes, so dev's first paint is unstyled (FOUC). A
+// render-blocking `<link>` to the Vite-served source path paints the first
+// frame styled — the dev mirror of `bundledCssTags`. The `<script>` stays: it
+// still owns CSS HMR (its injected `<style>` lands after this link and wins
+// the cascade on edit) and loads any specifiers a browser `<link>` can't.
+// No-op in build.
+export function devThemeCssLinks(
+  themeCss: readonly string[],
+  command: ViteCommand,
+  basePath = "",
+): string {
+  if (command !== "serve") return "";
+  const hrefs = new Set(
+    themeCss.map(toDevCssHref).filter((href): href is string => href !== null),
+  );
+  return Array.from(hrefs)
+    .map(
+      (href) =>
+        `<link rel="stylesheet" href="${withBasePath(href, basePath)}" />`,
+    )
+    .join("");
+}
+
+// Normalize an author's `css: []` entry to the root-absolute URL Vite's dev
+// server serves it under, or `null` when a browser `<link>` can't resolve it.
+// Mirrors the plumix Vite plugin's `toClientEntryImport`: `./x` and bare `x`
+// are project-root-relative; a leading `/` is already root-absolute. Aliased
+// (`~`, `@`) and parent-escape (`../`) specifiers are module-resolver concerns
+// with no stable dev URL, so they get no link.
+function toDevCssHref(path: string): string | null {
+  if (path.startsWith("~") || path.startsWith("@") || path.startsWith("../")) {
+    return null;
+  }
+  if (path.startsWith("/")) return path;
+  if (path.startsWith("./")) return "/" + path.slice(2);
+  return "/" + path;
+}
+
 // In build, resolve the hashed asset path from Vite's manifest; in dev (or
 // the cold-build edge where the entry isn't in the manifest yet) fall back
 // to the source path Vite's dev server serves directly.

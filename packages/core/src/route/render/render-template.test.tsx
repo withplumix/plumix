@@ -982,6 +982,73 @@ describe("resolvePublicRoute — single entry through theme", () => {
     );
   });
 
+  describe("dev theme CSS is linked in <head> to avoid FOUC (#1701)", () => {
+    const original = process.env.PLUMIX_DEV;
+    afterEach(() => {
+      if (original === undefined) delete process.env.PLUMIX_DEV;
+      else process.env.PLUMIX_DEV = original;
+    });
+
+    async function renderPost(themeCss: readonly string[]): Promise<string> {
+      const theme = defineTheme({
+        templates: [
+          fallback(() => null),
+          entry(({ data }) => <article>{data.entry.title}</article>),
+        ],
+        document: { link: [{ rel: "icon", href: "/favicon.svg" }] },
+        css: [...themeCss],
+      });
+      const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+      const author = await h.seedUser("admin");
+      await h.factory.entry.create({
+        type: "post",
+        slug: "fouc",
+        title: "FOUC",
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(),
+      });
+      const response = await h.dispatch(
+        new Request("https://cms.example/post/fouc"),
+      );
+      return headOf(await response.text());
+    }
+
+    test("serve mode: a render-blocking <link> AND the HMR client-entry script both ship", async () => {
+      process.env.PLUMIX_DEV = "1";
+      const head = await renderPost(["./theme/app.css"]);
+      // The blocking <link> paints the first frame styled...
+      expect(head).toContain('<link rel="stylesheet" href="/theme/app.css" />');
+      // ...and the client-entry <script> stays for dev tools + CSS HMR.
+      expect(head).toContain(
+        '<script type="module" src="/.plumix/client-entry.ts"></script>',
+      );
+      // The dev CSS link follows the theme's own link[] so it wins the cascade.
+      expect(head).toMatch(
+        /<link\s+rel="icon"[\s\S]*<link\s+rel="stylesheet"\s+href="\/theme\/app\.css"/,
+      );
+    });
+
+    test("serve mode: aliased / npm-scope specifiers get no <link> (they ride the script)", async () => {
+      process.env.PLUMIX_DEV = "1";
+      const head = await renderPost(["~/aliased.css", "@acme/ui/style.css"]);
+      expect(head).not.toContain('<link rel="stylesheet"');
+      // Still loaded via the client-entry import, unchanged from before.
+      expect(head).toContain(
+        '<script type="module" src="/.plumix/client-entry.ts"></script>',
+      );
+    });
+
+    test("build mode: no dev <link> — prod links the hashed CSS from the manifest", async () => {
+      delete process.env.PLUMIX_DEV;
+      const head = await renderPost(["./theme/app.css"]);
+      expect(head).not.toContain(
+        '<link rel="stylesheet" href="/theme/app.css" />',
+      );
+    });
+  });
+
   test("per-template document fragment merges with theme document; theme entries first", async () => {
     const theme = defineTheme({
       templates: [

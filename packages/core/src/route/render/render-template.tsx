@@ -47,7 +47,11 @@ import {
 import { normalizeTemplate } from "../../template.js";
 import { validateDocumentManifest } from "../../theme.js";
 import { LIVE_EDIT_MODE } from "../edit-mode.js";
-import { bundledCssTags, devThemeStylesTag } from "./asset-manifest.js";
+import {
+  bundledCssTags,
+  devThemeCssLinks,
+  devThemeStylesTag,
+} from "./asset-manifest.js";
 import { injectEditorBootstrap } from "./inject-editor-bootstrap.js";
 import { injectIslandsBootstrap } from "./inject-islands-bootstrap.js";
 import { templateRules } from "./template-builders.js";
@@ -174,6 +178,7 @@ async function renderThroughThemeInner({
     loaderData,
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
+    themeCss: theme.css ?? [],
     editMode,
   });
 }
@@ -272,6 +277,7 @@ async function renderErrorThroughThemeInner({
     loaderData: undefined,
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
+    themeCss: theme.css ?? [],
     editMode: LIVE_EDIT_MODE,
   });
 }
@@ -371,6 +377,8 @@ interface RenderTreeArgs {
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly tokens: ThemeTokens | undefined;
   readonly breakpoints: ThemeBreakpoints | undefined;
+  // The theme's `css: []` paths, linked in dev to avoid FOUC (#1701).
+  readonly themeCss: readonly string[];
   readonly editMode: EditModeDecision;
 }
 
@@ -391,6 +399,7 @@ function renderTree({
   tokens,
   breakpoints,
   loaderData,
+  themeCss,
   editMode,
 }: RenderTreeArgs): string {
   // Adapter FC wraps `template.render({ data, ctx, ...deps })` so it
@@ -507,6 +516,7 @@ function renderTree({
     titleFallback +
     voidTagsToHtml("link", document.link) +
     bundledCssTags(assetManifest, command, ctx.basePath) +
+    devThemeCssLinks(themeCss, command, ctx.basePath) +
     devThemeStylesTag(command, ctx.basePath) +
     voidTagsToHtml("meta", document.meta) +
     scripts.headEnd.map(scriptToHtml).join("");
