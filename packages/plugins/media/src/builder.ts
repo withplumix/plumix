@@ -64,6 +64,7 @@ interface MediaFieldState {
   readonly required?: true;
   readonly multiple?: true;
   readonly returns?: "id";
+  readonly role?: "featured" | "ogImage";
   readonly max?: number;
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
@@ -166,6 +167,27 @@ export class MediaFieldBuilder<
   /** Mark the field required — enforced at write time by the constraint walker. */
   required(): MediaFieldBuilder<K, Multiple, true, Returns> {
     return this.#fork<Multiple, true, Returns>({ required: true });
+  }
+
+  /**
+   * Mark this as the entry's representative image — its first consumer is the
+   * `og:image` head wiring. Single-value only; core allows at most one
+   * featured field per entry type.
+   */
+  featured(
+    this: MediaFieldBuilder<K, false, Required, Returns>,
+  ): MediaFieldBuilder<K, false, Required, Returns> {
+    return this.#fork<false, Required, Returns>({ role: "featured" });
+  }
+
+  /**
+   * Mark this as an explicit social-share image, outranking `.featured()` when
+   * both are set. Single-value only.
+   */
+  ogImage(
+    this: MediaFieldBuilder<K, false, Required, Returns>,
+  ): MediaFieldBuilder<K, false, Required, Returns> {
+    return this.#fork<false, Required, Returns>({ role: "ogImage" });
   }
 
   /** Override the derived (humanized-key) label. */
