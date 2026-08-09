@@ -108,7 +108,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
 });
 
 describe("plumix() vite plugin — island serialize virtual module", () => {
-  test("resolves the virtual id and loads a serializeProps re-export from plumix/blocks", () => {
+  test("resolves the virtual id and loads an IslandShim re-export from plumix/blocks", () => {
     const plugin = plumix();
     const resolveId = plugin.resolveId as (
       id: string,
@@ -120,9 +120,9 @@ describe("plumix() vite plugin — island serialize virtual module", () => {
     expect(resolveId(SERIALIZE_VIRTUAL_ID)).toBe(resolvedId);
     // The re-export resolves `plumix/blocks` from the project root rather
     // than from the island module's own (pnpm-strict) location, so core
-    // islands resolve serializeProps the same way plugin/userland ones do.
+    // islands resolve the island runtime the same way plugin/userland ones do.
     expect(load(resolvedId)).toContain(
-      `export { serializeProps } from "plumix/blocks"`,
+      `export { IslandShim } from "plumix/blocks"`,
     );
   });
 });

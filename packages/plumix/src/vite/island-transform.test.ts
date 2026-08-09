@@ -171,7 +171,7 @@ describe("findUseClientIslands", () => {
 });
 
 describe("transformUseClientModule", () => {
-  test("rewrites a `use client` module to re-export shim components", () => {
+  test("rewrites a `use client` module to a shim that delegates to IslandShim", () => {
     const source = `
       "use client";
       import { useState } from "react";
@@ -191,95 +191,35 @@ describe("transformUseClientModule", () => {
     expect(out).toContain(`from "/abs/path/Counter.tsx?plumix-orig"`);
     // Re-exports every name the original exports, but as a shim.
     expect(out).toMatch(/export\s+function\s+Counter\s*\(/);
-    // Shim wraps in `<plumix-island>` with chunk-url + component-export
-    // + ssr="" baked in. We just check the literals are present — the
-    // exact JSX/createElement shape is an internal detail.
-    expect(out).toContain('"chunk-url": "/src/Counter.tsx"');
-    expect(out).toContain('"component-export": "Counter"');
-    // `ssr=""` gates nested hydration for SSR'd islands; `only` islands get
-    // `null` (no markup, no gate).
-    expect(out).toContain('"ssr": __only ? null : ""');
+    // The shim hands the original component + wiring to IslandShim, which
+    // owns the boundary decision, prop split, serialization, and the
+    // `<plumix-island>` shape. The transform only supplies static wiring.
+    expect(out).toContain(`Component: __orig["Counter"]`);
+    expect(out).toContain(`exportName: "Counter"`);
+    expect(out).toContain(`chunkUrl: "/src/Counter.tsx"`);
+    // The raw props flow straight through — the shim no longer bakes the
+    // split/serialize/attribute logic inline.
+    expect(out).toContain("props");
   });
 
-  test("shim defaults the hydration trigger to `interaction`", () => {
-    // `IslandProps<T>` enforces the type at compile time; the custom
-    // element dispatches `plumix:hydration-error` for unknown strategies at
-    // runtime. The shim passes an explicit `client` prop through and falls
-    // back to `interaction` — hydrate on first user intent.
+  test("wraps the default export as a delegating shim", () => {
     const source = `
       "use client";
-      export function Counter() { return null; }
+      export default function MyComponent() { return null; }
     `;
-    const result = transformUseClientModule(source, "/Counter.tsx", {
-      chunkUrl: "/Counter.tsx",
+    const result = transformUseClientModule(source, "/abs/MyComponent.tsx", {
+      chunkUrl: "/MyComponent.tsx",
     });
-    expect(result?.code).toContain(
-      `typeof client === "string" ? client : "interaction"`,
-    );
+    expect(result?.code).toContain("export default function PlumixIsland(");
+    expect(result?.code).toContain(`Component: __orig["default"]`);
+    expect(result?.code).toContain(`exportName: "default"`);
   });
 
-  test("shim resolves a default `prefetch` trigger per the defaults table", () => {
-    // Prefetch (chunk download) is split from hydrate (mount): the
-    // `interaction` default warms on `visible` so the first click is
-    // instant. Authors override via the `prefetch` prop, which the shim
-    // destructures out and forwards as a `prefetch=` attribute.
-    const source = `
-      "use client";
-      export function Counter() { return null; }
-    `;
-    const result = transformUseClientModule(source, "/Counter.tsx", {
-      chunkUrl: "/Counter.tsx",
-    });
-    expect(result?.code).toContain(`interaction: "visible"`);
-    expect(result?.code).toContain(
-      `typeof prefetch === "string" ? prefetch : (__PREFETCH_DEFAULTS[__when]`,
-    );
-    expect(result?.code).toContain('"prefetch": __pf');
-  });
-
-  test("shim renders no SSR markup for an `only` island (empty shell)", () => {
-    const source = `
-      "use client";
-      export function BrowserOnly() { return null; }
-    `;
-    const result = transformUseClientModule(source, "/BrowserOnly.tsx", {
-      chunkUrl: "/BrowserOnly.tsx",
-    });
-    // The child render + the `ssr` gate are both guarded on `__only`, so an
-    // `only` island emits `<plumix-island>` with no children.
-    expect(result?.code).toContain('const __only = __when === "only"');
-    expect(result?.code).toContain(
-      `__only ? null : __c(__orig["BrowserOnly"], wrapped)`,
-    );
-  });
-
-  test("shim serializes props via JSON.stringify (functions drop automatically)", () => {
-    // The shim's `props=` attribute is built by `JSON.stringify(forward)`.
-    // JSON.stringify omits function-typed values at every depth — a
-    // standard JS behavior we rely on rather than re-implement. Assert
-    // the generated source uses JSON.stringify on the forwarded props
-    // (the strip happens for free).
-    const source = `
-      "use client";
-      export function Action() { return null; }
-    `;
-    const result = transformUseClientModule(source, "/Action.tsx", {
-      chunkUrl: "/Action.tsx",
-    });
-    // Props travel through `serializeProps` (plumix's tuple format)
-    // — the custom element's `deserializeProps` expects this shape
-    // so Date/Map/Set/etc. survive the round-trip.
-    expect(result?.code).toContain("__ser(rest)");
-    // The shim destructures `client` + `prefetch` out before forwarding so
-    // neither strategy slot leaks into the props attribute.
-    expect(result?.code).toContain("const { client, prefetch, ...rest }");
-  });
-
-  test("imports serializeProps from the virtual module, not plumix/blocks directly", () => {
+  test("imports IslandShim from the virtual module, not plumix/blocks directly", () => {
     // A "use client" island in `@plumix/blocks` itself can't resolve the
     // public `plumix/blocks` specifier (cycle + pnpm strictness), so the
-    // shim sources `serializeProps` from the virtual module the plugin
-    // resolves at the project root.
+    // shim sources `IslandShim` from the virtual module the plugin resolves
+    // at the project root.
     const source = `
       "use client";
       export function Widget() { return null; }
@@ -287,9 +227,8 @@ describe("transformUseClientModule", () => {
     const result = transformUseClientModule(source, "/Widget.tsx", {
       chunkUrl: "/Widget.tsx",
     });
-    expect(result?.code).toContain(
-      `import { serializeProps as __ser } from "${SERIALIZE_VIRTUAL_ID}"`,
-    );
+    expect(result?.code).toContain(`from "${SERIALIZE_VIRTUAL_ID}"`);
+    expect(result?.code).toContain("IslandShim");
     expect(result?.code).not.toContain(`from "plumix/blocks"`);
   });
 
@@ -302,27 +241,6 @@ describe("transformUseClientModule", () => {
       chunkUrl: "/x.tsx",
     });
     expect(result).toBeNull();
-  });
-
-  test("shim wraps React-element props in <plumix-static-slot> and lists them on `slots`", () => {
-    const source = `
-      "use client";
-      export function Wrapper() { return null; }
-    `;
-    const result = transformUseClientModule(source, "/Wrapper.tsx", {
-      chunkUrl: "/Wrapper.tsx",
-    });
-    // The shim detects React elements via $$typeof === Symbol and wraps
-    // each in a <plumix-static-slot>. Slot names go on a `slots=`
-    // attribute so the custom element knows which descendants to extract
-    // at hydrate time.
-    expect(result?.code).toContain("$$typeof");
-    expect(result?.code).toContain('"plumix-static-slot"');
-    expect(result?.code).toContain('"slots"');
-    // Wrapped element props must NOT appear in the serialized `props=`
-    // attribute (they'd serialize to a meaningless object). Props go
-    // through `serializeProps` (plumix's tuple format).
-    expect(result?.code).toContain("__ser(rest)");
   });
 });
 

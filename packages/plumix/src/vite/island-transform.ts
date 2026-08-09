@@ -111,12 +111,12 @@ function hasDefaultModifier(node: ts.HasModifiers): boolean {
 // recursively re-trigger this transform.
 export const ORIG_QUERY = "?plumix-orig";
 
-// Virtual module the SSR shim pulls `serializeProps` from. A `"use client"`
+// Virtual module the SSR shim pulls `IslandShim` from. A `"use client"`
 // island in `@plumix/blocks` itself can't import the public `plumix/blocks`
 // specifier — that package re-exports `@plumix/blocks`, so a dependency on it
 // would be a cycle, and pnpm's strict layout makes `plumix/blocks`
 // unresolvable from the island's own location. The plugin's `load` re-exports
-// `serializeProps` from `plumix/blocks` resolved at the project root (where
+// `IslandShim` from `plumix/blocks` resolved at the project root (where
 // `plumix` is always a dependency), so islands in core, plugins, and userland
 // all resolve it identically.
 export const SERIALIZE_VIRTUAL_ID = "virtual:plumix/island-serialize";
@@ -141,38 +141,14 @@ export function transformUseClientModule(
   const chunkUrl = JSON.stringify(options.chunkUrl);
   const lines: string[] = [
     `import { createElement as __c } from "react";`,
-    // Route props through `serializeProps` so Date/Map/Set/etc. survive
-    // the round-trip the custom element's `deserializeProps` expects.
-    // Plain JSON.stringify would silently coerce them. Sourced from the
-    // virtual module (not `plumix/blocks` directly) so core islands resolve
-    // it too — see SERIALIZE_VIRTUAL_ID.
-    `import { serializeProps as __ser } from ${JSON.stringify(SERIALIZE_VIRTUAL_ID)};`,
+    // `IslandShim` owns the island boundary decision, prop split,
+    // serialization, and the `<plumix-island>` shape — real, tested code
+    // rather than a generated string (see @plumix/blocks/island-shim).
+    // Sourced from the virtual module (not `plumix/blocks` directly) so a
+    // core island in `@plumix/blocks` resolves it too — see
+    // SERIALIZE_VIRTUAL_ID.
+    `import { IslandShim as __IslandShim } from ${JSON.stringify(SERIALIZE_VIRTUAL_ID)};`,
     `import * as __orig from ${origUrl};`,
-    // Default prefetch trigger per hydration trigger. `interaction`'s
-    // `visible` default is the one that makes the first click feel instant
-    // — the chunk is warm before the user reaches the island.
-    `const __PREFETCH_DEFAULTS = { load: "load", idle: "load", visible: "visible", interaction: "visible", only: "load" };`,
-    // `wrapped` is the full prop set fed to the SSR'd Component (with
-    // React-element props replaced by <plumix-static-slot> wrappers).
-    // `rest` is the JSON-safe subset for the serialized `props=`
-    // attribute — element props are excluded and bridged via
-    // StaticHtml on hydrate.
-    `function __split(props) {`,
-    `  const { client, prefetch, ...rest } = props ?? {};`,
-    `  const slots = [];`,
-    `  const wrapped = {};`,
-    `  for (const k of Object.keys(rest)) {`,
-    `    const v = rest[k];`,
-    `    if (v != null && typeof v === "object" && typeof v.$$typeof === "symbol") {`,
-    `      slots.push(k);`,
-    `      wrapped[k] = __c("plumix-static-slot", { "data-plumix-slot": k }, v);`,
-    `      delete rest[k];`,
-    `    } else {`,
-    `      wrapped[k] = v;`,
-    `    }`,
-    `  }`,
-    `  return { client, prefetch, rest, wrapped, slots };`,
-    `}`,
   ];
   for (const finding of findings) {
     const name = finding.exportName;
@@ -181,26 +157,17 @@ export function transformUseClientModule(
     const exportPrefix = isDefault
       ? "export default function PlumixIsland(props)"
       : `export function ${name}(props)`;
+    // Hand the original component + static wiring to IslandShim; the raw
+    // props flow through untouched so the shim can decide inline-vs-island
+    // at render time from the `InsideIsland` context.
     lines.push(
       `${exportPrefix} {`,
-      `  const { client, prefetch, rest, wrapped, slots } = __split(props);`,
-      // Default hydration trigger is `interaction` — hydrate on first user
-      // intent, replay the event. Authors opt into eager/visible/idle
-      // explicitly; the common case pays for JS only when engaged.
-      `  const __when = typeof client === "string" ? client : "interaction";`,
-      `  const __pf = typeof prefetch === "string" ? prefetch : (__PREFETCH_DEFAULTS[__when] || "load");`,
-      // `only` skips SSR entirely: empty shell, no `ssr` gate attribute, the
-      // client renders into it on connect.
-      `  const __only = __when === "only";`,
-      `  return __c("plumix-island", {`,
-      `    "chunk-url": ${chunkUrl},`,
-      `    "component-export": ${targetLiteral},`,
-      `    "client": __when,`,
-      `    "prefetch": __pf,`,
-      `    "props": __ser(rest),`,
-      `    "slots": slots.length ? slots.join(",") : null,`,
-      `    "ssr": __only ? null : "",`,
-      `  }, __only ? null : __c(__orig[${targetLiteral}], wrapped));`,
+      `  return __c(__IslandShim, {`,
+      `    Component: __orig[${targetLiteral}],`,
+      `    exportName: ${targetLiteral},`,
+      `    chunkUrl: ${chunkUrl},`,
+      `    props,`,
+      `  });`,
       `}`,
     );
   }

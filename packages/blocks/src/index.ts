@@ -206,3 +206,5 @@ export type {
 // Re-exported for the SSR shim the Vite plugin emits for `"use client"`
 // modules; not intended for direct theme/block-author consumption.
 export { serializeProps } from "./serialize.js";
+export { InsideIslandContext, IslandShim } from "./island-shim.js";
+export type { IslandShimProps } from "./island-shim.js";
