@@ -45,6 +45,17 @@ export { hydrateReferences } from "./rpc/meta/core.js";
 export { readEntryType } from "./entries/read-service.js";
 export { memoBatch } from "./context/memo.js";
 export type { RequestMemo } from "./context/memo.js";
+// Edge-cache tag vocabulary (PRD #1080). Exposed so a plugin that writes
+// directly to `ctx.db` — bypassing the entry-mutation service, so no
+// `entry:*`/`term:*` action fires — can enqueue the same coarse purge core
+// would, instead of hand-restating the `t:<type>`/`e:<id>` scheme (#1700).
+export {
+  entryPurgeTags,
+  entryTag,
+  termPurgeTags,
+  typeTag,
+} from "./cache/tags.js";
+export { enqueuePurgeTags } from "./cache/purge.js";
 export {
   archive,
   author,
