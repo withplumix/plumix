@@ -1,7 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 import type { AssetManifest } from "./asset-manifest.js";
-import { bundledCssTags, devThemeStylesTag } from "./asset-manifest.js";
+import {
+  bundledCssTags,
+  devThemeCssLinks,
+  devThemeStylesTag,
+} from "./asset-manifest.js";
 
 describe("bundledCssTags", () => {
   test("emits a stylesheet <link> for every CSS file linked from an entry chunk", () => {
@@ -182,5 +186,82 @@ describe("devThemeStylesTag", () => {
     expect(devThemeStylesTag("serve", "/custom-directory")).toBe(
       '<script type="module" src="/custom-directory/.plumix/client-entry.ts"></script>',
     );
+  });
+});
+
+describe("devThemeCssLinks", () => {
+  // #1701: in dev the theme CSS otherwise rides in only via the client-entry
+  // <script>, which injects <style> after hydration → flash of unstyled
+  // content. A render-blocking <link> to the Vite-served source path paints
+  // the first frame styled, matching prod's `bundledCssTags`.
+  test("serve mode links a `./`-relative css path as a root-absolute href", () => {
+    expect(devThemeCssLinks(["./theme/app.css"], "serve")).toBe(
+      '<link rel="stylesheet" href="/theme/app.css" />',
+    );
+  });
+
+  test("serve mode normalizes a bare relative path to root-absolute", () => {
+    expect(devThemeCssLinks(["theme/app.css"], "serve")).toBe(
+      '<link rel="stylesheet" href="/theme/app.css" />',
+    );
+  });
+
+  test("serve mode passes an already root-absolute path through", () => {
+    expect(devThemeCssLinks(["/theme/app.css"], "serve")).toBe(
+      '<link rel="stylesheet" href="/theme/app.css" />',
+    );
+  });
+
+  test("serve mode links every entry, in declaration order", () => {
+    expect(devThemeCssLinks(["./a.css", "./b.css"], "serve")).toBe(
+      '<link rel="stylesheet" href="/a.css" />' +
+        '<link rel="stylesheet" href="/b.css" />',
+    );
+  });
+
+  test("serve mode prefixes the basePath for a subdirectory install", () => {
+    expect(
+      devThemeCssLinks(["./theme/app.css"], "serve", "/custom-directory"),
+    ).toBe('<link rel="stylesheet" href="/custom-directory/theme/app.css" />');
+  });
+
+  test("serve mode deduplicates paths that resolve to the same href", () => {
+    // `./a.css` and `a.css` normalize to the same URL — link it once,
+    // matching `bundledCssTags`'s Set-based dedupe.
+    expect(devThemeCssLinks(["./a.css", "a.css", "/a.css"], "serve")).toBe(
+      '<link rel="stylesheet" href="/a.css" />',
+    );
+  });
+
+  // A plain <link href> is resolved by the browser, not Vite's module
+  // resolver, so aliased (`~`, `@/`) and npm-scope (`@scope/pkg`) specifiers
+  // 404 as links. Those keep riding in on the client-entry <script> import
+  // (today's behavior); emitting a knowingly-404ing <link> would just add
+  // console noise.
+  test("serve mode skips alias and npm-scope specifiers", () => {
+    expect(
+      devThemeCssLinks(
+        ["~/aliased.css", "@acme/ui/style.css", "@/aliased.css"],
+        "serve",
+      ),
+    ).toBe("");
+  });
+
+  test("serve mode skips parent-escape paths whose href is ambiguous", () => {
+    expect(devThemeCssLinks(["../outside.css"], "serve")).toBe("");
+  });
+
+  test("serve mode links only the resolvable entries, leaving the rest to the script", () => {
+    expect(
+      devThemeCssLinks(["./theme/app.css", "@acme/ui/style.css"], "serve"),
+    ).toBe('<link rel="stylesheet" href="/theme/app.css" />');
+  });
+
+  test("build mode emits nothing — bundledCssTags links the hashed CSS", () => {
+    expect(devThemeCssLinks(["./theme/app.css"], "build")).toBe("");
+  });
+
+  test("emits nothing for an empty css array", () => {
+    expect(devThemeCssLinks([], "serve")).toBe("");
   });
 });
