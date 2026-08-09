@@ -1,7 +1,7 @@
 import type { AppContext } from "../context/app.js";
 import type { MetaBoxField, PluginRegistry } from "../plugin/manifest.js";
-import { listEntryMetaFields } from "../plugin/manifest.js";
 import type { DocumentManifest, DocumentMeta, TemplateData } from "../theme.js";
+import { listEntryMetaFields } from "../plugin/manifest.js";
 import { canonicalUrl } from "./canonical.js";
 import { applyFeedDiscovery } from "./feed.js";
 import { loadSiteSettings, nonEmpty } from "./site-settings.js";
@@ -97,7 +97,7 @@ function toOgLocale(localeCode: string): string {
 // plugin's `MediaReference` type.
 function mediaUrl(value: unknown): string | null {
   if (value !== null && typeof value === "object" && "url" in value) {
-    return nonEmpty((value as { url: unknown }).url);
+    return nonEmpty(value.url);
   }
   return null;
 }

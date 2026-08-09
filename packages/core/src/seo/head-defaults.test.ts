@@ -113,15 +113,14 @@ const mediaRef = (url: string) => ({ id: "m1", url });
 const mediaField = (
   key: string,
   role?: "featured" | "ogImage",
-): MetaBoxField =>
-  ({
-    key,
-    label: key,
-    type: "json",
-    inputType: "media",
-    referenceTarget: { kind: "media", scope: {} },
-    ...(role ? { role } : {}),
-  }) as MetaBoxField;
+): MetaBoxField => ({
+  key,
+  label: key,
+  type: "json",
+  inputType: "media",
+  referenceTarget: { kind: "media", scope: {} },
+  ...(role ? { role } : {}),
+});
 
 describe("resolveEntryOgImage", () => {
   test("returns the featured field's url", () => {
@@ -195,10 +194,7 @@ const registryWith = (
     entryMetaBoxes: new Map([["box", { entryTypes, fields }]]),
   }) as unknown as PluginRegistry;
 
-const entryData = (
-  type: string,
-  meta: Record<string, unknown>,
-): TemplateData =>
+const entryData = (type: string, meta: Record<string, unknown>): TemplateData =>
   ({ kind: "entry", entry: { type, meta } }) as unknown as TemplateData;
 
 describe("entryOgImage", () => {
