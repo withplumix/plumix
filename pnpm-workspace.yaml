@@ -64,8 +64,8 @@ catalogs:
     "@vitest/coverage-v8": ^4.1.10
     vitest: ^4.1.10
   vite:
-    "@vitejs/plugin-react": ^6.0.3
-    vite: ^8.1.4
+    "@vitejs/plugin-react": ^6.0.5
+    vite: ^8.2.0
   tiptap:
     "@tiptap/core": ^3.27.3
     "@tiptap/react": ^3.27.3
