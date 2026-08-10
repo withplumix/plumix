@@ -9,41 +9,51 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root";
-import { Route as EditorRouteImport } from "./routes/_editor";
-import { Route as AuthenticatedRouteImport } from "./routes/_authenticated";
 import { Route as AuthRouteImport } from "./routes/_auth";
+import { Route as AuthenticatedRouteImport } from "./routes/_authenticated";
+import { Route as EditorRouteImport } from "./routes/_editor";
+import { Route as AuthBootstrapRouteImport } from "./routes/_auth/bootstrap";
+import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as AuthenticatedIndexRouteImport } from "./routes/_authenticated/index";
 import { Route as AuthenticatedProfileRouteImport } from "./routes/_authenticated/profile";
-import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
-import { Route as AuthBootstrapRouteImport } from "./routes/_auth/bootstrap";
-import { Route as AuthenticatedUsersIndexRouteImport } from "./routes/_authenticated/users/index";
-import { Route as AuthenticatedSettingsIndexRouteImport } from "./routes/_authenticated/settings/index";
-import { Route as AuthenticatedMailerIndexRouteImport } from "./routes/_authenticated/mailer/index";
-import { Route as AuthenticatedAllowedDomainsIndexRouteImport } from "./routes/_authenticated/allowed-domains/index";
-import { Route as AuthenticatedUsersCreateRouteImport } from "./routes/_authenticated/users/create";
-import { Route as AuthenticatedSettingsPageRouteImport } from "./routes/_authenticated/settings/$page";
-import { Route as AuthenticatedPagesSplatRouteImport } from "./routes/_authenticated/pages/$";
-import { Route as AuthenticatedAuthDeviceRouteImport } from "./routes/_authenticated/auth/device";
 import { Route as AuthAcceptInviteTokenRouteImport } from "./routes/_auth/accept-invite/$token";
-import { Route as AuthenticatedTermsNameIndexRouteImport } from "./routes/_authenticated/terms/$name/index";
+import { Route as AuthenticatedAllowedDomainsIndexRouteImport } from "./routes/_authenticated/allowed-domains/index";
+import { Route as AuthenticatedAuthDeviceRouteImport } from "./routes/_authenticated/auth/device";
+import { Route as AuthenticatedMailerIndexRouteImport } from "./routes/_authenticated/mailer/index";
+import { Route as AuthenticatedPagesSplatRouteImport } from "./routes/_authenticated/pages/$";
+import { Route as AuthenticatedSettingsIndexRouteImport } from "./routes/_authenticated/settings/index";
+import { Route as AuthenticatedSettingsPageRouteImport } from "./routes/_authenticated/settings/$page";
+import { Route as AuthenticatedUsersIndexRouteImport } from "./routes/_authenticated/users/index";
+import { Route as AuthenticatedUsersCreateRouteImport } from "./routes/_authenticated/users/create";
 import { Route as AuthenticatedEntriesSlugIndexRouteImport } from "./routes/_authenticated/entries/$slug/index";
-import { Route as EditorEntriesSlugCreateRouteImport } from "./routes/_editor/entries/$slug/create";
-import { Route as AuthenticatedUsersIdEditRouteImport } from "./routes/_authenticated/users/$id/edit";
+import { Route as AuthenticatedTermsNameIndexRouteImport } from "./routes/_authenticated/terms/$name/index";
 import { Route as AuthenticatedTermsNameCreateRouteImport } from "./routes/_authenticated/terms/$name/create";
-import { Route as EditorEntriesSlugIdEditRouteImport } from "./routes/_editor/entries/$slug/$id/edit";
+import { Route as AuthenticatedUsersIdEditRouteImport } from "./routes/_authenticated/users/$id/edit";
+import { Route as EditorEntriesSlugCreateRouteImport } from "./routes/_editor/entries/$slug/create";
 import { Route as AuthenticatedTermsNameIdEditRouteImport } from "./routes/_authenticated/terms/$name/$id/edit";
+import { Route as EditorEntriesSlugIdEditRouteImport } from "./routes/_editor/entries/$slug/$id/edit";
 
-const EditorRoute = EditorRouteImport.update({
-  id: "/_editor",
+const AuthRoute = AuthRouteImport.update({
+  id: "/_auth",
   getParentRoute: () => rootRouteImport,
 } as any);
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: "/_authenticated",
   getParentRoute: () => rootRouteImport,
 } as any);
-const AuthRoute = AuthRouteImport.update({
-  id: "/_auth",
+const EditorRoute = EditorRouteImport.update({
+  id: "/_editor",
   getParentRoute: () => rootRouteImport,
+} as any);
+const AuthBootstrapRoute = AuthBootstrapRouteImport.update({
+  id: "/bootstrap",
+  path: "/bootstrap",
+  getParentRoute: () => AuthRoute,
+} as any);
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: "/login",
+  path: "/login",
+  getParentRoute: () => AuthRoute,
 } as any);
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: "/",
@@ -55,19 +65,31 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: "/profile",
   getParentRoute: () => AuthenticatedRoute,
 } as any);
-const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: "/login",
-  path: "/login",
+const AuthAcceptInviteTokenRoute = AuthAcceptInviteTokenRouteImport.update({
+  id: "/accept-invite/$token",
+  path: "/accept-invite/$token",
   getParentRoute: () => AuthRoute,
 } as any);
-const AuthBootstrapRoute = AuthBootstrapRouteImport.update({
-  id: "/bootstrap",
-  path: "/bootstrap",
-  getParentRoute: () => AuthRoute,
+const AuthenticatedAllowedDomainsIndexRoute =
+  AuthenticatedAllowedDomainsIndexRouteImport.update({
+    id: "/allowed-domains/",
+    path: "/allowed-domains/",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
+const AuthenticatedAuthDeviceRoute = AuthenticatedAuthDeviceRouteImport.update({
+  id: "/auth/device",
+  path: "/auth/device",
+  getParentRoute: () => AuthenticatedRoute,
 } as any);
-const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
-  id: "/users/",
-  path: "/users/",
+const AuthenticatedMailerIndexRoute =
+  AuthenticatedMailerIndexRouteImport.update({
+    id: "/mailer/",
+    path: "/mailer/",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
+const AuthenticatedPagesSplatRoute = AuthenticatedPagesSplatRouteImport.update({
+  id: "/pages/$",
+  path: "/pages/$",
   getParentRoute: () => AuthenticatedRoute,
 } as any);
 const AuthenticatedSettingsIndexRoute =
@@ -76,49 +98,21 @@ const AuthenticatedSettingsIndexRoute =
     path: "/settings/",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
-const AuthenticatedMailerIndexRoute =
-  AuthenticatedMailerIndexRouteImport.update({
-    id: "/mailer/",
-    path: "/mailer/",
-    getParentRoute: () => AuthenticatedRoute,
-  } as any);
-const AuthenticatedAllowedDomainsIndexRoute =
-  AuthenticatedAllowedDomainsIndexRouteImport.update({
-    id: "/allowed-domains/",
-    path: "/allowed-domains/",
-    getParentRoute: () => AuthenticatedRoute,
-  } as any);
-const AuthenticatedUsersCreateRoute =
-  AuthenticatedUsersCreateRouteImport.update({
-    id: "/users/create",
-    path: "/users/create",
-    getParentRoute: () => AuthenticatedRoute,
-  } as any);
 const AuthenticatedSettingsPageRoute =
   AuthenticatedSettingsPageRouteImport.update({
     id: "/settings/$page",
     path: "/settings/$page",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
-const AuthenticatedPagesSplatRoute = AuthenticatedPagesSplatRouteImport.update({
-  id: "/pages/$",
-  path: "/pages/$",
+const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
+  id: "/users/",
+  path: "/users/",
   getParentRoute: () => AuthenticatedRoute,
 } as any);
-const AuthenticatedAuthDeviceRoute = AuthenticatedAuthDeviceRouteImport.update({
-  id: "/auth/device",
-  path: "/auth/device",
-  getParentRoute: () => AuthenticatedRoute,
-} as any);
-const AuthAcceptInviteTokenRoute = AuthAcceptInviteTokenRouteImport.update({
-  id: "/accept-invite/$token",
-  path: "/accept-invite/$token",
-  getParentRoute: () => AuthRoute,
-} as any);
-const AuthenticatedTermsNameIndexRoute =
-  AuthenticatedTermsNameIndexRouteImport.update({
-    id: "/terms/$name/",
-    path: "/terms/$name/",
+const AuthenticatedUsersCreateRoute =
+  AuthenticatedUsersCreateRouteImport.update({
+    id: "/users/create",
+    path: "/users/create",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
 const AuthenticatedEntriesSlugIndexRoute =
@@ -127,15 +121,10 @@ const AuthenticatedEntriesSlugIndexRoute =
     path: "/entries/$slug/",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
-const EditorEntriesSlugCreateRoute = EditorEntriesSlugCreateRouteImport.update({
-  id: "/entries/$slug/create",
-  path: "/entries/$slug/create",
-  getParentRoute: () => EditorRoute,
-} as any);
-const AuthenticatedUsersIdEditRoute =
-  AuthenticatedUsersIdEditRouteImport.update({
-    id: "/users/$id/edit",
-    path: "/users/$id/edit",
+const AuthenticatedTermsNameIndexRoute =
+  AuthenticatedTermsNameIndexRouteImport.update({
+    id: "/terms/$name/",
+    path: "/terms/$name/",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
 const AuthenticatedTermsNameCreateRoute =
@@ -144,9 +133,15 @@ const AuthenticatedTermsNameCreateRoute =
     path: "/terms/$name/create",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
-const EditorEntriesSlugIdEditRoute = EditorEntriesSlugIdEditRouteImport.update({
-  id: "/entries/$slug/$id/edit",
-  path: "/entries/$slug/$id/edit",
+const AuthenticatedUsersIdEditRoute =
+  AuthenticatedUsersIdEditRouteImport.update({
+    id: "/users/$id/edit",
+    path: "/users/$id/edit",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any);
+const EditorEntriesSlugCreateRoute = EditorEntriesSlugCreateRouteImport.update({
+  id: "/entries/$slug/create",
+  path: "/entries/$slug/create",
   getParentRoute: () => EditorRoute,
 } as any);
 const AuthenticatedTermsNameIdEditRoute =
@@ -155,6 +150,11 @@ const AuthenticatedTermsNameIdEditRoute =
     path: "/terms/$name/$id/edit",
     getParentRoute: () => AuthenticatedRoute,
   } as any);
+const EditorEntriesSlugIdEditRoute = EditorEntriesSlugIdEditRouteImport.update({
+  id: "/entries/$slug/$id/edit",
+  path: "/entries/$slug/$id/edit",
+  getParentRoute: () => EditorRoute,
+} as any);
 
 export interface FileRoutesByFullPath {
   "/": typeof AuthenticatedIndexRoute;
@@ -306,11 +306,11 @@ export interface RootRouteChildren {
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    "/_editor": {
-      id: "/_editor";
+    "/_auth": {
+      id: "/_auth";
       path: "";
       fullPath: "/";
-      preLoaderRoute: typeof EditorRouteImport;
+      preLoaderRoute: typeof AuthRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/_authenticated": {
@@ -320,12 +320,26 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    "/_auth": {
-      id: "/_auth";
+    "/_editor": {
+      id: "/_editor";
       path: "";
       fullPath: "/";
-      preLoaderRoute: typeof AuthRouteImport;
+      preLoaderRoute: typeof EditorRouteImport;
       parentRoute: typeof rootRouteImport;
+    };
+    "/_auth/bootstrap": {
+      id: "/_auth/bootstrap";
+      path: "/bootstrap";
+      fullPath: "/bootstrap";
+      preLoaderRoute: typeof AuthBootstrapRouteImport;
+      parentRoute: typeof AuthRoute;
+    };
+    "/_auth/login": {
+      id: "/_auth/login";
+      path: "/login";
+      fullPath: "/login";
+      preLoaderRoute: typeof AuthLoginRouteImport;
+      parentRoute: typeof AuthRoute;
     };
     "/_authenticated/": {
       id: "/_authenticated/";
@@ -341,67 +355,18 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_auth/login": {
-      id: "/_auth/login";
-      path: "/login";
-      fullPath: "/login";
-      preLoaderRoute: typeof AuthLoginRouteImport;
+    "/_auth/accept-invite/$token": {
+      id: "/_auth/accept-invite/$token";
+      path: "/accept-invite/$token";
+      fullPath: "/accept-invite/$token";
+      preLoaderRoute: typeof AuthAcceptInviteTokenRouteImport;
       parentRoute: typeof AuthRoute;
-    };
-    "/_auth/bootstrap": {
-      id: "/_auth/bootstrap";
-      path: "/bootstrap";
-      fullPath: "/bootstrap";
-      preLoaderRoute: typeof AuthBootstrapRouteImport;
-      parentRoute: typeof AuthRoute;
-    };
-    "/_authenticated/users/": {
-      id: "/_authenticated/users/";
-      path: "/users";
-      fullPath: "/users/";
-      preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport;
-      parentRoute: typeof AuthenticatedRoute;
-    };
-    "/_authenticated/settings/": {
-      id: "/_authenticated/settings/";
-      path: "/settings";
-      fullPath: "/settings/";
-      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport;
-      parentRoute: typeof AuthenticatedRoute;
-    };
-    "/_authenticated/mailer/": {
-      id: "/_authenticated/mailer/";
-      path: "/mailer";
-      fullPath: "/mailer/";
-      preLoaderRoute: typeof AuthenticatedMailerIndexRouteImport;
-      parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/allowed-domains/": {
       id: "/_authenticated/allowed-domains/";
       path: "/allowed-domains";
       fullPath: "/allowed-domains/";
       preLoaderRoute: typeof AuthenticatedAllowedDomainsIndexRouteImport;
-      parentRoute: typeof AuthenticatedRoute;
-    };
-    "/_authenticated/users/create": {
-      id: "/_authenticated/users/create";
-      path: "/users/create";
-      fullPath: "/users/create";
-      preLoaderRoute: typeof AuthenticatedUsersCreateRouteImport;
-      parentRoute: typeof AuthenticatedRoute;
-    };
-    "/_authenticated/settings/$page": {
-      id: "/_authenticated/settings/$page";
-      path: "/settings/$page";
-      fullPath: "/settings/$page";
-      preLoaderRoute: typeof AuthenticatedSettingsPageRouteImport;
-      parentRoute: typeof AuthenticatedRoute;
-    };
-    "/_authenticated/pages/$": {
-      id: "/_authenticated/pages/$";
-      path: "/pages/$";
-      fullPath: "/pages/$";
-      preLoaderRoute: typeof AuthenticatedPagesSplatRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/auth/device": {
@@ -411,18 +376,46 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedAuthDeviceRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_auth/accept-invite/$token": {
-      id: "/_auth/accept-invite/$token";
-      path: "/accept-invite/$token";
-      fullPath: "/accept-invite/$token";
-      preLoaderRoute: typeof AuthAcceptInviteTokenRouteImport;
-      parentRoute: typeof AuthRoute;
+    "/_authenticated/mailer/": {
+      id: "/_authenticated/mailer/";
+      path: "/mailer";
+      fullPath: "/mailer/";
+      preLoaderRoute: typeof AuthenticatedMailerIndexRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
     };
-    "/_authenticated/terms/$name/": {
-      id: "/_authenticated/terms/$name/";
-      path: "/terms/$name";
-      fullPath: "/terms/$name/";
-      preLoaderRoute: typeof AuthenticatedTermsNameIndexRouteImport;
+    "/_authenticated/pages/$": {
+      id: "/_authenticated/pages/$";
+      path: "/pages/$";
+      fullPath: "/pages/$";
+      preLoaderRoute: typeof AuthenticatedPagesSplatRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/settings/": {
+      id: "/_authenticated/settings/";
+      path: "/settings";
+      fullPath: "/settings/";
+      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/settings/$page": {
+      id: "/_authenticated/settings/$page";
+      path: "/settings/$page";
+      fullPath: "/settings/$page";
+      preLoaderRoute: typeof AuthenticatedSettingsPageRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/users/": {
+      id: "/_authenticated/users/";
+      path: "/users";
+      fullPath: "/users/";
+      preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/users/create": {
+      id: "/_authenticated/users/create";
+      path: "/users/create";
+      fullPath: "/users/create";
+      preLoaderRoute: typeof AuthenticatedUsersCreateRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/entries/$slug/": {
@@ -432,18 +425,11 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedEntriesSlugIndexRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_editor/entries/$slug/create": {
-      id: "/_editor/entries/$slug/create";
-      path: "/entries/$slug/create";
-      fullPath: "/entries/$slug/create";
-      preLoaderRoute: typeof EditorEntriesSlugCreateRouteImport;
-      parentRoute: typeof EditorRoute;
-    };
-    "/_authenticated/users/$id/edit": {
-      id: "/_authenticated/users/$id/edit";
-      path: "/users/$id/edit";
-      fullPath: "/users/$id/edit";
-      preLoaderRoute: typeof AuthenticatedUsersIdEditRouteImport;
+    "/_authenticated/terms/$name/": {
+      id: "/_authenticated/terms/$name/";
+      path: "/terms/$name";
+      fullPath: "/terms/$name/";
+      preLoaderRoute: typeof AuthenticatedTermsNameIndexRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/terms/$name/create": {
@@ -453,11 +439,18 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedTermsNameCreateRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
-    "/_editor/entries/$slug/$id/edit": {
-      id: "/_editor/entries/$slug/$id/edit";
-      path: "/entries/$slug/$id/edit";
-      fullPath: "/entries/$slug/$id/edit";
-      preLoaderRoute: typeof EditorEntriesSlugIdEditRouteImport;
+    "/_authenticated/users/$id/edit": {
+      id: "/_authenticated/users/$id/edit";
+      path: "/users/$id/edit";
+      fullPath: "/users/$id/edit";
+      preLoaderRoute: typeof AuthenticatedUsersIdEditRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_editor/entries/$slug/create": {
+      id: "/_editor/entries/$slug/create";
+      path: "/entries/$slug/create";
+      fullPath: "/entries/$slug/create";
+      preLoaderRoute: typeof EditorEntriesSlugCreateRouteImport;
       parentRoute: typeof EditorRoute;
     };
     "/_authenticated/terms/$name/$id/edit": {
@@ -466,6 +459,13 @@ declare module "@tanstack/react-router" {
       fullPath: "/terms/$name/$id/edit";
       preLoaderRoute: typeof AuthenticatedTermsNameIdEditRouteImport;
       parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_editor/entries/$slug/$id/edit": {
+      id: "/_editor/entries/$slug/$id/edit";
+      path: "/entries/$slug/$id/edit";
+      fullPath: "/entries/$slug/$id/edit";
+      preLoaderRoute: typeof EditorEntriesSlugIdEditRouteImport;
+      parentRoute: typeof EditorRoute;
     };
   }
 }
