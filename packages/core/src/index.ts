@@ -1,5 +1,8 @@
 // Side-effect: exposes core's `TemplateDepRegistry` augmentation.
 import "./template-deps-core.js";
+// Side-effect: anchors public core hook augmentations (seo:*, render:document,
+// resolve:*, admin_bar:nodes, …) into the published declaration graph (#1698).
+import "./hooks/public-hooks.js";
 
 export * from "./admin/index.js";
 export * from "./auth/index.js";
