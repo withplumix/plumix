@@ -359,7 +359,6 @@ describe("format checks", () => {
       (await runFieldPipeline(field, "/pricing", "website")).errors,
     ).toHaveLength(0);
     expect(
-      // eslint-disable-next-line no-script-url -- asserting the reject path
       (await runFieldPipeline(field, "javascript:alert(1)", "website")).errors,
     ).toEqual([{ path: "website", message: META_FIELD_MESSAGES.invalidUrl }]);
   });
@@ -386,7 +385,6 @@ describe("format checks", () => {
     expect(result.value).toEqual({ url: "/pricing", label: "See pricing" });
     const bad = await runFieldPipeline(
       field,
-      // eslint-disable-next-line no-script-url -- asserting the reject path
       { url: "javascript:alert(1)" },
       "cta",
     );
@@ -768,7 +766,6 @@ describe(".sanitize()", () => {
     // The link URL gate re-runs on the sanitize output — a callback
     // returning a script-bearing URL must not persist.
     const cta = link("cta")
-      // eslint-disable-next-line no-script-url -- asserting the reject path
       .sanitize((value) => ({ ...value, url: "javascript:alert(1)" }))
       .build();
     const smuggled = await runFieldPipeline(cta, { url: "/ok" }, "cta");
