@@ -24,11 +24,15 @@ declare module "../hooks/types.js" {
   interface FilterRegistry {
     /**
      * Adjust a sub-sitemap's URL set before it's serialized — add, drop, or
-     * re-`lastmod` entries. Receives the scope (entry-type or taxonomy name).
+     * re-`lastmod` entries. Receives the scope (entry-type, taxonomy, or custom
+     * archive name), the 1-based `page`, and the request `ctx` so a subscriber
+     * can query the DB to inject rows, not just reshape statically-known URLs.
      */
     "seo:sitemap:urls": (
       urls: readonly SitemapUrl[],
       scope: string,
+      page: number,
+      ctx: AppContext,
     ) => readonly SitemapUrl[] | Promise<readonly SitemapUrl[]>;
   }
 }
@@ -126,17 +130,18 @@ export async function collectSitemapUrls(
   page: number,
 ): Promise<readonly SitemapUrl[] | null> {
   const entryType = ctx.plugins.entryTypes.get(scope);
-  let urls: SitemapUrl[] | null = null;
+  const taxonomy = ctx.plugins.termTaxonomies.get(scope);
+  const archive = ctx.plugins.archiveTypes.get(scope);
+  let urls: readonly SitemapUrl[] | null = null;
   if (entryType && entryType.isPublic !== false) {
     urls = await entryUrls(ctx, scope, page);
-  } else {
-    const taxonomy = ctx.plugins.termTaxonomies.get(scope);
-    if (taxonomy && taxonomy.isPublic !== false) {
-      urls = await termUrls(ctx, scope, page);
-    }
+  } else if (taxonomy && taxonomy.isPublic !== false) {
+    urls = await termUrls(ctx, scope, page);
+  } else if (archive?.sitemap) {
+    urls = await archive.sitemap.urls(ctx, page);
   }
   if (urls === null) return null;
-  return ctx.hooks.applyFilter("seo:sitemap:urls", urls, scope);
+  return ctx.hooks.applyFilter("seo:sitemap:urls", urls, scope, page, ctx);
 }
 
 async function sitemapIndexLocs(ctx: AppContext): Promise<string[]> {
@@ -164,6 +169,11 @@ async function sitemapIndexLocs(ctx: AppContext): Promise<string[]> {
       .from(terms)
       .where(eq(terms.taxonomy, taxonomy.name));
     pushScope(taxonomy.name, Number(row?.n ?? 0));
+  }
+  // Archives are opaque to core's SQL, so they report their own count.
+  for (const archive of ctx.plugins.archiveTypes.values()) {
+    if (!archive.sitemap) continue;
+    pushScope(archive.name, Number(await archive.sitemap.count(ctx)));
   }
   return locs;
 }
