@@ -25,6 +25,7 @@ import type { Label } from "../i18n/label.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { McpTool } from "../mcp/tool.js";
 import type { RouteIntent } from "../route/intent.js";
+import type { RedirectRule } from "../route/redirects.js";
 import type { CustomArchiveData } from "../route/render/resolved-entry.js";
 import type { NamedTemplateChoice } from "../route/render/template-builders.js";
 import type { SitemapUrl } from "../seo/sitemap.js";
@@ -1564,6 +1565,7 @@ export interface PluginRegistry {
   readonly settingsGroups: ReadonlyMap<string, RegisteredSettingsGroup>;
   readonly settingsPages: ReadonlyMap<string, RegisteredSettingsPage>;
   readonly rewriteRules: readonly RegisteredRewriteRule[];
+  readonly redirects: readonly RedirectRule[];
   readonly archiveTypes: ReadonlyMap<string, RegisteredArchiveType>;
   readonly rpcRouters: ReadonlyMap<string, PluginRpcRouter>;
   readonly mcpTools: ReadonlyMap<string, RegisteredMcpTool>;
@@ -1593,6 +1595,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly settingsGroups: Map<string, RegisteredSettingsGroup>;
   readonly settingsPages: Map<string, RegisteredSettingsPage>;
   readonly rewriteRules: RegisteredRewriteRule[];
+  readonly redirects: RedirectRule[];
   readonly archiveTypes: Map<string, RegisteredArchiveType>;
   readonly rpcRouters: Map<string, PluginRpcRouter>;
   readonly mcpTools: Map<string, RegisteredMcpTool>;
@@ -1623,6 +1626,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     settingsGroups: new Map(),
     settingsPages: new Map(),
     rewriteRules: [],
+    redirects: [],
     archiveTypes: new Map(),
     rpcRouters: new Map(),
     mcpTools: new Map(),

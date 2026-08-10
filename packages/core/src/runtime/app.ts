@@ -30,6 +30,7 @@ import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RestDispatch } from "../rest/build-handler.js";
 import type { RestRoute } from "../rest/rest-routes.js";
 import type { RouteRule } from "../route/intent.js";
+import type { CompiledRedirects } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { DocumentManifest } from "../theme.js";
 import { registerCoreAdminBarContributors } from "../admin-bar/core-contributors.js";
@@ -46,6 +47,7 @@ import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
 import { CORE_REST_ROUTES, routesOverlap } from "../rest/rest-routes.js";
 import { compileRouteMap } from "../route/compile.js";
+import { assembleRedirects } from "../route/redirects.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { registerCoreSearchHandlers } from "../search/register-core-handlers.js";
@@ -129,6 +131,8 @@ export interface PlumixApp {
    * across requests without re-derivation.
    */
   readonly routeMap: readonly RouteRule[];
+  /** Compiled public-route redirects/410s, matched ahead of `routeMap`. */
+  readonly redirects: CompiledRedirects;
   readonly rawRoutes: readonly RegisteredRawRoute[];
   readonly capabilityResolver: CapabilityResolver;
   /**
@@ -380,6 +384,11 @@ export async function buildApp(
     oauthProviders,
     schema,
     routeMap: compileRouteMap(registry),
+    redirects: assembleRedirects({
+      config: config.redirects,
+      plugin: registry.redirects,
+      theme: config.theme.redirects,
+    }),
     rawRoutes: registry.rawRoutes,
     capabilityResolver: createCapabilityResolver(registry),
     appContextExtensions,

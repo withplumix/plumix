@@ -21,6 +21,7 @@ import type {
   FilterRest,
 } from "../hooks/types.js";
 import type { I18nInput } from "../i18n/locale-registry.js";
+import type { RedirectRule } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { PlumixApp } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
@@ -79,6 +80,8 @@ export interface CreateDispatcherHarnessOptions {
    * routes, manifest projection, or plugin-registered hooks.
    */
   readonly plugins?: readonly AnyPluginDescriptor[];
+  /** Site-level `config.redirects` for exercising the public redirect stage. */
+  readonly redirects?: readonly RedirectRule[];
   /**
    * On-the-fly image delivery slot. Stub it in tests that need
    * `ctx.imageDelivery` populated (e.g. media plugin route handlers).
@@ -274,6 +277,7 @@ export async function createDispatcherHarness(
       bootstrapVia: options.bootstrapVia,
     }),
     plugins: options.plugins,
+    redirects: options.redirects,
     imageDelivery: options.imageDelivery,
     mailer: options.mailer,
     i18n: options.i18n,

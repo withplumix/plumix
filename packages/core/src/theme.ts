@@ -6,6 +6,7 @@ import type {
   ThemeTokens,
 } from "@plumix/blocks";
 
+import type { RedirectRule } from "./route/redirects.js";
 import type {
   ArchiveData,
   AuthorArchiveData,
@@ -217,6 +218,14 @@ export interface ThemeDescriptor extends TemplateDepDeclarations {
    * — the most site-specific layer wins.
    */
   readonly shortcodes?: readonly ShortcodeSpec[];
+  /**
+   * Public-route redirects the theme owns — declared statically, like
+   * {@link ThemeDescriptor.shortcodes} (themes have no setup hook). Use for
+   * URL-structure moves that belong to the theme itself (e.g. `/post/:slug` →
+   * `/blog/:slug`). These merge behind the site's `config.redirects` and
+   * plugin-registered redirects (theme loses a tie). See {@link RedirectRule}.
+   */
+  readonly redirects?: readonly RedirectRule[];
   /**
    * Paths (relative to the project root or aliased) to CSS / asset files
    * that should ship as client bundles. Mirror of Nuxt's `css: []` — the

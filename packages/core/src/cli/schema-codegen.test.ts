@@ -16,6 +16,7 @@ const baseConfig: PlumixConfig = {
   }),
   theme: defineTheme({ templates: [fallback(() => null)] }),
   plugins: [],
+  redirects: [],
   i18n: resolveLocales({ defaultLocale: "en", locales: ["en"] }),
   basePath: "",
 };
