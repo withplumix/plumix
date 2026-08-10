@@ -407,9 +407,12 @@ export const DEV_ERROR_CSS = `
   color: var(--plumix-deverr-fg);
 }
 
-/* Request / route / database / timeline / application context (#1598). */
+/* Request / route / database / timeline / application context (#1598).
+   minmax(0, 1fr) caps the column so inner overflow-x/word-break contain wide
+   SQL rows and header values instead of widening the page (#1695). */
 .plumix-dev-error__context {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
   margin-top: 2.5rem;
 }
@@ -417,6 +420,7 @@ export const DEV_ERROR_CSS = `
 /* Plugin-contributed panels (#1626) — same section language as the context. */
 .plumix-dev-error__panels {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
   margin-top: 1.5rem;
 }
@@ -480,6 +484,7 @@ export const DEV_ERROR_CSS = `
   padding: 0;
   list-style: none;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem;
 }
 
