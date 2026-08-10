@@ -1,7 +1,9 @@
 // Plugin authors and core hooks both extend these registries via TypeScript
-// module augmentation. The Vite plugin emits typed declarations from
-// `registerEntryType` / `registerTermTaxonomy` / `registerFilter` / `registerAction`
-// calls so cross-plugin autocompletion works without manual type wiring.
+// module augmentation: a `declare module` block colocated with the code that
+// fires each hook adds its name and handler signature here. Core's public hooks
+// are anchored into the published declaration graph by `./public-hooks.ts` so a
+// consumer's registry carries them (see that file and issue #1698); third-party
+// plugins augment `"plumix/plugin"` from their own modules.
 //
 // Each registry value is the handler signature for that hook name.
 
