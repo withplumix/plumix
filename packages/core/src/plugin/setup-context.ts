@@ -21,6 +21,7 @@ import type {
 } from "../hooks/types.js";
 import type { McpTool } from "../mcp/tool.js";
 import type { RouteIntent } from "../route/intent.js";
+import type { RedirectRule } from "../route/redirects.js";
 import type {
   RegisteredTemplateDep,
   TemplateDepLoader,
@@ -201,6 +202,18 @@ export interface PluginSetupContextBase {
     intent: RouteIntent,
     options?: { readonly priority?: number },
   ): void;
+
+  /**
+   * Register public-route redirects (301/302/307/308) or `410 Gone`. Matched
+   * by the dispatcher ahead of the content route map, so a redirect shadows a
+   * would-be content page. Each rule maps a `from` — an exact path, a
+   * `URLPattern` string (`:slug`, `*`), or a `RegExp` (`$1` / `$<name>`
+   * backrefs in `to`) — to a target, or supplies a `match(url)` callback for
+   * data-driven decisions. Plugin rules sit at priority 20 by default; a
+   * per-rule `priority` overrides it (lower wins). The site's own
+   * `config.redirects` and the theme's `redirects` merge into the same set.
+   */
+  registerRedirects(rules: readonly RedirectRule[]): void;
 
   /**
    * Register a whole archive type — URL pattern(s) + a resolver (+ an optional
@@ -538,6 +551,10 @@ export function createPluginSetupContext({
         priority: options?.priority ?? DEFAULT_REWRITE_RULE_PRIORITY,
         registeredBy: pluginId,
       });
+    },
+
+    registerRedirects: (rules) => {
+      registry.redirects.push(...rules);
     },
 
     registerArchiveType: (name, options) => {

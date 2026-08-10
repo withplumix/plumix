@@ -4,6 +4,7 @@ import type * as McpDispatch from "../mcp/dispatch.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RouteMatch } from "../route/match.js";
+import type { RedirectResolution } from "../route/redirects.js";
 import type { PlumixApp } from "./app.js";
 import { authenticateTraced } from "../auth/authenticator.js";
 import { readSessionCookie } from "../auth/cookies.js";
@@ -27,6 +28,7 @@ import { devErrorJson, renderDevErrorPage } from "../dev/server/render.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { exposesHierarchicalUrls } from "../route/compile.js";
 import { extractParams, matchRoute } from "../route/match.js";
+import { matchRedirect } from "../route/redirects.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
 import { canonicalRedirectTarget } from "../seo/canonical.js";
@@ -43,10 +45,12 @@ import {
 } from "./admin-shell.js";
 import {
   forbidden,
+  gone,
   jsonResponse,
   methodNotAllowed,
   notFound,
   permanentRedirect,
+  redirect,
 } from "./http.js";
 import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
@@ -499,10 +503,16 @@ async function tryPublicRoutes(
     }
   }
 
+  // Plugin/site/theme-registered redirects (301/302/307/308) and 410s. Matched
+  // ahead of both the asset-404 shortcut (so a moved image/css/js can redirect)
+  // and the content route map (so a redirect shadows a would-be page). Reserved
+  // SEO assets above (robots.txt, sitemap*.xml, feeds) still win.
+  const redirect = matchRedirect(url, app.redirects);
+  if (redirect !== null) return redirectResponse(redirect);
+
   // Asset-shaped misses (favicon.ico, /assets/* the platform's asset layer
   // didn't own) 404 cheaply before route resolution — no slug lookup, no
-  // themed render. The SEO assets above (robots.txt, sitemap*.xml) have
-  // already had their chance.
+  // themed render.
   if (STATIC_ASSET_EXT.test(pathname)) {
     return cacheableAssetNotFound("static-asset");
   }
@@ -513,6 +523,14 @@ async function tryPublicRoutes(
   if (canonical !== null) return permanentRedirect(canonical);
 
   return dispatchPublicRoute(app, ctx, url);
+}
+
+// Build the HTTP response for a matched redirect rule: a redirect status with
+// just the Location header, or a 410 for `gone`.
+function redirectResponse(resolution: RedirectResolution): Response {
+  return resolution.kind === "gone"
+    ? gone("redirect-gone")
+    : redirect(resolution.location, resolution.status);
 }
 
 // Match a `/…/feed[/atom]` request against every registered archive feed route.

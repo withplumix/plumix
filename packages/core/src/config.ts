@@ -7,6 +7,7 @@ import type { TelemetryConfig } from "./context/telemetry.js";
 import type { DebugBarInput } from "./dev/debug-bar/config.js";
 import type { I18nInput, ResolvedI18n } from "./i18n/locale-registry.js";
 import type { PluginDescriptor } from "./plugin/define.js";
+import type { RedirectRule } from "./route/redirects.js";
 import type { RuntimeAdapter } from "./runtime/adapter.js";
 import type {
   CacheProvider,
@@ -98,6 +99,13 @@ export interface PlumixConfigInput {
   readonly plugins?: readonly AnyPluginDescriptor[];
   readonly i18n?: I18nInput;
   /**
+   * The site's own public-route redirects (301/302/307/308) and `410 Gone`
+   * rules — typically legacy path→path moves at an SEO cutover. Merged ahead
+   * of plugin- and theme-contributed redirects (config wins on a tie). See
+   * {@link RedirectRule}.
+   */
+  readonly redirects?: readonly RedirectRule[];
+  /**
    * Serve the whole site under a subdirectory (`example.com/custom-directory/*`)
    * — set this when a reverse proxy mounts plumix below the domain root.
    * Mirrors Next's `basePath` / Nuxt's `app.baseURL`: a leading-slash prefix
@@ -165,6 +173,7 @@ export interface PlumixConfig {
   readonly theme: ThemeDescriptor;
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly i18n: ResolvedI18n;
+  readonly redirects: readonly RedirectRule[];
   /** Normalized subdirectory prefix (`""` for a root deployment). */
   readonly basePath: string;
   readonly mcp?: InterfaceToggle;
@@ -198,6 +207,7 @@ export function plumix(config: PlumixConfigInput): PlumixConfig {
     mailer: config.mailer,
     theme: config.theme ?? welcomeTheme,
     plugins: config.plugins ?? [],
+    redirects: config.redirects ?? [],
     i18n: resolveLocales(
       config.i18n ?? { defaultLocale: "en", locales: ["en"] },
     ),

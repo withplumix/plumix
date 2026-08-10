@@ -27,6 +27,12 @@ export function notFound(hint?: string): Response {
   return new Response("Not Found", { status: 404, headers });
 }
 
+export function gone(hint?: string): Response {
+  const headers = new Headers({ "content-type": "text/plain; charset=utf-8" });
+  if (hint) headers.set("x-plumix-hint", hint);
+  return new Response("Gone", { status: 410, headers });
+}
+
 export function methodNotAllowed(allowed: readonly string[]): Response {
   return new Response("Method Not Allowed", {
     status: 405,
@@ -53,8 +59,15 @@ export function redirectTo(
   return new Response(null, { status: 302, headers });
 }
 
+export function redirect(
+  location: string,
+  status: 301 | 302 | 307 | 308,
+): Response {
+  return new Response(null, { status, headers: { Location: location } });
+}
+
 export function permanentRedirect(location: string): Response {
-  return new Response(null, { status: 301, headers: { Location: location } });
+  return redirect(location, 301);
 }
 
 export function loginErrorRedirect(
