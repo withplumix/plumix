@@ -27,6 +27,7 @@ import type { McpTool } from "../mcp/tool.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { CustomArchiveData } from "../route/render/resolved-entry.js";
 import type { NamedTemplateChoice } from "../route/render/template-builders.js";
+import type { SitemapUrl } from "../seo/sitemap.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
 import type { PluginI18nSlot } from "./define.js";
 import type { MetaFieldCondition } from "./fields/condition.js";
@@ -1206,10 +1207,26 @@ export interface ArchiveTypeFeed {
 }
 
 /**
- * `registerArchiveType` options — a URL pattern set + resolver (+ optional feed)
- * that adds a whole archive type without patching core. The resolver returns the
- * render payload (`{ data, title }`) or `null` (404); `data` extends
- * {@link CustomArchiveData} and is typed via `ArchiveTypeRegistry`.
+ * The sitemap URL space a `registerArchiveType` archive can own. The cached
+ * output is retired by the same `entry:*` / `term:*` actions that bust the rest
+ * of the sitemap; an archive drawn from other tables should keep those actions
+ * as its own invalidation signal.
+ */
+export interface ArchiveTypeSitemap {
+  /** Published URL count — drives index pagination without a full URL scan. */
+  readonly count: (ctx: AppContext) => Promise<number> | number;
+  /** URLs for one 1-based page, windowed to `SITEMAP_PAGE_SIZE` as core expects. */
+  readonly urls: (
+    ctx: AppContext,
+    page: number,
+  ) => Promise<readonly SitemapUrl[]> | readonly SitemapUrl[];
+}
+
+/**
+ * `registerArchiveType` options — a URL pattern set + resolver (+ optional feed
+ * and sitemap) that adds a whole archive type without patching core. The
+ * resolver returns the render payload (`{ data, title }`) or `null` (404);
+ * `data` extends {@link CustomArchiveData} and is typed via `ArchiveTypeRegistry`.
  */
 export interface ArchiveTypeOptions {
   /** URLPattern pathnames that dispatch to this archive (`/events/:series`). */
@@ -1221,6 +1238,8 @@ export interface ArchiveTypeOptions {
     params: Record<string, string>,
   ) => Promise<CustomArchiveResolution | null> | CustomArchiveResolution | null;
   readonly feed?: ArchiveTypeFeed;
+  /** Fold this archive into the native sitemap index (`/sitemap-<name>-<page>.xml`); absent otherwise. */
+  readonly sitemap?: ArchiveTypeSitemap;
 }
 
 export interface RegisteredArchiveType extends ArchiveTypeOptions {
