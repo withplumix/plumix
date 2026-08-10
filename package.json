@@ -43,7 +43,7 @@
     "@types/node": "catalog:",
     "knip": "^6.24.0",
     "pkg-pr-new": "^0.0.75",
-    "turbo": "^2.10.3"
+    "turbo": "^2.10.8"
   },
   "pnpm": {
     "overrides": {

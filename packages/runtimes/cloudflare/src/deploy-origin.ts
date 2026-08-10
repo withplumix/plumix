@@ -31,8 +31,12 @@ export interface DeployOrigin {
  * previews.
  */
 export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
+  // @cloudflare/workers-types declares a global `process: any` that shadows
+  // @types/node's typed global (both are in this package's tsconfig `types`),
+  // so read the build-time Workers Builds env through a typed view.
+  const env = readEnv();
   const localOrigin = input.localOrigin ?? "http://localhost:8787";
-  if (process.env.WORKERS_CI !== "1") {
+  if (env.WORKERS_CI !== "1") {
     return { rpId: "localhost", origin: localOrigin };
   }
   const defaultBranch = input.defaultBranch ?? "main";
@@ -41,13 +45,17 @@ export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
   // an empty value as "the default branch" keeps production CSRF
   // working instead of falling back to localhost (which would fail
   // every deployed request).
-  const raw = (process.env.WORKERS_CI_BRANCH ?? "").trim();
+  const raw = (env.WORKERS_CI_BRANCH ?? "").trim();
   const branch = raw === "" ? defaultBranch : raw;
   const isProduction = branch === defaultBranch;
   const host = isProduction
     ? `${input.workerName}.${input.accountSubdomain}.workers.dev`
     : `${sanitizeBranch(branch)}-${input.workerName}.${input.accountSubdomain}.workers.dev`;
   return { rpId: host, origin: `https://${host}` };
+}
+
+function readEnv(): Record<string, string | undefined> {
+  return (process as { env: Record<string, string | undefined> }).env;
 }
 
 // Cloudflare lowercases branch names and replaces non-alphanumerics

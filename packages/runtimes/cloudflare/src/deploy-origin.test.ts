@@ -4,20 +4,24 @@ import { cloudflareDeployOrigin } from "./deploy-origin.js";
 
 const ENV_KEYS = ["WORKERS_CI", "WORKERS_CI_BRANCH"] as const;
 
+// @cloudflare/workers-types declares a global `process: any`; cast to a typed
+// view so env reads/writes here stay type-safe.
+const env = (process as { env: Record<string, string | undefined> }).env;
+
 describe("cloudflareDeployOrigin", () => {
   const saved: Record<string, string | undefined> = {};
 
   beforeEach(() => {
     for (const key of ENV_KEYS) {
-      saved[key] = process.env[key];
-      delete process.env[key];
+      saved[key] = env[key];
+      delete env[key];
     }
   });
 
   afterEach(() => {
     for (const key of ENV_KEYS) {
-      if (saved[key] === undefined) delete process.env[key];
-      else process.env[key] = saved[key];
+      if (saved[key] === undefined) delete env[key];
+      else env[key] = saved[key];
     }
   });
 
@@ -41,8 +45,8 @@ describe("cloudflareDeployOrigin", () => {
   });
 
   test("returns the bare worker URL on the default branch", () => {
-    process.env.WORKERS_CI = "1";
-    process.env.WORKERS_CI_BRANCH = "main";
+    env.WORKERS_CI = "1";
+    env.WORKERS_CI_BRANCH = "main";
 
     expect(
       cloudflareDeployOrigin({
@@ -56,8 +60,8 @@ describe("cloudflareDeployOrigin", () => {
   });
 
   test("respects a non-default `defaultBranch`", () => {
-    process.env.WORKERS_CI = "1";
-    process.env.WORKERS_CI_BRANCH = "trunk";
+    env.WORKERS_CI = "1";
+    env.WORKERS_CI_BRANCH = "trunk";
 
     expect(
       cloudflareDeployOrigin({
@@ -69,8 +73,8 @@ describe("cloudflareDeployOrigin", () => {
   });
 
   test("constructs a sanitized preview URL on a feature branch", () => {
-    process.env.WORKERS_CI = "1";
-    process.env.WORKERS_CI_BRANCH = "feat/bundle-drizzle-kit";
+    env.WORKERS_CI = "1";
+    env.WORKERS_CI_BRANCH = "feat/bundle-drizzle-kit";
 
     expect(
       cloudflareDeployOrigin({
@@ -84,8 +88,8 @@ describe("cloudflareDeployOrigin", () => {
   });
 
   test("normalizes uppercase + special chars in branch names", () => {
-    process.env.WORKERS_CI = "1";
-    process.env.WORKERS_CI_BRANCH = "Feat/Foo_Bar.Baz";
+    env.WORKERS_CI = "1";
+    env.WORKERS_CI_BRANCH = "Feat/Foo_Bar.Baz";
 
     expect(
       cloudflareDeployOrigin({
@@ -96,8 +100,8 @@ describe("cloudflareDeployOrigin", () => {
   });
 
   test("treats empty WORKERS_CI_BRANCH as the default branch (production)", () => {
-    process.env.WORKERS_CI = "1";
-    process.env.WORKERS_CI_BRANCH = "";
+    env.WORKERS_CI = "1";
+    env.WORKERS_CI_BRANCH = "";
 
     expect(
       cloudflareDeployOrigin({
@@ -108,8 +112,8 @@ describe("cloudflareDeployOrigin", () => {
   });
 
   test("treats missing WORKERS_CI_BRANCH as the default branch (production)", () => {
-    process.env.WORKERS_CI = "1";
-    delete process.env.WORKERS_CI_BRANCH;
+    env.WORKERS_CI = "1";
+    delete env.WORKERS_CI_BRANCH;
 
     expect(
       cloudflareDeployOrigin({
@@ -120,8 +124,8 @@ describe("cloudflareDeployOrigin", () => {
   });
 
   test("trims whitespace from WORKERS_CI_BRANCH", () => {
-    process.env.WORKERS_CI = "1";
-    process.env.WORKERS_CI_BRANCH = "  main\n";
+    env.WORKERS_CI = "1";
+    env.WORKERS_CI_BRANCH = "  main\n";
 
     expect(
       cloudflareDeployOrigin({
