@@ -1,5 +1,81 @@
 # plumix
 
+## 0.12.0
+
+### Minor Changes
+
+- [#1680](https://github.com/withplumix/plumix/pull/1680) [`b124789`](https://github.com/withplumix/plumix/commit/b1247897f2044ad4e7f975ce2d0b8294fd0939af) Thanks [@nasyrov](https://github.com/nasyrov)! - Install the dev-only client error tools from one core-owned entry point.
+
+  The island error dialog, the browser-errors-to-terminal forwarder, and the
+  compile/import error overlay are now installed from a single browser-safe
+  `@plumix/core/dev-client` export (reached through the `plumix` package as
+  `plumix/core/dev-client`), which the generated client bootstrap calls behind the
+  `import.meta.hot` dev gate. `@plumix/blocks`'s island runtime no longer installs
+  any overlay or forwarder — it only hydrates islands and dispatches the
+  `plumix:island-*` events the core-installed dialog listens for. The dependency
+  runs core → blocks (no cycle), and nothing in `@plumix/blocks` outside its
+  `dev-error/` implementation imports dev-error.
+
+  This is behind the existing `PLUMIX_DEV` / `import.meta.hot` gates, so it
+  tree-shakes out of production exactly as before: an island hydration mismatch
+  still shows the dialog, a Vite compile error still shows the overlay, and client
+  errors still forward to the terminal — now all wired from one place.
+
+  The `plumix/blocks/dev-error` subpath — an internal wiring seam the generated
+  client bootstrap used to reach the compile overlay — is removed, since install
+  now goes through `plumix/core/dev-client`. The dev-error implementations
+  themselves remain in `@plumix/blocks` and are unaffected.
+
+- [#1706](https://github.com/withplumix/plumix/pull/1706) [`6da618c`](https://github.com/withplumix/plumix/commit/6da618c216924fa966cb735ef33c16451383b4b0) Thanks [@nasyrov](https://github.com/nasyrov)! - Add a `plumix/db` (`@plumix/core/db`) subpath and complete the direct-write toolkit.
+
+  A plugin running a bulk-ingest pipeline writes directly to `ctx.db`, which
+  bypasses core's entry-mutation service — so no `entry:*`/`term:*` action fires
+  and core's edge-cache purge invalidator never runs, leaving the public archive
+  and permalinks stale until TTL. Making that path first-class needed two things
+  the public API didn't expose:
+
+  - **The edge-cache tag vocabulary.** `typeTag`, `entryTag`, `entryPurgeTags`,
+    `termPurgeTags`, and `enqueuePurgeTags` are now exported, so a direct-write
+    plugin can enqueue the same coarse `t:<type>`/`e:<id>` tags core would —
+    `enqueuePurgeTags(ctx, entryPurgeTags(type, id))` — for the post-request /
+    scheduled flush, instead of hand-restating the scheme (PRD [#1080](https://github.com/withplumix/plumix/issues/1080)) and drifting
+    when it changes.
+  - **The Drizzle table-introspection helpers.** `getTableColumns`, `getTableName`,
+    and `is` live on the `drizzle-orm` root rather than its `/sql` subpath, so they
+    weren't reachable through core. `getTableColumns` in particular is how a bulk
+    `onConflictDoUpdate` derives its set clause — without it a plugin had to add
+    its own `drizzle-orm` dependency (which can drift from core's pinned version).
+
+  The new `plumix/db` / `@plumix/core/db` subpath groups the whole toolkit — query
+  operators, schema tables, introspection helpers, and the purge vocabulary — in
+  one import so a direct-write plugin never needs its own `drizzle-orm`
+  dependency. Everything is also reachable from the flat package root.
+
+### Patch Changes
+
+- [#1704](https://github.com/withplumix/plumix/pull/1704) [`56e416a`](https://github.com/withplumix/plumix/commit/56e416af8e753cc07cd0f87a26af4ef0c6fc343c) Thanks [@nasyrov](https://github.com/nasyrov)! - Fix `IslandPropSerializationError: Cyclic reference` when a `"use client"` island
+  renders a shared client primitive such as a Radix/shadcn context component (e.g.
+  `Tabs`).
+
+  Island props are now serialized exactly once, at the outermost boundary. A
+  `"use client"` component becomes an island when it carries an explicit hydration
+  directive (`client=…`) or is the outermost such component in the render; a
+  non-directive `"use client"` component rendered inside an island now renders
+  inline (bundled into the parent island) instead of becoming its own island and
+  re-serializing props. This stops the serializer from walking the cyclic React
+  Context objects that libraries like Radix thread through their internals.
+
+  Components passed into an island as `children`/slots still become their own
+  island and hydrate independently, and intentional nested islands (an explicit
+  `client=` directive) are unchanged.
+
+- Updated dependencies [[`c5facfe`](https://github.com/withplumix/plumix/commit/c5facfee050d3f5880de31dc6866dd48c4ac3d41), [`665a57b`](https://github.com/withplumix/plumix/commit/665a57b421fc2f82dcf0dad7d0a89e2497557959), [`c74ca2f`](https://github.com/withplumix/plumix/commit/c74ca2ffc069209d543e5d606a2ded8b22245a1e), [`b124789`](https://github.com/withplumix/plumix/commit/b1247897f2044ad4e7f975ce2d0b8294fd0939af), [`30f287e`](https://github.com/withplumix/plumix/commit/30f287e72470efd50ce4e95183c4f7e89f8e0843), [`88b6db2`](https://github.com/withplumix/plumix/commit/88b6db2b94c94a0a9c12f4d8cb84289f28cd7558), [`6da618c`](https://github.com/withplumix/plumix/commit/6da618c216924fa966cb735ef33c16451383b4b0), [`56e416a`](https://github.com/withplumix/plumix/commit/56e416af8e753cc07cd0f87a26af4ef0c6fc343c), [`05ea95c`](https://github.com/withplumix/plumix/commit/05ea95c65a798ea2b74b7b3f3f533471aa4a483e), [`66bce99`](https://github.com/withplumix/plumix/commit/66bce99343595168a13272b947cebb074aa30650), [`fff6e4a`](https://github.com/withplumix/plumix/commit/fff6e4a134e03a6fa1276c8d0d3d23c8cd7e134a), [`5785f19`](https://github.com/withplumix/plumix/commit/5785f19862495b1c445640fbc58a3210d6b0c2ff)]:
+  - @plumix/core@0.12.0
+  - @plumix/blocks@0.12.0
+  - @plumix/admin-editor@0.12.0
+  - @plumix/admin@0.12.0
+  - @plumix/admin-ui@0.12.0
+
 ## 0.11.0
 
 ### Patch Changes

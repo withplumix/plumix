@@ -1,5 +1,70 @@
 # @plumix/blocks
 
+## 0.12.0
+
+### Minor Changes
+
+- [#1730](https://github.com/withplumix/plumix/pull/1730) [`fff6e4a`](https://github.com/withplumix/plumix/commit/fff6e4a134e03a6fa1276c8d0d3d23c8cd7e134a) Thanks [@nasyrov](https://github.com/nasyrov)! - Add optional per-entry-type scoping for editor blocks.
+
+  Blocks registered via `ctx.registerBlock` were global — offered in every entry
+  type's inserter — and the only lever was `inserter: false`, which hides a block
+  from _every_ palette. There was no way to offer a block for one entry type and
+  nowhere else.
+
+  A block spec can now declare an optional `entryTypes` allow-list:
+
+  ```ts
+  defineBlock({ name: "eduscope/hero", entryTypes: ["school"], render });
+  ```
+
+  Unset = every type (the unchanged default, so nothing changes for existing
+  blocks); set = the block appears only in those entry types' inserters, and is
+  hidden when the entry type doesn't match or is unknown. This mirrors the existing
+  `PatternSpec.entryTypes` scoping. It constrains only the editor's
+  available-blocks palette — the render registry stays global and save-time
+  validation is untouched, so a block already stored on an entry still renders and
+  still validates regardless of the type it lives on.
+
+### Patch Changes
+
+- [#1680](https://github.com/withplumix/plumix/pull/1680) [`b124789`](https://github.com/withplumix/plumix/commit/b1247897f2044ad4e7f975ce2d0b8294fd0939af) Thanks [@nasyrov](https://github.com/nasyrov)! - Install the dev-only client error tools from one core-owned entry point.
+
+  The island error dialog, the browser-errors-to-terminal forwarder, and the
+  compile/import error overlay are now installed from a single browser-safe
+  `@plumix/core/dev-client` export (reached through the `plumix` package as
+  `plumix/core/dev-client`), which the generated client bootstrap calls behind the
+  `import.meta.hot` dev gate. `@plumix/blocks`'s island runtime no longer installs
+  any overlay or forwarder — it only hydrates islands and dispatches the
+  `plumix:island-*` events the core-installed dialog listens for. The dependency
+  runs core → blocks (no cycle), and nothing in `@plumix/blocks` outside its
+  `dev-error/` implementation imports dev-error.
+
+  This is behind the existing `PLUMIX_DEV` / `import.meta.hot` gates, so it
+  tree-shakes out of production exactly as before: an island hydration mismatch
+  still shows the dialog, a Vite compile error still shows the overlay, and client
+  errors still forward to the terminal — now all wired from one place.
+
+  The `plumix/blocks/dev-error` subpath — an internal wiring seam the generated
+  client bootstrap used to reach the compile overlay — is removed, since install
+  now goes through `plumix/core/dev-client`. The dev-error implementations
+  themselves remain in `@plumix/blocks` and are unaffected.
+
+- [#1704](https://github.com/withplumix/plumix/pull/1704) [`56e416a`](https://github.com/withplumix/plumix/commit/56e416af8e753cc07cd0f87a26af4ef0c6fc343c) Thanks [@nasyrov](https://github.com/nasyrov)! - Fix `IslandPropSerializationError: Cyclic reference` when a `"use client"` island
+  renders a shared client primitive such as a Radix/shadcn context component (e.g.
+  `Tabs`).
+
+  Island props are now serialized exactly once, at the outermost boundary. A
+  `"use client"` component becomes an island when it carries an explicit hydration
+  directive (`client=…`) or is the outermost such component in the render; a
+  non-directive `"use client"` component rendered inside an island now renders
+  inline (bundled into the parent island) instead of becoming its own island and
+  re-serializing props. This stops the serializer from walking the cyclic React
+  Context objects that libraries like Radix thread through their internals.
+
+  Components passed into an island as `children`/slots still become their own
+  island and hydrate independently, and intentional nested islands (an explicit
+  `client=` directive) are unchanged.
+
 ## 0.11.0
 
 ### Minor Changes

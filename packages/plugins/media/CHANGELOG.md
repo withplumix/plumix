@@ -1,5 +1,41 @@
 # @plumix/plugin-media
 
+## 0.4.0
+
+### Minor Changes
+
+- [#1709](https://github.com/withplumix/plumix/pull/1709) [`66bce99`](https://github.com/withplumix/plumix/commit/66bce99343595168a13272b947cebb074aa30650) Thanks [@nasyrov](https://github.com/nasyrov)! - Add per-entity OpenGraph `og:image` from a featured media field.
+
+  Theme and plugin authors can mark a media field `media("hero").featured()` (the
+  entry's representative image) or `media("share").ogImage()` (an explicit
+  social-share override). Public entry pages now emit a per-entity `og:image` —
+  resolved as the `ogImage`-role field → the `featured`-role field → the existing
+  site-wide `default_og_image` — and upgrade the Twitter card to
+  `summary_large_image`, instead of only the single site default. The field name is
+  free; the role is what core keys on, and it reads the hydrated media reference
+  structurally so core takes no dependency on `@plumix/plugin-media`.
+
+  `buildManifest` rejects an entry type with more than one `featured` field, and any
+  role-tagged field that stores multiple values, so a per-entity `og:image` always
+  resolves to one deterministic image. The Cloudflare edge SVG→PNG rasterization
+  path and storage-backed serve route are tracked separately ([#1708](https://github.com/withplumix/plumix/issues/1708)).
+
+### Patch Changes
+
+- [#1731](https://github.com/withplumix/plumix/pull/1731) [`c5facfe`](https://github.com/withplumix/plumix/commit/c5facfee050d3f5880de31dc6866dd48c4ac3d41) Thanks [@nasyrov](https://github.com/nasyrov)! - Augment the public `plumix` specifier instead of the `plumix/plugin` subpath.
+
+  These plugins declared their `TemplateDepRegistry`, `ReferenceHydrationShapes`,
+  `FilterRegistry`, `ActionRegistry`, and `AppContextExtensions` contributions via
+  `declare module "plumix/plugin"`. A theme augmenting a registry through the root
+  `plumix` specifier (the documented convention, [#1691](https://github.com/withplumix/plumix/issues/1691)) would not co-merge with a
+  `plumix/plugin` augmentation of the same interface — declaration merging
+  fractures across specifiers, dropping one side's keys. All augmentations now
+  target `declare module "plumix"` so themes and plugins share one merged view.
+
+  No runtime or public-API change: the plugins' value imports still come from
+  `plumix/plugin`, and consumers read the contributed kinds through the same
+  `defineTemplate` / reference-field surfaces as before.
+
 ## 0.3.0
 
 ### Minor Changes
