@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { defineBlock } from "@plumix/blocks";
@@ -1469,6 +1470,103 @@ describe("dispatcher — embedded reference cache tags (#1508)", () => {
     expect(put).toHaveBeenCalledOnce();
     const tags = (put.mock.calls[0] as unknown[])[2] as readonly string[];
     expect(tags).toEqual(["t:post", `e:${String(plain.id)}`]);
+  });
+});
+
+describe("dispatcher — custom-archive edge cache (#1693)", () => {
+  function cacheStub(hit?: Response) {
+    const match = vi.fn(() => Promise.resolve(hit));
+    const put = vi.fn(() => Promise.resolve());
+    const purgeTags = vi.fn(() => Promise.resolve());
+    return { cache: { match, put, purgeTags }, match, put };
+  }
+
+  // A theme that renders any custom-archive node to a 200 so the store path
+  // is reachable; real themes narrow via `forArchiveType(name)`.
+  const customTheme = defineTheme({
+    templates: [
+      fallback(({ data }) =>
+        data.kind === "custom"
+          ? createElement("h1", null, `${data.name} archive`)
+          : null,
+      ),
+    ],
+  });
+
+  // A plugin-registered archive that opted into caching and contributes the
+  // type tags of the content it lists.
+  const cacheableSchools = definePlugin("schools-archive", (ctx) => {
+    ctx.registerArchiveType("schools", {
+      routes: ["/schools/:location"],
+      cacheable: true,
+      resolve: (_ctx, params) => ({
+        data: { kind: "custom", name: "schools", location: params.location },
+        title: `Schools in ${params.location}`,
+        tags: ["t:school", "t:location"],
+      }),
+    });
+  });
+
+  // The same archive, left at the default (opted out of caching).
+  const uncachedSchools = definePlugin("schools-archive", (ctx) => {
+    ctx.registerArchiveType("schools", {
+      routes: ["/schools/:location"],
+      resolve: (_ctx, params) => ({
+        data: { kind: "custom", name: "schools", location: params.location },
+        title: `Schools in ${params.location}`,
+      }),
+    });
+  });
+
+  test("stores an opted-in custom archive's rendered response on a miss", async () => {
+    const { cache, put } = cacheStub();
+    const h = await createDispatcherHarness({
+      plugins: [cacheableSchools],
+      theme: customTheme,
+      cache,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/schools/london"),
+    );
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    expect(put).toHaveBeenCalledOnce();
+  });
+
+  test("stores it under the type tags the resolver contributed", async () => {
+    const { cache, put } = cacheStub();
+    const h = await createDispatcherHarness({
+      plugins: [cacheableSchools],
+      theme: customTheme,
+      cache,
+    });
+
+    await h.dispatch(new Request("https://cms.example/schools/london"));
+    await h.drainDeferred();
+
+    const tags = (put.mock.calls[0] as unknown[])[2] as readonly string[];
+    expect(tags).toContain("t:school");
+    expect(tags).toContain("t:location");
+  });
+
+  test("bypasses a custom archive that did not opt into caching", async () => {
+    const { cache, match, put } = cacheStub();
+    const h = await createDispatcherHarness({
+      plugins: [uncachedSchools],
+      theme: customTheme,
+      cache,
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/schools/london"),
+    );
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
   });
 });
 

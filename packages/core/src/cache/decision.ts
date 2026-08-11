@@ -19,6 +19,14 @@ interface CacheableRequest {
    */
   readonly isPrivileged: boolean;
   readonly intentKind: RouteIntent["kind"];
+  /**
+   * For a `custom` (plugin-registered) archive, whether it opted into edge
+   * caching via `registerArchiveType({ cacheable: true })`. Core can't know a
+   * custom archive's content dependencies, so it caches only on this opt-in.
+   * Ignored for the built-in intents, whose cacheability is fixed by
+   * {@link CACHEABLE_INTENTS}.
+   */
+  readonly customArchiveCacheable?: boolean;
 }
 
 /**
@@ -50,7 +58,13 @@ export function cacheBypassReason(
 ): CacheBypassReason | null {
   if (req.method !== "GET" && req.method !== "HEAD") return "method";
   if (req.isPrivileged) return "privileged";
-  return CACHEABLE_INTENTS.has(req.intentKind) ? null : "intent";
+  // A custom archive caches only on its explicit opt-in; the built-in intents
+  // are fixed by CACHEABLE_INTENTS.
+  const cacheable =
+    req.intentKind === "custom"
+      ? req.customArchiveCacheable === true
+      : CACHEABLE_INTENTS.has(req.intentKind);
+  return cacheable ? null : "intent";
 }
 
 /**

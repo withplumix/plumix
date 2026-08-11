@@ -22,6 +22,7 @@ import type {
 } from "./render/resolved-entry.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
+import { accumulateEmbeddedTags } from "../cache/embedded-tags.js";
 import {
   and,
   desc,
@@ -569,6 +570,13 @@ async function resolveCustom(
 
   const result = await archive.resolve(ctx, params);
   if (result === null) return notFound("public-custom-archive-not-found");
+
+  // Contribute the archive's cache tags through the same per-request
+  // accumulator the public read-through folds into the stored response's
+  // tags (#1508). A publish of any listed type then purges this page — the
+  // coarse invalidation the built-in archives get. Only consumed when the
+  // archive opted into caching (`cacheable`); harmless otherwise.
+  if (result.tags) accumulateEmbeddedTags(ctx, result.tags);
 
   const html = await renderThroughTheme({
     ctx,
