@@ -108,6 +108,48 @@ describe("readThrough", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
+  it("stores a custom archive that opted into caching", async () => {
+    const { cache, match, put } = spies();
+    const fresh = new Response("listing", { status: 200 });
+    const render = vi.fn(() => Promise.resolve(fresh));
+
+    await readThrough({
+      request: GET(),
+      intentKind: "custom",
+      customArchiveCacheable: true,
+      cache,
+      defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
+      render,
+      tags: () => ["t:school"],
+    });
+
+    expect(match).toHaveBeenCalledOnce();
+    expect(put).toHaveBeenCalledOnce();
+    expect(put.mock.calls[0]?.[2]).toEqual(["t:school"]);
+  });
+
+  it("bypasses a custom archive that did not opt into caching", async () => {
+    const { cache, match, put } = spies();
+    const render = vi.fn(() =>
+      Promise.resolve(new Response("listing", { status: 200 })),
+    );
+
+    await readThrough({
+      request: GET(),
+      intentKind: "custom",
+      cache,
+      defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
+      render,
+      tags: noTags,
+    });
+
+    expect(render).toHaveBeenCalledOnce();
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+  });
+
   it("does not store a non-200 render", async () => {
     const { cache, match, put } = spies();
     const render = vi.fn(() =>

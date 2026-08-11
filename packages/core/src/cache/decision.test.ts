@@ -45,6 +45,57 @@ describe("cacheBypassReason", () => {
     ).toBe("intent");
   });
 
+  it("bypasses a custom archive that has not opted into caching", () => {
+    expect(
+      cacheBypassReason({
+        method: "GET",
+        isPrivileged: false,
+        intentKind: "custom",
+      }),
+    ).toBe("intent");
+    expect(
+      cacheBypassReason({
+        method: "GET",
+        isPrivileged: false,
+        intentKind: "custom",
+        customArchiveCacheable: false,
+      }),
+    ).toBe("intent");
+  });
+
+  it("caches a custom archive that opted in via cacheable: true", () => {
+    expect(
+      cacheBypassReason({
+        method: "GET",
+        isPrivileged: false,
+        intentKind: "custom",
+        customArchiveCacheable: true,
+      }),
+    ).toBe(null);
+  });
+
+  it("still bypasses an opted-in custom archive when the request is privileged", () => {
+    expect(
+      cacheBypassReason({
+        method: "GET",
+        isPrivileged: true,
+        intentKind: "custom",
+        customArchiveCacheable: true,
+      }),
+    ).toBe("privileged");
+  });
+
+  it("still bypasses an opted-in custom archive on a non-GET/HEAD method", () => {
+    expect(
+      cacheBypassReason({
+        method: "POST",
+        isPrivileged: false,
+        intentKind: "custom",
+        customArchiveCacheable: true,
+      }),
+    ).toBe("method");
+  });
+
   it("bypasses non-GET/HEAD methods", () => {
     expect(
       cacheBypassReason({

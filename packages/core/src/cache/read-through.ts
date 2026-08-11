@@ -15,6 +15,12 @@ interface ReadThroughArgs {
    * route (a 404) — in which case the cache is never consulted.
    */
   readonly intentKind: RouteIntent["kind"] | null;
+  /**
+   * When `intentKind` is `"custom"`, whether that plugin-registered archive
+   * opted into edge caching. The dispatcher resolves it from the archive-type
+   * registry so the pure decision layer stays free of the lookup.
+   */
+  readonly customArchiveCacheable?: boolean;
   readonly cache: ConnectedCache;
   readonly defer: DeferFn;
   /** Records the cache decision + reason as a durationless `cache` fact. */
@@ -45,6 +51,7 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
           method: request.method,
           isPrivileged: requestIsPrivileged(request),
           intentKind,
+          customArchiveCacheable: args.customArchiveCacheable,
         });
   if (reason !== null) {
     telemetry.record("cache", { decision: "bypass", reason });

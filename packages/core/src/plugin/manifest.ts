@@ -1194,6 +1194,14 @@ export interface RegisteredRewriteRule {
 export interface CustomArchiveResolution {
   readonly data: CustomArchiveData;
   readonly title: string;
+  /**
+   * Edge-cache tags for the content this archive lists — typically `t:<type>`
+   * for each entry type it draws from (see {@link typeTag}). When the archive
+   * is `cacheable`, a publish of any listed type purges the stored page, the
+   * same coarse invalidation the built-in archives get. Ignored when the
+   * archive hasn't opted into caching.
+   */
+  readonly tags?: readonly string[];
 }
 
 /** The RSS/Atom feed a `registerArchiveType` archive can own. */
@@ -1234,6 +1242,14 @@ export interface ArchiveTypeOptions {
   readonly routes: readonly string[];
   /** Route priority (lower wins); defaults to the rewrite-rule priority. */
   readonly priority?: number;
+  /**
+   * Opt this archive's anonymous GET renders into the built-in edge cache.
+   * Off by default: core can't know a custom archive's content dependencies,
+   * so caching without a tag contribution would risk stale pages. Pair with a
+   * `tags` contribution from {@link CustomArchiveResolution.tags} so a publish
+   * of the listed types purges the archive the way built-in archives are.
+   */
+  readonly cacheable?: boolean;
   readonly resolve: (
     ctx: AppContext,
     params: Record<string, string>,

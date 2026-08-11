@@ -593,6 +593,13 @@ async function dispatchPublicRoute(
   return readThrough({
     request: ctx.request,
     intentKind: intent?.kind ?? null,
+    // A custom archive caches only when it opted in via `registerArchiveType
+    // ({ cacheable: true })`. Resolved here so the pure decision layer stays
+    // free of the registry lookup.
+    customArchiveCacheable:
+      intent?.kind === "custom"
+        ? ctx.plugins.archiveTypes.get(intent.name)?.cacheable === true
+        : undefined,
     cache,
     defer: ctx.defer,
     telemetry: ctx.telemetry,
