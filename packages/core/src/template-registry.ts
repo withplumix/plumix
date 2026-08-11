@@ -12,7 +12,7 @@ import type {
  * `entry` projection degrades to the base `ResolvedEntry`.
  *
  * ```ts
- * declare module "@plumix/core" {
+ * declare module "plumix" {
  *   interface EntryTypeRegistry {
  *     product: { entry: Product };
  *   }
@@ -29,6 +29,14 @@ export interface EntryTypeRegistry {
  * Carries the term shape (`data.term`), not the archive entries — a taxonomy
  * can span multiple entry types, so `data.entries` stays the base
  * `ResolvedEntry[]`, narrowable per-template.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface TermTaxonomyRegistry {
+ *     genre: { term: Genre };
+ *   }
+ * }
+ * ```
  */
 export interface TermTaxonomyRegistry {
   category: { term: ResolvedTerm };
@@ -43,7 +51,7 @@ export interface TermTaxonomyRegistry {
  * `data` projection degrades to the base.
  *
  * ```ts
- * declare module "@plumix/core" {
+ * declare module "plumix" {
  *   interface ArchiveTypeRegistry {
  *     "event-series": { data: EventSeriesData };
  *   }

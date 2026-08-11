@@ -3,7 +3,7 @@
 // fires each hook adds its name and handler signature here. Core's public hooks
 // are anchored into the published declaration graph by `./public-hooks.ts` so a
 // consumer's registry carries them (see that file and issue #1698); third-party
-// plugins augment `"plumix/plugin"` from their own modules.
+// plugins augment `"plumix"` from their own modules.
 //
 // Each registry value is the handler signature for that hook name.
 

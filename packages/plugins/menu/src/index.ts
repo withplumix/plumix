@@ -100,7 +100,7 @@ const APPEARANCE_LABEL: Label = {
 // in the project's `node_modules`. The eligibility flags are read at
 // admin time by the eligibility resolver (`getEligibleMenuKinds`);
 // the hooks are fired by `getMenuByName` and `menu.save`.
-declare module "plumix/plugin" {
+declare module "plumix" {
   interface EntryTypeOptions {
     /**
      * Whether this entry type appears in the menu plugin's item picker.

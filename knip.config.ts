@@ -28,7 +28,12 @@ const config: KnipConfig = {
       // array, not a static import knip can follow. tailwindcss and the
       // typography plugin are consumed through `@import`/`@plugin` in that
       // stylesheet, not a TS import.
-      ignore: ["theme/styles.css"],
+      //
+      // theme/augmentation-guard.ts is a typecheck-only regression guard for
+      // the public `plumix` augmentation surface (issue #1691). It is
+      // deliberately never imported — it exists to be type-checked — so knip
+      // reads it as unused.
+      ignore: ["theme/styles.css", "theme/augmentation-guard.ts"],
       ignoreDependencies: ["@tailwindcss/typography", "tailwindcss"],
       // e2e/playwright.config.ts imports `plumix/test/playwright` whose dist
       // may not exist on a cold clone; disable the plugin and list the spec as

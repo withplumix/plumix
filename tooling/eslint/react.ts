@@ -2,7 +2,10 @@ import reactPlugin from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig } from "eslint/config";
 
-import { NO_THROW_NEW_ERROR_SELECTOR } from "./base.js";
+import {
+  NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
+  NO_THROW_NEW_ERROR_SELECTOR,
+} from "./base.js";
 
 // Physical CSS classes don't auto-flip under `<html dir="rtl">`. `pl-4` stays
 // padding-left in every locale, while `ps-4` resolves to start-side per
@@ -50,6 +53,7 @@ export const reactConfig = defineConfig(
         "error",
         NO_THROW_NEW_ERROR_SELECTOR,
         NO_PHYSICAL_CLASSES_SELECTOR,
+        NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
       ],
     },
   },

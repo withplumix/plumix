@@ -2,6 +2,7 @@ import type { Linter } from "eslint";
 
 import {
   baseConfig,
+  NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
   NO_THROW_NEW_ERROR_SELECTOR,
   noInternalImports,
 } from "./base.js";
@@ -43,6 +44,7 @@ export function pluginConfig(): readonly Linter.Config[] {
           "error",
           NO_THROW_NEW_ERROR_SELECTOR,
           NO_IMPERATIVE_REGISTER_PLUGIN_PAGE_SELECTOR,
+          NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
         ],
       },
     },

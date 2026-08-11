@@ -1,9 +1,13 @@
+// Types come from the root `plumix` specifier — the same module this file
+// augments below (`declare module "plumix"`). Importing them here keeps the
+// augmentation target loaded in the plugin's own build. The db runtime stays
+// on the `plumix/plugin` subpath.
 import type {
   HydratedReference,
   LookupAdapter,
   LookupResult,
   SQL,
-} from "plumix/plugin";
+} from "plumix";
 import { and, desc, entries, eq, inArray, like, sql } from "plumix/plugin";
 
 import { parseMediaMeta } from "./meta.js";
@@ -54,7 +58,7 @@ export interface MediaReference extends HydratedReference {
   readonly height: number | null;
 }
 
-declare module "plumix/plugin" {
+declare module "plumix" {
   interface ReferenceHydrationShapes {
     readonly media: MediaReference;
   }

@@ -72,7 +72,7 @@ function decodeCursor(cursor: string | null | undefined): RootCursor | null {
 // Lives alongside the exported `ResolvedThread` (not the plugin entry) so
 // a theme importing the type from `./server` pulls the `comments` dep kind
 // into its `TemplateDepRegistry` too.
-declare module "plumix/plugin" {
+declare module "plumix" {
   interface TemplateDepRegistry {
     comments: { slug: string; result: ResolvedThread };
   }

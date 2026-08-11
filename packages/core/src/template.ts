@@ -19,9 +19,17 @@ const PLUMIX_TEMPLATE_BRAND: unique symbol = Symbol("plumix.template");
  * The framework loads each declared dep in parallel per request and
  * passes results into render.
  *
- * Each entry shape: `{ slug: string; result: ResultType }`. Augment via
- * declaration merging — see `core` registering `settings` for the
- * canonical example.
+ * Each entry shape: `{ slug: string; result: ResultType }`. A plugin
+ * registers its kind via declaration merging (`core` registers `settings`
+ * the same way):
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface TemplateDepRegistry {
+ *     menu: { slug: string; result: ResolvedMenu };
+ *   }
+ * }
+ * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional augmentation seam
 export interface TemplateDepRegistry {}

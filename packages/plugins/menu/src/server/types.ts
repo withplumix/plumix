@@ -81,7 +81,7 @@ export interface ResolvedMenu {
 
 // Lives here (not main entry) so themes pulling /server types pick
 // up the augmentation without a side-effect import on the main entry.
-declare module "plumix/plugin" {
+declare module "plumix" {
   interface TemplateDepRegistry {
     menus: { slug: string; result: ResolvedMenu };
   }
