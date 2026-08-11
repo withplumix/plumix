@@ -9,11 +9,20 @@ import {
 } from "../../test/fixtures/webauthn.js";
 import { createTestDb } from "../../test/harness.js";
 import { issueChallenge } from "./challenges.js";
-import { PASSKEY_DEFAULTS, resolvePasskeyConfig } from "./config.js";
+import {
+  PASSKEY_DEFAULTS,
+  resolvePasskeyConfig,
+  resolvePasskeyOrigins,
+} from "./config.js";
 import { PasskeyError } from "./errors.js";
 import { finishRegistration, persistCredential } from "./register.js";
 
-const config = resolvePasskeyConfig({
+// The ceremony verifies against a resolved config; static origins resolve
+// against an empty env unchanged.
+const resolved = (input: Parameters<typeof resolvePasskeyConfig>[0]) =>
+  resolvePasskeyOrigins(resolvePasskeyConfig(input), {});
+
+const config = resolved({
   rpName: "Plumix Test",
   rpId: "cms.example.com",
   origin: "https://cms.example.com",
@@ -83,6 +92,76 @@ describe("finishRegistration (positive ceremony with ES256)", () => {
 
     expect(verified.publicKey).toEqual(keyPair.publicKeySec1);
     expect(verified.publicKey[33]).toBe(0);
+  });
+});
+
+const previewPolicyConfig = resolved({
+  rpName: "Plumix Test",
+  rpId: "acme.workers.dev",
+  origin: "https://app.acme.workers.dev",
+  allowedOrigins: ["https://*.acme.workers.dev"],
+});
+
+describe("finishRegistration (origin policy)", () => {
+  test("accepts a preview-host origin allowed by a subdomain wildcard", async () => {
+    const db = await createTestDb();
+    const userId = (
+      await userFactory.transient({ db }).create({ role: "admin" })
+    ).id;
+    const { challenge } = await issueChallenge(db, 60_000, userId);
+    const keyPair = generatePasskeyKeyPair();
+    const credentialId = randomCredentialId();
+
+    const att = buildAttestation({
+      keyPair,
+      // rpId is the account registrable domain; the browser is on a
+      // per-branch preview host under it.
+      rpId: previewPolicyConfig.rpId,
+      origin: "https://feat-x-app.acme.workers.dev",
+      challenge,
+      credentialId,
+    });
+
+    const verified = await finishRegistration(db, previewPolicyConfig, {
+      id: att.credentialIdBase64Url,
+      rawId: att.credentialIdBase64Url,
+      type: "public-key",
+      response: {
+        clientDataJSON: att.clientDataJSON,
+        attestationObject: att.attestationObject,
+      },
+    });
+
+    expect(verified.publicKey).toEqual(keyPair.publicKeySec1);
+  });
+
+  test("still rejects an origin outside the policy", async () => {
+    const db = await createTestDb();
+    const userId = (
+      await userFactory.transient({ db }).create({ role: "admin" })
+    ).id;
+    const { challenge } = await issueChallenge(db, 60_000, userId);
+    const keyPair = generatePasskeyKeyPair();
+    const credentialId = randomCredentialId();
+    const att = buildAttestation({
+      keyPair,
+      rpId: previewPolicyConfig.rpId,
+      origin: "https://evil.com",
+      challenge,
+      credentialId,
+    });
+
+    await expect(
+      finishRegistration(db, previewPolicyConfig, {
+        id: att.credentialIdBase64Url,
+        rawId: att.credentialIdBase64Url,
+        type: "public-key",
+        response: {
+          clientDataJSON: att.clientDataJSON,
+          attestationObject: att.attestationObject,
+        },
+      }),
+    ).rejects.toMatchObject({ code: "invalid_origin" });
   });
 });
 

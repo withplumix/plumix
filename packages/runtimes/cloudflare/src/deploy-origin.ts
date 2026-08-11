@@ -7,28 +7,55 @@ export interface DeployOriginInput {
   readonly defaultBranch?: string;
   /** Override for local dev. Defaults to `http://localhost:8787`. */
   readonly localOrigin?: string;
+  /**
+   * Full origin of the custom domain the *production* deploy is served on
+   * (e.g. `"https://example.com"`). Set this whenever production runs on a
+   * custom domain rather than its `*.workers.dev` host — Workers Builds does
+   * not expose the custom domain, so it can't be inferred. When set, the
+   * production branch resolves `rpId`/`origin` from it (deriving `rpId` from
+   * its hostname). Preview branches are unaffected: they stay on their
+   * per-branch `*.workers.dev` host (a custom domain and `workers.dev` are
+   * different registrable domains, so no single passkey can span both).
+   */
+  readonly productionOrigin?: string;
 }
 
 export interface DeployOrigin {
   /** WebAuthn relying-party id — bare hostname, no scheme/port. */
   readonly rpId: string;
-  /** Full origin string the browser sends. */
+  /** Full origin string the browser sends for this deploy. */
   readonly origin: string;
+  /**
+   * Extra origins the passkey ceremony accepts alongside `origin`. On a
+   * `*.workers.dev` deploy this is the account wildcard
+   * (`https://*.<account>.workers.dev`) so one passkey — anchored to the
+   * account-subdomain `rpId` — spans production and every per-branch preview.
+   * Omitted for the localhost fallback and the custom-domain production case.
+   */
+  readonly allowedOrigins?: readonly string[];
 }
 
 /**
- * Resolve the passkey rpId / origin for a Cloudflare Workers deploy by
- * reading the build-time env Workers Builds injects (`WORKERS_CI`,
- * `WORKERS_CI_BRANCH`). Returns the bare worker URL on the default
- * branch, the auto-generated `<branch>-<worker>.<account>.workers.dev`
- * URL on every other branch, and a localhost fallback when not running
- * under Workers Builds (i.e. local `pnpm dev`).
+ * Resolve the passkey `rpId` / `origin` / `allowedOrigins` for a Cloudflare
+ * Workers deploy from the build-time env Workers Builds injects (`WORKERS_CI`,
+ * `WORKERS_CI_BRANCH`).
  *
- * Preview-deploy passkeys are scoped to that preview's hostname — a
- * passkey enrolled on PR #76 won't work on PR #77; that's WebAuthn's
- * domain-binding behavior, not a plumix limit. Use a custom domain +
- * wildcard subdomains if you need credentials to follow across
- * previews.
+ * On any `*.workers.dev` deploy — production or a per-branch preview — `rpId`
+ * is the account registrable domain (`<account>.workers.dev`) and
+ * `allowedOrigins` is the account wildcard (`https://*.<account>.workers.dev`).
+ * Because every deploy shares that registrable domain, one passkey enrolled
+ * once is valid on production *and* every preview branch (previews are all
+ * subdomains of the same `<account>.workers.dev`). `origin` still reflects the
+ * specific host this build is served on.
+ *
+ * When production runs on a custom domain, pass `productionOrigin` — Workers
+ * Builds does not expose the custom domain, so it can't be inferred. The
+ * production branch then anchors to it; preview branches stay on their
+ * `*.workers.dev` host. A custom domain and `workers.dev` are different
+ * registrable domains, so no single passkey spans both — authenticate previews
+ * with an origin-agnostic method (magic-link / Cloudflare Access) in that case.
+ *
+ * Falls back to localhost when not running under Workers Builds (local dev).
  */
 export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
   // @cloudflare/workers-types declares a global `process: any` that shadows
@@ -48,10 +75,27 @@ export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
   const raw = (env.WORKERS_CI_BRANCH ?? "").trim();
   const branch = raw === "" ? defaultBranch : raw;
   const isProduction = branch === defaultBranch;
+
+  // Custom-domain production: Workers Builds can't tell us the host, so the
+  // operator declares it. rpId derives from its hostname; previews keep their
+  // workers.dev host below (different registrable domain — can't be spanned).
+  if (isProduction && input.productionOrigin !== undefined) {
+    const url = new URL(input.productionOrigin);
+    return { rpId: url.hostname, origin: url.origin };
+  }
+
+  const accountDomain = `${input.accountSubdomain}.workers.dev`;
   const host = isProduction
-    ? `${input.workerName}.${input.accountSubdomain}.workers.dev`
-    : `${sanitizeBranch(branch)}-${input.workerName}.${input.accountSubdomain}.workers.dev`;
-  return { rpId: host, origin: `https://${host}` };
+    ? `${input.workerName}.${accountDomain}`
+    : `${sanitizeBranch(branch)}-${input.workerName}.${accountDomain}`;
+  // rpId is the account *registrable* domain, and the wildcard accepts every
+  // host under it — so a passkey enrolled once is valid on production and on
+  // every per-branch preview `*.workers.dev` URL.
+  return {
+    rpId: accountDomain,
+    origin: `https://${host}`,
+    allowedOrigins: [`https://*.${accountDomain}`],
+  };
 }
 
 function readEnv(): Record<string, string | undefined> {

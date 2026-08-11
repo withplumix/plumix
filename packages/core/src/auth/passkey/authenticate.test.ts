@@ -13,11 +13,16 @@ import {
 import { createTestDb } from "../../test/harness.js";
 import { ensureUint8Array, finishAuthentication } from "./authenticate.js";
 import { issueChallenge } from "./challenges.js";
-import { resolvePasskeyConfig } from "./config.js";
+import { resolvePasskeyConfig, resolvePasskeyOrigins } from "./config.js";
 import { PasskeyError } from "./errors.js";
 import { finishRegistration } from "./register.js";
 
-const config = resolvePasskeyConfig({
+// The ceremony verifies against a resolved config; static origins resolve
+// against an empty env unchanged.
+const resolved = (input: Parameters<typeof resolvePasskeyConfig>[0]) =>
+  resolvePasskeyOrigins(resolvePasskeyConfig(input), {});
+
+const config = resolved({
   rpName: "Plumix Test",
   rpId: "cms.example.com",
   origin: "https://cms.example.com",
@@ -70,6 +75,77 @@ async function registerFixtureCredential(): Promise<RegisteredFixture> {
     credentialIdBase64Url: att.credentialIdBase64Url,
   };
 }
+
+describe("finishAuthentication (origin policy)", () => {
+  test("accepts an assertion from a preview host allowed by a subdomain wildcard", async () => {
+    const previewPolicyConfig = resolved({
+      rpName: "Plumix Test",
+      rpId: "acme.workers.dev",
+      origin: "https://app.acme.workers.dev",
+      allowedOrigins: ["https://*.acme.workers.dev"],
+    });
+
+    const db = await createTestDb();
+    const user = await userFactory
+      .transient({ db })
+      .create({ email: "u@example.com", role: "admin" });
+
+    // Enrol on the canonical origin.
+    const { challenge: regChallenge } = await issueChallenge(
+      db,
+      60_000,
+      user.id,
+    );
+    const keyPair = generatePasskeyKeyPair();
+    const credentialId = randomCredentialId();
+    const att = buildAttestation({
+      keyPair,
+      rpId: previewPolicyConfig.rpId,
+      origin: previewPolicyConfig.origin,
+      challenge: regChallenge,
+      credentialId,
+    });
+    const verified = await finishRegistration(db, previewPolicyConfig, {
+      id: att.credentialIdBase64Url,
+      rawId: att.credentialIdBase64Url,
+      type: "public-key",
+      response: {
+        clientDataJSON: att.clientDataJSON,
+        attestationObject: att.attestationObject,
+      },
+    });
+    await credentialFactory.transient({ db }).create({
+      id: verified.credentialId,
+      userId: user.id,
+      publicKey: Buffer.from(verified.publicKey),
+      counter: verified.signatureCounter,
+      transports: [...verified.transports],
+    });
+
+    // Assert from a different preview host under the same registrable domain.
+    const { challenge } = await issueChallenge(db, 60_000);
+    const assertion = buildAssertion({
+      keyPair,
+      rpId: previewPolicyConfig.rpId,
+      origin: "https://feat-x-app.acme.workers.dev",
+      challenge,
+      counter: 1,
+    });
+
+    const result = await finishAuthentication(db, previewPolicyConfig, {
+      id: att.credentialIdBase64Url,
+      rawId: att.credentialIdBase64Url,
+      type: "public-key",
+      response: {
+        clientDataJSON: assertion.clientDataJSON,
+        authenticatorData: assertion.authenticatorData,
+        signature: assertion.signature,
+      },
+    });
+
+    expect(result.newSignatureCounter).toBe(1);
+  });
+});
 
 describe("finishAuthentication", () => {
   test("verifies a valid assertion end-to-end and updates the counter", async () => {

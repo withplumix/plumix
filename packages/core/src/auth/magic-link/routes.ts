@@ -69,7 +69,7 @@ export async function handleMagicLinkRequest(
   try {
     await requestMagicLink(ctx.db, {
       email: parsed.output.email,
-      origin: app.origin,
+      origin: ctx.origin,
       basePath: app.basePath,
       mailer: ctx.mailer,
       siteName: app.config.auth.magicLink.siteName,

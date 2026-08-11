@@ -57,6 +57,54 @@ describe("createAppContext mailer resolution", () => {
   });
 });
 
+describe("createAppContext origin resolution", () => {
+  const baseArgs = (
+    harness: Awaited<ReturnType<typeof createDispatcherHarness>>,
+    request: Request,
+  ) => ({
+    db: harness.db,
+    env: harness.env,
+    request,
+    hooks: harness.app.hooks,
+    plugins: harness.app.plugins,
+  });
+
+  test("resolves an (env) => origin resolver into ctx.origin", async () => {
+    const harness = await createDispatcherHarness({
+      env: { PUBLIC_ORIGIN: "https://example.com" },
+    });
+    const seenEnv: unknown[] = [];
+
+    const ctx = createAppContext({
+      ...baseArgs(harness, new Request("https://worker.acme.workers.dev/")),
+      origin: (env) => {
+        seenEnv.push(env);
+        return (env as { PUBLIC_ORIGIN: string }).PUBLIC_ORIGIN;
+      },
+    });
+
+    expect(ctx.origin).toBe("https://example.com");
+    expect(seenEnv).toEqual([harness.env]);
+  });
+
+  test("uses a literal origin verbatim, not the request host", async () => {
+    const harness = await createDispatcherHarness();
+    const ctx = createAppContext({
+      ...baseArgs(harness, new Request("https://worker.acme.workers.dev/")),
+      origin: "https://example.com",
+    });
+    expect(ctx.origin).toBe("https://example.com");
+  });
+
+  test("falls back to the request origin when none is configured", async () => {
+    const harness = await createDispatcherHarness();
+    const ctx = createAppContext(
+      baseArgs(harness, new Request("https://fallback.example/admin")),
+    );
+    expect(ctx.origin).toBe("https://fallback.example");
+  });
+});
+
 describe("createAppContext platform I/O tracing", () => {
   test("assets, storage, cache, and mailer slots are wrapped in telemetry spans", async () => {
     const harness = await createDispatcherHarness();

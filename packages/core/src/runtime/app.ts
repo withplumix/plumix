@@ -16,7 +16,7 @@ import {
 } from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
-import type { ResolvedPasskeyConfig } from "../auth/passkey/config.js";
+import type { PasskeyRuntimeConfig } from "../auth/passkey/config.js";
 import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
 import type { PlumixConfig } from "../config.js";
@@ -33,6 +33,7 @@ import type { RouteRule } from "../route/intent.js";
 import type { CompiledRedirects } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { DocumentManifest } from "../theme.js";
+import type { EnvInput } from "./env-input.js";
 import { registerCoreAdminBarContributors } from "../admin-bar/core-contributors.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
@@ -89,9 +90,11 @@ export interface PlumixApp {
    * Canonical site origin (e.g. `https://cms.example.com`). Sourced from
    * the passkey config for now since that's the only place it lives in
    * user-facing config; exposed at the top level so CSRF / admin / future
-   * features don't have to reach into `passkey.*` to learn it.
+   * features don't have to reach into `passkey.*` to learn it. An `EnvInput`
+   * because `passkey.origin` may be an `(env) => …` resolver — resolved into
+   * the per-request `ctx.origin` where the runtime `env` is available.
    */
-  readonly origin: string;
+  readonly origin: EnvInput<string>;
   /**
    * Normalized subdirectory prefix from `config.basePath` (`""` for a root
    * deployment). Hoisted alongside `origin` so the dispatcher and runtime
@@ -101,7 +104,7 @@ export interface PlumixApp {
   readonly basePath: string;
   /** See RuntimeContext.devCsrfLocalhost — false in production builds. */
   readonly devCsrfLocalhost: boolean;
-  readonly passkey: ResolvedPasskeyConfig;
+  readonly passkey: PasskeyRuntimeConfig;
   readonly sessionPolicy: SessionPolicy;
   /**
    * Resolved request authenticator. Defaults to the session-cookie

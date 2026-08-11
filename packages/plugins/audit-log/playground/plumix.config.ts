@@ -14,7 +14,7 @@ import {
 // via `plumix dev` and walks the audit-log happy path against the real
 // worker.
 
-const { rpId, origin } = cloudflareDeployOrigin({
+const deployOrigin = cloudflareDeployOrigin({
   workerName: "plumix-audit-log-playground",
   accountSubdomain: "local",
   // CSRF origin-allowlist must match what the browser sends. The
@@ -30,8 +30,7 @@ export default plumix({
   auth: auth({
     passkey: {
       rpName: "Plumix — Audit log playground",
-      rpId,
-      origin,
+      ...deployOrigin,
     },
   }),
   plugins: [auditLog()],

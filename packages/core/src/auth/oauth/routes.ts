@@ -42,7 +42,7 @@ export async function handleOAuthStart(
     }
   }
 
-  const redirectUri = oauthCallbackUrl(app, providerKey);
+  const redirectUri = oauthCallbackUrl(ctx.origin, app.basePath, providerKey);
 
   try {
     const { url } = await buildAuthorizeUrl({
@@ -88,7 +88,7 @@ export async function handleOAuthCallback(
   if (stored.provider !== providerKey)
     return loginError(app.basePath, "state_invalid");
 
-  const redirectUri = oauthCallbackUrl(app, providerKey);
+  const redirectUri = oauthCallbackUrl(ctx.origin, app.basePath, providerKey);
 
   try {
     const profile = await exchangeAndFetchProfile({
@@ -140,14 +140,18 @@ function pickProvider(app: PlumixApp, key: string): OAuthProviderClient | null {
   return providers[key] ?? null;
 }
 
-// `app.origin` is the canonical site origin from passkey config — pinning
-// the callback URL there means the value the provider sees at authorize
-// time is identical at token-exchange time even if a load balancer or
-// custom adapter rewrites Host on the way in. (Cloudflare Workers binds
-// `request.url` to the connection hostname, but other adapters may not.)
-function oauthCallbackUrl(app: PlumixApp, providerKey: string): string {
+// `ctx.origin` is the resolved canonical site origin — pinning the callback
+// URL there means the value the provider sees at authorize time is identical
+// at token-exchange time even if a load balancer or custom adapter rewrites
+// Host on the way in. (Cloudflare Workers binds `request.url` to the connection
+// hostname, but other adapters may not.)
+function oauthCallbackUrl(
+  origin: string,
+  basePath: string,
+  providerKey: string,
+): string {
   const path = `/_plumix/auth/oauth/${providerKey}/callback`;
-  return `${app.origin}${withBasePath(path, app.basePath)}`;
+  return `${origin}${withBasePath(path, basePath)}`;
 }
 
 function loginError(basePath: string, code: OAuthErrorCode): Response {

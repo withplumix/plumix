@@ -24,6 +24,7 @@ import type { RegistrationOptions, RegistrationResponse } from "./types.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { consumeChallenge, issueChallenge } from "./challenges.js";
 import { PasskeyError } from "./errors.js";
+import { originAllowed } from "./origin-policy.js";
 
 interface BeginRegistrationInput {
   readonly userId: number;
@@ -111,7 +112,7 @@ export async function finishRegistration(
     throw PasskeyError.invalidClientData({ expectedType: "create" });
   }
 
-  if (clientData.origin !== config.origin) {
+  if (!originAllowed(clientData.origin, config)) {
     throw PasskeyError.invalidOrigin({
       expected: config.origin,
       actual: clientData.origin,
