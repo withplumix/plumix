@@ -186,6 +186,15 @@ export interface BlockSpec<
    * `requiresParent`.
    */
   readonly requiresParent?: readonly string[];
+  /**
+   * The entry types whose editor may offer this block in the inserter. Unset =
+   * every type (the default); set = only these types, and the block is hidden
+   * from the palette of any other type (or when the type is unknown). Mirrors
+   * `PatternSpec.entryTypes`. Scopes only the editor's available-blocks palette;
+   * the render registry stays global, so already-stored content still renders
+   * regardless of the entry type it lives on.
+   */
+  readonly entryTypes?: readonly string[];
 }
 
 export interface BlockRegistry {

@@ -55,6 +55,9 @@ interface GroupOptions {
   /** The block the inserter targets, for enforcing each candidate's
    *  `requiresParent`. `undefined` = the top level (parent-bound blocks hidden). */
   readonly parentName?: string;
+  /** The entry type being authored, for enforcing each candidate's `entryTypes`
+   *  allow-list. `undefined` = unknown type, so entry-type-scoped blocks hide. */
+  readonly entryType?: string;
 }
 
 interface InsertableGroup {
@@ -70,7 +73,7 @@ interface InsertableGroup {
  */
 export function groupInsertables(
   registry: BlockRegistry,
-  { capabilities, query, allowed, parentName }: GroupOptions,
+  { capabilities, query, allowed, parentName, entryType }: GroupOptions,
 ): readonly InsertableGroup[] {
   const needle = query?.trim().toLowerCase() ?? "";
   const eligible = [...registry].filter(
@@ -79,7 +82,10 @@ export function groupInsertables(
       (!spec.capability || capabilities.has(spec.capability)) &&
       (!allowed || allowed.includes(spec.name)) &&
       (!spec.requiresParent ||
-        (parentName !== undefined && spec.requiresParent.includes(parentName))),
+        (parentName !== undefined &&
+          spec.requiresParent.includes(parentName))) &&
+      (!spec.entryTypes ||
+        (entryType !== undefined && spec.entryTypes.includes(entryType))),
   );
   // Map iteration is insertion-ordered, which is the registry order we want.
   const buckets = new Map<string, InsertableBlockEntry[]>();

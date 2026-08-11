@@ -45,6 +45,8 @@ interface CanvasFrameProps {
   readonly registry: BlockRegistry;
   /** Viewer capabilities, gating which block the empty state inserts. */
   readonly capabilities: ReadonlySet<string>;
+  /** The entry type being authored, scoping the in-canvas inserter's palette. */
+  readonly entryType?: string;
   /** Preview mode: still render the pushed tree, but draw no selection /
    *  hover overlays, toolbar, drop indicators, or empty-state affordance. */
   readonly readOnly?: boolean;
@@ -73,6 +75,7 @@ export function CanvasFrame({
   origin,
   registry,
   capabilities,
+  entryType,
   readOnly = false,
   previewRefreshToken,
 }: CanvasFrameProps): ReactElement {
@@ -419,6 +422,7 @@ export function CanvasFrame({
                 allowed={pendingAllowed}
                 parentName={pendingParentName}
                 target={pendingTarget}
+                entryType={entryType}
                 onInsert={() => setPendingAdd(null)}
               />
             </ScrollArea>

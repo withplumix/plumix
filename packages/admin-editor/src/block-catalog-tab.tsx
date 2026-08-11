@@ -34,6 +34,8 @@ interface BlockCatalogProps {
   readonly target?: { readonly parentId: string; readonly slotKey: string };
   /** The target slot's parent block name, for enforcing `requiresParent`. */
   readonly parentName?: string;
+  /** The entry type being authored, for enforcing each block's `entryTypes`. */
+  readonly entryType?: string;
 }
 
 /**
@@ -50,6 +52,7 @@ export function BlockCatalog({
   allowed,
   target,
   parentName,
+  entryType,
 }: BlockCatalogProps): ReactElement {
   const { i18n } = useLingui();
   const [query, setQuery] = useState("");
@@ -61,8 +64,14 @@ export function BlockCatalog({
 
   const groups = useMemo(
     () =>
-      groupInsertables(registry, { capabilities, query, allowed, parentName }),
-    [registry, capabilities, query, allowed, parentName],
+      groupInsertables(registry, {
+        capabilities,
+        query,
+        allowed,
+        parentName,
+        entryType,
+      }),
+    [registry, capabilities, query, allowed, parentName, entryType],
   );
   const matchedPatterns = useMemo(
     () => filterPatterns(patterns ?? [], query),

@@ -230,6 +230,7 @@ export function PlumixEditor({
                     registry={registry}
                     capabilities={capabilities}
                     patterns={patterns}
+                    entryType={entryType}
                   />
                 </TabsContent>
                 <TabsContent value="layers">
@@ -245,6 +246,7 @@ export function PlumixEditor({
               origin={origin}
               registry={registry}
               capabilities={capabilities}
+              entryType={entryType}
               previewRefreshToken={previewRefreshToken}
             />
           </SidebarInset>
