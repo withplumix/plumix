@@ -61,6 +61,66 @@ describe("auth()", () => {
     expect(error.issues[0]?.path).toBe("passkey.origin");
   });
 
+  const atAllowedOrigins = (error: PlumixConfigError): boolean =>
+    error.issues.some((i) => i.path.startsWith("passkey.allowedOrigins"));
+
+  test("accepts and preserves a subdomain-wildcard allowedOrigins entry", () => {
+    const passkey = {
+      ...validPasskey,
+      allowedOrigins: ["https://*.cms.example"],
+    };
+    const config = auth({ passkey });
+    expect(config.passkey.allowedOrigins).toEqual(["https://*.cms.example"]);
+  });
+
+  test("accepts an exact allowedOrigins entry that is a subdomain of rpId", () => {
+    const passkey = {
+      ...validPasskey,
+      allowedOrigins: ["https://www.cms.example"],
+    };
+    expect(() => auth({ passkey })).not.toThrow();
+  });
+
+  test("rejects an allowedOrigins entry outside the rpId", () => {
+    const error = rejected({
+      passkey: { ...validPasskey, allowedOrigins: ["https://evil.com"] },
+    });
+    expect(atAllowedOrigins(error)).toBe(true);
+  });
+
+  test("rejects a wildcard whose base is outside the rpId", () => {
+    const error = rejected({
+      passkey: { ...validPasskey, allowedOrigins: ["https://*.evil.com"] },
+    });
+    expect(atAllowedOrigins(error)).toBe(true);
+  });
+
+  test("rejects a non-https allowedOrigins entry", () => {
+    const error = rejected({
+      passkey: { ...validPasskey, allowedOrigins: ["http://cms.example"] },
+    });
+    expect(atAllowedOrigins(error)).toBe(true);
+  });
+
+  test("rejects an exact entry that is not a bare origin (path/trailing slash)", () => {
+    // `originAllowed` matches exact entries by full-string equality, so an
+    // entry the runtime can never match must fail at config time, not silently.
+    const error = rejected({
+      passkey: {
+        ...validPasskey,
+        allowedOrigins: ["https://www.cms.example/x"],
+      },
+    });
+    expect(atAllowedOrigins(error)).toBe(true);
+  });
+
+  test("rejects a wildcard base that itself contains a wildcard", () => {
+    const error = rejected({
+      passkey: { ...validPasskey, allowedOrigins: ["https://*.*.cms.example"] },
+    });
+    expect(atAllowedOrigins(error)).toBe(true);
+  });
+
   test("rejects a negative maxAgeSeconds", () => {
     const error = rejected({
       passkey: validPasskey,

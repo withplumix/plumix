@@ -14,7 +14,7 @@ import {
 // via `plumix dev --port 3020` and walks the blog happy path against
 // the real worker.
 
-const { rpId, origin } = cloudflareDeployOrigin({
+const deployOrigin = cloudflareDeployOrigin({
   workerName: "plumix-blog-playground",
   accountSubdomain: "local",
   // CSRF origin-allowlist must match what the browser sends. The
@@ -30,8 +30,7 @@ export default plumix({
   auth: auth({
     passkey: {
       rpName: "Plumix — Blog playground",
-      rpId,
-      origin,
+      ...deployOrigin,
     },
   }),
   plugins: [blog],

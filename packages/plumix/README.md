@@ -47,17 +47,19 @@ import {
   d1,
 } from "@plumix/runtime-cloudflare";
 
-const { rpId, origin } = cloudflareDeployOrigin({
-  workerName: "my-site",
-  accountSubdomain: "my-account",
-  localOrigin: "http://localhost:5173",
-});
-
 export default plumix({
   runtime: cloudflare(),
   database: d1({ binding: "DB", session: "auto" }),
   auth: auth({
-    passkey: { rpName: "My Site", rpId, origin },
+    passkey: {
+      rpName: "My Site",
+      // Spread all fields — allowedOrigins lets one passkey span preview deploys.
+      ...cloudflareDeployOrigin({
+        workerName: "my-site",
+        accountSubdomain: "my-account",
+        localOrigin: "http://localhost:5173",
+      }),
+    },
   }),
 });
 ```

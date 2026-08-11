@@ -5,6 +5,7 @@ import type { OAuthProviderClient } from "./oauth/types.js";
 import type { PasskeyConfig } from "./passkey/config.js";
 import type { SessionPolicy } from "./sessions.js";
 import { OAUTH_PROVIDER_KEY_PATTERN } from "./oauth/types.js";
+import { HTTPS_WILDCARD_PREFIX } from "./passkey/origin-policy.js";
 
 export interface PlumixMagicLinkConfig {
   /**
@@ -135,11 +136,53 @@ const isNonEmptyString = (val: unknown): boolean =>
 const field = (val: unknown, key: string): unknown =>
   isPlainObject(val) ? val[key] : undefined;
 
-const passkeySchema = v.object({
-  rpName: v.pipe(v.string(), v.nonEmpty("rpName must be a non-empty string")),
-  rpId: v.pipe(v.string(), v.nonEmpty("rpId must be a non-empty string")),
-  origin: v.pipe(v.string(), v.url("origin must be a valid URL")),
-});
+// The host an allowedOrigins entry accepts: the base of a `https://*.base`
+// wildcard, or the hostname of an exact https origin. null for anything the
+// runtime matcher could never honor — non-https, a nested wildcard, or (for an
+// exact entry) any form other than a bare origin, since `originAllowed` matches
+// exact entries by full-string equality.
+function allowedOriginHost(entry: string): string | null {
+  if (entry.startsWith(HTTPS_WILDCARD_PREFIX)) {
+    const base = entry.slice(HTTPS_WILDCARD_PREFIX.length);
+    return base.length > 0 && !base.includes("/") && !base.includes("*")
+      ? base
+      : null;
+  }
+  try {
+    const url = new URL(entry);
+    if (url.protocol !== "https:" || url.origin !== entry) return null;
+    return url.hostname;
+  } catch {
+    return null;
+  }
+}
+
+const isRpIdSuffix = (host: string, rpId: string): boolean =>
+  host === rpId || host.endsWith(`.${rpId}`);
+
+const passkeySchema = v.pipe(
+  v.object({
+    rpName: v.pipe(v.string(), v.nonEmpty("rpName must be a non-empty string")),
+    rpId: v.pipe(v.string(), v.nonEmpty("rpId must be a non-empty string")),
+    origin: v.pipe(v.string(), v.url("origin must be a valid URL")),
+    allowedOrigins: v.optional(v.array(v.string())),
+  }),
+  // Cross-field: every accepted origin must keep rpId as a registrable suffix,
+  // so a credential bound to rpId stays valid on it. Forwarded onto the
+  // allowedOrigins path so the issue points at the offending field.
+  v.forward(
+    v.check(
+      (cfg) =>
+        !cfg.allowedOrigins ||
+        cfg.allowedOrigins.every((entry) => {
+          const host = allowedOriginHost(entry);
+          return host !== null && isRpIdSuffix(host, cfg.rpId);
+        }),
+      "allowedOrigins entries must be an https origin (or https://*.subdomain wildcard) whose host is rpId or a subdomain of it",
+    ),
+    ["allowedOrigins"],
+  ),
+);
 
 const sessionPolicySchema = v.pipe(
   v.object({

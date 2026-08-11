@@ -86,6 +86,76 @@ describe("finishRegistration (positive ceremony with ES256)", () => {
   });
 });
 
+const previewPolicyConfig = resolvePasskeyConfig({
+  rpName: "Plumix Test",
+  rpId: "acme.workers.dev",
+  origin: "https://app.acme.workers.dev",
+  allowedOrigins: ["https://*.acme.workers.dev"],
+});
+
+describe("finishRegistration (origin policy)", () => {
+  test("accepts a preview-host origin allowed by a subdomain wildcard", async () => {
+    const db = await createTestDb();
+    const userId = (
+      await userFactory.transient({ db }).create({ role: "admin" })
+    ).id;
+    const { challenge } = await issueChallenge(db, 60_000, userId);
+    const keyPair = generatePasskeyKeyPair();
+    const credentialId = randomCredentialId();
+
+    const att = buildAttestation({
+      keyPair,
+      // rpId is the account registrable domain; the browser is on a
+      // per-branch preview host under it.
+      rpId: previewPolicyConfig.rpId,
+      origin: "https://feat-x-app.acme.workers.dev",
+      challenge,
+      credentialId,
+    });
+
+    const verified = await finishRegistration(db, previewPolicyConfig, {
+      id: att.credentialIdBase64Url,
+      rawId: att.credentialIdBase64Url,
+      type: "public-key",
+      response: {
+        clientDataJSON: att.clientDataJSON,
+        attestationObject: att.attestationObject,
+      },
+    });
+
+    expect(verified.publicKey).toEqual(keyPair.publicKeySec1);
+  });
+
+  test("still rejects an origin outside the policy", async () => {
+    const db = await createTestDb();
+    const userId = (
+      await userFactory.transient({ db }).create({ role: "admin" })
+    ).id;
+    const { challenge } = await issueChallenge(db, 60_000, userId);
+    const keyPair = generatePasskeyKeyPair();
+    const credentialId = randomCredentialId();
+    const att = buildAttestation({
+      keyPair,
+      rpId: previewPolicyConfig.rpId,
+      origin: "https://evil.com",
+      challenge,
+      credentialId,
+    });
+
+    await expect(
+      finishRegistration(db, previewPolicyConfig, {
+        id: att.credentialIdBase64Url,
+        rawId: att.credentialIdBase64Url,
+        type: "public-key",
+        response: {
+          clientDataJSON: att.clientDataJSON,
+          attestationObject: att.attestationObject,
+        },
+      }),
+    ).rejects.toMatchObject({ code: "invalid_origin" });
+  });
+});
+
 describe("finishRegistration (security checks)", () => {
   test("rejects a response whose origin does not match the configured origin", async () => {
     const db = await createTestDb();

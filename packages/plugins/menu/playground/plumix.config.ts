@@ -13,7 +13,7 @@ import {
 // worker-driven plugin e2e suite in `../e2e` boots this playground via
 // `plumix dev` and walks the menu happy path against the real worker.
 
-const { rpId, origin } = cloudflareDeployOrigin({
+const deployOrigin = cloudflareDeployOrigin({
   workerName: "plumix-menu-playground",
   accountSubdomain: "local",
   // CSRF origin-allowlist must match what the browser actually sends.
@@ -30,8 +30,7 @@ export default plumix({
   auth: auth({
     passkey: {
       rpName: "Plumix — Menu playground",
-      rpId,
-      origin,
+      ...deployOrigin,
     },
   }),
   // Locations are nav slots the theme renders; the e2e locations-tab
