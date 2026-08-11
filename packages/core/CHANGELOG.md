@@ -1,5 +1,233 @@
 # @plumix/core
 
+## 0.12.0
+
+### Minor Changes
+
+- [#1729](https://github.com/withplumix/plumix/pull/1729) [`665a57b`](https://github.com/withplumix/plumix/commit/665a57b421fc2f82dcf0dad7d0a89e2497557959) Thanks [@nasyrov](https://github.com/nasyrov)! - Let custom archives opt into the edge cache and contribute cache tags.
+
+  `registerArchiveType` now accepts a `cacheable` flag, and a custom-archive resolver's
+  `CustomArchiveResolution` may return `tags`. When `cacheable` is set, a `custom`
+  route's anonymous GET renders participate in the built-in edge cache instead of
+  rendering live on every request, and the resolver's `tags` are stored on the response
+  so a publish of the listed types purges the archive — the same coarse, publish-driven
+  invalidation the built-in entry, taxonomy, and front-page archives already get.
+  Previously `custom` intents bypassed the Workers Cache API entirely and carried no
+  tags, so faceted or rollup archives that the built-in taxonomy archive can't express
+  lost edge caching and tag-based purge.
+
+  The two knobs are split deliberately: the cache gate runs before render, so the opt-in
+  (`cacheable`) must be static, while `tags` are consumed only at store time and ride on
+  the resolution. Both default off and no-op safely on their own — `tags` without
+  `cacheable` never caches; `cacheable` without `tags` caches under `s-maxage` alone.
+  Tags flow through the existing embedded-reference tag accumulator, and the pure cache
+  decision layer stays free of the archive-type registry lookup.
+
+- [#1712](https://github.com/withplumix/plumix/pull/1712) [`c74ca2f`](https://github.com/withplumix/plumix/commit/c74ca2ffc069209d543e5d606a2ded8b22245a1e) Thanks [@nasyrov](https://github.com/nasyrov)! - Let custom archives contribute a sitemap scope, and give `seo:sitemap:urls` the request context.
+
+  `registerArchiveType` now accepts a `sitemap` provider (`{ count, urls }`), mirroring
+  its existing `feed` option. Core folds the archive's URL space into the native
+  sitemap index under a paginated `/sitemap-<name>-<page>.xml` scope: `count(ctx)`
+  drives index pagination (kept cheap — no URL scan), and `urls(ctx, page)` produces
+  each 1000-URL page. Previously a custom archive was neither an entry type nor a
+  taxonomy, so its URLs were absent from sitemaps entirely.
+
+  The `seo:sitemap:urls` filter now also receives the 1-based `page` and the request
+  `ctx` — `(urls, scope, page, ctx)`. A subscriber can now query the DB to inject
+  rows and paginate its adjustments, not just reshape statically-known URLs. The new
+  arguments are appended, so existing `(urls, scope)` subscribers are unaffected.
+
+- [#1680](https://github.com/withplumix/plumix/pull/1680) [`b124789`](https://github.com/withplumix/plumix/commit/b1247897f2044ad4e7f975ce2d0b8294fd0939af) Thanks [@nasyrov](https://github.com/nasyrov)! - Install the dev-only client error tools from one core-owned entry point.
+
+  The island error dialog, the browser-errors-to-terminal forwarder, and the
+  compile/import error overlay are now installed from a single browser-safe
+  `@plumix/core/dev-client` export (reached through the `plumix` package as
+  `plumix/core/dev-client`), which the generated client bootstrap calls behind the
+  `import.meta.hot` dev gate. `@plumix/blocks`'s island runtime no longer installs
+  any overlay or forwarder — it only hydrates islands and dispatches the
+  `plumix:island-*` events the core-installed dialog listens for. The dependency
+  runs core → blocks (no cycle), and nothing in `@plumix/blocks` outside its
+  `dev-error/` implementation imports dev-error.
+
+  This is behind the existing `PLUMIX_DEV` / `import.meta.hot` gates, so it
+  tree-shakes out of production exactly as before: an island hydration mismatch
+  still shows the dialog, a Vite compile error still shows the overlay, and client
+  errors still forward to the terminal — now all wired from one place.
+
+  The `plumix/blocks/dev-error` subpath — an internal wiring seam the generated
+  client bootstrap used to reach the compile overlay — is removed, since install
+  now goes through `plumix/core/dev-client`. The dev-error implementations
+  themselves remain in `@plumix/blocks` and are unaffected.
+
+- [#1706](https://github.com/withplumix/plumix/pull/1706) [`6da618c`](https://github.com/withplumix/plumix/commit/6da618c216924fa966cb735ef33c16451383b4b0) Thanks [@nasyrov](https://github.com/nasyrov)! - Add a `plumix/db` (`@plumix/core/db`) subpath and complete the direct-write toolkit.
+
+  A plugin running a bulk-ingest pipeline writes directly to `ctx.db`, which
+  bypasses core's entry-mutation service — so no `entry:*`/`term:*` action fires
+  and core's edge-cache purge invalidator never runs, leaving the public archive
+  and permalinks stale until TTL. Making that path first-class needed two things
+  the public API didn't expose:
+
+  - **The edge-cache tag vocabulary.** `typeTag`, `entryTag`, `entryPurgeTags`,
+    `termPurgeTags`, and `enqueuePurgeTags` are now exported, so a direct-write
+    plugin can enqueue the same coarse `t:<type>`/`e:<id>` tags core would —
+    `enqueuePurgeTags(ctx, entryPurgeTags(type, id))` — for the post-request /
+    scheduled flush, instead of hand-restating the scheme (PRD [#1080](https://github.com/withplumix/plumix/issues/1080)) and drifting
+    when it changes.
+  - **The Drizzle table-introspection helpers.** `getTableColumns`, `getTableName`,
+    and `is` live on the `drizzle-orm` root rather than its `/sql` subpath, so they
+    weren't reachable through core. `getTableColumns` in particular is how a bulk
+    `onConflictDoUpdate` derives its set clause — without it a plugin had to add
+    its own `drizzle-orm` dependency (which can drift from core's pinned version).
+
+  The new `plumix/db` / `@plumix/core/db` subpath groups the whole toolkit — query
+  operators, schema tables, introspection helpers, and the purge vocabulary — in
+  one import so a direct-write plugin never needs its own `drizzle-orm`
+  dependency. Everything is also reachable from the flat package root.
+
+- [#1732](https://github.com/withplumix/plumix/pull/1732) [`05ea95c`](https://github.com/withplumix/plumix/commit/05ea95c65a798ea2b74b7b3f3f533471aa4a483e) Thanks [@nasyrov](https://github.com/nasyrov)! - Accept a set of passkey origins so custom domains and preview deploys can enrol.
+
+  `auth.passkey` gains an optional `allowedOrigins` — extra origins the WebAuthn
+  ceremony accepts alongside `origin`, each an exact origin
+  (`https://www.example.com`) or a subdomain wildcard
+  (`https://*.acme.workers.dev`). Every entry's host must be `rpId` or a subdomain
+  of it (the registrable-suffix rule), validated at config time. `rpId` is still
+  the sole anchor and is never derived from the request, so a policy can only
+  _accept_ origins the operator declared — never widen the set from a
+  request Host. Verification stays pinned to `origin` when `allowedOrigins` is
+  unset, so existing single-host deploys are unchanged.
+
+  `auth.passkey.origin` and `.allowedOrigins` also accept an `(env) => …`
+  resolver (the same `EnvInput` form as secret slots), so the public origin can be
+  sourced from a runtime env var (`PUBLIC_ORIGIN`) per deploy instead of hardcoded
+  — resolved per request, consistent across runtimes rather than reconstructed
+  from Cloudflare's build-time env. Literal values keep their config-time
+  validation; resolver forms defer to runtime. The canonical `app.origin` (CSRF,
+  magic-link, OAuth, sitemap, cron) resolves through the same value.
+
+  `cloudflareDeployOrigin()` now anchors `rpId` to the account registrable domain
+  (`<account>.workers.dev`) and returns `allowedOrigins:
+["https://*.<account>.workers.dev"]`, so one passkey enrolled once is valid on
+  production **and** every per-branch preview URL. It also accepts
+  `productionOrigin` for deploys served on a custom domain, which Workers Builds
+  cannot expose to the build.
+
+  **Breaking (`@plumix/runtime-cloudflare`):** `cloudflareDeployOrigin()` no longer
+  returns the full worker host as `rpId` — production now yields
+  `rpId: "<account>.workers.dev"` instead of `rpId: "<worker>.<account>.workers.dev"`.
+  Passkeys enrolled against the old per-worker `rpId` must be re-enrolled once
+  after upgrading. A custom domain and `workers.dev` remain different registrable
+  domains, so no single passkey spans both — authenticate custom-domain-production
+  previews with an origin-agnostic method (magic-link / Cloudflare Access).
+
+- [#1709](https://github.com/withplumix/plumix/pull/1709) [`66bce99`](https://github.com/withplumix/plumix/commit/66bce99343595168a13272b947cebb074aa30650) Thanks [@nasyrov](https://github.com/nasyrov)! - Add per-entity OpenGraph `og:image` from a featured media field.
+
+  Theme and plugin authors can mark a media field `media("hero").featured()` (the
+  entry's representative image) or `media("share").ogImage()` (an explicit
+  social-share override). Public entry pages now emit a per-entity `og:image` —
+  resolved as the `ogImage`-role field → the `featured`-role field → the existing
+  site-wide `default_og_image` — and upgrade the Twitter card to
+  `summary_large_image`, instead of only the single site default. The field name is
+  free; the role is what core keys on, and it reads the hydrated media reference
+  structurally so core takes no dependency on `@plumix/plugin-media`.
+
+  `buildManifest` rejects an entry type with more than one `featured` field, and any
+  role-tagged field that stores multiple values, so a per-entity `og:image` always
+  resolves to one deterministic image. The Cloudflare edge SVG→PNG rasterization
+  path and storage-backed serve route are tracked separately ([#1708](https://github.com/withplumix/plumix/issues/1708)).
+
+- [#1728](https://github.com/withplumix/plumix/pull/1728) [`5785f19`](https://github.com/withplumix/plumix/commit/5785f19862495b1c445640fbc58a3210d6b0c2ff) Thanks [@nasyrov](https://github.com/nasyrov)! - Add a plugin/site/theme surface for public-route redirects (301/302/307/308) and `410 Gone`.
+
+  Previously the only redirect the public pipeline emitted was the dispatcher's own
+  canonical normalization, so a plugin could map a URL to content but never to a
+  redirect or a 410. Migrating an existing site (legacy `path → path` moves, or
+  turning a removed entry's URL into a redirect-to-successor / 410 instead of a soft 404) had to be punted to the CDN zone.
+
+  Redirects are now a first-class part of the app, contributed through whichever
+  surface owns the URL, all merged into one precedence-ordered set matched by the
+  dispatcher **ahead of the content route map** (so a redirect shadows a would-be
+  page):
+
+  - **Site** — `config.redirects` on the plumix config, for the site's own cutover
+    list.
+  - **Plugin** — `ctx.registerRedirects([...])` in a plugin's setup, for
+    feature-owned or data-driven redirects.
+  - **Theme** — a declarative `redirects: [...]` field on the theme descriptor
+    (themes have no setup hook), for URL-structure moves the theme owns.
+
+  Each rule maps a `from` to a target, where `from` is a `URLPattern` string
+  (`/team/:slug`, `/legacy/*`; use a `RegExp` for literal paths with URLPattern
+  metacharacters), or a `RegExp` (with `$1` / `$<name>` backreferences interpolated
+  into `to`); `{ gone: true }` yields a 410. A rule may instead supply `match(url)`
+  for a fully dynamic decision (e.g. a DB lookup). The request query string is
+  carried onto the target by default (a `preserveQuery: false` per-rule flag opts
+  out; a target that states its own `?…` is never appended to). Precedence is
+  site → plugin → theme by default, and a per-rule `priority` overrides it (lower
+  wins).
+
+  The redirect stage runs after the reserved SEO asset routes (robots.txt,
+  sitemaps, feeds) but ahead of the static-asset 404 shortcut and the content route
+  map — so a moved image/css/js can redirect, and a redirect shadows a would-be
+  content page. Only `GET`/`HEAD` public requests reach it.
+
+  New public types: `RedirectRule`, `RedirectResolution`, `RedirectTarget`,
+  `RedirectStatus`.
+
+### Patch Changes
+
+- [#1731](https://github.com/withplumix/plumix/pull/1731) [`c5facfe`](https://github.com/withplumix/plumix/commit/c5facfee050d3f5880de31dc6866dd48c4ac3d41) Thanks [@nasyrov](https://github.com/nasyrov)! - Standardize type augmentation on the single public `plumix` specifier.
+
+  The augmentable registry docstrings (`EntryTypeRegistry`, `ArchiveTypeRegistry`,
+  `TermTaxonomyRegistry`, `TemplateDepRegistry`, `ReferenceHydrationShapes`,
+  `BlockTypeRegistry`, `PatternCategoryRegistry`) told consumers to
+  `declare module "@plumix/core"`. That specifier is an internal package consumers
+  don't depend on, so the augmentation silently no-op'd and `forEntryType("…")`
+  still errored — the bug reported in [#1691](https://github.com/withplumix/plumix/issues/1691).
+
+  Every registry is now augmented through one specifier, `declare module "plumix"`:
+
+  ```ts
+  declare module "plumix" {
+    interface EntryTypeRegistry {
+      insight: { entry: ResolvedEntry };
+    }
+  }
+  ```
+
+  `plumix` re-exports the block/pattern registries (`BlockTypeRegistry`,
+  `PatternCategoryRegistry`, type-only) so the whole augment surface lives behind
+  one module. Using one specifier matters: augmenting the same interface through
+  two of them (e.g. `plumix` and `plumix/plugin`) fractures declaration merging —
+  each view drops the other's keys. A `no-restricted-syntax` lint rule now forbids
+  augmenting `@plumix/*` packages or `plumix/*` subpaths, steering everything to
+  `plumix`. See `docs/type-augmentation.md`.
+
+- [#1727](https://github.com/withplumix/plumix/pull/1727) [`30f287e`](https://github.com/withplumix/plumix/commit/30f287e72470efd50ce4e95183c4f7e89f8e0843) Thanks [@nasyrov](https://github.com/nasyrov)! - Stop the dev error page from scrolling sideways on wide SQL or header values.
+
+  The context, plugin-panel, and executed-query lists on the `plumix dev` error
+  page rendered as bare `display: grid`, so their implicit column sized to
+  `max-content` — a long single-line `select … where (…)` query or a long
+  `accept` / `user-agent` header grew it past the viewport, scrolling the whole
+  page body sideways and clipping the content past each panel's right edge. Each
+  grid now pins its column to `minmax(0, 1fr)` (matching the stack/source and
+  hydration-diff grids), so wide content stays inside its own `overflow-x` / word
+  wrap block: SQL rows scroll within their block and header values wrap.
+
+- [#1705](https://github.com/withplumix/plumix/pull/1705) [`88b6db2`](https://github.com/withplumix/plumix/commit/88b6db2b94c94a0a9c12f4d8cb84289f28cd7558) Thanks [@nasyrov](https://github.com/nasyrov)! - Fix a flash of unstyled content (FOUC) on first paint in `plumix dev`.
+
+  Theme stylesheets declared via `defineTheme({ css: ["./theme/app.css"] })` were
+  delivered in dev only through the client-entry `<script>`, which side-effect-
+  imports the CSS so Vite injects `<style>` tags after hydration — the page painted
+  unstyled for a moment, then snapped in. The dev SSR response now also links each
+  resolvable theme CSS path with a render-blocking `<link rel="stylesheet">` in
+  `<head>`, so the first frame is styled, matching the production build.
+
+  The client-entry `<script>` still loads, so CSS hot-module replacement is
+  unchanged. Aliased (`~`, `@/`) and npm-scope (`@scope/pkg`) CSS specifiers keep
+  riding in on that import, since a browser `<link>` cannot resolve them.
+
+- Updated dependencies [[`b124789`](https://github.com/withplumix/plumix/commit/b1247897f2044ad4e7f975ce2d0b8294fd0939af), [`56e416a`](https://github.com/withplumix/plumix/commit/56e416af8e753cc07cd0f87a26af4ef0c6fc343c), [`fff6e4a`](https://github.com/withplumix/plumix/commit/fff6e4a134e03a6fa1276c8d0d3d23c8cd7e134a)]:
+  - @plumix/blocks@0.12.0
+
 ## 0.11.0
 
 ### Patch Changes

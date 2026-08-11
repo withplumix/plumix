@@ -1,5 +1,37 @@
 # @plumix/admin-editor
 
+## 0.12.0
+
+### Minor Changes
+
+- [#1730](https://github.com/withplumix/plumix/pull/1730) [`fff6e4a`](https://github.com/withplumix/plumix/commit/fff6e4a134e03a6fa1276c8d0d3d23c8cd7e134a) Thanks [@nasyrov](https://github.com/nasyrov)! - Add optional per-entry-type scoping for editor blocks.
+
+  Blocks registered via `ctx.registerBlock` were global — offered in every entry
+  type's inserter — and the only lever was `inserter: false`, which hides a block
+  from _every_ palette. There was no way to offer a block for one entry type and
+  nowhere else.
+
+  A block spec can now declare an optional `entryTypes` allow-list:
+
+  ```ts
+  defineBlock({ name: "eduscope/hero", entryTypes: ["school"], render });
+  ```
+
+  Unset = every type (the unchanged default, so nothing changes for existing
+  blocks); set = the block appears only in those entry types' inserters, and is
+  hidden when the entry type doesn't match or is unknown. This mirrors the existing
+  `PatternSpec.entryTypes` scoping. It constrains only the editor's
+  available-blocks palette — the render registry stays global and save-time
+  validation is untouched, so a block already stored on an entry still renders and
+  still validates regardless of the type it lives on.
+
+### Patch Changes
+
+- Updated dependencies [[`c5facfe`](https://github.com/withplumix/plumix/commit/c5facfee050d3f5880de31dc6866dd48c4ac3d41), [`665a57b`](https://github.com/withplumix/plumix/commit/665a57b421fc2f82dcf0dad7d0a89e2497557959), [`c74ca2f`](https://github.com/withplumix/plumix/commit/c74ca2ffc069209d543e5d606a2ded8b22245a1e), [`b124789`](https://github.com/withplumix/plumix/commit/b1247897f2044ad4e7f975ce2d0b8294fd0939af), [`30f287e`](https://github.com/withplumix/plumix/commit/30f287e72470efd50ce4e95183c4f7e89f8e0843), [`88b6db2`](https://github.com/withplumix/plumix/commit/88b6db2b94c94a0a9c12f4d8cb84289f28cd7558), [`6da618c`](https://github.com/withplumix/plumix/commit/6da618c216924fa966cb735ef33c16451383b4b0), [`56e416a`](https://github.com/withplumix/plumix/commit/56e416af8e753cc07cd0f87a26af4ef0c6fc343c), [`05ea95c`](https://github.com/withplumix/plumix/commit/05ea95c65a798ea2b74b7b3f3f533471aa4a483e), [`66bce99`](https://github.com/withplumix/plumix/commit/66bce99343595168a13272b947cebb074aa30650), [`fff6e4a`](https://github.com/withplumix/plumix/commit/fff6e4a134e03a6fa1276c8d0d3d23c8cd7e134a), [`5785f19`](https://github.com/withplumix/plumix/commit/5785f19862495b1c445640fbc58a3210d6b0c2ff)]:
+  - @plumix/core@0.12.0
+  - @plumix/blocks@0.12.0
+  - @plumix/admin-ui@0.12.0
+
 ## 0.11.0
 
 ### Patch Changes
