@@ -157,6 +157,28 @@ describe("groupInsertables", () => {
     expect(names("core/group")).not.toContain("core/button");
   });
 
+  test("scopes entry-type-restricted blocks to matching types, treating unset as global", () => {
+    const registry = createBlockRegistry([
+      spec({ name: "core/heading", category: "text", title: "Heading" }),
+      spec({
+        name: "eduscope/hero",
+        category: "eduscope",
+        title: "Hero",
+        entryTypes: ["school"],
+      }),
+    ]);
+    const names = (entryType?: string): readonly string[] =>
+      groupInsertables(registry, { capabilities: NO_CAPS, entryType }).flatMap(
+        (g) => g.entries.map((e) => e.name),
+      );
+
+    // Offered for a matching type; an unset block stays global; a scoped block
+    // drops when the type doesn't match or is unknown — as selectStarterPatterns.
+    expect(names("school")).toEqual(["core/heading", "eduscope/hero"]);
+    expect(names("post")).toEqual(["core/heading"]);
+    expect(names(undefined)).toEqual(["core/heading"]);
+  });
+
   test("an undefined allow-list permits every eligible block", () => {
     const registry = createBlockRegistry([
       spec({ name: "core/heading", category: "text", title: "Heading" }),
