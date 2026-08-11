@@ -9,20 +9,36 @@ import { validateEntryContent } from "./validate-content.js";
 
 /**
  * Augmentable registry mapping block name → attrs shape. Plugins and
- * themes extend it via `declare module "@plumix/blocks"` so the `block()`
+ * themes extend it via `declare module "plumix"` so the `block()`
  * helper can narrow attrs at compile time for known block names.
  *
  * Unknown names fall back to a loose `Record<string, unknown>` — see
  * `AttrsFor` below — so call sites with names the registry hasn't seen
  * still compile.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface BlockTypeRegistry {
+ *     "acme/hero": { heading: string };
+ *   }
+ * }
+ * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- module-augmentation seam; consumers extend via `declare module`.
 export interface BlockTypeRegistry {}
 
 /**
  * Augmentable registry of pattern category slugs. The 8 default
- * categories ship as the seed; plugins / themes augment to add their
- * own.
+ * categories ship as the seed; plugins / themes augment via
+ * `declare module "plumix"` to add their own.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface PatternCategoryRegistry {
+ *     newsletter: true;
+ *   }
+ * }
+ * ```
  */
 export interface PatternCategoryRegistry {
   readonly hero: true;

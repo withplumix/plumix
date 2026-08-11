@@ -16,7 +16,7 @@ export interface CommentModerationCandidate {
   readonly isAuthenticated: boolean;
 }
 
-declare module "plumix/plugin" {
+declare module "plumix" {
   interface FilterRegistry {
     "comment:moderate": (
       status: CommentStatus,

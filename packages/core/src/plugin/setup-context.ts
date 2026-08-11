@@ -349,7 +349,7 @@ export interface PluginSetupContextBase {
    * the plugin lives:
    *
    * - **Workspace-package plugin** (e.g. `@plumix/plugin-menu`): put
-   *   the `declare module "plumix/plugin"` block alongside the
+   *   the `declare module "plumix"` block alongside the
    *   result type the plugin exports from `/server`. Themes import
    *   the result type from `/server`, which pulls the augmentation
    *   in too. Avoid the main entry — themes that only touch `/server`

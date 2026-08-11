@@ -1,5 +1,8 @@
 import type { Label } from "plumix/i18n";
-import { definePlugin } from "plumix/plugin";
+// Imported from the root `plumix` specifier (not the `plumix/plugin` subpath)
+// so the `declare module "plumix"` augmentation below has its target loaded in
+// this plugin's own build.
+import { definePlugin } from "plumix";
 
 import type { AuditExtension } from "./server/auditExtension.js";
 import type { AuditLogRetentionConfig } from "./server/retention.js";
@@ -40,7 +43,7 @@ export { sqlite } from "./server/storage-sqlite.js";
 // don't install the plugin can still write `ctx.audit?.log(...)` and
 // have it compile + no-op at runtime. The augmentation is picked up
 // automatically when any module imports from `@plumix/plugin-audit-log`.
-declare module "plumix/plugin" {
+declare module "plumix" {
   interface AppContextExtensions {
     readonly audit?: AuditExtension;
   }

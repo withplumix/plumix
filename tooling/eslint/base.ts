@@ -15,6 +15,17 @@ export const NO_THROW_NEW_ERROR_SELECTOR = {
     "Use a named factory instead of `throw new Error(...)` — see the area's errors.ts for the pattern (umbrella #232).",
 } as const;
 
+// Type augmentation must go through the single public `plumix` specifier, not
+// an internal `@plumix/*` package or a `plumix/*` subpath. Augmenting the same
+// interface via two specifiers fractures declaration merging — each view drops
+// the other's keys — so the whole ecosystem uses one target (issue #1691).
+// Bare `plumix`, relative paths, and third-party modules are unaffected.
+export const NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR = {
+  selector: "TSModuleDeclaration[id.value=/^(@plumix\\/|plumix\\/)/]",
+  message:
+    "Augment the public `plumix` specifier, not internal `@plumix/*` packages or `plumix/*` subpaths — mixing augmentation targets fractures declaration merging (issue #1691).",
+} as const;
+
 export const baseConfig = defineConfig(
   includeIgnoreFile(path.join(import.meta.dirname, "../../.gitignore")),
   // The root .gitignore patterns are anchored to the repo root, but ESLint
@@ -61,13 +72,31 @@ export const baseConfig = defineConfig(
       "import-x/no-duplicates": "error",
     },
   },
+  // Augmentation-target convention (issue #1691): every file may only augment
+  // the public `plumix` specifier. This broad block covers app/theme code,
+  // `.d.ts` files, and tests; the `src/**` block below re-includes the
+  // selector because ESLint flat config replaces `no-restricted-syntax`
+  // wholesale rather than merging selector lists.
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
+      ],
+    },
+  },
   // Named-errors convention (umbrella #232): production `src/` code may not
   // `throw new Error(...)` — use a factory from the area's errors.ts.
   {
     files: ["src/**/*.ts", "src/**/*.tsx"],
     ignores: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test/**"],
     rules: {
-      "no-restricted-syntax": ["error", NO_THROW_NEW_ERROR_SELECTOR],
+      "no-restricted-syntax": [
+        "error",
+        NO_THROW_NEW_ERROR_SELECTOR,
+        NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
+      ],
     },
   },
   {

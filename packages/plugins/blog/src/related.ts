@@ -11,7 +11,7 @@ import { entries, entryTerm } from "plumix/schema";
 // anything where the post taxonomy (category/tag) this plugin registers
 // exists — so the dep lives here, not in core. Themes import `RelatedPosts`
 // to pull this augmentation, mirroring the comments plugin's `ResolvedThread`.
-declare module "plumix/plugin" {
+declare module "plumix" {
   interface TemplateDepRegistry {
     relatedPosts: { slug: string; result: readonly ResolvedEntry[] };
   }

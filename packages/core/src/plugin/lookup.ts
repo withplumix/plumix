@@ -53,9 +53,17 @@ export interface LookupHydrateOptions<TScope = unknown> {
 /**
  * Read-shape registry for reference kinds, keyed by adapter `kind`.
  * Core declares its own kinds; plugins augment via declaration
- * merging (`declare module "plumix/plugin"`), so the typed-meta layer
+ * merging (`declare module "plumix"`), so the typed-meta layer
  * can resolve a reference field's hydrated value without core knowing
  * plugin-provided kinds.
+ *
+ * ```ts
+ * declare module "plumix" {
+ *   interface ReferenceHydrationShapes {
+ *     media: MediaReference;
+ *   }
+ * }
+ * ```
  */
 export interface ReferenceHydrationShapes {
   readonly entry: EntryReferenceSummary;
