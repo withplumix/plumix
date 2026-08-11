@@ -9,11 +9,20 @@ import {
 } from "../../test/fixtures/webauthn.js";
 import { createTestDb } from "../../test/harness.js";
 import { issueChallenge } from "./challenges.js";
-import { PASSKEY_DEFAULTS, resolvePasskeyConfig } from "./config.js";
+import {
+  PASSKEY_DEFAULTS,
+  resolvePasskeyConfig,
+  resolvePasskeyOrigins,
+} from "./config.js";
 import { PasskeyError } from "./errors.js";
 import { finishRegistration, persistCredential } from "./register.js";
 
-const config = resolvePasskeyConfig({
+// The ceremony verifies against a resolved config; static origins resolve
+// against an empty env unchanged.
+const resolved = (input: Parameters<typeof resolvePasskeyConfig>[0]) =>
+  resolvePasskeyOrigins(resolvePasskeyConfig(input), {});
+
+const config = resolved({
   rpName: "Plumix Test",
   rpId: "cms.example.com",
   origin: "https://cms.example.com",
@@ -86,7 +95,7 @@ describe("finishRegistration (positive ceremony with ES256)", () => {
   });
 });
 
-const previewPolicyConfig = resolvePasskeyConfig({
+const previewPolicyConfig = resolved({
   rpName: "Plumix Test",
   rpId: "acme.workers.dev",
   origin: "https://app.acme.workers.dev",

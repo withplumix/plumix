@@ -15,6 +15,14 @@ the sole anchor and is never derived from the request, so a policy can only
 request Host. Verification stays pinned to `origin` when `allowedOrigins` is
 unset, so existing single-host deploys are unchanged.
 
+`auth.passkey.origin` and `.allowedOrigins` also accept an `(env) => …`
+resolver (the same `EnvInput` form as secret slots), so the public origin can be
+sourced from a runtime env var (`PUBLIC_ORIGIN`) per deploy instead of hardcoded
+— resolved per request, consistent across runtimes rather than reconstructed
+from Cloudflare's build-time env. Literal values keep their config-time
+validation; resolver forms defer to runtime. The canonical `app.origin` (CSRF,
+magic-link, OAuth, sitemap, cron) resolves through the same value.
+
 `cloudflareDeployOrigin()` now anchors `rpId` to the account registrable domain
 (`<account>.workers.dev`) and returns `allowedOrigins:
 ["https://*.<account>.workers.dev"]`, so one passkey enrolled once is valid on

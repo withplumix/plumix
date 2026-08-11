@@ -64,6 +64,11 @@ export default plumix({
 });
 ```
 
+`passkey.origin` (and `allowedOrigins`) also accept an `(env) => string`
+resolver, so the public origin can come from a per-deploy env var
+(`origin: (env) => env.PUBLIC_ORIGIN`) instead of being hardcoded — resolved
+per request, the same way secret slots are.
+
 Add capabilities by dropping plugins into `plugins`:
 
 ```ts

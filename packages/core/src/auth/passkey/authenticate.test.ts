@@ -13,11 +13,16 @@ import {
 import { createTestDb } from "../../test/harness.js";
 import { ensureUint8Array, finishAuthentication } from "./authenticate.js";
 import { issueChallenge } from "./challenges.js";
-import { resolvePasskeyConfig } from "./config.js";
+import { resolvePasskeyConfig, resolvePasskeyOrigins } from "./config.js";
 import { PasskeyError } from "./errors.js";
 import { finishRegistration } from "./register.js";
 
-const config = resolvePasskeyConfig({
+// The ceremony verifies against a resolved config; static origins resolve
+// against an empty env unchanged.
+const resolved = (input: Parameters<typeof resolvePasskeyConfig>[0]) =>
+  resolvePasskeyOrigins(resolvePasskeyConfig(input), {});
+
+const config = resolved({
   rpName: "Plumix Test",
   rpId: "cms.example.com",
   origin: "https://cms.example.com",
@@ -73,7 +78,7 @@ async function registerFixtureCredential(): Promise<RegisteredFixture> {
 
 describe("finishAuthentication (origin policy)", () => {
   test("accepts an assertion from a preview host allowed by a subdomain wildcard", async () => {
-    const previewPolicyConfig = resolvePasskeyConfig({
+    const previewPolicyConfig = resolved({
       rpName: "Plumix Test",
       rpId: "acme.workers.dev",
       origin: "https://app.acme.workers.dev",

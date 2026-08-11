@@ -24,6 +24,7 @@ import {
 import { invalidateSession, validateSession } from "../sessions.js";
 import { mintSessionAndCookie } from "../sign-in.js";
 import { beginAuthentication, finishAuthentication } from "./authenticate.js";
+import { resolvePasskeyOrigins } from "./config.js";
 import { PasskeyError } from "./errors.js";
 import {
   beginRegistration,
@@ -179,7 +180,8 @@ export async function handlePasskeyRegisterOptions(
           .where(eq(credentials.userId, user.id))
       : undefined;
 
-  const options = await beginRegistration(ctx.db, app.passkey, {
+  const passkey = resolvePasskeyOrigins(app.passkey, ctx.env);
+  const options = await beginRegistration(ctx.db, passkey, {
     userId: user.id,
     userEmail: user.email,
     userDisplayName: user.name ?? user.email,
@@ -224,8 +226,9 @@ export async function handlePasskeyRegisterVerify(
   const payload = await parseJson(ctx.request, registerResponseSchema);
   if (!payload) return invalidInput();
 
+  const passkey = resolvePasskeyOrigins(app.passkey, ctx.env);
   try {
-    const verified = await finishRegistration(ctx.db, app.passkey, payload);
+    const verified = await finishRegistration(ctx.db, passkey, payload);
     if (verified.userId === null) {
       return jsonResponse(
         { error: "challenge_not_bound_to_user" },
@@ -236,7 +239,7 @@ export async function handlePasskeyRegisterVerify(
     const credential = await persistCredential(ctx.db, {
       userId: verified.userId,
       verified,
-      maxPerUser: app.passkey.maxCredentialsPerUser,
+      maxPerUser: passkey.maxCredentialsPerUser,
     });
 
     // Look up the full user row for the hook payload (createSession
@@ -317,7 +320,8 @@ export async function handlePasskeyLoginOptions(
         .where(eq(credentials.userId, user.id))
     : [];
 
-  const options = await beginAuthentication(ctx.db, app.passkey, {
+  const passkey = resolvePasskeyOrigins(app.passkey, ctx.env);
+  const options = await beginAuthentication(ctx.db, passkey, {
     allowCredentials,
   });
   return jsonResponse(options);
@@ -331,9 +335,10 @@ export async function handlePasskeyLoginVerify(
   if (!payload) return invalidInput();
 
   try {
+    const passkey = resolvePasskeyOrigins(app.passkey, ctx.env);
     const verified = await finishAuthentication(
       ctx.db,
-      app.passkey,
+      passkey,
       payload as AuthenticationResponse,
     );
     await ctx.db
@@ -454,7 +459,8 @@ export async function handleInviteRegisterOptions(
   if (target instanceof Response) return target;
   const { user } = target;
 
-  const options = await beginRegistration(ctx.db, app.passkey, {
+  const passkey = resolvePasskeyOrigins(app.passkey, ctx.env);
+  const options = await beginRegistration(ctx.db, passkey, {
     userId: user.id,
     userEmail: user.email,
     userDisplayName: pickDisplayName(input.name, user.name, user.email),
@@ -477,11 +483,8 @@ export async function handleInviteRegisterVerify(
   const { invite, user } = target;
 
   try {
-    const verified = await finishRegistration(
-      ctx.db,
-      app.passkey,
-      input.response,
-    );
+    const passkey = resolvePasskeyOrigins(app.passkey, ctx.env);
+    const verified = await finishRegistration(ctx.db, passkey, input.response);
     // The challenge issued in register/options was bound to invite.userId.
     // A mismatch means the response is for a different user — refuse.
     if (verified.userId === null || verified.userId !== user.id) {
@@ -490,7 +493,7 @@ export async function handleInviteRegisterVerify(
     const credential = await persistCredential(ctx.db, {
       userId: user.id,
       verified,
-      maxPerUser: app.passkey.maxCredentialsPerUser,
+      maxPerUser: passkey.maxCredentialsPerUser,
     });
     await consumeInviteToken(ctx.db, invite.tokenHash);
     const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);

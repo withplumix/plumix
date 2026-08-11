@@ -21,6 +21,7 @@ import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/current.js";
 import type { OAuthProviderSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
+import type { EnvInput } from "../runtime/env-input.js";
 import type {
   AssetsBinding,
   ConnectedCache,
@@ -41,6 +42,7 @@ import { debugHistoryConsumer } from "../dev/debug-bar/history-consumer.js";
 import { devErrorTelemetryConsumer } from "../dev/server/telemetry-consumer.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
+import { resolveEnvInput } from "../runtime/env-input.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
 import { createRequestMemo } from "./memo.js";
@@ -347,7 +349,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly shortcodes?: ShortcodeRegistry;
   readonly user?: AuthenticatedUser | null;
   readonly tokenScopes?: readonly string[] | null;
-  readonly origin?: string;
+  readonly origin?: EnvInput<string>;
   readonly basePath?: string;
   readonly debugBar?: DebugBarInput;
   /** App-config telemetry slot — registered consumers vote per request. */
@@ -482,8 +484,12 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     // Best-effort fallback for tests / runtimes that don't pass an
     // explicit origin: derive from the inbound request URL. Production
     // always passes the canonical operator-set origin so URLs in
-    // outgoing email are stable across worker geos.
-    origin: args.origin ?? new URL(args.request.url).origin,
+    // outgoing email are stable across worker geos. The origin may be an
+    // `(env) => …` resolver — resolve it here, where the runtime env exists.
+    origin:
+      args.origin !== undefined
+        ? resolveEnvInput(args.origin, args.env)
+        : new URL(args.request.url).origin,
     basePath: args.basePath ?? "",
     debugBar: args.debugBar,
     // Provisional no-op — swapped for the real collector below iff a consumer

@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import type { EnvInput } from "../runtime/env-input.js";
 import type { RequestAuthenticator } from "./authenticator.js";
 import type { OAuthProviderClient } from "./oauth/types.js";
 import type { PasskeyConfig } from "./passkey/config.js";
@@ -160,20 +161,46 @@ function allowedOriginHost(entry: string): string | null {
 const isRpIdSuffix = (host: string, rpId: string): boolean =>
   host === rpId || host.endsWith(`.${rpId}`);
 
+const isUrl = (value: string): boolean => {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const isStringArray = (value: unknown): value is readonly string[] =>
+  Array.isArray(value) && value.every((entry) => typeof entry === "string");
+
+// origin / allowedOrigins accept an `(env) => …` resolver (validated at runtime,
+// like secret slots) or a literal validated here. A bare `v.custom` per field
+// keeps the error message precise — a `v.union` would collapse it.
 const passkeySchema = v.pipe(
   v.object({
     rpName: v.pipe(v.string(), v.nonEmpty("rpName must be a non-empty string")),
     rpId: v.pipe(v.string(), v.nonEmpty("rpId must be a non-empty string")),
-    origin: v.pipe(v.string(), v.url("origin must be a valid URL")),
-    allowedOrigins: v.optional(v.array(v.string())),
+    origin: v.custom<EnvInput<string>>(
+      (val) =>
+        typeof val === "function" || (typeof val === "string" && isUrl(val)),
+      "origin must be a valid URL or an (env) => string resolver",
+    ),
+    allowedOrigins: v.optional(
+      v.custom<EnvInput<readonly string[]>>(
+        (val) => typeof val === "function" || isStringArray(val),
+        "allowedOrigins must be a string[] or an (env) => string[] resolver",
+      ),
+    ),
   }),
-  // Cross-field: every accepted origin must keep rpId as a registrable suffix,
-  // so a credential bound to rpId stays valid on it. Forwarded onto the
-  // allowedOrigins path so the issue points at the offending field.
+  // Cross-field: every literal accepted origin must keep rpId as a registrable
+  // suffix, so a credential bound to rpId stays valid on it. Resolver forms are
+  // deferred to runtime. Forwarded onto the allowedOrigins path so the issue
+  // points at the offending field.
   v.forward(
     v.check(
       (cfg) =>
-        !cfg.allowedOrigins ||
+        typeof cfg.allowedOrigins === "function" ||
+        cfg.allowedOrigins === undefined ||
         cfg.allowedOrigins.every((entry) => {
           const host = allowedOriginHost(entry);
           return host !== null && isRpIdSuffix(host, cfg.rpId);

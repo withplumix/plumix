@@ -199,7 +199,7 @@ function enforcePlumixCsrf(app: PlumixApp, ctx: AppContext): Response | null {
   // layer or an intermediate that strips/forwards headers loosely.
   if (
     ctx.request.headers.has("origin") &&
-    !hasMatchingOrigin(ctx.request, { allowed: [app.origin] })
+    !hasMatchingOrigin(ctx.request, { allowed: [ctx.origin] })
   ) {
     // A same-origin request — Origin equals the host it targets — is by
     // definition not cross-site forgery, so accept it even when the canonical

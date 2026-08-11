@@ -14,6 +14,7 @@ import {
   jsonResponse,
   readSessionCookie,
   requestStore,
+  resolveEnvInput,
   runScheduledTasks,
 } from "plumix";
 
@@ -261,9 +262,11 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
 
     // Synthetic request representing the cron invocation. Anything that
     // reads `ctx.request.url` from a scheduled task sees an internal
-    // marker rather than a real inbound request.
+    // marker rather than a real inbound request. `app.origin` may be an
+    // `(env) => …` resolver — resolve it against the scheduled env.
+    const origin = resolveEnvInput(app.origin, env as PlumixEnv);
     const syntheticRequest = new Request(
-      `${app.origin}/_plumix/internal/scheduled?cron=${encodeURIComponent(event.cron)}`,
+      `${origin}/_plumix/internal/scheduled?cron=${encodeURIComponent(event.cron)}`,
       { method: "POST" },
     );
 

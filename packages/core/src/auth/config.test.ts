@@ -121,6 +121,17 @@ describe("auth()", () => {
     expect(atAllowedOrigins(error)).toBe(true);
   });
 
+  test("accepts (env) => resolvers for origin and allowedOrigins", () => {
+    // Resolver form defers to runtime env — not validated at config time,
+    // the same contract secret slots use.
+    const passkey = {
+      ...validPasskey,
+      origin: () => "https://cms.example",
+      allowedOrigins: () => ["https://*.cms.example"],
+    };
+    expect(() => auth({ passkey })).not.toThrow();
+  });
+
   test("rejects a negative maxAgeSeconds", () => {
     const error = rejected({
       passkey: validPasskey,
