@@ -38,6 +38,10 @@ export const authTokens = sqliteTable(
   (table) => [
     index("auth_tokens_user_id_idx").on(table.userId),
     index("auth_tokens_expires_at_idx").on(table.expiresAt),
+    // Serves the magic-link per-email issuance cap, which filters
+    // (email, type) within a time window on every request to the public
+    // signup surface — without this it's a table scan.
+    index("auth_tokens_email_type_idx").on(table.email, table.type),
   ],
 );
 

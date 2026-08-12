@@ -167,6 +167,61 @@ describe("verifyMagicLink — signup branch (userId null)", () => {
     expect(created).toBeUndefined();
   });
 
+  test("selfSignup provisions at defaultRole with no allowed-domains row", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    // No allowed_domains row for this domain at all — domain-gated signup
+    // would reject, but open self-signup mints the user regardless.
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: null, email: "newcomer@anywhere.test" })
+    ).token;
+
+    const result = await verifyMagicLink(db, token, {
+      selfSignup: { defaultRole: "subscriber" },
+    });
+    expect(result.user.email).toBe("newcomer@anywhere.test");
+    expect(result.user.role).toBe("subscriber");
+    expect(result.created).toBe(true);
+  });
+
+  test("selfSignup default role wins over a matching allowed-domains role", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    // Even when a domain rule exists (and would grant "author"), open
+    // self-signup bypasses the allowlist entirely and grants its own role.
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "author",
+      isEnabled: true,
+    });
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: null, email: "newcomer@example.com" })
+    ).token;
+
+    const result = await verifyMagicLink(db, token, {
+      selfSignup: { defaultRole: "subscriber" },
+    });
+    expect(result.user.role).toBe("subscriber");
+  });
+
+  test("without selfSignup the allowed-domains gate still applies", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    const token = (
+      await authTokenFactory
+        .transient({ db })
+        .create({ userId: null, email: "newcomer@anywhere.test" })
+    ).token;
+
+    await expect(verifyMagicLink(db, token)).rejects.toMatchObject({
+      code: "domain_not_allowed",
+    });
+  });
+
   test("rejects with domain_not_allowed when the allowed-domains row was removed mid-flight", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });

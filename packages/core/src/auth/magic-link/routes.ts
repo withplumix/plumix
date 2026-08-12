@@ -91,6 +91,9 @@ export async function handleMagicLinkRequest(
       locale: ctx.locale.code,
       logger: ctx.logger,
       bootstrapAllowed: ctx.bootstrapAllowed,
+      // Open self-signup lets any valid email register; the verify route
+      // grants `auth.selfSignup.defaultRole`. Absent = domain-gated.
+      selfSignupOpen: app.config.auth.selfSignup !== undefined,
     });
   } catch (error) {
     // requestMagicLink swallows mailer errors internally; anything that
@@ -132,6 +135,7 @@ export async function handleMagicLinkVerify(
   try {
     const { user, created } = await verifyMagicLink(ctx.db, token, {
       bootstrapAllowed: ctx.bootstrapAllowed,
+      selfSignup: app.config.auth.selfSignup,
     });
     const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);
     await ctx.hooks.doAction("user:signed_in", user, {
