@@ -43,6 +43,30 @@ describe("oauth state store", () => {
     expect(replay).toBeNull();
   });
 
+  test("round-trips a redirectTo through the payload", async () => {
+    const db = await createTestDb();
+    const { state } = await issueOAuthState(db, {
+      provider: "github",
+      codeVerifier: "v",
+      redirectTo: "/account/saved",
+    });
+    expect(await consumeOAuthState(db, state)).toEqual({
+      provider: "github",
+      codeVerifier: "v",
+      redirectTo: "/account/saved",
+    });
+  });
+
+  test("omits redirectTo from the payload when none was issued", async () => {
+    const db = await createTestDb();
+    const { state } = await issueOAuthState(db, {
+      provider: "github",
+      codeVerifier: "v",
+    });
+    const consumed = await consumeOAuthState(db, state);
+    expect(consumed).not.toHaveProperty("redirectTo");
+  });
+
   test("consume rejects an unknown state without throwing", async () => {
     const db = await createTestDb();
     expect(

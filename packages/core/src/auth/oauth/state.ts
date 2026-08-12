@@ -8,6 +8,13 @@ const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 interface OAuthStatePayload {
   readonly provider: string;
   readonly codeVerifier: string;
+  /**
+   * Validated same-origin path to return the visitor to after the callback
+   * mints a session. Absent for admin-originated sign-in (defaults to the
+   * admin). Stored server-side in the (hashed-key) state row, never in the
+   * URL round-trip, so it can't be tampered with between start and callback.
+   */
+  readonly redirectTo?: string;
 }
 
 interface IssuedOAuthState {
@@ -68,5 +75,11 @@ export async function consumeOAuthState(
   return {
     provider: payload.provider,
     codeVerifier: payload.codeVerifier,
+    // Only surface a string; the callback re-validates it against
+    // `isSafeRedirect` before honouring, so a hand-rolled row can't inject
+    // an off-origin destination here.
+    ...(typeof payload.redirectTo === "string"
+      ? { redirectTo: payload.redirectTo }
+      : {}),
   };
 }

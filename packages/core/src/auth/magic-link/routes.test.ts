@@ -101,6 +101,80 @@ describe("magic-link request route", () => {
     );
   });
 
+  test("folds a safe redirectTo into the emailed verify link", async () => {
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+    });
+    await h.factory.user.create({
+      email: "alice@example.com",
+      role: "subscriber",
+    });
+
+    const response = await h.dispatch(
+      postRequest("/_plumix/auth/magic-link/request", {
+        email: "alice@example.com",
+        redirectTo: "/account/saved",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(sent[0]?.text).toMatch(/[?&]redirectTo=%2Faccount%2Fsaved/);
+  });
+
+  test("omits an unsafe redirectTo from the emailed verify link", async () => {
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+    });
+    await h.factory.user.create({
+      email: "alice@example.com",
+      role: "subscriber",
+    });
+
+    await h.dispatch(
+      postRequest("/_plumix/auth/magic-link/request", {
+        email: "alice@example.com",
+        redirectTo: "https://evil.com",
+      }),
+    );
+    expect(sent[0]?.text).not.toContain("redirectTo");
+  });
+
+  test("is callable from a theme-origin page (custom header + Origin gate)", async () => {
+    // The theme login page lives on the site origin and posts here with the
+    // custom CSRF header. Assert the endpoint accepts it — this is what makes
+    // the endpoints theme-callable, not just admin-callable.
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+    });
+    await h.factory.user.create({
+      email: "alice@example.com",
+      role: "subscriber",
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/auth/magic-link/request", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-plumix-request": "1",
+          origin: "https://cms.example",
+        },
+        body: JSON.stringify({
+          email: "alice@example.com",
+          redirectTo: "/account",
+        }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.text).toMatch(/[?&]redirectTo=%2Faccount/);
+  });
+
   test("returns the same shape when user does not exist (no enumeration)", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({
@@ -228,6 +302,95 @@ describe("magic-link verify route", () => {
     expect(response.headers.get("set-cookie")).toContain(
       "Path=/custom-directory",
     );
+  });
+
+  test("honours a safe redirectTo on the verify link", async () => {
+    const { mailer } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+    });
+    const user = await h.factory.user.create({
+      email: "alice@example.com",
+      role: "subscriber",
+    });
+    const token = (
+      await h.factory.authToken.create({
+        userId: user.id,
+        email: "alice@example.com",
+      })
+    ).token;
+
+    const response = await h.dispatch(
+      getRequest(
+        `/_plumix/auth/magic-link/verify?token=${token}&redirectTo=%2Faccount%2Fsaved`,
+      ),
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/account/saved");
+    expect(response.headers.get("set-cookie")).toContain("plumix_session=");
+  });
+
+  test("falls back to admin when the verify redirectTo is unsafe", async () => {
+    const { mailer } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+    });
+    const user = await h.factory.user.create({
+      email: "alice@example.com",
+      role: "subscriber",
+    });
+    const token = (
+      await h.factory.authToken.create({
+        userId: user.id,
+        email: "alice@example.com",
+      })
+    ).token;
+
+    const response = await h.dispatch(
+      getRequest(
+        `/_plumix/auth/magic-link/verify?token=${token}&redirectTo=%2F%2Fevil.com`,
+      ),
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/_plumix/admin");
+  });
+
+  test("worked theme wiring: request with redirectTo → verify returns to the theme page", async () => {
+    // Mirrors a custom theme login page: an email form posts to
+    // magic-link/request with the current page as redirectTo; the visitor
+    // clicks the emailed link and lands back on that page, signed in.
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+    });
+    await h.factory.user.create({
+      email: "reader@example.com",
+      role: "subscriber",
+    });
+
+    const requestResp = await h.dispatch(
+      postRequest("/_plumix/auth/magic-link/request", {
+        email: "reader@example.com",
+        redirectTo: "/blog/hello-world",
+      }),
+    );
+    expect(requestResp.status).toBe(200);
+
+    // The theme's own login page URL rode all the way into the email.
+    const verifyPath =
+      /https:\/\/cms\.example(\/_plumix\/auth\/magic-link\/verify\?\S+)/.exec(
+        sent[0]?.text ?? "",
+      )?.[1];
+    if (!verifyPath) throw new Error("expected verify URL in email");
+    expect(verifyPath).toMatch(/redirectTo=%2Fblog%2Fhello-world/);
+
+    const verifyResp = await h.dispatch(getRequest(verifyPath));
+    expect(verifyResp.status).toBe(302);
+    expect(verifyResp.headers.get("location")).toBe("/blog/hello-world");
+    expect(verifyResp.headers.get("set-cookie")).toContain("plumix_session=");
   });
 
   test("rejects an unknown token with token_invalid", async () => {

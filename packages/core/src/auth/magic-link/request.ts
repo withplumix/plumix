@@ -46,6 +46,14 @@ interface RequestMagicLinkInput {
    */
   readonly logger?: Pick<Logger, "warn">;
   /**
+   * Validated same-origin path to fold into the emailed verify URL so a
+   * theme-originated sign-in returns the visitor to where they started. The
+   * caller passes only a value it has already run through `isSafeRedirect`;
+   * the verify route re-validates the query param before honouring it.
+   * Omitted for admin sign-in (verify defaults to the admin).
+   */
+  readonly redirectTo?: string;
+  /**
    * When true, allow this magic-link request to issue a signup token
    * even when zero users exist. The route reads this from
    * `ctx.bootstrapAllowed` (derived from `auth.bootstrapVia`); default
@@ -154,6 +162,12 @@ async function issueAndSend(
     input.origin,
   );
   verifyUrl.searchParams.set("token", token);
+  // Ride the return-to destination through the emailed link. Set only when
+  // the caller supplied one it already validated — the verify route checks
+  // it again on the way out.
+  if (input.redirectTo !== undefined) {
+    verifyUrl.searchParams.set("redirectTo", input.redirectTo);
+  }
 
   try {
     // Plain-text body only. Branded HTML / template rendering is the

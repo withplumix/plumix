@@ -171,6 +171,59 @@ describe("oauth start route", () => {
     );
   });
 
+  test("carries a safe redirectTo through the state payload", async () => {
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.seedUser("admin");
+
+    const response = await h.dispatch(
+      new Request(
+        "https://cms.example/_plumix/auth/oauth/github/start?redirectTo=%2Faccount%2Fsaved",
+      ),
+    );
+    expect(response.status).toBe(302);
+
+    // The state row landed with the return-to path in its payload.
+    const rows = await h.db.select().from(authTokens);
+    const stateRow = rows.find((r) => r.type === "oauth_state");
+    const payload = stateRow?.payload as { redirectTo?: string } | undefined;
+    expect(payload?.redirectTo).toBe("/account/saved");
+  });
+
+  test("drops an unsafe redirectTo at start (not stored)", async () => {
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.seedUser("admin");
+
+    await h.dispatch(
+      new Request(
+        "https://cms.example/_plumix/auth/oauth/github/start?redirectTo=https%3A%2F%2Fevil.com",
+      ),
+    );
+
+    const rows = await h.db.select().from(authTokens);
+    const stateRow = rows.find((r) => r.type === "oauth_state");
+    const payload = stateRow?.payload as { redirectTo?: string } | undefined;
+    expect(payload?.redirectTo).toBeUndefined();
+  });
+
+  test("drops a TAB-smuggled protocol-relative redirectTo at start (not stored)", async () => {
+    // `/%09/evil.com` decodes to `/<TAB>/evil.com`; the browser's URL parser
+    // strips the TAB, reconstructing `//evil.com`. The validator must reject
+    // it before it reaches the state row.
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.seedUser("admin");
+
+    await h.dispatch(
+      new Request(
+        "https://cms.example/_plumix/auth/oauth/github/start?redirectTo=%2F%09%2Fevil.com",
+      ),
+    );
+
+    const rows = await h.db.select().from(authTokens);
+    const stateRow = rows.find((r) => r.type === "oauth_state");
+    const payload = stateRow?.payload as { redirectTo?: string } | undefined;
+    expect(payload?.redirectTo).toBeUndefined();
+  });
+
   test("returns 405 on POST", async () => {
     const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
     const response = await h.dispatch(
@@ -223,8 +276,13 @@ describe("oauth callback route", () => {
     h: Awaited<ReturnType<typeof createDispatcherHarness>>,
     provider: "github" | "google",
     codeVerifier: string,
+    redirectTo?: string,
   ): Promise<string> {
-    const { state } = await issueOAuthState(h.db, { provider, codeVerifier });
+    const { state } = await issueOAuthState(h.db, {
+      provider,
+      codeVerifier,
+      redirectTo,
+    });
     return state;
   }
 
@@ -386,6 +444,77 @@ describe("oauth callback route", () => {
     expect(sessionRows[0]?.userId).toBe(seeded.id);
   });
 
+  test("returns the visitor to a safe redirectTo carried in state", async () => {
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.factory.user.create({
+      role: "subscriber",
+      email: "alice@example.com",
+    });
+    const state = await seedState(h, "github", "v-rt", "/account/saved");
+
+    answer({
+      "https://github.com/login/oauth/access_token": {
+        body: { access_token: "tk", token_type: "bearer" },
+      },
+      "https://api.github.com/user": {
+        body: {
+          id: 9002,
+          login: "alice",
+          name: "Alice",
+          email: "alice@example.com",
+          avatar_url: null,
+        },
+      },
+      "https://api.github.com/user/emails": {
+        body: [{ email: "alice@example.com", primary: true, verified: true }],
+      },
+    });
+
+    const response = await get(
+      h,
+      `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/account/saved");
+    expect(response.headers.get("set-cookie")).toContain("plumix_session=");
+  });
+
+  test("falls back to admin when the stored redirectTo is unsafe", async () => {
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.factory.user.create({
+      role: "subscriber",
+      email: "alice@example.com",
+    });
+    // A hand-rolled / tampered row carrying an off-origin destination must
+    // not become a navigation target — the callback re-validates.
+    const state = await seedState(h, "github", "v-rt2", "https://evil.com");
+
+    answer({
+      "https://github.com/login/oauth/access_token": {
+        body: { access_token: "tk", token_type: "bearer" },
+      },
+      "https://api.github.com/user": {
+        body: {
+          id: 9003,
+          login: "alice",
+          name: "Alice",
+          email: "alice@example.com",
+          avatar_url: null,
+        },
+      },
+      "https://api.github.com/user/emails": {
+        body: [{ email: "alice@example.com", primary: true, verified: true }],
+      },
+    });
+
+    const response = await get(
+      h,
+      `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/_plumix/admin");
+  });
+
   test("domain-gated signup creates a user with the domain's default role", async () => {
     const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
     await h.seedUser("admin");
@@ -460,6 +589,52 @@ describe("oauth callback route", () => {
       where: eq(users.email, "stranger@notallowed.com"),
     });
     expect(stranger).toBeUndefined();
+  });
+
+  test("worked theme wiring: start → callback returns the visitor to redirectTo", async () => {
+    // Mirrors a theme "Continue with GitHub" link carrying ?redirectTo; the
+    // whole round-trip lands the visitor back on the page, signed in.
+    const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
+    await h.factory.user.create({
+      role: "subscriber",
+      email: "reader@example.com",
+    });
+
+    const start = await h.dispatch(
+      new Request(
+        "https://cms.example/_plumix/auth/oauth/github/start?redirectTo=%2Fblog%2Fhello-world",
+      ),
+    );
+    const authorizeUrl = start.headers.get("location");
+    if (!authorizeUrl) throw new Error("missing authorize redirect");
+    const state = new URL(authorizeUrl).searchParams.get("state");
+    if (!state) throw new Error("missing state in authorize URL");
+
+    answer({
+      "https://github.com/login/oauth/access_token": {
+        body: { access_token: "tk", token_type: "bearer" },
+      },
+      "https://api.github.com/user": {
+        body: {
+          id: 9100,
+          login: "reader",
+          name: "Reader",
+          email: "reader@example.com",
+          avatar_url: null,
+        },
+      },
+      "https://api.github.com/user/emails": {
+        body: [{ email: "reader@example.com", primary: true, verified: true }],
+      },
+    });
+
+    const callback = await get(
+      h,
+      `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
+    );
+    expect(callback.status).toBe(302);
+    expect(callback.headers.get("location")).toBe("/blog/hello-world");
+    expect(callback.headers.get("set-cookie")).toContain("plumix_session=");
   });
 
   test("token exchange failure redirects to login with code_exchange_failed", async () => {
