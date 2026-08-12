@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { createPluginRegistry } from "../plugin/manifest.js";
 import {
+  canAccessAdmin,
   capabilitiesForRole,
   CapabilityError,
   CORE_CAPABILITIES,
@@ -18,6 +19,19 @@ describe("role hierarchy", () => {
     expect(roleLevel("editor")).toBeGreaterThan(roleLevel("author"));
     expect(roleLevel("author")).toBeGreaterThan(roleLevel("contributor"));
     expect(roleLevel("contributor")).toBeGreaterThan(roleLevel("subscriber"));
+  });
+});
+
+describe("canAccessAdmin", () => {
+  test("locks subscribers out of the admin", () => {
+    expect(canAccessAdmin("subscriber")).toBe(false);
+  });
+
+  test("admits every staff role from contributor up", () => {
+    expect(canAccessAdmin("contributor")).toBe(true);
+    expect(canAccessAdmin("author")).toBe(true);
+    expect(canAccessAdmin("editor")).toBe(true);
+    expect(canAccessAdmin("admin")).toBe(true);
   });
 });
 
