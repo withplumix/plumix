@@ -5,6 +5,7 @@ import type { OAuthProviderClient } from "./types.js";
 import { withBasePath } from "../../base-path.js";
 import { users } from "../../db/schema/users.js";
 import { loginErrorRedirect, redirectTo } from "../../runtime/http.js";
+import { isSafeRedirect, resolveSafeRedirect } from "../redirect.js";
 import { mintSessionAndCookie } from "../sign-in.js";
 import { buildAuthorizeUrl, exchangeAndFetchProfile } from "./consumer.js";
 import { OAuthError } from "./errors.js";
@@ -44,6 +45,13 @@ export async function handleOAuthStart(
 
   const redirectUri = oauthCallbackUrl(ctx.origin, app.basePath, providerKey);
 
+  // A theme-owned "Continue with <provider>" link carries `?redirectTo=` so
+  // the visitor lands back on the page they started from. Only stash it when
+  // it's a safe same-origin path — the callback re-validates as well, but
+  // filtering here keeps a junk value out of the state row entirely.
+  const requested = new URL(ctx.request.url).searchParams.get("redirectTo");
+  const redirectToPath = isSafeRedirect(requested) ? requested : undefined;
+
   try {
     const { url } = await buildAuthorizeUrl({
       db: ctx.db,
@@ -51,6 +59,7 @@ export async function handleOAuthStart(
       provider,
       redirectUri,
       env: ctx.env,
+      redirectTo: redirectToPath,
     });
     return redirectTo(url);
   } catch (error) {
@@ -113,7 +122,15 @@ export async function handleOAuthCallback(
       firstSignIn: created,
     });
 
-    return redirectTo(withBasePath(ADMIN_PATH, app.basePath), {
+    // Return to the theme page the sign-in started from when a safe
+    // `redirectTo` rode through the state payload; otherwise the admin, as
+    // before. The path is already root-relative and includes any basePath
+    // (the browser sent its own location), so it's honoured verbatim.
+    const destination = resolveSafeRedirect(
+      stored.redirectTo,
+      withBasePath(ADMIN_PATH, app.basePath),
+    );
+    return redirectTo(destination, {
       "set-cookie": cookieHeader,
     });
   } catch (error) {

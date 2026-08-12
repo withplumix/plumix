@@ -13,6 +13,11 @@ interface BuildAuthorizeUrlInput {
   readonly redirectUri: string;
   /** Request env, for resolving a `client` that's an `(env) => …` resolver. */
   readonly env: PlumixEnv;
+  /**
+   * Validated same-origin path to return to after callback. Carried in the
+   * server-side state payload; the callback re-validates before honouring it.
+   */
+  readonly redirectTo?: string;
 }
 
 interface BuiltAuthorizeUrl {
@@ -36,6 +41,9 @@ export async function buildAuthorizeUrl(
   const { state } = await issueOAuthState(input.db, {
     provider: input.providerKey,
     codeVerifier,
+    // Undefined is dropped from the persisted JSON payload, so an admin-
+    // originated sign-in stores exactly what it did before.
+    redirectTo: input.redirectTo,
   });
 
   const url = new URL(provider.authorizeUrl);

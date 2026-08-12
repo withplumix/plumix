@@ -9,6 +9,7 @@ import {
   loginErrorRedirect,
   redirectTo,
 } from "../../runtime/http.js";
+import { isSafeRedirect, resolveSafeRedirect } from "../redirect.js";
 import { mintSessionAndCookie } from "../sign-in.js";
 import { MagicLinkError } from "./errors.js";
 import { requestMagicLink } from "./request.js";
@@ -30,6 +31,10 @@ const requestInputSchema = v.object({
     v.email(),
     v.maxLength(255),
   ),
+  // Optional return-to destination a theme login page sends alongside the
+  // email. Accepted as a bounded string here; `isSafeRedirect` is the real
+  // gate before it's folded into the emailed link.
+  redirectTo: v.optional(v.pipe(v.string(), v.maxLength(2048))),
 });
 
 /**
@@ -69,6 +74,11 @@ export async function handleMagicLinkRequest(
   try {
     await requestMagicLink(ctx.db, {
       email: parsed.output.email,
+      // Drop an unsafe destination now so it never reaches the email. The
+      // verify route re-validates the surviving value as the trust boundary.
+      redirectTo: isSafeRedirect(parsed.output.redirectTo)
+        ? parsed.output.redirectTo
+        : undefined,
       origin: ctx.origin,
       basePath: app.basePath,
       mailer: ctx.mailer,
@@ -128,7 +138,13 @@ export async function handleMagicLinkVerify(
       method: "magic_link",
       firstSignIn: created,
     });
-    return redirectTo(withBasePath(ADMIN_PATH, app.basePath), {
+    // Honour a safe return-to path that rode through the emailed link;
+    // otherwise the admin, as before.
+    const destination = resolveSafeRedirect(
+      url.searchParams.get("redirectTo"),
+      withBasePath(ADMIN_PATH, app.basePath),
+    );
+    return redirectTo(destination, {
       "set-cookie": cookieHeader,
     });
   } catch (error) {
