@@ -19,7 +19,10 @@ import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/current.js";
-import type { OAuthProviderSummary } from "../runtime/app.js";
+import type {
+  AuthMethodsSummary,
+  OAuthProviderSummary,
+} from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/bindings.js";
 import type { EnvInput } from "../runtime/env-input.js";
 import type {
@@ -58,6 +61,13 @@ import {
 const EMPTY_BLOCK_REGISTRY: BlockRegistry = createBlockRegistry([]);
 const EMPTY_MARK_LIST: readonly MarkSpec[] = Object.freeze([]);
 const EMPTY_SHORTCODE_REGISTRY: ShortcodeRegistry = new Map();
+// Fallback for contexts built without an app wiring auth (bare test/util
+// contexts). The real app always passes `app.authMethods`.
+const NO_AUTH_METHODS: AuthMethodsSummary = Object.freeze({
+  passkey: false,
+  magicLink: false,
+  oauthProviders: Object.freeze([]),
+});
 const DEFAULT_I18N: ResolvedI18n = resolveLocales({
   defaultLocale: "en",
   locales: ["en"],
@@ -213,6 +223,11 @@ export interface AppContextBase<
    */
   readonly oauthProviders: readonly OAuthProviderSummary[];
   /**
+   * Configured auth methods, fed to the render provider so a theme's own login
+   * page reads them via `useAuthMethods()`. See {@link AuthMethodsSummary}.
+   */
+  readonly authMethods: AuthMethodsSummary;
+  /**
    * Extend work past the returned Response — see `DeferFn` for the
    * full per-runtime contract. Default fallback (long-lived runtimes,
    * tests with no adapter wired) catches rejections and logs them
@@ -367,6 +382,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly mailer?: MailerInput;
   readonly i18n?: ResolvedI18n;
   readonly oauthProviders?: readonly OAuthProviderSummary[];
+  readonly authMethods?: AuthMethodsSummary;
   readonly authenticator?: RequestAuthenticator;
   readonly bootstrapAllowed?: boolean;
   /**
@@ -476,6 +492,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     i18n,
     locale,
     oauthProviders: args.oauthProviders ?? [],
+    authMethods: args.authMethods ?? NO_AUTH_METHODS,
     authenticator: args.authenticator ?? defaultAuthenticator(),
     bootstrapAllowed: args.bootstrapAllowed ?? false,
     requestId: crypto.randomUUID(),

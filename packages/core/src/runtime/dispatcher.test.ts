@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { defineBlock } from "@plumix/blocks";
+import { useAuthMethods } from "@plumix/blocks/renderer";
 
 import type { AnyPluginDescriptor } from "../config.js";
 import type { AppContext } from "../context/app.js";
@@ -152,6 +153,53 @@ describe("dispatcher — routing", () => {
     // miniflare's `single-page-application` not_found_handling
     // redirects /index.html → /, breaking SPA deep links.
     expect(new URL(calls[0]?.url ?? "").pathname).toBe("/_plumix/admin/");
+  });
+
+  test("bounces a signed-in subscriber off the admin shell back to the theme", async () => {
+    const assets = {
+      fetch: (): Promise<Response> =>
+        Promise.resolve(
+          new Response("<!doctype html><title>admin</title>", {
+            status: 200,
+            headers: { "content-type": "text/html" },
+          }),
+        ),
+    };
+    const h = await createDispatcherHarness({ assets });
+    const subscriber = await h.seedUser("subscriber");
+    const request = await h.authenticateRequest(
+      plumixRequest("/_plumix/admin", { method: "GET" }),
+      subscriber.id,
+    );
+
+    const response = await h.dispatch(request);
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/");
+  });
+
+  test("serves the admin shell to a signed-in staff member", async () => {
+    const indexBody = "<!doctype html><title>admin</title>";
+    const assets = {
+      fetch: (): Promise<Response> =>
+        Promise.resolve(
+          new Response(indexBody, {
+            status: 200,
+            headers: { "content-type": "text/html" },
+          }),
+        ),
+    };
+    const h = await createDispatcherHarness({ assets });
+    const editor = await h.seedUser("editor");
+    const request = await h.authenticateRequest(
+      plumixRequest("/_plumix/admin", { method: "GET" }),
+      editor.id,
+    );
+
+    const response = await h.dispatch(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(indexBody);
   });
 
   test("POST /_plumix/admin is rejected with 405 even when an assets binding is present", async () => {
@@ -716,6 +764,85 @@ describe("dispatcher — error boundary", () => {
     );
     const response = await h.dispatch(authed);
     expect(response.status).toBe(500);
+  });
+});
+
+async function seedHelloWorldPost(h: DispatcherHarness): Promise<void> {
+  const author = await h.seedUser("admin");
+  await h.factory.entry.create({
+    type: "post",
+    slug: "hello-world",
+    title: "Hello World",
+    content: {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "First." }] },
+      ],
+    },
+    status: "published",
+    authorId: author.id,
+    publishedAt: new Date(),
+  });
+}
+
+describe("dispatcher — user-dependent render caching", () => {
+  const blog = definePlugin("test-blog", (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  });
+
+  test("marks a signed-in visitor's render private, no-store with a Cookie Vary", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    await seedHelloWorldPost(h);
+    const visitor = await h.seedUser("subscriber");
+    const request = await h.authenticateRequest(
+      new Request("https://cms.example/post/hello-world"),
+      visitor.id,
+    );
+
+    const response = await h.dispatch(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("vary")?.toLowerCase()).toContain("cookie");
+  });
+
+  test("leaves an anonymous render untouched (no private/no-store)", async () => {
+    const h = await createDispatcherHarness({ plugins: [blog] });
+    await seedHelloWorldPost(h);
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/hello-world"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBeNull();
+    expect(response.headers.get("vary")).toBeNull();
+  });
+});
+
+describe("dispatcher — theme reads configured auth methods", () => {
+  test("a theme component reads useAuthMethods() during a public render", async () => {
+    const blog = definePlugin("test-blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    });
+    // A theme login page renders its controls from `useAuthMethods()`; here a
+    // component proves the configured methods reach the render tree.
+    const LoginControls = (): ReturnType<typeof createElement> => {
+      const methods = useAuthMethods();
+      return createElement("p", null, `passkey:${String(methods?.passkey)}`);
+    };
+    const theme = defineTheme({
+      templates: [fallback(() => createElement(LoginControls))],
+    });
+    const h = await createDispatcherHarness({ plugins: [blog], theme });
+    await seedHelloWorldPost(h);
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/hello-world"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("passkey:true");
   });
 });
 

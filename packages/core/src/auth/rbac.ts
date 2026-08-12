@@ -25,6 +25,19 @@ export function roleLevel(role: UserRole): number {
   return ROLE_LEVEL[role];
 }
 
+/**
+ * Lowest role that may use the admin shell. `subscriber` is the theme-only
+ * visitor tier (the open-signup default); every role from `contributor` up is
+ * staff. Keying the admin-lockout guard on this rather than a bespoke
+ * capability keeps "who is staff" a single named boundary.
+ */
+export const STAFF_MIN_ROLE: UserRole = "contributor";
+
+/** True for any staff role, false for a theme-only `subscriber`. */
+export function canAccessAdmin(role: UserRole): boolean {
+  return roleLevel(role) >= roleLevel(STAFF_MIN_ROLE);
+}
+
 // Capability shape: `<entity>:<typeName>:<action>` for per-type
 // resources (`entry:post:edit_own`, `term:category:manage`); flat
 // `<entity>:<action>` for entity-level caps without a type segment

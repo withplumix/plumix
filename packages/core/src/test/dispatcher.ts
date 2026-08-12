@@ -257,6 +257,7 @@ function withRequest(
     mailer: app.config.mailer,
     i18n: app.config.i18n,
     oauthProviders: app.oauthProviders,
+    authMethods: app.authMethods,
     authenticator: app.authenticator,
     bootstrapAllowed: app.bootstrapAllowed,
     origin: app.origin,

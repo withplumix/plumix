@@ -14,7 +14,9 @@ import {
   isLoopbackOrigin,
 } from "../auth/csrf.js";
 import { parseOAuthPath } from "../auth/oauth/match.js";
+import { canAccessAdmin } from "../auth/rbac.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
+import { requestIsPrivileged } from "../cache/decision.js";
 import { embeddedPageTags } from "../cache/embedded-tags.js";
 import { flushPurgeTags } from "../cache/purge.js";
 import { readThrough } from "../cache/read-through.js";
@@ -656,6 +658,16 @@ async function renderPublicRoute(
         }
       }
     });
+    // A privileged request's render can depend on the visitor, so forbid any
+    // shared or browser cache from storing it. Keyed on the same
+    // `requestIsPrivileged` signal the edge cache bypasses on, so the two never
+    // disagree; these headers extend that to intermediaries and the browser
+    // bfcache. Anonymous renders are left untouched, so ordinary pages stay
+    // cacheable. (The segment model generalizes this privileged signal later.)
+    if (requestIsPrivileged(ctx.request)) {
+      response.headers.set("cache-control", "private, no-store");
+      response.headers.append("vary", "cookie");
+    }
     if (response.status === 404 && acceptsHtml(ctx.request)) {
       const html = await renderErrorThroughTheme({
         ctx,
@@ -915,6 +927,13 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   const auth = readSessionCookie(ctx.request)
     ? await authenticateTraced(ctx, ctx.authenticator)
     : null;
+  // A signed-in non-staff visitor (a `subscriber` from open signup) has no
+  // admin surface — bounce them to the theme rather than hand over a shell
+  // whose every RPC call would 403. Anonymous visitors fall through to the
+  // SPA, which owns the login screen.
+  if (auth?.user && !canAccessAdmin(auth.user.role)) {
+    return redirect(withBasePath("/", ctx.basePath), 302);
+  }
   const locale = resolveLocale({
     request: ctx.request,
     user: auth?.user ?? null,

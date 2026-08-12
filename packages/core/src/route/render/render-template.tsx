@@ -434,6 +434,7 @@ function renderTree({
         breakpoints,
         loaderData,
         user: ctx.user,
+        authMethods: ctx.authMethods,
         queriedEntry: ctx.resolvedEntity,
         locale: ctx.locale.code,
         shortcodes: ctx.shortcodes,

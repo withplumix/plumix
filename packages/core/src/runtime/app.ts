@@ -16,6 +16,7 @@ import {
 } from "@plumix/blocks";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
+import type { PlumixAuthConfig } from "../auth/config.js";
 import type { PasskeyRuntimeConfig } from "../auth/passkey/config.js";
 import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
@@ -66,6 +67,38 @@ export interface OAuthProviderSummary {
   readonly key: string;
   /** Human-readable name for the login button ("GitHub", "Google", …). */
   readonly label: string;
+}
+
+/**
+ * The configured auth methods, projected from `auth({ … })` config for a theme
+ * to render its own login/registration controls. The theme-side analog of the
+ * admin login's provider list: a custom login page reads this (via
+ * `useAuthMethods()`) and shows a button per enabled method, so adding or
+ * removing a method in config changes the page with no theme code change.
+ */
+export interface AuthMethodsSummary {
+  /** Passkey is always configured, so this is always `true` today. */
+  readonly passkey: boolean;
+  /** True when `auth.magicLink` is configured. */
+  readonly magicLink: boolean;
+  /** `{ key, label }` per configured OAuth provider; empty when none. */
+  readonly oauthProviders: readonly OAuthProviderSummary[];
+}
+
+/**
+ * Project the enabled auth methods from resolved config. Pure: the same config
+ * always yields the same summary, so a theme login page rendered from it never
+ * drifts from what the endpoints actually accept.
+ */
+export function resolveAuthMethods(
+  authConfig: PlumixAuthConfig,
+  oauthProviders: readonly OAuthProviderSummary[],
+): AuthMethodsSummary {
+  return {
+    passkey: true,
+    magicLink: authConfig.magicLink !== undefined,
+    oauthProviders,
+  };
 }
 
 export interface PlumixApp {
@@ -127,6 +160,8 @@ export interface PlumixApp {
    * `auth.oauthProviders` RPC; secrets never leave config.
    */
   readonly oauthProviders: readonly OAuthProviderSummary[];
+  /** Projected auth methods for theme login pages; see {@link AuthMethodsSummary}. */
+  readonly authMethods: AuthMethodsSummary;
   readonly schema: Record<string, unknown>;
   /**
    * Sorted route map compiled once at `buildApp` from the plugin registry.
@@ -320,6 +355,7 @@ export async function buildApp(
         label: provider.label,
       }))
     : [];
+  const authMethods = resolveAuthMethods(config.auth, oauthProviders);
   const authenticator = config.auth.authenticator ?? defaultAuthenticator();
   const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
 
@@ -385,6 +421,7 @@ export async function buildApp(
     authenticator,
     bootstrapAllowed,
     oauthProviders,
+    authMethods,
     schema,
     routeMap: compileRouteMap(registry),
     redirects: assembleRedirects({

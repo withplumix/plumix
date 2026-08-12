@@ -2,6 +2,7 @@
 // (Link, Image) import their hooks without pulling in this barrel — that cycles.
 export { BlockRenderer, PlumixProvider } from "./context.js";
 export {
+  useAuthMethods,
   useBasePath,
   useImageConfig,
   useIsEditing,
@@ -14,9 +15,13 @@ export {
 export type {
   PlumixContextValue,
   PlumixRenderMode,
+  RendererAuthMethods,
+  RendererOAuthProvider,
   RendererQueriedEntry,
   RendererUser,
 } from "./context.js";
+
+export { SignedIn, SignedOut } from "./auth.js";
 
 export { Link } from "./link.js";
 export type { LinkProps, LinkTarget } from "./link.js";

@@ -65,6 +65,7 @@ const APP_CONTEXT_BASE_KEYS: ReadonlySet<string> = new Set([
   "authenticator",
   "bootstrapAllowed",
   "oauthProviders",
+  "authMethods",
   "after",
   "assets",
   "storage",
