@@ -48,8 +48,13 @@ export function injectIslandsBootstrap(
     DEV_RENDERER_PATH,
     basePath,
   );
+  // Thread the subdirectory prefix onto the runtime tag as
+  // `data-plumix-base-path` (empty at the domain root). A hydrated client
+  // island has no `PlumixProvider` context and no `<base href>` on public
+  // pages, so this is its only signal for building `/_plumix/*` URLs under the
+  // mount — the theme `useAuth` hook reads it to reach the RPC endpoint.
   return (
     body +
-    `<script type="module" src="${src}" data-plumix-renderer-url="${rendererUrl}"></script>`
+    `<script type="module" src="${src}" data-plumix-renderer-url="${rendererUrl}" data-plumix-base-path="${basePath}"></script>`
   );
 }

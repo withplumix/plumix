@@ -28,6 +28,9 @@ describe("injectIslandsBootstrap", () => {
     expect(out).toContain(
       'data-plumix-renderer-url="/.plumix/islands-renderer-entry.ts"',
     );
+    // Root deployment: the base-path marker is present but empty so client
+    // islands (e.g. the theme `useAuth` hook) can address `/_plumix/*` as-is.
+    expect(out).toContain('data-plumix-base-path=""');
   });
 
   test("build mode uses the hashed manifest URLs for runtime + renderer", () => {
@@ -73,6 +76,9 @@ describe("injectIslandsBootstrap", () => {
     expect(out).toContain(
       'data-plumix-renderer-url="/custom-directory/assets/plumix-islands-renderer-def456.js"',
     );
+    // The marker carries the subdirectory prefix so a client island can build
+    // the RPC URL under the mount instead of POSTing to the domain root.
+    expect(out).toContain('data-plumix-base-path="/custom-directory"');
   });
 
   test("build mode falls back to the dev paths when manifest entries are missing", () => {
