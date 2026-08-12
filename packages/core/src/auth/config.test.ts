@@ -370,3 +370,44 @@ describe("auth() — bootstrapVia", () => {
     expect(error.issues[0]?.path).toBe("bootstrapVia");
   });
 });
+
+describe("auth() — selfSignup", () => {
+  test("defaults to undefined (domain-gated signup)", () => {
+    const config = auth({ passkey: validPasskey });
+    expect(config.selfSignup).toBeUndefined();
+  });
+
+  test("accepts a default role", () => {
+    const config = auth({
+      passkey: validPasskey,
+      selfSignup: { defaultRole: "subscriber" },
+    });
+    expect(config.selfSignup).toEqual({ defaultRole: "subscriber" });
+  });
+
+  test("accepts any role on the enum (operator's call)", () => {
+    const config = auth({
+      passkey: validPasskey,
+      selfSignup: { defaultRole: "editor" },
+    });
+    expect(config.selfSignup?.defaultRole).toBe("editor");
+  });
+
+  test("rejects an unknown default role with a pathed issue", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      // @ts-expect-error — exercising runtime validation
+      selfSignup: { defaultRole: "superadmin" },
+    });
+    expect(error.issues[0]?.path).toBe("selfSignup.defaultRole");
+  });
+
+  test("rejects a missing default role", () => {
+    const error = rejected({
+      passkey: validPasskey,
+      // @ts-expect-error — exercising runtime validation
+      selfSignup: {},
+    });
+    expect(error.issues[0]?.path).toBe("selfSignup.defaultRole");
+  });
+});

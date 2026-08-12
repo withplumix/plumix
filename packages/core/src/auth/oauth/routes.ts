@@ -112,6 +112,7 @@ export async function handleOAuthCallback(
       provider: providerKey,
       profile,
       bootstrapAllowed: ctx.bootstrapAllowed,
+      selfSignup: app.config.auth.selfSignup,
     });
 
     const { cookieHeader } = await mintSessionAndCookie(ctx, app, user.id);

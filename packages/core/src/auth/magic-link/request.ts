@@ -1,7 +1,7 @@
 import type { Db, Logger } from "../../context/app.js";
 import type { Mailer } from "../mailer/types.js";
 import { withBasePath } from "../../base-path.js";
-import { eq } from "../../db/index.js";
+import { and, eq, gte } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
@@ -21,6 +21,19 @@ const MAGIC_LINK_TTL_SECONDS = 15 * 60;
 // of token generation + the mailer round-trip on the happy path.
 const TIMING_DELAY_MIN_MS = 100;
 const TIMING_DELAY_RANGE_MS = 150;
+
+// Abuse cap: the most magic-link tokens a single email may be issued
+// within the rolling window below. Open self-signup turns this endpoint
+// into a public signup surface, so without a ceiling it becomes an
+// email-bomb amplifier (real sends to attacker-chosen addresses). The cap
+// is enforced on the sign-in issuance path too, so it can't be turned
+// into a probe for which addresses are registered. Counting the token
+// rows themselves (single-use, deleted on verify) needs no separate
+// counter store — the same dependency-free approach the comments plugin's
+// limiter uses. Generous enough that a user retrying past a spam filter
+// never trips it; volumetric per-IP limiting is the edge/runtime's job.
+const MAGIC_LINK_MAX_PER_WINDOW = 5;
+const MAGIC_LINK_WINDOW_MS = 15 * 60 * 1000;
 
 interface RequestMagicLinkInput {
   readonly email: string;
@@ -60,6 +73,14 @@ interface RequestMagicLinkInput {
    * false keeps the bootstrap rail passkey-only.
    */
   readonly bootstrapAllowed?: boolean;
+  /**
+   * Open self-signup. When true, a signup token is issued for any
+   * syntactically valid email regardless of `allowed_domains` (the verify
+   * route grants `auth.selfSignup.defaultRole`). When false (default),
+   * signup stays gated to the domain allowlist. The bootstrap rail and
+   * the per-email issuance cap apply either way.
+   */
+  readonly selfSignupOpen?: boolean;
 }
 
 /**
@@ -108,19 +129,23 @@ export async function requestMagicLink(
     return;
   }
 
-  // Signup path — no user yet. Gate on allowed_domains + non-zero
-  // user count so the bootstrap-via-passkey rule holds.
+  // Signup path — no user yet. A syntactically valid domain is required
+  // either way (the verify route re-derives the role); with open
+  // self-signup the allowlist is skipped, otherwise the domain must be
+  // enabled in `allowed_domains`.
   const domain = extractDomain(email);
   if (!domain) {
     await timingDelay();
     return;
   }
-  const allowed = await db.query.allowedDomains.findFirst({
-    where: eq(allowedDomains.domain, domain),
-  });
-  if (!allowed?.isEnabled) {
-    await timingDelay();
-    return;
+  if (!input.selfSignupOpen) {
+    const allowed = await db.query.allowedDomains.findFirst({
+      where: eq(allowedDomains.domain, domain),
+    });
+    if (!allowed?.isEnabled) {
+      await timingDelay();
+      return;
+    }
   }
   if (!input.bootstrapAllowed) {
     const userCount = await db.$count(users);
@@ -145,6 +170,14 @@ async function issueAndSend(
   ttlSeconds: number,
   target: IssueAndSendInput,
 ): Promise<void> {
+  if (await issuanceCapReached(db, target.email)) {
+    // Over the per-email cap — behave exactly like the other silent
+    // no-op branches (jitter, no send) so a throttled request is
+    // indistinguishable from an unknown-email one.
+    await timingDelay();
+    return;
+  }
+
   const token = generateToken();
   const hash = await hashToken(token);
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
@@ -189,6 +222,20 @@ async function issueAndSend(
     // the failure (otherwise broken mail config would be silent).
     input.logger?.warn("magic_link_mailer_failed", { error });
   }
+}
+
+/** Whether `email` is at or over its magic-link cap for the window. */
+async function issuanceCapReached(db: Db, email: string): Promise<boolean> {
+  const since = new Date(Date.now() - MAGIC_LINK_WINDOW_MS);
+  const recent = await db.$count(
+    authTokens,
+    and(
+      eq(authTokens.email, email),
+      eq(authTokens.type, "magic_link"),
+      gte(authTokens.createdAt, since),
+    ),
+  );
+  return recent >= MAGIC_LINK_MAX_PER_WINDOW;
 }
 
 function timingDelay(): Promise<void> {

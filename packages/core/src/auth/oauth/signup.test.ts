@@ -162,6 +162,42 @@ describe("resolveOAuthUser — domain-gated signup", () => {
     expect(link?.userId).toBe(result.user.id);
   });
 
+  test("selfSignup provisions at defaultRole with no allowed-domains row", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    // No allowed_domains row — domain-gated signup would reject, but open
+    // self-signup provisions the user and writes the oauth link regardless.
+    const result = await resolveOAuthUser(db, {
+      provider: "github",
+      profile: PROFILE,
+      selfSignup: { defaultRole: "subscriber" },
+    });
+
+    expect(result.created).toBe(true);
+    expect(result.user.role).toBe("subscriber");
+    const link = await db.query.oauthAccounts.findFirst({
+      where: eq(oauthAccounts.providerAccountId, PROFILE.providerAccountId),
+    });
+    expect(link?.userId).toBe(result.user.id);
+  });
+
+  test("selfSignup default role wins over a matching allowed-domains role", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    await allowedDomainFactory.transient({ db }).create({
+      domain: "example.com",
+      defaultRole: "author",
+      isEnabled: true,
+    });
+
+    const result = await resolveOAuthUser(db, {
+      provider: "github",
+      profile: PROFILE,
+      selfSignup: { defaultRole: "subscriber" },
+    });
+    expect(result.user.role).toBe("subscriber");
+  });
+
   test("disabled domain row rejects with domain_not_allowed", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({ role: "admin" });
