@@ -3,7 +3,11 @@ import { describe, expect, test, vi } from "vitest";
 import type { Mailer } from "../mailer/types.js";
 import { eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
-import { allowedDomainFactory, userFactory } from "../../test/factories.js";
+import {
+  allowedDomainFactory,
+  authTokenFactory,
+  userFactory,
+} from "../../test/factories.js";
 import { createTestDb } from "../../test/harness.js";
 import { hashToken } from "../tokens.js";
 import { requestMagicLink } from "./request.js";
@@ -244,6 +248,65 @@ describe("requestMagicLink", () => {
     expect(tokens[0]?.userId).toBeNull();
   });
 
+  test("selfSignupOpen: unlisted domain → token issued for a new email", async () => {
+    const db = await createTestDb();
+    // One existing user satisfies the bootstrap rail; no allowed_domains
+    // row for this domain — domain-gated signup would no-op, but open
+    // self-signup issues the token.
+    await userFactory.transient({ db }).create({ role: "admin" });
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "stranger@anywhere.test",
+      origin: "https://cms.example",
+      basePath: "",
+      mailer,
+      siteName: "Test",
+      selfSignupOpen: true,
+    });
+
+    expect(sent).toHaveLength(1);
+    const tokens = await db.select().from(authTokens);
+    expect(tokens).toHaveLength(1);
+    expect(tokens[0]?.userId).toBeNull();
+    expect(tokens[0]?.email).toBe("stranger@anywhere.test");
+  });
+
+  test("selfSignupOpen: zero-user system still refuses (bootstrap rail holds)", async () => {
+    const db = await createTestDb();
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "first@anywhere.test",
+      origin: "https://cms.example",
+      basePath: "",
+      mailer,
+      siteName: "Test",
+      selfSignupOpen: true,
+    });
+
+    expect(sent).toHaveLength(0);
+    const tokens = await db.select().from(authTokens);
+    expect(tokens).toHaveLength(0);
+  });
+
+  test("selfSignupOpen: malformed email (no domain) silently no-ops", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({ role: "admin" });
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "not-an-email",
+      origin: "https://cms.example",
+      basePath: "",
+      mailer,
+      siteName: "Test",
+      selfSignupOpen: true,
+    });
+
+    expect(sent).toHaveLength(0);
+  });
+
   test("swallows mailer errors so the response shape never leaks success", async () => {
     const db = await createTestDb();
     await userFactory.transient({ db }).create({
@@ -308,5 +371,89 @@ describe("requestMagicLink", () => {
 
     const [message] = sent;
     expect(message?.subject).toBe("Sign in to Test Site");
+  });
+});
+
+describe("requestMagicLink — per-email issuance cap", () => {
+  // Seed `count` recent magic-link tokens for `email` so the next request
+  // sits at or past the cap.
+  async function seedRecentTokens(
+    db: Awaited<ReturnType<typeof createTestDb>>,
+    email: string,
+    count: number,
+  ): Promise<void> {
+    for (let i = 0; i < count; i++) {
+      await authTokenFactory
+        .transient({ db })
+        .create({ type: "magic_link", email });
+    }
+  }
+
+  test("stops issuing once an email hits the cap within the window", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({
+      email: "alice@example.com",
+      role: "editor",
+    });
+    // Five live tokens already issued to this address this window.
+    await seedRecentTokens(db, "alice@example.com", 5);
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "alice@example.com",
+      origin: "https://cms.example",
+      basePath: "",
+      mailer,
+      siteName: "Test",
+    });
+
+    // Over the cap → silent no-op, no sixth token minted.
+    expect(sent).toHaveLength(0);
+    const rows = await db.select().from(authTokens);
+    expect(rows).toHaveLength(5);
+  });
+
+  test("still issues while below the cap", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({
+      email: "alice@example.com",
+      role: "editor",
+    });
+    await seedRecentTokens(db, "alice@example.com", 4);
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "alice@example.com",
+      origin: "https://cms.example",
+      basePath: "",
+      mailer,
+      siteName: "Test",
+    });
+
+    expect(sent).toHaveLength(1);
+    const rows = await db.select().from(authTokens);
+    expect(rows).toHaveLength(5);
+  });
+
+  test("the cap is per-email — a flooded address never blocks another", async () => {
+    const db = await createTestDb();
+    await userFactory.transient({ db }).create({
+      email: "alice@example.com",
+      role: "editor",
+    });
+    // Bob is flooded; Alice's request must still go through.
+    await seedRecentTokens(db, "bob@example.com", 5);
+    const { mailer, sent } = captureMailer();
+
+    await requestMagicLink(db, {
+      email: "alice@example.com",
+      origin: "https://cms.example",
+      basePath: "",
+      mailer,
+      siteName: "Test",
+    });
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.to).toBe("alice@example.com");
   });
 });

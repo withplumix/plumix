@@ -1,7 +1,11 @@
 import type { RemotePattern } from "@plumix/blocks/renderer";
 
 import type { RequestAuthenticator } from "../auth/authenticator.js";
-import type { BootstrapVia, PlumixMagicLinkConfig } from "../auth/config.js";
+import type {
+  BootstrapVia,
+  PlumixMagicLinkConfig,
+  PlumixSelfSignupConfig,
+} from "../auth/config.js";
 import type { Mailer } from "../auth/mailer/types.js";
 import type { OAuthProviderClient } from "../auth/oauth/types.js";
 import type {
@@ -128,6 +132,12 @@ export interface CreateDispatcherHarnessOptions {
    * default passkey-only rail).
    */
   readonly bootstrapVia?: BootstrapVia;
+  /**
+   * Open self-signup for tests exercising public registration. When set,
+   * the harness app provisions first-time verified emails at
+   * `selfSignup.defaultRole` regardless of `allowed_domains`.
+   */
+  readonly selfSignup?: PlumixSelfSignupConfig;
   readonly theme?: ThemeDescriptor;
   readonly i18n?: I18nInput;
   /**
@@ -275,6 +285,7 @@ export async function createDispatcherHarness(
       magicLink: options.magicLink,
       authenticator: options.authenticator,
       bootstrapVia: options.bootstrapVia,
+      selfSignup: options.selfSignup,
     }),
     plugins: options.plugins,
     redirects: options.redirects,

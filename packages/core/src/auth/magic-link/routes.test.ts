@@ -592,6 +592,62 @@ describe("magic-link verify route", () => {
     expect(sessionRows).toHaveLength(1);
   });
 
+  test("end-to-end self-signup: unlisted email registers as the default role", async () => {
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+      selfSignup: { defaultRole: "subscriber" },
+    });
+    // One user exists (bootstrap satisfied); no allowed_domains row for
+    // this address — only open self-signup lets it through.
+    await h.factory.user.create({ role: "admin" });
+
+    const requestResp = await h.dispatch(
+      postRequest("/_plumix/auth/magic-link/request", {
+        email: "visitor@anywhere.test",
+      }),
+    );
+    expect(requestResp.status).toBe(200);
+    expect(sent).toHaveLength(1);
+
+    const tokenMatch = /token=([A-Za-z0-9_-]+)/.exec(sent[0]?.text ?? "");
+    const token = tokenMatch?.[1];
+    if (!token) throw new Error("expected token in email");
+
+    const verifyResp = await h.dispatch(
+      getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
+    );
+    expect(verifyResp.status).toBe(302);
+    expect(verifyResp.headers.get("set-cookie")).toContain("plumix_session=");
+
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "visitor@anywhere.test"),
+    });
+    expect(created?.role).toBe("subscriber");
+    expect(created?.emailVerifiedAt).not.toBeNull();
+  });
+
+  test("without self-signup an unlisted email is refused (no leak, no token)", async () => {
+    const { mailer, sent } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+    });
+    await h.factory.user.create({ role: "admin" });
+
+    // Generic 200, but nothing is issued for an unlisted domain.
+    const resp = await h.dispatch(
+      postRequest("/_plumix/auth/magic-link/request", {
+        email: "visitor@anywhere.test",
+      }),
+    );
+    expect(resp.status).toBe(200);
+    expect(sent).toHaveLength(0);
+    const tokens = await h.db.select().from(authTokens);
+    expect(tokens).toHaveLength(0);
+  });
+
   test("signup verify rejects with domain_not_allowed if admin disables the domain mid-flight", async () => {
     const { mailer, sent } = captureMailer();
     const h = await createDispatcherHarness({

@@ -1,5 +1,6 @@
 import type { Db } from "../../context/app.js";
 import type { User } from "../../db/schema/users.js";
+import type { PlumixSelfSignupConfig } from "../config.js";
 import type { OAuthProfile } from "./types.js";
 import { and, eq, isUniqueConstraintError } from "../../db/index.js";
 import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
@@ -18,6 +19,11 @@ interface ResolveOAuthUserInput {
    * passkey-only.
    */
   readonly bootstrapAllowed?: boolean;
+  /**
+   * Open self-signup (from `auth.selfSignup`). Present bypasses the domain
+   * allowlist and grants `defaultRole`; absent keeps domain-gated signup.
+   */
+  readonly selfSignup?: PlumixSelfSignupConfig;
 }
 
 interface ResolvedOAuthUser {
@@ -76,9 +82,11 @@ export async function resolveOAuthUser(
       name: profile.name,
       avatarUrl: profile.avatarUrl,
       bootstrapAllowed: input.bootstrapAllowed,
-      // allowed_domains still gates signup; the `oauth_accounts` link
-      // row is OAuth-specific and written below regardless of whether
-      // the user existed or was just provisioned.
+      // Open self-signup bypasses the domain allowlist; otherwise
+      // `allowed_domains` still gates signup. Either way the
+      // `oauth_accounts` link row is written below.
+      allowedDomainsGate: input.selfSignup === undefined,
+      defaultRole: input.selfSignup?.defaultRole,
     });
   } catch (error) {
     if (error instanceof ExternalIdentityError) {

@@ -554,6 +554,45 @@ describe("oauth callback route", () => {
     expect(created?.role).toBe("author");
   });
 
+  test("self-signup provisions an unlisted email at the default role", async () => {
+    const h = await createDispatcherHarness({
+      oauth: TEST_OAUTH,
+      selfSignup: { defaultRole: "subscriber" },
+    });
+    await h.seedUser("admin");
+    // No allowed_domains row — domain-gated signup would reject, but open
+    // self-signup mints the user at "subscriber".
+
+    const state = await seedState(h, "google", "v-self");
+
+    answer({
+      "https://oauth2.googleapis.com/token": {
+        body: { access_token: "tk", id_token: "id", token_type: "bearer" },
+      },
+      "https://openidconnect.googleapis.com/v1/userinfo": {
+        body: {
+          sub: "google-self",
+          email: "visitor@anywhere.test",
+          email_verified: true,
+          name: "Visitor",
+          picture: null,
+        },
+      },
+    });
+
+    const response = await get(
+      h,
+      `/_plumix/auth/oauth/google/callback?code=abc&state=${state}`,
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("set-cookie")).toContain("plumix_session=");
+
+    const created = await h.db.query.users.findFirst({
+      where: eq(users.email, "visitor@anywhere.test"),
+    });
+    expect(created?.role).toBe("subscriber");
+  });
+
   test("unknown domain redirects to login with domain_not_allowed", async () => {
     const h = await createDispatcherHarness({ oauth: TEST_OAUTH });
     await h.seedUser("admin");

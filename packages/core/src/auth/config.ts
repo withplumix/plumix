@@ -1,10 +1,12 @@
 import * as v from "valibot";
 
+import type { UserRole } from "../db/schema/users.js";
 import type { EnvInput } from "../runtime/env-input.js";
 import type { RequestAuthenticator } from "./authenticator.js";
 import type { OAuthProviderClient } from "./oauth/types.js";
 import type { PasskeyConfig } from "./passkey/config.js";
 import type { SessionPolicy } from "./sessions.js";
+import { USER_ROLES } from "../db/schema/users.js";
 import { OAUTH_PROVIDER_KEY_PATTERN } from "./oauth/types.js";
 import { HTTPS_WILDCARD_PREFIX } from "./passkey/origin-policy.js";
 
@@ -36,6 +38,29 @@ export interface PlumixOAuthConfig {
 }
 
 export type BootstrapVia = "passkey" | "first-method-wins";
+
+export interface PlumixSelfSignupConfig {
+  /**
+   * Role every self-provisioned user is granted. Present = open
+   * self-signup: the built-in magic-link and OAuth signup paths stop
+   * consulting `allowed_domains` and mint new users at this role
+   * directly. Absent (default) = today's domain-gated behaviour.
+   *
+   * Kept explicit — never defaulted — because it decides how much
+   * authority "anyone with an email" receives. `"subscriber"` is the
+   * intended choice (authenticated but off the admin capability ladder);
+   * a privileged role here hands the admin to the public, so the
+   * operator states it deliberately.
+   *
+   * Note the allowlist is bypassed wholesale, not merged: while open,
+   * even an email whose domain has an `allowed_domains` rule granting a
+   * higher role is provisioned at `defaultRole`. Per-inbox abuse limits
+   * are the edge/runtime's job — the built-in per-email issuance cap
+   * bounds one address, not aliases of it (`user+tag@…`) or account
+   * volume across many addresses.
+   */
+  readonly defaultRole: UserRole;
+}
 
 export interface PlumixAuthInput {
   readonly passkey: PasskeyConfig;
@@ -79,6 +104,13 @@ export interface PlumixAuthInput {
    *   "can the JWT be issued at all", not "can plumix see any user".
    */
   readonly bootstrapVia?: BootstrapVia;
+  /**
+   * Open public registration (see {@link PlumixSelfSignupConfig}). Omit
+   * (default) to keep signup gated to `allowed_domains`. Enabling it turns
+   * the magic-link request endpoint into a public signup surface, so
+   * issuance stays rate-limited and timing-uniform underneath.
+   */
+  readonly selfSignup?: PlumixSelfSignupConfig;
 }
 
 export interface PlumixAuthConfig {
@@ -89,6 +121,7 @@ export interface PlumixAuthConfig {
   readonly magicLink?: PlumixMagicLinkConfig;
   readonly authenticator?: RequestAuthenticator;
   readonly bootstrapVia?: BootstrapVia;
+  readonly selfSignup?: PlumixSelfSignupConfig;
 }
 
 export interface PlumixConfigIssue {
@@ -336,12 +369,20 @@ const magicLinkSchema = v.object({
   ),
 });
 
+const selfSignupSchema = v.object({
+  defaultRole: v.picklist(
+    USER_ROLES,
+    "selfSignup.defaultRole must be a valid user role",
+  ),
+});
+
 const authInputSchema = v.object({
   passkey: passkeySchema,
   sessions: v.optional(sessionPolicySchema),
   oauth: v.optional(oauthSchema),
   magicLink: v.optional(magicLinkSchema),
   bootstrapVia: v.optional(v.picklist(["passkey", "first-method-wins"])),
+  selfSignup: v.optional(selfSignupSchema),
 });
 
 function toIssues(
@@ -367,5 +408,6 @@ export function auth(input: PlumixAuthInput): PlumixAuthConfig {
     magicLink: input.magicLink,
     authenticator: input.authenticator,
     bootstrapVia: input.bootstrapVia,
+    selfSignup: input.selfSignup,
   };
 }

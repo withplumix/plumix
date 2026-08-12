@@ -1,5 +1,6 @@
 import type { Db } from "../../context/app.js";
 import type { User } from "../../db/schema/users.js";
+import type { PlumixSelfSignupConfig } from "../config.js";
 import { and, eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
@@ -16,6 +17,11 @@ interface VerifyMagicLinkOptions {
    * passkey-only.
    */
   readonly bootstrapAllowed?: boolean;
+  /**
+   * Open self-signup (from `auth.selfSignup`). Present bypasses the domain
+   * allowlist and grants `defaultRole`; absent keeps domain-gated signup.
+   */
+  readonly selfSignup?: PlumixSelfSignupConfig;
 }
 
 interface VerifyMagicLinkResult {
@@ -79,6 +85,8 @@ export async function verifyMagicLink(
       email: row.email,
       emailVerified: true, // link click is the verification
       bootstrapAllowed: options.bootstrapAllowed,
+      allowedDomainsGate: options.selfSignup === undefined,
+      defaultRole: options.selfSignup?.defaultRole,
     });
     return { user, created };
   } catch (error) {
