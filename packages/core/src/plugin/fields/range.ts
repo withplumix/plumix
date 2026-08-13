@@ -1,14 +1,14 @@
 import type { Label } from "../../i18n/label.js";
 import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
+import type {
   FieldBuilder,
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
   RangeMetaBoxField,
-} from "../manifest.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+} from "./meta-box-field.js";
 import { humanizeFieldKey } from "./builder.js";
 import { FieldConfigError } from "./errors.js";
 

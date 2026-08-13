@@ -1,17 +1,17 @@
 import type { Label } from "../../i18n/label.js";
+import type { StringFieldState } from "./builder.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import type {
   FieldBuilder,
   LinkMetaBoxField,
   LinkValue,
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
-} from "../manifest.js";
-import type { StringFieldState } from "./builder.js";
-import type { MetaFieldConditionRule } from "./condition.js";
+} from "./meta-box-field.js";
 import { humanizeFieldKey } from "./builder.js";
 import { SAFE_HREF_RE } from "./richtext-validate.js";
 
-export type { LinkValue } from "../manifest.js";
+export type { LinkValue } from "./meta-box-field.js";
 
 type LinkFieldState = Omit<StringFieldState, "default" | "maxLength"> & {
   readonly default?: LinkValue;

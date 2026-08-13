@@ -1,5 +1,9 @@
 import type { Label } from "../../i18n/label.js";
 import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
+import type {
   FieldBuilder,
   MetaBoxFieldOption,
   MetaBoxFieldSpan,
@@ -8,11 +12,7 @@ import type {
   SelectAppearance,
   SelectMetaBoxField,
   SingleSelectMetaBoxField,
-} from "../manifest.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+} from "./meta-box-field.js";
 import { humanizeFieldKey } from "./builder.js";
 
 /**

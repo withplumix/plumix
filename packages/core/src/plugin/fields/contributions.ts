@@ -4,7 +4,7 @@ import type {
   TermProjection,
   TermTaxonomyName,
 } from "../../template-registry.js";
-import type { MetaBoxFieldInput } from "../manifest.js";
+import type { MetaBoxFieldInput } from "./meta-box-field.js";
 
 /**
  * The typed-meta contribution registries. A meta box (or settings

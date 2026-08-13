@@ -1,17 +1,17 @@
 import type { Label } from "../../i18n/label.js";
 import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
+import type {
   FieldBuilder,
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
   StringInputType,
   StringMetaBoxField,
-} from "../manifest.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
+} from "./meta-box-field.js";
 
-export type { StringInputType } from "../manifest.js";
+export type { StringInputType } from "./meta-box-field.js";
 
 // "heroImage" → "Hero image", "site_title" → "Site title". Derived
 // default for fields authored without `.label()`. Shared by every
