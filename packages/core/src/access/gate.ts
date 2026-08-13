@@ -16,7 +16,7 @@ import type { AppContext } from "../context/app.js";
 import type { RouteMatch } from "../route/match.js";
 import type { AccessPolicy } from "./policy.js";
 import { withBasePath } from "../base-path.js";
-import { redirect } from "../runtime/http.js";
+import { redirectTo } from "../runtime/http.js";
 import { resolveAccess } from "./policy.js";
 
 // Where `redirectToLogin()` sends a visitor when the operator sets no override.
@@ -77,9 +77,13 @@ export async function enforceAccess(
     case "allow":
       return null;
     case "redirect":
-      return redirect(
+      // Same `private, no-store` + `Vary: cookie` the allow/challenge paths
+      // carry: the 302 is anonymous-only and per-visitor, so a heuristically
+      // caching intermediary must never store it and bounce a signed-in user
+      // to login. A bare 302 isn't cacheable by default — this is belt-and-suspenders.
+      return redirectTo(
         loginRedirect(args.loginPath, args.url, args.ctx.basePath),
-        302,
+        { "cache-control": "private, no-store", vary: "cookie" },
       );
     case "challenge":
       return challengeResponse(gate.kind);

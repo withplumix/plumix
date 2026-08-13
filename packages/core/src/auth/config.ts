@@ -118,6 +118,10 @@ export interface PlumixAuthInput {
    * the honouring sign-in flow returns the visitor afterwards. Defaults to the
    * admin login (`/_plumix/admin/login`) — set it to a theme-owned login page
    * so gated visitors sign in on the site rather than in the CMS.
+   *
+   * Point it at a page that is itself un-policied: a `loginPath` under a gated
+   * entry type would bounce an anonymous visitor from the gate to the login and
+   * straight back into the gate — a redirect loop. The default is un-policied.
    */
   readonly loginPath?: string;
 }

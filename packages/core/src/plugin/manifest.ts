@@ -178,9 +178,20 @@ export interface EntryTypeOptions {
   readonly archivePerPage?: number;
   /**
    * Access-control policy space for entries of this type. `default` gates
-   * every entry (its single and archive routes); `policies` is the closed set
-   * an editor may later assign per-entry. Absent ⇒ the global `anonymous`
-   * default (un-policied — cached and rendered exactly as today).
+   * every entry's own routes (its `single` and `archive` intents); `policies`
+   * is the closed set an editor may later assign per-entry. Absent ⇒ the global
+   * `anonymous` default (un-policied — cached and rendered exactly as today).
+   *
+   * Scope boundary (this slice): the policy gates only the entry's *own* single
+   * and archive routes. It does NOT yet filter the entry out of aggregate
+   * surfaces it also appears on — the front page, taxonomy / author / date
+   * archives, search, RSS/Atom feeds, or the sitemap. So a gated entry's title
+   * / excerpt (and, via a feed, its body) can still surface anonymously there.
+   * That is intentional for the soft-paywall case (a teaser must stay indexable)
+   * and the teaser-vs-exclude decision needs the segment / soft-gate model — so
+   * cross-surface filtering lands with segment-keyed caching + the soft gate
+   * (follow-up slices). Do not rely on `access` alone to make a type fully
+   * private across every surface until then.
    */
   readonly access?: EntryTypeAccess;
 }
