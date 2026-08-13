@@ -411,3 +411,26 @@ describe("auth() — selfSignup", () => {
     expect(error.issues[0]?.path).toBe("selfSignup.defaultRole");
   });
 });
+
+describe("auth() — loginPath", () => {
+  test("defaults to undefined (the admin login is used)", () => {
+    const config = auth({ passkey: validPasskey });
+    expect(config.loginPath).toBeUndefined();
+  });
+
+  test("accepts a root-relative theme login path", () => {
+    const config = auth({ passkey: validPasskey, loginPath: "/login" });
+    expect(config.loginPath).toBe("/login");
+  });
+
+  test("rejects an absolute or protocol-relative login path", () => {
+    expect(
+      rejected({ passkey: validPasskey, loginPath: "https://evil.test/login" })
+        .issues[0]?.path,
+    ).toBe("loginPath");
+    expect(
+      rejected({ passkey: validPasskey, loginPath: "//evil.test/login" })
+        .issues[0]?.path,
+    ).toBe("loginPath");
+  });
+});

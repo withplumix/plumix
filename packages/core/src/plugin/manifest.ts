@@ -15,6 +15,7 @@ import type {
 } from "@plumix/blocks";
 import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
 
+import type { AccessPolicy } from "../access/policy.js";
 import type {
   EntryTypeCapabilityOverrides,
   TermTaxonomyCapabilityOverrides,
@@ -175,6 +176,38 @@ export interface EntryTypeOptions {
   };
   /** Page size for this type's archive route. Default 20. */
   readonly archivePerPage?: number;
+  /**
+   * Access-control policy space for entries of this type. `default` gates
+   * every entry's own routes (its `single` and `archive` intents); `policies`
+   * is the closed set an editor may later assign per-entry. Absent ⇒ the global
+   * `anonymous` default (un-policied — cached and rendered exactly as today).
+   *
+   * Scope boundary (this slice): the policy gates only the entry's *own* single
+   * and archive routes. It does NOT yet filter the entry out of aggregate
+   * surfaces it also appears on — the front page, taxonomy / author / date
+   * archives, search, RSS/Atom feeds, or the sitemap. So a gated entry's title
+   * / excerpt (and, via a feed, its body) can still surface anonymously there.
+   * That is intentional for the soft-paywall case (a teaser must stay indexable)
+   * and the teaser-vs-exclude decision needs the segment / soft-gate model — so
+   * cross-surface filtering lands with segment-keyed caching + the soft gate
+   * (follow-up slices). Do not rely on `access` alone to make a type fully
+   * private across every surface until then.
+   */
+  readonly access?: EntryTypeAccess;
+}
+
+export interface EntryTypeAccess {
+  /**
+   * Applied to every entry of this type until a per-entry choice (a later
+   * slice) overrides it within {@link policies}.
+   */
+  readonly default: AccessPolicy;
+  /**
+   * The closed set of policies an editor may assign per-entry. `default` is
+   * always implicitly part of the space; list additional selectable policies
+   * here. Absent ⇒ `default` is the only option.
+   */
+  readonly policies?: readonly AccessPolicy[];
 }
 
 /**
@@ -1257,6 +1290,12 @@ export interface ArchiveTypeOptions {
   readonly feed?: ArchiveTypeFeed;
   /** Fold this archive into the native sitemap index (`/sitemap-<name>-<page>.xml`); absent otherwise. */
   readonly sitemap?: ArchiveTypeSitemap;
+  /**
+   * Access-control policy gating this custom (route-level) archive. Absent ⇒
+   * the global `anonymous` default. A policied archive renders live (it opts
+   * out of the edge cache in this slice, like any other policied route).
+   */
+  readonly access?: AccessPolicy;
 }
 
 export interface RegisteredArchiveType extends ArchiveTypeOptions {

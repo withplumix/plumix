@@ -1,3 +1,4 @@
+import type { AccessPolicy } from "../access/policy.js";
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { AppContext } from "../context/app.js";
 import type * as McpDispatch from "../mcp/dispatch.js";
@@ -6,6 +7,11 @@ import type { RouteIntent } from "../route/intent.js";
 import type { RouteMatch } from "../route/match.js";
 import type { RedirectResolution } from "../route/redirects.js";
 import type { PlumixApp } from "./app.js";
+import {
+  enforceAccess,
+  policyForMatch,
+  resolveLoginPath,
+} from "../access/gate.js";
 import { authenticateTraced } from "../auth/authenticator.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import {
@@ -589,8 +595,14 @@ async function dispatchPublicRoute(
   // Resolve the route once here and thread it into rendering so a cache miss
   // doesn't re-run `matchRoute` on the hot public-render path.
   const match = matchRoute(url, app.routeMap);
+  // A policied route renders live in this slice: it opts out of the edge cache
+  // (the segment becomes a cache-key axis in the follow-up). `null` ⇒
+  // un-policied — cached exactly as before, no gate overhead.
+  const policy = policyForMatch(ctx, match);
   const cache = ctx.cache;
-  if (cache === undefined) return renderPublicRoute(app, ctx, url, match);
+  if (cache === undefined || policy !== null) {
+    return renderPublicRoute(app, ctx, url, match, policy);
+  }
   const intent = publicIntent(match, url);
   return readThrough({
     request: ctx.request,
@@ -605,7 +617,7 @@ async function dispatchPublicRoute(
     cache,
     defer: ctx.defer,
     telemetry: ctx.telemetry,
-    render: () => renderPublicRoute(app, ctx, url, match),
+    render: () => renderPublicRoute(app, ctx, url, match, null),
     // Evaluated post-render so `ctx.resolvedEntity` (the entry id) is set
     // and read-time hydration has finished accumulating the tags of the
     // entities embedded in the page (#1508). The source thunks run only
@@ -635,6 +647,7 @@ async function renderPublicRoute(
   ctx: AppContext,
   url: URL,
   match: RouteMatch | null,
+  policy: AccessPolicy | null,
 ): Promise<Response> {
   const theme = app.config.theme;
   const document = app.document;
@@ -642,6 +655,27 @@ async function renderPublicRoute(
   const assetManifest = app.assetManifest;
   try {
     ctx = await loadUserForPublicRequest(ctx);
+    // Hard access gate — runs on the loaded principal, before any content
+    // resolves. A redirect/challenge short-circuits so protected content is
+    // never rendered. Un-policied routes (`policy === null`) skip it entirely.
+    //
+    // Fail-closed by design: it gates on `ctx.user` (the same principal the
+    // public render trusts), so a request that reads as anonymous here — no
+    // session, and by deliberate policy neither a `?preview=` grant nor a
+    // Bearer token counts as a session on the public path — is gated as
+    // anonymous. And it gates by the entry *type*, before the specific entry
+    // resolves, so a gated type refuses even a would-be-404 URL rather than
+    // leak which slugs exist. Both keep the default safe; a preview/soft-gate
+    // relaxation is a later, explicit opt-in.
+    if (policy !== null) {
+      const gated = await enforceAccess({
+        ctx,
+        url,
+        policy,
+        loginPath: resolveLoginPath(app.config.auth),
+      });
+      if (gated !== null) return gated;
+    }
     const response = await ctx.telemetry.span("resolve", async (s) => {
       try {
         return await resolvePublicRouteOrFallback(app, ctx, url, match);
@@ -664,7 +698,12 @@ async function renderPublicRoute(
     // disagree; these headers extend that to intermediaries and the browser
     // bfcache. Anonymous renders are left untouched, so ordinary pages stay
     // cacheable. (The segment model generalizes this privileged signal later.)
-    if (requestIsPrivileged(ctx.request)) {
+    //
+    // A policied route's allow-render is also kept out of every cache: it
+    // opts out of the edge read-through above, and until the segment becomes a
+    // cache key (follow-up), an anonymous-granted render must not be stored at
+    // its plain URL by an intermediary either — so it renders live everywhere.
+    if (policy !== null || requestIsPrivileged(ctx.request)) {
       response.headers.set("cache-control", "private, no-store");
       response.headers.append("vary", "cookie");
     }

@@ -9,6 +9,7 @@ import type { SessionPolicy } from "./sessions.js";
 import { USER_ROLES } from "../db/schema/users.js";
 import { OAUTH_PROVIDER_KEY_PATTERN } from "./oauth/types.js";
 import { HTTPS_WILDCARD_PREFIX } from "./passkey/origin-policy.js";
+import { isSafeRedirect } from "./redirect.js";
 
 export interface PlumixMagicLinkConfig {
   /**
@@ -111,6 +112,18 @@ export interface PlumixAuthInput {
    * issuance stays rate-limited and timing-uniform underneath.
    */
   readonly selfSignup?: PlumixSelfSignupConfig;
+  /**
+   * Where an access policy's `redirectToLogin()` sends an anonymous visitor.
+   * A root-relative path; the framework appends `?redirectTo=<current URL>` so
+   * the honouring sign-in flow returns the visitor afterwards. Defaults to the
+   * admin login (`/_plumix/admin/login`) — set it to a theme-owned login page
+   * so gated visitors sign in on the site rather than in the CMS.
+   *
+   * Point it at a page that is itself un-policied: a `loginPath` under a gated
+   * entry type would bounce an anonymous visitor from the gate to the login and
+   * straight back into the gate — a redirect loop. The default is un-policied.
+   */
+  readonly loginPath?: string;
 }
 
 export interface PlumixAuthConfig {
@@ -122,6 +135,7 @@ export interface PlumixAuthConfig {
   readonly authenticator?: RequestAuthenticator;
   readonly bootstrapVia?: BootstrapVia;
   readonly selfSignup?: PlumixSelfSignupConfig;
+  readonly loginPath?: string;
 }
 
 export interface PlumixConfigIssue {
@@ -383,6 +397,19 @@ const authInputSchema = v.object({
   magicLink: v.optional(magicLinkSchema),
   bootstrapVia: v.optional(v.picklist(["passkey", "first-method-wins"])),
   selfSignup: v.optional(selfSignupSchema),
+  loginPath: v.optional(
+    // Reuse the single redirect trust boundary rather than a second, weaker
+    // regex: rejects protocol-relative (`//…`), backslashes, control chars,
+    // absolute URLs, and over-length values — the same guard the flows run a
+    // request `redirectTo` through before honouring it.
+    v.pipe(
+      v.string(),
+      v.check(
+        (value) => isSafeRedirect(value),
+        "loginPath must be a safe root-relative path (no //, backslash, absolute URL, or control chars)",
+      ),
+    ),
+  ),
 });
 
 function toIssues(
@@ -409,5 +436,6 @@ export function auth(input: PlumixAuthInput): PlumixAuthConfig {
     authenticator: input.authenticator,
     bootstrapVia: input.bootstrapVia,
     selfSignup: input.selfSignup,
+    loginPath: input.loginPath,
   };
 }

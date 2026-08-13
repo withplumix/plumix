@@ -4,6 +4,7 @@ import "./template-deps-core.js";
 // resolve:*, admin_bar:nodes, …) into the published declaration graph (#1698).
 import "./hooks/public-hooks.js";
 
+export * from "./access/index.js";
 export * from "./admin/index.js";
 export * from "./auth/index.js";
 export { withBasePath } from "./base-path.js";
