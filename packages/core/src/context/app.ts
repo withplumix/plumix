@@ -8,6 +8,7 @@ import type {
 import type { RemotePattern } from "@plumix/blocks/renderer";
 import { createBlockRegistry } from "@plumix/blocks";
 
+import type { Access } from "../access/policy.js";
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { MailerInput } from "../auth/mailer/resolve.js";
 import type { Mailer } from "../auth/mailer/types.js";
@@ -336,6 +337,15 @@ export interface AppContextBase<
    * `resolvedEntity` — the resolve phase span reads it back post-render.
    */
   resolvedTemplate: string | null;
+  /**
+   * The resolved access decision for a policied public route — its `segment`
+   * and `gate` — written by the dispatcher after it enforces the gate, before
+   * the render. `null` on an un-policied route (the global `anonymous` default)
+   * and every non-public path. A theme template reads this to branch a soft
+   * gate: a `challenge` gate means serve the teaser variant, `allow` the full
+   * render. Same write-once-mutable design as `resolvedEntity`.
+   */
+  access: Access | null;
 }
 
 export type AppContext<TSchema extends Record<string, unknown> = CoreSchema> =
@@ -498,6 +508,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     requestId: crypto.randomUUID(),
     resolvedEntity: null,
     resolvedTemplate: null,
+    access: null,
     // Best-effort fallback for tests / runtimes that don't pass an
     // explicit origin: derive from the inbound request URL. Production
     // always passes the canonical operator-set origin so URLs in

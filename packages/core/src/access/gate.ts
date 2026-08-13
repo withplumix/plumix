@@ -20,7 +20,8 @@ const DEFAULT_LOGIN_PATH = "/_plumix/admin/login";
 
 // Challenge kind → terminal HTTP status. A role denial is a 403 (the visitor
 // is signed in; re-authenticating wouldn't help), every other challenge is the
-// 402 paywall default. A later slice renders a themed teaser for the soft gate.
+// 402 paywall default. A *soft* challenge never reaches here — it renders a
+// teaser at 200 (see `gateToResponse`).
 const CHALLENGE_STATUS: Readonly<Record<string, number>> = { forbidden: 403 };
 
 /** The configured login path, defaulting to the admin login. */
@@ -61,8 +62,9 @@ interface GateResponseArgs {
 
 /**
  * Turn an already-resolved {@link Gate} into a short-circuit `Response` — a 302
- * to sign-in for `redirect`, a terminal challenge response for `challenge`, or
- * `null` for `allow` (let the render proceed). Split from resolution so the
+ * to sign-in for `redirect`, a terminal challenge response for a *hard*
+ * `challenge`, or `null` for `allow` and a *soft* `challenge` (let the render
+ * proceed — a soft gate serves a teaser at 200). Split from resolution so the
  * dispatcher can resolve access once — reading the segment for the cache key
  * and the gate for enforcement from a single, possibly I/O-bearing, run.
  */
@@ -83,7 +85,7 @@ export function gateToResponse(
         { "cache-control": "private, no-store", vary: "cookie" },
       );
     case "challenge":
-      return challengeResponse(gate.kind);
+      return gate.soft ? null : challengeResponse(gate.kind);
   }
 }
 

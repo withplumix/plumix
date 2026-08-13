@@ -5,11 +5,15 @@ import type { ConnectedCache } from "../runtime/slots.js";
 import { SEGMENT_KEY_PARAM } from "../cache/decision.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback, forArchiveType } from "../route/render/template-builders.js";
+import { defineTemplate } from "../template.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
 import {
   authenticatedPolicy,
+  challenge,
   definePolicy,
+  entitlement,
+  entitlementSegment,
   grant,
   redirectToLogin,
   rolePolicy,
@@ -383,4 +387,204 @@ describe("access gate — segment-keyed caching (#1740)", () => {
       expect(put).not.toHaveBeenCalled();
     },
   );
+});
+
+// The paywall: a soft gate. An active `entitlement:premium` gets the full
+// render under one shared segment; everyone else (anonymous or lapsed) gets a
+// teaser at their own segment — the same URL, a distinct cache variant. A
+// mutable `entitled` set stands in for the developer's per-request entitlement
+// check (a `meta` flag, their own table, an external billing API), letting a
+// test flip a subscription active/lapsed between requests.
+interface PaywallData extends CustomArchiveData {
+  readonly kind: "custom";
+  readonly name: "premium";
+  readonly summary: string;
+  readonly body: string;
+}
+declare module "../template-registry.js" {
+  interface ArchiveTypeRegistry {
+    premium: { data: PaywallData };
+  }
+}
+
+function paywallSetup() {
+  const entitled = new Set<number>();
+  const plugin = definePlugin("paywall", (ctx) => {
+    ctx.registerArchiveType("premium", {
+      routes: ["/premium"],
+      access: definePolicy({
+        segments: [entitlementSegment("premium")],
+        // Runs on every request, before the cache lookup — its result is never
+        // cached, so a lapsed entitlement is denied on the next request.
+        resolve: (c) =>
+          c.user && entitled.has(c.user.id)
+            ? entitlement("premium")
+            : challenge("subscribe", { soft: true }),
+      }),
+      // A custom archive opts into caching so the teaser/full variants persist.
+      cacheable: true,
+      resolve: () => ({
+        data: {
+          kind: "custom",
+          name: "premium",
+          summary: "PUBLIC-SUMMARY",
+          body: "FULL-ARTICLE-BODY",
+        },
+        title: "Premium",
+      }),
+    });
+  });
+  const theme = defineTheme({
+    templates: [
+      forArchiveType("premium").template(
+        defineTemplate<PaywallData>({
+          render: ({ data, ctx }) => {
+            // The soft-gate seam: a `challenge` gate means render the teaser.
+            // The teaser variant is a public document, so it withholds the
+            // protected body server-side and shows only the free summary; the
+            // full body renders solely on the entitled `allow` branch.
+            const gated = ctx.access?.gate.type === "challenge";
+            return gated ? (
+              <main data-testid="teaser">{data.summary}</main>
+            ) : (
+              <main data-testid="full">{data.body}</main>
+            );
+          },
+        }),
+      ),
+      fallback(() => null),
+    ],
+  });
+  return { entitled, plugin, theme };
+}
+
+describe("access gate — soft gate / paywall (#1741)", () => {
+  test("an active entitlement gets the full render under a shared segment", async () => {
+    const { entitled, plugin, theme } = paywallSetup();
+    const h = await createDispatcherHarness({ plugins: [plugin], theme });
+    const member = await h.seedUser("subscriber");
+    entitled.add(member.id);
+
+    const response = await h.dispatch(await authed(h, "/premium", member.id));
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain('data-testid="full"');
+    expect(html).toContain("FULL-ARTICLE-BODY");
+    // No soft challenge on the full render — no teaser signal.
+    expect(response.headers.get("x-plumix-challenge")).toBe(null);
+  });
+
+  test("two entitled principals share one full-variant cache entry", async () => {
+    const { cache, store } = memoryCache();
+    const { entitled, plugin, theme } = paywallSetup();
+    const h = await createDispatcherHarness({
+      plugins: [plugin],
+      theme,
+      cache,
+    });
+    const alice = await h.seedUser("subscriber");
+    const bob = await h.seedUser("subscriber");
+    entitled.add(alice.id);
+    entitled.add(bob.id);
+
+    const first = await h.dispatch(await authed(h, "/premium", alice.id));
+    await h.drainDeferred();
+    expect(first.status).toBe(200);
+
+    // One entry, keyed by the `entitlement:premium` segment — not per identity.
+    expect(store.size).toBe(1);
+    const key = [...store.keys()][0];
+    if (key === undefined) throw new Error("expected a stored cache entry");
+    expect(new URL(key).searchParams.get(SEGMENT_KEY_PARAM)).toBe(
+      "entitlement:premium",
+    );
+
+    store.set(key, {
+      response: new Response("SHARED-FULL", { status: 200 }),
+      tags: [],
+    });
+    const second = await h.dispatch(await authed(h, "/premium", bob.id));
+    expect(await second.text()).toBe("SHARED-FULL");
+    expect(store.size).toBe(1);
+  });
+
+  test("serves teaser and full as two cache variants at one URL", async () => {
+    const { cache, store } = memoryCache();
+    const { entitled, plugin, theme } = paywallSetup();
+    const h = await createDispatcherHarness({
+      plugins: [plugin],
+      theme,
+      cache,
+    });
+    const member = await h.seedUser("subscriber");
+    entitled.add(member.id);
+
+    // Anonymous visitor (a search-engine crawler) → the teaser variant: a 200,
+    // publicly cacheable page carrying only the free summary. The protected body
+    // is withheld server-side, so it can't leak through the public entry.
+    const teaser = await h.dispatch(new Request("https://cms.example/premium"));
+    await h.drainDeferred();
+    expect(teaser.status).toBe(200);
+    const teaserHtml = await teaser.text();
+    expect(teaserHtml).toContain('data-testid="teaser"');
+    expect(teaserHtml).toContain("PUBLIC-SUMMARY");
+    expect(teaserHtml).not.toContain("FULL-ARTICLE-BODY");
+    expect(teaser.headers.get("x-plumix-challenge")).toBe("subscribe");
+
+    // Entitled member → the full variant, at the same URL: the full text is
+    // present here, the appropriate variant for it.
+    const full = await h.dispatch(await authed(h, "/premium", member.id));
+    await h.drainDeferred();
+    expect(full.status).toBe(200);
+    const fullHtml = await full.text();
+    expect(fullHtml).toContain('data-testid="full"');
+    expect(fullHtml).toContain("FULL-ARTICLE-BODY");
+
+    // Two variants stored for the one path: anonymous teaser + entitled full.
+    expect(store.size).toBe(2);
+    const segments = [...store.keys()].map((k) =>
+      new URL(k).searchParams.get(SEGMENT_KEY_PARAM),
+    );
+    // The anonymous teaser is keyed at the plain URL (no segment marker) so it
+    // is the shared, crawler-visible document; the full render is segmented.
+    expect(segments).toContain(null);
+    expect(segments).toContain("entitlement:premium");
+    const paths = new Set([...store.keys()].map((k) => new URL(k).pathname));
+    expect(paths).toEqual(new Set(["/premium"]));
+  });
+
+  test("a lapsed entitlement is denied on the next request without cache busting", async () => {
+    const { cache, store } = memoryCache();
+    const { entitled, plugin, theme } = paywallSetup();
+    const h = await createDispatcherHarness({
+      plugins: [plugin],
+      theme,
+      cache,
+    });
+    const member = await h.seedUser("subscriber");
+    entitled.add(member.id);
+
+    // While entitled: the full variant renders and is cached.
+    const active = await h.dispatch(await authed(h, "/premium", member.id));
+    await h.drainDeferred();
+    expect(await active.text()).toContain('data-testid="full"');
+    expect(store.size).toBe(1);
+
+    // The subscription lapses (the external check now returns false). No cache
+    // busting — the full variant stays put.
+    entitled.delete(member.id);
+
+    const lapsed = await h.dispatch(await authed(h, "/premium", member.id));
+    await h.drainDeferred();
+    // Denied the full render on the very next request: they resolve to the
+    // teaser segment now, never reading the still-cached full variant.
+    const lapsedHtml = await lapsed.text();
+    expect(lapsedHtml).toContain('data-testid="teaser"');
+    expect(lapsed.headers.get("x-plumix-challenge")).toBe("subscribe");
+    // The entitled variant was neither purged nor overwritten.
+    const keys = [...store.keys()].map((k) =>
+      new URL(k).searchParams.get(SEGMENT_KEY_PARAM),
+    );
+    expect(keys).toContain("entitlement:premium");
+  });
 });

@@ -36,33 +36,92 @@ export type BuiltinSegment =
   "anonymous" | "authenticated" | "private" | `role:${UserRole}`;
 
 /**
- * A resolved audience segment: a built-in or a custom label. `(string & {})`
- * keeps custom labels assignable while preserving autocomplete for the
- * built-ins.
+ * The membership / paywall segment family — a developer-defined `<label>` (a
+ * plan, tier, or capability) resolved by their entitlement check and declared
+ * in the policy's `segments` space. Open-ended by design, so unlike the closed
+ * `role:` family it is not a built-in: each label must be declared.
  */
-export type Segment = BuiltinSegment | (string & {});
+export type EntitlementSegment = `entitlement:${string}`;
+
+/**
+ * A resolved audience segment: a built-in, an `entitlement:<label>`, or another
+ * custom label. `(string & {})` keeps custom labels assignable while preserving
+ * autocomplete for the built-ins.
+ */
+export type Segment = BuiltinSegment | EntitlementSegment | (string & {});
+
+const ENTITLEMENT_PREFIX = "entitlement:";
+
+/** Build the `entitlement:<label>` segment string for a policy's `segments`. */
+export function entitlementSegment(label: string): EntitlementSegment {
+  return `${ENTITLEMENT_PREFIX}${label}`;
+}
 
 /** The gate decision one policy resolution yields. Closed union. */
 export type Gate =
   | { readonly type: "allow" }
   /** Redirect an anonymous visitor to sign-in, returning them afterwards. */
   | { readonly type: "redirect" }
-  /** Render a challenge result (a 402 upsell, a 403 denial). */
-  | { readonly type: "challenge"; readonly kind: string };
+  /**
+   * An unmet requirement. A *hard* challenge (`soft` absent/false) blocks — a
+   * terminal 402 upsell or 403 denial, no content sent. A *soft* challenge lets
+   * the render proceed at 200 so the theme can serve a teaser (or client-locked
+   * full content) at the same URL, cached under the visitor's own segment as a
+   * variant distinct from the entitled full render.
+   */
+  | {
+      readonly type: "challenge";
+      readonly kind: string;
+      readonly soft?: boolean;
+    };
 
 /**
  * What a policy's `resolve` returns — the closed set of outcomes. Built via the
- * {@link grant} / {@link redirectToLogin} / {@link challenge} constructors so
- * call sites never hand-shape the discriminated union.
+ * {@link grant} / {@link redirectToLogin} / {@link challenge} / {@link entitlement}
+ * constructors so call sites never hand-shape the discriminated union.
  */
 export type AccessOutcome =
   | { readonly type: "grant"; readonly segment: string }
   | { readonly type: "redirect" }
-  | { readonly type: "challenge"; readonly kind: string };
+  | {
+      readonly type: "challenge";
+      readonly kind: string;
+      readonly soft?: boolean;
+    };
+
+/** Options for {@link challenge}. */
+export interface ChallengeOptions {
+  /**
+   * Opt into a *soft* gate: instead of a terminal 402/403 the render proceeds
+   * at 200 with the resolved {@link Access} exposed on `ctx.access`, so the
+   * theme can serve a teaser variant. Off by default — the hard gate is the
+   * default; soft is the explicit opt-in.
+   *
+   * The teaser is a *public* document: it is keyed to the visitor's free
+   * segment (`anonymous` shares the plain-URL, crawler-indexable entry;
+   * `authenticated` shares one entry across every signed-in un-entitled
+   * visitor), so it must be principal-invariant — never place per-user content,
+   * or gated content the operator isn't willing to serve publicly, in a soft
+   * teaser. Withholding the protected body means rendering less of it
+   * server-side; a client-only lock over a fully-delivered body is presentation,
+   * not protection.
+   */
+  readonly soft?: boolean;
+}
 
 /** Grant access, tagging the render with `segment` (a built-in or declared). */
 export function grant(segment: string): AccessOutcome {
   return { type: "grant", segment };
+}
+
+/**
+ * Grant access under an `entitlement:<label>` segment — the membership /
+ * paywall case. Sugar over `grant(entitlementSegment(label))`; declare the same
+ * label in the policy's `segments` space (via {@link entitlementSegment}) so the
+ * closed-output contract admits it. Every entitled principal shares one variant.
+ */
+export function entitlement(label: string): AccessOutcome {
+  return grant(entitlementSegment(label));
 }
 
 /** Send an anonymous visitor to sign-in (returned afterwards via `redirectTo`). */
@@ -70,9 +129,16 @@ export function redirectToLogin(): AccessOutcome {
   return { type: "redirect" };
 }
 
-/** Block with a challenge (`"subscribe"` upsell, `"forbidden"` denial, …). */
-export function challenge(kind: string): AccessOutcome {
-  return { type: "challenge", kind };
+/**
+ * Signal an unmet requirement (`"subscribe"` upsell, `"forbidden"` denial, …).
+ * Hard by default — a terminal challenge response. Pass `{ soft: true }` to let
+ * the render proceed so the theme serves a teaser at the same URL.
+ */
+export function challenge(
+  kind: string,
+  options?: ChallengeOptions,
+): AccessOutcome {
+  return { type: "challenge", kind, soft: options?.soft };
 }
 
 export type AccessResolver = (
@@ -149,11 +215,14 @@ export async function resolveAccess(
       // Nothing renders on a redirect; the visitor is anonymous by definition.
       return { segment: "anonymous", gate: { type: "redirect" } };
     case "challenge":
-      // The challenge result (upsell / denial) is keyed to the principal's free
-      // built-in segment, so two lapsed subscribers share one variant.
+      // A challenge (hard 402/403 block, or a soft teaser) is keyed to the
+      // principal's free built-in segment — `anonymous` or `authenticated` — so
+      // every un-entitled visitor of the same kind shares one variant, distinct
+      // from the entitled full render. `soft` rides through so the dispatcher
+      // renders the teaser (soft) or blocks (hard).
       return {
         segment: principalSegment(ctx.user),
-        gate: { type: "challenge", kind: outcome.kind },
+        gate: { type: "challenge", kind: outcome.kind, soft: outcome.soft },
       };
   }
 }

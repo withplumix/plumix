@@ -625,6 +625,10 @@ async function dispatchPublicRoute(
         loginPath: resolveLoginPath(app.config.auth),
       });
       if (gated !== null) return gated;
+      // The render proceeds (an `allow`, or a soft `challenge` teaser). Expose
+      // the decision so a theme template can branch the render — a soft gate
+      // reads `ctx.access.gate` to serve the teaser variant.
+      ctx.access = access;
       // A `?preview=` draft link or `?plumix.edit` editor session is authorized
       // per-request, not by audience membership: its render (a draft, or the
       // editor runtime) must never be stored under the shared segment entry and
@@ -720,6 +724,15 @@ async function renderPublicRoute(
       }
     }
   });
+  // A soft gate rendered a teaser: surface the challenge kind so a client-side
+  // unlock (or an analytics hook) has the same signal the hard gate sends,
+  // without the theme having to re-derive it from the DOM. Stored with the
+  // segment variant, so the cached teaser carries it too. Skipped on a 404 —
+  // the teaser resolved to nothing, so a challenge signal there is incoherent.
+  const gate = ctx.access?.gate;
+  if (gate?.type === "challenge" && gate.soft && response.status !== 404) {
+    response.headers.set("x-plumix-challenge", gate.kind);
+  }
   // Any non-`anonymous` segment's render can depend on the visitor, so the copy
   // sent to the client forbids a shared or browser cache from storing it under
   // the plain URL — a downstream intermediary is unaware of the segment axis.
