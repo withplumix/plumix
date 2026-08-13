@@ -1,7 +1,7 @@
 // Plugin registry container — the runtime half of the plugin system. Holds
 // every `Registered*` shape, the registration `*Options` inputs they extend,
 // the visibility resolvers, the `PluginRegistry` map bag + `createPluginRegistry`,
-// and the meta-field lookup helpers. This is what the ~90 runtime importers
+// and the meta-field lookup helpers. This is what the runtime importers
 // traverse; the build-time `manifest-projection.ts` reads a snapshot of it.
 // Re-exported unchanged from the public `@plumix/core/manifest` barrel.
 
