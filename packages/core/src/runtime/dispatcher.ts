@@ -1,4 +1,4 @@
-import type { AccessPolicy } from "../access/policy.js";
+import type { Segment } from "../access/policy.js";
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { AppContext } from "../context/app.js";
 import type * as McpDispatch from "../mcp/dispatch.js";
@@ -8,10 +8,11 @@ import type { RouteMatch } from "../route/match.js";
 import type { RedirectResolution } from "../route/redirects.js";
 import type { PlumixApp } from "./app.js";
 import {
-  enforceAccess,
+  gateToResponse,
   policyForMatch,
   resolveLoginPath,
 } from "../access/gate.js";
+import { PRIVATE_SEGMENT, resolveAccess } from "../access/policy.js";
 import { authenticateTraced } from "../auth/authenticator.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import {
@@ -22,7 +23,10 @@ import {
 import { parseOAuthPath } from "../auth/oauth/match.js";
 import { canAccessAdmin } from "../auth/rbac.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
-import { requestIsPrivileged } from "../cache/decision.js";
+import {
+  requestCarriesEphemeralGrant,
+  requestIsPrivileged,
+} from "../cache/decision.js";
 import { embeddedPageTags } from "../cache/embedded-tags.js";
 import { flushPurgeTags } from "../cache/purge.js";
 import { readThrough } from "../cache/read-through.js";
@@ -595,51 +599,95 @@ async function dispatchPublicRoute(
   // Resolve the route once here and thread it into rendering so a cache miss
   // doesn't re-run `matchRoute` on the hot public-render path.
   const match = matchRoute(url, app.routeMap);
-  // A policied route renders live in this slice: it opts out of the edge cache
-  // (the segment becomes a cache-key axis in the follow-up). `null` ⇒
-  // un-policied — cached exactly as before, no gate overhead.
+  // `null` ⇒ un-policied: no gate, and the segment derives from today's
+  // privileged signal (below), so ordinary pages behave exactly as before.
   const policy = policyForMatch(ctx, match);
-  const cache = ctx.cache;
-  if (cache === undefined || policy !== null) {
-    return renderPublicRoute(app, ctx, url, match, policy);
+  try {
+    // Load the principal once, before the cache decision, so a policied route
+    // resolves its segment (and any I/O-bearing entitlement check) up front.
+    // The loader early-returns for session-less traffic, so the anonymous hot
+    // path — the only one that reaches a cache hit without a policy — pays
+    // nothing.
+    ctx = await loadUserForPublicRequest(ctx);
+
+    // The audience segment is the cache-key axis. A policied route runs its
+    // resolver (gate + segment); a non-`allow` gate short-circuits before any
+    // content resolves — fail-closed, gating by entry *type* so a gated type
+    // refuses even a would-be-404 URL rather than leak which slugs exist. An
+    // un-policied route maps a privileged request to `private` (never
+    // shared-cached, as today) and everyone else to `anonymous`.
+    let segment: Segment;
+    if (policy !== null) {
+      const access = await resolveAccess(ctx, policy);
+      const gated = gateToResponse(access.gate, {
+        ctx,
+        url,
+        loginPath: resolveLoginPath(app.config.auth),
+      });
+      if (gated !== null) return gated;
+      // A `?preview=` draft link or `?plumix.edit` editor session is authorized
+      // per-request, not by audience membership: its render (a draft, or the
+      // editor runtime) must never be stored under the shared segment entry and
+      // outlive that grant. The un-policied branch gets this via
+      // `requestIsPrivileged`; here the segment would otherwise be cacheable.
+      segment = requestCarriesEphemeralGrant(ctx.request)
+        ? PRIVATE_SEGMENT
+        : access.segment;
+    } else {
+      segment = requestIsPrivileged(ctx.request)
+        ? PRIVATE_SEGMENT
+        : "anonymous";
+    }
+
+    const cache = ctx.cache;
+    // No cache binding ⇒ every render is live and the read-through is never
+    // consulted. With a cache, a `private` segment still flows through it: the
+    // read-through bypasses internally (recording the decision) and renders
+    // live, so the telemetry stays uniform across cached and bypassed requests.
+    if (cache === undefined) {
+      return await renderPublicRoute(app, ctx, url, match, segment);
+    }
+    const intent = publicIntent(match, url);
+    return await readThrough({
+      request: ctx.request,
+      segment,
+      intentKind: intent?.kind ?? null,
+      // A custom archive caches only when it opted in via `registerArchiveType
+      // ({ cacheable: true })`. Resolved here so the pure decision layer stays
+      // free of the registry lookup.
+      customArchiveCacheable:
+        intent?.kind === "custom"
+          ? ctx.plugins.archiveTypes.get(intent.name)?.cacheable === true
+          : undefined,
+      cache,
+      defer: ctx.defer,
+      telemetry: ctx.telemetry,
+      render: () => renderPublicRoute(app, ctx, url, match, segment),
+      // Evaluated post-render so `ctx.resolvedEntity` (the entry id) is set
+      // and read-time hydration has finished accumulating the tags of the
+      // entities embedded in the page (#1508). The source thunks run only
+      // for the intent kind that needs them. The tag vocabulary is unchanged:
+      // segment variants share one tag set, so one publish purges them all.
+      tags: () => {
+        const routeTags =
+          intent === null
+            ? []
+            : pageTags({
+                intent,
+                resolvedEntity: ctx.resolvedEntity,
+                frontPageEntryTypes: () => frontPageEntryTypes(ctx),
+                taxonomyEntryTypes: (taxonomy) =>
+                  ctx.plugins.termTaxonomies.get(taxonomy)?.entryTypes ?? [],
+              });
+        const embedded = embeddedPageTags(ctx);
+        return embedded.length === 0
+          ? routeTags
+          : [...new Set([...routeTags, ...embedded])];
+      },
+    });
+  } catch (err) {
+    return renderPublicError(app, ctx, url, err);
   }
-  const intent = publicIntent(match, url);
-  return readThrough({
-    request: ctx.request,
-    intentKind: intent?.kind ?? null,
-    // A custom archive caches only when it opted in via `registerArchiveType
-    // ({ cacheable: true })`. Resolved here so the pure decision layer stays
-    // free of the registry lookup.
-    customArchiveCacheable:
-      intent?.kind === "custom"
-        ? ctx.plugins.archiveTypes.get(intent.name)?.cacheable === true
-        : undefined,
-    cache,
-    defer: ctx.defer,
-    telemetry: ctx.telemetry,
-    render: () => renderPublicRoute(app, ctx, url, match, null),
-    // Evaluated post-render so `ctx.resolvedEntity` (the entry id) is set
-    // and read-time hydration has finished accumulating the tags of the
-    // entities embedded in the page (#1508). The source thunks run only
-    // for the intent kind that needs them.
-    tags: () => {
-      const routeTags =
-        intent === null
-          ? []
-          : pageTags({
-              intent,
-              resolvedEntity: ctx.resolvedEntity,
-              frontPageEntryTypes: () => frontPageEntryTypes(ctx),
-              taxonomyEntryTypes: (taxonomy) =>
-                ctx.plugins.termTaxonomies.get(taxonomy)?.entryTypes ?? [],
-            });
-      const embedded = embeddedPageTags(ctx);
-      // A page that embedded nothing is tagged exactly as before.
-      return embedded.length === 0
-        ? routeTags
-        : [...new Set([...routeTags, ...embedded])];
-    },
-  });
 }
 
 async function renderPublicRoute(
@@ -647,166 +695,156 @@ async function renderPublicRoute(
   ctx: AppContext,
   url: URL,
   match: RouteMatch | null,
-  policy: AccessPolicy | null,
+  segment: Segment,
 ): Promise<Response> {
   const theme = app.config.theme;
   const document = app.document;
   const templateDeps = app.plugins.templateDeps;
   const assetManifest = app.assetManifest;
-  try {
-    ctx = await loadUserForPublicRequest(ctx);
-    // Hard access gate — runs on the loaded principal, before any content
-    // resolves. A redirect/challenge short-circuits so protected content is
-    // never rendered. Un-policied routes (`policy === null`) skip it entirely.
-    //
-    // Fail-closed by design: it gates on `ctx.user` (the same principal the
-    // public render trusts), so a request that reads as anonymous here — no
-    // session, and by deliberate policy neither a `?preview=` grant nor a
-    // Bearer token counts as a session on the public path — is gated as
-    // anonymous. And it gates by the entry *type*, before the specific entry
-    // resolves, so a gated type refuses even a would-be-404 URL rather than
-    // leak which slugs exist. Both keep the default safe; a preview/soft-gate
-    // relaxation is a later, explicit opt-in.
-    if (policy !== null) {
-      const gated = await enforceAccess({
-        ctx,
-        url,
-        policy,
-        loginPath: resolveLoginPath(app.config.auth),
-      });
-      if (gated !== null) return gated;
-    }
-    const response = await ctx.telemetry.span("resolve", async (s) => {
-      try {
-        return await resolvePublicRouteOrFallback(app, ctx, url, match);
-      } finally {
-        // Attributes read post-resolution: the resolver writes
-        // `resolvedEntity` / `resolvedTemplate` onto ctx during the render it
-        // encloses. In a `finally` so a throwing render still stamps whatever
-        // had resolved — the failure path is the trace that matters most.
-        // Lazy thunks, so the no-op collector never evaluates them.
-        s.set("route.intent", () => publicIntent(match, url)?.kind ?? "none");
-        if (ctx.resolvedEntity) s.set("resolve.entity", ctx.resolvedEntity);
-        if (ctx.resolvedTemplate) {
-          s.set("template.matched", ctx.resolvedTemplate);
-        }
+  // The principal is loaded and the gate enforced by the caller, before the
+  // cache decision — this runs only on a live render (a cache miss, a `private`
+  // segment, or no cache binding). Throws propagate to the caller's error path.
+  const response = await ctx.telemetry.span("resolve", async (s) => {
+    try {
+      return await resolvePublicRouteOrFallback(app, ctx, url, match);
+    } finally {
+      // Attributes read post-resolution: the resolver writes
+      // `resolvedEntity` / `resolvedTemplate` onto ctx during the render it
+      // encloses. In a `finally` so a throwing render still stamps whatever
+      // had resolved — the failure path is the trace that matters most.
+      // Lazy thunks, so the no-op collector never evaluates them.
+      s.set("route.intent", () => publicIntent(match, url)?.kind ?? "none");
+      if (ctx.resolvedEntity) s.set("resolve.entity", ctx.resolvedEntity);
+      if (ctx.resolvedTemplate) {
+        s.set("template.matched", ctx.resolvedTemplate);
       }
-    });
-    // A privileged request's render can depend on the visitor, so forbid any
-    // shared or browser cache from storing it. Keyed on the same
-    // `requestIsPrivileged` signal the edge cache bypasses on, so the two never
-    // disagree; these headers extend that to intermediaries and the browser
-    // bfcache. Anonymous renders are left untouched, so ordinary pages stay
-    // cacheable. (The segment model generalizes this privileged signal later.)
-    //
-    // A policied route's allow-render is also kept out of every cache: it
-    // opts out of the edge read-through above, and until the segment becomes a
-    // cache key (follow-up), an anonymous-granted render must not be stored at
-    // its plain URL by an intermediary either — so it renders live everywhere.
-    if (policy !== null || requestIsPrivileged(ctx.request)) {
-      response.headers.set("cache-control", "private, no-store");
-      response.headers.append("vary", "cookie");
     }
-    if (response.status === 404 && acceptsHtml(ctx.request)) {
-      const html = await renderErrorThroughTheme({
-        ctx,
-        theme,
-        document,
-        templateDeps,
-        assetManifest,
-        kind: "not-found",
-        data: {
-          kind: "error",
-          request: ctx.request,
-          hint: response.headers.get("x-plumix-hint") ?? undefined,
-        },
-      });
-      const headers = new Headers(response.headers);
-      headers.set("content-type", "text/html; charset=utf-8");
-      return new Response(html, { status: 404, headers });
-    }
-    return response;
-  } catch (err) {
-    ctx.logger.error("dispatch_failed", {
-      requestId: ctx.requestId,
-      url: url.href,
-      err: err instanceof Error ? err.message : String(err),
-    });
-    if (acceptsHtml(ctx.request)) {
-      // Dev-only: bypass the theme entirely and serve the standalone dev error
-      // page, which shows the exception and stack and renders even when the
-      // theme is what broke. `process.env.PLUMIX_DEV` is Vite-empty in prod
-      // builds, so this branch and `renderDevErrorPage` tree-shake out —
-      // production keeps the themed 500 below, unchanged. A failing dev-page
-      // render falls through to the plain-text 500 (#1582).
-      if (process.env.PLUMIX_DEV) {
-        try {
-          // Match "how to fix" hints for the caught error via the dev-only
-          // `error_page:hints` filter (core's typed + untyped matchers, plus
-          // any plugin subscribers) and surface them above the stack.
-          const hints = collectDevErrorHints(ctx.hooks, err, ctx);
-          // The request/route/database/timeline/application sections, read from
-          // the same request-scoped collectors the debug bar uses (#1598). Dev
-          // sampling is ensured regardless of the debug bar, so these are
-          // populated even when the bar is off.
-          const context = collectDevErrorContext(ctx);
-          // Plugin-contributed panels via the dev-only `error_page:panels`
-          // filter (#1626), each rendered in isolation and shown below the
-          // context. No subscribers → an empty list and no extra sections.
-          const panels = collectDevErrorPanels(ctx.hooks, err, ctx);
-          return new Response(renderDevErrorPage(err, hints, context, panels), {
-            status: 500,
-            headers: { "content-type": "text/html; charset=utf-8" },
-          });
-        } catch (devErr) {
-          ctx.logger.error("dev_error_page_failed", {
-            url: url.href,
-            err: devErr instanceof Error ? devErr.message : String(devErr),
-          });
-        }
-      } else {
-        try {
-          const html = await renderErrorThroughTheme({
-            ctx,
-            theme,
-            document,
-            templateDeps,
-            assetManifest,
-            kind: "server-error",
-            data: {
-              kind: "error",
-              request: ctx.request,
-              errorId: ctx.requestId,
-            },
-          });
-          return new Response(html, {
-            status: 500,
-            headers: { "content-type": "text/html; charset=utf-8" },
-          });
-        } catch (templateErr) {
-          ctx.logger.error("error_template_failed", {
-            url: url.href,
-            err:
-              templateErr instanceof Error
-                ? templateErr.message
-                : String(templateErr),
-          });
-        }
-      }
-    } else if (process.env.PLUMIX_DEV) {
-      // Non-HTML request (an API/fetch call): return the exception as JSON so the
-      // caller sees what broke instead of the bare "Internal Server Error" text
-      // (#1599). Same dev gate as the HTML branch above, so it tree-shakes out.
-      return jsonResponse(
-        devErrorJson(err, collectDevErrorHints(ctx.hooks, err, ctx)),
-        { status: 500 },
-      );
-    }
-    return new Response("Internal Server Error", {
-      status: 500,
-      headers: { "content-type": "text/plain; charset=utf-8" },
-    });
+  });
+  // Any non-`anonymous` segment's render can depend on the visitor, so the copy
+  // sent to the client forbids a shared or browser cache from storing it under
+  // the plain URL — a downstream intermediary is unaware of the segment axis.
+  // A shared segment is still accelerated by the edge read-through above, which
+  // stores its own segment-keyed, cookie-stripped clone; only the anonymous
+  // public document is left cacheable downstream, exactly as before.
+  if (segment !== "anonymous") {
+    response.headers.set("cache-control", "private, no-store");
+    response.headers.append("vary", "cookie");
   }
+  if (response.status === 404 && acceptsHtml(ctx.request)) {
+    const html = await renderErrorThroughTheme({
+      ctx,
+      theme,
+      document,
+      templateDeps,
+      assetManifest,
+      kind: "not-found",
+      data: {
+        kind: "error",
+        request: ctx.request,
+        hint: response.headers.get("x-plumix-hint") ?? undefined,
+      },
+    });
+    const headers = new Headers(response.headers);
+    headers.set("content-type", "text/html; charset=utf-8");
+    return new Response(html, { status: 404, headers });
+  }
+  return response;
+}
+
+// Turn a thrown public-render error into the best response the environment can
+// give: the standalone dev error page in dev, a themed 500 in production, and a
+// JSON/plain-text fallback for non-HTML or a failing error render. Shared by
+// the live render and the pre-render access resolution so a throw in either —
+// including a developer's I/O-bearing policy resolver — lands here.
+async function renderPublicError(
+  app: PlumixApp,
+  ctx: AppContext,
+  url: URL,
+  err: unknown,
+): Promise<Response> {
+  const theme = app.config.theme;
+  const document = app.document;
+  const templateDeps = app.plugins.templateDeps;
+  const assetManifest = app.assetManifest;
+  ctx.logger.error("dispatch_failed", {
+    requestId: ctx.requestId,
+    url: url.href,
+    err: err instanceof Error ? err.message : String(err),
+  });
+  if (acceptsHtml(ctx.request)) {
+    // Dev-only: bypass the theme entirely and serve the standalone dev error
+    // page, which shows the exception and stack and renders even when the
+    // theme is what broke. `process.env.PLUMIX_DEV` is Vite-empty in prod
+    // builds, so this branch and `renderDevErrorPage` tree-shake out —
+    // production keeps the themed 500 below, unchanged. A failing dev-page
+    // render falls through to the plain-text 500 (#1582).
+    if (process.env.PLUMIX_DEV) {
+      try {
+        // Match "how to fix" hints for the caught error via the dev-only
+        // `error_page:hints` filter (core's typed + untyped matchers, plus
+        // any plugin subscribers) and surface them above the stack.
+        const hints = collectDevErrorHints(ctx.hooks, err, ctx);
+        // The request/route/database/timeline/application sections, read from
+        // the same request-scoped collectors the debug bar uses (#1598). Dev
+        // sampling is ensured regardless of the debug bar, so these are
+        // populated even when the bar is off.
+        const context = collectDevErrorContext(ctx);
+        // Plugin-contributed panels via the dev-only `error_page:panels`
+        // filter (#1626), each rendered in isolation and shown below the
+        // context. No subscribers → an empty list and no extra sections.
+        const panels = collectDevErrorPanels(ctx.hooks, err, ctx);
+        return new Response(renderDevErrorPage(err, hints, context, panels), {
+          status: 500,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        });
+      } catch (devErr) {
+        ctx.logger.error("dev_error_page_failed", {
+          url: url.href,
+          err: devErr instanceof Error ? devErr.message : String(devErr),
+        });
+      }
+    } else {
+      try {
+        const html = await renderErrorThroughTheme({
+          ctx,
+          theme,
+          document,
+          templateDeps,
+          assetManifest,
+          kind: "server-error",
+          data: {
+            kind: "error",
+            request: ctx.request,
+            errorId: ctx.requestId,
+          },
+        });
+        return new Response(html, {
+          status: 500,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        });
+      } catch (templateErr) {
+        ctx.logger.error("error_template_failed", {
+          url: url.href,
+          err:
+            templateErr instanceof Error
+              ? templateErr.message
+              : String(templateErr),
+        });
+      }
+    }
+  } else if (process.env.PLUMIX_DEV) {
+    // Non-HTML request (an API/fetch call): return the exception as JSON so the
+    // caller sees what broke instead of the bare "Internal Server Error" text
+    // (#1599). Same dev gate as the HTML branch above, so it tree-shakes out.
+    return jsonResponse(
+      devErrorJson(err, collectDevErrorHints(ctx.hooks, err, ctx)),
+      { status: 500 },
+    );
+  }
+  return new Response("Internal Server Error", {
+    status: 500,
+    headers: { "content-type": "text/plain; charset=utf-8" },
+  });
 }
 
 // Whether an error response should render through the theme at all. A missing

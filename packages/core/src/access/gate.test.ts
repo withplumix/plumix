@@ -1,20 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import type { AppContext, AuthenticatedUser } from "../context/app.js";
-import type { UserRole } from "../db/schema/users.js";
 import type { RouteMatch } from "../route/match.js";
-import { enforceAccess, policyForMatch } from "./gate.js";
-import {
-  anonymousPolicy,
-  authenticatedPolicy,
-  challenge,
-  definePolicy,
-  rolePolicy,
-} from "./policy.js";
-
-function user(role: UserRole): AuthenticatedUser {
-  return { id: 1, email: "u@site.test", name: null, role, meta: {} };
-}
+import { gateToResponse, policyForMatch } from "./gate.js";
+import { authenticatedPolicy } from "./policy.js";
 
 function ctx(args: {
   user?: AuthenticatedUser | null;
@@ -94,28 +83,25 @@ describe("policyForMatch", () => {
   });
 });
 
-describe("enforceAccess", () => {
+describe("gateToResponse", () => {
   const url = new URL("https://site.test/members/secret?x=1");
+  const login = "/_plumix/admin/login";
 
-  it("lets an allowed principal proceed (no short-circuit response)", async () => {
-    await expect(
-      enforceAccess({
-        ctx: ctx({ user: user("subscriber") }),
-        url,
-        policy: anonymousPolicy,
-        loginPath: "/_plumix/admin/login",
-      }),
-    ).resolves.toBe(null);
+  it("lets an allow gate proceed (no short-circuit response)", () => {
+    expect(
+      gateToResponse(
+        { type: "allow" },
+        { ctx: ctx({}), url, loginPath: login },
+      ),
+    ).toBe(null);
   });
 
-  it("redirects an anonymous visitor to sign-in with a returnTo", async () => {
+  it("redirects a `redirect` gate to sign-in with a returnTo", () => {
     const response = must(
-      await enforceAccess({
-        ctx: ctx({ user: null }),
-        url,
-        policy: authenticatedPolicy,
-        loginPath: "/_plumix/admin/login",
-      }),
+      gateToResponse(
+        { type: "redirect" },
+        { ctx: ctx({}), url, loginPath: login },
+      ),
     );
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe(
@@ -125,46 +111,36 @@ describe("enforceAccess", () => {
     expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 
-  it("prefixes both the login path and the returnTo with the base path", async () => {
+  it("prefixes both the login path and the returnTo with the base path", () => {
     const response = must(
-      await enforceAccess({
-        ctx: ctx({ user: null, basePath: "/blog" }),
-        url,
-        policy: authenticatedPolicy,
-        loginPath: "/login",
-      }),
+      gateToResponse(
+        { type: "redirect" },
+        { ctx: ctx({ basePath: "/blog" }), url, loginPath: "/login" },
+      ),
     );
     expect(response.headers.get("location")).toBe(
       "/blog/login?redirectTo=%2Fblog%2Fmembers%2Fsecret%3Fx%3D1",
     );
   });
 
-  it("denies an under-privileged principal with a terminal 403 challenge", async () => {
+  it("answers a `forbidden` challenge with a terminal 403", () => {
     const response = must(
-      await enforceAccess({
-        ctx: ctx({ user: user("subscriber") }),
-        url,
-        policy: rolePolicy("editor"),
-        loginPath: "/_plumix/admin/login",
-      }),
+      gateToResponse(
+        { type: "challenge", kind: "forbidden" },
+        { ctx: ctx({}), url, loginPath: login },
+      ),
     );
     expect(response.status).toBe(403);
     expect(response.headers.get("x-plumix-challenge")).toBe("forbidden");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 
-  it("answers a paywall challenge with a 402", async () => {
-    const membersOnly = definePolicy({
-      segments: ["members"],
-      resolve: () => challenge("subscribe"),
-    });
+  it("answers a paywall challenge with a 402", () => {
     const response = must(
-      await enforceAccess({
-        ctx: ctx({ user: user("subscriber") }),
-        url,
-        policy: membersOnly,
-        loginPath: "/_plumix/admin/login",
-      }),
+      gateToResponse(
+        { type: "challenge", kind: "subscribe" },
+        { ctx: ctx({}), url, loginPath: login },
+      ),
     );
     expect(response.status).toBe(402);
     expect(response.headers.get("x-plumix-challenge")).toBe("subscribe");

@@ -141,12 +141,24 @@ describe("resolveAccess — custom resolvers (open logic, closed output)", () =>
       gate: { type: "allow" },
     });
   });
+
+  it("grants the `private` escape-hatch segment without declaring it", async () => {
+    // `private` is a built-in: a policy that gates but keeps the render
+    // per-visitor grants it, and it must resolve without a `segments` entry.
+    const policy = definePolicy({
+      resolve: (c) => (c.user ? grant("private") : redirectToLogin()),
+    });
+    await expect(
+      resolveAccess(ctx(user("subscriber")), policy),
+    ).resolves.toEqual({ segment: "private", gate: { type: "allow" } });
+  });
 });
 
 describe("segment helpers", () => {
   it("recognizes the built-in segments", () => {
     expect(isBuiltinSegment("anonymous")).toBe(true);
     expect(isBuiltinSegment("authenticated")).toBe(true);
+    expect(isBuiltinSegment("private")).toBe(true);
     expect(isBuiltinSegment("role:admin")).toBe(true);
     expect(isBuiltinSegment("role:subscriber")).toBe(true);
   });
