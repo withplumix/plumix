@@ -2172,6 +2172,25 @@ export function emptyManifest(): PlumixManifest {
 }
 
 /**
+ * The single source of contributed (non-core) block specs: plugin blocks
+ * registered via `ctx.registerBlock` plus theme blocks from the `defineTheme`
+ * `blocks` field, at precedence plugin < theme (the theme, being the most
+ * site-specific layer, wins a name clash). Both the per-app block registry
+ * (`buildApp`) and the admin manifest read from here, so the two never diverge.
+ */
+export function collectContributedBlocks(
+  registeredBlocks: Iterable<RegisteredBlock>,
+  themeBlocks: readonly BlockSpec[] = [],
+): readonly BlockSpec[] {
+  // Deduped by name, theme last so it wins a clash — matching the last-write-
+  // wins the runtime registry gives it, so `buildManifest` and `buildApp` agree.
+  const byName = new Map<string, BlockSpec>();
+  for (const { spec } of registeredBlocks) byName.set(spec.name, spec);
+  for (const spec of themeBlocks) byName.set(spec.name, spec);
+  return [...byName.values()];
+}
+
+/**
  * Project a registry snapshot into its manifest form — the subset that ships
  * to the admin bundle. Every surface with a `priority?: number` field —
  * entry types, entry/term/user meta boxes, settings pages, settings groups —
@@ -2196,6 +2215,13 @@ export function buildManifest(
     readonly namedTemplates?: Readonly<
       Record<string, readonly NamedTemplateChoice[]>
     >;
+    /**
+     * Theme-contributed block specs (the `defineTheme` `blocks` field). Routed
+     * through options — like `namedTemplates` — because they live on the theme
+     * descriptor, not the plugin registry. Merged with plugin blocks by
+     * {@link collectContributedBlocks} so the manifest lists both.
+     */
+    readonly blocks?: readonly BlockSpec[];
     readonly i18n?: ResolvedI18n;
     readonly plugins?: readonly {
       readonly id: string;
@@ -2270,7 +2296,10 @@ export function buildManifest(
   const fieldTypes = Array.from(registry.fieldTypes.values())
     .map(toFieldTypeEntry)
     .sort((a, b) => a.type.localeCompare(b.type));
-  const blocks = Array.from(registry.blockSpecs.values())
+  const blocks = collectContributedBlocks(
+    registry.blockSpecs.values(),
+    options?.blocks,
+  )
     .map(toBlockEntry)
     .sort((a, b) => a.name.localeCompare(b.name));
   const marks = Array.from(registry.markSpecs.values())
@@ -3048,7 +3077,7 @@ function toDashboardWidgetEntry(
   return { id, title, capability, component, priority };
 }
 
-function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
+function toBlockEntry(spec: BlockSpec): BlockManifestEntry {
   const {
     name,
     title,
@@ -3058,7 +3087,7 @@ function toBlockEntry(block: RegisteredBlock): BlockManifestEntry {
     keywords,
     inserter,
     variations,
-  } = block.spec;
+  } = spec;
   return {
     name: name,
     title: title ?? name,

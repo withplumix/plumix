@@ -2,7 +2,8 @@ type VitePluginErrorCode =
   | "admin_asset_not_found"
   | "admin_entry_and_chunk_both_set"
   | "admin_entry_outside_project_root"
-  | "admin_entry_not_found";
+  | "admin_entry_not_found"
+  | "block_module_unresolvable";
 
 interface VitePluginErrorFields {
   pluginId?: string;
@@ -10,6 +11,7 @@ interface VitePluginErrorFields {
   declared?: string;
   resolved?: string;
   adminEntry?: string;
+  module?: string;
 }
 
 export class VitePluginError extends Error {
@@ -23,6 +25,7 @@ export class VitePluginError extends Error {
   readonly declared: string | undefined;
   readonly resolved: string | undefined;
   readonly adminEntry: string | undefined;
+  readonly module: string | undefined;
 
   private constructor(
     code: VitePluginErrorCode,
@@ -36,6 +39,7 @@ export class VitePluginError extends Error {
     this.declared = fields.declared;
     this.resolved = fields.resolved;
     this.adminEntry = fields.adminEntry;
+    this.module = fields.module;
   }
 
   static adminAssetNotFound(ctx: {
@@ -50,6 +54,19 @@ export class VitePluginError extends Error {
         `the file was not found at ${ctx.resolved}. Build the plugin's admin ` +
         `assets before running \`plumix build\`.`,
       ctx,
+    );
+  }
+
+  static blockModuleUnresolvable(ctx: {
+    module: string;
+    reason: string;
+  }): VitePluginError {
+    return new VitePluginError(
+      "block_module_unresolvable",
+      `[plumix] cannot statically resolve the \`blocks\` module for ${ctx.module}: ` +
+        `${ctx.reason}. Import the blocks from a module and pass the binding ` +
+        `directly (\`import blocks from "./blocks"; { blocks }\`).`,
+      { module: ctx.module },
     );
   }
 

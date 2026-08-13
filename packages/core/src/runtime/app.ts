@@ -45,7 +45,10 @@ import * as coreSchema from "../db/schema/index.js";
 import { registerCoreDebugPanels } from "../dev/debug-bar/core-panels.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { HookRegistry } from "../hooks/registry.js";
-import { createPluginRegistry } from "../plugin/manifest.js";
+import {
+  collectContributedBlocks,
+  createPluginRegistry,
+} from "../plugin/manifest.js";
 import { installPlugins } from "../plugin/register.js";
 import { CORE_REST_ROUTES, routesOverlap } from "../rest/rest-routes.js";
 import { compileRouteMap } from "../route/compile.js";
@@ -187,8 +190,9 @@ export interface PlumixApp {
    */
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
   /**
-   * Merged block registry: `@plumix/blocks` core specs + plugin
-   * contributions from `ctx.registerBlock`, built once at boot.
+   * Merged block registry, built once at boot: `@plumix/blocks` core specs +
+   * plugin contributions (`ctx.registerBlock(s)`) + theme blocks (the
+   * `defineTheme` `blocks` field), aggregated by `collectContributedBlocks`.
    */
   readonly blocks: BlockRegistry;
   /**
@@ -359,13 +363,17 @@ export async function buildApp(
   const authenticator = config.auth.authenticator ?? defaultAuthenticator();
   const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
 
-  // Aggregate `@plumix/blocks` core specs + plugin contributions into the
-  // per-app registry. `createBlockRegistry`'s last-write-wins semantics
-  // give plugins precedence over the core baseline.
-  const pluginBlockSpecs = Array.from(registry.blockSpecs.values()).map(
-    ({ spec }) => spec,
-  );
-  const blocks = createBlockRegistry([...coreBlocks, ...pluginBlockSpecs]);
+  // Aggregate `@plumix/blocks` core specs + plugin + theme contributions into
+  // the per-app registry. `collectContributedBlocks` is the single source the
+  // admin manifest also reads; `createBlockRegistry`'s last-write-wins semantics
+  // give the precedence core < plugin < theme (the most site-specific layer wins).
+  const blocks = createBlockRegistry([
+    ...coreBlocks,
+    ...collectContributedBlocks(
+      registry.blockSpecs.values(),
+      config.theme.blocks,
+    ),
+  ]);
   // Boot validation: every variation's `innerBlocks` is walked against
   // the committed registry. Unknown block names and undeclared attrs
   // throw structured errors here rather than producing render junk later.

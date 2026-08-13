@@ -11,10 +11,8 @@
 // `registerPluginFieldType`'s registry. The host's meta-box-field
 // dispatcher consults that registry on every render.
 
-import type { BlockSpec } from "plumix/blocks";
 import type { ComponentType } from "react";
 
-import { mediaBlocks } from "../media-blocks.js";
 import { FocalPointField } from "./FocalPointField.js";
 import { MediaListPickerField } from "./MediaListPickerField.js";
 import { MediaPickerField } from "./MediaPickerField.js";
@@ -28,7 +26,6 @@ interface PlumixWindowGlobal {
     type: string,
     component: ComponentType<never>,
   ) => void;
-  readonly registerPluginBlock: (spec: BlockSpec) => void;
 }
 
 declare const window:
@@ -62,9 +59,9 @@ export function registerMediaAdmin(
       "focalPoint",
       FocalPointField as ComponentType<never>,
     );
-    for (const spec of mediaBlocks) {
-      plumix.registerPluginBlock(spec);
-    }
+    // Media's blocks (`media/image`, `media/file`) register centrally via the
+    // synthesised admin bundle — the same source the canvas uses — so they're
+    // declared once in `setup` (`ctx.registerBlocks`), not again here.
     return;
   }
   // Silent no-op would leave the `media`/`mediaList` field renderers

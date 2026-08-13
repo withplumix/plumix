@@ -1,10 +1,12 @@
 import type { ComponentType, JSX } from "react";
 
 import type {
+  BlockSpec,
   ShortcodeSpec,
   ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/blocks";
+import { isReservedBlockName } from "@plumix/blocks";
 
 import type { RedirectRule } from "./route/redirects.js";
 import type {
@@ -203,6 +205,14 @@ export interface ThemeDescriptor extends TemplateDepDeclarations {
    * shorthand.
    */
   readonly templates: readonly TemplateRule[] | TemplateEntry<TemplateData>;
+  /**
+   * Presentation blocks the theme owns (charts, callouts, …), declared
+   * statically like {@link ThemeDescriptor.shortcodes} (themes have no setup
+   * hook). They merge into the per-app block registry at `buildApp` with the
+   * highest precedence (core < plugin < theme) — the most site-specific layer
+   * wins.
+   */
+  readonly blocks?: readonly BlockSpec[];
   readonly document?: DocumentManifest;
   readonly tokens?: ThemeTokens;
   /**
@@ -254,6 +264,11 @@ export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
   }
   if (descriptor.tokens) {
     validateTokens(descriptor.tokens);
+  }
+  for (const block of descriptor.blocks ?? []) {
+    if (isReservedBlockName(block.name)) {
+      throw ThemeRegistrationError.reservedBlockNamespace(block.name);
+    }
   }
   return descriptor;
 }

@@ -33,7 +33,8 @@ type PluginContextErrorCode =
   | "meta_box_field_duplicate_key"
   | "meta_box_field_reserved_key"
   | "meta_box_field_unknown_condition_driver"
-  | "template_dep_kind_reserved";
+  | "template_dep_kind_reserved"
+  | "block_name_reserved_namespace";
 
 interface PluginContextErrorFields {
   pluginId?: string;
@@ -552,6 +553,19 @@ export class PluginContextError extends Error {
     return new PluginContextError(
       "meta_box_field_duplicate_key",
       `${ctx.kind} "${ctx.id}" declares field "${ctx.fieldKey}" more than once.`,
+      ctx,
+    );
+  }
+
+  static blockNameReserved(ctx: {
+    pluginId: string;
+    name: string;
+  }): PluginContextError {
+    return new PluginContextError(
+      "block_name_reserved_namespace",
+      `Plugin "${ctx.pluginId}" registers block "${ctx.name}" in the reserved ` +
+        `\`core/\` namespace, which is owned by \`@plumix/blocks\`' built-in ` +
+        `primitives — register it under the \`${ctx.pluginId}/\` namespace instead.`,
       ctx,
     );
   }
