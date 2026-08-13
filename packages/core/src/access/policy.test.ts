@@ -8,6 +8,8 @@ import {
   authenticatedPolicy,
   challenge,
   definePolicy,
+  entitlement,
+  entitlementSegment,
   grant,
   isBuiltinSegment,
   principalSegment,
@@ -27,6 +29,21 @@ function user(
 // all the built-in policies touch.
 function ctx(u: AuthenticatedUser | null): AppContext {
   return { user: u } as unknown as AppContext;
+}
+
+// A stub with a real per-request memo — the read-through the entitlement
+// resolvers exercise. Runs each `load` once per key, replaying the settled
+// value to later callers, exactly as the request-scoped memo does.
+function memoCtx(u: AuthenticatedUser | null): AppContext {
+  const store = new Map<string, Promise<unknown>>();
+  const memo = <T>(key: string, load: () => Promise<T>): Promise<T> => {
+    const existing = store.get(key);
+    if (existing) return existing as Promise<T>;
+    const pending = load();
+    store.set(key, pending);
+    return pending;
+  };
+  return { user: u, memo } as unknown as AppContext;
 }
 
 describe("definePolicy", () => {
@@ -151,6 +168,113 @@ describe("resolveAccess — custom resolvers (open logic, closed output)", () =>
     await expect(
       resolveAccess(ctx(user("subscriber")), policy),
     ).resolves.toEqual({ segment: "private", gate: { type: "allow" } });
+  });
+});
+
+describe("resolveAccess — entitlement segments (paywall / membership)", () => {
+  // A paywall policy: an active entitlement gets the full render under a shared
+  // `entitlement:premium` segment; everyone else (anon or lapsed) gets a soft
+  // challenge — the teaser, at their own segment.
+  const paywall = definePolicy({
+    segments: [entitlementSegment("premium")],
+    resolve: async (c) => {
+      // The entitlement check may be async and memoized per request — here it
+      // reads through `ctx.memo`, running the (stubbed) lookup once per key.
+      const active = await c.memo(`entitlement:${c.user?.id ?? 0}`, async () =>
+        Promise.resolve(c.user?.meta.premium === true),
+      );
+      return active
+        ? entitlement("premium")
+        : challenge("subscribe", { soft: true });
+    },
+  });
+
+  it("grants an active entitlement the shared entitlement segment (full render)", async () => {
+    await expect(
+      resolveAccess(memoCtx(user("subscriber", { premium: true })), paywall),
+    ).resolves.toEqual({
+      segment: "entitlement:premium",
+      gate: { type: "allow" },
+    });
+  });
+
+  it("soft-challenges a lapsed principal at their own segment (teaser variant)", async () => {
+    // Two un-entitled visitors of the same kind share one teaser variant: a
+    // lapsed subscriber caches under `authenticated`, an anonymous bot under
+    // `anonymous` — both distinct from the entitled `entitlement:premium`.
+    await expect(
+      resolveAccess(memoCtx(user("subscriber", { premium: false })), paywall),
+    ).resolves.toEqual({
+      segment: "authenticated",
+      gate: { type: "challenge", kind: "subscribe", soft: true },
+    });
+    await expect(resolveAccess(memoCtx(null), paywall)).resolves.toEqual({
+      segment: "anonymous",
+      gate: { type: "challenge", kind: "subscribe", soft: true },
+    });
+  });
+
+  it("memoizes the entitlement check within a request", async () => {
+    let lookups = 0;
+    const ctx = memoCtx(user("subscriber", { premium: true }));
+    const policy = definePolicy({
+      segments: [entitlementSegment("premium")],
+      resolve: (c) =>
+        c
+          .memo("premium", async () => {
+            lookups += 1;
+            return Promise.resolve(true);
+          })
+          .then((ok) =>
+            ok
+              ? entitlement("premium")
+              : challenge("subscribe", { soft: true }),
+          ),
+    });
+    await resolveAccess(ctx, policy);
+    await resolveAccess(ctx, policy);
+    // Both resolutions share the same request-scoped memo → one lookup.
+    expect(lookups).toBe(1);
+  });
+
+  it("rejects an undeclared entitlement label", async () => {
+    const policy = definePolicy({
+      // Only `premium` is declared; the resolver grants `pro`.
+      segments: [entitlementSegment("premium")],
+      resolve: () => entitlement("pro"),
+    });
+    await expect(
+      resolveAccess(memoCtx(user("subscriber")), policy),
+    ).rejects.toThrow(AccessError);
+  });
+});
+
+describe("challenge — hard vs soft", () => {
+  it("is hard by default (no soft flag)", () => {
+    expect(challenge("subscribe")).toEqual({
+      type: "challenge",
+      kind: "subscribe",
+    });
+  });
+
+  it("carries the soft flag when opted in", () => {
+    expect(challenge("subscribe", { soft: true })).toEqual({
+      type: "challenge",
+      kind: "subscribe",
+      soft: true,
+    });
+  });
+
+  it("keeps a hard challenge gate flag-free through resolution", async () => {
+    const policy = definePolicy({ resolve: () => challenge("forbidden") });
+    const { gate } = await resolveAccess(memoCtx(user("subscriber")), policy);
+    expect(gate).toEqual({ type: "challenge", kind: "forbidden" });
+  });
+});
+
+describe("entitlementSegment", () => {
+  it("builds the `entitlement:<label>` string", () => {
+    expect(entitlementSegment("premium")).toBe("entitlement:premium");
   });
 });
 

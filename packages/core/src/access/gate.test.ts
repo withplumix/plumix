@@ -145,4 +145,15 @@ describe("gateToResponse", () => {
     expect(response.status).toBe(402);
     expect(response.headers.get("x-plumix-challenge")).toBe("subscribe");
   });
+
+  it("lets a soft challenge proceed (renders a teaser, no short-circuit)", () => {
+    // The soft gate never blocks: the dispatcher renders the teaser variant at
+    // 200 instead of a terminal response.
+    expect(
+      gateToResponse(
+        { type: "challenge", kind: "subscribe", soft: true },
+        { ctx: ctx({}), url, loginPath: login },
+      ),
+    ).toBe(null);
+  });
 });
