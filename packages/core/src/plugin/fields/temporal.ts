@@ -1,18 +1,18 @@
 import type { Label } from "../../i18n/label.js";
 import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
+import type {
   FieldBuilder,
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
   TemporalInputType,
   TemporalMetaBoxField,
 } from "./meta-box-field.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
-import { isValidTemporalValue } from "./meta-box-field.js";
 import { humanizeFieldKey } from "./builder.js";
 import { FieldConfigError } from "./errors.js";
+import { isValidTemporalValue } from "./meta-box-field.js";
 
 export type { TemporalInputType } from "./meta-box-field.js";
 

@@ -1,4 +1,6 @@
 import type { Label } from "../../i18n/label.js";
+import type { StringFieldState } from "./builder.js";
+import type { MetaFieldConditionRule } from "./condition.js";
 import type {
   FieldBuilder,
   LinkMetaBoxField,
@@ -6,8 +8,6 @@ import type {
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
 } from "./meta-box-field.js";
-import type { StringFieldState } from "./builder.js";
-import type { MetaFieldConditionRule } from "./condition.js";
 import { humanizeFieldKey } from "./builder.js";
 import { SAFE_HREF_RE } from "./richtext-validate.js";
 

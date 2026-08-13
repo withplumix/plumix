@@ -1,14 +1,14 @@
 import type { Label } from "../../i18n/label.js";
 import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
+import type {
   FieldBuilder,
   JsonMetaBoxField,
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
 } from "./meta-box-field.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
 import { humanizeFieldKey } from "./builder.js";
 
 interface JsonFieldState {

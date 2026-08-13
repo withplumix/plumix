@@ -3,6 +3,10 @@ import type { UserRole } from "../../db/schema/users.js";
 import type { Label } from "../../i18n/label.js";
 import type { ReferenceHydrationShapes } from "../lookup.js";
 import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
+import type {
   EntryListMetaBoxField,
   EntryReferenceMetaBoxField,
   FieldBuilder,
@@ -15,10 +19,6 @@ import type {
   UserListMetaBoxField,
   UserMetaBoxField,
 } from "./meta-box-field.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
 import { humanizeFieldKey } from "./builder.js";
 
 /**

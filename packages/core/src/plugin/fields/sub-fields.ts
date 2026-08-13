@@ -1,5 +1,5 @@
-import type { MetaBoxField } from "./meta-box-field.js";
 import type { SubFieldContainer } from "./errors.js";
+import type { MetaBoxField } from "./meta-box-field.js";
 import { FieldConfigError } from "./errors.js";
 
 // Mirrors `META_FIELD_KEY_RE` in plugin/validation/meta-box-fields.ts.

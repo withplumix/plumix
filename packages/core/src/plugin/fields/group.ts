@@ -1,18 +1,18 @@
 import type { Label } from "../../i18n/label.js";
 import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
+import type { InferFields, InferStoredFields } from "./contributions.js";
+import type {
   FieldBuilder,
   GroupMetaBoxField,
   MetaBoxField,
   MetaBoxFieldInput,
   MetaBoxFieldSpan,
 } from "./meta-box-field.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
-import type { InferFields, InferStoredFields } from "./contributions.js";
-import { compileMetaBoxFields } from "./meta-box-field.js";
 import { humanizeFieldKey } from "./builder.js";
+import { compileMetaBoxFields } from "./meta-box-field.js";
 import { assertSubFields } from "./sub-fields.js";
 
 interface GroupFieldState {

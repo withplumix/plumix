@@ -1,15 +1,15 @@
 import type { Label } from "../../i18n/label.js";
 import type {
+  MetaFieldCondition,
+  MetaFieldConditionRule,
+} from "./condition.js";
+import type {
   FieldBuilder,
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
   StringInputType,
   StringMetaBoxField,
 } from "./meta-box-field.js";
-import type {
-  MetaFieldCondition,
-  MetaFieldConditionRule,
-} from "./condition.js";
 
 export type { StringInputType } from "./meta-box-field.js";
 
