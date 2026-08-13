@@ -187,7 +187,11 @@ export function registerPluginBlock(spec: BlockSpec): void {
   if (typeof spec.name !== "string" || !spec.name.includes("/")) {
     throw AdminPluginRegistryError.invalidBlockName({ name: spec.name });
   }
-  register(pluginBlocks, spec.name, spec);
+  // Last-write-wins on a duplicate name — unlike the other registries, blocks
+  // tolerate re-registration so a theme block overrides a same-named plugin
+  // block (blocks are collected plugin-first, theme-last) instead of crashing
+  // the admin. Matches the server (`createBlockRegistry`) and the canvas.
+  pluginBlocks.map.set(spec.name, spec);
 }
 
 export function getRegisteredBlocks(): readonly BlockSpec[] {

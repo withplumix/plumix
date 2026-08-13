@@ -1059,6 +1059,50 @@ describe("buildManifest", () => {
     });
   });
 
+  test("projects theme blocks (the `blocks` option) into manifest.blocks", () => {
+    const manifest = buildManifest(createPluginRegistry(), {
+      blocks: [
+        defineBlock({
+          name: "eduscope/chart",
+          title: "Chart",
+          render: () => null,
+        }),
+      ],
+    });
+    expect(manifest.blocks).toHaveLength(1);
+    expect(manifest.blocks[0]).toMatchObject({
+      name: "eduscope/chart",
+      title: "Chart",
+    });
+  });
+
+  test("dedups a plugin/theme block name clash, the theme winning", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("acme", (ctx) => {
+      ctx.registerBlock(
+        defineBlock({
+          name: "shared/card",
+          title: "Plugin",
+          render: () => null,
+        }),
+      );
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+
+    const manifest = buildManifest(registry, {
+      blocks: [
+        defineBlock({
+          name: "shared/card",
+          title: "Theme",
+          render: () => null,
+        }),
+      ],
+    });
+    const cards = manifest.blocks.filter((b) => b.name === "shared/card");
+    expect(cards).toHaveLength(1);
+    expect(cards[0]?.title).toBe("Theme");
+  });
+
   test("block entries carry slash-menu metadata (description, keywords, inserter)", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("acme", (ctx) => {

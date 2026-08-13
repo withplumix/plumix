@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, test } from "vitest";
 
-import { coreBlocks } from "@plumix/blocks";
+import { coreBlocks, defineBlock } from "@plumix/blocks";
 
 import {
   _resetPluginRegistry,
   getRegisteredBlocks,
+  registerPluginBlock,
 } from "../lib/plugin-registry.js";
 import { registerCoreBlocks } from "./register-core-blocks.js";
 
@@ -23,5 +24,17 @@ describe("synthetic core-plugin block registration", () => {
     registerCoreBlocks();
     expect(() => registerCoreBlocks()).not.toThrow();
     expect(getRegisteredBlocks()).toHaveLength(coreBlocks.length);
+  });
+
+  test("still registers core when many non-core blocks precede it", () => {
+    // The site-bundle registers theme/plugin blocks before this runs. Enough of
+    // them to exceed coreBlocks.length would trip a length-threshold guard into
+    // skipping core entirely — the guard must key on a core name instead.
+    for (let i = 0; i < coreBlocks.length; i++) {
+      registerPluginBlock(defineBlock({ name: `x/b${i}`, render: () => null }));
+    }
+    registerCoreBlocks();
+    const names = new Set(getRegisteredBlocks().map((s) => s.name));
+    for (const spec of coreBlocks) expect(names.has(spec.name)).toBe(true);
   });
 });

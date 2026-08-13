@@ -5,7 +5,8 @@ type ThemeRegistrationCode =
   | "theme_dep_function_form"
   | "document_invalid_link"
   | "document_invalid_script"
-  | "invalid_template";
+  | "invalid_template"
+  | "reserved_block_namespace";
 
 export class ThemeRegistrationError extends Error {
   static {
@@ -26,6 +27,16 @@ export class ThemeRegistrationError extends Error {
         `through a theme — there is no inline-HTML fallback. Define one with ` +
         `\`defineTheme({ templates: [fallback(...)] })\` and pass it to ` +
         `\`plumix({ … , theme })\`.`,
+    );
+  }
+
+  static reservedBlockNamespace(name: string): ThemeRegistrationError {
+    return new ThemeRegistrationError(
+      "reserved_block_namespace",
+      `Theme block "${name}" uses the reserved \`core/\` namespace, which is ` +
+        `owned by \`@plumix/blocks\`' built-in primitives. A theme block that ` +
+        `shadows a core name silently replaces it for the whole site — rename ` +
+        `it under the theme's own namespace.`,
     );
   }
 

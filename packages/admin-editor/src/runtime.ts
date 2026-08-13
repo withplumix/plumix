@@ -14,9 +14,8 @@ export function buildEditorRegistry(
 
 /**
  * Boots the editor canvas in the iframe page. Called by the SSR-injected
- * editor entry, which passes the site's plugin block specs (collected by the
- * vite plugin from each plugin's `editorBlocksModule`). No-ops outside the
- * browser.
+ * editor entry, which passes the site's theme + plugin block specs (recovered
+ * by the vite plugin from each `blocks` field). No-ops outside the browser.
  */
 export function bootEditor(pluginBlocks: readonly BlockSpec[] = []): void {
   if (typeof window === "undefined" || typeof document === "undefined") return;

@@ -15,7 +15,7 @@ import type { IncomingMessage } from "node:http";
 import type { Plugin, UserConfig } from "vite";
 import { mergeConfig } from "vite";
 
-import type { ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
+import type { BlockSpec, ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
 import type {
   AnyPluginDescriptor,
   PluginRegistry,
@@ -40,6 +40,7 @@ import {
 } from "@plumix/core/dev-client";
 
 import type { LoadConfigOptions } from "../cli/load-config.js";
+import type { BlockModuleRef } from "./block-module-resolver.js";
 import type { DiscoveredIsland } from "./island-transform.js";
 import { loadConfig } from "../cli/load-config.js";
 import {
@@ -53,6 +54,7 @@ import {
   resolveClientStack,
 } from "./dev-error-stack.js";
 import { createTerminalForwarder } from "./dev-error-terminal.js";
+import { collectEditorBlockModules } from "./editor-block-modules.js";
 import { generateEditorEntrySource } from "./editor-entry-codegen.js";
 import { VitePluginError } from "./errors.js";
 import {
@@ -334,6 +336,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         emitted.plugins,
         emitted.registry,
         root,
+        emitted.editorBlockModules,
       );
     },
     // No watcher on workspace `public/` here — Vite serves `publicDir`
@@ -466,6 +469,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
               emitted.plugins,
               emitted.registry,
               root,
+              emitted.editorBlockModules,
             );
             server.ws.send({ type: "full-reload" });
           })
@@ -507,6 +511,7 @@ async function regenerate(
   registry: PluginRegistry;
   plugins: readonly AnyPluginDescriptor[];
   workerExports: readonly string[];
+  editorBlockModules: readonly BlockModuleRef[];
 }> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig, options);
 
@@ -553,11 +558,13 @@ async function regenerate(
   // Always-emit editor runtime entry — bundled as the `plumix-editor` client
   // chunk. Its `bootEditor()` call mounts the canvas into the SSR
   // `data-plumix-content-root`; the SSR layer injects this chunk only when the
-  // edit gate authorizes it. Plugins' `editorBlocksModule` specs are imported
-  // here so the canvas renders plugin blocks, not just core.
-  const editorBlockModules = config.plugins
-    .map((plugin) => plugin.editorBlocksModule)
-    .filter((mod): mod is string => typeof mod === "string");
+  // edit gate authorizes it. Theme blocks (its `blocks` field) and plugin blocks
+  // (their `ctx.registerBlock(s)` calls) are recovered from config source and
+  // resolved to importable paths so the canvas renders them, not just core.
+  const editorBlockModules = collectEditorBlockModules(
+    configPath,
+    readFileSync(configPath, "utf8"),
+  );
   writeIfChanged(
     resolve(cwd, ".plumix/editor-entry.ts"),
     generateEditorEntrySource(editorBlockModules),
@@ -569,6 +576,7 @@ async function regenerate(
       tokens: config.theme.tokens,
       breakpoints: config.theme.breakpoints,
       namedTemplates: collectNamedTemplates(config.theme.templates),
+      blocks: config.theme.blocks,
       i18n: config.i18n,
     },
     cwd,
@@ -580,6 +588,7 @@ async function regenerate(
     registry,
     plugins: config.plugins,
     workerExports: config.runtime.workerExports ?? [],
+    editorBlockModules,
   };
 }
 
@@ -599,6 +608,7 @@ async function computeManifestAndRegistry(
     readonly tokens?: ThemeTokens;
     readonly breakpoints?: ThemeBreakpoints;
     readonly namedTemplates?: ReturnType<typeof collectNamedTemplates>;
+    readonly blocks?: readonly BlockSpec[];
     readonly i18n?: ResolvedI18n;
   },
   projectRoot: string,
@@ -660,6 +670,7 @@ async function stageAdminAssets(
   plugins: readonly AnyPluginDescriptor[],
   registry: PluginRegistry,
   projectRoot: string,
+  blockModules: readonly BlockModuleRef[],
 ): Promise<void> {
   const dest = resolve(publicDir, "_plumix/admin");
   if (!(await destIsFresh(dest, ADMIN_SOURCE_DIR))) {
@@ -678,6 +689,7 @@ async function stageAdminAssets(
     registry,
     adminDest: dest,
     projectRoot,
+    blockModules,
   });
   const allChunks: PluginChunkRef[] = [...chunks];
   if (assembled) {

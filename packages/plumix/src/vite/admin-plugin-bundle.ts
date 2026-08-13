@@ -17,6 +17,11 @@ import {
   SHARED_ADMIN_RUNTIME_SPECIFIERS,
 } from "@plumix/core";
 
+import type { BlockModuleRef } from "./block-module-resolver.js";
+import {
+  blockImportStatement,
+  blockSpecsArrayExpr,
+} from "./block-module-resolver.js";
 import { VitePluginError } from "./errors.js";
 
 // Bare imports of `react` etc. in the plugin source get aliased to
@@ -62,17 +67,21 @@ export async function assemblePluginAdminBundle({
   registry,
   adminDest,
   projectRoot,
+  blockModules = [],
 }: {
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly registry: PluginRegistry;
   readonly adminDest: string;
   readonly projectRoot: string;
+  readonly blockModules?: readonly BlockModuleRef[];
 }): Promise<AssembledBundle | null> {
   const withEntry = plugins.filter(
     (p): p is AnyPluginDescriptor & { adminEntry: string } =>
       typeof p.adminEntry === "string" && p.adminEntry.length > 0,
   );
-  if (withEntry.length === 0) return null;
+  // The bundle also carries theme/plugin block registrations, so build it when
+  // there are blocks even if no plugin declares an `adminEntry`.
+  if (withEntry.length === 0 && blockModules.length === 0) return null;
 
   for (const p of withEntry) {
     if (p.adminChunk) {
@@ -104,6 +113,7 @@ export async function assemblePluginAdminBundle({
     plugins: withEntry,
     resolvedEntries,
     registry,
+    blockModules,
   });
 
   const entryFile = resolve(cacheDir, "admin-plugins-entry.mjs");
@@ -166,13 +176,26 @@ function buildSynthesisedEntry({
   plugins,
   resolvedEntries,
   registry,
+  blockModules,
 }: {
   readonly plugins: readonly (AnyPluginDescriptor & { adminEntry: string })[];
   readonly resolvedEntries: readonly string[];
   readonly registry: PluginRegistry;
+  readonly blockModules: readonly BlockModuleRef[];
 }): string {
   const importLines: string[] = [];
   const registerLines: string[] = [];
+
+  // Block specs (theme + plugin) recovered from config source, registered into
+  // the admin from the one source the canvas also uses — so themes reach the
+  // inserter and a plugin declares its blocks once (in `setup`), not again here.
+  blockModules.forEach((ref, i) => {
+    const local = `b_${i}`;
+    importLines.push(blockImportStatement(ref, local));
+    registerLines.push(
+      `  for (const s of ${blockSpecsArrayExpr(local)}) __plumix.registerPluginBlock(s);`,
+    );
+  });
 
   plugins.forEach((plugin, idx) => {
     const ns = `p_${plugin.id}`;

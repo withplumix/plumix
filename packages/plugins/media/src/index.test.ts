@@ -18,8 +18,7 @@ describe("@plumix/plugin-media — registration", () => {
   test("each media block is attributed to the media plugin", async () => {
     const { registry } = await install();
     for (const name of ["media/image", "media/file"]) {
-      const entry = registry.blockSpecs.get(name);
-      expect(entry?.registeredBy).toBe("media");
+      expect(registry.blockSpecs.get(name)?.registeredBy).toBe("media");
     }
   });
 
@@ -84,11 +83,6 @@ describe("@plumix/plugin-media — registration", () => {
     expect(descriptor.adminEntry).toBe(
       "node_modules/@plumix/plugin-media/dist/admin/index.js",
     );
-  });
-
-  test("declares the editorBlocksModule the canvas imports its blocks from", () => {
-    const descriptor = media();
-    expect(descriptor.editorBlocksModule).toBe("@plumix/plugin-media/blocks");
   });
 
   test("DEFAULT_ACCEPTED_TYPES covers the headline file kinds, excludes SVG by default", () => {

@@ -2,10 +2,9 @@ import type { Label } from "plumix/i18n";
 import type { EntryTypeLabels, PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
-import { fileBlock } from "./blocks/file/index.js";
-import { imageBlock } from "./blocks/image/index.js";
 import { mediaLookupAdapter } from "./lookup.js";
 import { mediaGetTool, mediaListTool } from "./mcp-tools.js";
+import { mediaBlocks } from "./media-blocks.js";
 import { DEFAULT_ACCEPTED_TYPES } from "./mime.js";
 import { createMediaRouter } from "./rpc.js";
 import { handleMediaServe } from "./serve-route.js";
@@ -80,7 +79,7 @@ const LIBRARY_GROUP_LABEL: Label = {
 };
 
 // Re-export the canonical list from `media-blocks.ts` (server-clean).
-export { mediaBlocks } from "./media-blocks.js";
+export { mediaBlocks };
 
 interface MediaPluginOptions {
   /**
@@ -155,10 +154,8 @@ export function media(
   return definePlugin(
     "media",
     (ctx) => {
-      // Media blocks contributed under the `media/` namespace. Order is
-      // just for readability; the registry is keyed by name.
-      ctx.registerBlock(imageBlock);
-      ctx.registerBlock(fileBlock);
+      // Media blocks (`media/image`, `media/file`) under the `media/` namespace.
+      ctx.registerBlocks(mediaBlocks);
 
       ctx.registerEntryType("media", {
         label: MEDIA_LABELS.plural,
@@ -248,9 +245,6 @@ export function media(
     },
     {
       adminEntry: ADMIN_ENTRY_PATH,
-      // Browser-safe block specs for the editor canvas (the iframe ships no
-      // server code). Mirrors the `ctx.registerBlock` calls above.
-      editorBlocksModule: "@plumix/plugin-media/blocks",
       i18n: {
         sourceLocale: "en",
         locales: ["en"],

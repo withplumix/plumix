@@ -197,6 +197,13 @@ export interface BlockSpec<
   readonly entryTypes?: readonly string[];
 }
 
+/** The namespace reserved for `@plumix/blocks`' built-in specs. */
+export const CORE_BLOCK_NAMESPACE = "core/";
+
+/** Whether `name` sits in the reserved `core/` namespace. */
+export const isReservedBlockName = (name: string): boolean =>
+  name.startsWith(CORE_BLOCK_NAMESPACE);
+
 export interface BlockRegistry {
   get(name: string): BlockSpec | undefined;
   has(name: string): boolean;

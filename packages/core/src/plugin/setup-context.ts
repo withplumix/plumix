@@ -4,6 +4,7 @@ import type {
   MarkSpec,
   ShortcodeSpec,
 } from "@plumix/blocks";
+import { isReservedBlockName } from "@plumix/blocks";
 
 import type { DerivedCapability } from "../auth/rbac.js";
 import type { AppContext } from "../context/app.js";
@@ -278,6 +279,13 @@ export interface PluginSetupContextBase {
    * reserved for `@plumix/blocks`'s built-in primitives.
    */
   registerBlock(spec: BlockSpec): void;
+
+  /**
+   * Register several blocks at once — the array ergonomic of `registerBlock`,
+   * mirroring the theme `blocks` field. Equivalent to calling `registerBlock`
+   * for each spec (same `core/` and duplicate-name guards apply per spec).
+   */
+  registerBlocks(specs: readonly BlockSpec[]): void;
 
   /**
    * Register a `MarkSpec` produced by `defineMark` from `plumix/blocks`.
@@ -695,6 +703,12 @@ export function createPluginSetupContext({
     },
 
     registerBlock: (spec) => {
+      if (isReservedBlockName(spec.name)) {
+        throw PluginContextError.blockNameReserved({
+          pluginId,
+          name: spec.name,
+        });
+      }
       if (registry.blockSpecs.has(spec.name)) {
         throw DuplicateRegistrationError.alreadyRegistered({
           kind: "block",
@@ -702,6 +716,10 @@ export function createPluginSetupContext({
         });
       }
       registry.blockSpecs.set(spec.name, { spec, registeredBy: pluginId });
+    },
+
+    registerBlocks: (specs) => {
+      for (const spec of specs) ctx.registerBlock(spec);
     },
 
     registerMark: (spec) => {

@@ -1,19 +1,15 @@
 import { describe, expect, test, vi } from "vitest";
 
-import { mediaBlocks } from "../media-blocks.js";
 import { registerMediaAdmin } from "./index.js";
 
 describe("registerMediaAdmin", () => {
-  test("registers every mediaBlocks spec and all field types with the host", () => {
-    const registerPluginBlock = vi.fn();
+  // Blocks register centrally via the synthesised admin bundle now; the admin
+  // entry only contributes field types.
+  test("registers all field types with the host", () => {
     const registerPluginFieldType = vi.fn();
 
-    registerMediaAdmin({ registerPluginBlock, registerPluginFieldType });
+    registerMediaAdmin({ registerPluginFieldType });
 
-    expect(registerPluginBlock).toHaveBeenCalledTimes(mediaBlocks.length);
-    mediaBlocks.forEach((spec, i) => {
-      expect(registerPluginBlock).toHaveBeenNthCalledWith(i + 1, spec);
-    });
     expect(registerPluginFieldType).toHaveBeenCalledWith(
       "media",
       expect.anything(),

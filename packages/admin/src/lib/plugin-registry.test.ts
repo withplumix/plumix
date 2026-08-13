@@ -123,9 +123,12 @@ describe("v2 block registry", () => {
     expect(getRegisteredBlocks()).toEqual([spec]);
   });
 
-  test("rejects two specs registered under the same name", () => {
-    registerPluginBlock(spec);
-    expect(() => registerPluginBlock(spec)).toThrow(/already registered/);
+  test("last-write-wins on a duplicate name (does not throw)", () => {
+    const first = { name: "acme/banner", title: "First" } as BlockSpec;
+    const second = { name: "acme/banner", title: "Second" } as BlockSpec;
+    registerPluginBlock(first);
+    expect(() => registerPluginBlock(second)).not.toThrow();
+    expect(getRegisteredBlocks()).toEqual([second]);
   });
 
   test("rejects a spec whose name is not namespaced (no slash)", () => {

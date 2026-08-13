@@ -2,8 +2,13 @@ import { describe, expect, test } from "vitest";
 
 import { generateEditorEntrySource } from "./editor-entry-codegen.js";
 
+const ref = (module: string, exportName = "default") => ({
+  module,
+  exportName,
+});
+
 describe("generateEditorEntrySource", () => {
-  test("no plugin blocks → a bare bootEditor() call", () => {
+  test("no blocks → a bare bootEditor() call", () => {
     const source = generateEditorEntrySource([]);
     expect(source).toContain(
       'import { bootEditor } from "plumix/editor-runtime";',
@@ -12,28 +17,35 @@ describe("generateEditorEntrySource", () => {
     expect(source).not.toContain("import pb");
   });
 
-  test("imports each module's default export and spreads them into bootEditor", () => {
+  test("default-import a default export", () => {
     const source = generateEditorEntrySource([
-      "@plumix/plugin-media/blocks",
-      "@acme/widgets/blocks",
+      ref("@plumix/plugin-media/blocks"),
+      ref("@acme/widgets/blocks"),
     ]);
     expect(source).toContain('import pb0 from "@plumix/plugin-media/blocks";');
     expect(source).toContain('import pb1 from "@acme/widgets/blocks";');
-    expect(source).toContain("bootEditor([...(pb0 ?? []), ...(pb1 ?? [])]);");
   });
 
-  test("dedups a module declared by more than one plugin", () => {
+  test("named-import a named export", () => {
     const source = generateEditorEntrySource([
-      "@plumix/plugin-media/blocks",
-      "@plumix/plugin-media/blocks",
+      ref("/pkgs/media/dist/media-blocks.js", "mediaBlocks"),
     ]);
-    expect(source).toContain('import pb0 from "@plumix/plugin-media/blocks";');
-    expect(source).not.toContain("pb1");
-    expect(source).toContain("bootEditor([...(pb0 ?? [])]);");
+    expect(source).toContain(
+      'import { mediaBlocks as pb0 } from "/pkgs/media/dist/media-blocks.js";',
+    );
+  });
+
+  test("normalizes each import so a single spec or missing export can't crash the spread", () => {
+    const source = generateEditorEntrySource([ref("./blocks.js")]);
+    // A single `registerBlock` spec becomes `[pb0]`, an array passes through,
+    // a missing export becomes `[]` — never a non-iterable in the spread.
+    expect(source).toContain(
+      "bootEditor([...(Array.isArray(pb0) ? pb0 : pb0 ? [pb0] : [])]);",
+    );
   });
 
   test("quotes specifiers via JSON.stringify", () => {
-    const source = generateEditorEntrySource(['weird"name/blocks']);
+    const source = generateEditorEntrySource([ref('weird"name/blocks')]);
     expect(source).toContain('import pb0 from "weird\\"name/blocks";');
   });
 

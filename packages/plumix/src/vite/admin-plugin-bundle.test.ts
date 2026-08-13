@@ -130,6 +130,33 @@ describe("assemblePluginAdminBundle", () => {
     expect(bundle).toContain("__plumix_admin_marker__");
   });
 
+  test("registers config block modules into the admin (no adminEntry needed)", async () => {
+    const adminDest = resolve(workspace, "admin-dest");
+    await mkdir(adminDest, { recursive: true });
+    await writeFile(
+      resolve(workspace, "src/blocks.ts"),
+      'export default [{ name: "acme/widget", render: () => null }];',
+    );
+
+    const result = await assemblePluginAdminBundle({
+      plugins: [], // no adminEntry plugins — the bundle still builds for blocks
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+      blockModules: [
+        { module: resolve(workspace, "src/blocks.ts"), exportName: "default" },
+      ],
+    });
+
+    expect(result).not.toBeNull();
+    const bundle = await readFile(
+      resolve(adminDest, "plugins/site-bundle.js"),
+      "utf8",
+    );
+    expect(bundle).toContain("registerPluginBlock");
+    expect(bundle).toContain("acme/widget");
+  });
+
   // The Tailwind-sidecar case compiles CSS against `@plumix/admin`'s built
   // `theme.css`, so it needs a build and lives in
   // `admin-plugin-bundle.build.test.ts` (run by `test:build`).
