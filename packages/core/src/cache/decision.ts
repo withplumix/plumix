@@ -34,6 +34,11 @@ interface CacheableRequest {
   readonly customArchiveCacheable?: boolean;
 }
 
+// The markers of an ephemeral, per-request render grant: a `?preview=<token>`
+// draft link and a `?plumix.edit` editor session (see `resolveEditMode`).
+const PREVIEW_PARAM = "preview";
+const EDIT_PARAM = "plumix.edit";
+
 /**
  * Whether a request carries elevated visibility: an authenticated session or
  * bearer credential, or a `?preview=<token>` draft grant. Any of these can
@@ -46,7 +51,27 @@ interface CacheableRequest {
 export function requestIsPrivileged(request: Request): boolean {
   if (readSessionCookie(request) !== null) return true;
   if (request.headers.has("authorization")) return true;
-  return new URL(request.url).searchParams.has("preview");
+  return new URL(request.url).searchParams.has(PREVIEW_PARAM);
+}
+
+/**
+ * Whether the request carries an *ephemeral, per-request* render grant — a
+ * `?preview=<token>` draft link or a `?plumix.edit` editor session — rather than
+ * a durable audience membership. Its render is authorized only for this request
+ * (a preview token, edit rights) and must never enter the shared cache, even on
+ * a policied route whose resolved segment is otherwise cacheable: a stored draft
+ * (or an editor's autosave render) would outlive that grant.
+ *
+ * The un-policied cache path gets this for free through {@link
+ * requestIsPrivileged} (whose session-cookie arm bypasses every authenticated
+ * request); the policied path keys on the segment — an authenticated audience
+ * member always carries a cookie — so it must exclude these grants explicitly.
+ * Keyed on the marker's presence, not a validated token: an invalid grant then
+ * renders live-but-uncached, which is safe.
+ */
+export function requestCarriesEphemeralGrant(request: Request): boolean {
+  const params = new URL(request.url).searchParams;
+  return params.has(PREVIEW_PARAM) || params.has(EDIT_PARAM);
 }
 
 /** Why the edge cache refused to participate in a request. */

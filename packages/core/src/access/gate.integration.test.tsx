@@ -256,11 +256,16 @@ async function seedEntry(
   });
 }
 
-const authed = async (
+async function authed(
   h: Awaited<ReturnType<typeof createDispatcherHarness>>,
   path: string,
   userId: number,
-) => h.authenticateRequest(new Request(`https://cms.example${path}`), userId);
+) {
+  return h.authenticateRequest(
+    new Request(`https://cms.example${path}`),
+    userId,
+  );
+}
 
 describe("access gate — segment-keyed caching (#1740)", () => {
   test("two subscribers in one segment share a single cache entry keyed by segment", async () => {
@@ -351,4 +356,31 @@ describe("access gate — segment-keyed caching (#1740)", () => {
     expect(match).not.toHaveBeenCalled();
     expect(put).not.toHaveBeenCalled();
   });
+
+  // A per-request grant (a draft preview, an editor session) must never be
+  // stored under the shared segment entry, where it would outlive the grant and
+  // serve a draft/editor render to other members. The gate still allows
+  // (`authenticated`), but the render is forced private.
+  test.each(["preview=tok", "plumix.edit"])(
+    "an ephemeral ?%s grant on a policied route bypasses the shared cache",
+    async (query) => {
+      const { cache, match, put } = memoryCache();
+      const h = await createDispatcherHarness({
+        plugins: [membersPlugin],
+        cache,
+      });
+      await seedEntry(h, "article", "gated");
+      const editor = await h.seedUser("editor");
+
+      const response = await h.dispatch(
+        await authed(h, `/article/gated?${query}`, editor.id),
+      );
+      await h.drainDeferred();
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("cache-control")).toBe("private, no-store");
+      expect(match).not.toHaveBeenCalled();
+      expect(put).not.toHaveBeenCalled();
+    },
+  );
 });

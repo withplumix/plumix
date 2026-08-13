@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   cacheBypassReason,
+  requestCarriesEphemeralGrant,
   requestIsPrivileged,
   responseIsStorable,
   SEGMENT_KEY_PARAM,
@@ -218,6 +219,36 @@ describe("requestIsPrivileged", () => {
     expect(
       requestIsPrivileged(new Request("https://site.test/post?preview=tok")),
     ).toBe(true);
+  });
+});
+
+describe("requestCarriesEphemeralGrant", () => {
+  it("flags a ?preview= draft link and a ?plumix.edit editor session", () => {
+    expect(
+      requestCarriesEphemeralGrant(
+        new Request("https://site.test/post?preview=tok"),
+      ),
+    ).toBe(true);
+    expect(
+      requestCarriesEphemeralGrant(
+        new Request("https://site.test/post?plumix.edit"),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not flag a plain request or a bare session cookie", () => {
+    // A durable audience membership (the session cookie) is NOT ephemeral — a
+    // policied route caches it under its segment; only per-request grants opt out.
+    expect(
+      requestCarriesEphemeralGrant(new Request("https://site.test/post")),
+    ).toBe(false);
+    expect(
+      requestCarriesEphemeralGrant(
+        new Request("https://site.test/post", {
+          headers: { cookie: "plumix_session=abc" },
+        }),
+      ),
+    ).toBe(false);
   });
 });
 

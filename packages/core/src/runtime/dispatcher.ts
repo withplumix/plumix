@@ -23,7 +23,10 @@ import {
 import { parseOAuthPath } from "../auth/oauth/match.js";
 import { canAccessAdmin } from "../auth/rbac.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
-import { requestIsPrivileged } from "../cache/decision.js";
+import {
+  requestCarriesEphemeralGrant,
+  requestIsPrivileged,
+} from "../cache/decision.js";
 import { embeddedPageTags } from "../cache/embedded-tags.js";
 import { flushPurgeTags } from "../cache/purge.js";
 import { readThrough } from "../cache/read-through.js";
@@ -622,7 +625,14 @@ async function dispatchPublicRoute(
         loginPath: resolveLoginPath(app.config.auth),
       });
       if (gated !== null) return gated;
-      segment = access.segment;
+      // A `?preview=` draft link or `?plumix.edit` editor session is authorized
+      // per-request, not by audience membership: its render (a draft, or the
+      // editor runtime) must never be stored under the shared segment entry and
+      // outlive that grant. The un-policied branch gets this via
+      // `requestIsPrivileged`; here the segment would otherwise be cacheable.
+      segment = requestCarriesEphemeralGrant(ctx.request)
+        ? PRIVATE_SEGMENT
+        : access.segment;
     } else {
       segment = requestIsPrivileged(ctx.request)
         ? PRIVATE_SEGMENT
