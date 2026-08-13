@@ -43,7 +43,6 @@ export type MetaBoxFieldSpan =
       readonly lg?: number;
     };
 
-
 /**
  * Shared shape for every meta-box field variant — properties carried
  * regardless of `inputType`. Each narrowed variant of `MetaBoxField`
