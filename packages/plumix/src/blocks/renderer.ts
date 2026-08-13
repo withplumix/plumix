@@ -14,6 +14,7 @@ export {
   BlockRenderer,
   buildImageAttrs,
   matchesRemotePattern,
+  useAuth,
   useBasePath,
   useImageConfig,
   useIsEditing,
@@ -24,6 +25,7 @@ export {
   useUser,
 } from "@plumix/blocks/renderer";
 export type {
+  AuthUser,
   BuildImageAttrsInput,
   ImageAttrs,
   ImageProps,
@@ -35,4 +37,5 @@ export type {
   RemotePattern,
   RendererQueriedEntry,
   RendererUser,
+  UseAuthResult,
 } from "@plumix/blocks/renderer";

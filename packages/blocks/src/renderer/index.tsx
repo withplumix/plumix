@@ -22,6 +22,8 @@ export type {
 } from "./context.js";
 
 export { SignedIn, SignedOut } from "./auth.js";
+export { useAuth } from "./use-auth.js";
+export type { AuthUser, UseAuthResult } from "./use-auth.js";
 
 export { Link } from "./link.js";
 export type { LinkProps, LinkTarget } from "./link.js";
