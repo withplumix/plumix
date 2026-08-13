@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ConnectedCache } from "../runtime/slots.js";
 import { NOOP_TELEMETRY } from "../context/telemetry.js";
+import { SEGMENT_KEY_PARAM } from "./decision.js";
 import { readThrough } from "./read-through.js";
 
 // `defer` swallows the promise here so tests can drive the store-write path
@@ -31,6 +32,7 @@ describe("readThrough", () => {
 
     const result = await readThrough({
       request: GET(),
+      segment: "anonymous",
       intentKind: "single",
       cache,
       defer: immediateDefer,
@@ -53,6 +55,7 @@ describe("readThrough", () => {
 
     const result = await readThrough({
       request: GET(),
+      segment: "anonymous",
       intentKind: "front-page",
       cache,
       defer: immediateDefer,
@@ -66,15 +69,14 @@ describe("readThrough", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it("bypasses the cache entirely for a privileged request", async () => {
+  it("bypasses the cache entirely for a private segment", async () => {
     const { cache, match, put } = spies();
     const fresh = new Response("live", { status: 200 });
     const render = vi.fn(() => Promise.resolve(fresh));
 
     const result = await readThrough({
-      request: new Request("https://site.test/hello", {
-        headers: { cookie: "plumix_session=abc" },
-      }),
+      request: GET(),
+      segment: "private",
       intentKind: "single",
       cache,
       defer: immediateDefer,
@@ -88,6 +90,37 @@ describe("readThrough", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
+  it("keys a non-anonymous segment under a distinct entry and shares it across cookies", async () => {
+    const { cache, match, put } = spies();
+    const fresh = new Response("members", { status: 200 });
+    const render = vi.fn(() => Promise.resolve(fresh));
+
+    await readThrough({
+      request: new Request("https://site.test/members", {
+        headers: { cookie: "plumix_session=alice" },
+      }),
+      segment: "authenticated",
+      intentKind: "single",
+      cache,
+      defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
+      render,
+      tags: noTags,
+    });
+
+    // The stored/looked-up key folds the segment into the URL and carries no
+    // per-visitor cookie — so a second subscriber (different cookie) collides
+    // on the same entry.
+    const matchKey = match.mock.calls[0]?.[0];
+    const putKey = put.mock.calls[0]?.[0];
+    if (!matchKey || !putKey) throw new Error("expected a keyed cache request");
+    expect(new URL(matchKey.url).searchParams.get(SEGMENT_KEY_PARAM)).toBe(
+      "authenticated",
+    );
+    expect(matchKey.headers.has("cookie")).toBe(false);
+    expect(putKey.url).toBe(matchKey.url);
+  });
+
   it("renders live without touching the cache for an unmatched route", async () => {
     const { cache, match, put } = spies();
     const render = vi.fn(() =>
@@ -96,6 +129,7 @@ describe("readThrough", () => {
 
     await readThrough({
       request: GET(),
+      segment: "anonymous",
       intentKind: null,
       cache,
       defer: immediateDefer,
@@ -115,6 +149,7 @@ describe("readThrough", () => {
 
     await readThrough({
       request: GET(),
+      segment: "anonymous",
       intentKind: "custom",
       customArchiveCacheable: true,
       cache,
@@ -137,6 +172,7 @@ describe("readThrough", () => {
 
     await readThrough({
       request: GET(),
+      segment: "anonymous",
       intentKind: "custom",
       cache,
       defer: immediateDefer,
@@ -158,6 +194,7 @@ describe("readThrough", () => {
 
     await readThrough({
       request: GET(),
+      segment: "anonymous",
       intentKind: "single",
       cache,
       defer: immediateDefer,

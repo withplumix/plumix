@@ -1,23 +1,19 @@
 /**
- * The hard gate — wiring the pure {@link resolveAccess} into the public render
+ * The hard gate — wiring the pure access resolution into the public render
  * path. {@link policyForMatch} finds the policy attached to a matched route
  * (entry-type default for single/archive intents, the route-level policy for a
- * custom archive, else none); {@link enforceAccess} resolves it against the
- * loaded principal and turns a non-`allow` gate into an HTTP response — a 302
+ * custom archive, else none); the dispatcher resolves it against the loaded
+ * principal once (reading the segment for the cache key), and
+ * {@link gateToResponse} turns a non-`allow` gate into an HTTP response — a 302
  * to sign-in (with a `returnTo`), or a terminal challenge response.
- *
- * No cache changes live here: a policied route opts out of the edge cache and
- * renders live (the caller decides that from `policyForMatch` returning a
- * policy). The segment becomes a cache-key axis in the follow-up slice.
  */
 
 import type { PlumixAuthConfig } from "../auth/config.js";
 import type { AppContext } from "../context/app.js";
 import type { RouteMatch } from "../route/match.js";
-import type { AccessPolicy } from "./policy.js";
+import type { AccessPolicy, Gate } from "./policy.js";
 import { withBasePath } from "../base-path.js";
 import { redirectTo } from "../runtime/http.js";
-import { resolveAccess } from "./policy.js";
 
 // Where `redirectToLogin()` sends a visitor when the operator sets no override.
 const DEFAULT_LOGIN_PATH = "/_plumix/admin/login";
@@ -56,23 +52,24 @@ export function policyForMatch(
   return null;
 }
 
-interface EnforceAccessArgs {
+interface GateResponseArgs {
   readonly ctx: AppContext;
   /** The current (base-stripped) request URL — the `returnTo` destination. */
   readonly url: URL;
-  readonly policy: AccessPolicy;
   readonly loginPath: string;
 }
 
 /**
- * Resolve `policy` against the loaded principal and enforce the hard gate.
- * Returns a short-circuit `Response` for a `redirect` or `challenge` gate, or
- * `null` to let the render proceed (`allow`).
+ * Turn an already-resolved {@link Gate} into a short-circuit `Response` — a 302
+ * to sign-in for `redirect`, a terminal challenge response for `challenge`, or
+ * `null` for `allow` (let the render proceed). Split from resolution so the
+ * dispatcher can resolve access once — reading the segment for the cache key
+ * and the gate for enforcement from a single, possibly I/O-bearing, run.
  */
-export async function enforceAccess(
-  args: EnforceAccessArgs,
-): Promise<Response | null> {
-  const { gate } = await resolveAccess(args.ctx, args.policy);
+export function gateToResponse(
+  gate: Gate,
+  args: GateResponseArgs,
+): Response | null {
   switch (gate.type) {
     case "allow":
       return null;

@@ -1,4 +1,6 @@
+import type { Segment } from "../access/policy.js";
 import type { RouteIntent } from "../route/intent.js";
+import { PRIVATE_SEGMENT } from "../access/policy.js";
 import { readSessionCookie } from "../auth/cookies.js";
 
 // Public route intents whose anonymous render is a shared, cacheable document.
@@ -14,10 +16,13 @@ const CACHEABLE_INTENTS: ReadonlySet<RouteIntent["kind"]> = new Set([
 interface CacheableRequest {
   readonly method: string;
   /**
-   * True when the request may see content the anonymous public can't — so its
-   * render must never be read from or written to the shared cache.
+   * The resolved audience segment this render belongs to. Every non-`private`
+   * segment is a shared, cacheable document keyed by the segment; `private` is
+   * the escape hatch whose render is per-visitor and never touches the shared
+   * cache. The un-policied default maps a privileged request to `private` and
+   * an anonymous one to `anonymous`, preserving today's behavior exactly.
    */
-  readonly isPrivileged: boolean;
+  readonly segment: Segment;
   readonly intentKind: RouteIntent["kind"];
   /**
    * For a `custom` (plugin-registered) archive, whether it opted into edge
@@ -45,7 +50,39 @@ export function requestIsPrivileged(request: Request): boolean {
 }
 
 /** Why the edge cache refused to participate in a request. */
-export type CacheBypassReason = "method" | "privileged" | "intent";
+export type CacheBypassReason = "method" | "private" | "intent";
+
+/**
+ * The variant marker folded into a cache-key URL for a non-anonymous segment.
+ * Framework-reserved (the `__plumix_` namespace) so it can't collide with a
+ * real query parameter; stripped from any incoming request before the
+ * server-chosen segment is applied, so a crafted query can't poison a variant.
+ */
+export const SEGMENT_KEY_PARAM = "__plumix_segment";
+
+/**
+ * The cache-key request for a render in `segment`. The edge cache backs onto
+ * the request URL, so a distinct segment must produce a distinct key: the
+ * `anonymous` segment keys under the plain URL (un-policied pages, and an
+ * explicit `anonymous` grant, share exactly today's entry), and every other
+ * segment folds its label into the URL as a reserved query parameter.
+ *
+ * The Cookie header is stripped from the key so that two visitors in the same
+ * segment collapse onto one entry even though their session cookies differ,
+ * while the stored response's `Vary: Cookie` still keeps a downstream shared
+ * cache from serving one visitor's variant to another.
+ */
+export function segmentCacheKey(request: Request, segment: Segment): Request {
+  const url = new URL(request.url);
+  // The server fully owns this axis — drop any client-supplied marker first.
+  url.searchParams.delete(SEGMENT_KEY_PARAM);
+  if (segment !== "anonymous") {
+    url.searchParams.set(SEGMENT_KEY_PARAM, segment);
+  }
+  const keyed = new Request(url, request);
+  keyed.headers.delete("cookie");
+  return keyed;
+}
 
 /**
  * The gate for whether the edge cache may participate in this request at all —
@@ -57,7 +94,7 @@ export function cacheBypassReason(
   req: CacheableRequest,
 ): CacheBypassReason | null {
   if (req.method !== "GET" && req.method !== "HEAD") return "method";
-  if (req.isPrivileged) return "privileged";
+  if (req.segment === PRIVATE_SEGMENT) return "private";
   // A custom archive caches only on its explicit opt-in; the built-in intents
   // are fixed by CACHEABLE_INTENTS.
   const cacheable =

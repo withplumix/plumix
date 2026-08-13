@@ -20,11 +20,20 @@ import { roleLevel } from "../auth/rbac.js";
 import { USER_ROLES } from "../db/schema/users.js";
 
 /**
+ * The reserved segment that is never shared-cached. A `grant("private")` gates
+ * the route yet keeps its render per-visitor — the explicit escape hatch for a
+ * personalized authenticated page. The edge cache never reads or writes it.
+ */
+export const PRIVATE_SEGMENT = "private";
+
+/**
  * Audience segments derived for free from the loaded principal — no extra
  * lookup. `entitlement:<label>` and other custom labels come only from a
  * developer `grant()` and are declared in the policy's `segments` space.
+ * `private` is the reserved never-cached escape hatch.
  */
-export type BuiltinSegment = "anonymous" | "authenticated" | `role:${UserRole}`;
+export type BuiltinSegment =
+  "anonymous" | "authenticated" | "private" | `role:${UserRole}`;
 
 /**
  * A resolved audience segment: a built-in or a custom label. `(string & {})`
@@ -151,9 +160,15 @@ export async function resolveAccess(
 
 const ROLE_PREFIX = "role:";
 
-/** True for `anonymous`, `authenticated`, or `role:<known-role>`. */
+/** True for `anonymous`, `authenticated`, `private`, or `role:<known-role>`. */
 export function isBuiltinSegment(segment: string): boolean {
-  if (segment === "anonymous" || segment === "authenticated") return true;
+  if (
+    segment === "anonymous" ||
+    segment === "authenticated" ||
+    segment === PRIVATE_SEGMENT
+  ) {
+    return true;
+  }
   if (!segment.startsWith(ROLE_PREFIX)) return false;
   return (USER_ROLES as readonly string[]).includes(
     segment.slice(ROLE_PREFIX.length),

@@ -1,11 +1,19 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { CustomArchiveData } from "../route/render/resolved-entry.js";
+import type { ConnectedCache } from "../runtime/slots.js";
+import { SEGMENT_KEY_PARAM } from "../cache/decision.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback, forArchiveType } from "../route/render/template-builders.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
-import { authenticatedPolicy, rolePolicy } from "./policy.js";
+import {
+  authenticatedPolicy,
+  definePolicy,
+  grant,
+  redirectToLogin,
+  rolePolicy,
+} from "./policy.js";
 
 // Two custom archives standing in for policied public routes: one
 // authenticated-only, one gated to `editor`. The route-level `access` policy is
@@ -175,7 +183,172 @@ describe("access gate — entry-type-level policy", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("Gated Article");
-    // A policied render is kept out of every cache in this slice.
+    // With no cache binding, the copy sent to the client is always live and
+    // per-visitor: an `authenticated` render carries `private, no-store` so a
+    // downstream intermediary never shares it under the plain URL.
     expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+});
+
+// A real in-memory edge cache: `match`/`put` key on the request URL, exactly as
+// the Workers Cache API does, so the segment folded into the key by #1740 is
+// what separates (or collapses) entries.
+function memoryCache() {
+  const store = new Map<
+    string,
+    { readonly response: Response; readonly tags: readonly string[] }
+  >();
+  const match = vi.fn((req: Request) =>
+    Promise.resolve(store.get(req.url)?.response.clone()),
+  );
+  const put = vi.fn(
+    (req: Request, response: Response, tags: readonly string[]) => {
+      store.set(req.url, { response, tags });
+      return Promise.resolve();
+    },
+  );
+  const cache: ConnectedCache = {
+    match,
+    put,
+    purgeTags: vi.fn(() => Promise.resolve()),
+  };
+  return { cache, store, match, put };
+}
+
+// An entry type whose single/archive routes require login and cache under the
+// shared `authenticated` segment (the "explicit opt-in" of #1740) …
+const membersPlugin = definePlugin("member-articles", (ctx) => {
+  ctx.registerEntryType("article", {
+    label: "Articles",
+    isPublic: true,
+    access: { default: authenticatedPolicy },
+  });
+});
+
+// … versus one whose policy grants the reserved `private` segment: gated, yet
+// never shared-cached.
+const privatePlugin = definePlugin("private-memos", (ctx) => {
+  ctx.registerEntryType("memo", {
+    label: "Memos",
+    isPublic: true,
+    access: {
+      default: definePolicy({
+        resolve: (c) => (c.user ? grant("private") : redirectToLogin()),
+      }),
+    },
+  });
+});
+
+async function seedEntry(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  type: string,
+  slug: string,
+) {
+  const author = await h.seedUser("admin");
+  return h.factory.entry.create({
+    type,
+    slug,
+    title: `${slug} title`,
+    content: null,
+    status: "published",
+    authorId: author.id,
+    parentId: null,
+  });
+}
+
+const authed = async (
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  path: string,
+  userId: number,
+) => h.authenticateRequest(new Request(`https://cms.example${path}`), userId);
+
+describe("access gate — segment-keyed caching (#1740)", () => {
+  test("two subscribers in one segment share a single cache entry keyed by segment", async () => {
+    const { cache, store } = memoryCache();
+    const h = await createDispatcherHarness({
+      plugins: [membersPlugin],
+      cache,
+    });
+    await seedEntry(h, "article", "gated");
+    const alice = await h.seedUser("subscriber");
+    const bob = await h.seedUser("subscriber");
+
+    const first = await h.dispatch(await authed(h, "/article/gated", alice.id));
+    await h.drainDeferred();
+    expect(first.status).toBe(200);
+
+    // One entry, stored under the `authenticated` segment — not the plain URL.
+    expect(store.size).toBe(1);
+    const key = [...store.keys()][0];
+    if (key === undefined) throw new Error("expected a stored cache entry");
+    expect(new URL(key).searchParams.get(SEGMENT_KEY_PARAM)).toBe(
+      "authenticated",
+    );
+
+    // Swap the stored body for a sentinel; a second subscriber (a different
+    // session cookie) must read that same entry rather than re-render.
+    store.set(key, {
+      response: new Response("SHARED-VARIANT", { status: 200 }),
+      tags: [],
+    });
+    const second = await h.dispatch(await authed(h, "/article/gated", bob.id));
+    expect(await second.text()).toBe("SHARED-VARIANT");
+    expect(store.size).toBe(1);
+  });
+
+  test("the segment variant carries the same t:/e: tags as the anonymous document", async () => {
+    const { cache, store } = memoryCache();
+    const h = await createDispatcherHarness({
+      plugins: [membersPlugin],
+      cache,
+    });
+    const entry = await seedEntry(h, "article", "tagged");
+    const sub = await h.seedUser("subscriber");
+
+    await h.dispatch(await authed(h, "/article/tagged", sub.id));
+    await h.drainDeferred();
+
+    const [stored] = [...store.values()];
+    // Unchanged vocabulary: one publish of the article purges every segment
+    // variant because they all share this tag set (#1740 AC3).
+    expect(stored?.tags).toContain("t:article");
+    expect(stored?.tags).toContain(`e:${String(entry.id)}`);
+  });
+
+  test("a private-granting policy is never read from or written to the cache", async () => {
+    const { cache, store, match, put } = memoryCache();
+    const h = await createDispatcherHarness({
+      plugins: [privatePlugin],
+      cache,
+    });
+    await seedEntry(h, "memo", "secret");
+    const sub = await h.seedUser("subscriber");
+
+    const response = await h.dispatch(await authed(h, "/memo/secret", sub.id));
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+    expect(store.size).toBe(0);
+  });
+
+  test("an un-policied page keeps today's authenticated ⇒ private bypass", async () => {
+    const { cache, match, put } = memoryCache();
+    const h = await createDispatcherHarness({
+      plugins: [membersPlugin],
+      cache,
+    });
+    const sub = await h.seedUser("subscriber");
+
+    // The front page carries no policy: a signed-in visitor bypasses the shared
+    // cache entirely, exactly as before this slice (no opt-in ⇒ private).
+    const response = await h.dispatch(await authed(h, "/", sub.id));
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
   });
 });

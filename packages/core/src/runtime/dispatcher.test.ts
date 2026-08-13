@@ -2071,7 +2071,8 @@ describe("dispatcher — telemetry consumers", () => {
     await h.drainDeferred();
     await h.dispatch(new Request("https://cms.example/"));
     await h.drainDeferred();
-    // A session cookie makes the request privileged: the cache is bypassed.
+    // A session cookie makes an un-policied request `private`: the shared cache
+    // is bypassed, and the resolved segment is stamped on every decision.
     const user = await h.seedUser("admin");
     await h.dispatch(
       await h.authenticateRequest(new Request("https://cms.example/"), user.id),
@@ -2080,9 +2081,9 @@ describe("dispatcher — telemetry consumers", () => {
 
     const decisions = snapshots.map((s) => s.records.cache?.map((r) => r.data));
     expect(decisions).toEqual([
-      [{ decision: "miss", stored: true }],
-      [{ decision: "hit" }],
-      [{ decision: "bypass", reason: "privileged" }],
+      [{ decision: "miss", stored: true, segment: "anonymous" }],
+      [{ decision: "hit", segment: "anonymous" }],
+      [{ decision: "bypass", reason: "private", segment: "private" }],
     ]);
 
     // The lookup/store latency itself is spanned (#1494): the miss carries

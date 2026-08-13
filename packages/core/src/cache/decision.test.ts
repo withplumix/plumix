@@ -4,6 +4,8 @@ import {
   cacheBypassReason,
   requestIsPrivileged,
   responseIsStorable,
+  SEGMENT_KEY_PARAM,
+  segmentCacheKey,
 } from "./decision.js";
 
 describe("cacheBypassReason", () => {
@@ -11,7 +13,7 @@ describe("cacheBypassReason", () => {
     expect(
       cacheBypassReason({
         method: "GET",
-        isPrivileged: false,
+        segment: "anonymous",
         intentKind: "single",
       }),
     ).toBe(null);
@@ -20,26 +22,38 @@ describe("cacheBypassReason", () => {
   it("caches anonymous GETs to archive, taxonomy, and front-page intents", () => {
     for (const intentKind of ["archive", "taxonomy", "front-page"] as const) {
       expect(
-        cacheBypassReason({ method: "GET", isPrivileged: false, intentKind }),
+        cacheBypassReason({ method: "GET", segment: "anonymous", intentKind }),
       ).toBe(null);
     }
   });
 
-  it("bypasses a privileged request", () => {
+  it("caches a non-anonymous shared segment (keyed separately)", () => {
+    for (const segment of [
+      "authenticated",
+      "role:editor",
+      "members",
+    ] as const) {
+      expect(
+        cacheBypassReason({ method: "GET", segment, intentKind: "single" }),
+      ).toBe(null);
+    }
+  });
+
+  it("bypasses a private segment", () => {
     expect(
       cacheBypassReason({
         method: "GET",
-        isPrivileged: true,
+        segment: "private",
         intentKind: "single",
       }),
-    ).toBe("privileged");
+    ).toBe("private");
   });
 
   it("bypasses search pages", () => {
     expect(
       cacheBypassReason({
         method: "GET",
-        isPrivileged: false,
+        segment: "anonymous",
         intentKind: "search",
       }),
     ).toBe("intent");
@@ -49,14 +63,14 @@ describe("cacheBypassReason", () => {
     expect(
       cacheBypassReason({
         method: "GET",
-        isPrivileged: false,
+        segment: "anonymous",
         intentKind: "custom",
       }),
     ).toBe("intent");
     expect(
       cacheBypassReason({
         method: "GET",
-        isPrivileged: false,
+        segment: "anonymous",
         intentKind: "custom",
         customArchiveCacheable: false,
       }),
@@ -67,29 +81,29 @@ describe("cacheBypassReason", () => {
     expect(
       cacheBypassReason({
         method: "GET",
-        isPrivileged: false,
+        segment: "anonymous",
         intentKind: "custom",
         customArchiveCacheable: true,
       }),
     ).toBe(null);
   });
 
-  it("still bypasses an opted-in custom archive when the request is privileged", () => {
+  it("still bypasses an opted-in custom archive for a private segment", () => {
     expect(
       cacheBypassReason({
         method: "GET",
-        isPrivileged: true,
+        segment: "private",
         intentKind: "custom",
         customArchiveCacheable: true,
       }),
-    ).toBe("privileged");
+    ).toBe("private");
   });
 
   it("still bypasses an opted-in custom archive on a non-GET/HEAD method", () => {
     expect(
       cacheBypassReason({
         method: "POST",
-        isPrivileged: false,
+        segment: "anonymous",
         intentKind: "custom",
         customArchiveCacheable: true,
       }),
@@ -100,10 +114,76 @@ describe("cacheBypassReason", () => {
     expect(
       cacheBypassReason({
         method: "POST",
-        isPrivileged: false,
+        segment: "anonymous",
         intentKind: "single",
       }),
     ).toBe("method");
+  });
+});
+
+describe("segmentCacheKey", () => {
+  const at = (req: Request) => new URL(req.url);
+
+  it("keys the anonymous segment under the plain URL", () => {
+    const key = segmentCacheKey(
+      new Request("https://site.test/post"),
+      "anonymous",
+    );
+    expect(at(key).searchParams.has(SEGMENT_KEY_PARAM)).toBe(false);
+    expect(key.url).toBe("https://site.test/post");
+  });
+
+  it("folds a non-anonymous segment into the key URL", () => {
+    const key = segmentCacheKey(
+      new Request("https://site.test/post"),
+      "authenticated",
+    );
+    expect(at(key).searchParams.get(SEGMENT_KEY_PARAM)).toBe("authenticated");
+  });
+
+  it("gives distinct segments distinct keys, and same-segment requests one key", () => {
+    const a = segmentCacheKey(
+      new Request("https://site.test/x"),
+      "authenticated",
+    );
+    const b = segmentCacheKey(
+      new Request("https://site.test/x"),
+      "role:editor",
+    );
+    const c = segmentCacheKey(
+      new Request("https://site.test/x"),
+      "authenticated",
+    );
+    expect(a.url).not.toBe(b.url);
+    expect(a.url).toBe(c.url);
+  });
+
+  it("strips the session cookie so same-segment cookies collapse to one key", () => {
+    const key = segmentCacheKey(
+      new Request("https://site.test/post", {
+        headers: { cookie: "plumix_session=abc" },
+      }),
+      "authenticated",
+    );
+    expect(key.headers.has("cookie")).toBe(false);
+  });
+
+  it("drops a client-supplied marker before applying the server segment", () => {
+    // An anonymous request crafted to carry the authenticated marker must not
+    // land on (or poison) the authenticated variant's entry.
+    const anon = segmentCacheKey(
+      new Request(`https://site.test/post?${SEGMENT_KEY_PARAM}=authenticated`),
+      "anonymous",
+    );
+    expect(at(anon).searchParams.has(SEGMENT_KEY_PARAM)).toBe(false);
+
+    const authed = segmentCacheKey(
+      new Request(`https://site.test/post?${SEGMENT_KEY_PARAM}=spoofed`),
+      "authenticated",
+    );
+    expect(at(authed).searchParams.get(SEGMENT_KEY_PARAM)).toBe(
+      "authenticated",
+    );
   });
 });
 
