@@ -8,7 +8,7 @@ import type {
   SelectAppearance,
   SelectMetaBoxField,
   SingleSelectMetaBoxField,
-} from "../manifest.js";
+} from "./meta-box-field.js";
 import type {
   MetaFieldCondition,
   MetaFieldConditionRule,

@@ -5,13 +5,13 @@ import type {
   MetaBoxField,
   MetaBoxFieldInput,
   MetaBoxFieldSpan,
-} from "../manifest.js";
+} from "./meta-box-field.js";
 import type {
   MetaFieldCondition,
   MetaFieldConditionRule,
 } from "./condition.js";
 import type { InferFields, InferStoredFields } from "./contributions.js";
-import { compileMetaBoxFields } from "../manifest.js";
+import { compileMetaBoxFields } from "./meta-box-field.js";
 import { humanizeFieldKey } from "./builder.js";
 import { assertSubFields } from "./sub-fields.js";
 

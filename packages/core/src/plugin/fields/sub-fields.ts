@@ -1,4 +1,4 @@
-import type { MetaBoxField } from "../manifest.js";
+import type { MetaBoxField } from "./meta-box-field.js";
 import type { SubFieldContainer } from "./errors.js";
 import { FieldConfigError } from "./errors.js";
 

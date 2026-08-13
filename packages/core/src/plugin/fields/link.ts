@@ -5,13 +5,13 @@ import type {
   LinkValue,
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
-} from "../manifest.js";
+} from "./meta-box-field.js";
 import type { StringFieldState } from "./builder.js";
 import type { MetaFieldConditionRule } from "./condition.js";
 import { humanizeFieldKey } from "./builder.js";
 import { SAFE_HREF_RE } from "./richtext-validate.js";
 
-export type { LinkValue } from "../manifest.js";
+export type { LinkValue } from "./meta-box-field.js";
 
 type LinkFieldState = Omit<StringFieldState, "default" | "maxLength"> & {
   readonly default?: LinkValue;

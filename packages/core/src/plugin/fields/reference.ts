@@ -14,7 +14,7 @@ import type {
   TermReferenceMetaBoxField,
   UserListMetaBoxField,
   UserMetaBoxField,
-} from "../manifest.js";
+} from "./meta-box-field.js";
 import type {
   MetaFieldCondition,
   MetaFieldConditionRule,

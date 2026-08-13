@@ -5,16 +5,16 @@ import type {
   MetaBoxFieldValidate,
   TemporalInputType,
   TemporalMetaBoxField,
-} from "../manifest.js";
+} from "./meta-box-field.js";
 import type {
   MetaFieldCondition,
   MetaFieldConditionRule,
 } from "./condition.js";
-import { isValidTemporalValue } from "../manifest.js";
+import { isValidTemporalValue } from "./meta-box-field.js";
 import { humanizeFieldKey } from "./builder.js";
 import { FieldConfigError } from "./errors.js";
 
-export type { TemporalInputType } from "../manifest.js";
+export type { TemporalInputType } from "./meta-box-field.js";
 
 /** Read type after `.returns("date")` — optionality carries over from `V`. */
 type ProjectedDate<V> = undefined extends V ? Date | undefined : Date;

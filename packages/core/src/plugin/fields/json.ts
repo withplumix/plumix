@@ -4,7 +4,7 @@ import type {
   JsonMetaBoxField,
   MetaBoxFieldSpan,
   MetaBoxFieldValidate,
-} from "../manifest.js";
+} from "./meta-box-field.js";
 import type {
   MetaFieldCondition,
   MetaFieldConditionRule,
