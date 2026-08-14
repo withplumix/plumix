@@ -367,7 +367,7 @@ describe("MetaBoxField dispatcher", () => {
     // subsequent save doesn't clear the field). The hydrated summary
     // also prefills the visible label: this harness wires no fetcher,
     // so the label can only come from the hydrated value, not a
-    // `lookup.resolve` call.
+    // `lookup.list` fetch.
     renderWithI18n(
       <Harness
         fieldDef={field({

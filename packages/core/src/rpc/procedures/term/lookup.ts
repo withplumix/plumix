@@ -7,7 +7,7 @@ import type {
   LookupResult,
   TermReferenceSummary,
 } from "../../../plugin/lookup.js";
-import { and, eq, inArray, like, or } from "../../../db/index.js";
+import { and, inArray, like, or } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { buildTermArchiveUrl } from "../../../route/permalink.js";
 import { LookupScopeError } from "../lookup.errors.js";
@@ -71,17 +71,6 @@ export const termLookupAdapter = {
     return Promise.all(rows.map((row) => toLookupResult(ctx, row)));
   },
 
-  async resolve(ctx, id, scope?) {
-    const numericId = parseTermId(id);
-    if (numericId === null) return null;
-    const [row] = await ctx.db
-      .select(TERM_ROW_COLUMNS)
-      .from(terms)
-      .where(buildTermWhere(numericId, scope))
-      .limit(1);
-    return row ? toLookupResult(ctx, row) : null;
-  },
-
   async hydrate(ctx, options) {
     const numericIds = options.ids
       .map((id) => parseTermId(id))
@@ -103,10 +92,6 @@ function parseTermId(id: string): number | null {
   if (!/^[1-9]\d*$/.test(id)) return null;
   const parsed = Number(id);
   return Number.isSafeInteger(parsed) ? parsed : null;
-}
-
-function buildTermWhere(numericId: number, scope: TermFieldScope | undefined) {
-  return and(eq(terms.id, numericId), ...scopeConditions(scope));
 }
 
 function scopeConditions(scope: TermFieldScope | undefined): SQL[] {

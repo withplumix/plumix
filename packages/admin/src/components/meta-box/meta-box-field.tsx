@@ -934,17 +934,17 @@ function referenceValueId(value: unknown): string | null {
 
 // Map a hydrated reference read (`{ id, title|name, ... }`) to the
 // picker's `LookupItem` so the selected label paints on first render —
-// no `lookup.resolve` round-trip. The summary key names differ per kind
+// no lookup round-trip. The summary key names differ per kind
 // (entry `title`, term/user `name`), so read both spellings.
 //
-// Returns null (→ the picker resolves the id itself) for the bare-id
-// shape (drafts, `.returns("id")` opt-outs) AND when the hydrated label
-// is absent: a null title/name means the resolve RPC has a richer
-// fallback to offer (an entry's untitled chrome, a user's email) that
-// the public-safe summary intentionally omits, so it's worth the query.
-// Only the label is carried — the summary lacks the admin-only subtitle
-// bits (`type · status`, `email · role`) the resolve shows, and a
-// mismatched subtitle would mislead more than an absent one.
+// Returns null (→ the picker resolves the id itself via `lookup.list`)
+// for the bare-id shape (drafts, `.returns("id")` opt-outs) AND when the
+// hydrated label is absent: a null title/name means the lookup query has
+// a richer fallback to offer (an entry's untitled chrome, a user's email)
+// that the public-safe summary intentionally omits, so it's worth the
+// query. Only the label is carried — the summary lacks the admin-only
+// subtitle bits (`type · status`, `email · role`) the lookup query
+// shows, and a mismatched subtitle would mislead more than an absent one.
 function referenceValueSummary(value: unknown): LookupItem | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;

@@ -71,17 +71,6 @@ export const entryLookupAdapter = {
     return Promise.all(rows.map((row) => toLookupResult(ctx, row)));
   },
 
-  async resolve(ctx, id, scope?) {
-    const numericId = parseEntryId(id);
-    if (numericId === null) return null;
-    const [row] = await ctx.db
-      .select(ENTRY_ROW_COLUMNS)
-      .from(entries)
-      .where(buildEntryWhere(numericId, scope))
-      .limit(1);
-    return row ? toLookupResult(ctx, row) : null;
-  },
-
   async hydrate(ctx, options) {
     const numericIds = options.ids
       .map((id) => parseEntryId(id))
@@ -136,13 +125,6 @@ function parseEntryId(id: string): number | null {
   if (!/^[1-9]\d*$/.test(id)) return null;
   const parsed = Number(id);
   return Number.isSafeInteger(parsed) ? parsed : null;
-}
-
-function buildEntryWhere(
-  numericId: number,
-  scope: EntryFieldScope | undefined,
-) {
-  return and(eq(entries.id, numericId), ...scopeConditions(scope));
 }
 
 function scopeConditions(scope: EntryFieldScope | undefined): SQL[] {
