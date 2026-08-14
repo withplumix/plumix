@@ -7,6 +7,14 @@
 
 import type { Label } from "../../i18n/label.js";
 import type { MetaFieldCondition } from "./condition.js";
+import type { StringInputType, TemporalInputType } from "./roster.js";
+import { TEMPORAL_INPUT_TYPES } from "./roster.js";
+
+// The string / temporal input-type unions derive from the runtime roster
+// arrays (see `./roster.js`) so a family's value list and its type share
+// one source. Re-exported here to keep the `plumix/fields` barrel and the
+// builder re-export chain pointing at `meta-box-field.js` unchanged.
+export type { StringInputType, TemporalInputType };
 
 export type MetaScalarType = "string" | "number" | "boolean" | "json";
 
@@ -118,10 +126,6 @@ export interface MetaBoxFieldBase {
   readonly role?: "featured" | "ogImage";
 }
 
-/** The five string-scalar input types sharing one field shape. */
-export type StringInputType =
-  "text" | "textarea" | "email" | "url" | "password";
-
 /**
  * Shared shape of the five string scalar variants produced by the
  * fluent builders exported from `plumix/fields` — they differ only in
@@ -165,9 +169,6 @@ export interface NumberMetaBoxField extends MetaBoxFieldBase {
   readonly max?: number;
   readonly step?: number;
 }
-
-/** The three temporal input types sharing one field shape. */
-export type TemporalInputType = "date" | "datetime" | "time";
 
 /**
  * Shared shape of the three temporal variants produced by the fluent
@@ -217,9 +218,7 @@ export function formatTemporalValue(
 export function isTemporalInputType(
   inputType: string,
 ): inputType is TemporalInputType {
-  return (
-    inputType === "date" || inputType === "datetime" || inputType === "time"
-  );
+  return (TEMPORAL_INPUT_TYPES as readonly string[]).includes(inputType);
 }
 
 // Stored ISO shapes the native temporal inputs produce. The regex pins
@@ -683,7 +682,19 @@ export interface LegacyMetaBoxField extends MetaBoxFieldBase {
  * `registerFieldType` registrations and broad object-literal authoring
  * compiling unchanged.
  */
-export type MetaBoxField =
+export type MetaBoxField = CanonicalMetaBoxField | LegacyMetaBoxField;
+
+/**
+ * The narrowed variants only — every built-in with a literal `inputType`
+ * discriminant, excluding the `LegacyMetaBoxField` catch-all (whose
+ * `inputType: string` would otherwise widen the union's discriminant to
+ * `string`). Keeping this split lets `CanonicalMetaBoxField["inputType"]`
+ * yield the exact literal set the field-type roster's exhaustiveness guard
+ * binds itself to (see `./roster.js`). `Media*` variants are members here
+ * even though they are not roster entries — the roster is a subset of the
+ * union (`roster ⊆ union`), the media plugin owning those names.
+ */
+export type CanonicalMetaBoxField =
   | StringMetaBoxField
   | NumberMetaBoxField
   | TemporalMetaBoxField
@@ -703,8 +714,7 @@ export type MetaBoxField =
   | GroupMetaBoxField
   | SelectMetaBoxField
   | ToggleMetaBoxField
-  | LinkMetaBoxField
-  | LegacyMetaBoxField;
+  | LinkMetaBoxField;
 
 /**
  * A fluent field builder — an immutable chain that compiles to a

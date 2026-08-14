@@ -4,6 +4,7 @@ import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 import type { BlockSpec } from "@plumix/blocks";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
+import { CANONICAL_INPUT_TYPES, LEGACY_INPUT_TYPES } from "@plumix/core/fields";
 
 import { AdminPluginRegistryError } from "./errors.js";
 
@@ -101,38 +102,17 @@ export function getPluginDashboardWidget(
 //  - accidental: a plugin author picks "text" for their custom field
 //    and silently replaces the host's text input across the whole admin
 //  - malicious: a plugin overrides every built-in to harvest form data
-// Kept in sync with the dispatcher in
-// `packages/admin/src/components/meta-box/meta-box-field.tsx` plus the
-// reference renderers (user/userList/entry/entryList/term/termList).
-// Plugin-shipped reference types (notably `media`) are NOT in this set
-// — the duplicate-detection in `register` already prevents two plugins
-// from both claiming the same name.
-const RESERVED_INPUT_TYPES: ReadonlySet<string> = new Set([
-  "text",
-  "textarea",
-  "number",
-  "email",
-  "url",
-  "password",
-  "date",
-  "datetime",
-  "time",
-  "color",
-  "range",
-  "multiselect",
-  "json",
-  "richtext",
-  "repeater",
-  "select",
-  "radio",
-  "checkbox",
-  "toggle",
-  "user",
-  "userList",
-  "entry",
-  "entryList",
-  "term",
-  "termList",
+//
+// Derived from the single field-type roster in `core` (the canonical
+// families plus the retired legacy family) rather than hand-listed, so it
+// can never drift from the union again. `media` / `mediaList` are NOT
+// roster members — they are plugin-contributed reference kinds whose own
+// admin renderers register through this very seam, so they stay unreserved
+// (the duplicate-detection in `register` still stops two plugins claiming
+// the same name).
+const RESERVED_INPUT_TYPES: ReadonlySet<string> = new Set<string>([
+  ...CANONICAL_INPUT_TYPES,
+  ...LEGACY_INPUT_TYPES,
 ]);
 
 export function registerPluginFieldType(
