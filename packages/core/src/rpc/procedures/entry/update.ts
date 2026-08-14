@@ -1,5 +1,6 @@
 import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
+import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { getAutosave, upsertAutosave } from "../../../revisions/repository.js";
@@ -15,8 +16,11 @@ import {
   assertContentWithinByteCap,
 } from "./content.js";
 import {
+  applyAccessChoiceToMeta,
   applyTemplateChoiceToMeta,
+  assertAccessChoiceDeclared,
   stripUndefined,
+  withAccessChoice,
   withTemplateChoice,
 } from "./helpers.js";
 import {
@@ -178,6 +182,15 @@ export const update = base
     };
     assertCanEditEntry(context, existing, accessGuards);
 
+    // An editor may only select a per-entry access policy the type declares —
+    // enforced here (before either the autosave or the live write folds it in)
+    // so an undeclared key is rejected regardless of the save target.
+    assertAccessChoiceDeclared(
+      context.plugins.entryTypes.get(existing.type)?.access?.policies,
+      filtered.access,
+      errors,
+    );
+
     // Optimistic-concurrency check sits after auth so an unauthorised
     // caller with a stale token still gets FORBIDDEN, not CONFLICT.
     assertExpectedLiveUpdatedAt(
@@ -242,11 +255,12 @@ export const update = base
       });
       const draftBase = currentDraft ?? existing;
       // Reserved envelope keys (snapshot, revision message) are re-derived by
-      // `upsertAutosave`; drop them from the base, but keep the template pick so
-      // a prior unsaved choice survives a write that doesn't change it.
+      // `upsertAutosave`; drop them from the base, but keep the template and
+      // access picks so a prior unsaved choice survives a write that doesn't
+      // change it.
       const autosaveMeta: Record<string, unknown> = stripReservedMeta(
         draftBase.meta,
-        [NAMED_TEMPLATE_META_KEY],
+        [NAMED_TEMPLATE_META_KEY, ACCESS_POLICY_META_KEY],
       );
       if (autosaveMetaPatch) {
         for (const key of autosaveMetaPatch.deletes) {
@@ -275,10 +289,13 @@ export const update = base
             filtered.excerpt !== undefined
               ? filtered.excerpt
               : draftBase.excerpt,
-          // The framework template choice rides along (bypassing the
-          // meta-box sanitizer by design) so the preview overlay can
-          // honor an unsaved pick.
-          meta: applyTemplateChoiceToMeta(autosaveMeta, filtered.template),
+          // The framework template + access choices ride along (bypassing the
+          // meta-box sanitizer by design) so the preview overlay can honor an
+          // unsaved pick.
+          meta: applyAccessChoiceToMeta(
+            applyTemplateChoiceToMeta(autosaveMeta, filtered.template),
+            filtered.access,
+          ),
         },
       });
       await fireEntryAutosaveSaved(context, autosave, existing);
@@ -321,6 +338,7 @@ export const update = base
       terms: termsPatch,
       meta: metaInput,
       template: templateChoice,
+      access: accessChoice,
       expectedLiveUpdatedAt: _expectedLiveUpdatedAt,
       saveAs: _saveAs,
       publishedAt: publishedAtInput,
@@ -343,9 +361,10 @@ export const update = base
       errors,
       metaMode,
     );
-    // Fold the framework-owned template choice in after plugin-field
-    // validation — it bypasses the meta-box sanitizer by design.
+    // Fold the framework-owned template + access choices in after plugin-field
+    // validation — they bypass the meta-box sanitizer by design.
     metaPatch = withTemplateChoice(metaPatch, templateChoice);
+    metaPatch = withAccessChoice(metaPatch, accessChoice);
     if (termsPatch !== undefined) {
       await assertTermsPatchValid(
         context,

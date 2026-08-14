@@ -37,6 +37,18 @@ const templateChoiceSchema = v.pipe(
   v.maxLength(200),
 );
 
+// The key of a per-entry access policy declared in the entry type's
+// `access.policies` space. Written to the reserved `__plumix_access` meta key.
+// `null` clears the choice (type-default gating). Unlike the template choice,
+// the server DOES validate the key against the declared space (an editor can't
+// select a policy the developer didn't declare) — this only bounds the shape.
+const accessChoiceSchema = v.pipe(
+  v.string(),
+  v.trim(),
+  v.minLength(1),
+  v.maxLength(200),
+);
+
 const serverControlledKeys = [
   "id",
   "authorId",
@@ -93,6 +105,8 @@ export const entryUpdateInputSchema = v.object({
   meta: v.optional(metaInputSchema),
   /** Named-template choice; `null` clears it. See `templateChoiceSchema`. */
   template: v.optional(v.nullable(templateChoiceSchema)),
+  /** Per-entry access-policy choice; `null` clears it. See `accessChoiceSchema`. */
+  access: v.optional(v.nullable(accessChoiceSchema)),
   /** Target publish time; required (and must be future) when `status: "scheduled"`. */
   publishedAt: v.optional(v.date()),
   /**

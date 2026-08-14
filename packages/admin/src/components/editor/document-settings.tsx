@@ -15,6 +15,7 @@ import { defineMessage } from "@lingui/core/macro";
 import { useForm, useWatch } from "react-hook-form";
 
 import type {
+  AccessPolicyChoice,
   EntryMetaBoxManifestEntry,
   NamedTemplateChoice,
 } from "@plumix/core/manifest";
@@ -47,6 +48,14 @@ const M = {
     id: "editor.document.template.default",
     message: "(theme default)",
   }),
+  visibility: defineMessage({
+    id: "editor.document.visibility",
+    message: "Visibility",
+  }),
+  accessDefault: defineMessage({
+    id: "editor.document.visibility.default",
+    message: "(default)",
+  }),
 } satisfies Record<string, MessageDescriptor>;
 
 // Radix Select forbids an empty-string item value, so the "no parent"
@@ -55,6 +64,9 @@ const NO_PARENT_VALUE = "__none__";
 
 // Same Radix constraint for the "theme default" (no override) template choice.
 const THEME_DEFAULT_VALUE = "__default__";
+
+// And for the "type default" (no per-entry override) visibility choice.
+const ACCESS_DEFAULT_VALUE = "__default__";
 
 interface DocumentParentOption {
   readonly id: number;
@@ -84,6 +96,12 @@ interface DocumentSettingsPanelProps {
   readonly template?: {
     readonly value: string | null;
     readonly options: readonly NamedTemplateChoice[];
+    readonly onChange: (next: string | null) => void;
+  };
+  /** Present only when the entry type declares selectable access policies. */
+  readonly access?: {
+    readonly value: string | null;
+    readonly options: readonly AccessPolicyChoice[];
     readonly onChange: (next: string | null) => void;
   };
   /** Term pickers for the taxonomies registered against this entry type. */
@@ -181,6 +199,7 @@ export function DocumentSettingsPanel({
   excerpt,
   parent,
   template,
+  access,
   taxonomies,
   metaBoxes,
 }: DocumentSettingsPanelProps): ReactElement {
@@ -289,6 +308,44 @@ export function DocumentSettingsPanel({
                   data-testid={`entry-template-select-option-${option.id}`}
                 >
                   {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      ) : null}
+      {access && access.options.length > 0 ? (
+        <Field className="gap-1.5">
+          <FieldLabel htmlFor="entry-visibility-select">
+            {renderLabel(M.visibility)}
+          </FieldLabel>
+          <Select
+            value={access.value ?? ACCESS_DEFAULT_VALUE}
+            onValueChange={(next) => {
+              access.onChange(next === ACCESS_DEFAULT_VALUE ? null : next);
+            }}
+          >
+            <SelectTrigger
+              id="entry-visibility-select"
+              className="w-full"
+              data-testid="entry-visibility-select"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                value={ACCESS_DEFAULT_VALUE}
+                data-testid="entry-visibility-select-option-default"
+              >
+                {renderLabel(M.accessDefault)}
+              </SelectItem>
+              {access.options.map((option) => (
+                <SelectItem
+                  key={option.key}
+                  value={option.key}
+                  data-testid={`entry-visibility-select-option-${option.key}`}
+                >
+                  {renderLabel(option.label)}
                 </SelectItem>
               ))}
             </SelectContent>

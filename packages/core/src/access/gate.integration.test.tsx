@@ -8,7 +8,9 @@ import { fallback, forArchiveType } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
+import { ACCESS_POLICY_META_KEY } from "./meta-key.js";
 import {
+  anonymousPolicy,
   authenticatedPolicy,
   challenge,
   definePolicy,
@@ -586,5 +588,118 @@ describe("access gate — soft gate / paywall (#1741)", () => {
       new URL(k).searchParams.get(SEGMENT_KEY_PARAM),
     );
     expect(keys).toContain("entitlement:premium");
+  });
+});
+
+// An entry type whose single routes are PUBLIC by default but declare a
+// selectable `members` policy an editor can assign per-entry. Proves the
+// per-entry choice (stored under the reserved access meta key) overrides the
+// type default at the gate and in the cache key — the load-bearing data seam of
+// #1742. Precedence: per-entry › entry-type › global.
+const perEntryPlugin = definePlugin("per-entry", (ctx) => {
+  ctx.registerEntryType("column", {
+    label: "Columns",
+    isPublic: true,
+    access: {
+      default: anonymousPolicy,
+      policies: [
+        { key: "members", label: "Members only", policy: authenticatedPolicy },
+      ],
+    },
+  });
+});
+
+async function seedColumn(
+  h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  slug: string,
+  meta: Record<string, unknown>,
+) {
+  const author = await h.seedUser("admin");
+  return h.factory.entry.create({
+    type: "column",
+    slug,
+    title: `${slug} title`,
+    content: null,
+    status: "published",
+    authorId: author.id,
+    parentId: null,
+    meta,
+  });
+}
+
+describe("access gate — per-entry visibility (#1742)", () => {
+  test("a per-entry choice gates an otherwise-public entry for anonymous visitors", async () => {
+    const h = await createDispatcherHarness({ plugins: [perEntryPlugin] });
+    await seedColumn(h, "locked", { [ACCESS_POLICY_META_KEY]: "members" });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/column/locked"),
+    );
+    // The type default is `anonymous` (public), but this one entry selected
+    // `members` — the gate honours the per-entry override and redirects.
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
+      "/_plumix/admin/login?redirectTo=%2Fcolumn%2Flocked",
+    );
+  });
+
+  test("renders the per-entry-gated entry for an authenticated visitor", async () => {
+    const h = await createDispatcherHarness({ plugins: [perEntryPlugin] });
+    await seedColumn(h, "locked", { [ACCESS_POLICY_META_KEY]: "members" });
+    const subscriber = await h.seedUser("subscriber");
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/column/locked"),
+      subscriber,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("locked title");
+  });
+
+  test("a sibling entry with no choice stays public (precedence falls to the type default)", async () => {
+    const h = await createDispatcherHarness({ plugins: [perEntryPlugin] });
+    await seedColumn(h, "open", {});
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/column/open"),
+    );
+    // No per-entry choice → the `anonymous` type default → served publicly.
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("open title");
+  });
+
+  test("an unknown stored choice falls back to the type default, never granting less", async () => {
+    const h = await createDispatcherHarness({ plugins: [perEntryPlugin] });
+    // A key the developer removed from the space: the gate falls back to the
+    // type default (`anonymous`) rather than failing open to something laxer.
+    await seedColumn(h, "stale", { [ACCESS_POLICY_META_KEY]: "ghost" });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/column/stale"),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("stale title");
+  });
+
+  test("the cache segment reflects the per-entry choice", async () => {
+    const { cache, store } = memoryCache();
+    const h = await createDispatcherHarness({
+      plugins: [perEntryPlugin],
+      cache,
+    });
+    await seedColumn(h, "locked", { [ACCESS_POLICY_META_KEY]: "members" });
+    const sub = await h.seedUser("subscriber");
+
+    await h.dispatch(await authed(h, "/column/locked", sub.id));
+    await h.drainDeferred();
+
+    // The gated entry caches under the `authenticated` segment its per-entry
+    // policy resolved to — not the plain anonymous URL.
+    expect(store.size).toBe(1);
+    const key = [...store.keys()][0];
+    if (key === undefined) throw new Error("expected a stored cache entry");
+    expect(new URL(key).searchParams.get(SEGMENT_KEY_PARAM)).toBe(
+      "authenticated",
+    );
   });
 });

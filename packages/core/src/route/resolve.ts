@@ -45,12 +45,13 @@ import { notFound, permanentRedirect } from "../runtime/http.js";
 import { dateRange } from "./date-range.js";
 import { resolveEditMode } from "./edit-mode.js";
 import { paginate } from "./paginate.js";
-import { findEntryByPath, findTermByPath } from "./path-chain.js";
+import { findTermByPath } from "./path-chain.js";
 import { buildTermArchiveUrl } from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
 import { buildResolvedEntries } from "./render/build-resolved-entries.js";
 import { renderThroughTheme } from "./render/render-template.js";
 import { NAMED_TEMPLATE_META_KEY } from "./render/template-builders.js";
+import { resolveSingleEntry } from "./single-entry.js";
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
@@ -601,7 +602,7 @@ async function resolveSingle(
   templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
   assetManifest: AssetManifest,
 ): Promise<Response> {
-  const baseRow = await findEntryForSingle(ctx, intent.entryType, params);
+  const baseRow = await resolveSingleEntry(ctx, intent.entryType, params);
   if (!baseRow) return notFound("public-post-not-found");
   // A preview link renders the minting author's in-progress autosave, so the
   // "Preview current draft" action shows pending edits rather than the live row.
@@ -760,35 +761,6 @@ async function overlayPreviewAutosave(
     // drives resolution — otherwise preview would fall back to the default.
     meta: stripReservedMeta(autosave.meta, [NAMED_TEMPLATE_META_KEY]),
   };
-}
-
-async function findEntryForSingle(
-  ctx: AppContext,
-  entryType: string,
-  params: Record<string, string>,
-): Promise<Entry | null> {
-  const path = params.path;
-  if (typeof path === "string" && path !== "") {
-    return findEntryByPath(ctx, entryType, path.split("/"));
-  }
-  const slug = params.slug;
-  if (typeof slug !== "string" || slug === "") return null;
-  const published = await ctx.db.query.entries.findFirst({
-    where: and(
-      eq(entries.type, entryType),
-      eq(entries.slug, slug),
-      eq(entries.status, "published"),
-    ),
-  });
-  if (published) return published;
-  // A valid `?preview=` token can reveal the matching draft. Skip the extra
-  // query entirely on the common no-token 404.
-  if (readPreviewToken(ctx) === null) return null;
-  const candidate = await ctx.db.query.entries.findFirst({
-    where: and(eq(entries.type, entryType), eq(entries.slug, slug)),
-  });
-  if (!candidate) return null;
-  return (await previewTokenGrantsEntry(ctx, candidate)) ? candidate : null;
 }
 
 async function findTermForTaxonomy(

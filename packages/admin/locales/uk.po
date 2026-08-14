@@ -696,6 +696,11 @@ msgid "editor.revisions.sheet.commentSaving"
 msgstr "…"
 
 #. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.visibility.default"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.noName"
 msgstr "(без імені)"
@@ -4230,6 +4235,11 @@ msgstr "Переглянути"
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.diffAriaLabel"
 msgstr "Переглянути JSON-різницю"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.visibility"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx

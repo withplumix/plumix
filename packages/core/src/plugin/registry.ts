@@ -189,16 +189,32 @@ export interface EntryTypeOptions {
 
 export interface EntryTypeAccess {
   /**
-   * Applied to every entry of this type until a per-entry choice (a later
-   * slice) overrides it within {@link policies}.
+   * Applied to every entry of this type until a per-entry choice overrides it
+   * with one of {@link policies} (see {@link ACCESS_POLICY_META_KEY}). Also the
+   * fallback when an entry's stored choice names a key no longer in the space.
    */
   readonly default: AccessPolicy;
   /**
    * The closed set of policies an editor may assign per-entry. `default` is
-   * always implicitly part of the space; list additional selectable policies
-   * here. Absent ⇒ `default` is the only option.
+   * always implicitly part of the space (selecting nothing ⇒ `default`); list
+   * the additional selectable policies here. Absent ⇒ `default` is the only
+   * option and no per-entry override is possible.
    */
-  readonly policies?: readonly AccessPolicy[];
+  readonly policies?: readonly SelectableAccessPolicy[];
+}
+
+/**
+ * A developer-declared, editor-selectable access policy for an entry type.
+ * `key` is the stable identifier persisted on the entry (under
+ * {@link ACCESS_POLICY_META_KEY}); `label` names the option in the editor's
+ * visibility picker; `policy` is the gate applied when an entry selects `key`.
+ * The resolver stays server-side — only {@link AccessPolicyChoice} (`key` +
+ * `label`) is projected to the admin manifest.
+ */
+export interface SelectableAccessPolicy {
+  readonly key: string;
+  readonly label: Label;
+  readonly policy: AccessPolicy;
 }
 
 /**

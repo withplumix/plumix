@@ -35,6 +35,7 @@ import type {
 } from "./fields/meta-box-field.js";
 import type {
   AdminNavGroupRef,
+  EntryTypeAccess,
   EntryTypeLabels,
   PluginComponentRef,
   PluginRegistry,
@@ -227,6 +228,23 @@ export interface EntryTypeManifestEntry {
    * Omitted when the theme registers none for this type.
    */
   readonly namedTemplates?: readonly NamedTemplateChoice[];
+  /**
+   * Editor-selectable per-entry access policies for this type — the `key` +
+   * `label` of each {@link SelectableAccessPolicy} in `access.policies`, with
+   * the resolver stripped. Feeds the editor's visibility picker. Omitted when
+   * the type declares no selectable policies (the default is the only option).
+   */
+  readonly accessPolicies?: readonly AccessPolicyChoice[];
+}
+
+/**
+ * Client-safe projection of a {@link SelectableAccessPolicy} — `key` + `label`,
+ * never the resolver. Surfaced to the editor's visibility picker via
+ * {@link EntryTypeManifestEntry.accessPolicies}.
+ */
+export interface AccessPolicyChoice {
+  readonly key: string;
+  readonly label: Label;
 }
 
 /**
@@ -1325,6 +1343,20 @@ function toEntryTypeManifest(
     keywords,
     versioning: deriveVersioning(supports, versioning),
     ...(namedTemplates && namedTemplates.length > 0 ? { namedTemplates } : {}),
+    ...accessPoliciesManifest(pt.access),
+  };
+}
+
+// Project the editor-selectable policies to `{ key, label }` — the resolver
+// stays server-side. Omitted entirely when the type declares no selectable
+// space, so the admin picker only appears where there's a real choice.
+function accessPoliciesManifest(access: EntryTypeAccess | undefined): {
+  accessPolicies?: readonly AccessPolicyChoice[];
+} {
+  const policies = access?.policies;
+  if (!policies || policies.length === 0) return {};
+  return {
+    accessPolicies: policies.map(({ key, label }) => ({ key, label })),
   };
 }
 
