@@ -1,15 +1,18 @@
 import type { MutableRefObject, ReactElement, ReactNode } from "react";
-import { createContext, useContext, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 
 import type { BlockNode, ThemeBreakpoints } from "@plumix/blocks";
 import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 
+import type { CameraStore, CameraStoreApi } from "./camera-store.js";
 import type { EditorDevice, EditorStore, EditorStoreApi } from "./store.js";
+import { createCameraStore } from "./camera-store.js";
 import { EditorError } from "./errors.js";
 import { createEditorStore } from "./store.js";
 
 const EditorStoreContext = createContext<EditorStoreApi | null>(null);
+const CameraStoreContext = createContext<CameraStoreApi | null>(null);
 
 /** Pushes a scoped refresh's loader data to the canvas. Held in a ref so the
  *  CanvasFrame (which owns the bridge) can populate it once connected, and the
@@ -45,18 +48,31 @@ export function EditorProvider({
     createEditorStore({
       tree: initialTree,
       device,
-      zoom,
       breakpoints,
       starterOpen,
     }),
   );
+  const [camera] = useState<CameraStoreApi>(() => createCameraStore({ zoom }));
   const loaderPushRef = useRef<LoaderDataPush | null>(null);
+
+  // The one document→camera coupling, as a one-way notification: switching
+  // device re-enters fit mode so the new frame width re-fits the viewport. The
+  // camera stays ignorant of the document; only this edge crosses the seam.
+  useEffect(
+    () =>
+      store.subscribe((state, prev) => {
+        if (state.device !== prev.device) camera.getState().enableFit();
+      }),
+    [store, camera],
+  );
 
   return (
     <EditorStoreContext.Provider value={store}>
-      <LoaderPushContext.Provider value={loaderPushRef}>
-        {children}
-      </LoaderPushContext.Provider>
+      <CameraStoreContext.Provider value={camera}>
+        <LoaderPushContext.Provider value={loaderPushRef}>
+          {children}
+        </LoaderPushContext.Provider>
+      </CameraStoreContext.Provider>
     </EditorStoreContext.Provider>
   );
 }
@@ -79,4 +95,19 @@ export function useEditorStoreApi(): EditorStoreApi {
   const store = useContext(EditorStoreContext);
   if (!store) throw EditorError.missingProvider();
   return store;
+}
+
+/** Subscribe to the canvas camera (pan/zoom/fit) — the sibling store the
+ *  editor provider injects alongside the document store. */
+export function useCameraStore<T>(selector: (state: CameraStore) => T): T {
+  const camera = useContext(CameraStoreContext);
+  if (!camera) throw EditorError.missingProvider();
+  return useStore(camera, selector);
+}
+
+/** The raw camera handle, for gesture/geometry hooks that read it imperatively. */
+export function useCameraStoreApi(): CameraStoreApi {
+  const camera = useContext(CameraStoreContext);
+  if (!camera) throw EditorError.missingProvider();
+  return camera;
 }

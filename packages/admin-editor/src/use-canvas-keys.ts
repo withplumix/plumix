@@ -2,7 +2,7 @@ import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import type { View } from "./canvas-view.js";
-import { useEditorStoreApi } from "./provider.js";
+import { useCameraStoreApi, useEditorStoreApi } from "./provider.js";
 
 type CanvasKeyHandler = (
   down: boolean,
@@ -63,6 +63,7 @@ export function useCanvasKeys({
   readonly liveViewRef: RefObject<View>;
 }): CanvasKeys {
   const store = useEditorStoreApi();
+  const camera = useCameraStoreApi();
   const [panReady, setPanReady] = useState(false);
   const keyHandlerRef = useRef<CanvasKeyHandler | null>(null);
 
@@ -94,9 +95,9 @@ export function useCanvasKeys({
         return;
       }
       if (!shiftKey) return;
-      if (code === "Digit1") store.getState().enableZoomFit();
+      if (code === "Digit1") camera.getState().enableFit();
       else if (code === "Digit2") zoomToSelection();
-      else if (code === "Digit0") store.getState().zoomToCenter(1);
+      else if (code === "Digit0") camera.getState().zoomToCenter(1);
       else if (code === "KeyX") store.getState().toggleXray();
     };
     keyHandlerRef.current = handleKey;
@@ -152,7 +153,14 @@ export function useCanvasKeys({
       keyHandlerRef.current = null;
       exitPan();
     };
-  }, [store, zoomToSelection, panByClientDelta, commitLive, liveViewRef]);
+  }, [
+    store,
+    camera,
+    zoomToSelection,
+    panByClientDelta,
+    commitLive,
+    liveViewRef,
+  ]);
 
   return { panReady, keyHandlerRef };
 }

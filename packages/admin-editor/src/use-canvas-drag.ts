@@ -11,7 +11,11 @@ import { findBlock } from "./block-tree-ops.js";
 import { reorderIndex, resolveSlotTarget } from "./canvas-drop-target.js";
 import { dropPlacement } from "./drop-index.js";
 import { overlayBox } from "./overlay.js";
-import { useEditorStore, useEditorStoreApi } from "./provider.js";
+import {
+  useCameraStoreApi,
+  useEditorStore,
+  useEditorStoreApi,
+} from "./provider.js";
 
 /** The in-canvas "Add a block" popover target: a slot carries both ids; the
  *  root document carries neither (every block offered). */
@@ -51,6 +55,7 @@ export function useCanvasDrag({
 }): CanvasDrag {
   const { i18n } = useLingui();
   const store = useEditorStoreApi();
+  const camera = useCameraStoreApi();
   const dragSpec = useEditorStore((s) => s.dragSpec);
   const movingId = useEditorStore((s) => s.movingId);
 
@@ -108,7 +113,8 @@ export function useCanvasDrag({
         clientY <= rect.bottom;
       if (!over) return null;
       const frame: FrameOffset = { left: rect.left, top: rect.top };
-      const { tree, zoom: z } = store.getState();
+      const { tree } = store.getState();
+      const z = camera.getState().zoom;
       const spans = tree.flatMap((node) => {
         const r = geometryRef.current.rects.get(node.id);
         if (!r) return [];
@@ -124,7 +130,8 @@ export function useCanvasDrag({
       clientY: number,
     ): SlotDrop | null => {
       const rect = iframe.getBoundingClientRect();
-      const { tree, zoom } = store.getState();
+      const { tree } = store.getState();
+      const zoom = camera.getState().zoom;
       return resolveSlotTarget({
         slots: geometryRef.current.slots,
         tree,
@@ -233,7 +240,16 @@ export function useCanvasDrag({
       setDropY(null);
       setDropSlot(null);
     };
-  }, [dragSpec, movingId, store, registry, i18n, iframeRef, geometryRef]);
+  }, [
+    dragSpec,
+    movingId,
+    store,
+    camera,
+    registry,
+    i18n,
+    iframeRef,
+    geometryRef,
+  ]);
 
   // Auto-dismiss the transient rejection notice.
   useEffect(() => {

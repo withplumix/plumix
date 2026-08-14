@@ -32,7 +32,6 @@ import {
   selectionRoots,
   ungroupBlock,
 } from "./block-tree-ops.js";
-import { clampZoom, zoomToCursor } from "./canvas-view.js";
 import { initHistory, recordHistory, redo, undo } from "./history.js";
 
 /** The responsive bucket a style edit targets (per active device). */
@@ -82,23 +81,11 @@ export interface EditorState {
   readonly activeId: string | null;
   readonly hoverId: string | null;
   readonly device: EditorDevice;
-  readonly zoom: number;
   /** X-ray view: when on, the canvas outlines every block. Transient view
-   *  state (like zoom), not persisted to the document. */
+   *  state, not persisted to the document. */
   readonly xray: boolean;
-  /** Free-canvas pan offset (px, host/container space) of the device frame's
-   *  top-left. The canvas is a Figma-style pannable stage, not a scroll area. */
-  readonly panX: number;
-  readonly panY: number;
-  /** The canvas viewport size, mirrored from the host so view actions
-   *  (zoom-to-center) can do their math without the DOM. */
-  readonly viewportW: number;
-  readonly viewportH: number;
   /** Theme breakpoints driving the device canvas widths. */
   readonly breakpoints: ThemeBreakpoints;
-  /** When true, zoom auto-fits the canvas to the viewport width; a manual zoom
-   *  clears it until the device changes or fit is re-enabled. */
-  readonly zoomFit: boolean;
   /** The catalog entry (block or variation) being dragged toward the canvas. */
   readonly dragSpec: InsertableBlockEntry | null;
   /** The existing block being dragged to a new position on the canvas, if any. */
@@ -205,7 +192,8 @@ export interface EditorActions {
   /** Move the active block by `delta` positions among its siblings. */
   moveSelectedBy: (delta: number) => void;
   setHover: (id: string | null) => void;
-  /** Switch device; re-enables fit-to-width so the new width fits the viewport. */
+  /** Switch device. The camera re-enters fit mode (a one-way notification wired
+   *  in the provider) so the new frame width re-fits the viewport. */
   setDevice: (device: EditorDevice) => void;
   /** Flip the X-ray (outline-all-blocks) view. */
   toggleXray: () => void;
@@ -214,30 +202,6 @@ export interface EditorActions {
   setStarterOpen: (open: boolean) => void;
   /** Set (or clear, with an empty string) a block's Layers-tree instance name. */
   setBlockLabel: (id: string, label: string) => void;
-  /** Re-enable fit-to-width (the toolbar's "Fit" action). Also recenters. */
-  enableZoomFit: () => void;
-  /** Pan the free canvas to an absolute offset (canvas-driven; clamped by the
-   *  caller to keep the frame on-screen). A manual pan leaves fit mode. */
-  setPan: (panX: number, panY: number) => void;
-  /** Set zoom + pan atomically (zoom-to-cursor keeps a focal point fixed).
-   *  Leaves fit mode — it's a manual gesture. */
-  setView: (view: {
-    readonly zoom: number;
-    readonly panX: number;
-    readonly panY: number;
-  }) => void;
-  /** Mirror the host canvas viewport size so view actions can do their math. */
-  setViewport: (width: number, height: number) => void;
-  /** Zoom keeping the viewport center's point fixed (the toolbar +/- buttons,
-   *  vs. the wheel's zoom-to-cursor). Leaves fit mode. */
-  zoomToCenter: (zoom: number) => void;
-  /** Center + fit the frame in the viewport (canvas-driven, stays in fit mode).
-   *  This is how a device switch re-lands the frame on-screen. */
-  applyFitView: (view: {
-    readonly zoom: number;
-    readonly panX: number;
-    readonly panY: number;
-  }) => void;
   startBlockDrag: (entry: InsertableBlockEntry) => void;
   endBlockDrag: () => void;
   /** Begin / end dragging an existing block to a new canvas position. */
@@ -389,10 +353,7 @@ export type EditorStoreApi = ReturnType<typeof createEditorStore>;
 
 export function createEditorStore(
   initial?: Partial<
-    Pick<
-      EditorState,
-      "tree" | "device" | "zoom" | "breakpoints" | "starterOpen"
-    >
+    Pick<EditorState, "tree" | "device" | "breakpoints" | "starterOpen">
   >,
 ) {
   return createStore<EditorStore>((set) => ({
@@ -402,13 +363,7 @@ export function createEditorStore(
     hoverId: null,
     device: initial?.device ?? "desktop",
     xray: false,
-    zoom: initial?.zoom ?? 1,
-    panX: 0,
-    panY: 0,
-    viewportW: 0,
-    viewportH: 0,
     breakpoints: initial?.breakpoints ?? DEFAULT_BREAKPOINTS,
-    zoomFit: true,
     dragSpec: null,
     movingId: null,
     history: initHistory(initial?.tree ?? []),
@@ -706,37 +661,11 @@ export function createEditorStore(
         return { tree, history: recordHistory(state.history, tree, null) };
       }),
     setHover: (hoverId) => set({ hoverId }),
-    setDevice: (device) => set({ device, zoomFit: true }),
+    setDevice: (device) => set({ device }),
     toggleXray: () => set((s) => ({ xray: !s.xray })),
     setRightPanel: (rightPanel) => set({ rightPanel }),
     setJsonOpen: (jsonOpen) => set({ jsonOpen }),
     setStarterOpen: (starterOpen) => set({ starterOpen }),
-    enableZoomFit: () => set({ zoomFit: true }),
-    setPan: (panX, panY) => set({ panX, panY, zoomFit: false }),
-    setView: ({ zoom, panX, panY }) =>
-      set({ zoom: clampZoom(zoom), panX, panY, zoomFit: false }),
-    applyFitView: ({ zoom, panX, panY }) =>
-      set({ zoom: clampZoom(zoom), panX, panY }),
-    setViewport: (width, height) =>
-      set((s) =>
-        s.viewportW === width && s.viewportH === height
-          ? {}
-          : { viewportW: width, viewportH: height },
-      ),
-    zoomToCenter: (zoom) =>
-      set((s) => {
-        const next = clampZoom(zoom);
-        if (next === s.zoom) return {};
-        if (s.viewportW === 0) return { zoom: next, zoomFit: false };
-        // Zoom keeping the viewport center fixed (vs. the wheel's cursor).
-        const view = zoomToCursor(
-          { zoom: s.zoom, panX: s.panX, panY: s.panY },
-          next,
-          s.viewportW / 2,
-          s.viewportH / 2,
-        );
-        return { ...view, zoomFit: false };
-      }),
     startBlockDrag: (dragSpec) => set({ dragSpec }),
     endBlockDrag: () => set({ dragSpec: null }),
     startMove: (movingId) => set({ movingId }),

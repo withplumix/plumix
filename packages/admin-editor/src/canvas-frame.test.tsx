@@ -18,6 +18,7 @@ import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/blocks/renderer";
 import { CanvasFrame } from "./canvas-frame.js";
 import {
   EditorProvider,
+  useCameraStoreApi,
   useEditorStore,
   useEditorStoreApi,
 } from "./provider.js";
@@ -214,11 +215,11 @@ describe("CanvasFrame", () => {
   test("a wheel burst pans live without a render or store commit per event", () => {
     vi.useFakeTimers();
     try {
-      let storeApi: ReturnType<typeof useEditorStoreApi> | undefined;
+      let cameraApi: ReturnType<typeof useCameraStoreApi> | undefined;
       function Capture(): null {
-        const api = useEditorStoreApi();
+        const api = useCameraStoreApi();
         useEffect(() => {
-          storeApi = api;
+          cameraApi = api;
         }, [api]);
         return null;
       }
@@ -271,13 +272,13 @@ describe("CanvasFrame", () => {
       // ...but the whole burst caused at most one render (the gesture-start
       // flag), not one per event — and nothing committed to the store yet.
       expect(renders).toBeLessThanOrEqual(1);
-      expect(storeApi?.getState().zoomFit).toBe(true);
+      expect(cameraApi?.getState().fit).toBe(true);
 
-      // The store commits exactly once when the gesture settles.
+      // The camera commits exactly once when the gesture settles.
       act(() => {
         vi.advanceTimersByTime(200);
       });
-      expect(storeApi?.getState().zoomFit).toBe(false);
+      expect(cameraApi?.getState().fit).toBe(false);
     } finally {
       vi.useRealTimers();
     }

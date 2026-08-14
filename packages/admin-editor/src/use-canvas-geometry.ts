@@ -6,7 +6,7 @@ import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
 import type { Geometry } from "./canvas-geometry.js";
 import { CANVAS_HEIGHT } from "./canvas-geometry.js";
 import { clampPanToFrame, fitView } from "./canvas-view.js";
-import { useEditorStore, useEditorStoreApi } from "./provider.js";
+import { useCameraStore, useCameraStoreApi } from "./provider.js";
 
 export interface CanvasGeometry {
   /** Live geometry for the render (overlays, drop indicators). */
@@ -40,11 +40,11 @@ export function useCanvasGeometry({
   readonly containerRef: RefObject<HTMLDivElement | null>;
   readonly frameWidth: number;
 }): CanvasGeometry {
-  const store = useEditorStoreApi();
-  const zoomFit = useEditorStore((s) => s.zoomFit);
-  const zoom = useEditorStore((s) => s.zoom);
-  const panX = useEditorStore((s) => s.panX);
-  const panY = useEditorStore((s) => s.panY);
+  const camera = useCameraStoreApi();
+  const zoomFit = useCameraStore((s) => s.fit);
+  const zoom = useCameraStore((s) => s.zoom);
+  const panX = useCameraStore((s) => s.panX);
+  const panY = useCameraStore((s) => s.panY);
 
   const [geometry, setGeometry] = useState<Geometry>({
     rects: new Map(),
@@ -129,9 +129,9 @@ export function useCanvasGeometry({
       containerWidth,
       containerHeight,
     );
-    const s = store.getState();
+    const s = camera.getState();
     if (s.zoom !== next.zoom || s.panX !== next.panX || s.panY !== next.panY) {
-      s.applyFitView(next);
+      s.applyView(next, { fit: true });
     }
   }, [
     zoomFit,
@@ -139,7 +139,7 @@ export function useCanvasGeometry({
     contentHeight,
     containerWidth,
     containerHeight,
-    store,
+    camera,
   ]);
 
   // The stage transform moves the iframe without firing scroll, so re-measure
@@ -154,8 +154,8 @@ export function useCanvasGeometry({
       // which zoom from the center and could otherwise drift it off-stage). The
       // fit effect owns pan while in fit mode, so only clamp manual views.
       const iframe = iframeRef.current;
-      const s = store.getState();
-      if (next.container && iframe && !s.zoomFit) {
+      const s = camera.getState();
+      if (next.container && iframe && !s.fit) {
         const r = iframe.getBoundingClientRect();
         const p = clampPanToFrame(
           s.panX,
@@ -165,7 +165,9 @@ export function useCanvasGeometry({
           next.container.width,
           next.container.height,
         );
-        if (p.panX !== s.panX || p.panY !== s.panY) s.setPan(p.panX, p.panY);
+        if (p.panX !== s.panX || p.panY !== s.panY) {
+          s.applyView({ zoom: s.zoom, panX: p.panX, panY: p.panY });
+        }
       }
     });
     return () => cancelAnimationFrame(id);
@@ -176,7 +178,7 @@ export function useCanvasGeometry({
     frameWidth,
     contentHeight,
     measureHost,
-    store,
+    camera,
     iframeRef,
   ]);
 
@@ -184,9 +186,9 @@ export function useCanvasGeometry({
   // dims it needs without reaching into the DOM.
   useEffect(() => {
     if (containerWidth && containerHeight) {
-      store.getState().setViewport(containerWidth, containerHeight);
+      camera.getState().setViewport(containerWidth, containerHeight);
     }
-  }, [containerWidth, containerHeight, store]);
+  }, [containerWidth, containerHeight, camera]);
 
   return { geometry, geometryRef, contentHeight, measureContent, applyReport };
 }

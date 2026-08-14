@@ -9,7 +9,11 @@ import { SidebarProvider } from "@plumix/admin-ui/sidebar";
 
 import { EditorHeader } from "./editor-header.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
-import { EditorProvider, useEditorStoreApi } from "./provider.js";
+import {
+  EditorProvider,
+  useCameraStoreApi,
+  useEditorStoreApi,
+} from "./provider.js";
 
 beforeAll(() => {
   i18n.loadAndActivate({ locale: "en", messages: {} });
@@ -17,13 +21,17 @@ beforeAll(() => {
 
 afterEach(cleanup);
 
-// Exposes the store so a test can drive edits the toolbar reacts to.
+// Exposes the stores so a test can drive edits the toolbar reacts to (document
+// store) and read the camera (pan/zoom/fit).
 let storeApi: ReturnType<typeof useEditorStoreApi> | undefined;
+let cameraApi: ReturnType<typeof useCameraStoreApi> | undefined;
 function Capture(): null {
   const api = useEditorStoreApi();
+  const camera = useCameraStoreApi();
   useEffect(() => {
     storeApi = api;
-  }, [api]);
+    cameraApi = camera;
+  }, [api, camera]);
   return null;
 }
 
@@ -54,13 +62,26 @@ describe("EditorToolbar", () => {
 
     // Zoom in steps up and turns off fit; the percent reflects it.
     fireEvent.click(getByTestId("plumix-zoom-in"));
-    expect(storeApi?.getState().zoomFit).toBe(false);
-    expect(Number(storeApi?.getState().zoom)).toBeGreaterThan(1);
+    expect(cameraApi?.getState().fit).toBe(false);
+    expect(Number(cameraApi?.getState().zoom)).toBeGreaterThan(1);
     expect(getByTestId("plumix-zoom-percent").textContent).toContain("%");
 
     // The percent readout re-enables fit-to-width.
     fireEvent.click(getByTestId("plumix-zoom-percent"));
-    expect(storeApi?.getState().zoomFit).toBe(true);
+    expect(cameraApi?.getState().fit).toBe(true);
+  });
+
+  test("switching device re-enters fit after a manual zoom", () => {
+    const { getByTestId } = renderToolbar();
+
+    // A manual zoom leaves fit mode.
+    fireEvent.click(getByTestId("plumix-zoom-in"));
+    expect(cameraApi?.getState().fit).toBe(false);
+
+    // A device switch re-fits so the new frame width fills the viewport — the
+    // one document→camera coupling, wired as a provider subscription.
+    fireEvent.click(getByTestId("plumix-device-mobile"));
+    expect(cameraApi?.getState().fit).toBe(true);
   });
 
   test("the X-ray toggle flips the store and reflects its pressed state", () => {
