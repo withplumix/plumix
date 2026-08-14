@@ -71,9 +71,6 @@ describe("termLookupAdapter", () => {
     await expect(
       termLookupAdapter.list(h.context, { ids: ["1"] }),
     ).rejects.toThrow(/termTaxonomies is required/);
-    await expect(termLookupAdapter.resolve(h.context, "1")).rejects.toThrow(
-      /termTaxonomies is required/,
-    );
   });
 
   test("rejects calls with an empty termTaxonomies array (same disclosure shape)", async () => {
@@ -146,40 +143,24 @@ describe("termLookupAdapter", () => {
     expect(row?.subtitle).toContain("sub-test");
   });
 
-  test("resolve() returns null for missing / orphaned ids", async () => {
-    const h = await createRpcHarness();
-    expect(
-      await termLookupAdapter.resolve(h.context, "999999", CATEGORY),
-    ).toBeNull();
-    expect(
-      await termLookupAdapter.resolve(h.context, "abc", CATEGORY),
-    ).toBeNull();
-  });
-
-  test("resolve() returns the lookup result for valid in-scope ids", async () => {
+  test("list({ ids }) returns full lookup result (targetType) for a valid in-scope id", async () => {
+    // The single-reference picker resolves its selected id through this
+    // same `list({ ids })` path, so this pins the row's wire contract.
     const h = await createRpcHarness();
     const t = await categoryTerm
       .transient({ db: h.context.db })
       .create({ name: "Resolved" });
-    const result = await termLookupAdapter.resolve(
-      h.context,
-      String(t.id),
-      CATEGORY,
-    );
+    const [result] = await termLookupAdapter.list(h.context, {
+      ids: [String(t.id)],
+      scope: CATEGORY,
+      limit: 1,
+    });
     expect(result?.id).toBe(String(t.id));
     expect(result?.label).toBe("Resolved");
     // Wire-contract pin — every term row carries `targetType` (the
     // taxonomy name) so the admin picker can cascade through the
     // taxonomy's per-type labels. Mirrors the entry adapter test.
     expect(result?.targetType).toBe("category");
-  });
-
-  test("resolve() returns null when the id exists but fails scope", async () => {
-    const h = await createRpcHarness();
-    const t = await tagTerm.transient({ db: h.context.db }).create();
-    expect(
-      await termLookupAdapter.resolve(h.context, String(t.id), CATEGORY),
-    ).toBeNull();
   });
 
   test("hydrate() resolves ids into term summaries with archive urls", async () => {

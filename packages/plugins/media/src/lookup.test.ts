@@ -165,50 +165,6 @@ describe("mediaLookupAdapter", () => {
     expect(rows[0]?.id).toBe(String(png.id));
   });
 
-  test("resolve() returns the row when in scope", async () => {
-    const h = await harnessWithMediaPlugin();
-    const a = await seedMedia(h, {
-      title: "logo.svg",
-      mime: "image/svg+xml",
-      authorId: h.user.id,
-    });
-    const result = await mediaLookupAdapter.resolve(h.context, String(a.id));
-    expect(result).toEqual({
-      id: String(a.id),
-      label: "logo.svg",
-      targetType: "media",
-      subtitle: "image/svg+xml",
-    });
-  });
-
-  test("resolve() returns null when MIME fails the accept scope", async () => {
-    const h = await harnessWithMediaPlugin();
-    const pdf = await seedMedia(h, {
-      title: "doc.pdf",
-      mime: "application/pdf",
-      authorId: h.user.id,
-    });
-    const result = await mediaLookupAdapter.resolve(h.context, String(pdf.id), {
-      accept: "image/",
-    });
-    expect(result).toBeNull();
-  });
-
-  test("resolve() returns null for a draft id (asset unverified)", async () => {
-    const h = await harnessWithMediaPlugin();
-    const draft = await seedMedia(h, {
-      title: "wip.png",
-      mime: "image/png",
-      status: "draft",
-      authorId: h.user.id,
-    });
-    const result = await mediaLookupAdapter.resolve(
-      h.context,
-      String(draft.id),
-    );
-    expect(result).toBeNull();
-  });
-
   test("browse path with `accept` set: LIMIT counts only matching rows (no silent under-fill)", async () => {
     // Mixed library: more PDFs than the LIMIT, plus a single image.
     // With JS post-filter the picker would fetch 3 rows, drop the

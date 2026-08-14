@@ -38,6 +38,12 @@ describe("lookup.list", () => {
     ).rejects.toThrow();
   });
 
+  test("requires authentication", async () => {
+    const plugins = registryWithCoreAdapters();
+    const h = await createRpcHarness({ plugins });
+    await expect(h.client.lookup.list({ kind: "user" })).rejects.toThrow();
+  });
+
   test("forwards scope to the adapter", async () => {
     const plugins = registryWithCoreAdapters();
     const h = await createRpcHarness({ authAs: "admin", plugins });
@@ -55,47 +61,6 @@ describe("lookup.list", () => {
   });
 });
 
-describe("lookup.resolve", () => {
-  test("returns the lookup result for a valid id", async () => {
-    const plugins = registryWithCoreAdapters();
-    const h = await createRpcHarness({ authAs: "admin", plugins });
-    const u = await userFactory
-      .transient({ db: h.context.db })
-      .create({ name: "Cara" });
-    const result = await h.client.lookup.resolve({
-      kind: "user",
-      id: String(u.id),
-    });
-    expect(result.result?.label).toBe("Cara");
-  });
-
-  test("returns null for orphan ids", async () => {
-    const plugins = registryWithCoreAdapters();
-    const h = await createRpcHarness({ authAs: "admin", plugins });
-    const result = await h.client.lookup.resolve({
-      kind: "user",
-      id: "999999",
-    });
-    expect(result.result).toBeNull();
-  });
-
-  test("404s when the kind has no registered adapter", async () => {
-    const plugins = registryWithCoreAdapters();
-    const h = await createRpcHarness({ authAs: "admin", plugins });
-    await expect(
-      h.client.lookup.resolve({ kind: "nope", id: "1" }),
-    ).rejects.toThrow();
-  });
-
-  test("requires authentication", async () => {
-    const plugins = registryWithCoreAdapters();
-    const h = await createRpcHarness({ plugins });
-    await expect(
-      h.client.lookup.resolve({ kind: "user", id: "1" }),
-    ).rejects.toThrow();
-  });
-});
-
 describe("lookup capability gating", () => {
   test("subscribers (no `user:list` capability) get FORBIDDEN on user lookup", async () => {
     // Subscribers can authenticate but can't list users — picker access
@@ -107,9 +72,6 @@ describe("lookup capability gating", () => {
       .create({ email: "leak@example.test", name: "Leak Target" });
 
     await expect(h.client.lookup.list({ kind: "user" })).rejects.toThrow();
-    await expect(
-      h.client.lookup.resolve({ kind: "user", id: "1" }),
-    ).rejects.toThrow();
   });
 
   test("editors (with `user:list`) can call user lookup", async () => {

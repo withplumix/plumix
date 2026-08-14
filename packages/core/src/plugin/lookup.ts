@@ -118,30 +118,21 @@ export interface LookupListOptions<TScope = unknown> {
  * — e.g. `{ roles: UserRole[] }` for `user`. Adapters interpret it
  * however makes sense for their target.
  *
- * Two methods, one round-trip per call regardless of selection size:
+ * One round-trip per call regardless of selection size:
  *  - `list` covers search/browse (no `ids`, optional `query`) and
  *    resolve-by-id batch (`ids` set, `query` ignored). The meta
  *    pipeline (`validateMetaReferences` + `hydrateMetaBags`)
  *    groups all reference fields by `(kind, scope)` and issues one
  *    `list({ ids })` per group, eliminating per-field N+1 on both
- *    reads and writes. The `MultiReferencePicker` batches the same
- *    way for label rendering.
- *  - `resolve` powers the single-reference admin picker (`lookup.
- *    resolve` RPC). One id per call but each picker on the page is
- *    its own component, so this stays simple.
+ *    reads and writes. Both admin pickers batch the same way for
+ *    label rendering — the single-reference picker resolves its one
+ *    selected id through `list({ ids: [value] })`.
  */
 export interface LookupAdapter<TScope = unknown> {
   list(
     ctx: AppContext,
     options: LookupListOptions<TScope>,
   ): Promise<readonly LookupResult[]>;
-
-  /** Returns `null` when the target is gone or no longer matches scope (orphan). */
-  resolve(
-    ctx: AppContext,
-    id: string,
-    scope?: TScope,
-  ): Promise<LookupResult | null>;
 
   /**
    * Batched read-time hydration: resolve `ids` (subject to `scope`)
@@ -180,8 +171,8 @@ export interface RegisteredLookupAdapter<
   readonly kind: string;
   readonly adapter: LookupAdapter<TScope>;
   /**
-   * Capability the lookup RPC requires for `list` / `resolve` calls
-   * targeting this kind. Without it, any authenticated user could
+   * Capability the lookup RPC requires for `list` calls targeting
+   * this kind. Without it, any authenticated user could
    * enumerate the adapter's universe — a real concern for `user` /
    * `entry` whose rows leak email/name/title to lower-privilege
    * roles. Server-side write validation (the meta pipeline calling

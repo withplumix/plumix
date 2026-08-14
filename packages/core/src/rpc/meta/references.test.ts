@@ -209,7 +209,6 @@ describe("hydrateMetaReferences", () => {
               .filter((id) => id === "1")
               .map((id) => ({ id, label: `Thing ${id}` })),
           ),
-        resolve: () => Promise.resolve(null),
       },
       capability: null,
       registeredBy: null,
@@ -276,7 +275,6 @@ describe("hydrateMetaBags (response-level batching)", () => {
       kind: "thing",
       adapter: {
         list: () => Promise.resolve([]),
-        resolve: () => Promise.resolve(null),
         hydrate: (_ctx, options) => {
           seenBatches.push(options.ids.length);
           return Promise.resolve(options.ids.map((id) => ({ id })));
@@ -432,7 +430,6 @@ describe("validateMetaReferences (multi)", () => {
           listCalls += 1;
           return userEntry.adapter.list(ctx, options);
         },
-        resolve: (ctx, id, scope) => userEntry.adapter.resolve(ctx, id, scope),
       },
     });
     const ownerField: MetaBoxField = {
@@ -758,7 +755,6 @@ describe("entryList / termList multi-reference pipeline", () => {
           userListCalls += 1;
           return userEntry.adapter.list(ctx, options);
         },
-        resolve: (ctx, id, scope) => userEntry.adapter.resolve(ctx, id, scope),
       },
     });
     registry.lookupAdapters.set("entry", {
@@ -768,7 +764,6 @@ describe("entryList / termList multi-reference pipeline", () => {
           entryListCalls += 1;
           return entryEntry.adapter.list(ctx, options);
         },
-        resolve: (ctx, id, scope) => entryEntry.adapter.resolve(ctx, id, scope),
       },
     });
     const ownersField = {
@@ -888,8 +883,6 @@ describe("validateMetaReferences (plain-id normalization)", () => {
               .filter(isLive)
               .map((id) => ({ id, label: `stub-${id}` })),
           ),
-        resolve: (_ctx, id) =>
-          Promise.resolve(isLive(id) ? { id, label: `stub-${id}` } : null),
       },
     });
     return {
@@ -1096,7 +1089,6 @@ describe("validateMetaReferences (repeater subFields)", () => {
           Promise.resolve(
             (opts.ids ?? []).map((id) => ({ id, label: `stub-${id}` })),
           ),
-        resolve: () => Promise.resolve(null),
       },
     });
     const heroSubField: MetaBoxField = {
@@ -1157,7 +1149,6 @@ describe("validateMetaReferences (repeater subFields)", () => {
           listCalls += 1;
           return userEntry.adapter.list(ctx, options);
         },
-        resolve: (ctx, id, scope) => userEntry.adapter.resolve(ctx, id, scope),
       },
     });
     const ownerField: MetaBoxField = {
