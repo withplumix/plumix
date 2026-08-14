@@ -599,9 +599,6 @@ async function dispatchPublicRoute(
   // Resolve the route once here and thread it into rendering so a cache miss
   // doesn't re-run `matchRoute` on the hot public-render path.
   const match = matchRoute(url, app.routeMap);
-  // `null` ⇒ un-policied: no gate, and the segment derives from today's
-  // privileged signal (below), so ordinary pages behave exactly as before.
-  const policy = policyForMatch(ctx, match);
   try {
     // Load the principal once, before the cache decision, so a policied route
     // resolves its segment (and any I/O-bearing entitlement check) up front.
@@ -609,6 +606,14 @@ async function dispatchPublicRoute(
     // path — the only one that reaches a cache hit without a policy — pays
     // nothing.
     ctx = await loadUserForPublicRequest(ctx);
+
+    // `null` ⇒ un-policied: no gate, and the segment derives from today's
+    // privileged signal (below), so ordinary pages behave exactly as before. A
+    // per-entry-policied single intent resolves the addressed entry here — via
+    // the same request memo the renderer reuses, so the gate and the render
+    // share one lookup. Runs after the principal loads so any per-entry
+    // resolution keys off the same memo threaded into the live render.
+    const policy = await policyForMatch(ctx, match);
 
     // The audience segment is the cache-key axis. A policied route runs its
     // resolver (gate + segment); a non-`allow` gate short-circuits before any

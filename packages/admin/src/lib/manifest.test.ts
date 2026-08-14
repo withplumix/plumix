@@ -8,6 +8,7 @@ import type {
 } from "@plumix/core/manifest";
 
 import {
+  accessPoliciesForType,
   entryMetaBoxesForType,
   findEntryTypeBySlug,
   findSettingsGroupByName,
@@ -201,6 +202,31 @@ describe("namedTemplatesForType", () => {
   test("returns an empty list for a type with none or an unknown type", () => {
     expect(namedTemplatesForType("post", source)).toEqual([]);
     expect(namedTemplatesForType("nope", source)).toEqual([]);
+  });
+});
+
+describe("accessPoliciesForType", () => {
+  const source: PlumixManifest = {
+    entryTypes: [
+      {
+        name: "article",
+        adminSlug: "articles",
+        label: "Articles",
+        accessPolicies: [{ key: "members", label: "Members only" }],
+      },
+      { name: "post", adminSlug: "posts", label: "Posts" },
+    ],
+  };
+
+  test("returns the type's selectable access policies", () => {
+    expect(accessPoliciesForType("article", source)).toEqual([
+      { key: "members", label: "Members only" },
+    ]);
+  });
+
+  test("returns an empty list for a type with none or an unknown type", () => {
+    expect(accessPoliciesForType("post", source)).toEqual([]);
+    expect(accessPoliciesForType("nope", source)).toEqual([]);
   });
 });
 

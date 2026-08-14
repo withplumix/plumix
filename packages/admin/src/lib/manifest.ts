@@ -1,5 +1,6 @@
 import type { ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
 import type {
+  AccessPolicyChoice,
   AdminNavGroup,
   AdminNavItem,
   DashboardWidgetManifestEntry,
@@ -126,6 +127,18 @@ export function namedTemplatesForType(
   source: PlumixManifest = manifest,
 ): readonly NamedTemplateChoice[] {
   return findEntryTypeByName(name, source)?.namedTemplates ?? [];
+}
+
+/**
+ * The per-entry access policies an editor may assign for an entry type, feeding
+ * the editor's visibility picker. Empty when the type declares no selectable
+ * space or is unknown — the caller renders just the "type default" option.
+ */
+export function accessPoliciesForType(
+  name: string,
+  source: PlumixManifest = manifest,
+): readonly AccessPolicyChoice[] {
+  return findEntryTypeByName(name, source)?.accessPolicies ?? [];
 }
 
 export function visibleEntryTypes(

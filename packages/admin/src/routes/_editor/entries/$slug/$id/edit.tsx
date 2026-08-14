@@ -26,6 +26,7 @@ import { seedEntryMetaForm } from "@/editor/seed-entry-meta.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import {
+  accessPoliciesForType,
   entryMetaBoxesForType,
   findEntryTypeBySlug,
   getPatterns,
@@ -63,7 +64,10 @@ import {
   defineEntryContent,
   isEntryContent,
 } from "@plumix/blocks";
-import { NAMED_TEMPLATE_META_KEY } from "@plumix/core/manifest";
+import {
+  ACCESS_POLICY_META_KEY,
+  NAMED_TEMPLATE_META_KEY,
+} from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
 import { PlainFormRouteInner } from "./-plain-form-route.js";
@@ -348,6 +352,14 @@ function EntryEditor({
   );
   const templateRef = useRef<string | null>(initialTemplate);
   const lastSavedTemplateRef = useRef<string | null>(initialTemplate);
+  // Per-entry visibility pick — same reserved-key / dedicated-field mechanics as
+  // the template choice, sent as the `access` update field. `null` = the entry
+  // type's default policy. Rides the same autosave debouncer.
+  const rawAccess = entry.meta[ACCESS_POLICY_META_KEY];
+  const initialAccess = typeof rawAccess === "string" ? rawAccess : null;
+  const [accessValue, setAccessValue] = useState<string | null>(initialAccess);
+  const accessRef = useRef<string | null>(initialAccess);
+  const lastSavedAccessRef = useRef<string | null>(initialAccess);
   const [titleValue, setTitleValue] = useState<string>(entry.title);
   const [slugValue, setSlugValue] = useState<string>(entry.slug);
   const [parentValue, setParentValue] = useState<number | null>(entry.parentId);
@@ -386,6 +398,7 @@ function EntryEditor({
     parentRef.current = parentValue;
     termsRef.current = termSelections;
     templateRef.current = templateValue;
+    accessRef.current = accessValue;
   });
 
   // Surface a genuine autosave failure so a rejected save (e.g. content
@@ -439,11 +452,14 @@ function EntryEditor({
       const metaChanged = Object.keys(metaPatch).length > 0;
       const nextTemplate = templateRef.current;
       const templateChanged = nextTemplate !== lastSavedTemplateRef.current;
+      const nextAccess = accessRef.current;
+      const accessChanged = nextAccess !== lastSavedAccessRef.current;
       if (
         !contentChanged &&
         !excerptChanged &&
         !metaChanged &&
-        !templateChanged
+        !templateChanged &&
+        !accessChanged
       )
         return;
       try {
@@ -460,6 +476,7 @@ function EntryEditor({
               : {}),
             ...(metaChanged ? { meta: metaPatch } : {}),
             ...(templateChanged ? { template: nextTemplate } : {}),
+            ...(accessChanged ? { access: nextAccess } : {}),
             expectedLiveUpdatedAt: liveUpdatedAtRef.current,
           });
           if (res.type === entry.type) liveUpdatedAtRef.current = res.updatedAt;
@@ -474,10 +491,12 @@ function EntryEditor({
         if (excerptChanged) lastSavedExcerptRef.current = nextExcerpt;
         if (metaChanged) lastSavedMetaRef.current = metaSnapshot;
         if (templateChanged) lastSavedTemplateRef.current = nextTemplate;
+        if (accessChanged) lastSavedAccessRef.current = nextAccess;
         autosaveFailedRef.current = false;
         setMetaFieldErrors(null);
         // Excerpt / meta / template render into the shell — reload to show
-        // them (block content is already live over the bridge).
+        // them (block content is already live over the bridge). An access
+        // change doesn't alter this render, so it needn't trigger a reload.
         if (excerptChanged || metaChanged || templateChanged) {
           refreshPreview.call();
         }
@@ -627,6 +646,14 @@ function EntryEditor({
     },
     [contentDebouncer, setTemplateValue],
   );
+  const handleAccessChange = useCallback(
+    (next: string | null): void => {
+      accessRef.current = next;
+      setAccessValue(next);
+      contentDebouncer.call();
+    },
+    [contentDebouncer, setAccessValue],
+  );
   const handleBack = useCallback(async (): Promise<void> => {
     // Flush pending autosaves before leaving so edits made within the debounce
     // window aren't dropped when the route unmounts.
@@ -656,6 +683,10 @@ function EntryEditor({
 
   const templateOptions = useMemo(
     () => (entryTypeName ? namedTemplatesForType(entryTypeName) : []),
+    [entryTypeName],
+  );
+  const accessOptions = useMemo(
+    () => (entryTypeName ? accessPoliciesForType(entryTypeName) : []),
     [entryTypeName],
   );
   const supportsTitle =
@@ -739,6 +770,15 @@ function EntryEditor({
               }
             : undefined
         }
+        access={
+          accessOptions.length > 0
+            ? {
+                value: accessValue,
+                options: accessOptions,
+                onChange: handleAccessChange,
+              }
+            : undefined
+        }
         taxonomies={taxonomyPickers.length > 0 ? taxonomyPickers : undefined}
         metaBoxes={
           metaBoxes.length > 0
@@ -765,6 +805,9 @@ function EntryEditor({
       templateOptions,
       templateValue,
       handleTemplateChange,
+      accessOptions,
+      accessValue,
+      handleAccessChange,
       taxonomyPickers,
       metaBoxes,
       seededMeta,

@@ -3,6 +3,12 @@ import { describe, expect, test } from "vitest";
 import type { MarkSpec } from "@plumix/blocks";
 import { defineBlock } from "@plumix/blocks";
 
+import {
+  anonymousPolicy,
+  definePolicy,
+  grant,
+  redirectToLogin,
+} from "../access/policy.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { registerCoreSettings } from "../settings-core.js";
@@ -527,6 +533,41 @@ describe("buildManifest", () => {
     ]);
     // A type the theme registers nothing for omits the field entirely.
     expect(post?.namedTemplates).toBeUndefined();
+  });
+
+  test("projects selectable access policies to key + label, dropping the resolver", async () => {
+    const hooks = new HookRegistry();
+    const membersOnly = definePolicy({
+      segments: ["members"],
+      resolve: (ctx) => (ctx.user ? grant("members") : redirectToLogin()),
+    });
+    const blog = definePlugin("blog", (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        access: {
+          default: anonymousPolicy,
+          policies: [
+            { key: "members", label: "Members only", policy: membersOnly },
+          ],
+        },
+      });
+      ctx.registerEntryType("page", { label: "Pages" });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [blog] });
+
+    const manifest = buildManifest(registry);
+    const post = manifest.entryTypes.find((e) => e.name === "post");
+    const page = manifest.entryTypes.find((e) => e.name === "page");
+
+    expect(post?.accessPolicies).toEqual([
+      { key: "members", label: "Members only" },
+    ]);
+    // The resolver never leaves the server.
+    expect(
+      (post?.accessPolicies?.[0] as unknown as Record<string, unknown>).policy,
+    ).toBeUndefined();
+    // A type with no selectable space omits the field.
+    expect(page?.accessPolicies).toBeUndefined();
   });
 
   test("uses labels.plural (slugified) for adminSlug when provided", async () => {

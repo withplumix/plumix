@@ -1,19 +1,23 @@
 /**
  * The hard gate — wiring the pure access resolution into the public render
  * path. {@link policyForMatch} finds the policy attached to a matched route
- * (entry-type default for single/archive intents, the route-level policy for a
- * custom archive, else none); the dispatcher resolves it against the loaded
- * principal once (reading the segment for the cache key), and
+ * (the entry's per-entry choice for a single intent, the entry-type default for
+ * an archive, the route-level policy for a custom archive, else none); the
+ * dispatcher resolves it against the loaded principal once (reading the segment
+ * for the cache key), and
  * {@link gateToResponse} turns a non-`allow` gate into an HTTP response — a 302
  * to sign-in (with a `returnTo`), or a terminal challenge response.
  */
 
 import type { PlumixAuthConfig } from "../auth/config.js";
 import type { AppContext } from "../context/app.js";
+import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";
 import type { AccessPolicy, Gate } from "./policy.js";
 import { withBasePath } from "../base-path.js";
+import { resolveSingleEntry } from "../route/single-entry.js";
 import { redirectTo } from "../runtime/http.js";
+import { ACCESS_POLICY_META_KEY } from "./meta-key.js";
 
 // Where `redirectToLogin()` sends a visitor when the operator sets no override.
 const DEFAULT_LOGIN_PATH = "/_plumix/admin/login";
@@ -31,18 +35,44 @@ export function resolveLoginPath(auth: PlumixAuthConfig): string {
 
 /**
  * The access policy attached to a matched route, or `null` when the route is
- * un-policied (the global `anonymous` default — behaves exactly as today). A
- * single or archive intent inherits its entry type's `access.default`; a custom
- * archive carries its own route-level `access`; every other intent (taxonomy,
- * author, date, front page, search) and an unmatched route are un-policied.
+ * un-policied (the global `anonymous` default — behaves exactly as today).
+ *
+ * Precedence is per-entry › entry-type › global. A `single` intent resolves the
+ * addressed entry and honours its stored per-entry choice ({@link selectEntryPolicy})
+ * when the type declares a selectable space, otherwise the type's
+ * `access.default`; an `archive` intent always uses the type's `access.default`
+ * (per-entry visibility is a property of the entry's own page, not the listing);
+ * a custom archive carries its own route-level `access`; every other intent
+ * (taxonomy, author, date, front page, search) and an unmatched route are
+ * un-policied.
+ *
+ * The per-entry lookup runs only for a type that declares a non-empty
+ * `access.policies` space — an un-policied type, or one with only a `default`,
+ * still resolves without touching the database, so the hot path is unchanged.
+ * A would-be-404 single (no matching entry) resolves to the type default, so
+ * gating stays fail-closed by type and never leaks which slugs exist.
+ *
+ * A `?preview=`-revealed draft is gated by its own stored per-entry choice too
+ * (the resolver returns the draft row; the gate reads its persisted meta) — a
+ * preview link honours per-entry visibility rather than bypassing it, matching
+ * the fail-closed stance the type-level gate already takes for preview traffic.
  */
-export function policyForMatch(
+export async function policyForMatch(
   ctx: AppContext,
   match: RouteMatch | null,
-): AccessPolicy | null {
+): Promise<AccessPolicy | null> {
   const intent = match?.intent;
   if (!intent) return null;
-  if (intent.kind === "single" || intent.kind === "archive") {
+  if (intent.kind === "single") {
+    const access = ctx.plugins.entryTypes.get(intent.entryType)?.access;
+    if (!access) return null;
+    if (!access.policies || access.policies.length === 0) {
+      return access.default;
+    }
+    const row = await resolveSingleEntry(ctx, intent.entryType, match.params);
+    return selectEntryPolicy(access, readAccessKey(row?.meta));
+  }
+  if (intent.kind === "archive") {
     return (
       ctx.plugins.entryTypes.get(intent.entryType)?.access?.default ?? null
     );
@@ -51,6 +81,37 @@ export function policyForMatch(
     return ctx.plugins.archiveTypes.get(intent.name)?.access ?? null;
   }
   return null;
+}
+
+/**
+ * Resolve an entry type's effective policy for one entry: the policy whose key
+ * the entry stored, else the type `default`. A stored key outside the declared
+ * space (a policy the developer removed) falls back to `default` — a stale
+ * selection never grants less than the type baseline. Pure.
+ *
+ * Operator note: because a stale key resolves to `default`, *removing* a
+ * selectable policy that was more restrictive than `default` relaxes every
+ * entry that had selected it — there is no migration signal. Rename/replace
+ * in place rather than delete when tightening isn't intended.
+ */
+export function selectEntryPolicy(
+  access: EntryTypeAccess,
+  storedKey: string | undefined,
+): AccessPolicy {
+  if (storedKey !== undefined) {
+    const chosen = access.policies?.find((p) => p.key === storedKey);
+    if (chosen) return chosen.policy;
+  }
+  return access.default;
+}
+
+// The per-entry access choice stored under the reserved meta key, or `undefined`
+// when unset (or stored as a non-string by some out-of-band write).
+function readAccessKey(
+  meta: Readonly<Record<string, unknown>> | null | undefined,
+): string | undefined {
+  const value = meta?.[ACCESS_POLICY_META_KEY];
+  return typeof value === "string" ? value : undefined;
 }
 
 interface GateResponseArgs {

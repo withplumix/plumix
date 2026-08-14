@@ -696,6 +696,11 @@ msgid "editor.revisions.sheet.commentSaving"
 msgstr "…"
 
 #. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.visibility.default"
+msgstr "(default)"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.noName"
 msgstr "(no name)"
@@ -4230,6 +4235,11 @@ msgstr "View"
 #: src/editor/revisions/RevisionsSheet.tsx
 msgid "editor.revisions.sheet.diffAriaLabel"
 msgstr "View JSON diff"
+
+#. js-lingui-explicit-id
+#: src/components/editor/document-settings.tsx
+msgid "editor.document.visibility"
+msgstr "Visibility"
 
 #. js-lingui-explicit-id
 #: src/components/profile/user-email-field.tsx

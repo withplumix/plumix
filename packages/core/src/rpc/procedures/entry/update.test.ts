@@ -1,8 +1,31 @@
 import { describe, expect, test } from "vitest";
 
+import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
+import {
+  anonymousPolicy,
+  authenticatedPolicy,
+} from "../../../access/policy.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+
+// Register a `post` entry type carrying a selectable per-entry access space, so
+// the update handler validates a caller's `access` key against it.
+function registerPostAccess(
+  plugins: ReturnType<typeof createPluginRegistry>,
+): void {
+  plugins.entryTypes.set("post", {
+    name: "post",
+    registeredBy: null,
+    label: "Posts",
+    access: {
+      default: anonymousPolicy,
+      policies: [
+        { key: "members", label: "Members only", policy: authenticatedPolicy },
+      ],
+    },
+  });
+}
 
 // SEO meta box fixture used by the partial-write and null-clear tests.
 // Registers two fields on the `post` entry type so each test can flip
@@ -757,6 +780,91 @@ describe("entry.update — named template choice", () => {
       h.client.entry.update({
         id: own.id,
         meta: { [NAMED_TEMPLATE_META_KEY]: "landing" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "meta_not_registered" },
+    });
+  });
+});
+
+describe("entry.update — per-entry access choice", () => {
+  test("persists a declared choice to the reserved access meta key", async () => {
+    const plugins = createPluginRegistry();
+    registerPostAccess(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.client.entry.create({ title: "a", slug: "a" });
+
+    const updated = await h.client.entry.update({
+      id: post.id,
+      access: "members",
+    });
+    expect(updated.meta[ACCESS_POLICY_META_KEY]).toBe("members");
+  });
+
+  test("access: null clears a previously stored choice", async () => {
+    const plugins = createPluginRegistry();
+    registerPostAccess(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.client.entry.create({ title: "b", slug: "b" });
+
+    await h.client.entry.update({ id: post.id, access: "members" });
+    const cleared = await h.client.entry.update({ id: post.id, access: null });
+    expect(cleared.meta[ACCESS_POLICY_META_KEY]).toBeUndefined();
+  });
+
+  test("omitting access leaves an existing choice untouched", async () => {
+    const plugins = createPluginRegistry();
+    registerPostAccess(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.client.entry.create({ title: "c", slug: "c" });
+
+    await h.client.entry.update({ id: post.id, access: "members" });
+    const renamed = await h.client.entry.update({
+      id: post.id,
+      title: "renamed",
+    });
+    expect(renamed.meta[ACCESS_POLICY_META_KEY]).toBe("members");
+  });
+
+  test("rejects a policy key the entry type does not declare", async () => {
+    const plugins = createPluginRegistry();
+    registerPostAccess(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.client.entry.create({ title: "d", slug: "d" });
+
+    await expect(
+      h.client.entry.update({ id: post.id, access: "ghost" }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      data: { reason: "access_policy_undeclared" },
+    });
+  });
+
+  test("rejects any choice when the type declares no access space", async () => {
+    // No `post` access registered — the selectable space is empty, so even a
+    // plausible key is undeclared.
+    const h = await createRpcHarness({ authAs: "admin" });
+    const post = await h.client.entry.create({ title: "e", slug: "e" });
+
+    await expect(
+      h.client.entry.update({ id: post.id, access: "members" }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      data: { reason: "access_policy_undeclared" },
+    });
+  });
+
+  test("the reserved key can't be smuggled through the plugin meta bag", async () => {
+    const plugins = createPluginRegistry();
+    registerPostAccess(plugins);
+    const h = await createRpcHarness({ authAs: "admin", plugins });
+    const post = await h.client.entry.create({ title: "f", slug: "f" });
+
+    await expect(
+      h.client.entry.update({
+        id: post.id,
+        meta: { [ACCESS_POLICY_META_KEY]: "members" },
       }),
     ).rejects.toMatchObject({
       code: "CONFLICT",

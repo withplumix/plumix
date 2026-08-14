@@ -78,3 +78,28 @@ describe("DocumentSettingsPanel template picker", () => {
     expect(queryByTestId("entry-template-select")).toBeNull();
   });
 });
+
+describe("DocumentSettingsPanel visibility picker", () => {
+  test("renders the picker when the type declares selectable policies", () => {
+    const { getByTestId } = renderPanel({
+      ...BASE,
+      access: {
+        value: "members",
+        options: [
+          { key: "members", label: "Members only" },
+          { key: "staff", label: "Staff only" },
+        ],
+        onChange: () => {},
+      },
+    });
+    expect(getByTestId("entry-visibility-select")).toBeDefined();
+  });
+
+  test("renders no picker when the type declares no selectable policies", () => {
+    const { queryByTestId } = renderPanel({
+      ...BASE,
+      access: { value: null, options: [], onChange: () => {} },
+    });
+    expect(queryByTestId("entry-visibility-select")).toBeNull();
+  });
+});
