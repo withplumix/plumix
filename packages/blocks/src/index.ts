@@ -115,14 +115,13 @@ export type {
 } from "./validation-errors.js";
 
 // ─── Style emission + theme tokens ──────────────────────────────────────────
+// The token↔CSS-var codec (`tokenIdToCssVar`, `tokenIdFromCssVar`,
+// `tokenCssVar`, `tokenCategoryForProperty`, `normalizeStyleValue`) is
+// package-internal — it stays behind `createStyleField`/`createStyleFields` and
+// the SSR `emitBlockStyleCss`, so no consumer parses or builds a `var()` string.
 export {
   DEFAULT_BREAKPOINTS,
   emitBlockStyleCss,
-  normalizeStyleValue,
-  tokenCategoryForProperty,
-  tokenCssVar,
-  tokenIdFromCssVar,
-  tokenIdToCssVar,
   VIEWPORT_MAX_PX,
 } from "./styles/style-emitter.js";
 export type {
@@ -131,6 +130,13 @@ export type {
   ThemeBreakpoints,
   VisibilityFlags,
 } from "./styles/style-emitter.js";
+export { createStyleFields } from "./styles/style-field.js";
+export type {
+  StyleField,
+  StyleFields,
+  StyleSelection,
+  StyleTokenOption,
+} from "./styles/style-field.js";
 export { sanitizeCssValue } from "./styles/sanitize-css.js";
 export { parseLoaderData, serializeLoaderData } from "./loader-data.js";
 export { findBlockNode } from "./find-block-node.js";
