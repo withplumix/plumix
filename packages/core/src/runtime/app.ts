@@ -33,12 +33,13 @@ import type { RestRoute } from "../rest/rest-routes.js";
 import type { RouteRule } from "../route/intent.js";
 import type { CompiledRedirects } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
+import type { RenderEnv } from "../route/render/render-env.js";
 import type { DocumentManifest } from "../theme.js";
 import type { EnvInput } from "./env-input.js";
 import { registerCoreAdminBarContributors } from "../admin-bar/core-contributors.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
-import { createCapabilityResolver } from "../auth/rbac.js";
+import { getCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import { registerCorePurgeInvalidator } from "../cache/purge.js";
 import * as coreSchema from "../db/schema/index.js";
@@ -232,6 +233,8 @@ export interface PlumixApp {
    * exist (e.g. tests that don't run a full Vite build).
    */
   readonly assetManifest: AssetManifest;
+  /** The bundled render environment the dispatcher threads per render; see {@link RenderEnv}. */
+  readonly renderEnv: RenderEnv;
 }
 
 // Runtime-only state the worker template injects at boot — values
@@ -400,6 +403,14 @@ export async function buildApp(
 
   const document = await resolveDocumentManifest(hooks, config.theme.document);
 
+  const assetManifest = runtime.assetManifest ?? {};
+  const renderEnv: RenderEnv = {
+    theme: config.theme,
+    document,
+    templateDeps: registry.templateDeps,
+    assetManifest,
+  };
+
   // Memoized so the heavy router module + handler construction happen once per
   // isolate, on the first RPC request — never on the public render cold path.
   let rpcHandler: Promise<RPCHandler<AppContext>> | undefined;
@@ -438,7 +449,7 @@ export async function buildApp(
       theme: config.theme.redirects,
     }),
     rawRoutes: registry.rawRoutes,
-    capabilityResolver: createCapabilityResolver(registry),
+    capabilityResolver: getCapabilityResolver(registry),
     appContextExtensions,
     scheduledTasks: registry.scheduledTasks,
     blocks,
@@ -446,7 +457,8 @@ export async function buildApp(
     shortcodes,
     htmlAllowlist,
     document,
-    assetManifest: runtime.assetManifest ?? {},
+    assetManifest,
+    renderEnv,
   };
 }
 

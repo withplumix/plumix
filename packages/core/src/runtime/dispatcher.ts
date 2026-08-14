@@ -706,10 +706,7 @@ async function renderPublicRoute(
   match: RouteMatch | null,
   segment: Segment,
 ): Promise<Response> {
-  const theme = app.config.theme;
-  const document = app.document;
-  const templateDeps = app.plugins.templateDeps;
-  const assetManifest = app.assetManifest;
+  const renderEnv = app.renderEnv;
   // The principal is loaded and the gate enforced by the caller, before the
   // cache decision — this runs only on a live render (a cache miss, a `private`
   // segment, or no cache binding). Throws propagate to the caller's error path.
@@ -751,10 +748,7 @@ async function renderPublicRoute(
   if (response.status === 404 && acceptsHtml(ctx.request)) {
     const html = await renderErrorThroughTheme({
       ctx,
-      theme,
-      document,
-      templateDeps,
-      assetManifest,
+      renderEnv,
       kind: "not-found",
       data: {
         kind: "error",
@@ -780,10 +774,7 @@ async function renderPublicError(
   url: URL,
   err: unknown,
 ): Promise<Response> {
-  const theme = app.config.theme;
-  const document = app.document;
-  const templateDeps = app.plugins.templateDeps;
-  const assetManifest = app.assetManifest;
+  const renderEnv = app.renderEnv;
   ctx.logger.error("dispatch_failed", {
     requestId: ctx.requestId,
     url: url.href,
@@ -825,10 +816,7 @@ async function renderPublicError(
       try {
         const html = await renderErrorThroughTheme({
           ctx,
-          theme,
-          document,
-          templateDeps,
-          assetManifest,
+          renderEnv,
           kind: "server-error",
           data: {
             kind: "error",
@@ -885,28 +873,15 @@ async function resolvePublicRouteOrFallback(
   url: URL,
   match: RouteMatch | null,
 ): Promise<Response> {
-  const theme = app.config.theme;
-  const document = app.document;
-  const templateDeps = app.plugins.templateDeps;
-  const assetManifest = app.assetManifest;
+  const renderEnv = app.renderEnv;
   if (match !== null) {
-    return resolvePublicRoute(
-      ctx,
-      match,
-      theme,
-      document,
-      templateDeps,
-      assetManifest,
-    );
+    return resolvePublicRoute(ctx, match, renderEnv);
   }
   if (url.pathname === "/") {
     return resolvePublicRoute(
       ctx,
       { intent: { kind: "front-page" }, params: {} },
-      theme,
-      document,
-      templateDeps,
-      assetManifest,
+      renderEnv,
     );
   }
   return notFound("public-route-not-found");

@@ -198,6 +198,28 @@ export function createCapabilityResolver(
   };
 }
 
+// The resolver is a pure function of the plugin registry, which has stable
+// per-app identity — so one resolver serves an app for its whole lifetime.
+// Weak-keyed so a discarded registry (e.g. a torn-down test app) frees its
+// resolver with it.
+const RESOLVER_BY_REGISTRY = new WeakMap<PluginRegistry, CapabilityResolver>();
+
+/**
+ * Every construction site — app build, context creation, user upgrade,
+ * plugin-raw-route dispatch — routes through here, so an authentication upgrade
+ * reuses the app's resolver instead of rebuilding an identical one.
+ */
+export function getCapabilityResolver(
+  plugins: PluginRegistry,
+): CapabilityResolver {
+  let resolver = RESOLVER_BY_REGISTRY.get(plugins);
+  if (resolver === undefined) {
+    resolver = createCapabilityResolver(plugins);
+    RESOLVER_BY_REGISTRY.set(plugins, resolver);
+  }
+  return resolver;
+}
+
 export class CapabilityError extends Error {
   static {
     CapabilityError.prototype.name = "CapabilityError";
