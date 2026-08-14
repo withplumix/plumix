@@ -117,8 +117,9 @@ export function useCanvasGeometry({
 
   // Fit-and-center: while in fit mode, scale the frame to the viewport width
   // (never past 100%) AND center it. This is what a device switch lands on
-  // (setDevice re-enables fit), so the frame is always on-screen and centered
-  // instead of pinned to the top-left. A manual pan/zoom leaves fit mode.
+  // (the provider re-enters fit on device change), so the frame is always
+  // on-screen and centered instead of pinned to the top-left. A manual
+  // pan/zoom leaves fit mode.
   const containerWidth = geometry.container?.width;
   const containerHeight = geometry.container?.height;
   useEffect(() => {

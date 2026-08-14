@@ -45,7 +45,7 @@ export type CameraStore = CameraState & CameraActions;
 export type CameraStoreApi = ReturnType<typeof createCameraStore>;
 
 export function createCameraStore(
-  initial?: Pick<Partial<CameraState>, "zoom">,
+  initial?: Partial<Pick<CameraState, "zoom">>,
 ) {
   return createStore<CameraStore>((set) => ({
     zoom: initial?.zoom ?? 1,
