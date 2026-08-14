@@ -6,11 +6,9 @@ import { expandShortcodes } from "@plumix/blocks";
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
-import type { RegisteredTemplateDep } from "../template-deps.js";
-import type { DocumentManifest, ThemeDescriptor } from "../theme.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
-import type { AssetManifest } from "./render/asset-manifest.js";
+import type { RenderEnv } from "./render/render-env.js";
 import type {
   ArchiveData,
   AuthorArchiveData,
@@ -103,98 +101,32 @@ function htmlResponseOrNotFound(html: string | null, reason: string): Response {
 export async function resolvePublicRoute(
   ctx: AppContext,
   match: RouteMatch,
-  theme: ThemeDescriptor,
-  document: DocumentManifest,
-  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
-  assetManifest: AssetManifest,
+  renderEnv: RenderEnv,
 ): Promise<Response> {
   switch (match.intent.kind) {
     case "single":
-      return resolveSingle(
-        ctx,
-        match.intent,
-        match.params,
-        theme,
-        document,
-        templateDeps,
-        assetManifest,
-      );
+      return resolveSingle(ctx, match.intent, match.params, renderEnv);
     case "archive":
-      return resolveArchive(
-        ctx,
-        match.intent,
-        match.params,
-        theme,
-        document,
-        templateDeps,
-        assetManifest,
-      );
+      return resolveArchive(ctx, match.intent, match.params, renderEnv);
     case "taxonomy":
-      return resolveTaxonomy(
-        ctx,
-        match.intent,
-        match.params,
-        theme,
-        document,
-        templateDeps,
-        assetManifest,
-      );
+      return resolveTaxonomy(ctx, match.intent, match.params, renderEnv);
     case "front-page":
-      return resolveFrontPage(
-        ctx,
-        match.params,
-        theme,
-        document,
-        templateDeps,
-        assetManifest,
-      );
+      return resolveFrontPage(ctx, match.params, renderEnv);
     case "author":
-      return resolveAuthor(
-        ctx,
-        match.params,
-        theme,
-        document,
-        templateDeps,
-        assetManifest,
-      );
+      return resolveAuthor(ctx, match.params, renderEnv);
     case "date":
-      return resolveDate(
-        ctx,
-        match.params,
-        theme,
-        document,
-        templateDeps,
-        assetManifest,
-      );
+      return resolveDate(ctx, match.params, renderEnv);
     case "custom":
-      return resolveCustom(
-        ctx,
-        match.intent,
-        match.params,
-        theme,
-        document,
-        templateDeps,
-        assetManifest,
-      );
+      return resolveCustom(ctx, match.intent, match.params, renderEnv);
     case "search":
-      return resolveSearch(
-        ctx,
-        match.params,
-        theme,
-        document,
-        templateDeps,
-        assetManifest,
-      );
+      return resolveSearch(ctx, match.params, renderEnv);
   }
 }
 
 async function resolveFrontPage(
   ctx: AppContext,
   params: Record<string, string>,
-  theme: ThemeDescriptor,
-  document: DocumentManifest,
-  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
-  assetManifest: AssetManifest,
+  renderEnv: RenderEnv,
 ): Promise<Response> {
   const page = parsePageParam(params.page);
   // The latest-posts front feed excludes hierarchical types (pages) — they
@@ -230,11 +162,7 @@ async function resolveFrontPage(
   const data = await ctx.hooks.applyFilter("resolve:front-page:data", initial);
   const html = await renderThroughTheme({
     ctx,
-    theme,
-    document,
-    templateDeps,
-    assetManifest,
-
+    renderEnv,
     node: { kind: "front-page" },
     data,
     // Public-route content i18n is a deferred userland seam; "Home"
@@ -258,10 +186,7 @@ function decodeSearchQuery(raw: string | undefined): string {
 async function resolveSearch(
   ctx: AppContext,
   params: Record<string, string>,
-  theme: ThemeDescriptor,
-  document: DocumentManifest,
-  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
-  assetManifest: AssetManifest,
+  renderEnv: RenderEnv,
 ): Promise<Response> {
   // Plain HTML search forms submit `GET /search?q=…`; 301 to the canonical
   // path form (`/search/<q>`) so the query renders and the URL is shareable.
@@ -314,10 +239,7 @@ async function resolveSearch(
   const data = await ctx.hooks.applyFilter("resolve:search:data", initial);
   const html = await renderThroughTheme({
     ctx,
-    theme,
-    document,
-    templateDeps,
-    assetManifest,
+    renderEnv,
     node: { kind: "search" },
     data,
     title: data.query ? `Search: ${data.query}` : "Search",
@@ -329,10 +251,7 @@ async function resolveTaxonomy(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "taxonomy" }>,
   params: Record<string, string>,
-  theme: ThemeDescriptor,
-  document: DocumentManifest,
-  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
-  assetManifest: AssetManifest,
+  renderEnv: RenderEnv,
 ): Promise<Response> {
   const term = await findTermForTaxonomy(ctx, intent.taxonomy, params);
   if (!term) return notFound("public-term-not-found");
@@ -382,11 +301,7 @@ async function resolveTaxonomy(
   const data = await ctx.hooks.applyFilter("resolve:term:data", initial);
   const html = await renderThroughTheme({
     ctx,
-    theme,
-    document,
-    templateDeps,
-    assetManifest,
-
+    renderEnv,
     node: {
       kind: "term",
       taxonomy: intent.taxonomy,
@@ -404,10 +319,7 @@ async function resolveTaxonomy(
 async function resolveAuthor(
   ctx: AppContext,
   params: Record<string, string>,
-  theme: ThemeDescriptor,
-  document: DocumentManifest,
-  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
-  assetManifest: AssetManifest,
+  renderEnv: RenderEnv,
 ): Promise<Response> {
   const slug = params.slug;
   if (typeof slug !== "string" || slug === "") {
@@ -462,11 +374,7 @@ async function resolveAuthor(
   const data = await ctx.hooks.applyFilter("resolve:author:data", initial);
   const html = await renderThroughTheme({
     ctx,
-    theme,
-    document,
-    templateDeps,
-    assetManifest,
-
+    renderEnv,
     node: { kind: "author", slug: author.slug, databaseId: author.id },
     data,
     title: data.author.name ?? data.author.slug,
@@ -491,10 +399,7 @@ function dateTitle(
 async function resolveDate(
   ctx: AppContext,
   params: Record<string, string>,
-  theme: ThemeDescriptor,
-  document: DocumentManifest,
-  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
-  assetManifest: AssetManifest,
+  renderEnv: RenderEnv,
 ): Promise<Response> {
   const year = Number(params.year);
   const month = params.month === undefined ? null : Number(params.month);
@@ -540,11 +445,7 @@ async function resolveDate(
   const data = await ctx.hooks.applyFilter("resolve:date:data", initial);
   const html = await renderThroughTheme({
     ctx,
-    theme,
-    document,
-    templateDeps,
-    assetManifest,
-
+    renderEnv,
     node: { kind: "date", year, month, day },
     data,
     title: dateTitle(year, month, day),
@@ -559,10 +460,7 @@ async function resolveCustom(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "custom" }>,
   params: Record<string, string>,
-  theme: ThemeDescriptor,
-  document: DocumentManifest,
-  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
-  assetManifest: AssetManifest,
+  renderEnv: RenderEnv,
 ): Promise<Response> {
   const archive = ctx.plugins.archiveTypes.get(intent.name);
   // A compiled route always names a registered archive; the guard is a
@@ -581,11 +479,7 @@ async function resolveCustom(
 
   const html = await renderThroughTheme({
     ctx,
-    theme,
-    document,
-    templateDeps,
-    assetManifest,
-
+    renderEnv,
     node: { kind: "custom", name: intent.name },
     data: result.data,
     title: result.title,
@@ -597,10 +491,7 @@ async function resolveSingle(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "single" }>,
   params: Record<string, string>,
-  theme: ThemeDescriptor,
-  document: DocumentManifest,
-  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
-  assetManifest: AssetManifest,
+  renderEnv: RenderEnv,
 ): Promise<Response> {
   const baseRow = await resolveSingleEntry(ctx, intent.entryType, params);
   if (!baseRow) return notFound("public-post-not-found");
@@ -642,11 +533,7 @@ async function resolveSingle(
   };
   const html = await renderThroughTheme({
     ctx,
-    theme,
-    document,
-    templateDeps,
-    assetManifest,
-
+    renderEnv,
     node: {
       kind: "content",
       entryType: row.type,
@@ -664,10 +551,7 @@ async function resolveArchive(
   ctx: AppContext,
   intent: Extract<RouteIntent, { kind: "archive" }>,
   params: Record<string, string>,
-  theme: ThemeDescriptor,
-  document: DocumentManifest,
-  templateDeps: ReadonlyMap<string, RegisteredTemplateDep>,
-  assetManifest: AssetManifest,
+  renderEnv: RenderEnv,
 ): Promise<Response> {
   const page = parsePageParam(params.page);
   const where = and(
@@ -707,11 +591,7 @@ async function resolveArchive(
   const data = await ctx.hooks.applyFilter("resolve:archive:data", initial);
   const html = await renderThroughTheme({
     ctx,
-    theme,
-    document,
-    templateDeps,
-    assetManifest,
-
+    renderEnv,
     node: { kind: "content-type-archive", entryType: intent.entryType },
     data,
     title,

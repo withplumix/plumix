@@ -15,7 +15,6 @@ import { PlumixProvider } from "@plumix/blocks/renderer";
 import type { AppContext } from "../../context/app.js";
 import type { JsonValue } from "../../context/telemetry.js";
 import type { TransformOpts } from "../../runtime/slots.js";
-import type { RegisteredTemplateDep } from "../../template-deps.js";
 import type { Template } from "../../template.js";
 import type {
   DocumentLink,
@@ -23,10 +22,10 @@ import type {
   DocumentMeta,
   DocumentScript,
   TemplateData,
-  ThemeDescriptor,
 } from "../../theme.js";
 import type { EditModeDecision } from "../edit-mode.js";
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
+import type { RenderEnv } from "./render-env.js";
 import type { ErrorData } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { PlumixAdminBar } from "../../admin-bar/component.js";
@@ -82,10 +81,7 @@ declare module "../../hooks/types.js" {
 
 interface RenderArgs {
   readonly ctx: AppContext;
-  readonly theme: ThemeDescriptor;
-  readonly document: DocumentManifest;
-  readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
-  readonly assetManifest: AssetManifest;
+  readonly renderEnv: RenderEnv;
   readonly node: ResolvedNode;
   readonly data: TemplateData;
   readonly title: string;
@@ -109,15 +105,13 @@ export function renderThroughTheme(args: RenderArgs): Promise<string | null> {
 
 async function renderThroughThemeInner({
   ctx,
-  theme,
-  document,
-  templateDeps,
-  assetManifest,
+  renderEnv,
   node,
   data,
   title,
   editMode = LIVE_EDIT_MODE,
 }: RenderArgs): Promise<string | null> {
+  const { theme, document, templateDeps, assetManifest } = renderEnv;
   const rules = templateRules(theme.templates);
   // The resolution walk is a `template` span (nested under `render`) carrying
   // the full explain as a lazy attribute — the Template panel reads it back
@@ -200,10 +194,7 @@ function composeTitle(document: DocumentManifest, fallback: string): string {
 
 interface RenderErrorArgs {
   readonly ctx: AppContext;
-  readonly theme: ThemeDescriptor;
-  readonly document: DocumentManifest;
-  readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
-  readonly assetManifest: AssetManifest;
+  readonly renderEnv: RenderEnv;
   readonly kind: "not-found" | "server-error";
   readonly data: ErrorData;
 }
@@ -234,13 +225,11 @@ export function renderErrorThroughTheme(
 
 async function renderErrorThroughThemeInner({
   ctx,
-  theme,
-  document,
-  templateDeps,
-  assetManifest,
+  renderEnv,
   kind,
   data,
 }: RenderErrorArgs): Promise<string> {
+  const { theme, document, templateDeps, assetManifest } = renderEnv;
   const variant = ERROR_VARIANTS[kind];
   const raw =
     resolveErrorTemplate(templateRules(theme.templates), variant.tier)

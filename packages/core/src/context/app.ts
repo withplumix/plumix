@@ -12,7 +12,7 @@ import type { Access } from "../access/policy.js";
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { MailerInput } from "../auth/mailer/resolve.js";
 import type { Mailer } from "../auth/mailer/types.js";
-import type { KnownCapability } from "../auth/rbac.js";
+import type { CapabilityResolver, KnownCapability } from "../auth/rbac.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { DebugBarInput } from "../dev/debug-bar/config.js";
@@ -40,7 +40,7 @@ import type {
 } from "./telemetry.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolveMailer } from "../auth/mailer/resolve.js";
-import { createCapabilityResolver } from "../auth/rbac.js";
+import { getCapabilityResolver } from "../auth/rbac.js";
 import { debugBarTelemetryConsumer } from "../dev/debug-bar/consumer.js";
 import { debugHistoryConsumer } from "../dev/debug-bar/history-consumer.js";
 import { devErrorTelemetryConsumer } from "../dev/server/telemetry-consumer.js";
@@ -449,7 +449,7 @@ function wrapDefer(logger: Logger, target: DeferFn | undefined): DeferFn {
 }
 
 function makeAuthCan(
-  resolver: ReturnType<typeof createCapabilityResolver>,
+  resolver: CapabilityResolver,
   user: AuthenticatedUser | null,
   tokenScopes: readonly string[] | null,
 ): (capability: string) => boolean {
@@ -468,7 +468,7 @@ function makeAuthCan(
 export function createAppContext<TSchema extends Record<string, unknown>>(
   args: CreateAppContextArgs<TSchema>,
 ): AppContext<TSchema> {
-  const resolver = createCapabilityResolver(args.plugins);
+  const resolver = getCapabilityResolver(args.plugins);
   const user = args.user ?? null;
   const tokenScopes = args.tokenScopes ?? null;
   const i18n = args.i18n ?? DEFAULT_I18N;
@@ -598,7 +598,7 @@ export function withUser<TSchema extends Record<string, unknown>>(
   user: AuthenticatedUser,
   tokenScopes: readonly string[] | null = null,
 ): AuthenticatedAppContext<TSchema> {
-  const resolver = createCapabilityResolver(ctx.plugins);
+  const resolver = getCapabilityResolver(ctx.plugins);
   return {
     ...ctx,
     user,
