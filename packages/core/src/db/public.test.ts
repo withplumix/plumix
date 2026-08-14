@@ -10,7 +10,13 @@ describe("@plumix/core/db surface", () => {
     for (const name of [
       "eq",
       "and",
+      "or",
       "inArray",
+      "isNotNull",
+      "exists",
+      "count",
+      "asc",
+      "desc",
       "sql",
       "getTableColumns",
       "getTableName",
