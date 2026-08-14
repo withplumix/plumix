@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
+import { useId } from "react";
 import { Trans } from "@lingui/react";
 
-import type { ThemeTokens, TokenCategory } from "@plumix/blocks";
+import type { TokenCategory } from "@plumix/blocks";
 import { Field, FieldLabel } from "@plumix/admin-ui/field";
 import { Input } from "@plumix/admin-ui/input";
 import {
@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { cn } from "@plumix/admin-ui/utils";
-import { tokenIdFromCssVar, tokenIdToCssVar } from "@plumix/blocks";
+
+import { useStyleField } from "./use-style-field.js";
 
 // Native `<input type="color">` only round-trips 6-digit hex; anything else
 // (a token var(), `transparent`, rgba) leaves the swatch on a safe default.
@@ -27,10 +28,9 @@ interface StyleControlProps {
   readonly label: string;
   /** CSS property (camelCase), used for ids and the store write. */
   readonly property: string;
-  /** Token group offered in token mode; omit for a custom-value-only control. */
+  /** Token scale offered in token mode; omit for a custom-value-only control. */
   readonly category?: TokenCategory;
   readonly value: string | undefined;
-  readonly tokens: ThemeTokens;
   /** Emits the next CSS value string, or null to clear the property. */
   readonly onChange: (value: string | null) => void;
 }
@@ -39,36 +39,28 @@ interface StyleControlProps {
  * One style property edited as a theme token OR a custom value. Both store a
  * plain CSS value string: token mode writes the token's `var(--plumix-…,
  * fallback)` (a theme reskins it by redefining the variable), custom mode
- * writes a raw literal. A control without a `category` is custom-only.
+ * writes a raw literal. A control without a `category` is custom-only. The
+ * token/literal encoding and the Token/Custom mode machine live in
+ * {@link useStyleField} — this component only renders and dispatches.
  */
 export function StyleControl({
   label,
   property,
   category,
   value,
-  tokens,
   onChange,
 }: StyleControlProps): ReactElement {
   const testId = `style-control-${property}`;
   const controlId = useId();
-  const group = category ? (tokens[category] ?? {}) : {};
-  // Mode follows the current value's kind, so a value set elsewhere (the
-  // declarations list, another control) reflects here live. With no value, the
-  // user's last toggle (`pref`) decides which input to show — and it starts on
-  // custom when the theme declares no tokens for this category (an empty token
-  // dropdown is useless; token mode only leads when there's something to pick).
-  const [pref, setPref] = useState<"token" | "custom">(
-    Object.keys(group).length > 0 ? "token" : "custom",
-  );
-  // The value is a token when it's a `var()` for this category (even an id the
-  // theme no longer declares — it still edits in token mode); else it's custom.
-  const tokenId =
-    category && value !== undefined ? tokenIdFromCssVar(value, category) : null;
-  const isCustom =
-    category === undefined ||
-    (value !== undefined ? tokenId === null : pref === "custom");
-  const isColor = category === "color";
-  const custom = isCustom && value !== undefined ? value : "";
+  // A control with no `category` is custom-only — it never offers tokens, even
+  // for a property the field could derive a scale for (e.g. max-width).
+  const showModes = category !== undefined;
+  const field = useStyleField(property, value, {
+    onChange,
+    category,
+    literalOnly: !showModes,
+  });
+  const isCustom = field.mode === "custom";
 
   return (
     <Field className="gap-1" data-testid={testId}>
@@ -79,27 +71,19 @@ export function StyleControl({
         <FieldLabel htmlFor={controlId} className="text-xs">
           {label}
         </FieldLabel>
-        {category ? (
+        {showModes ? (
           <div className="flex justify-end gap-0.5 text-xs">
             <ModeButton
               testId={`${testId}-mode-token`}
               active={!isCustom}
-              // Clear a custom value when switching to token mode so the select
-              // isn't shadowed by a value it can't represent.
-              onClick={() => {
-                setPref("token");
-                if (value !== undefined && tokenId === null) onChange(null);
-              }}
+              onClick={() => field.setMode("token")}
             >
               <Trans id="editor.styles.mode.token" message="Token" />
             </ModeButton>
             <ModeButton
               testId={`${testId}-mode-custom`}
               active={isCustom}
-              onClick={() => {
-                setPref("custom");
-                if (tokenId !== null) onChange(null);
-              }}
+              onClick={() => field.setMode("custom")}
             >
               <Trans id="editor.styles.mode.custom" message="Custom" />
             </ModeButton>
@@ -108,34 +92,30 @@ export function StyleControl({
       </div>
       {isCustom ? (
         <div className="flex gap-1">
-          {isColor ? (
+          {field.isColor ? (
             <input
               type="color"
               data-testid={`${testId}-swatch`}
               aria-label={`${label} color`}
-              value={HEX6.test(custom) ? custom : "#000000"}
-              onChange={(e) => onChange(e.target.value)}
+              value={
+                HEX6.test(field.literalText) ? field.literalText : "#000000"
+              }
+              onChange={(e) => field.setLiteral(e.target.value)}
               className="border-input size-9 shrink-0 cursor-pointer rounded-md border bg-transparent p-1"
             />
           ) : null}
           <Input
             id={controlId}
             data-testid={`${testId}-custom`}
-            value={custom}
-            onChange={(e) =>
-              onChange(e.target.value === "" ? null : e.target.value)
-            }
+            value={field.literalText}
+            onChange={(e) => field.setLiteral(e.target.value)}
           />
         </div>
       ) : (
         <Select
-          value={tokenId ?? NONE_VALUE}
+          value={field.tokenId ?? NONE_VALUE}
           onValueChange={(next) =>
-            onChange(
-              next === NONE_VALUE
-                ? null
-                : tokenIdToCssVar(next, category, tokens),
-            )
+            next === NONE_VALUE ? field.clear() : field.setToken(next)
           }
         >
           <SelectTrigger
@@ -149,13 +129,13 @@ export function StyleControl({
             <SelectItem value={NONE_VALUE} data-testid={`${testId}-token-none`}>
               —
             </SelectItem>
-            {Object.keys(group).map((id) => (
+            {field.options.map((option) => (
               <SelectItem
-                key={id}
-                value={id}
-                data-testid={`${testId}-token-${id}`}
+                key={option.id}
+                value={option.id}
+                data-testid={`${testId}-token-${option.id}`}
               >
-                {group[id]?.label ?? id}
+                {option.label}
               </SelectItem>
             ))}
           </SelectContent>

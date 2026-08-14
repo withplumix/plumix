@@ -6,7 +6,6 @@ import type { BlockRegistry } from "@plumix/blocks";
 import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import { Button } from "@plumix/admin-ui/button";
 import { Minus, Plus, RefreshCw } from "@plumix/admin-ui/icons";
-import { normalizeStyleValue } from "@plumix/blocks";
 
 import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { createNodeFromEntry } from "./block-catalog.js";
@@ -124,20 +123,21 @@ export function BlockInspector({
     <div className="flex flex-col gap-4 p-4" data-testid="block-inspector">
       {inputs.map((input) => {
         // A `styleProperty` input edits `node.style` for the active device
-        // instead of an attr, so it's two-way synced with the Styles tab.
+        // instead of an attr, so it's two-way synced with the Styles tab. A
+        // cleared Custom-CSS declaration can leave "" in the bucket; read it as
+        // unset so a raw-passthrough control doesn't surface an empty value.
         const styleProp = input.styleProperty;
+        const stored = styleProp
+          ? block.style?.[bucket]?.[styleProp]
+          : undefined;
+        const styleValue = stored === "" ? undefined : stored;
         return (
           <BlockInputControl
             key={input.name}
             input={input}
             resolvePluginFieldType={resolvePluginFieldType}
             attrs={block.attrs}
-            value={
-              styleProp
-                ? (normalizeStyleValue(block.style?.[bucket]?.[styleProp]) ??
-                  undefined)
-                : block.attrs?.[input.name]
-            }
+            value={styleProp ? styleValue : block.attrs?.[input.name]}
             onChange={(value) => {
               if (!styleProp) {
                 handleChange(input.name, value);

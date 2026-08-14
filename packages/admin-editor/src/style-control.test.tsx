@@ -7,6 +7,7 @@ import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import type { ThemeTokens } from "@plumix/blocks";
 
 import { StyleControl } from "./style-control.js";
+import { StyleFieldsProvider } from "./style-fields-context.js";
 
 beforeAll(() => {
   i18n.loadAndActivate({ locale: "en", messages: {} });
@@ -23,15 +24,16 @@ function renderControl(
   const onChange = vi.fn();
   const utils = render(
     <I18nProvider i18n={i18n}>
-      <StyleControl
-        label="Padding"
-        property="padding"
-        category="spacing"
-        value={undefined}
-        tokens={tokens}
-        onChange={onChange}
-        {...props}
-      />
+      <StyleFieldsProvider tokens={tokens}>
+        <StyleControl
+          label="Padding"
+          property="padding"
+          category="spacing"
+          value={undefined}
+          onChange={onChange}
+          {...props}
+        />
+      </StyleFieldsProvider>
     </I18nProvider>,
   );
   return { ...utils, onChange };

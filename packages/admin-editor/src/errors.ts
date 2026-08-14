@@ -12,4 +12,10 @@ export class EditorError extends Error {
       "useEditorStore must be used within <EditorProvider/>.",
     );
   }
+
+  static missingStyleFieldsProvider(): EditorError {
+    return new EditorError(
+      "useStyleFields must be used within <StyleFieldsProvider/>.",
+    );
+  }
 }
