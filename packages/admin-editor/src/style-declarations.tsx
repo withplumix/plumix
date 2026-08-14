@@ -2,7 +2,6 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
-import type { ThemeTokens } from "@plumix/blocks";
 import { Button } from "@plumix/admin-ui/button";
 import {
   Command,
@@ -27,14 +26,9 @@ import {
   SelectValue,
 } from "@plumix/admin-ui/select";
 import { cn } from "@plumix/admin-ui/utils";
-import {
-  tokenCategoryForProperty,
-  tokenCssVar,
-  tokenIdFromCssVar,
-  tokenIdToCssVar,
-} from "@plumix/blocks";
 
 import { CSS_PROPERTIES } from "./css-properties.js";
+import { useStyleField } from "./use-style-field.js";
 
 // A camelCase standard property (`marginTop`) or a CSS custom property
 // (`--brand-gap`) — stricter than the render guard, which also tolerates junk.
@@ -52,8 +46,6 @@ export interface StyleDeclaration {
 
 interface StyleDeclarationsProps {
   readonly declarations: readonly StyleDeclaration[];
-  /** Theme tokens, for the per-property token picker on token-valued rows. */
-  readonly tokens: ThemeTokens;
   /** Set a property's value, or clear it with `null`. */
   readonly onChange: (property: string, value: string | null) => void;
   /** Rename a property in place, keeping its value. */
@@ -68,7 +60,6 @@ interface StyleDeclarationsProps {
  */
 export function StyleDeclarations({
   declarations,
-  tokens,
   onChange,
   onRename,
 }: StyleDeclarationsProps): ReactElement {
@@ -81,7 +72,6 @@ export function StyleDeclarations({
           property={property}
           value={value}
           siblingKeys={keys}
-          tokens={tokens}
           onChange={onChange}
           onRename={onRename}
         />
@@ -109,27 +99,24 @@ function DeclarationRow({
   property,
   value,
   siblingKeys,
-  tokens,
   onChange,
   onRename,
 }: {
   readonly property: string;
   readonly value: string;
   readonly siblingKeys: readonly string[];
-  readonly tokens: ThemeTokens;
   readonly onChange: (property: string, value: string | null) => void;
   readonly onRename: (from: string, to: string) => void;
 }): ReactElement {
   const [keyDraft, setKeyDraft] = useState(property);
-  const category = tokenCategoryForProperty(property);
-  const tokenGroup = category ? (tokens[category] ?? {}) : {};
   // A row edits as a token picker when its value is a `var(--plumix-…)` for the
-  // property's scale, and as a raw text input otherwise.
-  const tokenId = category ? tokenIdFromCssVar(value, category) : null;
-  // Show a token as the CSS variable it emits (`var(--plumix-color-primary)`),
-  // not its label or resolved literal — this is the raw-CSS view.
-  const tokenVar = (id: string): string =>
-    category ? tokenCssVar(id, category) : id;
+  // property's scale, and as a raw text input otherwise. Empty stays a
+  // declaration (not a clear) so retyping doesn't unmount the focused row.
+  const field = useStyleField(property, value, {
+    onChange: (next) => onChange(property, next),
+    emptyLiteralClears: false,
+  });
+  const tokenId = field.tokenId;
 
   const commitRename = (): void => {
     const next = keyDraft.trim();
@@ -160,22 +147,17 @@ function DeclarationRow({
         <Input
           className="h-8"
           data-testid={`style-declaration-${property}-value`}
-          value={value}
+          value={field.literalText}
           // Empty-string stays a declaration rather than clearing — otherwise
           // clearing the field to retype unmounts the focused row. The Trash
           // button is the sole delete affordance.
-          onChange={(e) => onChange(property, e.target.value)}
+          onChange={(e) => field.setLiteral(e.target.value)}
         />
       ) : (
         <Select
           value={tokenId}
           onValueChange={(next) =>
-            onChange(
-              property,
-              next === NONE_VALUE || !category
-                ? null
-                : tokenIdToCssVar(next, category, tokens),
-            )
+            next === NONE_VALUE ? field.clear() : field.setToken(next)
           }
         >
           <SelectTrigger
@@ -194,17 +176,20 @@ function DeclarationRow({
             </SelectItem>
             {/* Keep an unknown token (stale id) visible + selected — a
                 controlled select with no matching item would render blank,
-                hiding the stored value. */}
-            {!(tokenId in tokenGroup) ? (
-              <SelectItem value={tokenId}>{tokenVar(tokenId)}</SelectItem>
+                hiding the stored value. The bare `var(--plumix-…)` is the
+                raw-CSS view of the token. */}
+            {!field.options.some((option) => option.id === tokenId) ? (
+              <SelectItem value={tokenId}>
+                {field.tokenOption(tokenId).cssVar}
+              </SelectItem>
             ) : null}
-            {Object.keys(tokenGroup).map((id) => (
+            {field.options.map((option) => (
               <SelectItem
-                key={id}
-                value={id}
-                data-testid={`style-declaration-${property}-token-${id}`}
+                key={option.id}
+                value={option.id}
+                data-testid={`style-declaration-${property}-token-${option.id}`}
               >
-                {tokenVar(id)}
+                {option.cssVar}
               </SelectItem>
             ))}
           </SelectContent>
@@ -216,7 +201,7 @@ function DeclarationRow({
         size="icon"
         className="text-destructive hover:text-destructive size-8 shrink-0"
         data-testid={`style-declaration-${property}-remove`}
-        onClick={() => onChange(property, null)}
+        onClick={() => field.clear()}
       >
         <Trash2 />
         <span className="sr-only">
