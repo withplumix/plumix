@@ -38,7 +38,7 @@ import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 import { CANONICAL_INPUT_TYPES } from "@plumix/core/fields";
 import { formatTemporalValue } from "@plumix/core/manifest";
 
-import type { LookupItem } from "./reference-picker.js";
+import type { LookupItem } from "./lookup/types.js";
 import { GroupField } from "./group-field.js";
 import { evaluateJsonDraft } from "./json-draft.js";
 import { LinkField } from "./link-field.js";

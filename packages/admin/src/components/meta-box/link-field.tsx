@@ -3,12 +3,10 @@ import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { useState } from "react";
 import { publicEntryTypeNames } from "@/lib/manifest.js";
-import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
 import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
-import { useQuery } from "@tanstack/react-query";
 
 import type { EntryFieldScope } from "@plumix/core/fields";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
@@ -21,7 +19,8 @@ import {
 import { Input } from "@plumix/admin-ui/input";
 import { Switch } from "@plumix/admin-ui/switch";
 
-import { renderLookupListBody } from "./reference-picker.js";
+import { renderLookupListBody } from "./lookup/list-body.js";
+import { useLookupSearch } from "./lookup/use-lookup-search.js";
 
 // Admin control for the `link` field — a CTA-shaped `{ url, label?,
 // newTab? }` value. The URL is authored either by typing an external
@@ -91,7 +90,6 @@ export function LinkField({
   const labelFn = useLabel();
   const untitledLabel = useUntitledLabel();
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
 
   // The inputs edit a local draft so a half-filled state (link text
   // typed before the URL) survives in the UI while the form value
@@ -129,21 +127,9 @@ export function LinkField({
   // URL would 404 (and go stale on slug edits). `satisfies` keeps the
   // status literal tracking the `EntryStatus` vocabulary.
   const scope = { entryTypes, status: "published" } satisfies EntryFieldScope;
-  const listQuery = useQuery({
-    ...orpc.lookup.list.queryOptions({
-      input: {
-        kind: "entry",
-        query: query.trim() || undefined,
-        scope,
-        limit: 20,
-      },
-    }),
-    enabled: open,
-  });
+  const search = useLookupSearch({ kind: "entry", scope, enabled: open });
   // Only entries with a public URL can back a link value.
-  const items = (listQuery.data?.items ?? []).filter(
-    (item) => item.href !== undefined,
-  );
+  const items = search.items.filter((item) => item.href !== undefined);
 
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
@@ -172,7 +158,7 @@ export function LinkField({
             size="sm"
             disabled={disabled}
             onClick={() => {
-              setQuery("");
+              search.setQuery("");
               setOpen(true);
             }}
             data-testid={`${testId}-pick`}
@@ -211,13 +197,13 @@ export function LinkField({
       >
         <CommandInput
           placeholder={labelFn(M.searchPlaceholder)}
-          value={query}
-          onValueChange={setQuery}
+          value={search.query}
+          onValueChange={search.setQuery}
           data-testid={`${testId}-search`}
         />
         <CommandList>
           {renderLookupListBody({
-            isLoading: listQuery.isLoading,
+            isLoading: search.isLoading,
             items,
             testId,
             untitledLabel,
