@@ -7,8 +7,6 @@ import {
   DESKTOP_CANVAS_WIDTH,
   deviceBucket,
   deviceWidth,
-  MAX_ZOOM,
-  MIN_ZOOM,
 } from "./store.js";
 
 describe("deviceBucket", () => {
@@ -80,30 +78,6 @@ describe("editor store", () => {
     expect(store.getState().selectedIds.size).toBe(0);
   });
 
-  test("zoom is clamped to the allowed range", () => {
-    const store = createEditorStore();
-
-    store.getState().zoomToCenter(99);
-    expect(store.getState().zoom).toBe(MAX_ZOOM);
-
-    store.getState().zoomToCenter(0);
-    expect(store.getState().zoom).toBe(MIN_ZOOM);
-  });
-
-  test("zoomToCenter keeps the viewport center's point fixed", () => {
-    const store = createEditorStore();
-    store.getState().setViewport(1000, 800);
-    store.getState().setPan(0, 0);
-
-    store.getState().zoomToCenter(2);
-
-    expect(store.getState().zoom).toBe(2);
-    // center (500,400) was world (500,400) at zoom 1; at zoom 2 it must still
-    // land at the viewport center: pan = center - world*zoom.
-    expect(store.getState().panX).toBe(500 - 500 * 2);
-    expect(store.getState().panY).toBe(400 - 400 * 2);
-  });
-
   test("deviceWidth: desktop is fixed; tablet/mobile track the breakpoints", () => {
     const breakpoints = { tablet: 900, mobile: 500 };
     expect(deviceWidth("desktop", breakpoints)).toBe(DESKTOP_CANVAS_WIDTH);
@@ -111,26 +85,15 @@ describe("editor store", () => {
     expect(deviceWidth("mobile", breakpoints)).toBe(500);
   });
 
-  test("manual zoom turns off fit; device switch + applyFitView keep/restore it", () => {
+  test("setDevice switches the active device", () => {
     const store = createEditorStore();
-    expect(store.getState().zoomFit).toBe(true);
+    expect(store.getState().device).toBe("desktop");
 
-    store.getState().zoomToCenter(1.5);
-    expect(store.getState().zoomFit).toBe(false);
-
-    // The canvas applies a computed fit + center without leaving fit mode...
-    store.getState().enableZoomFit();
-    store.getState().applyFitView({ zoom: 0.8, panX: 10, panY: 20 });
-    expect(store.getState().zoom).toBe(0.8);
-    expect(store.getState().panX).toBe(10);
-    expect(store.getState().zoomFit).toBe(true);
-
-    // ...and a manual zoom leaves it, while switching device restores it.
-    store.getState().zoomToCenter(2);
-    expect(store.getState().zoomFit).toBe(false);
     store.getState().setDevice("mobile");
+
+    // The camera's re-fit on a device switch is a provider-wired coupling, so
+    // it's asserted through the toolbar (see editor-toolbar.test), not here.
     expect(store.getState().device).toBe("mobile");
-    expect(store.getState().zoomFit).toBe(true);
   });
 
   test("breakpoints default and seed from the initializer", () => {

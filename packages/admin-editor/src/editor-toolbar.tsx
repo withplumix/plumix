@@ -24,7 +24,11 @@ import {
 } from "@plumix/admin-ui/tooltip";
 
 import type { EditorDevice } from "./store.js";
-import { useEditorStore, useEditorStoreApi } from "./provider.js";
+import {
+  useCameraStore,
+  useEditorStore,
+  useEditorStoreApi,
+} from "./provider.js";
 
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
@@ -177,10 +181,10 @@ function XrayToggle(): ReactElement {
 function DeviceZoomControls(): ReactElement {
   const { i18n } = useLingui();
   const device = useEditorStore((s) => s.device);
-  const zoom = useEditorStore((s) => s.zoom);
   const setDevice = useEditorStore((s) => s.setDevice);
-  const zoomToCenter = useEditorStore((s) => s.zoomToCenter);
-  const enableZoomFit = useEditorStore((s) => s.enableZoomFit);
+  const zoom = useCameraStore((s) => s.zoom);
+  const zoomToCenter = useCameraStore((s) => s.zoomToCenter);
+  const enableFit = useCameraStore((s) => s.enableFit);
 
   // Zoom toward the viewport center (the wheel handles zoom-to-cursor).
   const zoomOut = (): void =>
@@ -235,7 +239,7 @@ function DeviceZoomControls(): ReactElement {
       <button
         type="button"
         data-testid="plumix-zoom-percent"
-        onClick={enableZoomFit}
+        onClick={enableFit}
         className="text-muted-foreground hover:text-foreground w-12 text-center text-xs tabular-nums"
         title={i18n._({
           id: "editor.toolbar.fitWidth",

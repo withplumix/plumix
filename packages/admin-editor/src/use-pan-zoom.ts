@@ -15,7 +15,11 @@ import {
   frameSelection,
   zoomToCursor,
 } from "./canvas-view.js";
-import { useEditorStore, useEditorStoreApi } from "./provider.js";
+import {
+  useCameraStore,
+  useCameraStoreApi,
+  useEditorStoreApi,
+} from "./provider.js";
 
 export interface PanZoom {
   /** Attach to the pannable stage node the transform is written to. */
@@ -63,10 +67,11 @@ export function usePanZoom({
   readonly containerRef: RefObject<HTMLDivElement | null>;
   readonly geometryRef: RefObject<Geometry>;
 }): PanZoom {
-  const store = useEditorStoreApi();
-  const zoom = useEditorStore((s) => s.zoom);
-  const panX = useEditorStore((s) => s.panX);
-  const panY = useEditorStore((s) => s.panY);
+  const editor = useEditorStoreApi();
+  const camera = useCameraStoreApi();
+  const zoom = useCameraStore((s) => s.zoom);
+  const panX = useCameraStore((s) => s.panX);
+  const panY = useCameraStore((s) => s.panY);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const liveViewRef = useRef<View>({ zoom, panX, panY });
@@ -83,8 +88,8 @@ export function usePanZoom({
     if (!gesturingRef.current) return;
     gesturingRef.current = false;
     setGesturing(false);
-    store.getState().setView(liveViewRef.current);
-  }, [store]);
+    camera.getState().applyView(liveViewRef.current);
+  }, [camera]);
 
   // Apply a view live: write the transform straight to the DOM (no render),
   // track it in the ref, and debounce a single commit when the gesture idles.
@@ -247,14 +252,12 @@ export function usePanZoom({
   // Frame the active block in the viewport (Shift+2) — the move that makes a
   // free canvas genuinely better for editing, not just nicer to look at.
   const zoomToSelection = useCallback((): void => {
-    const s = store.getState();
+    const { activeId } = editor.getState();
     const box = geometryRef.current.container;
-    const rect = s.activeId
-      ? geometryRef.current.rects.get(s.activeId)
-      : undefined;
+    const rect = activeId ? geometryRef.current.rects.get(activeId) : undefined;
     if (!box || !rect || rect.width === 0 || rect.height === 0) return;
-    s.setView(frameSelection(rect, box.width, box.height));
-  }, [store, geometryRef]);
+    camera.getState().applyView(frameSelection(rect, box.width, box.height));
+  }, [editor, camera, geometryRef]);
 
   // Host-side wheel: pan/zoom when the cursor is over the margin around the
   // frame. Over the iframe the gesture is forwarded via the bridge. Native +

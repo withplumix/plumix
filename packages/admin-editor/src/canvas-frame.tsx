@@ -25,6 +25,8 @@ import { connectCanvas } from "./connect-canvas.js";
 import { deviceLabel } from "./editor-toolbar.js";
 import { overlayBox } from "./overlay.js";
 import {
+  useCameraStore,
+  useCameraStoreApi,
   useEditorStore,
   useEditorStoreApi,
   useLoaderPushRef,
@@ -87,6 +89,7 @@ export function CanvasFrame({
     message: "Add a block",
   });
   const store = useEditorStoreApi();
+  const camera = useCameraStoreApi();
   const clipboard = useMemo(
     () =>
       createClipboardOps(store, navigator.clipboard, pasteableAtRoot(registry)),
@@ -94,9 +97,9 @@ export function CanvasFrame({
   );
   const loaderPushRef = useLoaderPushRef();
   const device = useEditorStore((s) => s.device);
-  const zoom = useEditorStore((s) => s.zoom);
-  const panX = useEditorStore((s) => s.panX);
-  const panY = useEditorStore((s) => s.panY);
+  const zoom = useCameraStore((s) => s.zoom);
+  const panX = useCameraStore((s) => s.panX);
+  const panY = useCameraStore((s) => s.panY);
   const breakpoints = useEditorStore((s) => s.breakpoints);
   const frameWidth = deviceWidth(device, breakpoints);
   const activeId = useEditorStore((s) => s.activeId);
@@ -140,7 +143,7 @@ export function CanvasFrame({
       // cursor in container space is the frame's pan offset plus the scaled
       // local position.
       onWheel: ({ deltaX, deltaY, zoomIntent, clientX, clientY }) => {
-        const { panX, panY, zoom } = store.getState();
+        const { panX, panY, zoom } = camera.getState();
         handleWheel(
           deltaX,
           deltaY,
@@ -163,6 +166,7 @@ export function CanvasFrame({
     };
   }, [
     store,
+    camera,
     origin,
     applyReport,
     loaderPushRef,
