@@ -1,14 +1,12 @@
-// Types come from the root `plumix` specifier — the same module this file
-// augments below (`declare module "plumix"`). Importing them here keeps the
-// augmentation target loaded in the plugin's own build. The db runtime stays
-// on the `plumix/plugin` subpath.
-import type {
-  HydratedReference,
-  LookupAdapter,
-  LookupResult,
-  SQL,
-} from "plumix";
-import { and, desc, entries, eq, inArray, like, sql } from "plumix/plugin";
+// Augmentation-seam types come from the root `plumix` specifier — the same
+// module this file augments below (`declare module "plumix"`). Importing them
+// here keeps the augmentation target loaded in the plugin's own build. Direct-
+// write db symbols come from their canonical seams: operators + the `SQL` type
+// from `plumix/db`, schema tables from `plumix/schema` (#1766).
+import type { HydratedReference, LookupAdapter, LookupResult } from "plumix";
+import type { SQL } from "plumix/db";
+import { and, desc, eq, inArray, like, sql } from "plumix/db";
+import { entries } from "plumix/schema";
 
 import { parseMediaMeta } from "./meta.js";
 import { resolveMediaUrl, thumbnailFor } from "./read-service.js";

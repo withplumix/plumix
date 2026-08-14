@@ -6,10 +6,10 @@
 import type {
   AppContext,
   AuthenticatedUser,
-  Entry,
   HookOptions,
   PluginSetupContext,
 } from "plumix/plugin";
+import type { Entry } from "plumix/schema";
 import { HookRegistry, requestStore } from "plumix/plugin";
 import { describe, expect, test, vi } from "vitest";
 

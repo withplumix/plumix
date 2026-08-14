@@ -14,15 +14,17 @@
 // is caught at CI time, not in review.
 
 import type {
-  ApiToken,
   AppContext,
   AuthenticatedUser,
+  PluginSetupContext,
+} from "plumix/plugin";
+import type {
+  ApiToken,
   Credential,
   Entry,
   EntryStatus,
-  PluginSetupContext,
   User,
-} from "plumix/plugin";
+} from "plumix/schema";
 import { tryGetContext } from "plumix/plugin";
 
 import type { NewAuditLogRow } from "../db/schema.js";

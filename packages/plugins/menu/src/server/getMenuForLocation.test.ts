@@ -2,12 +2,11 @@ import type { AppContext, PluginRegistry } from "plumix/plugin";
 import { eq } from "drizzle-orm";
 import {
   createPluginRegistry,
-  entries,
   HookRegistry,
   installPlugins,
   registerCoreLookupAdapters,
-  settings,
 } from "plumix/plugin";
+import { entries, settings } from "plumix/schema";
 import {
   adminUser,
   createRequestMemo,

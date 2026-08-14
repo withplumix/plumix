@@ -3,11 +3,11 @@ import { eq } from "drizzle-orm";
 import {
   createPluginRegistry,
   definePlugin,
-  entries as entriesTable,
   HookRegistry,
   installPlugins,
   registerCoreLookupAdapters,
 } from "plumix/plugin";
+import { entries as entriesTable } from "plumix/schema";
 import {
   adminUser,
   createRequestMemo,
