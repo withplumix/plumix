@@ -1,12 +1,10 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
-import { orpc } from "@/lib/orpc.js";
+import { useState } from "react";
 import { useLabel } from "@/lib/use-label.js";
 import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
-import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -19,7 +17,9 @@ import {
 import { Skeleton } from "@plumix/admin-ui/skeleton";
 import { SortableList } from "@plumix/admin-ui/sortable";
 
-import type { LookupItem } from "./reference-picker.js";
+import type { LookupItem } from "./lookup/types.js";
+import { useLookupSearch } from "./lookup/use-lookup-search.js";
+import { useReferenceResolve } from "./lookup/use-reference-resolve.js";
 
 // Multi-value counterpart to `ReferencePicker`. Shares the same
 // `kind` / `scope` dispatch shape — same lookup RPC, same adapter
@@ -54,14 +54,6 @@ const M = {
   addMore: defineMessage({
     id: "metaBox.multiReference.addMore",
     message: "Add",
-  }),
-  loading: defineMessage({
-    id: "metaBox.multiReference.loading",
-    message: "Loading…",
-  }),
-  noMatches: defineMessage({
-    id: "metaBox.multiReference.noMatches",
-    message: "No matches",
   }),
   dialogDescription: defineMessage({
     id: "metaBox.multiReference.dialogDescription",
@@ -111,48 +103,20 @@ export function MultiReferencePicker({
   const labelFn = useLabel();
   const untitledLabel = useUntitledLabel();
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
 
-  // Labels handed over already-hydrated by the read. When they cover
-  // every selected id, the resolve round-trip is unnecessary.
-  const prefillById = useMemo(() => {
-    const map = new Map<string, LookupItem>();
-    for (const row of initialSelected) map.set(row.id, row);
-    return map;
-  }, [initialSelected]);
-  const allPrefilled =
-    value.length > 0 && value.every((id) => prefillById.has(id));
-
-  // Single batch round-trip to resolve every selected ID that the
-  // hydrated prefill didn't cover (a freshly-picked id, a
-  // `.returns("id")` opt-out). The adapter's `list` honours the `ids`
-  // filter and returns one row per live target — orphans simply don't
-  // come back. We map by id below so the sortable list still iterates
-  // `value` in order. `limit` is omitted: the adapter sizes the result
-  // to the parsed-id count for the `ids` path. Spread to drop
-  // `readonly` — the wire schema produces a mutable `string[]`.
-  const resolveQuery = useQuery({
-    ...orpc.lookup.list.queryOptions({
-      input: { kind, scope, ids: [...value] },
-    }),
-    enabled: value.length > 0 && !allPrefilled,
+  // Selected-id resolution (batched `lookup.list`, hydrated-prefill
+  // short-circuit, found/pending/orphan tri-state) and the search box
+  // are the shared hooks; this component lays them out as a sortable,
+  // reorderable, capped multi-selection.
+  const resolve = useReferenceResolve({
+    kind,
+    scope,
+    ids: value,
+    initialSelected,
   });
-  const resolvedById = useMemo(() => {
-    const map = new Map<string, LookupItem>();
-    // Hydrated prefill first; a live resolve (when one ran) overrides.
-    for (const row of prefillById.values()) map.set(row.id, row);
-    for (const row of resolveQuery.data?.items ?? []) map.set(row.id, row);
-    return map;
-  }, [prefillById, resolveQuery.data]);
+  const search = useLookupSearch({ kind, scope, enabled: open });
 
-  const listQuery = useQuery({
-    ...orpc.lookup.list.queryOptions({
-      input: { kind, query: query.trim() || undefined, scope, limit: 20 },
-    }),
-    enabled: open,
-  });
-
-  const items = listQuery.data?.items ?? [];
+  const items = search.items;
   const selectedSet = new Set(value);
   const atMax = max !== undefined && value.length >= max;
 
@@ -170,21 +134,12 @@ export function MultiReferencePicker({
     onChange(next.map((row) => row.id));
   };
 
-  // Three states per row: `found` (result in cache), `orphan` (resolve
-  // settled, no result — really gone), `pending` (resolve still in
-  // flight). The pending case renders as a skeleton so the brief gap
-  // between mount and the first resolve doesn't flash "Reference
-  // missing" for every row.
-  const isResolvePending =
-    value.length > 0 &&
-    resolveQuery.data === undefined &&
-    !resolveQuery.isError;
   const sortableItems = value.map((id) => {
-    const result = resolvedById.get(id) ?? null;
+    const state = resolve.statusOf(id);
     return {
       id,
-      result,
-      pending: result === null && isResolvePending,
+      result: state.status === "found" ? state.item : null,
+      pending: state.status === "pending",
     };
   });
 
@@ -201,7 +156,7 @@ export function MultiReferencePicker({
 
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
-      {resolveQuery.isError ? (
+      {resolve.isError ? (
         // Don't conflate "fetch failed" with "every selected id is an
         // orphan" — without this banner, a transient network error
         // would render every row as `Reference missing`.
@@ -280,7 +235,7 @@ export function MultiReferencePicker({
           size="sm"
           disabled={disabled || atMax}
           onClick={() => {
-            setQuery("");
+            search.setQuery("");
             setOpen(true);
           }}
           data-testid={`${testId}-add`}
@@ -304,12 +259,12 @@ export function MultiReferencePicker({
       >
         <CommandInput
           placeholder={searchPlaceholder}
-          value={query}
-          onValueChange={setQuery}
+          value={search.query}
+          onValueChange={search.setQuery}
           data-testid={`${testId}-search`}
         />
         <CommandList>
-          {listQuery.isLoading ? (
+          {search.isLoading ? (
             <CommandEmpty>
               <Trans id="metaBox.multiReference.loading" message="Loading…" />
             </CommandEmpty>

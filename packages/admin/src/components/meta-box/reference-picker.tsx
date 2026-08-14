@@ -1,22 +1,24 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
 import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
-import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
   CommandDialog,
-  CommandEmpty,
   CommandInput,
-  CommandItem,
   CommandList,
 } from "@plumix/admin-ui/command";
 import { Skeleton } from "@plumix/admin-ui/skeleton";
+
+import type { LookupItem } from "./lookup/types.js";
+import type { ResolvedReference } from "./lookup/use-reference-resolve.js";
+import { renderLookupListBody } from "./lookup/list-body.js";
+import { useLookupSearch } from "./lookup/use-lookup-search.js";
+import { useReferenceResolve } from "./lookup/use-reference-resolve.js";
 
 // Generic picker for reference fields (`user`, future `entry` /
 // `term` / `media`). The field's `referenceTarget.kind` selects the
@@ -25,7 +27,9 @@ import { Skeleton } from "@plumix/admin-ui/skeleton";
 //
 // Storage is the bare ID string; the picker's job is to swap the
 // admin-side display from "42" to a human-readable label without
-// changing what the form submits.
+// changing what the form submits. The search box + selected-label
+// resolution are the shared `useLookupSearch` / `useReferenceResolve`
+// hooks — this component is the single-value presentation over them.
 
 // User-facing copy for the picker. The dialog description and the
 // search placeholder both interpolate `{kind}` verbatim (the wire
@@ -53,14 +57,6 @@ const M = {
     id: "metaBox.reference.orphan",
     message: "Reference missing — re-pick or clear",
   }),
-  loading: defineMessage({
-    id: "metaBox.reference.loading",
-    message: "Loading…",
-  }),
-  noMatches: defineMessage({
-    id: "metaBox.reference.noMatches",
-    message: "No matches",
-  }),
   dialogDescription: defineMessage({
     id: "metaBox.reference.dialogDescription",
     message: "Search and pick a {kind}",
@@ -86,8 +82,8 @@ interface ReferencePickerProps {
   /**
    * The read-time-hydrated summary for the initial `value`, when the
    * form loaded one (reference reads hydrate by default, #1507). Used
-   * to paint the selected label on first render — no `lookup.resolve`
-   * round-trip while the initial id is unchanged.
+   * to paint the selected label on first render — no resolve round-trip
+   * while the initial id is unchanged.
    */
   readonly initialSelected?: LookupItem | null;
 }
@@ -107,39 +103,18 @@ export function ReferencePicker({
   const labelFn = useLabel();
   const untitledLabel = useUntitledLabel();
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
 
-  // The initial value already arrived hydrated, so its label is in hand
-  // — skip the resolve entirely while the id is untouched. A change
-  // moves the value off `initialSelected.id` and the query takes over.
-  const hasPrefill =
-    value !== null && initialSelected !== null && initialSelected.id === value;
-
-  // Resolve the currently-selected id to its label/subtitle. Skips when
-  // value is null or already prefilled. Stale-data tolerant — if the
-  // target was deleted server-side, `result` comes back null and we
-  // render a "Missing" badge so the author knows to re-pick.
-  const resolveQuery = useQuery({
-    ...orpc.lookup.resolve.queryOptions({
-      input: { kind, id: value ?? "", scope },
-    }),
-    enabled: value !== null && !hasPrefill,
+  // Resolve the currently-selected id to its label/subtitle, short-
+  // circuiting when the hydrated `initialSelected` already covers it.
+  const resolve = useReferenceResolve({
+    kind,
+    scope,
+    ids: value === null ? [] : [value],
+    initialSelected: initialSelected ? [initialSelected] : [],
   });
+  const state = value === null ? null : resolve.statusOf(value);
 
-  const listQuery = useQuery({
-    ...orpc.lookup.list.queryOptions({
-      input: { kind, query: query.trim() || undefined, scope, limit: 20 },
-    }),
-    enabled: open,
-  });
-
-  const selected =
-    value === null
-      ? null
-      : hasPrefill
-        ? initialSelected
-        : (resolveQuery.data?.result ?? null);
-  const items = listQuery.data?.items ?? [];
+  const search = useLookupSearch({ kind, scope, enabled: open });
 
   const dialogDescription = i18n._(
     M.dialogDescription.id,
@@ -155,13 +130,7 @@ export function ReferencePicker({
   return (
     <div className="flex items-center gap-2" data-testid={testId}>
       <div className="min-w-0 flex-1">
-        {renderDisplay({
-          testId,
-          value,
-          selected,
-          isResolving: resolveQuery.isLoading,
-          untitledLabel,
-        })}
+        {renderDisplay({ testId, state, untitledLabel })}
       </div>
       <Button
         type="button"
@@ -169,7 +138,7 @@ export function ReferencePicker({
         size="sm"
         disabled={disabled}
         onClick={() => {
-          setQuery("");
+          search.setQuery("");
           setOpen(true);
         }}
         data-testid={`${testId}-open`}
@@ -198,14 +167,14 @@ export function ReferencePicker({
       >
         <CommandInput
           placeholder={searchPlaceholder}
-          value={query}
-          onValueChange={setQuery}
+          value={search.query}
+          onValueChange={search.setQuery}
           data-testid={`${testId}-search`}
         />
         <CommandList>
           {renderLookupListBody({
-            isLoading: listQuery.isLoading,
-            items,
+            isLoading: search.isLoading,
+            items: search.items,
             testId,
             onSelect: (item) => {
               onChange(item.id);
@@ -219,29 +188,16 @@ export function ReferencePicker({
   );
 }
 
-export interface LookupItem {
-  readonly id: string;
-  readonly label: string | null;
-  readonly targetType?: string;
-  readonly subtitle?: string;
-  /** Public URL of the row, when it has one — see `LookupResult.href`. */
-  readonly href?: string;
-}
-
 function renderDisplay({
   testId,
-  value,
-  selected,
-  isResolving,
+  state,
   untitledLabel,
 }: {
   testId: string;
-  value: string | null;
-  selected: LookupItem | null;
-  isResolving: boolean;
+  state: ResolvedReference | null;
   untitledLabel: ReturnType<typeof useUntitledLabel>;
 }): ReactNode {
-  if (value === null) {
+  if (state === null) {
     return (
       <p
         className="text-muted-foreground text-sm"
@@ -251,21 +207,22 @@ function renderDisplay({
       </p>
     );
   }
-  if (selected) {
+  if (state.status === "found") {
+    const { item } = state;
     return (
       <div className="text-sm" data-testid={`${testId}-selected`}>
         <p className="truncate font-medium">
-          {untitledLabel(selected.label, selected.targetType)}
+          {untitledLabel(item.label, item.targetType)}
         </p>
-        {selected.subtitle ? (
+        {item.subtitle ? (
           <p className="text-muted-foreground truncate text-xs">
-            {selected.subtitle}
+            {item.subtitle}
           </p>
         ) : null}
       </div>
     );
   }
-  if (isResolving) {
+  if (state.status === "pending") {
     // Loading state distinct from orphan — without this skeleton the
     // brief gap between "value set" and "resolve returns" would
     // render as "Reference missing", which reads as an actual error.
@@ -288,55 +245,4 @@ function renderDisplay({
       />
     </p>
   );
-}
-
-// Shared loading / empty / item-list body for lookup-backed pickers —
-// the reference pickers select by `item.id`, the link field's entry
-// picker by `item.href`.
-export function renderLookupListBody({
-  isLoading,
-  items,
-  testId,
-  onSelect,
-  untitledLabel,
-}: {
-  isLoading: boolean;
-  items: readonly LookupItem[];
-  testId: string;
-  onSelect: (item: LookupItem) => void;
-  untitledLabel: ReturnType<typeof useUntitledLabel>;
-}): ReactNode {
-  if (isLoading) {
-    return (
-      <CommandEmpty>
-        <Trans id="metaBox.reference.loading" message="Loading…" />
-      </CommandEmpty>
-    );
-  }
-  if (items.length === 0) {
-    return (
-      <CommandEmpty>
-        <Trans id="metaBox.reference.noMatches" message="No matches" />
-      </CommandEmpty>
-    );
-  }
-  return items.map((item) => (
-    <CommandItem
-      key={item.id}
-      value={`${item.label ?? ""} ${item.subtitle ?? ""}`}
-      onSelect={() => {
-        onSelect(item);
-      }}
-      data-testid={`${testId}-option-${item.id}`}
-    >
-      <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium">
-          {untitledLabel(item.label, item.targetType)}
-        </span>
-        {item.subtitle ? (
-          <span className="text-muted-foreground text-xs">{item.subtitle}</span>
-        ) : null}
-      </div>
-    </CommandItem>
-  ));
 }
