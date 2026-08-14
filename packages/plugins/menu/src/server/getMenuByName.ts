@@ -1,7 +1,8 @@
 import type { AppContext, LookupResult } from "plumix/plugin";
 import { and, eq, inArray } from "drizzle-orm";
 import { memoBatch } from "plumix";
-import { entries, entryTerm, isCurrentSource, terms } from "plumix/plugin";
+import { isCurrentSource } from "plumix/plugin";
+import { entries, entryTerm, terms } from "plumix/schema";
 
 import type { TreeNode } from "./buildTree.js";
 import type { MenuItemMeta, ResolvedMenu, ResolvedMenuItem } from "./types.js";

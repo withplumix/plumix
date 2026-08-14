@@ -11,8 +11,14 @@ export { withBasePath } from "./base-path.js";
 export * from "./cli/index.js";
 export * from "./config.js";
 export * from "./context/index.js";
-export * from "./db/index.js";
-export * from "./db/schema/index.js";
+// The drizzle query operators (`./db/index.js`) and schema tables
+// (`./db/schema/index.js`) are deliberately NOT re-exported here. Direct DB
+// writes are a specialized concern with a dedicated seam: operators +
+// introspection + purge on `@plumix/core/db` (`plumix/db`), tables on
+// `@plumix/core/schema` (`plumix/schema`). Surfacing them on the root barrel
+// too gave newcomers two ways to import the same thing with no signal about
+// which is canonical (#1766). The `traceDbQuery`/`traceDbBatch` helpers below
+// aren't part of that direct-write toolkit, so they stay on root.
 // Driver-agnostic query-span helpers — runtime adapters (D1, demo) wrap their
 // driver's execution path with these so every `ctx.db` query is traced.
 export { traceDbBatch, traceDbQuery } from "./db/trace.js";

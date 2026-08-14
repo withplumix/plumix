@@ -1,6 +1,7 @@
 import type { AppContext } from "plumix/plugin";
 import { eq } from "drizzle-orm";
-import { entries, jsonResponse } from "plumix/plugin";
+import { jsonResponse } from "plumix/plugin";
+import { entries } from "plumix/schema";
 import * as v from "valibot";
 
 import type { ResolvedCommentsConfig } from "../config.js";

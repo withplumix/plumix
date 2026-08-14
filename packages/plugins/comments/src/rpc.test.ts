@@ -1,4 +1,5 @@
-import type { RequestAuthenticator, User, UserRole } from "plumix/plugin";
+import type { RequestAuthenticator } from "plumix/plugin";
+import type { User, UserRole } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import {
   createAppContext,

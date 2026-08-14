@@ -1,12 +1,7 @@
 import type { AuthenticatedAppContext } from "plumix/plugin";
-import {
-  and,
-  authenticated,
-  base,
-  entries,
-  eq,
-  withBasePath,
-} from "plumix/plugin";
+import { and, eq } from "plumix/db";
+import { authenticated, base, withBasePath } from "plumix/plugin";
+import { entries } from "plumix/schema";
 import * as v from "valibot";
 
 import {

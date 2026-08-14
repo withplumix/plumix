@@ -1,9 +1,5 @@
-import type {
-  PluginRegistry,
-  RequestAuthenticator,
-  User,
-  UserRole,
-} from "plumix/plugin";
+import type { PluginRegistry, RequestAuthenticator } from "plumix/plugin";
+import type { User, UserRole } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 import {
@@ -12,9 +8,8 @@ import {
   HookRegistry,
   installPlugins,
   registerCoreLookupAdapters,
-  settings,
-  terms,
 } from "plumix/plugin";
+import { settings, terms } from "plumix/schema";
 import {
   adminUser,
   createTestDb,

@@ -17,9 +17,8 @@ import type {
   AuthenticatedUser,
   HookOptions,
   PluginSetupContext,
-  Term,
-  User,
 } from "plumix/plugin";
+import type { Term, User } from "plumix/schema";
 import { HookRegistry, requestStore } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 

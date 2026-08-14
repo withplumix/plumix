@@ -1,5 +1,6 @@
 import type { AppContext } from "plumix/plugin";
-import { and, entries, eq } from "plumix/plugin";
+import { and, eq } from "plumix/db";
+import { entries } from "plumix/schema";
 
 import { parseMediaMeta } from "./meta.js";
 
