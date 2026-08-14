@@ -128,36 +128,6 @@ describe("userLookupAdapter", () => {
     expect(row?.subtitle).toContain("admin");
   });
 
-  test("resolve() returns null for missing / orphaned ids", async () => {
-    const h = await createRpcHarness();
-    expect(await userLookupAdapter.resolve(h.context, "999999")).toBeNull();
-    expect(await userLookupAdapter.resolve(h.context, "abc")).toBeNull();
-  });
-
-  test("resolve() returns the lookup result for valid in-scope ids", async () => {
-    const h = await createRpcHarness();
-    const u = await adminUser
-      .transient({ db: h.context.db })
-      .create({ name: "Eva" });
-    const result = await userLookupAdapter.resolve(h.context, String(u.id), {
-      roles: ["admin"],
-    });
-    expect(result?.id).toBe(String(u.id));
-    expect(result?.label).toBe("Eva");
-  });
-
-  test("resolve() returns null when the id exists but fails scope", async () => {
-    const h = await createRpcHarness();
-    const u = await userFactory
-      .transient({ db: h.context.db })
-      .create({ role: "author" });
-    expect(
-      await userLookupAdapter.resolve(h.context, String(u.id), {
-        roles: ["admin"],
-      }),
-    ).toBeNull();
-  });
-
   test("hydrate() resolves ids into public-safe user summaries", async () => {
     const h = await createRpcHarness();
     const u = await userFactory

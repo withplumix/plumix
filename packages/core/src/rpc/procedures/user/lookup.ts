@@ -7,7 +7,7 @@ import type {
   LookupResult,
   UserReferenceSummary,
 } from "../../../plugin/lookup.js";
-import { and, eq, inArray, isNull, like, or, sql } from "../../../db/index.js";
+import { and, inArray, isNull, like, or, sql } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 
 const DEFAULT_LIST_LIMIT = 20;
@@ -60,17 +60,6 @@ export const userLookupAdapter = {
     return rows.map(toLookupResult);
   },
 
-  async resolve(ctx, id, scope?) {
-    const numericId = parseUserId(id);
-    if (numericId === null) return null;
-    const [row] = await ctx.db
-      .select(USER_ROW_COLUMNS)
-      .from(users)
-      .where(buildUserWhere(numericId, scope))
-      .limit(1);
-    return row ? toLookupResult(row) : null;
-  },
-
   async hydrate(ctx, options) {
     const numericIds = options.ids
       .map((id) => parseUserId(id))
@@ -104,10 +93,6 @@ function parseUserId(id: string): number | null {
   if (!/^[1-9]\d*$/.test(id)) return null;
   const parsed = Number(id);
   return Number.isSafeInteger(parsed) ? parsed : null;
-}
-
-function buildUserWhere(numericId: number, scope: UserFieldScope | undefined) {
-  return and(eq(users.id, numericId), ...scopeConditions(scope));
 }
 
 function scopeConditions(scope: UserFieldScope | undefined): SQL[] {

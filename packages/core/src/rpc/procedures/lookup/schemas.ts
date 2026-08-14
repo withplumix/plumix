@@ -45,12 +45,6 @@ export const lookupListInputSchema = v.object({
   ids: v.optional(lookupListIdsSchema),
 });
 
-export const lookupResolveInputSchema = v.object({
-  kind: kindSchema,
-  id: v.pipe(v.string(), v.maxLength(ID_MAX_LENGTH)),
-  scope: scopeSchema,
-});
-
 interface LookupErrors {
   NOT_FOUND: (args: { data: { kind: string; id: string } }) => Error;
   FORBIDDEN: (args: { data: { capability: string } }) => Error;
@@ -66,8 +60,8 @@ export function requireAdapter(
     throw errors.NOT_FOUND({ data: { kind: "lookup_adapter", id: kind } });
   }
   // Picker-facing surface: the adapter's owner declared which
-  // capability gates list/resolve. Without it, any authenticated
-  // user could enumerate the adapter's universe (emails for `user`,
+  // capability gates lookup. Without it, any authenticated user
+  // could enumerate the adapter's universe (emails for `user`,
   // titles for future `entry`, etc.) at a lower privilege than the
   // matching list RPC enforces. Adapters that opt out (`null`) are
   // public — make that an explicit decision per kind.
