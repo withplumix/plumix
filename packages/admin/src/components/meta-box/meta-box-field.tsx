@@ -35,6 +35,7 @@ import { Slider } from "@plumix/admin-ui/slider";
 import { Switch } from "@plumix/admin-ui/switch";
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
+import { CANONICAL_INPUT_TYPES } from "@plumix/core/fields";
 import { formatTemporalValue } from "@plumix/core/manifest";
 
 import type { LookupItem } from "./reference-picker.js";
@@ -758,7 +759,7 @@ function renderTextLikeField(ctx: NativeInputContext): ReactNode {
     // dev tools. A future `customRenderers` seam will hook in here
     // before the fallback.
     console.warn(
-      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (text/textarea/number/email/url/password/date/datetime/time/color/range/json/richtext/repeater/user/userList/entry/entryList/term/termList/select/toggle/link).`,
+      `[plumix] unknown meta-box field inputType "${field.inputType}" — falling back to text input. Register a custom renderer or use a built-in type (${CANONICAL_INPUT_TYPES.join("/")}).`,
     );
   }
 

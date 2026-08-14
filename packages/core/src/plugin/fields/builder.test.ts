@@ -1,10 +1,18 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { StringInputType } from "./index.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { definePlugin } from "../define.js";
 import { buildManifest } from "../manifest.js";
 import { installPlugins } from "../register.js";
-import { email, password, text, textarea, url } from "./index.js";
+import {
+  email,
+  password,
+  STRING_INPUT_TYPES,
+  text,
+  textarea,
+  url,
+} from "./index.js";
 
 describe("string field builder chassis", () => {
   test("text(key) compiles to a text field definition with a derived label", () => {
@@ -92,6 +100,32 @@ describe("string field builder chassis", () => {
       maxLength: 32,
       required: true,
     });
+  });
+
+  test("every string builder's inputType is a member of the roster's string family", () => {
+    const built = [
+      text("a").build(),
+      textarea("b").build(),
+      email("c").build(),
+      url("d").build(),
+      password("e").build(),
+    ];
+    for (const field of built) {
+      expect(STRING_INPUT_TYPES).toContain(field.inputType);
+    }
+    // The family array and the constructors cover exactly the same names —
+    // no builder without an array entry, no array entry without a builder.
+    expect(new Set(built.map((f) => f.inputType))).toEqual(
+      new Set(STRING_INPUT_TYPES),
+    );
+  });
+
+  test("StringInputType derives from the roster array, not a hand-written union", () => {
+    // Value list and type share one source: the type is exactly the array's
+    // element type. A drift between them fails to compile here.
+    expectTypeOf<StringInputType>().toEqualTypeOf<
+      (typeof STRING_INPUT_TYPES)[number]
+    >();
   });
 
   test("chains are immutable — a shared base forks without aliasing", () => {

@@ -12,6 +12,16 @@
 //
 // Re-exported as a public surface from `plumix/fields`.
 
+export {
+  CANONICAL_INPUT_TYPES,
+  CHOICE_INPUT_TYPES,
+  LEGACY_INPUT_TYPES,
+  REFERENCE_INPUT_TYPES,
+  SCALAR_INPUT_TYPES,
+  STRING_INPUT_TYPES,
+  STRUCTURAL_INPUT_TYPES,
+  TEMPORAL_INPUT_TYPES,
+} from "./roster.js";
 export { isFieldVisible } from "./condition.js";
 export type {
   MetaFieldCondition,

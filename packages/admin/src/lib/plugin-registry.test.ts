@@ -66,6 +66,23 @@ describe("plugin field-type registry", () => {
     expect(() => registerPluginFieldType("userList", Stub)).toThrow(/reserved/);
   });
 
+  test("reserves the structural built-ins group + link (closing the drift where they were shadowable)", () => {
+    // `group` and `link` are host-owned built-ins with builders + narrowed
+    // union variants, but the hand-synced reserved set had omitted them, so
+    // a plugin could shadow the host control. Deriving the set from the
+    // roster closes that hole.
+    expect(() => registerPluginFieldType("group", Stub)).toThrow(/reserved/);
+    expect(() => registerPluginFieldType("link", Stub)).toThrow(/reserved/);
+  });
+
+  test("keeps the retired legacy trio reserved (rendered by back-compat renderers, not re-authorable)", () => {
+    expect(() => registerPluginFieldType("checkbox", Stub)).toThrow(/reserved/);
+    expect(() => registerPluginFieldType("radio", Stub)).toThrow(/reserved/);
+    expect(() => registerPluginFieldType("multiselect", Stub)).toThrow(
+      /reserved/,
+    );
+  });
+
   test("plugin-shipped reference types (media) are not reserved — duplicate detection is enough", () => {
     // `media` is plugin-shipped (`@plumix/plugin-media`); reserving it
     // would block the very plugin that owns it. Two media plugins
@@ -75,6 +92,10 @@ describe("plugin field-type registry", () => {
     expect(() => registerPluginFieldType("media", Stub)).toThrow(
       /already registered/,
     );
+    // `mediaList` is the same story — a plugin-owned reference kind, so the
+    // roster leaves it out of the reserved set.
+    registerPluginFieldType("mediaList", Stub);
+    expect(getPluginFieldType("mediaList")).toBe(Stub);
   });
 });
 
