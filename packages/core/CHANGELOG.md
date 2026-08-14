@@ -1,5 +1,150 @@
 # @plumix/core
 
+## 0.13.0
+
+### Minor Changes
+
+- [#1749](https://github.com/withplumix/plumix/pull/1749) [`f3971a8`](https://github.com/withplumix/plumix/commit/f3971a8ec726a12ab7aa2e0c2897d48f3d5c4889) Thanks [@nasyrov](https://github.com/nasyrov)! - Add access policies and a hard gate for theme-facing routes.
+
+  Declare who may see a route or entry type as a resolver over the current
+  visitor that returns a discrete outcome — a segment plus a gate decision. The
+  framework enforces it: an anonymous visitor to an authenticated-only page is
+  redirected to sign in (and returned afterwards), and an under-privileged visitor
+  to a role-gated page is denied.
+
+  ```ts
+  import { challenge, definePolicy, grant, redirectToLogin } from "plumix";
+
+  const membersOnly = definePolicy({
+    segments: ["members"],
+    resolve: (ctx) =>
+      !ctx.user
+        ? redirectToLogin()
+        : !hasActiveSub(ctx.user)
+          ? challenge("subscribe")
+          : grant("members"),
+  });
+  ```
+
+  Attach a policy at the entry-type level (`access.default`, gating a type's
+  single and archive routes) or on a custom archive; the built-in
+  `anonymousPolicy` / `authenticatedPolicy` / `rolePolicy` cover the common cases.
+  The decision logic is unconstrained (role, a `meta` flag, an external check),
+  but the return shape is closed, so the gate stays sound. `auth({ loginPath })`
+  points sign-in at a theme-owned page.
+
+  Un-policied routes are unchanged. A policied page renders live in this release;
+  keying the edge cache on the segment is a follow-up.
+
+- [#1756](https://github.com/withplumix/plumix/pull/1756) [`6d6db5c`](https://github.com/withplumix/plumix/commit/6d6db5c6a2defabfc0737f570f4d30a40c7ee67d) Thanks [@nasyrov](https://github.com/nasyrov)! - Derive the built-in field-type vocabulary from one runtime roster.
+
+  The set of built-in meta-box `inputType` names now has a single source — a
+  per-family roster (`STRING_INPUT_TYPES`, `TEMPORAL_INPUT_TYPES`,
+  `SCALAR_INPUT_TYPES`, `REFERENCE_INPUT_TYPES`, `CHOICE_INPUT_TYPES`,
+  `STRUCTURAL_INPUT_TYPES`, `LEGACY_INPUT_TYPES`, and the derived
+  `CANONICAL_INPUT_TYPES`) exported from `@plumix/core/fields`. The string and
+  temporal input-type unions derive from these arrays, and a compile-time
+  exhaustiveness guard — enabled by splitting `MetaBoxField` into the newly
+  exported `CanonicalMetaBoxField` and the legacy catch-all — binds the roster
+  to the union, so the two can no longer drift. The admin's reserved-name set
+  and its unknown-type warning now derive from the roster instead of hand-synced
+  copies.
+
+  The only consumer-visible behaviour change: the built-in `group` and `link`
+  field types are now **reserved**, so a plugin can no longer register a custom
+  field type under those names and shadow the host control (they previously
+  slipped through the hand-maintained set). `media` / `mediaList` remain
+  unreserved — they are plugin-contributed reference kinds whose own admin
+  renderers register through the same seam.
+
+- [#1744](https://github.com/withplumix/plumix/pull/1744) [`4f5730d`](https://github.com/withplumix/plumix/commit/4f5730dcaecb587396c41f7c10229f3689de52c8) Thanks [@nasyrov](https://github.com/nasyrov)! - Add an opt-in `auth({ selfSignup: { defaultRole } })` switch that opens public
+  registration.
+
+  Self-service signup was gated to the `allowed_domains` allowlist, so "anyone can
+  register as a subscriber" meant re-implementing the flow from primitives. With
+  `selfSignup` set, a first-time verified email through the built-in magic-link or
+  OAuth flows provisions a new user at `defaultRole` regardless of
+  `allowed_domains`:
+
+  ```ts
+  auth({ passkey, magicLink, selfSignup: { defaultRole: "subscriber" } });
+  ```
+
+  Omit it (the default) and signup stays domain-gated exactly as before. The
+  bootstrap rail is unchanged — the first admin still enrols via passkey (or
+  `bootstrapVia: "first-method-wins"`), and self-signup never mints the first user
+  on an empty deploy.
+
+  Because enabling this turns the magic-link request endpoint into a public signup
+  surface, issuance is now rate-limited: at most five magic-link tokens per email
+  within a 15-minute window. Over the cap the request is a silent no-op, so the
+  endpoint stays timing- and shape-uniform for registered vs unregistered emails
+  and can't be turned into an email-bomb amplifier or an enumeration probe.
+
+- [#1755](https://github.com/withplumix/plumix/pull/1755) [`dcda2fa`](https://github.com/withplumix/plumix/commit/dcda2fa124117175f5a56f587c22e95d6f14d89e) Thanks [@nasyrov](https://github.com/nasyrov)! - Let editors set per-entry visibility, choosing from the policies a type declares.
+
+  An entry type can offer a closed set of selectable access policies beside its
+  default, and an editor assigns one to an individual entry from the document
+  settings — no code change per entry. Precedence is per-entry › entry-type ›
+  global, so a single article can be members-only even when its type is public.
+
+  ```ts
+  ctx.registerEntryType("article", {
+    access: {
+      default: anonymousPolicy, // public by default…
+      policies: [
+        // …but an editor may lock an individual entry to members.
+        { key: "members", label: "Members only", policy: authenticatedPolicy },
+      ],
+    },
+  });
+  ```
+
+  The choice persists on the entry and drives both the hard gate and the segment
+  the edge cache keys on. An editor can only pick a policy the developer declared
+  (`entry.update` validates the key server-side), and a type that declares no
+  selectable policies pays no extra lookup — the hot path is unchanged. A
+  would-be-404 falls back to the type default, so gating never leaks which slugs
+  exist, and a stale selection (a policy the developer removed) falls back to the
+  default rather than granting less.
+
+  This completes the theme-facing access-control model: policies now attach at the
+  global, entry-type, and per-entry levels.
+
+- [#1750](https://github.com/withplumix/plumix/pull/1750) [`202a1fc`](https://github.com/withplumix/plumix/commit/202a1fc788e5386c08ba6c9d69bbba49c3503fc6) Thanks [@nasyrov](https://github.com/nasyrov)! - Key the edge cache on the access-policy segment, so signed-in visitors share
+  cached renders instead of each bypassing the cache.
+
+  A policied route resolves to a discrete segment (`anonymous`, `authenticated`,
+  `role:<role>`, or a developer's `entitlement:<label>`); that segment now
+  participates in the cache key. Two visitors in the same non-private segment whose
+  render is byte-identical share one edge entry — the "subscribers-only" page is
+  cached once per segment at its real URL instead of rendering live for every
+  logged-in request. The cache-tag vocabulary (`t:` / `e:`) is unchanged, so one
+  publish of an entry still purges every segment variant at once.
+
+  ```ts
+  // Shared-cacheable for all logged-in visitors — the explicit opt-in.
+  ctx.registerEntryType("article", {
+    access: { default: authenticatedPolicy },
+  });
+
+  // Gated but never shared-cached — the escape hatch for a personalized page.
+  definePolicy({
+    resolve: (c) => (c.user ? grant("private") : redirectToLogin()),
+  });
+  ```
+
+  A new built-in `private` segment is the escape hatch: its render is per-visitor
+  and never read from or written to the shared cache. Un-policied pages are
+  unchanged — an anonymous request caches under the plain URL exactly as before,
+  and a request carrying a session (or an `Authorization`/`?preview=` grant) stays
+  private. Nothing is inferred; cache behavior follows only the declared policy.
+
+### Patch Changes
+
+- Updated dependencies [[`c01d2a3`](https://github.com/withplumix/plumix/commit/c01d2a3f843cdf743ba2f4cc5812c245cb9d918d)]:
+  - @plumix/blocks@0.13.0
+
 ## 0.12.0
 
 ### Minor Changes
