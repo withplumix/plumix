@@ -129,27 +129,6 @@ export const mediaLookupAdapter = {
     return results;
   },
 
-  async resolve(ctx, id, scope?) {
-    const numericId = parseMediaId(id);
-    if (numericId === null) return null;
-    const conditions: SQL[] = [
-      eq(entries.id, numericId),
-      eq(entries.type, MEDIA_ENTRY_TYPE),
-      eq(entries.status, "published"),
-    ];
-    const acceptCondition = buildAcceptCondition(scope?.accept);
-    if (acceptCondition) conditions.push(acceptCondition);
-    const [row] = await ctx.db
-      .select(MEDIA_ROW_COLUMNS)
-      .from(entries)
-      .where(and(...conditions))
-      .limit(1);
-    if (!row) return null;
-    const meta = parseMediaMeta(row.meta);
-    if (!meta) return null;
-    return toLookupResult(row.id, row.title, meta.mime);
-  },
-
   async hydrate(ctx, options) {
     const numericIds = options.ids
       .map((id) => parseMediaId(id))

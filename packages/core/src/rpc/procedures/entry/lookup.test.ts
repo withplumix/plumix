@@ -128,9 +128,6 @@ describe("entryLookupAdapter", () => {
     await expect(
       entryLookupAdapter.list(h.context, { ids: ["1"] }),
     ).rejects.toThrow(/entryTypes is required/);
-    await expect(entryLookupAdapter.resolve(h.context, "1")).rejects.toThrow(
-      /entryTypes is required/,
-    );
   });
 
   test("rejects calls with an empty entryTypes array (same disclosure shape)", async () => {
@@ -188,17 +185,10 @@ describe("entryLookupAdapter", () => {
     expect(row?.subtitle).toContain("published");
   });
 
-  test("resolve() returns null for missing / orphaned ids", async () => {
-    const h = await createRpcHarness();
-    expect(
-      await entryLookupAdapter.resolve(h.context, "999999", POST),
-    ).toBeNull();
-    expect(await entryLookupAdapter.resolve(h.context, "abc", POST)).toBeNull();
-  });
-
-  test("resolve() returns the lookup result for valid in-scope ids", async () => {
+  test("list({ ids }) returns full lookup result (targetType + href) for a valid in-scope id", async () => {
     // A registered public entry type gives the row a permalink, so
-    // this test pins the `href` contract too.
+    // this pins the `href` contract too. The single-reference picker
+    // resolves its selected id through this same `list({ ids })` path.
     const registry: MutablePluginRegistry = createPluginRegistry();
     registry.entryTypes.set("post", {
       name: "post",
@@ -210,11 +200,11 @@ describe("entryLookupAdapter", () => {
     const e = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, title: "Specific" });
-    const result = await entryLookupAdapter.resolve(
-      h.context,
-      String(e.id),
-      POST,
-    );
+    const [result] = await entryLookupAdapter.list(h.context, {
+      ids: [String(e.id)],
+      scope: POST,
+      limit: 1,
+    });
     expect(result?.id).toBe(String(e.id));
     expect(result?.label).toBe("Specific");
     // Wire-contract pin: every entry adapter row carries `targetType`
@@ -225,16 +215,6 @@ describe("entryLookupAdapter", () => {
     // `href` is the public permalink — menu resolution renders links
     // from it at read time.
     expect(result?.href).toBe(`/post/${e.slug}`);
-  });
-
-  test("resolve() returns null when the id exists but fails scope", async () => {
-    const h = await createRpcHarness({ authAs: "admin" });
-    const e = await entryFactory
-      .transient({ db: h.context.db })
-      .create({ authorId: h.user.id, type: "post" });
-    expect(
-      await entryLookupAdapter.resolve(h.context, String(e.id), PAGE),
-    ).toBeNull();
   });
 
   test("hydrate() resolves ids into entry summaries with permalinks", async () => {
@@ -348,16 +328,16 @@ describe("entryLookupAdapter", () => {
     expect(rows[0]?.title).toBeNull();
   });
 
-  test("returns null label when title is empty so the admin can localize", async () => {
+  test("list({ ids }) returns a null label when title is empty so the admin can localize", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const e = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, title: "   " });
-    const result = await entryLookupAdapter.resolve(
-      h.context,
-      String(e.id),
-      POST,
-    );
+    const [result] = await entryLookupAdapter.list(h.context, {
+      ids: [String(e.id)],
+      scope: POST,
+      limit: 1,
+    });
     expect(result?.label).toBeNull();
   });
 });
