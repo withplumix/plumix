@@ -4,12 +4,14 @@ import type { Mailer } from "../auth/mailer/types.js";
 import type {
   AssetsBinding,
   ConnectedCache,
+  ConnectedKv,
   ConnectedObjectStorage,
 } from "../runtime/slots.js";
 import { createTelemetryCollector } from "./collector.js";
 import {
   traceAssets,
   traceCache,
+  traceKv,
   traceMailer,
   traceStorage,
 } from "./traced-slots.js";
@@ -207,5 +209,46 @@ describe("traceMailer", () => {
     const [span] = telemetry.getSpans();
     expect(span?.status).toBe("error");
     expect(span?.error?.message).toBe("smtp down");
+  });
+});
+
+describe("traceKv", () => {
+  function stub(): ConnectedKv {
+    return {
+      get: () => Promise.resolve(null),
+      put: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      list: () => Promise.resolve({ keys: [], listComplete: true }),
+    };
+  }
+
+  test("get/put/delete ops get `kv: <op>` spans keyed by key", async () => {
+    const telemetry = createTelemetryCollector();
+    const kv = traceKv(stub(), () => telemetry);
+
+    await kv.get("session:1");
+    await kv.put("session:1", "v");
+    await kv.delete("session:1");
+
+    const spans = telemetry.getSpans();
+    expect(spans.map((s) => s.name)).toEqual([
+      "kv: get",
+      "kv: put",
+      "kv: delete",
+    ]);
+    expect(spans.every((s) => s.attributes["kv.key"] === "session:1")).toBe(
+      true,
+    );
+  });
+
+  test("list gets a `kv: list` span keyed by prefix", async () => {
+    const telemetry = createTelemetryCollector();
+    const kv = traceKv(stub(), () => telemetry);
+
+    await kv.list({ prefix: "session:" });
+
+    const [span] = telemetry.getSpans();
+    expect(span?.name).toBe("kv: list");
+    expect(span?.attributes["kv.prefix"]).toBe("session:");
   });
 });

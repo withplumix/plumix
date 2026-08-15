@@ -51,6 +51,8 @@ export type { PlumixDispatcher } from "./runtime/dispatcher.js";
 export type { EnvInput } from "./runtime/env-input.js";
 export { resolveEnvInput } from "./runtime/env-input.js";
 export { forbidden, jsonResponse, methodNotAllowed } from "./runtime/http.js";
+export { memoryKv } from "./runtime/memory-kv.js";
+export type { MemoryKvConfig } from "./runtime/memory-kv.js";
 export { memoryStorage } from "./runtime/memory-storage.js";
 export type { MemoryStorageConfig } from "./runtime/memory-storage.js";
 export { runScheduledTasks } from "./runtime/scheduled.js";
