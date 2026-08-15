@@ -2,7 +2,7 @@ import { eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
-import { hydrateUserMeta } from "./meta.js";
+import { resolveUserMeta } from "./meta.js";
 import { userGetInputSchema } from "./schemas.js";
 
 // Listing gates access to arbitrary user records; self-lookup is always
@@ -24,6 +24,6 @@ export const get = base
     if (!row) {
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
     }
-    const meta = await hydrateUserMeta(context, row.meta);
+    const meta = await resolveUserMeta(context, row.meta);
     return context.hooks.applyFilter("rpc:user.get:output", { ...row, meta });
   });

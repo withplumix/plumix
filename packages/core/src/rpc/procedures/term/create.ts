@@ -5,8 +5,8 @@ import { base } from "../../base.js";
 import { taxonomyCapability } from "./helpers.js";
 import {
   assertTermMetaCapabilities,
-  hydrateTermMeta,
   loadTermMeta,
+  resolveTermMeta,
   sanitizeMetaForRpc,
   validateTermMetaReferences,
   writeTermMeta,
@@ -96,7 +96,7 @@ export const create = base
       await writeTermMeta(context, created, metaPatch);
       meta = await loadTermMeta(context, created);
     } else {
-      meta = await hydrateTermMeta(context, created.taxonomy, created.meta);
+      meta = await resolveTermMeta(context, created.taxonomy, created.meta);
     }
 
     await context.hooks.doAction("term:created", created);

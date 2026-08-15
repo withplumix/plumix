@@ -3,7 +3,7 @@ import { getAutosave } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryCapability } from "./lifecycle.js";
-import { hydrateEntryMeta } from "./meta.js";
+import { resolveEntryMeta } from "./meta.js";
 import { toRpcEntryReadError } from "./read-errors.js";
 import { entryGetInputSchema } from "./schemas.js";
 
@@ -44,13 +44,14 @@ export const get = base
       // Overlay only the drafted fields. `title` (and `slug` / `parentId`) are
       // live-only fields — the editor writes them straight to the live row and
       // publish never promotes them — so they stay on `live`, keeping this
-      // hydration consistent with the public `?preview=` render and publish.
+      // reference resolution consistent with the public `?preview=` render
+      // and publish.
       const overlaid = autosave
         ? {
             ...live,
             content: autosave.content,
             excerpt: autosave.excerpt,
-            meta: await hydrateEntryMeta(context, live, autosave.meta),
+            meta: await resolveEntryMeta(context, live, autosave.meta),
           }
         : live;
       return await context.hooks.applyFilter("rpc:entry.get:output", {

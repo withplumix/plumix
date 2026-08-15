@@ -1516,7 +1516,7 @@ describe("dispatcher — embedded reference cache tags (#1508)", () => {
   }
 
   // A blog whose posts carry a single `featured` entry-reference meta
-  // field — hydrating it during render is what feeds the accumulator.
+  // field — resolving it during render is what feeds the accumulator.
   const featuringBlog = definePlugin("test-featuring-blog", (ctx) => {
     ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     ctx.registerEntryMetaBox("featuring", {

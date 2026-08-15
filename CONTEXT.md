@@ -117,7 +117,7 @@ The rich-text document persisted on an entry, allow-listed by the renderer on th
 A client-interactive component embedded in otherwise-static server-rendered HTML. A page with no island ships zero JavaScript.
 
 **Hydration**:
-Attaching client React to an island's server markup. See the disambiguation note — this is distinct from _reference hydration_ (read-time data enrichment).
+Attaching client React to an island's server markup.
 
 **Hydration strategy**:
 When an island hydrates: `load`, `idle`, `visible`, `interaction`, or `only`.
@@ -269,9 +269,6 @@ them distinct by **always qualifying** them; bare use is a smell.
   admin), **document manifest** (`<head>` descriptor), **asset manifest** (Vite
   chunk map), **island runtime manifest** (bootstrap). Never write bare
   "manifest".
-- **hydration** — **island hydration** (attaching client React) vs **reference
-  hydration** (read-time resolution of referenced entities/meta into rows). Say
-  which.
 - **capability** — the **RBAC** sense (a permission string) vs the loose
   entitlement-label sense. Reserve "capability" for RBAC; use **entitlement**
   for the membership label.

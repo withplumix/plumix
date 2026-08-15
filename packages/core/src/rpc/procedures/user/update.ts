@@ -15,8 +15,8 @@ import { stripUndefined } from "../entry/helpers.js";
 import { otherActiveAdminExists } from "./helpers.js";
 import {
   assertUserMetaCapabilities,
-  hydrateUserMeta,
   loadUserMeta,
+  resolveUserMeta,
   sanitizeMetaForRpc,
   validateUserMetaReferences,
   writeUserMeta,
@@ -151,7 +151,7 @@ export const update = base
     // Nothing to write anywhere? Return the existing row with its
     // decoded meta for a consistent response shape.
     if (Object.keys(patch).length === 0 && isEmptyMetaPatch(metaPatch)) {
-      const meta = await hydrateUserMeta(context, existing.meta);
+      const meta = await resolveUserMeta(context, existing.meta);
       return context.hooks.applyFilter("rpc:user.update:output", {
         ...existing,
         meta,
@@ -192,7 +192,7 @@ export const update = base
       await writeUserMeta(context, updated, metaPatch);
       meta = await loadUserMeta(context, updated);
     } else {
-      meta = await hydrateUserMeta(context, updated.meta);
+      meta = await resolveUserMeta(context, updated.meta);
     }
 
     // Any role change → existing sessions carry a cached role via AppContext

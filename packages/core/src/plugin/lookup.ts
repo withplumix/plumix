@@ -121,7 +121,7 @@ export interface LookupListOptions<TScope = unknown> {
  * One round-trip per call regardless of selection size:
  *  - `list` covers search/browse (no `ids`, optional `query`) and
  *    resolve-by-id batch (`ids` set, `query` ignored). The meta
- *    pipeline (`validateMetaReferences` + `hydrateMetaBags`)
+ *    pipeline (`validateMetaReferences` + `resolveMetaBags`)
  *    groups all reference fields by `(kind, scope)` and issues one
  *    `list({ ids })` per group, eliminating per-field N+1 on both
  *    reads and writes. Both admin pickers batch the same way for

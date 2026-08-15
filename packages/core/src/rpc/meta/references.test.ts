@@ -16,10 +16,10 @@ import {
 import { createRpcHarness } from "../../test/rpc.js";
 import { registerCoreLookupAdapters } from "../procedures/lookup-adapters.js";
 import {
-  hydrateMetaBags,
-  hydrateMetaReferences,
-  hydrateReferences,
   MetaSanitizationError,
+  resolveMetaBags,
+  resolveMetaReferences,
+  resolveReferences,
   sanitizeMetaInput,
   validateMetaReferences,
 } from "./core.js";
@@ -130,12 +130,12 @@ describe("validateMetaReferences", () => {
   });
 });
 
-describe("hydrateMetaReferences", () => {
-  test("hydrates an in-scope reference into the adapter's summary shape", async () => {
+describe("resolveMetaReferences", () => {
+  test("resolves an in-scope reference into the adapter's summary shape", async () => {
     const { findField, registry } = registryWithUserRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const target = await adminUser.transient({ db: h.context.db }).create();
-    const hydrated = await hydrateMetaReferences(h.context, findField, {
+    const hydrated = await resolveMetaReferences(h.context, findField, {
       owner: String(target.id),
     });
     expect(hydrated.owner).toEqual({
@@ -149,25 +149,25 @@ describe("hydrateMetaReferences", () => {
   test("nulls out orphan reference values whose target is gone", async () => {
     const { findField, registry } = registryWithUserRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const hydrated = await hydrateMetaReferences(h.context, findField, {
+    const hydrated = await resolveMetaReferences(h.context, findField, {
       owner: "999999",
     });
     expect(hydrated.owner).toBeNull();
   });
 
-  test('.returns("id") fields keep the bare stored id — no hydration, no orphan-strip', async () => {
+  test('.returns("id") fields keep the bare stored id — no resolution, no orphan-strip', async () => {
     // The opt-out skips the read-time join entirely: a live id passes
     // through unresolved, and even a dead id survives (no orphan check).
     const { findField, registry } = registryWithUserRef({ returns: "id" });
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const target = await adminUser.transient({ db: h.context.db }).create();
     expect(
-      await hydrateMetaReferences(h.context, findField, {
+      await resolveMetaReferences(h.context, findField, {
         owner: String(target.id),
       }),
     ).toEqual({ owner: String(target.id) });
     expect(
-      await hydrateMetaReferences(h.context, findField, { owner: "999999" }),
+      await resolveMetaReferences(h.context, findField, { owner: "999999" }),
     ).toEqual({ owner: "999999" });
   });
 
@@ -179,7 +179,7 @@ describe("hydrateMetaReferences", () => {
     const author = await userFactory
       .transient({ db: h.context.db })
       .create({ role: "author" });
-    const hydrated = await hydrateMetaReferences(h.context, findField, {
+    const hydrated = await resolveMetaReferences(h.context, findField, {
       owner: String(author.id),
     });
     expect(hydrated.owner).toBeNull();
@@ -189,7 +189,7 @@ describe("hydrateMetaReferences", () => {
     const registry = createPluginRegistry();
     registerCoreLookupAdapters(registry);
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const hydrated = await hydrateMetaReferences(h.context, () => undefined, {
+    const hydrated = await resolveMetaReferences(h.context, () => undefined, {
       title: "Hello",
       count: 7,
     });
@@ -223,15 +223,15 @@ describe("hydrateMetaReferences", () => {
     const findField = (key: string) => (key === "thing" ? field : undefined);
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     expect(
-      await hydrateMetaReferences(h.context, findField, { thing: "1" }),
+      await resolveMetaReferences(h.context, findField, { thing: "1" }),
     ).toEqual({ thing: "1" });
     expect(
-      await hydrateMetaReferences(h.context, findField, { thing: "2" }),
+      await resolveMetaReferences(h.context, findField, { thing: "2" }),
     ).toEqual({ thing: null });
   });
 });
 
-describe("hydrateMetaBags (response-level batching)", () => {
+describe("resolveMetaBags (response-level batching)", () => {
   test("aggregates ids across all bags into one hydrate call per (kind, scope)", async () => {
     const { findField, registry } = registryWithUserRef();
     const userEntry = registry.lookupAdapters.get("user");
@@ -253,7 +253,7 @@ describe("hydrateMetaBags (response-level batching)", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const a = await adminUser.transient({ db: h.context.db }).create();
     const b = await adminUser.transient({ db: h.context.db }).create();
-    const bags = await hydrateMetaBags(h.context, [
+    const bags = await resolveMetaBags(h.context, [
       { findField, decoded: { owner: String(a.id) } },
       { findField, decoded: { owner: String(b.id) } },
       { findField, decoded: { owner: "999999" } },
@@ -302,7 +302,7 @@ describe("hydrateMetaBags (response-level batching)", () => {
         ),
       },
     }));
-    const hydrated = await hydrateMetaBags(h.context, bags);
+    const hydrated = await resolveMetaBags(h.context, bags);
     expect(seenBatches).toEqual([100, 100, 70]);
     expect(
       hydrated.every((bag) => (bag.things as unknown[]).length === perBag),
@@ -490,13 +490,13 @@ describe("validateMetaReferences (multi)", () => {
   });
 });
 
-describe("hydrateMetaReferences (multi)", () => {
-  test("hydrates the array in stored order, dropping missing IDs", async () => {
+describe("resolveMetaReferences (multi)", () => {
+  test("resolves the array in stored order, dropping missing IDs", async () => {
     const { registry, findField } = registryWithUserListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const a = await adminUser.transient({ db: h.context.db }).create();
     const b = await adminUser.transient({ db: h.context.db }).create();
-    const hydrated = await hydrateMetaReferences(h.context, findField, {
+    const hydrated = await resolveMetaReferences(h.context, findField, {
       owners: [String(a.id), "999999", String(b.id)],
     });
     const owners = hydrated.owners as readonly { id: string }[];
@@ -506,7 +506,7 @@ describe("hydrateMetaReferences (multi)", () => {
   test("returns an empty array when every entry is orphaned", async () => {
     const { registry, findField } = registryWithUserListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const hydrated = await hydrateMetaReferences(h.context, findField, {
+    const hydrated = await resolveMetaReferences(h.context, findField, {
       owners: ["999999", "888888"],
     });
     expect(hydrated.owners).toEqual([]);
@@ -515,7 +515,7 @@ describe("hydrateMetaReferences (multi)", () => {
   test("leaves non-array storage untouched (read forgiveness)", async () => {
     const { registry, findField } = registryWithUserListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const hydrated = await hydrateMetaReferences(h.context, findField, {
+    const hydrated = await resolveMetaReferences(h.context, findField, {
       owners: "not-an-array",
     });
     expect(hydrated.owners).toBe("not-an-array");
@@ -662,7 +662,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
-  test("entryList: hydrateMetaReferences drops out-of-type entries from the array", async () => {
+  test("entryList: resolveMetaReferences drops out-of-type entries from the array", async () => {
     const { registry, findField } = registryWithEntryListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     // Published targets — the anonymous-context visibility clamp is
@@ -673,7 +673,7 @@ describe("entryList / termList multi-reference pipeline", () => {
     const page = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "page", status: "published" });
-    const hydrated = await hydrateMetaReferences(h.context, findField, {
+    const hydrated = await resolveMetaReferences(h.context, findField, {
       related: [String(post.id), String(page.id), "999999"],
     });
     const related = hydrated.related as readonly { id: string }[];
@@ -708,12 +708,12 @@ describe("entryList / termList multi-reference pipeline", () => {
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
-  test("termList: hydrateMetaReferences drops out-of-taxonomy term ids", async () => {
+  test("termList: resolveMetaReferences drops out-of-taxonomy term ids", async () => {
     const { registry, findField } = registryWithTermListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const cat = await categoryTerm.transient({ db: h.context.db }).create();
     const tag = await tagTerm.transient({ db: h.context.db }).create();
-    const hydrated = await hydrateMetaReferences(h.context, findField, {
+    const hydrated = await resolveMetaReferences(h.context, findField, {
       tags: [String(cat.id), String(tag.id)],
     });
     const tags = hydrated.tags as readonly { id: string }[];
@@ -1205,8 +1205,8 @@ describe("validateMetaReferences (repeater subFields)", () => {
   });
 });
 
-describe("hydrateMetaReferences (repeater subFields)", () => {
-  test("hydrates nested refs and nulls out a nested orphan on read", async () => {
+describe("resolveMetaReferences (repeater subFields)", () => {
+  test("resolves nested refs and nulls out a nested orphan on read", async () => {
     // A concurrent delete between save and read can leave a dead id in
     // the meta bag. Top-level refs already null-out on read; nested
     // refs need the same treatment so a stale row doesn't leak through
@@ -1239,7 +1239,7 @@ describe("hydrateMetaReferences (repeater subFields)", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const live = await userFactory.transient({ db: h.context.db }).create();
 
-    const hydrated = await hydrateMetaReferences(h.context, findField, {
+    const hydrated = await resolveMetaReferences(h.context, findField, {
       rows: [{ owner: String(live.id) }, { owner: "999999" }],
     });
 
@@ -1252,7 +1252,7 @@ describe("hydrateMetaReferences (repeater subFields)", () => {
 
 describe("references nested in groups + deep repeaters", () => {
   // A `user` reference living inside a group, and inside a repeater row
-  // nested in another repeater — both must validate on write and hydrate
+  // nested in another repeater — both must validate on write and resolve
   // on read, so the declared nested type is honoured at runtime.
   const ownerRef: MetaBoxField = {
     key: "owner",
@@ -1316,12 +1316,12 @@ describe("references nested in groups + deep repeaters", () => {
     ).rejects.toBeInstanceOf(MetaSanitizationError);
   });
 
-  test("hydrates a ref inside a group", async () => {
+  test("resolves a ref inside a group", async () => {
     const { findField, registry } = registryWith(groupField);
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const live = await userFactory.transient({ db: h.context.db }).create();
 
-    const hydrated = await hydrateMetaReferences(h.context, findField, {
+    const hydrated = await resolveMetaReferences(h.context, findField, {
       meta: { owner: String(live.id) },
     });
     const meta = hydrated.meta as { owner: { id?: string } };
@@ -1329,12 +1329,12 @@ describe("references nested in groups + deep repeaters", () => {
     // The caller's decoded bag is untouched (copy-on-write).
   });
 
-  test("hydrates a ref two repeaters deep and nulls a nested orphan", async () => {
+  test("resolves a ref two repeaters deep and nulls a nested orphan", async () => {
     const { findField, registry } = registryWith(deepRepeater);
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const live = await userFactory.transient({ db: h.context.db }).create();
 
-    const hydrated = await hydrateMetaReferences(h.context, findField, {
+    const hydrated = await resolveMetaReferences(h.context, findField, {
       sections: [
         {
           rows: [{ owner: String(live.id) }, { owner: "999999" }],
@@ -1350,22 +1350,22 @@ describe("references nested in groups + deep repeaters", () => {
   });
 });
 
-describe("embedded cache tags (hydration tag accounting)", () => {
-  test("hydrating a single entry reference accumulates its entry tag", async () => {
+describe("embedded cache tags (resolution tag accounting)", () => {
+  test("resolving a single entry reference accumulates its entry tag", async () => {
     const { registry, findField } = registryWithEntryRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const target = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "post", status: "published" });
 
-    await hydrateMetaReferences(h.context, findField, {
+    await resolveMetaReferences(h.context, findField, {
       featured: String(target.id),
     });
 
     expect(embeddedPageTags(h.context)).toEqual([`e:${String(target.id)}`]);
   });
 
-  test("hydrating a multi entry reference accumulates a tag per live target", async () => {
+  test("resolving a multi entry reference accumulates a tag per live target", async () => {
     const { registry, findField } = registryWithEntryListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const a = await entryFactory
@@ -1375,7 +1375,7 @@ describe("embedded cache tags (hydration tag accounting)", () => {
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "post", status: "published" });
 
-    await hydrateMetaReferences(h.context, findField, {
+    await resolveMetaReferences(h.context, findField, {
       related: [String(a.id), String(b.id), "999999"],
     });
 
@@ -1390,19 +1390,19 @@ describe("embedded cache tags (hydration tag accounting)", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const owner = await adminUser.transient({ db: h.context.db }).create();
 
-    await hydrateMetaReferences(h.context, findField, {
+    await resolveMetaReferences(h.context, findField, {
       owner: String(owner.id),
     });
 
     expect(embeddedPageTags(h.context)).toEqual([]);
   });
 
-  test("a page that hydrates nothing accumulates no tags", async () => {
+  test("a page that resolves nothing accumulates no tags", async () => {
     const registry = createPluginRegistry();
     registerCoreLookupAdapters(registry);
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
 
-    await hydrateMetaReferences(h.context, () => undefined, {
+    await resolveMetaReferences(h.context, () => undefined, {
       title: "Plain",
       count: 3,
     });
@@ -1411,7 +1411,7 @@ describe("embedded cache tags (hydration tag accounting)", () => {
   });
 });
 
-describe("hydrateReferences (theme-facing id-only helper)", () => {
+describe("resolveReferences (theme-facing id-only helper)", () => {
   test("resolves an id set into hydrated payloads and accumulates their tags", async () => {
     const registry = createPluginRegistry();
     registerCoreLookupAdapters(registry);
@@ -1423,7 +1423,7 @@ describe("hydrateReferences (theme-facing id-only helper)", () => {
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "post", status: "published" });
 
-    const resolved = await hydrateReferences(
+    const resolved = await resolveReferences(
       h.context,
       "entry",
       [String(a.id), String(b.id), "999999"],
@@ -1467,7 +1467,7 @@ describe("hydrateReferences (theme-facing id-only helper)", () => {
       ),
     );
 
-    const resolved = await hydrateReferences(
+    const resolved = await resolveReferences(
       h.context,
       "entry",
       targets.map((t) => String(t.id)),
@@ -1482,7 +1482,7 @@ describe("hydrateReferences (theme-facing id-only helper)", () => {
     const registry = createPluginRegistry();
     registerCoreLookupAdapters(registry);
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    expect(await hydrateReferences(h.context, "nope" as never, ["1"])).toEqual(
+    expect(await resolveReferences(h.context, "nope" as never, ["1"])).toEqual(
       [],
     );
   });
@@ -1491,6 +1491,6 @@ describe("hydrateReferences (theme-facing id-only helper)", () => {
     const registry = createPluginRegistry();
     registerCoreLookupAdapters(registry);
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    expect(await hydrateReferences(h.context, "entry", [])).toEqual([]);
+    expect(await resolveReferences(h.context, "entry", [])).toEqual([]);
   });
 });

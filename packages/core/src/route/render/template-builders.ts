@@ -186,7 +186,7 @@ interface EntryTypeBuilder<K extends EntryTypeName> extends EntrySelector<K> {
   /**
    * Narrow by an entry-meta value, typed against the type's folded
    * stored meta shape (what actually sits in the meta JSON — decode-time
-   * defaults and hydration don't apply here).
+   * defaults and resolution don't apply here).
    */
   whereMeta<M extends keyof StoredMetaOf<K>>(
     key: M,

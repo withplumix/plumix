@@ -36,8 +36,8 @@ import {
   wouldCreateParentCycle,
 } from "./lifecycle.js";
 import {
-  hydrateEntryMeta,
   loadEntryMeta,
+  resolveEntryMeta,
   sanitizeAndValidateEntryMeta,
   sanitizePromotedEntryMeta,
   writeEntryMeta,
@@ -299,9 +299,9 @@ export const update = base
         },
       });
       await fireEntryAutosaveSaved(context, autosave, existing);
-      // Decode + hydrate against the LIVE row's type — the autosave
+      // Decode + resolve against the LIVE row's type — the autosave
       // row's own reserved type matches no registered meta fields.
-      const decoded = await hydrateEntryMeta(context, existing, autosave.meta);
+      const decoded = await resolveEntryMeta(context, existing, autosave.meta);
       return context.hooks.applyFilter("rpc:entry.update:output", {
         ...autosave,
         meta: decoded,
@@ -432,7 +432,7 @@ export const update = base
       termsPatch === undefined &&
       isEmptyMetaPatch(metaPatch)
     ) {
-      const meta = await hydrateEntryMeta(context, existing, existing.meta);
+      const meta = await resolveEntryMeta(context, existing, existing.meta);
       return context.hooks.applyFilter("rpc:entry.update:output", {
         ...existing,
         meta,
@@ -471,7 +471,7 @@ export const update = base
       await writeEntryMeta(context, updated, metaPatch);
       meta = await loadEntryMeta(context, updated);
     } else {
-      meta = await hydrateEntryMeta(context, updated, updated.meta);
+      meta = await resolveEntryMeta(context, updated, updated.meta);
     }
 
     if (postColumnsWritten) {

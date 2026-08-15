@@ -1,8 +1,8 @@
 import type { AppContext } from "../context/app.js";
 
 // Per-request accumulator of cache tags for entities embedded into a page
-// via read-time reference hydration (#1508). When hydration resolves a
-// referenced entity, the resolving adapter contributes the tag that
+// via read-time reference resolution (#1508). When resolution materializes
+// a referenced entity, the resolving adapter contributes the tag that
 // entity's purge would enqueue (an entry contributes `e:<id>`); the public
 // dispatcher folds the accumulated set into the page's stored cache tags,
 // so editing or deleting an embedded entity purges the pages that embedded

@@ -10,14 +10,14 @@ import { memoBatch } from "../../context/memo.js";
 import { entryTerm } from "../../db/schema/entry_term.js";
 import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
-import { hydrateEntriesMeta } from "../../rpc/procedures/entry/meta.js";
+import { resolveEntriesMeta } from "../../rpc/procedures/entry/meta.js";
 import {
   buildEntryPermalinkSync,
   buildTermArchiveUrlSync,
 } from "../permalink.js";
 
 /**
- * Hydrate raw entry rows into `ResolvedEntry` — author, terms, and the
+ * Resolve raw entry rows into `ResolvedEntry` — author, terms, and the
  * basePath-correct permalink each entry needs for rendering. Batched
  * (mirrors WordPress's `update_post_caches`): one `IN(...)` query for
  * authors, one entry_term×terms join for terms — no N+1 per entry.
@@ -30,7 +30,7 @@ export async function buildResolvedEntries(
   const entryIds = rows.map((r) => r.id);
   const authorIds = Array.from(new Set(rows.map((r) => r.authorId)));
   // Per-author request memo (#1493): entry resolution and the blog
-  // related-posts loader hydrate the same author in one request — the
+  // related-posts loader resolve the same author in one request — the
   // second call replays the row, and a mixed batch still costs a single
   // `IN(...)` query.
   const [authorRows, joinRows, metaBags] = await Promise.all([
@@ -68,7 +68,7 @@ export async function buildResolvedEntries(
       .where(inArray(entryTerm.entryId, entryIds)),
     // Templates read `entry.meta.<field>` as the adapter's hydrated
     // shape — one level deep; a summary carries no meta of its own.
-    hydrateEntriesMeta(ctx, rows),
+    resolveEntriesMeta(ctx, rows),
   ]);
   const authorById = new Map(
     authorRows.filter((a) => a !== null).map((a) => [a.id, a]),
