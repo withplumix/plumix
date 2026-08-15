@@ -38,13 +38,8 @@ const BARREL_ALLOWED: Readonly<Record<string, string>> = {
   "./plugin": "plugin config is authored and loaded server-side",
   "./theme": "defineTheme / defineTemplate run at config / SSR time",
   "./vite": "the Vite plugin runs in Node at build time",
-  // `getRuntime` (re-exported from ./runtime.js) is browser-facing, but the
-  // *values* this entry pulls from the barrel — SHARED_ADMIN_RUNTIME_SPECIFIERS
-  // and adminRuntimeShimSlug — are build-time constants, and no browser /
-  // plugin chunk imports `plumix/admin` (the index) today. If one ever does,
-  // move those constants onto a browser-safe `@plumix/core` subpath rather
-  // than widening this allowlist.
-  "./admin": "build-time runtime-alias constants; not browser-bundled today",
+  // `./admin` is intentionally absent: it's a browser entry held to the same
+  // rule as the rest, reaching core through the `@plumix/core/admin` subpath.
 };
 
 // `./dist/admin/react.js` -> `<pkg>/src/admin/react.{ts,tsx}` (whichever exists)
