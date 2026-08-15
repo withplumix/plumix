@@ -4,7 +4,7 @@ import { apiTokenAuthenticator, authenticateTraced } from "./authenticator.js";
 
 // Bearer PAT only — shared by the CSRF-exempt external surfaces (MCP, REST).
 // Deliberately NOT the request's configured authenticator (cookie/custom
-// guard): cookie auth must never resolve on an endpoint mounted ahead of the
+// authenticator): cookie auth must never resolve on an endpoint mounted ahead of the
 // CSRF gate, since only bearer auth is inherently CSRF-immune.
 const bearerAuthenticator = apiTokenAuthenticator();
 
