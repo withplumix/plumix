@@ -8,6 +8,7 @@ import type { BlockPattern } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import { BlockCatalog } from "./block-catalog-tab.js";
+import { EditorConfigProvider } from "./editor-config-context.js";
 import { EditorProvider, useEditorStore } from "./provider.js";
 
 beforeAll(() => {
@@ -49,15 +50,16 @@ function renderCatalog(
 ): ReturnType<typeof render> {
   return render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={[]}>
-        <BlockCatalog
-          registry={registry}
-          capabilities={NO_CAPS}
-          patterns={patterns}
-          onInsert={onInsert}
-        />
-        <TreeProbe />
-      </EditorProvider>
+      <EditorConfigProvider
+        registry={registry}
+        tokens={{}}
+        capabilities={NO_CAPS}
+      >
+        <EditorProvider initialTree={[]}>
+          <BlockCatalog patterns={patterns} onInsert={onInsert} />
+          <TreeProbe />
+        </EditorProvider>
+      </EditorConfigProvider>
     </I18nProvider>,
   );
 }
@@ -74,13 +76,15 @@ describe("BlockCatalog", () => {
   test("restricts the listed blocks to the allowed set", () => {
     const { getByTestId, queryByTestId } = render(
       <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={[]}>
-          <BlockCatalog
-            registry={registry}
-            capabilities={NO_CAPS}
-            allowed={["core/heading"]}
-          />
-        </EditorProvider>
+        <EditorConfigProvider
+          registry={registry}
+          tokens={{}}
+          capabilities={NO_CAPS}
+        >
+          <EditorProvider initialTree={[]}>
+            <BlockCatalog allowed={["core/heading"]} />
+          </EditorProvider>
+        </EditorConfigProvider>
       </I18nProvider>,
     );
     expect(getByTestId("block-catalog-item-core/heading")).toBeDefined();

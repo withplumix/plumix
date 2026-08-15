@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useEffect } from "react";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
@@ -9,7 +9,9 @@ import type { BlockNode, BlockRegistry } from "@plumix/blocks";
 import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import { createBlockRegistry } from "@plumix/blocks";
 
+import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { BlockInspector } from "./block-inspector.js";
+import { EditorConfigProvider } from "./editor-config-context.js";
 import {
   EditorProvider,
   useEditorStore,
@@ -96,6 +98,28 @@ const registry: BlockRegistry = createBlockRegistry([
   },
 ]);
 
+const NO_CAPS: ReadonlySet<string> = new Set();
+
+/** Mirrors the config provider PlumixEditor mounts in prod. */
+function Config({
+  resolve,
+  children,
+}: {
+  readonly resolve?: ResolvePluginFieldType;
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <EditorConfigProvider
+      registry={registry}
+      tokens={{}}
+      capabilities={NO_CAPS}
+      resolvePluginFieldType={resolve}
+    >
+      {children}
+    </EditorConfigProvider>
+  );
+}
+
 function ColumnsProbe({ id }: { readonly id: string }): ReactElement {
   const count = useEditorStore((s) => {
     const node = s.tree.find((b) => b.id === id);
@@ -133,13 +157,12 @@ function renderInspector(
 ): ReturnType<typeof render> {
   return render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={tree}>
-        <Selector id={selectId} />
-        <BlockInspector
-          registry={registry}
-          onRefreshBlockLoader={onRefreshBlockLoader}
-        />
-      </EditorProvider>
+      <Config>
+        <EditorProvider initialTree={tree}>
+          <Selector id={selectId} />
+          <BlockInspector onRefreshBlockLoader={onRefreshBlockLoader} />
+        </EditorProvider>
+      </Config>
     </I18nProvider>,
   );
 }
@@ -262,11 +285,13 @@ describe("BlockInspector", () => {
     ];
     const { getByTestId } = render(
       <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={tree}>
-          <Selector id="cols" />
-          <BlockInspector registry={registry} />
-          <ColumnsProbe id="cols" />
-        </EditorProvider>
+        <Config>
+          <EditorProvider initialTree={tree}>
+            <Selector id="cols" />
+            <BlockInspector />
+            <ColumnsProbe id="cols" />
+          </EditorProvider>
+        </Config>
       </I18nProvider>,
     );
 
@@ -300,23 +325,20 @@ describe("BlockInspector", () => {
     };
     const { getByTestId } = render(
       <I18nProvider i18n={i18n}>
-        <EditorProvider
-          initialTree={[
-            {
-              id: "m1",
-              name: "core/probe-media",
-              attrs: { image: { id: "7" } },
-            },
-          ]}
-        >
-          <Selector id="m1" />
-          <BlockInspector
-            registry={registry}
-            resolvePluginFieldType={(t) =>
-              t === "media" ? StubField : undefined
-            }
-          />
-        </EditorProvider>
+        <Config resolve={(t) => (t === "media" ? StubField : undefined)}>
+          <EditorProvider
+            initialTree={[
+              {
+                id: "m1",
+                name: "core/probe-media",
+                attrs: { image: { id: "7" } },
+              },
+            ]}
+          >
+            <Selector id="m1" />
+            <BlockInspector />
+          </EditorProvider>
+        </Config>
       </I18nProvider>,
     );
     const control = getByTestId("block-input-image") as HTMLInputElement;
@@ -355,11 +377,13 @@ describe("BlockInspector", () => {
   function renderTableInspector(): ReturnType<typeof render> {
     return render(
       <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={tableTree}>
-          <Selector id="tbl" />
-          <BlockInspector registry={registry} />
-          <TableProbe id="tbl" />
-        </EditorProvider>
+        <Config>
+          <EditorProvider initialTree={tableTree}>
+            <Selector id="tbl" />
+            <BlockInspector />
+            <TableProbe id="tbl" />
+          </EditorProvider>
+        </Config>
       </I18nProvider>,
     );
   }
@@ -403,11 +427,13 @@ describe("BlockInspector", () => {
   function renderGrid(): ReturnType<typeof render> {
     return render(
       <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={grid2x2}>
-          <Selector id="tbl" />
-          <BlockInspector registry={registry} />
-          <TableProbe id="tbl" />
-        </EditorProvider>
+        <Config>
+          <EditorProvider initialTree={grid2x2}>
+            <Selector id="tbl" />
+            <BlockInspector />
+            <TableProbe id="tbl" />
+          </EditorProvider>
+        </Config>
       </I18nProvider>,
     );
   }
@@ -437,11 +463,13 @@ describe("BlockInspector", () => {
   test("keeps the table controls in reach when a cell is selected", () => {
     const { getByTestId } = render(
       <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={tableTree}>
-          <Selector id="c0" />
-          <BlockInspector registry={registry} />
-          <TableProbe id="tbl" />
-        </EditorProvider>
+        <Config>
+          <EditorProvider initialTree={tableTree}>
+            <Selector id="c0" />
+            <BlockInspector />
+            <TableProbe id="tbl" />
+          </EditorProvider>
+        </Config>
       </I18nProvider>,
     );
     // A cell is selected, yet the table's structure controls still show...

@@ -8,6 +8,7 @@ import type { BlockNode } from "@plumix/blocks";
 import { createBlockRegistry } from "@plumix/blocks";
 
 import { flattenTree } from "./block-tree-ops.js";
+import { EditorConfigProvider } from "./editor-config-context.js";
 import { LayersTab } from "./layers-tab.js";
 import { EditorProvider, useEditorStore } from "./provider.js";
 
@@ -50,11 +51,17 @@ function TreeProbe(): ReactElement {
 function renderLayers(tree: readonly BlockNode[]): ReturnType<typeof render> {
   return render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={tree}>
-        <LayersTab registry={registry} />
-        <ActiveProbe />
-        <TreeProbe />
-      </EditorProvider>
+      <EditorConfigProvider
+        registry={registry}
+        tokens={{}}
+        capabilities={new Set()}
+      >
+        <EditorProvider initialTree={tree}>
+          <LayersTab />
+          <ActiveProbe />
+          <TreeProbe />
+        </EditorProvider>
+      </EditorConfigProvider>
     </I18nProvider>,
   );
 }
