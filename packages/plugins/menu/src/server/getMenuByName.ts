@@ -1,6 +1,6 @@
 import type { AppContext, LookupResult } from "plumix/plugin";
-import { and, eq, inArray } from "drizzle-orm";
 import { memoBatch } from "plumix";
+import { and, eq, inArray } from "plumix/db";
 import { isCurrentSource } from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
 

@@ -1,6 +1,6 @@
 import type { AppContext } from "plumix/plugin";
-import { and, eq, inArray } from "drizzle-orm";
 import { memoBatch } from "plumix";
+import { and, eq, inArray } from "plumix/db";
 import { settings } from "plumix/schema";
 
 import type { ResolvedMenu } from "./types.js";
