@@ -1,6 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type {
+  AppContext,
   AssetsBinding,
+  ConnectedCache,
+  ConnectedObjectStorage,
   Db,
   FetchHandler,
   PlumixApp,
@@ -81,6 +84,54 @@ function connectImageDelivery(
   const slot = app.config.imageDelivery;
   if (!slot) return undefined;
   return slot.connect ? slot.connect(env) : slot;
+}
+
+// Both the fetch and scheduled handlers assemble an identical AppContext from
+// `app` — only the request, db, deferred-work sink, and per-isolate storage /
+// cache handles differ. Keep the ~20 app-derived fields in one place so a new
+// context field is wired once, not in two drifting call sites.
+function buildAppContext(
+  app: PlumixApp,
+  args: {
+    readonly db: unknown;
+    readonly env: unknown;
+    readonly request: Request;
+    readonly defer: ((promise: Promise<unknown>) => void) | undefined;
+    readonly storage: ConnectedObjectStorage | undefined;
+    readonly cache: ConnectedCache | undefined;
+  },
+): AppContext {
+  const { db, env, request, defer, storage, cache } = args;
+  return createAppContext({
+    db: db as Db,
+    env: env as PlumixEnv,
+    request,
+    hooks: app.hooks,
+    plugins: app.plugins,
+    blocks: app.blocks,
+    marks: app.marks,
+    shortcodes: app.shortcodes,
+    defer,
+    assets: readAssetsBinding(env),
+    storage,
+    cache,
+    imageDelivery: connectImageDelivery(app, env),
+    imageRemotePatterns: app.config.images?.remotePatterns,
+    debugBar: app.config.debugBar,
+    // Registered consumers head-sample at context creation; snapshot delivery
+    // then rides `defer` → `waitUntil`, off the response / cron path.
+    telemetry: app.config.telemetry,
+    mailer: app.config.mailer,
+    i18n: app.config.i18n,
+    oauthProviders: app.oauthProviders,
+    authMethods: app.authMethods,
+    authenticator: app.authenticator,
+    bootstrapAllowed: app.bootstrapAllowed,
+    origin: app.origin,
+    basePath: app.basePath,
+    siteName: app.config.auth.magicLink?.siteName,
+    appContextExtensions: app.appContextExtensions,
+  });
 }
 
 function validateBindings(app: PlumixApp, env: unknown): void {
@@ -203,35 +254,13 @@ function buildFetch(app: PlumixApp): FetchHandler {
       // lacks zone credentials (e.g. workers.dev) — caching off, render live.
       const cache = app.config.cache?.connect(env) ?? undefined;
 
-      const appCtx = createAppContext({
-        db: db as Db,
-        env: env as PlumixEnv,
+      const appCtx = buildAppContext(app, {
+        db,
+        env,
         request,
-        hooks: app.hooks,
-        plugins: app.plugins,
-        blocks: app.blocks,
-        marks: app.marks,
-        shortcodes: app.shortcodes,
         defer,
-        assets: readAssetsBinding(env),
         storage,
         cache,
-        imageDelivery: connectImageDelivery(app, env),
-        imageRemotePatterns: app.config.images?.remotePatterns,
-        debugBar: app.config.debugBar,
-        // Registered consumers head-sample at context creation; snapshot
-        // delivery then rides `defer` → `waitUntil`, off the response path.
-        telemetry: app.config.telemetry,
-        mailer: app.config.mailer,
-        i18n: app.config.i18n,
-        oauthProviders: app.oauthProviders,
-        authMethods: app.authMethods,
-        authenticator: app.authenticator,
-        bootstrapAllowed: app.bootstrapAllowed,
-        origin: app.origin,
-        basePath: app.basePath,
-        siteName: app.config.auth.magicLink?.siteName,
-        appContextExtensions: app.appContextExtensions,
       });
       const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
       return finalize(response);
@@ -292,35 +321,13 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
     // can reach it.
     const cache = app.config.cache?.connect(env) ?? undefined;
 
-    const appCtx = createAppContext({
-      db: db as Db,
-      env: env as PlumixEnv,
+    const appCtx = buildAppContext(app, {
+      db,
+      env,
       request: syntheticRequest,
-      hooks: app.hooks,
-      plugins: app.plugins,
-      blocks: app.blocks,
-      marks: app.marks,
-      shortcodes: app.shortcodes,
       defer,
-      assets: readAssetsBinding(env),
       storage,
       cache,
-      imageDelivery: connectImageDelivery(app, env),
-      imageRemotePatterns: app.config.images?.remotePatterns,
-      debugBar: app.config.debugBar,
-      // Cron runs collect through the same consumer gate as requests; the
-      // snapshot delivery inside `runScheduledTasks` rides `defer` → waitUntil.
-      telemetry: app.config.telemetry,
-      mailer: app.config.mailer,
-      i18n: app.config.i18n,
-      oauthProviders: app.oauthProviders,
-      authMethods: app.authMethods,
-      authenticator: app.authenticator,
-      bootstrapAllowed: app.bootstrapAllowed,
-      origin: app.origin,
-      basePath: app.basePath,
-      siteName: app.config.auth.magicLink?.siteName,
-      appContextExtensions: app.appContextExtensions,
     });
 
     try {
