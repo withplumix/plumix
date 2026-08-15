@@ -1,5 +1,130 @@
 # @plumix/core
 
+## 0.14.0
+
+### Minor Changes
+
+- [#1781](https://github.com/withplumix/plumix/pull/1781) [`7c7be38`](https://github.com/withplumix/plumix/commit/7c7be38e813530a3e27dd7d34df509470b5d1280) Thanks [@nasyrov](https://github.com/nasyrov)! - Add a browser-safe `@plumix/core/admin` subpath exposing the admin
+  runtime-alias constants (`SHARED_ADMIN_RUNTIME_SPECIFIERS`,
+  `adminRuntimeShimSlug`, and the `SharedAdminRuntimeSpecifier` type).
+
+  `plumix/admin` co-exports the browser-facing `getRuntime` accessor with these
+  build-time constants. They were reached through the flat `@plumix/core` root
+  barrel, which statically imports `node:async_hooks` (via the request-context
+  stores) — so a plugin chunk importing `plumix/admin` for `getRuntime` would
+  fail its esbuild-for-browser build on the unresolved `node:async_hooks`. The
+  constants now come from the barrel-free `@plumix/core/admin` subpath instead.
+
+  Migration: none. The root barrel still re-exports the same constants (so
+  server-side consumers are unchanged); `@plumix/core/admin` is an additional,
+  browser-safe way to reach them.
+
+- [#1774](https://github.com/withplumix/plumix/pull/1774) [`56cdc6f`](https://github.com/withplumix/plumix/commit/56cdc6f616413c4d20be9a3cccff303259cae1ac) Thanks [@nasyrov](https://github.com/nasyrov)! - Remove the drizzle query operators and schema tables from the flat `@plumix/core`
+  / `plumix` root barrel. They now live only on their dedicated seams:
+  `plumix/db` (`@plumix/core/db`) for the query operators, table-introspection
+  helpers, unique-constraint guards, and edge-cache purge vocabulary; and
+  `plumix/schema` (`@plumix/core/schema`) for the schema tables and their inferred
+  row types.
+
+  Direct DB writes are a specialized concern the `plumix/db` seam is designed to
+  own (its purge vocabulary exists precisely because direct writes bypass core's
+  auto-purge). Re-exporting the same operators and tables from the root barrel
+  widened the root interface with that concern and gave newcomers two ways to
+  import the same thing with no signal about which is canonical. `plumix/db` and
+  `plumix/schema` are now the single canonical seams.
+
+  The `traceDbQuery` / `traceDbBatch` span helpers stay on the root barrel — they
+  wrap `ctx.db` in runtime adapters and aren't part of the direct-write toolkit.
+
+  Migration: if you imported drizzle operators (`eq`, `and`, `sql`, `inArray`,
+  `getTableColumns`, the `SQL` type, …) from `plumix` / `@plumix/core`, import them
+  from `plumix/db` (`@plumix/core/db`) instead. If you imported schema tables
+  (`entries`, `terms`, `settings`, `users`, …) or their row types (`Entry`,
+  `User`, `UserRole`, `Term`, …) from the root, import them from `plumix/schema`
+  (`@plumix/core/schema`). The `plumix/plugin` bundle no longer re-exports these
+  either, so plugins that reached for db symbols through it move to the same two
+  seams.
+
+- [#1782](https://github.com/withplumix/plumix/pull/1782) [`4155a46`](https://github.com/withplumix/plumix/commit/4155a467dcd5e358d3c335849943e7683fc804cd) Thanks [@nasyrov](https://github.com/nasyrov)! - Turn the `kv` slot into a working key/value store.
+
+  The `kv` config slot was previously a marker interface with no methods —
+  accepted in config but never usable at runtime. It now carries a real
+  `ConnectedKv` contract (`get` / `put` with `expirationTtl` / `delete` / `list`
+  with prefix + cursor pagination), exposed on the request context as `ctx.kv`
+  and traced like the `storage` and `cache` slots.
+
+  `@plumix/core` ships `memoryKv()`, a backend-agnostic in-memory adapter for dev
+  and tests (string values, a 1..1000 list page cap; no backend-specific TTL
+  floor). `@plumix/runtime-cloudflare`'s `kv({ binding })` binds a Workers KV
+  namespace and implements the same contract. The port is deliberately
+  runtime-neutral — a Node runtime over Redis would implement the same `KV`
+  interface.
+
+  Usage:
+
+  ```ts
+  import { kv } from "@plumix/runtime-cloudflare";
+
+  plumix({
+    kv: kv({ binding: "SESSIONS" }),
+    // ...
+  });
+
+  // in a plugin handler:
+  await ctx.kv?.put("key", "value", { expirationTtl: 3600 });
+  const value = await ctx.kv?.get("key");
+  ```
+
+  `create-plumix-app` gains a `kv` scaffold capability for the Cloudflare runtime:
+  a plugin that requires `kv` now automatically wires `kv({ binding: "KV" })` and a
+  `KV` namespace binding into the generated `wrangler.jsonc`.
+
+- [#1770](https://github.com/withplumix/plumix/pull/1770) [`f579afb`](https://github.com/withplumix/plumix/commit/f579afbbf0e297b1c591d23a2c3b20c178880bc6) Thanks [@nasyrov](https://github.com/nasyrov)! - Remove the redundant `lookup.resolve` RPC and `LookupAdapter.resolve`.
+
+  The single-reference admin picker now resolves its selected id through the
+  batched `lookup.list({ ids })` path (the same path the multi-reference picker
+  and the meta read/write pipeline already use), so the dedicated
+  `lookup.resolve` procedure had no remaining caller. It is removed along with
+  its `LookupAdapter.resolve` contract method — `list({ ids })` covers single-id
+  resolution, so a lookup adapter now implements one query method (`list`) plus
+  the optional `hydrate`/`embeddedCacheTags`. The built-in `user`, `entry`,
+  `term`, and `media` adapters drop their `resolve` implementations accordingly.
+
+  `lookup.resolve` was the authenticated admin RPC surface only (not REST- or
+  public-exposed), so no public HTTP contract changes.
+
+  Migration: if you implemented a custom `LookupAdapter`, drop its `resolve`
+  method — `list({ ids })` is now the single-id path. If you called the
+  `lookup.resolve` RPC directly, switch to `lookup.list({ ids: [id] })` and read
+  the single item from `items`.
+
+- [#1779](https://github.com/withplumix/plumix/pull/1779) [`320f222`](https://github.com/withplumix/plumix/commit/320f222c5b365079a8f618b1955dbb2e59bd37d8) Thanks [@nasyrov](https://github.com/nasyrov)! - Rename the read-time `hydrate*` reference/meta family to `resolve*`, freeing the
+  word "hydration" for its one canonical sense: island hydration (attaching client
+  React to server markup).
+
+  "Hydration" meant two unrelated things in the code. Island hydration is the
+  load-bearing sense. The read-time data-enrichment family — resolving referenced
+  entities and meta bags into rows during a read — is resolution, not hydration.
+  Reserving "hydration" for islands and renaming the enrichment family removes the
+  collision (`CONTEXT.md` glossary updated to match).
+
+  Renamed: `hydrateReferences` → `resolveReferences` (the public, theme-facing
+  id-set resolver), plus the core-internal `hydrateMetaBags`/`hydrateMetaReferences`
+  pipeline and the per-entity `hydrateEntryMeta`/`hydrateEntriesMeta`/
+  `hydrateTermMeta`/`hydrateUserMeta` read helpers. The `LookupAdapter.hydrate`
+  contract method and the reference-shape types are unchanged — the adapter still
+  `hydrate`s a payload; the pipeline that calls it now `resolve`s references.
+
+  Migration: if you imported `hydrateReferences` from `plumix` / `@plumix/core` to
+  resolve an id-only reference field in a theme, import `resolveReferences` instead
+  — same signature and behavior. Custom `LookupAdapter` implementations need no
+  change.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @plumix/blocks@0.14.0
+
 ## 0.13.0
 
 ### Minor Changes
