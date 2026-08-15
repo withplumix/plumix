@@ -59,7 +59,6 @@
     "@dnd-kit/core": "catalog:dnd-kit",
     "@dnd-kit/sortable": "catalog:dnd-kit",
     "@dnd-kit/utilities": "catalog:dnd-kit",
-    "drizzle-orm": "catalog:drizzle",
     "valibot": "catalog:"
   },
   "peerDependencies": {

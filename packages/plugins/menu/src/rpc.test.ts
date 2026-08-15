@@ -1,7 +1,7 @@
 import type { PluginRegistry, RequestAuthenticator } from "plumix/plugin";
 import type { User, UserRole } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq } from "plumix/db";
 import {
   createAppContext,
   createPluginRegistry,

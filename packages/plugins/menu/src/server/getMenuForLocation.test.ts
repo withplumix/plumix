@@ -1,5 +1,5 @@
 import type { AppContext, PluginRegistry } from "plumix/plugin";
-import { eq } from "drizzle-orm";
+import { eq } from "plumix/db";
 import {
   createPluginRegistry,
   HookRegistry,
