@@ -2,11 +2,7 @@ import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
 import { useLingui } from "@lingui/react";
 
-import type {
-  BlockNode,
-  BlockRegistry,
-  InsertableBlockEntry,
-} from "@plumix/blocks";
+import type { BlockNode, InsertableBlockEntry } from "@plumix/blocks";
 import { Search } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import { resolveLabel } from "@plumix/core/i18n";
@@ -19,11 +15,10 @@ import {
   groupInsertables,
 } from "./block-catalog.js";
 import { BlockIcon } from "./block-icon.js";
+import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore } from "./provider.js";
 
 interface BlockCatalogProps {
-  readonly registry: BlockRegistry;
-  readonly capabilities: ReadonlySet<string>;
   /** Theme + plugin patterns offered alongside the blocks (click-insert). */
   readonly patterns?: readonly InserterPattern[];
   /** Called after any click-insert, so a host popover can close itself. */
@@ -45,8 +40,6 @@ interface BlockCatalogProps {
  * click-insert only (their whole composition appends).
  */
 export function BlockCatalog({
-  registry,
-  capabilities,
   patterns,
   onInsert,
   allowed,
@@ -54,6 +47,7 @@ export function BlockCatalog({
   parentName,
   entryType,
 }: BlockCatalogProps): ReactElement {
+  const { registry, capabilities } = useEditorConfig();
   const { i18n } = useLingui();
   const [query, setQuery] = useState("");
   const insertBlock = useEditorStore((s) => s.insertBlock);

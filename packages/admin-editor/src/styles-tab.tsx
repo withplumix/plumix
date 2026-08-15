@@ -3,11 +3,7 @@ import type { ReactElement, ReactNode } from "react";
 import { createElement, useId } from "react";
 import { Trans, useLingui } from "@lingui/react";
 
-import type {
-  ThemeTokens,
-  TokenCategory,
-  VisibilityFlags,
-} from "@plumix/blocks";
+import type { TokenCategory, VisibilityFlags } from "@plumix/blocks";
 import {
   Accordion,
   AccordionContent,
@@ -43,23 +39,16 @@ import {
 } from "@plumix/admin-ui/tooltip";
 import { resolveRootTag, ROOT_TAGS } from "@plumix/blocks";
 
-import type { ResolvePluginFieldType } from "./block-input-control.js";
 import type { StyleBucket } from "./store.js";
 import type { StyleDeclaration } from "./style-declarations.js";
 import { findBlock } from "./block-tree-ops.js";
+import { useEditorConfig } from "./editor-config-context.js";
 import { HtmlAttributes } from "./html-attributes.js";
 import { useEditorStore } from "./provider.js";
 import { deviceBucket } from "./store.js";
 import { HEX6, StyleControl } from "./style-control.js";
 import { StyleDeclarations } from "./style-declarations.js";
 import { StyleFieldsProvider } from "./style-fields-context.js";
-
-interface StylesTabProps {
-  readonly tokens: ThemeTokens;
-  /** Resolves the plugin media picker for the Background section's image
-   *  control; when absent, the section falls back to a hand-typed URL. */
-  readonly resolvePluginFieldType?: ResolvePluginFieldType;
-}
 
 interface ControlSpec {
   readonly property: string;
@@ -175,10 +164,8 @@ const SECTION_IDS = [
  * visual box-model for per-side spacing. Every edit targets the active device's
  * responsive bucket, so styles are set per breakpoint.
  */
-export function StylesTab({
-  tokens,
-  resolvePluginFieldType,
-}: StylesTabProps): ReactElement {
+export function StylesTab(): ReactElement {
+  const { tokens } = useEditorConfig();
   const activeId = useEditorStore((s) => s.activeId);
   const device = useEditorStore((s) => s.device);
   const block = useEditorStore((s) =>
@@ -268,7 +255,6 @@ export function StylesTab({
             section={BACKGROUND_SECTION}
             valueOf={valueOf}
             setter={setter}
-            resolvePluginFieldType={resolvePluginFieldType}
           />
           <GenericSection
             section={TYPOGRAPHY_SECTION}
@@ -351,12 +337,10 @@ function GenericSection({
   section,
   valueOf,
   setter,
-  resolvePluginFieldType,
 }: {
   readonly section: SectionDef;
   readonly valueOf: StyleGetter;
   readonly setter: StyleSetter;
-  readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }): ReactElement {
   return (
     <AccordionItem value={section.id}>
@@ -402,7 +386,6 @@ function GenericSection({
           <BackgroundImageField
             value={valueOf("backgroundImage")}
             onChange={setter("backgroundImage")}
-            resolvePluginFieldType={resolvePluginFieldType}
           />
         )}
       </AccordionContent>
@@ -875,12 +858,11 @@ function parseBackgroundImageUrl(value: string | undefined): string {
 function BackgroundImageField({
   value,
   onChange,
-  resolvePluginFieldType,
 }: {
   readonly value: string | undefined;
   readonly onChange: (value: string | null) => void;
-  readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }): ReactElement {
+  const { resolvePluginFieldType } = useEditorConfig();
   const Picker = resolvePluginFieldType?.("mediaUrl");
   if (!Picker) {
     return <BackgroundImageControl value={value} onChange={onChange} />;

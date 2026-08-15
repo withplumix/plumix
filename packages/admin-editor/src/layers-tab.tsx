@@ -16,7 +16,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Trans, useLingui } from "@lingui/react";
 
-import type { BlockRegistry } from "@plumix/blocks";
 import { Button } from "@plumix/admin-ui/button";
 import {
   DropdownMenu,
@@ -38,16 +37,12 @@ import type { FlatNode } from "./block-tree-ops.js";
 import { BlockIcon } from "./block-icon.js";
 import { flattenTree, projectMove } from "./block-tree-ops.js";
 import { createClipboardOps, pasteableAtRoot } from "./clipboard-ops.js";
+import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
 
 const INDENT_WIDTH = 16;
 
 type RowAction = "copy" | "paste" | "duplicate" | "delete";
-
-interface LayersTabProps {
-  /** Resolves a block's display label from its name. */
-  readonly registry: BlockRegistry;
-}
 
 /**
  * Layers outline: the nested tree as a flat, indented list. Clicking a row
@@ -55,7 +50,8 @@ interface LayersTabProps {
  * via the projection, writing through the store's move action so the canvas
  * reflects it live and it persists.
  */
-export function LayersTab({ registry }: LayersTabProps): ReactElement {
+export function LayersTab(): ReactElement {
+  const { registry } = useEditorConfig();
   const { i18n } = useLingui();
   const storeApi = useEditorStoreApi();
   const tree = useEditorStore((s) => s.tree);

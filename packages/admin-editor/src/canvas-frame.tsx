@@ -2,7 +2,6 @@ import type { ReactElement, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useLingui } from "@lingui/react";
 
-import type { BlockRegistry } from "@plumix/blocks";
 import {
   Popover,
   PopoverAnchor,
@@ -22,6 +21,7 @@ import {
   pasteableAtRoot,
 } from "./clipboard-ops.js";
 import { connectCanvas } from "./connect-canvas.js";
+import { useEditorConfig } from "./editor-config-context.js";
 import { deviceLabel } from "./editor-toolbar.js";
 import { overlayBox } from "./overlay.js";
 import {
@@ -43,10 +43,6 @@ interface CanvasFrameProps {
   readonly previewUrl: string;
   /** Origin of that route, for bridge message pinning. */
   readonly origin: string;
-  /** Catalog for the empty-state affordance's default block. */
-  readonly registry: BlockRegistry;
-  /** Viewer capabilities, gating which block the empty state inserts. */
-  readonly capabilities: ReadonlySet<string>;
   /** The entry type being authored, scoping the in-canvas inserter's palette. */
   readonly entryType?: string;
   /** Preview mode: still render the pushed tree, but draw no selection /
@@ -75,12 +71,11 @@ const HOVER_OUTLINE = "rgba(37,99,235,0.4)";
 export function CanvasFrame({
   previewUrl,
   origin,
-  registry,
-  capabilities,
   entryType,
   readOnly = false,
   previewRefreshToken,
 }: CanvasFrameProps): ReactElement {
+  const { registry } = useEditorConfig();
   const { i18n } = useLingui();
   // The canvas has no i18n runtime, so resolve its chrome (the in-canvas "Add a
   // block" affordance, root + empty slots) here and push it over the bridge.
@@ -421,8 +416,6 @@ export function CanvasFrame({
                 the popover still shrinks to fit short lists. */}
             <ScrollArea className="[&>[data-slot=scroll-area-viewport]]:max-h-96">
               <BlockCatalog
-                registry={registry}
-                capabilities={capabilities}
                 allowed={pendingAllowed}
                 parentName={pendingParentName}
                 target={pendingTarget}

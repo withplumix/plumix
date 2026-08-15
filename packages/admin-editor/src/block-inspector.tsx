@@ -2,29 +2,23 @@ import type { ReactElement } from "react";
 import { useCallback } from "react";
 import { Trans } from "@lingui/react";
 
-import type { BlockRegistry } from "@plumix/blocks";
 import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import { Button } from "@plumix/admin-ui/button";
 import { Minus, Plus, RefreshCw } from "@plumix/admin-ui/icons";
 
-import type { ResolvePluginFieldType } from "./block-input-control.js";
 import { createNodeFromEntry } from "./block-catalog.js";
 import { BlockInputControl } from "./block-input-control.js";
 import { enclosingTableId, findBlock } from "./block-tree-ops.js";
+import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore, useLoaderPushRef } from "./provider.js";
 import { deviceBucket } from "./store.js";
 
 interface BlockInspectorProps {
-  /** Core + plugin block registry; supplies each block's input schema. */
-  readonly registry: BlockRegistry;
   /** Re-run the active block's loader(s) server-side (the host's orpc call).
    *  When set, a loader-backed block gets a "Refresh data" control. */
   readonly onRefreshBlockLoader?: (
     blockId: string,
   ) => Promise<SerializedLoaderData>;
-  /** Resolves plugin-registered input types (e.g. the media picker) to a
-   *  control; threaded down to each {@link BlockInputControl}. */
-  readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }
 
 /**
@@ -34,10 +28,9 @@ interface BlockInspectorProps {
  * pushes to the iframe for a live, reload-free re-render.
  */
 export function BlockInspector({
-  registry,
   onRefreshBlockLoader,
-  resolvePluginFieldType,
 }: BlockInspectorProps): ReactElement {
+  const { registry, resolvePluginFieldType } = useEditorConfig();
   const activeId = useEditorStore((s) => s.activeId);
   const tree = useEditorStore((s) => s.tree);
   const device = useEditorStore((s) => s.device);

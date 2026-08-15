@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
@@ -6,8 +6,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { BlockNode, ThemeTokens } from "@plumix/blocks";
+import { createBlockRegistry } from "@plumix/blocks";
 
 import type { ResolvePluginFieldType } from "./block-input-control.js";
+import { EditorConfigProvider } from "./editor-config-context.js";
 import { EditorProvider, useEditorStore } from "./provider.js";
 import { StylesTab } from "./styles-tab.js";
 
@@ -21,6 +23,29 @@ const tokens: ThemeTokens = {
   fontFamily: { lg: { value: "20px" }, sm: { value: "14px" } },
   fontSize: { base: { value: "16px" } },
 };
+
+const NO_CAPS: ReadonlySet<string> = new Set();
+const registry = createBlockRegistry([{ name: "core/x", render: () => null }]);
+
+/** Mirrors the config provider PlumixEditor mounts in prod. */
+function Config({
+  resolve,
+  children,
+}: {
+  readonly resolve?: ResolvePluginFieldType;
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <EditorConfigProvider
+      registry={registry}
+      tokens={tokens}
+      capabilities={NO_CAPS}
+      resolvePluginFieldType={resolve}
+    >
+      {children}
+    </EditorConfigProvider>
+  );
+}
 
 function StyleProbe({ id }: { readonly id: string }): ReactElement {
   const style = useEditorStore((s) => s.tree.find((n) => n.id === id)?.style);
@@ -46,11 +71,13 @@ function renderTab(
 ) {
   const utils = render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={tree}>
-        <ActiveSeed activeId={activeId} />
-        <StylesTab tokens={tokens} resolvePluginFieldType={resolve} />
-        <StyleProbe id={tree[0]?.id ?? ""} />
-      </EditorProvider>
+      <Config resolve={resolve}>
+        <EditorProvider initialTree={tree}>
+          <ActiveSeed activeId={activeId} />
+          <StylesTab />
+          <StyleProbe id={tree[0]?.id ?? ""} />
+        </EditorProvider>
+      </Config>
     </I18nProvider>,
   );
   // The raw-CSS "declarations" section is collapsed by default; open it so its
@@ -864,11 +891,13 @@ function renderNodeSection(
 ) {
   const utils = render(
     <I18nProvider i18n={i18n}>
-      <EditorProvider initialTree={tree}>
-        <ActiveSeed activeId={activeId} />
-        <StylesTab tokens={tokens} />
-        <NodeProbe id={tree[0]?.id ?? ""} />
-      </EditorProvider>
+      <Config>
+        <EditorProvider initialTree={tree}>
+          <ActiveSeed activeId={activeId} />
+          <StylesTab />
+          <NodeProbe id={tree[0]?.id ?? ""} />
+        </EditorProvider>
+      </Config>
     </I18nProvider>,
   );
   // The HTML attributes / Advanced sections are collapsed by default — open one.
@@ -920,10 +949,12 @@ describe("StylesTab — HTML attributes & tag name", () => {
   test("the HTML attributes section is collapsed by default", () => {
     const { getByTestId, queryByTestId } = render(
       <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={[withAttrs]}>
-          <ActiveSeed activeId="a" />
-          <StylesTab tokens={tokens} />
-        </EditorProvider>
+        <Config>
+          <EditorProvider initialTree={[withAttrs]}>
+            <ActiveSeed activeId="a" />
+            <StylesTab />
+          </EditorProvider>
+        </Config>
       </I18nProvider>,
     );
     expect(getByTestId("styles-section-html")).toBeDefined();

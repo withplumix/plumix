@@ -31,6 +31,7 @@ import type { RightPanel } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
+import { EditorConfigProvider } from "./editor-config-context.js";
 import { EditorHeader } from "./editor-header.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
 import { JsonSourceDialog } from "./json-inspector.js";
@@ -45,6 +46,10 @@ import { StarterModal } from "./starter-modal.js";
 import { StylesTab } from "./styles-tab.js";
 
 const NO_CAPABILITIES: ReadonlySet<string> = new Set();
+// A stable empty-tokens default, so an editor mounted without a theme doesn't
+// hand the config provider a fresh `{}` each render (which would defeat its
+// memo and re-render every panel). Mirrors NO_CAPABILITIES above.
+const NO_TOKENS: ThemeTokens = {};
 
 interface PlumixEditorProps {
   /** Seed content; the editor owns state thereafter (uncontrolled). */
@@ -158,20 +163,21 @@ export function PlumixEditor({
         initialTree={defaultValue?.blocks}
         breakpoints={breakpoints}
       >
-        <div
-          className="flex h-full min-h-0 flex-col"
-          data-testid="plumix-editor-preview"
+        <EditorConfigProvider
+          registry={registry}
+          tokens={tokens ?? NO_TOKENS}
+          capabilities={capabilities}
+          resolvePluginFieldType={resolvePluginFieldType}
         >
-          {previewBanner}
-          <CanvasFrame
-            previewUrl={previewUrl}
-            origin={origin}
-            registry={registry}
-            capabilities={capabilities}
-            readOnly
-          />
-        </div>
-        {overlay}
+          <div
+            className="flex h-full min-h-0 flex-col"
+            data-testid="plumix-editor-preview"
+          >
+            {previewBanner}
+            <CanvasFrame previewUrl={previewUrl} origin={origin} readOnly />
+          </div>
+          {overlay}
+        </EditorConfigProvider>
       </EditorProvider>
     );
   }
@@ -181,89 +187,86 @@ export function PlumixEditor({
       breakpoints={breakpoints}
       starterOpen={seedStarterOpen}
     >
-      {/* shadcn sidebar-16 pattern: a flex-col provider with a full-width
-          header, then a flex row whose offcanvas rails (position: fixed) are
-          offset below the header by --header-height. */}
-      <SidebarProvider
-        className="flex h-full min-h-0 flex-col"
-        style={
-          {
-            "--sidebar-width": "18rem",
-            "--header-height": "3.25rem",
-          } as CSSProperties
-        }
-        data-testid="plumix-editor-layout"
+      <EditorConfigProvider
+        registry={registry}
+        tokens={tokens ?? NO_TOKENS}
+        capabilities={capabilities}
+        resolvePluginFieldType={resolvePluginFieldType}
       >
-        <EditorHeader
-          title={title}
-          onTitleChange={onTitleChange}
-          onBack={onBack}
-          publish={publish}
-          previewLink={previewLink}
-          liveUrl={liveUrl}
-          revisionsTrigger={revisionsTrigger}
-        />
-        <div className="flex min-h-0 flex-1">
-          <Sidebar
-            side="left"
-            collapsible="offcanvas"
-            className="top-(--header-height) !h-[calc(100svh-var(--header-height))]"
-            data-testid="plumix-editor-left"
-          >
-            <Tabs
-              defaultValue="blocks"
-              className="flex h-full min-h-0 flex-col"
-            >
-              <SidebarHeader>
-                <TabsList>
-                  <TabsTrigger value="blocks" data-testid="plumix-tab-blocks">
-                    <Trans id="editor.tab.blocks" message="Blocks" />
-                  </TabsTrigger>
-                  <TabsTrigger value="layers" data-testid="plumix-tab-layers">
-                    <Trans id="editor.tab.layers" message="Layers" />
-                  </TabsTrigger>
-                </TabsList>
-              </SidebarHeader>
-              <SidebarContent>
-                <TabsContent value="blocks">
-                  <BlockCatalog
-                    registry={registry}
-                    capabilities={capabilities}
-                    patterns={patterns}
-                    entryType={entryType}
-                  />
-                </TabsContent>
-                <TabsContent value="layers">
-                  <LayersTab registry={registry} />
-                </TabsContent>
-              </SidebarContent>
-            </Tabs>
-          </Sidebar>
-          <SidebarInset className="min-w-0">
-            <EditorToolbar hasStarters={starterCandidates.length > 0} />
-            <CanvasFrame
-              previewUrl={previewUrl}
-              origin={origin}
-              registry={registry}
-              capabilities={capabilities}
-              entryType={entryType}
-              previewRefreshToken={previewRefreshToken}
-            />
-          </SidebarInset>
-          <RightRail
-            registry={registry}
-            tokens={tokens}
-            documentPanel={documentPanel}
-            onRefreshBlockLoader={onRefreshBlockLoader}
-            resolvePluginFieldType={resolvePluginFieldType}
+        {/* shadcn sidebar-16 pattern: a flex-col provider with a full-width
+            header, then a flex row whose offcanvas rails (position: fixed) are
+            offset below the header by --header-height. */}
+        <SidebarProvider
+          className="flex h-full min-h-0 flex-col"
+          style={
+            {
+              "--sidebar-width": "18rem",
+              "--header-height": "3.25rem",
+            } as CSSProperties
+          }
+          data-testid="plumix-editor-layout"
+        >
+          <EditorHeader
+            title={title}
+            onTitleChange={onTitleChange}
+            onBack={onBack}
+            publish={publish}
+            previewLink={previewLink}
+            liveUrl={liveUrl}
+            revisionsTrigger={revisionsTrigger}
           />
-        </div>
-      </SidebarProvider>
-      <EditorShortcuts />
-      <JsonSourceDialog />
-      <StarterModal candidates={starterCandidates} />
-      {overlay}
-      {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}
+          <div className="flex min-h-0 flex-1">
+            <Sidebar
+              side="left"
+              collapsible="offcanvas"
+              className="top-(--header-height) !h-[calc(100svh-var(--header-height))]"
+              data-testid="plumix-editor-left"
+            >
+              <Tabs
+                defaultValue="blocks"
+                className="flex h-full min-h-0 flex-col"
+              >
+                <SidebarHeader>
+                  <TabsList>
+                    <TabsTrigger value="blocks" data-testid="plumix-tab-blocks">
+                      <Trans id="editor.tab.blocks" message="Blocks" />
+                    </TabsTrigger>
+                    <TabsTrigger value="layers" data-testid="plumix-tab-layers">
+                      <Trans id="editor.tab.layers" message="Layers" />
+                    </TabsTrigger>
+                  </TabsList>
+                </SidebarHeader>
+                <SidebarContent>
+                  <TabsContent value="blocks">
+                    <BlockCatalog patterns={patterns} entryType={entryType} />
+                  </TabsContent>
+                  <TabsContent value="layers">
+                    <LayersTab />
+                  </TabsContent>
+                </SidebarContent>
+              </Tabs>
+            </Sidebar>
+            <SidebarInset className="min-w-0">
+              <EditorToolbar hasStarters={starterCandidates.length > 0} />
+              <CanvasFrame
+                previewUrl={previewUrl}
+                origin={origin}
+                entryType={entryType}
+                previewRefreshToken={previewRefreshToken}
+              />
+            </SidebarInset>
+            <RightRail
+              documentPanel={documentPanel}
+              onRefreshBlockLoader={onRefreshBlockLoader}
+            />
+          </div>
+        </SidebarProvider>
+        <EditorShortcuts />
+        <JsonSourceDialog />
+        <StarterModal candidates={starterCandidates} />
+        {overlay}
+        {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}
+      </EditorConfigProvider>
     </EditorProvider>
   );
 }
@@ -273,19 +276,13 @@ export function PlumixEditor({
  * so selections can steer which panel is shown.
  */
 function RightRail({
-  registry,
-  tokens,
   documentPanel,
   onRefreshBlockLoader,
-  resolvePluginFieldType,
 }: {
-  readonly registry: BlockRegistry;
-  readonly tokens?: ThemeTokens;
   readonly documentPanel?: ReactNode;
   readonly onRefreshBlockLoader?: (
     blockId: string,
   ) => Promise<SerializedLoaderData>;
-  readonly resolvePluginFieldType?: ResolvePluginFieldType;
 }): ReactElement {
   const rightPanel = useEditorStore((s) => s.rightPanel);
   const setRightPanel = useEditorStore((s) => s.setRightPanel);
@@ -316,17 +313,10 @@ function RightRail({
         </SidebarHeader>
         <SidebarContent>
           <TabsContent value="block">
-            <BlockInspector
-              registry={registry}
-              onRefreshBlockLoader={onRefreshBlockLoader}
-              resolvePluginFieldType={resolvePluginFieldType}
-            />
+            <BlockInspector onRefreshBlockLoader={onRefreshBlockLoader} />
           </TabsContent>
           <TabsContent value="styles">
-            <StylesTab
-              tokens={tokens ?? {}}
-              resolvePluginFieldType={resolvePluginFieldType}
-            />
+            <StylesTab />
           </TabsContent>
           <TabsContent value="page" data-testid="plumix-page-panel">
             {documentPanel ?? (

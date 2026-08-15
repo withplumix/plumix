@@ -16,6 +16,7 @@ import { createBlockRegistry } from "@plumix/blocks";
 import { EDITOR_BRIDGE_CHANNEL, encode } from "@plumix/blocks/renderer";
 
 import { CanvasFrame } from "./canvas-frame.js";
+import { EditorConfigProvider } from "./editor-config-context.js";
 import {
   EditorProvider,
   useCameraStoreApi,
@@ -55,7 +56,13 @@ function fromCanvas(message: unknown): void {
 function Wrapper({ children }: { readonly children: ReactNode }): ReactElement {
   return (
     <I18nProvider i18n={i18n}>
-      <EditorProvider>{children}</EditorProvider>
+      <EditorConfigProvider
+        registry={registry}
+        tokens={{}}
+        capabilities={NO_CAPS}
+      >
+        <EditorProvider>{children}</EditorProvider>
+      </EditorConfigProvider>
     </I18nProvider>
   );
 }
@@ -69,12 +76,7 @@ describe("CanvasFrame", () => {
   test("renders the iframe at the device width", () => {
     const { container } = render(
       <Wrapper>
-        <CanvasFrame
-          previewUrl="about:blank"
-          origin={ORIGIN}
-          registry={registry}
-          capabilities={NO_CAPS}
-        />
+        <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
       </Wrapper>,
     );
 
@@ -87,8 +89,6 @@ describe("CanvasFrame", () => {
     const props = {
       previewUrl: "about:blank",
       origin: ORIGIN,
-      registry,
-      capabilities: NO_CAPS,
     };
     const { container, rerender } = render(
       <Wrapper>
@@ -142,12 +142,7 @@ describe("CanvasFrame", () => {
   test("draws a selection overlay from the canvas's reported geometry", () => {
     const { queryByTestId } = render(
       <Wrapper>
-        <CanvasFrame
-          previewUrl="about:blank"
-          origin={ORIGIN}
-          registry={registry}
-          capabilities={NO_CAPS}
-        />
+        <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
       </Wrapper>,
     );
 
@@ -163,12 +158,7 @@ describe("CanvasFrame", () => {
   test("outlines every selected block, marking the active one apart", () => {
     const { queryByTestId } = render(
       <Wrapper>
-        <CanvasFrame
-          previewUrl="about:blank"
-          origin={ORIGIN}
-          registry={registry}
-          capabilities={NO_CAPS}
-        />
+        <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
       </Wrapper>,
     );
 
@@ -191,12 +181,7 @@ describe("CanvasFrame", () => {
   test("floats the selection toolbar over the active block", () => {
     const { queryByTestId } = render(
       <Wrapper>
-        <CanvasFrame
-          previewUrl="about:blank"
-          origin={ORIGIN}
-          registry={registry}
-          capabilities={NO_CAPS}
-        />
+        <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
       </Wrapper>,
     );
 
@@ -226,22 +211,23 @@ describe("CanvasFrame", () => {
       let renders = 0;
       const { container } = render(
         <I18nProvider i18n={i18n}>
-          <EditorProvider>
-            <Profiler
-              id="cf"
-              onRender={() => {
-                renders++;
-              }}
-            >
-              <CanvasFrame
-                previewUrl="about:blank"
-                origin={ORIGIN}
-                registry={registry}
-                capabilities={NO_CAPS}
-              />
-            </Profiler>
-            <Capture />
-          </EditorProvider>
+          <EditorConfigProvider
+            registry={registry}
+            tokens={{}}
+            capabilities={NO_CAPS}
+          >
+            <EditorProvider>
+              <Profiler
+                id="cf"
+                onRender={() => {
+                  renders++;
+                }}
+              >
+                <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
+              </Profiler>
+              <Capture />
+            </EditorProvider>
+          </EditorConfigProvider>
         </I18nProvider>,
       );
       // A geometry report populates the container box the wheel handler needs.
@@ -287,12 +273,7 @@ describe("CanvasFrame", () => {
   test("an in-canvas add request opens the inserter; a pick inserts at root", () => {
     const { getByTestId, queryByTestId } = render(
       <Wrapper>
-        <CanvasFrame
-          previewUrl="about:blank"
-          origin={ORIGIN}
-          registry={registry}
-          capabilities={NO_CAPS}
-        />
+        <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
         <TreeProbe />
       </Wrapper>,
     );
@@ -315,12 +296,7 @@ describe("CanvasFrame", () => {
   test("keeps the inserter open through the open transition", () => {
     const { getByTestId, queryByTestId } = render(
       <Wrapper>
-        <CanvasFrame
-          previewUrl="about:blank"
-          origin={ORIGIN}
-          registry={registry}
-          capabilities={NO_CAPS}
-        />
+        <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
       </Wrapper>,
     );
 
@@ -337,12 +313,7 @@ describe("CanvasFrame", () => {
   test("clicking into the canvas iframe dismisses the open inserter", () => {
     const { getByTestId, queryByTestId } = render(
       <Wrapper>
-        <CanvasFrame
-          previewUrl="about:blank"
-          origin={ORIGIN}
-          registry={registry}
-          capabilities={NO_CAPS}
-        />
+        <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
       </Wrapper>,
     );
 
@@ -407,15 +378,16 @@ describe("CanvasFrame nested drop", () => {
   function renderWith(tree: readonly BlockNode[]): void {
     render(
       <I18nProvider i18n={i18n}>
-        <EditorProvider initialTree={tree}>
-          <CanvasFrame
-            previewUrl="about:blank"
-            origin={ORIGIN}
-            registry={nestRegistry}
-            capabilities={NO_CAPS}
-          />
-          <Capture />
-        </EditorProvider>
+        <EditorConfigProvider
+          registry={nestRegistry}
+          tokens={{}}
+          capabilities={NO_CAPS}
+        >
+          <EditorProvider initialTree={tree}>
+            <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
+            <Capture />
+          </EditorProvider>
+        </EditorConfigProvider>
       </I18nProvider>,
     );
   }
@@ -610,12 +582,7 @@ describe("CanvasFrame — drag handle", () => {
   test("the frame handle shows the active device label", () => {
     const { getByTestId } = render(
       <Wrapper>
-        <CanvasFrame
-          previewUrl="about:blank"
-          origin={ORIGIN}
-          registry={registry}
-          capabilities={NO_CAPS}
-        />
+        <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
         <Capture />
       </Wrapper>,
     );
@@ -628,13 +595,7 @@ describe("CanvasFrame — drag handle", () => {
   test("the handle is hidden in read-only preview", () => {
     const { queryByTestId } = render(
       <Wrapper>
-        <CanvasFrame
-          previewUrl="about:blank"
-          origin={ORIGIN}
-          registry={registry}
-          capabilities={NO_CAPS}
-          readOnly
-        />
+        <CanvasFrame previewUrl="about:blank" origin={ORIGIN} readOnly />
       </Wrapper>,
     );
 

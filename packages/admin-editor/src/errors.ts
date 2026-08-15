@@ -18,4 +18,10 @@ export class EditorError extends Error {
       "useStyleFields must be used within <StyleFieldsProvider/>.",
     );
   }
+
+  static missingConfigProvider(): EditorError {
+    return new EditorError(
+      "useEditorConfig must be used within <EditorConfigProvider/>.",
+    );
+  }
 }

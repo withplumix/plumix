@@ -4,6 +4,11 @@ export { connectRuntime } from "./connect-runtime.js";
 export type { RuntimeConnection } from "./connect-runtime.js";
 export { EditorCanvas } from "./editor-canvas.js";
 export { CanvasFrame } from "./canvas-frame.js";
+export {
+  EditorConfigProvider,
+  useEditorConfig,
+} from "./editor-config-context.js";
+export type { EditorConfig } from "./editor-config-context.js";
 export { PlumixEditor } from "./plumix-editor.js";
 export type {
   PluginFieldControl,
