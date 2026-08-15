@@ -2,6 +2,7 @@ import type { Mailer } from "../auth/mailer/types.js";
 import type {
   AssetsBinding,
   ConnectedCache,
+  ConnectedKv,
   ConnectedObjectStorage,
 } from "../runtime/slots.js";
 import type { TelemetryCollector } from "./telemetry.js";
@@ -81,6 +82,32 @@ export function traceStorage(
     // it would put 0ms noise rows next to real bucket round-trips.
     url: (key, opts) => storage.url(key, opts),
     ...(presignPut ? { presignPut } : {}),
+  };
+}
+
+export function traceKv(
+  kv: ConnectedKv,
+  getTelemetry: GetTelemetry,
+): ConnectedKv {
+  const spanned = <T>(
+    op: string,
+    key: string,
+    run: () => Promise<T>,
+  ): Promise<T> =>
+    getTelemetry().span(`kv: ${op}`, (s) => {
+      s.set("kv.key", key);
+      return run();
+    });
+  return {
+    get: (key) => spanned("get", key, () => kv.get(key)),
+    put: (key, value, opts) =>
+      spanned("put", key, () => kv.put(key, value, opts)),
+    delete: (key) => spanned("delete", key, () => kv.delete(key)),
+    list: (opts) =>
+      getTelemetry().span("kv: list", (s) => {
+        s.set("kv.prefix", opts?.prefix ?? "");
+        return kv.list(opts);
+      }),
   };
 }
 

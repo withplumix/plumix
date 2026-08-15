@@ -25,6 +25,34 @@ export class D1Error extends Error {
   }
 }
 
+export class KvError extends Error {
+  static {
+    KvError.prototype.name = "KvError";
+  }
+
+  readonly code: "binding_missing";
+  readonly binding: string;
+
+  private constructor(
+    code: "binding_missing",
+    message: string,
+    binding: string,
+  ) {
+    super(message);
+    this.code = code;
+    this.binding = binding;
+  }
+
+  static bindingMissing(ctx: { binding: string }): KvError {
+    return new KvError(
+      "binding_missing",
+      `kv(): env binding "${ctx.binding}" is missing or not a KV namespace. ` +
+        `Declare it in wrangler.toml and ensure the name matches.`,
+      ctx.binding,
+    );
+  }
+}
+
 export class R2Error extends Error {
   static {
     R2Error.prototype.name = "R2Error";

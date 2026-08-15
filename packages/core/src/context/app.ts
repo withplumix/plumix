@@ -29,6 +29,7 @@ import type { EnvInput } from "../runtime/env-input.js";
 import type {
   AssetsBinding,
   ConnectedCache,
+  ConnectedKv,
   ConnectedObjectStorage,
   ImageDelivery,
 } from "../runtime/slots.js";
@@ -55,6 +56,7 @@ import { createTracedFetch } from "./traced-fetch.js";
 import {
   traceAssets,
   traceCache,
+  traceKv,
   traceMailer,
   traceStorage,
 } from "./traced-slots.js";
@@ -257,6 +259,12 @@ export interface AppContextBase<
    */
   readonly cache?: ConnectedCache;
   /**
+   * Bound key/value store for this request, when the config declared a `kv:`
+   * slot and the runtime adapter connected it. Plugin handlers read/write via
+   * this; core procedures don't use it today.
+   */
+  readonly kv?: ConnectedKv;
+  /**
    * On-the-fly image delivery (resize / format / quality URLs). Present
    * when the config declared an `imageDelivery:` slot, already resolved
    * against the request env by the runtime. `imageDelivery.url(src, opts)`
@@ -385,6 +393,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly assets?: AssetsBinding;
   readonly storage?: ConnectedObjectStorage;
   readonly cache?: ConnectedCache;
+  readonly kv?: ConnectedKv;
   readonly imageDelivery?: ImageDelivery;
   readonly imageRemotePatterns?: readonly RemotePattern[];
   /** Literal transport, or an `(env) => Mailer` resolver (resolved per-request
@@ -496,6 +505,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     assets: args.assets && traceAssets(args.assets, () => base.telemetry),
     storage: args.storage && traceStorage(args.storage, () => base.telemetry),
     cache: args.cache && traceCache(args.cache, () => base.telemetry),
+    kv: args.kv && traceKv(args.kv, () => base.telemetry),
     imageDelivery: args.imageDelivery,
     imageRemotePatterns: args.imageRemotePatterns,
     mailer: mailer && traceMailer(mailer, () => base.telemetry),

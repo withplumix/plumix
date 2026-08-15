@@ -95,6 +95,22 @@
           "configSlots": {
             "imageDelivery": "images()"
           }
+        },
+        "kv": {
+          "imports": [
+            "import { kv } from \"@plumix/runtime-cloudflare\";"
+          ],
+          "configSlots": {
+            "kv": "kv({ binding: \"KV\" })"
+          },
+          "wrangler": {
+            "kv_namespaces": [
+              {
+                "binding": "KV",
+                "id": "local-development-only"
+              }
+            ]
+          }
         }
       },
       "authMethods": {

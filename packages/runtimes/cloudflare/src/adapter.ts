@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type {
+  AppContext,
   AssetsBinding,
   Db,
   FetchHandler,
@@ -56,22 +57,6 @@ function readAssetsBinding(env: unknown): AssetsBinding | undefined {
   return undefined;
 }
 
-/**
- * Walk the configured slot adapters for their declared `requiredBindings`
- * and assert every key is present on `env`. Called once per Worker isolate
- * — the result is memoised — so the check is effectively free after the
- * first request.
- *
- * Produces a single error listing every missing binding, which is far more
- * actionable than a 500 surfacing from the first query several hops deeper.
- */
-function collectBindingsFrom(slot: unknown, into: string[]): void {
-  if (slot === undefined || slot === null) return;
-  const bindings = (slot as { readonly requiredBindings?: readonly string[] })
-    .requiredBindings;
-  if (bindings) into.push(...bindings);
-}
-
 // `connect` owns its result, including `undefined` for "no delivery" — so it
 // must not `?? slot` back to the bare (identity-transform) object.
 function connectImageDelivery(
@@ -83,15 +68,74 @@ function connectImageDelivery(
   return slot.connect ? slot.connect(env) : slot;
 }
 
+// Both the fetch and scheduled handlers assemble an identical AppContext; only
+// the request, its db handle, and the deferred-work sink differ, so those come
+// in as args while everything derived from `app`/`env` is built once here — a
+// new context field is wired in one place, not two drifting call sites.
+function buildAppContext(
+  app: PlumixApp,
+  args: {
+    readonly db: unknown;
+    readonly env: unknown;
+    readonly request: Request;
+    readonly defer: ((promise: Promise<unknown>) => void) | undefined;
+  },
+): AppContext {
+  const { db, env, request, defer } = args;
+  // Per-request I/O slots. `storage`/`kv` bindings are stateless; `cache`
+  // connects to null (→ undefined) when the deploy lacks the zone credentials
+  // to purge, so caching is off and pages render live. Purge tags accrue on
+  // both the request path and scheduled publishes, so cache is wired for both.
+  const storage = app.config.storage?.connect(env);
+  const cache = app.config.cache?.connect(env) ?? undefined;
+  const kv = app.config.kv?.connect(env);
+  return createAppContext({
+    db: db as Db,
+    env: env as PlumixEnv,
+    request,
+    hooks: app.hooks,
+    plugins: app.plugins,
+    blocks: app.blocks,
+    marks: app.marks,
+    shortcodes: app.shortcodes,
+    defer,
+    assets: readAssetsBinding(env),
+    storage,
+    cache,
+    kv,
+    imageDelivery: connectImageDelivery(app, env),
+    imageRemotePatterns: app.config.images?.remotePatterns,
+    debugBar: app.config.debugBar,
+    // Registered consumers head-sample at context creation; snapshot delivery
+    // then rides `defer` → `waitUntil`, off the response / cron path.
+    telemetry: app.config.telemetry,
+    mailer: app.config.mailer,
+    i18n: app.config.i18n,
+    oauthProviders: app.oauthProviders,
+    authMethods: app.authMethods,
+    authenticator: app.authenticator,
+    bootstrapAllowed: app.bootstrapAllowed,
+    origin: app.origin,
+    basePath: app.basePath,
+    siteName: app.config.auth.magicLink?.siteName,
+    appContextExtensions: app.appContextExtensions,
+  });
+}
+
+/**
+ * Walk the configured slot adapters for their declared `requiredBindings` and
+ * assert every key is present on `env`. Called once per Worker isolate — the
+ * result is memoised — so the check is effectively free after the first request.
+ *
+ * Produces a single error listing every missing binding, which is far more
+ * actionable than a 500 surfacing from the first query several hops deeper.
+ */
 function validateBindings(app: PlumixApp, env: unknown): void {
+  const { database, storage, kv } = app.config;
   const required: string[] = [];
-  const { database, kv, storage } = app.config;
-  if (database.requiredBindings) required.push(...database.requiredBindings);
-  // kv and storage slots are structurally simple today but may grow
-  // requiredBindings later; walk them defensively. Cast is needed because
-  // the public slot types don't yet declare the field.
-  collectBindingsFrom(kv, required);
-  collectBindingsFrom(storage, required);
+  for (const slot of [database, storage, kv]) {
+    if (slot?.requiredBindings) required.push(...slot.requiredBindings);
+  }
 
   if (required.length === 0) return;
   // Defensive: if env isn't an object, every binding is "missing". This
@@ -194,45 +238,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         ? (response: Response) => scoped.commit(response)
         : (response: Response) => response;
 
-      // Object storage binds once per isolate — R2 binding is stateless,
-      // so connecting on every request is wasted work. Memoise lazily so
-      // apps without `storage` configured never pay the cost.
-      const storage = app.config.storage?.connect(env);
-
-      // Edge cache binds per request. `connect` returns null when the deploy
-      // lacks zone credentials (e.g. workers.dev) — caching off, render live.
-      const cache = app.config.cache?.connect(env) ?? undefined;
-
-      const appCtx = createAppContext({
-        db: db as Db,
-        env: env as PlumixEnv,
-        request,
-        hooks: app.hooks,
-        plugins: app.plugins,
-        blocks: app.blocks,
-        marks: app.marks,
-        shortcodes: app.shortcodes,
-        defer,
-        assets: readAssetsBinding(env),
-        storage,
-        cache,
-        imageDelivery: connectImageDelivery(app, env),
-        imageRemotePatterns: app.config.images?.remotePatterns,
-        debugBar: app.config.debugBar,
-        // Registered consumers head-sample at context creation; snapshot
-        // delivery then rides `defer` → `waitUntil`, off the response path.
-        telemetry: app.config.telemetry,
-        mailer: app.config.mailer,
-        i18n: app.config.i18n,
-        oauthProviders: app.oauthProviders,
-        authMethods: app.authMethods,
-        authenticator: app.authenticator,
-        bootstrapAllowed: app.bootstrapAllowed,
-        origin: app.origin,
-        basePath: app.basePath,
-        siteName: app.config.auth.magicLink?.siteName,
-        appContextExtensions: app.appContextExtensions,
-      });
+      const appCtx = buildAppContext(app, { db, env, request, defer });
       const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
       return finalize(response);
     } catch (error) {
@@ -286,41 +292,11 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
       ? scoped.db
       : database.connect(env, syntheticRequest, app.schema).db;
 
-    const storage = app.config.storage?.connect(env);
-    // Scheduled publishes fire `entry:published`, which accumulates edge-cache
-    // purge tags; wire the cache so the flush at the end of `runScheduledTasks`
-    // can reach it.
-    const cache = app.config.cache?.connect(env) ?? undefined;
-
-    const appCtx = createAppContext({
-      db: db as Db,
-      env: env as PlumixEnv,
+    const appCtx = buildAppContext(app, {
+      db,
+      env,
       request: syntheticRequest,
-      hooks: app.hooks,
-      plugins: app.plugins,
-      blocks: app.blocks,
-      marks: app.marks,
-      shortcodes: app.shortcodes,
       defer,
-      assets: readAssetsBinding(env),
-      storage,
-      cache,
-      imageDelivery: connectImageDelivery(app, env),
-      imageRemotePatterns: app.config.images?.remotePatterns,
-      debugBar: app.config.debugBar,
-      // Cron runs collect through the same consumer gate as requests; the
-      // snapshot delivery inside `runScheduledTasks` rides `defer` → waitUntil.
-      telemetry: app.config.telemetry,
-      mailer: app.config.mailer,
-      i18n: app.config.i18n,
-      oauthProviders: app.oauthProviders,
-      authMethods: app.authMethods,
-      authenticator: app.authenticator,
-      bootstrapAllowed: app.bootstrapAllowed,
-      origin: app.origin,
-      basePath: app.basePath,
-      siteName: app.config.auth.magicLink?.siteName,
-      appContextExtensions: app.appContextExtensions,
     });
 
     try {

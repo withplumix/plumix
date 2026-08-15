@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { loadRegistry } from "./registry.js";
 import { buildSnapshot, serializeSnapshot } from "./snapshot.js";
 import { loadSources } from "./sources.js";
 import { REPO_ROOT } from "./test-support.js";
@@ -54,5 +55,21 @@ describe("loadSources", () => {
     const { registry } = await loadSources(dir, snapshotPath);
 
     expect(registry.runtimes.map((r) => r.id)).toContain("cloudflare");
+  });
+});
+
+describe("live cloudflare runtime capabilities", () => {
+  it("advertises a kv capability wiring kv({ binding }) + a KV namespace", async () => {
+    const registry = await loadRegistry(REPO_ROOT);
+    const cloudflare = registry.runtimes.find((r) => r.id === "cloudflare");
+    const kv = cloudflare?.capabilities?.kv;
+
+    expect(kv?.imports).toContain(
+      'import { kv } from "@plumix/runtime-cloudflare";',
+    );
+    expect(kv?.configSlots?.kv).toBe('kv({ binding: "KV" })');
+    expect(kv?.wrangler?.kv_namespaces).toEqual([
+      { binding: "KV", id: "local-development-only" },
+    ]);
   });
 });

@@ -169,8 +169,50 @@ export interface ObjectStorage {
   connect(env: unknown): ConnectedObjectStorage;
 }
 
+export interface KvPutOptions {
+  /**
+   * Seconds until the entry expires. Backends may impose their own minimum —
+   * Cloudflare Workers KV, for example, rejects TTLs under 60 seconds at write
+   * time, while other stores accept any positive value.
+   */
+  readonly expirationTtl?: number;
+}
+
+export interface KvListOptions {
+  readonly prefix?: string;
+  readonly limit?: number;
+  /** Opaque cursor from a prior {@link KvListResult} to resume pagination. */
+  readonly cursor?: string;
+}
+
+export interface KvListResult {
+  readonly keys: readonly string[];
+  /** Present when more keys remain — pass back as `cursor` to continue. */
+  readonly cursor?: string;
+  readonly listComplete: boolean;
+}
+
+/**
+ * A key/value store bound for the current request. String values only —
+ * callers serialize (JSON, etc.) themselves.
+ */
+export interface ConnectedKv {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, opts?: KvPutOptions): Promise<void>;
+  delete(key: string): Promise<void>;
+  list(opts?: KvListOptions): Promise<KvListResult>;
+}
+
+/**
+ * Key/value slot. `connect(env)` binds the store for a request. Providers
+ * include `kv({ binding })` from `@plumix/runtime-cloudflare` (a Workers KV
+ * namespace) and `memoryKv()` (in-memory, for dev and tests); any backend —
+ * e.g. a Node runtime over Redis — implements this same port.
+ */
 export interface KV {
   readonly kind: string;
+  readonly requiredBindings?: readonly string[];
+  connect(env: unknown): ConnectedKv;
 }
 
 /**

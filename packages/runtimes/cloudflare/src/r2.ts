@@ -14,6 +14,7 @@ import type {
 } from "plumix";
 import { resolveEnvInput } from "plumix";
 
+import { bucketNameKey, publicUrlBaseKey } from "./env-keys.js";
 import { R2Error } from "./errors.js";
 import { readEnvString } from "./read-env.js";
 import { presignPutUrl } from "./sigv4.js";
@@ -147,7 +148,7 @@ export function r2(config: R2Config): R2ObjectStorage {
       const bucket = readR2Binding(env, config.binding);
       const publicUrlBase =
         config.publicUrlBase ??
-        readEnvString(env, `${config.binding}_PUBLIC_URL_BASE`);
+        readEnvString(env, publicUrlBaseKey(config.binding));
       const s3 = config.s3 ?? readConventionalS3(env, config.binding);
       const connected: ConnectedObjectStorage = {
         async put(key, body: ObjectBody, opts?: PutOptions): Promise<void> {
@@ -272,7 +273,7 @@ function readConventionalS3(
   const accountId = readEnvString(env, "CF_ACCOUNT_ID");
   const accessKeyId = readEnvString(env, "R2_ACCESS_KEY_ID");
   const secretAccessKey = readEnvString(env, "R2_SECRET_ACCESS_KEY");
-  const bucket = readEnvString(env, `${binding}_BUCKET`);
+  const bucket = readEnvString(env, bucketNameKey(binding));
   if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
     return undefined;
   }
