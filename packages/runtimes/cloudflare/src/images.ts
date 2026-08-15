@@ -1,5 +1,6 @@
 import type { ImageDelivery, TransformOpts } from "plumix";
 
+import { DEFAULT_MEDIA_BINDING, publicUrlBaseKey } from "./env-keys.js";
 import { readEnvString } from "./read-env.js";
 
 export interface ImagesConfig {
@@ -48,7 +49,10 @@ export function images(config: ImagesConfig = {}): ImageDelivery {
     // checks upstream build a same-URL srcSet across the width ladder.
     connect(env: unknown): ImageDelivery | undefined {
       if (rawZone) return this;
-      const zoneFromEnv = readEnvString(env, "MEDIA_PUBLIC_URL_BASE");
+      const zoneFromEnv = readEnvString(
+        env,
+        publicUrlBaseKey(DEFAULT_MEDIA_BINDING),
+      );
       return zoneFromEnv ? images({ zone: zoneFromEnv }) : undefined;
     },
   };
