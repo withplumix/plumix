@@ -3,6 +3,7 @@ import type {
   AppContext,
   AssetsBinding,
   ConnectedCache,
+  ConnectedKv,
   ConnectedObjectStorage,
   Db,
   FetchHandler,
@@ -59,22 +60,6 @@ function readAssetsBinding(env: unknown): AssetsBinding | undefined {
   return undefined;
 }
 
-/**
- * Walk the configured slot adapters for their declared `requiredBindings`
- * and assert every key is present on `env`. Called once per Worker isolate
- * — the result is memoised — so the check is effectively free after the
- * first request.
- *
- * Produces a single error listing every missing binding, which is far more
- * actionable than a 500 surfacing from the first query several hops deeper.
- */
-function collectBindingsFrom(slot: unknown, into: string[]): void {
-  if (slot === undefined || slot === null) return;
-  const bindings = (slot as { readonly requiredBindings?: readonly string[] })
-    .requiredBindings;
-  if (bindings) into.push(...bindings);
-}
-
 // `connect` owns its result, including `undefined` for "no delivery" — so it
 // must not `?? slot` back to the bare (identity-transform) object.
 function connectImageDelivery(
@@ -99,9 +84,10 @@ function buildAppContext(
     readonly defer: ((promise: Promise<unknown>) => void) | undefined;
     readonly storage: ConnectedObjectStorage | undefined;
     readonly cache: ConnectedCache | undefined;
+    readonly kv: ConnectedKv | undefined;
   },
 ): AppContext {
-  const { db, env, request, defer, storage, cache } = args;
+  const { db, env, request, defer, storage, cache, kv } = args;
   return createAppContext({
     db: db as Db,
     env: env as PlumixEnv,
@@ -115,6 +101,7 @@ function buildAppContext(
     assets: readAssetsBinding(env),
     storage,
     cache,
+    kv,
     imageDelivery: connectImageDelivery(app, env),
     imageRemotePatterns: app.config.images?.remotePatterns,
     debugBar: app.config.debugBar,
@@ -134,15 +121,20 @@ function buildAppContext(
   });
 }
 
+/**
+ * Walk the configured slot adapters for their declared `requiredBindings` and
+ * assert every key is present on `env`. Called once per Worker isolate — the
+ * result is memoised — so the check is effectively free after the first request.
+ *
+ * Produces a single error listing every missing binding, which is far more
+ * actionable than a 500 surfacing from the first query several hops deeper.
+ */
 function validateBindings(app: PlumixApp, env: unknown): void {
+  const { database, storage, kv } = app.config;
   const required: string[] = [];
-  const { database, kv, storage } = app.config;
-  if (database.requiredBindings) required.push(...database.requiredBindings);
-  // kv and storage slots are structurally simple today but may grow
-  // requiredBindings later; walk them defensively. Cast is needed because
-  // the public slot types don't yet declare the field.
-  collectBindingsFrom(kv, required);
-  collectBindingsFrom(storage, required);
+  for (const slot of [database, storage, kv]) {
+    if (slot?.requiredBindings) required.push(...slot.requiredBindings);
+  }
 
   if (required.length === 0) return;
   // Defensive: if env isn't an object, every binding is "missing". This
@@ -253,6 +245,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
       // Edge cache binds per request. `connect` returns null when the deploy
       // lacks zone credentials (e.g. workers.dev) — caching off, render live.
       const cache = app.config.cache?.connect(env) ?? undefined;
+      const kv = app.config.kv?.connect(env);
 
       const appCtx = buildAppContext(app, {
         db,
@@ -261,6 +254,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         defer,
         storage,
         cache,
+        kv,
       });
       const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
       return finalize(response);
@@ -320,6 +314,7 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
     // purge tags; wire the cache so the flush at the end of `runScheduledTasks`
     // can reach it.
     const cache = app.config.cache?.connect(env) ?? undefined;
+    const kv = app.config.kv?.connect(env);
 
     const appCtx = buildAppContext(app, {
       db,
@@ -328,6 +323,7 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
       defer,
       storage,
       cache,
+      kv,
     });
 
     try {
