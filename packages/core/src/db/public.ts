@@ -3,8 +3,10 @@
 // never takes its own `drizzle-orm` dependency. Direct writes bypass core's
 // entry-mutation service — no `entry:*`/`term:*` action fires, so no auto-purge
 // — hence the write helpers and the purge vocabulary belong together here.
-// Everything below is also reachable from the flat `@plumix/core` root barrel;
-// this subpath just groups it (#1700).
+// This is the one canonical seam for the operators + introspection + purge
+// vocabulary; the bundled schema tables also have their own tables-only
+// `@plumix/core/schema` / `plumix/schema` seam. None of it is re-exported from
+// the flat `@plumix/core` / `plumix` root barrel anymore (#1766).
 
 // Query operators, table-introspection helpers, unique-constraint guards, types.
 export * from "./index.js";

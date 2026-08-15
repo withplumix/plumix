@@ -1,17 +1,6 @@
-import {
-  and,
-  authenticated,
-  base,
-  count,
-  entries,
-  entryTerm,
-  eq,
-  inArray,
-  settings,
-  slugify,
-  sql,
-  terms,
-} from "plumix/plugin";
+import { and, count, eq, inArray, sql } from "plumix/db";
+import { authenticated, base, slugify } from "plumix/plugin";
+import { entries, entryTerm, settings, terms } from "plumix/schema";
 import * as v from "valibot";
 
 import type { ResolvedRow } from "./server/resolveItemStates.js";

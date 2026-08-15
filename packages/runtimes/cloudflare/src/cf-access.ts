@@ -1,4 +1,5 @@
-import type { Db, RequestAuthenticator, UserRole } from "plumix";
+import type { Db, RequestAuthenticator } from "plumix";
+import type { UserRole } from "plumix/schema";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { ExternalIdentityError, resolveExternalIdentity } from "plumix";
 

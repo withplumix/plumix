@@ -1,4 +1,5 @@
-import type { RequestAuthenticator, User } from "plumix";
+import type { RequestAuthenticator } from "plumix";
+import type { User } from "plumix/schema";
 
 import { hasDemoSession, readDemoToken } from "./session.js";
 
