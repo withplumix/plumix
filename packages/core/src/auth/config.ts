@@ -69,7 +69,7 @@ export interface PlumixAuthInput {
   readonly oauth?: PlumixOAuthConfig;
   readonly magicLink?: PlumixMagicLinkConfig;
   /**
-   * Request-level guard. Decides "who is this user" on every request.
+   * Request-level authenticator. Decides "who is this user" on every request.
    * Defaults to `defaultAuthenticator()` — a chain of
    * `sessionAuthenticator()` (cookie) followed by
    * `apiTokenAuthenticator()` (Authorization: Bearer pl_pat_…).
@@ -86,7 +86,7 @@ export interface PlumixAuthInput {
    * deploys that mix transparent SSO with passkey-as-backup.
    *
    * If you override and still want bearer-token auth alongside, wrap
-   * yours in `chainAuthenticators(yourGuard, apiTokenAuthenticator())`.
+   * yours in `chainAuthenticators(yourAuthenticator, apiTokenAuthenticator())`.
    */
   readonly authenticator?: RequestAuthenticator;
   /**

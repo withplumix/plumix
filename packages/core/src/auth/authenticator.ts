@@ -5,12 +5,12 @@ import { readSessionCookie } from "./cookies.js";
 import { validateSession } from "./sessions.js";
 
 /**
- * Resolved auth on a request — the user plus any guard-specific
+ * Resolved auth on a request — the user plus any authenticator-specific
  * narrowing of capabilities. Returned by `RequestAuthenticator`s.
  *
  * `tokenScopes`:
  *   - `undefined` / `null` → unrestricted, the user's role caps apply
- *     verbatim (session-cookie auth, IdP guards like cfAccess).
+ *     verbatim (session-cookie auth, IdP authenticators like cfAccess).
  *   - `readonly string[]` → capability whitelist. The effective caps
  *     are `tokenScopes ∩ roleCaps`, so a token can never escalate.
  *     Used by API-token auth where the operator scoped the token at
@@ -18,7 +18,7 @@ import { validateSession } from "./sessions.js";
  *
  * `auth.can()` on `AppContext` is the single chokepoint that consults
  * `tokenScopes` — every capability check in core + plugins reads
- * through it, so adding a guard that returns scopes Just Works
+ * through it, so adding an authenticator that returns scopes Just Works
  * everywhere without scattered checks.
  */
 export interface AuthResult {
@@ -27,7 +27,7 @@ export interface AuthResult {
 }
 
 /**
- * Decides who the user is on a given request — Laravel-style Guard.
+ * Decides who the user is on a given request — a pluggable authenticator.
  *
  * Default: read the session cookie, look up the row. Override at config
  * time with anything that maps a request to an `AuthResult` (or null):
@@ -36,7 +36,7 @@ export interface AuthResult {
  *     validates the Cloudflare Access JWT header.
  *   - `apiTokenAuthenticator()` — `Authorization: Bearer …` against
  *     the hashed `api_tokens` table; surfaces per-token `scopes`.
- *   - User-shipped enterprise SSO / custom guards: implement this
+ *   - User-shipped enterprise SSO / custom authenticators: implement this
  *     one-method interface, no plumix changes required.
  *
  * The contract is intentionally narrow:
@@ -46,7 +46,7 @@ export interface AuthResult {
  *   - Throws on a malformed credential (bad signature, replay, etc.)
  *     so the dispatcher can map to a typed error.
  *   - No side effects: the authenticator does NOT mint sessions or
- *     set cookies. Login flows do that. A guard only reads.
+ *     set cookies. Login flows do that. An authenticator only reads.
  */
 export interface RequestAuthenticator {
   authenticate(request: Request, db: Db): Promise<AuthResult | null>;
@@ -54,12 +54,12 @@ export interface RequestAuthenticator {
    * Optional. Does this request carry a credential this authenticator would
    * resolve to a browser session? Public renders consult it to skip
    * authentication for anonymous traffic without coupling to the default
-   * session cookie — a custom guard (demo token, Cloudflare Access JWT, …)
+   * session cookie — a custom authenticator (demo token, Cloudflare Access JWT, …)
    * authenticates by its own signal and must be given the chance to load its
    * user, or capability-gated render decisions (e.g. the visual-editor gate)
    * silently see an anonymous request. Omit it and the default applies: the
-   * standard `plumix_session` cookie is present. Returning `false` opts a guard
-   * out of public-render authentication entirely (e.g. bearer-token API auth,
+   * standard `plumix_session` cookie is present. Returning `false` opts an
+   * authenticator out of public-render authentication entirely (e.g. bearer-token API auth,
    * which is not a browser session and must not bump `lastUsedAt` on every GET).
    */
   hasSession?(request: Request): boolean;
@@ -128,7 +128,7 @@ export function authenticateTraced(
 /**
  * Whether a request carries a session this authenticator would resolve on a
  * public render. Defaults to "the standard `plumix_session` cookie is present"
- * for a guard that doesn't declare its own signal, preserving the historical
+ * for an authenticator that doesn't declare its own signal, preserving the historical
  * behaviour for authenticators written before this predicate existed.
  */
 export function requestHasSession(
@@ -182,8 +182,8 @@ export function apiTokenAuthenticator(): RequestAuthenticator {
  * is taken from the first authenticator that exposes it — the chain is
  * a list, and the head wins when both could speak.
  *
- * Used to wire the default plumix install: the cookie-session guard
- * in front of the API-token guard, so browser requests resolve via
+ * Used to wire the default plumix install: the cookie-session authenticator
+ * in front of the API-token authenticator, so browser requests resolve via
  * the existing path and bearer-auth API clients don't need any
  * operator config.
  */

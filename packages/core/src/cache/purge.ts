@@ -51,7 +51,7 @@ const ENTRY_ACTIONS = [
 
 // Term lifecycle actions whose payload's leading arg carries `{ taxonomy }`.
 // A term archive is stored under the `t:<type>` tags of its taxonomy's entry
-// types, so creating, renaming, meta-changing, or deleting a term busts those.
+// types, so creating, renaming, meta-changing, or deleting a term purges those.
 const TERM_ACTIONS = [
   "term:created",
   "term:updated",

@@ -3,7 +3,7 @@ import type { RouteIntent } from "../route/intent.js";
 
 // Coarse cache-tag vocabulary (PRD #1080). Archive-class pages carry the type
 // tag `t:<type>`; entry permalinks carry the entry tag `e:<id>`. Publishing an
-// entry purges both, busting its permalink and every archive of that type.
+// entry purges both — its permalink and every archive of that type.
 export function typeTag(entryType: string): string {
   return `t:${entryType}`;
 }
@@ -25,8 +25,8 @@ interface PageTagSources {
  * The cache tags a rendered public page is stored under. Every page that lists
  * or embeds type-`X` content — its archives, the front page, term archives,
  * and an entry permalink (which can render sibling content like related posts)
- * — carries `t:X`, so any publish of that type busts it. A permalink also
- * carries its own `e:<id>` so an edit to just that entry busts it precisely.
+ * — carries `t:X`, so any publish of that type purges it. A permalink also
+ * carries its own `e:<id>` so an edit to just that entry purges it precisely.
  */
 export function pageTags(sources: PageTagSources): string[] {
   const { intent, resolvedEntity } = sources;
@@ -50,7 +50,7 @@ export function pageTags(sources: PageTagSources): string[] {
     case "search":
       // A plugin archive's content dependencies are unknown to core (as search
       // results are), so it carries no coarse type tags — the plugin manages
-      // its own invalidation if it edge-caches.
+      // its own purging if it edge-caches.
       return [];
   }
 }
@@ -62,7 +62,7 @@ export function entryPurgeTags(entryType: string, entryId: number): string[] {
 
 /**
  * Tags to purge when a term changes. A term archive carries the `t:<type>`
- * tags of the entry types its taxonomy lists, so purging those busts the
+ * tags of the entry types its taxonomy lists, so purging those clears the
  * archive and the listings that show the term's name.
  */
 export function termPurgeTags(taxonomyEntryTypes: readonly string[]): string[] {

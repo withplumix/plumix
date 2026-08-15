@@ -2,7 +2,7 @@
  * Access policies — the "open logic, closed output" core.
  *
  * A policy pairs a developer-supplied resolver (`(ctx) => Outcome`, whose
- * decision logic is unconstrained — role, capability, a `meta` flag, an
+ * decision logic is unconstrained — role, entitlement, a `meta` flag, an
  * external billing check, a time window) with a *closed* return shape. The
  * resolver returns one of three discrete outcomes; {@link resolveAccess} maps
  * that to a `{ segment, gate }` pair. Because everything downstream (the hard
@@ -37,7 +37,7 @@ export type BuiltinSegment =
 
 /**
  * The membership / paywall segment family — a developer-defined `<label>` (a
- * plan, tier, or capability) resolved by their entitlement check and declared
+ * membership, plan, or tier) resolved by their entitlement check and declared
  * in the policy's `segments` space. Open-ended by design, so unlike the closed
  * `role:` family it is not a built-in: each label must be declared.
  */
