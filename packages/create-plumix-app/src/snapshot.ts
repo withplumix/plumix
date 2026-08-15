@@ -7,32 +7,34 @@ import { ScaffoldError } from "./errors.js";
 import { loadRegistry } from "./registry.js";
 
 /**
- * A self-contained scaffold snapshot: the discovered registry (runtimes and
+ * Everything a scaffold run needs: the discovered registry (runtimes and
  * plugins, with runtime file content inlined) plus the catalog context that
- * resolves their dependency protocols. Baked at `prepack` so the published
- * CLI scaffolds without the monorepo — the same resolution path as a live
- * workspace run, just against baked data.
+ * resolves their dependency protocols. Assembled live from the workspace, or
+ * baked at `prepack` and reloaded — either way the same shape, so scaffolded
+ * output is identical. A serialized copy of this is the published snapshot.
  */
-export interface Snapshot {
-  readonly catalogContext: CatalogContext;
+export interface ScaffoldSources {
   readonly registry: Registry;
+  readonly ctx: CatalogContext;
 }
 
-export async function buildSnapshot(repoRoot: string): Promise<Snapshot> {
-  const [registry, catalogContext] = await Promise.all([
+export async function buildSnapshot(
+  repoRoot: string,
+): Promise<ScaffoldSources> {
+  const [registry, ctx] = await Promise.all([
     loadRegistry(repoRoot),
     loadCatalogContext(repoRoot),
   ]);
-  return { catalogContext, registry };
+  return { registry, ctx };
 }
 
-export function serializeSnapshot(snapshot: Snapshot): string {
-  return `${JSON.stringify(snapshot, null, 2)}\n`;
+export function serializeSnapshot(sources: ScaffoldSources): string {
+  return `${JSON.stringify(sources, null, 2)}\n`;
 }
 
-export async function loadSnapshot(path: string): Promise<Snapshot> {
+export async function loadSnapshot(path: string): Promise<ScaffoldSources> {
   try {
-    return JSON.parse(await readFile(path, "utf8")) as Snapshot;
+    return JSON.parse(await readFile(path, "utf8")) as ScaffoldSources;
   } catch (cause) {
     throw ScaffoldError.snapshotMissing({ path, cause });
   }

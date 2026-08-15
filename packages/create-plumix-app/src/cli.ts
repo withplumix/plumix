@@ -1,8 +1,6 @@
-import { createRequire } from "node:module";
-import * as clack from "@clack/prompts";
-
 import type { PackageManager } from "./package-manager.js";
 import type { CommandRunner } from "./post-scaffold.js";
+import type { CliIO, Reporter } from "./reporter.js";
 import type { ScaffoldSources } from "./sources.js";
 import type { WizardSelection } from "./wizard.js";
 import {
@@ -12,40 +10,15 @@ import {
 } from "./package-manager.js";
 import { nextSteps, runPostScaffold, spawnRunner } from "./post-scaffold.js";
 import { reconcile } from "./reconcile.js";
+import { clackReporter, plainReporter } from "./reporter.js";
 import { DEFAULT_RUNTIME, loadScaffoldSources, scaffold } from "./scaffold.js";
 import { clackPrompter, runWizard } from "./wizard.js";
-
-export interface CliIO {
-  stdout(line: string): void;
-  stderr(line: string): void;
-}
 
 export interface CliDeps {
   /** Command runner for install/git — injected in tests to avoid spawning. */
   readonly runner?: CommandRunner;
   /** `npm_config_user_agent`, for package-manager detection. */
   readonly userAgent?: string;
-}
-
-// The plumix wordmark, shown once as a welcome header on a successful scaffold.
-export const BANNER = [
-  "        _                 _",
-  "  _ __ | |_   _ _ __ ___ (_)_  __",
-  " | '_ \\| | | | | '_ ` _ \\| \\ \\/ /",
-  " | |_) | | |_| | | | | | | |>  <",
-  " | .__/|_|\\__,_|_| |_| |_|_/_/\\_\\",
-  " |_|",
-].join("\n");
-
-// Resolved from this package's own manifest at runtime — never hardcoded.
-function readVersion(): string {
-  try {
-    const require = createRequire(import.meta.url);
-    const pkg = require("../package.json") as { version?: string };
-    return pkg.version ?? "0.0.0";
-  } catch {
-    return "0.0.0";
-  }
 }
 
 const USAGE = `Usage: create-plumix-app <target-directory> [options]
@@ -116,10 +89,11 @@ export async function runCli(
   };
 
   const interactive = reconciled.prompts.length > 0 && isInteractive();
+  const reporter: Reporter = interactive ? clackReporter : plainReporter(io);
   let sources: ScaffoldSources | undefined;
   if (interactive) {
     sources = await loadScaffoldSources();
-    clack.intro("create-plumix-app");
+    reporter.intro();
     const filled = await runWizard(
       reconciled.prompts,
       selection,
@@ -127,7 +101,7 @@ export async function runCli(
       clackPrompter,
     );
     if (filled === null) {
-      clack.cancel("Scaffolding cancelled.");
+      reporter.cancelled("Scaffolding cancelled.");
       return 1;
     }
     selection = filled;
@@ -161,26 +135,18 @@ export async function runCli(
       dbReady: post.dbSetup,
     });
 
-    if (interactive) {
-      if (post.installFailed) clack.log.warn(`"${pm} install" failed.`);
-      if (post.dbSetupFailed) clack.log.warn("Local database setup failed.");
-      clack.outro(`Created ${result.name}. Next: ${steps.join(" && ")}`);
-    } else {
-      io.stdout(BANNER);
-      io.stdout(`v${readVersion()}`);
-      io.stdout("");
-      io.stdout(`Created ${result.name} at ${result.targetDir}.`);
-      if (post.installFailed) io.stdout("Dependency install failed.");
-      if (post.dbSetupFailed) io.stdout("Local database setup failed.");
-      io.stdout("");
-      io.stdout("Next steps:");
-      for (const step of steps) io.stdout(`  ${step}`);
-    }
+    reporter.created({
+      name: result.name,
+      targetDir: result.targetDir,
+      steps,
+      pm,
+      installFailed: post.installFailed,
+      dbSetupFailed: post.dbSetupFailed,
+    });
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (interactive) clack.cancel(message);
-    else io.stderr(message);
+    reporter.cancelled(message);
     return 1;
   }
 }

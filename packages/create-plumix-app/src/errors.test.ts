@@ -3,13 +3,12 @@ import { describe, expect, test } from "vitest";
 import { ScaffoldError } from "./errors.js";
 
 describe("ScaffoldError.targetParentMissing", () => {
-  test("class identity, code, exposed parent, and message", () => {
+  test("class identity, code, and message carrying the parent", () => {
     const err = ScaffoldError.targetParentMissing({ parent: "/missing/dir" });
     expect(err).toBeInstanceOf(ScaffoldError);
     expect(err).toBeInstanceOf(Error);
     expect(err.name).toBe("ScaffoldError");
     expect(err.code).toBe("target_parent_missing");
-    expect(err.parent).toBe("/missing/dir");
     expect(err.message).toContain(
       "Target parent directory does not exist: /missing/dir",
     );
@@ -17,11 +16,10 @@ describe("ScaffoldError.targetParentMissing", () => {
 });
 
 describe("ScaffoldError.targetNotDirectory", () => {
-  test("class identity, code, exposed targetDir, and message", () => {
+  test("code and message carrying the target", () => {
     const err = ScaffoldError.targetNotDirectory({ targetDir: "/path/file" });
     expect(err.name).toBe("ScaffoldError");
     expect(err.code).toBe("target_not_directory");
-    expect(err.targetDir).toBe("/path/file");
     expect(err.message).toContain(
       "Target path exists but is not a directory: /path/file",
     );
@@ -29,12 +27,11 @@ describe("ScaffoldError.targetNotDirectory", () => {
 });
 
 describe("ScaffoldError.targetDirectoryNotEmpty", () => {
-  test("class identity, code, exposed targetDir, and message", () => {
+  test("code and message carrying the target", () => {
     const err = ScaffoldError.targetDirectoryNotEmpty({
       targetDir: "/path/existing",
     });
     expect(err.code).toBe("target_directory_not_empty");
-    expect(err.targetDir).toBe("/path/existing");
     expect(err.message).toContain(
       "Target directory is not empty: /path/existing",
     );
@@ -42,14 +39,12 @@ describe("ScaffoldError.targetDirectoryNotEmpty", () => {
 });
 
 describe("ScaffoldError.catalogResolutionMissing", () => {
-  test("class identity, code, exposed dependency/catalog, and message", () => {
+  test("code and message carrying dependency and catalog", () => {
     const err = ScaffoldError.catalogResolutionMissing({
       dependency: "react-dom",
       catalog: "react",
     });
     expect(err.code).toBe("catalog_resolution_missing");
-    expect(err.dependency).toBe("react-dom");
-    expect(err.catalog).toBe("react");
     expect(err.message).toContain('"react-dom"');
     expect(err.message).toContain('"react" catalog');
     expect(err.message).toContain("pnpm-workspace.yaml");
@@ -57,12 +52,11 @@ describe("ScaffoldError.catalogResolutionMissing", () => {
 });
 
 describe("ScaffoldError.workspaceVersionMissing", () => {
-  test("class identity, code, exposed packageName, and message", () => {
+  test("code and message carrying the package name", () => {
     const err = ScaffoldError.workspaceVersionMissing({
       packageName: "@plumix/ghost",
     });
     expect(err.code).toBe("workspace_version_missing");
-    expect(err.packageName).toBe("@plumix/ghost");
     expect(err.message).toContain('No workspace version for "@plumix/ghost"');
     expect(err.message).toContain("workspace:");
   });

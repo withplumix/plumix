@@ -10,6 +10,12 @@ export interface ResolvedContributions {
   readonly wrangler: Record<string, unknown>;
   /** `plugins: [...]` array entries, in selection order. */
   readonly registrations: string[];
+  /**
+   * Secret binding names the selected auth methods need, deduped. Derived
+   * once here so the `.dev.vars` file and the `PlumixEnv` augmentation that
+   * declares them can never drift.
+   */
+  readonly envVars: string[];
 }
 
 /**
@@ -21,12 +27,13 @@ export interface ResolvedContributions {
 export function resolveContributions(
   selection: Selection,
 ): ResolvedContributions {
-  const { runtime, plugins } = selection;
+  const { runtime, plugins, authMethods } = selection;
   const acc: ResolvedContributions = {
     imports: [...runtime.imports],
     configSlots: { ...runtime.configSlots },
     wrangler: {},
     registrations: [],
+    envVars: [...new Set(authMethods.flatMap((m) => m.envVars ?? []))],
   };
 
   const fulfilled = new Set<string>();
