@@ -8,7 +8,11 @@ import type { Geometry, SlotDrop } from "./canvas-geometry.js";
 import type { FrameOffset } from "./overlay.js";
 import { createNodeFromEntry, slotAllowedBlocks } from "./block-catalog.js";
 import { findBlock } from "./block-tree-ops.js";
-import { reorderIndex, resolveSlotTarget } from "./canvas-drop-target.js";
+import {
+  reorderIndex,
+  resolveDrop,
+  resolveSlotTarget,
+} from "./canvas-drop-target.js";
 import { dropPlacement } from "./drop-index.js";
 import { overlayBox } from "./overlay.js";
 import {
@@ -153,71 +157,74 @@ export function useCanvasDrag({
       );
     };
     const onUp = (e: PointerEvent): void => {
-      // A `requiresParent` block is refused unless the parent it would land
-      // under (a slot's parent, or none at the top level) is in its list.
-      const req = registry.get(draggingName)?.requiresParent;
-      const refuse = (): void => {
-        setRejection(
-          i18n._({
-            id: "editor.canvas.cantPlaceHere",
-            message: "This block can't be placed here.",
-          }),
-        );
-        endDrag();
-      };
-
       const slot = slotTargetAt(e.clientX, e.clientY);
-      if (slot) {
-        const parent = findBlock(store.getState().tree, slot.parentId);
-        if (req && (!parent || !req.includes(parent.name))) {
-          refuse();
-          return;
-        }
-        // Nested drops append (a sentinel index that insertNode/moveBlock clamp
-        // to the slot length).
-        const target = {
-          parentId: slot.parentId,
-          slotKey: slot.slotKey,
-          index: Number.MAX_SAFE_INTEGER,
-        };
-        const allowed = parent
+      const parent = slot
+        ? findBlock(store.getState().tree, slot.parentId)
+        : undefined;
+      // A resolved slot supersedes the top-level line, so only hit-test the
+      // top level when no slot won.
+      const placement = slot ? null : placementAt(e.clientX, e.clientY);
+      const outcome = resolveDrop({
+        source: dragSpec ? "insert" : "move",
+        slot,
+        placement,
+        requiresParent: registry.get(draggingName)?.requiresParent,
+        parentName: parent?.name,
+      });
+
+      // Both slot outcomes gate the drop on the slot's `allowedBlocks`.
+      const allowed =
+        slot && parent
           ? slotAllowedBlocks(registry, parent.name, slot.slotKey)
           : undefined;
-        if (dragSpec) {
-          store
-            .getState()
-            .insertBlockInto(
-              createNodeFromEntry(registry, dragSpec),
-              target,
-              allowed,
-            );
-        } else if (movingId) {
-          store.getState().moveBlock(movingId, target, allowed);
-        }
-      } else {
-        const placement = placementAt(e.clientX, e.clientY);
-        if (placement) {
-          // A `requiresParent` block can't live at the top level.
-          if (req) {
-            refuse();
-            return;
+
+      switch (outcome.kind) {
+        case "refuse":
+          setRejection(
+            i18n._({
+              id: "editor.canvas.cantPlaceHere",
+              message: "This block can't be placed here.",
+            }),
+          );
+          break;
+        case "insertInto":
+          if (dragSpec) {
+            store
+              .getState()
+              .insertBlockInto(
+                createNodeFromEntry(registry, dragSpec),
+                outcome.target,
+                allowed,
+              );
           }
+          break;
+        case "move":
+          if (movingId) {
+            store.getState().moveBlock(movingId, outcome.target, allowed);
+          }
+          break;
+        case "insert":
           if (dragSpec) {
             store
               .getState()
               .insertBlock(
                 createNodeFromEntry(registry, dragSpec),
-                placement.index,
+                outcome.index,
               );
-          } else if (movingId) {
+          }
+          break;
+        case "reorder":
+          if (movingId) {
             const index = reorderIndex(
               store.getState().tree,
               movingId,
-              placement.index,
+              outcome.index,
             );
             store.getState().moveBlock(movingId, { parentId: null, index });
           }
-        }
+          break;
+        case "none":
+          break;
       }
       endDrag();
     };
