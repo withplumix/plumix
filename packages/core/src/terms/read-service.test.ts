@@ -98,7 +98,7 @@ describe("listTerms", () => {
 });
 
 describe("getTerm", () => {
-  test("returns a term hydrated with decoded meta", async () => {
+  test("returns a term resolved with decoded meta", async () => {
     const h = await harness("editor");
     const seeded = await h.factory.term.create({
       name: "News",

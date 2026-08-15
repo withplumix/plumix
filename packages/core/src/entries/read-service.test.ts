@@ -138,7 +138,7 @@ describe("listEntries", () => {
 });
 
 describe("getEntry", () => {
-  test("returns a published entry hydrated with meta + terms", async () => {
+  test("returns a published entry resolved with meta + terms", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
     const entry = await h.factory.published.create({
       authorId: h.user.id,
@@ -250,10 +250,10 @@ describe("readEntryType", () => {
   });
 });
 
-// Reference meta hydration in the shared read pipeline (#1507): admin
+// Reference meta resolution in the shared read pipeline (#1507): admin
 // oRPC reads and REST projection both ride these two functions, so
-// hydrated values asserted here cover both surfaces' data.
-describe("reference meta hydration", () => {
+// resolved values asserted here cover both surfaces' data.
+describe("reference meta resolution", () => {
   // Raw field defs (not the flat factories) keep both fields'
   // `referenceTarget.scope` undefined → one `(kind, scope)` group.
   const OWNER_FIELD = {
@@ -322,7 +322,7 @@ describe("reference meta hydration", () => {
     expect(read.meta.reviewers).toEqual([]);
   });
 
-  test("listEntries hydrates the page with one in-query per (kind, scope) group", async () => {
+  test("listEntries resolves the page with one in-query per (kind, scope) group", async () => {
     const refsPlugin = definePlugin("test-refs", (ctx) => {
       ctx.registerEntryMetaBox("relations", {
         label: "Relations",

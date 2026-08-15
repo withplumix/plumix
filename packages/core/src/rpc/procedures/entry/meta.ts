@@ -10,12 +10,12 @@ import {
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
-  hydrateMetaBags as hydrateMetaBagsCore,
-  hydrateMetaReferences as hydrateMetaReferencesCore,
   isEmptyMetaPatch,
   loadMeta,
   metaValidationConflict,
   MetaValidationError,
+  resolveMetaBags as resolveMetaBagsCore,
+  resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
   validateAndPromoteMetaBag,
   validateMetaReferencesForRpc,
@@ -165,34 +165,34 @@ export async function sanitizePromotedEntryMeta(
 }
 
 /**
- * Decode + hydrate one entry's meta bag for a read response. Use
- * {@link hydrateEntriesMeta} for multi-entry responses so ids
+ * Decode + resolve one entry's meta bag for a read response. Use
+ * {@link resolveEntriesMeta} for multi-entry responses so ids
  * aggregate into one in-query per `(kind, scope)` group.
  */
-export async function hydrateEntryMeta(
+export async function resolveEntryMeta(
   ctx: AppContext,
   entry: { readonly type: string },
   raw: Readonly<Record<string, unknown>> | null | undefined,
 ): Promise<Record<string, unknown>> {
-  const [bag] = await hydrateEntriesMeta(ctx, [
+  const [bag] = await resolveEntriesMeta(ctx, [
     { type: entry.type, meta: raw },
   ]);
   return bag ?? {};
 }
 
 /**
- * Decode + hydrate meta bags for a whole read response, one result per
+ * Decode + resolve meta bags for a whole read response, one result per
  * row (index-aligned). All reference ids across all rows resolve
  * through the shared batched pipeline.
  */
-export async function hydrateEntriesMeta(
+export async function resolveEntriesMeta(
   ctx: AppContext,
   rows: readonly {
     readonly type: string;
     readonly meta: Readonly<Record<string, unknown>> | null | undefined;
   }[],
 ): Promise<Record<string, unknown>[]> {
-  return hydrateMetaBagsCore(
+  return resolveMetaBagsCore(
     ctx,
     rows.map((row) => {
       const findField = (key: string) =>
@@ -209,7 +209,7 @@ export async function loadEntryMeta(
   const decoded = await loadMeta(ctx, entries, entries.id, entry.id, (key) =>
     findEntryMetaField(ctx.plugins, entry.type, key),
   );
-  return hydrateMetaReferencesCore(
+  return resolveMetaReferencesCore(
     ctx,
     (key) => findEntryMetaField(ctx.plugins, entry.type, key),
     decoded,

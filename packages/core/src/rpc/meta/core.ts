@@ -306,7 +306,7 @@ export async function validateAndPromoteMetaBag(
  * TOCTOU note: validate runs in a separate query from the eventual
  * `applyMetaPatch`, and callers don't share a transaction. A
  * concurrent delete between validate and apply leaves an orphan id
- * in the meta bag; `hydrateMetaBags` masks it on read. Wrap the
+ * in the meta bag; `resolveMetaBags` masks it on read. Wrap the
  * validate/apply pair in `ctx.db.transaction()` if a caller needs
  * serializable consistency.
  */
@@ -649,7 +649,7 @@ export async function validateMetaReferencesForRpc(
   }
 }
 
-// The read-time hydration + orphan pass. `hydrateMetaBags` resolves
+// The read-time resolution + orphan pass. `resolveMetaBags` resolves
 // reference fields across every bag in a response in one traversal:
 // stored ids become the adapter's hydrated shapes (media item with
 // URL, entry/term/user summaries), and any id whose target is gone or
@@ -678,7 +678,7 @@ interface ReferenceOccurrence {
 }
 
 // A reference field authored with `.returns("id")` reads the bare
-// stored id — the hydration walk skips it so no lookup query runs and
+// stored id — the resolution walk skips it so no lookup query runs and
 // the id survives untouched. `"returns" in field` narrows to the field
 // variants that carry the flag (temporal's `"date"` never matches).
 function readsRawReferenceId(field: MetaBoxField | undefined): boolean {
@@ -688,7 +688,7 @@ function readsRawReferenceId(field: MetaBoxField | undefined): boolean {
 /**
  * Yield every reference-field occurrence in a decoded meta bag: top-level
  * reference fields, plus references nested inside repeater rows and
- * groups at any depth. One structural walk so the hydration pass doesn't
+ * groups at any depth. One structural walk so the resolution pass doesn't
  * reinline the traversal twice.
  */
 function* referenceOccurrences(
@@ -711,7 +711,7 @@ function* fieldOccurrences(
 ): Generator<ReferenceOccurrence> {
   const target = referenceTargetOf(field);
   if (target) {
-    // `.returns("id")` opts out of the hydration join at any depth —
+    // `.returns("id")` opts out of the resolution join at any depth —
     // leave the stored id(s) untouched (no resolve, no orphan-strip).
     if (!readsRawReferenceId(field)) yield { path, target, value };
     return;
@@ -740,22 +740,22 @@ function* fieldOccurrences(
 
 /**
  * A decoded meta bag plus the field lookup that scopes it — the unit
- * `hydrateMetaBags` operates on. Multi-entity responses pass one per
+ * `resolveMetaBags` operates on. Multi-entity responses pass one per
  * entity so ids aggregate across the whole response.
  */
-export interface HydratableBag {
+export interface ResolvableBag {
   readonly findField: (key: string) => MetaBoxField | undefined;
   readonly decoded: MetaMap;
 }
 
-/** Single-bag convenience over {@link hydrateMetaBags}. */
-export async function hydrateMetaReferences(
+/** Single-bag convenience over {@link resolveMetaBags}. */
+export async function resolveMetaReferences(
   ctx: AppContext,
   findField: (key: string) => MetaBoxField | undefined,
   decoded: MetaMap,
 ): Promise<MetaMap> {
-  const [bag] = await hydrateMetaBags(ctx, [{ findField, decoded }]);
-  // hydrateMetaBags returns one bag per input by construction.
+  const [bag] = await resolveMetaBags(ctx, [{ findField, decoded }]);
+  // resolveMetaBags returns one bag per input by construction.
   return bag ?? decoded;
 }
 
@@ -771,9 +771,9 @@ type GroupResolution =
   | { readonly kind: "hydrated"; readonly byId: ReadonlyMap<string, unknown> }
   | { readonly kind: "ids"; readonly liveIds: ReadonlySet<string> };
 
-export async function hydrateMetaBags(
+export async function resolveMetaBags(
   ctx: AppContext,
-  bags: readonly HydratableBag[],
+  bags: readonly ResolvableBag[],
 ): Promise<MetaMap[]> {
   // Pass 1: shallow-copy each bag into its output slot, classify each
   // reference occurrence, and accumulate ids per `(kind, scope)`
@@ -869,8 +869,8 @@ export async function hydrateMetaBags(
 }
 
 /**
- * Batched, tag-accounted hydration of a raw id set for one reference kind
- * — the theme-facing counterpart to the meta pipeline's hydration (#1508).
+ * Batched, tag-accounted resolution of a raw id set for one reference kind
+ * — the theme-facing counterpart to the meta pipeline's resolution (#1508).
  * A theme holding an id-only reference field (a field declared
  * `.returns("id")`, or one contributed by a third-party plugin) resolves
  * it here instead of hand-rolled per-item fetches: ids resolve through the
@@ -879,12 +879,12 @@ export async function hydrateMetaBags(
  * accumulator the meta pipeline uses, so the page is purged when an
  * embedded entity changes.
  *
- * Returns the hydrated payloads dense and in the requested id order — ids
+ * Returns the resolved payloads dense and in the requested id order — ids
  * that are gone or out of scope are dropped, mirroring multi-reference
- * field hydration. An unregistered kind, an adapter without the `hydrate`
+ * field resolution. An unregistered kind, an adapter without the `hydrate`
  * contract, or an empty id set yields `[]`.
  */
-export async function hydrateReferences<
+export async function resolveReferences<
   K extends keyof ReferenceHydrationShapes,
 >(
   ctx: AppContext,

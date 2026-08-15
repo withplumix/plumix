@@ -673,8 +673,8 @@ async function dispatchPublicRoute(
       telemetry: ctx.telemetry,
       render: () => renderPublicRoute(app, ctx, url, match, segment),
       // Evaluated post-render so `ctx.resolvedEntity` (the entry id) is set
-      // and read-time hydration has finished accumulating the tags of the
-      // entities embedded in the page (#1508). The source thunks run only
+      // and read-time reference resolution has finished accumulating the tags
+      // of the entities embedded in the page (#1508). The source thunks run only
       // for the intent kind that needs them. The tag vocabulary is unchanged:
       // segment variants share one tag set, so one publish purges them all.
       tags: () => {

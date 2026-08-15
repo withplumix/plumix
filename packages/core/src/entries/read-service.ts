@@ -16,8 +16,8 @@ import { terms } from "../db/schema/terms.js";
 import { isReservedType } from "../revisions/slug-codec.js";
 import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
 import {
-  hydrateEntriesMeta,
-  hydrateEntryMeta,
+  resolveEntriesMeta,
+  resolveEntryMeta,
 } from "../rpc/procedures/entry/meta.js";
 import {
   escapeLikePattern,
@@ -119,12 +119,12 @@ export async function listEntries(
     .orderBy(primary, desc(entries.id))
     .limit(input.limit)
     .offset(input.offset);
-  const bags = await hydrateEntriesMeta(ctx, rows);
+  const bags = await resolveEntriesMeta(ctx, rows);
   return rows.map((row, i) => ({ ...row, meta: bags[i] ?? {} }));
 }
 
 /**
- * Read a single entry by id, hydrated with meta + terms. Every condition that
+ * Read a single entry by id, resolved with meta + terms. Every condition that
  * would reveal an entry the caller can't see — missing, reserved-type, no read
  * capability, or an unpublished status they can't view — collapses to
  * `not_found` so existence stays hidden. Preview/autosave overlay is an editor
@@ -151,7 +151,7 @@ export async function getEntry(
     if (!canSeeAny && !ownsAndCanEdit) throw EntryReadError.notFound(input.id);
   }
 
-  const meta = await hydrateEntryMeta(ctx, row, row.meta);
+  const meta = await resolveEntryMeta(ctx, row, row.meta);
   const entryTerms = await loadEntryTerms(ctx, row.id);
   return { ...row, meta, terms: entryTerms };
 }

@@ -6,9 +6,9 @@ import { findTermMetaField } from "../../../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
-  hydrateMetaReferences as hydrateMetaReferencesCore,
   isEmptyMetaPatch,
   loadMeta,
+  resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
   validateMetaReferencesForRpc,
 } from "../../meta/core.js";
@@ -62,15 +62,15 @@ export function assertTermMetaCapabilities(
   );
 }
 
-/** Decode + hydrate one term's meta bag for a read response. */
-export async function hydrateTermMeta(
+/** Decode + resolve one term's meta bag for a read response. */
+export async function resolveTermMeta(
   ctx: AppContext,
   taxonomy: string,
   raw: Readonly<Record<string, unknown>> | null | undefined,
 ): Promise<Record<string, unknown>> {
   const findField = (key: string) =>
     findTermMetaField(ctx.plugins, taxonomy, key);
-  return hydrateMetaReferencesCore(
+  return resolveMetaReferencesCore(
     ctx,
     findField,
     decodeMetaBagCore(findField, raw),
@@ -84,7 +84,7 @@ export async function loadTermMeta(
   const decoded = await loadMeta(ctx, terms, terms.id, term.id, (key) =>
     findTermMetaField(ctx.plugins, term.taxonomy, key),
   );
-  return hydrateMetaReferencesCore(
+  return resolveMetaReferencesCore(
     ctx,
     (key) => findTermMetaField(ctx.plugins, term.taxonomy, key),
     decoded,

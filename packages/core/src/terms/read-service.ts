@@ -7,7 +7,7 @@ import type {
 import { and, asc, eq, isNull, like } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
 import { taxonomyCapability } from "../rpc/procedures/term/helpers.js";
-import { hydrateTermMeta } from "../rpc/procedures/term/meta.js";
+import { resolveTermMeta } from "../rpc/procedures/term/meta.js";
 import { TermReadError } from "./errors.js";
 
 type TermRead = Omit<Term, "meta"> & { readonly meta: Record<string, unknown> };
@@ -47,7 +47,7 @@ export async function listTerms(
 }
 
 /**
- * Read a single term by id, hydrated with decoded meta. A missing term and one
+ * Read a single term by id, resolved with decoded meta. A missing term and one
  * in a taxonomy the caller can't read both collapse to `term_not_found` so
  * existence stays hidden.
  */
@@ -63,6 +63,6 @@ export async function getTerm(
     throw TermReadError.termNotFound(input.id);
   }
 
-  const meta = await hydrateTermMeta(ctx, row.taxonomy, row.meta);
+  const meta = await resolveTermMeta(ctx, row.taxonomy, row.meta);
   return { ...row, meta };
 }

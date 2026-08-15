@@ -46,7 +46,7 @@ describe("buildResolvedEntries author memoization", () => {
   });
 });
 
-describe("buildResolvedEntries reference meta hydration", () => {
+describe("buildResolvedEntries reference meta resolution", () => {
   const refsPlugin = definePlugin("test-refs", (ctx) => {
     ctx.registerEntryMetaBox("relations", {
       label: "Relations",
@@ -84,7 +84,7 @@ describe("buildResolvedEntries reference meta hydration", () => {
     );
     const targetIds = targets.map((t) => String(t.id));
     // A referenced draft must not leak its title through anonymous
-    // hydration — it reads as absent, exactly like a deleted target.
+    // resolution — it reads as absent, exactly like a deleted target.
     const draft = await harness.factory.entry.create({
       authorId: author.id,
       type: "post",
@@ -111,7 +111,7 @@ describe("buildResolvedEntries reference meta hydration", () => {
         slug: string;
         url: string | null;
       }[];
-      // Hydrated one level deep, orphans dropped, order preserved.
+      // Resolved one level deep, orphans dropped, order preserved.
       expect(related.map((r) => r.id)).toEqual(targetIds);
       expect(related[0]?.title).toBe("Target 0");
       // A hydrated summary is not a full entry — its own meta (and any

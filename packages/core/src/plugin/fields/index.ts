@@ -3,7 +3,7 @@
 // the choice field (`select` — `.multiple()` for arrays,
 // `.appearance()` for the control), the boolean switch (`toggle`), and
 // the reference fields (`entry` / `term` / `user` — `.multiple()` for
-// id arrays, `.returns("id")` to opt out of read-time hydration) are
+// id arrays, `.returns("id")` to opt out of read-time resolution) are
 // fluent builders: the constructor takes the key (plus a required
 // scope for `entry` / `term`) and every option is a chained call
 // (`text("subtitle").maxLength(120)`, `entry("hero", ["post"]).required()`),

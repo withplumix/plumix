@@ -575,7 +575,7 @@ describe("entry.get", () => {
     expect(got.meta).toEqual({});
   });
 
-  test("response hydrates the meta bag, typed against the plugin registry", async () => {
+  test("response resolves the meta bag, typed against the plugin registry", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("test-seo", {
       id: "test-seo",

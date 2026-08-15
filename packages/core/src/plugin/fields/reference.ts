@@ -206,7 +206,7 @@ export class ReferenceFieldBuilder<
 
   /**
    * Read the bare stored id(s) instead of the hydrated summary — opts
-   * this field out of the read-time hydration join. Storage and the
+   * this field out of the read-time resolution join. Storage and the
    * write contract are unaffected.
    */
   returns(
@@ -364,7 +364,7 @@ export class ReferenceFieldBuilder<
 
   /**
    * Normalising transform, applied after coercion and before
-   * persistence. Receives the stored id(s) — the read-time hydration is
+   * persistence. Receives the stored id(s) — the read-time resolution is
    * a separate, later step.
    */
   sanitize(
