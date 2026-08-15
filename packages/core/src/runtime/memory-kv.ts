@@ -17,8 +17,8 @@ export interface MemoryKvConfig {
 }
 
 /**
- * In-memory {@link KV} adapter — the dev/test stand-in for a real Workers KV
- * namespace. Honors `expirationTtl` against wall-clock time so TTL behavior can
+ * In-memory {@link KV} adapter — the dev/test stand-in for a real key/value
+ * backend. Honors `expirationTtl` against wall-clock time so TTL behavior can
  * be exercised with fake timers.
  */
 export function memoryKv(config: MemoryKvConfig = {}): KV {
@@ -50,14 +50,6 @@ export function memoryKv(config: MemoryKvConfig = {}): KV {
     // eslint-disable-next-line @typescript-eslint/require-await
     async put(key, value, opts?: KvPutOptions) {
       const ttl = opts?.expirationTtl;
-      // Mirror the platform: Workers KV rejects sub-60s TTLs at write time, so
-      // the stand-in must too — otherwise a bad TTL passes dev/tests and throws
-      // only in production.
-      if (ttl !== undefined && ttl < 60) {
-        throw new RangeError(
-          `memoryKv: expirationTtl must be at least 60 seconds, got ${String(ttl)}`,
-        );
-      }
       const expiresAt = ttl !== undefined ? Date.now() + ttl * 1000 : undefined;
       store.set(key, { value, expiresAt });
     },
@@ -67,8 +59,8 @@ export function memoryKv(config: MemoryKvConfig = {}): KV {
     },
     // eslint-disable-next-line @typescript-eslint/require-await
     async list(opts: KvListOptions = {}): Promise<KvListResult> {
-      // Clamp to the platform's 1..1000 range; a floor of 1 also stops a
-      // `limit: 0` from returning an empty page with a live cursor forever.
+      // Cap the page at 1000 keys; the floor of 1 also stops a `limit: 0` from
+      // returning an empty page with a live cursor forever.
       const limit = Math.min(Math.max(opts.limit ?? 1000, 1), 1000);
       const keys = [...store.keys()]
         .filter((key) => live(key) !== undefined)

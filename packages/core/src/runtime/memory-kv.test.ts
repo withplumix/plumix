@@ -47,11 +47,13 @@ describe("memoryKv", () => {
     expect(await kv.get("k")).toBeNull();
   });
 
-  test("put rejects a sub-60-second expirationTtl, mirroring the platform", async () => {
+  test("honors a sub-60-second expirationTtl — the generic adapter has no backend floor", async () => {
+    vi.useFakeTimers();
     const kv = memoryKv().connect({});
-    await expect(kv.put("k", "v", { expirationTtl: 30 })).rejects.toThrow(
-      /at least 60/,
-    );
+    await kv.put("k", "v", { expirationTtl: 30 });
+    expect(await kv.get("k")).toBe("v");
+    vi.advanceTimersByTime(31_000);
+    expect(await kv.get("k")).toBeNull();
   });
 
   test("put without a ttl clears a previously set expiry", async () => {

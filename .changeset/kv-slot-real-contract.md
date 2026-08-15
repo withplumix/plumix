@@ -12,10 +12,12 @@ accepted in config but never usable at runtime. It now carries a real
 with prefix + cursor pagination), exposed on the request context as `ctx.kv`
 and traced like the `storage` and `cache` slots.
 
-`@plumix/core` ships `memoryKv()`, an in-memory adapter for dev and tests that
-mirrors Workers KV semantics (string values, a 60-second `expirationTtl` floor,
-a 1..1000 list limit). `@plumix/runtime-cloudflare`'s `kv({ binding })` now
-binds a Workers KV namespace and implements the same contract.
+`@plumix/core` ships `memoryKv()`, a backend-agnostic in-memory adapter for dev
+and tests (string values, a 1..1000 list page cap; no backend-specific TTL
+floor). `@plumix/runtime-cloudflare`'s `kv({ binding })` binds a Workers KV
+namespace and implements the same contract. The port is deliberately
+runtime-neutral — a Node runtime over Redis would implement the same `KV`
+interface.
 
 Usage:
 
