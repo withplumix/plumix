@@ -8,6 +8,8 @@ import {
   frameSelection,
   MAX_ZOOM,
   MIN_ZOOM,
+  reconcileView,
+  wheelToView,
   zoomToCursor,
 } from "./canvas-view.js";
 
@@ -94,5 +96,124 @@ describe("frameSelection", () => {
     // Block center (400,450) lands at the viewport center (500,400).
     expect(v.panX + 400 * v.zoom).toBe(500);
     expect(v.panY + 450 * v.zoom).toBe(400);
+  });
+});
+
+describe("wheelToView", () => {
+  const view = { zoom: 1, panX: 100, panY: 100 };
+  const scaledFrame = { width: 300, height: 200 };
+  const viewport = { width: 1000, height: 800 };
+
+  test("pans by the (inverted) wheel delta when not a zoom gesture", () => {
+    const v = wheelToView(
+      view,
+      { deltaX: 20, deltaY: 30, zoomIntent: false },
+      { cx: 0, cy: 0 },
+      scaledFrame,
+      viewport,
+    );
+    expect(v).toEqual({ zoom: 1, panX: 80, panY: 70 });
+  });
+
+  test("clamps a pan so the frame stays reachable", () => {
+    const v = wheelToView(
+      { zoom: 1, panX: 0, panY: 0 },
+      { deltaX: -99999, deltaY: 0, zoomIntent: false },
+      { cx: 0, cy: 0 },
+      scaledFrame,
+      viewport,
+    );
+    // 300px frame in a 1000px viewport → pan can't exceed viewport - 64.
+    expect(v.panX).toBe(1000 - 64);
+  });
+
+  test("zooms toward the cursor, keeping the origin fixed", () => {
+    const v = wheelToView(
+      { zoom: 1, panX: 0, panY: 0 },
+      { deltaX: 0, deltaY: -100, zoomIntent: true },
+      { cx: 0, cy: 0 },
+      { width: 375, height: 600 },
+      viewport,
+    );
+    expect(v.zoom).toBeGreaterThan(1);
+    expect(v.zoom).toBeLessThanOrEqual(MAX_ZOOM);
+    // World point under the origin cursor stays put.
+    expect(v.panX).toBe(0);
+    expect(v.panY).toBe(0);
+  });
+
+  test("returns the same view unchanged when clamped at MAX_ZOOM", () => {
+    const atMax = { zoom: MAX_ZOOM, panX: 0, panY: 0 };
+    expect(
+      wheelToView(
+        atMax,
+        { deltaX: 0, deltaY: -100, zoomIntent: true },
+        { cx: 0, cy: 0 },
+        scaledFrame,
+        viewport,
+      ),
+    ).toBe(atMax);
+  });
+
+  test("returns the same view unchanged when clamped at MIN_ZOOM", () => {
+    const atMin = { zoom: MIN_ZOOM, panX: 0, panY: 0 };
+    expect(
+      wheelToView(
+        atMin,
+        { deltaX: 0, deltaY: 100, zoomIntent: true },
+        { cx: 0, cy: 0 },
+        scaledFrame,
+        viewport,
+      ),
+    ).toBe(atMin);
+  });
+});
+
+describe("reconcileView", () => {
+  const viewport = { width: 1000, height: 800 };
+
+  test("re-fits and centers while in fit mode", () => {
+    const result = reconcileView({
+      fit: true,
+      view: { zoom: 0.5, panX: 0, panY: 0 },
+      frameWidth: 375,
+      contentHeight: 600,
+      viewport,
+    });
+    expect(result).toEqual(fitView(375, 600, 1000, 800));
+  });
+
+  test("is a no-op in fit mode when the view already fits", () => {
+    const fit = fitView(375, 600, 1000, 800);
+    expect(
+      reconcileView({
+        fit: true,
+        view: fit,
+        frameWidth: 375,
+        contentHeight: 600,
+        viewport,
+      }),
+    ).toBeNull();
+  });
+
+  test("re-clamps a drifted pan out of fit mode", () => {
+    const result = reconcileView({
+      fit: false,
+      view: { zoom: 1, panX: 99999, panY: 0 },
+      scaledFrame: { width: 300, height: 200 },
+      viewport,
+    });
+    expect(result).toEqual({ zoom: 1, panX: 1000 - 64, panY: 0 });
+  });
+
+  test("is a no-op out of fit mode when the pan is already reachable", () => {
+    expect(
+      reconcileView({
+        fit: false,
+        view: { zoom: 1, panX: 100, panY: 100 },
+        scaledFrame: { width: 300, height: 200 },
+        viewport,
+      }),
+    ).toBeNull();
   });
 });

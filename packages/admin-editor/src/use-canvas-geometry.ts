@@ -5,7 +5,7 @@ import type { BlockRect, SlotRect } from "@plumix/blocks/renderer";
 
 import type { Geometry } from "./canvas-geometry.js";
 import { CANVAS_HEIGHT } from "./canvas-geometry.js";
-import { clampPanToFrame, fitView } from "./canvas-view.js";
+import { reconcileView } from "./canvas-view.js";
 import { useCameraStore, useCameraStoreApi } from "./provider.js";
 
 export interface CanvasGeometry {
@@ -124,16 +124,15 @@ export function useCanvasGeometry({
   const containerHeight = geometry.container?.height;
   useEffect(() => {
     if (!zoomFit || !containerWidth || !containerHeight) return;
-    const next = fitView(
-      frameWidth,
-      contentHeight ?? CANVAS_HEIGHT,
-      containerWidth,
-      containerHeight,
-    );
     const s = camera.getState();
-    if (s.zoom !== next.zoom || s.panX !== next.panX || s.panY !== next.panY) {
-      s.applyView(next, { fit: true });
-    }
+    const next = reconcileView({
+      fit: true,
+      view: { zoom: s.zoom, panX: s.panX, panY: s.panY },
+      frameWidth,
+      contentHeight: contentHeight ?? CANVAS_HEIGHT,
+      viewport: { width: containerWidth, height: containerHeight },
+    });
+    if (next) s.applyView(next, { fit: true });
   }, [
     zoomFit,
     frameWidth,
@@ -158,17 +157,16 @@ export function useCanvasGeometry({
       const s = camera.getState();
       if (next.container && iframe && !s.fit) {
         const r = iframe.getBoundingClientRect();
-        const p = clampPanToFrame(
-          s.panX,
-          s.panY,
-          r.width,
-          r.height,
-          next.container.width,
-          next.container.height,
-        );
-        if (p.panX !== s.panX || p.panY !== s.panY) {
-          s.applyView({ zoom: s.zoom, panX: p.panX, panY: p.panY });
-        }
+        const clamped = reconcileView({
+          fit: false,
+          view: { zoom: s.zoom, panX: s.panX, panY: s.panY },
+          scaledFrame: { width: r.width, height: r.height },
+          viewport: {
+            width: next.container.width,
+            height: next.container.height,
+          },
+        });
+        if (clamped) s.applyView(clamped);
       }
     });
     return () => cancelAnimationFrame(id);

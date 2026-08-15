@@ -9,12 +9,7 @@ import {
 
 import type { Geometry } from "./canvas-geometry.js";
 import type { View } from "./canvas-view.js";
-import {
-  clampPanToFrame,
-  clampZoom,
-  frameSelection,
-  zoomToCursor,
-} from "./canvas-view.js";
+import { clampPanToFrame, frameSelection, wheelToView } from "./canvas-view.js";
 import {
   useCameraStore,
   useCameraStoreApi,
@@ -208,43 +203,17 @@ export function usePanZoom({
       const box = geometryRef.current.container;
       if (!iframe || !box) return;
       const rect = iframe.getBoundingClientRect();
-      const { panX: px, panY: py, zoom: z } = liveViewRef.current;
-      if (zoomIntent) {
-        const nextZoom = clampZoom(z * Math.exp(-deltaY * 0.0015));
-        if (nextZoom === z) return;
-        // Zoom toward the cursor, then clamp so the frame stays reachable.
-        const view = zoomToCursor(
-          { zoom: z, panX: px, panY: py },
-          nextZoom,
-          cx,
-          cy,
-        );
-        const baseW = rect.width / z;
-        const baseH = rect.height / z;
-        applyLive({
-          zoom: view.zoom,
-          ...clampPanToFrame(
-            view.panX,
-            view.panY,
-            baseW * view.zoom,
-            baseH * view.zoom,
-            box.width,
-            box.height,
-          ),
-        });
-      } else {
-        applyLive({
-          zoom: z,
-          ...clampPanToFrame(
-            px - deltaX,
-            py - deltaY,
-            rect.width,
-            rect.height,
-            box.width,
-            box.height,
-          ),
-        });
-      }
+      const view = liveViewRef.current;
+      const next = wheelToView(
+        view,
+        { deltaX, deltaY, zoomIntent },
+        { cx, cy },
+        { width: rect.width, height: rect.height },
+        { width: box.width, height: box.height },
+      );
+      // A zoom already at a limit returns the same view — skip the redundant
+      // gesture write.
+      if (next !== view) applyLive(next);
     },
     [applyLive, geometryRef, iframeRef],
   );

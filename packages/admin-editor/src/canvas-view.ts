@@ -83,6 +83,106 @@ export function zoomToCursor(
   return { zoom, panX: cx - wx * zoom, panY: cy - wy * zoom };
 }
 
+/** Fold a free-canvas wheel event into the next view: zoom-to-cursor (Ctrl/Cmd
+ *  intent) or pan, re-clamped so the frame stays reachable either way.
+ *  `scaledFrame` is the iframe's live on-screen size (scaled at the current
+ *  zoom); `cursor` is in viewport space. A zoom already at a limit returns the
+ *  same `view` object so the caller can skip a redundant gesture write. */
+export function wheelToView(
+  view: View,
+  wheel: {
+    readonly deltaX: number;
+    readonly deltaY: number;
+    readonly zoomIntent: boolean;
+  },
+  cursor: { readonly cx: number; readonly cy: number },
+  scaledFrame: { readonly width: number; readonly height: number },
+  viewport: { readonly width: number; readonly height: number },
+): View {
+  if (wheel.zoomIntent) {
+    const nextZoom = clampZoom(view.zoom * Math.exp(-wheel.deltaY * 0.0015));
+    if (nextZoom === view.zoom) return view; // already at a zoom limit
+    // Zoom toward the cursor, then clamp so the frame stays reachable. The
+    // unscaled frame is the live rect divided back out by the current zoom.
+    const zoomed = zoomToCursor(view, nextZoom, cursor.cx, cursor.cy);
+    const baseW = scaledFrame.width / view.zoom;
+    const baseH = scaledFrame.height / view.zoom;
+    return {
+      zoom: zoomed.zoom,
+      ...clampPanToFrame(
+        zoomed.panX,
+        zoomed.panY,
+        baseW * zoomed.zoom,
+        baseH * zoomed.zoom,
+        viewport.width,
+        viewport.height,
+      ),
+    };
+  }
+  return {
+    zoom: view.zoom,
+    ...clampPanToFrame(
+      view.panX - wheel.deltaX,
+      view.panY - wheel.deltaY,
+      scaledFrame.width,
+      scaledFrame.height,
+      viewport.width,
+      viewport.height,
+    ),
+  };
+}
+
+/** The view the canvas should settle to after a geometry/camera change: re-fit
+ *  and center while in fit mode, otherwise re-clamp the current pan so the frame
+ *  stays reachable. Returns `null` when the current view already satisfies the
+ *  constraint, so the caller skips a redundant store write. */
+export function reconcileView(
+  input:
+    | {
+        readonly fit: true;
+        readonly view: View;
+        readonly frameWidth: number;
+        readonly contentHeight: number;
+        readonly viewport: { readonly width: number; readonly height: number };
+      }
+    | {
+        readonly fit: false;
+        readonly view: View;
+        readonly scaledFrame: {
+          readonly width: number;
+          readonly height: number;
+        };
+        readonly viewport: { readonly width: number; readonly height: number };
+      },
+): View | null {
+  if (input.fit) {
+    const { view, viewport } = input;
+    const next = fitView(
+      input.frameWidth,
+      input.contentHeight,
+      viewport.width,
+      viewport.height,
+    );
+    return next.zoom !== view.zoom ||
+      next.panX !== view.panX ||
+      next.panY !== view.panY
+      ? next
+      : null;
+  }
+  const { view, scaledFrame, viewport } = input;
+  const { panX, panY } = clampPanToFrame(
+    view.panX,
+    view.panY,
+    scaledFrame.width,
+    scaledFrame.height,
+    viewport.width,
+    viewport.height,
+  );
+  return panX !== view.panX || panY !== view.panY
+    ? { zoom: view.zoom, panX, panY }
+    : null;
+}
+
 /** Frame a block: the largest zoom that fits its rect (with padding) inside the
  *  viewport, panned so the block is centered. `rect` is in the frame's unscaled
  *  coordinate space. */

@@ -4,7 +4,11 @@ import type { BlockNode, BlockSpec } from "@plumix/blocks";
 import type { SlotRect } from "@plumix/blocks/renderer";
 import { createBlockRegistry } from "@plumix/blocks";
 
-import { reorderIndex, resolveSlotTarget } from "./canvas-drop-target.js";
+import {
+  reorderIndex,
+  resolveDrop,
+  resolveSlotTarget,
+} from "./canvas-drop-target.js";
 
 const spec = (over: Partial<BlockSpec> & { name: string }): BlockSpec => ({
   render: () => null,
@@ -164,5 +168,109 @@ describe("reorderIndex", () => {
 
   test("no shift when the source isn't in the tree", () => {
     expect(reorderIndex(tree, "zzz", 2)).toBe(2);
+  });
+});
+
+describe("resolveDrop", () => {
+  const groupSlot = { parentId: "g1", slotKey: "content" };
+
+  test("nothing under the pointer resolves to a no-op", () => {
+    expect(
+      resolveDrop({ source: "insert", slot: null, placement: null }),
+    ).toEqual({ kind: "none" });
+  });
+
+  test("a top-level insert drops at the placement index", () => {
+    expect(
+      resolveDrop({ source: "insert", slot: null, placement: { index: 2 } }),
+    ).toEqual({ kind: "insert", index: 2 });
+  });
+
+  test("a top-level move reorders at the placement index", () => {
+    expect(
+      resolveDrop({ source: "move", slot: null, placement: { index: 3 } }),
+    ).toEqual({ kind: "reorder", index: 3 });
+  });
+
+  test("a slot insert appends into the slot (sentinel index)", () => {
+    expect(
+      resolveDrop({ source: "insert", slot: groupSlot, placement: null }),
+    ).toEqual({
+      kind: "insertInto",
+      target: {
+        parentId: "g1",
+        slotKey: "content",
+        index: Number.MAX_SAFE_INTEGER,
+      },
+    });
+  });
+
+  test("a slot move appends into the slot (sentinel index)", () => {
+    expect(
+      resolveDrop({ source: "move", slot: groupSlot, placement: null }),
+    ).toEqual({
+      kind: "move",
+      target: {
+        parentId: "g1",
+        slotKey: "content",
+        index: Number.MAX_SAFE_INTEGER,
+      },
+    });
+  });
+
+  test("a resolved slot supersedes a top-level placement", () => {
+    expect(
+      resolveDrop({
+        source: "insert",
+        slot: groupSlot,
+        placement: { index: 0 },
+      }),
+    ).toMatchObject({ kind: "insertInto" });
+  });
+
+  test("refuses a requiresParent block at the top level", () => {
+    expect(
+      resolveDrop({
+        source: "insert",
+        slot: null,
+        placement: { index: 0 },
+        requiresParent: ["core/buttons"],
+      }),
+    ).toEqual({ kind: "refuse" });
+  });
+
+  test("accepts a requiresParent block into a slot whose parent is listed", () => {
+    expect(
+      resolveDrop({
+        source: "insert",
+        slot: { parentId: "b1", slotKey: "items" },
+        placement: null,
+        requiresParent: ["core/buttons"],
+        parentName: "core/buttons",
+      }),
+    ).toMatchObject({ kind: "insertInto" });
+  });
+
+  test("refuses a requiresParent block into a slot whose parent isn't listed", () => {
+    expect(
+      resolveDrop({
+        source: "insert",
+        slot: groupSlot,
+        placement: null,
+        requiresParent: ["core/buttons"],
+        parentName: "core/group",
+      }),
+    ).toEqual({ kind: "refuse" });
+  });
+
+  test("refuses a requiresParent block when the slot parent is unknown", () => {
+    expect(
+      resolveDrop({
+        source: "insert",
+        slot: groupSlot,
+        placement: null,
+        requiresParent: ["core/buttons"],
+      }),
+    ).toEqual({ kind: "refuse" });
   });
 });
