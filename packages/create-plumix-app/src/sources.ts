@@ -1,22 +1,18 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import type { CatalogContext } from "./catalog.js";
-import type { Registry } from "./registry.js";
+import type { ScaffoldSources } from "./snapshot.js";
 import { buildSnapshot, loadSnapshot } from "./snapshot.js";
 
-export interface ScaffoldSources {
-  readonly registry: Registry;
-  readonly ctx: CatalogContext;
-}
+export type { ScaffoldSources };
 
 /**
  * Resolve the registry and catalog context for a scaffold run. Inside the
  * plumix monorepo they come from the live workspace; a published install
  * has no monorepo and reads the snapshot baked at `prepack`. Both paths
- * produce the same `Snapshot`, so scaffolded output is identical either way.
+ * produce the same {@link ScaffoldSources}, so output is identical either way.
  */
-export async function loadSources(
+export function loadSources(
   repoRoot: string,
   snapshotPath: string,
 ): Promise<ScaffoldSources> {
@@ -26,8 +22,7 @@ export async function loadSources(
   const inPlumixWorkspace =
     existsSync(join(repoRoot, "pnpm-workspace.yaml")) &&
     existsSync(join(repoRoot, "packages", "runtimes"));
-  const { registry, catalogContext } = inPlumixWorkspace
-    ? await buildSnapshot(repoRoot)
-    : await loadSnapshot(snapshotPath);
-  return { registry, ctx: catalogContext };
+  return inPlumixWorkspace
+    ? buildSnapshot(repoRoot)
+    : loadSnapshot(snapshotPath);
 }

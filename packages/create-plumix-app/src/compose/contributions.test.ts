@@ -87,6 +87,21 @@ describe("resolveContributions", () => {
     expect(wrangler.r2_buckets).toHaveLength(1);
   });
 
+  it("aggregates and dedupes auth-method env vars into one derivation", () => {
+    const withAuth: Selection = {
+      ...select([]),
+      authMethods: [
+        { id: "oauth", label: "OAuth", authEntry: "", envVars: ["X", "Y"] },
+        { id: "extra", label: "Extra", authEntry: "", envVars: ["Y", "Z"] },
+      ],
+    };
+    expect(resolveContributions(withAuth).envVars).toEqual(["X", "Y", "Z"]);
+  });
+
+  it("derives no env vars when no auth method needs secrets", () => {
+    expect(resolveContributions(select([blog])).envVars).toEqual([]);
+  });
+
   it("throws when a plugin requires a capability the runtime lacks", () => {
     const needsSearch: PluginDescriptor = {
       ...blog,

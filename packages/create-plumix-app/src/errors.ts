@@ -13,67 +13,32 @@ type ScaffoldErrorCode =
   | "wrangler_file_missing"
   | "snapshot_missing";
 
-interface ScaffoldErrorFields {
-  parent?: string;
-  targetDir?: string;
-  dependency?: string;
-  catalog?: string;
-  packageName?: string;
-  runtime?: string;
-  projectName?: string;
-  packagePath?: string;
-  capability?: string;
-  plugin?: string;
-  authMethod?: string;
-  available?: readonly string[];
-}
-
+/**
+ * A scaffolder failure. The interface callers depend on is the human-readable
+ * `message` (rendered to the user) plus the machine-readable {@link code}; the
+ * offending values are already interpolated into `message`, so they are not
+ * re-exposed as fields. Construct via the static factories, never `new`.
+ */
 export class ScaffoldError extends Error {
   static {
     ScaffoldError.prototype.name = "ScaffoldError";
   }
 
   readonly code: ScaffoldErrorCode;
-  readonly parent: string | undefined;
-  readonly targetDir: string | undefined;
-  readonly dependency: string | undefined;
-  readonly catalog: string | undefined;
-  readonly packageName: string | undefined;
-  readonly runtime: string | undefined;
-  readonly projectName: string | undefined;
-  readonly packagePath: string | undefined;
-  readonly capability: string | undefined;
-  readonly plugin: string | undefined;
-  readonly authMethod: string | undefined;
-  readonly available: readonly string[] | undefined;
 
   private constructor(
     code: ScaffoldErrorCode,
     message: string,
-    fields: ScaffoldErrorFields,
     options?: ErrorOptions,
   ) {
     super(message, options);
     this.code = code;
-    this.parent = fields.parent;
-    this.targetDir = fields.targetDir;
-    this.dependency = fields.dependency;
-    this.catalog = fields.catalog;
-    this.packageName = fields.packageName;
-    this.runtime = fields.runtime;
-    this.projectName = fields.projectName;
-    this.packagePath = fields.packagePath;
-    this.capability = fields.capability;
-    this.plugin = fields.plugin;
-    this.authMethod = fields.authMethod;
-    this.available = fields.available;
   }
 
   static targetParentMissing(ctx: { parent: string }): ScaffoldError {
     return new ScaffoldError(
       "target_parent_missing",
       `Target parent directory does not exist: ${ctx.parent}. Create the parent first, or pick a target inside an existing directory.`,
-      ctx,
     );
   }
 
@@ -81,7 +46,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "target_not_directory",
       `Target path exists but is not a directory: ${ctx.targetDir}. Pick a target that is either a fresh path or an empty directory.`,
-      ctx,
     );
   }
 
@@ -89,7 +53,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "target_directory_not_empty",
       `Target directory is not empty: ${ctx.targetDir}. Pick a fresh path, or empty the existing one first.`,
-      ctx,
     );
   }
 
@@ -100,7 +63,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "catalog_resolution_missing",
       `No "${ctx.dependency}" entry in the "${ctx.catalog}" catalog of pnpm-workspace.yaml — the template references it via \`catalog:\` but that catalog has no such key.`,
-      ctx,
     );
   }
 
@@ -108,7 +70,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "workspace_version_missing",
       `No workspace version for "${ctx.packageName}" — the template references it via \`workspace:\` but no workspace package publishes that name.`,
-      ctx,
     );
   }
 
@@ -119,7 +80,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "unknown_runtime",
       `Unknown runtime "${ctx.runtime}". Available runtimes: ${ctx.available.join(", ")}.`,
-      ctx,
     );
   }
 
@@ -127,7 +87,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "invalid_project_name",
       `Invalid project name "${ctx.name}". Use a valid npm package name: lowercase letters, digits, and "-", "_", "." (no spaces or other characters), starting with a letter or digit.`,
-      { projectName: ctx.name },
     );
   }
 
@@ -138,7 +97,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "invalid_scaffold_meta",
       `Invalid plumix.scaffold in ${ctx.packagePath}: ${ctx.reason}`,
-      { packagePath: ctx.packagePath },
     );
   }
 
@@ -150,7 +108,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "unsupported_capability",
       `Plugin "${ctx.plugin}" needs the "${ctx.capability}" capability, which the "${ctx.runtime}" runtime does not provide.`,
-      ctx,
     );
   }
 
@@ -161,7 +118,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "unknown_plugin",
       `Unknown plugin "${ctx.plugin}". Available plugins: ${ctx.available.join(", ")}.`,
-      ctx,
     );
   }
 
@@ -172,7 +128,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "unknown_auth_method",
       `Unknown auth method "${ctx.method}". Available: ${ctx.available.join(", ")}.`,
-      { authMethod: ctx.method, available: ctx.available },
     );
   }
 
@@ -180,7 +135,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "wrangler_file_missing",
       `The "${ctx.runtime}" runtime contributes wrangler bindings but provides no wrangler.jsonc to merge them into.`,
-      ctx,
     );
   }
 
@@ -191,7 +145,6 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "snapshot_missing",
       `Could not read or parse the bundled registry snapshot at ${ctx.path}. This is a packaging bug — please report it.`,
-      { packagePath: ctx.path },
       { cause: ctx.cause },
     );
   }

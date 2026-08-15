@@ -12,7 +12,7 @@ describe("buildSnapshot", () => {
 
     expect(snapshot.registry.runtimes.map((r) => r.id)).toContain("cloudflare");
     expect(snapshot.registry.plugins.map((p) => p.id)).toContain("blog");
-    expect(snapshot.catalogContext.workspaceVersions.plumix).toBeDefined();
+    expect(snapshot.ctx.workspaceVersions.plumix).toBeDefined();
   });
 
   it("inlines runtime file content so no source package is needed", async () => {
@@ -45,7 +45,7 @@ describe("loadSnapshot", () => {
     expect(loaded.registry.runtimes.map((r) => r.id)).toEqual(
       built.registry.runtimes.map((r) => r.id),
     );
-    expect(loaded.catalogContext).toEqual(built.catalogContext);
+    expect(loaded.ctx).toEqual(built.ctx);
   });
 
   it("throws a packaging error when the snapshot is absent", async () => {

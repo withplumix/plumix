@@ -12,7 +12,7 @@ import { fillProjectName } from "./types.js";
  */
 export function assembleConfig(
   selection: Selection,
-  { imports, configSlots, registrations }: ResolvedContributions,
+  { imports, configSlots, registrations, envVars }: ResolvedContributions,
 ): string {
   const { projectName, runtime, authMethods } = selection;
   const fill = (value: string): string => fillProjectName(value, projectName);
@@ -55,11 +55,8 @@ export function assembleConfig(
     : ["  plugins: [],"];
 
   // A method whose config uses an `(env) => ...` secret resolver needs those
-  // bindings declared, or the config would not type-check. Dedup so two
-  // methods sharing a secret don't declare it twice (a TS2300 error).
-  const envVars = [
-    ...new Set(authMethods.flatMap((method) => method.envVars ?? [])),
-  ];
+  // bindings declared, or the config would not type-check. `envVars` is the
+  // one deduped derivation (see resolveContributions), shared with `.dev.vars`.
   const envAugmentation = envVars.length
     ? [
         "",

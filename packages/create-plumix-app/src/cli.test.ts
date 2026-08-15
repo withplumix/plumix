@@ -3,9 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import type { CliIO } from "./cli.js";
 import type { CommandRunner } from "./post-scaffold.js";
-import { BANNER, runCli } from "./cli.js";
+import type { CliIO } from "./reporter.js";
+import { runCli } from "./cli.js";
+import { BANNER } from "./reporter.js";
 
 interface CapturedIO {
   readonly io: CliIO;
