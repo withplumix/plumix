@@ -1,6 +1,7 @@
 ---
 "@plumix/core": minor
 "@plumix/runtime-cloudflare": minor
+"create-plumix-app": minor
 ---
 
 Turn the `kv` slot into a working key/value store.
@@ -30,3 +31,7 @@ plumix({
 await ctx.kv?.put("key", "value", { expirationTtl: 3600 });
 const value = await ctx.kv?.get("key");
 ```
+
+`create-plumix-app` gains a `kv` scaffold capability for the Cloudflare runtime:
+a plugin that requires `kv` now automatically wires `kv({ binding: "KV" })` and a
+`KV` namespace binding into the generated `wrangler.jsonc`.
