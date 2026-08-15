@@ -5,6 +5,12 @@
  * `@plumix/blocks` package. Consumers (plugins, themes, the user's app)
  * import from `plumix/blocks`; `@plumix/blocks` is never a direct
  * dependency in their `package.json`.
+ *
+ * The block *value* API (`defineBlock`, `renderBlockTree`, …) is imported
+ * from here, but the block/pattern type-registries are augmented through the
+ * root `plumix` specifier (see `../index.ts`), not `plumix/blocks` —
+ * `declare module "plumix" { interface BlockTypeRegistry { … } }`. Type
+ * augmentation must go through one specifier or it fractures.
  */
 
 export {

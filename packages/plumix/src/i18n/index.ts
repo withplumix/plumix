@@ -2,7 +2,8 @@
 // Subpath import — the root `@plumix/core` barrel drags `context/stores.js`
 // (`AsyncLocalStorage` from `node:async_hooks`) into the browser bundle,
 // which esbuild can't resolve at admin/playground build time. See
-// [[core-subpath-imports]].
+// [[core-subpath-imports]]. `facade-core-barrel.test.ts` enforces this for
+// every browser-facing subpath export.
 export {
   formatDate,
   formatNumber,
