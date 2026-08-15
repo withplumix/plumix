@@ -2,9 +2,6 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type {
   AppContext,
   AssetsBinding,
-  ConnectedCache,
-  ConnectedKv,
-  ConnectedObjectStorage,
   Db,
   FetchHandler,
   PlumixApp,
@@ -71,10 +68,10 @@ function connectImageDelivery(
   return slot.connect ? slot.connect(env) : slot;
 }
 
-// Both the fetch and scheduled handlers assemble an identical AppContext from
-// `app` — only the request, db, deferred-work sink, and per-isolate storage /
-// cache handles differ. Keep the ~20 app-derived fields in one place so a new
-// context field is wired once, not in two drifting call sites.
+// Both the fetch and scheduled handlers assemble an identical AppContext; only
+// the request, its db handle, and the deferred-work sink differ, so those come
+// in as args while everything derived from `app`/`env` is built once here — a
+// new context field is wired in one place, not two drifting call sites.
 function buildAppContext(
   app: PlumixApp,
   args: {
@@ -82,12 +79,16 @@ function buildAppContext(
     readonly env: unknown;
     readonly request: Request;
     readonly defer: ((promise: Promise<unknown>) => void) | undefined;
-    readonly storage: ConnectedObjectStorage | undefined;
-    readonly cache: ConnectedCache | undefined;
-    readonly kv: ConnectedKv | undefined;
   },
 ): AppContext {
-  const { db, env, request, defer, storage, cache, kv } = args;
+  const { db, env, request, defer } = args;
+  // Per-request I/O slots. `storage`/`kv` bindings are stateless; `cache`
+  // connects to null (→ undefined) when the deploy lacks the zone credentials
+  // to purge, so caching is off and pages render live. Purge tags accrue on
+  // both the request path and scheduled publishes, so cache is wired for both.
+  const storage = app.config.storage?.connect(env);
+  const cache = app.config.cache?.connect(env) ?? undefined;
+  const kv = app.config.kv?.connect(env);
   return createAppContext({
     db: db as Db,
     env: env as PlumixEnv,
@@ -237,25 +238,7 @@ function buildFetch(app: PlumixApp): FetchHandler {
         ? (response: Response) => scoped.commit(response)
         : (response: Response) => response;
 
-      // Object storage binds once per isolate — R2 binding is stateless,
-      // so connecting on every request is wasted work. Memoise lazily so
-      // apps without `storage` configured never pay the cost.
-      const storage = app.config.storage?.connect(env);
-
-      // Edge cache binds per request. `connect` returns null when the deploy
-      // lacks zone credentials (e.g. workers.dev) — caching off, render live.
-      const cache = app.config.cache?.connect(env) ?? undefined;
-      const kv = app.config.kv?.connect(env);
-
-      const appCtx = buildAppContext(app, {
-        db,
-        env,
-        request,
-        defer,
-        storage,
-        cache,
-        kv,
-      });
+      const appCtx = buildAppContext(app, { db, env, request, defer });
       const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
       return finalize(response);
     } catch (error) {
@@ -309,21 +292,11 @@ function buildScheduled(app: PlumixApp): ScheduledHandler {
       ? scoped.db
       : database.connect(env, syntheticRequest, app.schema).db;
 
-    const storage = app.config.storage?.connect(env);
-    // Scheduled publishes fire `entry:published`, which accumulates edge-cache
-    // purge tags; wire the cache so the flush at the end of `runScheduledTasks`
-    // can reach it.
-    const cache = app.config.cache?.connect(env) ?? undefined;
-    const kv = app.config.kv?.connect(env);
-
     const appCtx = buildAppContext(app, {
       db,
       env,
       request: syntheticRequest,
       defer,
-      storage,
-      cache,
-      kv,
     });
 
     try {
