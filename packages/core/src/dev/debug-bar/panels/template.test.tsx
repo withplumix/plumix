@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { JsonValue } from "../../../context/telemetry.js";
+import type { JsonValue } from "../../../json.js";
 import type { TemplateResolution } from "./template.js";
 import { createTelemetryCollector } from "../../../context/collector.js";
 import { makeSnapshot } from "../snapshot-fixture.js";
