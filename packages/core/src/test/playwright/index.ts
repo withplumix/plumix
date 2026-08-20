@@ -115,6 +115,20 @@ export function mockSession(
 }
 
 /**
+ * Playwright disposes a fetched response body, and cuts `fulfill`'s
+ * channel, when the page re-navigates or the test tears down while a
+ * document request is still in flight. Both are teardown races rather
+ * than defects.
+ */
+function isTeardownRace(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("Response has been disposed") ||
+    message.includes("Target page, context or browser has been closed")
+  );
+}
+
+/**
  * Replace the inline manifest `<script>` tag in the admin's HTML with
  * a synthetic one. Use to register entry types, taxonomies, plugin
  * pages, etc. that your plugin needs at admin-load time.
@@ -123,29 +137,41 @@ export async function mockManifest(
   page: Page,
   manifest: PlumixManifest,
 ): Promise<void> {
+  // Escape every sequence the HTML parser would treat as
+  // script-tag-end inside `<script type="application/json">`:
+  // `</...` (close tags) and `<!--`/`-->` (comment boundaries).
+  const payload = JSON.stringify(manifest)
+    .replaceAll("</", "<\\/")
+    .replaceAll("<!--", "<\\!--")
+    .replaceAll("-->", "--\\>");
   await page.route("**/*", async (route) => {
     if (route.request().resourceType() !== "document") {
       await route.fallback();
       return;
     }
-    const response = await route.fetch();
-    const html = await response.text();
-    // Escape every sequence the HTML parser would treat as
-    // script-tag-end inside `<script type="application/json">`:
-    // `</...` (close tags) and `<!--`/`-->` (comment boundaries).
-    const payload = JSON.stringify(manifest)
-      .replaceAll("</", "<\\/")
-      .replaceAll("<!--", "<\\!--")
-      .replaceAll("-->", "--\\>");
-    const next = html.replace(
-      /<script id="plumix-manifest"[^>]*>[\s\S]*?<\/script>/i,
-      `<script id="plumix-manifest" type="application/json">${payload}</script>`,
-    );
-    await route.fulfill({
-      response,
-      body: next,
-      headers: { ...response.headers(), "content-length": String(next.length) },
-    });
+    try {
+      const response = await route.fetch();
+      const html = await response.text();
+      const next = html.replace(
+        /<script id="plumix-manifest"[^>]*>[\s\S]*?<\/script>/i,
+        `<script id="plumix-manifest" type="application/json">${payload}</script>`,
+      );
+      await route.fulfill({
+        response,
+        body: next,
+        headers: {
+          ...response.headers(),
+          "content-length": String(next.length),
+        },
+      });
+    } catch (error) {
+      // Losing the race means there is no document left to rewrite, so
+      // serve the request unmodified. Anything else must stay loud: a
+      // silently no-op'd manifest mock resurfaces as an unrelated
+      // assertion failure much later in whichever spec is running.
+      if (!isTeardownRace(error)) throw error;
+      await route.fallback();
+    }
   });
 }
 

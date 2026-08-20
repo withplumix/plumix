@@ -1,8 +1,12 @@
+import type { Page, Route } from "@playwright/test";
 import { describe, expect, test } from "vitest";
 
+import type { PlumixManifest } from "../../plugin/manifest.js";
 import {
   anonymousSession,
   AUTHED_ADMIN,
+  emptyManifest,
+  mockManifest,
   rpcErrorBody,
   rpcOkBody,
   withCapabilities,
@@ -104,5 +108,131 @@ describe("AUTHED_ADMIN", () => {
 
   test("needsBootstrap is false (the admin already exists)", () => {
     expect(AUTHED_ADMIN.needsBootstrap).toBe(false);
+  });
+});
+
+describe("mockManifest", () => {
+  const DOC_HTML = `<!doctype html><html><head><script id="plumix-manifest" type="application/json">{"old":true}</script></head><body></body></html>`;
+
+  /**
+   * `mockManifest` registers a catch-all route handler; capture it so
+   * each test can drive it with a hand-rolled `Route` and simulate the
+   * teardown races that only surface under full-suite parallel load.
+   */
+  async function captureHandler(
+    manifest: PlumixManifest = emptyManifest(),
+  ): Promise<(route: Route) => Promise<void>> {
+    let handler: ((route: Route) => Promise<void>) | undefined;
+    const page = {
+      route: (_pattern: string, fn: (route: Route) => Promise<void>) => {
+        handler = fn;
+        return Promise.resolve();
+      },
+    } as unknown as Page;
+    await mockManifest(page, manifest);
+    if (!handler) throw new Error("mockManifest registered no route handler");
+    return handler;
+  }
+
+  function routeStub(
+    overrides: {
+      resourceType?: string;
+      fetch?: () => Promise<unknown>;
+      text?: () => Promise<string>;
+      fulfill?: () => Promise<void>;
+    } = {},
+  ) {
+    const calls = { fulfilled: [] as { body?: string }[], fellBack: 0 };
+    const response = {
+      text: overrides.text ?? (() => Promise.resolve(DOC_HTML)),
+      headers: () => ({ "content-type": "text/html" }),
+      status: () => 200,
+    };
+    const route = {
+      request: () => ({
+        resourceType: () => overrides.resourceType ?? "document",
+      }),
+      fetch: overrides.fetch ?? (() => Promise.resolve(response)),
+      fulfill:
+        overrides.fulfill ??
+        ((opts: { body?: string }) => {
+          calls.fulfilled.push(opts);
+          return Promise.resolve();
+        }),
+      fallback: () => {
+        calls.fellBack += 1;
+        return Promise.resolve();
+      },
+    } as unknown as Route;
+    return { route, calls };
+  }
+
+  const disposed = () =>
+    Promise.reject(new Error("Response has been disposed"));
+  const targetClosed = () =>
+    Promise.reject(
+      new Error("Target page, context or browser has been closed"),
+    );
+
+  test("rewrites the manifest tag on the happy path", async () => {
+    const handler = await captureHandler();
+    const { route, calls } = routeStub();
+    await handler(route);
+    expect(calls.fulfilled).toHaveLength(1);
+    expect(calls.fulfilled[0]?.body).toContain(`id="plumix-manifest"`);
+    expect(calls.fulfilled[0]?.body).not.toContain(`{"old":true}`);
+  });
+
+  test("escapes sequences that would close the script tag early", async () => {
+    const handler = await captureHandler({
+      ...emptyManifest(),
+      i18n: { defaultLocale: "</script><!--", locales: [] },
+    });
+    const { route, calls } = routeStub();
+    await handler(route);
+    const body = calls.fulfilled[0]?.body ?? "";
+    expect(body).toContain("<\\/script>");
+    expect(body).not.toContain("</script><!--");
+  });
+
+  test("falls back on non-document requests", async () => {
+    const handler = await captureHandler();
+    const { route, calls } = routeStub({ resourceType: "script" });
+    await handler(route);
+    expect(calls.fulfilled).toHaveLength(0);
+    expect(calls.fellBack).toBe(1);
+  });
+
+  test("recovers when the response is disposed during the body read", async () => {
+    const handler = await captureHandler();
+    const { route, calls } = routeStub({ text: disposed });
+    await expect(handler(route)).resolves.toBeUndefined();
+    expect(calls.fellBack).toBe(1);
+    expect(calls.fulfilled).toHaveLength(0);
+  });
+
+  test("recovers when the fetch itself is disposed", async () => {
+    const handler = await captureHandler();
+    const { route, calls } = routeStub({ fetch: disposed });
+    await expect(handler(route)).resolves.toBeUndefined();
+    expect(calls.fellBack).toBe(1);
+  });
+
+  test("recovers when the page closes during fulfill", async () => {
+    const handler = await captureHandler();
+    const { route, calls } = routeStub({ fulfill: targetClosed });
+    await expect(handler(route)).resolves.toBeUndefined();
+    expect(calls.fellBack).toBe(1);
+  });
+
+  test("rethrows anything that isn't a teardown race", async () => {
+    // Swallowing these would no-op the manifest mock and resurface as
+    // an unrelated assertion failure later in the spec.
+    const handler = await captureHandler();
+    const { route, calls } = routeStub({
+      text: () => Promise.reject(new Error("boom")),
+    });
+    await expect(handler(route)).rejects.toThrow("boom");
+    expect(calls.fellBack).toBe(0);
   });
 });
