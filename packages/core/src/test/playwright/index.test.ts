@@ -112,6 +112,17 @@ describe("AUTHED_ADMIN", () => {
 });
 
 describe("mockManifest", () => {
+  // What `vite preview` actually sends for the admin document.
+  const ORIGIN_HEADERS = {
+    "cache-control": "no-cache",
+    "content-encoding": "gzip",
+    "content-length": "6582",
+    "content-type": "text/html",
+    etag: 'W/"19b6-Y+r28AUOyZujO8+Cm8H0cxstmTU"',
+    "transfer-encoding": "chunked",
+    vary: "Origin",
+  };
+
   const DOC_HTML = `<!doctype html><html><head><script id="plumix-manifest" type="application/json">{"old":true}</script></head><body></body></html>`;
 
   /**
@@ -134,18 +145,24 @@ describe("mockManifest", () => {
     return handler;
   }
 
+  interface FulfillCall {
+    body?: string;
+    headers?: Record<string, string>;
+  }
+
   function routeStub(
     overrides: {
       resourceType?: string;
       fetch?: () => Promise<unknown>;
       text?: () => Promise<string>;
       fulfill?: () => Promise<void>;
+      headers?: Record<string, string>;
     } = {},
   ) {
-    const calls = { fulfilled: [] as { body?: string }[], fellBack: 0 };
+    const calls = { fulfilled: [] as FulfillCall[], fellBack: 0 };
     const response = {
       text: overrides.text ?? (() => Promise.resolve(DOC_HTML)),
-      headers: () => ({ "content-type": "text/html" }),
+      headers: () => overrides.headers ?? { ...ORIGIN_HEADERS },
       status: () => 200,
     };
     const route = {
@@ -155,7 +172,7 @@ describe("mockManifest", () => {
       fetch: overrides.fetch ?? (() => Promise.resolve(response)),
       fulfill:
         overrides.fulfill ??
-        ((opts: { body?: string }) => {
+        ((opts: FulfillCall) => {
           calls.fulfilled.push(opts);
           return Promise.resolve();
         }),
@@ -223,6 +240,19 @@ describe("mockManifest", () => {
     const { route, calls } = routeStub({ fulfill: targetClosed });
     await expect(handler(route)).resolves.toBeUndefined();
     expect(calls.fellBack).toBe(1);
+  });
+
+  test("forwards only the headers that still describe the body", async () => {
+    // Framing and validator headers describe the original bytes, so
+    // forwarding them would mislabel a decoded, resized document.
+    const handler = await captureHandler();
+    const { route, calls } = routeStub();
+    await handler(route);
+    expect(Object.keys(calls.fulfilled[0]?.headers ?? {}).sort()).toEqual([
+      "cache-control",
+      "content-type",
+      "vary",
+    ]);
   });
 
   test("rethrows anything that isn't a teardown race", async () => {
