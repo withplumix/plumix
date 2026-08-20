@@ -9,6 +9,7 @@ import type { MessageDescriptor } from "@lingui/core";
 import type {
   ColumnDef,
   OnChangeFn,
+  RowData,
   RowSelectionState,
 } from "@tanstack/react-table";
 import type { ReactNode } from "react";
@@ -48,7 +49,6 @@ declare module "@tanstack/react-table" {
     className?: string;
   }
 }
-type RowData = unknown;
 
 export function DataTable<TData>({
   columns,
