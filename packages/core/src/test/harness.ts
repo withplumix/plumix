@@ -37,9 +37,9 @@ async function compileSchemaSql(schemaModule: SchemaModule): Promise<string[]> {
 /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 
 /**
- * Create the tables a drizzle schema module declares on `db`. Plugin test
- * suites layer their own schema onto a core test db with this; foreign keys
- * into `entries` / `users` resolve because the core schema is already there.
+ * Create the tables a drizzle schema module declares on `db`. A plugin suite
+ * layers its schema onto a core test db when its FKs reference `entries` /
+ * `users`, or onto a bare `:memory:` db when it owns every table it touches.
  */
 export async function applyTestSchema(
   db: SqlRunner,

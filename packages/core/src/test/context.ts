@@ -37,8 +37,8 @@ export const silentLogger: Logger = {
  * A real `AppContext` for tests that exercise a service function directly
  * rather than through a request. Everything a handler reads through — the
  * request memo, the capability resolver, the hook executor, `defer` — is
- * the production implementation, so a test can't pass against a stand-in
- * that a real request would never produce.
+ * the production implementation rather than an omission the test has to
+ * work around.
  *
  * The default `defer` is fire-and-forget with no drain handle; a test that
  * asserts on deferred work should pass `createDeferQueue().defer`. For a
@@ -49,12 +49,15 @@ export function createTestContext(
 ): AppContext {
   const { db, ...overrides } = options;
   return createAppContext({
-    env: {},
-    request: new Request("https://cms.example/"),
-    hooks: new HookRegistry(),
-    plugins: createPluginRegistry(),
-    logger: silentLogger,
     ...overrides,
+    // Defaulted with `??` rather than by spread order: an explicitly-passed
+    // `undefined` would otherwise overwrite the default and blow up inside
+    // `createAppContext`, which has no fallback for these four.
+    env: overrides.env ?? {},
+    request: overrides.request ?? new Request("https://cms.example/"),
+    hooks: overrides.hooks ?? new HookRegistry(),
+    plugins: overrides.plugins ?? createPluginRegistry(),
+    logger: overrides.logger ?? silentLogger,
     // Asserted, not checked — see `TestContextDb`.
     db: db as Db<CoreSchema>,
   });

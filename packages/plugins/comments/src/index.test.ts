@@ -1,5 +1,5 @@
 import type { AppContext } from "plumix/plugin";
-import { createRequestMemo } from "plumix/test";
+import { createTestContext } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import type { CommentsTestDb } from "./test/db.js";
@@ -14,12 +14,7 @@ function ctxWith(
   db: CommentsTestDb,
   resolvedEntity: { kind: "entry"; id: number } | null,
 ): AppContext {
-  return {
-    db,
-    resolvedEntity,
-    plugins: { entryTypes: new Map() },
-    memo: createRequestMemo(),
-  } as unknown as AppContext;
+  return { ...createTestContext({ db }), resolvedEntity };
 }
 
 async function seedApprovedPost(db: CommentsTestDb) {

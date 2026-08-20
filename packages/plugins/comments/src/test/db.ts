@@ -11,7 +11,6 @@ import * as schema from "../db/schema.js";
 
 export type CommentsTestDb = Awaited<ReturnType<typeof createTestDb>>;
 
-/** An `AppContext` over the plugin's test db, for server-module tests. */
 export function ctxFor(db: CommentsTestDb): AppContext {
   return createTestContext({ db });
 }

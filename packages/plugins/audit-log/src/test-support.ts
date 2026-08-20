@@ -18,7 +18,6 @@ export async function createDb(): Promise<TestDb> {
   return db;
 }
 
-/** An `AppContext` over the plugin's test db, for storage-adapter tests. */
 export function ctxFor(db: TestDb): AppContext {
   return createTestContext({ db });
 }
