@@ -1444,6 +1444,9 @@ function toEntryMetaBoxEntry(
     id,
     label,
     description,
+    // Deprecated with no replacement by design: the editor ignores it, but it
+    // stays on the wire so plugins that still set it keep validating.
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     location,
     priority,
     entryTypes,

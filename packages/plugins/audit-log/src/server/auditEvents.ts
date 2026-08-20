@@ -475,7 +475,7 @@ export const auditEvents: readonly AuditEventDef[] = [
         credential: { readonly id: string },
         context: { readonly name: string },
       ) => ({
-        id: String(credential.id),
+        id: credential.id,
         label: context.name,
       }),
     },

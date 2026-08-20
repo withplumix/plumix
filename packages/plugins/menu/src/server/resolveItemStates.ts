@@ -53,10 +53,10 @@ export async function resolveItemStates(
   }
 
   const eligibleEntryTypes = [...ctx.plugins.entryTypes.values()]
-    .filter((t) => (t.isShownInMenus ?? t.isPublic ?? true) === true)
+    .filter((t) => t.isShownInMenus ?? t.isPublic ?? true)
     .map((t) => t.name);
   const eligibleTaxonomies = [...ctx.plugins.termTaxonomies.values()]
-    .filter((t) => (t.isShownInMenus ?? t.isPublic ?? true) === true)
+    .filter((t) => t.isShownInMenus ?? t.isPublic ?? true)
     .map((t) => t.name);
 
   const canAccessKind = (kind: string): boolean => {

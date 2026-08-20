@@ -100,7 +100,7 @@ export class RangeFieldBuilder<
    * the admin form) — narrows the read type to `number`; the stored
    * shape stays optional. */
   default(value: number): RangeFieldBuilder<K, number, S> {
-    return this.#fork<number, S>({ default: value });
+    return this.#fork<number>({ default: value });
   }
 
   /** Mark the field required — narrows the read and stored types to `number`. */

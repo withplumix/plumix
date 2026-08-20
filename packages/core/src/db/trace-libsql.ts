@@ -60,9 +60,14 @@ export function traceSqlClient(client: Client): Client {
 
   // drizzle runs in-transaction statements through the Transaction object's
   // own execute/batch — wrap each transaction as it opens.
+  // Only libsql's zero-argument `transaction()` overload is deprecated; the
+  // `transaction(mode)` one this forwards to is current. A bare reference
+  // can't pick an overload, so the rule sees the whole symbol as deprecated.
+  /* eslint-disable @typescript-eslint/no-deprecated */
   const rawTransaction = client.transaction.bind(client);
   client.transaction = async (mode?: TransactionMode) =>
     wrapQueryTarget(await rawTransaction(mode));
+  /* eslint-enable @typescript-eslint/no-deprecated */
 
   return client;
 }

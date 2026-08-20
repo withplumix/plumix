@@ -97,7 +97,7 @@ class TerminalForwarder {
   private readonly schedule: (flush: () => void) => void;
   private readonly listeners: (() => void)[] = [];
   private readonly restores: (() => void)[] = [];
-  private readonly seenObjects = new WeakSet<object>();
+  private readonly seenObjects = new WeakSet();
   private queue: ForwardedLog[] = [];
   private scheduled = false;
 

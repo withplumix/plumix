@@ -83,7 +83,7 @@ export class LinkFieldBuilder<
    * the admin form) — narrows the read type to `LinkValue`; the stored
    * shape stays optional. */
   default(value: LinkValue): LinkFieldBuilder<K, LinkValue, S> {
-    return this.#fork<LinkValue, S>({ default: value });
+    return this.#fork<LinkValue>({ default: value });
   }
 
   /** Mark the field required — narrows the read and stored types to `LinkValue`. */

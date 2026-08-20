@@ -71,7 +71,7 @@ export const stats = base.use(authenticated).handler(async ({ context }) => {
   return rows.map((row) => ({
     type: row.type,
     status: row.status,
-    count: Number(row.count),
+    count: row.count,
   }));
 });
 

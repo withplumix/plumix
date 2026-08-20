@@ -31,7 +31,7 @@ const demoPlugin = definePlugin("debug-demo", (ctx) => {
           <DebugTable
             headers={["note"]}
             rows={(snapshot.records["debug-demo"] ?? []).map((r) => [
-              String((r.data as { note: string }).note),
+              (r.data as { note: string }).note,
             ])}
           />
         </DebugSection>

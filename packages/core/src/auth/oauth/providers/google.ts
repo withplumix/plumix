@@ -3,7 +3,10 @@ import type { OAuthProviderClient, OAuthProviderFactory } from "../types.js";
 interface GoogleProfile {
   readonly sub: string;
   readonly email: string;
-  readonly email_verified: boolean;
+  // Unparsed provider JSON. `emailVerified` gates account linking, so the
+  // boolean is derived below rather than claimed here — the same way the
+  // GitHub provider derives it.
+  readonly email_verified: unknown;
   readonly name: string | null;
   readonly picture: string | null;
 }
@@ -20,7 +23,7 @@ export const google: OAuthProviderFactory = (client): OAuthProviderClient => ({
     return {
       providerAccountId: p.sub,
       email: p.email,
-      emailVerified: Boolean(p.email_verified),
+      emailVerified: p.email_verified === true,
       name: p.name,
       avatarUrl: p.picture,
     };

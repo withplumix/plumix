@@ -103,7 +103,10 @@ export type TemporalInputType = (typeof TEMPORAL_INPUT_TYPES)[number];
 
 type Assert<T extends true> = T;
 
+// Each `<T>()` is deliberately single-use: deferring the conditional is what
+// makes this exact equality rather than mutual assignability.
 type Equals<A, B> =
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
     ? true
     : false;

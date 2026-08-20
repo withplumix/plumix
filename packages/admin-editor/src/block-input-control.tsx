@@ -158,7 +158,7 @@ export function BlockInputControl({
             id={id}
             data-testid={testId}
             checked={value === true}
-            onCheckedChange={(checked) => onChange(checked === true)}
+            onCheckedChange={onChange}
           />
         );
       case "select":

@@ -274,7 +274,7 @@ async function renderErrorThroughThemeInner({
 async function prefetchEntryLoaders(
   ctx: AppContext,
   data: TemplateData,
-  template: Template<TemplateData>,
+  template: Template,
 ): Promise<ResolvedBlockLoaders | undefined> {
   const blocks = collectLoaderBlocks(data, template);
   if (blocks.length === 0) return undefined;
@@ -319,7 +319,7 @@ async function prefetchEntryLoaders(
 
 function collectLoaderBlocks(
   data: TemplateData,
-  template: Template<TemplateData>,
+  template: Template,
 ): readonly BlockNode[] {
   if ("entry" in data) return data.entry.contentBlocks?.blocks ?? [];
   if (!("entries" in data)) return [];
@@ -328,7 +328,7 @@ function collectLoaderBlocks(
 }
 
 interface ResolveDocumentArgs {
-  readonly template: Template<TemplateData>;
+  readonly template: Template;
   readonly document: DocumentManifest;
   readonly data: TemplateData;
   readonly ctx: AppContext;
@@ -361,7 +361,7 @@ interface RenderTreeArgs {
   readonly assetManifest: AssetManifest;
   readonly data: TemplateData;
   readonly title: string;
-  readonly template: Template<TemplateData>;
+  readonly template: Template;
   readonly deps: Record<string, Record<string, unknown>>;
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly tokens: ThemeTokens | undefined;

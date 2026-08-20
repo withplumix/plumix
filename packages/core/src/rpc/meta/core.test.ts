@@ -69,9 +69,9 @@ describe("sanitizeMetaInput (constraint enforcement)", () => {
   });
 
   test("unregistered keys still fail fast with the legacy error", async () => {
-    await expect(
-      sanitizeMetaInput(findField, { ghost: "x" }),
-    ).rejects.toThrowError(MetaSanitizationError);
+    await expect(sanitizeMetaInput(findField, { ghost: "x" })).rejects.toThrow(
+      MetaSanitizationError,
+    );
   });
 
   test("a deletion (null/undefined) of an unregistered key is a harmless no-op", async () => {
@@ -183,13 +183,13 @@ describe("sanitizeMetaInput (condition-hidden fields)", () => {
         layout: "video",
         videoUrl: { not: "a string" },
       }),
-    ).rejects.toThrowError(MetaValidationError);
+    ).rejects.toThrow(MetaValidationError);
   });
 
   test("a patch that omits the driver validates the field as if visible", async () => {
     await expect(
       sanitizeMetaInput(findField, { videoUrl: { not: "a string" } }),
-    ).rejects.toThrowError(MetaValidationError);
+    ).rejects.toThrow(MetaValidationError);
 
     const patch = await sanitizeMetaInput(findField, {
       videoUrl: "https://example.com/v.mp4",
@@ -200,7 +200,7 @@ describe("sanitizeMetaInput (condition-hidden fields)", () => {
   test("hidden fields must still be registered keys", async () => {
     await expect(
       sanitizeMetaInput(findField, { layout: "standard", ghost: "x" }),
-    ).rejects.toThrowError(MetaSanitizationError);
+    ).rejects.toThrow(MetaSanitizationError);
   });
 });
 
@@ -370,7 +370,7 @@ describe("sanitizeMetaInput (Date acceptance on temporal fields)", () => {
   test("an invalid Date is rejected with a path-addressed error", async () => {
     await expect(
       sanitizeMetaInput(findField, { publishedOn: new Date("garbage") }),
-    ).rejects.toThrowError(MetaValidationError);
+    ).rejects.toThrow(MetaValidationError);
   });
 
   test("decode → write round-trips the stored string exactly", async () => {

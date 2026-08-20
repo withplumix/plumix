@@ -129,7 +129,7 @@ export function defineTemplate<TData extends TemplateData = TemplateData>(
   return template as unknown as Template<TData>;
 }
 
-export function isTemplate(value: unknown): value is Template<TemplateData> {
+export function isTemplate(value: unknown): value is Template {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -145,10 +145,7 @@ export function isTemplate(value: unknown): value is Template<TemplateData> {
  * fail loud so a future deps / document-fragment field doesn't get
  * silently ignored on a malformed registration.
  */
-export function normalizeTemplate(
-  value: unknown,
-  slot: string,
-): Template<TemplateData> {
+export function normalizeTemplate(value: unknown, slot: string): Template {
   if (isTemplate(value)) return value;
   if (typeof value === "function") {
     // Invoke the legacy template via `createElement` so it runs inside

@@ -1,4 +1,4 @@
-import type { MutableRefObject, ReactElement, ReactNode } from "react";
+import type { ReactElement, ReactNode, RefObject } from "react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 
@@ -20,7 +20,7 @@ const CameraStoreContext = createContext<CameraStoreApi | null>(null);
 type LoaderDataPush = (data: SerializedLoaderData) => void;
 
 const LoaderPushContext =
-  createContext<MutableRefObject<LoaderDataPush | null> | null>(null);
+  createContext<RefObject<LoaderDataPush | null> | null>(null);
 
 /**
  * Creates one store per editor instance (kept stable across renders) and
@@ -80,7 +80,7 @@ export function EditorProvider({
 /** The loader-data push channel ref. CanvasFrame sets `.current` when its
  *  bridge connects; the inspector's refresh control calls it. Null outside an
  *  EditorProvider (e.g. an isolated unit render) — callers no-op then. */
-export function useLoaderPushRef(): MutableRefObject<LoaderDataPush | null> | null {
+export function useLoaderPushRef(): RefObject<LoaderDataPush | null> | null {
   return useContext(LoaderPushContext);
 }
 

@@ -46,6 +46,6 @@ describe("resolveCommandApp", () => {
       "dev",
     );
 
-    expect(() => sentinel.config).toThrowError(/ctx\.app is not available/);
+    expect(() => sentinel.config).toThrow(/ctx\.app is not available/);
   });
 });

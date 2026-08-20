@@ -1094,7 +1094,7 @@ describe("dispatcher — plugin raw routes", () => {
         path: "/upload",
         auth: "authenticated",
         handler: (_req, c) =>
-          new Response(String(c.user?.email ?? ""), { status: 200 }),
+          new Response(c.user?.email ?? "", { status: 200 }),
       });
     });
     const h = await createDispatcherHarness({ plugins: [plugin] });
