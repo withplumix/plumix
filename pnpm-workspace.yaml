@@ -73,7 +73,10 @@ catalogs:
     # which bundles ~16 extensions but we activate only these (the rest are
     # disabled marks we replace with @plumix/blocks marks, or nodes that are
     # standalone blocks). All pinned in lockstep with @tiptap/core so a single
-    # prosemirror/core copy is bundled.
+    # prosemirror/core copy is bundled. @tiptap/pm is an exact-version peer of
+    # every package here and rides along on that lockstep -- never pin it in
+    # pnpm.overrides, which silently rewrites the peer range and forks it away
+    # from the version tiptap expects.
     "@tiptap/extension-blockquote": ^3.29.2
     "@tiptap/extension-document": ^3.29.2
     "@tiptap/extension-hard-break": ^3.29.2
