@@ -14,6 +14,7 @@
 //     delay.
 
 import type { IslandStrategy } from "../island-element.js";
+import { publishIslandStrategy } from "../island-global.js";
 
 const DEFAULT_TIMEOUT_MS = 2000;
 const FALLBACK_DELAY_MS = 200;
@@ -35,8 +36,5 @@ export const idleStrategy: IslandStrategy = (loadFn, opts) => {
 };
 
 export function registerIdleStrategy(): void {
-  const target = self as unknown as {
-    Plumix?: Record<string, IslandStrategy>;
-  };
-  target.Plumix = { ...(target.Plumix ?? {}), idle: idleStrategy };
+  publishIslandStrategy("idle", idleStrategy);
 }

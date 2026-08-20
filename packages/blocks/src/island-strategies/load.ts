@@ -7,14 +7,12 @@
 // directly.
 
 import type { IslandStrategy } from "../island-element.js";
+import { publishIslandStrategy } from "../island-global.js";
 
 export const loadStrategy: IslandStrategy = (loadFn) => {
   void loadFn();
 };
 
 export function registerLoadStrategy(): void {
-  const target = self as unknown as {
-    Plumix?: Record<string, IslandStrategy>;
-  };
-  target.Plumix = { ...(target.Plumix ?? {}), load: loadStrategy };
+  publishIslandStrategy("load", loadStrategy);
 }
