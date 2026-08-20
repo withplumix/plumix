@@ -7,14 +7,12 @@
 // `client="only"`.
 
 import type { IslandStrategy } from "../island-element.js";
+import { publishIslandStrategy } from "../island-global.js";
 
 export const onlyStrategy: IslandStrategy = (loadFn) => {
   void loadFn();
 };
 
 export function registerOnlyStrategy(): void {
-  const target = self as unknown as {
-    Plumix?: Record<string, IslandStrategy>;
-  };
-  target.Plumix = { ...(target.Plumix ?? {}), only: onlyStrategy };
+  publishIslandStrategy("only", onlyStrategy);
 }

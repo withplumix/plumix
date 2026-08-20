@@ -31,6 +31,7 @@
 //      that loses Nuxt's click is handled.
 
 import type { IslandStrategy, PlumixIslandElement } from "../island-element.js";
+import { publishIslandStrategy } from "../island-global.js";
 
 // The superset the single document listener subscribes to. An island's
 // `opts.events` (if any) must be a subset; `pointerenter` is a trigger only
@@ -214,11 +215,5 @@ function eventTarget(event: Event): Element | null {
 const ISLAND_SELECTOR = "plumix-island";
 
 export function registerInteractionStrategy(): void {
-  const target = self as unknown as {
-    Plumix?: Record<string, IslandStrategy>;
-  };
-  target.Plumix = {
-    ...(target.Plumix ?? {}),
-    interaction: interactionStrategy,
-  };
+  publishIslandStrategy("interaction", interactionStrategy);
 }

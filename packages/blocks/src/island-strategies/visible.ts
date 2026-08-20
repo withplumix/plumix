@@ -20,6 +20,7 @@
 // without ever constructing an observer for an above-the-fold island.
 
 import type { IslandStrategy } from "../island-element.js";
+import { publishIslandStrategy } from "../island-global.js";
 
 const DEFAULT_ROOT_MARGIN = "200px";
 
@@ -61,8 +62,5 @@ function isInViewport(el: Element): boolean {
 }
 
 export function registerVisibleStrategy(): void {
-  const target = self as unknown as {
-    Plumix?: Record<string, IslandStrategy>;
-  };
-  target.Plumix = { ...(target.Plumix ?? {}), visible: visibleStrategy };
+  publishIslandStrategy("visible", visibleStrategy);
 }

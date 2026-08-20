@@ -17,6 +17,7 @@ import type { ComponentType } from "react";
 
 import type { IslandPageMode } from "./island-mode.js";
 import type { IslandRoot, MountOptions } from "./island-renderer.js";
+import { islandStrategy } from "./island-global.js";
 import { clientOnlyPlaceholderLabel, shouldHydrate } from "./island-mode.js";
 import { deserializeProps } from "./serialize.js";
 
@@ -191,7 +192,6 @@ export class PlumixIslandElement extends HTMLElement {
     const strategy = this.getAttribute("client") ?? "load";
     const prefetch = this.getAttribute("prefetch");
     const opts = parseJsonAttr(this.getAttribute("opts"));
-    const strategies = window.Plumix;
 
     // Prefetch is wired first — it fires no later than hydration. Skip it
     // when hydration is already immediate (`load`/`only`) or shares the
@@ -199,7 +199,7 @@ export class PlumixIslandElement extends HTMLElement {
     // split (warm the chunk on `visible`, hydrate on `interaction`) is the
     // lever Astro and Nuxt lack — both couple fetch to the hydrate trigger.
     if (prefetch && shouldPrefetch(strategy, prefetch)) {
-      const prefetchFn = strategies?.[prefetch];
+      const prefetchFn = islandStrategy(prefetch);
       if (prefetchFn) {
         const cleanup = await prefetchFn(
           () => Promise.resolve(this.prefetch()),
@@ -210,7 +210,7 @@ export class PlumixIslandElement extends HTMLElement {
       }
     }
 
-    const fn = strategies?.[strategy];
+    const fn = islandStrategy(strategy);
     if (!fn) {
       // No registered strategy — the runtime entry script never loaded.
       // Surface the same hydration-error event so the page can react.
