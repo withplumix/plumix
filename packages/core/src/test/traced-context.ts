@@ -1,6 +1,6 @@
 import type { AppContext } from "../context/app.js";
-import { createAppContext } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
+import { createTestContext } from "./context.js";
 import { createDispatcherHarness } from "./dispatcher.js";
 
 export interface TracedContext {
@@ -21,10 +21,9 @@ export async function createTracedContext(
   options: Parameters<typeof createDispatcherHarness>[0] = {},
 ): Promise<TracedContext> {
   const harness = await createDispatcherHarness(options);
-  const ctx = createAppContext({
+  const ctx = createTestContext({
     db: harness.db,
     env: harness.env,
-    request: new Request("https://cms.example/"),
     hooks: harness.app.hooks,
     plugins: harness.app.plugins,
     telemetry: {

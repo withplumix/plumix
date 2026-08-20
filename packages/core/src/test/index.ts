@@ -30,7 +30,7 @@ export {
 } from "./factories.js";
 export type { Factories } from "./factories.js";
 
-export { createTestDb } from "./harness.js";
+export { applyTestSchema, createTestDb } from "./harness.js";
 
 export { createDispatcherHarness, plumixRequest } from "./dispatcher.js";
 export type {
@@ -38,11 +38,15 @@ export type {
   CreateDispatcherHarnessOptions,
 } from "./dispatcher.js";
 
+export { createTestContext } from "./context.js";
+export type { CreateTestContextOptions } from "./context.js";
+
 export { createTracedContext } from "./traced-context.js";
 export type { TracedContext } from "./traced-context.js";
 
-// Real request-memo implementation for hand-rolled AppContext stand-ins —
-// service functions read through `ctx.memo`, so a stand-in needs one.
+// Real request-memo implementation for the AppContext stand-ins that predate
+// `createTestContext` — service functions read through `ctx.memo`, so a
+// hand-rolled stand-in needs one. New tests should take the factory instead.
 export { createRequestMemo } from "../context/memo.js";
 
 export { createDeferQueue } from "./defer.js";
