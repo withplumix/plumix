@@ -113,6 +113,12 @@ test.describe("editor playground", () => {
     await page.goto("/");
     const canvas = page.frameLocator(CANVAS_FRAME);
     const blocks = canvas.locator("[data-plumix-id]");
+    // Settle the canvas before sampling. `goto` resolves on the host's load
+    // event, but the iframe mounts with createRoot().render(), which commits
+    // asynchronously — and `.count()` does not retry. Under parallel-worker
+    // load the sample otherwise lands on zero and every delta below is off by
+    // the whole baseline. Same guard at each baseline sample in this file.
+    await expect(blocks).not.toHaveCount(0);
     const before = await blocks.count();
 
     await canvas.locator('[data-plumix-id="heading-1"]').click();
@@ -327,6 +333,7 @@ test.describe("editor playground", () => {
     await page.goto("/");
     const canvas = page.frameLocator(CANVAS_FRAME);
     const blocks = canvas.locator("[data-plumix-id]");
+    await expect(blocks).not.toHaveCount(0);
     const before = await blocks.count();
 
     // The catalog lives in the left rail (no toolbar "+ Add Block" popover).
@@ -694,6 +701,7 @@ test.describe("editor playground", () => {
     await page.goto("/");
     const canvas = page.frameLocator(CANVAS_FRAME);
     const blocks = canvas.locator("[data-plumix-id]");
+    await expect(blocks).not.toHaveCount(0);
     const before = await blocks.count();
 
     // Clicking a block puts focus inside the iframe; the shortcuts must still
@@ -712,6 +720,7 @@ test.describe("editor playground", () => {
     await page.goto("/");
     const canvas = page.frameLocator(CANVAS_FRAME);
     const blocks = canvas.locator("[data-plumix-id]");
+    await expect(blocks).not.toHaveCount(0);
     const before = await blocks.count();
 
     // Multi-select two root siblings, then group → one new container block.
