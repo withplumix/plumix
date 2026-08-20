@@ -12,6 +12,11 @@ const config: KnipConfig = {
     "tooling/typescript": {
       entry: ["*.json"],
     },
+    // `test/fixtures/` holds deliberately-violating source files that the
+    // lint-rule suite feeds to ESLint by path. Nothing imports them.
+    "tooling/eslint": {
+      ignore: ["test/fixtures/**"],
+    },
     // `base/` is the scaffolder's template payload — copied verbatim into
     // generated projects and typechecked there, not part of this package's
     // own module graph.

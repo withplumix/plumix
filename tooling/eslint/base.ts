@@ -6,6 +6,8 @@ import turboPlugin from "eslint-plugin-turbo";
 import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 
+import { plumixPlugin } from "./rules/index.js";
+
 // Exported so consumer configs that extend `no-restricted-syntax` for their
 // own selectors can re-include this entry — ESLint flat config replaces the
 // rule wholesale rather than merging selector lists.
@@ -26,6 +28,14 @@ export const NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR = {
     "Augment the public `plumix` specifier, not internal `@plumix/*` packages or `plumix/*` subpaths — mixing augmentation targets fractures declaration merging (issue #1691).",
 } as const;
 
+const PRODUCTION_SOURCE = ["src/**/*.ts", "src/**/*.tsx"];
+const TEST_SOURCE = [
+  "**/*.test.ts",
+  "**/*.test.tsx",
+  "**/*.spec.ts",
+  "**/test/**",
+];
+
 export const baseConfig = defineConfig(
   includeIgnoreFile(path.join(import.meta.dirname, "../../.gitignore")),
   // The root .gitignore patterns are anchored to the repo root, but ESLint
@@ -41,6 +51,7 @@ export const baseConfig = defineConfig(
     files: ["**/*.js", "**/*.ts", "**/*.tsx"],
     plugins: {
       "import-x": importXPlugin,
+      plumix: plumixPlugin,
       turbo: turboPlugin,
     },
     extends: [
@@ -89,14 +100,28 @@ export const baseConfig = defineConfig(
   // Named-errors convention (umbrella #232): production `src/` code may not
   // `throw new Error(...)` — use a factory from the area's errors.ts.
   {
-    files: ["src/**/*.ts", "src/**/*.tsx"],
-    ignores: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test/**"],
+    files: PRODUCTION_SOURCE,
+    ignores: TEST_SOURCE,
     rules: {
       "no-restricted-syntax": [
         "error",
         NO_THROW_NEW_ERROR_SELECTOR,
         NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
       ],
+    },
+  },
+  // Earned-types rules (issue #1807). Registered as distinct rules rather
+  // than extra `no-restricted-syntax` selectors, so a consumer config that
+  // re-declares that rule can't silently drop them. Scoped like the
+  // named-errors guard above: fixtures and test doubles are exempt, since
+  // forcing them to satisfy these makes tests worse, not better.
+  {
+    files: PRODUCTION_SOURCE,
+    ignores: TEST_SOURCE,
+    rules: {
+      "plumix/no-reflect-apply": "error",
+      "plumix/no-reflect-get": "error",
+      "plumix/no-unknown-type-alias": "error",
     },
   },
   {
