@@ -1,6 +1,24 @@
 import { describe, expect, test } from "vitest";
 
-import { definePlumixE2EConfig } from "./playwright-config.js";
+import { definePlumixE2EConfig, resolveE2EPort } from "./playwright-config.js";
+
+function withPortOffset<T>(value: string | undefined, fn: () => T): T {
+  const original = process.env.PLUMIX_E2E_PORT_OFFSET;
+  if (value === undefined) delete process.env.PLUMIX_E2E_PORT_OFFSET;
+  else process.env.PLUMIX_E2E_PORT_OFFSET = value;
+  try {
+    return fn();
+  } finally {
+    if (original === undefined) delete process.env.PLUMIX_E2E_PORT_OFFSET;
+    else process.env.PLUMIX_E2E_PORT_OFFSET = original;
+  }
+}
+
+function webServerCommandOf(config: ReturnType<typeof definePlumixE2EConfig>) {
+  return config.webServer && "command" in config.webServer
+    ? config.webServer.command
+    : "";
+}
 
 describe("definePlumixE2EConfig", () => {
   test("derives baseURL from port when not explicitly set", () => {
@@ -191,5 +209,148 @@ describe("definePlumixE2EConfig", () => {
         ? config.webServer.command
         : "";
     expect(cmd).not.toContain("--inspector-port");
+  });
+
+  test("reuses no existing server, on CI and locally alike", () => {
+    const original = process.env.CI;
+    delete process.env.CI;
+    try {
+      const config = definePlumixE2EConfig({ playground: "../playground" });
+      const reuse =
+        config.webServer && "reuseExistingServer" in config.webServer
+          ? config.webServer.reuseExistingServer
+          : undefined;
+      expect(reuse).toBe(false);
+    } finally {
+      if (original === undefined) delete process.env.CI;
+      else process.env.CI = original;
+    }
+  });
+});
+
+describe("PLUMIX_E2E_PORT_OFFSET", () => {
+  test("resolveE2EPort is the identity when the offset is unset", () => {
+    withPortOffset(undefined, () => {
+      expect(resolveE2EPort(3010)).toBe(3010);
+    });
+  });
+
+  test("resolveE2EPort shifts the base by the offset", () => {
+    withPortOffset("100", () => {
+      expect(resolveE2EPort(3010)).toBe(3110);
+    });
+  });
+
+  test("a negative offset shifts downward", () => {
+    withPortOffset("-10", () => {
+      expect(resolveE2EPort(3010)).toBe(3000);
+    });
+  });
+
+  test("an empty offset is treated as unset", () => {
+    withPortOffset("   ", () => {
+      expect(resolveE2EPort(3010)).toBe(3010);
+    });
+  });
+
+  test("a non-integer offset is rejected loudly rather than yielding NaN ports", () => {
+    withPortOffset("wat", () => {
+      expect(() => resolveE2EPort(3010)).toThrow(
+        /PLUMIX_E2E_PORT_OFFSET.*integer/i,
+      );
+    });
+    withPortOffset("1.5", () => {
+      expect(() => resolveE2EPort(3010)).toThrow(
+        /PLUMIX_E2E_PORT_OFFSET.*integer/i,
+      );
+    });
+  });
+
+  test("shifts the HTTP port and the derived baseURL together", () => {
+    withPortOffset("100", () => {
+      const config = definePlumixE2EConfig({
+        port: 3010,
+        playground: "../playground",
+      });
+
+      expect(config.use?.baseURL).toBe("http://localhost:3110/_plumix/admin/");
+      expect(webServerCommandOf(config)).toContain("plumix dev --port 3110");
+    });
+  });
+
+  test("shifts the webServer readiness URL alongside the port", () => {
+    withPortOffset("100", () => {
+      const config = definePlumixE2EConfig({
+        port: 3010,
+        playground: "../playground",
+      });
+
+      const url =
+        config.webServer && "url" in config.webServer
+          ? config.webServer.url
+          : undefined;
+      expect(url).toBe("http://localhost:3110/_plumix/admin/");
+    });
+  });
+
+  test("shifts the workerd inspector port too, preserving suite spacing", () => {
+    withPortOffset("100", () => {
+      const audit = definePlumixE2EConfig({
+        port: 3010,
+        inspectorPort: 9310,
+        playground: "../playground",
+      });
+      const blog = definePlumixE2EConfig({
+        port: 3020,
+        inspectorPort: 9320,
+        playground: "../playground",
+      });
+
+      expect(webServerCommandOf(audit)).toContain(
+        "plumix dev --port 3110 --inspector-port 9410",
+      );
+      expect(webServerCommandOf(blog)).toContain(
+        "plumix dev --port 3120 --inspector-port 9420",
+      );
+    });
+  });
+
+  test("shifts the TCP readiness port so it still matches the bound port", () => {
+    withPortOffset("100", () => {
+      const config = definePlumixE2EConfig({
+        port: 3010,
+        playground: "../playground",
+        webServerPort: 3010,
+      });
+
+      const port =
+        config.webServer && "port" in config.webServer
+          ? config.webServer.port
+          : undefined;
+      expect(port).toBe(3110);
+    });
+  });
+
+  test("shifts the default port when the suite declares none", () => {
+    withPortOffset("100", () => {
+      const config = definePlumixE2EConfig({ playground: "../playground" });
+
+      expect(config.use?.baseURL).toBe("http://localhost:5273/_plumix/admin/");
+    });
+  });
+
+  test("leaves every port untouched when unset", () => {
+    withPortOffset(undefined, () => {
+      const config = definePlumixE2EConfig({
+        port: 3010,
+        inspectorPort: 9310,
+        playground: "../playground",
+      });
+
+      expect(config.use?.baseURL).toBe("http://localhost:3010/_plumix/admin/");
+      expect(webServerCommandOf(config)).toContain(
+        "plumix dev --port 3010 --inspector-port 9310",
+      );
+    });
   });
 });

@@ -1,15 +1,22 @@
-import { definePlumixE2EConfig } from "@plumix/core/test/playwright";
+import {
+  definePlumixE2EConfig,
+  resolveE2EPort,
+} from "@plumix/core/test/playwright";
 
 import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
 
 // E2E always runs against the production build via `vite preview`. The
 // build-time alias seam (admin globals + per-site plugin assembly)
 // only kicks in for built artifacts; dev-mode HMR doesn't exercise it.
-const E2E_PORT = 5180;
+// `port` below takes the *base*; definePlumixE2EConfig applies
+// PLUMIX_E2E_PORT_OFFSET itself. The preview command and base URL are built
+// here, out of the helper's reach, so they resolve the same base explicitly.
+const E2E_PORT_BASE = 5180;
+const E2E_PORT = resolveE2EPort(E2E_PORT_BASE);
 const BASE_URL = `http://localhost:${String(E2E_PORT)}${ADMIN_BASE_PATH}/`;
 
 export default definePlumixE2EConfig({
-  port: E2E_PORT,
+  port: E2E_PORT_BASE,
   testDir: "./e2e",
   baseURL: BASE_URL,
   // Turbo's `test:e2e` task has `dependsOn: ["build", "^build"]`, so
