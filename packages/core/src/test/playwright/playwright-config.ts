@@ -3,12 +3,16 @@ import { defineConfig, devices } from "@playwright/test";
 
 export interface PlumixE2EConfigOptions {
   /**
-   * Port the worker / preview listens on. Used to derive `baseURL`
+   * Base port the worker / preview listens on. Used to derive `baseURL`
    * when not explicitly set, and passed through to the baked
    * `plumix dev --port <port>` so the worker binds where playwright
    * polls. Suites should pick distinct ports so they can run in
    * parallel under turbo without colliding. Defaults to `5173`
    * (vite's default) for back-compat.
+   *
+   * This is a *base*: `PLUMIX_E2E_PORT_OFFSET` shifts it (and every
+   * other port here) so a second checkout can move the whole block off
+   * a busy range without editing any config. See `resolveE2EPort`.
    */
   readonly port?: number;
   /**
@@ -18,6 +22,7 @@ export interface PlumixE2EConfigOptions {
    * worker-driven e2e suites boot in parallel under turbo. Suites
    * should pick distinct ports (convention: mirror the HTTP port —
    * 3010 ↔ 9310, 3020 ↔ 9320, …). Ignored when `playground` is unset.
+   * Shifted by `PLUMIX_E2E_PORT_OFFSET` like every other port here.
    */
   readonly inspectorPort?: number;
   /**
@@ -55,7 +60,9 @@ export interface PlumixE2EConfigOptions {
    * TCP port to open instead of polling `baseURL` for a 2xx/3xx
    * response. Use this when the dev server starts but `/` returns
    * 404 (e.g. a public-route example whose front page isn't wired) —
-   * waiting on the URL would otherwise time out forever.
+   * waiting on the URL would otherwise time out forever. Pass the same
+   * base as `port`; it is shifted by `PLUMIX_E2E_PORT_OFFSET` too, so
+   * readiness keeps watching the port the server actually binds.
    */
   readonly webServerPort?: number;
   /**
@@ -77,8 +84,35 @@ export interface PlumixE2EConfigOptions {
 }
 
 const ADMIN_BASE = "/_plumix/admin";
+const PORT_OFFSET_ENV = "PLUMIX_E2E_PORT_OFFSET";
 const DEFAULT_BINDING = "DB";
 const DEFAULT_PORT = 5173;
+
+/**
+ * Shifts a suite's declared base port by `PLUMIX_E2E_PORT_OFFSET`.
+ *
+ * Every port in an e2e suite — HTTP, workerd inspector, readiness —
+ * moves by the same offset, so the spacing that keeps suites from
+ * colliding under a parallel `turbo run test:e2e` is preserved by
+ * construction. Unset or blank means no shift, so the baked literals
+ * are what runs by default.
+ *
+ * Exported because the admin-family suites assemble their own
+ * `vite preview --port <n> --strictPort` command strings and explicit
+ * base URLs, which `definePlumixE2EConfig` never sees. They must
+ * resolve through here rather than re-deriving the arithmetic.
+ */
+export function resolveE2EPort(base: number): number {
+  const raw = process.env[PORT_OFFSET_ENV];
+  if (raw === undefined || raw.trim() === "") return base;
+  const offset = Number(raw);
+  if (!Number.isInteger(offset)) {
+    throw new Error(
+      `${PORT_OFFSET_ENV} must be an integer, got ${JSON.stringify(raw)}.`,
+    );
+  }
+  return base + offset;
+}
 
 function bakePlaygroundCommand(
   playground: string,
@@ -150,7 +184,7 @@ export function definePlumixE2EConfig(
     );
   }
 
-  const port = options.port ?? DEFAULT_PORT;
+  const port = resolveE2EPort(options.port ?? DEFAULT_PORT);
   const baseURL =
     options.baseURL ?? `http://localhost:${String(port)}${ADMIN_BASE}/`;
   const isPlayground = options.playground !== undefined;
@@ -161,7 +195,9 @@ export function definePlumixE2EConfig(
       ? bakePlaygroundCommand(
           options.playground,
           port,
-          options.inspectorPort,
+          options.inspectorPort === undefined
+            ? undefined
+            : resolveE2EPort(options.inspectorPort),
           options.extraSetup,
           options.applyMigrations !== false,
         )
@@ -191,9 +227,14 @@ export function definePlumixE2EConfig(
     webServer: {
       command: webServerCommand,
       ...(options.webServerPort !== undefined
-        ? { port: options.webServerPort }
+        ? { port: resolveE2EPort(options.webServerPort) }
         : { url: baseURL }),
-      reuseExistingServer: !process.env.CI,
+      // Never adopt whatever already answers on the port. Playwright
+      // does not check that the responder is this suite's build, and
+      // reuse skips the whole command above — the `.wrangler/state`
+      // wipe, the migrations, the rebuild — so even a legitimately-ours
+      // server means running against stale data and a stale build.
+      reuseExistingServer: false,
       stdout: "pipe",
       stderr: "pipe",
       timeout: 180_000,

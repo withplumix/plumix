@@ -11,7 +11,7 @@ export { buildAdminPluginChunkForE2E } from "./build-admin-chunk.js";
 export type { OpenPlaygroundDbOptions } from "./open-playground-db.js";
 export { openPlaygroundDb } from "./open-playground-db.js";
 export type { PlumixE2EConfigOptions } from "./playwright-config.js";
-export { definePlumixE2EConfig } from "./playwright-config.js";
+export { definePlumixE2EConfig, resolveE2EPort } from "./playwright-config.js";
 
 /**
  * Playwright helpers for plugin authors testing their admin pages

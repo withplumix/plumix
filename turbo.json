@@ -51,7 +51,8 @@
     },
     "test:e2e": {
       "dependsOn": ["build", "^build"],
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
     },
     "clean": {
       "cache": false
