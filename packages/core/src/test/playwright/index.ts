@@ -115,6 +115,25 @@ export function mockSession(
 }
 
 /**
+ * `text()` decoded and reassembled the body and the rewrite resized it,
+ * so every header describing the original bytes is now wrong. Playwright
+ * reframes what it serves, so drop them rather than restating them.
+ */
+const STALE_HEADERS = new Set([
+  "content-encoding",
+  "content-length",
+  "transfer-encoding",
+  "etag",
+  "last-modified",
+]);
+
+function freshHeaders(headers: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(headers).filter(([name]) => !STALE_HEADERS.has(name)),
+  );
+}
+
+/**
  * Playwright disposes a fetched response body, and cuts `fulfill`'s
  * channel, when the page re-navigates or the test tears down while a
  * document request is still in flight. Both are teardown races rather
@@ -159,10 +178,7 @@ export async function mockManifest(
       await route.fulfill({
         response,
         body: next,
-        headers: {
-          ...response.headers(),
-          "content-length": String(next.length),
-        },
+        headers: freshHeaders(response.headers()),
       });
     } catch (error) {
       // Losing the race means there is no document left to rewrite, so
