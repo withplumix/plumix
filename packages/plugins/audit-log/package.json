@@ -88,7 +88,6 @@
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
     "@vitest/coverage-v8": "catalog:vitest",
-    "drizzle-kit": "catalog:drizzle",
     "eslint": "catalog:",
     "fishery": "catalog:",
     "jsdom": "catalog:",

@@ -1139,9 +1139,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 4.1.10(vitest@4.1.10)
-      drizzle-kit:
-        specifier: catalog:drizzle
-        version: 0.31.10
       eslint:
         specifier: 'catalog:'
         version: 10.8.1(jiti@2.7.0)
@@ -1356,9 +1353,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 4.1.10(vitest@4.1.10)
-      drizzle-kit:
-        specifier: catalog:drizzle
-        version: 0.31.10
       eslint:
         specifier: 'catalog:'
         version: 10.8.1(jiti@2.7.0)

@@ -27,6 +27,7 @@ import { createAppContext } from "../context/app.js";
 import { HookRegistry as HookRegistryImpl } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { appRouter } from "../rpc/router.js";
+import { silentLogger } from "./context.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
 import { spyAction, spyFilter } from "./spies.js";
@@ -109,14 +110,6 @@ export interface RpcHarnessBase<TUser extends User | null> {
 
 export type RpcHarness = RpcHarnessBase<User | null>;
 export type AuthenticatedRpcHarness = RpcHarnessBase<User>;
-
-const noop = (): void => undefined;
-const silentLogger = {
-  debug: noop,
-  info: noop,
-  warn: noop,
-  error: noop,
-};
 
 function buildContext(
   db: Db,

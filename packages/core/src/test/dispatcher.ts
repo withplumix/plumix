@@ -47,6 +47,7 @@ import { createAppContext } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
 import { buildApp } from "../runtime/app.js";
 import { createPlumixDispatcher } from "../runtime/dispatcher.js";
+import { silentLogger } from "./context.js";
 import { defaultTestTheme } from "./default-theme.js";
 import { createDeferQueue } from "./defer.js";
 import { factoriesFor, userFactory } from "./factories.js";
@@ -215,14 +216,6 @@ export interface DispatcherHarness {
    */
   readonly drainDeferred: () => Promise<void>;
 }
-
-const noop = (): void => undefined;
-const silentLogger = {
-  debug: noop,
-  info: noop,
-  warn: noop,
-  error: noop,
-};
 
 function withRequest(
   app: PlumixApp,
