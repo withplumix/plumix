@@ -95,7 +95,10 @@ E2E (Playwright) is separate, lives under each package's `e2e/`, runs via `pnpm 
 
 ### Selectors
 
-Tests use `getByTestId` only — never `getByRole`, `getByText`, or `getByLabel`.
+Tests use `getByTestId` only. Every other query — by role, text, label, placeholder, alt text, title
+or display value, in any `get`/`query`/`find` and `All` variant — is rejected by
+`plumix/no-non-testid-queries` in test files and e2e specs. Add a `data-testid` to the markup rather
+than reaching for another query.
 
 ### Coverage
 

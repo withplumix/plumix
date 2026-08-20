@@ -66,8 +66,11 @@ test.describe("admin shell", () => {
         document.documentElement.setAttribute("dir", "rtl");
         document.documentElement.setAttribute("lang", "ar");
       };
-      if (document.documentElement) apply();
-      else document.addEventListener("DOMContentLoaded", apply, { once: true });
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", apply, { once: true });
+      } else {
+        apply();
+      }
     });
     await mockManifest(page, MANIFEST_WITH_POST);
     await mockRpc(page, {

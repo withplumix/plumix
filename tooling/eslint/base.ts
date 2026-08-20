@@ -29,12 +29,22 @@ export const NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR = {
 } as const;
 
 const PRODUCTION_SOURCE = ["src/**/*.ts", "src/**/*.tsx"];
+// One list, two opposed roles: the production-source blocks below step back
+// from these files, and the test-id rule targets them. Both roles want the
+// same answer to "is this a test?", so they share the constant — but a glob
+// added here widens an exemption as well as an enforcement. Weigh both.
 const TEST_SOURCE = [
   "**/*.test.ts",
   "**/*.test.tsx",
   "**/*.spec.ts",
-  "**/test/**",
+  "**/*.spec.tsx",
+  "**/test/**/*.ts",
+  "**/test/**/*.tsx",
 ];
+// Playwright specs and the helpers colocated with them. E2E lives outside
+// `src/`, so `PRODUCTION_SOURCE` never reaches it and `TEST_SOURCE` only
+// catches the `*.spec.ts` files, not the support modules beside them.
+const E2E_SOURCE = ["**/e2e/**/*.ts", "**/e2e/**/*.tsx"];
 
 export const baseConfig = defineConfig(
   includeIgnoreFile(path.join(import.meta.dirname, "../../.gitignore")),
@@ -122,6 +132,15 @@ export const baseConfig = defineConfig(
       "plumix/no-reflect-apply": "error",
       "plumix/no-reflect-get": "error",
       "plumix/no-unknown-type-alias": "error",
+    },
+  },
+  // Test-id query convention (AGENTS.md). Scoped as the inverse of the rules
+  // above: a query by role, text or label only appears where a rendered tree
+  // is being read, and that is tests and e2e specs.
+  {
+    files: [...TEST_SOURCE, ...E2E_SOURCE],
+    rules: {
+      "plumix/no-non-testid-queries": "error",
     },
   },
   {

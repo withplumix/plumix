@@ -412,7 +412,7 @@ describe("BlockInputControl", () => {
   });
 
   test("uses the input name as the label when none is given", () => {
-    const { getByText } = renderControl({ name: "slug", type: "text" }, "");
-    expect(getByText("slug")).toBeDefined();
+    const { getByTestId } = renderControl({ name: "slug", type: "text" }, "");
+    expect(getByTestId("block-input-slug-label").textContent).toBe("slug");
   });
 });
