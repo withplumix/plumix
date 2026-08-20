@@ -13,7 +13,7 @@ import { BlockLoaderError, resolveBlockLoaders } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
-import type { JsonValue } from "../../context/telemetry.js";
+import type { JsonValue } from "../../json.js";
 import type { TransformOpts } from "../../runtime/slots.js";
 import type { Template } from "../../template.js";
 import type {

@@ -1,4 +1,5 @@
-import type { JsonValue, TelemetrySpanHandle } from "../context/telemetry.js";
+import type { TelemetrySpanHandle } from "../context/telemetry.js";
+import type { JsonValue } from "../json.js";
 import { tryGetContext } from "../context/stores.js";
 import { queryKind } from "./query-kind.js";
 

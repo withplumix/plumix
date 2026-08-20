@@ -1,9 +1,9 @@
 import type {
-  JsonValue,
   TelemetryConsumer,
   TelemetrySnapshot,
   TelemetrySpan,
 } from "./context/telemetry.js";
+import type { JsonObject, JsonValue } from "./json.js";
 
 /** OTLP/JSON `AnyValue` — the primitive subset the exporter emits. */
 interface OtlpValue {
@@ -95,15 +95,11 @@ function toAnyValue(value: JsonValue): OtlpValue {
 }
 
 // `Array.isArray` alone won't exclude `readonly JsonValue[]` from the union.
-function isJsonObject(
-  value: JsonValue,
-): value is Readonly<Record<string, JsonValue>> {
+function isJsonObject(value: JsonValue): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function toAttributes(
-  record: Readonly<Record<string, JsonValue>>,
-): OtlpKeyValue[] {
+function toAttributes(record: JsonObject): OtlpKeyValue[] {
   return Object.entries(record).map(([key, value]) => ({
     key,
     value: toAnyValue(value),
