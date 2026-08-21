@@ -1,4 +1,4 @@
-import type { JsonValue } from "../../context/telemetry.js";
+import type { JsonValue } from "../../json.js";
 import type { DebugSnapshot } from "./snapshot.js";
 
 /**

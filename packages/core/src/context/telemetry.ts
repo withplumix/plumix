@@ -1,13 +1,5 @@
+import type { JsonValue } from "../json.js";
 import type { AppContext } from "./app.js";
-
-/** Attribute and record values must be JSON-serializable — enforced by type only. */
-export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | readonly JsonValue[]
-  | { readonly [key: string]: JsonValue };
 
 /**
  * A span's captured failure — the serialized form, never the live Error.

@@ -25,6 +25,7 @@ export { traceDbBatch, traceDbQuery } from "./db/trace.js";
 export type { TracedQuery } from "./db/trace.js";
 export * from "./hooks/index.js";
 export * from "./i18n/index.js";
+export type { JsonObject, JsonValue } from "./json.js";
 export * from "./mcp/index.js";
 export * from "./plugin/index.js";
 export { isCurrentSource } from "./route/current.js";
