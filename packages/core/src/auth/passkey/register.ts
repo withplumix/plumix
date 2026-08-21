@@ -237,6 +237,12 @@ export async function persistCredential(
 // (~1/256 of P-256 keys) comes out left-shifted, silently storing a
 // corrupted key that fails every future assertion. Encode with fixed
 // 32-byte big-endian slots instead (RFC 5480 §2.2).
+//
+// Upstream: @oslojs/crypto `ECDSAPublicKey.encodeSEC1Uncompressed`, still
+// left-aligning Y as of 1.0.1 (the latest release). Recorded as a
+// dependency divergence in /NOTICE; remove this once a fixed, usably-
+// exposed upstream release ships. The leading-zero-Y case is locked by a
+// regression test in `register.test.ts`.
 function encodeSec1Uncompressed(x: bigint, y: bigint): Uint8Array {
   const out = new Uint8Array(65);
   out[0] = 0x04;

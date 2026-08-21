@@ -1,4 +1,4 @@
-// Port of Astro's `astro-island.ts` (Apache-2.0). The custom element
+// Port of Astro's `astro-island.ts` (upstream MIT — see /NOTICE). The custom element
 // reads its hydration target from attributes the SSR walker emitted:
 // the chunk URL, the named export to mount, the strategy name, the
 // strategy-specific opts JSON, the serialized `props` payload, and an
