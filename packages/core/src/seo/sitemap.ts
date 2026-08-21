@@ -160,7 +160,7 @@ async function sitemapIndexLocs(ctx: AppContext): Promise<string[]> {
       .select({ n: sql<number>`count(*)` })
       .from(entries)
       .where(and(eq(entries.type, type.name), eq(entries.status, "published")));
-    pushScope(type.name, Number(row?.n ?? 0));
+    pushScope(type.name, row?.n ?? 0);
   }
   for (const taxonomy of ctx.plugins.termTaxonomies.values()) {
     if (taxonomy.isPublic === false) continue;
@@ -168,12 +168,12 @@ async function sitemapIndexLocs(ctx: AppContext): Promise<string[]> {
       .select({ n: sql<number>`count(*)` })
       .from(terms)
       .where(eq(terms.taxonomy, taxonomy.name));
-    pushScope(taxonomy.name, Number(row?.n ?? 0));
+    pushScope(taxonomy.name, row?.n ?? 0);
   }
   // Archives are opaque to core's SQL, so they report their own count.
   for (const archive of ctx.plugins.archiveTypes.values()) {
     if (!archive.sitemap) continue;
-    pushScope(archive.name, Number(await archive.sitemap.count(ctx)));
+    pushScope(archive.name, await archive.sitemap.count(ctx));
   }
   return locs;
 }

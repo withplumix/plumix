@@ -178,9 +178,7 @@ export interface MenuPluginOptions {
  * lives in `entry_term`. Both types are `isPublic: false` so they hide from
  * the generic Entries/Terms admin; the plugin owns its own admin (slices 7+).
  */
-export function menu(
-  options: MenuPluginOptions = {},
-): PluginDescriptor<undefined> {
+export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
   return definePlugin("menu", {
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: {

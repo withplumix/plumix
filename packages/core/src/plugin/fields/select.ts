@@ -178,7 +178,7 @@ export class SelectFieldBuilder<
     this: SelectFieldBuilder<O, K, true, A, V, S>,
     max: number,
   ): SelectFieldBuilder<O, K, true, A, V, S> {
-    return this.#fork<true, A, V, S>({ max });
+    return this.#fork<true>({ max });
   }
 
   /**
@@ -191,7 +191,7 @@ export class SelectFieldBuilder<
   appearance<A2 extends AppearanceFor<Multiple>>(
     appearance: A2,
   ): SelectFieldBuilder<O, K, Multiple, A2, V, S> {
-    return this.#fork<Multiple, A2, V, S>({ appearance });
+    return this.#fork<Multiple, A2>({ appearance });
   }
 
   /** Override the derived (humanized-key) label. */
@@ -208,7 +208,7 @@ export class SelectFieldBuilder<
   default(
     value: Multiple extends true ? readonly O[] : O,
   ): SelectFieldBuilder<O, K, Multiple, A, NonNullable<V>, S> {
-    return this.#fork<Multiple, A, NonNullable<V>, S>({ default: value });
+    return this.#fork<Multiple, A, NonNullable<V>>({ default: value });
   }
 
   /** Mark the field required — narrows away `undefined`. */

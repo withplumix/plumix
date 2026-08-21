@@ -1176,9 +1176,9 @@ export function isEmptyMetaPatch(patch: MetaPatch | null): boolean {
  * caller clearing + re-setting the same key in one request behaves
  * predictably.
  */
-export async function applyMetaPatch<TTable extends { meta: SQLiteColumn }>(
+export async function applyMetaPatch(
   ctx: AppContext,
-  table: TTable,
+  table: { meta: SQLiteColumn },
   idColumn: SQLiteColumn,
   id: number,
   patch: MetaPatch,
@@ -1213,9 +1213,9 @@ export async function applyMetaPatch<TTable extends { meta: SQLiteColumn }>(
  * Load + decode the full meta bag for a single row. Returns empty
  * when the row is missing (deleted mid-flight) or has no saved meta.
  */
-export async function loadMeta<TTable extends { meta: SQLiteColumn }>(
+export async function loadMeta(
   ctx: AppContext,
-  table: TTable,
+  table: { meta: SQLiteColumn },
   idColumn: SQLiteColumn,
   id: number,
   findField: (key: string) => MetaBoxField | undefined,

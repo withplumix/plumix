@@ -78,7 +78,7 @@ export class ColorFieldBuilder<
    * optional.
    */
   default(value: string): ColorFieldBuilder<K, string, S> {
-    return this.#fork<string, S>({ default: value });
+    return this.#fork<string>({ default: value });
   }
 
   /** Mark the field required — narrows the read and stored types to `string`. */

@@ -100,7 +100,7 @@ export class TemporalFieldBuilder<
    * optional.
    */
   default(value: string): TemporalFieldBuilder<Input, K, NonNullable<V>, S> {
-    return this.#fork<NonNullable<V>, S>({ default: value });
+    return this.#fork<NonNullable<V>>({ default: value });
   }
 
   /** Mark the field required — narrows the read and stored types to non-optional. */
@@ -187,7 +187,7 @@ export class TemporalFieldBuilder<
    * values written back encode from UTC components symmetrically.
    */
   returns(shape: "date"): TemporalFieldBuilder<Input, K, ProjectedDate<V>, S> {
-    return this.#fork<ProjectedDate<V>, S>({ returns: shape });
+    return this.#fork<ProjectedDate<V>>({ returns: shape });
   }
 
   /**

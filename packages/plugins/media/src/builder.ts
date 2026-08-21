@@ -148,7 +148,7 @@ export class MediaFieldBuilder<
   multiple(
     this: MediaFieldBuilder<K, false, false, Returns>,
   ): MediaFieldBuilder<K, true, false, Returns> {
-    return this.#fork<true, false, Returns>({ multiple: true });
+    return this.#fork<true, false>({ multiple: true });
   }
 
   /** Cap the array length — multi-value fields only. */
@@ -156,7 +156,7 @@ export class MediaFieldBuilder<
     this: MediaFieldBuilder<K, true, Required, Returns>,
     max: number,
   ): MediaFieldBuilder<K, true, Required, Returns> {
-    return this.#fork<true, Required, Returns>({ max });
+    return this.#fork<true>({ max });
   }
 
   /** Read the bare stored id(s) instead of the hydrated summary. */
@@ -166,7 +166,7 @@ export class MediaFieldBuilder<
 
   /** Mark the field required — enforced at write time by the constraint walker. */
   required(): MediaFieldBuilder<K, Multiple, true, Returns> {
-    return this.#fork<Multiple, true, Returns>({ required: true });
+    return this.#fork<Multiple, true>({ required: true });
   }
 
   /**
@@ -177,7 +177,7 @@ export class MediaFieldBuilder<
   featured(
     this: MediaFieldBuilder<K, false, Required, Returns>,
   ): MediaFieldBuilder<K, false, Required, Returns> {
-    return this.#fork<false, Required, Returns>({ role: "featured" });
+    return this.#fork<false>({ role: "featured" });
   }
 
   /**
@@ -187,7 +187,7 @@ export class MediaFieldBuilder<
   ogImage(
     this: MediaFieldBuilder<K, false, Required, Returns>,
   ): MediaFieldBuilder<K, false, Required, Returns> {
-    return this.#fork<false, Required, Returns>({ role: "ogImage" });
+    return this.#fork<false>({ role: "ogImage" });
   }
 
   /** Override the derived (humanized-key) label. */

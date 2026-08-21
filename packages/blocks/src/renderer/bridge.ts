@@ -78,15 +78,15 @@ export function isHandshakeFrame(
   );
 }
 
-export function parseEnvelope<M>(
+export function parseEnvelope(
   channel: string,
   raw: unknown,
   origin: string,
   expectedOrigin: string,
-): M | null {
+): object | null {
   if (origin !== expectedOrigin) return null;
   if (raw === null || typeof raw !== "object") return null;
-  const env = raw as Partial<Envelope<M>>;
+  const env = raw as Partial<Envelope<object>>;
   if (env.channel !== channel || env.message === undefined) return null;
   return env.message;
 }

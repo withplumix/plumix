@@ -233,7 +233,7 @@ function collectImport(
   const clause = node.importClause;
   if (
     !clause ||
-    clause.isTypeOnly ||
+    clause.phaseModifier === ts.SyntaxKind.TypeKeyword ||
     !ts.isStringLiteral(node.moduleSpecifier)
   ) {
     return; // side-effect or `import type` — no runtime value binding

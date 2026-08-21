@@ -81,7 +81,7 @@ export function connectRuntime({
   };
 
   const onMessage = (event: MessageEvent): void => {
-    const message = parseEnvelope<object>(
+    const message = parseEnvelope(
       EDITOR_BRIDGE_CHANNEL,
       event.data,
       event.origin,

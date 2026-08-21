@@ -59,6 +59,6 @@ export function createTestContext(
     plugins: overrides.plugins ?? createPluginRegistry(),
     logger: overrides.logger ?? silentLogger,
     // Asserted, not checked — see `TestContextDb`.
-    db: db as Db<CoreSchema>,
+    db: db as Db,
   });
 }

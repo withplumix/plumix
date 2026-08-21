@@ -72,7 +72,7 @@ export function serializeProps(
   props: Readonly<Record<string, unknown>>,
   options: SerializePropsOptions = {},
 ): string {
-  const seen = new WeakSet<object>();
+  const seen = new WeakSet();
   const out: Record<string, Encoded> = {};
   for (const [key, value] of Object.entries(props)) {
     out[key] = encode(value, seen, options.displayName);
