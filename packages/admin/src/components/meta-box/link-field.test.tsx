@@ -70,7 +70,7 @@ function Harness({
 }
 
 function Spy({ onChange }: { onChange: (next: unknown) => void }): ReactNode {
-  const value = useWatch({ name: "cta" });
+  const value: unknown = useWatch({ name: "cta" });
   onChange(value);
   return null;
 }

@@ -72,7 +72,7 @@ describe("DocumentMetaBoxes foreign-key retention", () => {
   // same `seedEntryMetaForm` value, so a freshly-opened entry (defaults shown,
   // no user edit) must produce an empty diff — otherwise opening an entry would
   // autosave a spurious "change".
-  test("mounting with seeded defaults emits them unchanged, so the diff is empty", async () => {
+  test("mounting with seeded defaults emits them unchanged, so the diff is empty", () => {
     const seeded = { subtitle: "old", accent: "#3366ff" };
     const onMetaChange = vi.fn<(next: Record<string, unknown>) => void>();
 

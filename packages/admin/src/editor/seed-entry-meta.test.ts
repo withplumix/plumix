@@ -6,19 +6,18 @@ import { seedEntryMetaForm } from "./seed-entry-meta.js";
 
 const box = (
   fields: readonly { key: string; default?: unknown }[],
-): EntryMetaBoxManifestEntry =>
-  ({
-    id: "b",
-    label: "B",
-    entryTypes: ["post"],
-    fields: fields.map((f) => ({
-      key: f.key,
-      label: f.key,
-      type: "string",
-      inputType: "text",
-      ...(f.default !== undefined ? { default: f.default } : {}),
-    })),
-  }) as EntryMetaBoxManifestEntry;
+): EntryMetaBoxManifestEntry => ({
+  id: "b",
+  label: "B",
+  entryTypes: ["post"],
+  fields: fields.map((f) => ({
+    key: f.key,
+    label: f.key,
+    type: "string",
+    inputType: "text",
+    ...(f.default !== undefined ? { default: f.default } : {}),
+  })),
+});
 
 describe("seedEntryMetaForm", () => {
   test("fills a field's default when the key is absent from stored meta", () => {

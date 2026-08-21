@@ -1,6 +1,6 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { renderWithI18n } from "../../test/render-with-i18n.js";
 import { ErrorBoundaryFallback } from "./error-boundary-fallback.js";
@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 function renderFallback(error: Error): void {
-  renderWithI18n(<ErrorBoundaryFallback error={error} reset={() => {}} />);
+  renderWithI18n(<ErrorBoundaryFallback error={error} reset={vi.fn()} />);
 }
 
 describe("ErrorBoundaryFallback", () => {
