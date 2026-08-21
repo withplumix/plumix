@@ -1,6 +1,6 @@
 import type {
   BlockRect,
-  CanvasMessage,
+  HandshakeMessage,
   HostMessage,
   SerializedLoaderData,
   SlotRect,
@@ -81,7 +81,7 @@ export function connectCanvas({
   onClipboard,
   config,
 }: ConnectCanvasOptions): CanvasConnection {
-  const post = (message: object): void => {
+  const post = (message: HostMessage | HandshakeMessage): void => {
     frameWindow.postMessage(encode(EDITOR_BRIDGE_CHANNEL, message), origin);
   };
   const handshake = createHandshake({ role: "initiator", post });
@@ -90,7 +90,7 @@ export function connectCanvas({
     post({
       type: "host:tree",
       tree: store.getState().tree,
-    } satisfies HostMessage);
+    });
   };
 
   const pushConfig = (): void => {
@@ -98,7 +98,7 @@ export function connectCanvas({
       post({
         type: "host:config",
         addBlockLabel: config.addBlockLabel,
-      } satisfies HostMessage);
+      });
     }
   };
 
@@ -106,7 +106,7 @@ export function connectCanvas({
     post({
       type: "host:xray",
       enabled: store.getState().xray,
-    } satisfies HostMessage);
+    });
   };
 
   const onMessage = (event: MessageEvent): void => {
@@ -121,43 +121,45 @@ export function connectCanvas({
       handshake.onMessage(message);
       return;
     }
-    const canvas = message as CanvasMessage;
-    switch (canvas.type) {
+    switch (message.type) {
       case "canvas:ready":
         pushConfig();
         pushXray();
         pushTree();
         break;
       case "canvas:select":
-        store.getState().select(canvas.id, { additive: canvas.additive });
+        store.getState().select(message.id, { additive: message.additive });
         break;
       case "canvas:hover":
-        store.getState().setHover(canvas.id);
+        store.getState().setHover(message.id);
         break;
       case "canvas:geometry":
-        onGeometry?.(canvas.rects, canvas.slots ?? []);
+        onGeometry?.(message.rects, message.slots ?? []);
         break;
       case "canvas:wheel":
         onWheel?.({
-          deltaX: canvas.deltaX,
-          deltaY: canvas.deltaY,
-          zoomIntent: canvas.zoomIntent,
-          clientX: canvas.clientX,
-          clientY: canvas.clientY,
+          deltaX: message.deltaX,
+          deltaY: message.deltaY,
+          zoomIntent: message.zoomIntent,
+          clientX: message.clientX,
+          clientY: message.clientY,
         });
         break;
       case "canvas:key":
         onKey?.({
-          down: canvas.down,
-          code: canvas.code,
-          shiftKey: canvas.shiftKey,
+          down: message.down,
+          code: message.code,
+          shiftKey: message.shiftKey,
         });
         break;
       case "canvas:requestAdd":
-        onRequestAdd?.({ parentId: canvas.parentId, slotKey: canvas.slotKey });
+        onRequestAdd?.({
+          parentId: message.parentId,
+          slotKey: message.slotKey,
+        });
         break;
       case "canvas:clipboard":
-        onClipboard?.(canvas.op);
+        onClipboard?.(message.op);
         break;
     }
   };
@@ -184,8 +186,7 @@ export function connectCanvas({
 
   return {
     whenReady,
-    pushLoaderData: (data) =>
-      post({ type: "host:loader-data", data } satisfies HostMessage),
+    pushLoaderData: (data) => post({ type: "host:loader-data", data }),
     dispose: () => {
       clearInterval(retryTimer);
       window.removeEventListener("message", onMessage);

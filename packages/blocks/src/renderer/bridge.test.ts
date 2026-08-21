@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { createHandshake, encode, parseEnvelope } from "./bridge.js";
+import {
+  createHandshake,
+  encode,
+  isHandshakeFrame,
+  parseEnvelope,
+} from "./bridge.js";
 
 const CHANNEL = "plumix.editor";
 const ORIGIN = "https://admin.example";
@@ -33,6 +38,31 @@ describe("bridge envelope", () => {
     expect(
       parseEnvelope(CHANNEL, { channel: CHANNEL }, ORIGIN, ORIGIN),
     ).toBeNull();
+    // Right channel, but the payload is a primitive: no protocol message is
+    // one, and the callers read a discriminant off whatever comes back.
+    expect(
+      parseEnvelope(CHANNEL, encode(CHANNEL, 7), ORIGIN, ORIGIN),
+    ).toBeNull();
+  });
+});
+
+describe("handshake frames", () => {
+  test("hello and ack are frames; every protocol message is not", () => {
+    expect(isHandshakeFrame({ kind: "hello" })).toBe(true);
+    expect(isHandshakeFrame({ kind: "ack" })).toBe(true);
+
+    // `kind` is the whole discriminant, which is why no protocol message may
+    // carry one — including canvas:key, whose payload is otherwise key-shaped.
+    expect(isHandshakeFrame({ type: "canvas:ready" })).toBe(false);
+    expect(
+      isHandshakeFrame({
+        type: "canvas:key",
+        down: true,
+        code: "Space",
+        shiftKey: false,
+      }),
+    ).toBe(false);
+    expect(isHandshakeFrame({ type: "host:xray", enabled: true })).toBe(false);
   });
 });
 

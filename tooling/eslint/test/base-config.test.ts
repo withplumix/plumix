@@ -85,6 +85,30 @@ describe("plumix/no-unknown-type-alias", () => {
   });
 });
 
+describe("plumix/no-bare-object-input", () => {
+  it("rejects object as a parameter and as a property type", async () => {
+    await expect(
+      plumixReports("src/bare-object-input.violations.ts"),
+    ).resolves.toEqual([
+      { ruleId: "plumix/no-bare-object-input", line: 1 },
+      { ruleId: "plumix/no-bare-object-input", line: 5 },
+      { ruleId: "plumix/no-bare-object-input", line: 10 },
+      { ruleId: "plumix/no-bare-object-input", line: 11 },
+      { ruleId: "plumix/no-bare-object-input", line: 12 },
+      { ruleId: "plumix/no-bare-object-input", line: 16 },
+      { ruleId: "plumix/no-bare-object-input", line: 18 },
+      { ruleId: "plumix/no-bare-object-input", line: 27 },
+      { ruleId: "plumix/no-bare-object-input", line: 28 },
+    ]);
+  });
+
+  it("stays silent on object inside a wider type and in a return position", async () => {
+    await expect(
+      plumixReports("src/bare-object-input.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
 describe("plumix/no-non-testid-queries", () => {
   it("rejects role, label and text queries in a test file", async () => {
     await expect(

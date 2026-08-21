@@ -1,6 +1,12 @@
 // Editor bridge primitives shared by the admin shell (parent) and the
 // canvas runtime (iframe). No transport here — the caller injects `post`
 // and feeds inbound data in, so the protocol is testable without an iframe.
+// The frames they carry are typed in ./editor-protocol.
+
+import type {
+  EditorBridgeMessage,
+  HandshakeMessage,
+} from "./editor-protocol.js";
 
 export interface Envelope<M> {
   readonly channel: string;
@@ -13,11 +19,9 @@ export function encode<M>(channel: string, message: M): Envelope<M> {
 
 export type HandshakeRole = "initiator" | "responder";
 
-type HandshakeMessage = { readonly kind: "hello" } | { readonly kind: "ack" };
-
 export interface Handshake {
   /** Feed an inbound handshake message (hello/ack). */
-  onMessage(message: { readonly kind?: string }): void;
+  onMessage(message: HandshakeMessage): void;
   /** Re-post hello while still waiting for ack (driven by the caller's timer). */
   retry(): void;
   isReady(): boolean;
@@ -68,25 +72,35 @@ export function createHandshake({
   };
 }
 
-/** Distinguishes a handshake frame (hello/ack) from a typed editor message. */
+/** Splits the handshake frames back out of the wire union — they are the only
+ *  members keyed by `kind`, which is why no protocol message may carry one. */
 export function isHandshakeFrame(
-  message: object,
-): message is { readonly kind: string } {
-  return (
-    "kind" in message &&
-    typeof (message as { kind?: unknown }).kind === "string"
-  );
+  message: EditorBridgeMessage,
+): message is HandshakeMessage {
+  return "kind" in message;
 }
 
+/**
+ * Unwraps an inbound `postMessage` payload, or null if it isn't one of ours.
+ *
+ * The returned message is typed but not decoded — what earns that is the
+ * checks above it. Only the paired frame is served from `expectedOrigin` and
+ * only the two halves of this bridge post on this channel, so an envelope
+ * passing both came from code that posts `EditorBridgeMessage`. The payload
+ * is still confirmed to be an object, because every caller reads a
+ * discriminant off it and a primitive would throw rather than fall through.
+ */
 export function parseEnvelope(
   channel: string,
   raw: unknown,
   origin: string,
   expectedOrigin: string,
-): object | null {
+): EditorBridgeMessage | null {
   if (origin !== expectedOrigin) return null;
   if (raw === null || typeof raw !== "object") return null;
-  const env = raw as Partial<Envelope<object>>;
-  if (env.channel !== channel || env.message === undefined) return null;
-  return env.message;
+  const env = raw as Partial<Envelope<unknown>>;
+  if (env.channel !== channel) return null;
+  const message = env.message;
+  if (message === null || typeof message !== "object") return null;
+  return message as EditorBridgeMessage;
 }

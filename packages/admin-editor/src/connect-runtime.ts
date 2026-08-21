@@ -2,7 +2,7 @@ import type { BlockNode } from "@plumix/blocks";
 import type {
   BlockRect,
   CanvasMessage,
-  HostMessage,
+  HandshakeMessage,
   SerializedLoaderData,
   SlotRect,
 } from "@plumix/blocks/renderer";
@@ -71,13 +71,13 @@ export function connectRuntime({
   onConfig,
   onXray,
 }: ConnectRuntimeOptions): RuntimeConnection {
-  const post = (message: object): void => {
+  const post = (message: CanvasMessage | HandshakeMessage): void => {
     parentWindow.postMessage(encode(EDITOR_BRIDGE_CHANNEL, message), origin);
   };
   const handshake = createHandshake({ role: "responder", post });
 
   const announce = (): void => {
-    post({ type: "canvas:ready" } satisfies CanvasMessage);
+    post({ type: "canvas:ready" });
   };
 
   const onMessage = (event: MessageEvent): void => {
@@ -95,19 +95,18 @@ export function connectRuntime({
       if (message.kind === "hello") announce();
       return;
     }
-    const host = message as HostMessage;
-    switch (host.type) {
+    switch (message.type) {
       case "host:tree":
-        onTree(host.tree);
+        onTree(message.tree);
         break;
       case "host:loader-data":
-        onLoaderData?.(host.data);
+        onLoaderData?.(message.data);
         break;
       case "host:config":
-        onConfig?.({ addBlockLabel: host.addBlockLabel });
+        onConfig?.({ addBlockLabel: message.addBlockLabel });
         break;
       case "host:xray":
-        onXray?.(host.enabled);
+        onXray?.(message.enabled);
         break;
     }
   };
@@ -121,11 +120,10 @@ export function connectRuntime({
         type: "canvas:select",
         id,
         ...(additive ? { additive: true } : {}),
-      } satisfies CanvasMessage),
-    reportHover: (id) =>
-      post({ type: "canvas:hover", id } satisfies CanvasMessage),
+      }),
+    reportHover: (id) => post({ type: "canvas:hover", id }),
     reportGeometry: (rects, slots) =>
-      post({ type: "canvas:geometry", rects, slots } satisfies CanvasMessage),
+      post({ type: "canvas:geometry", rects, slots }),
     reportWheel: (deltaX, deltaY, zoomIntent, clientX, clientY) =>
       post({
         type: "canvas:wheel",
@@ -134,22 +132,21 @@ export function connectRuntime({
         zoomIntent,
         clientX,
         clientY,
-      } satisfies CanvasMessage),
+      }),
     reportKey: (down, code, shiftKey) =>
       post({
         type: "canvas:key",
         down,
         code,
         shiftKey,
-      } satisfies CanvasMessage),
+      }),
     reportRequestAdd: (parentId, slotKey) =>
       post({
         type: "canvas:requestAdd",
         ...(parentId !== undefined && { parentId }),
         ...(slotKey !== undefined && { slotKey }),
-      } satisfies CanvasMessage),
-    reportClipboard: (op) =>
-      post({ type: "canvas:clipboard", op } satisfies CanvasMessage),
+      }),
+    reportClipboard: (op) => post({ type: "canvas:clipboard", op }),
     dispose: () => window.removeEventListener("message", onMessage),
   };
 }

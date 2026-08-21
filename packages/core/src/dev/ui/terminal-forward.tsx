@@ -260,7 +260,7 @@ function callSiteStack(
 ): string | undefined {
   const capture = (
     Error as unknown as {
-      captureStackTrace?: (target: object, origin: unknown) => void;
+      captureStackTrace?: (target: { stack?: string }, origin: unknown) => void;
     }
   ).captureStackTrace;
   const holder: { stack?: string } = {};

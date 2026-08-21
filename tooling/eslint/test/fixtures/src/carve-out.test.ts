@@ -35,3 +35,7 @@ export function shout(text: string): string {
 export function isReady(ready: boolean): boolean {
   return ready === true;
 }
+
+export function send(message: object): void {
+  void message;
+}
