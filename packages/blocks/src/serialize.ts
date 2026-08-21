@@ -117,8 +117,10 @@ function encode(
   }
 }
 
+// Widened back on purpose: every branch below re-derives the shape from the
+// runtime tag, so the caller's narrowing buys this function nothing.
 function encodeInner(
-  value: object,
+  value: unknown,
   seen: WeakSet<object>,
   displayName: string | undefined,
 ): Encoded {

@@ -51,6 +51,7 @@ export type {
   BlockRect,
   CanvasMessage,
   EditorBridgeMessage,
+  HandshakeMessage,
   HostMessage,
   SerializedLoaderData,
   SlotRect,

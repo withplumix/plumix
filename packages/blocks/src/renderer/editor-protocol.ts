@@ -1,7 +1,9 @@
 // Typed message contract for the editor bridge, shared by the admin shell
 // (parent) and the SSR-injected canvas runtime (iframe). The parent owns
 // the canonical tree and pushes it down; the canvas renders what it's told
-// and reports user intent back. Transport/handshake live in ./bridge.
+// and reports user intent back. Every frame that crosses the channel is
+// described here, including the handshake ones; the transport that carries
+// them lives in ./bridge.
 
 import type { BlockNode } from "../render-block-tree.js";
 
@@ -112,4 +114,15 @@ export type CanvasMessage =
       readonly op: "copy" | "cut" | "paste";
     };
 
-export type EditorBridgeMessage = HostMessage | CanvasMessage;
+/** Connection frames, in both directions. Not part of either half of the
+ *  protocol — they open the channel rather than say anything on it — but they
+ *  travel the same envelopes, so the wire union covers them and
+ *  `isHandshakeFrame` splits them back out on arrival. */
+export type HandshakeMessage =
+  { readonly kind: "hello" } | { readonly kind: "ack" };
+
+/** Everything the bridge carries. One union, shared by both endpoints: the
+ *  sender's `post` narrows it to the half it may send, and the receiver
+ *  switches on the discriminant rather than asserting a shape. */
+export type EditorBridgeMessage =
+  HostMessage | CanvasMessage | HandshakeMessage;

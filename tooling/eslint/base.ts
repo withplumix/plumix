@@ -139,6 +139,7 @@ export const baseConfig = defineConfig(
     files: PRODUCTION_SOURCE,
     ignores: TEST_SOURCE,
     rules: {
+      "plumix/no-bare-object-input": "error",
       "plumix/no-reflect-apply": "error",
       "plumix/no-reflect-get": "error",
       "plumix/no-unknown-type-alias": "error",
