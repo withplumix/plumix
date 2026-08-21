@@ -45,7 +45,7 @@ describe("createDebouncer", () => {
     const d = createDebouncer(fn, 300);
 
     d.call("a");
-    d.flush();
+    void d.flush();
     expect(fn).toHaveBeenCalledTimes(1);
     expect(fn).toHaveBeenCalledWith("a");
 
@@ -57,7 +57,7 @@ describe("createDebouncer", () => {
     const fn = vi.fn();
     const d = createDebouncer(fn, 300);
 
-    d.flush();
+    void d.flush();
     expect(fn).not.toHaveBeenCalled();
   });
 

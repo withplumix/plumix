@@ -6,6 +6,7 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { BlockInput } from "@plumix/blocks";
+import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
 import { resolvePluginFieldType } from "./resolve-plugin-field-type.js";
 
@@ -20,7 +21,7 @@ describe("resolvePluginFieldType", () => {
   });
 
   test("adapts the block input onto the field manifest the plugin control reads", () => {
-    const seen = vi.fn();
+    const seen = vi.fn<(field: MetaBoxFieldManifestEntry) => void>();
     registerPluginFieldType("media", ({ field, testId }) => {
       seen(field);
       return <div data-testid={testId} />;
@@ -47,8 +48,8 @@ describe("resolvePluginFieldType", () => {
     expect(getByTestId("block-input-image")).toBeDefined();
     // The reference scope (accept) rides through so the picker filters to images.
     const field = seen.mock.calls[0]?.[0];
-    expect(field.inputType).toBe("media");
-    expect(field.referenceTarget?.scope?.accept).toBe("image/");
+    expect(field?.inputType).toBe("media");
+    expect(field?.referenceTarget?.scope).toEqual({ accept: "image/" });
   });
 
   test("forwards the rhf binding so edits reach the block attr", () => {

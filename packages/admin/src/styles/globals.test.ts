@@ -18,8 +18,10 @@ const css = readFileSync(
 describe("admin globals.css cascade layers", () => {
   test("orders plumix-plugins above base/components but below utilities, before the tailwind import", () => {
     const decl = /@layer\s+([a-z0-9 ,_-]+);/i.exec(css);
-    expect(decl).not.toBeNull();
-    const layers = (decl?.[1] ?? "").split(",").map((s) => s.trim());
+    if (decl === null) {
+      throw new Error("globals.css declares no @layer order");
+    }
+    const layers = (decl[1] ?? "").split(",").map((s) => s.trim());
 
     // Every layer must be present (indexOf returns -1 when absent, which
     // would make the ordering comparisons below pass vacuously).
@@ -31,6 +33,6 @@ describe("admin globals.css cascade layers", () => {
     expect(i("plumix-plugins")).toBeGreaterThan(i("components"));
     expect(i("plumix-plugins")).toBeLessThan(i("utilities"));
 
-    expect(decl!.index).toBeLessThan(css.indexOf('@import "tailwindcss"'));
+    expect(decl.index).toBeLessThan(css.indexOf('@import "tailwindcss"'));
   });
 });

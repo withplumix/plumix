@@ -31,8 +31,9 @@ describe("createSaveQueue", () => {
       events.push("a:end");
     });
     // Enqueue b while a is mid-flight.
-    const b = queue.run(async () => {
+    const b = queue.run(() => {
       events.push("b:start");
+      return Promise.resolve();
     });
 
     // a has started; b must NOT have started while a is still running.
@@ -61,13 +62,13 @@ describe("createSaveQueue", () => {
     const queue = createSaveQueue();
     const ran: string[] = [];
 
-    const failing = queue.run(async () => {
+    const failing = queue.run(() => {
       ran.push("fail");
-      throw new Error("boom");
+      return Promise.reject(new Error("boom"));
     });
-    const next = queue.run(async () => {
+    const next = queue.run(() => {
       ran.push("next");
-      return "ok";
+      return Promise.resolve("ok");
     });
 
     await expect(failing).rejects.toThrow("boom");
@@ -79,8 +80,9 @@ describe("createSaveQueue", () => {
     const queue = createSaveQueue();
     await queue.run(() => Promise.resolve());
     const order: string[] = [];
-    await queue.run(async () => {
+    await queue.run(() => {
       order.push("late");
+      return Promise.resolve();
     });
     expect(order).toEqual(["late"]);
   });

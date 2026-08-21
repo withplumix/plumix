@@ -1,7 +1,7 @@
 import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { cleanup, render } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { DocumentSettingsPanel } from "./document-settings.js";
 
@@ -11,7 +11,7 @@ beforeAll(() => {
 
 afterEach(cleanup);
 
-const BASE = { slug: "hello-world", onSlugChange: () => {} } as const;
+const BASE = { slug: "hello-world", onSlugChange: vi.fn() } as const;
 
 function renderPanel(
   props: Parameters<typeof DocumentSettingsPanel>[0],
@@ -33,14 +33,14 @@ describe("DocumentSettingsPanel taxonomies", () => {
           label: "Categories",
           options: [{ value: "1", label: "News", depth: 0 }],
           value: ["1"],
-          onChange: () => {},
+          onChange: vi.fn(),
         },
         {
           name: "post_tag",
           label: "Tags",
           options: [],
           value: [],
-          onChange: () => {},
+          onChange: vi.fn(),
         },
       ],
     });
@@ -64,7 +64,7 @@ describe("DocumentSettingsPanel template picker", () => {
           { id: "landing", label: "Landing Page" },
           { id: "wide", label: "Wide" },
         ],
-        onChange: () => {},
+        onChange: vi.fn(),
       },
     });
     expect(getByTestId("entry-template-select")).toBeDefined();
@@ -73,7 +73,7 @@ describe("DocumentSettingsPanel template picker", () => {
   test("renders no picker when there are no named templates", () => {
     const { queryByTestId } = renderPanel({
       ...BASE,
-      template: { value: null, options: [], onChange: () => {} },
+      template: { value: null, options: [], onChange: vi.fn() },
     });
     expect(queryByTestId("entry-template-select")).toBeNull();
   });
@@ -89,7 +89,7 @@ describe("DocumentSettingsPanel visibility picker", () => {
           { key: "members", label: "Members only" },
           { key: "staff", label: "Staff only" },
         ],
-        onChange: () => {},
+        onChange: vi.fn(),
       },
     });
     expect(getByTestId("entry-visibility-select")).toBeDefined();
@@ -98,7 +98,7 @@ describe("DocumentSettingsPanel visibility picker", () => {
   test("renders no picker when the type declares no selectable policies", () => {
     const { queryByTestId } = renderPanel({
       ...BASE,
-      access: { value: null, options: [], onChange: () => {} },
+      access: { value: null, options: [], onChange: vi.fn() },
     });
     expect(queryByTestId("entry-visibility-select")).toBeNull();
   });

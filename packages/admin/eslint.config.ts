@@ -37,12 +37,14 @@ export default defineConfig(
     // user-facing — keep them out of the `no-unlocalized-strings` net. Only
     // the fixtures: the specs themselves are linted, so the test-id query
     // convention reaches them.
-    // Colocated `*.test.{ts,tsx}` files match `src/**` too; same boundary.
-    ignores: [
-      "src/components/ui/**",
-      "locales/**",
-      "e2e/fixtures/**",
-      "**/*.test.{ts,tsx}",
-    ],
+    ignores: ["src/components/ui/**", "locales/**", "e2e/fixtures/**"],
+  },
+  {
+    // Colocated tests match `src/**`, so the strict i18n net would catch
+    // their fixture copy. Only that rule relaxes — a bare `ignores` entry
+    // here would be a *global* ignore and exempt tests from every rule,
+    // which is how they went unlinted before.
+    files: ["**/*.test.{ts,tsx}"],
+    rules: { "lingui/no-unlocalized-strings": "off" },
   },
 );

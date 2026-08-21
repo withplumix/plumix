@@ -47,7 +47,7 @@ describe("DashboardWidgets", () => {
   test("shows a widget-scoped fallback when a widget throws", () => {
     const consoleError = vi
       .spyOn(console, "error")
-      .mockImplementation(() => {});
+      .mockImplementation(() => undefined);
     registerPluginDashboardWidget("demo:hello", () => {
       throw new Error("boom");
     });

@@ -142,7 +142,7 @@ describe("inline display of path-addressed write errors", () => {
                 inputType: "text",
               },
             ],
-          } as MetaBoxFieldManifestEntry,
+          },
         ]}
         initial={{
           sections: [{ heading: "fine" }, { heading: "" }],
@@ -193,7 +193,7 @@ describe("inline display of path-addressed write errors", () => {
                 inputType: "text",
               },
             ],
-          } as MetaBoxFieldManifestEntry,
+          },
         ]}
         initial={{ sections: [{ heading: "" }] }}
         serverErrors={[
