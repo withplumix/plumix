@@ -131,6 +131,9 @@ function readR2Binding(env: unknown, bindingName: string): R2Bucket {
   ) {
     throw R2Error.bindingMissing({ binding: bindingName });
   }
+  // Safety: the binding is a live Workers object the runtime injected, not
+  // data — its shape is fixed by the platform, and the `put` probe above is
+  // what distinguishes it from a name bound to something else.
   return bucket as unknown as R2Bucket;
 }
 

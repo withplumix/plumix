@@ -38,6 +38,9 @@ function rule<Data extends TemplateData>(
   tier: GenericTier,
   template: TemplateEntry<Data>,
 ): TemplateRule {
+  // Safety: the resolver only ever invokes a rule's template with the data of
+  // the node whose tier the rule was built for, so the erased parameter is
+  // restored to `Data` before the template is ever called.
   return { tier, template: template as unknown as TemplateEntry<TemplateData> };
 }
 
@@ -120,6 +123,8 @@ function matchRule<Data extends TemplateData>(
 ): TemplateRule {
   return {
     match,
+    // Safety: same erasure as the generic builders above — `match` is what
+    // guarantees the resolver reaches this template only with `Data`.
     template: template as unknown as TemplateEntry<TemplateData>,
   };
 }
@@ -225,6 +230,9 @@ export function forEntryType<K extends EntryTypeName>(
       content({ predicate: metaEquals(String(key), value) }),
     where: (predicate) =>
       content({
+        // Safety: the surrounding matcher pins `nodeKind` and `type`, so the
+        // resolver only calls this predicate with the entry data it was
+        // written against.
         predicate: predicate as unknown as (d: TemplateData) => boolean,
       }),
     named: (id, label) =>
@@ -283,6 +291,9 @@ export function forTermTaxonomy<K extends TermTaxonomyName>(
       term({ predicate: termMetaEquals(String(key), value) }),
     where: (predicate) =>
       term({
+        // Safety: the surrounding matcher pins `nodeKind` and `type`, so the
+        // resolver only calls this predicate with the term data it was written
+        // against.
         predicate: predicate as unknown as (d: TemplateData) => boolean,
       }),
     named: (id, label) =>

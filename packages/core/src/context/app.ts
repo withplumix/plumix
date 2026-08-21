@@ -539,11 +539,15 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     fetch: createTracedFetch(() => base.telemetry),
     siteName: args.siteName,
   };
-  // Spread plugin-contributed entries onto the base. The cast is the
-  // unavoidable seam between an open `Record`-of-unknown registry and
-  // the `AppContextExtensions` declaration-merge type — plugin authors
-  // augment the latter, the dispatcher feeds the former.
+  // Spread plugin-contributed entries onto the base — the seam between an open
+  // `Record`-of-unknown registry and the `AppContextExtensions` declaration-
+  // merge type: plugin authors augment the latter, the dispatcher feeds the
+  // former.
   if (args.appContextExtensions !== undefined) {
+    // Safety: the write is keyed, never structural — every key is rejected
+    // below if it already exists, so no declared field of the context can be
+    // reached through this view, and each value arrives typed from the
+    // registration that produced it.
     const target = base as unknown as Record<string, unknown>;
     for (const [key, entry] of args.appContextExtensions) {
       // Defense in depth — `extendAppContext` already rejects these at
@@ -558,10 +562,12 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     }
   }
   const ctx = base as AppContext<TSchema>;
-  // Consumers are declared against the core schema; a custom-schema context
-  // is structurally the same at the seam, so the double cast is safe.
+  // Safety: `TSchema` reaches only `ctx.db`, which the vote never touches —
+  // consumers see the same context shape whatever schema the site declared,
+  // so erasing to the core-schema view drops nothing a consumer can read.
+  const coreSchemaView = ctx as unknown as AppContext;
   const sampled = sampleTelemetryConsumers(
-    ctx as unknown as AppContext,
+    coreSchemaView,
     args.debugBar,
     args.telemetry,
   );

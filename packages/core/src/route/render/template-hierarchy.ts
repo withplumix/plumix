@@ -206,22 +206,37 @@ export function ruleLabel(rule: TemplateRule): string {
 /** What happened to a rule during resolution. */
 type ResolutionStatus = "matched" | "skipped" | "never-evaluated";
 
-export interface ResolutionStep {
-  readonly label: string;
-  readonly status: ResolutionStatus;
+// Spelled as `Readonly<{…}>` rather than as interfaces so they satisfy
+// `JsonObject` — the trace's only consumer is the debug bar, which reads it
+// back off a telemetry span attribute, and TypeScript withholds the implicit
+// index signature from `interface` declarations (see the note on `JsonObject`).
+export type ResolutionStep = Readonly<{
+  label: string;
+  status: ResolutionStatus;
   /**
    * Present for a targeted rule carrying a `whereMeta`/`where`/`named`
    * predicate. `fired` is whether the predicate function actually ran (its
    * rule's identity matched and `data` was present); `result` is its return.
    */
-  readonly predicate?: { readonly fired: boolean; readonly result: boolean };
-}
+  predicate?: Readonly<{ fired: boolean; result: boolean }>;
+}>;
 
-export interface ResolutionTrace {
-  readonly steps: readonly ResolutionStep[];
+export type ResolutionTrace = Readonly<{
+  steps: readonly ResolutionStep[];
   /** The winning rule's label, or `null` when nothing matched (a 404). */
-  readonly winner: string | null;
-}
+  winner: string | null;
+}>;
+
+/**
+ * What the renderer writes to the `template` span's `resolution` attribute:
+ * the trace plus the label of the node it resolved. The debug bar's Template
+ * panel reads it straight back off the span.
+ */
+export type TemplateResolution = ResolutionTrace &
+  Readonly<{
+    /** Human label for the resolved route node, e.g. "post: hello-world". */
+    nodeLabel: string;
+  }>;
 
 /**
  * Replay `resolveTemplate` and classify every rule for the debug bar: which one

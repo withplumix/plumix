@@ -15,6 +15,15 @@ describe("defineTemplate", () => {
     expect(tmpl.render).toBe(render);
   });
 
+  test("an object spread of a template does not carry the brand onward", () => {
+    // The brand is spelled in the literal so the object satisfies `Template`
+    // on its own terms, then redefined non-enumerable. That second step is
+    // what stops a spread copy from passing `isTemplate` — an enumerable
+    // symbol key would ride along and brand every derivative.
+    const tmpl = defineTemplate({ render: () => null });
+    expect(isTemplate({ ...tmpl })).toBe(false);
+  });
+
   test("a hand-written `{ render }` literal is NOT recognized as a Template", () => {
     // Locks the brand invariant — only `defineTemplate`'s output passes
     // `isTemplate`. A future deps / document-fragment field added to

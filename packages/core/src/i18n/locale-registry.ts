@@ -65,12 +65,19 @@ function normalizeEntry(entry: string | LocaleInput): ResolvedLocale {
     code: locale.toString(),
     label: input.label ?? labelFor(locale),
     direction: validateDirection(
-      input.direction ??
-        (locale as unknown as LocaleWithTextInfo).getTextInfo().direction,
+      input.direction ?? textInfoDirection(locale),
       input.code,
     ),
     enabled: input.enabled ?? true,
   };
+}
+
+function textInfoDirection(locale: Intl.Locale): LocaleDirection {
+  // Safety: `getTextInfo` exists on `Intl.Locale` in every runtime plumix
+  // targets (V8 — Node, Bun, Workers); the shim names the one method read,
+  // and `validateDirection` re-checks the returned value before anything
+  // uses it, so the assertion buys reachability and no trust.
+  return (locale as unknown as LocaleWithTextInfo).getTextInfo().direction;
 }
 
 // `direction` is the only registry field that flows raw into rendered HTML

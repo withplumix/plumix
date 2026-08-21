@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import type { Linter } from "eslint";
 import { ESLint } from "eslint";
 import { describe, expect, it } from "vitest";
 
@@ -21,10 +22,21 @@ async function reportsMatching(
   fixture: string,
   matches: (ruleId: string) => boolean,
 ): Promise<{ ruleId: string | null; line: number }[]> {
+  return messagesMatching(fixture, matches, (message) => ({
+    ruleId: message.ruleId,
+    line: message.line,
+  }));
+}
+
+async function messagesMatching<TReport>(
+  fixture: string,
+  matches: (ruleId: string) => boolean,
+  project: (message: Linter.LintMessage) => TReport,
+): Promise<TReport[]> {
   const [result] = await eslint.lintFiles([fixture]);
   return (result?.messages ?? [])
     .filter((message) => message.ruleId !== null && matches(message.ruleId))
-    .map((message) => ({ ruleId: message.ruleId, line: message.line }));
+    .map(project);
 }
 
 const plumixReports = (fixture: string) =>
@@ -53,6 +65,16 @@ async function restrictedSyntaxLines(
     .filter((message) => message.ruleId === "no-restricted-syntax")
     .map((message) => message.line);
 }
+
+// The chained-assertion rule reports two distinct failures — no safety comment
+// at all, and one that marks the assertion without stating why it is sound —
+// so its assertions carry the message id as well as the position.
+const chainedAssertionReports = (fixture: string) =>
+  messagesMatching(
+    fixture,
+    (ruleId) => ruleId === "plumix/no-chained-type-assertion",
+    (message) => ({ messageId: message.messageId, line: message.line }),
+  );
 
 describe("plumix/no-reflect-get and plumix/no-reflect-apply", () => {
   it("rejects Reflect.get and Reflect.apply", async () => {
@@ -105,6 +127,32 @@ describe("plumix/no-bare-object-input", () => {
   it("stays silent on object inside a wider type and in a return position", async () => {
     await expect(
       plumixReports("src/bare-object-input.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
+describe("plumix/no-chained-type-assertion", () => {
+  it("rejects an assertion routed through unknown", async () => {
+    await expect(
+      chainedAssertionReports("src/chained-assertion.violations.ts"),
+    ).resolves.toEqual([
+      { messageId: "chainedTypeAssertion", line: 6 },
+      { messageId: "safetyCommentTooThin", line: 11 },
+      { messageId: "chainedTypeAssertion", line: 18 },
+      { messageId: "chainedTypeAssertion", line: 26 },
+      { messageId: "chainedTypeAssertion", line: 32 },
+    ]);
+  });
+
+  it("permits one whose preceding safety comment states an invariant", async () => {
+    await expect(
+      chainedAssertionReports("src/chained-assertion.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+
+  it("stays silent on assertions not routed through unknown", async () => {
+    await expect(
+      plumixReports("src/chained-assertion.allowed.ts"),
     ).resolves.toEqual([]);
   });
 });

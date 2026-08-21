@@ -84,6 +84,20 @@ Version families that release in lockstep get a **named catalog** under `catalog
 
 Gate dev-only code on `import.meta.env.DEV` (a compile-time constant), not `process.env` — a dev endpoint must fail closed in production. Secret config slots take an `EnvInput<T>` resolved with `resolveEnvInput`; local Worker secrets live in `.dev.vars` (gitignored). Never paste secret values into commits, logs, or chat.
 
+### Earned types
+
+`x as unknown as Y` is rejected in production `src/` by `plumix/no-chained-type-assertion`.
+Routing through `unknown` throws away every constraint the compiler could have checked, so the
+conversion arrives as a claim with its evidence removed. Give the value an honest type instead —
+decode it at the boundary it enters, or widen the declaration it flows into.
+
+Where the conversion is genuinely load-bearing — the fluent-builder variance escapes are the honest
+case — keep it with a `// Safety:` comment stating the invariant that makes it sound, on the line
+directly above the one the converted expression starts on. An assertion buried inside a multi-line
+call has to be hoisted into its own binding first. The rule can only check that a sentence was
+written; what keeps the escape meaningful is being rare enough that a reviewer reads every one.
+Never silence it with a bare disable comment.
+
 ## Tests
 
 One vitest suite per package. Two layouts, in order of preference:

@@ -290,6 +290,42 @@ describe("menu RPC", () => {
       expect(result.items[0]?.resolved.label).toBe("Old About");
       expect(result.items[0]?.resolved.lastHref).toBe("/about-old");
     });
+
+    test("sends meta already parsed — null when the stored JSON matches no kind", async () => {
+      // The resolver parses `entries.meta` to compute state and label; it
+      // sends that parsed value on rather than the raw column, so the editor
+      // never has to re-derive (or assert) the type of what it receives.
+      const h = await buildHarness();
+      const m = await seedMenu(h.db, h.factories, "primary", "Primary");
+      const author = await adminUser
+        .transient({ db: h.db })
+        .create({ email: "metashape@example.test" });
+      for (const [index, meta] of [
+        { kind: "custom", url: "/contact" },
+        { kind: "nonsense" },
+      ].entries()) {
+        const item = await entryFactory.transient({ db: h.db }).create({
+          type: "menu_item",
+          title: `Item ${String(index)}`,
+          slug: `mi-shape-${String(index)}-${Date.now()}`,
+          status: "published",
+          authorId: author.id,
+          meta: meta as unknown as Record<string, unknown>,
+        });
+        await entryTermFactory
+          .transient({ db: h.db })
+          .create({ entryId: item.id, termId: m.id, sortOrder: index });
+      }
+
+      const result = (await h.client.menu.get({ termId: m.id })) as {
+        items: readonly { meta: unknown }[];
+      };
+
+      expect(result.items.map((item) => item.meta)).toEqual([
+        { kind: "custom", url: "/contact" },
+        null,
+      ]);
+    });
   });
 
   describe("menu.save", () => {

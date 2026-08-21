@@ -823,6 +823,9 @@ export function createPluginSetupContext({
       }
       // Erase the per-kind generic at storage time — the typed view is
       // recovered when `defineTemplate` looks the loader up by kind.
+      // Safety: the loader is stored under the very kind it was registered
+      // for, and every read goes back through that key, so the slugs it
+      // receives and the results it returns are the ones it declared.
       const erased = load as unknown as RegisteredTemplateDep["load"];
       registry.templateDeps.set(kind, {
         kind,
@@ -833,6 +836,9 @@ export function createPluginSetupContext({
   };
 
   if (extensions && extensions.size > 0) {
+    // Safety: the write is keyed, never structural — every key that already
+    // exists is rejected below, so no declared field of the setup context can
+    // be reached through this view.
     const target = ctx as unknown as Record<string, unknown>;
     for (const [key, value] of extensions) {
       if (key in target) {
@@ -867,6 +873,11 @@ function makeMetaBoxRegistrar<R extends { readonly id: string }>(
       });
     const fields = compileMetaBoxFields(options.fields);
     assertMetaBoxFields(kind, id, fields);
+    // Safety: every member `R` declares is present on the value — `id`,
+    // `registeredBy` and `fields` are written here, and `R`'s remaining
+    // members ride in on `options`, which the caller passes whole. The
+    // compiler can't see the second half because the parameter is typed down
+    // to the one field this factory reads.
     map.set(id, {
       ...options,
       fields,

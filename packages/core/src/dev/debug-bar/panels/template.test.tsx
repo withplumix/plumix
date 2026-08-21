@@ -1,8 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { JsonValue } from "../../../json.js";
-import type { TemplateResolution } from "./template.js";
+import type { TemplateResolution } from "../../../route/render/template-hierarchy.js";
 import { createTelemetryCollector } from "../../../context/collector.js";
 import { makeSnapshot } from "../snapshot-fixture.js";
 import { TEMPLATE_PANEL_ID } from "../template-node-label.js";
@@ -16,7 +15,7 @@ function render(resolution?: TemplateResolution): string {
   telemetry.span("render", () => {
     if (resolution) {
       telemetry.span(TEMPLATE_PANEL_ID, (s) => {
-        s.set("resolution", resolution as unknown as JsonValue);
+        s.set("resolution", resolution);
       });
     }
   });

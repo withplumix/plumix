@@ -117,16 +117,21 @@ export function defineTemplate<TData extends TemplateData = TemplateData>(
   // any declared dep kinds (`settings`, `menus`, ...) which live as
   // top-level slug arrays — the framework's per-request dispatch
   // reads `template[kind]` to know which loaders to fire. `render` +
-  // `document` come along the same way.
-  const template: Record<string | symbol, unknown> = { ...config };
-  // `enumerable: false` keeps the brand out of `Object.keys` / JSON;
-  // writable/configurable defaults are fine — the symbol itself is
-  // module-local so no caller can forge or rewrite it.
+  // `document` come along the same way. The brand is spelled in the
+  // literal so the object satisfies `Template` on its own terms.
+  const template: Template<TData> = {
+    ...config,
+    [PLUMIX_TEMPLATE_BRAND]: true,
+  };
+  // Redefined non-enumerable so an object spread of a template doesn't
+  // carry the brand onward — `Object.keys` and `JSON.stringify` skip
+  // symbol keys either way. Writable/configurable defaults are fine: the
+  // symbol is module-local, so no caller can forge or rewrite it.
   Object.defineProperty(template, PLUMIX_TEMPLATE_BRAND, {
     value: true,
     enumerable: false,
   });
-  return template as unknown as Template<TData>;
+  return template;
 }
 
 export function isTemplate(value: unknown): value is Template {
