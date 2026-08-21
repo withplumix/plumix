@@ -47,11 +47,11 @@ catalogs:
     react-dom: ^19.2.8
   lingui:
     "@lingui/babel-plugin-lingui-macro": ^6.4.0
-    "@lingui/cli": ^6.4.0
-    "@lingui/core": ^6.4.0
-    "@lingui/format-po": ^6.4.0
-    "@lingui/react": ^6.4.0
-    "@lingui/vite-plugin": ^6.4.0
+    "@lingui/cli": ^6.6.0
+    "@lingui/core": ^6.6.0
+    "@lingui/format-po": ^6.6.0
+    "@lingui/react": ^6.6.0
+    "@lingui/vite-plugin": ^6.6.0
   tailwind:
     "@tailwindcss/node": ^4.3.3
     "@tailwindcss/oxide": ^4.3.3
