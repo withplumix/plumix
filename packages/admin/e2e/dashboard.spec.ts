@@ -7,7 +7,6 @@ import {
   mockManifest,
   mockRpc,
   mockSession,
-  rpcOkBody,
 } from "./support/rpc-mock.js";
 
 const STATS = [

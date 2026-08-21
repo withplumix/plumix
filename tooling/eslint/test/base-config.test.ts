@@ -67,6 +67,37 @@ describe("plumix/no-unknown-type-alias", () => {
   });
 });
 
+describe("plumix/no-non-testid-queries", () => {
+  it("rejects role, label and text queries in a test file", async () => {
+    await expect(
+      plumixReports("src/testid-queries.violations.test.ts"),
+    ).resolves.toEqual([
+      { ruleId: "plumix/no-non-testid-queries", line: 12 },
+      { ruleId: "plumix/no-non-testid-queries", line: 16 },
+      { ruleId: "plumix/no-non-testid-queries", line: 23 },
+    ]);
+  });
+
+  it("rejects role and placeholder locators in an e2e spec", async () => {
+    await expect(plumixReports("e2e/testid-queries.spec.ts")).resolves.toEqual([
+      { ruleId: "plumix/no-non-testid-queries", line: 15 },
+      { ruleId: "plumix/no-non-testid-queries", line: 19 },
+    ]);
+  });
+
+  it("stays silent on test-id queries and on data-testid locators", async () => {
+    await expect(
+      plumixReports("src/testid-queries.allowed.test.ts"),
+    ).resolves.toEqual([]);
+  });
+
+  it("stays silent in production source", async () => {
+    await expect(
+      plumixReports("src/testid-queries.production.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
 describe("scoping", () => {
   it("stays silent in test files", async () => {
     await expect(plumixReports("src/carve-out.test.ts")).resolves.toEqual([]);

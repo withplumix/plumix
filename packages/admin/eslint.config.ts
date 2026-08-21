@@ -34,12 +34,14 @@ export default defineConfig(
     // Compiled Lingui catalogs are generated; their `/*eslint-disable*/`
     // header trips the unused-disable-directive rule.
     // E2E fixture plugins live under `e2e/fixtures/*/src/*` and aren't
-    // user-facing — keep them out of the `no-unlocalized-strings` net.
+    // user-facing — keep them out of the `no-unlocalized-strings` net. Only
+    // the fixtures: the specs themselves are linted, so the test-id query
+    // convention reaches them.
     // Colocated `*.test.{ts,tsx}` files match `src/**` too; same boundary.
     ignores: [
       "src/components/ui/**",
       "locales/**",
-      "e2e/**",
+      "e2e/fixtures/**",
       "**/*.test.{ts,tsx}",
     ],
   },

@@ -265,7 +265,7 @@ export function BlockInputControl({
       orientation={inline ? "horizontal" : "vertical"}
       className={inline ? undefined : "gap-1.5"}
     >
-      <FieldLabel htmlFor={id} id={labelId}>
+      <FieldLabel htmlFor={id} id={labelId} data-testid={`${testId}-label`}>
         {label}
       </FieldLabel>
       {control}
