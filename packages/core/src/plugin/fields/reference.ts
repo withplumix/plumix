@@ -190,7 +190,7 @@ export class ReferenceFieldBuilder<
   multiple(
     this: ReferenceFieldBuilder<Kind, K, false, false, Returns>,
   ): ReferenceFieldBuilder<Kind, K, true, false, Returns> {
-    return this.#fork<true, false, Returns>({ multiple: true });
+    return this.#fork<true, false>({ multiple: true });
   }
 
   /**
@@ -201,7 +201,7 @@ export class ReferenceFieldBuilder<
     this: ReferenceFieldBuilder<Kind, K, true, Required, Returns>,
     max: number,
   ): ReferenceFieldBuilder<Kind, K, true, Required, Returns> {
-    return this.#fork<true, Required, Returns>({ max });
+    return this.#fork<true>({ max });
   }
 
   /**
@@ -221,7 +221,7 @@ export class ReferenceFieldBuilder<
    * optional (targets can orphan after the write).
    */
   required(): ReferenceFieldBuilder<Kind, K, Multiple, true, Returns> {
-    return this.#fork<Multiple, true, Returns>({ required: true });
+    return this.#fork<Multiple, true>({ required: true });
   }
 
   /**

@@ -7,7 +7,7 @@ const useColor = shouldUseColor();
 function shouldUseColor(): boolean {
   if (process.env.NO_COLOR) return false;
   if (process.env.FORCE_COLOR) return true;
-  return Boolean(process.stderr.isTTY);
+  return process.stderr.isTTY;
 }
 
 function paint(style: Parameters<typeof styleText>[0], text: string): string {

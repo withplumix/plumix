@@ -34,7 +34,7 @@ export function extractConfigModules(source: string): ConfigModules {
     const clause = statement.importClause;
     if (
       !clause ||
-      clause.isTypeOnly ||
+      clause.phaseModifier === ts.SyntaxKind.TypeKeyword ||
       !ts.isStringLiteral(statement.moduleSpecifier)
     ) {
       continue;

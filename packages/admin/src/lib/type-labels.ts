@@ -26,17 +26,17 @@ export { GENERIC_ENTRY_TYPE_LABELS, GENERIC_TERM_TAXONOMY_LABELS };
  * a sentence (DE/RU/PL/UK/AR morphology) or lowercases a translated
  * noun.
  */
-export function entryTypeLabel<K extends keyof EntryTypeLabels>(
+export function entryTypeLabel(
   entry: EntryTypeManifestEntry,
-  key: K,
+  key: keyof EntryTypeLabels,
 ): Label {
   return entry.labels?.[key] ?? GENERIC_ENTRY_TYPE_LABELS[key];
 }
 
 /** Term-taxonomy counterpart of `entryTypeLabel`. */
-export function termTaxonomyLabel<K extends keyof TermTaxonomyLabels>(
+export function termTaxonomyLabel(
   taxonomy: TermTaxonomyManifestEntry,
-  key: K,
+  key: keyof TermTaxonomyLabels,
 ): Label {
   return taxonomy.labels?.[key] ?? GENERIC_TERM_TAXONOMY_LABELS[key];
 }
@@ -48,9 +48,9 @@ export function termTaxonomyLabel<K extends keyof TermTaxonomyLabels>(
  * when the taxonomy isn't known — matches WP's
  * `get_taxonomy_labels( null )` semantics.
  */
-export function termTaxonomyLabelOr<K extends keyof TermTaxonomyLabels>(
+export function termTaxonomyLabelOr(
   taxonomy: TermTaxonomyManifestEntry | undefined,
-  key: K,
+  key: keyof TermTaxonomyLabels,
 ): Label {
   return taxonomy?.labels?.[key] ?? GENERIC_TERM_TAXONOMY_LABELS[key];
 }

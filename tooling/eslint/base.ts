@@ -89,6 +89,16 @@ export const baseConfig = defineConfig(
         { allowConstantLoopConditions: true },
       ],
       "@typescript-eslint/no-non-null-assertion": "error",
+      // Earned types, cherry-picked from typescript-eslint's strict preset
+      // (issue #1807). An explicit type argument that restates the default is
+      // ceremony, converting a value to the type it already has is defensive
+      // noise, and comparing to a boolean literal repeats what the expression
+      // already said. The preset as a whole is not adopted: the bulk of what
+      // it adds beyond these fires on correct code.
+      "@typescript-eslint/no-unnecessary-type-arguments": "error",
+      "@typescript-eslint/no-unnecessary-type-conversion": "error",
+      "@typescript-eslint/no-unnecessary-boolean-literal-compare": "error",
+      "@typescript-eslint/no-deprecated": "error",
       "import-x/consistent-type-specifier-style": ["error", "prefer-top-level"],
       "import-x/no-duplicates": "error",
     },
@@ -132,6 +142,14 @@ export const baseConfig = defineConfig(
       "plumix/no-reflect-apply": "error",
       "plumix/no-reflect-get": "error",
       "plumix/no-unknown-type-alias": "error",
+      // Same principle, borrowed from typescript-eslint: a type parameter used
+      // once in a signature is an assertion wearing a generic's clothes — the
+      // caller names the type and the function hands it back unchecked. Scoped
+      // here rather than globally because a test helper that decodes a
+      // response into the shape the test expects is doing that on purpose, and
+      // the alternative — `unknown` plus a cast at each call site — moves the
+      // assertion without earning it.
+      "@typescript-eslint/no-unnecessary-type-parameters": "error",
     },
   },
   // Test-id query convention (AGENTS.md). Scoped as the inverse of the rules

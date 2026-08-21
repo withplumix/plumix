@@ -117,7 +117,7 @@ export class StringFieldBuilder<
    * the admin form) — narrows the read type to `string`; the stored
    * shape stays optional. */
   default(value: string): StringFieldBuilder<Input, K, string, S> {
-    return this.#fork<string, S>({ default: value });
+    return this.#fork<string>({ default: value });
   }
 
   /** Mark the field required — narrows the read and stored types to `string`. */

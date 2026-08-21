@@ -145,9 +145,7 @@ const ADMIN_ENTRY_PATH =
  * });
  * ```
  */
-export function media(
-  options: MediaPluginOptions = {},
-): PluginDescriptor<undefined> {
+export function media(options: MediaPluginOptions = {}): PluginDescriptor {
   const acceptedTypes = options.acceptedTypes ?? DEFAULT_ACCEPTED_TYPES;
   const maxUploadSize = options.maxUploadSize ?? DEFAULT_MAX_UPLOAD_SIZE;
 

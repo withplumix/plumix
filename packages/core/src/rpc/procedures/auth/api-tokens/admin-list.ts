@@ -66,7 +66,7 @@ export const adminList = base
 
     return {
       items,
-      total: Number(totalRow?.count ?? 0),
+      total: totalRow?.count ?? 0,
       limit: input.limit,
       offset: input.offset,
     };

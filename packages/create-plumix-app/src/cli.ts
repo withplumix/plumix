@@ -43,9 +43,7 @@ Example:
 // Only drive the interactive wizard on a real terminal (and never in CI),
 // so piped/scripted invocations stay on the deterministic flag path.
 function isInteractive(): boolean {
-  return (
-    Boolean(process.stdin.isTTY && process.stdout.isTTY) && !process.env.CI
-  );
+  return process.stdin.isTTY && process.stdout.isTTY && !process.env.CI;
 }
 
 export async function runCli(

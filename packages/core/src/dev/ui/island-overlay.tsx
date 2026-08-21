@@ -63,7 +63,7 @@ class IslandErrorOverlay {
   private errors: CapturedError[] = [];
   // Identity dedup so a render loop or a doubly-dispatched failure (e.g. the
   // hydration path and the window `error` handler both seeing it) counts once.
-  private readonly seenObjects = new WeakSet<object>();
+  private readonly seenObjects = new WeakSet();
   private readonly seenPrimitives = new Set<string>();
   private active = 0;
   // Set by a genuine capture and consumed (reset) by the next `render`, so only

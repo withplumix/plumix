@@ -1,4 +1,4 @@
-import type { Control, FieldValues } from "react-hook-form";
+import type { Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
 import type { MetaFieldCondition } from "@plumix/core/manifest";
@@ -26,7 +26,7 @@ export function useVisibleFields<
   }: {
     /** Dot path to the box's value bag; omit when it sits at the form root. */
     readonly name?: string;
-    readonly control?: Control<FieldValues>;
+    readonly control?: Control;
   } = {},
 ): readonly F[] {
   // Form shapes are dynamic plugin-declared bags, hence the loose
@@ -36,7 +36,7 @@ export function useVisibleFields<
   // box's own bag so unrelated form fields don't re-render it.
   const scoped: unknown = useWatch({ name, control } as {
     name: string;
-    control?: Control<FieldValues>;
+    control?: Control;
   });
   const values =
     scoped !== null && typeof scoped === "object" && !Array.isArray(scoped)

@@ -766,7 +766,7 @@ describe("assertRedactionInvariants", () => {
     ];
     expect(() =>
       assertRedactionInvariants(violating, SUBJECT_REQUIRED_REDACTIONS),
-    ).toThrowError(/user:bad/);
+    ).toThrow(/user:bad/);
   });
 
   test("ignores diff-less rows even when subject is in the required map", () => {

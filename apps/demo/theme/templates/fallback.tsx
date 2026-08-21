@@ -5,7 +5,6 @@ import type {
   FrontPageData,
   SearchData,
   TaxonomyData,
-  TemplateData,
 } from "plumix";
 import { defineTemplate } from "plumix";
 
@@ -82,7 +81,7 @@ function listingCopy(data: ListingData): {
 // The `index` slot: renders every listing route as a post list, deriving the
 // title from the resolved node (see index.ts for why it's the only listing
 // template).
-export const fallback = defineTemplate<TemplateData>({
+export const fallback = defineTemplate({
   settings: ["site"],
   menus: ["primary", "footer"],
   render: ({ data, settings, menus, ctx }) => (

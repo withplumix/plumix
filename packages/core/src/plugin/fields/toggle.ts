@@ -85,7 +85,7 @@ export class ToggleFieldBuilder<
 
   /** Admin-form prefill for unsaved keys — narrows the read type to `boolean`. */
   default(value: boolean): ToggleFieldBuilder<K, boolean, S> {
-    return this.#fork<boolean, S>({ default: value });
+    return this.#fork<boolean>({ default: value });
   }
 
   /** Mark the field required — narrows the read type to `boolean`. */

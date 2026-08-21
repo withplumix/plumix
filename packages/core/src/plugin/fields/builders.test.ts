@@ -120,13 +120,9 @@ describe("date() builder", () => {
     // ISO shapes compare lexicographically, so "March 1" beats any
     // "2026-…" string. Newly load-bearing now that the walker
     // enforces bounds server-side.
-    expect(() => date("d").min("March 1").build()).toThrowError(
-      /temporal bound/,
-    );
-    expect(() => date("d").max("2026-13-45").build()).toThrowError(
-      /temporal bound/,
-    );
-    expect(() => time("t").min("25:99").build()).toThrowError(/temporal bound/);
+    expect(() => date("d").min("March 1").build()).toThrow(/temporal bound/);
+    expect(() => date("d").max("2026-13-45").build()).toThrow(/temporal bound/);
+    expect(() => time("t").min("25:99").build()).toThrow(/temporal bound/);
     expect(() => date("d").min("2026-01-01").build()).not.toThrow();
   });
 });
@@ -285,7 +281,7 @@ describe("range() builder", () => {
   });
 
   test("rejects min > max at registration time", () => {
-    expect(() => range("r").bounds(10, 5).build()).toThrowError(
+    expect(() => range("r").bounds(10, 5).build()).toThrow(
       /min .* must be <= max/,
     );
   });

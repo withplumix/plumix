@@ -17,14 +17,32 @@ const eslint = new ESLint({
   overrideConfig: baseConfig,
 });
 
-async function plumixReports(
+async function reportsMatching(
   fixture: string,
+  matches: (ruleId: string) => boolean,
 ): Promise<{ ruleId: string | null; line: number }[]> {
   const [result] = await eslint.lintFiles([fixture]);
   return (result?.messages ?? [])
-    .filter((message) => message.ruleId?.startsWith("plumix/") === true)
+    .filter((message) => message.ruleId !== null && matches(message.ruleId))
     .map((message) => ({ ruleId: message.ruleId, line: message.line }));
 }
+
+const plumixReports = (fixture: string) =>
+  reportsMatching(fixture, (ruleId) => ruleId.startsWith("plumix/"));
+
+// The earned-types rules borrowed from typescript-eslint's strict preset.
+// Named explicitly so a report from one of the presets the config already
+// extends can't be mistaken for one of these.
+const STRICT_PRESET_RULES = new Set([
+  "@typescript-eslint/no-deprecated",
+  "@typescript-eslint/no-unnecessary-boolean-literal-compare",
+  "@typescript-eslint/no-unnecessary-type-arguments",
+  "@typescript-eslint/no-unnecessary-type-conversion",
+  "@typescript-eslint/no-unnecessary-type-parameters",
+]);
+
+const strictPresetReports = (fixture: string) =>
+  reportsMatching(fixture, (ruleId) => STRICT_PRESET_RULES.has(ruleId));
 
 async function restrictedSyntaxLines(
   instance: ESLint,
@@ -98,9 +116,55 @@ describe("plumix/no-non-testid-queries", () => {
   });
 });
 
+describe("the earned-types rules from the strict preset", () => {
+  it("rejects deprecated APIs and types that were declared rather than earned", async () => {
+    await expect(
+      strictPresetReports("src/strict-preset.violations.ts"),
+    ).resolves.toEqual([
+      { ruleId: "@typescript-eslint/no-deprecated", line: 6 },
+      { ruleId: "@typescript-eslint/no-unnecessary-type-parameters", line: 8 },
+      { ruleId: "@typescript-eslint/no-unnecessary-type-arguments", line: 16 },
+      { ruleId: "@typescript-eslint/no-unnecessary-type-conversion", line: 19 },
+      {
+        ruleId: "@typescript-eslint/no-unnecessary-boolean-literal-compare",
+        line: 23,
+      },
+    ]);
+  });
+
+  it("stays silent on type parameters, arguments, conversions and comparisons that earn their keep", async () => {
+    await expect(
+      strictPresetReports("src/strict-preset.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
 describe("scoping", () => {
   it("stays silent in test files", async () => {
     await expect(plumixReports("src/carve-out.test.ts")).resolves.toEqual([]);
+  });
+
+  // The single-use type parameter rule is the one strict-preset rule scoped to
+  // production source; the other four apply everywhere. Assert the split from
+  // one fixture that violates all five, so neither half can drift unnoticed.
+  it("exempts test files from the single-use type parameter rule only", async () => {
+    await expect(strictPresetReports("src/carve-out.test.ts")).resolves.toEqual(
+      [
+        { ruleId: "@typescript-eslint/no-deprecated", line: 23 },
+        {
+          ruleId: "@typescript-eslint/no-unnecessary-type-arguments",
+          line: 29,
+        },
+        {
+          ruleId: "@typescript-eslint/no-unnecessary-type-conversion",
+          line: 32,
+        },
+        {
+          ruleId: "@typescript-eslint/no-unnecessary-boolean-literal-compare",
+          line: 36,
+        },
+      ],
+    );
   });
 
   it("stays silent outside src", async () => {

@@ -141,7 +141,7 @@ export function createMenuRouter(): Record<string, unknown> {
         slug: row.slug,
         name: row.name,
         version: row.version,
-        itemCount: Number(row.itemCount),
+        itemCount: row.itemCount,
       }));
     });
 
