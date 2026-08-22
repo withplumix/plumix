@@ -366,7 +366,7 @@ export function createMenuRouter(): Record<string, unknown> {
             .set({
               title: item.title ?? "",
               sortOrder: item.sortOrder,
-              meta: item.meta as unknown as Record<string, unknown>,
+              meta: item.meta,
               // parentId is patched in the second pass below.
             })
             .where(eq(entries.id, item.id))
@@ -388,7 +388,7 @@ export function createMenuRouter(): Record<string, unknown> {
               status: "published",
               authorId,
               sortOrder: item.sortOrder,
-              meta: item.meta as unknown as Record<string, unknown>,
+              meta: item.meta,
             })
             .returning({ id: entries.id });
           if (!inserted) {

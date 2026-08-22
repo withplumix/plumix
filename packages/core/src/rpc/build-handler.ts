@@ -19,7 +19,11 @@ export function buildRpcHandler(
   for (const [pluginId, pluginRouter] of pluginRouters) {
     mergedRouter[pluginId] = pluginRouter;
   }
-  return new RPCHandler(mergedRouter as unknown as typeof appRouter, {
+  // Safety: the merge only adds keys — every core procedure is still present
+  // under its own name, and plugin ids are rejected in `buildApp` if they
+  // collide with one, so no procedure `appRouter` declares has been replaced.
+  const merged = mergedRouter as unknown as typeof appRouter;
+  return new RPCHandler(merged, {
     plugins: [new ResponseHeadersPlugin()],
     // One span per matched procedure — plugin routers included, since they
     // merge into this handler. Middleware (auth) runs inside the call, so its

@@ -58,7 +58,7 @@ export const RESERVED_DEP_KIND_NAMES: ReadonlySet<string> = new Set([
  */
 export function mergeTemplateDepDeclarations(
   themeDeps: TemplateDepDeclarations | undefined,
-  template: Readonly<Record<string, unknown>>,
+  template: TemplateDepDeclarations,
 ): Readonly<Record<string, readonly string[]>> {
   const result: Record<string, readonly string[]> = {};
   if (themeDeps) {
@@ -73,9 +73,7 @@ export function mergeTemplateDepDeclarations(
       result[kind] = value as readonly string[];
     } else if (typeof value === "function") {
       const prev = result[kind] ?? [];
-      const next = (value as (prev: readonly string[]) => readonly string[])(
-        prev,
-      );
+      const next = value(prev);
       if (Array.isArray(next)) result[kind] = next;
     }
   }

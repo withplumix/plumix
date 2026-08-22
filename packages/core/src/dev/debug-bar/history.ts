@@ -75,6 +75,9 @@ export function createDebugHistoryStore(
 
   return {
     save(entry) {
+      // Safety: `sanitize` rewrites leaves, never structure — it truncates
+      // long strings and replaces what JSON can't carry, so every key the
+      // snapshot declares survives with a value of its declared shape.
       const snapshot = sanitize(
         entry.snapshot,
         maxStringLength,

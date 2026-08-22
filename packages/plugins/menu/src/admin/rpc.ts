@@ -6,6 +6,7 @@
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type { MenuItemMeta } from "../server/types.js";
 import type { SaveItemPayload } from "./editor-state.js";
 
 export interface MenuListItem {
@@ -39,7 +40,8 @@ interface MenuItemRow {
   readonly parentId: number | null;
   readonly sortOrder: number;
   readonly title: string;
-  readonly meta: Record<string, unknown>;
+  /** Parsed server-side; `null` when the stored JSON matched no known kind. */
+  readonly meta: MenuItemMeta | null;
 }
 
 interface MenuGetResponse {

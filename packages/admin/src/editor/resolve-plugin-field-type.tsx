@@ -24,6 +24,11 @@ function inputToField(input: BlockInput): MetaBoxFieldManifestEntry {
   };
 }
 
+// The editor owns its inputs directly, so nothing needs the RHF ref — but a
+// control may still spread it onto an element, and a no-op callback ref is
+// what React expects there.
+const NOOP_REF = (): void => undefined;
+
 // One stable wrapper per registered component. Resolving on every inspector
 // render must return the same identity, or the picker (and its open modal)
 // would remount and lose state each keystroke elsewhere in the panel.
@@ -47,15 +52,29 @@ export function resolvePluginFieldType(
     disabled,
     testId,
     attrs,
-  }) => (
-    <Component
-      field={inputToField(field as BlockInput)}
-      rhf={rhf as unknown as ControllerRenderProps<FieldValues, string>}
-      disabled={disabled}
-      testId={testId}
-      attrs={attrs}
-    />
-  );
+  }) => {
+    // Built rather than asserted. The editor's `rhf` carries four of the six
+    // members RHF's own controller has; `ref` is the one a control could
+    // legitimately spread onto an input, so it gets a real no-op callback
+    // instead of the `undefined` a cast would have left behind.
+    const controller: ControllerRenderProps<FieldValues, string> = {
+      value: rhf.value,
+      onChange: rhf.onChange,
+      onBlur: rhf.onBlur,
+      name: rhf.name,
+      disabled,
+      ref: NOOP_REF,
+    };
+    return (
+      <Component
+        field={inputToField(field as BlockInput)}
+        rhf={controller}
+        disabled={disabled}
+        testId={testId}
+        attrs={attrs}
+      />
+    );
+  };
   wrappers.set(Component, wrapper);
   return wrapper;
 }

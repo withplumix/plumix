@@ -258,14 +258,11 @@ function formatArg(arg: unknown): string {
 function callSiteStack(
   origin: (...args: unknown[]) => void,
 ): string | undefined {
-  const capture = (
-    Error as unknown as {
-      captureStackTrace?: (target: { stack?: string }, origin: unknown) => void;
-    }
-  ).captureStackTrace;
+  // `captureStackTrace` is declared unconditionally by the ambient types but
+  // only exists on V8; the runtime check is what covers every other engine.
   const holder: { stack?: string } = {};
-  if (typeof capture === "function") {
-    capture(holder, origin);
+  if (typeof Error.captureStackTrace === "function") {
+    Error.captureStackTrace(holder, origin);
     return holder.stack;
   }
   return new Error().stack;

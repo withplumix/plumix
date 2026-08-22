@@ -19,17 +19,12 @@ import { publishIslandStrategy } from "../island-global.js";
 const DEFAULT_TIMEOUT_MS = 2000;
 const FALLBACK_DELAY_MS = 200;
 
-interface IdleWindow {
-  requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-}
-
 export const idleStrategy: IslandStrategy = (loadFn, opts) => {
   const timeout =
     typeof opts.timeout === "number" ? opts.timeout : DEFAULT_TIMEOUT_MS;
   const run = (): void => void loadFn();
-  const w = self as unknown as IdleWindow;
-  if (typeof w.requestIdleCallback === "function") {
-    w.requestIdleCallback(run, { timeout });
+  if (typeof self.requestIdleCallback === "function") {
+    self.requestIdleCallback(run, { timeout });
     return;
   }
   setTimeout(run, FALLBACK_DELAY_MS);

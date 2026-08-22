@@ -39,3 +39,7 @@ export function isReady(ready: boolean): boolean {
 export function send(message: object): void {
   void message;
 }
+
+// A test double asserted into the shape the subject expects is the case the
+// chained-assertion rule is scoped away from.
+export const stubRow = { id: "" } as unknown as Row;

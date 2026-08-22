@@ -1,18 +1,12 @@
 import type { TelemetrySpan } from "../../../context/telemetry.js";
 import type {
   ResolutionStep,
-  ResolutionTrace,
+  TemplateResolution,
 } from "../../../route/render/template-hierarchy.js";
 import type { DebugSnapshot } from "../snapshot.js";
 import type { DebugPanel } from "../types.js";
 import { DebugKV, DebugSection, DebugTable } from "../primitives.js";
 import { TEMPLATE_PANEL_ID } from "../template-node-label.js";
-
-/** Set as the `template` span's `resolution` attribute by the renderer. */
-export interface TemplateResolution extends ResolutionTrace {
-  /** Human label for the resolved route node, e.g. "post: hello-world". */
-  readonly nodeLabel: string;
-}
 
 // Matches on the resolution attribute too, so an unrelated span that happens
 // to share the `template` name can't shadow the renderer's span.
@@ -47,8 +41,11 @@ export const templatePanel: DebugPanel = {
   title: "Template",
   order: 15,
   render: ({ spans }: DebugSnapshot) => {
-    const resolution = findResolutionSpan(spans)?.attributes
-      .resolution as unknown as TemplateResolution | undefined;
+    // A narrowing within `JsonValue`, not a route around it: the renderer
+    // writes this attribute from a `TemplateResolution`, which the type
+    // checker holds to the JSON shape at that end.
+    const resolution = findResolutionSpan(spans)?.attributes.resolution as
+      TemplateResolution | undefined;
     if (!resolution) {
       return (
         <p className="plumix-debug-bar__empty">

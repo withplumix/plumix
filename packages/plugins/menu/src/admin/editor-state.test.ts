@@ -31,6 +31,46 @@ describe("editorReducer", () => {
       expect(next.dirty).toBe(false);
     });
 
+    test("stands an unparseable row up as an empty custom item so it stays saveable", () => {
+      const next = editorReducer(initialEditorState, {
+        type: "loadFromServer",
+        response: {
+          id: 1,
+          slug: "main",
+          name: "Main",
+          version: 1,
+          maxDepth: 5,
+          items: [
+            {
+              id: 10,
+              parentId: null,
+              sortOrder: 0,
+              title: "Mystery",
+              meta: null,
+              resolved: {
+                state: "broken",
+                label: "Mystery",
+                href: null,
+                lastHref: null,
+              },
+            },
+          ],
+        },
+      });
+
+      expect(next.items[0]?.meta).toEqual({ kind: "custom", url: "" });
+      expect(next.items[0]?.state).toBe("broken");
+      expect(buildSavePayload(next)).toEqual([
+        {
+          id: 10,
+          parentIndex: null,
+          sortOrder: 0,
+          title: "Mystery",
+          meta: { kind: "custom", url: "" },
+        },
+      ]);
+    });
+
     test("converts server items into editor items in (parentId, sortOrder) DFS order with stable keys", () => {
       // Server sends items already ordered by (parentId, sortOrder, id).
       // The editor stores them in DFS pre-order so parents always come

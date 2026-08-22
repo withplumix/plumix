@@ -242,5 +242,9 @@ export function defineBlock<
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   Loaders extends BlockLoaderRecord = {},
 >(spec: BlockSpec<Attrs, Loaders>): BlockSpec {
+  // Safety: the registry is keyed by block name, so a widened spec only ever
+  // meets nodes carrying its own name — `render` is reached solely through
+  // that lookup, never by substituting one `BlockSpec` for another. The
+  // erasure buys a homogeneous map, not interchangeable specs.
   return Object.freeze(spec) as unknown as BlockSpec;
 }

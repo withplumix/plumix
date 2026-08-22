@@ -519,9 +519,10 @@ async function resolveSingle(
   const data = await ctx.hooks.applyFilter("resolve:single:data", initial);
   // Expand shortcodes in the author-written entry title so both the
   // document `<title>` and the theme-rendered heading resolve `[year]` &c.
-  const entryContext = data.entry as unknown as Readonly<
-    Record<string, unknown>
-  >;
+  // The spread is what makes the entry readable as an open bag: a shortcode
+  // looks its fields up by name, and TypeScript withholds the implicit index
+  // signature an `interface` would need to be read that way.
+  const entryContext = { ...data.entry };
   const title = expandShortcodes(data.entry.title, ctx.shortcodes, {
     siteSettings: {},
     locale: ctx.locale.code,

@@ -13,7 +13,6 @@ import { BlockLoaderError, resolveBlockLoaders } from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
-import type { JsonValue } from "../../json.js";
 import type { TransformOpts } from "../../runtime/slots.js";
 import type { Template } from "../../template.js";
 import type {
@@ -27,7 +26,7 @@ import type { EditModeDecision } from "../edit-mode.js";
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
 import type { RenderEnv } from "./render-env.js";
 import type { ErrorData } from "./resolved-entry.js";
-import type { ResolvedNode } from "./template-hierarchy.js";
+import type { ResolvedNode, TemplateResolution } from "./template-hierarchy.js";
 import { PlumixAdminBar } from "../../admin-bar/component.js";
 import { PlumixDebugBar } from "../../dev/debug-bar/component.js";
 import {
@@ -120,14 +119,10 @@ async function renderThroughThemeInner({
     // Resolve first so the explain (which re-runs user predicates) keeps the
     // old resolve-then-explain order for any stateful predicate.
     const result = resolveTemplate(rules, node, data);
-    s.set(
-      "resolution",
-      () =>
-        ({
-          nodeLabel: templateNodeLabel(node),
-          ...explainTemplateResolution(rules, node, data),
-        }) as unknown as JsonValue,
-    );
+    s.set("resolution", (): TemplateResolution => ({
+      nodeLabel: templateNodeLabel(node),
+      ...explainTemplateResolution(rules, node, data),
+    }));
     return result;
   });
   if (matched === undefined) return null;
@@ -135,10 +130,7 @@ async function renderThroughThemeInner({
   ctx.resolvedTemplate = matchedLabel;
   const template = normalizeTemplate(matched.template, matchedLabel);
   const deps = await loadTemplateDeps(
-    mergeTemplateDepDeclarations(
-      theme,
-      template as unknown as Record<string, unknown>,
-    ),
+    mergeTemplateDepDeclarations(theme, template),
     templateDeps,
     ctx,
   );
@@ -236,10 +228,7 @@ async function renderErrorThroughThemeInner({
       ?.template ?? variant.fallback;
   const template = normalizeTemplate(raw, variant.tier);
   const deps = await loadTemplateDeps(
-    mergeTemplateDepDeclarations(
-      theme,
-      template as unknown as Record<string, unknown>,
-    ),
+    mergeTemplateDepDeclarations(theme, template),
     templateDeps,
     ctx,
   );
@@ -407,10 +396,10 @@ function renderTree({
       : undefined;
   // Body shortcodes get the post-expansion entry — its `title` is already
   // rendered, not the raw `[year]` source the title pass itself expands.
-  const entry =
-    "entry" in data
-      ? (data.entry as unknown as Readonly<Record<string, unknown>>)
-      : null;
+  // Spread rather than asserted: a shortcode reads the entry's fields by name,
+  // and TypeScript withholds from an `interface` the implicit index signature
+  // that open-bag read needs.
+  const entry = "entry" in data ? { ...data.entry } : null;
   // Bind once so the resolver closure keeps the non-null narrowing.
   const imageDelivery = ctx.imageDelivery;
   const templateTree: ReactNode = createElement(

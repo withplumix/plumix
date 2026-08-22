@@ -160,6 +160,9 @@ export class SelectFieldBuilder<
   > {
     // The conditional this-type erases the class shape inside the body;
     // restore it to reach the private #fork.
+    // Safety: the receiver is this builder — the conditional this-type only
+    // constrains which receivers may call the method, and every one it admits
+    // is a `SelectFieldBuilder` with exactly these arguments.
     const self = this as unknown as SelectFieldBuilder<O, K, false, A, V, S>;
     return self.#fork<
       true,

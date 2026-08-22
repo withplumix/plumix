@@ -85,6 +85,9 @@ function connectRequestScoped(
   }
 
   const session = binding.withSession(constraint);
+  // Safety: `D1DatabaseSession` carries `prepare` and `batch` with the same
+  // signatures `D1Database` declares, and those are the only members drizzle
+  // and the tracer call — `dump`/`exec`/`withSession` are never reached.
   const sessionAsBinding = traceD1Client(session as unknown as D1Database);
   const db = drizzle(sessionAsBinding, {
     schema: args.schema,

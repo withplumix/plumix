@@ -62,7 +62,8 @@ interface ServerItemRow {
   readonly parentId: number | null;
   readonly sortOrder: number;
   readonly title: string;
-  readonly meta: Record<string, unknown>;
+  /** Parsed server-side; `null` when the stored JSON matched no known kind. */
+  readonly meta: MenuItemMeta | null;
   readonly resolved?: {
     readonly state: ItemState;
     readonly label: string;
@@ -489,7 +490,13 @@ function flattenServerItems(rows: readonly ServerItemRow[]): EditorItem[] {
         parentKey,
         sortOrder: row.sortOrder,
         title: row.title === "" ? null : row.title,
-        meta: row.meta as unknown as MenuItemMeta,
+        // A row whose stored meta didn't parse arrives already marked broken.
+        // Stand it up as an empty custom item so it stays visible, stays
+        // fixable, and no longer sinks the whole save payload on the item
+        // schema — the previous behaviour left the menu unsaveable until the
+        // row was deleted. The trade is that saving replaces the unreadable
+        // JSON, which no consumer could interpret in the first place.
+        meta: row.meta ?? { kind: "custom", url: "" },
         state: row.resolved?.state ?? "ok",
         resolvedLabel:
           row.resolved?.label ?? (row.title === "" ? "(unnamed)" : row.title),

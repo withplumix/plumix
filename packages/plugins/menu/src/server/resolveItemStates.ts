@@ -14,6 +14,7 @@ import type { MenuItemMeta } from "./types.js";
 import { mapItemState } from "../admin/item-state.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
 
+/** A `menu_item` row as it comes out of the DB — `meta` still unparsed JSON. */
 export interface MenuItemRow {
   readonly id: number;
   readonly parentId: number | null;
@@ -22,7 +23,15 @@ export interface MenuItemRow {
   readonly meta: Record<string, unknown>;
 }
 
-export interface ResolvedRow extends MenuItemRow {
+/**
+ * What the editor receives. `meta` is the parsed value this resolver already
+ * computed — sending the raw column instead would make every client re-parse
+ * it, and the one that didn't asserted its way to the same type without the
+ * check. `null` when the stored JSON matched no known kind, which is also
+ * what puts `resolved.state` at `"broken"`.
+ */
+export interface ResolvedRow extends Omit<MenuItemRow, "meta"> {
+  readonly meta: MenuItemMeta | null;
   readonly resolved: {
     readonly state: ItemState;
     readonly label: string;
@@ -140,6 +149,7 @@ function enrich(
     // user can Convert-to-Custom or Remove it.
     return {
       ...row,
+      meta,
       resolved: {
         state: "broken",
         label: row.title || "(unnamed)",
@@ -152,6 +162,7 @@ function enrich(
   if (meta.kind === "custom") {
     return {
       ...row,
+      meta,
       resolved: {
         state: "ok",
         label: row.title || "(unnamed)",
@@ -176,6 +187,7 @@ function enrich(
 
   return {
     ...row,
+    meta,
     resolved: {
       state,
       label,
