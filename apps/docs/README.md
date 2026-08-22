@@ -21,3 +21,27 @@ pnpm dev        # astro dev — http://localhost:4321
 pnpm build      # static build → dist/
 pnpm typecheck  # astro sync + tsc
 ```
+
+## Why Starlight is capped below 0.41.7
+
+`@astrojs/starlight` is held to `>=0.41.5 <0.41.7`, not a caret range.
+
+The floor is deliberate: `0.41.4` and `0.41.5` fixed `docsSchema({ extend })`
+bugs with Zod enums and unions, which the frontmatter schema needs.
+
+The ceiling is an upstream break, and it arrived after the fact. `0.41.7`
+shipped on 5 August with `@astrojs/markdown-satteri: ^0.3.5` and its own
+`satteri: ^0.9.1` — consistent at the time. On 19 August
+`@astrojs/markdown-satteri@0.3.7` moved to `satteri@^0.10.3`, and that range
+swallowed it. Two Sätteri copies now meet inside Starlight's own
+`integrations/markdown-plugins.ts`, which `pnpm typecheck` compiles from source
+— so the docs app stops type-checking on a dependency it never imports.
+
+Starlight is migrating to the Sätteri 0.10 APIs in
+[withastro/starlight#4134](https://github.com/withastro/starlight/pull/4134),
+which is blocked on an Astro release carrying
+[withastro/astro#17766](https://github.com/withastro/astro/pull/17766) (merged,
+unreleased as of 22 August). Lifting the ceiling here is tracked by
+[#1865](https://github.com/withplumix/plumix/issues/1865); nothing surfaces the
+fixing release automatically, as `.github/dependabot.yml` has no astro or
+starlight group.

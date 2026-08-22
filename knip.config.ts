@@ -49,10 +49,24 @@ const config: KnipConfig = {
       entry: ["plumix.config.ts"],
     },
     "apps/docs": {
-      // wrangler is invoked by the Workers Build deploy command (`wrangler
-      // deploy`), not a repo script; knip's wrangler plugin only recognises
-      // configs with a `main`, and this static-assets site has none.
-      ignoreDependencies: ["wrangler"],
+      // - wrangler is invoked by the Workers Build deploy command (`wrangler
+      //   deploy`), not a repo script; knip's wrangler plugin only recognises
+      //   configs with a `main`, and this static-assets site has none.
+      // - The three starlight-* plugins, vitest and plumix are installed ahead
+      //   of the code that uses them, so the docs work under #1851 lands on a
+      //   dependency set that already resolves. The starlight plugins are wired
+      //   into astro.config.mjs with the Starlight configuration ticket; vitest
+      //   and plumix with the content-check suite, which type-checks docs code
+      //   samples against the real published types. Drop each entry as its
+      //   consumer arrives.
+      ignoreDependencies: [
+        "wrangler",
+        "starlight-auto-sidebar",
+        "starlight-links-validator",
+        "starlight-llms-txt",
+        "plumix",
+        "vitest",
+      ],
     },
     // Playgrounds — same shape as apps/*: `plumix.config.ts` is the
     // consumer entry, not visible to knip without an explicit hint.
