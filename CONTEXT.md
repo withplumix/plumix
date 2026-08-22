@@ -219,7 +219,7 @@ The zero-JS, server-rendered admin chrome overlaid on public pages for logged-in
 ## Extensibility
 
 **Plugin**:
-A unit of extension defined by a plugin descriptor, which registers its contributions during setup.
+A unit of extension defined by a plugin descriptor, which registers its contributions during setup. A plugin may be local to a single site or published for others to install; distribution is a mode, not a kind.
 
 **Hook**:
 The umbrella term for the two extension primitives, filter and action.
