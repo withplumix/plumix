@@ -33,8 +33,30 @@ reaches the markdown pipeline, so the validator never records it, and every link
 to it is reported invalid.
 
 Links carrying the site's own origin (`https://docs.plumix.dev/...`) are _not_
-checked — the plugin only treats them as internal once `site` is set in
-`astro.config.mjs`. Write cross-references root-relative.
+checked: `sameSitePolicy` defaults to `ignore`, which skips them even though
+`site` is now set. Write cross-references root-relative. Closing that gap is a
+one-option change, left to the ticket that owns the gate.
+
+## Machine-readable output
+
+`starlight-llms-txt` writes three files into `dist/` at build time, so a coding
+agent can fetch selectively against an index or ingest the corpus in one go:
+
+| File             | What it is                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| `llms.txt`       | The entry point — names the project and links the two corpus files                 |
+| `llms-full.txt`  | Every published page as markdown, each under its title and lede                    |
+| `llms-small.txt` | The same corpus with notes, tips and `<details>` stripped and whitespace collapsed |
+
+Note that `llms.txt` indexes the corpus files, not the pages — the plugin builds
+no per-page listing. Pages marked `draft: true` are excluded from both corpus
+files.
+
+The plugin throws without `site`, which is why `astro.config.mjs` declares
+`https://docs.plumix.dev`: llms.txt links the corpus with absolute URLs, and an
+agent holding only the index has no base to resolve a relative href against.
+That absolute base also lets Starlight emit a sitemap and per-page
+canonical/`og:url` metadata, neither of which the site carried before.
 
 ## Content checks
 
