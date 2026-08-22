@@ -1,5 +1,22 @@
 # @plumix/core
 
+## 0.15.0
+
+### Minor Changes
+
+- [#1825](https://github.com/withplumix/plumix/pull/1825) [`c0771f0`](https://github.com/withplumix/plumix/commit/c0771f010290452887f758483a25a2e303dbf346) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `createTestContext` and `applyTestSchema` to `plumix/test` — a real `AppContext` for tests that call a service function directly, and a one-liner for creating a drizzle schema module's tables on an existing test db.
+
+- [#1826](https://github.com/withplumix/plumix/pull/1826) [`064ff07`](https://github.com/withplumix/plumix/commit/064ff07cbf36728beb2afcfcddfe82f0fd36f193) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `JsonObject` and gives `JsonValue` a home of its own, both exported from `plumix`. Use them to describe data that crosses a serialization boundary — stored metadata, span attributes, message payloads — instead of a dictionary of `unknown`. `JsonValue` was previously reachable only as a wildcard re-export of an internal telemetry module; it is now a deliberate part of the public API.
+
+### Patch Changes
+
+- [#1806](https://github.com/withplumix/plumix/pull/1806) [`cfae716`](https://github.com/withplumix/plumix/commit/cfae716b9a39873db45ccb79083f4e1753e14744) Thanks [@nasyrov](https://github.com/nasyrov)! - Stops `mockManifest` forwarding stale response headers onto the document it rewrites. `content-encoding`, `content-length`, `transfer-encoding`, `etag`, and `last-modified` all described the original bytes, not the decoded and resized body being served, so they are now dropped and Playwright reframes the response itself.
+
+- [#1803](https://github.com/withplumix/plumix/pull/1803) [`b014e4d`](https://github.com/withplumix/plumix/commit/b014e4d212f1ccde8af3dd1464a1fea4143b97f9) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the `mockManifest` Playwright helper throwing "Response has been disposed" and failing an unrelated test. Document responses disposed mid-rewrite are now served unmodified instead of erroring.
+
+- Updated dependencies []:
+  - @plumix/blocks@0.15.0
+
 ## 0.14.0
 
 ### Minor Changes
