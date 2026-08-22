@@ -12,6 +12,7 @@
     "clean": "git clean -xdf .astro dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .gitignore",
     "lint": "astro sync && eslint",
+    "test:unit": "vitest run",
     "typecheck": "astro sync && tsc --noEmit"
   },
   "dependencies": {
@@ -24,12 +25,20 @@
   "devDependencies": {
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
+    "@plumix/vitest-config": "workspace:*",
+    "@types/mdast": "^4.0.4",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
     "plumix": "workspace:*",
     "prettier": "catalog:",
+    "remark-mdx": "^3.1.1",
+    "remark-parse": "^11.0.0",
     "typescript": "catalog:",
+    "unified": "^11.0.5",
     "vitest": "catalog:vitest",
-    "wrangler": "catalog:cloudflare"
+    "wrangler": "catalog:cloudflare",
+    "yaml": "^2.8.1"
   },
   "prettier": "@plumix/prettier-config"
 }
