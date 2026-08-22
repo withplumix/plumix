@@ -1,5 +1,15 @@
 # @plumix/plugin-menu
 
+## 0.2.0
+
+### Minor Changes
+
+- [#1847](https://github.com/withplumix/plumix/pull/1847) [`6ed6444`](https://github.com/withplumix/plumix/commit/6ed6444d4deacc11040cc56e3d673303be94170b) Thanks [@nasyrov](https://github.com/nasyrov)! - Changes `menu.get` to send each item's `meta` already parsed — the declared `MenuItemMeta`, or `null`
+  when the stored JSON matches no known kind — instead of the raw column. `MenuItemMeta` and its arms
+  are now type aliases rather than interfaces, so the shape assigns to the `entries.meta` column
+  directly. A menu item whose stored meta doesn't parse now loads in the editor as an empty custom-URL
+  item, so it stays visible, stays fixable, and no longer rejects the whole save.
+
 ## 0.1.3
 
 ### Patch Changes
