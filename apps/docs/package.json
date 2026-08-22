@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Plumix documentation site — Astro Starlight (scaffold; content + versioning land with the docs follow-up)",
+  "description": "Plumix documentation site — Astro Starlight (structure in place; content and versioning still ahead)",
   "license": "MIT",
   "scripts": {
     "dev": "astro dev",

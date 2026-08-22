@@ -1,0 +1,7 @@
+# The two-level cap. `depth: 1` here means one level of directories below the
+# content root becomes a sidebar group, and anything nested deeper is dropped
+# from the navigation rather than opening a third level.
+#
+# The cap has to live at the root: `depth` on a section's own `_meta.yml` is
+# measured from that section, so it can only widen the tree, never narrow it.
+depth: 1
