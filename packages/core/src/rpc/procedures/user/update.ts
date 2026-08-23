@@ -1,5 +1,6 @@
 import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { NewUser, User } from "../../../db/schema/users.js";
+import type { ResolvedMeta } from "../../meta/core.js";
 import { invalidateAllSessionsForUser } from "../../../auth/sessions.js";
 import {
   and,
@@ -187,7 +188,7 @@ export const update = base
     // Match the early-return's empty-patch gate — an explicit `meta: {}`
     // from the client produces a non-null but empty `MetaPatch`, and a
     // plain `loadUserMeta` re-read for that case is just a wasted SELECT.
-    let meta: Record<string, unknown>;
+    let meta: ResolvedMeta;
     if (metaPatch !== null && !isEmptyMetaPatch(metaPatch)) {
       await writeUserMeta(context, updated, metaPatch);
       meta = await loadUserMeta(context, updated);

@@ -1,3 +1,4 @@
+import type { JsonObject } from "../../json.js";
 import { escapeHtml } from "../../escape-html.js";
 
 // Attribute-context escape: `href="..."` / `alt="..."` etc. Additionally
@@ -20,13 +21,13 @@ export function renderTiptapContent(input: unknown): string {
 
 interface TiptapMark {
   readonly type?: string;
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
 }
 
 interface TiptapNode {
   readonly type?: string;
   readonly text?: string;
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
   readonly marks?: readonly TiptapMark[];
   readonly content?: readonly unknown[];
 }

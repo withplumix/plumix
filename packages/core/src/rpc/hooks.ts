@@ -4,6 +4,7 @@ import type { Credential } from "../db/schema/credentials.js";
 import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
+import type { WithResolvedMeta } from "./meta/core.js";
 import type { EntryMetaChanges } from "./procedures/entry/meta.js";
 import type {
   EntryCreateInput,
@@ -31,7 +32,7 @@ import type {
 // taxonomy. Plugins editing the output filter receive this shape.
 // In preview mode the row also carries `_preview` so editor clients
 // can distinguish autosave-overlaid responses from straight live reads.
-type EntryWithTerms = Entry & {
+type EntryWithTerms = WithResolvedMeta<Entry> & {
   readonly terms: Record<string, readonly number[]>;
   readonly _preview?: {
     readonly source: "live" | "autosave";
@@ -50,7 +51,9 @@ type UserListRow = User & {
 declare module "../hooks/types.js" {
   interface FilterRegistry {
     "rpc:entry.list:input": (input: EntryListInput) => EntryListInput;
-    "rpc:entry.list:output": (output: readonly Entry[]) => readonly Entry[];
+    "rpc:entry.list:output": (
+      output: readonly WithResolvedMeta<Entry>[],
+    ) => readonly WithResolvedMeta<Entry>[];
 
     "rpc:entry.get:input": (input: {
       id: number;
@@ -59,10 +62,14 @@ declare module "../hooks/types.js" {
     "rpc:entry.get:output": (output: EntryWithTerms) => EntryWithTerms;
 
     "rpc:entry.create:input": (input: EntryCreateInput) => EntryCreateInput;
-    "rpc:entry.create:output": (output: Entry) => Entry;
+    "rpc:entry.create:output": (
+      output: WithResolvedMeta<Entry>,
+    ) => WithResolvedMeta<Entry>;
 
     "rpc:entry.update:input": (input: EntryUpdateInput) => EntryUpdateInput;
-    "rpc:entry.update:output": (output: Entry) => Entry;
+    "rpc:entry.update:output": (
+      output: WithResolvedMeta<Entry>,
+    ) => WithResolvedMeta<Entry>;
 
     "rpc:entry.trash:input": (input: { id: number }) => typeof input;
     "rpc:entry.trash:output": (output: Entry) => Entry;
@@ -74,14 +81,18 @@ declare module "../hooks/types.js" {
     "rpc:entry.deletePermanent:output": (output: Entry) => Entry;
 
     "rpc:entry.duplicate:input": (input: { id: number }) => typeof input;
-    "rpc:entry.duplicate:output": (output: Entry) => Entry;
+    "rpc:entry.duplicate:output": (
+      output: WithResolvedMeta<Entry>,
+    ) => WithResolvedMeta<Entry>;
 
     "rpc:user.list:input": (input: UserListInput) => UserListInput;
     "rpc:user.list:output": (
       output: readonly UserListRow[],
     ) => readonly UserListRow[];
 
-    "rpc:user.get:output": (output: User) => User;
+    "rpc:user.get:output": (
+      output: WithResolvedMeta<User>,
+    ) => WithResolvedMeta<User>;
 
     "rpc:user.invite:input": (input: UserInviteInput) => UserInviteInput;
     "rpc:user.invite:output": (output: {
@@ -90,7 +101,9 @@ declare module "../hooks/types.js" {
     }) => typeof output;
 
     "rpc:user.update:input": (input: UserUpdateInput) => UserUpdateInput;
-    "rpc:user.update:output": (output: User) => User;
+    "rpc:user.update:output": (
+      output: WithResolvedMeta<User>,
+    ) => WithResolvedMeta<User>;
 
     "rpc:user.disable:input": (input: { id: number }) => typeof input;
     "rpc:user.disable:output": (output: User) => User;
@@ -99,15 +112,23 @@ declare module "../hooks/types.js" {
     "rpc:user.delete:output": (output: User) => User;
 
     "rpc:term.list:input": (input: TermListInput) => TermListInput;
-    "rpc:term.list:output": (output: readonly Term[]) => readonly Term[];
+    "rpc:term.list:output": (
+      output: readonly WithResolvedMeta<Term>[],
+    ) => readonly WithResolvedMeta<Term>[];
 
-    "rpc:term.get:output": (output: Term) => Term;
+    "rpc:term.get:output": (
+      output: WithResolvedMeta<Term>,
+    ) => WithResolvedMeta<Term>;
 
     "rpc:term.create:input": (input: TermCreateInput) => TermCreateInput;
-    "rpc:term.create:output": (output: Term) => Term;
+    "rpc:term.create:output": (
+      output: WithResolvedMeta<Term>,
+    ) => WithResolvedMeta<Term>;
 
     "rpc:term.update:input": (input: TermUpdateInput) => TermUpdateInput;
-    "rpc:term.update:output": (output: Term) => Term;
+    "rpc:term.update:output": (
+      output: WithResolvedMeta<Term>,
+    ) => WithResolvedMeta<Term>;
 
     "rpc:term.delete:output": (output: Term) => Term;
 

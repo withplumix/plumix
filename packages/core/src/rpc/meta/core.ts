@@ -3,6 +3,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 import type { AppContext } from "../../context/app.js";
+import type { JsonObject, JsonValue } from "../../json.js";
 import type {
   LookupAdapter,
   ReferenceHydrationShapes,
@@ -43,7 +44,27 @@ import {
  *  plugin config while bounding adversarial payloads. */
 const MAX_META_VALUE_BYTES = 256 * 1024;
 
-type MetaMap = Record<string, unknown>;
+/**
+ * A meta bag on the read side. `decodeMetaBag` hands a `.returns("date")`
+ * field back as a `Date`, and `resolveMetaBags` hydrates a reference's stored
+ * id into whatever its lookup adapter returns — so these values are no longer
+ * JSON and the bag stays open. The stored counterpart is `JsonObject`.
+ */
+export type ResolvedMeta = Record<string, unknown>;
+
+/**
+ * Meta as a caller sends it: object-shaped and nothing more. Values stay
+ * unproven until the field pipeline normalizes them.
+ */
+export type MetaInput = Readonly<Record<string, unknown>>;
+
+/**
+ * A row as a read surface hands it back: the stored row with `meta` replaced
+ * by its {@link ResolvedMeta} counterpart.
+ */
+export type WithResolvedMeta<T> = Omit<T, "meta"> & {
+  readonly meta: ResolvedMeta;
+};
 
 /**
  * Validated meta patch produced by `sanitizeMetaInput`. Values in
@@ -57,7 +78,7 @@ type MetaMap = Record<string, unknown>;
  * self-heals to its id). Other callers should treat it as read-only.
  */
 export interface MetaPatch {
-  readonly upserts: Map<string, unknown>;
+  readonly upserts: Map<string, JsonValue>;
   readonly deletes: readonly string[];
 }
 
@@ -118,7 +139,7 @@ export interface RpcErrorsForMeta {
  * cleared keys.
  */
 export interface MetaChanges {
-  readonly set: Readonly<Record<string, unknown>>;
+  readonly set: JsonObject;
   readonly removed: readonly string[];
 }
 
@@ -156,11 +177,11 @@ export class MetaValidationError extends Error {
  */
 export async function sanitizeMetaInput(
   findField: (key: string) => MetaBoxField | undefined,
-  input: MetaMap | undefined,
+  input: MetaInput | undefined,
   mode: FieldPipelineMode = "strict",
 ): Promise<MetaPatch | null> {
   if (input === undefined) return null;
-  const upserts = new Map<string, unknown>();
+  const upserts = new Map<string, JsonValue>();
   const deletes: string[] = [];
   const fieldErrors: MetaFieldError[] = [];
   for (const [key, rawValue] of Object.entries(input)) {
@@ -183,6 +204,11 @@ export async function sanitizeMetaInput(
       deletes.push(key);
       continue;
     }
+    // A `.sanitize()` callback returning `undefined` leaves nothing to write.
+    // The pre-#1817 path bound that `undefined` into the `json_set` update,
+    // which the driver rejects — skipping the key is that write minus the
+    // crash.
+    if (result.value === undefined) continue;
     assertEncodedSize(key, result.value);
     upserts.set(key, result.value);
   }
@@ -221,7 +247,7 @@ export function metaValidationConflict(
 
 export async function sanitizeMetaForRpc(
   findField: (key: string) => MetaBoxField | undefined,
-  input: MetaMap | undefined,
+  input: MetaInput | undefined,
   errors: RpcErrorsForMeta,
   mode: FieldPipelineMode = "strict",
 ): Promise<MetaPatch | null> {
@@ -262,9 +288,9 @@ export async function sanitizeMetaForRpc(
  */
 export async function validateAndPromoteMetaBag(
   fields: readonly MetaBoxField[],
-  bag: Readonly<Record<string, unknown>>,
-): Promise<Record<string, unknown>> {
-  const out: MetaMap = {};
+  bag: JsonObject,
+): Promise<JsonObject> {
+  const out: Record<string, JsonValue> = {};
   const owned = new Set<string>();
   const fieldErrors: MetaFieldError[] = [];
   for (const field of fields) {
@@ -274,7 +300,8 @@ export async function validateAndPromoteMetaBag(
     // driver hides would be lost on publish and gone when the driver flips
     // back.
     if (isConditionHidden(field, bag)) {
-      if (field.key in bag) out[field.key] = bag[field.key];
+      const stored = bag[field.key];
+      if (stored !== undefined) out[field.key] = stored;
       continue;
     }
     const result = await runFieldPipeline(field, bag[field.key], field.key);
@@ -283,7 +310,7 @@ export async function validateAndPromoteMetaBag(
       continue;
     }
     if (result.isDeletion === true) continue;
-    out[field.key] = result.value;
+    if (result.value !== undefined) out[field.key] = result.value;
   }
   for (const [key, value] of Object.entries(bag)) {
     if (!owned.has(key)) out[key] = value;
@@ -331,8 +358,12 @@ export async function validateMetaReferences(
         fieldMax(field),
       );
       // Normalize eagerly — a validation failure below aborts the whole
-      // save, so a rewritten patch never persists on the failure path.
-      patch.upserts.set(key, target.multiple ? ids : ids[0]);
+      // save, so a rewritten patch never persists on the failure path. A
+      // single-target ref always yields exactly one id (the id extractor
+      // throws rather than returning none), so the guard only narrows the
+      // index access.
+      const normalized = target.multiple ? ids : ids[0];
+      if (normalized !== undefined) patch.upserts.set(key, normalized);
       const group = upsertGroup(groups, target, registered);
       for (const id of ids) group.ids.add(id);
       group.contributions.push({ errorKey: key, ids });
@@ -745,15 +776,15 @@ function* fieldOccurrences(
  */
 export interface ResolvableBag {
   readonly findField: (key: string) => MetaBoxField | undefined;
-  readonly decoded: MetaMap;
+  readonly decoded: ResolvedMeta;
 }
 
 /** Single-bag convenience over {@link resolveMetaBags}. */
 export async function resolveMetaReferences(
   ctx: AppContext,
   findField: (key: string) => MetaBoxField | undefined,
-  decoded: MetaMap,
-): Promise<MetaMap> {
+  decoded: ResolvedMeta,
+): Promise<ResolvedMeta> {
   const [bag] = await resolveMetaBags(ctx, [{ findField, decoded }]);
   // resolveMetaBags returns one bag per input by construction.
   return bag ?? decoded;
@@ -774,16 +805,16 @@ type GroupResolution =
 export async function resolveMetaBags(
   ctx: AppContext,
   bags: readonly ResolvableBag[],
-): Promise<MetaMap[]> {
+): Promise<ResolvedMeta[]> {
   // Pass 1: shallow-copy each bag into its output slot, classify each
   // reference occurrence, and accumulate ids per `(kind, scope)`
   // group. Candidates carry their bag references so Pass 3 is a
   // straight walk with no findField / registry re-lookups.
   interface Candidate {
     /** The shallow output copy of the candidate's bag. */
-    readonly outBag: MetaMap;
+    readonly outBag: ResolvedMeta;
     /** The caller's original decoded bag (for lazy copy-on-write). */
-    readonly decoded: MetaMap;
+    readonly decoded: ResolvedMeta;
     /** Full path from the bag root to the reference slot. */
     readonly path: readonly PathSegment[];
     readonly multiple: boolean;
@@ -803,9 +834,9 @@ export async function resolveMetaBags(
   // treatment, so the single `referenceOccurrences` walk feeds both.
   // Every candidate carries its full path; Pass 3 rewrites the slot in a
   // per-path copy-on-write so callers' bags stay untouched.
-  const out: MetaMap[] = [];
+  const out: ResolvedMeta[] = [];
   for (const bag of bags) {
-    const outBag: MetaMap = { ...bag.decoded };
+    const outBag: ResolvedMeta = { ...bag.decoded };
     out.push(outBag);
     for (const occ of referenceOccurrences(
       Object.entries(bag.decoded),
@@ -1000,8 +1031,8 @@ function applyResolutionToSlot(
 // any segment's runtime shape doesn't match the declared structure
 // (hand-edited / migrated bags).
 function takeWritableSlot(
-  outBag: MetaMap,
-  decoded: MetaMap,
+  outBag: ResolvedMeta,
+  decoded: ResolvedMeta,
   path: readonly PathSegment[],
 ): {
   readonly parent: Record<string, unknown>;
@@ -1092,10 +1123,10 @@ function referenceCandidateIds(
  */
 export function decodeMetaBag(
   findField: (key: string) => MetaBoxField | undefined,
-  raw: Readonly<Record<string, unknown>> | null | undefined,
-): MetaMap {
+  raw: JsonObject | null | undefined,
+): ResolvedMeta {
   if (!raw) return {};
-  const out: MetaMap = {};
+  const out: ResolvedMeta = {};
   for (const [key, value] of Object.entries(raw)) {
     const field = findField(key);
     out[key] = field ? decodeFieldValue(field, value) : value;
@@ -1219,12 +1250,12 @@ export async function loadMeta(
   idColumn: SQLiteColumn,
   id: number,
   findField: (key: string) => MetaBoxField | undefined,
-): Promise<MetaMap> {
+): Promise<ResolvedMeta> {
   const [row] = (await ctx.db
     .select({ meta: table.meta })
     .from(table as never)
     .where(eq(idColumn, id))) as { meta: unknown }[];
-  return decodeMetaBag(findField, row?.meta as MetaMap | undefined);
+  return decodeMetaBag(findField, row?.meta as JsonObject | undefined);
 }
 
 // --- internals below ---------------------------------------------------

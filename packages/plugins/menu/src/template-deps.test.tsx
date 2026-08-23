@@ -81,7 +81,7 @@ async function seedMenuItem(
     authorId: b.authorId,
     parentId: null,
     sortOrder: index,
-    meta: meta as unknown as Record<string, unknown>,
+    meta,
   });
   await entryTermFactory
     .transient({ db: b.db })
@@ -222,7 +222,7 @@ describe("@plumix/plugin-menu — end-to-end SSR", () => {
       title: "Home",
       status: "published",
       authorId: author.id,
-      meta: { kind: "custom", url: "/" } as unknown as Record<string, unknown>,
+      meta: { kind: "custom", url: "/" },
     });
     await h.factory.entryTerm.create({
       entryId: menuItem.id,

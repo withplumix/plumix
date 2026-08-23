@@ -110,7 +110,7 @@ async function seedItem(
     status: "published",
     authorId: b.user.id,
     sortOrder: 0,
-    meta: { kind: "custom", url } as unknown as Record<string, unknown>,
+    meta: { kind: "custom", url },
   });
   await entryTermFactory
     .transient({ db: b.db })
@@ -167,10 +167,7 @@ describe("menu hook surface", () => {
         status: "published",
         authorId: b.user.id,
         sortOrder: 0,
-        meta: { kind: "custom", url: "/p" } as unknown as Record<
-          string,
-          unknown
-        >,
+        meta: { kind: "custom", url: "/p" },
       });
       await entryTermFactory
         .transient({ db: b.db })
@@ -183,10 +180,7 @@ describe("menu hook surface", () => {
         authorId: b.user.id,
         parentId: parent.id,
         sortOrder: 0,
-        meta: { kind: "custom", url: "/p/c" } as unknown as Record<
-          string,
-          unknown
-        >,
+        meta: { kind: "custom", url: "/p/c" },
       });
       await entryTermFactory
         .transient({ db: b.db })

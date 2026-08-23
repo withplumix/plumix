@@ -2,6 +2,7 @@ import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
+import type { WithResolvedMeta } from "../rpc/meta/core.js";
 import type { PublicAuthor, PublicEntry, PublicTerm } from "./schemas.js";
 import { eq, inArray } from "../db/index.js";
 import { entryTerm } from "../db/schema/entry_term.js";
@@ -49,7 +50,7 @@ function projectMeta(
  * shape is pinned to `publicEntrySchema`, the surface's documented contract.
  */
 export function projectEntry(
-  entry: Entry,
+  entry: WithResolvedMeta<Entry>,
   author: PublicAuthor | null,
   termsByTaxonomy: Record<string, PublicTerm[]>,
   visibleMetaKeys: Set<string>,

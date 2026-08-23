@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import type { JsonObject } from "../../../json.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { deleteAutosave, getAutosave } from "../../../revisions/repository.js";
@@ -123,9 +124,7 @@ export const publish = base
 // if a third consumer appears.
 const SNAPSHOT_META_KEY = "__plumix_snapshot";
 
-function stripSnapshotEnvelope(
-  meta: Readonly<Record<string, unknown>>,
-): Record<string, unknown> {
+function stripSnapshotEnvelope(meta: JsonObject): JsonObject {
   const next = { ...meta };
   delete next[SNAPSHOT_META_KEY];
   return next;

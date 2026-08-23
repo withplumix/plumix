@@ -123,7 +123,7 @@ describe("getMenuByName", () => {
         authorId,
         parentId: input.parentId ?? null,
         sortOrder: input.sortOrder ?? index,
-        meta: input.meta as unknown as Record<string, unknown>,
+        meta: input.meta,
       });
       await entryTermFactory
         .transient({ db })
@@ -518,7 +518,7 @@ describe("getMenuByName", () => {
       title: "private-target",
       status: "published",
       authorId,
-      meta: { kind: "custom", url: "/x" } as unknown as Record<string, unknown>,
+      meta: { kind: "custom", url: "/x" },
     });
     const termId = await seedMenu("private-link");
     await seedItems(termId, [

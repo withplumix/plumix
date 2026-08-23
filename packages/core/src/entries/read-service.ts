@@ -3,6 +3,7 @@ import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import type { AppContext } from "../context/app.js";
 import type { SQL } from "../db/index.js";
 import type { Entry, EntryStatus } from "../db/schema/entries.js";
+import type { WithResolvedMeta } from "../rpc/meta/core.js";
 import type {
   EntryGetInput,
   EntryListInput,
@@ -47,8 +48,7 @@ export async function readEntryType(
   });
 }
 
-type EntryRead = Omit<Entry, "meta"> & {
-  readonly meta: Record<string, unknown>;
+type EntryRead = WithResolvedMeta<Entry> & {
   readonly terms: Record<string, number[]>;
 };
 
@@ -62,7 +62,7 @@ type EntryRead = Omit<Entry, "meta"> & {
 export async function listEntries(
   ctx: AppContext,
   input: EntryListInput,
-): Promise<readonly Entry[]> {
+): Promise<readonly WithResolvedMeta<Entry>[]> {
   const type = input.type ?? "post";
   if (isReservedType(type)) throw EntryReadError.reservedType(type);
   const readCapability = entryCapability(type, "read");

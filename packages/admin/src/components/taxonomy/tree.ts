@@ -1,4 +1,7 @@
-import type { Term } from "@plumix/core/schema";
+import type { WithResolvedMeta } from "@plumix/core";
+import type { Term as StoredTerm } from "@plumix/core/schema";
+
+type Term = WithResolvedMeta<StoredTerm>;
 
 /**
  * Hierarchical-taxonomy helpers. WordPress renders hierarchical term

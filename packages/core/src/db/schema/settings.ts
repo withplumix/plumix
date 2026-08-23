@@ -12,6 +12,10 @@ export const settings = sqliteTable(
   (t) => ({
     group: t.text().notNull(),
     key: t.text().notNull(),
+    // Not `JsonValue`, unlike the `meta` columns: a settings value arrives
+    // straight off `settings.upsert` without passing the field pipeline, so
+    // nothing has proved its shape. Retyping it, and the `settings.get` /
+    // `settings.upsert` bags it feeds, waits on that gate.
     value: t.text({ mode: "json" }).$type<unknown>(),
   }),
   (table) => [primaryKey({ columns: [table.group, table.key] })],

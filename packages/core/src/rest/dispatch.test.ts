@@ -2,6 +2,7 @@ import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
+import type { JsonObject } from "../json.js";
 import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
@@ -653,7 +654,7 @@ describe("REST API — term resources", () => {
 describe("REST API — meta visibility (default-deny)", () => {
   async function seedWithMeta(
     h: DispatcherHarness,
-    meta: Record<string, unknown>,
+    meta: JsonObject,
   ): Promise<number> {
     const author = await h.factory.user.create({ role: "author" });
     const entry = await h.factory.entry.create({

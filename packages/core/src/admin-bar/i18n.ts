@@ -13,6 +13,8 @@ import { messages as enMessages } from "@plumix/core/locales/admin-bar-en";
 import { messages as ukMessages } from "@plumix/core/locales/admin-bar-uk";
 import { messages as zhCnMessages } from "@plumix/core/locales/admin-bar-zh-CN";
 
+import type { ResolvedMeta } from "../rpc/meta/core.js";
+
 export type BarLocale = "en" | "de" | "uk" | "ar" | "zh-CN";
 
 type CompiledCatalog = Record<string, string | readonly string[]>;
@@ -70,7 +72,7 @@ const KNOWN: ReadonlySet<string> = new Set(Object.keys(CATALOGS));
  * Fold this into `resolveLocale` and per-user bar localization breaks.
  */
 export function resolveBarLocale(user: {
-  readonly meta: Record<string, unknown>;
+  readonly meta: ResolvedMeta;
 }): BarLocale {
   const stored = user.meta.locale;
   if (typeof stored === "string" && KNOWN.has(stored)) {

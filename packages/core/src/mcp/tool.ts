@@ -1,6 +1,7 @@
 import type { GenericSchema, InferOutput } from "valibot";
 
 import type { AppContext } from "../context/app.js";
+import type { JsonObject } from "../json.js";
 
 /**
  * One MCP tool: a name, a description, a valibot input schema authored once
@@ -16,6 +17,6 @@ export interface McpTool<TSchema extends GenericSchema = GenericSchema> {
    * Hand-written JSON Schema override for inputs the valibot converter can't
    * render faithfully. When set, it replaces the projected schema verbatim.
    */
-  readonly jsonSchema?: Record<string, unknown>;
+  readonly jsonSchema?: JsonObject;
   run(ctx: AppContext, input: InferOutput<TSchema>): unknown;
 }

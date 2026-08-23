@@ -2,6 +2,7 @@ import { and, desc, eq, gte, inArray, like, lt, ne } from "drizzle-orm";
 
 import type { Db } from "../context/app.js";
 import type { Entry, EntryContent } from "../db/schema/entries.js";
+import type { JsonObject } from "../json.js";
 import { isUniqueConstraintError } from "../db/errors.js";
 import { entries } from "../db/schema/entries.js";
 import { RevisionRepositoryError } from "./errors.js";
@@ -163,7 +164,7 @@ interface UpsertAutosaveInput {
     readonly title: string;
     readonly content: EntryContent | null;
     readonly excerpt: string | null;
-    readonly meta: Readonly<Record<string, unknown>>;
+    readonly meta: JsonObject;
   };
 }
 

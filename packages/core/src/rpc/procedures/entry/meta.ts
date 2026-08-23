@@ -1,6 +1,7 @@
 import type { AppContext } from "../../../context/app.js";
+import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
-import type { MetaPatch } from "../../meta/core.js";
+import type { MetaInput, MetaPatch, ResolvedMeta } from "../../meta/core.js";
 import type { FieldPipelineMode } from "../../meta/field-pipeline.js";
 import { entries } from "../../../db/schema/entries.js";
 import {
@@ -27,7 +28,7 @@ export type { MetaChanges as EntryMetaChanges } from "../../meta/core.js";
 export async function sanitizeMetaForRpc(
   registry: PluginRegistry,
   entryType: string,
-  input: Record<string, unknown> | undefined,
+  input: MetaInput | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
   mode: FieldPipelineMode = "strict",
 ): Promise<MetaPatch | null> {
@@ -115,7 +116,7 @@ export async function validateEntryMetaReferences(
 export async function sanitizeAndValidateEntryMeta(
   ctx: AppContext,
   entryType: string,
-  input: Record<string, unknown> | undefined,
+  input: MetaInput | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2] &
     Parameters<typeof assertEntryMetaCapabilities>[4],
   mode: FieldPipelineMode = "strict",
@@ -148,9 +149,9 @@ export async function sanitizeAndValidateEntryMeta(
 export async function sanitizePromotedEntryMeta(
   ctx: AppContext,
   entryType: string,
-  bag: Readonly<Record<string, unknown>>,
+  bag: JsonObject,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
-): Promise<Record<string, unknown>> {
+): Promise<JsonObject> {
   const fields = listEntryMetaFields(ctx.plugins, entryType).filter(
     (field) => !field.capability || ctx.auth.can(field.capability),
   );
@@ -172,8 +173,8 @@ export async function sanitizePromotedEntryMeta(
 export async function resolveEntryMeta(
   ctx: AppContext,
   entry: { readonly type: string },
-  raw: Readonly<Record<string, unknown>> | null | undefined,
-): Promise<Record<string, unknown>> {
+  raw: JsonObject | null | undefined,
+): Promise<ResolvedMeta> {
   const [bag] = await resolveEntriesMeta(ctx, [
     { type: entry.type, meta: raw },
   ]);
@@ -189,9 +190,9 @@ export async function resolveEntriesMeta(
   ctx: AppContext,
   rows: readonly {
     readonly type: string;
-    readonly meta: Readonly<Record<string, unknown>> | null | undefined;
+    readonly meta: JsonObject | null | undefined;
   }[],
-): Promise<Record<string, unknown>[]> {
+): Promise<ResolvedMeta[]> {
   return resolveMetaBagsCore(
     ctx,
     rows.map((row) => {
@@ -205,7 +206,7 @@ export async function resolveEntriesMeta(
 export async function loadEntryMeta(
   ctx: AppContext,
   entry: { readonly id: number; readonly type: string },
-): Promise<Record<string, unknown>> {
+): Promise<ResolvedMeta> {
   const decoded = await loadMeta(ctx, entries, entries.id, entry.id, (key) =>
     findEntryMetaField(ctx.plugins, entry.type, key),
   );

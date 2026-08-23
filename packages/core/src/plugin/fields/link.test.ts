@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { JsonValue } from "../../json.js";
 import type { LinkValue } from "./index.js";
 import { decodeMetaBag, sanitizeMetaInput } from "../../rpc/meta/core.js";
 import { link } from "./index.js";
@@ -60,14 +61,24 @@ describe("link server validation and round-trip", () => {
   const field = link("cta").build();
   const findField = (key: string) => (key === "cta" ? field : undefined);
 
-  async function write(value: unknown): Promise<unknown> {
+  async function write(value: unknown): Promise<JsonValue | undefined> {
     const patch = await sanitizeMetaInput(findField, { cta: value });
     return patch?.upserts.get("cta");
   }
 
+  // Same write, for the round-trip cases that then decode what was stored —
+  // an absent upsert is the test failing, not a value to decode.
+  async function writeStored(value: unknown): Promise<JsonValue> {
+    const stored = await write(value);
+    if (stored === undefined) {
+      throw new Error("writeStored: no upsert for cta");
+    }
+    return stored;
+  }
+
   test("a full link value round-trips through write and read", async () => {
     const value = { url: "https://example.com/x", label: "Go", newTab: true };
-    const stored = await write(value);
+    const stored = await writeStored(value);
     expect(stored).toEqual(value);
     expect(decodeMetaBag(findField, { cta: stored })).toEqual({ cta: value });
   });

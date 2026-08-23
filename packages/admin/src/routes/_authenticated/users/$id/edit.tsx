@@ -44,8 +44,9 @@ import {
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
+import type { WithResolvedMeta } from "@plumix/core";
 import type { UserMetaBoxManifestEntry } from "@plumix/core/manifest";
-import type { User, UserRole } from "@plumix/core/schema";
+import type { User as StoredUser, UserRole } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Badge } from "@plumix/admin-ui/badge";
 import { Button } from "@plumix/admin-ui/button";
@@ -83,6 +84,8 @@ import {
   USER_ROLES,
   USERS_LIST_DEFAULT_SEARCH,
 } from "../-constants.js";
+
+type User = WithResolvedMeta<StoredUser>;
 
 // Descriptors needed outside their natural `<Trans>` callsite — pending
 // / error component aria labels, state setters, `mapUserError` fallbacks.

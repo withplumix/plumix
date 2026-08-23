@@ -2,6 +2,7 @@ import { inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
+import type { JsonValue } from "../../../json.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { users } from "../../../db/schema/users.js";
@@ -212,7 +213,7 @@ export const restore = base
       // Strip the snapshot envelope from the revision's meta bag
       // before the autosave write — `upsertAutosave` re-encodes its
       // own envelope from the live row's current slug + parentId.
-      const cleanedMeta: Record<string, unknown> = { ...revision.meta };
+      const cleanedMeta: Record<string, JsonValue> = { ...revision.meta };
       delete cleanedMeta[SNAPSHOT_META_KEY];
       const autosave = await repoUpsertAutosave(context.db, {
         entry: live,
@@ -245,7 +246,7 @@ export const restore = base
       },
     });
 
-    const snapshotMeta: Record<string, unknown> = { ...revision.meta };
+    const snapshotMeta: Record<string, JsonValue> = { ...revision.meta };
     const decodedEnvelope = decodeSnapshotEnvelope(snapshotMeta);
     delete snapshotMeta[SNAPSHOT_META_KEY];
 

@@ -1,7 +1,10 @@
 import type { MultiSelectOption } from "@/components/form/multi-select.js";
 import { buildTermTree, flattenTree } from "@/components/taxonomy/tree.js";
 
-import type { Term } from "@plumix/core/schema";
+import type { WithResolvedMeta } from "@plumix/core";
+import type { Term as StoredTerm } from "@plumix/core/schema";
+
+type Term = WithResolvedMeta<StoredTerm>;
 
 /**
  * Narrow a term-id bag (`{ category: [3, 7], tag: [12] }`) to the set
