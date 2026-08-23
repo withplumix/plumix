@@ -6,6 +6,14 @@ against, and that page briefs cite as their source. Taken from the repository at
 Every entry records where it lives. Counts are exact at the time of writing and will drift; the
 groupings are the durable part.
 
+> **Corrected 2026-08-23.** Several counts here were taken by sweeping names rather than by reading
+> the declaration that owns them, and were wrong in ways the groupings around them were not — the
+> lists were right where the totals were not, and in a few places names from an adjacent namespace
+> were swept in. Every figure below has now been re-read from source at the same `plumix@0.14.0`
+> surface, and the sections that changed say what moved. The seventeen rosters are bound to source
+> in `apps/docs/src/content-checks/rosters.ts` (#1860), which is authoritative for a roster's
+> membership from here on; this file is the wider enumeration around them. See #1881.
+
 ---
 
 ## 0. What ships, and what a reader may import
@@ -41,7 +49,7 @@ be right about which track it is on.
 
 ---
 
-## 1. Public entry points — 33 subpaths on the `plumix` façade
+## 1. Public entry points — 34 subpaths on the `plumix` façade
 
 Source: `packages/plumix/package.json` `exports`, barrels under `packages/plumix/src/`.
 
@@ -66,15 +74,16 @@ Source: `packages/plumix/package.json` `exports`, barrels under `packages/plumix
 scaffolder and the Vite plugin: `plumix/blocks/island-runtime`, `plumix/blocks/island-renderer`,
 `plumix/core/dev-client`, `plumix/editor-runtime`, `plumix/db/libsql`.
 
-**Admin shared-runtime shims — 13 subpaths**, all under `plumix/admin/*`: `react`,
+**Admin shared-runtime shims — 15 subpaths**, all under `plumix/admin/*`: `react`,
 `react-jsx-runtime`, `react-dom`, `react-dom-client`, `react-query`, `react-router`,
 `orpc-client`, `orpc-client-fetch`, `orpc-tanstack-query`, `lingui-core`, `lingui-react`, `radix`,
 `sonner`, `tailwind-merge`, `ui`. These exist so plugin admin chunks share the admin's singletons
 rather than bundling their own copies; the plugin-chunk bundler rewrites bare specifiers to them.
 
-> **Documentation judgement this enables, not makes:** thirteen of thirty-three subpaths are a
-> single mechanism. Whether they are thirteen roster rows or one page about the shared admin
-> runtime is a page-brief question, not an inventory one.
+> **Documentation judgement this enables, not makes:** fifteen of thirty-four subpaths are a
+> single mechanism. Whether they are fifteen roster rows or one page about the shared admin
+> runtime is a page-brief question, not an inventory one. Bare `plumix/admin` is a sixteenth
+> subpath under that prefix and is not one of the shims.
 
 ---
 
@@ -110,13 +119,13 @@ Source: `packages/core/src/db/schema/`, `packages/core/src/plugin/registry.ts`.
 **Statuses — 4**, closed set: `draft`, `published`, `scheduled`, `trash`
 (`db/schema/entries.ts:8`).
 
-**Entry-type options — ~25** on `EntryTypeOptions` (`plugin/registry.ts:119`): `label`, `labels`,
+**Entry-type options — 21** on `EntryTypeOptions` (`plugin/registry.ts:119`): `label`, `labels`,
 `description`, `supports`, `termTaxonomies`, `isHierarchical`, `isPublic`, `showUI`,
 `showInSidebar`, `excludeFromGenericRpc`, `excludeFromSearch`, `hasArchive`, `rewrite.{slug,
 isHierarchical}`, `capabilityType`, `capabilities`, `priority`, `menuIcon`, `keywords`,
 `versioning.{maxRevisions, autosaveIntervalSeconds}`, `archivePerPage`, `access`.
 
-**Entry-type labels — 27 slots** (`EntryTypeLabels`, `plugin/registry.ts:55`): `singular`, `plural`,
+**Entry-type labels — 28 slots** (`EntryTypeLabels`, `plugin/registry.ts:55`): `singular`, `plural`,
 `addNew`, `addNewItem`, `editItem`, `newItem`, `viewItem`, `viewItems`, `searchItems`, `notFound`,
 `notFoundInTrash`, `loadingItems`, `loadErrorItems`, `allItems`, `noMatch`, `parentItem`,
 `parentItemColon`, `untitledItem`, `moveToTrash`, `itemUpdated`, `itemPublished`,
@@ -174,8 +183,14 @@ Source: `packages/blocks/src/`.
 
 **Core blocks — 17** (`core-blocks.ts`): `rich-text`, `separator`, `code`, `group`, `section`,
 `columns`, `column`, `button`, `details`, `video`, `embed`, `table`, `table-header-row`,
-`table-body-row`, `table-header-cell`, `table-cell`, `pattern-ref`. Plus `html`, which is
-operator-gated behind `config.blocks.htmlAllowlist` and ships separately.
+`table-body-row`, `table-header-cell`, `table-cell`, `pattern-ref`.
+
+**Flag: `core/html` is not reachable.** `htmlBlock` is defined and exported from `@plumix/blocks`,
+but it is absent from `coreBlocks`, nothing in the repository registers it, and `plumix/blocks`
+does not re-export it — so registering it means importing from a package the docs tell readers not
+to import. `config.blocks.htmlAllowlist` is the sanitiser allowlist the block reads at render time,
+not a gate on its registration. Either it gets a façade export or a page has to say plainly that it
+is unavailable; today the roster is seventeen and `core/html` is not one of them.
 
 **Marks — 13** (`marks/core/`): `bold`, `italic`, `underline`, `strike`, `code`, `link`, `abbr`,
 `cite`, `highlight`, `kbd`, `small`, `subscript`, `superscript`.
@@ -230,17 +245,27 @@ Source: `packages/core/src/theme.ts`, `template.ts`, `route/render/template-buil
 
 **Entry points:** `defineTheme`, `defineTemplate`.
 
-**Template builders — 19** (`template-builders.ts`): `entry`, `archive`, `author`, `date`,
-`taxonomy`, `search`, `frontPage`, `notFound`, `serverError`, `fallback`, `forEntryType`,
-`forTermTaxonomy`, `forArchiveType`, `forAuthor`, `forDate`, `templateRules`,
-`collectNamedTemplates`, `NAMED_TEMPLATE_META_KEY`, plus `NamedTemplateChoice`.
+**Template builders — 16**, counting `defineTemplate` and the rules that wrap it. Ten generic
+tiers (`template-builders.ts`), one per `GenericTier`: `fallback`, `entry`, `archive`, `taxonomy`,
+`author`, `date`, `frontPage`, `search`, `notFound`, `serverError`. Five targeted matchers:
+`forEntryType`, `forTermTaxonomy`, `forAuthor`, `forDate`, `forArchiveType`.
 
-**Template-data guards — 10** (`theme.ts`): `isEntry`, `isArchive`, `isAuthor`, `isDate`,
-`isTaxonomy`, `isSearch`, `isFrontPage`, `isError`, `isCustom`, and `isCurrentSource`.
+The same module also exports `templateRules`, `collectNamedTemplates`, `NAMED_TEMPLATE_META_KEY`
+and `NamedTemplateChoice`. Those are the resolver's own machinery and a metadata key, not builders
+a theme author calls, which is why the earlier count of 19 overshot.
 
-**Template-data shapes — 13** (`route/render/resolved-entry.ts`): `EntryData`, `ArchiveData`,
-`AuthorArchiveData`, `DateArchiveData`, `CustomArchiveData`, `TaxonomyData`, `SearchData`,
-`FrontPageData`, `ErrorData`, `Pagination`, `ResolvedEntry`, `ResolvedTerm`, `ResolvedAuthor`.
+**Template-data guards — 9** (`theme.ts`), one per shape: `isEntry`, `isArchive`, `isTaxonomy`,
+`isAuthor`, `isDate`, `isCustom`, `isFrontPage`, `isSearch`, `isError`. `isCurrentSource`
+(`route/current.ts`) is a different predicate over a different type and is not one of them.
+
+**Template-data shapes — 9**, the members of the `TemplateData` union (`theme.ts`), declared in
+`route/render/resolved-entry.ts`: `EntryData`, `ArchiveData`, `TaxonomyData`, `AuthorArchiveData`,
+`DateArchiveData`, `CustomArchiveData`, `FrontPageData`, `SearchData`, `ErrorData`. `Pagination`,
+`ResolvedEntry`, `ResolvedTerm` and `ResolvedAuthor` sit in the same file and are the types those
+shapes are built from — supporting types, not shapes a template receives.
+
+Guards and shapes pair one-to-one; the earlier 10-and-13 split implied an asymmetry that is not
+there.
 
 **Document manifest:** `DocumentManifest`, `DocumentMeta`, `DocumentLink`, `DocumentScript`.
 
@@ -261,7 +286,7 @@ Source: `packages/core/src/auth/`, `packages/core/src/access/`.
 **Roles — 5, ordered** (`db/schema/users.ts:5`): `subscriber` → `contributor` → `author` →
 `editor` → `admin`. `STAFF_MIN_ROLE` is `contributor`; `subscriber` is the theme-only visitor tier.
 
-**Core capabilities — 18** (`auth/rbac.ts:58`), each mapped to a minimum role:
+**Core capabilities — 17** (`auth/rbac.ts:58`), each mapped to a minimum role:
 `entry:post:{read, create, edit_own, publish, edit_any, delete, read_revisions,
 restore_revision}`, `user:{list, edit_own, create, edit, promote, delete, manage_tokens}`,
 `plugin:manage`, `settings:manage`.
@@ -303,26 +328,46 @@ Supporting modules: `plugin/define.ts`, `register.ts`, `setup-context.ts` (881 l
 `manifest-projection.ts` (1,738 lines), `lookup.ts`, `provides-context.ts`, `errors.ts` (883
 lines), `validation/`.
 
-### Hooks — 124 names across 22 families
+### Hooks — 105 names across 17 families
 
 Sources: `declare module "plumix"` blocks throughout `packages/core/src` and
 `packages/plugins/*/src`. Split across `FilterRegistry` and `ActionRegistry`
 (`core/src/hooks/types.ts`), anchored into the published declaration graph by
 `core/src/hooks/public-hooks.ts`.
 
-| Family | Count | | Family | Count |
-| --- | --- | --- | --- | --- |
-| `rpc:*` | 38 | | `seo:*` | 3 |
-| `entry:*` | 21 | | `menu:*` | 3 |
-| `user:*` | 17 | | `credential:*` | 3 |
-| `term:*` | 10 | | `settings:*` | 2 |
-| `resolve:*` | 6 | | `error_page:*` | 2 |
-| `comment:*` | 5 | | `device_code:*` | 2 |
-| `block:*` | 2 | | `api_token:*` | 2 |
-| `theme:*`, `session:*`, `plugin:*`, `og:*`, `debug_bar:*`, `blocks:*`, `admin_bar:*`, `admin:*` | 1 each | | | |
+Enumerating those two interfaces gives **116 names** in the repository. The documentable set is
+**105** — 59 filters and 46 actions — after removing two groups that belong elsewhere:
+
+- **8 plugin-owned**, which the plugin's own page documents: `comment:*` (5, `plugin-comments`)
+  and `menu:*` (3, `plugin-menu`).
+- **3 dev-only**, outside the closure `hooks/public-hooks.ts` anchors, so a plugin author cannot
+  type against them either: `debug_bar:panels`, `error_page:panels`, `error_page:hints`.
+
+| Family | Count | Notes |
+| --- | --- | --- |
+| `rpc:*` | 40 | Filters only — `:input` and `:output` per procedure. |
+| `entry:*` | 25 | 2 filters, 23 actions. Each event fires per-type and generic. |
+| `user:*` | 10 | Actions: lifecycle plus the auth events. |
+| `resolve:*` | 7 | Filters over resolved route data. |
+| `term:*` | 4 | Actions. |
+| `seo:*` | 3 | Filters. |
+| `credential:*` | 3 | Actions. |
+| `block:*` | 2 | Filters, around block render. |
+| `api_token:*` | 2 | Actions. |
+| `device_code:*` | 2 | Actions. |
+| `admin_bar:*`, `admin:*`, `blocks:*`, `render:*`, `theme:*`, `session:*`, `settings:*` | 1 each | 7 families, 7 names. |
 
 `rpc:*` is the largest family by far and is mechanical — every procedure gets an `:input` and an
 `:output` filter. That regularity is a roster-shaping fact.
+
+**Why the earlier figures were higher.** The first pass swept names by prefix rather than reading
+the registries, so it collected names that look like hooks and are not. `plugin:*` is a capability
+(`plugin:manage`, `auth/rbac.ts`) and `og:*` are OpenGraph meta properties
+(`seo/head-defaults.ts`) — neither appears in a hook registry, and both were counted as families.
+`user:*` read 17 because the seven `user:*` capabilities sat alongside the ten `user:*` hooks, and
+`term:*` inflated the same way. `entry:*` moved the other way and was undercounted: each entry
+event fires twice, once per-type and once generic, and both spellings are names a plugin author
+picks between.
 
 **Type augmentation:** every registry is extended through the single specifier
 `declare module "plumix"`. Mixing specifiers fractures the augmentation; the rule is
@@ -352,7 +397,10 @@ gate, the runtime's `edge()` owns the Cache API and purge.
 
 **SEO** (`core/src/seo/`): canonical URLs and canonical redirects, sitemap plus its cache and
 invalidator, feeds and feed routes, `robots.txt`, head defaults, site settings, XML emission.
-Filters: `seo:meta_tags`, `seo:sitemap:urls`, `seo:feed:items`, `og:title`.
+Filters — three, and these are all of them: `seo:sitemap:urls`, `seo:feed:items` and
+`seo:robots-txt`. The head itself is shaped by `render:document`, which is not in this family.
+(`seo:meta_tags` and `og:title` were listed here before and are not hooks: the first does not
+exist, the second is an OpenGraph property name emitted by `seo/head-defaults.ts`.)
 
 **Telemetry** (`core/src/telemetry-otel.ts`, `context/`): consumers registered in config,
 head-sampled per request; `traceDbQuery` / `traceDbBatch` for runtime adapters; `ctx.memo` and
@@ -367,9 +415,12 @@ error overlay, browser-errors-to-terminal forwarding, `installDevClient`,
 `renderDevBootErrorResponse`, the debug bar and its `debug_bar:panels` filter. Internal prose:
 `docs/dev-errors.md`.
 
-**CLI** (`packages/plumix/src/cli/`): commands `dev`, `build`, `migrate`, `doctor`, `help`; global
-flags `--config`, `--cwd`, `--verbose`, `--version`/`-v`, `--help`/`-h`. Runtimes extend the command
-set through `commandsModule` and `runtimeMigrate`.
+**CLI** (`packages/plumix/src/cli/`): **7 commands** — `migrate`, `doctor` and `i18n` built in
+(`BUILT_IN_COMMANDS`, `cli/index.ts`), and `dev`, `build`, `deploy` and `types` contributed by the
+runtime adapter (`runtimes/cloudflare/src/commands/index.ts`). **5 global flags**, as `formatHelp`
+prints them: `--config`, `--cwd`, `--verbose`, `--help`/`-h`, `--version`/`-v`. `help` is a flag,
+not a command. Runtimes extend the command set through `commandsModule` and `runtimeMigrate`, so
+the four adapter commands are what Cloudflare contributes rather than a fixed part of the CLI.
 
 **Scaffolder** (`packages/create-plumix-app`): base + addon string assembly; plugins self-describe
 through a `plumix.scaffold` key.
