@@ -1,29 +1,19 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
+import type { RpcStub } from "../../../../test/rpc.js";
 import type { LookupItem } from "./types.js";
+import { settleRpc, stubRpc } from "../../../../test/rpc.js";
+import { useLookupSearch } from "./use-lookup-search.js";
 
-// Control the `lookup.list` RPC from the test: `queryOptions` returns a
-// queryFn that defers to `listMock`, so each test scripts the response
-// and inspects the exact `input` the hook assembled.
-const listMock = vi.fn<(input: unknown) => Promise<{ items: LookupItem[] }>>();
-vi.mock("@/lib/orpc.js", () => ({
-  orpc: {
-    lookup: {
-      list: {
-        queryOptions: ({ input }: { readonly input: unknown }) => ({
-          queryKey: ["lookup.list", input],
-          queryFn: () => listMock(input),
-        }),
-      },
-    },
-  },
-}));
-
-// Imported after the mock so the hook's `orpc` binding is the stub.
-const { useLookupSearch } = await import("./use-lookup-search.js");
+// The hook talks to `lookup.list` through the admin's real oRPC client; the
+// stub answers at the fetch boundary, so `rpc.calls` holds the exact input the
+// hook assembled and put on the wire.
+function stubLookup(items: readonly LookupItem[] = []): RpcStub {
+  return stubRpc({ "lookup/list": () => ({ items }) });
+}
 
 function wrapper({ children }: { children: ReactNode }): ReactNode {
   const client = new QueryClient({
@@ -32,28 +22,26 @@ function wrapper({ children }: { children: ReactNode }): ReactNode {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-beforeEach(() => {
-  listMock.mockResolvedValue({ items: [] });
-});
-
 afterEach(() => {
-  vi.clearAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("useLookupSearch", () => {
-  test("does not fetch while disabled", () => {
+  test("does not fetch while disabled", async () => {
+    const rpc = stubLookup();
     const { result } = renderHook(
       () => useLookupSearch({ kind: "user", enabled: false }),
       { wrapper },
     );
-    expect(listMock).not.toHaveBeenCalled();
+    await settleRpc();
+    expect(rpc.calls).toEqual([]);
     expect(result.current.items).toEqual([]);
     expect(result.current.isLoading).toBe(false);
   });
 
   test("fetches when enabled and exposes the returned items", async () => {
     const rows: LookupItem[] = [{ id: "1", label: "Ada" }];
-    listMock.mockResolvedValue({ items: rows });
+    const rpc = stubLookup(rows);
     const { result } = renderHook(
       () =>
         useLookupSearch({
@@ -63,39 +51,45 @@ describe("useLookupSearch", () => {
         }),
       { wrapper },
     );
-    await waitFor(() => expect(result.current.items).toEqual(rows));
-    expect(listMock).toHaveBeenCalledWith({
+    await waitFor(() => {
+      expect(result.current.items).toEqual(rows);
+    });
+    expect(rpc.lastCallTo("lookup/list")?.input).toEqual({
       kind: "user",
-      query: undefined,
       scope: { roles: ["admin"] },
       limit: 20,
     });
   });
 
   test("trims the query and drops a blank one to undefined", async () => {
+    const rpc = stubLookup();
     const { result } = renderHook(
       () => useLookupSearch({ kind: "entry", enabled: true }),
       { wrapper },
     );
-    await waitFor(() => expect(listMock).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(rpc.calls.length).toBe(1);
+    });
 
     act(() => {
       result.current.setQuery("  hello  ");
     });
-    await waitFor(() =>
-      expect(listMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({ query: "hello" }),
-      ),
-    );
+    await waitFor(() => {
+      expect(rpc.lastCallTo("lookup/list")?.input).toMatchObject({
+        query: "hello",
+      });
+    });
     expect(result.current.query).toBe("  hello  ");
 
     act(() => {
       result.current.setQuery("   ");
     });
-    await waitFor(() =>
-      expect(listMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({ query: undefined }),
-      ),
-    );
+    await waitFor(() => {
+      expect(rpc.calls.length).toBe(3);
+    });
+    expect(rpc.lastCallTo("lookup/list")?.input).toEqual({
+      kind: "entry",
+      limit: 20,
+    });
   });
 });

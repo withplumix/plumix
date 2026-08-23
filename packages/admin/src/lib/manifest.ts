@@ -82,27 +82,42 @@ function normalize(value: unknown): PlumixManifest {
   return result;
 }
 
-const manifest: PlumixManifest = readManifest();
+// Parsed once, on first read rather than at module load: the manifest
+// `<script>` is written by the admin shell, and a module imported before that
+// element exists would otherwise cache an empty snapshot forever.
+let snapshot: PlumixManifest | undefined;
 
-export function getThemeTokens(source: PlumixManifest = manifest): ThemeTokens {
+function currentManifest(): PlumixManifest {
+  return (snapshot ??= readManifest());
+}
+
+/** @internal Test-only. Drops the parsed snapshot so the next read picks up a
+ *  freshly written `<script>` payload. */
+export function _resetManifest(): void {
+  snapshot = undefined;
+}
+
+export function getThemeTokens(
+  source: PlumixManifest = currentManifest(),
+): ThemeTokens {
   return source.tokens ?? {};
 }
 
 export function getThemeBreakpoints(
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): ThemeBreakpoints {
   return source.breakpoints ?? DEFAULT_BREAKPOINTS;
 }
 
 export function getPatterns(
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly PatternManifestEntry[] {
   return source.patterns ?? [];
 }
 
 export function findEntryTypeBySlug(
   slug: string,
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): EntryTypeManifestEntry | undefined {
   return (source.entryTypes ?? []).find((pt) => pt.adminSlug === slug);
 }
@@ -115,7 +130,7 @@ export function findEntryTypeBySlug(
  */
 export function findEntryTypeByName(
   name: string,
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): EntryTypeManifestEntry | undefined {
   return (source.entryTypes ?? []).find((pt) => pt.name === name);
 }
@@ -127,7 +142,7 @@ export function findEntryTypeByName(
  */
 export function namedTemplatesForType(
   name: string,
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly NamedTemplateChoice[] {
   return findEntryTypeByName(name, source)?.namedTemplates ?? [];
 }
@@ -139,14 +154,14 @@ export function namedTemplatesForType(
  */
 export function accessPoliciesForType(
   name: string,
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly AccessPolicyChoice[] {
   return findEntryTypeByName(name, source)?.accessPolicies ?? [];
 }
 
 export function visibleEntryTypes(
   capabilities: readonly string[],
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly EntryTypeManifestEntry[] {
   const caps = new Set(capabilities);
   return (source.entryTypes ?? []).filter((pt) => {
@@ -167,7 +182,7 @@ export function visibleEntryTypes(
  * resolve to a permalink worth storing).
  */
 export function publicEntryTypeNames(
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly string[] {
   return (source.entryTypes ?? [])
     .filter((pt) => manifestEntryVisibility(pt).isPublic)
@@ -176,14 +191,14 @@ export function publicEntryTypeNames(
 
 export function findTermTaxonomyByName(
   name: string,
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): TermTaxonomyManifestEntry | undefined {
   return (source.termTaxonomies ?? []).find((tax) => tax.name === name);
 }
 
 export function visibleTermTaxonomies(
   capabilities: readonly string[],
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly TermTaxonomyManifestEntry[] {
   const caps = new Set(capabilities);
   return (source.termTaxonomies ?? []).filter((tax) =>
@@ -193,7 +208,7 @@ export function visibleTermTaxonomies(
 
 export function visibleSettingsPages(
   capabilities: readonly string[],
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly SettingsPageManifestEntry[] {
   if (!capabilities.includes("settings:manage")) return [];
   return source.settingsPages ?? [];
@@ -201,7 +216,7 @@ export function visibleSettingsPages(
 
 export function visibleDashboardWidgets(
   capabilities: readonly string[],
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly DashboardWidgetManifestEntry[] {
   const caps = new Set(capabilities);
   return (source.dashboardWidgets ?? []).filter(
@@ -243,7 +258,7 @@ function filterMetaBoxes<
 export function entryMetaBoxesForType(
   entryTypeName: string,
   capabilities: readonly string[],
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly EntryMetaBoxManifestEntry[] {
   return filterMetaBoxes(source.entryMetaBoxes, new Set(capabilities), (box) =>
     box.entryTypes.includes(entryTypeName),
@@ -253,7 +268,7 @@ export function entryMetaBoxesForType(
 export function termMetaBoxesForTermTaxonomy(
   taxonomyName: string,
   capabilities: readonly string[],
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly TermMetaBoxManifestEntry[] {
   return filterMetaBoxes(source.termMetaBoxes, new Set(capabilities), (box) =>
     box.termTaxonomies.includes(taxonomyName),
@@ -262,7 +277,7 @@ export function termMetaBoxesForTermTaxonomy(
 
 export function visibleUserMetaBoxes(
   capabilities: readonly string[],
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly UserMetaBoxManifestEntry[] {
   return filterMetaBoxes(
     source.userMetaBoxes,
@@ -273,21 +288,21 @@ export function visibleUserMetaBoxes(
 
 export function findSettingsPageByName(
   name: string,
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): SettingsPageManifestEntry | undefined {
   return (source.settingsPages ?? []).find((p) => p.name === name);
 }
 
 export function findSettingsGroupByName(
   name: string,
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): SettingsGroupManifestEntry | undefined {
   return (source.settingsGroups ?? []).find((g) => g.name === name);
 }
 
 export function groupsForSettingsPage(
   page: SettingsPageManifestEntry,
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly SettingsGroupManifestEntry[] {
   return page.groups
     .map((name) => findSettingsGroupByName(name, source))
@@ -302,7 +317,7 @@ export function groupsForSettingsPage(
  */
 export function visibleAdminNav(
   capabilities: readonly string[],
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): readonly AdminNavGroup[] {
   const caps = new Set(capabilities);
   return (source.adminNav ?? [])
@@ -322,7 +337,7 @@ export function visibleAdminNav(
  */
 export function findPluginPageByPath(
   to: string,
-  source: PlumixManifest = manifest,
+  source: PlumixManifest = currentManifest(),
 ): AdminNavItem | undefined {
   for (const group of source.adminNav ?? []) {
     for (const item of group.items) {

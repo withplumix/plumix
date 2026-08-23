@@ -1,7 +1,6 @@
 import type { Segment } from "../access/policy.js";
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { AppContext } from "../context/app.js";
-import type * as McpDispatch from "../mcp/dispatch.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RouteMatch } from "../route/match.js";
@@ -98,12 +97,6 @@ const DATE_FEED_PATTERN =
 // `/<taxonomy>/<term-path>/feed` (+ `/atom`) — the term-scoped feed. The path
 // is one segment for a top-level term, `parent/child` for a nested one.
 const TERM_FEED_PATTERN = /^\/([^/]+)\/(.+)\/feed(\/atom)?$/;
-
-// MCP is cold-path-exclusive (an agent endpoint, never the public render path).
-// Dynamic-import its handler so the tool registry and the MCP SDK it pulls in
-// stay off the public render and cold-start paths, evaluating only on the first
-// MCP request per isolate.
-let mcpModule: Promise<typeof McpDispatch> | undefined;
 
 // Auth-flow handlers (passkey/oauth/magic-link/device/email-change) are
 // admin-login cold paths — never the public render path. Load them via one
@@ -292,8 +285,7 @@ async function tryColdInterfaces(
     if (!interfaceEnabled(app.config.mcp) && !app.devCsrfLocalhost) {
       return notFound("mcp-disabled");
     }
-    const { handleMcpRequest } = await (mcpModule ??=
-      import("../mcp/dispatch.js"));
+    const handleMcpRequest = await app.loadMcpHandler();
     return handleMcpRequest(ctx, app.devCsrfLocalhost);
   }
   if (pathname === API_PREFIX || pathname.startsWith(`${API_PREFIX}/`)) {

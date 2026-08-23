@@ -4,41 +4,45 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useForm, useWatch } from "react-hook-form";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { Form } from "@plumix/admin-ui/form";
 
+import type { RpcStub } from "../../../test/rpc.js";
+import type { LookupItem } from "./lookup/types.js";
+import { clearManifest, seedManifest } from "../../../test/manifest.js";
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
+import { stubRpc } from "../../../test/rpc.js";
 import { MetaBoxField } from "./meta-box-field.js";
 
-// The picker searches the lookup RPC scoped to the manifest's public
-// entry types; both modules are mocked so the dialog flow runs without
-// a server. `publicEntryTypeNames` drives the Pick button's presence.
-const publicEntryTypeNames = vi.fn(() => ["post", "page"]);
-vi.mock("@/lib/manifest.js", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  publicEntryTypeNames: () => publicEntryTypeNames(),
-}));
+// The picker offers the manifest's public entry types and searches them
+// through the lookup RPC, so both come from their real sources: a manifest
+// payload in the document and the oRPC client answered at the fetch boundary.
+function seedEntryTypes(...names: readonly string[]): void {
+  seedManifest({
+    entryTypes: names.map((name) => ({
+      name,
+      adminSlug: `${name}s`,
+      label: name,
+      isPublic: true,
+    })),
+  });
+}
 
-const lookupList = vi.fn();
-vi.mock("@/lib/orpc.js", () => ({
-  orpc: {
-    lookup: {
-      list: {
-        queryOptions: (opts: { input: Record<string, unknown> }) => ({
-          queryKey: ["lookup.list", opts.input],
-          queryFn: () => lookupList(opts.input) as unknown,
-        }),
-      },
-    },
-  },
-}));
+function stubLookup(items: readonly LookupItem[] = []): RpcStub {
+  return stubRpc({ "lookup/list": () => ({ items }) });
+}
+
+beforeEach(() => {
+  seedEntryTypes("post", "page");
+  stubLookup();
+});
 
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
-  publicEntryTypeNames.mockReturnValue(["post", "page"]);
+  clearManifest();
+  vi.unstubAllGlobals();
 });
 
 const linkField: MetaBoxFieldManifestEntry = {
@@ -119,19 +123,17 @@ describe("LinkField", () => {
   });
 
   test("picking an entry stores its permalink as the url", async () => {
-    lookupList.mockResolvedValue({
-      items: [
-        {
-          id: "1",
-          label: "Pricing",
-          targetType: "page",
-          subtitle: "page · published",
-          href: "/pricing",
-        },
-        // No public URL — must not be offered.
-        { id: "2", label: "Internal", targetType: "page" },
-      ],
-    });
+    const rpc = stubLookup([
+      {
+        id: "1",
+        label: "Pricing",
+        targetType: "page",
+        subtitle: "page · published",
+        href: "/pricing",
+      },
+      // No public URL — must not be offered.
+      { id: "2", label: "Internal", targetType: "page" },
+    ]);
     const onChange = vi.fn();
     renderWithI18n(<Harness initial={null} onChangeSpy={onChange} />);
 
@@ -141,12 +143,10 @@ describe("LinkField", () => {
         screen.getByTestId("meta-box-field-cta-input-option-1"),
       ).toBeVisible();
     });
-    expect(lookupList).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "entry",
-        scope: { entryTypes: ["post", "page"], status: "published" },
-      }),
-    );
+    expect(rpc.lastCallTo("lookup/list")?.input).toMatchObject({
+      kind: "entry",
+      scope: { entryTypes: ["post", "page"], status: "published" },
+    });
     expect(
       screen.queryByTestId("meta-box-field-cta-input-option-2"),
     ).not.toBeInTheDocument();
@@ -180,7 +180,7 @@ describe("LinkField", () => {
   });
 
   test("no public entry types hides the Pick button", () => {
-    publicEntryTypeNames.mockReturnValue([]);
+    seedManifest({ entryTypes: [] });
     renderWithI18n(<Harness initial={null} />);
     expect(screen.getByTestId("meta-box-field-cta-input-url")).toBeVisible();
     expect(

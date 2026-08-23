@@ -17,33 +17,12 @@ import { Form } from "@plumix/admin-ui/form";
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { MetaBoxField } from "./meta-box-field.js";
 
-// CodeMirror measures the DOM on mount, which jsdom can't satisfy; stub the
-// lazy editor with a controlled textarea so the JSON field's wiring (value
-// seeding + raw → parse → propagate) is testable here. The real editor is
-// verified in the browser; the parse logic itself in `json-draft.test.ts`.
-vi.mock("./json-code-editor.js", () => ({
-  default: ({
-    value,
-    onChange,
-    disabled,
-    ariaInvalid,
-    testId,
-  }: {
-    value: string;
-    onChange: (raw: string) => void;
-    disabled: boolean;
-    ariaInvalid?: boolean;
-    testId: string;
-  }) => (
-    <textarea
-      data-testid={testId}
-      value={value}
-      disabled={disabled}
-      aria-invalid={ariaInvalid}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  ),
-}));
+// CodeMirror renders each document line as its own element, so the editing
+// surface's `textContent` collapses the newlines the field seeded. Rejoin them
+// to read back what the author would see.
+function editorText(surface: HTMLElement): string {
+  return [...surface.children].map((line) => line.textContent).join("\n");
+}
 
 afterEach(() => {
   cleanup();
@@ -478,22 +457,25 @@ describe("MetaBoxField dispatcher", () => {
       />,
     );
     // The editor is lazy-loaded (code-split); await its first render.
-    const editor = await screen.findByTestId("meta-box-field-k-input");
-    expect(editor).toHaveValue('{\n  "a": 1\n}');
+    const editor = await screen.findByTestId("meta-box-field-k-input-code");
+    expect(editorText(editor)).toBe('{\n  "a": 1\n}');
 
     // Invalid JSON — error surfaces, form value untouched. `paste` avoids
     // userEvent treating `{` as a kbd-shortcut delimiter.
-    await userEvent.clear(editor);
-    editor.focus();
+    await userEvent.click(editor);
+    await userEvent.keyboard("{Control>}a{/Control}");
     await userEvent.paste("{not-json");
     expect(
       screen.getByTestId("meta-box-field-k-input-error"),
     ).toBeInTheDocument();
 
     // Valid JSON — error clears, parsed value propagates.
-    await userEvent.clear(editor);
+    await userEvent.keyboard("{Control>}a{/Control}");
     await userEvent.paste('{"b":2}');
     expect(onChange).toHaveBeenLastCalledWith({ b: 2 });
+    expect(
+      screen.queryByTestId("meta-box-field-k-input-error"),
+    ).not.toBeInTheDocument();
   });
 
   test("color: swatch + hex input share the same value via react-colorful", async () => {

@@ -2,6 +2,7 @@ import type { ESLint } from "eslint";
 
 import { noBareObjectInput } from "./no-bare-object-input.js";
 import { noChainedTypeAssertion } from "./no-chained-type-assertion.js";
+import { noModuleMocking } from "./no-module-mocking.js";
 import { noNonTestidQueries } from "./no-non-testid-queries.js";
 import { noReflectApply } from "./no-reflect-apply.js";
 import { noReflectGet } from "./no-reflect-get.js";
@@ -22,6 +23,7 @@ export const plumixPlugin: ESLint.Plugin = {
   rules: {
     "no-bare-object-input": noBareObjectInput,
     "no-chained-type-assertion": noChainedTypeAssertion,
+    "no-module-mocking": noModuleMocking,
     "no-non-testid-queries": noNonTestidQueries,
     "no-reflect-apply": noReflectApply,
     "no-reflect-get": noReflectGet,

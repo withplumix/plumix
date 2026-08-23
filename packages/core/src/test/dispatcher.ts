@@ -147,6 +147,14 @@ export interface CreateDispatcherHarnessOptions {
    * default `""` mirrors a root deployment.
    */
   readonly basePath?: string;
+  /**
+   * Substitute the app's lazily-loaded cold-interface handlers — the only
+   * things the dispatcher reads from the app that aren't already config, and
+   * so the seam for observing whether it reached for one at all.
+   */
+  readonly coldInterfaces?: Partial<
+    Pick<PlumixApp, "loadMcpHandler" | "loadRestHandler">
+  >;
   /** Mount the MCP endpoint. Default-off mirrors production. */
   readonly mcp?: InterfaceToggle;
   /** Mount the REST API. Default-off mirrors production. */
@@ -294,10 +302,11 @@ export async function createDispatcherHarness(
     images: options.images,
     theme: options.theme ?? defaultTestTheme,
   });
-  const app = await buildApp(config, {
+  const built = await buildApp(config, {
     assetManifest: options.assetManifest,
     devCsrfLocalhost: options.devCsrfLocalhost,
   });
+  const app: PlumixApp = { ...built, ...options.coldInterfaces };
   const dispatcher = createPlumixDispatcher(app);
   const { assets, storage, cache } = options;
   const { defer, drainDeferred } = createDeferQueue();

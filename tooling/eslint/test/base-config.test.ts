@@ -1,7 +1,7 @@
 import * as path from "node:path";
 import type { Linter } from "eslint";
 import { ESLint } from "eslint";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { baseConfig } from "../base.js";
 import { reactConfig } from "../react.js";
@@ -38,6 +38,14 @@ async function messagesMatching<TReport>(
     .filter((message) => message.ruleId !== null && matches(message.ruleId))
     .map(project);
 }
+
+// The first `lintFiles` call builds the fixture TS program for the type-aware
+// rules, and on a contended runner that alone outruns the 5s default. Pay it
+// here rather than inside whichever test happens to run first, so every test's
+// own timeout stays a hang detector — same cold-start spike as PR #1522.
+beforeAll(async () => {
+  await eslint.lintFiles(["src/restricted-syntax.ts"]);
+}, 60_000);
 
 const plumixReports = (fixture: string) =>
   reportsMatching(fixture, (ruleId) => ruleId.startsWith("plumix/"));
@@ -184,6 +192,33 @@ describe("plumix/no-non-testid-queries", () => {
   it("stays silent in production source", async () => {
     await expect(
       plumixReports("src/testid-queries.production.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
+describe("plumix/no-module-mocking", () => {
+  it("rejects every module-path mocking helper in a test file", async () => {
+    await expect(
+      plumixReports("src/module-mocking.violations.test.ts"),
+    ).resolves.toEqual([
+      { ruleId: "plumix/no-module-mocking", line: 14 },
+      { ruleId: "plumix/no-module-mocking", line: 16 },
+      { ruleId: "plumix/no-module-mocking", line: 18 },
+      { ruleId: "plumix/no-module-mocking", line: 20 },
+      { ruleId: "plumix/no-module-mocking", line: 22 },
+      { ruleId: "plumix/no-module-mocking", line: 24 },
+    ]);
+  });
+
+  it("stays silent on spies, stubbed globals and unrelated `mock` methods", async () => {
+    await expect(
+      plumixReports("src/module-mocking.allowed.test.ts"),
+    ).resolves.toEqual([]);
+  });
+
+  it("stays silent in production source", async () => {
+    await expect(
+      plumixReports("src/module-mocking.production.ts"),
     ).resolves.toEqual([]);
   });
 });

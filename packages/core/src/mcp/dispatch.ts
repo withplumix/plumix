@@ -4,6 +4,12 @@ import { forbidden, methodNotAllowed, unauthorized } from "../runtime/http.js";
 import { resolveMcpDevTrust } from "./dev-trust.js";
 import { buildMcpToolRegistry } from "./registry.js";
 
+/** The MCP entry point, as `PlumixApp.loadMcpHandler` resolves it. */
+export type McpHandler = (
+  ctx: AppContext,
+  devCsrfLocalhost: boolean,
+) => Promise<Response>;
+
 /**
  * Serve the first-party MCP endpoint. Mounted ahead of the `/_plumix/` CSRF
  * gate and authenticated by bearer PAT (CSRF-immune). POST-only; the transport

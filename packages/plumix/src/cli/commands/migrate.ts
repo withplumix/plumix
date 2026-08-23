@@ -101,7 +101,7 @@ function resolveDrizzleKitBin(cwd: string): string | null {
   return null;
 }
 
-// Mutable seam for tests — swap without vi.mock ceremony.
+// Mutable seam for tests — substitute the collaborator, not the module path.
 export const migrateGenerateDeps = {
   resolveDrizzleKitBin,
   spawnInherit,
