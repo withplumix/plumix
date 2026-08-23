@@ -64,7 +64,7 @@ subsystem summary. This is the one naming exception in the tree.
 | --- | --- | --- | --- | --- |
 | `getting-started/introduction` | Introduction | P0 | What Plumix is, who it is for, what a site is made of. States once that the docs describe the current release and you should pin. | — |
 | `getting-started/installation` | Installation | P0 | `pnpm create plumix-app` through to a running dev server and a first passkey. | scaffolder |
-| `getting-started/project-structure` | Project Structure | P0 | What the scaffolder generated and what each file is for. Hosts the façade-subpath roster. | 33 façade subpaths |
+| `getting-started/project-structure` | Project Structure | P0 | What the scaffolder generated and what each file is for. Hosts the façade-subpath roster. | 34 façade subpaths |
 | `getting-started/configuration` | Configuration | P0 | `plumix.config.ts`, its required slots and its optional ones. Hosts the config roster. | 20 config options, `EnvInput` |
 | `getting-started/deploy` | Deploy Your Site | P0 | The five-minute path to a deployed site. Depth lives in Deployment. | — |
 
@@ -77,7 +77,7 @@ subsystem summary. This is the one naming exception in the tree.
 | `content-modelling/taxonomies` | Taxonomies and Terms | P0 | Classifying entries; taxonomies scoped to entry types. | taxonomies, terms |
 | `content-modelling/statuses` | Statuses and Publishing | P0 | The four statuses and the transitions between them. Hosts the status roster. | 4 statuses, scheduled publishing |
 | `content-modelling/revisions` | Revisions and Autosave | P1 | Revision history, autosave, restore. | revisions, autosave |
-| `content-modelling/entry-type-reference` | Entry Type Reference | P1 | Exhaustive options and labels. Roster page. | ~25 options, 27 labels |
+| `content-modelling/entry-type-reference` | Entry Type Reference | P1 | Exhaustive options and labels. Roster page. | 21 options, 28 labels |
 
 ### 3. Fields
 
@@ -97,7 +97,7 @@ subsystem summary. This is the one naming exception in the tree.
 | Slug | Title | T | Purpose | Covers |
 | --- | --- | --- | --- | --- |
 | `blocks/overview` | Overview | P0 | Entry content as a block tree; how it is stored and rendered. | entry content model |
-| `blocks/core-blocks` | Core Blocks | P0 | **Roster page.** Every core block with its inputs and an example. | 17 core blocks + `html` |
+| `blocks/core-blocks` | Core Blocks | P0 | **Roster page.** Every core block with its inputs and an example. `core/html` is not one of them — it registers opt-in and the façade does not export it — so it belongs in prose here, not as an item. | 17 core blocks |
 | `blocks/authoring` | Authoring a Block | P1 | `defineBlock`, inputs, rendering, registration. | block authoring API |
 | `blocks/marks` | Marks | P1 | **Roster page.** Inline formatting. | 13 marks |
 | `blocks/styles` | Styles | P1 | The style field, CSS values, viewport breakpoints. | style codec, breakpoints |
@@ -120,9 +120,9 @@ subsystem summary. This is the one naming exception in the tree.
 | Slug | Title | T | Purpose | Covers |
 | --- | --- | --- | --- | --- |
 | `themes/overview` | Overview | P0 | What a theme is; the fallback `welcomeTheme` when none is registered. | `defineTheme`, welcome theme |
-| `themes/templates` | Templates | P0 | **Roster page.** `defineTemplate` and the builders. | 19 template builders |
+| `themes/templates` | Templates | P0 | **Roster page.** `defineTemplate` and the builders. | 16 template builders |
 | `themes/hierarchy` | Template Hierarchy | P0 | How a request resolves to a template; generic tiers and target matchers. | resolution, tiers, matchers |
-| `themes/template-data` | Template Data | P0 | **Roster page.** Every data shape with its guard. | 13 shapes, 10 guards |
+| `themes/template-data` | Template Data | P0 | **Roster page.** Every data shape with its guard. | 9 shapes, 9 guards |
 | `themes/document` | Document Manifest | P1 | Contributing to `<head>`. | `DocumentManifest` and kin |
 | `themes/tokens` | Tokens and Breakpoints | P1 | Theme tokens and breakpoints. | tokens, breakpoints |
 | `themes/primitives` | Component Primitives | P1 | `Link`, `Image`, `SignedIn`/`SignedOut`, `useAuth`, `PlumixProvider`. | renderer primitives |
@@ -148,7 +148,7 @@ subsystem summary. This is the one naming exception in the tree.
 | `access/roles` | Roles | P1 | **Roster page.** The five roles and the staff boundary. | 5 roles, `STAFF_MIN_ROLE` |
 | `access/magic-links` | Magic Links | P1 | Email sign-in and the mailer slot. | magic link, mailer |
 | `access/oauth` | OAuth | P1 | Third-party sign-in. | OAuth accounts |
-| `access/capabilities` | Capabilities | P2 | **Roster page.** Core capabilities and derived per-type actions. | 18 core + 8 + 5 actions |
+| `access/capabilities` | Capabilities | P2 | **Roster page.** Core capabilities and derived per-type actions. | 17 core + 8 + 5 actions |
 | `access/api-tokens` | API Tokens | P2 | Personal access tokens and device flow. | API tokens, device flow |
 | `access/policy` | Access Policy | P2 | Segments, gates, entitlements. | access policy |
 | `access/gating` | Gating Content | P2 | Teasers, paywalls, SEO implications. | teaser, paywall |
@@ -172,7 +172,7 @@ subsystem summary. This is the one naming exception in the tree.
 | `hooks/overview` | Overview | P1 | Filters and actions; when each fires. | hook model |
 | `hooks/filters` | Filters | P1 | Registering a filter; pipeline semantics. | filter API |
 | `hooks/actions` | Actions | P1 | Registering an action; side-effect semantics. | action API |
-| `hooks/reference` | Hook Reference | P1 | **Roster page.** All 124 names grouped by family; `rpc:*` grouped separately as mechanical. | 124 hooks, 22 families |
+| `hooks/reference` | Hook Reference | P1 | **Roster page.** All 105 names grouped by family; `rpc:*` grouped separately as mechanical. | 105 hooks — 59 filters, 46 actions |
 | `hooks/type-augmentation` | Type Augmentation | P2 | `declare module "plumix"` — the single specifier, and why mixing fractures. | augmentation rules |
 
 ### 11. Extending the Admin
@@ -187,7 +187,7 @@ entry — content-editor material is out of scope for this site.
 | `admin/widgets` | Dashboard Widgets | P2 | Registering a widget. | `dashboardWidgets` |
 | `admin/login-links` | Login Links | P2 | Adding an affordance to the sign-in screen. | `loginLinks` |
 | `admin/plugin-chunk` | The Plugin Chunk | P2 | How `adminEntry` becomes a bundle. | `adminEntry`, bundling |
-| `admin/shared-runtime` | The Shared Runtime | P2 | The 13 `plumix/admin/*` shims as one mechanism — React, Query, Router, Lingui singletons. | 13 admin subpaths |
+| `admin/shared-runtime` | The Shared Runtime | P2 | The 15 `plumix/admin/*` shims as one mechanism — React, Query, Router, Lingui singletons. | 15 admin subpaths |
 | `admin/styling` | Styling | P2 | The CSS cascade layer and why plugin styles are scoped. | admin CSS rules |
 
 ### 12. Going Further
@@ -212,7 +212,7 @@ entry — content-editor material is out of scope for this site.
 | `deployment/cloudflare` | Cloudflare Workers | P0 | The one shipped runtime: D1, R2, KV, Images, edge cache. | `@plumix/runtime-cloudflare` |
 | `deployment/bindings` | Bindings and Environment | P0 | Wiring bindings to config slots. | bindings, slots |
 | `deployment/secrets` | Secrets | P0 | `EnvInput`, `.dev.vars`, production secrets. | secret slots |
-| `deployment/cli` | CLI Reference | P1 | **Roster page.** Commands and global flags. | 5 commands + flags |
+| `deployment/cli` | CLI Reference | P1 | **Roster page.** Commands and global flags. | 7 commands + 5 global flags |
 | `deployment/runtimes` | Runtime Adapters | P2 | The adapter contract, for porting Plumix elsewhere. | `RuntimeAdapter` |
 
 ### 14. Plugins
@@ -306,7 +306,7 @@ harm.
 Rosters are **indexed pages** — one page per roster, items as `###` headings. Not one page per item.
 
 **A roster is a page that promises *this is all of them*** — the set is closed, enumerable from
-source, and a reader would be misled by an incomplete list. Size is irrelevant: 124 hooks and 5 roles
+source, and a reader would be misled by an incomplete list. Size is irrelevant: 105 hooks and 5 roles
 both qualify.
 
 **Grouped by the axis the source already uses, never alphabetically.** The field roster is already
@@ -336,6 +336,11 @@ states only what differs.
 **`supports` is deliberately not a roster.** The code accepts any string, so no complete list exists
 to promise. Its page presents a **conventional, not closed** list and says so visibly — otherwise
 someone will add a guard later assuming the omission was an oversight.
+
+**The guard is authoritative for what a roster contains.** `apps/docs/src/content-checks/rosters.ts`
+holds each roster's items and binds them to source; the sizes in the page briefs above are a
+reader's orientation, not the contract. Where the two disagree the guard is right, and the next
+reading of a source is a change there rather than a second correction here.
 
 ---
 
@@ -424,17 +429,17 @@ Every area of the public surface has a home. Mapping from the inventory:
 
 | Surface | Home |
 | --- | --- |
-| 33 façade subpaths | `Project Structure` (13 admin shims folded into `The Shared Runtime`) |
+| 34 façade subpaths | `Project Structure` (15 admin shims folded into `The Shared Runtime`) |
 | 20 config options | `Configuration` |
 | 4 statuses · entry types · taxonomies | Content Modelling |
 | 24 field types · builders · references · repeaters | Fields |
 | 17 blocks · 13 marks · shortcodes · patterns · styles | Blocks |
 | 5+3 hydration axes · `IslandProps` | Islands |
-| 19 builders · 13 data shapes · 10 guards · manifest · tokens · primitives | Themes |
+| 16 builders · 9 data shapes · 9 guards · manifest · tokens · primitives | Themes |
 | permalinks · archives · redirects · rewrites · base path | Routing |
-| 5 roles · 18+8+5 capabilities · 4 auth methods · policy · gating | Access & Identity |
+| 5 roles · 17+8+5 capabilities · 4 auth methods · policy · gating | Access & Identity |
 | RPC · REST · 9 MCP tools · raw routes · db toolkit · request context | APIs |
-| 124 hooks · type augmentation | Hooks |
+| 105 hooks · type augmentation | Hooks |
 | admin pages · widgets · login links · plugin chunk · shims · CSS | Extending the Admin |
 | caching · SEO · search · i18n · cron · telemetry · testing · dev tools | Going Further |
 | runtime adapter · bindings · secrets · CLI | Deployment |
