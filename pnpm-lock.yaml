@@ -390,12 +390,18 @@ importers:
         specifier: ^0.11.0
         version: 0.11.0(@astrojs/markdown-satteri@0.3.4)(@astrojs/starlight@0.41.6(@astrojs/markdown-remark@7.2.1)(astro@7.1.1(@astrojs/markdown-remark@7.2.1)(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.2)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))(typescript@6.0.3))(astro@7.1.1(@astrojs/markdown-remark@7.2.1)(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.2)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: catalog:cloudflare
+        version: 5.20260810.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
       '@plumix/vitest-config':
         specifier: workspace:*
         version: link:../../tooling/vitest
@@ -405,6 +411,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.2
+      '@types/react':
+        specifier: catalog:react
+        version: 19.2.18
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 4.1.10(vitest@4.1.10)

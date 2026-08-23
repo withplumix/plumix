@@ -1,0 +1,34 @@
+---
+title: Broken Sample
+description: A page whose second sample calls a method the builder does not have.
+---
+
+A lede that stands on its own, because an agent reads it first.
+
+## Overview
+
+The first sample compiles.
+
+```ts
+import { text } from "plumix/fields";
+
+export const subtitle = text("subtitle").label("Subtitle");
+```
+
+## Quickstart
+
+The second does not: `maxLen` is not a method on the builder.
+
+```ts
+import { text } from "plumix/fields";
+
+export const summary = text("summary").maxLen(120);
+```
+
+## Related
+
+- The page whose samples compile.
+
+## Next steps
+
+- Read the opt-out marker.

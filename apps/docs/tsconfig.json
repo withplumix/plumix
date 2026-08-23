@@ -12,6 +12,7 @@
   "include": [
     "astro.config.mjs",
     "vitest.config.ts",
+    "vitest.build.config.ts",
     "src",
     "test",
     ".astro/types.d.ts"

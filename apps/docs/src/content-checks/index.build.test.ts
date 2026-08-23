@@ -11,6 +11,7 @@ describe("runContentChecks", () => {
     );
 
     expect(rules).toContain("page-shape/missing-lede");
+    expect(rules).toContain("code-samples/does-not-compile");
   });
 
   it("runs every check over the one traversal", () => {

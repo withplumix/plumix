@@ -24,7 +24,8 @@ Semver-aware versioning (inline "Added in x.y" badges pre-1.0;
 pnpm dev        # astro dev — http://localhost:4321
 pnpm build      # static build → dist/
 pnpm typecheck  # astro sync + tsc
-pnpm test:unit  # the content checks
+pnpm test:unit  # the content checks that need nothing built
+pnpm test:build # the sample type-check, which reads the published types
 ```
 
 ## Adding a page
@@ -121,6 +122,10 @@ the deliberately-broken pages that prove each check catches what it claims to.
 Fixtures have to live outside the real content root, or the production run
 would flag them.
 
+Every check sees every fixture, so a fixture written for one rule has to hold
+up under the others: a `ts` fence added to a page-shape fixture is a sample the
+code-sample check will compile.
+
 ### Page shape
 
 Every documentation page owes a lede — prose between the frontmatter and the
@@ -128,6 +133,38 @@ first heading — and four sections: Overview, Quickstart, Related, Next steps. 
 roster page declares `roster: true` and enumerates its items as `###` headings,
 which exempts it from the quickstart. A landing page declares Starlight's own
 `template: splash` and is not held to the template at all.
+
+### Code samples
+
+Every fenced `ts`, `tsx` or `typescript` block is type-checked against the types
+`plumix` publishes — no tag needed, because a sample nobody remembered to tag is
+exactly the one that rots. Extraction needs no stitching: by convention every
+example carries its own import lines, so each block already stands alone.
+
+Samples are checked, never run. Most Plumix examples are declarative and do not
+meaningfully run without a worker, a database and bindings, so running them
+would mean standing up an instance per sample. A sample that type-checks and
+then misbehaves at runtime is a risk this check accepts rather than hides.
+
+A block that is _meant_ not to compile — an anti-pattern, an error the prose is
+about — opts out on the fence:
+
+````mdx
+```ts no-typecheck
+// the mistake the section warns against
+```
+````
+
+Each page gets its own program. A sample carrying `declare module "plumix"` —
+which is how this project's type augmentation is written — is visible to every
+other sample compiled beside it, and one page's augmentation deciding whether
+another page's sample compiles would be a hole in the gate rather than a
+performance question.
+
+Because the check reads the published `.d.ts` files rather than the packages'
+source, it needs the build graph. That puts it in the `test:build` tier
+alongside `runContentChecks`, and leaves the checks that read nothing but
+markdown in `test:unit`.
 
 ### Roster drift
 
@@ -145,10 +182,6 @@ remaining eleven follow in [#1860][]. A roster whose page nobody has written
 yet reports nothing; a written one that no entry claims is reported, so a
 mistyped path cannot leave a roster unguarded.
 
-Sample type-checking ([#1858][]) is the one check still to come, on the same
-traversal.
-
-[#1858]: https://github.com/withplumix/plumix/issues/1858
 [#1860]: https://github.com/withplumix/plumix/issues/1860
 
 ## Why Starlight is capped below 0.41.7
