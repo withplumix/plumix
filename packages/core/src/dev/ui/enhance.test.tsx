@@ -60,9 +60,20 @@ function mount(): void {
   );
 }
 
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 const SOURCE = '[data-testid="plumix-dev-error-source"]';
 const FRAME = '[data-testid="plumix-dev-error-frame"]';
+
+// The excerpt lands a promise chain after the frame is selected — poll for the
+// text it renders rather than betting a fixed delay covers the round trip.
+function waitForSource(contains: string): Promise<void> {
+  return vi.waitFor(
+    () =>
+      expect(document.querySelector(SOURCE)?.textContent ?? "").toContain(
+        contains,
+      ),
+    { interval: 10 },
+  );
+}
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -74,7 +85,7 @@ describe("enhanceDevError", () => {
     const fetchImpl = fakeFetch();
 
     enhanceDevError(document, fetchImpl as unknown as typeof fetch);
-    await flush();
+    await waitForSource("at /proj/src/theme.tsx:12");
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const requested = new URL(
@@ -105,11 +116,11 @@ describe("enhanceDevError", () => {
     mount();
     const fetchImpl = fakeFetch();
     enhanceDevError(document, fetchImpl as unknown as typeof fetch);
-    await flush();
+    await waitForSource("at /proj/src/theme.tsx:12");
 
     const buttons = document.querySelectorAll<HTMLElement>(FRAME);
     buttons.item(1).click();
-    await flush();
+    await waitForSource("at /proj/src/data.ts:4");
 
     const lastCall = String(fetchImpl.mock.calls.at(-1)?.[0]);
     expect(new URL(lastCall, "http://localhost").searchParams.get("file")).toBe(
@@ -126,7 +137,9 @@ describe("enhanceDevError", () => {
   test("renders excerpt content as text, never as markup", async () => {
     mount();
     enhanceDevError(document, fakeFetch() as unknown as typeof fetch);
-    await flush();
+    // Not the escaped form — that is what is under test, and polling for it
+    // would time out here instead of failing on the assertions below.
+    await waitForSource("after");
 
     const panel = document.querySelector(SOURCE);
     // The `<b>after</b>` line is shown literally, not parsed into an element.
@@ -140,11 +153,9 @@ describe("enhanceDevError", () => {
       document,
       fakeFetch({ ok: false }) as unknown as typeof fetch,
     );
-    await flush();
+    await waitForSource("Could not load source");
 
     const panel = document.querySelector(SOURCE);
-    const text = panel?.textContent ?? "";
-    expect(text.toLowerCase()).toContain("could not load");
     expect(panel?.querySelector(".plumix-dev-error__line")).toBeNull();
   });
 

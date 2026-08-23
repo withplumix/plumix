@@ -7,12 +7,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { DevOverlayShell } from "./overlay-shell.js";
 
-// React roots render on the scheduler; give it a macrotask to flush before
-// reading the DOM. Mirrors the island/compile overlay suites' teardown.
-function tick(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
 let container: HTMLElement;
 let root: Root;
 
@@ -20,9 +14,20 @@ function query(testid: string): HTMLElement | null {
   return container.querySelector<HTMLElement>(`[data-testid="${testid}"]`);
 }
 
+// React commits on the scheduler; poll for the rendered shell rather than
+// betting a fixed delay covers it.
 async function mount(node: ReactElement): Promise<void> {
   root.render(node);
-  await tick();
+  await vi.waitFor(
+    () => expect(query("plumix-dev-overlay-panel")).not.toBeNull(),
+    { interval: 10 },
+  );
+}
+
+// Only for the "nothing should have happened" assertions: there is no condition
+// to poll for, so let pending work run and then assert the absence.
+function flush(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 describe("DevOverlayShell", () => {
@@ -35,7 +40,7 @@ describe("DevOverlayShell", () => {
   afterEach(async () => {
     root.unmount();
     container.remove();
-    await tick();
+    await flush();
   });
 
   test("renders the label, an aria-labeled dialog, and its body children", async () => {
@@ -84,8 +89,9 @@ describe("DevOverlayShell", () => {
     );
 
     query("plumix-dev-overlay-close")?.click();
-    await tick();
-    expect(onClose).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalledTimes(1), {
+      interval: 10,
+    });
   });
 
   test("closes on a backdrop press-and-release", async () => {
@@ -103,8 +109,9 @@ describe("DevOverlayShell", () => {
     const backdrop = query("plumix-dev-overlay-backdrop");
     backdrop?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     backdrop?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    await tick();
-    expect(onClose).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalledTimes(1), {
+      interval: 10,
+    });
   });
 
   test("stays open when a drag starts in the modal and ends on the backdrop", async () => {
@@ -126,7 +133,7 @@ describe("DevOverlayShell", () => {
     query("plumix-dev-overlay-backdrop")?.dispatchEvent(
       new MouseEvent("click", { bubbles: true }),
     );
-    await tick();
+    await flush();
     expect(onClose).not.toHaveBeenCalled();
   });
 });
