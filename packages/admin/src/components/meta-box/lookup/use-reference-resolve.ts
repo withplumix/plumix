@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
 
+import type { JsonObject } from "@plumix/core";
+
 import type { LookupItem } from "./types.js";
 
 // Per-id outcome of resolving a selected reference. `pending` covers the
@@ -25,7 +27,7 @@ export function useReferenceResolve({
   initialSelected = [],
 }: {
   readonly kind: string;
-  readonly scope?: Record<string, unknown>;
+  readonly scope?: JsonObject;
   readonly ids: readonly string[];
   readonly initialSelected?: readonly LookupItem[];
 }): {

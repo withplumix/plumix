@@ -2,6 +2,8 @@ import { useState } from "react";
 import { orpc } from "@/lib/orpc.js";
 import { useQuery } from "@tanstack/react-query";
 
+import type { JsonObject } from "@plumix/core";
+
 import type { LookupItem } from "./types.js";
 
 // A search box backed by the `lookup.list` RPC. Owns the query string and
@@ -16,7 +18,7 @@ export function useLookupSearch({
   enabled,
 }: {
   readonly kind: string;
-  readonly scope?: Record<string, unknown>;
+  readonly scope?: JsonObject;
   readonly enabled: boolean;
 }): {
   readonly query: string;

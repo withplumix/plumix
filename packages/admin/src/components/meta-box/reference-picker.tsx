@@ -6,6 +6,7 @@ import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 
+import type { JsonObject } from "@plumix/core";
 import { Button } from "@plumix/admin-ui/button";
 import {
   CommandDialog,
@@ -74,7 +75,7 @@ interface ReferencePickerProps {
   readonly value: string | null;
   readonly onChange: (next: string | null) => void;
   readonly kind: string;
-  readonly scope?: Record<string, unknown>;
+  readonly scope?: JsonObject;
   readonly disabled?: boolean;
   readonly required?: boolean;
   readonly label: string;

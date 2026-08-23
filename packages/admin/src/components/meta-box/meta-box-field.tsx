@@ -7,6 +7,7 @@ import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 
 import type { JSONContent } from "@plumix/admin-editor/rich-text-field";
+import type { JsonObject } from "@plumix/core";
 import type {
   MetaBoxFieldManifestEntry,
   RichtextMetaBoxField,
@@ -874,9 +875,7 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
           rhf.onChange(next);
         }}
         kind={field.referenceTarget.kind}
-        scope={
-          field.referenceTarget.scope as Record<string, unknown> | undefined
-        }
+        scope={field.referenceTarget.scope as JsonObject | undefined}
         max={typeof field.max === "number" ? field.max : undefined}
         disabled={disabled}
         required={field.required}
@@ -901,9 +900,7 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
           rhf.onChange(next);
         }}
         kind={field.referenceTarget.kind}
-        scope={
-          field.referenceTarget.scope as Record<string, unknown> | undefined
-        }
+        scope={field.referenceTarget.scope as JsonObject | undefined}
         disabled={disabled}
         required={field.required}
         label={labelText}
@@ -949,7 +946,7 @@ function referenceValueSummary(value: unknown): LookupItem | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;
   }
-  const summary = value as Record<string, unknown>;
+  const summary = value as JsonObject;
   if (typeof summary.id !== "string" || summary.id === "") return null;
   const label =
     typeof summary.title === "string"

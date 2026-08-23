@@ -1,4 +1,5 @@
 import type { ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
+import type { JsonObject } from "@plumix/core";
 import type {
   AccessPolicyChoice,
   AdminNavGroup,
@@ -60,10 +61,12 @@ const KNOWN_ARRAY_FIELDS = [
 
 function normalize(value: unknown): PlumixManifest {
   if (!value || typeof value !== "object") return {};
-  const v = value as Record<string, unknown>;
+  const v = value as JsonObject;
   const result: PlumixManifest = {};
   for (const key of KNOWN_ARRAY_FIELDS) {
     if (Array.isArray(v[key])) {
+      // Written through a widened view: TypeScript can't correlate the loop's
+      // key with the field type it selects.
       (result as Record<string, unknown>)[key] = v[key];
     }
   }
