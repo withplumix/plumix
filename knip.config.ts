@@ -55,15 +55,12 @@ const config: KnipConfig = {
       // - wrangler is invoked by the Workers Build deploy command (`wrangler
       //   deploy`), not a repo script; knip's wrangler plugin only recognises
       //   configs with a `main`, and this static-assets site has none.
-      // - starlight-auto-sidebar and plumix are installed ahead of the code
-      //   that uses them, so the docs work under #1851 lands on a dependency
-      //   set that already resolves. The sidebar ticket wires the first;
-      //   plumix arrives with the code-sample check, which type-checks docs
-      //   samples against the real published types. Drop each entry as its
-      //   consumer arrives.
+      // - plumix is installed ahead of the code-sample check, which
+      //   type-checks docs samples against the real published types, so the
+      //   docs work under #1851 lands on a dependency set that already
+      //   resolves. Drop the entry as its consumer arrives.
       ignoreDependencies: [
         "wrangler",
-        "starlight-auto-sidebar",
         "plumix",
       ],
     },
