@@ -540,10 +540,7 @@ function useEntriesListNavActions(): EntriesListNavActions {
     (taxonomy: string, slugs: readonly string[]): void => {
       void navigate({
         search: (prev) => {
-          const next: Record<string, unknown> = {
-            ...(prev as Record<string, unknown>),
-            page: 1,
-          };
+          const next: Record<string, unknown> = { ...prev, page: 1 };
           if (slugs.length > 0) {
             next[taxonomy] = slugs.join(",");
           } else {
@@ -770,7 +767,7 @@ function ContentListRoute(): ReactNode {
 
   const taxonomyNames = entryType.termTaxonomies ?? EMPTY_TAXONOMY_NAMES;
   const termFilters = useMemo(
-    () => parseTermFilters(search as Record<string, unknown>, taxonomyNames),
+    () => parseTermFilters(search, taxonomyNames),
     [search, taxonomyNames],
   );
 

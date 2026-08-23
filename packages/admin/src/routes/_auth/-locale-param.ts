@@ -1,3 +1,4 @@
+import type { JsonObject } from "@plumix/core";
 // `buildLocaleCookie` produces the same byte-string as the server-side
 // `Set-Cookie` writer (`Path=/_plumix/`) so a pre-auth pick and a post-auth
 // pick are byte-identical and the unified `resolveLocale` reads either.
@@ -11,9 +12,9 @@ import { adminBasePath } from "../../lib/admin-base.js";
  *  may otherwise resolve the request to something other than the
  *  user's pick on reload. */
 export function nextSearchForLang(
-  currentSearch: Record<string, unknown>,
+  currentSearch: JsonObject,
   nextCode: string,
-): Record<string, unknown> {
+): JsonObject {
   const { lang: _drop, ...rest } = currentSearch;
   return { ...rest, lang: nextCode };
 }
@@ -22,7 +23,7 @@ export function nextSearchForLang(
  *  before the cookie is visible on the wire, preserving sibling
  *  search params (`oauth_error`, `redirect_to`, etc.). */
 export function buildLocaleSwitchUrl(
-  currentSearch: Record<string, unknown>,
+  currentSearch: JsonObject,
   nextCode: string,
 ): string {
   const nextSearch = nextSearchForLang(currentSearch, nextCode);

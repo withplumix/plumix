@@ -8,6 +8,7 @@ import { useUntitledLabel } from "@/lib/use-untitled-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 
+import type { JsonObject } from "@plumix/core";
 import type { EntryFieldScope } from "@plumix/core/fields";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { Button } from "@plumix/admin-ui/button";
@@ -64,7 +65,7 @@ function toDraft(value: unknown): LinkDraft {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return { url: "", label: "", newTab: false };
   }
-  const { url, label, newTab } = value as Record<string, unknown>;
+  const { url, label, newTab } = value as JsonObject;
   return {
     url: typeof url === "string" ? url : "",
     label: typeof label === "string" ? label : "",
