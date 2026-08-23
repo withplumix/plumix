@@ -17,6 +17,8 @@ describe("readContentTree", () => {
       "missing-sections.mdx",
       "rosters/empty.mdx",
       "rosters/field-types.mdx",
+      "rosters/roles.mdx",
+      "rosters/statuses.mdx",
       "unparsable.mdx",
       "well-formed.mdx",
     ]);
