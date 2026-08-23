@@ -22,8 +22,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import * as v from "valibot";
 
+import type { WithResolvedMeta } from "@plumix/core";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
-import type { Entry, EntryStatus, Term } from "@plumix/core/schema";
+import type {
+  EntryStatus,
+  Entry as StoredEntry,
+  Term as StoredTerm,
+} from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import {
   AlertDialog,
@@ -56,6 +61,9 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@plumix/admin-ui/toggle-group";
 
 import { EntriesBulkBar } from "./-entries-bulk-bar.js";
+
+type Entry = WithResolvedMeta<StoredEntry>;
+type Term = WithResolvedMeta<StoredTerm>;
 
 const PAGE_SIZE = 20;
 

@@ -68,6 +68,26 @@ describe("sanitizeMetaInput (constraint enforcement)", () => {
     expect(patch?.deletes).toEqual(["sections"]);
   });
 
+  test("a sanitize callback returning undefined writes nothing for that key", async () => {
+    // Nothing to persist: the value is neither a deletion request (the input
+    // was a real value) nor storable. The key is left alone rather than
+    // upserted as `undefined`, which would reach the driver as an unbindable
+    // `json_set` parameter.
+    const blanked = new Map<string, MetaBoxField>([
+      [
+        "subtitle",
+        text("subtitle")
+          .sanitize(() => undefined as never)
+          .build(),
+      ],
+    ]);
+    const patch = await sanitizeMetaInput((key) => blanked.get(key), {
+      subtitle: "anything",
+    });
+    expect(patch?.upserts.size).toBe(0);
+    expect(patch?.deletes).toEqual([]);
+  });
+
   test("unregistered keys still fail fast with the legacy error", async () => {
     await expect(sanitizeMetaInput(findField, { ghost: "x" })).rejects.toThrow(
       MetaSanitizationError,

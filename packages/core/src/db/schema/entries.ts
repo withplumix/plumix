@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { index, sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
+import type { JsonObject } from "../../json.js";
 import { users } from "./users.js";
 
 export const ENTRY_STATUSES = [
@@ -19,6 +20,13 @@ export type EntryStatus = (typeof ENTRY_STATUSES)[number];
  * loose — the editor owns the outgoing block vocabulary and the public
  * renderer's walker allowlists on the way out, so the column only needs
  * to agree that content is a JSON object.
+ *
+ * Not `JsonObject`, unlike `meta`. Both arrive off the wire as
+ * `v.record(v.string(), v.unknown())`, but meta is written through the field
+ * pipeline, which normalizes every value before `applyMetaPatch` encodes it;
+ * content goes straight from the request into `.values()`. Narrowing the
+ * column would only move the unproven claim to an assertion at the RPC
+ * boundary.
  */
 export type EntryContent = Record<string, unknown>;
 
@@ -40,11 +48,7 @@ export const entries = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     sortOrder: t.integer().notNull().default(0),
-    meta: t
-      .text({ mode: "json" })
-      .$type<Record<string, unknown>>()
-      .notNull()
-      .default({}),
+    meta: t.text({ mode: "json" }).$type<JsonObject>().notNull().default({}),
     publishedAt: t.integer({ mode: "timestamp" }),
     createdAt: t
       .integer({ mode: "timestamp" })

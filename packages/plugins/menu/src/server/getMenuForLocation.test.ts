@@ -90,7 +90,7 @@ describe("getMenuForLocation", () => {
       slug: `mi-${slug}-${Date.now()}`,
       status: "published",
       authorId,
-      meta: { kind: "custom", url } as unknown as Record<string, unknown>,
+      meta: { kind: "custom", url },
     });
     await entryTermFactory
       .transient({ db })

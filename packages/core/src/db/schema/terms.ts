@@ -2,6 +2,8 @@ import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { index, sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
+import type { JsonObject } from "../../json.js";
+
 export const terms = sqliteTable(
   "terms",
   (t) => ({
@@ -10,11 +12,7 @@ export const terms = sqliteTable(
     name: t.text().notNull(),
     slug: t.text().notNull(),
     description: t.text(),
-    meta: t
-      .text({ mode: "json" })
-      .$type<Record<string, unknown>>()
-      .notNull()
-      .default({}),
+    meta: t.text({ mode: "json" }).$type<JsonObject>().notNull().default({}),
     parentId: t.integer().references((): AnySQLiteColumn => terms.id, {
       onDelete: "set null",
     }),

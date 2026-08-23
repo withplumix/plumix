@@ -1,3 +1,4 @@
+import type { ResolvedMeta } from "../../meta/core.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
@@ -91,7 +92,7 @@ export const create = base
       throw errors.CONFLICT({ data: { reason: "insert_failed" } });
     }
 
-    let meta: Record<string, unknown>;
+    let meta: ResolvedMeta;
     if (metaPatch) {
       await writeTermMeta(context, created, metaPatch);
       meta = await loadTermMeta(context, created);

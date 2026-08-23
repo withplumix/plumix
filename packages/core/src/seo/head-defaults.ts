@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app.js";
 import type { MetaBoxField, PluginRegistry } from "../plugin/manifest.js";
+import type { ResolvedMeta } from "../rpc/meta/core.js";
 import type { DocumentManifest, DocumentMeta, TemplateData } from "../theme.js";
 import { listEntryMetaFields } from "../plugin/manifest.js";
 import { canonicalUrl } from "./canonical.js";
@@ -111,7 +112,7 @@ function mediaUrl(value: unknown): string | null {
  */
 export function resolveEntryOgImage(
   fields: readonly MetaBoxField[],
-  meta: Record<string, unknown>,
+  meta: ResolvedMeta,
 ): string | null {
   for (const role of ["ogImage", "featured"] as const) {
     for (const field of fields) {

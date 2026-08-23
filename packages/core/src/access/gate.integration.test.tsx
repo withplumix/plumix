@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { JsonObject } from "../json.js";
 import type { CustomArchiveData } from "../route/render/resolved-entry.js";
 import type { ConnectedCache } from "../runtime/slots.js";
 import { SEGMENT_KEY_PARAM } from "../cache/decision.js";
@@ -612,7 +613,7 @@ const perEntryPlugin = definePlugin("per-entry", (ctx) => {
 async function seedColumn(
   h: Awaited<ReturnType<typeof createDispatcherHarness>>,
   slug: string,
-  meta: Record<string, unknown>,
+  meta: JsonObject,
 ) {
   const author = await h.seedUser("admin");
   return h.factory.entry.create({

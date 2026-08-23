@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { JsonValue } from "../../json.js";
 import type {
   MetaBoxField,
   MutablePluginRegistry,
@@ -1023,7 +1024,7 @@ describe("validateMetaReferences (repeater subFields)", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
 
     const patch = {
-      upserts: new Map<string, unknown>([["rows", [{ owner: "999999" }]]]),
+      upserts: new Map<string, JsonValue>([["rows", [{ owner: "999999" }]]]),
       deletes: [] as readonly string[],
     };
 
@@ -1040,7 +1041,7 @@ describe("validateMetaReferences (repeater subFields)", () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
 
     const patch = {
-      upserts: new Map<string, unknown>([
+      upserts: new Map<string, JsonValue>([
         [
           "rows",
           [
@@ -1115,14 +1116,14 @@ describe("validateMetaReferences (repeater subFields)", () => {
       key === "rows" ? repeaterField : undefined;
 
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const rows: { hero: unknown }[] = [
+    const rows: { hero: JsonValue }[] = [
       // Plain id passes through untouched.
       { hero: "1" },
       // Legacy cached-object shape self-heals to the plain id.
       { hero: { id: "2", mime: "image/jpeg", spoofed: "ignored" } },
     ];
     const patch = {
-      upserts: new Map<string, unknown>([["rows", rows]]),
+      upserts: new Map<string, JsonValue>([["rows", rows]]),
       deletes: [] as readonly string[],
     };
 
@@ -1190,7 +1191,7 @@ describe("validateMetaReferences (repeater subFields)", () => {
     const r2 = await userFactory.transient({ db: h.context.db }).create();
 
     const patch = {
-      upserts: new Map<string, unknown>([
+      upserts: new Map<string, JsonValue>([
         ["owner", String(owner.id)],
         [
           "reviewers",
@@ -1308,7 +1309,7 @@ describe("references nested in groups + deep repeaters", () => {
     const { findField, registry } = registryWith(groupField);
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const patch = {
-      upserts: new Map<string, unknown>([["meta", { owner: "999999" }]]),
+      upserts: new Map<string, JsonValue>([["meta", { owner: "999999" }]]),
       deletes: [] as readonly string[],
     };
     await expect(

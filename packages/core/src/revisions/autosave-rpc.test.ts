@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { Entry } from "../db/schema/entries.js";
+import type { JsonObject } from "../json.js";
 import type { MetaBoxField } from "../plugin/manifest.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
@@ -477,7 +478,7 @@ describe("entry.publish", () => {
   // exactly the rows publish must re-sanitize.
   async function stalePendingAutosave(
     h: Awaited<ReturnType<typeof publishedPostFixture>>,
-    meta: Record<string, unknown>,
+    meta: JsonObject,
   ): Promise<Entry> {
     const live = await h.db.query.entries.findFirst({
       where: eq(entries.id, h.entryId),

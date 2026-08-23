@@ -53,23 +53,30 @@ function requireDb(transient: Partial<DbTransient>): Db {
   return transient.db;
 }
 
-export const userFactory = Factory.define<NewUser, DbTransient, User>(
-  ({ sequence, transientParams, onCreate, params }) => {
-    onCreate(async (attrs) => {
-      const db = requireDb(transientParams);
-      const [row] = await db.insert(users).values(attrs).returning();
-      if (!row) throw new Error("userFactory: insert returned no row");
-      return row;
-    });
+// The fourth type argument pins `params` to a shallow `Partial`. fishery's
+// default is a `DeepPartial`, which walks into the JSON columns — `JsonValue`
+// is recursive, so that instantiation never bottoms out. An override on a JSON
+// column is a whole value anyway.
+export const userFactory = Factory.define<
+  NewUser,
+  DbTransient,
+  User,
+  Partial<NewUser>
+>(({ sequence, transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const [row] = await db.insert(users).values(attrs).returning();
+    if (!row) throw new Error("userFactory: insert returned no row");
+    return row;
+  });
 
-    return {
-      email: params.email ?? `user-${sequence}@example.test`,
-      slug: params.slug ?? `user-${sequence}`,
-      name: params.name ?? null,
-      role: params.role ?? "subscriber",
-    };
-  },
-);
+  return {
+    email: params.email ?? `user-${sequence}@example.test`,
+    slug: params.slug ?? `user-${sequence}`,
+    name: params.name ?? null,
+    role: params.role ?? "subscriber",
+  };
+});
 
 export const adminUser = userFactory.params({ role: "admin" });
 export const editorUser = userFactory.params({ role: "editor" });
@@ -77,58 +84,64 @@ export const authorUser = userFactory.params({ role: "author" });
 export const contributorUser = userFactory.params({ role: "contributor" });
 export const subscriberUser = userFactory.params({ role: "subscriber" });
 
-export const entryFactory = Factory.define<NewEntry, DbTransient, Entry>(
-  ({ sequence, transientParams, onCreate, params }) => {
-    onCreate(async (attrs) => {
-      const db = requireDb(transientParams);
-      const [row] = await db.insert(entries).values(attrs).returning();
-      if (!row) throw new Error("entryFactory: insert returned no row");
-      return row;
-    });
+export const entryFactory = Factory.define<
+  NewEntry,
+  DbTransient,
+  Entry,
+  Partial<NewEntry>
+>(({ sequence, transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const [row] = await db.insert(entries).values(attrs).returning();
+    if (!row) throw new Error("entryFactory: insert returned no row");
+    return row;
+  });
 
-    const status = params.status ?? "draft";
-    const authorId = params.authorId;
-    if (authorId === undefined) {
-      throw new Error("entryFactory: authorId is required");
-    }
-    return {
-      type: params.type ?? "post",
-      title: params.title ?? `Entry ${sequence}`,
-      slug: params.slug ?? `post-${sequence}-${Date.now()}`,
-      content: params.content ?? null,
-      excerpt: params.excerpt ?? null,
-      status,
-      parentId: params.parentId ?? null,
-      sortOrder: params.sortOrder ?? 0,
-      publishedAt:
-        params.publishedAt ?? (status === "published" ? new Date() : null),
-      authorId,
-    };
-  },
-);
+  const status = params.status ?? "draft";
+  const authorId = params.authorId;
+  if (authorId === undefined) {
+    throw new Error("entryFactory: authorId is required");
+  }
+  return {
+    type: params.type ?? "post",
+    title: params.title ?? `Entry ${sequence}`,
+    slug: params.slug ?? `post-${sequence}-${Date.now()}`,
+    content: params.content ?? null,
+    excerpt: params.excerpt ?? null,
+    status,
+    parentId: params.parentId ?? null,
+    sortOrder: params.sortOrder ?? 0,
+    publishedAt:
+      params.publishedAt ?? (status === "published" ? new Date() : null),
+    authorId,
+  };
+});
 
 export const draftEntry = entryFactory.params({ status: "draft" });
 export const publishedEntry = entryFactory.params({ status: "published" });
 export const trashedEntry = entryFactory.params({ status: "trash" });
 
-export const termFactory = Factory.define<NewTerm, DbTransient, Term>(
-  ({ sequence, transientParams, onCreate, params }) => {
-    onCreate(async (attrs) => {
-      const db = requireDb(transientParams);
-      const [row] = await db.insert(terms).values(attrs).returning();
-      if (!row) throw new Error("termFactory: insert returned no row");
-      return row;
-    });
+export const termFactory = Factory.define<
+  NewTerm,
+  DbTransient,
+  Term,
+  Partial<NewTerm>
+>(({ sequence, transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const [row] = await db.insert(terms).values(attrs).returning();
+    if (!row) throw new Error("termFactory: insert returned no row");
+    return row;
+  });
 
-    return {
-      taxonomy: params.taxonomy ?? "category",
-      name: params.name ?? `Term ${sequence}`,
-      slug: params.slug ?? `term-${sequence}-${Date.now()}`,
-      description: params.description ?? null,
-      parentId: params.parentId ?? null,
-    };
-  },
-);
+  return {
+    taxonomy: params.taxonomy ?? "category",
+    name: params.name ?? `Term ${sequence}`,
+    slug: params.slug ?? `term-${sequence}-${Date.now()}`,
+    description: params.description ?? null,
+    parentId: params.parentId ?? null,
+  };
+});
 
 export const categoryTerm = termFactory.params({ taxonomy: "category" });
 export const tagTerm = termFactory.params({ taxonomy: "tag" });
@@ -324,7 +337,8 @@ interface MintedAuthToken {
 export const authTokenFactory = Factory.define<
   Omit<NewAuthToken, "hash">,
   DbTransient,
-  MintedAuthToken
+  MintedAuthToken,
+  Partial<Omit<NewAuthToken, "hash">>
 >(({ transientParams, onCreate, params }) => {
   onCreate(async (attrs) => {
     const db = requireDb(transientParams);

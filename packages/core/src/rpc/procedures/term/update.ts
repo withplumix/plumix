@@ -1,4 +1,5 @@
 import type { NewTerm } from "../../../db/schema/terms.js";
+import type { ResolvedMeta } from "../../meta/core.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { authenticated } from "../../authenticated.js";
@@ -122,7 +123,7 @@ export const update = base
       }
     }
 
-    let meta: Record<string, unknown>;
+    let meta: ResolvedMeta;
     if (metaPatch) {
       await writeTermMeta(context, updated, metaPatch);
       meta = await loadTermMeta(context, updated);

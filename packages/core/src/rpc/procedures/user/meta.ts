@@ -1,6 +1,7 @@
 import type { AppContext } from "../../../context/app.js";
+import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
-import type { MetaPatch } from "../../meta/core.js";
+import type { MetaInput, MetaPatch, ResolvedMeta } from "../../meta/core.js";
 import { users } from "../../../db/schema/users.js";
 import { findUserMetaField } from "../../../plugin/manifest.js";
 import {
@@ -20,7 +21,7 @@ export type { MetaChanges as UserMetaChanges } from "../../meta/core.js";
  *  keyspace — no scope argument. */
 export async function sanitizeMetaForRpc(
   registry: PluginRegistry,
-  input: Record<string, unknown> | undefined,
+  input: MetaInput | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
 ): Promise<MetaPatch | null> {
   return sanitizeMetaForRpcCore(
@@ -63,8 +64,8 @@ export function assertUserMetaCapabilities(
 /** Decode + resolve one user's meta bag for a read response. */
 export async function resolveUserMeta(
   ctx: AppContext,
-  raw: Readonly<Record<string, unknown>> | null | undefined,
-): Promise<Record<string, unknown>> {
+  raw: JsonObject | null | undefined,
+): Promise<ResolvedMeta> {
   const findField = (key: string) => findUserMetaField(ctx.plugins, key);
   return resolveMetaReferencesCore(
     ctx,
@@ -76,7 +77,7 @@ export async function resolveUserMeta(
 export async function loadUserMeta(
   ctx: AppContext,
   user: { readonly id: number },
-): Promise<Record<string, unknown>> {
+): Promise<ResolvedMeta> {
   const decoded = await loadMeta(ctx, users, users.id, user.id, (key) =>
     findUserMetaField(ctx.plugins, key),
   );

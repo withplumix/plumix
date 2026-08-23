@@ -1,4 +1,5 @@
 import type { NewEntry } from "../../../db/schema/entries.js";
+import type { ResolvedMeta } from "../../meta/core.js";
 import { entries } from "../../../db/schema/entries.js";
 import { isReservedType } from "../../../revisions/slug-codec.js";
 import { authenticated } from "../../authenticated.js";
@@ -153,7 +154,7 @@ export const create = base
       await applyTermPatch(context, created.id, termsPatch);
     }
 
-    let meta: Record<string, unknown>;
+    let meta: ResolvedMeta;
     if (metaPatch) {
       await writeEntryMeta(context, created, metaPatch);
       meta = await loadEntryMeta(context, created);

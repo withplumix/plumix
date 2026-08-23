@@ -11,6 +11,7 @@
 
 import type { PlumixAuthConfig } from "../auth/config.js";
 import type { AppContext } from "../context/app.js";
+import type { JsonObject } from "../json.js";
 import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";
 import type { AccessPolicy, Gate } from "./policy.js";
@@ -108,7 +109,7 @@ export function selectEntryPolicy(
 // The per-entry access choice stored under the reserved meta key, or `undefined`
 // when unset (or stored as a non-string by some out-of-band write).
 function readAccessKey(
-  meta: Readonly<Record<string, unknown>> | null | undefined,
+  meta: JsonObject | null | undefined,
 ): string | undefined {
   const value = meta?.[ACCESS_POLICY_META_KEY];
   return typeof value === "string" ? value : undefined;

@@ -17,8 +17,9 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import * as v from "valibot";
 
+import type { WithResolvedMeta } from "@plumix/core";
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
-import type { Term } from "@plumix/core/schema";
+import type { Term as StoredTerm } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -29,6 +30,8 @@ import {
   EmptyTitle,
 } from "@plumix/admin-ui/empty";
 import { Plus } from "@plumix/admin-ui/icons";
+
+type Term = WithResolvedMeta<StoredTerm>;
 
 const M = {
   columnName: defineMessage({
