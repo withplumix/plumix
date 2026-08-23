@@ -49,6 +49,9 @@ const config: KnipConfig = {
       entry: ["plumix.config.ts"],
     },
     "apps/docs": {
+      // Components are imported by `.mdx` pages, which knip does not parse for
+      // imports — so every one of them reads as unused however many pages use it.
+      entry: ["src/components/*.astro"],
       // `test/fixtures/` holds deliberately-broken `.mdx` pages that the
       // content-check suite reads by path. Nothing imports them.
       ignore: ["test/fixtures/**"],

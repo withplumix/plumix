@@ -12,6 +12,16 @@ interface Props {
 
 const { light, dark, alt } = Astro.props;
 
+// `astro check` reads `.astro` and `.ts`, never `.mdx`, so the interface above
+// is not enforced at the one call site that matters. Without this the omission
+// still fails the build, but as `ExpectedImage … Received undefined`, which
+// names neither the rule nor the fix.
+if (!light || !dark || !alt) {
+  throw new Error(
+    "<Screenshot> needs `light`, `dark` and `alt`. Half of readers are in the other theme, and a single-theme capture is unreadable to them.",
+  );
+}
+
 // Astro's default for a constrained image is `100vw`, but the pair renders in
 // the content column, never the viewport. 45rem is Starlight's own
 // `--sl-content-width`, restated here because `sizes` is an HTML attribute and
@@ -27,9 +37,6 @@ const sizes = "(min-width: 45rem) 45rem, 100vw";
     script of ours. The cost is that both captures ship and a browser fetches
     the hidden one too — hence `constrained`, so that second fetch takes a
     srcset variant near the display size rather than the full 2x capture.
-    `eager` for the same reason lazy buys nothing: the pair sits above the
-    body, so it loads either way, and it is the likely largest contentful
-    paint.
   */
 }
 <Image
@@ -37,7 +44,6 @@ const sizes = "(min-width: 45rem) 45rem, 100vw";
   alt={alt}
   layout="constrained"
   sizes={sizes}
-  loading="eager"
   class="dark:sl-hidden"
 />
 <Image
@@ -45,6 +51,5 @@ const sizes = "(min-width: 45rem) 45rem, 100vw";
   alt={alt}
   layout="constrained"
   sizes={sizes}
-  loading="eager"
   class="light:sl-hidden"
 />
