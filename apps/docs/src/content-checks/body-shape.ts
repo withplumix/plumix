@@ -1,4 +1,4 @@
-import type { Heading } from "mdast";
+import type { Heading, Root } from "mdast";
 import remarkMdx from "remark-mdx";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
@@ -16,19 +16,26 @@ const mdx = unified().use(remarkParse).use(remarkMdx);
  * Parse the body rather than scan its lines. MDX opens a page with `import`
  * statements and JSX elements — both of which span lines and both of which a
  * line scanner mistakes for the prose a page owes its reader. A `##` inside a
- * code fence is text, not a section, for the same reason.
+ * code fence is text, not a section, and a fence may itself contain fences, for
+ * the same reason.
  *
  * `undefined` when the body is not MDX at all: a run has to report every
  * offending page, so one unparsable page cannot take the whole run down.
  */
-export function readBodyShape(source: string): BodyShape | undefined {
-  let children;
+export function parseBody(source: string): Root | undefined {
   try {
-    children = mdx.parse(source).children;
+    return mdx.parse(source);
   } catch {
     return undefined;
   }
+}
 
+/** The parts of a parsed body the page-shape and roster checks read. */
+export function readBodyShape(source: string): BodyShape | undefined {
+  const root = parseBody(source);
+  if (root === undefined) return undefined;
+
+  const { children } = root;
   const firstHeading = children.findIndex((node) => node.type === "heading");
   const lede = firstHeading === -1 ? children : children.slice(0, firstHeading);
 

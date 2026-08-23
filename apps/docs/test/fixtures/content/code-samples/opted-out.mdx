@@ -1,0 +1,28 @@
+---
+title: Opted-Out Sample
+description: A page showing an anti-pattern, which must not be checked.
+---
+
+A lede that stands on its own, because an agent reads it first.
+
+## Overview
+
+The sample below is the mistake it warns against, so it cannot compile.
+
+```ts no-typecheck
+import { text } from "plumix/fields";
+
+export const summary = text("summary").maxLen(120);
+```
+
+## Quickstart
+
+Nothing to run.
+
+## Related
+
+- The page whose samples compile.
+
+## Next steps
+
+- Read the page shape check.

@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 
 import type { Finding } from "./finding";
 import type { Roster } from "./roster-drift";
+import { checkCodeSamples } from "./code-samples";
 import { readContentTree } from "./content-tree";
 import { checkPageShape } from "./page-shape";
 import { checkRosterDrift } from "./roster-drift";
@@ -26,5 +27,9 @@ export function runContentChecks(
 ): Finding[] {
   const pages = readContentTree(root);
 
-  return [...checkPageShape(pages), ...checkRosterDrift(pages, rosters)];
+  return [
+    ...checkPageShape(pages),
+    ...checkCodeSamples(pages),
+    ...checkRosterDrift(pages, rosters),
+  ];
 }

@@ -52,10 +52,17 @@ const config: KnipConfig = {
       // `test/fixtures/` holds deliberately-broken `.mdx` pages that the
       // content-check suite reads by path. Nothing imports them.
       ignore: ["test/fixtures/**"],
-      // wrangler is invoked by the Workers Build deploy command (`wrangler
-      // deploy`), not a repo script; knip's wrangler plugin only recognises
-      // configs with a `main`, and this static-assets site has none.
-      ignoreDependencies: ["wrangler"],
+      // - wrangler is invoked by the Workers Build deploy command (`wrangler
+      //   deploy`), not a repo script; knip's wrangler plugin only recognises
+      //   configs with a `main`, and this static-assets site has none.
+      // - The other two are how the code-sample check compiles samples: the
+      //   ambients a scaffolded app declares, and the tsconfig its options
+      //   extend — named in a string, so no import to follow.
+      ignoreDependencies: [
+        "wrangler",
+        "@cloudflare/workers-types",
+        "@plumix/typescript-config",
+      ],
     },
     // Playgrounds — same shape as apps/*: `plumix.config.ts` is the
     // consumer entry, not visible to knip without an explicit hint.

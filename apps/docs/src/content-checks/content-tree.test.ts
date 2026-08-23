@@ -9,6 +9,10 @@ const paths = pages.map((page) => page.path);
 describe("readContentTree", () => {
   it("returns every page the Starlight loader would publish", () => {
     expect(paths).toEqual([
+      "code-samples/broken.mdx",
+      "code-samples/opted-out.mdx",
+      "code-samples/unchecked-languages.mdx",
+      "code-samples/valid.mdx",
       "headings-in-code.mdx",
       "index.mdx",
       "markdown-page.md",

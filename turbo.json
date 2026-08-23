@@ -45,9 +45,18 @@
       "dependsOn": []
     },
     "test:build": {
-      // Tests that spin up a real Vite build and inspect the emitted artifacts
-      // (`*.build.test.ts`). Only plumix has these; they need the build graph.
+      // Tests that need the build graph (`*.build.test.ts`): plumix inspects
+      // the artifacts of a real Vite build, and the docs content checks compile
+      // samples against the published `.d.ts` files.
       "dependsOn": ["build", "^build"]
+    },
+    "@plumix-apps/docs#test:build": {
+      // Only `^build` — the samples are compiled against the packages' types,
+      // and nothing here reads the site's own output. Depending on `build` too
+      // would rebuild the whole Starlight site on every content edit, which is
+      // exactly when this check runs, and would surface a broken page as an
+      // Astro error before the finding this check exists to report.
+      "dependsOn": ["^build"]
     },
     "test:e2e": {
       "dependsOn": ["build", "^build"],
