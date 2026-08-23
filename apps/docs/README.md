@@ -20,6 +20,7 @@ per major from 1.0) — land with the **docs-site follow-up** to #1425.
 pnpm dev        # astro dev — http://localhost:4321
 pnpm build      # static build → dist/
 pnpm typecheck  # astro sync + tsc
+pnpm test:unit  # the content checks
 ```
 
 ## Link and anchor validation
@@ -34,6 +35,33 @@ to it is reported invalid.
 Links carrying the site's own origin (`https://docs.plumix.dev/...`) are _not_
 checked — the plugin only treats them as internal once `site` is set in
 `astro.config.mjs`. Write cross-references root-relative.
+
+## Content checks
+
+`src/content-checks/` walks a content root once and reports every page that
+breaks a documentation convention. Each check takes the pages that one
+traversal produced and **returns findings** rather than asserting, so a run
+names every offending page at once.
+
+`runContentChecks` takes the root as a parameter: the suite points it at
+`src/content/docs` for the production run and at `test/fixtures/content` for
+the deliberately-broken pages that prove each check catches what it claims to.
+Fixtures have to live outside the real content root, or the production run
+would flag them.
+
+Today the suite carries one check: page shape. Every documentation page owes a
+lede — prose between the frontmatter and the first heading — and four sections:
+Overview, Quickstart, Related, Next steps. A roster page declares
+`roster: true` and enumerates its items as `###` headings, which exempts it
+from the quickstart. A landing page declares Starlight's own `template: splash`
+and is not held to the template at all.
+
+Two more checks are planned on the same traversal: sample type-checking
+([#1858][]) and roster drift ([#1859][], [#1860][]).
+
+[#1858]: https://github.com/withplumix/plumix/issues/1858
+[#1859]: https://github.com/withplumix/plumix/issues/1859
+[#1860]: https://github.com/withplumix/plumix/issues/1860
 
 ## Why Starlight is capped below 0.41.7
 

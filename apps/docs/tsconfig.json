@@ -9,6 +9,12 @@
     "incremental": true,
     "tsBuildInfoFile": "${configDir}/.cache/typecheck.tsbuildinfo"
   },
-  "include": ["astro.config.mjs", "src", ".astro/types.d.ts"],
+  "include": [
+    "astro.config.mjs",
+    "vitest.config.ts",
+    "src",
+    "test",
+    ".astro/types.d.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }
