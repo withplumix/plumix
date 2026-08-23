@@ -13,6 +13,14 @@ describe("runContentChecks", () => {
     expect(rules).toContain("page-shape/missing-lede");
   });
 
+  it("runs every check over the one traversal", () => {
+    const rules = runContentChecks(FIXTURES_ROOT, [
+      { page: "rosters/roles.mdx", items: ["subscriber", "contributor"] },
+    ]).map((finding) => finding.rule);
+
+    expect(rules).toContain("roster-drift/unknown-item");
+  });
+
   it("reaches the real content tree", () => {
     // Without this the clean run below would pass just as happily on a
     // traversal that found nothing.

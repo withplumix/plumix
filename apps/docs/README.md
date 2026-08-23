@@ -121,18 +121,34 @@ the deliberately-broken pages that prove each check catches what it claims to.
 Fixtures have to live outside the real content root, or the production run
 would flag them.
 
-Today the suite carries one check: page shape. Every documentation page owes a
-lede — prose between the frontmatter and the first heading — and four sections:
-Overview, Quickstart, Related, Next steps. A roster page declares
-`roster: true` and enumerates its items as `###` headings, which exempts it
-from the quickstart. A landing page declares Starlight's own `template: splash`
-and is not held to the template at all.
+### Page shape
 
-Two more checks are planned on the same traversal: sample type-checking
-([#1858][]) and roster drift ([#1859][], [#1860][]).
+Every documentation page owes a lede — prose between the frontmatter and the
+first heading — and four sections: Overview, Quickstart, Related, Next steps. A
+roster page declares `roster: true` and enumerates its items as `###` headings,
+which exempts it from the quickstart. A landing page declares Starlight's own
+`template: splash` and is not held to the template at all.
+
+### Roster drift
+
+A roster page says _this is all of them_, so a roster that falls behind its
+source does not merely go incomplete — it lies. `rosters.ts` holds each
+roster's item ids once and pins that list from both sides, to its source and to
+the page, which transitively is page ≡ source.
+
+**The header comment in `rosters.ts` is the reference** — how a roster binds to
+its source, what an item id is, and what adding a roster involves are all
+settled there, once.
+
+Six rosters are guarded, the ones whose source is a runtime constant. The
+remaining eleven follow in [#1860][]. A roster whose page nobody has written
+yet reports nothing; a written one that no entry claims is reported, so a
+mistyped path cannot leave a roster unguarded.
+
+Sample type-checking ([#1858][]) is the one check still to come, on the same
+traversal.
 
 [#1858]: https://github.com/withplumix/plumix/issues/1858
-[#1859]: https://github.com/withplumix/plumix/issues/1859
 [#1860]: https://github.com/withplumix/plumix/issues/1860
 
 ## Why Starlight is capped below 0.41.7
