@@ -20,13 +20,6 @@ export default defineConfig({
       // Keeps a roster page's right rail a section index rather than a list as
       // long as the page. Pages override in frontmatter.
       tableOfContents: { maxHeadingLevel: 2 },
-      components: {
-        // Renders a page's frontmatter screenshot above its body. Overriding
-        // the content wrapper is what puts the pair on every page at once —
-        // the alternative, an `.mdx` component, is per-page wiring the writer
-        // has to remember.
-        MarkdownContent: "./src/components/MarkdownContent.astro",
-      },
       social: [
         {
           icon: "github",

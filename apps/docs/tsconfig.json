@@ -6,6 +6,10 @@
   // other workspace.
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
+    // Pages sit at varying depths, so a relative import to a component or an
+    // image means counting `../` per page. Astro resolves tsconfig paths, so
+    // `.mdx` imports can use this too.
+    "paths": { "~/*": ["./src/*"] },
     "incremental": true,
     "tsBuildInfoFile": "${configDir}/.cache/typecheck.tsbuildinfo"
   },
