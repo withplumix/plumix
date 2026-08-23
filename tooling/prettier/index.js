@@ -6,6 +6,8 @@
 const config = {
   plugins: [
     "@ianvs/prettier-plugin-sort-imports",
+    "prettier-plugin-astro",
+    // Last on purpose: it wraps whichever parser precedes it.
     "prettier-plugin-tailwindcss",
   ],
   tailwindFunctions: ["cn", "cva"],
