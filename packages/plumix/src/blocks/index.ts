@@ -17,6 +17,7 @@ export {
   BlockContentValidationError,
   coreBlocks,
   coreMarks,
+  coreShortcodes,
   createBlockRegistry,
   defineBlock,
   defineEntryContent,
@@ -32,7 +33,11 @@ export {
   serializeProps,
   IslandShim,
 } from "@plumix/blocks";
-export type { IslandProps, PlumixStrategy } from "@plumix/blocks";
+export type {
+  IslandProps,
+  PlumixPrefetch,
+  PlumixStrategy,
+} from "@plumix/blocks";
 export type {
   BlockContext,
   BlockInput,
@@ -52,4 +57,5 @@ export type {
   MarkSpec,
   RenderBlockTreeOptions,
   ResolvedTransformTarget,
+  ShortcodeSpec,
 } from "@plumix/blocks";

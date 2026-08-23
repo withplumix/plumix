@@ -1,12 +1,17 @@
+import { readFileSync } from "node:fs";
+import type { ActionName } from "plumix";
 import type { EntryStatus } from "plumix/schema";
 import {
   CORE_CAPABILITIES,
+  entryTag,
   POST_TYPE_CAPABILITY_ACTIONS,
   TERM_TAXONOMY_CAPABILITY_ACTIONS,
+  typeTag,
 } from "plumix";
-import { coreBlocks, coreMarks } from "plumix/blocks";
+import { coreBlocks, coreMarks, coreShortcodes } from "plumix/blocks";
 import { describe, expect, it } from "vitest";
 
+import type { SourceHookName } from "./rosters";
 import type { Assert, Equals } from "./type-assert";
 import { ROSTERS } from "./rosters";
 
@@ -18,17 +23,62 @@ import { ROSTERS } from "./rosters";
 // @ts-expect-error -- a list short of a source value must not satisfy Equals.
 type _ShortListIsCaught = Assert<Equals<"draft" | "published", EntryStatus>>;
 
+// The same proof for the hook registries, whose lists reach the shape only
+// through the placeholder substitution: a list holding two of the actions must
+// still fail, so expanding `entry:*:published` back to its template literal
+// cannot be what makes a short list pass.
+type ShortActionList = SourceHookName<"entry:*:published" | "entry:published">;
+
+// @ts-expect-error -- an action list short of a source name must not satisfy Equals.
+type _ShortHookListIsCaught = Assert<Equals<ShortActionList, ActionName>>;
+
 function itemsOf(page: string): readonly string[] {
   const roster = ROSTERS.find((candidate) => candidate.page === page);
   if (roster === undefined) throw new Error(`No roster registered for ${page}`);
   return roster.items;
 }
 
-// The three rosters below are the ones whose source hides its values behind a
-// widening annotation — `readonly BlockSpec[]`, `Record<string, UserRole>` —
-// leaving `typeof` nothing to bind a type-level assertion to. A runtime
-// comparison against the same source is the binding instead, and it is
-// stricter than the type-level one: it pins order as well as membership.
+describe("the roster inventory", () => {
+  // The IA spec settles the site at seventeen rosters. Pinning the count is
+  // what stops an eighteenth arriving without anyone deciding how it binds to
+  // its source — the page-side half comes free with registration, so an
+  // unbound roster looks guarded until it drifts.
+  it("covers every roster the site promises", () => {
+    expect(ROSTERS).toHaveLength(17);
+  });
+
+  // And the tally stops a roster losing the binding it already had. Deleting
+  // an `Assert` changes no count and reads as a tidy-up in review; moving an
+  // entry to `page-only` to match fails here instead.
+  it("leaves exactly the two rosters whose source no package exports unbound", () => {
+    const unbound = ROSTERS.filter((roster) => roster.binding === "page-only");
+
+    expect(unbound.map((roster) => roster.page)).toEqual([
+      "apis/mcp.mdx",
+      "deployment/cli.mdx",
+    ]);
+  });
+
+  it("claims each page once, so no two rosters fight over one page's items", () => {
+    const pages = ROSTERS.map((roster) => roster.page);
+
+    expect([...new Set(pages)]).toEqual(pages);
+  });
+
+  // `checkRosterDrift` compares against a Set, so a roster holding one item
+  // twice is satisfied by a single heading. Four rosters are assembled from
+  // more than one source, and two of those prefix their items precisely to
+  // keep a shared name apart — this is what holds that reasoning.
+  it("holds each item once, so no composed roster collides with itself", () => {
+    for (const roster of ROSTERS) {
+      expect([...new Set(roster.items)]).toEqual(roster.items);
+    }
+  });
+});
+
+// Every roster marked `binding: "runtime"` in the inventory. Each source says
+// there why it is bound this way rather than type-level; what they share is
+// that the comparison pins order as well as membership.
 describe("the rosters bound to their source at runtime", () => {
   it("binds the core-block roster to the blocks the package ships", () => {
     expect(itemsOf("blocks/core-blocks.mdx")).toEqual(
@@ -42,6 +92,12 @@ describe("the rosters bound to their source at runtime", () => {
     );
   });
 
+  it("binds the shortcode roster to the shortcodes the package ships", () => {
+    expect(itemsOf("blocks/shortcodes.mdx")).toEqual(
+      coreShortcodes.map((shortcode) => shortcode.name),
+    );
+  });
+
   it("binds the capability roster to the three capability records", () => {
     expect(itemsOf("access/capabilities.mdx")).toEqual([
       ...Object.keys(CORE_CAPABILITIES),
@@ -51,6 +107,34 @@ describe("the rosters bound to their source at runtime", () => {
       ...Object.keys(TERM_TAXONOMY_CAPABILITY_ACTIONS).map(
         (action) => `term:*:${action}`,
       ),
+    ]);
+  });
+
+  // Read off disk because a manifest is not one of the subpaths it declares,
+  // so no import reaches it. The `..` count walks out of `content-checks/` to
+  // the repo root and moving this file breaks it.
+  it("binds the façade-subpath roster to the exports map that publishes them", () => {
+    const manifest = JSON.parse(
+      readFileSync(
+        new URL("../../../../packages/plumix/package.json", import.meta.url),
+        "utf8",
+      ),
+    ) as { readonly exports: Readonly<Record<string, unknown>> };
+
+    expect(itemsOf("getting-started/project-structure.mdx")).toEqual(
+      Object.keys(manifest.exports).map((subpath) =>
+        subpath === "." ? "plumix" : `plumix/${subpath.slice("./".length)}`,
+      ),
+    );
+  });
+
+  // Each minter is asked for the tag the page documents. `typeTag` takes the
+  // type name, so the `*` goes straight through it; `entryTag` takes a number,
+  // so it goes back afterwards.
+  it("binds the cache-tag roster to the two minters the façade exports", () => {
+    expect(itemsOf("going-further/caching.mdx")).toEqual([
+      typeTag("*"),
+      entryTag(7).replace("7", "*"),
     ]);
   });
 });
