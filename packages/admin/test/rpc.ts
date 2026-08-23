@@ -72,8 +72,11 @@ export function stubRpc(
       if (!responder) return envelope({ message: "not routed" }, 404);
       try {
         return envelope(await responder(input), 200);
-      } catch (error) {
-        return envelope({ message: String(error) }, 500);
+      } catch {
+        // The thrown value isn't echoed back: what a responder threw is
+        // already visible in the test that threw it, and the tests using this
+        // path assert on the failure, not on its message.
+        return envelope({ message: "responder threw" }, 500);
       }
     }),
   );
