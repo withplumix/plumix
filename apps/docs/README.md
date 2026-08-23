@@ -22,6 +22,19 @@ pnpm build      # static build → dist/
 pnpm typecheck  # astro sync + tsc
 ```
 
+## Link and anchor validation
+
+`starlight-links-validator` runs on `pnpm build` and fails it on any internal
+link that does not resolve — including a `#heading` that no longer exists.
+
+One gotcha when adding a page: **give it a body.** A frontmatter-only page never
+reaches the markdown pipeline, so the validator never records it, and every link
+to it is reported invalid.
+
+Links carrying the site's own origin (`https://docs.plumix.dev/...`) are _not_
+checked — the plugin only treats them as internal once `site` is set in
+`astro.config.mjs`. Write cross-references root-relative.
+
 ## Why Starlight is capped below 0.41.7
 
 `@astrojs/starlight` is held to `>=0.41.5 <0.41.7`, not a caret range.
