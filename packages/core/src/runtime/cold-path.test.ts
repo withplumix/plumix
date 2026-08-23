@@ -107,20 +107,27 @@ function resolveWithinCore(
   return undefined;
 }
 
-function staticClosureOf(entries: readonly string[]): ReadonlySet<string> {
-  const seen = new Set(entries);
+// Maps each reachable file to the one that imported it, so a failure can name
+// the chain instead of only the destination. Breadth-first, so that chain is
+// the shortest one — the longest is rarely the one worth deleting.
+function staticClosureOf(
+  entries: readonly string[],
+): ReadonlyMap<string, string | undefined> {
+  const importedBy = new Map<string, string | undefined>(
+    entries.map((entry) => [entry, undefined]),
+  );
   const queue = [...entries];
   let file: string | undefined;
-  while ((file = queue.pop()) !== undefined) {
+  while ((file = queue.shift()) !== undefined) {
     for (const specifier of importsOf(file).static) {
       const resolved = resolveWithinCore(file, specifier);
-      if (resolved !== undefined && !seen.has(resolved)) {
-        seen.add(resolved);
+      if (resolved !== undefined && !importedBy.has(resolved)) {
+        importedBy.set(resolved, file);
         queue.push(resolved);
       }
     }
   }
-  return seen;
+  return importedBy;
 }
 
 const ENTRY_FILES = COLD_PATH_ENTRIES.map((entry) => path.join(SRC, entry));
@@ -129,15 +136,27 @@ const COLD_PATH = staticClosureOf(ENTRY_FILES);
 // Every module the entry files defer, discovered rather than listed. A loader
 // added later is guarded the day it lands, which the hand-written roster above
 // can't promise — this repo has had roster drift before.
-const DEFERRED_FILES = ENTRY_FILES.flatMap((file) =>
-  importsOf(file)
-    .dynamic.map((specifier) => ({
-      importer: path.relative(SRC, file),
-      specifier,
-      file: resolveWithinCore(file, specifier),
-    }))
-    .filter((entry) => entry.file !== undefined),
+const DEFERRED_FILES = ENTRY_FILES.flatMap((entry) =>
+  importsOf(entry).dynamic.flatMap((specifier) => {
+    const file = resolveWithinCore(entry, specifier);
+    return file === undefined ? [] : [{ specifier, file }];
+  }),
 );
+
+// The chain that put `file` on the cold path, entry first — or undefined when
+// nothing static reaches it, which is the passing case. Returning the chain as
+// the asserted value rather than a boolean means the failure names the import
+// to go delete, which is otherwise a hand search across 200-odd files.
+function staticImportChain(file: string): string | undefined {
+  if (!COLD_PATH.has(file)) return undefined;
+  const chain: string[] = [];
+  let step: string | undefined = file;
+  while (step !== undefined) {
+    chain.unshift(path.relative(SRC, step));
+    step = COLD_PATH.get(step);
+  }
+  return chain.join(" → ");
+}
 
 describe("the cold-start path defers its heavy graphs", () => {
   // The roster and the discovered set assert opposite failures. Losing a loader
@@ -154,7 +173,7 @@ describe("the cold-start path defers its heavy graphs", () => {
   test.each(DEFERRED_FILES)(
     "$specifier is absent from the static closure",
     ({ file }) => {
-      expect(COLD_PATH).not.toContain(file);
+      expect(staticImportChain(file)).toBeUndefined();
     },
   );
 });
