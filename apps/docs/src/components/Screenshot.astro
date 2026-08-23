@@ -1,0 +1,50 @@
+---
+import { Image } from "astro:assets";
+
+interface Props {
+  /** The capture taken against the light theme. */
+  light: ImageMetadata;
+  /** The same subject captured against the dark theme. */
+  dark: ImageMetadata;
+  /** Describes what the screenshot shows. Applies to both captures. */
+  alt: string;
+}
+
+const { light, dark, alt } = Astro.props;
+
+// Astro's default for a constrained image is `100vw`, but the pair renders in
+// the content column, never the viewport. 45rem is Starlight's own
+// `--sl-content-width`, restated here because `sizes` is an HTML attribute and
+// cannot read the custom property. Getting it wrong costs a too-large variant,
+// not a broken layout.
+const sizes = "(min-width: 45rem) 45rem, 100vw";
+---
+
+{
+  /*
+    Starlight's utilities key off the `data-theme` attribute its inline script
+    writes before first paint, so switching theme switches the image with no
+    script of ours. The cost is that both captures ship and a browser fetches
+    the hidden one too — hence `constrained`, so that second fetch takes a
+    srcset variant near the display size rather than the full 2x capture.
+    `eager` for the same reason lazy buys nothing: the pair sits above the
+    body, so it loads either way, and it is the likely largest contentful
+    paint.
+  */
+}
+<Image
+  src={light}
+  alt={alt}
+  layout="constrained"
+  sizes={sizes}
+  loading="eager"
+  class="dark:sl-hidden"
+/>
+<Image
+  src={dark}
+  alt={alt}
+  layout="constrained"
+  sizes={sizes}
+  loading="eager"
+  class="light:sl-hidden"
+/>

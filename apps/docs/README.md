@@ -12,8 +12,14 @@ frontmatter schema, the content-check suite, the screenshot pipeline — lands
 before the first page is written.
 
 Pages are `.mdx`, not `.md`, so every page can import components and partials.
-Astro-specific prettier/eslint wiring is still not needed: `.mdx` formats with
-the repo's stock prettier, and `tsconfig.json` explains the typecheck setup.
+`src/components/` holds the site's own `.astro` components — see
+[Screenshots](#screenshots). Those are the reason this app carries the two bits
+of Astro-specific tooling the repo has nowhere else: `.prettierrc.mjs` adds the
+Astro parser to the shared prettier config, and `pnpm typecheck` runs
+`astro check` before `tsc`, because `tsc` does not read `.astro` at all.
+`tsconfig.json` explains the rest of the typecheck setup. Eslint has no Astro
+parser here, so `.astro` is outside the lint gate — `astro check` is what
+covers those files.
 
 Semver-aware versioning (inline "Added in x.y" badges pre-1.0;
 `starlight-versions` snapshots per major from 1.0) is still ahead of us.
@@ -23,7 +29,7 @@ Semver-aware versioning (inline "Added in x.y" badges pre-1.0;
 ```bash
 pnpm dev        # astro dev — http://localhost:4321
 pnpm build      # static build → dist/
-pnpm typecheck  # astro sync + tsc
+pnpm typecheck  # astro sync + astro check + tsc
 pnpm test:unit  # the content checks that need nothing built
 pnpm test:build # the sample type-check, which reads the published types
 ```
@@ -108,6 +114,46 @@ The plugin throws without `site`, which is why `astro.config.mjs` declares
 agent holding only the index has no base to resolve a relative href against.
 That absolute base also lets Starlight emit a sitemap and per-page
 canonical/`og:url` metadata, neither of which the site carried before.
+
+## Screenshots
+
+A page carries at most one screenshot, declared in frontmatter as a pair.
+Paths resolve against the page, so a page one section deep — the norm — reaches
+`src/assets/` with three steps:
+
+```yaml
+screenshot:
+  light: ../../../assets/entry-editor-light.png
+  dark: ../../../assets/entry-editor-dark.png
+  alt: The entry editor with a blog post open
+```
+
+It renders above the page body, and it renders on every page without the page
+importing anything: `astro.config.mjs` overrides Starlight's `MarkdownContent`
+with `src/components/MarkdownContent.astro`, which hands the pair to
+`src/components/Screenshot.astro`.
+
+**Both captures are required together.** The site renders in the reader's
+theme, so a single-theme screenshot is unreadable for half of readers. Rather
+than leave that to review, the two sources sit inside one object: an object's
+fields are required together, so a page declaring `light` without `dark` fails
+the build with `screenshot.dark: Required`. Carrying no screenshot at all is
+the normal case and stays fine.
+
+Both captures ship in the markup and Starlight's own `light:sl-hidden` /
+`dark:sl-hidden` utilities hide the one that does not match, so switching theme
+switches the image with no script of ours. `alt` applies to both, and only one
+of the two is ever in the accessibility tree, since the other is `display:
+none`. The reader pays for both: a browser fetches a `display: none` image
+too, which is why the pair is `layout="constrained"` — a srcset keeps that
+second fetch near the content width rather than the full capture.
+
+Images are imported through Astro's `image()` schema helper, which resolves the
+path against the page and fails the build when it does not exist. That is why
+`sharp` is a devDependency: Astro's default image service optimises the
+committed captures into `webp` at build time. Capturing those images is
+[#1862](https://github.com/withplumix/plumix/issues/1862); until it lands, no
+page declares a pair.
 
 ## Content checks
 
