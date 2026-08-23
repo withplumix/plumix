@@ -185,12 +185,15 @@ Source: `packages/blocks/src/`.
 `columns`, `column`, `button`, `details`, `video`, `embed`, `table`, `table-header-row`,
 `table-body-row`, `table-header-cell`, `table-cell`, `pattern-ref`.
 
-**Flag: `core/html` is not reachable.** `htmlBlock` is defined and exported from `@plumix/blocks`,
-but it is absent from `coreBlocks`, nothing in the repository registers it, and `plumix/blocks`
-does not re-export it — so registering it means importing from a package the docs tell readers not
-to import. `config.blocks.htmlAllowlist` is the sanitiser allowlist the block reads at render time,
-not a gate on its registration. Either it gets a façade export or a page has to say plainly that it
-is unavailable; today the roster is seventeen and `core/html` is not one of them.
+**Flag: `core/html` cannot be registered** (#1884). `htmlBlock` is defined and exported from
+`@plumix/blocks`, but it is absent from `coreBlocks` and nothing in the repository registers it.
+`plumix/blocks` does not re-export it — and importing it from `@plumix/blocks` directly would not
+help either, because `isReservedBlockName` is `name.startsWith("core/")` and both registration
+routes throw on it: a theme's `blocks` field (`core/src/theme.ts:269`) and a plugin's
+`registerBlock` (`core/src/plugin/setup-context.ts:706`). `config.blocks.htmlAllowlist` is the
+sanitiser allowlist the block would read at render time, not a gate on its registration, and it is
+live regardless — `core/rich-text` sanitises through the same allowlist. Today the roster is
+seventeen and `core/html` is not one of them.
 
 **Marks — 13** (`marks/core/`): `bold`, `italic`, `underline`, `strike`, `code`, `link`, `abbr`,
 `cite`, `highlight`, `kbd`, `small`, `subscript`, `superscript`.
