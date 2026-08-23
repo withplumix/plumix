@@ -1,7 +1,7 @@
 import * as path from "node:path";
 import type { Linter } from "eslint";
 import { ESLint } from "eslint";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { baseConfig } from "../base.js";
 import { reactConfig } from "../react.js";
@@ -38,6 +38,14 @@ async function messagesMatching<TReport>(
     .filter((message) => message.ruleId !== null && matches(message.ruleId))
     .map(project);
 }
+
+// The first `lintFiles` call builds the fixture TS program for the type-aware
+// rules, and on a contended runner that alone outruns the 5s default. Pay it
+// here rather than inside whichever test happens to run first, so every test's
+// own timeout stays a hang detector — same cold-start spike as PR #1522.
+beforeAll(async () => {
+  await eslint.lintFiles(["src/restricted-syntax.ts"]);
+}, 60_000);
 
 const plumixReports = (fixture: string) =>
   reportsMatching(fixture, (ruleId) => ruleId.startsWith("plumix/"));
