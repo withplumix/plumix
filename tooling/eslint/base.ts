@@ -154,12 +154,14 @@ export const baseConfig = defineConfig(
       "@typescript-eslint/no-unnecessary-type-parameters": "error",
     },
   },
-  // Test-id query convention (AGENTS.md). Scoped as the inverse of the rules
-  // above: a query by role, text or label only appears where a rendered tree
-  // is being read, and that is tests and e2e specs.
+  // Test-id query convention (AGENTS.md) and the module-mocking ban (issue
+  // #1815). Scoped as the inverse of the rules above: a query by role, text or
+  // label only appears where a rendered tree is being read, and a module mock
+  // only where a test runner is present — that is tests and e2e specs.
   {
     files: [...TEST_SOURCE, ...E2E_SOURCE],
     rules: {
+      "plumix/no-module-mocking": "error",
       "plumix/no-non-testid-queries": "error",
     },
   },

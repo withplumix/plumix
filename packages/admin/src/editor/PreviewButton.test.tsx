@@ -2,16 +2,24 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { Toaster } from "@plumix/admin-ui/sonner";
 import { TooltipProvider } from "@plumix/admin-ui/tooltip";
 
 import { renderWithI18n } from "../../test/render-with-i18n.js";
-import { toastError } from "../lib/toast.js";
 import { PreviewButton } from "./PreviewButton.js";
 
-vi.mock("../lib/toast.js", () => ({
-  toastSuccess: vi.fn(),
-  toastError: vi.fn(),
-}));
+// Mounted alongside the button so a toast lands in the DOM the user would see
+// it in — `toastSuccess` / `toastError` tag their content with a test id.
+function renderPreviewButton(
+  mintPreviewLink: () => Promise<{ readonly url: string }>,
+): void {
+  renderWithI18n(
+    <TooltipProvider>
+      <PreviewButton mintPreviewLink={mintPreviewLink} />
+      <Toaster />
+    </TooltipProvider>,
+  );
+}
 
 interface FakeWindow {
   location: { href: string };
@@ -50,11 +58,7 @@ describe("PreviewButton", () => {
     const mintPreviewLink = vi
       .fn()
       .mockResolvedValue({ url: "/post/secret?preview=tok123" });
-    renderWithI18n(
-      <TooltipProvider>
-        <PreviewButton mintPreviewLink={mintPreviewLink} />
-      </TooltipProvider>,
-    );
+    renderPreviewButton(mintPreviewLink);
 
     await userEvent.click(screen.getByTestId("editor-preview"));
 
@@ -70,17 +74,11 @@ describe("PreviewButton", () => {
   test("closes the tab and toasts when minting the preview fails", async () => {
     const win = stubWindowOpen();
     const mintPreviewLink = vi.fn().mockRejectedValue(new Error("nope"));
-    renderWithI18n(
-      <TooltipProvider>
-        <PreviewButton mintPreviewLink={mintPreviewLink} />
-      </TooltipProvider>,
-    );
+    renderPreviewButton(mintPreviewLink);
 
     await userEvent.click(screen.getByTestId("editor-preview"));
 
-    await waitFor(() => {
-      expect(toastError).toHaveBeenCalledOnce();
-    });
+    await screen.findByTestId("toast-error");
     expect(win.close).toHaveBeenCalledOnce();
   });
 });

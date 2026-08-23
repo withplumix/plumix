@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { json } from "@codemirror/lang-json";
-import CodeMirror from "@uiw/react-codemirror";
+import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 
 // CodeMirror wants a concrete light/dark. Read the resolved theme the
 // `ThemeProvider` stamps onto the document root (`.dark`) — that already
@@ -56,7 +56,13 @@ function JsonCodeEditor({
         onChange={onChange}
         editable={!disabled}
         theme={resolveColorScheme()}
-        extensions={[json()]}
+        extensions={[
+          json(),
+          // CodeMirror owns the editable element, so the wrapper's test id
+          // can't reach it. Name the editing surface itself, or a test has no
+          // testid-only way to type into the field.
+          EditorView.contentAttributes.of({ "data-testid": `${testId}-code` }),
+        ]}
         basicSetup={{
           lineNumbers: true,
           foldGutter: false,

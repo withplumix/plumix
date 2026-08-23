@@ -14,6 +14,7 @@ import type {
 import type { DevErrorJson } from "../dev/server/render.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
+import type { PlumixApp } from "./app.js";
 import type { ConnectedCache } from "./slots.js";
 import { debugHistory } from "../dev/debug-bar/history.js";
 import { definePlugin } from "../plugin/define.js";
@@ -31,19 +32,6 @@ declare module "../template.js" {
   }
 }
 
-// Track when the dispatcher dynamic-imports the MCP module: the factory runs
-// once on first import, so `loadCount` is the no-load assertion for the
-// disabled path. Nothing else in this file imports the module — so the
-// disabled test must run before the enabled one for `loadCount === 0` to hold.
-const mcpMock = vi.hoisted(() => ({
-  loadCount: 0,
-  handleMcpRequest: vi.fn(() => new Response("mcp-ok", { status: 200 })),
-}));
-vi.mock("../mcp/dispatch.js", () => {
-  mcpMock.loadCount += 1;
-  return { handleMcpRequest: mcpMock.handleMcpRequest };
-});
-
 function mcpRequest(): Request {
   return new Request("https://cms.example/_plumix/mcp", {
     method: "POST",
@@ -52,20 +40,39 @@ function mcpRequest(): Request {
   });
 }
 
-// Same no-load assertion for the REST surface: the factory runs once on first
-// import, so the disabled test (which must precede the enabled one) sees zero.
-const restMock = vi.hoisted(() => ({
-  loadCount: 0,
-  dispatch: vi.fn(() => new Response("rest-ok", { status: 200 })),
-}));
-vi.mock("../rest/build-handler.js", () => {
-  restMock.loadCount += 1;
-  return { buildRestDispatcher: () => restMock.dispatch };
-});
+// Both cold interfaces hang off the app as lazy loaders, so substituting one
+// makes the load observable: a zero count is the "the SDK never came onto the
+// cold-start path" assertion, and the handler's body proves the request was
+// delegated rather than merely answered.
+function coldInterfaceProbe(): {
+  readonly loads: { mcp: number; rest: number };
+  readonly coldInterfaces: Pick<
+    PlumixApp,
+    "loadMcpHandler" | "loadRestHandler"
+  >;
+} {
+  const loads = { mcp: 0, rest: 0 };
+  const loader = (surface: "mcp" | "rest") => () => {
+    loads[surface] += 1;
+    return Promise.resolve(() =>
+      Promise.resolve(new Response(`${surface}-ok`, { status: 200 })),
+    );
+  };
+  return {
+    loads,
+    coldInterfaces: {
+      loadMcpHandler: loader("mcp"),
+      loadRestHandler: loader("rest"),
+    },
+  };
+}
 
 describe("dispatcher — REST API enablement gate", () => {
-  test("the REST API is disabled by default: GET /_plumix/api/v1/posts returns 404 without loading the REST module", async () => {
-    const h = await createDispatcherHarness();
+  test("the REST API is disabled by default: GET /_plumix/api/v1/posts returns 404 without loading the REST handler", async () => {
+    const probe = coldInterfaceProbe();
+    const h = await createDispatcherHarness({
+      coldInterfaces: probe.coldInterfaces,
+    });
 
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/api/v1/posts"),
@@ -73,12 +80,15 @@ describe("dispatcher — REST API enablement gate", () => {
 
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("api-disabled");
-    expect(restMock.loadCount).toBe(0);
-    expect(restMock.dispatch).not.toHaveBeenCalled();
+    expect(probe.loads.rest).toBe(0);
   });
 
-  test("api.enabled imports the REST module once and delegates to its dispatcher", async () => {
-    const h = await createDispatcherHarness({ api: { enabled: true } });
+  test("api.enabled loads the REST handler once and delegates to it", async () => {
+    const probe = coldInterfaceProbe();
+    const h = await createDispatcherHarness({
+      api: { enabled: true },
+      coldInterfaces: probe.coldInterfaces,
+    });
 
     const response = await h.dispatch(
       new Request("https://cms.example/_plumix/api/v1/posts"),
@@ -86,32 +96,36 @@ describe("dispatcher — REST API enablement gate", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("rest-ok");
-    expect(restMock.loadCount).toBe(1);
-    expect(restMock.dispatch).toHaveBeenCalledOnce();
+    expect(probe.loads.rest).toBe(1);
   });
 });
 
 describe("dispatcher — MCP enablement gate", () => {
-  test("MCP is disabled by default: POST /_plumix/mcp returns 404 without loading the MCP module", async () => {
-    const h = await createDispatcherHarness();
+  test("MCP is disabled by default: POST /_plumix/mcp returns 404 without loading the MCP handler", async () => {
+    const probe = coldInterfaceProbe();
+    const h = await createDispatcherHarness({
+      coldInterfaces: probe.coldInterfaces,
+    });
 
     const response = await h.dispatch(mcpRequest());
 
     expect(response.status).toBe(404);
     expect(response.headers.get("x-plumix-hint")).toBe("mcp-disabled");
-    expect(mcpMock.loadCount).toBe(0);
-    expect(mcpMock.handleMcpRequest).not.toHaveBeenCalled();
+    expect(probe.loads.mcp).toBe(0);
   });
 
-  test("mcp.enabled imports the MCP module once and delegates to its handler", async () => {
-    const h = await createDispatcherHarness({ mcp: { enabled: true } });
+  test("mcp.enabled loads the MCP handler once and delegates to it", async () => {
+    const probe = coldInterfaceProbe();
+    const h = await createDispatcherHarness({
+      mcp: { enabled: true },
+      coldInterfaces: probe.coldInterfaces,
+    });
 
     const response = await h.dispatch(mcpRequest());
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("mcp-ok");
-    expect(mcpMock.loadCount).toBe(1);
-    expect(mcpMock.handleMcpRequest).toHaveBeenCalledOnce();
+    expect(probe.loads.mcp).toBe(1);
   });
 });
 

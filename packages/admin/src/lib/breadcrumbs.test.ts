@@ -1,10 +1,10 @@
 import { i18n } from "@lingui/core";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { PlumixManifest } from "@plumix/core/manifest";
 
 import type { Crumb } from "./breadcrumbs.js";
-import type * as ManifestLib from "./manifest.js";
+import { clearManifest, seedManifest } from "../../test/manifest.js";
 import { pathToCrumbs } from "./breadcrumbs.js";
 
 const FIXTURE: PlumixManifest = {
@@ -26,31 +26,26 @@ const FIXTURE: PlumixManifest = {
     { name: "tag", label: "Tags" },
   ],
   settingsPages: [{ name: "general", label: "General", groups: [] }],
+  adminNav: [
+    {
+      id: "plugins",
+      label: "Plugins",
+      items: [
+        {
+          to: "/pages/media",
+          label: "Media Library",
+          component: "media:MediaLibrary",
+        },
+      ],
+    },
+  ],
 };
 
-const PLUGIN_PAGES: { readonly to: string; readonly label: string }[] = [
-  { to: "/pages/media", label: "Media Library" },
-];
-
-vi.mock(
-  "./manifest.js",
-  async (importOriginal): Promise<typeof ManifestLib> => {
-    const actual = await importOriginal<typeof ManifestLib>();
-    return {
-      ...actual,
-      findEntryTypeBySlug: (slug: string) =>
-        FIXTURE.entryTypes?.find((e) => e.adminSlug === slug),
-      findTermTaxonomyByName: (name: string) =>
-        FIXTURE.termTaxonomies?.find((t) => t.name === name),
-      findSettingsPageByName: (name: string) =>
-        FIXTURE.settingsPages?.find((p) => p.name === name),
-      findPluginPageByPath: (path: string) =>
-        PLUGIN_PAGES.find((p) => p.to === path),
-    };
-  },
-);
-
 beforeEach(() => {
+  // The crumb labels come from the manifest lookups, so the fixture is written
+  // into the document the admin shell writes it into — the same payload the
+  // real parse and capability filtering run over.
+  seedManifest(FIXTURE);
   // Source-locale renders use `descriptor.message` directly; explicit en
   // catalog keeps the resolver on the cheap path.
   i18n.load({ en: {} });
@@ -58,7 +53,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.clearAllMocks();
+  clearManifest();
 });
 
 function labels(crumbs: readonly Crumb[]): readonly {

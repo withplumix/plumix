@@ -19,6 +19,11 @@ const link = new RPCLink({
     // Dispatcher rejects any non-safe /_plumix/* method missing this header.
     "x-plumix-request": "1",
   }),
+  // `RPCLink` otherwise binds `globalThis.fetch` at construction, freezing
+  // whichever implementation existed when this module was first imported.
+  // `init` carries the link's own `redirect: "manual"` — forward it, or a 3xx
+  // on an RPC path gets followed and its HTML parsed as an RPC envelope.
+  fetch: (request, init) => globalThis.fetch(request, init),
 });
 
 const client = createORPCClient<AppRouterClient>(link);

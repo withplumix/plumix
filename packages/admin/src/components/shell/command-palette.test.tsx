@@ -8,83 +8,77 @@ import { createQueryClient } from "@/providers/query-client.js";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { Direction } from "radix-ui";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { renderWithI18n } from "../../../test/render-with-i18n.js";
+import { clearManifest, seedManifest } from "../../../test/manifest.js";
+import { renderWithRouter } from "../../../test/render-with-router.js";
+import { stubRpc } from "../../../test/rpc.js";
 import { CommandPalette } from "./command-palette.js";
 
-const navigate = vi.hoisted(() => vi.fn());
-
-vi.mock("@tanstack/react-router", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useNavigate: () => navigate,
-}));
-
-vi.mock("@/lib/palette-nav.js", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  paletteNavItems: () => [
+// Navigation destinations and the entry-type slug the palette routes through
+// both come from the manifest the admin shell writes into the document, so
+// they are seeded there rather than substituted at the lookup functions.
+const NAV_MANIFEST = {
+  entryTypes: [{ name: "post", adminSlug: "posts", label: "Posts" }],
+  adminNav: [
     {
-      to: "/entries/posts",
-      label: { id: "i.posts", message: "Posts" },
-      keywords: [{ id: "k.articles", message: "articles" }],
+      id: "content",
+      label: { id: "g.content", message: "Content" },
+      items: [
+        {
+          to: "/entries/posts",
+          label: { id: "i.posts", message: "Posts" },
+          keywords: [{ id: "k.articles", message: "articles" }],
+        },
+        { to: "/users", label: { id: "i.users", message: "Users" } },
+      ],
     },
-    { to: "/users", label: { id: "i.users", message: "Users" } },
   ],
-}));
+};
 
-vi.mock("@/lib/manifest.js", () => ({
-  findEntryTypeByName: () => ({ adminSlug: "posts" }),
-}));
-
-vi.mock("@/lib/orpc.js", () => ({
-  orpc: {
-    search: {
-      query: {
-        queryOptions: (opts: {
-          input: { query: string };
-          enabled?: boolean;
-        }) => ({
-          queryKey: ["search", opts.input.query],
-          queryFn: () => [
-            {
-              key: "entry:post",
-              label: { id: "g.post", message: "Posts" },
-              priority: 10,
-              items: [{ id: "1", title: "Hello World" }],
-            },
-            {
-              key: "term:category",
-              label: { id: "g.category", message: "Categories" },
-              priority: 100,
-              items: [{ id: "7", title: "News" }],
-            },
-            {
-              key: "users",
-              label: { id: "g.users", message: "Users" },
-              priority: 200,
-              items: [
-                { id: "9", title: "Alice", subtitle: "alice@example.com" },
-              ],
-            },
-          ],
-          enabled: opts.enabled,
-        }),
-      },
-    },
+const SEARCH_GROUPS = [
+  {
+    key: "entry:post",
+    label: { id: "g.post", message: "Posts" },
+    priority: 10,
+    items: [{ id: "1", title: "Hello World" }],
   },
-}));
+  {
+    key: "term:category",
+    label: { id: "g.category", message: "Categories" },
+    priority: 100,
+    items: [{ id: "7", title: "News" }],
+  },
+  {
+    key: "users",
+    label: { id: "g.users", message: "Users" },
+    priority: 200,
+    items: [{ id: "9", title: "Alice", subtitle: "alice@example.com" }],
+  },
+];
 
-function renderPalette(node: ReactNode): void {
-  renderWithI18n(
+// A real memory-history router stands in for the admin's own: selecting an
+// item has to land on a URL, and the `to` template plus its params are what
+// produce it.
+function renderPalette(node: ReactNode): Promise<{
+  readonly pathname: () => string;
+}> {
+  return renderWithRouter(
     <QueryClientProvider client={createQueryClient()}>
       {node}
     </QueryClientProvider>,
   );
 }
 
+beforeEach(() => {
+  seedManifest(NAV_MANIFEST);
+  stubRpc({ "search/query": () => SEARCH_GROUPS });
+});
+
 afterEach(() => {
   cleanup();
-  navigate.mockClear();
+  clearManifest();
+  vi.unstubAllGlobals();
   _resetPaletteCommands();
   localStorage.clear();
 });
@@ -95,7 +89,7 @@ function pressCmdK(): void {
 
 describe("CommandPalette", () => {
   test("opens on Cmd+K and is closed before that", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
     expect(screen.queryByTestId("command-palette-input")).toBeNull();
 
     pressCmdK();
@@ -104,7 +98,7 @@ describe("CommandPalette", () => {
   });
 
   test("opens on Ctrl+K for non-mac", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
 
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
 
@@ -112,21 +106,23 @@ describe("CommandPalette", () => {
   });
 
   test("lists navigation items and navigates on select", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    const palette = await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
 
     fireEvent.click(
       await screen.findByTestId("command-palette-nav-/entries/posts"),
     );
 
-    expect(navigate).toHaveBeenCalledWith({ to: "/entries/posts" });
+    await waitFor(() => {
+      expect(palette.pathname()).toBe("/entries/posts");
+    });
     await waitFor(() =>
       expect(screen.queryByTestId("command-palette-input")).toBeNull(),
     );
   });
 
   test("filters navigation items by the typed query", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
     const input = await screen.findByTestId("command-palette-input");
 
@@ -141,7 +137,7 @@ describe("CommandPalette", () => {
   });
 
   test("surfaces a navigation item by a keyword synonym, not just its label", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
     const input = await screen.findByTestId("command-palette-input");
 
@@ -153,7 +149,7 @@ describe("CommandPalette", () => {
 
   test("shows a Recent group of previously visited destinations on empty query", async () => {
     recordRecentNav("/users");
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
 
     await screen.findByTestId("command-palette-recent-/users");
@@ -161,7 +157,7 @@ describe("CommandPalette", () => {
 
   test("renders a recent destination and its nav entry side by side", async () => {
     recordRecentNav("/users");
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
 
     await screen.findByTestId("command-palette-recent-/users");
@@ -169,7 +165,7 @@ describe("CommandPalette", () => {
   });
 
   test("records a visited destination so it surfaces under Recent next time", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
     fireEvent.click(await screen.findByTestId("command-palette-nav-/users"));
 
@@ -179,7 +175,7 @@ describe("CommandPalette", () => {
   });
 
   test("shows server content results and opens the editor on select", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    const palette = await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
     fireEvent.change(await screen.findByTestId("command-palette-input"), {
       target: { value: "hello" },
@@ -190,14 +186,14 @@ describe("CommandPalette", () => {
     );
     fireEvent.click(result);
 
-    expect(navigate).toHaveBeenCalledWith({
-      to: "/entries/$slug/$id/edit",
-      params: { slug: "posts", id: 1 },
+    // The manifest maps the `post` entry type to the `posts` admin slug.
+    await waitFor(() => {
+      expect(palette.pathname()).toBe("/entries/posts/1/edit");
     });
   });
 
   test("shows a loading indicator while the search query is in flight", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
     fireEvent.change(await screen.findByTestId("command-palette-input"), {
       target: { value: "hello" },
@@ -208,7 +204,7 @@ describe("CommandPalette", () => {
   });
 
   test("opens the term editor when a term result is selected", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    const palette = await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
     fireEvent.change(await screen.findByTestId("command-palette-input"), {
       target: { value: "news" },
@@ -218,15 +214,14 @@ describe("CommandPalette", () => {
       await screen.findByTestId("command-palette-result-term:category:7"),
     );
 
-    expect(navigate).toHaveBeenCalledWith({
-      to: "/terms/$name/$id/edit",
-      params: { name: "category", id: 7 },
+    await waitFor(() => {
+      expect(palette.pathname()).toBe("/terms/category/7/edit");
     });
   });
 
   test("opens a content result in a new tab on Cmd/Ctrl+click", async () => {
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
-    renderPalette(<CommandPalette capabilities={[]} />);
+    const palette = await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
     fireEvent.change(await screen.findByTestId("command-palette-input"), {
       target: { value: "hello" },
@@ -242,12 +237,12 @@ describe("CommandPalette", () => {
       "_blank",
       "noopener,noreferrer",
     );
-    expect(navigate).not.toHaveBeenCalled();
+    expect(palette.pathname()).toBe("/");
     openSpy.mockRestore();
   });
 
   test("opens the user editor when a user result is selected", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    const palette = await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
     fireEvent.change(await screen.findByTestId("command-palette-input"), {
       target: { value: "alice" },
@@ -257,9 +252,8 @@ describe("CommandPalette", () => {
       await screen.findByTestId("command-palette-result-users:9"),
     );
 
-    expect(navigate).toHaveBeenCalledWith({
-      to: "/users/$id/edit",
-      params: { id: 9 },
+    await waitFor(() => {
+      expect(palette.pathname()).toBe("/users/9/edit");
     });
   });
 
@@ -270,7 +264,7 @@ describe("CommandPalette", () => {
       title: { id: "cmd.x", message: "Do X" },
       run,
     });
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
 
     fireEvent.click(
@@ -290,7 +284,7 @@ describe("CommandPalette", () => {
       capability: "secret:do",
       run: vi.fn(),
     });
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
     await screen.findByTestId("command-palette-input");
 
@@ -300,14 +294,14 @@ describe("CommandPalette", () => {
   });
 
   test("renders a footer with keyboard hints", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
 
     await screen.findByTestId("command-palette-footer");
   });
 
   test("Escape closes the palette", async () => {
-    renderPalette(<CommandPalette capabilities={[]} />);
+    await renderPalette(<CommandPalette capabilities={[]} />);
     pressCmdK();
     const input = await screen.findByTestId("command-palette-input");
 
@@ -319,7 +313,7 @@ describe("CommandPalette", () => {
   });
 
   test("mounts under an RTL direction provider without crashing", async () => {
-    renderPalette(
+    await renderPalette(
       <Direction.DirectionProvider dir="rtl">
         <CommandPalette capabilities={[]} />
       </Direction.DirectionProvider>,

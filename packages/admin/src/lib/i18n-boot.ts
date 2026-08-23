@@ -11,6 +11,26 @@ import {
 import { readManifest } from "./manifest.js";
 import { createPluginCatalogLoader } from "./plugin-catalogs.js";
 
+/** Path-keyed compiled catalogs, as `import.meta.glob` produces them. */
+type CatalogMap = Record<string, () => Promise<{ messages: Messages }>>;
+
+/**
+ * The three catalog sets `bootI18n` merges. Injectable so a caller can state
+ * which locales ship instead of inheriting whatever `i18n:compile` last wrote
+ * to disk — the globs resolve at build time and can't be narrowed afterwards.
+ */
+export interface AdminCatalogs {
+  readonly admin: CatalogMap;
+  readonly plugins: CatalogMap;
+  readonly editor: CatalogMap;
+}
+
+const BUNDLED_CATALOGS: AdminCatalogs = {
+  admin: ADMIN_CATALOGS,
+  plugins: PLUGIN_CATALOGS,
+  editor: EDITOR_CATALOGS,
+};
+
 // Source locale: the language `descriptor.message` strings are authored
 // in. When a user's locale isn't compiled (yet, or at all), we fall
 // back here. Mirrors `lingui.config.ts:sourceLocale`.
@@ -38,17 +58,22 @@ export const pluginCatalogLoaderRef: { current: PluginCatalogLoader } = {
  *  A missing source catalog (e.g., a dev boot before any package has
  *  compiled) leaves Lingui in its descriptor-message fallback mode —
  *  never throws, never blanks. */
-export async function bootI18n(): Promise<void> {
+export async function bootI18n(
+  catalogs: AdminCatalogs = BUNDLED_CATALOGS,
+): Promise<void> {
   const tag = document.documentElement.lang.toLowerCase().split("-")[0] ?? "";
-  const requested = ADMIN_CATALOGS[`../../locales/${tag}.mjs`];
-  const fallback = ADMIN_CATALOGS[`../../locales/${SOURCE_LOCALE}.mjs`];
+  const requested = catalogs.admin[`../../locales/${tag}.mjs`];
+  const fallback = catalogs.admin[`../../locales/${SOURCE_LOCALE}.mjs`];
   const adminLoader = requested ?? fallback;
   if (!adminLoader) return;
   const locale = requested ? tag : SOURCE_LOCALE;
 
   const adminMessages = (await adminLoader()).messages;
-  const workspaceMessages = await loadWorkspacePluginCatalogs(locale);
-  const editorMessages = await loadEditorCatalog(locale);
+  const workspaceMessages = await loadWorkspacePluginCatalogs(
+    catalogs.plugins,
+    locale,
+  );
+  const editorMessages = await loadEditorCatalog(catalogs.editor, locale);
   // Editor + workspace plugins merged first, admin chrome last so admin
   // wins on collision. Slice 5's note had the opposite order; chrome
   // stability matters more than letting a plugin override
@@ -86,17 +111,23 @@ export async function bootI18n(): Promise<void> {
 // The editor catalog falls back to the source locale (unlike plugins) so its
 // chrome is never blank — admin always ships the editor, so an uncompiled
 // locale should still read English rather than the raw descriptor ids.
-async function loadEditorCatalog(locale: string): Promise<Messages> {
+async function loadEditorCatalog(
+  editor: CatalogMap,
+  locale: string,
+): Promise<Messages> {
   const loader =
-    EDITOR_CATALOGS[`../../../admin-editor/locales/${locale}.mjs`] ??
-    EDITOR_CATALOGS[`../../../admin-editor/locales/${SOURCE_LOCALE}.mjs`];
+    editor[`../../../admin-editor/locales/${locale}.mjs`] ??
+    editor[`../../../admin-editor/locales/${SOURCE_LOCALE}.mjs`];
   if (!loader) return {};
   return (await loader()).messages;
 }
 
-async function loadWorkspacePluginCatalogs(locale: string): Promise<Messages> {
+async function loadWorkspacePluginCatalogs(
+  plugins: CatalogMap,
+  locale: string,
+): Promise<Messages> {
   const merged: Messages = {};
-  for (const [path, loader] of Object.entries(PLUGIN_CATALOGS)) {
+  for (const [path, loader] of Object.entries(plugins)) {
     // `../../../plugins/<id>/locales/<locale>.mjs` — match the
     // requested locale's filename. No fallback at the plugin layer;
     // missing translations fall through to `descriptor.message`.

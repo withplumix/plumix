@@ -114,6 +114,20 @@ or display value, in any `get`/`query`/`find` and `All` variant — is rejected 
 `plumix/no-non-testid-queries` in test files and e2e specs. Add a `data-testid` to the markup rather
 than reaching for another query.
 
+### Test doubles
+
+Module mocking is rejected in test files by `plumix/no-module-mocking` — `vi.mock`, `vi.doMock`,
+`vi.unmock`, `vi.importActual` and the rest of that family. A test that names a module path asserts
+where code lives, not what it does, so moving the file leaves it passing while covering nothing.
+Substitute at a real seam instead: pass the collaborator in, stub the platform boundary
+(`vi.stubGlobal("fetch", …)`), seed the input the subject actually reads, or render the real
+collaborator. `vi.fn` and `vi.spyOn` are untouched — they substitute values, not modules. When no
+seam exists, add one to the source at the highest point that serves every caller, not one per test.
+
+Admin tests have three shared seams in `packages/admin/test/`: `stubRpc` (answers the real oRPC
+client at the fetch boundary), `seedManifest` (writes the manifest payload the admin shell writes),
+and `renderWithRouter` (a real memory-history router, so navigation lands on a URL).
+
 ### Coverage
 
 Wired in every test-having package (`pnpm exec vitest run --coverage`). Tracked, not enforced; no thresholds.

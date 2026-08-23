@@ -1,28 +1,19 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
+import type { RpcStub } from "../../../../test/rpc.js";
 import type { LookupItem } from "./types.js";
+import { settleRpc, stubRpc } from "../../../../test/rpc.js";
+import { useReferenceResolve } from "./use-reference-resolve.js";
 
-// Resolve is a batched `lookup.list` call keyed on `ids`; the mock lets each
-// test script which rows come back (orphans simply don't) and inspect the
-// `ids` the hook sent.
-const listMock = vi.fn<(input: unknown) => Promise<{ items: LookupItem[] }>>();
-vi.mock("@/lib/orpc.js", () => ({
-  orpc: {
-    lookup: {
-      list: {
-        queryOptions: ({ input }: { readonly input: unknown }) => ({
-          queryKey: ["lookup.list", input],
-          queryFn: () => listMock(input),
-        }),
-      },
-    },
-  },
-}));
-
-const { useReferenceResolve } = await import("./use-reference-resolve.js");
+// Resolve is a batched `lookup.list` call keyed on `ids`. The stub answers at
+// the fetch boundary with whichever rows exist (orphans simply don't), leaving
+// the real client to assemble and send the `ids` the hook asked for.
+function stubResolve(items: readonly LookupItem[] = []): RpcStub {
+  return stubRpc({ "lookup/list": () => ({ items }) });
+}
 
 function wrapper({ children }: { children: ReactNode }): ReactNode {
   const client = new QueryClient({
@@ -31,16 +22,13 @@ function wrapper({ children }: { children: ReactNode }): ReactNode {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-beforeEach(() => {
-  listMock.mockResolvedValue({ items: [] });
-});
-
 afterEach(() => {
-  vi.clearAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("useReferenceResolve", () => {
-  test("short-circuits fully-hydrated ids without a resolve round-trip", () => {
+  test("short-circuits fully-hydrated ids without a resolve round-trip", async () => {
+    const rpc = stubResolve();
     const { result } = renderHook(
       () =>
         useReferenceResolve({
@@ -53,7 +41,8 @@ describe("useReferenceResolve", () => {
         }),
       { wrapper },
     );
-    expect(listMock).not.toHaveBeenCalled();
+    await settleRpc();
+    expect(rpc.calls).toEqual([]);
     expect(result.current.statusOf("1")).toEqual({
       status: "found",
       item: { id: "1", label: "Ada" },
@@ -62,7 +51,7 @@ describe("useReferenceResolve", () => {
   });
 
   test("resolves un-hydrated ids and marks missing rows as orphans", async () => {
-    listMock.mockResolvedValue({ items: [{ id: "1", label: "Ada" }] });
+    const rpc = stubResolve([{ id: "1", label: "Ada" }]);
     const { result } = renderHook(
       () => useReferenceResolve({ kind: "user", ids: ["1", "2"] }),
       { wrapper },
@@ -70,22 +59,21 @@ describe("useReferenceResolve", () => {
     // In flight → every row is pending, never a premature "orphan".
     expect(result.current.statusOf("1").status).toBe("pending");
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(result.current.statusOf("1")).toEqual({
         status: "found",
         item: { id: "1", label: "Ada" },
-      }),
-    );
+      });
+    });
     expect(result.current.statusOf("2")).toEqual({ status: "orphan" });
-    expect(listMock).toHaveBeenCalledWith({
+    expect(rpc.lastCallTo("lookup/list")?.input).toEqual({
       kind: "user",
-      scope: undefined,
       ids: ["1", "2"],
     });
   });
 
   test("hydrated prefill covers some ids while the rest resolve", async () => {
-    listMock.mockResolvedValue({ items: [{ id: "2", label: "Bo" }] });
+    stubResolve([{ id: "2", label: "Bo" }]);
     const { result } = renderHook(
       () =>
         useReferenceResolve({
@@ -96,12 +84,12 @@ describe("useReferenceResolve", () => {
       { wrapper },
     );
     // Not all prefilled → a resolve runs for the batch.
-    await waitFor(() =>
+    await waitFor(() => {
       expect(result.current.statusOf("2")).toEqual({
         status: "found",
         item: { id: "2", label: "Bo" },
-      }),
-    );
+      });
+    });
     expect(result.current.statusOf("1")).toEqual({
       status: "found",
       item: { id: "1", label: "Ada" },
@@ -109,21 +97,29 @@ describe("useReferenceResolve", () => {
   });
 
   test("surfaces a resolve failure via isError (rows fall to orphan)", async () => {
-    listMock.mockRejectedValue(new Error("network"));
+    stubRpc({
+      "lookup/list": () => {
+        throw new Error("network");
+      },
+    });
     const { result } = renderHook(
       () => useReferenceResolve({ kind: "user", ids: ["1"] }),
       { wrapper },
     );
-    await waitFor(() => expect(result.current.isError).toBe(true));
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
     expect(result.current.statusOf("1")).toEqual({ status: "orphan" });
   });
 
-  test("does not fetch for an empty selection", () => {
+  test("does not fetch for an empty selection", async () => {
+    const rpc = stubResolve();
     const { result } = renderHook(
       () => useReferenceResolve({ kind: "user", ids: [] }),
       { wrapper },
     );
-    expect(listMock).not.toHaveBeenCalled();
+    await settleRpc();
+    expect(rpc.calls).toEqual([]);
     expect(result.current.isError).toBe(false);
   });
 });

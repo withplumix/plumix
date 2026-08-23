@@ -22,6 +22,7 @@ import type { CapabilityResolver } from "../auth/rbac.js";
 import type { SessionPolicy } from "../auth/sessions.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext } from "../context/app.js";
+import type { McpHandler } from "../mcp/dispatch.js";
 import type {
   PluginRegistry,
   RegisteredRawRoute,
@@ -123,6 +124,13 @@ export interface PlumixApp {
    * cold-start path. Mirrors `loadRpcHandler`.
    */
   readonly loadRestHandler: () => Promise<RestDispatch>;
+  /**
+   * Lazily loads (and memoizes) the MCP request handler on first call. Cold-
+   * path-only and gated by `config.mcp` — deferred so the MCP SDK and the tool
+   * registry never evaluate on the public render cold-start path. Mirrors
+   * `loadRestHandler`.
+   */
+  readonly loadMcpHandler: () => Promise<McpHandler>;
   /**
    * Canonical site origin (e.g. `https://cms.example.com`). Sourced from
    * the passkey config for now since that's the only place it lives in
@@ -425,12 +433,19 @@ export async function buildApp(
       m.buildRestDispatcher(registry, config.api?.cors),
     ));
 
+  let mcpHandler: Promise<McpHandler> | undefined;
+  const loadMcpHandler = (): Promise<McpHandler> =>
+    (mcpHandler ??= import("../mcp/dispatch.js").then(
+      (m) => m.handleMcpRequest,
+    ));
+
   return {
     config,
     hooks,
     plugins: registry,
     loadRpcHandler,
     loadRestHandler,
+    loadMcpHandler,
     origin: passkey.origin,
     basePath: config.basePath,
     devCsrfLocalhost:

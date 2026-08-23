@@ -188,6 +188,33 @@ describe("plumix/no-non-testid-queries", () => {
   });
 });
 
+describe("plumix/no-module-mocking", () => {
+  it("rejects every module-path mocking helper in a test file", async () => {
+    await expect(
+      plumixReports("src/module-mocking.violations.test.ts"),
+    ).resolves.toEqual([
+      { ruleId: "plumix/no-module-mocking", line: 14 },
+      { ruleId: "plumix/no-module-mocking", line: 16 },
+      { ruleId: "plumix/no-module-mocking", line: 18 },
+      { ruleId: "plumix/no-module-mocking", line: 20 },
+      { ruleId: "plumix/no-module-mocking", line: 22 },
+      { ruleId: "plumix/no-module-mocking", line: 24 },
+    ]);
+  });
+
+  it("stays silent on spies, stubbed globals and unrelated `mock` methods", async () => {
+    await expect(
+      plumixReports("src/module-mocking.allowed.test.ts"),
+    ).resolves.toEqual([]);
+  });
+
+  it("stays silent in production source", async () => {
+    await expect(
+      plumixReports("src/module-mocking.production.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
 describe("the earned-types rules from the strict preset", () => {
   it("rejects deprecated APIs and types that were declared rather than earned", async () => {
     await expect(

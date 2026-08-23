@@ -51,7 +51,7 @@ function resolveDatabaseName(
   return { databaseName: firstName, passthroughArgs: argv };
 }
 
-// Mutable seam for tests — swap without vi.mock ceremony.
+// Mutable seam for tests — substitute the collaborator, not the module path.
 export const migrateApplyDeps = {
   loadWranglerConfig,
   spawnInherit,
