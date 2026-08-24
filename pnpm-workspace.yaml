@@ -54,12 +54,12 @@ catalogs:
     drizzle-orm: ^0.45.2
     drizzle-valibot: ^0.4.2
   lingui:
-    "@lingui/babel-plugin-lingui-macro": ^6.6.0
-    "@lingui/cli": ^6.6.0
-    "@lingui/core": ^6.6.0
-    "@lingui/format-po": ^6.6.0
-    "@lingui/react": ^6.6.0
-    "@lingui/vite-plugin": ^6.6.0
+    "@lingui/babel-plugin-lingui-macro": ">=6.4.0 <6.5.0"
+    "@lingui/cli": ">=6.4.0 <6.5.0"
+    "@lingui/core": ">=6.4.0 <6.5.0"
+    "@lingui/format-po": ">=6.4.0 <6.5.0"
+    "@lingui/react": ">=6.4.0 <6.5.0"
+    "@lingui/vite-plugin": ">=6.4.0 <6.5.0"
   orpc:
     "@orpc/client": ^1.15.0
     "@orpc/openapi": ^1.15.0
