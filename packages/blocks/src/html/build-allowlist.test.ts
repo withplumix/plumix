@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import { createBlockRegistry } from "../index.js";
-import { buildHtmlAllowlist, HARD_DENYLIST } from "./build-allowlist.js";
+import {
+  buildHtmlAllowlist,
+  HARD_DENIED_SCHEMES,
+  HARD_DENYLIST,
+} from "./build-allowlist.js";
+import { sanitizeHtml } from "./sanitize.js";
 
 const EMPTY_BLOCK_REGISTRY = createBlockRegistry([]);
 
@@ -42,6 +47,53 @@ describe("buildHtmlAllowlist", () => {
       schemes: [],
     });
     expect(allowlist.allowedSchemes).toEqual([]);
+  });
+
+  // Anchors the roster the two suites below iterate: without this,
+  // dropping a member takes its cases with it and stays green.
+  test("the denied scheme roster is what it says it is", () => {
+    expect([...HARD_DENIED_SCHEMES]).toEqual([
+      "javascript",
+      "vbscript",
+      "data",
+      "blob",
+      "view-source",
+    ]);
+  });
+
+  test.each([...HARD_DENIED_SCHEMES])(
+    "hard denylist blocks operator-supplied `%s` in schemes",
+    (scheme) => {
+      const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+        schemes: ["https", scheme],
+      });
+      expect(allowlist.allowedSchemes).toEqual(["https"]);
+    },
+  );
+
+  test.each([...HARD_DENIED_SCHEMES].map((scheme) => scheme.toUpperCase()))(
+    "hard denylist blocks the scheme `%s` regardless of the case it is written in",
+    (scheme) => {
+      const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+        schemes: [scheme],
+      });
+      expect(allowlist.allowedSchemes).toEqual([]);
+    },
+  );
+
+  test("override schemes are lowercased so both sanitizers agree on them", () => {
+    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+      schemes: ["HTTPS"],
+    });
+    expect(allowlist.allowedSchemes).toEqual(["https"]);
+  });
+
+  test("an override admitting `javascript:` cannot produce a live href", () => {
+    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+      schemes: ["https", "javascript"],
+    });
+    const out = sanitizeHtml('<a href="javascript:alert(1)">x</a>', allowlist);
+    expect(out).toBe("<a>x</a>");
   });
 
   test.each([...HARD_DENYLIST])(
