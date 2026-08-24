@@ -56,13 +56,17 @@ function Harness({
   fields,
   initial,
   serverErrors,
+  // The settings card keeps its fields at the RHF root; every entity form
+  // nests them under `meta`.
+  basePath = "meta",
 }: {
   fields: readonly MetaBoxFieldManifestEntry[];
   initial: Record<string, unknown>;
   serverErrors: readonly { path: string; message: unknown }[];
+  basePath?: string;
 }): ReactNode {
   const form = useForm<Record<string, unknown>>({
-    defaultValues: { meta: initial },
+    defaultValues: basePath === "" ? initial : { meta: initial },
   });
   const resolveMessage = useMetaFieldMessage();
   const queryClient = createQueryClient();
@@ -70,7 +74,11 @@ function Harness({
     <QueryClientProvider client={queryClient}>
       <Form {...form}>
         {fields.map((f) => (
-          <MetaBoxField key={f.key} field={f} name={`meta.${f.key}`} />
+          <MetaBoxField
+            key={f.key}
+            field={f}
+            name={basePath === "" ? f.key : `${basePath}.${f.key}`}
+          />
         ))}
         <button
           type="button"
@@ -78,7 +86,7 @@ function Harness({
           onClick={() => {
             applyMetaFieldErrors(
               form.setError,
-              "meta",
+              basePath,
               extractMetaFieldErrors({
                 code: "CONFLICT",
                 data: { reason: "meta_invalid_value", errors: serverErrors },
@@ -227,6 +235,37 @@ describe("inline display of path-addressed write errors", () => {
     expect(
       screen.getByTestId("meta-box-field-sections-input-row-0-error"),
     ).toBeInTheDocument();
+  });
+
+  test("a root base path addresses fields the settings card keeps unnested", async () => {
+    renderWithI18n(
+      <Harness
+        basePath=""
+        fields={[
+          {
+            key: "site_title",
+            label: "Site title",
+            type: "string",
+            inputType: "text",
+          },
+        ]}
+        initial={{ site_title: "way too long" }}
+        serverErrors={[
+          {
+            path: "site_title",
+            message: {
+              id: "metaField.maxLength",
+              message: "Must be at most {max} characters.",
+              values: { max: 5 },
+            },
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("apply-server-errors"));
+    expect(
+      screen.getByTestId("meta-box-field-site_title-error").textContent,
+    ).toBe("Must be at most 5 characters.");
   });
 
   test("plain-string messages (custom .validate() verdicts) pass through", async () => {

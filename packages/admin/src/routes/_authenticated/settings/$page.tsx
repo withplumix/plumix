@@ -11,6 +11,11 @@ import {
   findSettingsPageByName,
   groupsForSettingsPage,
 } from "@/lib/manifest.js";
+import {
+  applyMetaFieldErrors,
+  extractMetaFieldErrors,
+  useMetaFieldMessage,
+} from "@/lib/meta-field-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -23,11 +28,11 @@ import {
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 
+import type { ResolvedMeta } from "@plumix/core";
 import type {
   SettingsGroupManifestEntry,
   SettingsPageManifestEntry,
 } from "@plumix/core/manifest";
-import type { SettingsBag } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -164,6 +169,7 @@ function SettingsGroupCard({
 }): ReactNode {
   const { i18n } = useLingui();
   const renderLabel = useLabel();
+  const resolveMessage = useMetaFieldMessage();
   const queryClient = useQueryClient();
   // String branch is plugin-author text rendered verbatim.
   const [serverError, setServerError] = useState<
@@ -189,7 +195,7 @@ function SettingsGroupCard({
   });
 
   const save = useMutation({
-    mutationFn: (next: SettingsBag) =>
+    mutationFn: (next: ResolvedMeta) =>
       orpc.settings.upsert.call({ group: group.name, values: next }),
     onMutate: () => {
       setServerError(null);
@@ -207,6 +213,14 @@ function SettingsGroupCard({
       setSaveNotice(M.saved);
     },
     onError: (err) => {
+      // Path-addressed field rejections render inline on the offending
+      // inputs; everything else keeps the banner. The settings card keeps
+      // its fields at the RHF root, so the base path is empty.
+      const fieldErrors = extractMetaFieldErrors(err);
+      if (fieldErrors) {
+        applyMetaFieldErrors(form.setError, "", fieldErrors, resolveMessage);
+        return;
+      }
       setServerError(err instanceof Error ? err.message : M.saveFailed);
     },
   });

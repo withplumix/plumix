@@ -6,14 +6,13 @@ import type {
   GroupMetaBoxField,
   MetaBoxField,
   MetaBoxFieldOption,
-  MetaScalarType,
   ReferenceTarget,
   RepeaterMetaBoxField,
   RichtextMetaBoxField,
   TemporalInputType,
 } from "../../plugin/manifest.js";
 import type { ResolvedMeta } from "./core.js";
-import { isJsonArray } from "../../json.js";
+import { isJsonArray, isJsonObject } from "../../json.js";
 import { HEX_COLOR } from "../../plugin/fields/color.js";
 import { parseLinkValue } from "../../plugin/fields/link.js";
 import {
@@ -25,6 +24,7 @@ import {
   isTemporalInputType,
   isValidTemporalValue,
 } from "../../plugin/manifest.js";
+import { coerceValue, decodeJsonValue, extractStringId } from "./coerce.js";
 import { META_FIELD_MESSAGES } from "./field-messages.js";
 
 /**
@@ -92,9 +92,15 @@ export async function runFieldPipeline(
   // object. Repeater cells recurse through here, so nested refs heal
   // too.
   const target = referenceTargetOf(field);
-  // The bag arrived as JSON off the wire; the pipeline has not proved that
-  // yet, because retyping `MetaInput` is the deferred half of #1807.
-  if (target) raw = healReferenceValue(target, raw as JsonValue);
+  if (target) {
+    // Decode before healing: the bag arrives unproven, and every scalar
+    // coercion rejects the values that have no JSON at all anyway.
+    const decoded = decodeJsonValue(raw);
+    if (decoded === undefined) {
+      return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
+    }
+    raw = healReferenceValue(target, decoded);
+  }
   const coerced = coerceValue(field.type, raw);
   if (!coerced.ok) {
     return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
@@ -112,8 +118,9 @@ export async function runFieldPipeline(
   if (!normalized.ok) return { errors: [normalized.error] };
   let value = normalized.value;
   if (field.sanitize) {
+    let transformed: unknown;
     try {
-      value = field.sanitize(value);
+      transformed = field.sanitize(value);
     } catch (error) {
       // Buggy callbacks round to a generic `invalid` for the editor;
       // keep the diagnostic trail in the server log.
@@ -123,10 +130,18 @@ export async function runFieldPipeline(
       );
       return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
     }
-    // Re-normalize the callback's output — the shape gates (link URL
-    // safety, hex format, option-array shape) are declared constraints,
-    // and a transform must not be able to smuggle a value past them.
-    const renormalized = normalizeValue(field, value, path);
+    // A callback that returns nothing leaves nothing to persist; the key is
+    // left alone rather than written as `undefined` (see `sanitizeMetaInput`).
+    if (transformed === undefined) return { errors: [] };
+    // Re-decode and re-normalize the callback's output. The descriptor types
+    // the return as `JsonValue` but nothing enforces that at runtime, so the
+    // transform clears the same gates its input did: the storage shape, then
+    // the declared ones (link URL safety, hex format, option-array shape).
+    const recoerced = coerceValue(field.type, transformed);
+    if (!recoerced.ok) {
+      return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
+    }
+    const renormalized = normalizeValue(field, recoerced.value, path);
     if (!renormalized.ok) return { errors: [renormalized.error] };
     value = renormalized.value;
   }
@@ -149,15 +164,7 @@ export async function runFieldPipeline(
       return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
     }
   }
-  // Everything the pipeline itself produces is JSON: `coerceJson` round-trips
-  // through `JSON.stringify`/`parse` and every other branch builds primitives
-  // from a coerced value. The hole the assertion papers over is `.sanitize()` —
-  // the descriptor erases its signature, and its output is re-normalized but
-  // never re-coerced, so a callback returning a `Date` reaches this line and is
-  // written as whatever `JSON.stringify` makes of it. Closing that means
-  // re-coercing after the callback, which changes behaviour; #1807 defers the
-  // meta pipeline's parse migration to its own spec.
-  return { errors: [], value: value as JsonValue };
+  return { errors: [], value };
 }
 
 // --- repeater rows ------------------------------------------------------
@@ -190,14 +197,13 @@ export function isGroupField(
  */
 async function runGroupPipeline(
   field: GroupMetaBoxField,
-  value: unknown,
+  value: JsonValue,
   path: string,
   mode: FieldPipelineMode,
 ): Promise<FieldPipelineResult> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+  if (!isJsonObject(value)) {
     return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
   }
-  const source = value as Record<string, unknown>;
   // Mirrors the repeater's blank-row strip, and must run BEFORE member
   // validation: an all-empty group is an authoring affordance, not data,
   // so it's dropped (optional) or rejected at the group path (required)
@@ -205,7 +211,7 @@ async function runGroupPipeline(
   // an untouched optional group would error and make the group
   // impossible to clear. "Empty" is strictly `null` / `undefined` / `""`
   // per `isBlankRow`; `0` / `false` are real values.
-  if (isBlankRow(field.fields, source)) {
+  if (isBlankRow(field.fields, value)) {
     if (field.required === true && mode === "strict") {
       return { errors: [{ path, message: META_FIELD_MESSAGES.required }] };
     }
@@ -219,7 +225,7 @@ async function runGroupPipeline(
   for (const member of field.fields) {
     const cell = await runFieldPipeline(
       member,
-      source[member.key],
+      value[member.key],
       `${path}.${member.key}`,
       mode,
     );
@@ -240,18 +246,6 @@ export function referenceTargetOf(
   if (!field) return undefined;
   return (field as { readonly referenceTarget?: ReferenceTarget })
     .referenceTarget;
-}
-
-/**
- * Returns the `id` string of a `{ id: string, ... }` object, or null
- * for any other shape (string, array, null, primitive, missing key).
- */
-export function extractStringId(value: unknown): string | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return null;
-  }
-  const id = (value as { readonly id?: unknown }).id;
-  return typeof id === "string" ? id : null;
 }
 
 /**
@@ -297,34 +291,29 @@ function isBlankRow(
  */
 async function runRepeaterPipeline(
   field: RepeaterMetaBoxField,
-  value: unknown,
+  value: JsonValue,
   path: string,
   mode: FieldPipelineMode,
 ): Promise<FieldPipelineResult> {
-  if (!Array.isArray(value) || value.length > MAX_REPEATER_ROWS) {
+  if (!isJsonArray(value) || value.length > MAX_REPEATER_ROWS) {
     return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
   }
   const errors: MetaFieldError[] = [];
   const rows: Record<string, JsonValue>[] = [];
   for (const [idx, rawRow] of value.entries()) {
-    if (
-      rawRow === null ||
-      typeof rawRow !== "object" ||
-      Array.isArray(rawRow)
-    ) {
+    if (!isJsonObject(rawRow)) {
       // Anchor on the repeater itself — the admin renders no message
       // slot at the bare row path, and only non-form callers can send
       // a non-object row anyway.
       errors.push({ path, message: META_FIELD_MESSAGES.invalid });
       continue;
     }
-    const rowObj = rawRow as Record<string, unknown>;
-    if (isBlankRow(field.subFields, rowObj)) continue;
+    if (isBlankRow(field.subFields, rawRow)) continue;
     const next: Record<string, JsonValue> = {};
     for (const sf of field.subFields) {
       const cell = await runFieldPipeline(
         sf,
-        rowObj[sf.key],
+        rawRow[sf.key],
         `${path}.${String(idx)}.${sf.key}`,
         mode,
       );
@@ -363,12 +352,12 @@ async function runRepeaterPipeline(
 // constraints can inspect the value — a multi select's array shape and
 // de-dupe live here so `checkConstraints` sees the canonical form.
 type Normalized =
-  | { readonly ok: true; readonly value: unknown }
+  | { readonly ok: true; readonly value: JsonValue }
   | { readonly ok: false; readonly error: MetaFieldError };
 
 function normalizeValue(
   field: MetaBoxField,
-  value: unknown,
+  value: JsonValue,
   path: string,
 ): Normalized {
   if (field.inputType === "color") {
@@ -446,7 +435,7 @@ function isMultiSelect(
 
 function checkConstraints(
   field: MetaBoxField,
-  value: unknown,
+  value: JsonValue,
   path: string,
   mode: FieldPipelineMode,
 ): MetaFieldError[] {
@@ -515,7 +504,7 @@ function checkConstraints(
 function checkSelect(
   options: readonly MetaBoxFieldOption[],
   bounds: { readonly multiple?: boolean; readonly max?: number },
-  value: unknown,
+  value: JsonValue,
   path: string,
 ): MetaFieldError[] {
   const allowed = new Set(options.map((opt) => opt.value));
@@ -548,7 +537,7 @@ function checkSelect(
 function checkTemporal(
   inputType: TemporalInputType,
   field: MetaBoxField,
-  value: unknown,
+  value: JsonValue,
   path: string,
   mode: FieldPipelineMode,
 ): MetaFieldError[] {
@@ -584,83 +573,7 @@ function checkTemporal(
 // `.required()` rejects the values an editor produces by clearing an
 // input: the empty string (text-family) and the empty array (multi
 // selects, lists, repeaters). `0` and `false` are real values.
-function isEmptyValue(value: unknown): boolean {
+function isEmptyValue(value: JsonValue): boolean {
   if (value === "") return true;
   return Array.isArray(value) && value.length === 0;
-}
-
-// --- type coercion ------------------------------------------------------
-// Mirrors the storage `type` contract: the admin form sends native-input
-// strings, direct RPC callers send whatever they like — both funnel into
-// the declared scalar shape or fail as `invalid`.
-
-type Coerced =
-  | { readonly ok: true; readonly value: unknown }
-  | {
-      readonly ok: false;
-    };
-
-const COERCE_FAIL: Coerced = { ok: false };
-
-function coerceValue(type: MetaScalarType, value: unknown): Coerced {
-  switch (type) {
-    case "string":
-      return coerceString(value);
-    case "number":
-      return coerceNumber(value);
-    case "boolean":
-      return coerceBoolean(value);
-    case "json":
-      return coerceJson(value);
-  }
-}
-
-function coerceString(value: unknown): Coerced {
-  if (typeof value === "string") return { ok: true, value };
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return { ok: true, value: String(value) };
-  }
-  if (typeof value === "boolean") return { ok: true, value: String(value) };
-  return COERCE_FAIL;
-}
-
-function coerceNumber(value: unknown): Coerced {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return { ok: true, value };
-  }
-  if (typeof value === "string") {
-    // Empty string comes from cleared form inputs; the admin dispatcher
-    // already sends `null` for those, but a direct RPC caller might send
-    // "" — reject so we don't silently coerce to 0 (`Number("") === 0`).
-    if (value.trim() === "") return COERCE_FAIL;
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return { ok: true, value: parsed };
-  }
-  if (typeof value === "boolean") return { ok: true, value: value ? 1 : 0 };
-  return COERCE_FAIL;
-}
-
-function coerceBoolean(value: unknown): Coerced {
-  if (typeof value === "boolean") return { ok: true, value };
-  if (value === 1 || value === "1" || value === "true") {
-    return { ok: true, value: true };
-  }
-  if (value === 0 || value === "0" || value === "false") {
-    return { ok: true, value: false };
-  }
-  return COERCE_FAIL;
-}
-
-function coerceJson(value: unknown): Coerced {
-  // json keys take anything round-trippable through JSON.stringify —
-  // reject values that throw (BigInt) or silently drop (functions,
-  // Symbols) so reads don't hand back `undefined` for something a
-  // plugin thought it stored.
-  try {
-    const encoded = JSON.stringify(value) as string | undefined;
-    if (encoded === undefined) return COERCE_FAIL;
-    return { ok: true, value: JSON.parse(encoded) };
-  } catch {
-    return COERCE_FAIL;
-  }
 }

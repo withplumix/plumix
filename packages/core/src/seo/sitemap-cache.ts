@@ -50,9 +50,6 @@ export async function readSitemapVersion(ctx: AppContext): Promise<number> {
     .where(
       and(eq(settings.group, VERSION_GROUP), eq(settings.key, VERSION_KEY)),
     );
-  // Not parsed: `settings.value` is still `unknown` on the column because a
-  // value reaches it without passing the field pipeline — see that column's
-  // own note in db/schema/settings.ts for the gate it waits on.
   return typeof row?.value === "number" ? row.value : 0;
 }
 

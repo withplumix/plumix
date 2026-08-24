@@ -74,8 +74,9 @@ export function useMetaFieldMessage(): (message: Label) => string {
 /**
  * Pin each server rejection onto its form input. `setError` is the
  * form's `form.setError`; `basePath` is where the meta bag lives in
- * the form values (`"meta"` everywhere today). Idempotent per submit —
- * RHF clears field errors on the next change/submit cycle.
+ * the form values (`"meta"` for every entity form; the settings card
+ * keeps its fields at the root and passes `""`). Idempotent per
+ * submit — RHF clears field errors on the next change/submit cycle.
  */
 export function applyMetaFieldErrors(
   setError: (name: never, error: { type: string; message: string }) => void,
@@ -90,7 +91,8 @@ export function applyMetaFieldErrors(
     (a, b) => a.path.split(".").length - b.path.split(".").length,
   );
   for (const error of ordered) {
-    setError(`${basePath}.${error.path}` as never, {
+    const name = basePath === "" ? error.path : `${basePath}.${error.path}`;
+    setError(name as never, {
       type: "server",
       message: resolveMessage(error.message),
     });

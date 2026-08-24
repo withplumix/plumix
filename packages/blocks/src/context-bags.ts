@@ -1,3 +1,5 @@
+import type { JsonObject } from "./json.js";
+
 // Declared apart from `BlockContext` so `shortcodes/types.ts` can name them
 // too — that module sits below `render-block-tree.ts` in the import graph.
 
@@ -9,9 +11,6 @@
  */
 export type HydratedEntry = Readonly<Record<string, unknown>>;
 
-/**
- * The `site` settings group as a flat `key → value` bag. Not JSON: pinned by
- * the `settings` column upstream, where a value goes in without passing the
- * field pipeline (see `settings.value` in core).
- */
-export type SiteSettings = Readonly<Record<string, unknown>>;
+/** The `site` settings group as a flat `key → value` bag — the `settings`
+ *  column upstream, which the field pipeline decodes on the way in. */
+export type SiteSettings = JsonObject;
