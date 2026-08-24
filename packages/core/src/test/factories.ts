@@ -203,22 +203,25 @@ export const sessionFactory = Factory.define<NewSession, DbTransient, Session>(
 // Settings row (group, key, value). Caller supplies `group` and `key`;
 // `value` defaults to an empty string so tests that care only about
 // existence don't need to pass it.
-export const settingFactory = Factory.define<NewSetting, DbTransient, Setting>(
-  ({ sequence, transientParams, onCreate, params }) => {
-    onCreate(async (attrs) => {
-      const db = requireDb(transientParams);
-      const [row] = await db.insert(settings).values(attrs).returning();
-      if (!row) throw new Error("settingFactory: insert returned no row");
-      return row;
-    });
+export const settingFactory = Factory.define<
+  NewSetting,
+  DbTransient,
+  Setting,
+  Partial<NewSetting>
+>(({ sequence, transientParams, onCreate, params }) => {
+  onCreate(async (attrs) => {
+    const db = requireDb(transientParams);
+    const [row] = await db.insert(settings).values(attrs).returning();
+    if (!row) throw new Error("settingFactory: insert returned no row");
+    return row;
+  });
 
-    return {
-      group: params.group ?? `group_${sequence}`,
-      key: params.key ?? `key_${sequence}`,
-      value: params.value ?? "",
-    };
-  },
-);
+  return {
+    group: params.group ?? `group_${sequence}`,
+    key: params.key ?? `key_${sequence}`,
+    value: params.value ?? "",
+  };
+});
 
 // entry_term join row. Caller passes entryId + termId; sortOrder defaults to 0.
 export const entryTermFactory = Factory.define<

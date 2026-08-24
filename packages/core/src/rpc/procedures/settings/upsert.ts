@@ -1,11 +1,15 @@
 import { sql } from "drizzle-orm";
 
-import type { NewSetting } from "../../../db/schema/settings.js";
+import type { JsonValue } from "../../../json.js";
+import type { RpcErrorsForMeta } from "../../meta/core.js";
+import type { MetaFieldError } from "../../meta/field-pipeline.js";
 import { and, eq, inArray } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
 import { isConditionHidden } from "../../../plugin/fields/condition.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { decodeJsonValue } from "../../meta/coerce.js";
+import { runFieldPipeline } from "../../meta/field-pipeline.js";
 import {
   MAX_SETTINGS_VALUE_BYTES,
   settingsUpsertInputSchema,
@@ -29,10 +33,11 @@ export const upsert = base
       input,
     );
 
-    // Settings have no per-field validation pipeline, but condition-
-    // hidden fields still must not persist values the editor cannot
-    // see — same drop as the entry/term/user meta write path.
-    // Unregistered groups (and keys) keep the laissez-faire write.
+    // A registered field's declared type is what the column ends up
+    // holding, so every value it owns goes through the same write
+    // pipeline as entry/term meta — coercion, `.sanitize()`, declared
+    // constraints. Condition-hidden fields are dropped before that: a
+    // value the editor cannot see must not persist.
     const groupFields = new Map(
       (context.plugins.settingsGroups.get(filtered.group)?.fields ?? []).map(
         (f) => [f.key, f],
@@ -40,16 +45,66 @@ export const upsert = base
     );
 
     const deletes: string[] = [];
-    const upsertRows: NewSetting[] = [];
+    // Not `NewSetting`: the insert type leaves `value` optional and
+    // nullable, and `settings:group_changed` ships these rows as a
+    // `SettingsBag`, which admits neither.
+    const upsertRows: { group: string; key: string; value: JsonValue }[] = [];
+    const fieldErrors: MetaFieldError[] = [];
     for (const [key, value] of Object.entries(filtered.values)) {
       const field = groupFields.get(key);
       if (field && isConditionHidden(field, filtered.values)) continue;
-      if (value === null || value === undefined) {
-        deletes.push(key);
-        continue;
+
+      let stored: JsonValue | undefined;
+      if (field) {
+        const result = await runFieldPipeline(field, value, key);
+        if (result.errors.length > 0) {
+          fieldErrors.push(...result.errors);
+          continue;
+        }
+        if (result.isDeletion === true) {
+          deletes.push(key);
+          continue;
+        }
+        stored = result.value;
+      } else {
+        // No field declares what an unregistered key holds — an orphan left
+        // by an uninstalled plugin, or a group nobody declared — so the write
+        // stays laissez-faire. The column still names what it holds, which
+        // makes JSON the one thing the value has to be.
+        if (value === null || value === undefined) {
+          deletes.push(key);
+          continue;
+        }
+        stored = decodeJsonValue(value);
+        if (stored === undefined) {
+          throw errors.CONFLICT({
+            data: {
+              reason: "settings_invalid_value",
+              key: `${filtered.group}.${key}`,
+            },
+          });
+        }
       }
-      assertEncodedSize(filtered.group, key, value, errors);
-      upsertRows.push({ group: filtered.group, key, value });
+      // A `.sanitize()` callback returning nothing leaves nothing to write.
+      if (stored === undefined) continue;
+      upsertRows.push({ group: filtered.group, key, value: stored });
+    }
+    // Nothing is written when any key fails — the admin form addresses
+    // every offending input in one round-trip, as it does for meta. This
+    // runs before the size check so a validation failure is never masked
+    // by an oversized sibling.
+    const [firstError] = fieldErrors;
+    if (firstError) {
+      throw errors.CONFLICT({
+        data: {
+          reason: "settings_invalid_value",
+          key: `${filtered.group}.${firstError.path.split(".")[0] ?? firstError.path}`,
+          errors: fieldErrors,
+        },
+      });
+    }
+    for (const row of upsertRows) {
+      assertEncodedSize(row.group, row.key, row.value, errors);
     }
 
     if (deletes.length > 0) {
@@ -78,7 +133,8 @@ export const upsert = base
       .select({ key: settings.key, value: settings.value })
       .from(settings)
       .where(eq(settings.group, filtered.group));
-    const bag: Record<string, unknown> = {};
+    const bag: Record<string, JsonValue> = {};
+    // `null` is a value the column can hold, so it stays in the bag.
     for (const row of fresh) bag[row.key] = row.value;
 
     // Fire only when the call actually changed state — an empty
@@ -97,25 +153,16 @@ export const upsert = base
     });
   });
 
-// Guard against values that can't be persisted (un-serializable) or
-// that blow past the per-value cap in `schemas.ts`. Both translate to a
+// Values that blow past the per-value cap in `schemas.ts` translate to a
 // CONFLICT with a keyed `reason` so admin UIs surface which field hit
 // the limit.
 function assertEncodedSize(
   group: string,
   key: string,
-  value: unknown,
-  errors: {
-    CONFLICT: (args: { data: { reason: string; key?: string } }) => Error;
-  },
+  value: JsonValue,
+  errors: RpcErrorsForMeta,
 ): void {
-  const encoded = JSON.stringify(value) as string | undefined;
-  if (encoded === undefined) {
-    throw errors.CONFLICT({
-      data: { reason: "settings_invalid_value", key: `${group}.${key}` },
-    });
-  }
-  const byteLength = new TextEncoder().encode(encoded).length;
+  const byteLength = new TextEncoder().encode(JSON.stringify(value)).length;
   if (byteLength > MAX_SETTINGS_VALUE_BYTES) {
     throw errors.CONFLICT({
       data: { reason: "settings_value_too_large", key: `${group}.${key}` },

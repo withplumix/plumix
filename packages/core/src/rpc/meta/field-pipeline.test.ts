@@ -5,6 +5,7 @@ import {
   date,
   email,
   group,
+  json,
   link,
   number,
   range,
@@ -783,6 +784,39 @@ describe(".sanitize()", () => {
     expect(notArray.errors).toEqual([
       { path: "tags", message: META_FIELD_MESSAGES.invalid },
     ]);
+  });
+
+  test("the callback's output is decoded, not taken on trust", async () => {
+    // The descriptor types `.sanitize()` as returning `JsonValue`, but
+    // nothing enforces that at runtime. A callback handing back a `Date`
+    // used to reach storage as one and become whatever `JSON.stringify`
+    // made of it later; the pipeline now decodes the output the same way
+    // it decoded the input.
+    const field = json("payload")
+      .sanitize(() => new Date("2020-01-02T03:04:05.000Z") as never)
+      .build();
+    const result = await runFieldPipeline(field, { a: 1 }, "payload");
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toBe("2020-01-02T03:04:05.000Z");
+  });
+
+  test("a callback returning a value the field's type cannot hold is invalid", async () => {
+    const field = number("weight")
+      .sanitize(() => "heavy" as never)
+      .build();
+    const result = await runFieldPipeline(field, 1, "weight");
+    expect(result.errors).toEqual([
+      { path: "weight", message: META_FIELD_MESSAGES.invalid },
+    ]);
+  });
+
+  test("a numeric string from a callback lands in the declared shape", async () => {
+    const field = number("weight")
+      .sanitize(() => "12" as never)
+      .build();
+    const result = await runFieldPipeline(field, 1, "weight");
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toBe(12);
   });
 
   test("declarative constraints run on the sanitized value", async () => {

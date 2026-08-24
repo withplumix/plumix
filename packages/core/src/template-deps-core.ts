@@ -2,6 +2,7 @@ import { inArray } from "drizzle-orm";
 
 import type { AppContext } from "./context/app.js";
 import type { SettingsBag } from "./db/schema/settings.js";
+import type { JsonValue } from "./json.js";
 import type { MutablePluginRegistry } from "./plugin/manifest.js";
 import { memoBatch } from "./context/memo.js";
 import { settings } from "./db/schema/settings.js";
@@ -56,7 +57,7 @@ export async function settingsLoader(
         })
         .from(settings)
         .where(inArray(settings.group, unique));
-      const byGroup = new Map<string, Record<string, unknown>>();
+      const byGroup = new Map<string, Record<string, JsonValue>>();
       for (const row of rows) {
         const bag = byGroup.get(row.group) ?? {};
         bag[row.key] = row.value;

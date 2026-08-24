@@ -22,10 +22,10 @@ import { eq } from "../../db/index.js";
 import { isJsonArray, isJsonObject } from "../../json.js";
 import { isConditionHidden } from "../../plugin/fields/condition.js";
 import { anchorTemporalUtc } from "../../plugin/manifest.js";
+import { extractStringId } from "./coerce.js";
 import { MetaReferenceError } from "./errors.js";
 import { META_FIELD_MESSAGES } from "./field-messages.js";
 import {
-  extractStringId,
   healReferenceValue,
   isGroupField,
   isRepeaterField,

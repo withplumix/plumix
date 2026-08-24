@@ -192,6 +192,66 @@ test.describe("/settings/$page", () => {
     );
   });
 
+  test("save rejection: per-field errors render on the inputs they address", async ({
+    page,
+  }) => {
+    // A registered settings field now runs the same write pipeline as
+    // entry meta, so its constraint failures come back path-addressed —
+    // the card pins each one on the input rather than showing a banner.
+    await mockManifest(page, MANIFEST_WITH_SETTINGS);
+    await page.route("**/_plumix/rpc/**", (route) => {
+      const url = route.request().url();
+      if (url.endsWith("/auth/session")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: rpcOkBody(AUTHED_ADMIN),
+        });
+      }
+      if (url.endsWith("/settings/get")) {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: rpcOkBody({}),
+        });
+      }
+      if (url.endsWith("/settings/upsert")) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({
+            json: {
+              defined: true,
+              code: "CONFLICT",
+              status: 409,
+              message: "Resource conflict",
+              data: {
+                reason: "settings_invalid_value",
+                key: "site.site_title",
+                errors: [{ path: "site_title", message: "Too long" }],
+              },
+            },
+            meta: [],
+          }),
+        });
+      }
+      return route.fulfill({ status: 404, body: "not-mocked" });
+    });
+    await page.goto("settings/general");
+    await page.getByTestId("meta-box-field-site_title-input").fill("Plumix");
+    await page.getByTestId("settings-submit-identity").click();
+    await expect(
+      page.getByTestId("meta-box-field-site_title-error"),
+    ).toHaveText("Too long");
+    // The inline message is the address — no generic banner, no success.
+    await expect(
+      page.getByTestId("settings-server-error-identity"),
+    ).toHaveCount(0);
+    await expect(page.getByTestId("settings-save-notice-identity")).toHaveCount(
+      0,
+    );
+  });
+
   test("unregistered page surfaces the router 404", async ({ page }) => {
     await mockManifest(page, MANIFEST_WITH_SETTINGS);
     await mockSession(page, AUTHED_ADMIN);

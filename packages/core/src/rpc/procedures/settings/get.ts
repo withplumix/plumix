@@ -1,3 +1,4 @@
+import type { JsonValue } from "../../../json.js";
 import { eq } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
 import { authenticated } from "../../authenticated.js";
@@ -33,7 +34,7 @@ export const get = base
       .where(eq(settings.group, filtered.group))
       .limit(MAX_GROUP_ROWS_PER_READ);
 
-    const bag: Record<string, unknown> = {};
+    const bag: Record<string, JsonValue> = {};
     for (const row of rows) bag[row.key] = row.value;
 
     return context.hooks.applyFilter("rpc:settings.get:output", bag, {

@@ -1,6 +1,8 @@
 import { primaryKey, sqliteTable } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
+import type { JsonObject, JsonValue } from "../../json.js";
+
 // One row per field within a registered settings group. `group` matches
 // the name passed to `ctx.registerSettingsGroup`; plugin authors read /
 // write through the RPC (`settings.get({ group })` / `settings.upsert`)
@@ -12,21 +14,20 @@ export const settings = sqliteTable(
   (t) => ({
     group: t.text().notNull(),
     key: t.text().notNull(),
-    // Not `JsonValue`, unlike the `meta` columns: a settings value arrives
-    // straight off `settings.upsert` without passing the field pipeline, so
-    // nothing has proved its shape. Retyping it, and the `settings.get` /
-    // `settings.upsert` bags it feeds, waits on that gate.
-    value: t.text({ mode: "json" }).$type<unknown>(),
+    // Same contract as the `meta` columns: `settings.upsert` runs every
+    // value through the field pipeline — a registered field's declared type
+    // for the keys it owns, a JSON decode for the rest — so what lands here
+    // is decoded, not merely encodable.
+    value: t.text({ mode: "json" }).$type<JsonValue>(),
   }),
   (table) => [primaryKey({ columns: [table.group, table.key] })],
 );
 
 /**
- * A settings group as the RPC hands it over: one flat `key → value` bag.
- * Not JSON: the values are the `settings.value` column verbatim, and that
- * column is still `unknown` for the reason stated at its declaration.
+ * A settings group as the RPC hands it over: one flat `key → value` bag of
+ * the `settings.value` column verbatim.
  */
-export type SettingsBag = Readonly<Record<string, unknown>>;
+export type SettingsBag = JsonObject;
 
 export type Setting = typeof settings.$inferSelect;
 export type NewSetting = typeof settings.$inferInsert;

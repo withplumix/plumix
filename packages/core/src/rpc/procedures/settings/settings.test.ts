@@ -4,7 +4,7 @@ import { and, eq } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
 import { HookRegistry } from "../../../hooks/registry.js";
 import { definePlugin } from "../../../plugin/define.js";
-import { select, url } from "../../../plugin/fields/index.js";
+import { number, select, text, url } from "../../../plugin/fields/index.js";
 import { installPlugins } from "../../../plugin/register.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -283,5 +283,105 @@ describe("settings.upsert (condition-hidden fields)", () => {
       values: { anything: "goes" },
     });
     expect(bag).toEqual({ anything: "goes" });
+  });
+});
+
+// Registered fields put their declared shape between the caller and the
+// column: a value arrives decoded rather than however the caller spelled
+// it, which is what lets `settings.value` name what it holds.
+describe("settings.upsert (field pipeline)", () => {
+  async function harnessWithTypedGroup(): Promise<
+    Awaited<ReturnType<typeof createRpcHarness>>
+  > {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("test", (ctx) => {
+      ctx.registerSettingsGroup("reading", {
+        label: "Reading",
+        fields: [
+          number("per_page").min(1).max(50),
+          text("blurb").maxLength(5),
+          text("motto").required(),
+        ],
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    return createRpcHarness({ authAs: "admin", plugins: registry, hooks });
+  }
+
+  test("a registered field stores the value in its declared shape", async () => {
+    const h = await harnessWithTypedGroup();
+    const bag = await h.client.settings.upsert({
+      group: "reading",
+      values: { per_page: "10" },
+    });
+    expect(bag).toEqual({ per_page: 10 });
+    const [row] = await h.context.db
+      .select({ value: settings.value })
+      .from(settings)
+      .where(and(eq(settings.group, "reading"), eq(settings.key, "per_page")));
+    expect(row?.value).toBe(10);
+  });
+
+  test("a value the field cannot hold rejects the whole write", async () => {
+    const h = await harnessWithTypedGroup();
+    await expect(
+      h.client.settings.upsert({
+        group: "reading",
+        values: { per_page: "not a number", blurb: "ok" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: {
+        reason: "settings_invalid_value",
+        errors: [{ path: "per_page" }],
+      },
+    });
+    // Nothing partial lands — the sibling key is untouched too.
+    expect(await h.client.settings.get({ group: "reading" })).toEqual({});
+  });
+
+  test("a declared constraint is enforced, not just the shape", async () => {
+    const h = await harnessWithTypedGroup();
+    await expect(
+      h.client.settings.upsert({
+        group: "reading",
+        values: { blurb: "far too long" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "settings_invalid_value", errors: [{ path: "blurb" }] },
+    });
+  });
+
+  test("clearing a required field is rejected, as it is for meta", async () => {
+    const h = await harnessWithTypedGroup();
+    await expect(
+      h.client.settings.upsert({ group: "reading", values: { motto: null } }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "settings_invalid_value", errors: [{ path: "motto" }] },
+    });
+  });
+
+  test("an unregistered key still stores whatever JSON it was sent", async () => {
+    const h = await harnessWithTypedGroup();
+    const bag = await h.client.settings.upsert({
+      group: "reading",
+      values: { orphan: { nested: [1, true, null] } },
+    });
+    expect(bag).toEqual({ orphan: { nested: [1, true, null] } });
+  });
+
+  test("a value with no JSON serialization is rejected", async () => {
+    const h = await harnessWithTypedGroup();
+    await expect(
+      h.client.settings.upsert({
+        group: "reading",
+        values: { orphan: () => "nope" },
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "settings_invalid_value", key: "reading.orphan" },
+    });
   });
 });
