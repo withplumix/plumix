@@ -65,8 +65,16 @@
     },
     "docs:screenshots": {
       // Same graph as `test:e2e`: the capture drives the built admin through
-      // `vite preview`. Never cached — it exists for its side effect, the
-      // images it writes into `apps/docs/src/assets/`.
+      // `vite preview`.
+      //
+      // Uncached, but not because the outputs are unreachable — turbo restores
+      // `apps/docs/src/assets/` from outside the package fine. The blocker is
+      // that PNG bytes depend on the platform that rendered them (font
+      // rasterization; see packages/admin/README.md) while turbo's hash does
+      // not, so a shared remote cache would restore CI's ubuntu images into a
+      // macOS checkout and a contributor regenerating locally would commit
+      // images they never rendered. Pin the capture to one platform (#1935)
+      // and this caches.
       "dependsOn": ["build", "^build"],
       "cache": false,
       "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
