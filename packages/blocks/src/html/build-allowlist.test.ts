@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createBlockRegistry } from "../index.js";
-import { buildHtmlAllowlist } from "./build-allowlist.js";
+import { buildHtmlAllowlist, HARD_DENYLIST } from "./build-allowlist.js";
 
 const EMPTY_BLOCK_REGISTRY = createBlockRegistry([]);
 
@@ -44,13 +44,27 @@ describe("buildHtmlAllowlist", () => {
     expect(allowlist.allowedSchemes).toEqual([]);
   });
 
-  test.each(["script", "iframe", "object", "embed", "style", "form", "svg"])(
+  test.each([...HARD_DENYLIST])(
     "hard denylist blocks operator-supplied `%s` in extraTags",
     (tag) => {
       const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
         extraTags: [tag],
       });
       expect(allowlist.allowedTags).not.toContain(tag);
+    },
+  );
+
+  test.each([...HARD_DENYLIST].map((tag) => tag.toUpperCase()))(
+    "hard denylist blocks `%s` regardless of the case it is written in",
+    (tag) => {
+      const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+        extraTags: [tag],
+        extraAttributes: { [tag]: ["src"] },
+      });
+      expect(allowlist.allowedTags).not.toContain(tag);
+      expect(allowlist.allowedTags).not.toContain(tag.toLowerCase());
+      expect(allowlist.allowedAttributes).not.toHaveProperty(tag);
+      expect(allowlist.allowedAttributes).not.toHaveProperty(tag.toLowerCase());
     },
   );
 

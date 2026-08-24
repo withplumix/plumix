@@ -447,36 +447,48 @@ describe("MetaBoxField dispatcher", () => {
     expect(onChange).toHaveBeenCalledWith(["news", "sport"]);
   });
 
-  test("json: seeds the editor and parses input, surfacing errors inline", async () => {
-    const onChange = vi.fn();
-    renderWithI18n(
-      <Harness
-        fieldDef={field({ inputType: "json", type: "json" })}
-        initial={{ a: 1 }}
-        onChangeSpy={onChange}
-      />,
-    );
-    // The editor is lazy-loaded (code-split); await its first render.
-    const editor = await screen.findByTestId("meta-box-field-k-input-code");
-    expect(editorText(editor)).toBe('{\n  "a": 1\n}');
+  // The CodeMirror lazy chunk is heavy, and this is the only test in the file
+  // that pulls it, so it pays the whole graph's cold vite-node transform (~1s
+  // idle, past the default 5s test timeout on a contended CI runner). Raise the
+  // findBy margin and the test timeout above it, so a real failure surfaces the
+  // informative findBy error instead of racing vitest's timeout.
+  test(
+    "json: seeds the editor and parses input, surfacing errors inline",
+    { timeout: 15_000 },
+    async () => {
+      const onChange = vi.fn();
+      renderWithI18n(
+        <Harness
+          fieldDef={field({ inputType: "json", type: "json" })}
+          initial={{ a: 1 }}
+          onChangeSpy={onChange}
+        />,
+      );
+      const editor = await screen.findByTestId(
+        "meta-box-field-k-input-code",
+        undefined,
+        { timeout: 10_000 },
+      );
+      expect(editorText(editor)).toBe('{\n  "a": 1\n}');
 
-    // Invalid JSON — error surfaces, form value untouched. `paste` avoids
-    // userEvent treating `{` as a kbd-shortcut delimiter.
-    await userEvent.click(editor);
-    await userEvent.keyboard("{Control>}a{/Control}");
-    await userEvent.paste("{not-json");
-    expect(
-      screen.getByTestId("meta-box-field-k-input-error"),
-    ).toBeInTheDocument();
+      // Invalid JSON — error surfaces, form value untouched. `paste` avoids
+      // userEvent treating `{` as a kbd-shortcut delimiter.
+      await userEvent.click(editor);
+      await userEvent.keyboard("{Control>}a{/Control}");
+      await userEvent.paste("{not-json");
+      expect(
+        screen.getByTestId("meta-box-field-k-input-error"),
+      ).toBeInTheDocument();
 
-    // Valid JSON — error clears, parsed value propagates.
-    await userEvent.keyboard("{Control>}a{/Control}");
-    await userEvent.paste('{"b":2}');
-    expect(onChange).toHaveBeenLastCalledWith({ b: 2 });
-    expect(
-      screen.queryByTestId("meta-box-field-k-input-error"),
-    ).not.toBeInTheDocument();
-  });
+      // Valid JSON — error clears, parsed value propagates.
+      await userEvent.keyboard("{Control>}a{/Control}");
+      await userEvent.paste('{"b":2}');
+      expect(onChange).toHaveBeenLastCalledWith({ b: 2 });
+      expect(
+        screen.queryByTestId("meta-box-field-k-input-error"),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   test("color: swatch + hex input share the same value via react-colorful", async () => {
     const onChange = vi.fn();
