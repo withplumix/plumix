@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /// <reference lib="dom" />
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { HmrClient, ViteErrorPayload } from "./compile-overlay.js";
 import {
@@ -40,12 +40,6 @@ class FakeHot implements HmrClient {
   }
 }
 
-// React roots inside the shadow render on the scheduler; give it a macrotask to
-// flush before reading the DOM. Mirrors the island-overlay suite's teardown.
-function tick(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
 function host(): HTMLElement | null {
   return document.querySelector<HTMLElement>(HOST_TAG);
 }
@@ -55,6 +49,39 @@ function query(testid: string): HTMLElement | null {
   return (
     shadow?.querySelector<HTMLElement>(`[data-testid="${testid}"]`) ?? null
   );
+}
+
+// React roots inside the shadow commit on the scheduler, so the DOM an
+// assertion needs may not be there yet. Poll for it — a loaded CI runner
+// outruns any fixed delay.
+function shown(testid: string): Promise<HTMLElement> {
+  return vi.waitFor(
+    () => {
+      const el = query(testid);
+      if (!el) throw new Error(`no [data-testid="${testid}"] in the overlay`);
+      return el;
+    },
+    { interval: 10 },
+  );
+}
+
+async function press(testid: string): Promise<void> {
+  (await shown(testid)).click();
+}
+
+function hostGone(): Promise<void> {
+  return vi.waitFor(
+    () => {
+      if (host()) throw new Error("overlay host still mounted");
+    },
+    { interval: 10 },
+  );
+}
+
+// Only for the "nothing should have happened" assertions: there is no condition
+// to poll for, so let pending work run and then assert the absence.
+function flush(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 function viteError(err: ViteErrorPayload): { err: ViteErrorPayload } {
@@ -111,7 +138,7 @@ describe("installCompileErrorOverlay", () => {
     uninstall();
     uninstall = () => undefined;
     document.body.innerHTML = "";
-    await tick();
+    await flush();
   });
 
   test("stays out of the DOM until a compile error arrives", () => {
@@ -127,9 +154,8 @@ describe("installCompileErrorOverlay", () => {
         loc: { file: "/proj/src/App.tsx", line: 1, column: 8 },
       }),
     );
-    await tick();
+    await shown("plumix-dev-overlay-panel");
 
-    expect(query("plumix-dev-overlay-panel")).not.toBeNull();
     expect(query("plumix-dev-error-message")?.textContent).toBe(
       "Unexpected token",
     );
@@ -142,66 +168,59 @@ describe("installCompileErrorOverlay", () => {
 
   test("clears the overlay when the module recompiles", async () => {
     hot.emit("vite:error", viteError({ message: "Broken" }));
-    await tick();
-    expect(host()).not.toBeNull();
+    await shown("plumix-dev-overlay-panel");
 
     hot.emit("vite:beforeUpdate");
-    await tick();
-    expect(host()).toBeNull();
+    await hostGone();
   });
 
   test("dismisses on the close button", async () => {
     hot.emit("vite:error", viteError({ message: "Broken" }));
-    await tick();
+    await press("plumix-dev-overlay-close");
 
-    query("plumix-dev-overlay-close")?.click();
-    await tick();
-    expect(host()).toBeNull();
+    await hostGone();
   });
 
   test("dismisses on Escape", async () => {
     hot.emit("vite:error", viteError({ message: "Broken" }));
-    await tick();
-    expect(host()).not.toBeNull();
+    await shown("plumix-dev-overlay-panel");
 
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    await tick();
-    expect(host()).toBeNull();
+    await hostGone();
   });
 
   test("closes on a backdrop press-and-release", async () => {
     hot.emit("vite:error", viteError({ message: "Broken" }));
-    await tick();
 
-    const backdrop = query("plumix-dev-overlay-backdrop");
-    backdrop?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-    backdrop?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    await tick();
-    expect(host()).toBeNull();
+    const backdrop = await shown("plumix-dev-overlay-backdrop");
+    backdrop.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await hostGone();
   });
 
   test("stays open when a drag starts in the modal and ends on the backdrop", async () => {
     hot.emit("vite:error", viteError({ message: "Broken" }));
-    await tick();
 
-    query("plumix-dev-overlay-panel")?.dispatchEvent(
-      new MouseEvent("mousedown", { bubbles: true }),
-    );
-    query("plumix-dev-overlay-backdrop")?.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
-    );
-    await tick();
+    const panel = await shown("plumix-dev-overlay-panel");
+    const backdrop = await shown("plumix-dev-overlay-backdrop");
+
+    panel.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
     expect(query("plumix-dev-overlay-panel")).not.toBeNull();
   });
 
   test("replaces the shown error when a newer compile error arrives", async () => {
     hot.emit("vite:error", viteError({ message: "First" }));
-    await tick();
-    expect(query("plumix-dev-error-message")?.textContent).toBe("First");
+    const message = await shown("plumix-dev-error-message");
+    expect(message.textContent).toBe("First");
 
     hot.emit("vite:error", viteError({ message: "Second" }));
-    await tick();
-    expect(query("plumix-dev-error-message")?.textContent).toBe("Second");
+    await vi.waitFor(
+      () =>
+        expect(query("plumix-dev-error-message")?.textContent).toBe("Second"),
+      { interval: 10 },
+    );
   });
 
   test("is idempotent — a second install returns the same teardown", () => {
@@ -214,21 +233,19 @@ describe("installCompileErrorOverlay", () => {
   test("ignores a vite:error payload that carries no err", async () => {
     hot.emit("vite:error", undefined);
     hot.emit("vite:error", {});
-    await tick();
+    await flush();
     expect(host()).toBeNull();
   });
 
   test("re-shows after a dismissal when a new error arrives", async () => {
     hot.emit("vite:error", viteError({ message: "First" }));
-    await tick();
-    query("plumix-dev-overlay-close")?.click();
-    await tick();
-    expect(host()).toBeNull();
+    await press("plumix-dev-overlay-close");
+    await hostGone();
 
     // A fresh error must remount the overlay, not stay dismissed.
     hot.emit("vite:error", viteError({ message: "Second" }));
-    await tick();
-    expect(query("plumix-dev-error-message")?.textContent).toBe("Second");
+    const message = await shown("plumix-dev-error-message");
+    expect(message.textContent).toBe("Second");
   });
 
   test("replays an initialError buffered before install (cold-start race)", async () => {
@@ -240,10 +257,8 @@ describe("installCompileErrorOverlay", () => {
     uninstall = installCompileErrorOverlay(fresh, {
       initialError: viteError({ message: "Already broken on load" }),
     });
-    await tick();
-    expect(query("plumix-dev-error-message")?.textContent).toBe(
-      "Already broken on load",
-    );
+    const message = await shown("plumix-dev-error-message");
+    expect(message.textContent).toBe("Already broken on load");
   });
 
   test("uninstall unsubscribes and stops capturing", async () => {
@@ -252,7 +267,7 @@ describe("installCompileErrorOverlay", () => {
     expect(hot.count("vite:error")).toBe(0);
 
     hot.emit("vite:error", viteError({ message: "After" }));
-    await tick();
+    await flush();
     expect(host()).toBeNull();
   });
 });

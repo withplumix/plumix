@@ -9,9 +9,9 @@ import { installDevClient } from "./index.js";
 // the blocks-side overlay through the event seam.
 const OVERLAY_HOST = "plumix-dev-error-overlay";
 
-// The overlay renders its React root on the scheduler; give it a macrotask to
-// flush before reading the DOM.
-function tick(): Promise<void> {
+// Only for the "nothing should have happened" assertions: there is no condition
+// to poll for, so let pending work run and then assert the absence.
+function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
@@ -37,7 +37,7 @@ describe("installDevClient", () => {
     delete process.env.PLUMIX_FORWARD_ERRORS;
     globalThis.fetch = originalFetch;
     document.body.innerHTML = "";
-    await tick();
+    await flush();
   });
 
   test("installs the island dialog: a hydration mismatch surfaces the overlay", async () => {
@@ -47,8 +47,10 @@ describe("installDevClient", () => {
         detail: { componentStack: "at Counter", server: "0", client: "1" },
       }),
     );
-    await tick();
-    expect(document.querySelector(OVERLAY_HOST)).not.toBeNull();
+    await vi.waitFor(
+      () => expect(document.querySelector(OVERLAY_HOST)).not.toBeNull(),
+      { interval: 10 },
+    );
   });
 
   test("installs the compile overlay when a Vite hot client is supplied", () => {
@@ -84,7 +86,7 @@ describe("installDevClient", () => {
         detail: { componentStack: "at Counter" },
       }),
     );
-    await tick();
+    await flush();
     expect(document.querySelector(OVERLAY_HOST)).toBeNull();
   });
 });

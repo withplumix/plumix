@@ -8,12 +8,6 @@ const HOST_TAG = "plumix-dev-error-overlay";
 
 let uninstall: () => void = () => undefined;
 
-// React roots inside the shadow render on the scheduler; give it a macrotask
-// to flush before reading the DOM. Mirrors the island-element suite's teardown.
-function tick(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
 function host(): HTMLElement | null {
   return document.querySelector<HTMLElement>(HOST_TAG);
 }
@@ -26,6 +20,43 @@ function shadow(): ShadowRoot {
 
 function query(testid: string): HTMLElement | null {
   return shadow().querySelector<HTMLElement>(`[data-testid="${testid}"]`);
+}
+
+// React roots inside the shadow commit on the scheduler, so the DOM an
+// assertion needs may not be there yet. Poll for it — a loaded CI runner
+// outruns any fixed delay. The interval is tightened from vitest's 50ms
+// default because every wait here pays it in full.
+function shown(testid: string): Promise<HTMLElement> {
+  return vi.waitFor(
+    () => {
+      const el = query(testid);
+      if (!el) throw new Error(`no [data-testid="${testid}"] in the overlay`);
+      return el;
+    },
+    { interval: 10 },
+  );
+}
+
+function gone(testid: string): Promise<void> {
+  return vi.waitFor(
+    () => {
+      // Not `query`: a torn-down host means the testid is gone, and `shadow()`
+      // throwing would read to `waitFor` as "not settled yet".
+      const el = host()?.shadowRoot?.querySelector(`[data-testid="${testid}"]`);
+      if (el) throw new Error(`[data-testid="${testid}"] still shown`);
+    },
+    { interval: 10 },
+  );
+}
+
+async function press(testid: string): Promise<void> {
+  (await shown(testid)).click();
+}
+
+// Only for the "nothing should have happened" assertions: there is no condition
+// to poll for, so let pending work run and then assert the absence.
+function flush(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 function island(componentExport: string): HTMLElement {
@@ -55,7 +86,7 @@ describe("installIslandErrorOverlay", () => {
   afterEach(async () => {
     uninstall();
     document.body.innerHTML = "";
-    await tick();
+    await flush();
   });
 
   test("stays out of the DOM until an island error is captured", () => {
@@ -72,23 +103,17 @@ describe("installIslandErrorOverlay", () => {
     // suppressed.
     expect(notPrevented).toBe(false);
 
-    await tick();
-    const badge = query("plumix-island-overlay-badge");
-    expect(badge).not.toBeNull();
-    expect(badge?.textContent).toContain("1");
+    const badge = await shown("plumix-island-overlay-badge");
+    expect(badge.textContent).toContain("1");
     // A badge, not a full-screen takeover: no panel until it is expanded.
     expect(query("plumix-dev-overlay-panel")).toBeNull();
   });
 
   test("expands the badge into a panel that renders the shared error renderer", async () => {
     dispatchHydrationError(new Error("hydrate boom"), island("Counter"));
-    await tick();
+    await press("plumix-island-overlay-badge");
+    await shown("plumix-dev-overlay-panel");
 
-    query("plumix-island-overlay-badge")?.click();
-    await tick();
-
-    const panel = query("plumix-dev-overlay-panel");
-    expect(panel).not.toBeNull();
     // The shared error body renders inside the panel.
     expect(query("plumix-dev-error-message")?.textContent).toBe("hydrate boom");
     // Names the island that failed.
@@ -105,13 +130,10 @@ describe("installIslandErrorOverlay", () => {
         },
       }),
     );
-    await tick();
-    query("plumix-island-overlay-badge")?.click();
-    await tick();
+    await press("plumix-island-overlay-badge");
 
-    expect(query("plumix-dev-error-component-stack")?.textContent).toContain(
-      "at Counter",
-    );
+    const stack = await shown("plumix-dev-error-component-stack");
+    expect(stack.textContent).toContain("at Counter");
   });
 
   test("renders a hydration mismatch through the shared error page, named and labeled by island", async () => {
@@ -123,11 +145,11 @@ describe("installIslandErrorOverlay", () => {
         },
       }),
     );
-    await tick();
-    expect(query("plumix-island-overlay-badge")?.textContent).toContain("1");
+    const badge = await shown("plumix-island-overlay-badge");
+    expect(badge.textContent).toContain("1");
 
-    query("plumix-island-overlay-badge")?.click();
-    await tick();
+    badge.click();
+    await shown("plumix-dev-overlay-panel");
 
     // The shared error body renders inside the panel, named as a mismatch…
     expect(query("plumix-dev-error-name")?.textContent).toBe(
@@ -154,12 +176,9 @@ describe("installIslandErrorOverlay", () => {
         },
       }),
     );
-    await tick();
-    query("plumix-island-overlay-badge")?.click();
-    await tick();
+    await press("plumix-island-overlay-badge");
+    await shown("plumix-dev-error-hydration-diff");
 
-    const diff = query("plumix-dev-error-hydration-diff");
-    expect(diff).not.toBeNull();
     // Both captured renders show, escaped as text rather than re-rendered.
     expect(query("plumix-dev-error-hydration-server")?.textContent).toContain(
       "<span>SERVER</span>",
@@ -180,12 +199,11 @@ describe("installIslandErrorOverlay", () => {
         },
       }),
     );
-    await tick();
-    query("plumix-island-overlay-badge")?.click();
-    await tick();
+    await press("plumix-island-overlay-badge");
 
     // The dialog shows the island label, the error, and the hydration diff…
-    expect(query("plumix-dev-overlay-label")?.textContent).toContain("Clock");
+    const label = await shown("plumix-dev-overlay-label");
+    expect(label.textContent).toContain("Clock");
     expect(query("plumix-dev-error-message")).not.toBeNull();
     expect(query("plumix-dev-error-hydration-diff")).not.toBeNull();
     // …and none of the server-only context sections the full page renders — the
@@ -211,70 +229,77 @@ describe("installIslandErrorOverlay", () => {
         detail: { element: island("Clock"), componentStack: "\n    at Clock" },
       }),
     );
-    await tick();
 
-    expect(query("plumix-island-overlay-badge")?.textContent).toContain("1");
+    const badge = await shown("plumix-island-overlay-badge");
+    expect(badge.textContent).toContain("1");
   });
 
   test("counts and navigates between multiple distinct errors", async () => {
     dispatchHydrationError(new Error("first boom"), island("Alpha"));
     dispatchHydrationError(new Error("second boom"), island("Beta"));
-    await tick();
 
-    const badge = query("plumix-island-overlay-badge");
-    expect(badge?.textContent).toContain("2");
+    const badge = await shown("plumix-island-overlay-badge");
+    expect(badge.textContent).toContain("2");
 
-    badge?.click();
-    await tick();
+    badge.click();
+    await shown("plumix-dev-overlay-panel");
 
     // Newest error is shown first.
     expect(query("plumix-dev-error-message")?.textContent).toBe("second boom");
     expect(query("plumix-island-overlay-count")?.textContent).toContain("1");
 
-    query("plumix-island-overlay-next")?.click();
-    await tick();
-    expect(query("plumix-dev-error-message")?.textContent).toBe("first boom");
+    await press("plumix-island-overlay-next");
+    await vi.waitFor(
+      () =>
+        expect(query("plumix-dev-error-message")?.textContent).toBe(
+          "first boom",
+        ),
+      { interval: 10 },
+    );
 
-    query("plumix-island-overlay-prev")?.click();
-    await tick();
-    expect(query("plumix-dev-error-message")?.textContent).toBe("second boom");
+    await press("plumix-island-overlay-prev");
+    await vi.waitFor(
+      () =>
+        expect(query("plumix-dev-error-message")?.textContent).toBe(
+          "second boom",
+        ),
+      { interval: 10 },
+    );
   });
 
   test("keeps the expanded panel pinned to the error being read when a newer one arrives", async () => {
     dispatchHydrationError(new Error("reading this"), island("Alpha"));
-    await tick();
-    query("plumix-island-overlay-badge")?.click();
-    await tick();
-    expect(query("plumix-dev-error-message")?.textContent).toBe("reading this");
+    await press("plumix-island-overlay-badge");
+    const message = await shown("plumix-dev-error-message");
+    expect(message.textContent).toBe("reading this");
 
     // A newer error arrives while the panel is open; it must not swap out.
     dispatchHydrationError(new Error("newer"), island("Beta"));
-    await tick();
-
-    expect(query("plumix-dev-error-message")?.textContent).toBe("reading this");
-    // The read error shifted from slot 1 to slot 2 of 2.
-    expect(query("plumix-island-overlay-count")?.textContent).toContain(
-      "2 / 2",
+    // The read error shifting from slot 1 to slot 2 of 2 is the new one landing.
+    await vi.waitFor(
+      () =>
+        expect(query("plumix-island-overlay-count")?.textContent).toContain(
+          "2 / 2",
+        ),
+      { interval: 10 },
     );
+    expect(query("plumix-dev-error-message")?.textContent).toBe("reading this");
   });
 
   async function openModal(): Promise<void> {
-    query("plumix-island-overlay-badge")?.click();
-    await tick();
+    await press("plumix-island-overlay-badge");
+    await shown("plumix-dev-overlay-panel");
   }
 
   test("closes the modal to the indicator on a backdrop press-and-release", async () => {
     dispatchHydrationError(new Error("boom"), island("Counter"));
-    await tick();
     await openModal();
-    expect(query("plumix-dev-overlay-panel")).not.toBeNull();
 
-    const backdrop = query("plumix-dev-overlay-backdrop");
-    backdrop?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-    backdrop?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    await tick();
+    const backdrop = await shown("plumix-dev-overlay-backdrop");
+    backdrop.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
-    expect(query("plumix-dev-overlay-panel")).toBeNull();
+    await gone("plumix-dev-overlay-panel");
     expect(query("plumix-island-overlay-badge")).not.toBeNull();
     // Errors are kept — the host stays in the DOM (the indicator remains).
     expect(host()).not.toBeNull();
@@ -282,44 +307,37 @@ describe("installIslandErrorOverlay", () => {
 
   test("stays open when a drag starts in the modal and ends on the backdrop", async () => {
     dispatchHydrationError(new Error("boom"), island("Counter"));
-    await tick();
     await openModal();
 
+    const panel = await shown("plumix-dev-overlay-panel");
+    const backdrop = await shown("plumix-dev-overlay-backdrop");
+
     // Press begins inside the modal (selecting stack text), released outside.
-    query("plumix-dev-overlay-panel")?.dispatchEvent(
-      new MouseEvent("mousedown", { bubbles: true }),
-    );
-    query("plumix-dev-overlay-backdrop")?.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
-    );
-    await tick();
+    panel.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flush();
 
     expect(query("plumix-dev-overlay-panel")).not.toBeNull();
   });
 
   test("closes the modal to the indicator with the close button", async () => {
     dispatchHydrationError(new Error("boom"), island("Counter"));
-    await tick();
     await openModal();
 
-    query("plumix-dev-overlay-close")?.click();
-    await tick();
+    await press("plumix-dev-overlay-close");
 
-    expect(query("plumix-dev-overlay-panel")).toBeNull();
+    await gone("plumix-dev-overlay-panel");
     expect(query("plumix-island-overlay-badge")).not.toBeNull();
     expect(host()).not.toBeNull();
   });
 
   test("closes the modal on Escape, keeping the errors", async () => {
     dispatchHydrationError(new Error("boom"), island("Counter"));
-    await tick();
     await openModal();
-    expect(query("plumix-dev-overlay-panel")).not.toBeNull();
 
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    await tick();
 
-    expect(query("plumix-dev-overlay-panel")).toBeNull();
+    await gone("plumix-dev-overlay-panel");
     expect(query("plumix-island-overlay-badge")).not.toBeNull();
   });
 
@@ -327,20 +345,17 @@ describe("installIslandErrorOverlay", () => {
     const error = new Error("same boom");
     dispatchHydrationError(error, island("Counter"));
     dispatchHydrationError(error, island("Counter"));
-    await tick();
 
-    expect(query("plumix-island-overlay-badge")?.textContent).toContain("1");
+    const badge = await shown("plumix-island-overlay-badge");
+    expect(badge.textContent).toContain("1");
   });
 
   test("captures async window errors and unhandled rejections", async () => {
     window.dispatchEvent(
       new ErrorEvent("error", { error: new Error("async boom") }),
     );
-    // Poll rather than assume one macrotask flushed the render — CI load can
-    // stretch the async handler past a single tick.
-    await vi.waitFor(() =>
-      expect(query("plumix-island-overlay-badge")?.textContent).toContain("1"),
-    );
+    const badge = await shown("plumix-island-overlay-badge");
+    expect(badge.textContent).toContain("1");
 
     // jsdom lacks a PromiseRejectionEvent constructor; a plain event with the
     // reason attached is what the listener reads.
@@ -349,14 +364,18 @@ describe("installIslandErrorOverlay", () => {
     };
     rejection.reason = new Error("rejected boom");
     window.dispatchEvent(rejection);
-    await vi.waitFor(() =>
-      expect(query("plumix-island-overlay-badge")?.textContent).toContain("2"),
+    await vi.waitFor(
+      () =>
+        expect(query("plumix-island-overlay-badge")?.textContent).toContain(
+          "2",
+        ),
+      { interval: 10 },
     );
   });
 
   test("ignores resource-load error events that carry no error object", async () => {
     window.dispatchEvent(new ErrorEvent("error", { message: "404 img" }));
-    await tick();
+    await flush();
     expect(host()).toBeNull();
   });
 
@@ -385,16 +404,12 @@ describe("installIslandErrorOverlay", () => {
     error.stack =
       "Error: render boom\n    at Counter (http://localhost:5173/src/Counter.tsx?t=1:1:0)";
     dispatchHydrationError(error, island("Counter"));
-    // capture → render (raw stack) → POST → resolve → re-render with frames.
-    await tick();
-    await tick();
-    query("plumix-island-overlay-badge")?.click();
-    await tick();
+    await openModal();
 
-    // The overlay now shows the shared frame view with the mapped location.
-    const frame = query("plumix-dev-error-frame");
-    expect(frame).not.toBeNull();
-    expect(frame?.getAttribute("data-file")).toBe("/proj/src/Counter.tsx");
+    // capture → render (raw stack) → POST → resolve → re-render with the shared
+    // frame view.
+    const frame = await shown("plumix-dev-error-frame");
+    expect(frame.getAttribute("data-file")).toBe("/proj/src/Counter.tsx");
     expect(query("plumix-dev-error-stack")).toBeNull();
 
     vi.unstubAllGlobals();
@@ -410,8 +425,7 @@ describe("installIslandErrorOverlay", () => {
     const error = new Error("boom");
     error.stack = "Error: boom\n    at fn (http://localhost:5173/src/a.ts:1:0)";
     dispatchHydrationError(error, island("Counter"));
-    await tick();
-    expect(host()).not.toBeNull();
+    await shown("plumix-island-overlay-badge");
 
     // Tear down while the frame-resolution POST is still in flight.
     uninstall();
@@ -428,55 +442,49 @@ describe("installIslandErrorOverlay", () => {
           ],
         }),
     });
-    await tick();
-    await tick();
+    await flush();
     expect(host()).toBeNull();
 
     vi.unstubAllGlobals();
   });
 
-  function badgeCount(): HTMLElement | null {
-    return query("plumix-island-overlay-badge-count");
-  }
+  const PULSE = "plumix-island-overlay__badge-count--pulse";
 
   test("pulses the count circle when the error count climbs", async () => {
     dispatchHydrationError(new Error("first"), island("Alpha"));
-    await tick();
-    expect(badgeCount()?.className).toContain(
-      "plumix-island-overlay__badge-count--pulse",
-    );
+    const circle = await shown("plumix-island-overlay-badge-count");
+    expect(circle.className).toContain(PULSE);
 
     // A distinct error ticks the count up — the circle pulses again.
     dispatchHydrationError(new Error("second"), island("Beta"));
-    await tick();
-    expect(badgeCount()?.textContent).toBe("2");
-    expect(badgeCount()?.className).toContain(
-      "plumix-island-overlay__badge-count--pulse",
+    await vi.waitFor(
+      () =>
+        expect(query("plumix-island-overlay-badge-count")?.textContent).toBe(
+          "2",
+        ),
+      { interval: 10 },
+    );
+    expect(query("plumix-island-overlay-badge-count")?.className).toContain(
+      PULSE,
     );
   });
 
   test("does not re-pulse the circle when reopening on a settled count", async () => {
     dispatchHydrationError(new Error("boom"), island("Counter"));
-    await tick();
 
     // Open and close the modal without any new errors arriving.
-    query("plumix-island-overlay-badge")?.click();
-    await tick();
-    query("plumix-dev-overlay-close")?.click();
-    await tick();
+    await openModal();
+    await press("plumix-dev-overlay-close");
+    await gone("plumix-dev-overlay-panel");
 
     // The badge is back, but the count is unchanged — no false "arriving" pulse.
-    const circle = badgeCount();
-    expect(circle).not.toBeNull();
-    expect(circle?.className).not.toContain(
-      "plumix-island-overlay__badge-count--pulse",
-    );
+    const circle = await shown("plumix-island-overlay-badge-count");
+    expect(circle.className).not.toContain(PULSE);
   });
 
   test("uninstall removes the host and stops capturing", async () => {
     dispatchHydrationError(new Error("boom"), island("Counter"));
-    await tick();
-    expect(host()).not.toBeNull();
+    await shown("plumix-island-overlay-badge");
 
     uninstall();
     uninstall = () => undefined;
@@ -484,7 +492,7 @@ describe("installIslandErrorOverlay", () => {
 
     // A later error is no longer captured.
     dispatchHydrationError(new Error("after"), island("Counter"));
-    await tick();
+    await flush();
     expect(host()).toBeNull();
   });
 });
