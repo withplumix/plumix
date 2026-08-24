@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
 
 import type { BlockRegistry } from "../block-registry.js";
+import type { HydratedEntry } from "../context-bags.js";
 import type { EntryContent } from "../entry-content.js";
+import type { JsonObject } from "../json.js";
 import type { ResolvedBlockLoaders } from "../loaders.js";
 import type { ShortcodeRegistry } from "../shortcodes/types.js";
 import type { ThemeBreakpoints } from "../styles/style-emitter.js";
@@ -19,9 +21,9 @@ export interface RendererUser {
   readonly email: string;
   readonly name?: string | null;
   readonly role: string;
-  /** Not JSON: mirrors core's `AuthenticatedUser.meta`, which stayed open. The
-   *  `users.meta` column is already `JsonObject`; the two move together. */
-  readonly meta: Record<string, unknown>;
+  /** Mirrors core's `AuthenticatedUser.meta`, which is the `users.meta`
+   *  column verbatim. */
+  readonly meta: JsonObject;
 }
 
 // Mirrors core's `AuthMethodsSummary` structurally — blocks sits below core in
@@ -61,9 +63,8 @@ export interface PlumixContextValue {
   readonly locale?: string;
   /** Registered shortcodes for rich-text body expansion. */
   readonly shortcodes?: ShortcodeRegistry;
-  /** Queried entry, exposed to body shortcodes via `BlockContext.entry` — not
-   *  JSON, for the reason given there. */
-  readonly entry?: Readonly<Record<string, unknown>> | null;
+  /** Queried entry, exposed to body shortcodes via `BlockContext.entry`. */
+  readonly entry?: HydratedEntry | null;
   /** Subdirectory prefix for internal links; `""` for a root deployment. */
   readonly basePath?: string;
   /** Builds optimized image URLs (the `imageDelivery` transform); absent = no optimization. */

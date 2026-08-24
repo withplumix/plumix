@@ -14,8 +14,10 @@ import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
 import type { TransformOpts } from "../../runtime/slots.js";
+import type { LoadedTemplateDeps } from "../../template-deps.js";
 import type { Template } from "../../template.js";
 import type {
+  DocumentAttrs,
   DocumentLink,
   DocumentManifest,
   DocumentMeta,
@@ -321,7 +323,7 @@ interface ResolveDocumentArgs {
   readonly document: DocumentManifest;
   readonly data: TemplateData;
   readonly ctx: AppContext;
-  readonly deps: Record<string, Record<string, unknown>>;
+  readonly deps: LoadedTemplateDeps;
 }
 
 // Merge the matched template's `document` fragment (a literal or a per-request
@@ -351,7 +353,7 @@ interface RenderTreeArgs {
   readonly data: TemplateData;
   readonly title: string;
   readonly template: Template;
-  readonly deps: Record<string, Record<string, unknown>>;
+  readonly deps: LoadedTemplateDeps;
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly tokens: ThemeTokens | undefined;
   readonly breakpoints: ThemeBreakpoints | undefined;
@@ -594,7 +596,7 @@ function voidTagsToHtml(
   return items.map((attrs) => `<${tag}${renderAttrs(attrs)}/>`).join("");
 }
 
-function renderAttrs(attrs: Record<string, unknown> | undefined): string {
+function renderAttrs(attrs: DocumentAttrs | undefined): string {
   if (!attrs) return "";
   let out = "";
   for (const [key, value] of Object.entries(attrs)) {

@@ -6,6 +6,7 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import { useFormContext, useFormState, useWatch } from "react-hook-form";
 
+import type { ResolvedMeta } from "@plumix/core";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -55,10 +56,10 @@ const EDIT_ROW_LABEL = defineMessage({
 // Render-side tolerance for malformed rows from migration / hand-edited
 // DB rows. Bad rows drop from display but the validator still rejects
 // them on save, surfacing the error to the author at write time.
-function asRows(raw: unknown): readonly Record<string, unknown>[] {
+function asRows(raw: unknown): readonly ResolvedMeta[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter(
-    (r): r is Record<string, unknown> =>
+    (r): r is ResolvedMeta =>
       typeof r === "object" && r !== null && !Array.isArray(r),
   );
 }
@@ -111,7 +112,7 @@ export function RepeaterField({
   // onBlur on every Add/Remove/Reorder would mark the field touched in
   // `mode: "onTouched"` forms, surfacing required-field errors on a
   // freshly-Added blank row before the user types anything.
-  const commit = (nextRows: readonly Record<string, unknown>[]): void => {
+  const commit = (nextRows: readonly ResolvedMeta[]): void => {
     rhf.onChange(nextRows);
   };
 
@@ -400,7 +401,7 @@ function CountSuffix({
 // recognisable at a glance. `null` when nothing suitable is present (caller
 // falls back to the row number).
 function rowSummary(
-  row: Record<string, unknown>,
+  row: ResolvedMeta,
   subFields: readonly MetaBoxFieldManifestEntry[],
   collapsedKey: string | undefined,
   renderLabel: ReturnType<typeof useLabel>,

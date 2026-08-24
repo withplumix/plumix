@@ -145,6 +145,7 @@ export const baseConfig = defineConfig(
       "plumix/no-reflect-get": "error",
       "plumix/no-unknown-return": "error",
       "plumix/no-unknown-type-alias": "error",
+      "plumix/no-unsafe-dictionary": "error",
       // Same principle, borrowed from typescript-eslint: a type parameter used
       // once in a signature is an assertion wearing a generic's clothes — the
       // caller names the type and the function hands it back unchecked. Scoped

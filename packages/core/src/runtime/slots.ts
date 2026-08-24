@@ -1,7 +1,14 @@
+/**
+ * A drizzle schema module as the consumer imports it — the namespace object
+ * holding every table declaration. Not JSON: the values are drizzle table
+ * builders, and the whole point of passing the module is to keep them live.
+ */
+export type SchemaModule = Record<string, unknown>;
+
 export interface RequestScopedDbArgs {
   readonly env: unknown;
   readonly request: Request;
-  readonly schema: Record<string, unknown>;
+  readonly schema: SchemaModule;
   /**
    * Heuristic: true when the request carries a Plumix session cookie.
    * Adapters should treat this as "maybe signed in" — use it to gate whether

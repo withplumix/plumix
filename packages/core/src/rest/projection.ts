@@ -2,7 +2,7 @@ import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
-import type { WithResolvedMeta } from "../rpc/meta/core.js";
+import type { ResolvedMeta, WithResolvedMeta } from "../rpc/meta/core.js";
 import type { PublicAuthor, PublicEntry, PublicTerm } from "./schemas.js";
 import { eq, inArray } from "../db/index.js";
 import { entryTerm } from "../db/schema/entry_term.js";
@@ -33,9 +33,9 @@ export function apiVisibleMetaKeys(
 }
 
 function projectMeta(
-  bag: Record<string, unknown>,
+  bag: ResolvedMeta,
   visibleKeys: Set<string>,
-): Record<string, unknown> {
+): ResolvedMeta {
   const out: Record<string, unknown> = {};
   for (const key of visibleKeys) {
     if (key in bag) out[key] = bag[key];

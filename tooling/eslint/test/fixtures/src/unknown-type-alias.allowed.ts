@@ -1,3 +1,4 @@
+// Not JSON: an open dictionary is this rule's sibling's business, not its own.
 export type Bag = Record<string, unknown>;
 
 export type Items = readonly unknown[];

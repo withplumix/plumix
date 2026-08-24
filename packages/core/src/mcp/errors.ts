@@ -30,11 +30,12 @@ export class McpToolError extends Error {
   }
 }
 
-// The index signature keeps this assignable to the SDK's `CallToolResult`,
-// which carries `[x: string]: unknown` for protocol passthrough fields.
 interface McpToolErrorResult {
   readonly isError: true;
   readonly content: { readonly type: "text"; readonly text: string }[];
+  // Not JSON: this signature exists to stay assignable to the SDK's
+  // `CallToolResult`, which carries `[x: string]: unknown` for protocol
+  // passthrough fields we neither write nor read.
   readonly [key: string]: unknown;
 }
 

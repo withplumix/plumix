@@ -1,6 +1,7 @@
 import { inArray } from "drizzle-orm";
 
 import type { AppContext } from "./context/app.js";
+import type { SettingsBag } from "./db/schema/settings.js";
 import type { MutablePluginRegistry } from "./plugin/manifest.js";
 import { memoBatch } from "./context/memo.js";
 import { settings } from "./db/schema/settings.js";
@@ -10,7 +11,7 @@ import { settings } from "./db/schema/settings.js";
 // loader returns each requested group as a `Record<key, value>`.
 declare module "./template.js" {
   interface TemplateDepRegistry {
-    settings: { slug: string; result: Record<string, unknown> };
+    settings: { slug: string; result: SettingsBag };
   }
 }
 
@@ -33,7 +34,7 @@ export function registerCoreTemplateDeps(
 export async function settingsLoader(
   groups: readonly string[],
   ctx: AppContext,
-): Promise<Record<string, Record<string, unknown>>> {
+): Promise<Record<string, SettingsBag>> {
   const unique = [...new Set(groups)];
   if (unique.length === 0) return {};
   // Per-group memo (#1493): head defaults, SEO surfaces, and the template
@@ -64,7 +65,7 @@ export async function settingsLoader(
       return byGroup;
     },
   );
-  const grouped: Record<string, Record<string, unknown>> = {};
+  const grouped: Record<string, SettingsBag> = {};
   unique.forEach((group, i) => {
     const bag = bags[i];
     if (bag) grouped[group] = bag;

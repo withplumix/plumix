@@ -37,6 +37,7 @@ import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { RenderEnv } from "../route/render/render-env.js";
 import type { DocumentManifest } from "../theme.js";
 import type { EnvInput } from "./env-input.js";
+import type { SchemaModule } from "./slots.js";
 import { registerCoreAdminBarContributors } from "../admin-bar/core-contributors.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
@@ -174,7 +175,7 @@ export interface PlumixApp {
   readonly oauthProviders: readonly OAuthProviderSummary[];
   /** Projected auth methods for theme login pages; see {@link AuthMethodsSummary}. */
   readonly authMethods: AuthMethodsSummary;
-  readonly schema: Record<string, unknown>;
+  readonly schema: SchemaModule;
   /**
    * Sorted route map compiled once at `buildApp` from the plugin registry.
    * Module-scoped module-less equivalent: CF Worker isolates reuse this

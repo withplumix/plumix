@@ -1,4 +1,4 @@
-import type { JsonObject } from "@plumix/core";
+import type { JsonObject, ResolvedMeta } from "@plumix/core";
 
 // Structural equality via canonical JSON — meta values are plain
 // JSON (strings, numbers, booleans, nested objects/arrays), so a
@@ -31,9 +31,9 @@ function stableStringify(value: unknown): string {
  * keys persist unchanged.
  */
 export function diffMetaBag(
-  prev: Readonly<Record<string, unknown>>,
-  next: Readonly<Record<string, unknown>>,
-): Record<string, unknown> {
+  prev: ResolvedMeta,
+  next: ResolvedMeta,
+): ResolvedMeta {
   const patch: Record<string, unknown> = {};
   for (const key of Object.keys(next)) {
     if (stableStringify(next[key]) !== stableStringify(prev[key])) {

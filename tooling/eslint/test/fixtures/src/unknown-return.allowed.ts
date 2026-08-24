@@ -1,3 +1,5 @@
+import type { OpenBag } from "./open-bag.js";
+
 export interface Parsed {
   readonly id: string;
 }
@@ -8,7 +10,7 @@ export function parseConfig(raw: string): Parsed {
 }
 
 // `unknown` inside a wider return describes a boundary rather than hides one.
-export function readBag(raw: string): Record<string, unknown> {
+export function readBag(raw: string): OpenBag {
   return { raw };
 }
 

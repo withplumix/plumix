@@ -116,6 +116,26 @@ TypeScript has no way to spell, and the value is recovered at the typed boundary
 returns through rather than handed to a caller. Disable the rule there, and say in the comment
 where the erasure is undone.
 
+A dictionary type whose value type is `unknown`, `any`, `object` or `{}` is rejected in production
+`src/` by `plumix/no-unsafe-dictionary`. `Record<string, unknown>` is how both "JSON nobody has
+parsed yet" and "a bag that is open by design" get spelled, and neither the compiler nor a reader
+can tell which one is in front of them.
+
+Serialized data is `JsonObject`. Anything else has to be a **named** type, and the name is where
+the answer lives — once, at the declaration, rather than at each of the hundred sites that would
+otherwise repeat it. Give that declaration a `Not JSON: …` sentence naming what puts a
+non-serializable value in the bag; use `Not JsonObject: …` when the value really is JSON but the
+sanctioned type is out of reach from that package. The marker alone is not enough — the rule counts
+the words after it, for the same reason `// Safety:` does. Never silence it with a bare disable
+comment.
+
+`any`, `object` and `{}` get no such escape, named or not: `unknown` defers a proof, the other
+three waive it.
+
+The rule stays silent wherever nothing is being declared: a generic constraint or default, a type
+predicate, an assertion target, and a local's annotation. A signature or a member is a declaration
+wherever it sits, so neither an enclosing alias nor an enclosing `const` lends it cover.
+
 ## Tests
 
 One vitest suite per package. Two layouts, in order of preference:

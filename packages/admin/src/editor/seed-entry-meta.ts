@@ -1,3 +1,4 @@
+import type { ResolvedMeta } from "@plumix/core";
 import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
 
 /**
@@ -15,8 +16,8 @@ import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
  */
 export function seedEntryMetaForm(
   boxes: readonly EntryMetaBoxManifestEntry[],
-  stored: Readonly<Record<string, unknown>>,
-): Record<string, unknown> {
+  stored: ResolvedMeta,
+): ResolvedMeta {
   const seeded: Record<string, unknown> = { ...stored };
   for (const box of boxes) {
     for (const field of box.fields) {

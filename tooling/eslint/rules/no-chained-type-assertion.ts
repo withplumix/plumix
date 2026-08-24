@@ -1,5 +1,7 @@
 import type { Rule } from "eslint";
 
+import { commentBlockAbove, wordsAfterMarker } from "./comment-block.js";
+
 // Rust's `// SAFETY:` convention, borrowed for the same job: mark the point
 // where the compiler stopped checking and the author started promising.
 const SAFETY_MARKER = /(^|\s)safety:/i;
@@ -8,40 +10,6 @@ const SAFETY_MARKER = /(^|\s)safety:/i;
 // has to cost something. Requiring a sentence is the most a linter can check —
 // it cannot read the invariant, only insist that one was written.
 const MIN_INVARIANT_WORDS = 6;
-const WORD = /[A-Za-z]/;
-
-type SourceCode = Rule.RuleContext["sourceCode"];
-
-/**
- * The comments forming an unbroken block directly above `line`, joined into
- * one string. A comment trailing code (`foo(); // …`) ends on the line without
- * owning it and never joins the block — otherwise any line-end remark would
- * launder the assertion below it. Block comments arrive with their `*` gutter
- * attached; strip it so a word count measures prose rather than decoration.
- */
-function commentBlockAbove(sourceCode: SourceCode, line: number): string {
-  const ownLine = new Map<number, { text: string; start: number }>();
-  for (const comment of sourceCode.getAllComments()) {
-    const loc = comment.loc;
-    if (!loc) continue;
-    const before = sourceCode.lines[loc.start.line - 1]?.slice(
-      0,
-      loc.start.column,
-    );
-    if (before?.trim() !== "") continue;
-    ownLine.set(loc.end.line, {
-      text: comment.value.replaceAll(/^[\s*]+/gm, " "),
-      start: loc.start.line,
-    });
-  }
-  const parts: string[] = [];
-  let comment = ownLine.get(line - 1);
-  while (comment) {
-    parts.unshift(comment.text);
-    comment = ownLine.get(comment.start - 1);
-  }
-  return parts.join(" ");
-}
 
 /**
  * `x as unknown as Y` launders a value through the one type that erases every
@@ -78,19 +46,14 @@ export const noChainedTypeAssertion: Rule.RuleModule = {
       "TSAsExpression[expression.type='TSAsExpression'][expression.typeAnnotation.type='TSUnknownKeyword']"(
         node: Rule.Node,
       ) {
-        const block = commentBlockAbove(
-          context.sourceCode,
-          node.loc?.start.line ?? 0,
+        const words = wordsAfterMarker(
+          commentBlockAbove(context.sourceCode, node.loc?.start.line ?? 0),
+          SAFETY_MARKER,
         );
-        const marker = SAFETY_MARKER.exec(block);
-        if (marker === null) {
+        if (words === null) {
           context.report({ node, messageId: "chainedTypeAssertion" });
           return;
         }
-        const words = block
-          .slice(marker.index + marker[0].length)
-          .split(/\s+/)
-          .filter((word) => WORD.test(word)).length;
         if (words < MIN_INVARIANT_WORDS) {
           context.report({ node, messageId: "safetyCommentTooThin" });
         }

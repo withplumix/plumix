@@ -34,6 +34,7 @@ import {
 } from "@tanstack/react-router";
 import * as v from "valibot";
 
+import type { ResolvedMeta } from "@plumix/core";
 import type { TermTaxonomyManifestEntry } from "@plumix/core/manifest";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import {
@@ -207,7 +208,7 @@ function EditTermContent({
     readonly slug: string;
     readonly description: string | null;
     readonly parentId: number | null;
-    readonly meta?: Readonly<Record<string, unknown>>;
+    readonly meta?: ResolvedMeta;
   };
   readonly isHierarchical: boolean;
   readonly parentOptions: readonly {
@@ -237,7 +238,7 @@ function EditTermContent({
       slug: string;
       description: string;
       parentId: number | null;
-      meta: Readonly<Record<string, unknown>>;
+      meta: ResolvedMeta;
     }) =>
       orpc.term.update.call({
         id: term.id,

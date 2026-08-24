@@ -74,22 +74,28 @@ async function restrictedSyntaxLines(
     .map((message) => message.line);
 }
 
-// The chained-assertion rule reports two distinct failures — no safety comment
-// at all, and one that marks the assertion without stating why it is sound —
-// so its assertions carry the message id as well as the position.
-const chainedAssertionReports = (fixture: string) =>
+// Two rules report several distinct failures whose fixes differ — a missing
+// justification against one that only marks, an inline dictionary against a
+// value type no declaration can keep. Assert on the message id as well as the
+// position, so a report landing under the wrong branch fails here.
+const messageIdReports = (ruleId: string) => (fixture: string) =>
   messagesMatching(
     fixture,
-    (ruleId) => ruleId === "plumix/no-chained-type-assertion",
+    (candidate) => candidate === ruleId,
     (message) => ({ messageId: message.messageId, line: message.line }),
   );
+
+const unsafeDictionaryReports = messageIdReports("plumix/no-unsafe-dictionary");
+const chainedAssertionReports = messageIdReports(
+  "plumix/no-chained-type-assertion",
+);
 
 describe("plumix/no-reflect-get and plumix/no-reflect-apply", () => {
   it("rejects Reflect.get and Reflect.apply", async () => {
     await expect(plumixReports("src/reflect.violations.ts")).resolves.toEqual([
-      { ruleId: "plumix/no-reflect-get", line: 6 },
-      { ruleId: "plumix/no-reflect-apply", line: 10 },
-      { ruleId: "plumix/no-reflect-get", line: 16 },
+      { ruleId: "plumix/no-reflect-get", line: 8 },
+      { ruleId: "plumix/no-reflect-apply", line: 12 },
+      { ruleId: "plumix/no-reflect-get", line: 18 },
     ]);
   });
 
@@ -170,11 +176,11 @@ describe("plumix/no-chained-type-assertion", () => {
     await expect(
       chainedAssertionReports("src/chained-assertion.violations.ts"),
     ).resolves.toEqual([
-      { messageId: "chainedTypeAssertion", line: 6 },
-      { messageId: "safetyCommentTooThin", line: 11 },
-      { messageId: "chainedTypeAssertion", line: 18 },
-      { messageId: "chainedTypeAssertion", line: 26 },
-      { messageId: "chainedTypeAssertion", line: 32 },
+      { messageId: "chainedTypeAssertion", line: 8 },
+      { messageId: "safetyCommentTooThin", line: 13 },
+      { messageId: "chainedTypeAssertion", line: 20 },
+      { messageId: "chainedTypeAssertion", line: 28 },
+      { messageId: "chainedTypeAssertion", line: 34 },
     ]);
   });
 
@@ -187,6 +193,38 @@ describe("plumix/no-chained-type-assertion", () => {
   it("stays silent on assertions not routed through unknown", async () => {
     await expect(
       plumixReports("src/chained-assertion.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
+describe("plumix/no-unsafe-dictionary", () => {
+  it("rejects an inline dictionary in every position that declares a contract", async () => {
+    await expect(
+      unsafeDictionaryReports("src/unsafe-dictionary.violations.ts"),
+    ).resolves.toEqual([
+      { messageId: "inlineUnknownDictionary", line: 8 },
+      { messageId: "inlineUnknownDictionary", line: 9 },
+      { messageId: "inlineUnknownDictionary", line: 10 },
+      { messageId: "inlineUnknownDictionary", line: 14 },
+      { messageId: "inlineUnknownDictionary", line: 15 },
+      { messageId: "inlineUnknownDictionary", line: 20 },
+      { messageId: "inlineUnknownDictionary", line: 26 },
+      { messageId: "inlineUnknownDictionary", line: 30 },
+      { messageId: "undescribedDictionaryValue", line: 34 },
+      { messageId: "undescribedDictionaryValue", line: 35 },
+      { messageId: "undescribedDictionaryValue", line: 36 },
+      { messageId: "namedDictionaryReasonMissing", line: 39 },
+      { messageId: "namedDictionaryReasonTooThin", line: 43 },
+      { messageId: "namedDictionaryReasonMissing", line: 49 },
+      { messageId: "inlineUnknownDictionary", line: 54 },
+      { messageId: "inlineUnknownDictionary", line: 61 },
+      { messageId: "undescribedDictionaryValue", line: 66 },
+    ]);
+  });
+
+  it("permits the JSON object type, a named bag stating why it is not JSON, and the positions that declare no bag", async () => {
+    await expect(
+      unsafeDictionaryReports("src/unsafe-dictionary.allowed.ts"),
     ).resolves.toEqual([]);
   });
 });

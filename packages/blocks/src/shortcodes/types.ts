@@ -1,17 +1,16 @@
+import type { HydratedEntry, SiteSettings } from "../context-bags.js";
+
 /**
  * The render-time context handed to every shortcode. It is the
  * intersection of `AppContext` and `BlockContext` — the fields guaranteed
  * identical at every call site (entry title, rich-text body, and a future
  * meta description). No `db`/`request`: those aren't available inside the
  * walker, and anything needing them belongs to the deferred async path.
- *
- * `siteSettings` and `entry` are `BlockContext`'s own bags — not JSON, for the
- * reasons given there.
  */
 export interface ShortcodeContext {
-  readonly siteSettings: Readonly<Record<string, unknown>>;
+  readonly siteSettings: SiteSettings;
   readonly locale: string;
-  readonly entry: Readonly<Record<string, unknown>> | null;
+  readonly entry: HydratedEntry | null;
 }
 
 export interface ShortcodeRenderProps {

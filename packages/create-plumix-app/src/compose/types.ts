@@ -60,11 +60,19 @@ export interface AuthMethodDescriptor extends RawAuthMethod {
  * imports and top-level slots, plus wrangler binding patches. Shared by
  * plugin descriptors and runtime capabilities.
  */
+/**
+ * Top-level `wrangler.jsonc` keys a contribution merges in — bindings, mostly.
+ * Not JsonObject: this is JSON, and the scaffolder is a standalone CLI that
+ * does not depend on plumix, so the sanctioned type is out of reach here. The
+ * values go straight to jsonc-parser's `modify`.
+ */
+export type WranglerPatch = Record<string, unknown>;
+
 export interface Contribution {
   readonly imports?: readonly string[];
   readonly configSlots?: Readonly<Record<string, string>>;
   /** Top-level wrangler.jsonc keys to merge (arrays append). */
-  readonly wrangler?: Readonly<Record<string, unknown>>;
+  readonly wrangler?: Readonly<WranglerPatch>;
 }
 
 /** A plugin's scaffold contributions, from its `plumix.scaffold` block. */

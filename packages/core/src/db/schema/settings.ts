@@ -21,6 +21,13 @@ export const settings = sqliteTable(
   (table) => [primaryKey({ columns: [table.group, table.key] })],
 );
 
+/**
+ * A settings group as the RPC hands it over: one flat `key → value` bag.
+ * Not JSON: the values are the `settings.value` column verbatim, and that
+ * column is still `unknown` for the reason stated at its declaration.
+ */
+export type SettingsBag = Readonly<Record<string, unknown>>;
+
 export type Setting = typeof settings.$inferSelect;
 export type NewSetting = typeof settings.$inferInsert;
 

@@ -14,6 +14,7 @@ import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { useForm, useWatch } from "react-hook-form";
 
+import type { ResolvedMeta } from "@plumix/core";
 import type {
   AccessPolicyChoice,
   EntryMetaBoxManifestEntry,
@@ -115,8 +116,8 @@ interface DocumentSettingsPanelProps {
   /** Capability-filtered metaboxes for this entry type, if any. */
   readonly metaBoxes?: {
     readonly boxes: readonly EntryMetaBoxManifestEntry[];
-    readonly initialMeta: Record<string, unknown>;
-    readonly onMetaChange: (next: Record<string, unknown>) => void;
+    readonly initialMeta: ResolvedMeta;
+    readonly onMetaChange: (next: ResolvedMeta) => void;
     /** Path-addressed rejections from the last autosave — pinned onto
      *  the addressed inputs; cleared when the next save succeeds. */
     readonly fieldErrors?: readonly MetaFieldServerError[] | null;
@@ -135,11 +136,11 @@ export function DocumentMetaBoxes({
   fieldErrors,
 }: {
   readonly boxes: readonly EntryMetaBoxManifestEntry[];
-  readonly initialMeta: Record<string, unknown>;
-  readonly onMetaChange: (next: Record<string, unknown>) => void;
+  readonly initialMeta: ResolvedMeta;
+  readonly onMetaChange: (next: ResolvedMeta) => void;
   readonly fieldErrors?: readonly MetaFieldServerError[] | null;
 }): ReactElement {
-  const form = useForm<{ meta: Record<string, unknown> }>({
+  const form = useForm<{ meta: ResolvedMeta }>({
     defaultValues: { meta: initialMeta },
   });
   useApplyMetaFieldErrors(form, META_FORM_BASE_PATH, fieldErrors);

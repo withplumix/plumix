@@ -6,6 +6,7 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
 
+import type { ResolvedMeta } from "@plumix/core";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +32,7 @@ interface DiffSnapshot {
   readonly slug: string;
   readonly excerpt: string | null;
   readonly content: unknown;
-  readonly meta: Readonly<Record<string, unknown>>;
+  readonly meta: ResolvedMeta;
 }
 
 interface RevisionDiffDialogProps {

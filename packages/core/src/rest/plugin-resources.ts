@@ -28,11 +28,18 @@ function enforceRestAuth(
 
 const EMPTY_INPUT = v.object({});
 
+/**
+ * An oRPC router assembled from a plugin's registered REST resources, keyed by
+ * index. Not JSON: the values are live oRPC procedures — handler closures with
+ * their route metadata attached.
+ */
+type PluginRestRouter = Record<string, unknown>;
+
 // Build oRPC procedures for plugin resources, keyed by index (OpenAPI routing
 // is driven by each procedure's `route`, not the object key).
 export function buildPluginRestRouter(
   resources: readonly RegisteredRestResource[],
-): Record<string, unknown> {
+): PluginRestRouter {
   const router: Record<string, unknown> = {};
   resources.forEach((resource, index) => {
     router[`pluginResource${index}`] = base

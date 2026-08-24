@@ -18,6 +18,7 @@ import type { ComponentType } from "react";
 import type { IslandPageMode } from "./island-mode.js";
 import type { IslandRoot, MountOptions } from "./island-renderer.js";
 import type { JsonObject } from "./json.js";
+import type { SerializedProps } from "./serialize.js";
 import { islandStrategy } from "./island-global.js";
 import { clientOnlyPlaceholderLabel, shouldHydrate } from "./island-mode.js";
 import { deserializeProps } from "./serialize.js";
@@ -66,8 +67,7 @@ export class PlumixIslandElement extends HTMLElement {
   private root: IslandRoot | null = null;
   private retried = false;
   private hydrated = false;
-  private component: ComponentType<Readonly<Record<string, unknown>>> | null =
-    null;
+  private component: ComponentType<SerializedProps> | null = null;
   private childObserver: MutationObserver | null = null;
   private parentObserver: MutationObserver | null = null;
   private prefetched = false;
@@ -295,12 +295,10 @@ export class PlumixIslandElement extends HTMLElement {
   private async loadComponent(
     chunkUrl: string,
     exportName: string,
-  ): Promise<ComponentType<Readonly<Record<string, unknown>>> | null> {
+  ): Promise<ComponentType<SerializedProps> | null> {
     try {
       const mod = await dynamicImport(chunkUrl);
-      return mod[exportName] as ComponentType<
-        Readonly<Record<string, unknown>>
-      >;
+      return mod[exportName] as ComponentType<SerializedProps>;
     } catch (err) {
       if (this.retried) {
         this.dispatchHydrationError(err);
@@ -311,9 +309,7 @@ export class PlumixIslandElement extends HTMLElement {
       try {
         const retryUrl = appendCacheBust(chunkUrl);
         const mod = await dynamicImport(retryUrl);
-        return mod[exportName] as ComponentType<
-          Readonly<Record<string, unknown>>
-        >;
+        return mod[exportName] as ComponentType<SerializedProps>;
       } catch (retryErr) {
         this.dispatchHydrationError(retryErr);
         return null;
@@ -341,8 +337,9 @@ export class PlumixIslandElement extends HTMLElement {
   }
 }
 
-// A chunk's namespace object. Nothing here knows what its exports are, only
-// that they are read by name.
+// A chunk's namespace object. Not JSON: its exports are live components and
+// module bindings — nothing here knows what they are, only that they are read
+// by name.
 type ModuleNamespace = Readonly<Record<string, unknown>>;
 
 // Test-injectable dynamic import. jsdom can't resolve real module URLs
@@ -462,8 +459,7 @@ function parseJsonAttr(raw: string | null): JsonObject {
   }
 }
 
-// Not JSON: see the codec note in `serialize.ts`.
-function readProps(el: HTMLElement): Readonly<Record<string, unknown>> {
+function readProps(el: HTMLElement): SerializedProps {
   const raw = el.getAttribute("props");
   if (!raw) return {};
   return deserializeProps(raw);

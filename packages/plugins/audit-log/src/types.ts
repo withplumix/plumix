@@ -1,6 +1,21 @@
-import type { AppContext } from "plumix/plugin";
+import type { AppContext, SchemaModule } from "plumix/plugin";
 
 import type { NewAuditLogRow } from "./db/schema.js";
+
+/**
+ * An entity row as the audit pipeline reads it. Not JSON: the values are
+ * entity columns, so a `Date` reaches the diff live — `shallowEqual` compares
+ * them by `getTime()`.
+ */
+export type AuditEntityRow = Record<string, unknown>;
+
+/**
+ * The stored `properties` envelope: a diff over two {@link AuditEntityRow}s
+ * plus whatever the event merged in. Not JSON on the way in, for the reason
+ * given there — `auditService` runs `JSON.stringify` over it, which coerces a
+ * `Date` to a string rather than refusing it. It reads back parsed.
+ */
+export type AuditProperties = Record<string, unknown>;
 
 export interface AuditLogRow {
   readonly id: number;
@@ -11,9 +26,7 @@ export interface AuditLogRow {
   readonly subjectLabel: string;
   readonly actorId: number | null;
   readonly actorLabel: string | null;
-  /** Not JSON: the diff half is built from entity columns and still holds live
-   *  `Date` instances. See the note on the `properties` column. */
-  readonly properties: Record<string, unknown>;
+  readonly properties: AuditProperties;
 }
 
 export interface AuditLogQueryFilter {
@@ -49,9 +62,8 @@ export interface AuditLogQueryResult {
  */
 export interface AuditLogStorage {
   readonly kind: string;
-  /** Drizzle module to forward into `definePlugin({ schema })`. Not JSON: a
-   *  module namespace. */
-  readonly schemaModule?: Record<string, unknown>;
+  /** Drizzle module to forward into `definePlugin({ schema })`. */
+  readonly schemaModule?: SchemaModule;
   /** Batch insert. The audit-log service buffers per-request and calls this once. */
   write(ctx: AppContext, rows: readonly NewAuditLogRow[]): Promise<void>;
   /** Latest-first read for the admin feed; honors filter + cursor pagination. */

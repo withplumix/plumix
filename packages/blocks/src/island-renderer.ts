@@ -11,10 +11,8 @@ import type { Root } from "react-dom/client";
 import { createElement } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 
+import type { SerializedProps } from "./serialize.js";
 import { StaticHtml } from "./static-html.js";
-
-// Not JSON: island props, see the codec note in `serialize.ts`.
-type Props = Readonly<Record<string, unknown>>;
 
 /**
  * Renderer-owned handle the custom element drives, replacing the bare
@@ -23,8 +21,8 @@ type Props = Readonly<Record<string, unknown>>;
  */
 export interface IslandRoot {
   render(
-    Component: ComponentType<Props>,
-    props: Props,
+    Component: ComponentType<SerializedProps>,
+    props: SerializedProps,
     slotHtml: Readonly<Record<string, string>>,
   ): void;
   unmount(): void;
@@ -146,9 +144,9 @@ function reportIslandMismatch(
 // element. No-op (returns props as-is) when there are no slots, so the
 // common island carries no extra allocation.
 function mergeSlotProps(
-  props: Props,
+  props: SerializedProps,
   slotHtml: Readonly<Record<string, string>>,
-): Props {
+): SerializedProps {
   const names = Object.keys(slotHtml);
   if (names.length === 0) return props;
   const merged: Record<string, unknown> = { ...props };

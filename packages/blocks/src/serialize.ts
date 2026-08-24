@@ -68,10 +68,16 @@ interface SerializePropsOptions {
 
 type Encoded = readonly [PROP_TYPE, unknown];
 
-// Not JSON: the codec above carries `Date`, `Map`, `Set`, `BigInt`, `URL` and
-// the typed arrays through the round trip.
+/**
+ * An island's props as the codec moves them, distinct from the `IslandProps<T>`
+ * an author writes. Not JSON: the codec below carries `Date`, `Map`, `Set`,
+ * `BigInt`, `URL` and the typed arrays through the round trip, so what comes
+ * back out is richer than a JSON parse could produce.
+ */
+export type SerializedProps = Readonly<Record<string, unknown>>;
+
 export function serializeProps(
-  props: Readonly<Record<string, unknown>>,
+  props: SerializedProps,
   options: SerializePropsOptions = {},
 ): string {
   const seen = new WeakSet();
@@ -82,7 +88,7 @@ export function serializeProps(
   return JSON.stringify(out);
 }
 
-export function deserializeProps(payload: string): Record<string, unknown> {
+export function deserializeProps(payload: string): SerializedProps {
   const parsed = JSON.parse(payload) as Record<string, Encoded>;
   const out: Record<string, unknown> = {};
   for (const [key, encoded] of Object.entries(parsed)) {

@@ -44,7 +44,7 @@ import {
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
-import type { WithResolvedMeta } from "@plumix/core";
+import type { ResolvedMeta, WithResolvedMeta } from "@plumix/core";
 import type { UserMetaBoxManifestEntry } from "@plumix/core/manifest";
 import type { User as StoredUser, UserRole } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
@@ -279,7 +279,7 @@ function useUserUpdateMutation({
       name: string;
       slug: string;
       role: UserRole;
-      meta: Readonly<Record<string, unknown>>;
+      meta: ResolvedMeta;
     }) =>
       orpc.user.update.call({
         id: target.id,

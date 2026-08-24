@@ -33,16 +33,20 @@ export interface LoaderEntry {
   readonly spec: BlockSpec;
 }
 
+/**
+ * What a block's loaders resolved to, keyed by loader name. Not JSON: a loader
+ * returns whatever it returns, and the block reads it in the same process.
+ * Only the edit page's seeded copy crosses a wire, and that one is lossy by
+ * design (see `serializeLoaderData`).
+ */
+export type LoaderResults = Readonly<Record<string, unknown>>;
+
 // Resolved data for one block. On success: `loaders` carries the
 // resolved record, `error` is `null`. On any rejection: `loaders` is
 // `{}`, `error` carries the first rejection (per-block isolation —
 // siblings are unaffected).
-//
-// Not JSON: a loader returns whatever it returns, and the block reads it in the
-// same process. Only the edit page's seeded copy crosses a wire, and that one
-// is lossy by design (see `serializeLoaderData`).
 export interface ResolvedBlockLoaderData {
-  readonly loaders: Readonly<Record<string, unknown>>;
+  readonly loaders: LoaderResults;
   readonly error: unknown;
 }
 

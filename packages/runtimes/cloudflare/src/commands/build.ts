@@ -12,9 +12,12 @@ import { createCloudflareVite } from "./vite.js";
  */
 type BuildResult = Awaited<ReturnType<ViteBuilder["build"]>> | void;
 
+/** Vite's live `Environment` instances, keyed by name. Not JSON: they are the
+ *  builder's own objects, and this signature only reads them by name. */
+type ViteEnvironments = Record<string, unknown>;
+
 interface BuildableApp {
-  /** Not JSON: Vite's live `Environment` instances, keyed by name. */
-  readonly environments: Record<string, unknown>;
+  readonly environments: ViteEnvironments;
   build(environment: unknown): Promise<BuildResult>;
 }
 

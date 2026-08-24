@@ -1,4 +1,4 @@
-import type { Selection } from "./types.js";
+import type { Selection, WranglerPatch } from "./types.js";
 import { ScaffoldError } from "../errors.js";
 import { fillProjectName } from "./types.js";
 import { assembleWrangler } from "./wrangler.js";
@@ -12,7 +12,7 @@ const WRANGLER_FILE = "wrangler.jsonc";
  */
 export function assembleRuntimeFiles(
   selection: Selection,
-  wranglerPatches: Readonly<Record<string, unknown>>,
+  wranglerPatches: Readonly<WranglerPatch>,
 ): Record<string, string> {
   const { projectName, runtime } = selection;
   // Bindings with nowhere to land would vanish silently — fail loud instead.

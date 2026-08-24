@@ -2,12 +2,20 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, posix } from "node:path";
 import { parse as parseYaml } from "yaml";
 
+/**
+ * Parsed YAML frontmatter. Not JsonObject: the guard below proves only that
+ * `parseYaml` returned an object, so no value has been checked — and YAML's
+ * core schema reads `.nan` / `.inf` as `NaN` / `Infinity`, which `JSON`
+ * cannot carry but TypeScript counts as plain numbers.
+ */
+type Frontmatter = Readonly<Record<string, unknown>>;
+
 /** One page, read once and shared by every check in the suite. */
 export interface ContentPage {
   /** Path relative to the content root, POSIX-separated: `fields/text.mdx`. */
   readonly path: string;
   /** Parsed YAML frontmatter; empty when the page carries none. */
-  readonly frontmatter: Readonly<Record<string, unknown>>;
+  readonly frontmatter: Frontmatter;
   /** Everything below the frontmatter block. */
   readonly body: string;
 }

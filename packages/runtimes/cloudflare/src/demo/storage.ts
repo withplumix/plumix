@@ -28,12 +28,15 @@ function bootstrapVersion(bootstrapSql: string): string {
   return (hash >>> 0).toString(16);
 }
 
+/** One row from a demo-sandbox read. Not JSON: a blob column arrives as an
+ *  `ArrayBuffer`, which no serializer round trips. */
+type DemoSqlRow = Record<string, unknown>;
+
 export interface DemoSqlExecutor {
   /** Run a single SQL statement (no bindings). */
   exec(sql: string): Promise<void>;
-  /** Run a single read statement, returning its rows. Not JSON: a blob column
-   *  arrives as an `ArrayBuffer`. */
-  query(sql: string): Promise<readonly Record<string, unknown>[]>;
+  /** Run a single read statement, returning its rows. */
+  query(sql: string): Promise<readonly DemoSqlRow[]>;
 }
 
 /**

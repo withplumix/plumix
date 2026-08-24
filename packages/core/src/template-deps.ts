@@ -16,6 +16,23 @@ export type TemplateDepLoader<TKind extends keyof TemplateDepRegistry> = (
   ctx: AppContext,
 ) => Promise<Record<string, TemplateDepRegistry[TKind]["result"] | null>>;
 
+/**
+ * What one dep kind resolves to for the slugs a request asked for, keyed by
+ * slug. Not JSON: a loader returns whatever its kind is about — a menu tree, a
+ * settings bag, a queried row — and the value reaches the template untouched.
+ */
+type DepResults = Record<string, unknown>;
+
+/** Every dep kind's results for one request, keyed by kind. */
+export type LoadedTemplateDeps = Record<string, DepResults>;
+
+/**
+ * A template or theme read only for its dep-kind declarations —
+ * `{ settings: ["site"] }`. Not JSON: it is the live descriptor, `render`
+ * function and all; only the keys naming a registered dep kind are read.
+ */
+export type DepDeclarations = Readonly<Record<string, unknown>>;
+
 // Untyped flavor used inside the framework's registry storage — the
 // per-kind generic narrows are recovered when the loader is invoked
 // against a declared kind in `defineTemplate`. Keeping the registry
@@ -25,7 +42,7 @@ export type TemplateDepLoader<TKind extends keyof TemplateDepRegistry> = (
 type UntypedTemplateDepLoader = (
   slugs: readonly string[],
   ctx: AppContext,
-) => Promise<Record<string, unknown>>;
+) => Promise<DepResults>;
 
 export interface RegisteredTemplateDep {
   readonly kind: string;
@@ -94,10 +111,10 @@ export function mergeTemplateDepDeclarations(
  * the deps map — themes use optional chaining (`settings?.["site"]`).
  */
 export async function loadTemplateDeps(
-  template: Readonly<Record<string, unknown>>,
+  template: DepDeclarations,
   registry: ReadonlyMap<string, RegisteredTemplateDep>,
   ctx: AppContext,
-): Promise<Record<string, Record<string, unknown>>> {
+): Promise<LoadedTemplateDeps> {
   const declared: {
     kind: string;
     slugs: readonly string[];
@@ -126,7 +143,7 @@ async function loadOne(
   slugs: readonly string[],
   loader: RegisteredTemplateDep,
   ctx: AppContext,
-): Promise<readonly [string, Record<string, unknown>]> {
+): Promise<readonly [string, DepResults]> {
   try {
     const raw = await loader.load(slugs, ctx);
     // Fill any slug the loader omitted with null — themes get a
