@@ -2,9 +2,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
+import { inArray } from "plumix/db";
+import { openPlaygroundDb } from "plumix/test/playwright";
 
-// Seeded by globalSetup (see e2e/globalSetup.ts). The specs are read-only
-// against the database — they only drive the admin UI.
+// Relative source path, not `@plumix/plugin-comments/schema` — see the
+// audit-log spec's schema import for why.
+import { comments } from "../src/db/schema.js";
+
+// Seeded by globalSetup (see e2e/globalSetup.ts), once per suite run.
 interface Fixtures {
   readonly pendingId: number;
   readonly bulkEntryId: number;
@@ -14,12 +19,30 @@ const fixtures = JSON.parse(
   readFileSync(resolve(process.cwd(), "e2e-fixtures.json"), "utf8"),
 ) as Fixtures;
 
+// Both tests moderate their fixture, and the queue lists only what is still
+// pending — so a fixture an earlier attempt approved is invisible to the
+// retry (see `playground` in definePlumixE2EConfig for why it survives).
+//
+// Each test resets only the ids it owns. These tests are not serial and
+// `fullyParallel` runs them concurrently off CI, so a reset that reached
+// every fixture would un-approve a sibling's rows mid-assertion.
+async function resetToPending(ids: readonly number[]): Promise<void> {
+  const db = await openPlaygroundDb({
+    cwd: resolve(process.cwd(), "playground"),
+  });
+  await db
+    .update(comments)
+    .set({ status: "pending" })
+    .where(inArray(comments.id, [...ids]));
+}
+
 // The public render of an approved comment is covered in-process by the
 // dispatcher-harness render tests (plumix dev serves the admin SPA for
 // public routes). This suite exercises the admin moderation queue.
 test("moderator approves a pending comment from the queue", async ({
   page,
 }) => {
+  await resetToPending([fixtures.pendingId]);
   await page.goto("pages/comments");
   await expect(page.getByTestId("comments-shell")).toBeVisible();
 
@@ -39,6 +62,7 @@ test("moderator approves a pending comment from the queue", async ({
 });
 
 test("moderator bulk-approves selected comments", async ({ page }) => {
+  await resetToPending(fixtures.bulkIds);
   await page.goto("pages/comments");
   // Isolate this test's comments via the per-entry filter.
   await page
