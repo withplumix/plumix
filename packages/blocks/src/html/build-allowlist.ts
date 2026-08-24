@@ -36,8 +36,8 @@ export interface HtmlAllowlistOverride {
  * integration points — `foreignObject`, `mtext` and friends — are
  * reachable only inside `svg` / `math`, denied here already.
  *
- * Scoped to tags — `HARD_DENIED_SCHEMES` is the equivalent floor for
- * `schemes`. `extraAttributes` has none yet.
+ * Scoped to tags; the override's other fields have their own floors
+ * below.
  */
 export const HARD_DENYLIST: ReadonlySet<string> = new Set([
   // execution / navigation / subresource surface
@@ -68,6 +68,45 @@ export const HARD_DENYLIST: ReadonlySet<string> = new Set([
   "noframes",
   "plaintext",
 ]);
+
+/**
+ * Attribute names that may never be allowlisted, whatever
+ * `extraAttributes` declares. The half that needs a floor most: `on*`
+ * re-opens script execution on any tag that survives `HARD_DENYLIST`,
+ * `<p>` included, so it needs no element of its own. Handlers are
+ * matched by prefix rather than listed — the set grows with every new
+ * event.
+ *
+ * `style` is denied outright rather than sanitized. Trusting a
+ * declaration string means parsing `prop:val;prop:val` identically in
+ * both engines; `sanitizeCssValue` validates a single value, and the
+ * styles pipeline it guards receives CSS as structured property /
+ * value pairs. `attrs.ts` denies the attribute on the same grounds.
+ */
+export const HARD_DENIED_ATTRS: ReadonlySet<string> = new Set(["style"]);
+
+/**
+ * A literal name, no glob and no namespace — the rule `attrs.ts` uses
+ * on the author-supplied surface, applied here to both the attribute
+ * names an override declares and the tags it hangs them on.
+ *
+ * Load-bearing, not hygiene. sanitize-html reads an attribute entry as
+ * a GLOB and a `"*"` tag key as every tag, so `{ "*": ["*"] }` hands
+ * back everything the checks below reject, and `"*click"` walks past a
+ * prefix test. The DOMPurify shim matches both exactly and honours
+ * neither, so those configs sanitize clean in the editor and dirty on
+ * the server. Refusing the shape closes the hole and the divergence
+ * together.
+ */
+const LITERAL_NAME = /^[a-z][a-z0-9-]*$/;
+
+function isAllowedAttr(name: string): boolean {
+  return (
+    LITERAL_NAME.test(name) &&
+    !name.startsWith("on") &&
+    !HARD_DENIED_ATTRS.has(name)
+  );
+}
 
 /**
  * URL schemes that may never be allowlisted, whatever `schemes`
@@ -118,17 +157,16 @@ export function buildHtmlAllowlist(
   ].filter(isAllowed);
 
   const attrs: Record<string, string[]> = {};
-  for (const [tag, fields] of Object.entries(
-    BASELINE_HTML_ALLOWLIST.allowedAttributes,
-  )) {
-    if (isAllowed(tag)) attrs[tag] = [...fields];
-  }
-  for (const [rawTag, extra] of Object.entries(
-    override?.extraAttributes ?? {},
-  )) {
+  for (const [rawTag, names] of [
+    ...Object.entries(BASELINE_HTML_ALLOWLIST.allowedAttributes),
+    ...Object.entries(override?.extraAttributes ?? {}),
+  ]) {
     const tag = rawTag.toLowerCase();
-    if (!isAllowed(tag)) continue;
-    attrs[tag] = [...(attrs[tag] ?? []), ...extra];
+    if (!LITERAL_NAME.test(tag) || !isAllowed(tag)) continue;
+    const allowed = names
+      .map((name) => name.toLowerCase())
+      .filter(isAllowedAttr);
+    attrs[tag] = Array.from(new Set([...(attrs[tag] ?? []), ...allowed]));
   }
 
   // `??` only triggers on null / undefined, so an explicit `schemes: []`
