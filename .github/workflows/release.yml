@@ -99,19 +99,22 @@ jobs:
       # publishes via OIDC (npm exchanges the workflow identity, no token).
       - name: Version PR or publish
         if: steps.detect.outputs.run == 'true'
-        uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
+        # Held at v1 deliberately. v2 is only compatible with Changesets v3,
+        # which changes how peer-dependent packages are bumped — the exact
+        # thing `onlyUpdatePeerDependentsWhenOutOfRange` in .changeset/config.json
+        # is tuned around. v2 detects published packages by reading the file named
+        # by CHANGESETS_OUTPUT, which the v2 CLI never writes, so pairing v2 with
+        # our CLI publishes to npm and then skips every tag and GitHub release —
+        # and only warns. Move both together or neither.
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
-          # v2 renamed every input and dropped the GITHUB_TOKEN env var: the App
-          # token has to arrive through `github-token` or the action throws.
-          github-token: ${{ steps.app-token.outputs.token }}
-          version-script: pnpm version-packages
-          publish-script: pnpm release
-          commit-message: "ci: version packages"
-          pr-title: "ci: version packages"
-          # v2 pushes through the GitHub API by default; keep the git CLI so the
-          # push keeps using the App credentials `persist-credentials` installed.
-          push-with-git-cli: true
+          version: pnpm version-packages
+          publish: pnpm release
+          commit: "ci: version packages"
+          title: "ci: version packages"
         env:
-          # v2 dropped .npmrc handling entirely, so the empty-NPM_TOKEN dance
-          # that used to keep OIDC reachable is no longer needed.
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          # empty (not unset) so changesets/action skips npm-token auth and falls
+          # through to OIDC — https://github.com/changesets/changesets/issues/1152
+          NPM_TOKEN: ""
           NPM_CONFIG_PROVENANCE: "true"
