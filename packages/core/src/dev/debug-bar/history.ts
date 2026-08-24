@@ -118,9 +118,9 @@ const DROP = Symbol("drop");
 /**
  * Deep-copies a value to inert JSON: primitives pass, strings truncate past
  * `maxString`, functions/symbols/undefined drop, and a circular reference
- * becomes `"[Circular]"` instead of throwing. Records carry `unknown` data a
- * plugin may fill with live objects, so this is the leak boundary — nothing
- * live (an `Error`, a DB handle, a closure) survives into the store.
+ * becomes `"[Circular]"` instead of throwing. A record's `data` is typed
+ * `JsonValue` and nothing checks that at runtime, so this is the leak boundary
+ * — nothing live (an `Error`, a DB handle, a closure) survives into the store.
  */
 function sanitize(value: unknown, maxString: number): JsonValue {
   const result = sanitizeInner(value, maxString, new WeakSet());
@@ -147,7 +147,10 @@ function sanitizeInner(
   // `JSON.stringify` would, so a recorded timestamp becomes its ISO string
   // rather than the `{}` a bare `Object.entries` walk would yield.
   if ("toJSON" in object && typeof object.toJSON === "function") {
-    return sanitizeInner((object.toJSON as () => unknown)(), maxString, seen);
+    // The annotation is what `toJSON` exists to promise, not something proved
+    // here — the result goes straight back through this walk, which decides
+    // the shape either way.
+    return sanitizeInner((object.toJSON as () => JsonValue)(), maxString, seen);
   }
   // Ancestor-only cycle guard: deleted on the way out so a value referenced
   // twice across siblings still serializes both times.

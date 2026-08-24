@@ -20,7 +20,7 @@ export type EnvInput<T> = T | ((env: PlumixEnv) => T);
 // Memoize by resolver identity so a value that owns a connection (an SMTP
 // transport, a pooled client) is built once per isolate, not per request —
 // `env` is isolate-stable, the lazy-once contract `libsql()`'s client uses.
-const cache = new WeakMap<(env: PlumixEnv) => unknown, unknown>();
+const cache = new WeakMap<object, unknown>();
 
 export function resolveEnvInput<T>(input: EnvInput<T>, env: PlumixEnv): T {
   if (typeof input !== "function") return input;

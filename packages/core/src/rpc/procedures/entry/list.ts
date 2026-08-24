@@ -16,6 +16,6 @@ export const list = base
       const rows = await listEntries(context, filtered);
       return await context.hooks.applyFilter("rpc:entry.list:output", rows);
     } catch (error) {
-      throw toRpcEntryReadError(error, errors);
+      throw toRpcEntryReadError(error, errors) ?? error;
     }
   });

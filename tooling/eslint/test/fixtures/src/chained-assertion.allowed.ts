@@ -29,8 +29,8 @@ export function widen(row: Row): Readonly<Record<string, number | boolean>> {
 
 // Widening to `unknown` on its own discards nothing the caller had — it is the
 // correct input type for a parse boundary.
-export function erased(row: Row): unknown {
-  return row as unknown;
+export function erased(row: Row): { readonly value: unknown } {
+  return { value: row as unknown };
 }
 
 // `unknown` inside a wider assertion target describes a boundary rather than

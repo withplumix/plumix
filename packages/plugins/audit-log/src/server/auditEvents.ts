@@ -31,6 +31,7 @@ import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditLogActor } from "../types.js";
 import type { AuditService } from "./auditService.js";
 import type { EntryMetaChanges } from "./entry-meta-changes.js";
+import type { SubjectInput } from "./subjectExtractors.js";
 import { buildAuditRow } from "./buildAuditRow.js";
 import { extractSubject } from "./subjectExtractors.js";
 
@@ -49,7 +50,7 @@ type SubjectStrategy =
       readonly kind: "extract";
       readonly type: string;
       /** Optional payload → extractor-input transform. Defaults to identity. */
-      readonly from?: (payload: never, context: never) => unknown;
+      readonly from?: (payload: never, context: never) => SubjectInput;
     }
   | {
       readonly kind: "inline";
@@ -108,15 +109,12 @@ function resolveSubject(
     return { type: strategy.type, id: partial.id, label: partial.label };
   }
   const input = strategy.from
-    ? (strategy.from as (payload: unknown, context: unknown) => unknown)(
+    ? (strategy.from as (payload: unknown, context: unknown) => SubjectInput)(
         payload,
         context,
       )
-    : payload;
-  return extractSubject(
-    strategy.type,
-    input as Parameters<typeof extractSubject>[1],
-  );
+    : (payload as SubjectInput);
+  return extractSubject(strategy.type, input);
 }
 
 function resolveActor(

@@ -1,4 +1,5 @@
 import type { Label } from "../../i18n/label.js";
+import type { JsonValue } from "../../json.js";
 import type {
   MetaFieldCondition,
   MetaFieldConditionRule,
@@ -20,7 +21,7 @@ interface JsonFieldState {
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
   readonly showInApi?: true;
-  readonly sanitize?: (value: unknown) => unknown;
+  readonly sanitize?: (value: unknown) => JsonValue;
   readonly validate?: MetaBoxFieldValidate;
 }
 
@@ -133,7 +134,7 @@ export class JsonFieldBuilder<
   }
 
   /** Normalising transform, applied after coercion and before persistence. */
-  sanitize(sanitize: (value: unknown) => unknown): JsonFieldBuilder<K> {
+  sanitize(sanitize: (value: unknown) => JsonValue): JsonFieldBuilder<K> {
     return this.#fork({ sanitize });
   }
 

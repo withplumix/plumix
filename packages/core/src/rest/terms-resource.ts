@@ -14,11 +14,11 @@ import { readPagination } from "./schemas.js";
 //
 // Term reads hide existence the same way entry reads do: a missing term, an
 // unreadable taxonomy, or a wrong-taxonomy lookup all collapse to 404.
-function termNotFound(error: unknown, errors: RestErrors): unknown {
+function termNotFound(error: unknown, errors: RestErrors): Error | undefined {
   if (error instanceof TermReadError) {
     return errors.NOT_FOUND({ data: { kind: "term" } });
   }
-  return error;
+  return undefined;
 }
 
 // A paginated envelope of a public taxonomy's terms.
@@ -50,7 +50,7 @@ export async function getTermItem(
   try {
     term = await getTerm(context, { id });
   } catch (error) {
-    throw termNotFound(error, errors);
+    throw termNotFound(error, errors) ?? error;
   }
 
   if (term.taxonomy !== taxonomy.name) {

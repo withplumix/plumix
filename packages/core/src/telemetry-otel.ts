@@ -4,6 +4,7 @@ import type {
   TelemetrySpan,
 } from "./context/telemetry.js";
 import type { JsonObject, JsonValue } from "./json.js";
+import { isJsonObject } from "./json.js";
 
 /** OTLP/JSON `AnyValue` — the primitive subset the exporter emits. */
 interface OtlpValue {
@@ -94,11 +95,6 @@ function toAnyValue(value: JsonValue): OtlpValue {
   return { stringValue: JSON.stringify(value) };
 }
 
-// `Array.isArray` alone won't exclude `readonly JsonValue[]` from the union.
-function isJsonObject(value: JsonValue): value is JsonObject {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function toAttributes(record: JsonObject): OtlpKeyValue[] {
   return Object.entries(record).map(([key, value]) => ({
     key,
@@ -153,7 +149,7 @@ function addTreeSpans(
 function recordEvents(records: TelemetrySnapshot["records"]): OtlpEvent[] {
   return Object.entries(records).flatMap(([namespace, entries]) =>
     entries.map((record) => {
-      const data = record.data as JsonValue;
+      const data = record.data;
       return {
         timeUnixNano: unixNano(record.at),
         name: namespace,

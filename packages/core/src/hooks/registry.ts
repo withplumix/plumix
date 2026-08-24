@@ -18,6 +18,10 @@ interface FilterEntry {
   readonly plugin: string | null;
   readonly priority: number;
   readonly insertOrder: number;
+  // One map holds every filter name, which is an existential TypeScript can't
+  // spell. The erasure is undone once, where each pipeline returns through
+  // `as FilterInput<TName>`, and never reaches a caller.
+  // eslint-disable-next-line plumix/no-unknown-return
   readonly fn: (value: unknown, ...rest: unknown[]) => unknown;
 }
 
@@ -25,7 +29,8 @@ interface ActionEntry {
   readonly plugin: string | null;
   readonly priority: number;
   readonly insertOrder: number;
-  readonly fn: (...args: unknown[]) => unknown;
+  // Actions are fire-and-forget by contract — see `ActionFn`.
+  readonly fn: (...args: unknown[]) => void | Promise<void>;
 }
 
 export interface HookExecutor {

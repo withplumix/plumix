@@ -19,6 +19,7 @@ import type {
 import type { FieldPipelineMode, MetaFieldError } from "./field-pipeline.js";
 import { accumulateEmbeddedTags } from "../../cache/embedded-tags.js";
 import { eq } from "../../db/index.js";
+import { isJsonArray, isJsonObject } from "../../json.js";
 import { isConditionHidden } from "../../plugin/fields/condition.js";
 import { anchorTemporalUtc } from "../../plugin/manifest.js";
 import { MetaReferenceError } from "./errors.js";
@@ -1043,8 +1044,8 @@ function takeWritableSlot(
   for (let i = 0; i < path.length - 1; i++) {
     const seg = path[i];
     if (seg === undefined) return null;
-    const outChild = readSegment(outContainer, seg);
-    const decChild = readSegment(decContainer, seg);
+    const outChild = readContainer(outContainer, seg);
+    const decChild = readContainer(decContainer, seg);
     let writable = outChild;
     // Still the shared decoded child → clone it into the output tree.
     if (outChild === decChild) {
@@ -1062,11 +1063,28 @@ function takeWritableSlot(
   return { parent: outContainer, leafKey: leaf };
 }
 
-function readSegment(container: unknown, seg: PathSegment): unknown {
+/** An addressable node inside a meta bag — what a path segment descends into. */
+type MetaContainer = unknown[] | Record<string, unknown>;
+
+// Every segment but the last addresses a container, so a leaf (or a missing
+// key) reads back as `undefined` and the walk gives up on it — the storage
+// shape no longer matches the declared structure.
+function readContainer(
+  container: unknown,
+  seg: PathSegment,
+): MetaContainer | undefined {
+  let child: unknown;
   if (typeof seg === "number") {
-    return Array.isArray(container) ? container[seg] : undefined;
+    // `Array.isArray` widens to `any[]`; cast before indexing so the child
+    // stays `unknown`.
+    child = Array.isArray(container)
+      ? (container as readonly unknown[])[seg]
+      : undefined;
+  } else {
+    child = isPlainObject(container) ? container[seg] : undefined;
   }
-  return isPlainObject(container) ? container[seg] : undefined;
+  if (Array.isArray(child) || isPlainObject(child)) return child;
+  return undefined;
 }
 
 function writeSegment(
@@ -1083,9 +1101,7 @@ function writeSegment(
 
 // Shallow clone an array or plain object; null for any other shape (the
 // path expected a container but the stored value isn't one).
-function cloneContainer(
-  value: unknown,
-): unknown[] | Record<string, unknown> | null {
+function cloneContainer(value: unknown): MetaContainer | null {
   // `Array.isArray` widens to `any[]`; cast before spread so the clone
   // stays `unknown[]` rather than leaking `any` into the walk.
   if (Array.isArray(value)) return [...(value as readonly unknown[])];
@@ -1138,10 +1154,13 @@ export function decodeMetaBag(
 // write-time snapshot machinery was removed may hold `{ id, ... }`
 // objects. Reads yield the id; the next save persists the plain form
 // (`referenceItemId` accepts the legacy shape on write).
-function decodeFieldValue(field: MetaBoxField, value: unknown): unknown {
+function decodeFieldValue(
+  field: MetaBoxField,
+  value: JsonValue,
+): JsonValue | Date | undefined {
   const target = referenceTargetOf(field);
   if (target) return healReferenceValue(target, value);
-  if (isRepeaterField(field) && Array.isArray(value)) {
+  if (isRepeaterField(field) && isJsonArray(value)) {
     return value.map((row) => healRepeaterRow(field, row));
   }
   if (isTemporalField(field) && field.returns === "date") {
@@ -1176,17 +1195,20 @@ function projectTemporalDate(
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
-function healRepeaterRow(field: RepeaterMetaBoxField, row: unknown): unknown {
-  if (!row || typeof row !== "object" || Array.isArray(row)) return row;
-  const rowObj = row as Record<string, unknown>;
-  let healed: Record<string, unknown> | null = null;
+function healRepeaterRow(
+  field: RepeaterMetaBoxField,
+  row: JsonValue,
+): JsonValue {
+  if (!isJsonObject(row)) return row;
+  let healed: Record<string, JsonValue> | null = null;
   for (const subField of field.subFields) {
     const target = referenceTargetOf(subField);
     if (!target) continue;
-    const value = rowObj[subField.key];
+    const value = row[subField.key];
+    if (value === undefined) continue;
     const next = healReferenceValue(target, value);
     if (next !== value) {
-      healed ??= { ...rowObj };
+      healed ??= { ...row };
       healed[subField.key] = next;
     }
   }
@@ -1275,21 +1297,29 @@ function assertEncodedSize(key: string, value: unknown): void {
 const TRUTHY_BOOLEAN_TOKENS: ReadonlySet<unknown> = new Set([1, "1", "true"]);
 const FALSY_BOOLEAN_TOKENS: ReadonlySet<unknown> = new Set([0, "0", "false"]);
 
-function coerceBooleanOnRead(value: unknown): unknown {
+function coerceBooleanOnRead(value: JsonValue): JsonValue {
   if (typeof value === "boolean") return value;
   if (TRUTHY_BOOLEAN_TOKENS.has(value)) return true;
   if (FALSY_BOOLEAN_TOKENS.has(value)) return false;
   return value;
 }
 
-function coerceOnRead(type: MetaScalarType, value: unknown): unknown {
+// A container has no scalar form to fall back to, so it reads as its JSON
+// rather than as `String()`'s "[object Object]".
+function stringifyOnRead(value: JsonValue): string {
+  return typeof value === "object" && value !== null
+    ? JSON.stringify(value)
+    : String(value);
+}
+
+function coerceOnRead(type: MetaScalarType, value: JsonValue): JsonValue {
   // Reads are forgiving — the row was validated on write but a
   // schema change (e.g. a plugin flipping `number` → `string`)
   // shouldn't 500 the editor. We coerce when we can and fall through
   // to the raw value otherwise.
   switch (type) {
     case "string":
-      return typeof value === "string" ? value : String(value);
+      return typeof value === "string" ? value : stringifyOnRead(value);
     case "number":
       return typeof value === "number" ? value : Number(value);
     case "boolean":

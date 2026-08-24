@@ -1,4 +1,5 @@
 import type { Label } from "../../i18n/label.js";
+import type { JsonValue } from "../../json.js";
 import type {
   MetaFieldCondition,
   MetaFieldConditionRule,
@@ -24,7 +25,7 @@ interface RangeFieldState {
   readonly min: number;
   readonly max: number;
   readonly step?: number;
-  readonly sanitize?: (value: unknown) => unknown;
+  readonly sanitize?: (value: unknown) => JsonValue;
   readonly validate?: MetaBoxFieldValidate;
 }
 
@@ -184,7 +185,7 @@ export class RangeFieldBuilder<
   sanitize(
     sanitize: (value: NonNullable<V>) => NonNullable<V>,
   ): RangeFieldBuilder<K, V, S> {
-    return this.#fork({ sanitize: sanitize as (value: unknown) => unknown });
+    return this.#fork({ sanitize: sanitize as (value: unknown) => JsonValue });
   }
 
   /**

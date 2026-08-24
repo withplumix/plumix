@@ -12,6 +12,7 @@ import type {
   RichtextMetaBoxField,
   TemporalInputType,
 } from "../../plugin/manifest.js";
+import { isJsonArray } from "../../json.js";
 import { HEX_COLOR } from "../../plugin/fields/color.js";
 import { parseLinkValue } from "../../plugin/fields/link.js";
 import {
@@ -90,7 +91,9 @@ export async function runFieldPipeline(
   // object. Repeater cells recurse through here, so nested refs heal
   // too.
   const target = referenceTargetOf(field);
-  if (target) raw = healReferenceValue(target, raw);
+  // The bag arrived as JSON off the wire; the pipeline has not proved that
+  // yet, because retyping `MetaInput` is the deferred half of #1807.
+  if (target) raw = healReferenceValue(target, raw as JsonValue);
   const coerced = coerceValue(field.type, raw);
   if (!coerced.ok) {
     return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
@@ -257,16 +260,16 @@ export function extractStringId(value: unknown): string | null {
  */
 export function healReferenceValue(
   target: ReferenceTarget,
-  value: unknown,
-): unknown {
+  value: JsonValue,
+): JsonValue {
   if (target.multiple) {
-    if (!Array.isArray(value)) return value;
+    if (!isJsonArray(value)) return value;
     // Identity-preserving on the already-plain path — `healRepeaterRow`
     // clones a row only when the healed slot differs.
-    if (!value.some((item: unknown) => extractStringId(item) !== null)) {
+    if (!value.some((item) => extractStringId(item) !== null)) {
       return value;
     }
-    return value.map((item: unknown) => extractStringId(item) ?? item);
+    return value.map((item) => extractStringId(item) ?? item);
   }
   return extractStringId(value) ?? value;
 }

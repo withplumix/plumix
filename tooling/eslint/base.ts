@@ -143,6 +143,7 @@ export const baseConfig = defineConfig(
       "plumix/no-chained-type-assertion": "error",
       "plumix/no-reflect-apply": "error",
       "plumix/no-reflect-get": "error",
+      "plumix/no-unknown-return": "error",
       "plumix/no-unknown-type-alias": "error",
       // Same principle, borrowed from typescript-eslint: a type parameter used
       // once in a signature is an assertion wearing a generic's clothes — the

@@ -11,13 +11,14 @@ export interface TermReadErrorConstructors {
 
 /**
  * Translate a terms-read domain error into the oRPC typed error to throw.
- * Non-domain errors pass through unchanged for the caller to rethrow.
+ * `undefined` means this error is not ours to translate — the caller rethrows
+ * what it caught.
  */
 export function toRpcTermReadError(
   error: unknown,
   errors: TermReadErrorConstructors,
-): unknown {
-  if (!(error instanceof TermReadError)) return error;
+): Error | undefined {
+  if (!(error instanceof TermReadError)) return undefined;
   switch (error.data.code) {
     case "taxonomy_not_found":
       return errors.NOT_FOUND({

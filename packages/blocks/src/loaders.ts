@@ -11,6 +11,11 @@ export interface BlockLoaderArgs {
   readonly attrs: Readonly<Record<string, unknown>>;
 }
 
+// The bound a loader record is stored under, where which loader this is has
+// been erased. A block's own loaders keep their concrete types through
+// inference, and `ResolvedLoaders` reads them back off the literal — nothing
+// calls a loader through this type.
+// eslint-disable-next-line plumix/no-unknown-return
 export type BlockLoaderFn = (args: BlockLoaderArgs) => Promise<unknown>;
 export type BlockLoaderRecord = Readonly<Record<string, BlockLoaderFn>>;
 

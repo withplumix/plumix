@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { AnyPluginDescriptor } from "./config.js";
 import type { AppContext } from "./context/app.js";
 import type { TelemetrySnapshot } from "./context/telemetry.js";
+import type { JsonValue } from "./json.js";
 import type { OtelConsumerOptions } from "./telemetry-otel.js";
 import type { ThemeDescriptor } from "./theme.js";
 import { definePlugin } from "./plugin/define.js";
@@ -463,7 +464,11 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
     circular.self = circular;
     const poisoned: TelemetrySnapshot = {
       ...snapshot,
-      records: { bad: [{ at: 1_700_000_000_000, data: circular }] },
+      records: {
+        bad: [
+          { at: 1_700_000_000_000, data: circular as unknown as JsonValue },
+        ],
+      },
     };
     const { calls, fetchStub } = capturingFetch();
     const choking = otelConsumer({ endpoint: ENDPOINT, fetch: fetchStub });

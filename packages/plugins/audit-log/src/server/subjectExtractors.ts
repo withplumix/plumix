@@ -2,7 +2,7 @@
 // Plugins shipping their own subject types (term, comment, …) will
 // register their extractor here in follow-up slices (#179+).
 
-interface SubjectInput {
+export interface SubjectInput {
   readonly id: number | string;
   readonly title?: string | null;
   readonly slug?: string | null;

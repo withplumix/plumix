@@ -18,5 +18,13 @@ export interface McpTool<TSchema extends GenericSchema = GenericSchema> {
    * render faithfully. When set, it replaces the projected schema verbatim.
    */
   readonly jsonSchema?: JsonObject;
+  /**
+   * The tool's work. The transport `JSON.stringify`s what it hands back, so
+   * `JsonValue` is the type this wants — but a tool returns a read service's
+   * row, and those carry `Date` fields and a `ResolvedMeta` bag that is still
+   * `Record<string, unknown>`. This becomes `JsonValue` when the meta pipeline
+   * finishes the migration #1817 deferred, not before.
+   */
+  // eslint-disable-next-line plumix/no-unknown-return
   run(ctx: AppContext, input: InferOutput<TSchema>): unknown;
 }

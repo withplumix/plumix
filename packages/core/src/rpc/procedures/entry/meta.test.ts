@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { JsonValue } from "../../../json.js";
 import type {
   MetaBoxField,
   MutablePluginRegistry,
@@ -24,7 +25,7 @@ import { loadEntryMeta } from "./meta.js";
 interface TestMetaSpec {
   readonly type: "string" | "number" | "boolean" | "json";
   readonly entryTypes?: readonly string[];
-  readonly sanitize?: (value: unknown) => unknown;
+  readonly sanitize?: (value: unknown) => JsonValue;
   readonly default?: unknown;
 }
 
@@ -198,8 +199,7 @@ describe("sanitizeMetaInput", () => {
     const registry = registryWithMeta({
       slug: {
         type: "string",
-        sanitize: (value) =>
-          typeof value === "string" ? value.toLowerCase() : value,
+        sanitize: (value) => String(value).toLowerCase(),
       },
     });
     const patch = await sanitizeMetaInput(findField(registry, "post"), {

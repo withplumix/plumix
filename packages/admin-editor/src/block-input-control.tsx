@@ -455,7 +455,7 @@ function decodeSelectKey(key: string): string {
 function decodeOption(
   options: readonly BlockInputOption[],
   key: string,
-): unknown {
+): string | number | boolean {
   const match = options.find((opt) => optionKey(opt.value) === key);
   return match ? match.value : key;
 }

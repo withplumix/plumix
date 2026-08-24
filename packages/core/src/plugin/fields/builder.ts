@@ -1,4 +1,5 @@
 import type { Label } from "../../i18n/label.js";
+import type { JsonValue } from "../../json.js";
 import type {
   MetaFieldCondition,
   MetaFieldConditionRule,
@@ -38,7 +39,7 @@ export interface StringFieldState {
   readonly capability?: string;
   readonly showInApi?: true;
   readonly maxLength?: number;
-  readonly sanitize?: (value: unknown) => unknown;
+  readonly sanitize?: (value: unknown) => JsonValue;
   readonly validate?: MetaBoxFieldValidate;
 }
 
@@ -193,7 +194,7 @@ export class StringFieldBuilder<
   sanitize(
     sanitize: (value: NonNullable<V>) => NonNullable<V>,
   ): StringFieldBuilder<Input, K, V, S> {
-    return this.#fork({ sanitize: sanitize as (value: unknown) => unknown });
+    return this.#fork({ sanitize: sanitize as (value: unknown) => JsonValue });
   }
 
   /**
