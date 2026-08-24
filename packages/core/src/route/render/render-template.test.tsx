@@ -5,6 +5,7 @@ import { defineBlock } from "@plumix/blocks";
 import { BlockRenderer } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
+import type { User } from "../../db/schema/users.js";
 import type { ResolvedEntry } from "./resolved-entry.js";
 import { entries as entriesTable } from "../../db/schema/entries.js";
 import { definePlugin } from "../../plugin/define.js";
@@ -4195,5 +4196,190 @@ describe("resolvePublicRoute — error pages through theme", () => {
     expect(body).toContain("Internal Server Error");
     expect(body).not.toContain("kaboom-inner-secret");
     expect(body).not.toContain("kaboom-error-template-secret");
+  });
+});
+
+describe("html allowlist — operator config reaches the renderer", () => {
+  const htmlTheme = defineTheme({
+    templates: [
+      fallback(() => null),
+      entry(({ data }) =>
+        data.entry.contentBlocks ? (
+          <BlockRenderer content={data.entry.contentBlocks} />
+        ) : null,
+      ),
+    ],
+  });
+
+  async function seedHtmlEntry(
+    h: Awaited<ReturnType<typeof createDispatcherHarness>>,
+  ): Promise<User> {
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "raw",
+      title: "Raw",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "r1",
+            name: "core/html",
+            attrs: { html: '<p><img src="/cat.png" alt="cat"></p>' },
+          },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    return author;
+  }
+
+  test("an operator's extraTags/extraAttributes survive the render", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: htmlTheme,
+      blocks: {
+        htmlAllowlist: {
+          extraTags: ["img"],
+          extraAttributes: { img: ["src", "alt"] },
+        },
+      },
+    });
+    await seedHtmlEntry(h);
+
+    const body = await (
+      await h.dispatch(new Request("https://cms.example/post/raw"))
+    ).text();
+
+    expect(body).toContain('<img src="/cat.png" alt="cat" />');
+  });
+
+  test("without the override the same markup is stripped to the baseline", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: htmlTheme,
+    });
+    await seedHtmlEntry(h);
+
+    const body = await (
+      await h.dispatch(new Request("https://cms.example/post/raw"))
+    ).text();
+
+    expect(body).not.toContain("cat.png");
+    // Positive control: a 404 or a template miss would satisfy the line above
+    // on its own, so pin that the block did render.
+    expect(body).toContain("<p></p>");
+  });
+
+  // This wiring is what turns the override into a live lever, so the floors
+  // under it need pinning on the composed path, not just in their own unit.
+  test("the floors still hold against an override that names denied tags", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: htmlTheme,
+      blocks: {
+        htmlAllowlist: {
+          extraTags: ["script", "iframe"],
+          extraAttributes: { p: ["onclick"] },
+        },
+      },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "raw",
+      title: "Raw",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "r1",
+            name: "core/html",
+            attrs: {
+              html: '<p onclick="x()">hi</p><script>x()</script><iframe src="/x"></iframe>',
+            },
+          },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const body = await (
+      await h.dispatch(new Request("https://cms.example/post/raw"))
+    ).text();
+
+    expect(body).toContain("<p>hi</p>");
+    expect(body).not.toContain("<script>x()</script>");
+    expect(body).not.toContain("<iframe");
+    expect(body).not.toContain("onclick");
+  });
+
+  test("core/rich-text honours the override too, not just core/html", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: htmlTheme,
+      blocks: {
+        htmlAllowlist: {
+          extraTags: ["img"],
+          extraAttributes: { img: ["src"] },
+        },
+      },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "rich",
+      title: "Rich",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "t1",
+            name: "core/rich-text",
+            attrs: { body: '<p><img src="/cat.png"></p>' },
+          },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const body = await (
+      await h.dispatch(new Request("https://cms.example/post/rich"))
+    ).text();
+
+    expect(body).toContain('<img src="/cat.png" />');
+  });
+
+  // The editor canvas remounts client-side with no server context, so it can
+  // only match the published page if the allowlist rides the SSR embed. The
+  // two halves are unit-tested either side of that boundary; this is the one
+  // assertion that the edit-mode dispatch actually joins them.
+  test("an edit-mode dispatch embeds the operator's allowlist for the canvas", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: htmlTheme,
+      blocks: { htmlAllowlist: { extraTags: ["img"] } },
+    });
+    const author = await seedHtmlEntry(h);
+
+    const body = await (
+      await h.dispatch(
+        await h.authenticateRequest(
+          new Request("https://cms.example/post/raw?plumix.edit"),
+          author.id,
+        ),
+      )
+    ).text();
+
+    const env = JSON.parse(
+      /data-plumix-render-env="">(.*?)<\/script>/.exec(body)?.[1] ?? "{}",
+    ) as { htmlAllowlist?: { allowedTags: readonly string[] } };
+    expect(env.htmlAllowlist?.allowedTags).toContain("img");
   });
 });

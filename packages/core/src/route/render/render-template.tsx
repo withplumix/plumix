@@ -4,12 +4,17 @@ import { renderToString } from "react-dom/server";
 
 import type {
   BlockNode,
+  HtmlAllowlist,
   LoaderErrorEvent,
   ResolvedBlockLoaders,
   ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/blocks";
-import { BlockLoaderError, resolveBlockLoaders } from "@plumix/blocks";
+import {
+  BlockLoaderError,
+  HtmlAllowlistProvider,
+  resolveBlockLoaders,
+} from "@plumix/blocks";
 import { PlumixProvider } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
@@ -112,7 +117,8 @@ async function renderThroughThemeInner({
   title,
   editMode = LIVE_EDIT_MODE,
 }: RenderArgs): Promise<string | null> {
-  const { theme, document, templateDeps, assetManifest } = renderEnv;
+  const { theme, document, templateDeps, assetManifest, htmlAllowlist } =
+    renderEnv;
   const rules = templateRules(theme.templates);
   // The resolution walk is a `template` span (nested under `render`) carrying
   // the full explain as a lazy attribute — the Template panel reads it back
@@ -166,6 +172,7 @@ async function renderThroughThemeInner({
     loaderData,
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
+    htmlAllowlist,
     themeCss: theme.css ?? [],
     editMode,
   });
@@ -223,7 +230,8 @@ async function renderErrorThroughThemeInner({
   kind,
   data,
 }: RenderErrorArgs): Promise<string> {
-  const { theme, document, templateDeps, assetManifest } = renderEnv;
+  const { theme, document, templateDeps, assetManifest, htmlAllowlist } =
+    renderEnv;
   const variant = ERROR_VARIANTS[kind];
   const raw =
     resolveErrorTemplate(templateRules(theme.templates), variant.tier)
@@ -257,6 +265,7 @@ async function renderErrorThroughThemeInner({
     loaderData: undefined,
     tokens: theme.tokens,
     breakpoints: theme.breakpoints,
+    htmlAllowlist,
     themeCss: theme.css ?? [],
     editMode: LIVE_EDIT_MODE,
   });
@@ -357,6 +366,7 @@ interface RenderTreeArgs {
   readonly loaderData: ResolvedBlockLoaders | undefined;
   readonly tokens: ThemeTokens | undefined;
   readonly breakpoints: ThemeBreakpoints | undefined;
+  readonly htmlAllowlist: HtmlAllowlist;
   // The theme's `css: []` paths, linked in dev to avoid FOUC (#1701).
   readonly themeCss: readonly string[];
   readonly editMode: EditModeDecision;
@@ -378,6 +388,7 @@ function renderTree({
   deps,
   tokens,
   breakpoints,
+  htmlAllowlist,
   loaderData,
   themeCss,
   editMode,
@@ -457,7 +468,13 @@ function renderTree({
   );
   // The bulk of `render` self-time (#1494).
   const rendered = ctx.telemetry.span("render: react", () =>
-    renderToString(templateTree),
+    renderToString(
+      createElement(
+        HtmlAllowlistProvider,
+        { value: htmlAllowlist },
+        templateTree,
+      ),
+    ),
   );
   const { hoisted, body } = splitHoistedMetadata(rendered);
 

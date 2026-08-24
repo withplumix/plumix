@@ -22,4 +22,5 @@ the editor. Per-attribute scheme scoping is the shape of a fix there, not a hole
 
 Nothing was exploitable in the editor: DOMPurify rejects the dangerous schemes on its own URI regexp
 whatever the allowlist says. Nor in production — a site had to opt in through `blocks.htmlAllowlist`,
-and that override does not reach the renderer yet. This closes the gap before it is wired up.
+and that override reached no renderer at the time. It reaches both as of this same release, which is
+why the floor lands first.

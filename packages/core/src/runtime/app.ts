@@ -220,11 +220,10 @@ export interface PlumixApp {
    */
   readonly shortcodes: ShortcodeRegistry;
   /**
-   * Sanitizer allowlist `core/html` reads at render time. Built once
-   * from the intrinsic baseline + `config.blocks.htmlAllowlist`.
-   * Themes thread this through `<EntryContent htmlAllowlist={...}>`
-   * so operator-extended tags / attrs actually reach the rendered
-   * output rather than being silently swapped with the baseline.
+   * Sanitizer allowlist the blocks that render stored HTML
+   * (`core/html`, `core/rich-text`) are held to, built once from the
+   * intrinsic baseline + `config.blocks.htmlAllowlist`. It reaches those
+   * blocks through `HtmlAllowlistProvider`, never as a prop.
    */
   readonly htmlAllowlist: HtmlAllowlist;
   /**
@@ -418,6 +417,7 @@ export async function buildApp(
     document,
     templateDeps: registry.templateDeps,
     assetManifest,
+    htmlAllowlist,
   };
 
   // Memoized so the heavy router module + handler construction happen once per

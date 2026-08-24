@@ -148,12 +148,13 @@ export interface PlumixConfigInput {
   readonly telemetry?: TelemetryConfig;
   /**
    * Block-system configuration. `htmlAllowlist` feeds the allowlist built
-   * at boot for blocks that render stored HTML. It does not reach them
-   * yet — nothing mounts `HtmlAllowlistProvider`, so rendering falls back
-   * to the baseline (#1891). Note `extraTags` and `extraAttributes` merge
-   * with the baseline while `schemes` and `allowProtocolRelative` replace
-   * it. Future block-level settings (per-block disable, etc.) slot in
-   * here too.
+   * at boot for blocks that render stored HTML, which both the public
+   * render and the editor canvas sanitize against. Note `extraTags` and
+   * `extraAttributes` merge with the baseline while `schemes` and
+   * `allowProtocolRelative` replace it. Under all four is a floor no
+   * override can widen past: a denylist of tags, of `on*` / `style`
+   * attributes, and of script-capable URL schemes. Future block-level
+   * settings (per-block disable, etc.) slot in here too.
    */
   readonly blocks?: {
     readonly htmlAllowlist?: HtmlAllowlistOverride;

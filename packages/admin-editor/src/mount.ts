@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import type {
   BlockNode,
   BlockRegistry,
+  HtmlAllowlist,
   ThemeBreakpoints,
   ThemeTokens,
 } from "@plumix/blocks";
@@ -34,7 +35,7 @@ export function mountEditorRuntime({
   if (!(root instanceof Element)) return null;
 
   const initialTree = readInitialTree(doc);
-  const { tokens, breakpoints } = readStyleEnv(doc);
+  const { tokens, breakpoints, htmlAllowlist } = readRenderEnv(doc);
   const reactRoot = createRoot(root);
   reactRoot.render(
     createElement(EditorCanvas, {
@@ -43,6 +44,7 @@ export function mountEditorRuntime({
       initialTree,
       tokens,
       breakpoints,
+      htmlAllowlist,
     }),
   );
   return () => reactRoot.unmount();
@@ -59,22 +61,24 @@ function readInitialTree(doc: Document): readonly BlockNode[] {
   }
 }
 
-// The SSR embeds the theme's tokens + breakpoints so the canvas — a fresh
-// React tree with no server context — can emit per-block style CSS. Missing or
-// malformed env leaves them undefined; the renderer then skips style emission
-// (the pre-fix behavior) rather than crashing.
-function readStyleEnv(doc: Document): {
+// The SSR embeds what the canvas — a fresh React tree with no server context —
+// would otherwise have to guess: the theme's tokens + breakpoints for per-block
+// style CSS, and the app's html allowlist so its sanitiser holds authored
+// markup to the rules the published page will.
+interface RenderEnvEmbed {
   readonly tokens?: ThemeTokens;
   readonly breakpoints?: ThemeBreakpoints;
-} {
-  const script = doc.querySelector("[data-plumix-style-env]");
+  readonly htmlAllowlist?: HtmlAllowlist;
+}
+
+function readRenderEnv(doc: Document): RenderEnvEmbed {
+  const script = doc.querySelector("[data-plumix-render-env]");
   if (!script?.textContent) return {};
   try {
-    const parsed = JSON.parse(script.textContent) as {
-      tokens?: ThemeTokens;
-      breakpoints?: ThemeBreakpoints;
-    };
-    return { tokens: parsed.tokens, breakpoints: parsed.breakpoints };
+    const parsed: unknown = JSON.parse(script.textContent);
+    // A JSON scalar parses fine and then breaks every reader downstream; the
+    // canvas has no error boundary, so that is the whole editor, not a block.
+    return typeof parsed === "object" && parsed !== null ? parsed : {};
   } catch {
     return {};
   }

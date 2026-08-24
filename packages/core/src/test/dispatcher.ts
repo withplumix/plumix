@@ -12,6 +12,7 @@ import type {
   AnyPluginDescriptor,
   ApiConfig,
   InterfaceToggle,
+  PlumixConfigInput,
 } from "../config.js";
 import type { AppContext, DeferFn } from "../context/app.js";
 import type { TelemetryConfig } from "../context/telemetry.js";
@@ -170,6 +171,11 @@ export interface CreateDispatcherHarnessOptions {
   /** `<Image>` remote-host allowlist; tests exercising remote optimization set it. */
   readonly images?: { readonly remotePatterns?: readonly RemotePattern[] };
   /**
+   * Block-system config. Tests exercising the operator's
+   * `blocks.htmlAllowlist` reaching the renderer set it here.
+   */
+  readonly blocks?: PlumixConfigInput["blocks"];
+  /**
    * Vite-emitted asset manifest. Tests that exercise the renderer's
    * `<link rel="stylesheet">` auto-injection pass a stub manifest here;
    * the default empty object mirrors the runtime's "no client entries"
@@ -300,6 +306,7 @@ export async function createDispatcherHarness(
     debugBar: options.debugBar,
     telemetry: options.telemetry,
     images: options.images,
+    blocks: options.blocks,
     theme: options.theme ?? defaultTestTheme,
   });
   const built = await buildApp(config, {
