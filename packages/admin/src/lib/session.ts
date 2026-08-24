@@ -14,6 +14,13 @@ export const sessionQueryOptions = () =>
 
 export const SESSION_QUERY_KEY = orpc.auth.session.queryKey({ input: {} });
 
+// `static` short-circuits the freshness check entirely: whatever is already
+// cached is served as-is, so a hard page load fetches the session exactly once
+// no matter how many route guards read it on the way down.
+export function loadSession(queryClient: QueryClient) {
+  return queryClient.query({ ...sessionQueryOptions(), staleTime: "static" });
+}
+
 /**
  * Shared auth guard for layouts that require a signed-in user. Used by
  * `_authenticated` (shell + sidebar) and `_editor` (full-screen canvas).
@@ -21,10 +28,7 @@ export const SESSION_QUERY_KEY = orpc.auth.session.queryKey({ input: {} });
  * Throws a TanStack Router redirect on failure.
  */
 export async function requireAuthenticatedSession(queryClient: QueryClient) {
-  const session = await queryClient.query({
-    ...sessionQueryOptions(),
-    staleTime: "static",
-  });
+  const session = await loadSession(queryClient);
   if (!session.user) {
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow; see https://tanstack.com/router/latest/docs/framework/react/guide/authenticated-routes
     throw redirect({ to: session.needsBootstrap ? "/bootstrap" : "/login" });

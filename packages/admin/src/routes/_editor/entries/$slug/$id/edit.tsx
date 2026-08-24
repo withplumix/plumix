@@ -167,14 +167,12 @@ export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
         }),
         staleTime: "static",
       }),
-      ...(supportsEditor(entryType)
-        ? [
-            context.queryClient.query({
-              ...previewLinkQuery(params.id),
-              staleTime: "static",
-            }),
-          ]
-        : []),
+      supportsEditor(entryType)
+        ? context.queryClient.query({
+            ...previewLinkQuery(params.id),
+            staleTime: "static",
+          })
+        : undefined,
     ]);
   },
   pendingComponent: PendingScreen,

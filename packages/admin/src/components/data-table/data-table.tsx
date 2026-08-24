@@ -1,6 +1,5 @@
 import type { MessageDescriptor } from "@lingui/core";
 import type {
-  CellData,
   ColumnDef,
   OnChangeFn,
   RowData,
@@ -43,21 +42,17 @@ interface DataTableColumnMeta {
   className?: string;
 }
 
-// Row selection is the only feature registered. Column visibility stays
-// off, so cells come from `getAllCells` — the exact counterpart of the
-// header's `getHeaderGroups`, both spanning the full column set.
 const features = tableFeatures({
   rowSelectionFeature,
   columnMeta: metaHelper<DataTableColumnMeta>(),
 });
 
-/** Column definition bound to this table's feature set and column meta.
- *  Callers use this instead of TanStack's `ColumnDef` so the feature
- *  generic stays an implementation detail of `DataTable`. */
-export type DataTableColumnDef<
-  TData extends RowData,
-  TValue extends CellData = CellData,
-> = ColumnDef<typeof features, TData, TValue>;
+/** Callers use this instead of TanStack's `ColumnDef` so the registered
+ *  feature set stays an implementation detail of `DataTable`. */
+export type DataTableColumnDef<TData extends RowData> = ColumnDef<
+  typeof features,
+  TData
+>;
 
 export function DataTable<TData extends RowData>({
   columns,
@@ -143,6 +138,9 @@ export function DataTable<TData extends RowData>({
                 data-state={row.getIsSelected() ? "selected" : undefined}
                 className="group/row"
               >
+                {/* Not `getVisibleCells` — that comes from
+                    `columnVisibilityFeature`, which stays unregistered so
+                    cells and `getHeaderGroups` above span the same set. */}
                 {row.getAllCells().map((cell) => (
                   <TableCell
                     key={cell.id}

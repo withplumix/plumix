@@ -1,6 +1,3 @@
-// markdown-it 15 ships its own declarations: the default export is the
-// callable class, and the instance type is a separate named type export.
-import type { MarkdownIt as MarkdownItInstance } from "markdown-it";
 import MarkdownIt from "markdown-it";
 
 // `html: false` is the whole safety posture: raw HTML in the source is
@@ -10,7 +7,7 @@ import MarkdownIt from "markdown-it";
 // `javascript:`/`vbscript:`/`file:` and non-raster `data:` link hrefs
 // (raster `data:` images are still allowed — tighten in the submission
 // slice if embedded images are unwanted).
-const md: MarkdownItInstance = new MarkdownIt({
+const md = new MarkdownIt({
   html: false,
   linkify: false,
   breaks: true,

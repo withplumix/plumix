@@ -4,7 +4,7 @@ import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
 import { readManifest } from "@/lib/manifest.js";
 import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { registerWithPasskey } from "@/lib/passkey.js";
-import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
+import { loadSession, SESSION_QUERY_KEY } from "@/lib/session.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
@@ -36,10 +36,7 @@ import { bootstrapSchema, langOnlySearchSchema } from "./-schemas.js";
 export const Route = createFileRoute("/_auth/bootstrap")({
   validateSearch: langOnlySearchSchema,
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.query({
-      ...sessionQueryOptions(),
-      staleTime: "static",
-    });
+    const session = await loadSession(context.queryClient);
     if (!session.needsBootstrap) {
       // Once someone's claimed the bootstrap slot, /bootstrap becomes /login
       // to avoid dead-end UX; the server would reject a post-bootstrap

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { sessionQueryOptions } from "@/lib/session.js";
+import { loadSession } from "@/lib/session.js";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 // Unauth-only layout: wraps /login and /bootstrap with the full-screen
@@ -8,10 +8,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 // be on /bootstrap vs /login) stay on the leaf routes.
 export const Route = createFileRoute("/_auth")({
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.query({
-      ...sessionQueryOptions(),
-      staleTime: "static",
-    });
+    const session = await loadSession(context.queryClient);
     if (session.user) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
       throw redirect({ to: "/" });
