@@ -1,3 +1,4 @@
+import type { JsonObject } from "plumix";
 import { and, count, eq, inArray, sql } from "plumix/db";
 import { authenticated, base, slugify } from "plumix/plugin";
 import { entries, entryTerm, settings, terms } from "plumix/schema";
@@ -114,6 +115,8 @@ interface SaveResponse {
   readonly modified: readonly number[];
 }
 
+// Neither JSON nor an open bag: this is core's `PluginRpcRouter`, which
+// `registerRpcRouter` accepts but core does not export yet (#1896).
 export function createMenuRouter(): Record<string, unknown> {
   const list = base
     .use(authenticated)
@@ -743,7 +746,7 @@ interface LocationRow {
   readonly boundTermId: number | null;
 }
 
-function readMaxDepth(meta: Record<string, unknown>): number {
+function readMaxDepth(meta: JsonObject): number {
   const raw = meta.maxDepth;
   if (typeof raw !== "number" || !Number.isInteger(raw))
     return DEFAULT_MAX_DEPTH;

@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { BlockInput } from "@plumix/blocks";
+import type { BlockInput, JsonValue } from "@plumix/blocks";
 
 import { BlockInputControl } from "./block-input-control.js";
 
@@ -14,7 +14,11 @@ beforeAll(() => {
 
 afterEach(cleanup);
 
-function renderControl(input: BlockInput, value: unknown, onChange = vi.fn()) {
+function renderControl(
+  input: BlockInput,
+  value: JsonValue | undefined,
+  onChange = vi.fn(),
+) {
   const utils = render(
     <I18nProvider i18n={i18n}>
       <BlockInputControl input={input} value={value} onChange={onChange} />
@@ -335,8 +339,8 @@ describe("BlockInputControl", () => {
       testId,
     }: {
       readonly rhf: {
-        readonly value: unknown;
-        readonly onChange: (v: unknown) => void;
+        readonly value: JsonValue | undefined;
+        readonly onChange: (v: JsonValue) => void;
       };
       readonly testId: string;
     }) => (

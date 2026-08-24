@@ -1,4 +1,5 @@
 import type { UseInfiniteQueryResult } from "@tanstack/react-query";
+import type { JsonObject } from "plumix";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 export interface AuditLogRowDTO {
@@ -10,7 +11,8 @@ export interface AuditLogRowDTO {
   readonly subjectLabel: string;
   readonly actorId: number | null;
   readonly actorLabel: string | null;
-  readonly properties: Record<string, unknown>;
+  /** JSON, unlike the server-side row: this is what came back off the wire. */
+  readonly properties: JsonObject;
 }
 
 export interface AuditLogFilter {

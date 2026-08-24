@@ -19,6 +19,8 @@ export interface RendererUser {
   readonly email: string;
   readonly name?: string | null;
   readonly role: string;
+  /** Not JSON: mirrors core's `AuthenticatedUser.meta`, which stayed open. The
+   *  `users.meta` column is already `JsonObject`; the two move together. */
   readonly meta: Record<string, unknown>;
 }
 
@@ -59,7 +61,8 @@ export interface PlumixContextValue {
   readonly locale?: string;
   /** Registered shortcodes for rich-text body expansion. */
   readonly shortcodes?: ShortcodeRegistry;
-  /** Queried entry, exposed to body shortcodes via `BlockContext.entry`. */
+  /** Queried entry, exposed to body shortcodes via `BlockContext.entry` — not
+   *  JSON, for the reason given there. */
   readonly entry?: Readonly<Record<string, unknown>> | null;
   /** Subdirectory prefix for internal links; `""` for a root deployment. */
   readonly basePath?: string;

@@ -1,4 +1,5 @@
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+import type { JsonObject } from "plumix";
 import { sql } from "drizzle-orm";
 import { index, sqliteTable } from "drizzle-orm/sqlite-core";
 import { entries, users } from "plumix/schema";
@@ -37,11 +38,7 @@ export const comments = sqliteTable(
     bodyMd: t.text().notNull(),
     ipHash: t.text(),
     userAgent: t.text(),
-    meta: t
-      .text({ mode: "json" })
-      .$type<Record<string, unknown>>()
-      .notNull()
-      .default({}),
+    meta: t.text({ mode: "json" }).$type<JsonObject>().notNull().default({}),
     createdAt: t
       .integer({ mode: "timestamp" })
       .notNull()

@@ -1,3 +1,5 @@
+import type { JsonObject } from "plumix";
+
 import type { MenuItemDisplayAttrs, MenuItemMeta } from "./types.js";
 
 /**
@@ -13,7 +15,7 @@ import type { MenuItemDisplayAttrs, MenuItemMeta } from "./types.js";
  */
 export function parseMenuItemMeta(raw: unknown): MenuItemMeta | null {
   if (!raw || typeof raw !== "object") return null;
-  const obj = raw as Record<string, unknown>;
+  const obj = raw as JsonObject;
   const display = parseDisplayAttrs(obj);
 
   switch (obj.kind) {
@@ -45,7 +47,7 @@ export function parseMenuItemMeta(raw: unknown): MenuItemMeta | null {
   }
 }
 
-function parseSnapshot(obj: Record<string, unknown>): {
+function parseSnapshot(obj: JsonObject): {
   readonly lastLabel?: string;
   readonly lastHref?: string;
 } {
@@ -59,7 +61,7 @@ function parseSnapshot(obj: Record<string, unknown>): {
   return out;
 }
 
-function parseDisplayAttrs(obj: Record<string, unknown>): MenuItemDisplayAttrs {
+function parseDisplayAttrs(obj: JsonObject): MenuItemDisplayAttrs {
   const out: { target?: "_blank"; rel?: string; cssClasses?: string[] } = {};
   if (obj.target === "_blank") out.target = "_blank";
   if (typeof obj.rel === "string" && obj.rel.length > 0) out.rel = obj.rel;

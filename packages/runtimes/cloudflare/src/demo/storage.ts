@@ -31,7 +31,8 @@ function bootstrapVersion(bootstrapSql: string): string {
 export interface DemoSqlExecutor {
   /** Run a single SQL statement (no bindings). */
   exec(sql: string): Promise<void>;
-  /** Run a single read statement, returning its rows. */
+  /** Run a single read statement, returning its rows. Not JSON: a blob column
+   *  arrives as an `ArrayBuffer`. */
   query(sql: string): Promise<readonly Record<string, unknown>[]>;
 }
 

@@ -163,15 +163,15 @@ interface MediaListResponse {
  * the id) so a consumer can snapshot them without a second round-trip — the
  * block editor stores these directly on the image block.
  */
-export interface MediaSelection {
-  readonly id: string;
-  readonly url: string;
-  readonly alt: string | null;
-  readonly mime: string;
-  readonly filename: string;
-  readonly width: number | null;
-  readonly height: number | null;
-}
+export type MediaSelection = Readonly<{
+  id: string;
+  url: string;
+  alt: string | null;
+  mime: string;
+  filename: string;
+  width: number | null;
+  height: number | null;
+}>;
 
 function toSelection(item: MediaItem): MediaSelection {
   return {

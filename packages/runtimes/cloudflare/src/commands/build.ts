@@ -13,6 +13,7 @@ import { createCloudflareVite } from "./vite.js";
 type BuildResult = Awaited<ReturnType<ViteBuilder["build"]>> | void;
 
 interface BuildableApp {
+  /** Not JSON: Vite's live `Environment` instances, keyed by name. */
   readonly environments: Record<string, unknown>;
   build(environment: unknown): Promise<BuildResult>;
 }

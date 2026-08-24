@@ -68,6 +68,8 @@ interface SerializePropsOptions {
 
 type Encoded = readonly [PROP_TYPE, unknown];
 
+// Not JSON: the codec above carries `Date`, `Map`, `Set`, `BigInt`, `URL` and
+// the typed arrays through the round trip.
 export function serializeProps(
   props: Readonly<Record<string, unknown>>,
   options: SerializePropsOptions = {},

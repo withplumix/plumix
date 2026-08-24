@@ -19,6 +19,7 @@ import {
   runScheduledTasks,
 } from "plumix";
 
+import type { WorkerEnv } from "./read-env.js";
 import { PlumixRuntimeConfigError } from "./errors.js";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -145,7 +146,7 @@ function validateBindings(app: PlumixApp, env: unknown): void {
   if (env == null || typeof env !== "object") {
     throw PlumixRuntimeConfigError.bindingsMissing({ missing: required });
   }
-  const envRecord = env as Record<string, unknown>;
+  const envRecord = env as WorkerEnv;
   // `== null` catches both undefined and null — a binding explicitly set
   // to null (rare, but possible with a misconfigured wrangler.toml) is
   // just as broken as an unset one.

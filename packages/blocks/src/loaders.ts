@@ -1,4 +1,5 @@
 import type { BlockRegistry, BlockSpec } from "./block-registry.js";
+import type { JsonObject } from "./json.js";
 import type { BlockNode } from "./render-block-tree.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
@@ -8,7 +9,7 @@ import { isBlockNodeArray } from "./render-block-tree.js";
 // re-export at the consumer boundary.
 export interface BlockLoaderArgs {
   readonly ctx: unknown;
-  readonly attrs: Readonly<Record<string, unknown>>;
+  readonly attrs: JsonObject;
 }
 
 // The bound a loader record is stored under, where which loader this is has
@@ -36,6 +37,10 @@ export interface LoaderEntry {
 // resolved record, `error` is `null`. On any rejection: `loaders` is
 // `{}`, `error` carries the first rejection (per-block isolation —
 // siblings are unaffected).
+//
+// Not JSON: a loader returns whatever it returns, and the block reads it in the
+// same process. Only the edit page's seeded copy crosses a wire, and that one
+// is lossy by design (see `serializeLoaderData`).
 export interface ResolvedBlockLoaderData {
   readonly loaders: Readonly<Record<string, unknown>>;
   readonly error: unknown;

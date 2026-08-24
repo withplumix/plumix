@@ -1,7 +1,4 @@
-interface FocalPoint {
-  readonly x: number;
-  readonly y: number;
-}
+type FocalPoint = Readonly<{ x: number; y: number }>;
 
 function clamp01(n: number): number {
   if (n < 0) return 0;

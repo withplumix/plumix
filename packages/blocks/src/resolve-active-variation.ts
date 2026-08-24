@@ -1,8 +1,9 @@
 import type { BlockSpec, BlockVariation } from "./block-registry.js";
+import type { JsonObject } from "./json.js";
 
 export function resolveActiveVariation(
   spec: BlockSpec,
-  blockAttrs: Readonly<Record<string, unknown>>,
+  blockAttrs: JsonObject,
 ): BlockVariation | undefined {
   if (!spec.variations) return undefined;
   let bestArrayMatch: { variation: BlockVariation; length: number } | undefined;

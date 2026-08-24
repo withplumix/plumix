@@ -1,3 +1,4 @@
+import type { JsonObject } from "plumix";
 import type { CSSProperties, ReactElement } from "react";
 import { defineBlock } from "plumix/blocks";
 import { Image } from "plumix/blocks/renderer";
@@ -16,7 +17,7 @@ interface MediaValue {
 // projects to "" here (the picker stores alt as string | null).
 function normalizeMediaValue(raw: unknown): MediaValue | null {
   if (!raw || typeof raw !== "object") return null;
-  const obj = raw as Record<string, unknown>;
+  const obj = raw as JsonObject;
   if (typeof obj.url !== "string" || obj.url === "") return null;
   return {
     url: obj.url,

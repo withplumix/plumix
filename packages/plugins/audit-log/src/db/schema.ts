@@ -16,6 +16,11 @@ import { index, sqliteTable } from "drizzle-orm/sqlite-core";
  *                   anonymous actions.
  * - `properties`    free-form JSON — currently `{ diff: { field: [old, new] } }`
  *                   for entry mutations; future events may add their own keys.
+ *
+ * Not JSON: the diff half of the envelope is built from entity columns and
+ * still holds live `Date` values. `auditService` runs `JSON.stringify` over it
+ * and drops the row when that throws — which proves it doesn't throw, not that
+ * it round-trips: a `Date` coerces to a string and a `Map` to `{}`.
  */
 export const auditLog = sqliteTable(
   "audit_log",

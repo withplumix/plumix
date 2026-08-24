@@ -1,3 +1,4 @@
+import type { JsonObject } from "plumix";
 import type { ImageResolver } from "plumix/blocks/renderer";
 import { createBlockRegistry, renderBlockTree } from "plumix/blocks";
 import { PlumixProvider } from "plumix/blocks/renderer";
@@ -11,7 +12,7 @@ import { imageBlock } from "./index.js";
 // the image-delivery resolver from context (the public + canvas render paths
 // both wrap blocks in this provider).
 function renderWithProvider(
-  attrs: Record<string, unknown>,
+  attrs: JsonObject,
   opts: { readonly resolver?: ImageResolver; readonly editing?: boolean } = {},
 ): string {
   const registry = createBlockRegistry([imageBlock]);

@@ -1,4 +1,5 @@
 import type { BlockRegistry } from "./block-registry.js";
+import type { JsonObject } from "./json.js";
 import type { BlockNode } from "./render-block-tree.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 import { BlockVariationError } from "./variation-errors.js";
@@ -76,7 +77,7 @@ function checkAttrKeys(
   parentBlock: string,
   variationSlug: string,
   path: string,
-  attrs: Readonly<Record<string, unknown>> | undefined,
+  attrs: JsonObject | undefined,
   declared: ReadonlySet<string> | undefined,
 ): void {
   if (!attrs || !declared) return;

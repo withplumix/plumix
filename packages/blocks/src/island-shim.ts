@@ -50,7 +50,8 @@ export interface IslandShimProps {
   readonly exportName: string;
   /** Hashed chunk URL the custom element dynamic-imports on hydrate. */
   readonly chunkUrl: string;
-  /** The raw props the author passed to the island component. */
+  /** The raw props the author passed to the island component. Not JSON: see
+   *  the codec note in `serialize.ts`. */
   readonly props: Readonly<Record<string, unknown>>;
 }
 

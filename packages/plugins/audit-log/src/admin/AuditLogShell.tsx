@@ -1,3 +1,4 @@
+import type { JsonObject } from "plumix";
 import type { MessageDescriptor } from "plumix/i18n";
 import type { ReactNode } from "react";
 import { useCallback, useSyncExternalStore } from "react";
@@ -467,7 +468,7 @@ function AuditLogRow({ row }: { readonly row: AuditLogRowDTO }): ReactNode {
 function DiffPreview({
   properties,
 }: {
-  readonly properties: Record<string, unknown>;
+  readonly properties: JsonObject;
 }): ReactNode {
   const { i18n } = useLingui();
   const diff = properties.diff;

@@ -17,6 +17,7 @@ import type { ComponentType } from "react";
 
 import type { IslandPageMode } from "./island-mode.js";
 import type { IslandRoot, MountOptions } from "./island-renderer.js";
+import type { JsonObject } from "./json.js";
 import { islandStrategy } from "./island-global.js";
 import { clientOnlyPlaceholderLabel, shouldHydrate } from "./island-mode.js";
 import { deserializeProps } from "./serialize.js";
@@ -35,7 +36,7 @@ interface RendererModule {
 // observer / listener (a leak both Astro and Nuxt carry).
 export type IslandStrategy = (
   loadFn: () => Promise<void>,
-  opts: Readonly<Record<string, unknown>>,
+  opts: JsonObject,
   el: PlumixIslandElement,
 ) => void | (() => void) | Promise<void | (() => void)>;
 
@@ -448,12 +449,12 @@ function shouldPrefetch(hydrateWhen: string, prefetchWhen: string): boolean {
   return hydrateWhen !== prefetchWhen;
 }
 
-function parseJsonAttr(raw: string | null): Readonly<Record<string, unknown>> {
+function parseJsonAttr(raw: string | null): JsonObject {
   if (!raw) return {};
   try {
     const parsed: unknown = JSON.parse(raw);
     if (parsed !== null && typeof parsed === "object") {
-      return parsed as Readonly<Record<string, unknown>>;
+      return parsed as JsonObject;
     }
     return {};
   } catch {
@@ -461,6 +462,7 @@ function parseJsonAttr(raw: string | null): Readonly<Record<string, unknown>> {
   }
 }
 
+// Not JSON: see the codec note in `serialize.ts`.
 function readProps(el: HTMLElement): Readonly<Record<string, unknown>> {
   const raw = el.getAttribute("props");
   if (!raw) return {};

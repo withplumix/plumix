@@ -1,3 +1,4 @@
+import type { JsonValue } from "plumix";
 import type { MetaBoxFieldManifestEntry } from "plumix/plugin";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -22,8 +23,9 @@ export function MediaUrlField({
 }: {
   readonly field: MetaBoxFieldManifestEntry;
   readonly rhf: {
+    /** Not JSON, for the reason given in `MediaPickerField`. */
     readonly value: unknown;
-    readonly onChange: (next: unknown) => void;
+    readonly onChange: (next: JsonValue) => void;
     readonly onBlur: () => void;
     readonly name: string;
   };

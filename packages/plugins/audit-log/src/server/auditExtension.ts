@@ -17,6 +17,7 @@
 //   - Multiple calls in one request batch into the same flush as the
 //     internal hook listeners (same WeakMap key, same `ctx.defer`).
 
+import type { JsonObject } from "plumix";
 import { tryGetContext } from "plumix/plugin";
 
 import type { AuditService } from "./auditService.js";
@@ -29,8 +30,9 @@ export interface AuditLogInput {
     readonly id: string | number;
     readonly label?: string;
   };
-  /** Free-form key/value map merged into the row's `properties` JSON. */
-  readonly properties?: Readonly<Record<string, unknown>>;
+  /** Free-form key/value map merged into the row's `properties` JSON. A `Date`
+   *  has to be spelled `.toISOString()`. */
+  readonly properties?: JsonObject;
 }
 
 export interface AuditExtension {

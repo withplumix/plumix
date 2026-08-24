@@ -3,6 +3,7 @@ import { createElement, Fragment } from "react";
 
 import type { BlockRegistry } from "./block-registry.js";
 import type { RootTag } from "./html/root-tag.js";
+import type { JsonObject } from "./json.js";
 import type {
   BlockLoaderRecord,
   ResolvedBlockLoaders,
@@ -28,7 +29,13 @@ const PATTERN_REF_BLOCK = "core/pattern-ref";
  * without prop drilling.
  */
 export interface BlockContext {
+  /** The queried entry, spread flat so a shortcode can look a field up by
+   *  name. Not JSON: it arrives already hydrated by the field adapters, so a
+   *  `.returns("date")` field reads back as a `Date` and a reference as the
+   *  entity it points at. */
   readonly entry: Readonly<Record<string, unknown>> | null;
+  /** Not JSON: pinned by the `settings` column upstream, where a value goes in
+   *  without passing the field pipeline (see `settings.value` in core). */
   readonly siteSettings: Readonly<Record<string, unknown>>;
   readonly theme: { readonly id: string } | null;
   /** Name of the immediate parent block, or `null` at the document root. */
@@ -47,30 +54,44 @@ export interface BlockContext {
   readonly editing: boolean;
 }
 
-export interface BlockNode {
-  readonly id: string;
-  readonly name: string;
-  readonly attrs?: Readonly<Record<string, unknown>>;
-  readonly style?: ResponsiveStyleSlot;
+/**
+ * One node of the stored block tree — what the entry's content column holds and
+ * what the editor round-trips. A slot attr holds its own children, so the whole
+ * node has to be readable as a {@link JsonValue}; see the note on
+ * {@link JsonObject} for why that rules out an `interface`.
+ */
+export type BlockNode = Readonly<{
+  id: string;
+  name: string;
+  attrs?: JsonObject;
+  style?: ResponsiveStyleSlot;
   /** Per-device visibility, decoupled from `style` so hiding a block never
    *  overwrites a bucket's layout `display`. Emitted as `display: none`. */
-  readonly hidden?: VisibilityFlags;
+  hidden?: VisibilityFlags;
   /** Author-supplied HTML attributes spread onto the block's root element.
    *  Filtered through {@link safeHtmlAttrs} at render — only allowlisted, inert
    *  keys (id, title, role, aria-, data- prefixes) survive. Not responsive. */
-  readonly htmlAttrs?: Readonly<Record<string, string>>;
+  htmlAttrs?: Readonly<Record<string, string>>;
   /** Author-given instance name shown in the Layers tree; falls back to the
    *  block type's title when absent. Editor-only metadata, ignored at render. */
-  readonly label?: string;
+  label?: string;
   /** Overrides the block's root element (Builder's tag-name). Applied to the
    *  default wrapper and threaded to `selfSeam` container blocks via render
    *  props; constrained to {@link resolveRootTag}'s allowlist, else ignored. */
-  readonly tagName?: string;
+  tagName?: string;
   /** Author-supplied CSS class names (space-separated) merged onto the block's
    *  root, alongside the generated style class. An inert escape hatch — class
    *  tokens can't execute; React escapes the attribute. */
-  readonly className?: string;
-}
+  className?: string;
+}>;
+
+/**
+ * `BlockNode.attrs` as a block's `render` sees them: the stored bag with every
+ * slot key replaced by the component that renders that slot's children. A slot
+ * value is a function, so this bag is not JSON — {@link materializeSlots} is
+ * the only thing that puts a non-JSON value into an attr bag.
+ */
+export type MaterializedAttrs = Readonly<Record<string, unknown>>;
 
 /**
  * Walker-traversal hooks, fired at tree-construction time (NOT post-order).
@@ -97,7 +118,8 @@ export interface RenderBlockTreeOptions {
   readonly locale?: string;
   /** Registered shortcodes for authored-content body expansion. */
   readonly shortcodes?: ShortcodeRegistry;
-  /** Queried entry, exposed to shortcodes via `BlockContext.entry`. */
+  /** Queried entry, exposed to shortcodes via `BlockContext.entry` — not JSON,
+   *  for the reason given there. */
   readonly entry?: Readonly<Record<string, unknown>> | null;
   /** Edit mode: tag each block wrapper with `data-plumix-id` for canvas selection. */
   readonly editing?: boolean;
@@ -121,7 +143,7 @@ interface BlockSeamProps {
 type BlockProps = Readonly<Record<string, string | undefined>> & BlockSeamProps;
 
 export interface BlockNodeRenderProps<
-  Attrs = Readonly<Record<string, unknown>>,
+  Attrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
 > {
   readonly attrs: Attrs;
@@ -140,7 +162,7 @@ export interface BlockNodeRenderProps<
 }
 
 export type BlockNodeComponent<
-  Attrs = Readonly<Record<string, unknown>>,
+  Attrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
 > = (props: BlockNodeRenderProps<Attrs, Loaders>) => ReactNode;
 
@@ -203,7 +225,7 @@ function materializeSlots(
   node: BlockNode,
   env: WalkerEnv,
   childContext: BlockContext,
-): Readonly<Record<string, unknown>> {
+): MaterializedAttrs {
   const attrs = node.attrs ?? {};
   const inputs = env.registry.get(node.name)?.inputs;
 

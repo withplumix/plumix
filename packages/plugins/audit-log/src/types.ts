@@ -11,6 +11,8 @@ export interface AuditLogRow {
   readonly subjectLabel: string;
   readonly actorId: number | null;
   readonly actorLabel: string | null;
+  /** Not JSON: the diff half is built from entity columns and still holds live
+   *  `Date` instances. See the note on the `properties` column. */
   readonly properties: Record<string, unknown>;
 }
 
@@ -47,7 +49,8 @@ export interface AuditLogQueryResult {
  */
 export interface AuditLogStorage {
   readonly kind: string;
-  /** Drizzle module to forward into `definePlugin({ schema })`. */
+  /** Drizzle module to forward into `definePlugin({ schema })`. Not JSON: a
+   *  module namespace. */
   readonly schemaModule?: Record<string, unknown>;
   /** Batch insert. The audit-log service buffers per-request and calls this once. */
   write(ctx: AppContext, rows: readonly NewAuditLogRow[]): Promise<void>;

@@ -14,6 +14,7 @@ import type {
 } from "plumix";
 import { resolveEnvInput } from "plumix";
 
+import type { WorkerEnv } from "./read-env.js";
 import { bucketNameKey, publicUrlBaseKey } from "./env-keys.js";
 import { R2Error } from "./errors.js";
 import { readEnvString } from "./read-env.js";
@@ -126,7 +127,7 @@ function readR2Binding(env: unknown, bindingName: string): R2Bucket {
   if (env === null || typeof env !== "object") {
     throw R2Error.envNotObject();
   }
-  const bucket = (env as Record<string, unknown>)[bindingName];
+  const bucket = (env as WorkerEnv)[bindingName];
   if (
     bucket === null ||
     typeof bucket !== "object" ||

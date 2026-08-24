@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockSpec } from "./block-registry.js";
+import type { JsonObject } from "./json.js";
 import { resolveBlockTransforms } from "./transforms.js";
 
 const noopRender: BlockSpec["render"] = () => null;
@@ -61,9 +62,7 @@ describe("resolveBlockTransforms", () => {
   });
 
   test("dedupes by target — forward beats inverse when its priority is higher", () => {
-    const forwardMap = (a: Readonly<Record<string, unknown>>) => ({
-      x: a.text,
-    });
+    const forwardMap = (a: JsonObject) => ({ x: a.text ?? null });
     const specs = [
       spec("core/quote", {
         to: [{ target: "core/paragraph", mapAttrs: forwardMap }],
@@ -131,8 +130,8 @@ describe("resolveBlockTransforms", () => {
   });
 
   test("forwards the mapAttrs function through both forward and inverse paths", () => {
-    const forwardMap = (a: Readonly<Record<string, unknown>>) => ({ x: a.x });
-    const inverseMap = (a: Readonly<Record<string, unknown>>) => ({ y: a.x });
+    const forwardMap = (a: JsonObject) => ({ x: a.x ?? null });
+    const inverseMap = (a: JsonObject) => ({ y: a.x ?? null });
     const specs = [
       spec("core/heading", {
         to: [{ target: "core/paragraph", mapAttrs: forwardMap }],

@@ -1,11 +1,12 @@
 import type { JSX, ReactNode } from "react";
 import { createElement } from "react";
 
+import type { JsonObject } from "../json.js";
 import { SIMPLE_MARK_TAGS } from "./core/simple-configs.js";
 
 interface TiptapMark {
   readonly type: string;
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
 }
 
 interface TiptapTextNode {
