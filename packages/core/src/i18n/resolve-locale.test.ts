@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { AuthenticatedUser } from "../context/app.js";
+import type { JsonObject } from "../json.js";
 import { resolveLocales } from "./locale-registry.js";
 import { resolveLocale } from "./resolve-locale.js";
 
@@ -23,7 +24,7 @@ function adminRequest(
   });
 }
 
-function user(meta: Record<string, unknown> = {}): AuthenticatedUser {
+function user(meta: JsonObject = {}): AuthenticatedUser {
   return { id: 1, email: "u@x", role: "admin", meta };
 }
 

@@ -1,4 +1,4 @@
-import type { Contribution, Selection } from "./types.js";
+import type { Contribution, Selection, WranglerPatch } from "./types.js";
 import { ScaffoldError } from "../errors.js";
 
 export interface ResolvedContributions {
@@ -7,7 +7,7 @@ export interface ResolvedContributions {
   /** Top-level `plumix({ ... })` slots, runtime → capabilities → plugins. */
   readonly configSlots: Record<string, string>;
   /** Merged wrangler.jsonc binding patches (arrays append). */
-  readonly wrangler: Record<string, unknown>;
+  readonly wrangler: WranglerPatch;
   /** `plugins: [...]` array entries, in selection order. */
   readonly registrations: string[];
   /**

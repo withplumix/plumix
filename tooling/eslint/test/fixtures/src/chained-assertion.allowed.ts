@@ -1,3 +1,5 @@
+import type { OpenBag } from "./open-bag.js";
+
 interface Wire {
   readonly id: number;
 }
@@ -35,6 +37,6 @@ export function erased(row: Row): { readonly value: unknown } {
 
 // `unknown` inside a wider assertion target describes a boundary rather than
 // routes around one.
-export function bag(row: Row): Readonly<Record<string, unknown>> {
+export function bag(row: Row): OpenBag {
   return row as Readonly<Record<string, unknown>>;
 }

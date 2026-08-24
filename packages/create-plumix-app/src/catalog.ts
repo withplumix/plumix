@@ -7,6 +7,9 @@ export interface PackageJson {
   name?: string;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+  // Not JsonObject: same reason as `WranglerPatch`. Nothing here reads a key
+  // this interface does not name; the signature keeps the untouched half of
+  // the manifest around across a rewrite.
   [key: string]: unknown;
 }
 

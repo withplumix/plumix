@@ -21,6 +21,7 @@ import {
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
+import type { ResolvedMeta } from "@plumix/core";
 import type { Label } from "@plumix/core/i18n";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 
@@ -70,7 +71,7 @@ export function PlainFormRouteInner({
     mutationFn: async (values: {
       title: string;
       status: string;
-      meta: Record<string, unknown>;
+      meta: ResolvedMeta;
     }) => {
       // Send only the changed meta keys so untouched foreign keys aren't
       // re-validated (an unregistered one would fail the whole write).

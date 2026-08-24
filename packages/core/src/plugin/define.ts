@@ -1,3 +1,4 @@
+import type { SchemaModule } from "../runtime/slots.js";
 import type { PluginProvidesContext } from "./provides-context.js";
 import type { PluginSetupContext } from "./setup-context.js";
 import { PluginDefinitionError } from "./errors.js";
@@ -34,7 +35,7 @@ export interface PluginDescriptor<TConfig = undefined> {
   readonly version?: string;
   readonly provides?: PluginProvides;
   readonly setup: PluginSetup<TConfig>;
-  readonly schema?: Record<string, unknown>;
+  readonly schema?: SchemaModule;
   readonly schemaModule?: string;
   /** Translation catalog declaration — opts the plugin into the i18n
    *  pipeline. Omit to keep all labels rendered as their authored
@@ -58,7 +59,7 @@ export interface PluginDescriptor<TConfig = undefined> {
 
 export interface DefinePluginOptions {
   readonly version?: string;
-  readonly schema?: Record<string, unknown>;
+  readonly schema?: SchemaModule;
   readonly schemaModule?: string;
   readonly adminEntry?: string;
   readonly adminChunk?: string;

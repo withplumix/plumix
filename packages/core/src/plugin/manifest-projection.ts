@@ -21,6 +21,7 @@ import { DEFAULT_BREAKPOINTS } from "@plumix/blocks";
 import type { Label } from "../i18n/label.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { NamedTemplateChoice } from "../route/render/template-builders.js";
+import type { ResolvedMeta } from "../rpc/meta/core.js";
 import type { PluginI18nSlot } from "./define.js";
 import type { MetaFieldCondition } from "./fields/condition.js";
 import type {
@@ -1090,8 +1091,8 @@ export function seedFromMetaBoxes(
       readonly default?: unknown;
     }[];
   }[],
-  stored: Readonly<Record<string, unknown>> | null | undefined,
-): Record<string, unknown> {
+  stored: ResolvedMeta | null | undefined,
+): ResolvedMeta {
   const bag = stored ?? {};
   const seed: Record<string, unknown> = {};
   for (const box of boxes) {

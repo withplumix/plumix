@@ -56,6 +56,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import * as v from "valibot";
 
 import type { EntryContent } from "@plumix/blocks";
+import type { ResolvedMeta } from "@plumix/core";
 import type { Label } from "@plumix/core/i18n";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { PlumixEditor } from "@plumix/admin-editor";
@@ -633,7 +634,7 @@ function EntryEditor({
     [contentDebouncer, setExcerpt],
   );
   const handleMetaChange = useCallback(
-    (next: Record<string, unknown>): void => {
+    (next: ResolvedMeta): void => {
       metaRef.current = next;
       // Skip scheduling a write when nothing the editor owns actually changed.
       if (Object.keys(diffMetaBag(lastSavedMetaRef.current, next)).length === 0)

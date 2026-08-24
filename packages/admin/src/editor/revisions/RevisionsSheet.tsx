@@ -6,6 +6,7 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
+import type { ResolvedMeta } from "@plumix/core";
 import { Button } from "@plumix/admin-ui/button";
 import {
   History,
@@ -93,7 +94,7 @@ interface DiffSnapshot {
   readonly slug: string;
   readonly excerpt: string | null;
   readonly content: unknown;
-  readonly meta: Readonly<Record<string, unknown>>;
+  readonly meta: ResolvedMeta;
 }
 
 interface RevisionsSheetProps {

@@ -22,6 +22,7 @@
 import type { ComponentType, ReactElement, ReactNode } from "react";
 import { createContext, createElement, useContext } from "react";
 
+import type { SerializedProps } from "./serialize.js";
 import { serializeProps } from "./serialize.js";
 
 /**
@@ -45,14 +46,13 @@ const PREFETCH_DEFAULTS: Readonly<Record<string, string>> = {
 
 export interface IslandShimProps {
   /** The original (untransformed) island component. */
-  readonly Component: ComponentType<Readonly<Record<string, unknown>>>;
+  readonly Component: ComponentType<SerializedProps>;
   /** The named export, echoed onto `component-export` for client mount. */
   readonly exportName: string;
   /** Hashed chunk URL the custom element dynamic-imports on hydrate. */
   readonly chunkUrl: string;
-  /** The raw props the author passed to the island component. Not JSON: see
-   *  the codec note in `serialize.ts`. */
-  readonly props: Readonly<Record<string, unknown>>;
+  /** The raw props the author passed to the island component. */
+  readonly props: SerializedProps;
 }
 
 // Deliberately broad: any object carrying a symbol `$$typeof` (elements,

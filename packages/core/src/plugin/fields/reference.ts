@@ -1,7 +1,7 @@
 import type { EntryStatus } from "../../db/schema/entries.js";
 import type { UserRole } from "../../db/schema/users.js";
 import type { Label } from "../../i18n/label.js";
-import type { JsonValue } from "../../json.js";
+import type { JsonObject, JsonValue } from "../../json.js";
 import type { ReferenceHydrationShapes } from "../lookup.js";
 import type {
   MetaFieldCondition,
@@ -151,13 +151,13 @@ export class ReferenceFieldBuilder<
 
   readonly #kind: Kind;
   readonly #key: string;
-  readonly #scope: Record<string, unknown>;
+  readonly #scope: JsonObject;
   readonly #state: ReferenceFieldState;
 
   constructor(
     kind: Kind,
     key: string,
-    scope: Record<string, unknown>,
+    scope: JsonObject,
     state: ReferenceFieldState = {},
   ) {
     this.#kind = kind;
@@ -172,7 +172,7 @@ export class ReferenceFieldBuilder<
     Returns2 extends "id" | "hydrated" = Returns,
   >(
     patch: Partial<ReferenceFieldState>,
-    scopePatch?: Record<string, unknown>,
+    scopePatch?: JsonObject,
   ): ReferenceFieldBuilder<Kind, K, Multiple2, Required2, Returns2> {
     return new ReferenceFieldBuilder<Kind, K, Multiple2, Required2, Returns2>(
       this.#kind,

@@ -24,12 +24,13 @@ import type {
   Credential,
   Entry,
   EntryStatus,
+  SettingsBag,
   User,
 } from "plumix/schema";
 import { tryGetContext } from "plumix/plugin";
 
 import type { NewAuditLogRow } from "../db/schema.js";
-import type { AuditLogActor } from "../types.js";
+import type { AuditEntityRow, AuditLogActor } from "../types.js";
 import type { AuditService } from "./auditService.js";
 import type { EntryMetaChanges } from "./entry-meta-changes.js";
 import type { SubjectInput } from "./subjectExtractors.js";
@@ -160,9 +161,9 @@ function actorFromUser(user: {
 }
 
 function stripKeys(
-  source: Readonly<Record<string, unknown>>,
+  source: Readonly<AuditEntityRow>,
   omit: readonly string[],
-): Record<string, unknown> {
+): AuditEntityRow {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(source)) {
     if (omit.includes(key)) continue;
@@ -613,11 +614,8 @@ export const auditEvents: readonly AuditEventDef[] = [
       }),
     },
     actor: { kind: "ctx" },
-    // Not JSON: unlike `EntryMetaChanges`, a settings value reaches the store
-    // without passing the field pipeline. Only its keys are read, so it stops
-    // here.
     extra: (changes: {
-      readonly set: Readonly<Record<string, unknown>>;
+      readonly set: SettingsBag;
       readonly removed: readonly string[];
     }) => ({
       keysSet: Object.keys(changes.set),

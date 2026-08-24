@@ -38,13 +38,21 @@ export interface MetaFieldConditionRule {
 export type MetaFieldCondition = readonly (readonly MetaFieldConditionRule[])[];
 
 /**
+ * The sibling values a condition is judged against — admin form state on the
+ * client, the incoming meta bag on the server. Not JSON: on the admin side
+ * these are the field controls' live values, which include `Date` instances
+ * for date fields and hydrated entities for references.
+ */
+export type MetaFieldValues = Readonly<Record<string, unknown>>;
+
+/**
  * Evaluate a field's visibility against the sibling values of its box
  * (form values in the admin, the incoming meta bag on the server). A
  * field without a condition is always visible.
  */
 export function isFieldVisible(
   field: { readonly visibleWhen?: MetaFieldCondition },
-  values: Readonly<Record<string, unknown>>,
+  values: MetaFieldValues,
 ): boolean {
   const groups = field.visibleWhen;
   if (groups === undefined || groups.length === 0) return true;
@@ -65,7 +73,7 @@ export function isFieldVisible(
  */
 export function isConditionHidden(
   field: { readonly visibleWhen?: MetaFieldCondition },
-  input: Readonly<Record<string, unknown>>,
+  input: MetaFieldValues,
 ): boolean {
   const groups = field.visibleWhen ?? [];
   const driversPresent = groups.every((group) =>

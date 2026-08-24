@@ -1,5 +1,6 @@
 import { applyEdits, modify } from "jsonc-parser";
 
+import type { WranglerPatch } from "./types.js";
 import { fillProjectName } from "./types.js";
 
 const FORMATTING = { insertSpaces: true, tabSize: 2 } as const;
@@ -12,7 +13,7 @@ const FORMATTING = { insertSpaces: true, tabSize: 2 } as const;
  */
 export function assembleWrangler(
   base: string,
-  patches: Readonly<Record<string, unknown>>,
+  patches: Readonly<WranglerPatch>,
   projectName: string,
 ): string {
   let out = base;

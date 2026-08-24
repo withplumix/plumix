@@ -27,6 +27,7 @@ import type {
   SettingsGroupManifestEntry,
   SettingsPageManifestEntry,
 } from "@plumix/core/manifest";
+import type { SettingsBag } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -188,7 +189,7 @@ function SettingsGroupCard({
   });
 
   const save = useMutation({
-    mutationFn: (next: Record<string, unknown>) =>
+    mutationFn: (next: SettingsBag) =>
       orpc.settings.upsert.call({ group: group.name, values: next }),
     onMutate: () => {
       setServerError(null);

@@ -8,6 +8,7 @@ import { noReflectApply } from "./no-reflect-apply.js";
 import { noReflectGet } from "./no-reflect-get.js";
 import { noUnknownReturn } from "./no-unknown-return.js";
 import { noUnknownTypeAlias } from "./no-unknown-type-alias.js";
+import { noUnsafeDictionary } from "./no-unsafe-dictionary.js";
 
 /**
  * First-party rules for the conventions this repo holds by discipline alone
@@ -30,5 +31,6 @@ export const plumixPlugin: ESLint.Plugin = {
     "no-reflect-get": noReflectGet,
     "no-unknown-return": noUnknownReturn,
     "no-unknown-type-alias": noUnknownTypeAlias,
+    "no-unsafe-dictionary": noUnsafeDictionary,
   },
 };

@@ -491,7 +491,7 @@ export const Route = createFileRoute("/_authenticated/entries/$slug/")({
 // Parse comma-separated URL values (`?category=foo,bar`) into the slug
 // array the server expects for multi-term filtering.
 function parseTermFilters(
-  search: Record<string, unknown>,
+  search: Readonly<v.InferOutput<typeof searchSchema>>,
   taxonomyNames: readonly string[],
 ): Record<string, string[]> {
   const out: Record<string, string[]> = {};

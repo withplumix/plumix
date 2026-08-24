@@ -18,6 +18,7 @@ import type { UserRole } from "../db/schema/users.js";
 import type { DebugBarInput } from "../dev/debug-bar/config.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
+import type { JsonObject } from "../json.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/current.js";
 import type {
@@ -87,14 +88,24 @@ export interface AuthenticatedUser {
   /** Display name from `users.name`; null when the user never set one. */
   readonly name?: string | null;
   readonly role: UserRole;
-  readonly meta: Record<string, unknown>;
+  /** The stored `users.meta` bag, verbatim — this projection never runs the
+   *  field pipeline, so it is the column's own {@link JsonObject}, not the
+   *  hydrated `ResolvedMeta` the RPC read surfaces return. */
+  readonly meta: JsonObject;
 }
 
+/**
+ * Structured context attached to a log line. Not JSON: the canonical payload
+ * is `{ error }` carrying a live `Error` with its stack, and a structured
+ * backend is expected to serialize it however it likes.
+ */
+export type LogMeta = Readonly<Record<string, unknown>>;
+
 export interface Logger {
-  debug(message: string, meta?: Record<string, unknown>): void;
-  info(message: string, meta?: Record<string, unknown>): void;
-  warn(message: string, meta?: Record<string, unknown>): void;
-  error(message: string, meta?: Record<string, unknown>): void;
+  debug(message: string, meta?: LogMeta): void;
+  info(message: string, meta?: LogMeta): void;
+  warn(message: string, meta?: LogMeta): void;
+  error(message: string, meta?: LogMeta): void;
 }
 
 export interface AuthNamespace {

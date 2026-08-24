@@ -43,3 +43,9 @@ export function send(message: object): void {
 // A test double asserted into the shape the subject expects is the case the
 // chained-assertion rule is scoped away from.
 export const stubRow = { id: "" } as unknown as Row;
+
+// A test that builds the bag it then reads knows what is in it, so the
+// dictionary rule is scoped away from test files as well.
+export function seedBag(bag: Record<string, unknown>): string {
+  return String(bag.id);
+}

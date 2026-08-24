@@ -13,6 +13,7 @@ import { Trans } from "@lingui/react";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
+import type { ResolvedMeta } from "@plumix/core";
 import type { Label } from "@plumix/core/i18n";
 import type { TermMetaBoxManifestEntry } from "@plumix/core/manifest";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
@@ -44,7 +45,7 @@ interface TermFormValues {
   readonly parentId: number | null;
   /** Plugin-registered meta bag. Shape is open because meta-box fields
    *  coerce per-field on edit; the server re-sanitises on write. */
-  readonly meta: Readonly<Record<string, unknown>>;
+  readonly meta: ResolvedMeta;
 }
 
 const M = {

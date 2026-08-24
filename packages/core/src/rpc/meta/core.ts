@@ -46,16 +46,17 @@ import {
 const MAX_META_VALUE_BYTES = 256 * 1024;
 
 /**
- * A meta bag on the read side. `decodeMetaBag` hands a `.returns("date")`
- * field back as a `Date`, and `resolveMetaBags` hydrates a reference's stored
- * id into whatever its lookup adapter returns — so these values are no longer
- * JSON and the bag stays open. The stored counterpart is `JsonObject`.
+ * A meta bag on the read side. Not JSON: `decodeMetaBag` hands a
+ * `.returns("date")` field back as a `Date`, and `resolveMetaBags` hydrates a
+ * reference's stored id into whatever its lookup adapter returns, so the bag
+ * stays open. The stored counterpart is `JsonObject`.
  */
 export type ResolvedMeta = Record<string, unknown>;
 
 /**
- * Meta as a caller sends it: object-shaped and nothing more. Values stay
- * unproven until the field pipeline normalizes them.
+ * Meta as a caller sends it: object-shaped and nothing more. Not JSON — not
+ * yet: values stay unproven until the field pipeline normalizes them, and it
+ * is that pass which turns the bag into the stored `JsonObject`.
  */
 export type MetaInput = Readonly<Record<string, unknown>>;
 
@@ -453,7 +454,7 @@ function collectMemberReferences(
   topKey: string,
   path: string,
   members: readonly MetaBoxField[],
-  container: Record<string, unknown>,
+  container: ResolvedMeta,
   groups: Map<string, ReferenceGroup>,
 ): void {
   for (const member of members) {
@@ -999,7 +1000,7 @@ function* chunkIds(ids: readonly string[]): Generator<readonly string[]> {
 // Write one candidate's resolved value into its slot — the leaf object
 // key of a container reached by walking the candidate's path.
 function applyResolutionToSlot(
-  slot: Record<string, unknown>,
+  slot: ResolvedMeta,
   key: string,
   multiple: boolean,
   ids: readonly string[],
@@ -1036,7 +1037,7 @@ function takeWritableSlot(
   decoded: ResolvedMeta,
   path: readonly PathSegment[],
 ): {
-  readonly parent: Record<string, unknown>;
+  readonly parent: ResolvedMeta;
   readonly leafKey: string;
 } | null {
   let outContainer: unknown = outBag;
@@ -1064,7 +1065,7 @@ function takeWritableSlot(
 }
 
 /** An addressable node inside a meta bag — what a path segment descends into. */
-type MetaContainer = unknown[] | Record<string, unknown>;
+type MetaContainer = unknown[] | ResolvedMeta;
 
 // Every segment but the last addresses a container, so a leaf (or a missing
 // key) reads back as `undefined` and the walk gives up on it — the storage

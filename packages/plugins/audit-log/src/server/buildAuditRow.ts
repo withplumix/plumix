@@ -1,7 +1,7 @@
 import type { JsonObject } from "plumix";
 
 import type { NewAuditLogRow } from "../db/schema.js";
-import type { AuditLogActor } from "../types.js";
+import type { AuditEntityRow, AuditLogActor } from "../types.js";
 
 /**
  * Pure helper that turns an event payload into a denormalized audit
@@ -28,10 +28,8 @@ interface BuildAuditRowInput {
     readonly id: string;
     readonly label: string;
   };
-  // Not JSON: entity rows. `shallowEqual` compares `Date` instances by
-  // `getTime()`, so a column value reaches the diff live.
-  readonly previous?: Readonly<Record<string, unknown>>;
-  readonly next?: Readonly<Record<string, unknown>>;
+  readonly previous?: Readonly<AuditEntityRow>;
+  readonly next?: Readonly<AuditEntityRow>;
   /** Extra fields merged into `properties` after the diff. */
   readonly extraProperties?: JsonObject;
 }
@@ -52,8 +50,8 @@ export function buildAuditRow(input: BuildAuditRowInput): NewAuditLogRow {
 }
 
 function computeDiff(
-  previous: Readonly<Record<string, unknown>> | undefined,
-  next: Readonly<Record<string, unknown>> | undefined,
+  previous: Readonly<AuditEntityRow> | undefined,
+  next: Readonly<AuditEntityRow> | undefined,
 ): Record<string, [unknown, unknown]> | null {
   if (previous === undefined || next === undefined) return null;
   const out: Record<string, [unknown, unknown]> = {};

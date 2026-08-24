@@ -2,6 +2,7 @@ import type { AuthenticatedUser } from "../context/app.js";
 import type { ApiToken } from "../db/schema/api_tokens.js";
 import type { Credential } from "../db/schema/credentials.js";
 import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
+import type { SettingsBag } from "../db/schema/settings.js";
 import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
 import type { WithResolvedMeta } from "./meta/core.js";
@@ -140,11 +141,9 @@ declare module "../hooks/types.js" {
      * can branch on scope.
      */
     "rpc:settings.get:output": (
-      output: Readonly<Record<string, unknown>>,
+      output: SettingsBag,
       context: { readonly group: string },
-    ) =>
-      | Readonly<Record<string, unknown>>
-      | Promise<Readonly<Record<string, unknown>>>;
+    ) => SettingsBag | Promise<SettingsBag>;
 
     "rpc:settings.upsert:input": (
       input: SettingsUpsertInput,
@@ -156,11 +155,9 @@ declare module "../hooks/types.js" {
      * paths.
      */
     "rpc:settings.upsert:output": (
-      output: Readonly<Record<string, unknown>>,
+      output: SettingsBag,
       context: { readonly group: string },
-    ) =>
-      | Readonly<Record<string, unknown>>
-      | Promise<Readonly<Record<string, unknown>>>;
+    ) => SettingsBag | Promise<SettingsBag>;
 
     /**
      * `entry:before_save` fires on every save; `entry:<type>:before_save`
@@ -403,7 +400,7 @@ declare module "../hooks/types.js" {
      */
     "settings:group_changed": (changes: {
       readonly group: string;
-      readonly set: Readonly<Record<string, unknown>>;
+      readonly set: SettingsBag;
       readonly removed: readonly string[];
     }) => void | Promise<void>;
 

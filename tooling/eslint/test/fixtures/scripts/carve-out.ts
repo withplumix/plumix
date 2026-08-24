@@ -11,3 +11,7 @@ export function readId(row: Row): string {
 export function send(message: object): void {
   void message;
 }
+
+export function seedBag(bag: Record<string, unknown>): string {
+  return String(bag.id);
+}

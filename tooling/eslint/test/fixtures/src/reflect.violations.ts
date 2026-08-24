@@ -1,3 +1,5 @@
+import type { OpenBag } from "./open-bag.js";
+
 interface Row {
   readonly id: string;
 }
@@ -12,6 +14,6 @@ export function callWith(fn: (n: number) => number): number {
 
 // No carve-out for values whose shape isn't pinned down: an open bag is a
 // parse boundary, and `Reflect.get` isn't how you cross one.
-export function readLoose(bag: Record<string, unknown>): string {
+export function readLoose(bag: OpenBag): string {
   return String(Reflect.get(bag, "id"));
 }

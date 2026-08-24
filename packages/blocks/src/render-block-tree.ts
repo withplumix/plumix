@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { createElement, Fragment } from "react";
 
 import type { BlockRegistry } from "./block-registry.js";
+import type { HydratedEntry, SiteSettings } from "./context-bags.js";
 import type { RootTag } from "./html/root-tag.js";
 import type { JsonObject } from "./json.js";
 import type {
@@ -29,14 +30,8 @@ const PATTERN_REF_BLOCK = "core/pattern-ref";
  * without prop drilling.
  */
 export interface BlockContext {
-  /** The queried entry, spread flat so a shortcode can look a field up by
-   *  name. Not JSON: it arrives already hydrated by the field adapters, so a
-   *  `.returns("date")` field reads back as a `Date` and a reference as the
-   *  entity it points at. */
-  readonly entry: Readonly<Record<string, unknown>> | null;
-  /** Not JSON: pinned by the `settings` column upstream, where a value goes in
-   *  without passing the field pipeline (see `settings.value` in core). */
-  readonly siteSettings: Readonly<Record<string, unknown>>;
+  readonly entry: HydratedEntry | null;
+  readonly siteSettings: SiteSettings;
   readonly theme: { readonly id: string } | null;
   /** Name of the immediate parent block, or `null` at the document root. */
   readonly parent: string | null;
@@ -118,9 +113,8 @@ export interface RenderBlockTreeOptions {
   readonly locale?: string;
   /** Registered shortcodes for authored-content body expansion. */
   readonly shortcodes?: ShortcodeRegistry;
-  /** Queried entry, exposed to shortcodes via `BlockContext.entry` — not JSON,
-   *  for the reason given there. */
-  readonly entry?: Readonly<Record<string, unknown>> | null;
+  /** Queried entry, exposed to shortcodes via `BlockContext.entry`. */
+  readonly entry?: HydratedEntry | null;
   /** Edit mode: tag each block wrapper with `data-plumix-id` for canvas selection. */
   readonly editing?: boolean;
   /** Localized "Add a block" label for the edit-mode empty-slot affordance.

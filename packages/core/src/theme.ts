@@ -182,6 +182,14 @@ export type DocumentScript = Omit<
   readonly dangerouslySetInnerHTML?: { readonly __html: string };
 };
 
+/**
+ * The attribute bag on any of the document tags, as `renderAttrs` reads it.
+ * Not JSON: an author writes these as JSX props, so a key can carry `style` as
+ * a `CSSProperties` object, and an absent attribute is spelled as a present
+ * key holding `undefined` — a state `JsonObject` says cannot happen.
+ */
+export type DocumentAttrs = Readonly<Record<string, unknown>>;
+
 export interface DocumentManifest {
   readonly html?: Omit<
     DocumentTag<"html">,

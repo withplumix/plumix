@@ -12,6 +12,7 @@ import type {
   RichtextMetaBoxField,
   TemporalInputType,
 } from "../../plugin/manifest.js";
+import type { ResolvedMeta } from "./core.js";
 import { isJsonArray } from "../../json.js";
 import { HEX_COLOR } from "../../plugin/fields/color.js";
 import { parseLinkValue } from "../../plugin/fields/link.js";
@@ -280,7 +281,7 @@ export function healReferenceValue(
 // `false` are real values; only `null` / `undefined` / `""` are blank.
 function isBlankRow(
   subFields: readonly MetaBoxField[],
-  row: Record<string, unknown>,
+  row: ResolvedMeta,
 ): boolean {
   return subFields.every((sf) => {
     const cell = row[sf.key];

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AppContext, AuthenticatedUser } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
+import type { JsonObject } from "../json.js";
 import {
   AccessError,
   anonymousPolicy,
@@ -18,10 +19,7 @@ import {
   rolePolicy,
 } from "./policy.js";
 
-function user(
-  role: UserRole,
-  meta: Record<string, unknown> = {},
-): AuthenticatedUser {
+function user(role: UserRole, meta: JsonObject = {}): AuthenticatedUser {
   return { id: 1, email: "u@site.test", name: null, role, meta };
 }
 

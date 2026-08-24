@@ -1,4 +1,4 @@
-import type { ResolvedBlockLoaders } from "./loaders.js";
+import type { LoaderResults, ResolvedBlockLoaders } from "./loaders.js";
 
 /**
  * Serialize SSR-resolved loader data to a node-keyed JSON map for embedding in
@@ -22,10 +22,7 @@ export function serializeLoaderData(resolved: ResolvedBlockLoaders): string {
  *  Malformed / non-object input yields an empty map (the edit runtime then
  *  renders blocks without seeded data rather than crashing). */
 export function parseLoaderData(json: string): ResolvedBlockLoaders {
-  const map = new Map<
-    string,
-    { loaders: Record<string, unknown>; error: null }
-  >();
+  const map = new Map<string, { loaders: LoaderResults; error: null }>();
   if (json.trim() === "") return map;
   let parsed: unknown;
   try {

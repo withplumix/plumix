@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import { index, sqliteTable } from "drizzle-orm/sqlite-core";
 
+import type { AuditProperties } from "../types.js";
+
 /**
  * Activity-log row. Denormalized by design — every label that the
  * admin feed needs to render lives in the row itself, so the source
@@ -38,7 +40,7 @@ export const auditLog = sqliteTable(
     actorLabel: t.text(),
     properties: t
       .text({ mode: "json" })
-      .$type<Record<string, unknown>>()
+      .$type<AuditProperties>()
       .notNull()
       .default({}),
   }),

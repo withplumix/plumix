@@ -37,6 +37,14 @@ export type AnyDatabaseAdapter = DatabaseAdapter<any>;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
+ * A Vite config object as the consumer's `vite.config.ts` writes it, kept
+ * structural so core carries no Vite dependency. Not JSON: the values include
+ * plugin instances, resolver functions and RegExps that no serializer round
+ * trips.
+ */
+export type ViteUserConfig = Readonly<Record<string, unknown>>;
+
+/**
  * Shared on/off switch for an external interface surface (MCP today, the
  * REST API next). Default-off: a surface is mounted only when its config
  * sets `enabled: true`, so the dispatcher can 404 before importing the
@@ -162,7 +170,7 @@ export interface PlumixConfigInput {
    * Passthrough merged with plumix's own Vite config via `mergeConfig`.
    * Structural so core stays Vite-dep-free.
    */
-  readonly vite?: Readonly<Record<string, unknown>>;
+  readonly vite?: ViteUserConfig;
 }
 
 export interface PlumixConfig {
@@ -190,7 +198,7 @@ export interface PlumixConfig {
   readonly images?: {
     readonly remotePatterns?: readonly RemotePattern[];
   };
-  readonly vite?: Readonly<Record<string, unknown>>;
+  readonly vite?: ViteUserConfig;
 }
 
 export function plumix(config: PlumixConfigInput): PlumixConfig {

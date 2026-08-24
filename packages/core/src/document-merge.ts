@@ -1,4 +1,4 @@
-import type { DocumentManifest } from "./theme.js";
+import type { DocumentAttrs, DocumentManifest } from "./theme.js";
 
 /**
  * Merge a template's per-template document fragment onto the theme's
@@ -42,9 +42,9 @@ function concatArrays<T>(
 }
 
 function mergeAttrs(
-  theme: Readonly<Record<string, unknown>> | undefined,
-  fragment: Readonly<Record<string, unknown>> | undefined,
-): Readonly<Record<string, unknown>> | undefined {
+  theme: DocumentAttrs | undefined,
+  fragment: DocumentAttrs | undefined,
+): DocumentAttrs | undefined {
   if (!theme && !fragment) return undefined;
   const merged: Record<string, unknown> = { ...theme, ...fragment };
   const themeClass = theme?.className;
