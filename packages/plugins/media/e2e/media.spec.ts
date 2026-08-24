@@ -9,12 +9,8 @@
 // `media.createUploadUrl` returns a same-origin `/_plumix/media/upload/<id>`
 // URL the browser PUTs to. No `**/storage.test/**` mock needed.
 
-import { resolve } from "node:path";
 import type { Page } from "@playwright/test";
-import { expect, test } from "@playwright/test";
-import { eq } from "plumix/db";
-import { entries } from "plumix/schema";
-import { openPlaygroundDb } from "plumix/test/playwright";
+import { expect, test } from "plumix/test/playwright";
 
 // Minimal valid 1×1 transparent PNG — real signature + IHDR + IDAT +
 // IEND so the plugin's magic-byte confirm step doesn't 409.
@@ -27,25 +23,7 @@ const PNG_1X1 = Buffer.from([
   0x60, 0x82,
 ]);
 
-// Every count below is anchored on an empty library, and the second test
-// leaves two uploads behind for a retry to inherit (see `playground` in
-// definePlumixE2EConfig). Rows only — the R2 blobs go with the state wipe,
-// and nothing reads them once the row is gone.
-//
-// The type literal is the media plugin's `MEDIA_ENTRY_TYPE`, inlined rather
-// than imported: `read-service.ts` pulls plumix/db, /schema and /plugin into
-// the Playwright process for one string, and the constant is already a bare
-// literal in three other modules there.
-async function clearMediaLibrary(): Promise<void> {
-  const db = await openPlaygroundDb({
-    cwd: resolve(process.cwd(), "playground"),
-  });
-  await db.delete(entries).where(eq(entries.type, "media"));
-}
-
 test.describe.serial("@plumix/plugin-media — worker-driven happy path", () => {
-  test.beforeAll(clearMediaLibrary);
-
   test("empty state → upload → card visible → delete → empty again", async ({
     page,
   }) => {

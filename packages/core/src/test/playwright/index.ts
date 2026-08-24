@@ -12,6 +12,8 @@ export type { OpenPlaygroundDbOptions } from "./open-playground-db.js";
 export { openPlaygroundDb } from "./open-playground-db.js";
 export type { PlumixE2EConfigOptions } from "./playwright-config.js";
 export { definePlumixE2EConfig, resolveE2EPort } from "./playwright-config.js";
+export type { PlumixWorkerOptions } from "./test.js";
+export { expect, test } from "./test.js";
 
 /**
  * Playwright helpers for plugin authors testing their admin pages
