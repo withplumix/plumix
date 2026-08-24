@@ -49,10 +49,12 @@ for (const subject of SCREENSHOT_SUBJECTS) {
       await page.evaluate(() => document.fonts.ready);
 
       const frame = page.getByTestId(subject.testId);
+      // CI runs this capture as a check, so this message has to carry the fix.
       await expect(
         frame,
-        `screenshot subject "${subject.name}" could not frame its element — ` +
-          `correct the test id in screenshots/subjects.ts, or restore it in the admin`,
+        `screenshot subject "${subject.name}" could not frame ` +
+          `[data-testid="${subject.testId}"] — correct the test id in ` +
+          `screenshots/subjects.ts, or restore it in the admin`,
       ).toBeVisible({ timeout: FRAME_TIMEOUT });
 
       await frame.screenshot({

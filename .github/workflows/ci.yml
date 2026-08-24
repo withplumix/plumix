@@ -207,6 +207,19 @@ jobs:
 
       - run: pnpm test:e2e
 
+      # Running the capture is the check: markup that moved stops resolving by
+      # test id and the command fails. No baselines, no pixel diff — see
+      # packages/admin/README.md. A step rather than its own job because it
+      # reuses the chromium install above and the failure upload below; the
+      # images it writes go with the runner.
+      #
+      # Deliberately no `if: always()`. This is a second playwright run in the
+      # same package, and playwright clears `playwright-report/` and
+      # `test-results/` as it starts — running it after a failed suite would
+      # delete the artifacts the upload below exists to collect.
+      - name: Assert docs screenshot capture succeeds
+        run: pnpm docs:screenshots
+
       - name: Upload Playwright reports + traces on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -93,8 +93,15 @@ captures too.
 Each subject in `screenshots/subjects.ts` names the element it frames by test
 id. Framing an element rather than the window means a redesign of the chrome
 around it leaves the image alone — and when the markup does move, the id stops
-resolving and the command fails naming the subject, rather than writing a stale
-picture.
+resolving and the command fails naming both the subject and the id, rather than
+writing a stale picture.
+
+CI leans on exactly that: the e2e job runs the capture and asserts it succeeds,
+so markup that moves fails a pull request instead of reaching a reader. Nothing
+compares pixels and no baselines are kept — an image diff would catch cosmetic
+drift too, but font rendering and platform differences make it noisy, and a
+noisy job gets turned off. CI throws away the images it writes; regenerating the
+committed ones is the local act below.
 
 The data is mocked and the clock is frozen, so a re-run on the same machine
 rewrites the same bytes. That does not hold across machines: font rasterization
