@@ -3,9 +3,10 @@ import type { HtmlAllowlist } from "./sanitize.js";
 import { BASELINE_HTML_ALLOWLIST } from "./sanitize.js";
 
 /**
- * Operator-supplied override applied on top of the baseline. Each
- * field is additive against the baseline so operators add capabilities
- * without re-listing everything plumix already permits.
+ * Operator-supplied override applied on top of the baseline. The tag
+ * and attribute fields are additive, so operators add capabilities
+ * without re-listing everything plumix already permits; `schemes` and
+ * `allowProtocolRelative` replace their baseline instead.
  *
  * Intentionally NOT derived from the registry's `parsePaste`
  * selectors — `parsePaste` controls how the editor absorbs INPUT into
@@ -35,8 +36,8 @@ export interface HtmlAllowlistOverride {
  * integration points — `foreignObject`, `mtext` and friends — are
  * reachable only inside `svg` / `math`, denied here already.
  *
- * Scoped to tags. `extraAttributes` and `schemes` have no equivalent
- * floor.
+ * Scoped to tags — `HARD_DENIED_SCHEMES` is the equivalent floor for
+ * `schemes`. `extraAttributes` has none yet.
  */
 export const HARD_DENYLIST: ReadonlySet<string> = new Set([
   // execution / navigation / subresource surface
@@ -66,6 +67,31 @@ export const HARD_DENYLIST: ReadonlySet<string> = new Set([
   "noembed",
   "noframes",
   "plaintext",
+]);
+
+/**
+ * URL schemes that may never be allowlisted, whatever `schemes`
+ * declares — the floor under an override that would otherwise be
+ * wider than the baseline in the one direction that matters:
+ * `javascript:` on an `href` needs no tag the baseline does not
+ * already allow.
+ *
+ * The schemes `renderer/link.tsx` refuses to make clickable. They
+ * either execute (`javascript`, `vbscript`) or carry their own
+ * document, and with it their own scripts, into the page's origin
+ * (`data`, `blob`). `view-source` joins them as the wrapper the other
+ * four hide behind: `sanitize-html` reads it as the whole scheme of
+ * `view-source:javascript:...` and keeps the href, where DOMPurify
+ * rejects it on its own regexp — denying it here is what makes the two
+ * engines agree. `link.tsx` peels that wrapper instead of listing it,
+ * testing hrefs rather than scheme names.
+ */
+export const HARD_DENIED_SCHEMES: ReadonlySet<string> = new Set([
+  "javascript",
+  "vbscript",
+  "data",
+  "blob",
+  "view-source",
 ]);
 
 /**
@@ -105,12 +131,22 @@ export function buildHtmlAllowlist(
     attrs[tag] = [...(attrs[tag] ?? []), ...extra];
   }
 
+  // `??` only triggers on null / undefined, so an explicit `schemes: []`
+  // (lock-down) survives. Lowercased because the two engines disagree on
+  // a mixed-case entry: sanitize-html compares the list verbatim, the
+  // DOMPurify shim lowercases it.
+  const schemes = Array.from(
+    new Set(
+      (override?.schemes ?? BASELINE_HTML_ALLOWLIST.allowedSchemes ?? [])
+        .map((scheme) => scheme.toLowerCase())
+        .filter((scheme) => !HARD_DENIED_SCHEMES.has(scheme)),
+    ),
+  );
+
   return {
     allowedTags: Array.from(new Set(tags)),
     allowedAttributes: attrs,
-    // `schemes: []` is preserved — `??` only triggers on null /
-    // undefined, so an explicit empty array (lock-down) survives.
-    allowedSchemes: override?.schemes ?? BASELINE_HTML_ALLOWLIST.allowedSchemes,
+    allowedSchemes: schemes,
     allowProtocolRelative:
       override?.allowProtocolRelative ??
       BASELINE_HTML_ALLOWLIST.allowProtocolRelative,

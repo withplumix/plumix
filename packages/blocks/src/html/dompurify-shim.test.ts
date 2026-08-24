@@ -6,6 +6,8 @@
 // equivalent) markup.
 import { describe, expect, test } from "vitest";
 
+import { createBlockRegistry } from "../index.js";
+import { buildHtmlAllowlist } from "./build-allowlist.js";
 import sanitize from "./dompurify-shim.js";
 import { BASELINE_HTML_ALLOWLIST } from "./sanitize.js";
 
@@ -156,5 +158,54 @@ describe("dompurify-shim — baseline allowlist parity", () => {
     expect(run(null)).toBe("");
     expect(run(42)).toBe("");
     expect(run("")).toBe("");
+  });
+});
+
+// The two engines read `allowedSchemes` differently — DOMPurify lowercases its
+// own allowlist where sanitize-html compares it verbatim — so an override has
+// to be driven through this engine too, not only the server one. DOMPurify also
+// rejects the dangerous schemes on its own URI regexp whatever the allowlist
+// says; these cases pin that the builder's floor holds independently of that.
+// The floor lives in the builder, so drive a built allowlist, not a literal.
+describe("dompurify-shim — operator-override allowlists", () => {
+  function runBuilt(
+    raw: string,
+    schemes: readonly string[],
+    extraAttributes?: Readonly<Record<string, readonly string[]>>,
+  ): string {
+    const allowlist = buildHtmlAllowlist(createBlockRegistry([]), {
+      schemes,
+      extraAttributes,
+    });
+    return sanitize(raw, {
+      allowedTags: [...allowlist.allowedTags],
+      allowedAttributes: Object.fromEntries(
+        Object.entries(allowlist.allowedAttributes).map(([tag, attrs]) => [
+          tag,
+          [...attrs],
+        ]),
+      ),
+      allowedSchemes: [...(allowlist.allowedSchemes ?? [])],
+      allowProtocolRelative: allowlist.allowProtocolRelative ?? false,
+    });
+  }
+
+  test.each(["javascript", "JavaScript", "JAVASCRIPT"])(
+    "an override spelling the scheme `%s` cannot produce a live href",
+    (scheme) => {
+      const out = runBuilt('<a href="javascript:alert(1)">x</a>', [
+        "https",
+        scheme,
+      ]);
+      expect(parse(out).querySelector("a")?.hasAttribute("href")).toBe(false);
+    },
+  );
+
+  test("an override cannot re-admit the `view-source:` wrapper", () => {
+    const out = runBuilt('<a href="view-source:javascript:alert(1)">x</a>', [
+      "https",
+      "view-source",
+    ]);
+    expect(parse(out).querySelector("a")?.hasAttribute("href")).toBe(false);
   });
 });
