@@ -30,7 +30,7 @@ describe("isStaleConflictError", () => {
 });
 
 describe("classifyAutosaveError", () => {
-  const queryClient = { fetchQuery: vi.fn() } as never;
+  const queryClient = { query: vi.fn() } as never;
 
   test("an invalid-block-content rejection is a hard failure the author must see", async () => {
     // Regression: content that references a removed/unknown block is rejected
@@ -63,7 +63,7 @@ describe("classifyAutosaveError", () => {
 
   test("a stale conflict recovers, re-anchoring on the refetched row", async () => {
     const at = new Date("2026-07-04T00:00:00Z");
-    const qc = { fetchQuery: vi.fn().mockResolvedValue({ updatedAt: at }) };
+    const qc = { query: vi.fn().mockResolvedValue({ updatedAt: at }) };
     const outcome = await classifyAutosaveError(staleConflict, qc as never, 1);
     expect(outcome).toEqual({ kind: "recovered", updatedAt: at });
   });
@@ -71,7 +71,7 @@ describe("classifyAutosaveError", () => {
   test("a stale conflict whose refetch fails recovers quietly (retry on next edit)", async () => {
     // Must NOT become `failed` — the edit is intact and the next keystroke
     // retries; toasting here would nag on ordinary concurrent-tab churn.
-    const qc = { fetchQuery: vi.fn().mockRejectedValue(new Error("offline")) };
+    const qc = { query: vi.fn().mockRejectedValue(new Error("offline")) };
     const outcome = await classifyAutosaveError(staleConflict, qc as never, 1);
     expect(outcome).toEqual({ kind: "recovered", updatedAt: null });
   });

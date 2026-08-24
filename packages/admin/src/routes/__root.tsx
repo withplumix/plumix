@@ -22,10 +22,13 @@ const TITLE_BRAND = "Plumix Admin";
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   // Kick off the session probe as early as possible so child routes' beforeLoad
-  // can synchronously read it via queryClient.getQueryData. ensureQueryData
-  // deduplicates: a single fetch per hard page load.
+  // can synchronously read it via queryClient.getQueryData. The `static`
+  // staleTime deduplicates: a single fetch per hard page load.
   beforeLoad: async ({ context }) => {
-    await context.queryClient.ensureQueryData(sessionQueryOptions());
+    await context.queryClient.query({
+      ...sessionQueryOptions(),
+      staleTime: "static",
+    });
   },
   component: RootLayout,
   notFoundComponent: NotFound,

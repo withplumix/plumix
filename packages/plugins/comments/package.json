@@ -62,7 +62,7 @@
   },
   "dependencies": {
     "drizzle-orm": "catalog:drizzle",
-    "markdown-it": "^14.3.0",
+    "markdown-it": "^15.0.0",
     "valibot": "catalog:"
   },
   "peerDependencies": {
@@ -86,7 +86,6 @@
     "@tanstack/react-query": "catalog:tanstack",
     "@testing-library/jest-dom": "catalog:testing-library",
     "@testing-library/react": "catalog:testing-library",
-    "@types/markdown-it": "^14.1.2",
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",

@@ -1,5 +1,5 @@
+import type { DataTableColumnDef } from "@/components/data-table/data-table.js";
 import type { MessageDescriptor } from "@lingui/core";
-import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
@@ -284,7 +284,7 @@ function buildColumns({
   formatDate: (value: Date, options?: Intl.DateTimeFormatOptions) => string;
   formatRelative: (value: Date) => string;
   label: (l: Label) => string;
-}): ColumnDef<UserListRow>[] {
+}): DataTableColumnDef<UserListRow>[] {
   return [
     {
       accessorKey: "name",

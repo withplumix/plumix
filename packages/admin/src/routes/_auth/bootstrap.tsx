@@ -36,9 +36,10 @@ import { bootstrapSchema, langOnlySearchSchema } from "./-schemas.js";
 export const Route = createFileRoute("/_auth/bootstrap")({
   validateSearch: langOnlySearchSchema,
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(
-      sessionQueryOptions(),
-    );
+    const session = await context.queryClient.query({
+      ...sessionQueryOptions(),
+      staleTime: "static",
+    });
     if (!session.needsBootstrap) {
       // Once someone's claimed the bootstrap slot, /bootstrap becomes /login
       // to avoid dead-end UX; the server would reject a post-bootstrap

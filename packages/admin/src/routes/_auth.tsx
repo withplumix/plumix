@@ -8,9 +8,10 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 // be on /bootstrap vs /login) stay on the leaf routes.
 export const Route = createFileRoute("/_auth")({
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(
-      sessionQueryOptions(),
-    );
+    const session = await context.queryClient.query({
+      ...sessionQueryOptions(),
+      staleTime: "static",
+    });
     if (session.user) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
       throw redirect({ to: "/" });

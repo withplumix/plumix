@@ -1,5 +1,5 @@
+import type { DataTableColumnDef } from "@/components/data-table/data-table.js";
 import type { MessageDescriptor } from "@lingui/core";
-import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
@@ -187,7 +187,7 @@ function TaxonomyListRoute(): ReactNode {
 
   const canEdit = hasCap(user.capabilities, `term:${taxonomy.name}:edit`);
 
-  const columns = useMemo<ColumnDef<TermRow>[]>(() => {
+  const columns = useMemo<DataTableColumnDef<TermRow>[]>(() => {
     return [
       {
         accessorKey: "name",

@@ -21,7 +21,10 @@ export const SESSION_QUERY_KEY = orpc.auth.session.queryKey({ input: {} });
  * Throws a TanStack Router redirect on failure.
  */
 export async function requireAuthenticatedSession(queryClient: QueryClient) {
-  const session = await queryClient.ensureQueryData(sessionQueryOptions());
+  const session = await queryClient.query({
+    ...sessionQueryOptions(),
+    staleTime: "static",
+  });
   if (!session.user) {
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow; see https://tanstack.com/router/latest/docs/framework/react/guide/authenticated-routes
     throw redirect({ to: session.needsBootstrap ? "/bootstrap" : "/login" });

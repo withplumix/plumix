@@ -62,9 +62,10 @@ const loginSearchSchema = v.object({
 export const Route = createFileRoute("/_auth/login")({
   validateSearch: loginSearchSchema,
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(
-      sessionQueryOptions(),
-    );
+    const session = await context.queryClient.query({
+      ...sessionQueryOptions(),
+      staleTime: "static",
+    });
     if (session.needsBootstrap) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
       throw redirect({ to: "/bootstrap" });

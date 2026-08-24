@@ -122,9 +122,10 @@ export const Route = createFileRoute("/_authenticated/terms/$name/$id/edit")({
   // fetch degrades the parent-picker to empty instead of nuking the
   // whole edit screen via errorComponent.
   loader: ({ context, params }) =>
-    context.queryClient.ensureQueryData(
-      orpc.term.get.queryOptions({ input: { id: params.id } }),
-    ),
+    context.queryClient.query({
+      ...orpc.term.get.queryOptions({ input: { id: params.id } }),
+      staleTime: "static",
+    }),
   pendingComponent: PendingComponent,
   errorComponent: ErrorComponent,
   component: EditTermRoute,

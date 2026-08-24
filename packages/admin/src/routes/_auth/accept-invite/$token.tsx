@@ -40,9 +40,10 @@ import { langOnlySearchSchema } from "../-schemas.js";
 export const Route = createFileRoute("/_auth/accept-invite/$token")({
   validateSearch: langOnlySearchSchema,
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(
-      sessionQueryOptions(),
-    );
+    const session = await context.queryClient.query({
+      ...sessionQueryOptions(),
+      staleTime: "static",
+    });
     if (session.user) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
       throw redirect({ to: "/" });

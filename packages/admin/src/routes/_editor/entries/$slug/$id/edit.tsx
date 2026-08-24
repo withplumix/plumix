@@ -161,13 +161,19 @@ export const Route = createFileRoute("/_editor/entries/$slug/$id/edit")({
     // mint, not when — the entry load and the mint have no data dependency.
     const entryType = findEntryTypeBySlug(params.slug);
     await Promise.all([
-      context.queryClient.ensureQueryData(
-        orpc.entry.get.queryOptions({
+      context.queryClient.query({
+        ...orpc.entry.get.queryOptions({
           input: { id: params.id, preview: true },
         }),
-      ),
+        staleTime: "static",
+      }),
       ...(supportsEditor(entryType)
-        ? [context.queryClient.ensureQueryData(previewLinkQuery(params.id))]
+        ? [
+            context.queryClient.query({
+              ...previewLinkQuery(params.id),
+              staleTime: "static",
+            }),
+          ]
         : []),
     ]);
   },

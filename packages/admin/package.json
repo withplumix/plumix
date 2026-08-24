@@ -49,11 +49,11 @@
     "@uiw/react-codemirror": "^4.25.11"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.12.1",
+    "@axe-core/playwright": "^4.13.0",
     "@babel/core": "^8.0.1",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
-    "@hookform/resolvers": "^5.7.1",
+    "@hookform/resolvers": "^5.9.1",
     "@lingui/babel-plugin-lingui-macro": "catalog:lingui",
     "@lingui/cli": "catalog:lingui",
     "@lingui/core": "catalog:lingui",
@@ -71,7 +71,7 @@
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
-    "@rolldown/plugin-babel": "^0.2.0",
+    "@rolldown/plugin-babel": "^0.2.3",
     "@tailwindcss/vite": "catalog:tailwind",
     "@tanstack/react-query": "catalog:tanstack",
     "@tanstack/react-query-devtools": "catalog:tanstack",

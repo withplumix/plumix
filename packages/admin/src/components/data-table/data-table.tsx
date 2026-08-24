@@ -1,12 +1,6 @@
-// TanStack Table's `useReactTable` returns stateful getters that cannot be
-// memoized safely — React Compiler detects this automatically and skips
-// compilation for this file, emitting a `react-hooks/incompatible-library`
-// warning at the call site. No explicit `"use no memo"` directive: it's
-// redundant with the compiler's auto-detection and CodeQL flags it as
-// unknown. The warning is informational, not an error.
-
 import type { MessageDescriptor } from "@lingui/core";
 import type {
+  CellData,
   ColumnDef,
   OnChangeFn,
   RowData,
@@ -19,8 +13,10 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import {
   flexRender,
-  getCoreRowModel,
-  useReactTable,
+  metaHelper,
+  rowSelectionFeature,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table";
 
 import { Skeleton } from "@plumix/admin-ui/skeleton";
@@ -43,14 +39,27 @@ const M = {
 // Per-column alignment + className passthrough. Column defs opt in via
 // `meta: { className: "text-right" }`; both the header cell and every
 // body cell pick up the class so alignment stays in sync.
-declare module "@tanstack/react-table" {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface ColumnMeta<TData extends RowData, TValue> {
-    className?: string;
-  }
+interface DataTableColumnMeta {
+  className?: string;
 }
 
-export function DataTable<TData>({
+// Row selection is the only feature registered. Column visibility stays
+// off, so cells come from `getAllCells` — the exact counterpart of the
+// header's `getHeaderGroups`, both spanning the full column set.
+const features = tableFeatures({
+  rowSelectionFeature,
+  columnMeta: metaHelper<DataTableColumnMeta>(),
+});
+
+/** Column definition bound to this table's feature set and column meta.
+ *  Callers use this instead of TanStack's `ColumnDef` so the feature
+ *  generic stays an implementation detail of `DataTable`. */
+export type DataTableColumnDef<
+  TData extends RowData,
+  TValue extends CellData = CellData,
+> = ColumnDef<typeof features, TData, TValue>;
+
+export function DataTable<TData extends RowData>({
   columns,
   data,
   isLoading = false,
@@ -60,7 +69,7 @@ export function DataTable<TData>({
   onRowSelectionChange,
   getRowId,
 }: {
-  readonly columns: ColumnDef<TData>[];
+  readonly columns: DataTableColumnDef<TData>[];
   readonly data: readonly TData[];
   readonly isLoading?: boolean;
   readonly emptyState?: ReactNode;
@@ -79,15 +88,10 @@ export function DataTable<TData>({
   const label = useLabel();
   const resolvedLoadingLabel = loadingLabel ?? label(M.loading);
   const selectable = rowSelection !== undefined;
-  // `useReactTable` returns a non-stable table instance — React Compiler
-  // can't memoize the surrounding render. The instance is the documented
-  // contract (its methods and state are read by row/cell components)
-  // so there's no equivalent subscription-style API to migrate to.
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
-    data: data as TData[],
+  const table = useTable({
+    features,
+    data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
     ...(selectable
       ? {
           enableRowSelection: true,
@@ -139,7 +143,7 @@ export function DataTable<TData>({
                 data-state={row.getIsSelected() ? "selected" : undefined}
                 className="group/row"
               >
-                {row.getVisibleCells().map((cell) => (
+                {row.getAllCells().map((cell) => (
                   <TableCell
                     key={cell.id}
                     className={cn(cell.column.columnDef.meta?.className)}

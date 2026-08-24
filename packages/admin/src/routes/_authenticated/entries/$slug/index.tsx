@@ -1,5 +1,6 @@
+import type { DataTableColumnDef } from "@/components/data-table/data-table.js";
 import type { MessageDescriptor } from "@lingui/core";
-import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
+import type { RowSelectionState } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { DataTable } from "@/components/data-table/data-table.js";
@@ -368,8 +369,8 @@ function buildColumns({
   renderLabel: (label: MessageDescriptor) => string;
   editLabel: string;
   formatDate: (value: Date, options?: Intl.DateTimeFormatOptions) => string;
-}): ColumnDef<Entry>[] {
-  const selectColumn: ColumnDef<Entry> = {
+}): DataTableColumnDef<Entry>[] {
+  const selectColumn: DataTableColumnDef<Entry> = {
     id: "select",
     meta: { className: "w-8" },
     header: ({ table }) => {

@@ -291,6 +291,9 @@ export const i18nStrictOverrides: Linter.Config = {
           // Tanstack query / router / table
           "queryKey",
           "accessorKey",
+          // `staleTime: "static"` marks a query as never-stale — a
+          // TanStack Query sentinel alongside the numeric durations.
+          "staleTime",
           // Sortable-header column-id prop value (e.g.
           // `<SortableHeader column="title">`). The column id is the
           // picklist key, not the visible label.
