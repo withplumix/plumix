@@ -1,5 +1,6 @@
 import type { BlockSpec, BlockVariationExample } from "./block-registry.js";
 import type { Label } from "./i18n-label.js";
+import type { JsonObject } from "./json.js";
 import type { BlockNode } from "./render-block-tree.js";
 
 export interface InsertableBlockEntry {
@@ -10,7 +11,7 @@ export interface InsertableBlockEntry {
   readonly category?: string;
   readonly icon?: string;
   readonly keywords?: readonly Label[];
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
   // Default body for the parent block's conventional `content` slot.
   // Caller deep-clones + ID-rewrites before merging into a block instance.
   readonly innerBlocks?: readonly BlockNode[];
@@ -68,7 +69,7 @@ export function expandBlockVariations(
 // concrete entry type) lets the block-scope picker thumbnail resolve
 // previews straight from a BlockVariation.
 export interface VariationPreviewSource {
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
   readonly innerBlocks?: readonly BlockNode[];
   readonly example?: BlockVariationExample;
 }
@@ -78,7 +79,7 @@ export interface VariationPreviewSource {
 // (inserter cards, block-scope picker thumbnails) — never by insertion
 // paths.
 export function resolveVariationPreview(source: VariationPreviewSource): {
-  readonly attrs: Readonly<Record<string, unknown>>;
+  readonly attrs: JsonObject;
   readonly innerBlocks: readonly BlockNode[];
 } {
   return {

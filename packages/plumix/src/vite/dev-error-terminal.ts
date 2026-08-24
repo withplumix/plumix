@@ -1,3 +1,4 @@
+import type { JsonObject } from "@plumix/core";
 import type { DevErrorFrame, ForwardedLog } from "@plumix/core/dev-client";
 
 import type {
@@ -170,7 +171,7 @@ function isForwardLevel(value: unknown): value is ForwardedLog["level"] {
 
 function asForwardedLog(value: unknown): ForwardedLog | null {
   if (value === null || typeof value !== "object") return null;
-  const record = value as Record<string, unknown>;
+  const record = value as JsonObject;
   const { kind, level, message } = record;
   if (kind !== "console" && kind !== "exception") return null;
   if (!isForwardLevel(level)) return null;

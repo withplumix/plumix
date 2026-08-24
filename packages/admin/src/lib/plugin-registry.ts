@@ -2,7 +2,7 @@ import type { Mark, Node } from "@tiptap/core";
 import type { ComponentType } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
-import type { BlockSpec } from "@plumix/blocks";
+import type { BlockSpec, JsonObject } from "@plumix/blocks";
 import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 import { CANONICAL_INPUT_TYPES, LEGACY_INPUT_TYPES } from "@plumix/core/fields";
 
@@ -29,7 +29,7 @@ interface PluginFieldRendererProps {
   /** The active block's other attributes when rendered in the block inspector
    *  (a sibling-aware control like the focal-point picker reads the image url);
    *  absent in the metabox context, where fields are independent. */
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
 }
 
 type PluginFieldComponent = ComponentType<PluginFieldRendererProps>;

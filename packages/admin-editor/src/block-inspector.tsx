@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useCallback } from "react";
 import { Trans } from "@lingui/react";
 
+import type { JsonValue } from "@plumix/blocks";
 import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import { Button } from "@plumix/admin-ui/button";
 import { Minus, Plus, RefreshCw } from "@plumix/admin-ui/icons";
@@ -49,7 +50,7 @@ export function BlockInspector({
   // selected row/cell), so the table controls stay in reach while editing cells.
   const tableId = block ? enclosingTableId(tree, block.id) : null;
   const handleChange = useCallback(
-    (key: string, value: unknown): void => {
+    (key: string, value: JsonValue): void => {
       if (activeId) updateBlockAttrs(activeId, { [key]: value });
     },
     [activeId, updateBlockAttrs],

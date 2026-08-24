@@ -1,3 +1,5 @@
+import type { JsonObject } from "plumix";
+
 // http(s), root-relative, parent-relative, mailto:, and tel: pass; the
 // last two are required for contact-card "email me the file" flows.
 // Everything else is silently dropped so a hostile attribute value
@@ -20,7 +22,7 @@ interface FileMedia {
 }
 export function normalizeFileMedia(raw: unknown): FileMedia | null {
   if (!raw || typeof raw !== "object") return null;
-  const obj = raw as Record<string, unknown>;
+  const obj = raw as JsonObject;
   if (typeof obj.url !== "string" || obj.url === "") return null;
   return {
     url: obj.url,

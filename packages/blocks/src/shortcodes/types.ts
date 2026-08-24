@@ -4,6 +4,9 @@
  * identical at every call site (entry title, rich-text body, and a future
  * meta description). No `db`/`request`: those aren't available inside the
  * walker, and anything needing them belongs to the deferred async path.
+ *
+ * `siteSettings` and `entry` are `BlockContext`'s own bags — not JSON, for the
+ * reasons given there.
  */
 export interface ShortcodeContext {
   readonly siteSettings: Readonly<Record<string, unknown>>;

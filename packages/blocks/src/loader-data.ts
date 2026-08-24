@@ -5,6 +5,10 @@ import type { ResolvedBlockLoaders } from "./loaders.js";
  * the edit page. Only successful loaders are carried — an errored block has no
  * data to seed, and the error object isn't reliably serializable. The edit
  * runtime reads this so blocks open with real data without re-running loaders.
+ *
+ * This is the seam where the not-JSON in-process bag becomes JSON, and it is
+ * lossy by design: whatever a loader returned that `JSON.stringify` can't carry
+ * is gone on the other side. `SerializedLoaderData` is that other side.
  */
 export function serializeLoaderData(resolved: ResolvedBlockLoaders): string {
   const out: Record<string, Readonly<Record<string, unknown>>> = {};

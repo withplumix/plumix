@@ -1,3 +1,4 @@
+import type { JsonObject } from "plumix";
 import type { AppContext, LookupResult } from "plumix/plugin";
 import { memoBatch } from "plumix";
 import { and, eq, inArray } from "plumix/db";
@@ -15,7 +16,7 @@ interface MenuItemRow {
   readonly parentId: number | null;
   readonly sortOrder: number;
   readonly title: string;
-  readonly meta: Record<string, unknown>;
+  readonly meta: JsonObject;
 }
 
 interface ResolvedRef {

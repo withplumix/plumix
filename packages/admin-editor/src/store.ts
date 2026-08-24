@@ -3,6 +3,8 @@ import { createStore } from "zustand/vanilla";
 import type {
   BlockNode,
   InsertableBlockEntry,
+  JsonObject,
+  JsonValue,
   ResponsiveStyleBucket,
   ResponsiveStyleSlot,
   ThemeBreakpoints,
@@ -136,10 +138,7 @@ export interface EditorActions {
    *  or only one row remains. */
   removeTableRow: (tableId: string) => void;
   /** Merge a partial attrs patch into one block, anywhere in the tree. */
-  updateBlockAttrs: (
-    id: string,
-    patch: Readonly<Record<string, unknown>>,
-  ) => void;
+  updateBlockAttrs: (id: string, patch: JsonObject) => void;
   /** Set (or clear, with `null`) one style property in a block's responsive
    *  bucket, anywhere in the tree. Empty buckets / style are pruned. */
   updateBlockStyle: (
@@ -233,7 +232,7 @@ function mapNode(
   if (node.id === id) return transform(node);
   const attrs = node.attrs;
   if (!attrs) return node;
-  let nextAttrs: Record<string, unknown> | undefined;
+  let nextAttrs: Record<string, JsonValue> | undefined;
   for (const [key, value] of Object.entries(attrs)) {
     if (!isBlockNodeArray(value)) continue;
     const patched = mapNodeById(value, id, transform);

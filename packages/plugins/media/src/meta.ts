@@ -1,3 +1,5 @@
+import type { JsonObject } from "plumix";
+
 interface MediaMeta {
   readonly mime: string;
   readonly size: number;
@@ -12,7 +14,7 @@ interface MediaMeta {
 
 export function parseMediaMeta(raw: unknown): MediaMeta | null {
   if (!raw || typeof raw !== "object") return null;
-  const r = raw as Record<string, unknown>;
+  const r = raw as JsonObject;
   if (
     typeof r.storageKey !== "string" ||
     typeof r.mime !== "string" ||

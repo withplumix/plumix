@@ -1,4 +1,4 @@
-import type { BlockNode } from "@plumix/blocks";
+import type { BlockNode, JsonValue } from "@plumix/blocks";
 import {
   freshBlockId,
   isBlockNodeArray,
@@ -238,7 +238,7 @@ export function removeBlocks(
   const mapped = kept.map((node) => {
     const attrs = node.attrs;
     if (!attrs) return node;
-    let nextAttrs: Record<string, unknown> | undefined;
+    let nextAttrs: Record<string, JsonValue> | undefined;
     for (const [key, value] of Object.entries(attrs)) {
       if (!isBlockNodeArray(value)) continue;
       const pruned = removeBlocks(value, ids);
@@ -579,7 +579,7 @@ function setTableRows(
     }
     const attrs = node.attrs;
     if (!attrs) return node;
-    let nextAttrs: Record<string, unknown> | undefined;
+    let nextAttrs: Record<string, JsonValue> | undefined;
     for (const [key, value] of Object.entries(attrs)) {
       if (!isBlockNodeArray(value)) continue;
       const replaced = setTableRows(value, tableId, rows);
@@ -673,7 +673,7 @@ function insertNode(
     }
     const attrs = current.attrs;
     if (!attrs) return current;
-    let nextAttrs: Record<string, unknown> | undefined;
+    let nextAttrs: Record<string, JsonValue> | undefined;
     for (const [key, value] of Object.entries(attrs)) {
       if (!isBlockNodeArray(value)) continue;
       const inserted = insertNode(value, node, target);

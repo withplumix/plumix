@@ -31,7 +31,9 @@
 //      that loses Nuxt's click is handled.
 
 import type { IslandStrategy, PlumixIslandElement } from "../island-element.js";
+import type { JsonObject } from "../json.js";
 import { publishIslandStrategy } from "../island-global.js";
+import { isJsonArray } from "../json.js";
 
 // The superset the single document listener subscribes to. An island's
 // `opts.events` (if any) must be a subset; `pointerenter` is a trigger only
@@ -72,13 +74,14 @@ export const interactionStrategy: IslandStrategy = (loadFn, opts, el) => {
   return () => registry.delete(el);
 };
 
-function readEvents(
-  opts: Readonly<Record<string, unknown>>,
-): ReadonlySet<string> {
+function readEvents(opts: JsonObject): ReadonlySet<string> {
   const raw = opts.events;
-  const list = Array.isArray(raw)
-    ? raw.filter((e): e is string => typeof e === "string")
-    : null;
+  // `isJsonArray`, not `Array.isArray`: the latter widens a `JsonValue` to
+  // `any[]` and leaves the readonly array on the object side of the union.
+  const list =
+    raw !== undefined && isJsonArray(raw)
+      ? raw.filter((e): e is string => typeof e === "string")
+      : null;
   return new Set(list && list.length > 0 ? list : SUPPORTED_EVENTS);
 }
 

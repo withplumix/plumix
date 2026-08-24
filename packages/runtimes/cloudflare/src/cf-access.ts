@@ -1,3 +1,4 @@
+import type { JWTPayload } from "jose";
 import type { Db, RequestAuthenticator } from "plumix";
 import type { UserRole } from "plumix/schema";
 import { createRemoteJWKSet, jwtVerify } from "jose";
@@ -208,7 +209,7 @@ export function cfAccessLogoutUrl(teamDomain: string): string {
   return `https://${teamDomain}${CF_ACCESS_LOGOUT_PATH}`;
 }
 
-function extractEmail(payload: Record<string, unknown>): string | null {
+function extractEmail(payload: JWTPayload): string | null {
   const value = payload.email;
   if (typeof value !== "string") return null;
   const trimmed = value.trim().toLowerCase();

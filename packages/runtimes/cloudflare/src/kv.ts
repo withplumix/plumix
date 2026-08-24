@@ -1,5 +1,6 @@
 import type { ConnectedKv, KV, KvListOptions, KvPutOptions } from "plumix";
 
+import type { WorkerEnv } from "./read-env.js";
 import { KvError } from "./errors.js";
 
 export interface KVConfig {
@@ -69,7 +70,7 @@ export function kv(config: KVConfig): KVInstance {
 }
 
 function readKvBinding(env: unknown, bindingName: string): KvNamespace {
-  const binding = (env as Record<string, unknown> | null)?.[bindingName];
+  const binding = (env as WorkerEnv | null)?.[bindingName];
   if (
     binding === null ||
     typeof binding !== "object" ||

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
 import type { BlockSpec } from "../block-registry.js";
+import type { JsonObject } from "../json.js";
 import type {
   BlockContext,
   BlockNode,
@@ -43,7 +44,7 @@ export function mockRegistry(input: MockRegistryInput = {}) {
  */
 export function renderBlockSpecToHtml(
   spec: BlockSpec,
-  attrs?: Readonly<Record<string, unknown>>,
+  attrs?: JsonObject,
   options?: RenderBlockTreeOptions,
 ): string {
   const registry = createBlockRegistry([spec]);

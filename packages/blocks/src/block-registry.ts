@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
 
 import type { Label } from "./i18n-label.js";
+import type { JsonObject } from "./json.js";
 import type { BlockLoaderRecord } from "./loaders.js";
-import type { BlockNode, BlockNodeComponent } from "./render-block-tree.js";
+import type {
+  BlockNode,
+  BlockNodeComponent,
+  MaterializedAttrs,
+} from "./render-block-tree.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
 
 export interface BlockInputOption {
@@ -59,16 +64,13 @@ export interface BlockInput {
 export type BlockVariationScope = "inserter" | "block" | "transform";
 
 export interface BlockVariationExample {
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
   readonly innerBlocks?: readonly BlockNode[];
 }
 
 export type BlockVariationIsActive =
   | readonly string[]
-  | ((
-      blockAttrs: Readonly<Record<string, unknown>>,
-      variationAttrs: Readonly<Record<string, unknown>>,
-    ) => boolean);
+  | ((blockAttrs: JsonObject, variationAttrs: JsonObject) => boolean);
 
 export interface BlockVariation {
   readonly slug: string;
@@ -76,7 +78,7 @@ export interface BlockVariation {
   readonly icon?: string;
   readonly description?: Label;
   readonly keywords?: readonly Label[];
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
   // Default body for the parent block's conventional `content` slot.
   // Inserted as a deep-cloned, ID-rewritten tree — source remains
   // unmutated across insertions. Validated against the block registry
@@ -110,17 +112,13 @@ export type BlockShortcutMode = "setNode" | "wrap" | "leaf";
 
 export interface BlockTransformTo {
   readonly target: string;
-  readonly mapAttrs?: (
-    currentAttrs: Readonly<Record<string, unknown>>,
-  ) => Readonly<Record<string, unknown>>;
+  readonly mapAttrs?: (currentAttrs: JsonObject) => JsonObject;
   readonly mode?: BlockShortcutMode;
 }
 
 export interface BlockTransformFrom {
   readonly source: string;
-  readonly mapAttrs?: (
-    sourceAttrs: Readonly<Record<string, unknown>>,
-  ) => Readonly<Record<string, unknown>>;
+  readonly mapAttrs?: (sourceAttrs: JsonObject) => JsonObject;
   readonly mode?: BlockShortcutMode;
 }
 
@@ -131,9 +129,7 @@ export interface BlockTransforms {
 }
 
 export interface BlockSpec<
-  Attrs extends Readonly<Record<string, unknown>> = Readonly<
-    Record<string, unknown>
-  >,
+  Attrs extends MaterializedAttrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
 > {
   readonly name: string;
@@ -166,7 +162,10 @@ export interface BlockSpec<
   // `defineBlock` — without it, `{ defaults: { text: "" } }` would
   // narrow `Attrs` to `{ text: string }` even when `render` reads other
   // keys. `defaults` checks against the inferred `Attrs`, doesn't bias it.
-  readonly defaults?: Readonly<Partial<NoInfer<Attrs>>>;
+  // The `JsonObject` half is the other half of the contract: a default is
+  // merged into a freshly-inserted node's stored attrs, so it has to be JSON —
+  // which the materialized `Attrs` need not be.
+  readonly defaults?: Readonly<Partial<NoInfer<Attrs>>> & JsonObject;
   /**
    * Default responsive styles seeded into a freshly-inserted block's `style`
    * slot, so they appear as editable values in the Styles section rather than
@@ -236,9 +235,7 @@ export function createBlockRegistry(
 // `match.loaderData`. `Attrs` defaults wide so call sites that read
 // extra keys from `attrs` aren't accidentally narrowed by `defaults`.
 export function defineBlock<
-  Attrs extends Readonly<Record<string, unknown>> = Readonly<
-    Record<string, unknown>
-  >,
+  Attrs extends MaterializedAttrs = MaterializedAttrs,
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   Loaders extends BlockLoaderRecord = {},
 >(spec: BlockSpec<Attrs, Loaders>): BlockSpec {

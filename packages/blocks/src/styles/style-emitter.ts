@@ -17,20 +17,20 @@ export function normalizeStyleValue(value: unknown): string | null {
   return typeof value === "string" && value !== "" ? value : null;
 }
 
-export interface ResponsiveStyleSlot {
-  readonly large?: ResponsiveStyleBucket;
-  readonly medium?: ResponsiveStyleBucket;
-  readonly small?: ResponsiveStyleBucket;
-}
+export type ResponsiveStyleSlot = Readonly<{
+  large?: ResponsiveStyleBucket;
+  medium?: ResponsiveStyleBucket;
+  small?: ResponsiveStyleBucket;
+}>;
 
 /** Per-device visibility, kept OUT of the style slot so hiding never clobbers a
  *  bucket's layout `display`. Emitted as `display: none` (overriding layout) for
  *  each flagged device; clearing a flag restores the stored `display`. */
-export interface VisibilityFlags {
-  readonly large?: boolean;
-  readonly medium?: boolean;
-  readonly small?: boolean;
-}
+export type VisibilityFlags = Readonly<{
+  large?: boolean;
+  medium?: boolean;
+  small?: boolean;
+}>;
 
 // Which token category a property reads from. `spacing` and `color` are the
 // two cross-property buckets; every other property reads its own same-named

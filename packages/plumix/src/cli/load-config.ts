@@ -98,6 +98,7 @@ export function resolveConfigPath(cwd: string, explicit?: string): string {
   throw CliError.configNotFoundDefault({ cwd });
 }
 
+// Not JSON: inspects the *evaluated* config module, functions and all.
 function isPlumixConfig(value: unknown): value is PlumixConfig {
   if (!value || typeof value !== "object") return false;
   const c = value as Record<string, unknown>;

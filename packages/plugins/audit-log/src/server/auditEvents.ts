@@ -13,6 +13,7 @@
 // must include that field in `diff.omit` or the test fails — drift
 // is caught at CI time, not in review.
 
+import type { JsonObject } from "plumix";
 import type {
   AppContext,
   AuthenticatedUser,
@@ -82,12 +83,13 @@ export interface AuditEventDef {
   readonly actor: ActorStrategy;
   /** Diff the top-level columns of `payload` (next) vs. `context` (previous), omitting these keys. */
   readonly diff?: { readonly omit: readonly string[] };
-  /** Extra properties merged into the row's `properties` envelope. */
+  /** Extra properties merged into the row's `properties` envelope. Every
+   *  definition below already converts a `Date` by hand. */
   readonly extra?: (
     payload: never,
     context: never,
     appCtx: AppContext,
-  ) => Record<string, unknown>;
+  ) => JsonObject;
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -193,7 +195,7 @@ function buildRow(
           payload: unknown,
           context: unknown,
           appCtx: AppContext,
-        ) => Record<string, unknown>
+        ) => JsonObject
       )(payload, context, appCtx)
     : undefined;
   return buildAuditRow({
@@ -611,6 +613,9 @@ export const auditEvents: readonly AuditEventDef[] = [
       }),
     },
     actor: { kind: "ctx" },
+    // Not JSON: unlike `EntryMetaChanges`, a settings value reaches the store
+    // without passing the field pipeline. Only its keys are read, so it stops
+    // here.
     extra: (changes: {
       readonly set: Readonly<Record<string, unknown>>;
       readonly removed: readonly string[];

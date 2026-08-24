@@ -2,7 +2,12 @@ import type { ReactElement } from "react";
 import { createElement, lazy, Suspense, useId, useState } from "react";
 import { useLingui } from "@lingui/react";
 
-import type { BlockInput, BlockInputOption } from "@plumix/blocks";
+import type {
+  BlockInput,
+  BlockInputOption,
+  JsonObject,
+  JsonValue,
+} from "@plumix/blocks";
 import { Button } from "@plumix/admin-ui/button";
 import { Checkbox } from "@plumix/admin-ui/checkbox";
 import {
@@ -49,8 +54,8 @@ const RichTextField = lazy(() =>
 export interface PluginFieldControlProps {
   readonly field: unknown;
   readonly rhf: {
-    readonly value: unknown;
-    readonly onChange: (value: unknown) => void;
+    readonly value: JsonValue | undefined;
+    readonly onChange: (value: JsonValue) => void;
     readonly onBlur: () => void;
     readonly name: string;
   };
@@ -61,7 +66,7 @@ export interface PluginFieldControlProps {
    * sibling-aware — the focal-point picker reads the block's image url to draw
    * its preview. Absent in the metabox context (fields there are independent).
    */
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
 }
 
 export type PluginFieldControl = (
@@ -79,13 +84,13 @@ export type ResolvePluginFieldType = (
 
 interface BlockInputControlProps {
   readonly input: BlockInput;
-  readonly value: unknown;
+  readonly value: JsonValue | undefined;
   /** Emits the next typed value (string for text, number for number, etc.). */
-  readonly onChange: (value: unknown) => void;
+  readonly onChange: (value: JsonValue) => void;
   readonly resolvePluginFieldType?: ResolvePluginFieldType;
   /** The active block's other attributes, forwarded to sibling-aware plugin
    *  controls (e.g. the focal-point picker reads the image url). */
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
 }
 
 // Block-attr edits commit on onChange; the block path has no RHF touched-state,
@@ -325,9 +330,9 @@ function ComboboxControl({
 }: {
   readonly id: string;
   readonly testId: string;
-  readonly value: unknown;
+  readonly value: JsonValue | undefined;
   readonly options: readonly BlockInputOption[];
-  readonly onChange: (value: unknown) => void;
+  readonly onChange: (value: JsonValue) => void;
 }): ReactElement {
   const { i18n } = useLingui();
   const [open, setOpen] = useState(false);
@@ -338,7 +343,7 @@ function ComboboxControl({
   const canCreate =
     custom !== "" && !options.some((opt) => optionKey(opt.value) === custom);
 
-  const commit = (next: unknown): void => {
+  const commit = (next: JsonValue): void => {
     onChange(next);
     setQuery("");
     setOpen(false);
@@ -455,7 +460,7 @@ function decodeSelectKey(key: string): string {
 function decodeOption(
   options: readonly BlockInputOption[],
   key: string,
-): string | number | boolean {
+): BlockInputOption["value"] {
   const match = options.find((opt) => optionKey(opt.value) === key);
   return match ? match.value : key;
 }

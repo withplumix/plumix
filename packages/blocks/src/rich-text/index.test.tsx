@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { BlockNode } from "../render-block-tree.js";
 import type { ShortcodeSpec } from "../shortcodes/types.js";
 import { createBlockRegistry } from "../block-registry.js";
-import { renderBlockTree } from "../render-block-tree.js";
+import {
+  DEFAULT_BLOCK_CONTEXT,
+  renderBlockTree,
+} from "../render-block-tree.js";
 import { richTextBlock } from "./index.js";
 
 describe("core/rich-text walker render", () => {
@@ -48,27 +51,27 @@ describe("core/rich-text walker render", () => {
     expect(html).toContain("<p>hi</p>");
   });
 
-  test("returns the admin's React-element body verbatim so Tiptap mounts inline", () => {
-    // The admin preview wraps `attrs.body` as a <RichTextRender> element
-    // before calling the block render. Wrapping that element in another
-    // <div dangerouslySetInnerHTML> would mount the editor on a stale
-    // snapshot and lose focus after the first keystroke (the bug #471
-    // fixed for the paragraph block). The block must surface the element
-    // directly.
-    const registry = createBlockRegistry([richTextBlock]);
+  test("returns a React-element body verbatim rather than re-wrapping it", () => {
+    // Driven through `render`, not the walker: stored attrs are JSON, so no
+    // tree can carry an element. See the note in `index.tsx`.
+    const RichText = richTextBlock.render;
     const adminElement = (
       <div data-editor-portal="true">
         <span>inline editor mock</span>
       </div>
     );
-    const tree: readonly BlockNode[] = [
-      { id: "r1", name: "core/rich-text", attrs: { body: adminElement } },
-    ];
 
-    const html = renderToStaticMarkup(renderBlockTree(tree, registry));
+    const html = renderToStaticMarkup(
+      <RichText
+        attrs={{ body: adminElement }}
+        context={DEFAULT_BLOCK_CONTEXT}
+        loaders={{}}
+        blockProps={{}}
+      />,
+    );
 
     expect(html).toBe(
-      '<div><div data-editor-portal="true"><span>inline editor mock</span></div></div>',
+      '<div data-editor-portal="true"><span>inline editor mock</span></div>',
     );
   });
 

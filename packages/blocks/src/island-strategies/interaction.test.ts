@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { PlumixIslandElement } from "../island-element.js";
+import type { JsonObject } from "../json.js";
 import { interactionStrategy } from "./interaction.js";
 
 // A single document-level capture listener is registered once at module
@@ -11,7 +12,7 @@ const cleanups: (() => void)[] = [];
 
 function register(
   el: PlumixIslandElement,
-  opts: Readonly<Record<string, unknown>> = {},
+  opts: JsonObject = {},
 ): { loadFn: ReturnType<typeof vi.fn>; resolve: () => void } {
   // `loadFn` is invoked lazily (on the trigger), so capture its resolver
   // through a holder and return a stable `resolve` that calls the latest.

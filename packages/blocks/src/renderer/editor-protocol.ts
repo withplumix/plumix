@@ -5,13 +5,15 @@
 // described here, including the handshake ones; the transport that carries
 // them lives in ./bridge.
 
+import type { JsonObject } from "../json.js";
 import type { BlockNode } from "../render-block-tree.js";
 
 export const EDITOR_BRIDGE_CHANNEL = "plumix.editor";
 
 /** Node-keyed loader records, as serialized over the bridge — the wire form of
- *  ResolvedBlockLoaders (a ReadonlyMap doesn't survive postMessage). */
-export type SerializedLoaderData = Record<string, Record<string, unknown>>;
+ *  ResolvedBlockLoaders (a ReadonlyMap doesn't survive postMessage). JSON here,
+ *  unlike the in-process bag: see `serializeLoaderData`. */
+export type SerializedLoaderData = Record<string, JsonObject>;
 
 /** Geometry of one block, in the iframe's unscaled coordinate space. */
 export interface BlockRect {

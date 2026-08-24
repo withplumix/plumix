@@ -1,5 +1,6 @@
 import type { BlockRegistry } from "./block-registry.js";
 import type { Label } from "./i18n-label.js";
+import type { JsonObject, JsonValue } from "./json.js";
 import type { BlockNode } from "./render-block-tree.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
 import { commitBlockVariations } from "./commit-block-variations.js";
@@ -12,9 +13,9 @@ import { validateEntryContent } from "./validate-content.js";
  * themes extend it via `declare module "plumix"` so the `block()`
  * helper can narrow attrs at compile time for known block names.
  *
- * Unknown names fall back to a loose `Record<string, unknown>` — see
- * `AttrsFor` below — so call sites with names the registry hasn't seen
- * still compile.
+ * Unknown names fall back to `JsonObject` — see `AttrsFor` below — so call
+ * sites with names the registry hasn't seen still compile. An augmentation's
+ * value type has to be JSON-assignable.
  *
  * ```ts
  * declare module "plumix" {
@@ -53,7 +54,7 @@ export interface PatternCategoryRegistry {
 
 type AttrsFor<TName extends string> = TName extends keyof BlockTypeRegistry
   ? BlockTypeRegistry[TName]
-  : Readonly<Record<string, unknown>>;
+  : JsonObject;
 
 export type PatternInsertMode = "copy" | "reference";
 
@@ -120,7 +121,7 @@ function assignPatternIds(nodes: readonly BlockNode[]): readonly BlockNode[] {
   let counter = 0;
   function walk(input: readonly BlockNode[]): readonly BlockNode[] {
     return input.map((node) => {
-      const next: Record<string, unknown> = {};
+      const next: Record<string, JsonValue> = {};
       for (const [key, value] of Object.entries(node.attrs ?? {})) {
         next[key] = isBlockNodeArray(value) ? walk(value) : value;
       }
@@ -241,12 +242,12 @@ function inlinePatternRefs(
 }
 
 function inlineRefsInAttrs(
-  attrs: Readonly<Record<string, unknown>> | undefined,
+  attrs: JsonObject | undefined,
   patterns: PatternRegistry,
   chain: readonly string[],
-): Readonly<Record<string, unknown>> | undefined {
+): JsonObject | undefined {
   if (!attrs) return attrs;
-  let mutated: Record<string, unknown> | undefined;
+  let mutated: Record<string, JsonValue> | undefined;
   for (const [key, value] of Object.entries(attrs)) {
     if (isBlockNodeArray(value)) {
       const next = inlinePatternRefs(value, patterns, chain);

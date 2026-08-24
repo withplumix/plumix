@@ -13,6 +13,7 @@ import { createRoot, hydrateRoot } from "react-dom/client";
 
 import { StaticHtml } from "./static-html.js";
 
+// Not JSON: island props, see the codec note in `serialize.ts`.
 type Props = Readonly<Record<string, unknown>>;
 
 /**

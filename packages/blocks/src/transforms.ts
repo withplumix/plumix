@@ -1,8 +1,7 @@
 import type { BlockShortcutMode, BlockSpec } from "./block-registry.js";
+import type { JsonObject } from "./json.js";
 
-type MapAttrs = (
-  attrs: Readonly<Record<string, unknown>>,
-) => Readonly<Record<string, unknown>>;
+type MapAttrs = (attrs: JsonObject) => JsonObject;
 
 export interface ResolvedTransformTarget {
   readonly target: string;

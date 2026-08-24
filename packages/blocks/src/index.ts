@@ -6,6 +6,10 @@
  * directly — `@plumix/blocks` is workspace-internal and unpublished.
  */
 
+// ─── Serialized-data types ──────────────────────────────────────────────────
+export type { JsonObject, JsonValue } from "./json.js";
+export { isJsonArray, isJsonObject } from "./json.js";
+
 // ─── Block registry primitives ──────────────────────────────────────────────
 export {
   createBlockRegistry,
@@ -41,6 +45,7 @@ export type {
   BlockNodeComponent,
   BlockNodeRenderProps,
   BlockRenderHooks,
+  MaterializedAttrs,
   RenderBlockTreeOptions,
 } from "./render-block-tree.js";
 

@@ -1,3 +1,4 @@
+import type { JsonValue } from "./json.js";
 import type { BlockNode } from "./render-block-tree.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
@@ -24,7 +25,7 @@ export function rewriteBlockNodeIds(
   nodes: readonly BlockNode[],
 ): readonly BlockNode[] {
   return nodes.map((node) => {
-    const nextAttrs: Record<string, unknown> = {};
+    const nextAttrs: Record<string, JsonValue> = {};
     for (const [key, value] of Object.entries(node.attrs ?? {})) {
       nextAttrs[key] = isBlockNodeArray(value)
         ? rewriteBlockNodeIds(value)

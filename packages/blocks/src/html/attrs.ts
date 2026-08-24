@@ -1,3 +1,5 @@
+import type { JsonObject } from "../json.js";
+
 // Allowlist for author-supplied HTML attributes spread onto a block's root
 // element. Attributes reach the DOM as React props, so the threat isn't the
 // value (React escapes it) but the KEY: a `dangerouslySetInnerHTML` injects
@@ -31,7 +33,7 @@ export function isAllowedHtmlAttr(name: string): boolean {
 /** Filter an author-supplied attribute map down to the allowlisted, string-
  *  valued entries safe to spread onto a block element. */
 export function safeHtmlAttrs(
-  attrs: Readonly<Record<string, unknown>> | undefined,
+  attrs: JsonObject | undefined,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   if (!attrs) return out;

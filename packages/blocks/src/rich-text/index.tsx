@@ -9,8 +9,14 @@ import { expandShortcodes } from "../shortcodes/expand.js";
 
 // The trust boundary is the stored bytes: a string body is authored HTML and
 // is sanitised at render like `core/html`, which also covers content stored
-// before this gate. A React-element body is the editor's own live buffer
-// (admin editor preview), so it surfaces verbatim.
+// before this gate.
+//
+// The element branch skips that sanitiser. It cannot be reached through the
+// walker at all — `isValidElement` needs a symbol `$$typeof`, which stored JSON
+// cannot carry — so the only way in is a direct call to this spec's `render`,
+// which the `plumix/blocks` façade exports. Nothing in the repo does that. Kept
+// rather than removed because deleting it is a behaviour change; #1895 tracks
+// removing it.
 function RichTextBlockRender({
   attrs,
   context,

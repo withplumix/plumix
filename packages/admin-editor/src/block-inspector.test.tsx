@@ -5,7 +5,7 @@ import { I18nProvider } from "@lingui/react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { BlockNode, BlockRegistry } from "@plumix/blocks";
+import type { BlockNode, BlockRegistry, JsonValue } from "@plumix/blocks";
 import type { SerializedLoaderData } from "@plumix/blocks/renderer";
 import { createBlockRegistry } from "@plumix/blocks";
 
@@ -306,8 +306,8 @@ describe("BlockInspector", () => {
       testId,
     }: {
       readonly rhf: {
-        readonly value: unknown;
-        readonly onChange: (v: unknown) => void;
+        readonly value: JsonValue | undefined;
+        readonly onChange: (v: JsonValue) => void;
       };
       readonly testId: string;
     }): ReactElement => {

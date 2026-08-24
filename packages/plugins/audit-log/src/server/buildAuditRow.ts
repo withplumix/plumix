@@ -1,3 +1,5 @@
+import type { JsonObject } from "plumix";
+
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditLogActor } from "../types.js";
 
@@ -26,10 +28,12 @@ interface BuildAuditRowInput {
     readonly id: string;
     readonly label: string;
   };
+  // Not JSON: entity rows. `shallowEqual` compares `Date` instances by
+  // `getTime()`, so a column value reaches the diff live.
   readonly previous?: Readonly<Record<string, unknown>>;
   readonly next?: Readonly<Record<string, unknown>>;
   /** Extra fields merged into `properties` after the diff. */
-  readonly extraProperties?: Readonly<Record<string, unknown>>;
+  readonly extraProperties?: JsonObject;
 }
 
 export function buildAuditRow(input: BuildAuditRowInput): NewAuditLogRow {

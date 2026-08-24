@@ -3,6 +3,8 @@ import type {
   BlockPattern,
   BlockRegistry,
   InsertableBlockEntry,
+  JsonObject,
+  JsonValue,
 } from "@plumix/blocks";
 import {
   expandBlockVariations,
@@ -124,7 +126,7 @@ export function createNodeFromEntry(
   entry: InsertableBlockEntry,
 ): BlockNode {
   const spec = registry.get(entry.name);
-  const attrs: Record<string, unknown> = {
+  const attrs: Record<string, JsonValue> = {
     ...spec?.defaults,
     ...entry.attrs,
   };
@@ -168,8 +170,8 @@ export function createNodeFromEntry(
 // own children, as core/columns' DEFAULT_COLUMNS does.
 function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
   const spec = registry.get(node.name);
-  const base: Record<string, unknown> = { ...spec?.defaults, ...node.attrs };
-  const attrs: Record<string, unknown> = {};
+  const base: JsonObject = { ...spec?.defaults, ...node.attrs };
+  const attrs: Record<string, JsonValue> = {};
   for (const [key, value] of Object.entries(base)) {
     attrs[key] = isBlockNodeArray(value)
       ? value.map((child) => seedNodeDefaults(child, registry))

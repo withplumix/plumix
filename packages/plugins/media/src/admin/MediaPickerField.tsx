@@ -1,3 +1,4 @@
+import type { JsonObject, JsonValue } from "plumix";
 import type { MetaBoxFieldManifestEntry } from "plumix/plugin";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -35,7 +36,7 @@ export function normalizeValue(raw: unknown): MediaValue | null {
     return raw === "" ? null : { id: raw };
   }
   if (!raw || typeof raw !== "object") return null;
-  const obj = raw as Record<string, unknown>;
+  const obj = raw as JsonObject;
   if (typeof obj.id !== "string" || obj.id === "") return null;
   return {
     id: obj.id,
@@ -88,8 +89,11 @@ export function MediaPickerField({
 }: {
   readonly field: MetaBoxFieldManifestEntry;
   readonly rhf: {
+    // Not JSON: in a metabox this is RHF's own controller value, which can be a
+    // `Date` (see the temporal branch in admin's `meta-box-field`). Only the
+    // write half is provably JSON.
     readonly value: unknown;
-    readonly onChange: (next: unknown) => void;
+    readonly onChange: (next: JsonValue) => void;
     readonly onBlur: () => void;
     readonly name: string;
   };
@@ -97,7 +101,7 @@ export function MediaPickerField({
   readonly testId: string;
   // Present only in the block inspector (the block's sibling attributes);
   // absent in metaboxes. Used purely to know which context we're rendering in.
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
 }): ReactNode {
   const { i18n } = useLingui();
   const [open, setOpen] = useState(false);

@@ -10,7 +10,11 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { CommandContext, CommandDefinition } from "@plumix/core";
+import type {
+  CommandContext,
+  CommandDefinition,
+  JsonObject,
+} from "@plumix/core";
 import { CliError, spawnInherit } from "@plumix/core";
 
 import { report } from "../report.js";
@@ -166,11 +170,13 @@ child.on("exit", (code) => {
 });
 `;
 
-interface PackageJsonShape {
+/** A parsed `package.json`. The two named slots are what this command edits;
+ *  the `JsonObject` half is the rest of the file, which round-trips untouched. */
+type PackageJsonShape = Readonly<{
   scripts?: Record<string, string>;
   devDependencies?: Record<string, string>;
-  [key: string]: unknown;
-}
+}> &
+  JsonObject;
 
 /** Read package.json, raising a CliError on missing or malformed input.
  *  Silent fallback would clobber a user's broken file with a synthetic

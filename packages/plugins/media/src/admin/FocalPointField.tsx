@@ -1,3 +1,4 @@
+import type { JsonObject, JsonValue } from "plumix";
 import type { ReactNode, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useRef } from "react";
 import { useLingui } from "plumix/i18n";
@@ -10,10 +11,7 @@ import { M } from "./messages.js";
 // image block as CSS object-position. This control lets an author set it by
 // clicking/dragging on the image preview instead of typing coordinates.
 
-interface FocalPoint {
-  readonly x: number;
-  readonly y: number;
-}
+type FocalPoint = Readonly<{ x: number; y: number }>;
 
 const clamp01 = (n: number): number => Math.min(1, Math.max(0, n));
 
@@ -29,7 +27,7 @@ function readFocalPoint(raw: unknown): FocalPoint {
 }
 
 // The block's image url — the picked media's url, else the raw src escape hatch.
-function imageUrl(attrs: Readonly<Record<string, unknown>>): string {
+function imageUrl(attrs: JsonObject): string {
   const media = attrs.media;
   if (media && typeof media === "object") {
     const url = (media as { url?: unknown }).url;
@@ -62,11 +60,12 @@ export function FocalPointField({
   attrs,
 }: {
   readonly rhf: {
+    /** Not JSON, for the reason given in `MediaPickerField`. */
     readonly value: unknown;
-    readonly onChange: (next: unknown) => void;
+    readonly onChange: (next: JsonValue) => void;
   };
   readonly testId: string;
-  readonly attrs?: Readonly<Record<string, unknown>>;
+  readonly attrs?: JsonObject;
 }): ReactNode {
   const { i18n } = useLingui();
   const url = imageUrl(attrs ?? {});
