@@ -22,11 +22,5 @@ export interface RenderEnv {
   readonly document: DocumentManifest;
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly assetManifest: AssetManifest;
-  /**
-   * Baseline + `config.blocks.htmlAllowlist`, as `buildApp` resolved it.
-   * The renderer mounts it on `HtmlAllowlistProvider` so `core/html` and
-   * `core/rich-text` sanitize against the operator's list rather than the
-   * context default.
-   */
   readonly htmlAllowlist: HtmlAllowlist;
 }

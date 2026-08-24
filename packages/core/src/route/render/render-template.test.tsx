@@ -4268,6 +4268,92 @@ describe("html allowlist — operator config reaches the renderer", () => {
     ).text();
 
     expect(body).not.toContain("cat.png");
+    // Positive control: a 404 or a template miss would satisfy the line above
+    // on its own, so pin that the block did render.
+    expect(body).toContain("<p></p>");
+  });
+
+  // This wiring is what turns the override into a live lever, so the floors
+  // under it need pinning on the composed path, not just in their own unit.
+  test("the floors still hold against an override that names denied tags", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: htmlTheme,
+      blocks: {
+        htmlAllowlist: {
+          extraTags: ["script", "iframe"],
+          extraAttributes: { p: ["onclick"] },
+        },
+      },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "raw",
+      title: "Raw",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "r1",
+            name: "core/html",
+            attrs: {
+              html: '<p onclick="x()">hi</p><script>x()</script><iframe src="/x"></iframe>',
+            },
+          },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const body = await (
+      await h.dispatch(new Request("https://cms.example/post/raw"))
+    ).text();
+
+    expect(body).toContain("<p>hi</p>");
+    expect(body).not.toContain("<script>x()</script>");
+    expect(body).not.toContain("<iframe");
+    expect(body).not.toContain("onclick");
+  });
+
+  test("core/rich-text honours the override too, not just core/html", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: htmlTheme,
+      blocks: {
+        htmlAllowlist: {
+          extraTags: ["img"],
+          extraAttributes: { img: ["src"] },
+        },
+      },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "rich",
+      title: "Rich",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "t1",
+            name: "core/rich-text",
+            attrs: { body: '<p><img src="/cat.png"></p>' },
+          },
+        ],
+      },
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const body = await (
+      await h.dispatch(new Request("https://cms.example/post/rich"))
+    ).text();
+
+    expect(body).toContain('<img src="/cat.png" />');
   });
 
   // The editor canvas remounts client-side with no server context, so it can
@@ -4292,7 +4378,7 @@ describe("html allowlist — operator config reaches the renderer", () => {
     ).text();
 
     const env = JSON.parse(
-      /data-plumix-render-env="">(.*?)<\/script>/.exec(body)?.[1] ?? "null",
+      /data-plumix-render-env="">(.*?)<\/script>/.exec(body)?.[1] ?? "{}",
     ) as { htmlAllowlist?: { allowedTags: readonly string[] } };
     expect(env.htmlAllowlist?.allowedTags).toContain("img");
   });

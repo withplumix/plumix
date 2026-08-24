@@ -117,12 +117,10 @@ export function BlockRenderer({
   // Edit mode: wrap the content in a mount root the injected runtime renders
   // into, and embed the tree + the SSR-resolved loader data so the edit runtime
   // seeds both without a round-trip — blocks open with real data and keep it
-  // across edits (loaders re-run only via a scoped refresh). The render env
-  // rides along for the same reason: the canvas is a fresh React tree with no
-  // server context, so tokens, breakpoints and the html allowlist have to
-  // cross the iframe boundary as data or the canvas renders to a different
-  // set of rules than the published page. `<` is escaped so authored content
-  // can't break out of the JSON <script>.
+  // across edits (loaders re-run only via a scoped refresh), plus the render
+  // env — tokens, breakpoints, allowlist — the runtime has no other way to
+  // learn. `<` is escaped so authored content can't break out of the JSON
+  // <script>.
   return (
     <div data-plumix-content-root="">
       <script

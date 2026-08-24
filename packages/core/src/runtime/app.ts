@@ -221,13 +221,9 @@ export interface PlumixApp {
   readonly shortcodes: ShortcodeRegistry;
   /**
    * Sanitizer allowlist the blocks that render stored HTML
-   * (`core/html`, `core/rich-text`) are held to. Built once from the
-   * intrinsic baseline + `config.blocks.htmlAllowlist`.
-   *
-   * It reaches those blocks through `HtmlAllowlistProvider`, which the
-   * public render mounts from `renderEnv.htmlAllowlist` and the editor
-   * canvas re-mounts inside the iframe from the SSR render-env embed —
-   * so an operator's extra tags / attrs render the same in both places.
+   * (`core/html`, `core/rich-text`) are held to, built once from the
+   * intrinsic baseline + `config.blocks.htmlAllowlist`. It reaches those
+   * blocks through `HtmlAllowlistProvider`, never as a prop.
    */
   readonly htmlAllowlist: HtmlAllowlist;
   /**

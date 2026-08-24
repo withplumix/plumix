@@ -4,8 +4,9 @@
 "@plumix/admin-editor": patch
 ---
 
-Wires `blocks.htmlAllowlist` through to the renderer. An operator's `extraTags` / `extraAttributes`
-now change what `core/html` and `core/rich-text` render, on the public page and in the editor canvas.
+Wires `blocks.htmlAllowlist` through to the renderer. All four of its fields — `extraTags`,
+`extraAttributes`, `schemes`, `allowProtocolRelative` — now change what `core/html` and
+`core/rich-text` render, on the public page and in the editor canvas.
 
 The allowlist was typed, documented, and built at boot, but nothing mounted `HtmlAllowlistProvider`,
 so every render fell back to the context default — the baseline. Setting

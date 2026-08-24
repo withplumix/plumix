@@ -29,5 +29,5 @@ that reached them, and the mixed-case spelling was honoured in the editor alone:
 its allowlist while sanitize-html compares the parsed name against it verbatim.
 
 Nothing was exploitable: a site had to opt in through `blocks.htmlAllowlist`, and that override
-reached no renderer at the time. It reaches both as of this same release, which is why this closes
-the last of the three override fields first.
+reached no renderer at the time. It reaches both as of this same release, which is why this floor —
+the last of the three — lands first.

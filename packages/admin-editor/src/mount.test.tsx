@@ -11,6 +11,11 @@ import { mountEditorRuntime } from "./mount.js";
 
 const registry = createBlockRegistry(coreBlocks);
 
+// What the SSR does to its own embeds: an authored `</script>` would otherwise
+// close the tag that carries it.
+const embed = (value: unknown): string =>
+  JSON.stringify(value).replace(/</g, "\\u003c");
+
 afterEach(() => {
   document.body.innerHTML = "";
 });
@@ -148,6 +153,68 @@ describe("mountEditorRuntime", () => {
     });
 
     expect(document.querySelector("img")).toBeNull();
+  });
+
+  test("a non-object render env does not take the whole canvas down", () => {
+    const content = {
+      version: "plumix.v2",
+      blocks: [
+        { id: "e1", name: "core/rich-text", attrs: { body: "<h2>Alive</h2>" } },
+      ],
+    };
+    document.body.innerHTML =
+      `<div data-plumix-content-root>` +
+      `<script type="application/json" data-plumix-initial-tree>${JSON.stringify(content)}</script>` +
+      `<script type="application/json" data-plumix-render-env>null</script>` +
+      `<div>ssr</div></div>`;
+
+    act(() => {
+      mountEditorRuntime({
+        doc: document,
+        registry,
+        origin: "http://localhost",
+      });
+    });
+
+    expect(document.body.textContent).toContain("Alive");
+  });
+
+  // The embed is the one allowlist the sanitiser takes on trust from the DOM.
+  // The floors are what make that safe, so pin them on this path too.
+  test("a floor-violating embed still cannot re-admit a denied tag", () => {
+    const content = {
+      version: "plumix.v2",
+      blocks: [
+        {
+          id: "e1",
+          name: "core/html",
+          attrs: { html: "<p>hi</p><script>alert(1)</script>" },
+        },
+      ],
+    };
+    const renderEnv = {
+      htmlAllowlist: {
+        allowedTags: [...BASELINE_HTML_ALLOWLIST.allowedTags, "script"],
+        allowedAttributes: BASELINE_HTML_ALLOWLIST.allowedAttributes,
+      },
+    };
+    document.body.innerHTML =
+      `<div data-plumix-content-root>` +
+      `<script type="application/json" data-plumix-initial-tree>${embed(content)}</script>` +
+      `<script type="application/json" data-plumix-render-env>${embed(renderEnv)}</script>` +
+      `<div>ssr</div></div>`;
+
+    act(() => {
+      mountEditorRuntime({
+        doc: document,
+        registry,
+        origin: "http://localhost",
+      });
+    });
+
+    const canvas = document.querySelector("[data-plumix-id='e1']");
+    expect(canvas?.querySelector("script")).toBeNull();
+    expect(canvas?.textContent).toContain("hi");
   });
 
   test("does nothing on a page with no content root", () => {

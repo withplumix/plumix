@@ -466,9 +466,7 @@ function renderTree({
       : null,
     createElement(TemplateAdapter),
   );
-  // The bulk of `render` self-time (#1494). The allowlist wrapper is the one
-  // mount on the public path: `core/html` and `core/rich-text` read it through
-  // `useHtmlAllowlist`, and silently narrow to the baseline without it.
+  // The bulk of `render` self-time (#1494).
   const rendered = ctx.telemetry.span("render: react", () =>
     renderToString(
       createElement(

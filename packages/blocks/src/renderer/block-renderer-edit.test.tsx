@@ -73,7 +73,7 @@ describe("BlockRenderer edit-mode mount boundary", () => {
     // The canvas re-sanitizes on every keystroke; reading the allowlist off
     // the embed is what keeps its output identical to the server's.
     const env = JSON.parse(
-      /data-plumix-render-env="">(.*?)<\/script>/.exec(html)?.[1] ?? "null",
+      /data-plumix-render-env="">(.*?)<\/script>/.exec(html)?.[1] ?? "{}",
     ) as { htmlAllowlist?: HtmlAllowlist };
     expect(env.htmlAllowlist?.allowedTags).toContain("img");
     expect(env.htmlAllowlist?.allowedAttributes.img).toEqual(["src"]);

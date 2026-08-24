@@ -75,7 +75,10 @@ function readRenderEnv(doc: Document): RenderEnvEmbed {
   const script = doc.querySelector("[data-plumix-render-env]");
   if (!script?.textContent) return {};
   try {
-    return JSON.parse(script.textContent) as RenderEnvEmbed;
+    const parsed: unknown = JSON.parse(script.textContent);
+    // A JSON scalar parses fine and then breaks every reader downstream; the
+    // canvas has no error boundary, so that is the whole editor, not a block.
+    return typeof parsed === "object" && parsed !== null ? parsed : {};
   } catch {
     return {};
   }
