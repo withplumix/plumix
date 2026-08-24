@@ -23,25 +23,49 @@ export interface HtmlAllowlistOverride {
 
 /**
  * Tags that may never appear in sanitized output regardless of what
- * the baseline or operator override declares. A defensive belt against
- * `extraTags` typos / operator-config mistakes that accidentally
- * widen execution surface.
+ * the baseline or operator override declares — a floor under
+ * `extraTags` typos and operator-config mistakes.
+ *
+ * Two families qualify. Elements that are an execution, navigation or
+ * subresource surface, which no attribute filtering makes inert. And
+ * elements whose children parse as raw text on one pass and as markup
+ * on the next: sanitized output is re-parsed, since `core/html` and
+ * `core/rich-text` both hand it to `dangerouslySetInnerHTML`, which
+ * makes that second family the mutation-XSS shape. The remaining
+ * integration points — `foreignObject`, `mtext` and friends — are
+ * reachable only inside `svg` / `math`, denied here already.
+ *
+ * Scoped to tags. `extraAttributes` and `schemes` have no equivalent
+ * floor.
  */
-const HARD_DENYLIST: readonly string[] = Object.freeze([
+export const HARD_DENYLIST: ReadonlySet<string> = new Set([
+  // execution / navigation / subresource surface
   "script",
   "iframe",
   "object",
   "embed",
+  "applet",
   "style",
   "link",
   "meta",
   "base",
+  "frame",
+  "frameset",
   "form",
   "input",
   "textarea",
   "button",
+  // parser context switches
   "svg",
   "math",
+  "annotation-xml",
+  "noscript",
+  "template",
+  "title",
+  "xmp",
+  "noembed",
+  "noframes",
+  "plaintext",
 ]);
 
 /**
@@ -57,12 +81,14 @@ export function buildHtmlAllowlist(
   _registry: BlockRegistry,
   override?: HtmlAllowlistOverride,
 ): HtmlAllowlist {
-  const denied = new Set(HARD_DENYLIST);
-  const isAllowed = (tag: string): boolean => !denied.has(tag);
+  const isAllowed = (tag: string): boolean => !HARD_DENYLIST.has(tag);
 
+  // Override tags are lowercased first: DOMPurify lowercases its own
+  // allowlist, so `"IFRAME"` would otherwise slip past the denylist here
+  // and be honoured by the browser sanitizer.
   const tags = [
     ...BASELINE_HTML_ALLOWLIST.allowedTags,
-    ...(override?.extraTags ?? []),
+    ...(override?.extraTags ?? []).map((tag) => tag.toLowerCase()),
   ].filter(isAllowed);
 
   const attrs: Record<string, string[]> = {};
@@ -71,7 +97,10 @@ export function buildHtmlAllowlist(
   )) {
     if (isAllowed(tag)) attrs[tag] = [...fields];
   }
-  for (const [tag, extra] of Object.entries(override?.extraAttributes ?? {})) {
+  for (const [rawTag, extra] of Object.entries(
+    override?.extraAttributes ?? {},
+  )) {
+    const tag = rawTag.toLowerCase();
     if (!isAllowed(tag)) continue;
     attrs[tag] = [...(attrs[tag] ?? []), ...extra];
   }
