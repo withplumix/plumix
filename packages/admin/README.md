@@ -80,6 +80,32 @@ The default suite is an accessibility baseline — axe-core with WCAG 2.1 AA
 tags run against the landing page. Every new route or feature should add a
 spec under `e2e/`.
 
+### Documentation screenshots
+
+`pnpm docs:screenshots` captures the images `apps/docs` publishes and writes
+them into `apps/docs/src/assets/`. Run it from the repo root and turbo builds
+the admin first; run it here and it uses whatever `dist/` holds.
+
+It runs on the config above as a second Playwright project, so the same build,
+the same preview server and the same RPC mocks that back the e2e suite back the
+captures too.
+
+Each subject in `screenshots/subjects.ts` names the element it frames by test
+id. Framing an element rather than the window means a redesign of the chrome
+around it leaves the image alone — and when the markup does move, the id stops
+resolving and the command fails naming the subject, rather than writing a stale
+picture.
+
+The data is mocked and the clock is frozen, so a re-run on the same machine
+rewrites the same bytes. That does not hold across machines: font rasterization
+differs between macOS and Linux, and a Chromium bump moves it too, so
+regenerating on a different platform produces a whole-image diff for a UI that
+never changed. Regenerate where the images were last taken, or expect to
+re-take all of them.
+
+Images are committed: the docs build needs no admin instance, and a pull request
+diff shows which visuals a change moved.
+
 ### Workspace-local scripts
 
 From `packages/admin/`:
@@ -91,6 +117,8 @@ pnpm test:unit    # vitest (jsdom + React Testing Library)
 pnpm test:e2e     # playwright + axe-core (needs chromium installed once)
 pnpm typecheck
 pnpm lint
+
+pnpm docs:screenshots   # re-capture the images apps/docs publishes
 ```
 
 ## Stack

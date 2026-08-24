@@ -18,7 +18,7 @@ function AppShell(): ReactNode {
 
   return (
     <TooltipProvider delayDuration={100}>
-      <SidebarProvider>
+      <SidebarProvider data-testid="app-shell">
         <CommandPalette capabilities={user.capabilities} />
         <AppSidebar user={user} capabilities={user.capabilities} />
         <SidebarInset>

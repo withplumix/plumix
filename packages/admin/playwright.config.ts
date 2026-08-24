@@ -1,3 +1,5 @@
+import { defineConfig, devices } from "@playwright/test";
+
 import {
   definePlumixE2EConfig,
   resolveE2EPort,
@@ -15,7 +17,7 @@ const E2E_PORT_BASE = 5180;
 const E2E_PORT = resolveE2EPort(E2E_PORT_BASE);
 const BASE_URL = `http://localhost:${String(E2E_PORT)}${ADMIN_BASE_PATH}/`;
 
-export default definePlumixE2EConfig({
+const config = definePlumixE2EConfig({
   port: E2E_PORT_BASE,
   testDir: "./e2e",
   baseURL: BASE_URL,
@@ -34,4 +36,27 @@ export default definePlumixE2EConfig({
     "pnpm exec tsx e2e/fixtures/build-runtime-proof-plugin.ts",
     `pnpm exec vite preview --port ${String(E2E_PORT)} --strictPort`,
   ].join(" && "),
+});
+
+// The documentation screenshots run on this same config — same build, same
+// preview server, same mocks — as a second project rather than a second rig.
+//
+// Viewport and pixel ratio are fixed here rather than per subject: they are
+// what makes a re-run with no UI change produce an equivalent image, and that
+// holds across every subject or not at all. 2x is what a reader on a retina
+// display needs; the docs build downscales from it.
+export default defineConfig({
+  ...config,
+  projects: [
+    ...(config.projects ?? []),
+    {
+      name: "screenshots",
+      testDir: "./screenshots",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1280, height: 800 },
+        deviceScaleFactor: 2,
+      },
+    },
+  ],
 });

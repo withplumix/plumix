@@ -146,9 +146,19 @@ fetch near the content width rather than the full capture.
 
 Images are imported like any Astro asset, so a path that resolves to nothing
 fails the build. That is why `sharp` is a devDependency: Astro's default image
-service optimises the committed captures into `webp` at build time. Capturing
-them is [#1862](https://github.com/withplumix/plumix/issues/1862); until it
-lands, no page carries one.
+service optimises the committed captures into `webp` at build time.
+
+### Regenerating them
+
+`pnpm docs:screenshots`, from the repo root. It builds the admin, drives it
+through the Playwright estate that already runs against it, and rewrites
+`src/assets/<subject>-light.png` and `-dark.png` for every subject listed in
+`packages/admin/screenshots/subjects.ts`.
+
+Adding one is two edits: the subject there, then the page that places the pair.
+[`packages/admin/README.md`](../../packages/admin/README.md) owns the rest — what
+a subject is, what makes a re-run reproducible, and why regenerating on a
+different platform rewrites every image.
 
 ## Content checks
 

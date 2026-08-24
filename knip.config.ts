@@ -183,6 +183,9 @@ const config: KnipConfig = {
         "playwright.config.ts",
         "e2e/*.spec.ts",
         "e2e/support/*.ts",
+        // The documentation capture: same rig, run by the playwright CLI
+        // under its own project rather than by an import.
+        "screenshots/*.spec.ts",
         // Lingui CLI config + compiled catalogs. `lingui.config.ts` is
         // loaded by the `@lingui/cli` binary (extract/compile) — never
         // imported. Compiled `.mjs` catalogs are loaded by `i18n-boot`

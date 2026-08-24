@@ -15,6 +15,7 @@
     "clean:workspaces": "turbo run clean",
     "commitlint": "commitlint",
     "dev": "turbo watch dev --continue",
+    "docs:screenshots": "turbo run docs:screenshots",
     "format": "turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
     "format:fix": "turbo run format --continue -- --write --cache --cache-location .cache/.prettiercache",
     "i18n:check": "turbo run i18n:check",
