@@ -344,7 +344,10 @@ const config: KnipConfig = {
         "lingui.config.ts",
         "locales/*.mjs",
       ],
-      ignoreDependencies: ["@plumix/runtime-cloudflare"],
+      // Playground-only devDeps; see packages/plugins/media above. Blog is
+      // here because this is the one playground that composes a second
+      // plugin, so only here does `^build` need to reach it (#1883).
+      ignoreDependencies: ["@plumix/runtime-cloudflare", "@plumix/plugin-blog"],
       playwright: false,
     },
   },
