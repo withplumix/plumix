@@ -6,9 +6,11 @@
 // equivalent) markup.
 import { describe, expect, test } from "vitest";
 
+import type { HtmlAllowlist } from "./sanitize.js";
 import { createBlockRegistry } from "../index.js";
 import { buildHtmlAllowlist } from "./build-allowlist.js";
 import sanitize from "./dompurify-shim.js";
+import { enforceHtmlFloors } from "./floors.js";
 import { BASELINE_HTML_ALLOWLIST } from "./sanitize.js";
 
 // Mirror how `sanitizeHtml` normalizes the allowlist into the option shape the
@@ -166,28 +168,35 @@ describe("dompurify-shim — baseline allowlist parity", () => {
 // to be driven through this engine too, not only the server one. DOMPurify also
 // rejects the dangerous schemes on its own URI regexp whatever the allowlist
 // says; these cases pin that the builder's floor holds independently of that.
-// The floor lives in the builder, so drive a built allowlist, not a literal.
+// The floor lives in `sanitizeHtml`, so a hand-built allowlist is floored too;
+// `runBuilt` covers the config path and the literal case below covers the other.
 describe("dompurify-shim — operator-override allowlists", () => {
+  // Mirrors what `sanitizeHtml` hands the engine: the floored allowlist,
+  // mapped into the option shape.
+  function runFloored(raw: string, allowlist: HtmlAllowlist): string {
+    const floored = enforceHtmlFloors(allowlist);
+    return sanitize(raw, {
+      allowedTags: [...floored.allowedTags],
+      allowedAttributes: Object.fromEntries(
+        Object.entries(floored.allowedAttributes).map(([tag, attrs]) => [
+          tag,
+          [...attrs],
+        ]),
+      ),
+      allowedSchemes: [...(floored.allowedSchemes ?? [])],
+      allowProtocolRelative: floored.allowProtocolRelative ?? false,
+    });
+  }
+
   function runBuilt(
     raw: string,
     schemes: readonly string[],
     extraAttributes?: Readonly<Record<string, readonly string[]>>,
   ): string {
-    const allowlist = buildHtmlAllowlist(createBlockRegistry([]), {
-      schemes,
-      extraAttributes,
-    });
-    return sanitize(raw, {
-      allowedTags: [...allowlist.allowedTags],
-      allowedAttributes: Object.fromEntries(
-        Object.entries(allowlist.allowedAttributes).map(([tag, attrs]) => [
-          tag,
-          [...attrs],
-        ]),
-      ),
-      allowedSchemes: [...(allowlist.allowedSchemes ?? [])],
-      allowProtocolRelative: allowlist.allowProtocolRelative ?? false,
-    });
+    return runFloored(
+      raw,
+      buildHtmlAllowlist(createBlockRegistry([]), { schemes, extraAttributes }),
+    );
   }
 
   test.each(["javascript", "JavaScript", "JAVASCRIPT"])(
@@ -230,5 +239,18 @@ describe("dompurify-shim — operator-override allowlists", () => {
       p: ["style"],
     });
     expect(parse(out).querySelector("p")?.hasAttribute("style")).toBe(false);
+  });
+
+  // This engine is the one where the mixed-case hole was live, so it is the
+  // one that has to see an allowlist nothing normalized on the way in.
+  test("a hand-built allowlist is floored before this engine sees it", () => {
+    const out = runFloored('<p onclick="alert(1)">hi</p><script>x</script>', {
+      allowedTags: ["p", "SCRIPT", "IFRAME"],
+      allowedAttributes: { p: ["ONCLICK"] },
+      allowedSchemes: ["https"],
+    });
+    expect(out).not.toMatch(/script/i);
+    expect(parse(out).querySelector("p")?.hasAttribute("onclick")).toBe(false);
+    expect(parse(out).querySelector("p")?.textContent).toBe("hi");
   });
 });

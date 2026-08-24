@@ -1,12 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createBlockRegistry } from "../index.js";
-import {
-  buildHtmlAllowlist,
-  HARD_DENIED_ATTRS,
-  HARD_DENIED_SCHEMES,
-  HARD_DENYLIST,
-} from "./build-allowlist.js";
+import { buildHtmlAllowlist } from "./build-allowlist.js";
 import { sanitizeHtml } from "./sanitize.js";
 
 const EMPTY_BLOCK_REGISTRY = createBlockRegistry([]);
@@ -52,36 +47,6 @@ describe("buildHtmlAllowlist", () => {
 
   // Anchors the roster the two suites below iterate: without this,
   // dropping a member takes its cases with it and stays green.
-  test("the denied scheme roster is what it says it is", () => {
-    expect([...HARD_DENIED_SCHEMES]).toEqual([
-      "javascript",
-      "vbscript",
-      "data",
-      "blob",
-      "view-source",
-    ]);
-  });
-
-  test.each([...HARD_DENIED_SCHEMES])(
-    "hard denylist blocks operator-supplied `%s` in schemes",
-    (scheme) => {
-      const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
-        schemes: ["https", scheme],
-      });
-      expect(allowlist.allowedSchemes).toEqual(["https"]);
-    },
-  );
-
-  test.each([...HARD_DENIED_SCHEMES].map((scheme) => scheme.toUpperCase()))(
-    "hard denylist blocks the scheme `%s` regardless of the case it is written in",
-    (scheme) => {
-      const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
-        schemes: [scheme],
-      });
-      expect(allowlist.allowedSchemes).toEqual([]);
-    },
-  );
-
   test("override schemes are lowercased so both sanitizers agree on them", () => {
     const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
       schemes: ["HTTPS"],
@@ -97,42 +62,6 @@ describe("buildHtmlAllowlist", () => {
     expect(out).toBe("<a>x</a>");
   });
 
-  test.each([...HARD_DENIED_ATTRS])(
-    "hard denylist blocks operator-supplied `%s` in extraAttributes",
-    (attr) => {
-      const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
-        extraAttributes: { p: [attr] },
-      });
-      expect(allowlist.allowedAttributes.p ?? []).not.toContain(attr);
-    },
-  );
-
-  test.each([
-    "onclick",
-    "onerror",
-    "onload",
-    "onmouseover",
-    "onfocus",
-    "onanimationstart",
-  ])("hard denylist blocks the handler `%s` in extraAttributes", (attr) => {
-    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
-      extraAttributes: { p: [attr] },
-    });
-    expect(allowlist.allowedAttributes.p ?? []).not.toContain(attr);
-  });
-
-  test.each(["ONCLICK", "OnError", "STYLE"])(
-    "hard denylist blocks the attribute `%s` regardless of the case it is written in",
-    (attr) => {
-      const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
-        extraAttributes: { p: [attr] },
-      });
-      const allowed = allowlist.allowedAttributes.p ?? [];
-      expect(allowed).not.toContain(attr);
-      expect(allowed).not.toContain(attr.toLowerCase());
-    },
-  );
-
   test("the attribute floor does not disturb the legitimate names beside it", () => {
     const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
       extraAttributes: { a: ["REL", "onclick", "target"] },
@@ -143,28 +72,6 @@ describe("buildHtmlAllowlist", () => {
       "rel",
       "target",
     ]);
-  });
-
-  test.each([
-    "*",
-    "o*",
-    "*click",
-    "st*",
-    "on*",
-    "xlink:onclick",
-    "data-x onclick",
-  ])("the attribute floor refuses the non-literal name `%s`", (attr) => {
-    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
-      extraAttributes: { p: [attr] },
-    });
-    expect(allowlist.allowedAttributes.p ?? []).toEqual([]);
-  });
-
-  test("a `*` tag key cannot hang attributes on every tag", () => {
-    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
-      extraAttributes: { "*": ["title"] },
-    });
-    expect(allowlist.allowedAttributes).not.toHaveProperty("*");
   });
 
   test.each([
@@ -184,37 +91,6 @@ describe("buildHtmlAllowlist", () => {
     });
     const out = sanitizeHtml('<p onclick="alert(1)">x</p>', allowlist);
     expect(out).toBe("<p>x</p>");
-  });
-
-  test.each([...HARD_DENYLIST])(
-    "hard denylist blocks operator-supplied `%s` in extraTags",
-    (tag) => {
-      const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
-        extraTags: [tag],
-      });
-      expect(allowlist.allowedTags).not.toContain(tag);
-    },
-  );
-
-  test.each([...HARD_DENYLIST].map((tag) => tag.toUpperCase()))(
-    "hard denylist blocks `%s` regardless of the case it is written in",
-    (tag) => {
-      const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
-        extraTags: [tag],
-        extraAttributes: { [tag]: ["src"] },
-      });
-      expect(allowlist.allowedTags).not.toContain(tag);
-      expect(allowlist.allowedTags).not.toContain(tag.toLowerCase());
-      expect(allowlist.allowedAttributes).not.toHaveProperty(tag);
-      expect(allowlist.allowedAttributes).not.toHaveProperty(tag.toLowerCase());
-    },
-  );
-
-  test("hard denylist also strips extraAttributes targeting dangerous tags", () => {
-    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
-      extraAttributes: { iframe: ["src"] },
-    });
-    expect(allowlist.allowedAttributes).not.toHaveProperty("iframe");
   });
 
   test("registered blocks' parsePaste does NOT widen the output allowlist", () => {

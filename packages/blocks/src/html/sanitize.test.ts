@@ -124,3 +124,50 @@ describe("sanitizeHtml — baseline allowlist", () => {
     ).toBe("<span>x</span>");
   });
 });
+
+// `HtmlAllowlist` and `HtmlAllowlistProvider` are both public, so an allowlist
+// reaching the sanitizer has not necessarily been through `buildHtmlAllowlist`.
+// The floors have to hold for whatever arrives, not only for what the builder
+// produced.
+describe("sanitizeHtml — hand-built allowlists", () => {
+  const HOSTILE = {
+    allowedTags: ["p", "a", "script", "iframe"],
+    allowedAttributes: {
+      p: ["onclick", "style"],
+      a: ["href"],
+      iframe: ["src"],
+      "*": ["*"],
+    },
+    allowedSchemes: ["https", "javascript", "data"],
+    allowProtocolRelative: true,
+  };
+
+  test("a denied tag cannot be admitted by the allowlist it is given", () => {
+    const out = sanitizeHtml("<p>hi</p><script>alert(1)</script>", HOSTILE);
+    expect(out).toBe("<p>hi</p>");
+  });
+
+  test("a denied attribute cannot be admitted by the allowlist it is given", () => {
+    expect(sanitizeHtml('<p onclick="alert(1)">hi</p>', HOSTILE)).toBe(
+      "<p>hi</p>",
+    );
+    expect(sanitizeHtml('<p style="color:red">hi</p>', HOSTILE)).toBe(
+      "<p>hi</p>",
+    );
+  });
+
+  test("a denied scheme cannot be admitted by the allowlist it is given", () => {
+    expect(sanitizeHtml('<a href="javascript:alert(1)">x</a>', HOSTILE)).toBe(
+      "<a>x</a>",
+    );
+    expect(sanitizeHtml('<a href="data:text/html,x">x</a>', HOSTILE)).toBe(
+      "<a>x</a>",
+    );
+  });
+
+  test("the allowlist's legitimate half still applies", () => {
+    expect(sanitizeHtml('<a href="https://e.com/">x</a>', HOSTILE)).toBe(
+      '<a href="https://e.com/">x</a>',
+    );
+  });
+});
