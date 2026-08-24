@@ -1,5 +1,37 @@
 # @plumix/plugin-menu
 
+## 0.2.0
+
+### Minor Changes
+
+- [#1847](https://github.com/withplumix/plumix/pull/1847) [`6ed6444`](https://github.com/withplumix/plumix/commit/6ed6444d4deacc11040cc56e3d673303be94170b) Thanks [@nasyrov](https://github.com/nasyrov)! - Changes `menu.get` to send each item's `meta` already parsed — the declared `MenuItemMeta`, or `null`
+  when the stored JSON matches no known kind — instead of the raw column. `MenuItemMeta` and its arms
+  are now type aliases rather than interfaces, so the shape assigns to the `entries.meta` column
+  directly. A menu item whose stored meta doesn't parse now loads in the editor as an empty custom-URL
+  item, so it stays visible, stays fixable, and no longer rejects the whole save.
+
+### Patch Changes
+
+- [#1897](https://github.com/withplumix/plumix/pull/1897) [`5fbb8cf`](https://github.com/withplumix/plumix/commit/5fbb8cf6faa061554f32c4f3ca490be03449a3d4) Thanks [@nasyrov](https://github.com/nasyrov)! - Types the stored block tree and the plugin dictionaries that describe serialized data with the public `JsonObject` / `JsonValue` types.
+
+  **Source-breaking for block and theme authors** on the type level only — the emitted JS is unchanged. `BlockNode` is now a `type` alias rather than an `interface`, and its `attrs` is a `JsonObject`; the same goes for `BlockVariation.attrs`, `BlockSpec.defaults`, a transform's `mapAttrs`, a block loader's `attrs`, and `ResponsiveStyleSlot` / `VisibilityFlags`. A node built from a `Record<string, unknown>` no longer assigns, and an entry added to `BlockTypeRegistry` has to be spelled as a `type` over an object literal — TypeScript withholds the implicit index signature an `interface` would need.
+
+  What a block's `render` receives is deliberately _not_ JSON and is now named and exported: `MaterializedAttrs` is the stored bag with each slot key replaced by the component that renders that slot's children. `BlockNodeRenderProps`, `BlockNodeComponent` and `BlockSpec` default their `Attrs` parameter to it.
+
+  **Source-breaking for the editor's plugin-field seam.** `@plumix/admin-editor`'s `PluginFieldControlProps` now types `rhf.onChange` as `(next: JsonValue) => void` and the sibling block `attrs` as a `JsonObject`; `rhf.value` stays `unknown`, because the same controls also serve metaboxes, where RHF hands over a live `Date` for a temporal field. The `registerPluginFieldType` registry contract itself is unchanged.
+
+  `@plumix/plugin-audit-log` holds a caller's own `properties` to JSON: `ctx.audit.log({ properties })` and an event definition's `extra` return no longer accept a `Date`, which reached storage as an ISO string anyway. The row's stored envelope stays open — its diff half is built from live entity columns.
+
+  Island props keep their open type — the prop codec encodes `Date`, `Map`, `Set`, `BigInt`, `URL` and the typed arrays so they survive hydration, which a JSON type would deny.
+
+  `@plumix/runtime-cloudflare` types the CF Access JWT payload as jose's `JWTPayload` instead of a loose dictionary.
+
+- [#1882](https://github.com/withplumix/plumix/pull/1882) [`b6dcb7f`](https://github.com/withplumix/plumix/commit/b6dcb7f0a507dd1989e0ca3b86b0fb16927487f0) Thanks [@nasyrov](https://github.com/nasyrov)! - Types the JSON columns and the meta write path with the public `JsonObject` / `JsonValue` types. `entries.meta`, `terms.meta`, `users.meta` and `auth_tokens.payload` now read as `JsonObject` instead of `Record<string, unknown>`, and a sanitized meta patch carries `JsonValue` values.
+
+  **Source-breaking for plugin authors** on the type level only — the emitted JS is unchanged. A read procedure hands its row back with meta already resolved by the field adapters, so the output filters for `entry.list`/`get`/`create`/`update`/`duplicate`, `term.list`/`get`/`create`/`update` and `user.get`/`update` now take `WithResolvedMeta<Entry | Term | User>` rather than the bare row; a filter annotated with the row type no longer assigns. `MetaPatch.upserts` is a `Map<string, JsonValue>`, and writing a `meta` column from a `Record<string, unknown>` needs the value proved first. `ResolvedMeta` and `WithResolvedMeta` are exported from `plumix`.
+
+  One behaviour change, in a path that could not previously succeed: a meta field whose `.sanitize()` callback returns `undefined` now leaves its key untouched instead of upserting `undefined`, which reached the driver as an unbindable `json_set` parameter.
+
 ## 0.1.3
 
 ### Patch Changes

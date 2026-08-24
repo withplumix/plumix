@@ -1,5 +1,94 @@
 # @plumix/core
 
+## 0.15.0
+
+### Minor Changes
+
+- [#1825](https://github.com/withplumix/plumix/pull/1825) [`c0771f0`](https://github.com/withplumix/plumix/commit/c0771f010290452887f758483a25a2e303dbf346) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `createTestContext` and `applyTestSchema` to `plumix/test` — a real `AppContext` for tests that call a service function directly, and a one-liner for creating a drizzle schema module's tables on an existing test db.
+
+- [#1894](https://github.com/withplumix/plumix/pull/1894) [`b39380a`](https://github.com/withplumix/plumix/commit/b39380a7dab2780ec1f36729328258b529b85800) Thanks [@nasyrov](https://github.com/nasyrov)! - Types the returns that were left `unknown`. A function declaring a return type of `unknown` — or a
+  promise of one — is now rejected in production source by `plumix/no-unknown-return`, and the
+  signatures it found say what they hand back.
+
+  **Source-breaking for plugin authors** on the type level. Three sites also emit different JS, each
+  noted below.
+
+  - The `.sanitize()` callback on the `json()` and `entry()`/`term()`/`user()` reference builders, on
+    `media()`, and on a hand-written `MetaBoxField` object returns `JsonValue`. The value is written
+    to a JSON column, so this is what the write path already required — a callback returning a `Date`
+    reached the driver as whatever `JSON.stringify` made of it. The typed builders (string, color,
+    link, number, range, select, temporal, toggle) still take
+    `(value: NonNullable<V>) => NonNullable<V>` and are unaffected for callers.
+  - `LinkValue` is a `type` alias rather than an `interface`, so a link value assigns to `JsonObject`
+    (TypeScript withholds the implicit index signature from an interface).
+  - A telemetry record's `data` is `JsonValue`, and `TelemetryCollector.record` takes
+    `JsonValue | (() => JsonValue)` — matching `TelemetrySpanHandle.set`, which already did. The
+    debug bar still sanitizes at read time, since nothing checks the type at runtime.
+  - The read-error mappers (`toRpcEntryReadError`, `toRpcTermReadError`) return `Error | undefined`
+    instead of passing a foreign error through: `undefined` means "not mine to translate", and the
+    caller rethrows what it caught. This removes a latent `throw undefined` on an unrecognized error
+    code.
+
+  One further behaviour change, in a forgiving-read fallback: a meta value stored as an object or
+  array under a field since narrowed to `string` now reads back as its JSON rather than as
+  `"[object Object]"` or `"a,b"`.
+
+- [#1826](https://github.com/withplumix/plumix/pull/1826) [`064ff07`](https://github.com/withplumix/plumix/commit/064ff07cbf36728beb2afcfcddfe82f0fd36f193) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `JsonObject` and gives `JsonValue` a home of its own, both exported from `plumix`. Use them to describe data that crosses a serialization boundary — stored metadata, span attributes, message payloads — instead of a dictionary of `unknown`. `JsonValue` was previously reachable only as a wildcard re-export of an internal telemetry module; it is now a deliberate part of the public API.
+
+- [#1880](https://github.com/withplumix/plumix/pull/1880) [`e5d9d6b`](https://github.com/withplumix/plumix/commit/e5d9d6bef5b901206a3fd4f9a68d84b9edadb4ef) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `PlumixApp.loadMcpHandler`, mirroring `loadRestHandler`: the MCP entry point now loads through
+  a memoized loader on the app rather than a module-scoped one shared across everything in the
+  isolate. The handler's shape is exported as `McpHandler`. `createDispatcherHarness` gains a
+  `coldInterfaces` option for substituting either cold-interface loader, so a test can assert that a
+  disabled interface is never reached for.
+
+- [#1882](https://github.com/withplumix/plumix/pull/1882) [`b6dcb7f`](https://github.com/withplumix/plumix/commit/b6dcb7f0a507dd1989e0ca3b86b0fb16927487f0) Thanks [@nasyrov](https://github.com/nasyrov)! - Types the JSON columns and the meta write path with the public `JsonObject` / `JsonValue` types. `entries.meta`, `terms.meta`, `users.meta` and `auth_tokens.payload` now read as `JsonObject` instead of `Record<string, unknown>`, and a sanitized meta patch carries `JsonValue` values.
+
+  **Source-breaking for plugin authors** on the type level only — the emitted JS is unchanged. A read procedure hands its row back with meta already resolved by the field adapters, so the output filters for `entry.list`/`get`/`create`/`update`/`duplicate`, `term.list`/`get`/`create`/`update` and `user.get`/`update` now take `WithResolvedMeta<Entry | Term | User>` rather than the bare row; a filter annotated with the row type no longer assigns. `MetaPatch.upserts` is a `Map<string, JsonValue>`, and writing a `meta` column from a `Record<string, unknown>` needs the value proved first. `ResolvedMeta` and `WithResolvedMeta` are exported from `plumix`.
+
+  One behaviour change, in a path that could not previously succeed: a meta field whose `.sanitize()` callback returns `undefined` now leaves its key untouched instead of upserting `undefined`, which reached the driver as an unbindable `json_set` parameter.
+
+- [#1904](https://github.com/withplumix/plumix/pull/1904) [`5a24bfc`](https://github.com/withplumix/plumix/commit/5a24bfcd445c2cf1b89224f5ec07f4fef1080c57) Thanks [@nasyrov](https://github.com/nasyrov)! - Retypes `PluginRpcRouter`, the shape `registerRpcRouter` accepts, from `Record<string, any>` to
+  oRPC's own router type, so a plugin can name what its router-building function returns. Handing
+  `registerRpcRouter` a plain callable, or anything else that is not a procedure, is now reported
+  where the router is written instead of as a 404 at request time. Sub-routers still nest to any
+  depth, and lazy ones are accepted, as oRPC allows.
+
+  It was already reachable through `plumix/plugin` — it just published a dictionary of `any`, so
+  naming it bought nothing over the loose annotation both first-party routers were using instead.
+
+  Source-breaking for plugin authors on the type level only; the emitted JS is unchanged. Migration:
+  a router-building function annotated `Record<string, unknown>` (or `Record<string, any>`) should now
+  return `PluginRpcRouter`. If you name the router's shape separately, declare it with `type` and not
+  `interface` — TypeScript withholds the implicit index signature from interface declarations, so an
+  interface never assigns.
+
+### Patch Changes
+
+- [#1889](https://github.com/withplumix/plumix/pull/1889) [`82fa032`](https://github.com/withplumix/plumix/commit/82fa0323aada1c0c37e17261a4d2c62f7b585584) Thanks [@nasyrov](https://github.com/nasyrov)! - Registers `core/html` with the rest of `coreBlocks`, so the raw-HTML block appears in the inserter
+  and renders without a site installing it by hand.
+
+  It was held out of `coreBlocks` when it had no sanitizer, on the understanding that a site wanting
+  the escape hatch would register it explicitly. That route stopped working: block registration rejects
+  any name in the reserved `core/` namespace, so neither a theme's `blocks` field nor a plugin's
+  `registerBlock` would take it, and the block shipped unreachable. The reason for holding it back is
+  also gone — it renders through `sanitizeHtml`, the same path `core/rich-text` already takes, so it
+  adds no rendering surface a site did not already have.
+
+  What survives sanitizing is the baseline allowlist: text-level markup and `http`/`https`/`mailto`/
+  `tel` anchors. `script`, `iframe`, `object`, `embed`, `style`, `link`, `meta`, `base`, `form`,
+  `input`, `textarea`, `button`, `svg` and `math` are denied outright and stay denied whatever a site
+  configures. Others, `img` among them, are simply absent from the baseline and can be added.
+
+  Two caveats worth knowing. There is no per-block disable, so a site that would rather not offer a
+  raw-HTML block has no switch for it. And `blocks.htmlAllowlist` does not currently reach the
+  renderer at all — everything sanitizes against the baseline until that is wired up.
+
+- [#1806](https://github.com/withplumix/plumix/pull/1806) [`cfae716`](https://github.com/withplumix/plumix/commit/cfae716b9a39873db45ccb79083f4e1753e14744) Thanks [@nasyrov](https://github.com/nasyrov)! - Stops `mockManifest` forwarding stale response headers onto the document it rewrites. `content-encoding`, `content-length`, `transfer-encoding`, `etag`, and `last-modified` all described the original bytes, not the decoded and resized body being served, so they are now dropped and Playwright reframes the response itself.
+
+- [#1803](https://github.com/withplumix/plumix/pull/1803) [`b014e4d`](https://github.com/withplumix/plumix/commit/b014e4d212f1ccde8af3dd1464a1fea4143b97f9) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the `mockManifest` Playwright helper throwing "Response has been disposed" and failing an unrelated test. Document responses disposed mid-rewrite are now served unmodified instead of erroring.
+- Updated dependencies [[`5fbb8cf`](https://github.com/withplumix/plumix/commit/5fbb8cf6faa061554f32c4f3ca490be03449a3d4), [`b39380a`](https://github.com/withplumix/plumix/commit/b39380a7dab2780ec1f36729328258b529b85800), [`82fa032`](https://github.com/withplumix/plumix/commit/82fa0323aada1c0c37e17261a4d2c62f7b585584), [`482b4e6`](https://github.com/withplumix/plumix/commit/482b4e697cbf6b2f014e712315050f474f502fe0), [`fdd72b8`](https://github.com/withplumix/plumix/commit/fdd72b89167237d25bc3ced465e0d2543c37b40b)]:
+  - @plumix/blocks@0.15.0
+
 ## 0.14.0
 
 ### Minor Changes
