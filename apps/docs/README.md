@@ -63,8 +63,9 @@ Three more conventions fall out of the same shape:
   names a draft.
 - **Partials.** Reused fragments live in `src/content/docs/_partials/*.mdx` and
   are imported by the pages that need them. `src/content.config.ts` excludes
-  `_`-prefixed directories from the docs collection, so a partial is never a
-  page.
+  every `_`-prefixed file and directory from the docs collection, so a partial
+  is never a page — but what it holds still renders, which is why the content
+  checks read partials too.
 - **Nesting.** A page nested past two levels still builds and is still
   reachable at its URL — the cap removes it from the navigation, it does not
   reject it. So an over-nested page becomes an orphan rather than an error,
@@ -162,10 +163,19 @@ different platform rewrites every image.
 
 ## Content checks
 
-`src/content-checks/` walks a content root once and reports every page that
-breaks a documentation convention. Each check takes the pages that one
+`src/content-checks/` walks a content root once and reports every file that
+breaks a documentation convention. Each check takes the files that one
 traversal produced and **returns findings** rather than asserting, so a run
-names every offending page at once.
+names every offending file at once.
+
+The traversal carries **pages and fragments alike**, and each file says which
+it is. A fragment is a partial: the collection glob excludes it, so it has no
+URL, but the markdown pipeline still processes it and whatever it holds renders
+inside every page that imports it. Each check declares which it applies to —
+page shape and roster drift are about a page's promise to a reader and skip
+fragments; the sample check takes both, because a sample in a partial reaches
+readers exactly as one on a page does. That is why partials do not get a walk
+of their own: the suite still reads the tree once.
 
 `runContentChecks` takes the root as a parameter: the suite points it at
 `src/content/docs` for the production run and at `test/fixtures/content` for
@@ -176,6 +186,13 @@ would flag them.
 Every check sees every fixture, so a fixture written for one rule has to hold
 up under the others: a `ts` fence added to a page-shape fixture is a sample the
 code-sample check will compile.
+
+### Parsability
+
+A file the MDX parser cannot read is reported once, by its own check. Every
+other check stays silent on it — a body that does not parse has no shape, no
+roster items and no samples — so this is the report their silence rests on, and
+it covers a fragment as readily as a page.
 
 ### Page shape
 
@@ -189,8 +206,10 @@ which exempts it from the quickstart. A landing page declares Starlight's own
 
 Every fenced `ts`, `tsx` or `typescript` block is type-checked against the types
 `plumix` publishes — no tag needed, because a sample nobody remembered to tag is
-exactly the one that rots. Extraction needs no stitching: by convention every
-example carries its own import lines, so each block already stands alone.
+exactly the one that rots. That includes blocks written in a partial, which is
+exactly where a shared config snippet or a repeated import block ends up.
+Extraction needs no stitching: by convention every example carries its own
+import lines, so each block already stands alone.
 
 Samples are checked, never run. Most Plumix examples are declarative and do not
 meaningfully run without a worker, a database and bindings, so running them
@@ -206,11 +225,11 @@ about — opts out on the fence:
 ```
 ````
 
-Each page gets its own program. A sample carrying `declare module "plumix"` —
+Each file gets its own program. A sample carrying `declare module "plumix"` —
 which is how this project's type augmentation is written — is visible to every
-other sample compiled beside it, and one page's augmentation deciding whether
-another page's sample compiles would be a hole in the gate rather than a
-performance question.
+other sample compiled beside it, and one file's augmentation deciding whether
+another's sample compiles would be a hole in the gate rather than a performance
+question.
 
 Because the check reads the published `.d.ts` files rather than the packages'
 source, it needs the build graph. That puts it in the `test:build` tier
@@ -223,6 +242,10 @@ A roster page says _this is all of them_, so a roster that falls behind its
 source does not merely go incomplete — it lies. `rosters.ts` holds each
 roster's item ids once and pins that list from both sides, to its source and to
 the page, which transitively is page ≡ source.
+
+A roster enumerates its items in its own body, so an item contributed by an
+imported partial reads as `roster-drift/missing-item`. That is the ruling, not
+a gap: a promise assembled out of fragments cannot be read against a source.
 
 **The header comment in `rosters.ts` is the reference** — how a roster binds to
 its source, what an item id is, and what adding a roster involves are all

@@ -5,6 +5,7 @@ import type { Roster } from "./roster-drift";
 import { checkCodeSamples } from "./code-samples";
 import { readContentTree } from "./content-tree";
 import { checkPageShape } from "./page-shape";
+import { checkParsable } from "./parsable";
 import { checkRosterDrift } from "./roster-drift";
 import { ROSTERS } from "./rosters";
 
@@ -16,7 +17,9 @@ export const CONTENT_ROOT = fileURLToPath(
 /**
  * Run every content check over one traversal of a content root. Checks are
  * added here rather than given a traversal of their own, so the suite stays
- * fast as the tree grows past a hundred pages.
+ * fast as the tree grows past a hundred pages — which is also why the
+ * traversal carries fragments and each check declares whether it applies to
+ * them, rather than the partials getting a walk of their own.
  *
  * The rosters are a parameter for the same reason the root is: a check has to
  * be provable against content built to break it.
@@ -25,11 +28,12 @@ export function runContentChecks(
   root: string,
   rosters: readonly Roster[] = ROSTERS,
 ): Finding[] {
-  const pages = readContentTree(root);
+  const files = readContentTree(root);
 
   return [
-    ...checkPageShape(pages),
-    ...checkCodeSamples(pages),
-    ...checkRosterDrift(pages, rosters),
+    ...checkParsable(files),
+    ...checkPageShape(files),
+    ...checkCodeSamples(files),
+    ...checkRosterDrift(files, rosters),
   ];
 }

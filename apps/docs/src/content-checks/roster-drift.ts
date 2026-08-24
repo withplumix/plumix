@@ -1,4 +1,4 @@
-import type { ContentPage } from "./content-tree";
+import type { ContentFile } from "./content-tree";
 import type { Finding } from "./finding";
 import { readBodyShape } from "./body-shape";
 
@@ -26,11 +26,17 @@ export interface Roster {
  * useful — the binding takes hold the moment the page exists. The cost of that
  * is a mistyped path looking exactly like an unwritten page, which is why a
  * written roster page no entry claims is reported in its own right.
+ *
+ * Pages only. A roster is a page's promise to its reader that this is all of
+ * them, and a fragment has no reader of its own to promise anything to — so a
+ * roster enumerates its items in its own body rather than assembling them out
+ * of partials, and the `###` headings read here are the page's own.
  */
 export function checkRosterDrift(
-  pages: readonly ContentPage[],
+  files: readonly ContentFile[],
   rosters: readonly Roster[],
 ): Finding[] {
+  const pages = files.filter((file) => file.kind === "page");
   const byPath = new Map(pages.map((page) => [page.path, page]));
   const claimed = new Set(rosters.map((roster) => roster.page));
 
@@ -42,7 +48,7 @@ export function checkRosterDrift(
     ...pages
       .filter((page) => isRoster(page) && !claimed.has(page.path))
       .map((page) => ({
-        page: page.path,
+        file: page.path,
         rule: "roster-drift/unregistered-page",
         message:
           "Declares `roster: true`, but no entry in `src/content-checks/rosters.ts` claims it — so nothing holds it to its source. Register it, or drop the frontmatter if the page promises no closed set.",
@@ -50,15 +56,15 @@ export function checkRosterDrift(
   ];
 }
 
-function isRoster(page: ContentPage): boolean {
+function isRoster(page: ContentFile): boolean {
   return page.frontmatter.roster === true;
 }
 
-function checkRoster(roster: Roster, page: ContentPage): Finding[] {
-  const body = readBodyShape(page.body);
-  // An unparsable page has no items to read. The shape check reports it; a
-  // second complaint per roster item would bury that one line.
-  if (body === undefined) return [];
+function checkRoster(roster: Roster, page: ContentFile): Finding[] {
+  // Reported by `checkParsable`.
+  if (page.mdast === undefined) return [];
+
+  const body = readBodyShape(page.mdast);
 
   const documented = new Set(
     body.headings
@@ -71,14 +77,14 @@ function checkRoster(roster: Roster, page: ContentPage): Finding[] {
     ...roster.items
       .filter((item) => !documented.has(item))
       .map((item) => ({
-        page: page.path,
+        file: page.path,
         rule: "roster-drift/missing-item",
         message: `The roster is short of \`${item}\`, which its source lists. Document it as a \`###\` heading, or drop it from this roster's items in \`src/content-checks/rosters.ts\`.`,
       })),
     ...[...documented]
       .filter((item) => !expected.has(item))
       .map((item) => ({
-        page: page.path,
+        file: page.path,
         rule: "roster-drift/unknown-item",
         message: `The roster documents \`${item}\`, which its source does not list. Remove it, or add it to this roster's items in \`src/content-checks/rosters.ts\` — where a source binding decides whether it belongs.`,
       })),

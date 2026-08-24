@@ -6,9 +6,9 @@ import { checkPageShape } from "./page-shape";
 
 const findings = checkPageShape(readContentTree(FIXTURES_ROOT));
 
-function rulesFor(page: string): string[] {
+function rulesFor(file: string): string[] {
   return findings
-    .filter((finding) => finding.page === page)
+    .filter((finding) => finding.file === file)
     .map((finding) => finding.rule);
 }
 
@@ -66,12 +66,16 @@ describe("checkPageShape", () => {
     expect(rulesFor("index.mdx")).toEqual([]);
   });
 
-  it("reports a page it cannot parse instead of taking the run down with it", () => {
-    expect(rulesFor("unparsable.mdx")).toEqual(["page-shape/unparsable"]);
+  it("does not hold a fragment to the page template, which it has no URL to wear", () => {
+    expect(rulesFor("_partials/note.mdx")).toEqual([]);
+  });
+
+  it("leaves an unparsable page to the parse check, which already reports it", () => {
+    expect(rulesFor("unparsable.mdx")).toEqual([]);
   });
 
   it("reports every offending page in one run", () => {
-    const offenders = [...new Set(findings.map((finding) => finding.page))];
+    const offenders = [...new Set(findings.map((finding) => finding.file))];
 
     expect(offenders.sort()).toEqual([
       "headings-in-code.mdx",
@@ -80,7 +84,6 @@ describe("checkPageShape", () => {
       "missing-lede.mdx",
       "missing-sections.mdx",
       "rosters/empty.mdx",
-      "unparsable.mdx",
     ]);
   });
 });

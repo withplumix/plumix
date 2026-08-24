@@ -34,7 +34,7 @@ const SAMPLES_DIR = join(DOCS_ROOT, ".samples");
 const NO_INPUTS_FOUND = 18003;
 
 /**
- * Compile one page's samples in one program and return what the compiler said
+ * Compile one file's samples in one program and return what the compiler said
  * about each — one array of complaints per sample, in the order passed in.
  *
  * Samples are type-checked, never executed; the README carries why.

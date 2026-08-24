@@ -13,6 +13,7 @@ const FIXTURE_ROSTERS: readonly Roster[] = [
   },
   { page: "rosters/roles.mdx", items: ["subscriber", "contributor"] },
   { page: "unparsable.mdx", items: ["text"] },
+  { page: "_partials/note.mdx", items: ["draft"] },
   { page: "rosters/not-written-yet.mdx", items: ["text"] },
 ];
 
@@ -21,15 +22,15 @@ const findings = checkRosterDrift(
   FIXTURE_ROSTERS,
 );
 
-function rulesFor(page: string): string[] {
+function rulesFor(file: string): string[] {
   return findings
-    .filter((finding) => finding.page === page)
+    .filter((finding) => finding.file === file)
     .map((finding) => finding.rule);
 }
 
-function messagesFor(page: string): string {
+function messagesFor(file: string): string {
   return findings
-    .filter((finding) => finding.page === page)
+    .filter((finding) => finding.file === file)
     .map((finding) => finding.message)
     .join("\n");
 }
@@ -59,7 +60,7 @@ describe("checkRosterDrift", () => {
     expect(rulesFor("rosters/field-types.mdx")).toEqual([]);
   });
 
-  it("leaves an unparsable page to the shape check, which already reports it", () => {
+  it("leaves an unparsable page to the parse check, which already reports it", () => {
     expect(rulesFor("unparsable.mdx")).toEqual([]);
   });
 
@@ -73,8 +74,16 @@ describe("checkRosterDrift", () => {
     ]);
   });
 
+  it("does not mistake a fragment for a roster page, whatever it declares", () => {
+    expect(rulesFor("_partials/roster-items.mdx")).toEqual([]);
+  });
+
+  it("reads an entry naming a fragment as a page nobody has written", () => {
+    expect(rulesFor("_partials/note.mdx")).toEqual([]);
+  });
+
   it("reports every drifted roster in one run", () => {
-    const drifted = [...new Set(findings.map((finding) => finding.page))];
+    const drifted = [...new Set(findings.map((finding) => finding.file))];
 
     expect(drifted.sort()).toEqual([
       "rosters/empty.mdx",
