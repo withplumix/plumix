@@ -7,7 +7,7 @@ import MarkdownIt from "markdown-it";
 // `javascript:`/`vbscript:`/`file:` and non-raster `data:` link hrefs
 // (raster `data:` images are still allowed — tighten in the submission
 // slice if embedded images are unwanted).
-const md: MarkdownIt = new MarkdownIt({
+const md = new MarkdownIt({
   html: false,
   linkify: false,
   breaks: true,

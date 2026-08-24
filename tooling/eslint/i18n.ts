@@ -291,6 +291,7 @@ export const i18nStrictOverrides: Linter.Config = {
           // Tanstack query / router / table
           "queryKey",
           "accessorKey",
+          "staleTime",
           // Sortable-header column-id prop value (e.g.
           // `<SortableHeader column="title">`). The column id is the
           // picklist key, not the visible label.

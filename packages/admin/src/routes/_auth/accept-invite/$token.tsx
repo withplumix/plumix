@@ -4,7 +4,7 @@ import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
 import { readManifest } from "@/lib/manifest.js";
 import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { acceptInviteWithPasskey } from "@/lib/passkey.js";
-import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
+import { loadSession, SESSION_QUERY_KEY } from "@/lib/session.js";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
@@ -40,9 +40,7 @@ import { langOnlySearchSchema } from "../-schemas.js";
 export const Route = createFileRoute("/_auth/accept-invite/$token")({
   validateSearch: langOnlySearchSchema,
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(
-      sessionQueryOptions(),
-    );
+    const session = await loadSession(context.queryClient);
     if (session.user) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
       throw redirect({ to: "/" });

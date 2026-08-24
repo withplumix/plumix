@@ -187,9 +187,10 @@ export const Route = createFileRoute("/_authenticated/users/$id/edit")({
     }
   },
   loader: ({ context, params }) =>
-    context.queryClient.ensureQueryData(
-      orpc.user.get.queryOptions({ input: { id: params.id } }),
-    ),
+    context.queryClient.query({
+      ...orpc.user.get.queryOptions({ input: { id: params.id } }),
+      staleTime: "static",
+    }),
   pendingComponent: UserEditLoading,
   errorComponent: UserEditLoadError,
   component: UserEditRoute,

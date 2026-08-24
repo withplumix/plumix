@@ -112,7 +112,7 @@
   "dependencies": {
     "@libsql/client": "catalog:",
     "@lingui/core": "catalog:lingui",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@orpc/openapi": "catalog:orpc",
     "@orpc/server": "catalog:orpc",
     "@orpc/valibot": "catalog:orpc",

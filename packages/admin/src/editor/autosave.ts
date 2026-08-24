@@ -29,7 +29,7 @@ async function freshLiveUpdatedAt(
 ): Promise<Date | null> {
   if (!isStaleConflictError(err)) return null;
   try {
-    const fresh = await queryClient.fetchQuery({
+    const fresh = await queryClient.query({
       ...orpc.entry.get.queryOptions({ input: { id } }),
       staleTime: 0,
     });

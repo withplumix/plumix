@@ -99,6 +99,13 @@ jobs:
       # publishes via OIDC (npm exchanges the workflow identity, no token).
       - name: Version PR or publish
         if: steps.detect.outputs.run == 'true'
+        # Held at v1 deliberately. v2 is only compatible with Changesets v3,
+        # which changes how peer-dependent packages are bumped — the exact
+        # thing `onlyUpdatePeerDependentsWhenOutOfRange` in .changeset/config.json
+        # is tuned around. v2 detects published packages by reading the file named
+        # by CHANGESETS_OUTPUT, which the v2 CLI never writes, so pairing v2 with
+        # our CLI publishes to npm and then skips every tag and GitHub release —
+        # and only warns. Move both together or neither.
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           version: pnpm version-packages

@@ -72,7 +72,7 @@
     "@tiptap/extension-text": "catalog:tiptap",
     "@tiptap/extensions": "catalog:tiptap",
     "@tiptap/react": "catalog:tiptap",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.15"
   },
   "peerDependencies": {
     "@lingui/core": "catalog:lingui",

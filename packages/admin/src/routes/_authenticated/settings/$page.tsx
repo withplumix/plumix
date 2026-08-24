@@ -96,9 +96,10 @@ export const Route = createFileRoute("/_authenticated/settings/$page")({
     const groups = groupsForSettingsPage(context.page);
     return Promise.all(
       groups.map((group) =>
-        context.queryClient.ensureQueryData(
-          orpc.settings.get.queryOptions({ input: { group: group.name } }),
-        ),
+        context.queryClient.query({
+          ...orpc.settings.get.queryOptions({ input: { group: group.name } }),
+          staleTime: "static",
+        }),
       ),
     );
   },

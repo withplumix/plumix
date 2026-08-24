@@ -12,7 +12,7 @@ import { useOAuthErrorMessage } from "@/lib/oauth-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { signInWithPasskey } from "@/lib/passkey.js";
-import { SESSION_QUERY_KEY, sessionQueryOptions } from "@/lib/session.js";
+import { loadSession, SESSION_QUERY_KEY } from "@/lib/session.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -62,9 +62,7 @@ const loginSearchSchema = v.object({
 export const Route = createFileRoute("/_auth/login")({
   validateSearch: loginSearchSchema,
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(
-      sessionQueryOptions(),
-    );
+    const session = await loadSession(context.queryClient);
     if (session.needsBootstrap) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
       throw redirect({ to: "/bootstrap" });

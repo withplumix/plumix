@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { pathToCrumbs } from "@/lib/breadcrumbs.js";
-import { sessionQueryOptions } from "@/lib/session.js";
+import { loadSession } from "@/lib/session.js";
 import { useTheme } from "@/providers/theme.js";
 import { Trans, useLingui } from "@lingui/react";
 import {
@@ -22,10 +22,10 @@ const TITLE_BRAND = "Plumix Admin";
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   // Kick off the session probe as early as possible so child routes' beforeLoad
-  // can synchronously read it via queryClient.getQueryData. ensureQueryData
-  // deduplicates: a single fetch per hard page load.
+  // can synchronously read it via queryClient.getQueryData. The `static`
+  // staleTime deduplicates: a single fetch per hard page load.
   beforeLoad: async ({ context }) => {
-    await context.queryClient.ensureQueryData(sessionQueryOptions());
+    await loadSession(context.queryClient);
   },
   component: RootLayout,
   notFoundComponent: NotFound,
