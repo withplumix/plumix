@@ -4,17 +4,23 @@
 // RPC mocking — the spec exercises the menu plugin end-to-end through
 // the actual oRPC + D1 round-trip.
 
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 // MenuItemEditor.tsx — must match the constant in the component
 // because drag projection compares `delta.x` against this width.
 const INDENTATION_WIDTH = 24;
 
+// The worker-assigned slug of the menu the first test creates. Not
+// hard-codable as `primary`: `.wrangler/state` is wiped once per suite
+// run, not per attempt, so a retry's "Primary" lands beside the
+// abandoned first one as `primary-2`, and every later click on the
+// stale `primary` opens an empty tree.
+let menuSlug = "";
+
 // Tests share state across the serial sequence: the menu created in
 // the first test is reused for locations assignment + drag-nest + the
-// max-depth ceiling check. The webServer wipes `.wrangler/state` once
-// per suite run, so the sequence always starts from an empty D1.
+// max-depth ceiling check.
 test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
   test("create menu → add items → reorder → save → reload persists", async ({
     page,
@@ -30,10 +36,14 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
     await page.getByTestId("menus-selector-create-new").click();
     await page.getByTestId("menus-create-name").fill("Primary");
     await page.getByTestId("menus-create-submit").click();
-    await expect(
-      page.getByTestId("menus-selector-option-primary"),
-    ).toBeVisible();
     await expect(page.getByTestId("menu-item-editor")).toBeVisible();
+    // The shell mirrors the selected menu into `?menu=<slug>`
+    // (`admin/url-state.ts`) — the only place the worker-assigned slug
+    // surfaces client-side. The shape is still pinned, so a `slugify`
+    // regression can't hide behind "whatever the server returned".
+    menuSlug = new URL(page.url()).searchParams.get("menu") ?? "";
+    expect(menuSlug).toMatch(/^primary(-\d+)?$/);
+    await expect(menuOption(page)).toBeVisible();
 
     // 3. Add two custom items via the picker's Custom tab.
     await page.getByTestId("menu-picker-tab-custom").click();
@@ -63,11 +73,30 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
     //    with Space, move it above the first row with ArrowUp, drop
     //    with Space. KeyboardSensor calls preventDefault on Space so
     //    the activator's native click is suppressed.
-    await page.getByTestId(`menu-item-drag-${secondId}`).focus();
+    const dragHandle = page.getByTestId(`menu-item-drag-${secondId}`);
+    await dragHandle.focus();
     await page.keyboard.press("Space");
-    await page.waitForTimeout(50);
-    await page.keyboard.press("ArrowUp");
-    await page.waitForTimeout(50);
+    // `useSortable` puts `aria-pressed` on the activator for the life of
+    // the drag, so this is the pickup landing.
+    await expect(dragHandle).toHaveAttribute("aria-pressed", "true");
+    // Pickup is necessary but not sufficient. A keypress has several ways
+    // to be silently ignored — KeyboardSensor adds its keydown listener
+    // from a `setTimeout` (`attach()`) and Blink hands synthesized input to
+    // the page ahead of pending timers; `sortableKeyboardCoordinates` bails
+    // on a missing `collisionRect` or droppable rect — and all of them look
+    // the same from here: the drop just puts the row back. Re-send until
+    // the tree shifts; once the row is at the top ArrowUp moves nothing, so
+    // the extra presses cost nothing.
+    // Positive translateY on the row above is `verticalListSortingStrategy`
+    // reacting to the new drop target. The distance is that row's height,
+    // which the spec has no business pinning.
+    const shiftedDown = /^matrix\(1, 0, 0, 1, 0, [1-9]/;
+    await expect(async () => {
+      await page.keyboard.press("ArrowUp");
+      await expect(rowLocators.first()).toHaveCSS("transform", shiftedDown, {
+        timeout: 500,
+      });
+    }).toPass({ timeout: 10_000 });
     await page.keyboard.press("Space");
 
     // After reorder, the originally-second row (Docs) is now first.
@@ -85,7 +114,7 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
     // 6. Reload and re-open the editor. The reordered state persists.
     await page.reload();
     await expect(page.getByTestId("menus-shell")).toBeVisible();
-    await page.getByTestId("menus-selector-option-primary").click();
+    await menuOption(page).click();
     await expect(page.getByTestId("menu-item-editor")).toBeVisible();
 
     const reloadedRows = page
@@ -107,13 +136,13 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
     await page.getByTestId("menus-tab-locations").click();
     await expect(page.getByTestId("menus-tab-locations-panel")).toBeVisible();
 
-    // Assign the Primary menu (slug "primary") to the "primary"
-    // location. The select's value matches the menu's slug.
+    // Assign the menu created above to the "primary" location. The
+    // select's value matches the menu's slug.
     const saved = page.waitForResponse(
       (r) => r.url().endsWith("/menu/assignLocation") && r.status() === 200,
     );
     await page.getByTestId("menus-location-select-primary").click();
-    await page.getByTestId("menus-location-select-primary-primary").click();
+    await page.getByTestId(`menus-location-select-primary-${menuSlug}`).click();
     await saved;
 
     // Reload and re-enter the locations tab — assignment persists. The Radix
@@ -133,7 +162,7 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
     // test). We expect 2 rows: Docs (depth 0) then Home (depth 0)
     // (the order the first test left after save).
     await page.goto("pages/menus");
-    await page.getByTestId("menus-selector-option-primary").click();
+    await menuOption(page).click();
     await expect(page.getByTestId("menu-item-editor")).toBeVisible();
 
     const rows = page
@@ -157,7 +186,6 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
 
     // Save round-trips through the worker, then reload + reopen and
     // confirm Home is still at depth 1.
-    await page.waitForTimeout(100);
     const saved = page.waitForResponse(
       (r) => r.url().endsWith("/menu/save") && r.status() === 200,
     );
@@ -165,7 +193,7 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
     await saved;
 
     await page.reload();
-    await page.getByTestId("menus-selector-option-primary").click();
+    await menuOption(page).click();
     await expect(page.getByTestId("menu-item-editor")).toBeVisible();
 
     const reloadedHome = page
@@ -184,7 +212,7 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
     // (the server doesn't auto-clamp existing rows on a maxDepth
     // save).
     await page.goto("pages/menus");
-    await page.getByTestId("menus-selector-option-primary").click();
+    await menuOption(page).click();
     await expect(page.getByTestId("menu-item-editor")).toBeVisible();
 
     // Lower maxDepth to 0 (no nesting allowed for new drags).
@@ -221,12 +249,21 @@ test.describe.serial("@plumix/plugin-menu — worker-driven happy path", () => {
   });
 });
 
+function menuOption(page: Page): Locator {
+  return page.getByTestId(`menus-selector-option-${menuSlug}`);
+}
+
 // dnd-kit's PointerSensor listens for native `pointerdown` /
 // `pointermove` / `pointerup` events with a `distance: 5` activation
 // gate. Playwright's `page.mouse` API doesn't reliably fire pointer
 // events in a sequence the sensor accepts; dispatch them ourselves
 // inside a single `page.evaluate` (one CDP roundtrip, microtask burst)
 // so the sequence runs without timeout pressure.
+//
+// Returns once the drop has landed. That matters because a row's
+// `data-depth` carries the *projected* depth while a drag is live, so a
+// depth read before the drop is the preview rather than the committed
+// tree — including the unchanged depth the max-depth test asserts.
 async function dragRowOnSelf(
   page: Page,
   rowId: string,
@@ -245,7 +282,7 @@ async function dragRowOnSelf(
   const dropY = targetBox.y + targetBox.height / 2;
   const handleSelector = `[data-testid="menu-item-drag-${rowId}"]`;
 
-  await page.evaluate(
+  const activated = await page.evaluate(
     async ({ selector, startX, startY, dropX, dropY }) => {
       const el = document.querySelector(selector);
       if (!el) throw new Error(`drag handle not found: ${selector}`);
@@ -289,6 +326,9 @@ async function dragRowOnSelf(
         );
         await yieldToReact();
       }
+      // Read before the drop clears it — this is what separates a drag the
+      // sensor accepted from a burst of events it ignored.
+      const pressed = el.getAttribute("aria-pressed") === "true";
       document.dispatchEvent(
         new PointerEvent("pointerup", {
           ...base,
@@ -298,9 +338,53 @@ async function dragRowOnSelf(
           clientY: dropY,
         }),
       );
+      return pressed;
     },
     { selector: handleSelector, startX, startY, dropX, dropY },
   );
+  expect(activated, `drag never activated for row ${rowId}`).toBe(true);
+  // A dragged row carries a transform for the life of the drag — a
+  // self-drop still gives it `matrix(1, 0, 0, 1, 0, 0)` — and loses it when
+  // `activeKey` resets. So `none` is the DragEnd commit, which is the same
+  // React batch that dispatches the reorder into the editor's reducer.
+  // `aria-pressed` can't do this job: it is absent both before the pickup
+  // and after the drop, so asserting its absence here always passes.
+  await expect(target).toHaveCSS("transform", "none");
+  await waitForClicksToLand(page);
+}
+
+// dnd-kit keeps a drag from ending in a click by leaving a capture-phase
+// `click` swallower on `document`, which `AbstractPointerSensor.detach`
+// removes from a 50ms timer. Any click the spec makes inside that window —
+// the save button above all — is dropped before React sees it. Poll a probe
+// click rather than sleep 50ms: the removal timer runs late under load,
+// which is exactly when a fixed sleep loses. A capture-phase
+// `stopPropagation` on `document` also keeps the event from document's own
+// bubble listeners, so a probe that doesn't come back is the swallower
+// still armed.
+//
+// The probe is invisible to React, whose listeners are delegated to `#root`
+// — but not to document-level listeners, and every mounted Radix
+// `DismissableLayer` has some. Don't call this with a dialog or select open.
+async function waitForClicksToLand(page: Page): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          let landed = false;
+          const seen = (): void => {
+            landed = true;
+          };
+          document.addEventListener("click", seen);
+          document.body.dispatchEvent(
+            new MouseEvent("click", { bubbles: true }),
+          );
+          document.removeEventListener("click", seen);
+          return landed;
+        }),
+      { message: "dnd-kit's click swallower is still armed", timeout: 2_000 },
+    )
+    .toBe(true);
 }
 
 // Regression: the menus admin page once shipped as bare unstyled HTML (the
