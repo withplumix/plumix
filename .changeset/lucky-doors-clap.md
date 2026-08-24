@@ -28,5 +28,6 @@ Names are lowercased before the check, as tag names already were. Both engines h
 that reached them, and the mixed-case spelling was honoured in the editor alone: DOMPurify lowercases
 its allowlist while sanitize-html compares the parsed name against it verbatim.
 
-Nothing was exploitable: a site had to opt in through `blocks.htmlAllowlist`, and that override does
-not reach the renderer yet. This closes the last of the three override fields before it is wired up.
+Nothing was exploitable: a site had to opt in through `blocks.htmlAllowlist`, and that override
+reached no renderer at the time. It reaches both as of this same release, which is why this closes
+the last of the three override fields first.

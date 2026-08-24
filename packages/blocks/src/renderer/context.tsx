@@ -10,6 +10,7 @@ import type { ShortcodeRegistry } from "../shortcodes/types.js";
 import type { ThemeBreakpoints } from "../styles/style-emitter.js";
 import type { ThemeTokens } from "../styles/types.js";
 import type { ImageResolver, RemotePattern } from "./image-attrs.js";
+import { useHtmlAllowlist } from "../html/context.js";
 import { serializeLoaderData } from "../loader-data.js";
 import { renderBlockTree } from "../render-block-tree.js";
 import { RendererError } from "./errors.js";
@@ -101,6 +102,9 @@ export function BlockRenderer({
   readonly content: EntryContent;
 }): ReactNode {
   const ctx = usePlumixContext("BlockRenderer");
+  // The same hook the html / rich-text blocks read, so the embed below carries
+  // what this render actually sanitized with.
+  const htmlAllowlist = useHtmlAllowlist();
   const tree = renderBlockTree(content.blocks, ctx.registry, {
     breakpoints: ctx.breakpoints,
     loaderData: ctx.loaderData,
@@ -113,8 +117,12 @@ export function BlockRenderer({
   // Edit mode: wrap the content in a mount root the injected runtime renders
   // into, and embed the tree + the SSR-resolved loader data so the edit runtime
   // seeds both without a round-trip — blocks open with real data and keep it
-  // across edits (loaders re-run only via a scoped refresh). `<` is escaped so
-  // authored content can't break out of the JSON <script>.
+  // across edits (loaders re-run only via a scoped refresh). The render env
+  // rides along for the same reason: the canvas is a fresh React tree with no
+  // server context, so tokens, breakpoints and the html allowlist have to
+  // cross the iframe boundary as data or the canvas renders to a different
+  // set of rules than the published page. `<` is escaped so authored content
+  // can't break out of the JSON <script>.
   return (
     <div data-plumix-content-root="">
       <script
@@ -136,11 +144,12 @@ export function BlockRenderer({
       />
       <script
         type="application/json"
-        data-plumix-style-env=""
+        data-plumix-render-env=""
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             tokens: ctx.tokens,
             breakpoints: ctx.breakpoints,
+            htmlAllowlist,
           }).replace(/</g, "\\u003c"),
         }}
       />
