@@ -11,13 +11,15 @@
 // surfaced; reject loud here so the editor's allowlist + server's
 // allowlist stay in lockstep).
 
-interface TiptapNodeShape {
-  readonly type?: unknown;
-  readonly content?: unknown;
-  readonly marks?: unknown;
-  readonly attrs?: unknown;
-  readonly text?: unknown;
-}
+import * as v from "valibot";
+
+// The one field the walk needs typed. `looseObject` keeps the rest of the
+// node reachable as the undescribed bag it is, so `content` / `marks` / `attrs`
+// still read back for the `Array.isArray` branches below without this schema
+// claiming anything about them.
+const typedNodeSchema = v.looseObject({
+  type: v.pipe(v.string(), v.nonEmpty()),
+});
 
 /**
  * Always-allowed type names — the structural nodes the shared editor
@@ -228,10 +230,11 @@ function walkNode(
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw RichtextValidationError.nodeNotPlainObject({ path: normalizedPath });
   }
-  const node = value as TiptapNodeShape;
-  if (typeof node.type !== "string" || node.type === "") {
+  const parsed = v.safeParse(typedNodeSchema, value);
+  if (!parsed.success) {
     throw RichtextValidationError.nodeMissingType({ path: normalizedPath });
   }
+  const node = parsed.output;
   if (!allowedNodeTypes.has(node.type)) {
     throw RichtextValidationError.disallowedNode({
       path: normalizedPath,
@@ -264,10 +267,11 @@ function walkMark(
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw RichtextValidationError.markNotPlainObject({ path });
   }
-  const mark = value as TiptapNodeShape;
-  if (typeof mark.type !== "string" || mark.type === "") {
+  const parsed = v.safeParse(typedNodeSchema, value);
+  if (!parsed.success) {
     throw RichtextValidationError.markMissingType({ path });
   }
+  const mark = parsed.output;
   if (!allowedMarkTypes.has(mark.type)) {
     throw RichtextValidationError.disallowedMark({
       path,

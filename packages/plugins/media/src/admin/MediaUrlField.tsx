@@ -4,12 +4,17 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { Button } from "plumix/admin/ui";
 import { Trans, useLingui } from "plumix/i18n";
+import * as v from "valibot";
 
 import type { MediaSelection } from "./MediaLibrary.js";
 // Reuses the media picker's modal, accept-scope reader, and its generic
 // pick-verb strings (Select/Change/empty) on purpose — a single-value url
 // picker wants the same copy; no separate catalog namespace is warranted.
 import { M, MediaPickerModal, readAccept } from "./MediaPickerField.js";
+
+// An empty control is what a cleared field already shows, so anything the
+// stored value turns out to be other than a string reads as unset.
+const storedUrlSchema = v.fallback(v.string(), "");
 
 // `mediaUrl` field renderer: the value is a bare url string, not the
 // `{ id, url, ... }` composite the `media` field stores. Used by the Styles
@@ -34,7 +39,7 @@ export function MediaUrlField({
 }): ReactNode {
   const { i18n } = useLingui();
   const [open, setOpen] = useState(false);
-  const url = typeof rhf.value === "string" ? rhf.value : "";
+  const url = v.parse(storedUrlSchema, rhf.value);
   const accept = readAccept(field);
 
   const handleSelect = (selection: MediaSelection): void => {

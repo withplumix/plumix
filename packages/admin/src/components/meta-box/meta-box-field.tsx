@@ -377,7 +377,7 @@ function renderRangeField({
   renderLabel,
 }: NativeInputContext): ReactNode {
   const labelText = renderLabel(field.label);
-  const num = typeof rhf.value === "number" ? rhf.value : Number(rhf.value);
+  const num = Number(rhf.value);
   const minNum = toFiniteNumber(field.min, 0);
   const maxNum = toFiniteNumber(field.max, 100);
   const sliderValue = Number.isFinite(num) ? num : minNum;
@@ -640,6 +640,9 @@ function renderRichtextField({
   // The value is a stored ProseMirror doc (an object). Anything else — a
   // legacy string from the old textarea fallback, say — becomes an empty
   // editor rather than being mis-parsed as HTML by Tiptap's `content`.
+  // Not parsed: a ProseMirror doc is a recursive node tree whose shape is the
+  // editor schema's to state, and nothing here mirrors it — the check is only
+  // separating a stored doc from the legacy string.
   const doc =
     rhf.value && typeof rhf.value === "object"
       ? (rhf.value as JSONContent)

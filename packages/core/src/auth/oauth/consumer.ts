@@ -1,3 +1,5 @@
+import * as v from "valibot";
+
 import type { Db } from "../../context/app.js";
 import type { PlumixEnv } from "../../runtime/bindings.js";
 import type { OAuthProfile, OAuthProviderClient } from "./types.js";
@@ -68,11 +70,12 @@ interface ExchangeAndFetchInput {
   readonly env: PlumixEnv;
 }
 
-interface TokenResponse {
-  readonly access_token: string;
-  readonly id_token?: string;
-  readonly token_type?: string;
-}
+// Only the field the exchange actually consumes. The response carries
+// `id_token` / `token_type` too, and a provider is free to send them as null;
+// naming them here would turn a field nothing reads into a login failure.
+const tokenResponseSchema = v.looseObject({ access_token: v.string() });
+
+type TokenResponse = v.InferOutput<typeof tokenResponseSchema>;
 
 /**
  * Exchange the authorization code for tokens, then fetch the user's
@@ -160,15 +163,11 @@ async function exchangeCode(
     throw OAuthError.codeExchangeFailed({ reason: "non-json response" });
   }
 
-  if (
-    !json ||
-    typeof json !== "object" ||
-    !("access_token" in json) ||
-    typeof json.access_token !== "string"
-  ) {
+  const tokens = v.safeParse(tokenResponseSchema, json);
+  if (!tokens.success) {
     throw OAuthError.codeExchangeFailed({ reason: "missing access_token" });
   }
-  return json as TokenResponse;
+  return tokens.output;
 }
 
 async function fetchProfile(

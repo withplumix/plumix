@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createJiti } from "jiti";
+import * as v from "valibot";
 
 import type { PlumixConfig } from "@plumix/core";
 import { CliError } from "@plumix/core";
@@ -98,18 +99,21 @@ export function resolveConfigPath(cwd: string, explicit?: string): string {
   throw CliError.configNotFoundDefault({ cwd });
 }
 
-// Not JSON: inspects the *evaluated* config module, functions and all.
+// The load-bearing corner of an evaluated config module — enough to tell a
+// real config from whatever else a file may have exported, not a restatement
+// of `PlumixConfig`. Only a predicate: the module itself is what gets returned,
+// functions, adapters and all, so nothing here has to describe the rest of it.
+const configShapeSchema = v.looseObject({
+  runtime: v.looseObject({
+    name: v.string(),
+    buildFetchHandler: v.function(),
+  }),
+  database: v.looseObject({ kind: v.string() }),
+  auth: v.looseObject({
+    passkey: v.pipe(v.unknown(), v.check(Boolean)),
+  }),
+});
+
 function isPlumixConfig(value: unknown): value is PlumixConfig {
-  if (!value || typeof value !== "object") return false;
-  const c = value as Record<string, unknown>;
-  const runtime = c.runtime as
-    { name?: unknown; buildFetchHandler?: unknown } | undefined;
-  const database = c.database as { kind?: unknown } | undefined;
-  const auth = c.auth as { passkey?: unknown } | undefined;
-  return (
-    typeof runtime?.name === "string" &&
-    typeof runtime.buildFetchHandler === "function" &&
-    typeof database?.kind === "string" &&
-    !!auth?.passkey
-  );
+  return v.is(configShapeSchema, value);
 }

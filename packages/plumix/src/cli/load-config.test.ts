@@ -28,9 +28,9 @@ function evalCount(): number {
 // A fresh temp dir per call gives each test a unique config path, so the
 // module-level cache in load-config.ts never collides across tests (it is keyed
 // by absolute path and intentionally has no reset hook).
-function writeFixtureDir(): string {
+function writeFixtureDir(body = FIXTURE): string {
   const dir = mkdtempSync(join(tmpdir(), "plumix-loadconfig-"));
-  writeFileSync(join(dir, "plumix.config.ts"), FIXTURE);
+  writeFileSync(join(dir, "plumix.config.ts"), body);
   return dir;
 }
 
@@ -60,6 +60,33 @@ describe("loadConfig", () => {
     expect(evalCount()).toBe(2);
     // The forced-fresh result is what later cold reads now see.
     expect(afterRefresh.config).toBe(refreshed.config);
+  });
+
+  // Each slot the shape check reads, dropped one at a time. A config module
+  // that loads and evaluates cleanly but is not a config has to be rejected
+  // here rather than reaching the runtime as one.
+  test.each([
+    ["runtime missing", `{ database: { kind: "d1" }, auth: { passkey: {} } }`],
+    [
+      "runtime.buildFetchHandler not callable",
+      `{ runtime: { name: "test", buildFetchHandler: "no" },
+         database: { kind: "d1" }, auth: { passkey: {} } }`,
+    ],
+    [
+      "database.kind missing",
+      `{ runtime: { name: "test", buildFetchHandler: () => () => new Response() },
+         database: {}, auth: { passkey: {} } }`,
+    ],
+    [
+      "auth.passkey falsy",
+      `{ runtime: { name: "test", buildFetchHandler: () => () => new Response() },
+         database: { kind: "d1" }, auth: { passkey: null } }`,
+    ],
+    ["not an object at all", `"plumix"`],
+  ])("rejects a config whose %s", async (_name, body) => {
+    const dir = writeFixtureDir(`export default ${body};`);
+
+    await expect(loadConfig(dir)).rejects.toThrow(/Invalid config shape/);
   });
 
   test("caches per resolved config path", async () => {
