@@ -1,6 +1,7 @@
 import sanitize from "sanitize-html";
 
 import { HEADING_TAGS } from "../headings.js";
+import { enforceHtmlFloors } from "./floors.js";
 
 /**
  * Shape consumed by `sanitizeHtml`. Operators extend / replace it
@@ -72,17 +73,22 @@ export function sanitizeHtml(
   allowlist: HtmlAllowlist = BASELINE_HTML_ALLOWLIST,
 ): string {
   if (typeof raw !== "string" || raw === "") return "";
+  const floored = enforceHtmlFloors(allowlist);
   return sanitize(raw, {
-    allowedTags: [...allowlist.allowedTags],
+    allowedTags: [...floored.allowedTags],
     allowedAttributes: Object.fromEntries(
-      Object.entries(allowlist.allowedAttributes).map(([tag, attrs]) => [
+      Object.entries(floored.allowedAttributes).map(([tag, attrs]) => [
         tag,
         [...attrs],
       ]),
     ),
-    allowedSchemes: allowlist.allowedSchemes
-      ? [...allowlist.allowedSchemes]
+    // The floor propagates an absent scheme list rather than inventing
+    // one, so this fallback is the one list it never inspects — kept in
+    // step with `BASELINE_HTML_ALLOWLIST` above and with the shim's own
+    // default, and floor-clean because it names none of the denied four.
+    allowedSchemes: floored.allowedSchemes
+      ? [...floored.allowedSchemes]
       : ["http", "https", "mailto", "tel"],
-    allowProtocolRelative: allowlist.allowProtocolRelative ?? false,
+    allowProtocolRelative: floored.allowProtocolRelative ?? false,
   });
 }
