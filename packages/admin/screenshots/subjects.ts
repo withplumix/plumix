@@ -136,10 +136,11 @@ export const SCREENSHOT_SUBJECTS: readonly ScreenshotSubject[] = [
   },
 ];
 
-// `apps/docs` imports its screenshots from `src/assets`, so that is where they
-// are written — committed, so the docs build needs no admin instance.
+// A directory of their own, not `src/assets` at large: turbo caches this task
+// by its outputs, and a glob over the shared assets directory would claim — and
+// on a cache hit restore over — images a person put there by hand.
 const DOCS_ASSETS_DIR = new URL(
-  "../../../apps/docs/src/assets/",
+  "../../../apps/docs/src/assets/screenshots/",
   import.meta.url,
 );
 

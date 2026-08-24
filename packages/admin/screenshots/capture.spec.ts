@@ -2,12 +2,18 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import type { Theme } from "./subjects.js";
+import { assertCaptureEndpoint } from "./capture-browser.js";
 import {
   CAPTURE_INSTANT,
   SCREENSHOT_SUBJECTS,
   screenshotPath,
   THEMES,
 } from "./subjects.js";
+
+// The images are committed, so where they were rendered has to be the pinned
+// container and not whatever machine ran the command. Checked here rather than
+// in the config, which the e2e project shares.
+assertCaptureEndpoint();
 
 // `ThemeProvider`'s storage key. Pinning it beats driving the theme menu, which
 // would put a menu in frame and a transition under the capture.

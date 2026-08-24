@@ -84,7 +84,8 @@ spec under `e2e/`.
 
 `pnpm docs:screenshots` captures the images `apps/docs` publishes and writes
 them into `apps/docs/src/assets/`. Run it from the repo root and turbo builds
-the admin first; run it here and it uses whatever `dist/` holds.
+the admin first; run it here and it uses whatever `dist/` holds. It needs a
+running Docker — see below for what it does with one.
 
 It runs on the config above as a second Playwright project, so the same build,
 the same preview server and the same RPC mocks that back the e2e suite back the
@@ -99,16 +100,45 @@ writing a stale picture.
 CI leans on exactly that: the e2e job runs the capture and asserts it succeeds,
 so markup that moves fails a pull request instead of reaching a reader. Nothing
 compares pixels and no baselines are kept — an image diff would catch cosmetic
-drift too, but font rendering and platform differences make it noisy, and a
-noisy job gets turned off. CI throws away the images it writes; regenerating the
-committed ones is the local act below.
+drift too, but every intended redesign would fail it, and a noisy job gets
+turned off. CI throws away the images it writes; regenerating the committed
+ones is the local act below. Turbo caches the task either way, which is sound
+because both runs write the same bytes — `turbo.json` has the rest.
 
-The data is mocked and the clock is frozen, so a re-run on the same machine
-rewrites the same bytes. That does not hold across machines: font rasterization
-differs between macOS and Linux, and a Chromium bump moves it too, so
-regenerating on a different platform produces a whole-image diff for a UI that
-never changed. Regenerate where the images were last taken, or expect to
-re-take all of them.
+The data is mocked and the clock is frozen, so a re-run with no UI change
+rewrites the same bytes. Keeping that true off this machine takes one more
+thing: the browser is not the local one. `screenshots/run.ts` starts
+`mcr.microsoft.com/playwright:v<version>-noble` — Playwright's own image — runs
+`playwright run-server` inside it, and points the capture project at that over
+`connectOptions`. The preview server stays here; `exposeNetwork: "<loopback>"`
+tunnels it back to the container. So the rasterizer, the fonts and the Chromium
+are the image's, and a regeneration on macOS writes what a regeneration on
+Linux writes.
+
+Three things pin that image, and each of them earns its place:
+
+- The tag is derived from the installed `playwright-core` version rather than
+  written down, so it cannot drift from the build that connects to it — and a
+  Playwright bump re-takes the images deliberately, as the Chromium change it
+  is.
+- `--platform linux/amd64`, because the image is multi-arch and the two
+  rasterize differently. A page of plain system text comes out identical on
+  both; a real capture does not. CI's runners are amd64 and share a cache with
+  everyone, so amd64 is the one. Apple Silicon runs it emulated, which costs
+  seconds at this size.
+- The container runs this checkout's own `playwright-core`, mounted in. The
+  image ships browsers, not the package, and Playwright refuses to connect
+  across versions — so the server is the very build talking to it.
+
+Reach past the command — `playwright test --project screenshots` on its own —
+and the capture refuses to start rather than render here and rewrite every
+image. What it checks is that the runner published an endpoint, so it catches
+the accidental path and not a hand-set variable pointed at a local server.
+
+CI is what holds the whole claim up: it re-runs the capture on a Linux runner
+and fails if the bytes differ from the ones committed. That is the check on
+"renders the same anywhere" — without it, the images here would only ever have
+been compared against themselves.
 
 Images are committed: the docs build needs no admin instance, and a pull request
 diff shows which visuals a change moved.
