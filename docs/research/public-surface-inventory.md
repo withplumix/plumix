@@ -181,19 +181,22 @@ and their kin — the type-level machinery a plugin author meets when typing met
 
 Source: `packages/blocks/src/`.
 
-**Core blocks — 17** (`core-blocks.ts`): `rich-text`, `separator`, `code`, `group`, `section`,
-`columns`, `column`, `button`, `details`, `video`, `embed`, `table`, `table-header-row`,
+**Core blocks — 18** (`core-blocks.ts`): `rich-text`, `separator`, `code`, `group`, `section`,
+`columns`, `column`, `button`, `details`, `video`, `embed`, `html`, `table`, `table-header-row`,
 `table-body-row`, `table-header-cell`, `table-cell`, `pattern-ref`.
 
-**Flag: `core/html` cannot be registered** (#1884). `htmlBlock` is defined and exported from
-`@plumix/blocks`, but it is absent from `coreBlocks` and nothing in the repository registers it.
-`plumix/blocks` does not re-export it — and importing it from `@plumix/blocks` directly would not
-help either, because `isReservedBlockName` is `name.startsWith("core/")` and both registration
-routes throw on it: a theme's `blocks` field (`core/src/theme.ts:269`) and a plugin's
-`registerBlock` (`core/src/plugin/setup-context.ts:706`). `config.blocks.htmlAllowlist` is the
-sanitiser allowlist the block would read at render time, not a gate on its registration, and it is
-live regardless — `core/rich-text` sanitises through the same allowlist. Today the roster is
-seventeen and `core/html` is not one of them.
+**`core/html` was unreachable when this was written; it ships registered since #1889.** It sat
+outside `coreBlocks` with nothing registering it, and `isReservedBlockName` is
+`name.startsWith("core/")`, so both routes in threw on the name — a theme's `blocks` field
+(`core/src/theme.ts:269`) and a plugin's `registerBlock` (`core/src/plugin/setup-context.ts:706`).
+Recorded because the shape recurs: a block excluded for a reason that later stops holding, with the
+opt-in it named closed by an unrelated guard.
+
+**Flag: `config.blocks.htmlAllowlist` reaches no renderer** (#1891). `HtmlAllowlistProvider` is
+exported and mounted nowhere, and `app.htmlAllowlist` has no readers, so every block that renders
+stored HTML sanitises against the baseline whatever an operator sets. Its fields are also not
+uniformly additive: `extraTags`/`extraAttributes` merge, `schemes` and `allowProtocolRelative`
+replace. `HARD_DENYLIST` omits the mXSS context-switching tags (#1892).
 
 **Marks — 13** (`marks/core/`): `bold`, `italic`, `underline`, `strike`, `code`, `link`, `abbr`,
 `cite`, `highlight`, `kbd`, `small`, `subscript`, `superscript`.
