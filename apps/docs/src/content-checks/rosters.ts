@@ -11,7 +11,10 @@
 //   1. To the source. Either a type-level binding here, or a runtime
 //      comparison in `rosters.test.ts` — see "which binding" below.
 //   2. To the page, by `checkRosterDrift`, which reads the page's `###`
-//      headings and reports either direction of disagreement.
+//      headings and reports either direction of disagreement. The page's own
+//      body: an item contributed by an imported partial reads as missing,
+//      because a promise assembled out of fragments cannot be read against a
+//      source.
 //
 // Transitively that is page ≡ source, with no code generation and no change to
 // the product.

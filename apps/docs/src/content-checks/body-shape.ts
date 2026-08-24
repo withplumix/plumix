@@ -20,7 +20,7 @@ const mdx = unified().use(remarkParse).use(remarkMdx);
  * the same reason.
  *
  * `undefined` when the body is not MDX at all: a run has to report every
- * offending page, so one unparsable page cannot take the whole run down.
+ * offending file, so one unparsable file cannot take the whole run down.
  */
 export function parseBody(source: string): Root | undefined {
   try {
@@ -31,10 +31,7 @@ export function parseBody(source: string): Root | undefined {
 }
 
 /** The parts of a parsed body the page-shape and roster checks read. */
-export function readBodyShape(source: string): BodyShape | undefined {
-  const root = parseBody(source);
-  if (root === undefined) return undefined;
-
+export function readBodyShape(root: Root): BodyShape {
   const { children } = root;
   const firstHeading = children.findIndex((node) => node.type === "heading");
   const lede = firstHeading === -1 ? children : children.slice(0, firstHeading);

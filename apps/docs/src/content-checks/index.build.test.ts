@@ -4,11 +4,11 @@ import { FIXTURES_ROOT } from "../../test/fixtures-root";
 import { readContentTree } from "./content-tree";
 import { CONTENT_ROOT, runContentChecks } from "./index";
 
+const findings = runContentChecks(FIXTURES_ROOT);
+
 describe("runContentChecks", () => {
   it("runs the checks against an arbitrary content root", () => {
-    const rules = runContentChecks(FIXTURES_ROOT).map(
-      (finding) => finding.rule,
-    );
+    const rules = findings.map((finding) => finding.rule);
 
     expect(rules).toContain("page-shape/missing-lede");
     expect(rules).toContain("code-samples/does-not-compile");
@@ -20,6 +20,14 @@ describe("runContentChecks", () => {
     ]).map((finding) => finding.rule);
 
     expect(rules).toContain("roster-drift/unknown-item");
+  });
+
+  it("reports a sample that only a partial carries", () => {
+    const rules = findings.flatMap((finding) =>
+      finding.file === "_partials/broken-sample.mdx" ? [finding.rule] : [],
+    );
+
+    expect(rules).toEqual(["code-samples/does-not-compile"]);
   });
 
   it("reaches the real content tree", () => {

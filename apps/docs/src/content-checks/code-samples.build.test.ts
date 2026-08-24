@@ -7,8 +7,8 @@ import { readContentTree } from "./content-tree";
 
 const findings = checkCodeSamples(readContentTree(FIXTURES_ROOT));
 
-function findingsFor(page: string): Finding[] {
-  return findings.filter((finding) => finding.page === page);
+function findingsFor(file: string): Finding[] {
+  return findings.filter((finding) => finding.file === file);
 }
 
 describe("checkCodeSamples", () => {
@@ -42,9 +42,24 @@ describe("checkCodeSamples", () => {
     expect(findingsFor("code-samples/unchecked-languages.mdx")).toEqual([]);
   });
 
-  it("reports every offending page in one run", () => {
-    const offenders = [...new Set(findings.map((finding) => finding.page))];
+  it("compiles a sample inside a partial, which renders into every page that imports it", () => {
+    const reported = findingsFor("_partials/broken-sample.mdx");
 
-    expect(offenders).toEqual(["code-samples/broken.mdx"]);
+    expect(reported.map((finding) => finding.rule)).toEqual([
+      "code-samples/does-not-compile",
+    ]);
+    expect(reported[0].message).toContain("Sample 1");
+    expect(reported[0].message).toContain(
+      "Argument of type 'string' is not assignable",
+    );
+  });
+
+  it("reports every offending file in one run", () => {
+    const offenders = [...new Set(findings.map((finding) => finding.file))];
+
+    expect(offenders.sort()).toEqual([
+      "_partials/broken-sample.mdx",
+      "code-samples/broken.mdx",
+    ]);
   });
 });

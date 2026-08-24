@@ -1,9 +1,8 @@
 import type { Code, Root, RootContent } from "mdast";
 
-import type { ContentPage } from "./content-tree";
+import type { ContentFile } from "./content-tree";
 import type { Finding } from "./finding";
 import type { SampleDiagnostic } from "./sample-program";
-import { parseBody } from "./body-shape";
 import { typeCheckSamples } from "./sample-program";
 
 /**
@@ -21,9 +20,10 @@ const TYPESCRIPT_FENCES = new Set(["ts", "tsx", "typescript"]);
 const OPT_OUT = "no-typecheck";
 
 interface Sample {
-  readonly page: string;
+  /** Path of the file the fence sits in, relative to the content root. */
+  readonly file: string;
   /**
-   * 1-based position among the page's TypeScript blocks. Opted-out blocks are
+   * 1-based position among the file's TypeScript blocks. Opted-out blocks are
    * counted, so a sample keeps its number whether or not its neighbours are
    * checked.
    */
@@ -37,21 +37,25 @@ interface Sample {
  * package publishes. On a pre-1.0 surface a renamed export or a changed
  * signature leaves a sample that reads fine and does not work, and a reader who
  * copies it cannot tell whether they mis-copied it or the API moved.
+ *
+ * Fragments as well as pages. A partial has no URL, but a sample written in
+ * one renders inside every page that imports it — so it reaches a reader
+ * exactly as a sample on a page does, and rots exactly as readily.
  */
-export function checkCodeSamples(pages: readonly ContentPage[]): Finding[] {
-  return pages.flatMap(checkPage);
+export function checkCodeSamples(files: readonly ContentFile[]): Finding[] {
+  return files.flatMap(checkFile);
 }
 
 /**
- * One program per page. A sample carrying `declare module "plumix"` — which is
+ * One program per file. A sample carrying `declare module "plumix"` — which is
  * how this project's type augmentation is written, and therefore how its docs
  * will show it — is visible to every other sample compiled beside it. Kept to
- * the page, that is the narrative a reader reads top to bottom; spread across
- * the tree, one page's augmentation would quietly decide whether another page's
+ * the file, that is the narrative a reader reads top to bottom; spread across
+ * the tree, one file's augmentation would quietly decide whether another's
  * sample compiles.
  */
-function checkPage(page: ContentPage): Finding[] {
-  const samples = readSamples(page);
+function checkFile(file: ContentFile): Finding[] {
+  const samples = readSamples(file);
   const complaints = typeCheckSamples(samples);
 
   return samples.flatMap((sample, index) => {
@@ -60,7 +64,7 @@ function checkPage(page: ContentPage): Finding[] {
 
     return [
       {
-        page: sample.page,
+        file: sample.file,
         rule: "code-samples/does-not-compile",
         message: describeFailure(sample, failures),
       },
@@ -84,16 +88,14 @@ function describeFailure(
   ].join("\n");
 }
 
-function readSamples(page: ContentPage): Sample[] {
-  // An unparsable page yields no samples rather than a finding of its own: the
-  // page-shape check already reports it, and one problem is one finding.
-  const root = parseBody(page.body);
-  if (root === undefined) return [];
+function readSamples(file: ContentFile): Sample[] {
+  // Reported by `checkParsable`.
+  if (file.mdast === undefined) return [];
 
   const samples: Sample[] = [];
   let ordinal = 0;
 
-  for (const block of fencedBlocks(root)) {
+  for (const block of fencedBlocks(file.mdast)) {
     const language = block.lang?.toLowerCase();
     if (language === undefined || !TYPESCRIPT_FENCES.has(language)) continue;
 
@@ -101,7 +103,7 @@ function readSamples(page: ContentPage): Sample[] {
     if (optedOut(block)) continue;
 
     samples.push({
-      page: page.path,
+      file: file.path,
       ordinal,
       jsx: language === "tsx",
       code: block.value,

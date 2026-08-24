@@ -3,18 +3,28 @@ import { describe, expect, it } from "vitest";
 import { FIXTURES_ROOT } from "../../test/fixtures-root";
 import { readContentTree } from "./content-tree";
 
-const pages = readContentTree(FIXTURES_ROOT);
-const paths = pages.map((page) => page.path);
+const files = readContentTree(FIXTURES_ROOT);
+const paths = files.map((file) => file.path);
+
+function kindOf(path: string): string | undefined {
+  return files.find((file) => file.path === path)?.kind;
+}
 
 describe("readContentTree", () => {
-  it("returns every page the Starlight loader would publish", () => {
+  it("returns every file the markdown pipeline processes", () => {
     expect(paths).toEqual([
+      "_partials/broken-sample.mdx",
+      "_partials/note.mdx",
+      "_partials/roster-items.mdx",
+      "_partials/unparsable.mdx",
+      "code-samples/_snippet.mdx",
       "code-samples/broken.mdx",
       "code-samples/opted-out.mdx",
       "code-samples/unchecked-languages.mdx",
       "code-samples/valid.mdx",
       "headings-in-code.mdx",
       "index.mdx",
+      "legacy-note.markdown",
       "markdown-page.md",
       "missing-lede-jsx.mdx",
       "missing-lede.mdx",
@@ -28,16 +38,28 @@ describe("readContentTree", () => {
     ]);
   });
 
-  it("skips underscore-prefixed partials, which Starlight keeps out of the collection", () => {
-    expect(paths).not.toContain("_partials/note.mdx");
+  it("carries a file the Starlight loader publishes as a page", () => {
+    expect(kindOf("well-formed.mdx")).toBe("page");
   });
 
-  it("skips a file the loader would not publish", () => {
+  it("marks a file under an underscore-prefixed directory a fragment", () => {
+    expect(kindOf("_partials/note.mdx")).toBe("fragment");
+  });
+
+  it("marks an underscore-prefixed file a fragment, wherever it sits", () => {
+    expect(kindOf("code-samples/_snippet.mdx")).toBe("fragment");
+  });
+
+  it("marks a file the collection glob would not publish a fragment", () => {
+    expect(kindOf("legacy-note.markdown")).toBe("fragment");
+  });
+
+  it("skips a file the markdown pipeline would not process", () => {
     expect(paths).not.toContain("notes.txt");
   });
 
   it("splits parsed frontmatter from the body", () => {
-    const roster = pages.find((page) => page.path === "rosters/empty.mdx");
+    const roster = files.find((file) => file.path === "rosters/empty.mdx");
 
     expect(roster?.frontmatter).toMatchObject({
       title: "Empty Roster",
@@ -49,7 +71,7 @@ describe("readContentTree", () => {
   });
 
   it("reads a page carrying no frontmatter at all", () => {
-    const bare = pages.find((page) => page.path === "markdown-page.md");
+    const bare = files.find((file) => file.path === "markdown-page.md");
 
     expect(bare?.frontmatter).toEqual({});
     expect(bare?.body.trimStart()).toMatch(/^A lede that stands on its own,/);

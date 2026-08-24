@@ -1,28 +1,29 @@
 import type { BodyShape } from "./body-shape";
-import type { ContentPage } from "./content-tree";
+import type { ContentFile } from "./content-tree";
 import type { Finding } from "./finding";
 import { readBodyShape } from "./body-shape";
 
 /**
  * Report pages that do not follow the house template: the lede and the
  * mandatory `##` sections named in the documentation IA spec.
+ *
+ * A fragment is skipped outright. It has no URL, so it is not a page a reader
+ * arrives at — it legitimately carries no lede and none of the four sections,
+ * and holding it to a template written for pages would report every partial in
+ * the tree.
  */
-export function checkPageShape(pages: readonly ContentPage[]): Finding[] {
-  return pages.filter(isDocumentationPage).flatMap(checkPage);
+export function checkPageShape(files: readonly ContentFile[]): Finding[] {
+  return files
+    .filter((file) => file.kind === "page")
+    .filter(isDocumentationPage)
+    .flatMap(checkPage);
 }
 
-function checkPage(page: ContentPage): Finding[] {
-  const body = readBodyShape(page.body);
-  if (body === undefined) {
-    return [
-      {
-        page: page.path,
-        rule: "page-shape/unparsable",
-        message:
-          "Could not be parsed as MDX, so its shape could not be checked. The build reports the syntax error.",
-      },
-    ];
-  }
+function checkPage(page: ContentFile): Finding[] {
+  // Reported by `checkParsable`.
+  if (page.mdast === undefined) return [];
+
+  const body = readBodyShape(page.mdast);
 
   const sections = new Set(
     body.headings
@@ -34,7 +35,7 @@ function checkPage(page: ContentPage): Finding[] {
 
   if (!body.hasLede) {
     findings.push({
-      page: page.path,
+      file: page.path,
       rule: "page-shape/missing-lede",
       message:
         "Missing the lede: one or two sentences of prose between the frontmatter and the first `##` heading.",
@@ -44,7 +45,7 @@ function checkPage(page: ContentPage): Finding[] {
   for (const section of MANDATORY_SECTIONS) {
     if (sections.has(section.heading) || section.exempt?.(page, body)) continue;
     findings.push({
-      page: page.path,
+      file: page.path,
       rule: section.rule,
       message: section.message,
     });
@@ -58,7 +59,7 @@ interface MandatorySection {
   readonly rule: string;
   readonly message: string;
   /** Pages that earn their way out of carrying this section. */
-  readonly exempt?: (page: ContentPage, body: BodyShape) => boolean;
+  readonly exempt?: (page: ContentFile, body: BodyShape) => boolean;
 }
 
 /** The house template's mandatory `##` sections. Presence only — not order. */
@@ -94,7 +95,7 @@ const MANDATORY_SECTIONS: readonly MandatorySection[] = [
  * contents, so a page wearing it to dodge this check looks nothing like a
  * documentation page either.
  */
-function isDocumentationPage(page: ContentPage): boolean {
+function isDocumentationPage(page: ContentFile): boolean {
   return page.frontmatter.template !== "splash";
 }
 
@@ -105,7 +106,7 @@ function isDocumentationPage(page: ContentPage): boolean {
  * variant of a documented sibling legitimately links to the sibling's example
  * instead of repeating it.
  */
-function isRoster(page: ContentPage, body: BodyShape): boolean {
+function isRoster(page: ContentFile, body: BodyShape): boolean {
   return (
     page.frontmatter.roster === true &&
     body.headings.some((heading) => heading.depth === 3)
