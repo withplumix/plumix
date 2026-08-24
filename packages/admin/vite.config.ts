@@ -75,5 +75,10 @@ export default defineConfig(({ command }) => ({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
+    // lingui declares babel as optional peers, and this workspace resolves two
+    // babel majors, so pnpm materializes one @lingui/react per peer context.
+    // Two copies mean two LinguiContexts and `useLingui()` reads a null one in
+    // whichever chunk lost the race. Pin the bundle to a single copy.
+    dedupe: ["@lingui/react", "@lingui/core"],
   },
 }));
