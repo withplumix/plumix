@@ -115,9 +115,9 @@ catalogs:
     "@dnd-kit/sortable": ^10.0.0
     "@dnd-kit/utilities": ^3.2.2
   cloudflare:
-    "@cloudflare/vite-plugin": ^1.50.0
-    "@cloudflare/workers-types": ^5.20260801.1
-    wrangler: ^4.118.0
+    "@cloudflare/vite-plugin": ^1.52.1
+    "@cloudflare/workers-types": ^5.20260817.1
+    wrangler: ^4.123.0
 
 publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"
