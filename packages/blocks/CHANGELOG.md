@@ -1,5 +1,96 @@
 # @plumix/blocks
 
+## 0.15.0
+
+### Minor Changes
+
+- [#1897](https://github.com/withplumix/plumix/pull/1897) [`5fbb8cf`](https://github.com/withplumix/plumix/commit/5fbb8cf6faa061554f32c4f3ca490be03449a3d4) Thanks [@nasyrov](https://github.com/nasyrov)! - Types the stored block tree and the plugin dictionaries that describe serialized data with the public `JsonObject` / `JsonValue` types.
+
+  **Source-breaking for block and theme authors** on the type level only — the emitted JS is unchanged. `BlockNode` is now a `type` alias rather than an `interface`, and its `attrs` is a `JsonObject`; the same goes for `BlockVariation.attrs`, `BlockSpec.defaults`, a transform's `mapAttrs`, a block loader's `attrs`, and `ResponsiveStyleSlot` / `VisibilityFlags`. A node built from a `Record<string, unknown>` no longer assigns, and an entry added to `BlockTypeRegistry` has to be spelled as a `type` over an object literal — TypeScript withholds the implicit index signature an `interface` would need.
+
+  What a block's `render` receives is deliberately _not_ JSON and is now named and exported: `MaterializedAttrs` is the stored bag with each slot key replaced by the component that renders that slot's children. `BlockNodeRenderProps`, `BlockNodeComponent` and `BlockSpec` default their `Attrs` parameter to it.
+
+  **Source-breaking for the editor's plugin-field seam.** `@plumix/admin-editor`'s `PluginFieldControlProps` now types `rhf.onChange` as `(next: JsonValue) => void` and the sibling block `attrs` as a `JsonObject`; `rhf.value` stays `unknown`, because the same controls also serve metaboxes, where RHF hands over a live `Date` for a temporal field. The `registerPluginFieldType` registry contract itself is unchanged.
+
+  `@plumix/plugin-audit-log` holds a caller's own `properties` to JSON: `ctx.audit.log({ properties })` and an event definition's `extra` return no longer accept a `Date`, which reached storage as an ISO string anyway. The row's stored envelope stays open — its diff half is built from live entity columns.
+
+  Island props keep their open type — the prop codec encodes `Date`, `Map`, `Set`, `BigInt`, `URL` and the typed arrays so they survive hydration, which a JSON type would deny.
+
+  `@plumix/runtime-cloudflare` types the CF Access JWT payload as jose's `JWTPayload` instead of a loose dictionary.
+
+- [#1894](https://github.com/withplumix/plumix/pull/1894) [`b39380a`](https://github.com/withplumix/plumix/commit/b39380a7dab2780ec1f36729328258b529b85800) Thanks [@nasyrov](https://github.com/nasyrov)! - Types the returns that were left `unknown`. A function declaring a return type of `unknown` — or a
+  promise of one — is now rejected in production source by `plumix/no-unknown-return`, and the
+  signatures it found say what they hand back.
+
+  **Source-breaking for plugin authors** on the type level. Three sites also emit different JS, each
+  noted below.
+
+  - The `.sanitize()` callback on the `json()` and `entry()`/`term()`/`user()` reference builders, on
+    `media()`, and on a hand-written `MetaBoxField` object returns `JsonValue`. The value is written
+    to a JSON column, so this is what the write path already required — a callback returning a `Date`
+    reached the driver as whatever `JSON.stringify` made of it. The typed builders (string, color,
+    link, number, range, select, temporal, toggle) still take
+    `(value: NonNullable<V>) => NonNullable<V>` and are unaffected for callers.
+  - `LinkValue` is a `type` alias rather than an `interface`, so a link value assigns to `JsonObject`
+    (TypeScript withholds the implicit index signature from an interface).
+  - A telemetry record's `data` is `JsonValue`, and `TelemetryCollector.record` takes
+    `JsonValue | (() => JsonValue)` — matching `TelemetrySpanHandle.set`, which already did. The
+    debug bar still sanitizes at read time, since nothing checks the type at runtime.
+  - The read-error mappers (`toRpcEntryReadError`, `toRpcTermReadError`) return `Error | undefined`
+    instead of passing a foreign error through: `undefined` means "not mine to translate", and the
+    caller rethrows what it caught. This removes a latent `throw undefined` on an unrecognized error
+    code.
+
+  One further behaviour change, in a forgiving-read fallback: a meta value stored as an object or
+  array under a field since narrowed to `string` now reads back as its JSON rather than as
+  `"[object Object]"` or `"a,b"`.
+
+- [#1889](https://github.com/withplumix/plumix/pull/1889) [`82fa032`](https://github.com/withplumix/plumix/commit/82fa0323aada1c0c37e17261a4d2c62f7b585584) Thanks [@nasyrov](https://github.com/nasyrov)! - Registers `core/html` with the rest of `coreBlocks`, so the raw-HTML block appears in the inserter
+  and renders without a site installing it by hand.
+
+  It was held out of `coreBlocks` when it had no sanitizer, on the understanding that a site wanting
+  the escape hatch would register it explicitly. That route stopped working: block registration rejects
+  any name in the reserved `core/` namespace, so neither a theme's `blocks` field nor a plugin's
+  `registerBlock` would take it, and the block shipped unreachable. The reason for holding it back is
+  also gone — it renders through `sanitizeHtml`, the same path `core/rich-text` already takes, so it
+  adds no rendering surface a site did not already have.
+
+  What survives sanitizing is the baseline allowlist: text-level markup and `http`/`https`/`mailto`/
+  `tel` anchors. `script`, `iframe`, `object`, `embed`, `style`, `link`, `meta`, `base`, `form`,
+  `input`, `textarea`, `button`, `svg` and `math` are denied outright and stay denied whatever a site
+  configures. Others, `img` among them, are simply absent from the baseline and can be added.
+
+  Two caveats worth knowing. There is no per-block disable, so a site that would rather not offer a
+  raw-HTML block has no switch for it. And `blocks.htmlAllowlist` does not currently reach the
+  renderer at all — everything sanitizes against the baseline until that is wired up.
+
+- [#1898](https://github.com/withplumix/plumix/pull/1898) [`482b4e6`](https://github.com/withplumix/plumix/commit/482b4e697cbf6b2f014e712315050f474f502fe0) Thanks [@nasyrov](https://github.com/nasyrov)! - `core/rich-text` no longer surfaces a React-element `body` verbatim — that branch predated the
+  current editor and bypassed `sanitizeHtml`. An element body now takes the same fallback as any
+  other non-string value and renders an empty `<div>`.
+
+### Patch Changes
+
+- [#1899](https://github.com/withplumix/plumix/pull/1899) [`fdd72b8`](https://github.com/withplumix/plumix/commit/fdd72b89167237d25bc3ced465e0d2543c37b40b) Thanks [@nasyrov](https://github.com/nasyrov)! - Denies the parser context-switching tags in the raw-HTML allowlist, and matches the denylist
+  case-insensitively.
+
+  `HARD_DENYLIST` is what keeps `blocks.htmlAllowlist` from re-opening a surface the baseline closes.
+  It covered the elements that execute, navigate or load a subresource, and `svg` and `math` for
+  switching the parser into foreign content — but not the rest of that second family: `noscript`,
+  `template`, `title`, `xmp`, `noembed`, `noframes`, `plaintext` and `annotation-xml`. Sanitized output
+  is re-parsed, since `core/html` and `core/rich-text` both hand it to `dangerouslySetInnerHTML`, and a
+  tag whose children are raw text on the sanitizer's pass and markup on the browser's is the
+  mutation-XSS shape — which is why `svg` and `math` were listed to begin with. `frame`, `frameset` and
+  `applet` join the first family for the same reason its other members are there.
+
+  The list was also compared verbatim, so `extraTags: ["IFRAME"]` passed the check. That was inert
+  under `sanitize-html` on the server, which lowercases parsed tag names before matching, but the
+  browser build sanitizes through DOMPurify, which lowercases the allowlist instead — so the mixed-case
+  spelling was honoured there. Override tags and `extraAttributes` keys are now lowercased before the
+  check.
+
+  Nothing was exploitable: a site had to opt in through `blocks.htmlAllowlist`, and that override does
+  not reach the renderer yet. This closes the gaps before it is wired up.
+
 ## 0.14.0
 
 ## 0.13.0
