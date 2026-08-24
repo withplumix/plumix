@@ -9,6 +9,12 @@ const config: KnipConfig = {
   // via `@internal` JSDoc once that convention is in place.
   exclude: ["exports"],
   workspaces: {
+    // changesets v3 dropped its bundled prettier and formats generated
+    // changelogs by shelling out to `pnpm exec prettier` from the root, so the
+    // root needs it installed even though nothing here imports or scripts it.
+    ".": {
+      ignoreDependencies: ["prettier"],
+    },
     "tooling/typescript": {
       entry: ["*.json"],
     },

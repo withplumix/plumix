@@ -99,22 +99,26 @@ jobs:
       # publishes via OIDC (npm exchanges the workflow identity, no token).
       - name: Version PR or publish
         if: steps.detect.outputs.run == 'true'
-        # Held at v1 deliberately. v2 is only compatible with Changesets v3,
-        # which changes how peer-dependent packages are bumped — the exact
-        # thing `onlyUpdatePeerDependentsWhenOutOfRange` in .changeset/config.json
-        # is tuned around. v2 detects published packages by reading the file named
-        # by CHANGESETS_OUTPUT, which the v2 CLI never writes, so pairing v2 with
-        # our CLI publishes to npm and then skips every tag and GitHub release —
-        # and only warns. Move both together or neither.
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        # Pinned in lockstep with @changesets/cli: v2 of this action only speaks
+        # to Changesets v3. It learns what got published by reading the file named
+        # by the CHANGESETS_OUTPUT env var it injects, which only the v3 CLI
+        # writes — pair it with a v2 CLI and the publish succeeds while every tag
+        # and GitHub release is silently skipped. Move both together or neither.
+        uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
         with:
-          version: pnpm version-packages
-          publish: pnpm release
-          commit: "ci: version packages"
-          title: "ci: version packages"
+          # v2 ignores the GITHUB_TOKEN env var and falls back to `github.token`
+          # when this input is absent — whose pushes don't trigger the required
+          # checks. It also throws if a GITHUB_TOKEN env var is set and differs,
+          # so don't reintroduce one at job or workflow level.
+          github-token: ${{ steps.app-token.outputs.token }}
+          version-script: pnpm version-packages
+          publish-script: pnpm release
+          commit-message: "ci: version packages"
+          pr-title: "ci: version packages"
+          # v2 pushes through the GitHub API by default; keep the git CLI so the
+          # push keeps using the App credentials `persist-credentials` installed.
+          push-with-git-cli: true
         env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          # empty (not unset) so changesets/action skips npm-token auth and falls
-          # through to OIDC — https://github.com/changesets/changesets/issues/1152
-          NPM_TOKEN: ""
+          # No NPM_TOKEN: v2 dropped .npmrc handling entirely, so OIDC trusted
+          # publishing is reachable without the empty-token workaround v1 needed.
           NPM_CONFIG_PROVENANCE: "true"
