@@ -97,7 +97,7 @@ subsystem summary. This is the one naming exception in the tree.
 | Slug | Title | T | Purpose | Covers |
 | --- | --- | --- | --- | --- |
 | `blocks/overview` | Overview | P0 | Entry content as a block tree; how it is stored and rendered. | entry content model |
-| `blocks/core-blocks` | Core Blocks | P0 | **Roster page.** Every core block with its inputs and an example. `core/html` is not one of them — it registers opt-in and the façade does not export it — so it belongs in prose here, not as an item. | 17 core blocks |
+| `blocks/core-blocks` | Core Blocks | P0 | **Roster page.** Every core block with its inputs and an example. `core/html` is one of them, and the one whose entry owes a reader a line about what the sanitizer does to its markup. | 18 core blocks |
 | `blocks/authoring` | Authoring a Block | P1 | `defineBlock`, inputs, rendering, registration. | block authoring API |
 | `blocks/marks` | Marks | P1 | **Roster page.** Inline formatting. | 13 marks |
 | `blocks/styles` | Styles | P1 | The style field, CSS values, viewport breakpoints. | style codec, breakpoints |
@@ -433,7 +433,7 @@ Every area of the public surface has a home. Mapping from the inventory:
 | 20 config options | `Configuration` |
 | 4 statuses · entry types · taxonomies | Content Modelling |
 | 24 field types · builders · references · repeaters | Fields |
-| 17 blocks · 13 marks · shortcodes · patterns · styles | Blocks |
+| 18 blocks · 13 marks · shortcodes · patterns · styles | Blocks |
 | 5+3 hydration axes · `IslandProps` | Islands |
 | 16 builders · 9 data shapes · 9 guards · manifest · tokens · primitives | Themes |
 | permalinks · archives · redirects · rewrites · base path | Routing |
