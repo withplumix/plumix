@@ -63,6 +63,14 @@
       "cache": false,
       "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
     },
+    "docs:screenshots": {
+      // Same graph as `test:e2e`: the capture drives the built admin through
+      // `vite preview`. Never cached — it exists for its side effect, the
+      // images it writes into `apps/docs/src/assets/`.
+      "dependsOn": ["build", "^build"],
+      "cache": false,
+      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
+    },
     "clean": {
       "cache": false
     },

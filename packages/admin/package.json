@@ -32,6 +32,7 @@
     "build": "vite build",
     "clean": "git clean -xdf .cache .turbo dist node_modules playwright-report test-results",
     "dev": "vite",
+    "docs:screenshots": "playwright test --project screenshots",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .prettierignore",
     "i18n:check": "node ../plumix/bin/plumix.mjs i18n extract --check",
     "i18n:compile": "plumix-compile-catalogs",
@@ -40,7 +41,7 @@
     "lint": "eslint",
     "publint": "publint",
     "test:unit": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project chromium",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
