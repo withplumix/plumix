@@ -1,3 +1,4 @@
+import type { JsonObject } from "plumix";
 import type { PluginRegistry, RequestAuthenticator } from "plumix/plugin";
 import type { User, UserRole } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
@@ -141,10 +142,7 @@ describe("menu RPC", () => {
         slug: `mi-${Date.now()}`,
         status: "published",
         authorId: author.id,
-        meta: { kind: "custom", url: "/" } as unknown as Record<
-          string,
-          unknown
-        >,
+        meta: { kind: "custom", url: "/" },
       });
       await entryTermFactory
         .transient({ db: h.db })
@@ -219,10 +217,7 @@ describe("menu RPC", () => {
         slug: `mi-custom-${Date.now()}`,
         status: "published",
         authorId: author.id,
-        meta: { kind: "custom", url: "/contact" } as unknown as Record<
-          string,
-          unknown
-        >,
+        meta: { kind: "custom", url: "/contact" },
       });
       await entryTermFactory
         .transient({ db: h.db })
@@ -269,7 +264,7 @@ describe("menu RPC", () => {
           entryId: 99999,
           lastLabel: "Old About",
           lastHref: "/about-old",
-        } as unknown as Record<string, unknown>,
+        },
       });
       await entryTermFactory
         .transient({ db: h.db })
@@ -300,17 +295,18 @@ describe("menu RPC", () => {
       const author = await adminUser
         .transient({ db: h.db })
         .create({ email: "metashape@example.test" });
-      for (const [index, meta] of [
+      const metaShapes: JsonObject[] = [
         { kind: "custom", url: "/contact" },
         { kind: "nonsense" },
-      ].entries()) {
+      ];
+      for (const [index, meta] of metaShapes.entries()) {
         const item = await entryFactory.transient({ db: h.db }).create({
           type: "menu_item",
           title: `Item ${String(index)}`,
           slug: `mi-shape-${String(index)}-${Date.now()}`,
           status: "published",
           authorId: author.id,
-          meta: meta as unknown as Record<string, unknown>,
+          meta,
         });
         await entryTermFactory
           .transient({ db: h.db })

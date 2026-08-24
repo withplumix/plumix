@@ -1,5 +1,7 @@
 import type { AuthenticatedAppContext } from "../../../context/app.js";
 import type { Entry, NewEntry } from "../../../db/schema/entries.js";
+import type { JsonValue } from "../../../json.js";
+import type { ResolvedMeta } from "../../meta/core.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
 import { and, eq, isUniqueConstraintError, ne } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
@@ -258,7 +260,7 @@ export const update = base
       // `upsertAutosave`; drop them from the base, but keep the template and
       // access picks so a prior unsaved choice survives a write that doesn't
       // change it.
-      const autosaveMeta: Record<string, unknown> = stripReservedMeta(
+      const autosaveMeta: Record<string, JsonValue> = stripReservedMeta(
         draftBase.meta,
         [NAMED_TEMPLATE_META_KEY, ACCESS_POLICY_META_KEY],
       );
@@ -383,7 +385,7 @@ export const update = base
     const nowScheduled =
       filtered.status === "scheduled" && existing.status !== "scheduled";
     if (isPublishTransition || nowScheduled) {
-      const resultingMeta: Record<string, unknown> = { ...existing.meta };
+      const resultingMeta: Record<string, JsonValue> = { ...existing.meta };
       if (metaPatch) {
         for (const [key, value] of metaPatch.upserts)
           resultingMeta[key] = value;
@@ -466,7 +468,7 @@ export const update = base
 
     // `writeEntryMeta` is a no-op on an empty patch, so the null check
     // here is the only gate we need.
-    let meta: Record<string, unknown>;
+    let meta: ResolvedMeta;
     if (metaPatch) {
       await writeEntryMeta(context, updated, metaPatch);
       meta = await loadEntryMeta(context, updated);

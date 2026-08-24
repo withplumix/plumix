@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app.js";
 import type { Term } from "../db/schema/terms.js";
+import type { WithResolvedMeta } from "../rpc/meta/core.js";
 import type {
   TermGetInput,
   TermListInput,
@@ -9,8 +10,6 @@ import { terms } from "../db/schema/terms.js";
 import { taxonomyCapability } from "../rpc/procedures/term/helpers.js";
 import { resolveTermMeta } from "../rpc/procedures/term/meta.js";
 import { TermReadError } from "./errors.js";
-
-type TermRead = Omit<Term, "meta"> & { readonly meta: Record<string, unknown> };
 
 /**
  * List terms in a taxonomy the caller may read. The taxonomy must be
@@ -54,7 +53,7 @@ export async function listTerms(
 export async function getTerm(
   ctx: AppContext,
   input: TermGetInput,
-): Promise<TermRead> {
+): Promise<WithResolvedMeta<Term>> {
   const row = await ctx.db.query.terms.findFirst({
     where: eq(terms.id, input.id),
   });

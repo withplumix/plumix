@@ -1,6 +1,7 @@
 import { EMAIL_REGEX } from "valibot";
 
 import type { Label } from "../../i18n/label.js";
+import type { JsonValue } from "../../json.js";
 import type {
   GroupMetaBoxField,
   MetaBoxField,
@@ -38,7 +39,7 @@ export interface MetaFieldError {
 export interface FieldPipelineResult {
   readonly errors: readonly MetaFieldError[];
   /** Normalized value to persist; absent on deletion or error. */
-  readonly value?: unknown;
+  readonly value?: JsonValue;
   /** The input was `null`/`undefined` — a deletion request. */
   readonly isDeletion?: boolean;
 }
@@ -144,7 +145,15 @@ export async function runFieldPipeline(
       return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
     }
   }
-  return { errors: [], value };
+  // Everything the pipeline itself produces is JSON: `coerceJson` round-trips
+  // through `JSON.stringify`/`parse` and every other branch builds primitives
+  // from a coerced value. The hole the assertion papers over is `.sanitize()` —
+  // the descriptor erases its signature, and its output is re-normalized but
+  // never re-coerced, so a callback returning a `Date` reaches this line and is
+  // written as whatever `JSON.stringify` makes of it. Closing that means
+  // re-coercing after the callback, which changes behaviour; #1807 defers the
+  // meta pipeline's parse migration to its own spec.
+  return { errors: [], value: value as JsonValue };
 }
 
 // --- repeater rows ------------------------------------------------------
@@ -202,7 +211,7 @@ async function runGroupPipeline(
   // validates each — a required member left empty in a non-empty group
   // is a real error, just as in a non-blank repeater row.
   const errors: MetaFieldError[] = [];
-  const next: Record<string, unknown> = {};
+  const next: Record<string, JsonValue> = {};
   for (const member of field.fields) {
     const cell = await runFieldPipeline(
       member,
@@ -211,7 +220,7 @@ async function runGroupPipeline(
       mode,
     );
     errors.push(...cell.errors);
-    if (cell.errors.length === 0 && cell.isDeletion !== true) {
+    if (cell.errors.length === 0 && cell.value !== undefined) {
       next[member.key] = cell.value;
     }
   }
@@ -292,7 +301,7 @@ async function runRepeaterPipeline(
     return { errors: [{ path, message: META_FIELD_MESSAGES.invalid }] };
   }
   const errors: MetaFieldError[] = [];
-  const rows: Record<string, unknown>[] = [];
+  const rows: Record<string, JsonValue>[] = [];
   for (const [idx, rawRow] of value.entries()) {
     if (
       rawRow === null ||
@@ -307,7 +316,7 @@ async function runRepeaterPipeline(
     }
     const rowObj = rawRow as Record<string, unknown>;
     if (isBlankRow(field.subFields, rowObj)) continue;
-    const next: Record<string, unknown> = {};
+    const next: Record<string, JsonValue> = {};
     for (const sf of field.subFields) {
       const cell = await runFieldPipeline(
         sf,
@@ -316,7 +325,7 @@ async function runRepeaterPipeline(
         mode,
       );
       errors.push(...cell.errors);
-      if (cell.errors.length === 0 && cell.isDeletion !== true) {
+      if (cell.errors.length === 0 && cell.value !== undefined) {
         next[sf.key] = cell.value;
       }
     }

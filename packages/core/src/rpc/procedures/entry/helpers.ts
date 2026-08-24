@@ -1,3 +1,4 @@
+import type { JsonObject } from "../../../json.js";
 import type { SelectableAccessPolicy } from "../../../plugin/manifest.js";
 import type { MetaPatch } from "../../meta/core.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/meta-key.js";
@@ -50,9 +51,9 @@ export function withTemplateChoice(
  * fresh object (never mutates the input); `undefined` leaves it untouched.
  */
 export function applyTemplateChoiceToMeta(
-  meta: Readonly<Record<string, unknown>>,
+  meta: JsonObject,
   template: string | null | undefined,
-): Record<string, unknown> {
+): JsonObject {
   if (template === undefined) return { ...meta };
   const next = { ...meta };
   if (template === null) delete next[NAMED_TEMPLATE_META_KEY];
@@ -97,9 +98,9 @@ export function withAccessChoice(
  * object (never mutates the input); `undefined` leaves it untouched.
  */
 export function applyAccessChoiceToMeta(
-  meta: Readonly<Record<string, unknown>>,
+  meta: JsonObject,
   access: string | null | undefined,
-): Record<string, unknown> {
+): JsonObject {
   if (access === undefined) return { ...meta };
   const next = { ...meta };
   if (access === null) delete next[ACCESS_POLICY_META_KEY];

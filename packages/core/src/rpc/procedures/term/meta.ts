@@ -1,6 +1,7 @@
 import type { AppContext } from "../../../context/app.js";
+import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
-import type { MetaPatch } from "../../meta/core.js";
+import type { MetaInput, MetaPatch, ResolvedMeta } from "../../meta/core.js";
 import { terms } from "../../../db/schema/terms.js";
 import { findTermMetaField } from "../../../plugin/manifest.js";
 import {
@@ -20,7 +21,7 @@ export type { MetaChanges as TermMetaChanges } from "../../meta/core.js";
 export async function sanitizeMetaForRpc(
   registry: PluginRegistry,
   taxonomy: string,
-  input: Record<string, unknown> | undefined,
+  input: MetaInput | undefined,
   errors: Parameters<typeof sanitizeMetaForRpcCore>[2],
 ): Promise<MetaPatch | null> {
   return sanitizeMetaForRpcCore(
@@ -66,8 +67,8 @@ export function assertTermMetaCapabilities(
 export async function resolveTermMeta(
   ctx: AppContext,
   taxonomy: string,
-  raw: Readonly<Record<string, unknown>> | null | undefined,
-): Promise<Record<string, unknown>> {
+  raw: JsonObject | null | undefined,
+): Promise<ResolvedMeta> {
   const findField = (key: string) =>
     findTermMetaField(ctx.plugins, taxonomy, key);
   return resolveMetaReferencesCore(
@@ -80,7 +81,7 @@ export async function resolveTermMeta(
 export async function loadTermMeta(
   ctx: AppContext,
   term: { readonly id: number; readonly taxonomy: string },
-): Promise<Record<string, unknown>> {
+): Promise<ResolvedMeta> {
   const decoded = await loadMeta(ctx, terms, terms.id, term.id, (key) =>
     findTermMetaField(ctx.plugins, term.taxonomy, key),
   );

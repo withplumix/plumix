@@ -2,6 +2,8 @@ import { sql } from "drizzle-orm";
 import { sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
+import type { JsonObject } from "../../json.js";
+
 export const USER_ROLES = [
   "subscriber",
   "contributor",
@@ -25,11 +27,7 @@ export const users = sqliteTable(
     name: t.text(),
     avatarUrl: t.text(),
     role: t.text({ enum: USER_ROLES }).notNull().default("subscriber"),
-    meta: t
-      .text({ mode: "json" })
-      .$type<Record<string, unknown>>()
-      .notNull()
-      .default({}),
+    meta: t.text({ mode: "json" }).$type<JsonObject>().notNull().default({}),
     emailVerifiedAt: t.integer({ mode: "timestamp" }),
     disabledAt: t.integer({ mode: "timestamp" }),
     createdAt: t

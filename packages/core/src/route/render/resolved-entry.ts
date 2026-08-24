@@ -2,6 +2,7 @@ import type { EntryContent } from "@plumix/blocks";
 
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
+import type { WithResolvedMeta } from "../../rpc/meta/core.js";
 
 /** Public-safe author projection — query select narrows away email + auth columns. */
 export interface ResolvedAuthor {
@@ -14,7 +15,7 @@ export interface ResolvedAuthor {
 // A term plus its pre-resolved archive `url` (basePath-correct). `url` is null
 // for a private taxonomy or a nested term needing an ancestor-chain walk —
 // `<Link term>` then degrades to its children. Mirrors `ResolvedEntry.url`.
-export interface ResolvedTerm extends Term {
+export interface ResolvedTerm extends WithResolvedMeta<Term> {
   readonly url: string | null;
 }
 
@@ -24,7 +25,7 @@ export interface ResolvedTerm extends Term {
 //
 // `url` is null when an ancestor-chain DB walk is required — hierarchical
 // types with a non-null parentId await a follow-up batched resolver.
-export interface ResolvedEntry extends Entry {
+export interface ResolvedEntry extends WithResolvedMeta<Entry> {
   readonly contentBlocks: EntryContent | null;
   readonly terms: readonly ResolvedTerm[];
   readonly author: ResolvedAuthor;

@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, sqliteTable } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
+import type { JsonObject } from "../../json.js";
 import { USER_ROLES, users } from "./users.js";
 
 export const AUTH_TOKEN_TYPES = [
@@ -28,7 +29,7 @@ export const authTokens = sqliteTable(
     // Free-form per-type payload. Today only `oauth_state` populates this
     // (PKCE verifier + provider key + return path); kept nullable so the
     // existing token types keep their narrow column footprint.
-    payload: t.text({ mode: "json" }).$type<Record<string, unknown>>(),
+    payload: t.text({ mode: "json" }).$type<JsonObject>(),
     expiresAt: t.integer({ mode: "timestamp" }).notNull(),
     createdAt: t
       .integer({ mode: "timestamp" })

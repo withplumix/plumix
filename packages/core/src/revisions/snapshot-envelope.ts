@@ -1,3 +1,5 @@
+import type { JsonObject } from "../json.js";
+
 // The `__plumix_*` meta-key namespace is reserved for framework use —
 // plugin / theme code must not author keys under it, and meta-box
 // fields cannot use this prefix.
@@ -14,10 +16,14 @@ export const REVISION_MESSAGE_META_KEY = "__plumix_revision_message";
 // enough to render inline without truncating the row UI.
 export const REVISION_MESSAGE_MAX_LENGTH = 280;
 
-interface SnapshotEnvelope {
-  readonly slug: string;
-  readonly parentId: number | null;
-}
+// Spelled as a `type`, not an `interface`: TypeScript withholds the implicit
+// index signature from an interface, so an interface never assigns to
+// `JsonObject` however JSON-shaped its members are — and this envelope rides
+// inside the stored meta bag.
+type SnapshotEnvelope = Readonly<{
+  slug: string;
+  parentId: number | null;
+}>;
 
 export function encodeSnapshotEnvelope(envelope: SnapshotEnvelope): {
   readonly [SNAPSHOT_META_KEY]: SnapshotEnvelope;
@@ -26,7 +32,7 @@ export function encodeSnapshotEnvelope(envelope: SnapshotEnvelope): {
 }
 
 export function decodeSnapshotEnvelope(
-  meta: Readonly<Record<string, unknown>>,
+  meta: JsonObject,
 ): SnapshotEnvelope | undefined {
   const raw = meta[SNAPSHOT_META_KEY];
   if (typeof raw !== "object" || raw === null) return undefined;
@@ -44,9 +50,9 @@ export function decodeSnapshotEnvelope(
  * unsaved named-template choice still drives template resolution.
  */
 export function stripReservedMeta(
-  meta: Readonly<Record<string, unknown>>,
+  meta: JsonObject,
   keep: readonly string[] = [],
-): Record<string, unknown> {
+): JsonObject {
   const kept = new Set(keep);
   return Object.fromEntries(
     Object.entries(meta).filter(
@@ -55,9 +61,7 @@ export function stripReservedMeta(
   );
 }
 
-export function decodeRevisionMessage(
-  meta: Readonly<Record<string, unknown>>,
-): string | null {
+export function decodeRevisionMessage(meta: JsonObject): string | null {
   const raw = meta[REVISION_MESSAGE_META_KEY];
   // Treat both missing and empty string as "no message" so callers
   // get a stable `null | string` discriminator without an empty-string

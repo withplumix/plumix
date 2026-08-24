@@ -5,6 +5,7 @@ import {
   serializeLoaderData,
 } from "@plumix/blocks";
 
+import type { JsonObject } from "../../../json.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { getAutosave } from "../../../revisions/repository.js";
@@ -47,7 +48,7 @@ export const refreshBlockLoader = base
     return {
       data: JSON.parse(serializeLoaderData(resolved)) as Record<
         string,
-        Readonly<Record<string, unknown>>
+        JsonObject
       >,
     };
   });
