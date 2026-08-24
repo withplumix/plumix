@@ -136,6 +136,22 @@ export const BLOCK_DESCRIPTORS = {
     id: "block.core.html.title",
     message: "HTML",
   }),
+  htmlDescription: defineMessage({
+    id: "block.core.html.description",
+    message: "Raw markup, sanitized against the allowlist before it renders.",
+  }),
+  htmlKeywordRaw: defineMessage({
+    id: "block.core.html.keyword.raw",
+    message: "raw",
+  }),
+  htmlKeywordMarkup: defineMessage({
+    id: "block.core.html.keyword.markup",
+    message: "markup",
+  }),
+  htmlKeywordEmbedCode: defineMessage({
+    id: "block.core.html.keyword.embed-code",
+    message: "embed code",
+  }),
   htmlInputHtmlLabel: defineMessage({
     id: "block.core.html.input.html.label",
     message: "HTML",

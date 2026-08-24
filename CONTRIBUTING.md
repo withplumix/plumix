@@ -79,6 +79,11 @@ each `webServer` command does first — the `.wrangler/state` wipe, the
 migrations, the rebuild — so a reused server means testing stale data against a
 stale build. A busy port fails loudly instead; move the block with the offset.
 
+`packages/admin` carries a second Playwright project on the same config — the
+documentation captures, run by `pnpm docs:screenshots`. It binds admin's e2e
+port, so it collides with a running admin suite or preview the same way any two
+suites would, and the offset above is the escape hatch for that too.
+
 Every test-having package ships a `vitest.config.ts` with coverage wired
 (`pnpm exec vitest run --coverage` inside the package). Thresholds are not
 enforced yet.

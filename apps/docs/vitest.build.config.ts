@@ -7,5 +7,11 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     include: ["src/**/*.build.test.{ts,tsx}"],
+    // The first test to reach the sample check pays for the TypeScript program
+    // built over `plumix`'s published types — ~1.5s on a warm laptop, and the
+    // 5s default leaves too little headroom for a cold CI box, where it has
+    // timed out. 15s matches `packages/admin-editor` and absorbs the variance
+    // without masking a genuine hang.
+    testTimeout: 15_000,
   },
 });

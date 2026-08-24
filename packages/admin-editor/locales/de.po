@@ -394,6 +394,11 @@ msgid "block.core.embed.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.html.keyword.embed-code"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.fillImage"
 msgstr ""
@@ -511,6 +516,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.margin"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.html.keyword.markup"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -686,6 +696,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.toolbar.publish"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.html.keyword.raw"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.html.description"
 msgstr ""
 
 #. js-lingui-explicit-id

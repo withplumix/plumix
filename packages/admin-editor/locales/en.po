@@ -394,6 +394,11 @@ msgid "block.core.embed.description"
 msgstr "Embed a YouTube, Vimeo, Loom, Spotify, or CodePen URL — or any other page in a sandboxed iframe."
 
 #. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.html.keyword.embed-code"
+msgstr "embed code"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.fillImage"
 msgstr "Fill image"
@@ -512,6 +517,11 @@ msgstr "Loop"
 #: src/styles-tab.tsx
 msgid "editor.styles.margin"
 msgstr "Margin"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.html.keyword.markup"
+msgstr "markup"
 
 #. js-lingui-explicit-id
 #: src/block-i18n.ts
@@ -687,6 +697,16 @@ msgstr "property"
 #: src/editor-header.tsx
 msgid "editor.toolbar.publish"
 msgstr "Publish"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.html.keyword.raw"
+msgstr "raw"
+
+#. js-lingui-explicit-id
+#: src/block-i18n.ts
+msgid "block.core.html.description"
+msgstr "Raw markup, sanitized against the allowlist before it renders."
 
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
