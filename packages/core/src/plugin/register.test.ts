@@ -1,14 +1,18 @@
 import { object } from "valibot";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { HookRegistry } from "../hooks/registry.js";
+import { base } from "../rpc/base.js";
 import { definePlugin } from "./define.js";
 import { DuplicateRegistrationError } from "./errors.js";
 import { installPlugins } from "./register.js";
 
 import "../rpc/hooks.js";
 
+import type { Lazy } from "@orpc/server";
+
 import type { NewEntry } from "../db/schema/entries.js";
+import type { PluginRpcRouter } from "./registry.js";
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
@@ -446,9 +450,11 @@ describe("plugin id validation", () => {
 });
 
 describe("registerRpcRouter", () => {
+  const list = base.handler(() => "ok");
+
   test("stores the router under the plugin id", async () => {
     const hooks = new HookRegistry();
-    const sentinel = { list: () => "ok" };
+    const sentinel = { list };
     const plugin = definePlugin("menus", (ctx) => {
       ctx.registerRpcRouter(sentinel);
     });
@@ -456,11 +462,22 @@ describe("registerRpcRouter", () => {
     expect(registry.rpcRouters.get("menus")).toBe(sentinel);
   });
 
+  test("accepts procedures, sub-routers and lazy nodes, nothing else", () => {
+    expectTypeOf<{ list: typeof list }>().toExtend<PluginRpcRouter>();
+    expectTypeOf<{
+      locations: { list: typeof list };
+    }>().toExtend<PluginRpcRouter>();
+    expectTypeOf<{
+      sub: Lazy<{ list: typeof list }>;
+    }>().toExtend<PluginRpcRouter>();
+    expectTypeOf<{ list: () => string }>().not.toExtend<PluginRpcRouter>();
+  });
+
   test("rejects a second registration from the same plugin", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerRpcRouter({ list: () => "ok" });
-      ctx.registerRpcRouter({ list: () => "nope" });
+      ctx.registerRpcRouter({ list });
+      ctx.registerRpcRouter({ get: list });
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /plugin RPC router "menus" is already registered/,
