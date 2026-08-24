@@ -52,8 +52,10 @@ test("an SSR'd eager island already in the DOM hydrates with the renderer URL se
   // the renderer URL BEFORE defining the element, or the eager island
   // hydrates against a null renderer URL.
   await import("./island-runtime.js");
-  await new Promise((resolve) => setTimeout(resolve, 0));
-
-  expect(errors.join("\n")).not.toContain("island renderer URL not set");
-  expect(imported).toContain("/assets/renderer.js");
+  // Error assertion first: a regression should report the error that names the
+  // bug, not the missing import that follows from it.
+  await vi.waitFor(() => {
+    expect(errors.join("\n")).not.toContain("island renderer URL not set");
+    expect(imported).toContain("/assets/renderer.js");
+  });
 });
