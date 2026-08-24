@@ -33,6 +33,12 @@ export interface PlumixE2EConfigOptions {
    * `plumix dev`.
    * Also auto-wires `globalSetup.ts` and `storageState.json` by convention.
    * Mutually exclusive with an explicit `webServerCommand`.
+   *
+   * The `rm -rf .wrangler/state` step belongs to the webServer, so it runs
+   * once per suite run and never per retry. A retried spec meets the D1
+   * rows its failed attempt left behind — spec-side seeding has to put its
+   * own tables into a known state rather than append to whatever is there,
+   * or the retry fails in setup and buries the original failure (#1923).
    */
   readonly playground?: string;
   /**

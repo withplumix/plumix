@@ -5,11 +5,13 @@ import { actingAs, openPlaygroundDb } from "plumix/test/playwright";
 
 import { commentFactory } from "../src/test/factories.js";
 
-// All e2e seeding happens here — once, in the quiet window after the worker
-// boots but before any spec drives it. Seeding from a spec (or a retry's
-// beforeAll) races the live worker for the D1 write lock (SQLITE_BUSY) and
-// re-collides on unique indexes. The specs read the seeded ids back from
-// e2e-fixtures.json and never touch the database.
+// Row *creation* happens here — once, in the quiet window after the worker
+// boots but before any spec drives it. Creating rows from a spec re-collides
+// on unique indexes when a retry runs it again. The specs read the seeded ids
+// back from e2e-fixtures.json; their only write is resetting their own
+// fixtures' status, which updates existing rows. That still takes the D1
+// write lock while the worker is live, which is what `openPlaygroundDb`'s
+// `busy_timeout` is there to absorb.
 export default async function globalSetup(): Promise<void> {
   const db = await openPlaygroundDb({
     cwd: resolve(process.cwd(), "playground"),

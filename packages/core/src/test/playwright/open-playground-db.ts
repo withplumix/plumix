@@ -29,8 +29,9 @@ export interface OpenPlaygroundDbOptions {
  * Coordinates with a running `plumix dev` worker over the same sqlite
  * file via SQLite WAL mode: multi-reader, single-writer with
  * non-blocking reads. Test-side writes (e.g. seeding an admin user)
- * during quiet windows are safe; under contention libsql surfaces
- * `SQLITE_BUSY` rather than corrupting state.
+ * during quiet windows are safe; under contention SQLite serializes
+ * them behind a 5s `busy_timeout` rather than corrupting state, and
+ * surfaces `SQLITE_BUSY` only if the lock is still held past that.
  *
  * @experimental Part of the worker-driven plugin e2e helpers landing in
  *   #251. The discovery rule may move from "scan-and-pick" to
@@ -66,5 +67,11 @@ export async function openPlaygroundDb(
   }
 
   const client = createClient({ url: `file:${join(stateDir, dbFiles[0])}` });
+  // libsql opens with no busy handler at all, so a write that overlaps one
+  // from the running worker — or from a sibling Playwright worker holding
+  // this same file — fails on the first attempt instead of waiting. That
+  // surfaces as a failure in whichever hook took the lock second, masking
+  // whatever the test was actually checking.
+  await client.execute("PRAGMA busy_timeout = 5000");
   return drizzle(client, { schema, casing: "snake_case" });
 }
