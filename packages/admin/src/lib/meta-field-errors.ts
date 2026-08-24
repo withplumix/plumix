@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { useLingui } from "@lingui/react";
+import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
 
@@ -30,23 +31,30 @@ export interface MetaFieldServerError {
 export function extractMetaFieldErrors(
   err: unknown,
 ): readonly MetaFieldServerError[] | undefined {
-  if (!err || typeof err !== "object" || !("data" in err)) return undefined;
-  const data = (err as { data?: { errors?: unknown } }).data;
-  if (!data || !Array.isArray(data.errors)) return undefined;
-  const errors = data.errors.filter(isMetaFieldServerError);
+  const envelope = v.safeParse(errorEnvelopeSchema, err);
+  if (!envelope.success) return undefined;
+  const errors = envelope.output.data.errors.filter(isMetaFieldServerError);
   return errors.length > 0 ? errors : undefined;
 }
 
+// The oRPC error the rejections travel inside. Only the envelope is described
+// here — each entry is checked on its own below, so one malformed rejection
+// does not discard the rest.
+const errorEnvelopeSchema = v.looseObject({
+  data: v.looseObject({ errors: v.array(v.unknown()) }),
+});
+
+// The wire form of `MetaFieldServerError`. A descriptor is matched on its `id`
+// alone — the rest of what Lingui puts on one is the catalog's business, and
+// `useMetaFieldMessage` reads it off the original value either way, since this
+// is a predicate and the parsed output is discarded.
+const serverErrorSchema = v.object({
+  path: v.string(),
+  message: v.union([v.string(), v.object({ id: v.string() })]),
+});
+
 function isMetaFieldServerError(item: unknown): item is MetaFieldServerError {
-  if (!item || typeof item !== "object") return false;
-  const { path, message } = item as { path?: unknown; message?: unknown };
-  if (typeof path !== "string") return false;
-  if (typeof message === "string") return true;
-  return (
-    typeof message === "object" &&
-    message !== null &&
-    typeof (message as { id?: unknown }).id === "string"
-  );
+  return v.is(serverErrorSchema, item);
 }
 
 /** Resolver for server error messages. Unlike `useLabel`, interpolates

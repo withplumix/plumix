@@ -692,6 +692,9 @@ export function createMenuRouter(): PluginRpcRouter {
         );
       const slugToLocation = new Map<string, string>();
       for (const row of settingRows) {
+        // Not parsed: `settings.value` is still `unknown` on the column because a
+        // value reaches it without passing the field pipeline — see that column's
+        // own note in db/schema/settings.ts for the gate it waits on.
         if (typeof row.value === "string")
           slugToLocation.set(row.value, row.key);
       }

@@ -86,6 +86,9 @@ const messageIdReports = (ruleId: string) => (fixture: string) =>
   );
 
 const unsafeDictionaryReports = messageIdReports("plumix/no-unsafe-dictionary");
+const unparsedTypeofReports = messageIdReports(
+  "plumix/no-unparsed-property-typeof",
+);
 const chainedAssertionReports = messageIdReports(
   "plumix/no-chained-type-assertion",
 );
@@ -363,5 +366,28 @@ describe("the existing restricted-syntax selectors", () => {
     await expect(
       restrictedSyntaxLines(withReact, "src/physical-class.tsx"),
     ).resolves.toEqual([1]);
+  });
+});
+
+describe("plumix/no-unparsed-property-typeof", () => {
+  it("rejects a typeof on a property read off a value nothing decoded", async () => {
+    await expect(
+      unparsedTypeofReports("src/unparsed-typeof.violations.ts"),
+    ).resolves.toEqual([
+      { messageId: "unparsedProperty", line: 7 },
+      { messageId: "unparsedProperty", line: 11 },
+      { messageId: "unparsedProperty", line: 15 },
+      { messageId: "unparsedPropertyReasonTooThin", line: 20 },
+      { messageId: "unparsedProperty", line: 24 },
+      { messageId: "unparsedProperty", line: 32 },
+      { messageId: "unparsedProperty", line: 42 },
+      { messageId: "unparsedProperty", line: 51 },
+    ]);
+  });
+
+  it("stays silent on a key read off a bag declared open and on a boundary whose note names what blocks the parse", async () => {
+    await expect(
+      plumixReports("src/unparsed-typeof.allowed.ts"),
+    ).resolves.toEqual([]);
   });
 });

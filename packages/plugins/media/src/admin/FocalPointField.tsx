@@ -2,6 +2,7 @@ import type { JsonObject, JsonValue } from "plumix";
 import type { ReactNode, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useRef } from "react";
 import { useLingui } from "plumix/i18n";
+import * as v from "valibot";
 
 // Reuses the media picker's "no media selected" string — the focal control is
 // inert until an image is chosen — rather than adding a near-duplicate.
@@ -15,16 +16,16 @@ type FocalPoint = Readonly<{ x: number; y: number }>;
 
 const clamp01 = (n: number): number => Math.min(1, Math.max(0, n));
 
-function readFocalPoint(raw: unknown): FocalPoint {
-  if (raw && typeof raw === "object") {
-    const o = raw as { x?: unknown; y?: unknown };
-    return {
-      x: typeof o.x === "number" ? clamp01(o.x) : 0.5,
-      y: typeof o.y === "number" ? clamp01(o.y) : 0.5,
-    };
-  }
-  return { x: 0.5, y: 0.5 };
-}
+// Centre is the anchor an unset image already renders at, so every way the
+// stored value can disappoint — absent, the wrong type, not an object at all —
+// falls back to it rather than failing the field. Each axis falls back on its
+// own, so one bad coordinate does not discard a good one.
+const CENTRE: FocalPoint = { x: 0.5, y: 0.5 };
+const axisSchema = v.fallback(v.pipe(v.number(), v.transform(clamp01)), 0.5);
+const focalPointSchema = v.fallback(
+  v.object({ x: axisSchema, y: axisSchema }),
+  CENTRE,
+);
 
 // The block's image url — the picked media's url, else the raw src escape hatch.
 function imageUrl(attrs: JsonObject): string {
@@ -69,7 +70,7 @@ export function FocalPointField({
 }): ReactNode {
   const { i18n } = useLingui();
   const url = imageUrl(attrs ?? {});
-  const focal = readFocalPoint(rhf.value);
+  const focal = v.parse(focalPointSchema, rhf.value);
   const frameRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
 

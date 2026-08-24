@@ -13,6 +13,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import type { SourceMapInput } from "@jridgewell/trace-mapping";
 import type { IncomingMessage } from "node:http";
 import type { Plugin, UserConfig } from "vite";
+import * as v from "valibot";
 import { mergeConfig } from "vite";
 
 import type { BlockSpec, ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
@@ -1056,8 +1057,11 @@ function readAdminVersion(): string | null {
   try {
     const adminPkgPath = require.resolve("@plumix/admin/package.json");
     const raw = readFileSync(adminPkgPath, "utf8");
-    const pkg = JSON.parse(raw) as { version?: unknown };
-    return typeof pkg.version === "string" ? pkg.version : null;
+    const parsed = v.safeParse(
+      v.looseObject({ version: v.string() }),
+      JSON.parse(raw),
+    );
+    return parsed.success ? parsed.output.version : null;
   } catch {
     return null;
   }

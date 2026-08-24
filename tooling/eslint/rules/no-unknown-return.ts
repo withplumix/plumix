@@ -1,6 +1,8 @@
 import type { Rule } from "eslint";
 import ts from "typescript";
 
+import { readTypeAwareServices } from "./type-services.js";
+
 // Every node that can declare a return type. Method and property definitions
 // are absent on purpose — they wrap a function expression, and the annotation
 // hangs off the wrapped node.
@@ -26,23 +28,6 @@ const UNKNOWN_RETURN = `${RETURN_ANNOTATION} > TSUnknownKeyword`;
 const PROMISE_OF_UNKNOWN_RETURN =
   `${RETURN_ANNOTATION} > TSTypeReference[typeName.name=/^(Promise|PromiseLike)$/]` +
   ` > TSTypeParameterInstantiation > TSUnknownKeyword`;
-
-interface TypeAwareServices {
-  readonly program: ts.Program;
-  // typescript-eslint's own map type, structurally: a lookup keyed by the
-  // ESTree node, not a `Map`.
-  readonly esTreeNodeToTSNodeMap: { get(node: object): ts.Node | undefined };
-}
-
-function readTypeAwareServices(
-  context: Rule.RuleContext,
-): TypeAwareServices | null {
-  const services = context.sourceCode.parserServices as
-    Partial<TypeAwareServices> | undefined;
-  return services?.program && services.esTreeNodeToTSNodeMap
-    ? (services as TypeAwareServices)
-    : null;
-}
 
 /**
  * The type the outside world expects this function to be, when there is one:

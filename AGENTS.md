@@ -136,6 +136,32 @@ The rule stays silent wherever nothing is being declared: a generic constraint o
 predicate, an assertion target, and a local's annotation. A signature or a member is a declaration
 wherever it sits, so neither an enclosing alias nor an enclosing `const` lends it cover.
 
+A `typeof` on a field read off a value the compiler knows nothing about is rejected in production
+`src/` by `plumix/no-unparsed-property-typeof`. It catches two shapes. Where the object is `any`,
+`json.access_token` type-checks only because someone decided `json` has that field, so the `typeof`
+tests the leaf and leaves the claim about the object standing on nothing. Where the leaf is
+honestly declared `unknown` — `settings.value`, a stored bag's column — nothing was assumed: the
+declaration deferred the parse, and the read is where the debt comes due. Decode the value with a
+valibot schema and read a typed field off the result.
+
+Four positions stay silent, and they are as much the rule as the report is. A bare `unknown` or
+`any` value: that is what a parse boundary takes, and the first check inside one has nothing to
+reach through. A union the compiler already knows: `typeof` picking the arm of a `Label` or of an
+`EnvInput` config slot is the documented idiom. A key read off a dictionary — or an element of an
+`unknown[]`: the index signature already declared its values undescribed. A shape that merely
+*carries* an index signature beside declared members is not a bag and does report, so parsing with
+a loose-object schema buys no silence for the fields it left undescribed. And a comparison against
+`"function"` or `"symbol"`: no serialized value produces either tag, so asking for one is a
+structural question about the object in hand rather than a decode that was skipped.
+
+Binding the read to an annotated local first (`const raw: unknown = bag.x`) puts it in the first of
+those positions and the rule goes quiet — the same escape `no-unsafe-dictionary` grants a local's
+annotation, and for the same reason. It is an escape, not a fix.
+
+Where the boundary genuinely cannot be decoded yet, keep the check with a `Not parsed: …` sentence
+in the comment directly above the statement, naming what is holding the schema up. The words after
+the marker are counted, as with `// Safety:` and `Not JSON:`.
+
 ## Tests
 
 One vitest suite per package. Two layouts, in order of preference:
