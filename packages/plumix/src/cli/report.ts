@@ -27,6 +27,13 @@ export const report = {
   error(message: string): void {
     process.stderr.write(`${paint("red", "error")} ${message}\n`);
   },
+  // The failure's own words, not our advice. Every line is indented because a
+  // multi-line cause read flush-left looks like separate output, not a detail.
+  detail(message: string): void {
+    for (const line of message.split("\n")) {
+      process.stderr.write(`  ${paint("dim", line)}\n`);
+    }
+  },
   hint(message: string): void {
     process.stderr.write(`  ${paint("dim", "→")} ${message}\n`);
   },
@@ -42,9 +49,20 @@ export const report = {
   },
 };
 
+// An object cause would render as `[object Object]`, which is worse than
+// printing nothing.
+function causeText(cause: unknown): string | undefined {
+  if (cause instanceof Error) return cause.message;
+  if (typeof cause === "string") return cause;
+  return undefined;
+}
+
 export function exitWithError(error: unknown): never {
   if (isCliError(error)) {
     report.error(`${error.code}: ${error.message}`);
+    // Without it a CI log names the file that failed but never why (#1883).
+    const cause = causeText(error.cause);
+    if (cause) report.detail(cause);
     if (error.hint) report.hint(error.hint);
   } else if (error instanceof Error) {
     report.error(`UNEXPECTED: ${error.name}: ${error.message}`);
