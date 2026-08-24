@@ -98,6 +98,24 @@ call has to be hoisted into its own binding first. The rule can only check that 
 written; what keeps the escape meaningful is being rare enough that a reviewer reads every one.
 Never silence it with a bare disable comment.
 
+A declared return type of `unknown` — or a promise of one — is rejected in production `src/` by
+`plumix/no-unknown-return`. It is the rule that stops the previous one being needed: an `unknown`
+return has not solved a typing problem, it has exported one to every caller, and callers reach for
+an assertion. Return the shape the function produces — `JsonValue` / `JsonObject` for serialized
+data, a union naming what it can hand back, or the output of the valibot schema that decoded the
+input. A function named as a parser must not hand back an unparsed value. `unknown` stays correct
+as a *parameter* (that is what a parse boundary takes) and inside a wider type.
+
+The rule stays silent where the return was never yours to choose: a signature an outside contract
+already declares open (a proxy trap, a `JSON.parse` reviver) and a function type used as a
+type-level pattern (`extends (...args: never[]) => unknown`). Both are read from the code, so
+neither needs a disable comment.
+
+One case does: a registry that stores handlers for every name in a single map erases a type
+TypeScript has no way to spell, and the value is recovered at the typed boundary the registry
+returns through rather than handed to a caller. Disable the rule there, and say in the comment
+where the erasure is undone.
+
 ## Tests
 
 One vitest suite per package. Two layouts, in order of preference:

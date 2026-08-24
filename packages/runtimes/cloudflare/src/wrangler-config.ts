@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ParseError } from "jsonc-parser";
+import type { JsonValue } from "plumix";
 import { parse as parseJsonc } from "jsonc-parser";
 import { parse as parseToml } from "smol-toml";
 
@@ -59,9 +60,11 @@ function tryRead(path: string): string | null {
   }
 }
 
-function parseJsoncStrict(text: string, filename: string): unknown {
+function parseJsoncStrict(text: string, filename: string): JsonValue {
   const errors: ParseError[] = [];
-  const value: unknown = parseJsonc(text, errors, { allowTrailingComma: true });
+  const value = parseJsonc(text, errors, {
+    allowTrailingComma: true,
+  }) as JsonValue;
   if (errors.length > 0) {
     throw WranglerConfigError.parseFailed({
       filename,

@@ -65,6 +65,9 @@ export interface R2ObjectStorage extends ObjectStorage {
   readonly config: R2Config;
 }
 
+// The slice of the binding this adapter calls, and only that: `put` resolves
+// to an object the adapter never reads, so the mirror says `void` rather than
+// describing a shape nothing here checks.
 interface R2Bucket {
   put(
     key: string,
@@ -82,7 +85,7 @@ interface R2Bucket {
       };
       customMetadata?: Record<string, string>;
     },
-  ): Promise<unknown>;
+  ): Promise<void>;
   get(
     key: string,
     options?: { range?: { offset: number; length: number } },

@@ -16,6 +16,6 @@ export const list = base
       const rows = await listTerms(context, filtered);
       return await context.hooks.applyFilter("rpc:term.list:output", rows);
     } catch (error) {
-      throw toRpcTermReadError(error, errors);
+      throw toRpcTermReadError(error, errors) ?? error;
     }
   });

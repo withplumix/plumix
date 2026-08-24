@@ -1,14 +1,20 @@
 import type { CommandDefinition } from "plumix";
+import type { ViteBuilder } from "vite";
 
 import { createCloudflareVite } from "./vite.js";
 
 /**
  * Minimal slice of Vite's `ViteBuilder` this orchestration touches, so the
- * ordering invariant can be unit-tested without booting a real build.
+ * ordering invariant can be unit-tested without booting a real build. The
+ * result is Vite's to define and nothing here reads it — naming it after
+ * `ViteBuilder.build` is what keeps the real builder assignable, while `void`
+ * leaves a test double free to resolve nothing.
  */
+type BuildResult = Awaited<ReturnType<ViteBuilder["build"]>> | void;
+
 interface BuildableApp {
   readonly environments: Record<string, unknown>;
-  build(environment: unknown): Promise<unknown>;
+  build(environment: unknown): Promise<BuildResult>;
 }
 
 /**

@@ -1,6 +1,7 @@
 import type { Label } from "plumix/i18n";
 import type {
   FieldBuilder,
+  JsonValue,
   MediaListMetaBoxField,
   MediaMetaBoxField,
   MetaBoxFieldSpan,
@@ -69,7 +70,7 @@ interface MediaFieldState {
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
   readonly showInApi?: true;
-  readonly sanitize?: (value: unknown) => unknown;
+  readonly sanitize?: (value: unknown) => JsonValue;
   readonly validate?: MetaBoxFieldValidate;
 }
 
@@ -286,7 +287,7 @@ export class MediaFieldBuilder<
 
   /** Normalising transform, applied after coercion and before persistence. */
   sanitize(
-    sanitize: (value: unknown) => unknown,
+    sanitize: (value: unknown) => JsonValue,
   ): MediaFieldBuilder<K, Multiple, Required, Returns> {
     return this.#fork({ sanitize });
   }

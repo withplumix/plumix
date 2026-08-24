@@ -6,6 +6,7 @@
 // `@plumix/core/manifest` barrel.
 
 import type { Label } from "../../i18n/label.js";
+import type { JsonValue } from "../../json.js";
 import type { MetaFieldCondition } from "./condition.js";
 import type { StringInputType, TemporalInputType } from "./roster.js";
 import { TEMPORAL_INPUT_TYPES } from "./roster.js";
@@ -71,7 +72,7 @@ export interface MetaBoxFieldBase {
    * sanitized value replaces the caller's input — ideal for trimming,
    * whitelisting, or normalising shape.
    */
-  readonly sanitize?: (value: unknown) => unknown;
+  readonly sanitize?: (value: unknown) => JsonValue;
   /**
    * Custom validation predicate — see `MetaBoxFieldValidate`. Executed
    * server-side by the constraint walker, after `.sanitize()` and the
@@ -634,11 +635,15 @@ export interface ToggleMetaBoxField extends MetaBoxFieldBase {
  * absolute URL. `label` is the optional link text; `newTab` opts the
  * rendered anchor into `target="_blank"`.
  */
-export interface LinkValue {
-  readonly url: string;
-  readonly label?: string;
-  readonly newTab?: boolean;
-}
+// Spelled as a `type`, not an `interface`: TypeScript withholds the implicit
+// index signature from an interface, so an interface never assigns to
+// `JsonObject` however JSON-shaped its members are — and a link value is
+// stored in the meta bag and sanitized as JSON on the way in.
+export type LinkValue = Readonly<{
+  url: string;
+  label?: string;
+  newTab?: boolean;
+}>;
 
 /**
  * CTA-style link field authored via `link()`. Storage rides on the

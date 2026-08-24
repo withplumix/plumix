@@ -1,4 +1,5 @@
 import type { Label } from "../../i18n/label.js";
+import type { JsonValue } from "../../json.js";
 import type {
   MetaFieldCondition,
   MetaFieldConditionRule,
@@ -31,7 +32,7 @@ interface TemporalFieldState {
   readonly min?: string;
   readonly max?: string;
   readonly returns?: "date";
-  readonly sanitize?: (value: unknown) => unknown;
+  readonly sanitize?: (value: unknown) => JsonValue;
   readonly validate?: MetaBoxFieldValidate;
 }
 
@@ -198,7 +199,7 @@ export class TemporalFieldBuilder<
   sanitize(
     sanitize: (value: string) => string,
   ): TemporalFieldBuilder<Input, K, V, S> {
-    return this.#fork({ sanitize: sanitize as (value: unknown) => unknown });
+    return this.#fork({ sanitize: sanitize as (value: unknown) => JsonValue });
   }
 
   /**

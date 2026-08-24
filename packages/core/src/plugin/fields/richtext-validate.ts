@@ -3,10 +3,9 @@
 // rejects any disallowed type/mark name with a JSON-path pointer to
 // the offending location.
 //
-// The validator is a sanitize-shaped function (sync, no DB). Plug
-// it into a `richtext()` field's `sanitize` callback to reject
-// disallowed content before `applyMetaPatch` writes it. The wire
-// shape returned is the unchanged input — this is a validator, not
+// The validator is sync and DB-free. The field pipeline runs it while
+// normalizing a `richtext()` field, before `applyMetaPatch` writes the
+// value. What comes back is the unchanged input — this is a validator, not
 // a transformer (a transformer would silently strip disallowed
 // nodes, hiding edits the editor already prevented from being
 // surfaced; reject loud here so the editor's allowlist + server's
@@ -71,9 +70,9 @@ interface RichtextAllowlist {
 }
 
 /**
- * Build a sanitize-shaped validator for a `richtext` field. Returns
- * a function that walks a Tiptap JSON doc and either passes the
- * input through unchanged or throws a `RichtextValidationError`
+ * Build a validator for a `richtext` field. Returns a function that walks a
+ * Tiptap JSON doc and either hands the input back — the identity return type
+ * is the contract, not an accident — or throws a `RichtextValidationError`
  * pinpointing the first offending node/mark.
  *
  * Throws on the FIRST violation rather than collecting all of them
@@ -84,7 +83,7 @@ interface RichtextAllowlist {
  */
 export function walkRichtextDoc(
   allowlist: RichtextAllowlist,
-): (value: unknown) => unknown {
+): <T>(value: T) => T {
   // Pre-build the type sets so the recursive walker doesn't re-build
   // them on every node.
   const allowedNodeTypes = new Set<string>([

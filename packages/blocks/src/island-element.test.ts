@@ -123,7 +123,7 @@ describe("PlumixIslandElement lifecycle", () => {
           renders += 1;
           return null;
         },
-      } as unknown),
+      }),
     );
     const listener = vi.fn();
     window.addEventListener("plumix:unmount", listener);
@@ -189,9 +189,7 @@ describe("PlumixIslandElement lifecycle", () => {
     // attribute after its `hydrate()` runs.
     const strategy = vi.fn<IslandStrategy>((loadFn) => loadFn());
     stubStrategies(strategy);
-    const importer = vi.fn(() =>
-      Promise.resolve({ default: () => null } as unknown),
-    );
+    const importer = vi.fn(() => Promise.resolve({ default: () => null }));
     restoreImport = setDynamicImport(importer);
     const parent = makeIsland({
       client: "load",
@@ -237,9 +235,7 @@ describe("PlumixIslandElement lifecycle", () => {
       // Capture loadFn without invoking it — defers hydration.
       deferredLoad = loadFn;
     });
-    const importer = vi.fn(() =>
-      Promise.resolve({ default: () => null } as unknown),
-    );
+    const importer = vi.fn(() => Promise.resolve({ default: () => null }));
     restoreImport = setDynamicImport(importer);
     const el = makeIsland({
       client: "load",
@@ -344,7 +340,7 @@ describe("PlumixIslandElement lifecycle", () => {
       return null;
     };
     restoreImport = setDynamicImport(() =>
-      Promise.resolve({ default: Component } as unknown),
+      Promise.resolve({ default: Component }),
     );
     stubStrategies();
     const el = makeIsland({
@@ -418,7 +414,7 @@ describe("PlumixIslandElement lifecycle", () => {
       return null;
     };
     restoreImport = setDynamicImport(() =>
-      Promise.resolve({ default: Component } as unknown),
+      Promise.resolve({ default: Component }),
     );
     stubStrategies();
     const el = makeIsland({
@@ -452,7 +448,7 @@ describe("PlumixIslandElement lifecycle", () => {
       return null;
     };
     restoreImport = setDynamicImport(() =>
-      Promise.resolve({ default: Component } as unknown),
+      Promise.resolve({ default: Component }),
     );
     stubStrategies();
     const parent = makeIsland({
@@ -483,7 +479,7 @@ describe("PlumixIslandElement lifecycle", () => {
       return null;
     };
     restoreImport = setDynamicImport(() =>
-      Promise.resolve({ default: Component } as unknown),
+      Promise.resolve({ default: Component }),
     );
     stubStrategies();
     const el = makeIsland({
@@ -521,7 +517,7 @@ describe("PlumixIslandElement prefetch/hydrate split", () => {
     const imports: string[] = [];
     restoreImport = setDynamicImport((url) => {
       imports.push(url);
-      return Promise.resolve({ default: () => null } as unknown);
+      return Promise.resolve({ default: () => null });
     });
     let prefetchLoad: (() => Promise<void>) | undefined;
     let hydrateLoad: (() => Promise<void>) | undefined;

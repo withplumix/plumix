@@ -63,6 +63,6 @@ export const get = base
         },
       });
     } catch (error) {
-      throw toRpcEntryReadError(error, errors);
+      throw toRpcEntryReadError(error, errors) ?? error;
     }
   });

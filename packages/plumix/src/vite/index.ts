@@ -986,10 +986,7 @@ export function resolveIslandChunkUrl(
   rootDir: string,
 ): string {
   if (command === "serve") return "/@fs" + id;
-  const manifest = loadAssetManifest(rootDir) as Record<
-    string,
-    { file?: string } | undefined
-  >;
+  const manifest = loadAssetManifest(rootDir);
   // Vite's manifest keys source paths relative to the project root,
   // not by the `rollupOptions.input` name. Compute the relative POSIX
   // path so the lookup matches.
@@ -999,14 +996,21 @@ export function resolveIslandChunkUrl(
   return "/@fs" + id;
 }
 
-function loadAssetManifest(rootDir: string): unknown {
+/**
+ * The slice of Vite's `manifest.json` the island chunk lookup reads: source
+ * path → the chunk it built into. A missing file reads as an empty manifest,
+ * which is the cold-build case the virtual module already documents.
+ */
+type AssetManifest = Readonly<Record<string, { readonly file?: string }>>;
+
+function loadAssetManifest(rootDir: string): AssetManifest {
   const candidates = [
     resolve(rootDir, "dist/client/.vite/manifest.json"),
     resolve(rootDir, "dist/.vite/manifest.json"),
   ];
   for (const path of candidates) {
     try {
-      return JSON.parse(readFileSync(path, "utf8")) as unknown;
+      return JSON.parse(readFileSync(path, "utf8")) as AssetManifest;
     } catch {
       continue;
     }

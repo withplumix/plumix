@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { JsonValue } from "../../json.js";
 import type {
   EntryReferenceSummary,
   TermReferenceSummary,
@@ -243,7 +244,7 @@ describe("json() builder", () => {
   });
 
   test("forwards a custom .sanitize() and a json default", () => {
-    const sanitize = (v: unknown): unknown => v;
+    const sanitize = (v: unknown): JsonValue => String(v);
     const field = json("x")
       .default({ theme: "dark" })
       .sanitize(sanitize)

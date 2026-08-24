@@ -46,8 +46,7 @@ describe("toRpcTermReadError", () => {
     });
   });
 
-  test("passes a non-domain error through unchanged", () => {
-    const original = new Error("boom");
-    expect(toRpcTermReadError(original, stubErrors())).toBe(original);
+  test("declines a non-domain error so the caller rethrows its own", () => {
+    expect(toRpcTermReadError(new Error("boom"), stubErrors())).toBeUndefined();
   });
 });

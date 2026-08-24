@@ -171,7 +171,29 @@ function encodeInner(
   }
 }
 
-function decode(encoded: Encoded): unknown {
+/**
+ * Everything `decode` can hand back — the inverse of `PROP_TYPE`, so a branch
+ * added to one belongs in the other.
+ */
+type DecodedValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | bigint
+  | Date
+  | RegExp
+  | URL
+  | Uint8Array
+  | Uint16Array
+  | Uint32Array
+  | Map<DecodedValue, DecodedValue>
+  | Set<DecodedValue>
+  | readonly DecodedValue[]
+  | { readonly [key: string]: DecodedValue };
+
+function decode(encoded: Encoded): DecodedValue {
   const [type, raw] = encoded;
   switch (type) {
     case PROP_TYPE.Value:
@@ -207,9 +229,11 @@ function decode(encoded: Encoded): unknown {
   }
 }
 
-function decodeValue(raw: unknown): unknown {
-  if (raw === null || typeof raw !== "object") return raw;
-  const out: Record<string, unknown> = {};
+function decodeValue(raw: unknown): DecodedValue {
+  // The payload came out of `JSON.parse`, so a non-object here is a string,
+  // number, boolean or null — every one of them a `DecodedValue` already.
+  if (raw === null || typeof raw !== "object") return raw as DecodedValue;
+  const out: Record<string, DecodedValue> = {};
   for (const [k, v] of Object.entries(raw)) {
     out[k] = decode(v as Encoded);
   }

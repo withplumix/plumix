@@ -115,6 +115,32 @@ describe("plumix/no-unknown-type-alias", () => {
   });
 });
 
+describe("plumix/no-unknown-return", () => {
+  it("rejects unknown and promise-of-unknown returns", async () => {
+    await expect(
+      plumixReports("src/unknown-return.violations.ts"),
+    ).resolves.toEqual([
+      { ruleId: "plumix/no-unknown-return", line: 1 },
+      { ruleId: "plumix/no-unknown-return", line: 5 },
+      { ruleId: "plumix/no-unknown-return", line: 7 },
+      { ruleId: "plumix/no-unknown-return", line: 12 },
+      { ruleId: "plumix/no-unknown-return", line: 13 },
+      { ruleId: "plumix/no-unknown-return", line: 14 },
+      { ruleId: "plumix/no-unknown-return", line: 18 },
+      { ruleId: "plumix/no-unknown-return", line: 22 },
+      { ruleId: "plumix/no-unknown-return", line: 29 },
+      { ruleId: "plumix/no-unknown-return", line: 31 },
+      { ruleId: "plumix/no-unknown-return", line: 35 },
+    ]);
+  });
+
+  it("allows unknown inside a wider return, an externally fixed signature, and type-level patterns", async () => {
+    await expect(
+      plumixReports("src/unknown-return.allowed.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
 describe("plumix/no-bare-object-input", () => {
   it("rejects object as a parameter and as a property type", async () => {
     await expect(

@@ -12,6 +12,6 @@ export const get = base
       const term = await getTerm(context, input);
       return await context.hooks.applyFilter("rpc:term.get:output", term);
     } catch (error) {
-      throw toRpcTermReadError(error, errors);
+      throw toRpcTermReadError(error, errors) ?? error;
     }
   });

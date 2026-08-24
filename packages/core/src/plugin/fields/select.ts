@@ -1,4 +1,5 @@
 import type { Label } from "../../i18n/label.js";
+import type { JsonValue } from "../../json.js";
 import type {
   MetaFieldCondition,
   MetaFieldConditionRule,
@@ -48,7 +49,7 @@ interface SelectFieldState {
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
   readonly showInApi?: true;
-  readonly sanitize?: (value: unknown) => unknown;
+  readonly sanitize?: (value: unknown) => JsonValue;
   readonly validate?: MetaBoxFieldValidate;
 }
 
@@ -326,7 +327,7 @@ export class SelectFieldBuilder<
   sanitize(
     sanitize: (value: NonNullable<V>) => NonNullable<V>,
   ): SelectFieldBuilder<O, K, Multiple, A, V, S> {
-    return this.#fork({ sanitize: sanitize as (value: unknown) => unknown });
+    return this.#fork({ sanitize: sanitize as (value: unknown) => JsonValue });
   }
 
   /**

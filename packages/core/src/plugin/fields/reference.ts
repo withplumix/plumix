@@ -1,6 +1,7 @@
 import type { EntryStatus } from "../../db/schema/entries.js";
 import type { UserRole } from "../../db/schema/users.js";
 import type { Label } from "../../i18n/label.js";
+import type { JsonValue } from "../../json.js";
 import type { ReferenceHydrationShapes } from "../lookup.js";
 import type {
   MetaFieldCondition,
@@ -103,7 +104,7 @@ interface ReferenceFieldState {
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
   readonly showInApi?: true;
-  readonly sanitize?: (value: unknown) => unknown;
+  readonly sanitize?: (value: unknown) => JsonValue;
   readonly validate?: MetaBoxFieldValidate;
 }
 
@@ -368,7 +369,7 @@ export class ReferenceFieldBuilder<
    * a separate, later step.
    */
   sanitize(
-    sanitize: (value: unknown) => unknown,
+    sanitize: (value: unknown) => JsonValue,
   ): ReferenceFieldBuilder<Kind, K, Multiple, Required, Returns> {
     return this.#fork({ sanitize });
   }

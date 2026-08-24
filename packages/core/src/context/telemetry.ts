@@ -41,7 +41,7 @@ export interface TelemetrySpanHandle {
 /** A recorded durationless fact, stamped so consumers can order it against spans. */
 export interface TelemetryRecord {
   readonly at: number;
-  readonly data: unknown;
+  readonly data: JsonValue;
 }
 
 /**
@@ -68,7 +68,7 @@ export interface TelemetryCollector {
    * A function entry is a lazy payload: the active collector evaluates it once
    * at record time; the no-op never does.
    */
-  record(namespace: string, entry: unknown): void;
+  record(namespace: string, entry: JsonValue | (() => JsonValue)): void;
   /** Time `fn`, record a span, and return `fn`'s result unchanged. */
   span<T>(name: string, fn: (s: TelemetrySpanHandle) => T): T;
   /** Timestamped entries recorded under `namespace`, in record order. */

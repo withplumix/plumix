@@ -143,9 +143,36 @@ function decodeAuthenticationOptions(
   };
 }
 
+/**
+ * A credential on the wire: the browser's `ArrayBuffer` fields rendered as
+ * base64url, which is the shape the verify endpoints parse.
+ */
+interface EncodedCredential {
+  readonly id: string;
+  readonly rawId: string;
+  readonly type: string;
+}
+
+interface EncodedRegistrationCredential extends EncodedCredential {
+  readonly response: {
+    readonly clientDataJSON: string;
+    readonly attestationObject: string;
+    readonly transports: readonly string[];
+  };
+}
+
+interface EncodedAuthenticationCredential extends EncodedCredential {
+  readonly response: {
+    readonly clientDataJSON: string;
+    readonly authenticatorData: string;
+    readonly signature: string;
+    readonly userHandle: string | null;
+  };
+}
+
 function encodeRegistrationCredential(
   credential: PublicKeyCredential,
-): unknown {
+): EncodedRegistrationCredential {
   const response = credential.response as AuthenticatorAttestationResponse;
   return {
     id: credential.id,
@@ -161,7 +188,7 @@ function encodeRegistrationCredential(
 
 function encodeAuthenticationCredential(
   credential: PublicKeyCredential,
-): unknown {
+): EncodedAuthenticationCredential {
   const response = credential.response as AuthenticatorAssertionResponse;
   return {
     id: credential.id,

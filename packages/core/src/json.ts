@@ -18,3 +18,16 @@ export type JsonValue =
 export interface JsonObject {
   readonly [key: string]: JsonValue;
 }
+
+/**
+ * `Array.isArray` alone won't tell these two apart inside a {@link JsonValue}:
+ * it widens the array side to `any[]` and leaves the readonly array in the
+ * union on the object side.
+ */
+export function isJsonArray(value: JsonValue): value is readonly JsonValue[] {
+  return Array.isArray(value);
+}
+
+export function isJsonObject(value: JsonValue): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}

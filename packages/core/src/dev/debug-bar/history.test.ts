@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { TelemetrySpan } from "../../context/telemetry.js";
+import type { JsonValue } from "../../json.js";
 import type { DebugHistoryEntry } from "./history.js";
 import { createDebugHistoryStore } from "./history.js";
 import { makeSnapshot } from "./snapshot-fixture.js";
@@ -85,11 +86,17 @@ describe("createDebugHistoryStore — detachment", () => {
     const store = createDebugHistoryStore();
     const circular: Record<string, unknown> = { self: null };
     circular.self = circular;
+    // `data` is typed `JsonValue` and nothing checks that at runtime — a
+    // plugin handing over a closure or a cycle is what the sanitizer is for.
     const records = {
       panel: [
         {
           at: 1,
-          data: { keep: "yes", fn: () => "drop", loop: circular },
+          data: {
+            keep: "yes",
+            fn: () => "drop",
+            loop: circular,
+          } as unknown as JsonValue,
         },
       ],
     };
@@ -111,7 +118,10 @@ describe("createDebugHistoryStore — detachment", () => {
   test("serializes a Date via toJSON, matching JSON.stringify (not {})", () => {
     const store = createDebugHistoryStore();
     const at = new Date("2026-07-27T00:00:00.000Z");
-    const records = { panel: [{ at: 1, data: { when: at } }] };
+    // The same lie: a live `Date` where the type says JSON.
+    const records = {
+      panel: [{ at: 1, data: { when: at } as unknown as JsonValue }],
+    };
 
     store.save(entry({ snapshot: makeSnapshot({ records }) }));
 

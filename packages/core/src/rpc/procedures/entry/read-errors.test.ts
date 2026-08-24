@@ -52,8 +52,9 @@ describe("toRpcEntryReadError", () => {
     });
   });
 
-  test("passes a non-domain error through unchanged", () => {
-    const original = new Error("boom");
-    expect(toRpcEntryReadError(original, stubErrors())).toBe(original);
+  test("declines a non-domain error so the caller rethrows its own", () => {
+    expect(
+      toRpcEntryReadError(new Error("boom"), stubErrors()),
+    ).toBeUndefined();
   });
 });

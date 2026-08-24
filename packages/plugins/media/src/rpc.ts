@@ -342,7 +342,7 @@ export function createMediaRouter(
       try {
         return await listMedia(context, input);
       } catch (error) {
-        throw mapMediaReadError(error, errors);
+        throw mapMediaReadError(error, errors) ?? error;
       }
     });
 
@@ -430,10 +430,13 @@ export function createMediaRouter(
   return { createUploadUrl, confirm, list, update, delete: remove };
 }
 
-// Map a media-read domain error to the oRPC typed error to throw; non-domain
-// errors pass through for the caller to rethrow.
-function mapMediaReadError(error: unknown, errors: MediaRowGuards): unknown {
-  if (!(error instanceof MediaReadError)) return error;
+// Map a media-read domain error to the oRPC typed error to throw; `undefined`
+// for anything else, which the caller rethrows as it caught it.
+function mapMediaReadError(
+  error: unknown,
+  errors: MediaRowGuards,
+): Error | undefined {
+  if (!(error instanceof MediaReadError)) return undefined;
   switch (error.data.code) {
     case "forbidden":
       return errors.FORBIDDEN({ data: { capability: error.data.capability } });

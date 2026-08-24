@@ -306,6 +306,34 @@ describe("decodeMetaBag (legacy reference self-heal)", () => {
   });
 });
 
+describe("decodeMetaBag (forgiving scalar coercion)", () => {
+  const titleField = {
+    key: "title",
+    label: "Title",
+    type: "string",
+    inputType: "text",
+  } as MetaBoxField;
+  const findField = (key: string): MetaBoxField | undefined =>
+    key === "title" ? titleField : undefined;
+
+  test("coerces a number stored under a string field", () => {
+    expect(decodeMetaBag(findField, { title: 42 }).title).toBe("42");
+  });
+
+  // A container has no scalar form, so it reads as its JSON rather than as
+  // `String()`'s "[object Object]" / "a,b".
+  test("reads a container stored under a string field as its JSON", () => {
+    expect(decodeMetaBag(findField, { title: { a: 1 } }).title).toBe('{"a":1}');
+    expect(decodeMetaBag(findField, { title: ["a", "b"] }).title).toBe(
+      '["a","b"]',
+    );
+  });
+
+  test('reads a stored null under a string field as "null"', () => {
+    expect(decodeMetaBag(findField, { title: null }).title).toBe("null");
+  });
+});
+
 describe('decodeMetaBag (.returns("date") projection)', () => {
   const fields = new Map<string, MetaBoxField>([
     ["publishedOn", date("publishedOn").returns("date").build()],

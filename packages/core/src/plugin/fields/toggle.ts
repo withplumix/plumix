@@ -1,4 +1,5 @@
 import type { Label } from "../../i18n/label.js";
+import type { JsonValue } from "../../json.js";
 import type {
   MetaFieldCondition,
   MetaFieldConditionRule,
@@ -22,7 +23,7 @@ interface ToggleFieldState {
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
   readonly showInApi?: true;
-  readonly sanitize?: (value: unknown) => unknown;
+  readonly sanitize?: (value: unknown) => JsonValue;
   readonly validate?: MetaBoxFieldValidate;
 }
 
@@ -166,7 +167,7 @@ export class ToggleFieldBuilder<
   sanitize(
     sanitize: (value: NonNullable<V>) => NonNullable<V>,
   ): ToggleFieldBuilder<K, V, S> {
-    return this.#fork({ sanitize: sanitize as (value: unknown) => unknown });
+    return this.#fork({ sanitize: sanitize as (value: unknown) => JsonValue });
   }
 
   /**

@@ -51,7 +51,7 @@ export function createTelemetryCollector(): TelemetryCollector {
       }
       const record: TelemetryRecord = {
         at: Date.now(),
-        data: typeof entry === "function" ? (entry as () => unknown)() : entry,
+        data: typeof entry === "function" ? entry() : entry,
       };
       if (bucket) bucket.push(record);
       else entries.set(namespace, [record]);

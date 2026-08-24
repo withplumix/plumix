@@ -296,7 +296,7 @@ export class PlumixIslandElement extends HTMLElement {
     exportName: string,
   ): Promise<ComponentType<Readonly<Record<string, unknown>>> | null> {
     try {
-      const mod = (await dynamicImport(chunkUrl)) as Record<string, unknown>;
+      const mod = await dynamicImport(chunkUrl);
       return mod[exportName] as ComponentType<
         Readonly<Record<string, unknown>>
       >;
@@ -309,7 +309,7 @@ export class PlumixIslandElement extends HTMLElement {
       await sleep(RETRY_DELAY_MS);
       try {
         const retryUrl = appendCacheBust(chunkUrl);
-        const mod = (await dynamicImport(retryUrl)) as Record<string, unknown>;
+        const mod = await dynamicImport(retryUrl);
         return mod[exportName] as ComponentType<
           Readonly<Record<string, unknown>>
         >;
@@ -340,13 +340,18 @@ export class PlumixIslandElement extends HTMLElement {
   }
 }
 
+// A chunk's namespace object. Nothing here knows what its exports are, only
+// that they are read by name.
+type ModuleNamespace = Readonly<Record<string, unknown>>;
+
 // Test-injectable dynamic import. jsdom can't resolve real module URLs
 // in unit tests; swapping this lets the retry-and-error paths be
 // exercised without spinning up a bundler.
-let dynamicImport: (url: string) => Promise<unknown> = (url) => import(url);
+let dynamicImport: (url: string) => Promise<ModuleNamespace> = (url) =>
+  import(url);
 
 export function setDynamicImport(
-  fn: (url: string) => Promise<unknown>,
+  fn: (url: string) => Promise<ModuleNamespace>,
 ): () => void {
   const prev = dynamicImport;
   dynamicImport = fn;
@@ -389,11 +394,19 @@ let loadRenderer: () => Promise<RendererModule> = () => {
 // from the SSR manifest exactly like the per-island chunk URL.
 async function importRendererWithRetry(url: string): Promise<RendererModule> {
   try {
-    return (await dynamicImport(url)) as RendererModule;
+    return readRenderer(await dynamicImport(url));
   } catch {
     await sleep(RETRY_DELAY_MS);
-    return (await dynamicImport(appendCacheBust(url))) as RendererModule;
+    return readRenderer(await dynamicImport(appendCacheBust(url)));
   }
+}
+
+// The renderer chunk is built from this repo's own entry, so its `mount`
+// export is a fact about the build — read that one export rather than
+// asserting the whole namespace into shape. A member added to
+// `RendererModule` has to be read here too.
+function readRenderer(namespace: ModuleNamespace): RendererModule {
+  return { mount: namespace.mount as RendererModule["mount"] };
 }
 
 // Test seam: jsdom can't import a real renderer chunk URL, so unit tests

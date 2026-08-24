@@ -15,13 +15,14 @@ import { readPagination } from "./schemas.js";
 
 // Every entry-read failure mode (missing, reserved-type, forbidden, an
 // unpublished status the public principal can't see) collapses to 404 so the
-// existence of unreadable content stays hidden. A non-EntryReadError is
-// unexpected and rethrown for the dispatcher to surface as a 500.
-function entryNotFound(error: unknown, errors: RestErrors): unknown {
+// existence of unreadable content stays hidden. `undefined` for a
+// non-EntryReadError, which is unexpected: the caller rethrows it for the
+// dispatcher to surface as a 500.
+function entryNotFound(error: unknown, errors: RestErrors): Error | undefined {
   if (error instanceof EntryReadError) {
     return errors.NOT_FOUND({ data: { kind: "entry" } });
   }
-  return error;
+  return undefined;
 }
 
 // Pagination params own these query keys; a taxonomy that happens to share a
@@ -99,7 +100,7 @@ export async function getEntryItem(
   try {
     entry = await getEntry(context, { id });
   } catch (error) {
-    throw entryNotFound(error, errors);
+    throw entryNotFound(error, errors) ?? error;
   }
 
   // The id resolved to an entry of a different collection — hide that it

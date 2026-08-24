@@ -181,8 +181,8 @@ const isPlainObject = (val: unknown): val is Record<string, unknown> =>
 const isNonEmptyString = (val: unknown): boolean =>
   typeof val === "string" && val.length > 0;
 
-const field = (val: unknown, key: string): unknown =>
-  isPlainObject(val) ? val[key] : undefined;
+const hasNonEmptyString = (val: unknown, key: string): boolean =>
+  isPlainObject(val) && isNonEmptyString(val[key]);
 
 // The host an allowedOrigins entry accepts: the base of a `https://*.base`
 // wildcard, or the hostname of an exact https origin. null for anything the
@@ -305,14 +305,12 @@ const oauthProviderClientSchema = v.object({
       "client must be an { clientId, clientSecret } object or an (env) => … resolver",
     ),
     v.check(
-      (val) =>
-        typeof val === "function" || isNonEmptyString(field(val, "clientId")),
+      (val) => typeof val === "function" || hasNonEmptyString(val, "clientId"),
       "clientId must be non-empty",
     ),
     v.check(
       (val) =>
-        typeof val === "function" ||
-        isNonEmptyString(field(val, "clientSecret")),
+        typeof val === "function" || hasNonEmptyString(val, "clientSecret"),
       "clientSecret must be non-empty",
     ),
   ),

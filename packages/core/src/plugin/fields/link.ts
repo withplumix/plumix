@@ -1,4 +1,5 @@
 import type { Label } from "../../i18n/label.js";
+import type { JsonValue } from "../../json.js";
 import type { StringFieldState } from "./builder.js";
 import type { MetaFieldConditionRule } from "./condition.js";
 import type {
@@ -154,7 +155,7 @@ export class LinkFieldBuilder<
   sanitize(
     sanitize: (value: NonNullable<V>) => NonNullable<V>,
   ): LinkFieldBuilder<K, V, S> {
-    return this.#fork({ sanitize: sanitize as (value: unknown) => unknown });
+    return this.#fork({ sanitize: sanitize as (value: unknown) => JsonValue });
   }
 
   /**
