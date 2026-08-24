@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { createBlockRegistry } from "../index.js";
 import {
   buildHtmlAllowlist,
+  HARD_DENIED_ATTRS,
   HARD_DENIED_SCHEMES,
   HARD_DENYLIST,
 } from "./build-allowlist.js";
@@ -94,6 +95,95 @@ describe("buildHtmlAllowlist", () => {
     });
     const out = sanitizeHtml('<a href="javascript:alert(1)">x</a>', allowlist);
     expect(out).toBe("<a>x</a>");
+  });
+
+  test.each([...HARD_DENIED_ATTRS])(
+    "hard denylist blocks operator-supplied `%s` in extraAttributes",
+    (attr) => {
+      const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+        extraAttributes: { p: [attr] },
+      });
+      expect(allowlist.allowedAttributes.p ?? []).not.toContain(attr);
+    },
+  );
+
+  test.each([
+    "onclick",
+    "onerror",
+    "onload",
+    "onmouseover",
+    "onfocus",
+    "onanimationstart",
+  ])("hard denylist blocks the handler `%s` in extraAttributes", (attr) => {
+    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+      extraAttributes: { p: [attr] },
+    });
+    expect(allowlist.allowedAttributes.p ?? []).not.toContain(attr);
+  });
+
+  test.each(["ONCLICK", "OnError", "STYLE"])(
+    "hard denylist blocks the attribute `%s` regardless of the case it is written in",
+    (attr) => {
+      const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+        extraAttributes: { p: [attr] },
+      });
+      const allowed = allowlist.allowedAttributes.p ?? [];
+      expect(allowed).not.toContain(attr);
+      expect(allowed).not.toContain(attr.toLowerCase());
+    },
+  );
+
+  test("the attribute floor does not disturb the legitimate names beside it", () => {
+    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+      extraAttributes: { a: ["REL", "onclick", "target"] },
+    });
+    expect(allowlist.allowedAttributes.a).toEqual([
+      "href",
+      "title",
+      "rel",
+      "target",
+    ]);
+  });
+
+  test.each([
+    "*",
+    "o*",
+    "*click",
+    "st*",
+    "on*",
+    "xlink:onclick",
+    "data-x onclick",
+  ])("the attribute floor refuses the non-literal name `%s`", (attr) => {
+    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+      extraAttributes: { p: [attr] },
+    });
+    expect(allowlist.allowedAttributes.p ?? []).toEqual([]);
+  });
+
+  test("a `*` tag key cannot hang attributes on every tag", () => {
+    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+      extraAttributes: { "*": ["title"] },
+    });
+    expect(allowlist.allowedAttributes).not.toHaveProperty("*");
+  });
+
+  test.each([
+    ["*", '<p onclick="alert(1)" style="color:red">x</p>'],
+    ["o*", '<p onclick="alert(1)">x</p>'],
+    ["*click", '<p onclick="alert(1)">x</p>'],
+  ])("a `%s` glob cannot survive into the rendered output", (attr, markup) => {
+    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+      extraAttributes: { p: [attr] },
+    });
+    expect(sanitizeHtml(markup, allowlist)).toBe("<p>x</p>");
+  });
+
+  test("an override granting a handler cannot produce a live one", () => {
+    const allowlist = buildHtmlAllowlist(EMPTY_BLOCK_REGISTRY, {
+      extraAttributes: { p: ["onclick"] },
+    });
+    const out = sanitizeHtml('<p onclick="alert(1)">x</p>', allowlist);
+    expect(out).toBe("<p>x</p>");
   });
 
   test.each([...HARD_DENYLIST])(

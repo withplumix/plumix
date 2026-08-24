@@ -208,4 +208,27 @@ describe("dompurify-shim — operator-override allowlists", () => {
     ]);
     expect(parse(out).querySelector("a")?.hasAttribute("href")).toBe(false);
   });
+
+  // Unlike the schemes above, DOMPurify honours an event handler that reaches
+  // its ALLOWED_ATTR — this engine was exposed too, and the mixed-case spelling
+  // was exposed HERE ONLY, since DOMPurify lowercases its allowlist where
+  // sanitize-html compares the parsed name against it verbatim.
+  test.each(["onclick", "ONCLICK", "OnClick"])(
+    "an override granting `%s` cannot produce a live handler",
+    (attr) => {
+      const out = runBuilt('<p onclick="alert(1)">x</p>', ["https"], {
+        p: [attr],
+      });
+      expect(parse(out).querySelector("p")?.hasAttribute("onclick")).toBe(
+        false,
+      );
+    },
+  );
+
+  test("an override cannot grant a `style` attribute", () => {
+    const out = runBuilt('<p style="background:url(x)">x</p>', ["https"], {
+      p: ["style"],
+    });
+    expect(parse(out).querySelector("p")?.hasAttribute("style")).toBe(false);
+  });
 });
