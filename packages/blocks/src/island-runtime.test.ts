@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { ISLAND_TAG, setDynamicImport } from "./island-element.js";
 
@@ -65,9 +65,9 @@ describe("bootstrapIslandRuntime", () => {
     el.setAttribute("chunk-url", "/chunk.js");
     el.setAttribute("component-export", "default");
     document.body.appendChild(el);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(imported).toContain("/assets/renderer-xyz.js");
+    await vi.waitFor(() =>
+      expect(imported).toContain("/assets/renderer-xyz.js"),
+    );
     restore();
     el.remove();
   });

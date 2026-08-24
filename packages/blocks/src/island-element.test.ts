@@ -66,7 +66,7 @@ describe("PlumixIslandElement lifecycle", () => {
     // Detach any islands the test mounted so the React scheduler
     // unmounts their roots before the next test (or vitest's jsdom
     // teardown). React 19's scheduler queues work via setImmediate /
-    // MessageChannel; without a clean unmount + microtask drain, the
+    // MessageChannel; without a clean unmount + macrotask drain, the
     // deferred callback fires after jsdom is torn down and throws
     // `ReferenceError: window is not defined`, which vitest reports as
     // an unhandled error and fails the run.
@@ -116,8 +116,14 @@ describe("PlumixIslandElement lifecycle", () => {
     // Dispatched on window because the element is already detached
     // when disconnectedCallback fires.
     stubStrategies();
+    let renders = 0;
     restoreImport = setDynamicImport(() =>
-      Promise.resolve({ default: () => null } as unknown),
+      Promise.resolve({
+        default: () => {
+          renders += 1;
+          return null;
+        },
+      } as unknown),
     );
     const listener = vi.fn();
     window.addEventListener("plumix:unmount", listener);
@@ -128,7 +134,9 @@ describe("PlumixIslandElement lifecycle", () => {
       opts: "{}",
     });
     document.body.appendChild(el);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // Only a hydrated island emits `plumix:unmount`, so the removal below has
+    // to follow the render.
+    await vi.waitFor(() => expect(renders).toBe(1));
     el.remove();
     expect(listener).toHaveBeenCalledTimes(1);
     const event = listener.mock.calls[0]?.[0] as CustomEvent<{

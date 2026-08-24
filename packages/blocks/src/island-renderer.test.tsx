@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { IslandRoot } from "./island-renderer.js";
@@ -7,7 +8,7 @@ describe("island renderer mount()", () => {
   let active: IslandRoot | null = null;
 
   afterEach(async () => {
-    // Unmount + drain a microtask so React 19's scheduler tears the root
+    // Unmount + drain a macrotask so React 19's scheduler tears the root
     // down before jsdom teardown (mirrors the island-element suite).
     active?.unmount();
     active = null;
@@ -109,8 +110,13 @@ describe("island renderer mount()", () => {
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
     // React's default root handler reports the uncaught throw to `window`;
-    // swallow it so it doesn't surface as an unhandled error in the run.
-    const swallow = (event: Event): void => event.preventDefault();
+    // swallow it so it doesn't surface as an unhandled error in the run — and
+    // count it, since it is the proof React got as far as throwing.
+    let uncaught = 0;
+    const swallow = (event: Event): void => {
+      uncaught += 1;
+      event.preventDefault();
+    };
     window.addEventListener("error", swallow);
 
     const Boom = (): never => {
@@ -122,8 +128,7 @@ describe("island renderer mount()", () => {
     active = mount(el);
     active.render(Boom, {}, {});
 
-    // Give React a chance to throw and settle.
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.waitFor(() => expect(uncaught).toBe(1));
     expect(events).toHaveLength(0);
 
     window.removeEventListener("plumix:island-error", listener);
@@ -157,20 +162,30 @@ describe("island renderer mount()", () => {
     process.env.PLUMIX_DEV = "1";
     const events = listenForMismatch();
 
-    const Component = (props: Readonly<Record<string, unknown>>) => (
-      <span>{String(props.label)}</span>
-    );
+    // Passive effects flush after the commit, so counting one is the only
+    // observable proof that hydration finished when the client render matches
+    // the server HTML byte-for-byte.
+    let commits = 0;
+    const Component = (props: Readonly<Record<string, unknown>>) => {
+      useEffect(() => {
+        commits += 1;
+      }, []);
+      return <span>{String(props.label)}</span>;
+    };
     const el = document.createElement("div");
     // The server render the island hydrates against.
     el.innerHTML = "<span>hi</span>";
     document.body.appendChild(el);
+    const serverSpan = el.firstElementChild;
 
     active = mount(el, { hydrate: true });
     active.render(Component, { label: "hi" }, {});
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(events).toHaveLength(0);
+    await vi.waitFor(() => expect(commits).toBe(1));
+    // Adopted, not re-rendered over: the server's own node survives.
+    expect(el.firstElementChild).toBe(serverSpan);
     expect(el.textContent).toBe("hi");
+    expect(events).toHaveLength(0);
 
     process.env.PLUMIX_DEV = prev;
   });
@@ -214,19 +229,25 @@ describe("island renderer mount()", () => {
     process.env.PLUMIX_DEV = "1";
     const events = listenForMismatch();
 
-    const Component = (props: Readonly<Record<string, unknown>>) => (
-      <span>{String(props.label)}</span>
-    );
+    let commits = 0;
+    const Component = (props: Readonly<Record<string, unknown>>) => {
+      useEffect(() => {
+        commits += 1;
+      }, []);
+      return <span>{String(props.label)}</span>;
+    };
     const el = document.createElement("div");
     el.innerHTML = "<span>A</span>";
     document.body.appendChild(el);
+    const serverSpan = el.firstElementChild;
 
     active = mount(el, { hydrate: true });
     active.render(Component, { label: "A" }, {}); // first render hydrates
-    // The server text already reads "A", so let the hydration commit (a
-    // macrotask) before the props change — otherwise the second render would
-    // race the in-flight hydration rather than reconcile against it.
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // The props change must follow the hydration commit. An update that lands
+    // first makes React abandon hydration for client rendering and report a
+    // recoverable error, which surfaces below as a phantom mismatch.
+    await vi.waitFor(() => expect(commits).toBe(1));
+    expect(el.firstElementChild).toBe(serverSpan);
 
     active.render(Component, { label: "B" }, {}); // props change re-renders
     await vi.waitFor(() => expect(el.textContent).toBe("B"));
@@ -287,21 +308,31 @@ describe("island renderer mount()", () => {
     // which React never routes through the `onRecoverableError` diagnostic — so
     // a slot can never manufacture false mismatch noise, and the diagnostic only
     // ever reflects the component's own render.
-    const Card = (props: Readonly<Record<string, unknown>>) => (
-      <div className="card">
-        <span>{String(props.label)}</span>
-        {props.children as never}
-      </div>
-    );
+    let commits = 0;
+    const Card = (props: Readonly<Record<string, unknown>>) => {
+      useEffect(() => {
+        commits += 1;
+      }, []);
+      return (
+        <div className="card">
+          <span>{String(props.label)}</span>
+          {props.children as never}
+        </div>
+      );
+    };
     const el = document.createElement("div");
     el.innerHTML =
       '<div class="card"><span>A</span><plumix-static-slot data-plumix-slot="children"><strong>kid</strong></plumix-static-slot></div>';
     document.body.appendChild(el);
+    const serverSlot = el.querySelector("plumix-static-slot");
 
     active = mount(el, { hydrate: true });
     active.render(Card, { label: "A" }, { children: "<strong>kid</strong>" });
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.waitFor(() => expect(commits).toBe(1));
+    // The slot node itself is adopted, not recreated — proof the bridged HTML
+    // rode through hydration rather than being re-rendered over it.
+    expect(el.querySelector("plumix-static-slot")).toBe(serverSlot);
     expect(events).toHaveLength(0);
     expect(el.querySelector("plumix-static-slot")?.innerHTML).toBe(
       "<strong>kid</strong>",
@@ -369,7 +400,13 @@ describe("island renderer mount()", () => {
     // `suppressHydrationWarning` — the documented escape hatch for intentional
     // divergence. No signal fires and React keeps the server text for that
     // subtree.
-    const Component = () => <span suppressHydrationWarning>CLIENT</span>;
+    let commits = 0;
+    const Component = () => {
+      useEffect(() => {
+        commits += 1;
+      }, []);
+      return <span suppressHydrationWarning>CLIENT</span>;
+    };
     const el = document.createElement("div");
     el.innerHTML = "<span>SERVER</span>";
     document.body.appendChild(el);
@@ -377,7 +414,7 @@ describe("island renderer mount()", () => {
     active = mount(el, { hydrate: true });
     active.render(Component, {}, {});
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.waitFor(() => expect(commits).toBe(1));
     expect(events).toHaveLength(0);
     // Suppressed divergence keeps the server render for that node.
     expect(el.textContent).toBe("SERVER");
