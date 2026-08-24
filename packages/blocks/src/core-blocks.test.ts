@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { createBlockRegistry } from "./block-registry.js";
 import { coreBlocks } from "./core-blocks.js";
+import { renderBlockTreeToHtml } from "./test/index.js";
 
 describe("coreBlocks", () => {
   test("includes the canonical typography and layout blocks", () => {
@@ -71,9 +72,20 @@ describe("coreBlocks", () => {
     }
   });
 
-  test("does not include the html block (operators opt in explicitly)", () => {
+  test("includes the html block, which no theme or plugin could register", () => {
     const names = new Set(coreBlocks.map((b) => b.name));
-    expect(names.has("core/html")).toBe(false);
+    expect(names.has("core/html")).toBe(true);
+  });
+
+  // Membership is what decides whether stored content resolves, so assert the
+  // consequence rather than only the list: a `core/html` node used to render as
+  // an unknown block on every site.
+  test("resolves a stored core/html node through the registry", () => {
+    const html = renderBlockTreeToHtml(coreBlocks, [
+      { id: "h1", name: "core/html", attrs: { html: "<p>Stored</p>" } },
+    ]);
+
+    expect(html).toContain("<p>Stored</p>");
   });
 
   test("declares `inserter: false` on every spec that only makes sense inside a parent", () => {

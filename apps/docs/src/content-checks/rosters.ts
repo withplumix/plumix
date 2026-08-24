@@ -325,10 +325,6 @@ type _FieldTypesMatchSource = Assert<
  * Every block core registers, in registration order. Source: `coreBlocks`,
  * whose `readonly BlockSpec[]` annotation puts the names out of reach of a
  * type-level binding.
- *
- * `core/html` is deliberately absent: it ships in the package but registers
- * opt-in, and the `plumix` façade does not export it. A page documenting it
- * alongside these adds it here with that noted.
  */
 const CORE_BLOCKS = [
   "core/rich-text",
@@ -342,6 +338,7 @@ const CORE_BLOCKS = [
   "core/details",
   "core/video",
   "core/embed",
+  "core/html",
   "core/table",
   "core/table-header-row",
   "core/table-body-row",
