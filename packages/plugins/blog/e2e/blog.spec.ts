@@ -5,7 +5,7 @@
 // declarative registration (post entry type + category/tag taxonomies)
 // end-to-end through core admin's CRUD against real D1.
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "plumix/test/playwright";
 
 // Title links carry `content-list-row-<id>`; the actions strip and
 // trash button reuse the prefix, so exclude them when counting rows.

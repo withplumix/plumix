@@ -6,8 +6,7 @@
 
 import { resolve } from "node:path";
 import type { Page } from "@playwright/test";
-import { expect, test } from "@playwright/test";
-import { openPlaygroundDb } from "plumix/test/playwright";
+import { expect, openPlaygroundDb, test } from "plumix/test/playwright";
 
 // Import the schema via the relative source path, not the
 // `@plumix/plugin-audit-log/schema` package-export. The export points
@@ -28,14 +27,13 @@ import { auditLog } from "../src/db/schema.js";
 // plugin's own schema so column renames / new NOT NULL fields surface
 // as a TypeScript error here, not a runtime SqliteError mid-test.
 //
-// Clear first so this is safe to run twice: a retry meets the rows the
-// failed attempt seeded (see `playground` in definePlumixE2EConfig), and
-// appending breaks every count assertion below.
-async function reseedAuditRows(): Promise<void> {
+// Safe to run again on a retry because the rig restores the database to
+// its post-globalSetup baseline first, so this always inserts into an
+// empty table (`plumixDbBaseline` in plumix/test/playwright).
+async function seedAuditRows(): Promise<void> {
   const db = await openPlaygroundDb({
     cwd: resolve(process.cwd(), "playground"),
   });
-  await db.delete(auditLog);
   await db.insert(auditLog).values([
     {
       event: "user:created",
@@ -66,7 +64,7 @@ async function reseedAuditRows(): Promise<void> {
 
 test.describe
   .serial("@plumix/plugin-audit-log — worker-driven happy path", () => {
-  test.beforeAll(reseedAuditRows);
+  test.beforeAll(seedAuditRows);
 
   test("audit log table renders the seeded rows", async ({ page }) => {
     await page.goto("pages/audit-log");

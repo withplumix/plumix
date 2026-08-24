@@ -1,6 +1,8 @@
 import type { PlaywrightTestConfig } from "@playwright/test";
 import { defineConfig, devices } from "@playwright/test";
 
+import type { PlumixWorkerOptions } from "./test.js";
+
 export interface PlumixE2EConfigOptions {
   /**
    * Base port the worker / preview listens on. Used to derive `baseURL`
@@ -35,10 +37,11 @@ export interface PlumixE2EConfigOptions {
    * Mutually exclusive with an explicit `webServerCommand`.
    *
    * The `rm -rf .wrangler/state` step belongs to the webServer, so it runs
-   * once per suite run and never per retry. A retried spec meets the D1
-   * rows its failed attempt left behind — spec-side seeding has to put its
-   * own tables into a known state rather than append to whatever is there,
-   * or the retry fails in setup and buries the original failure (#1923).
+   * once per suite run and never per retry. Import `test` from
+   * `plumix/test/playwright` and the `plumixDbBaseline` fixture closes that
+   * gap, restoring the post-`globalSetup` database once per attempt; a
+   * suite importing `@playwright/test` directly still meets whatever its
+   * failed attempt left behind (#1923).
    */
   readonly playground?: string;
   /**
@@ -164,7 +167,7 @@ function bakePlaygroundCommand(
  */
 export function definePlumixE2EConfig(
   options: PlumixE2EConfigOptions,
-): PlaywrightTestConfig {
+): PlaywrightTestConfig<object, PlumixWorkerOptions> {
   if (
     options.playground !== undefined &&
     options.webServerCommand !== undefined
@@ -195,6 +198,11 @@ export function definePlumixE2EConfig(
     options.baseURL ?? `http://localhost:${String(port)}${ADMIN_BASE}/`;
   const isPlayground = options.playground !== undefined;
   const seedAdmin = isPlayground && options.seedAdminSession !== false;
+  // `applyMigrations: false` is how a playground says it has no D1 to
+  // migrate up front — apps/demo builds one per session in a Durable
+  // Object instead. Nothing to pin to one worker, and nothing for the
+  // baseline fixture to snapshot.
+  const hasSharedDb = isPlayground && options.applyMigrations !== false;
   const webServerCommand =
     options.webServerCommand ??
     (options.playground !== undefined
@@ -209,12 +217,15 @@ export function definePlumixE2EConfig(
         )
       : "");
 
-  return defineConfig({
+  return defineConfig<object, PlumixWorkerOptions>({
     testDir: options.testDir ?? ".",
     fullyParallel: true,
     forbidOnly: Boolean(process.env.CI),
     retries: process.env.CI ? 2 : 0,
-    workers: process.env.CI ? 1 : undefined,
+    // Tests sharing one mutable D1 race across workers, and would each
+    // restore the baseline mid-run (see `test.ts`). CI was already
+    // single-worker; this extends it to local runs.
+    workers: hasSharedDb || process.env.CI ? 1 : undefined,
     // On CI: write the HTML report alongside the inline GitHub annotations
     // so the failure-artifact upload (which globs `**/playwright-report/`)
     // has something to capture — without `["html"]` it never gets generated.
@@ -228,6 +239,11 @@ export function definePlumixE2EConfig(
       baseURL,
       trace: "on-first-retry",
       ...(seedAdmin ? { storageState: "./storageState.json" } : {}),
+      // Read by the `plumixDbBaseline` fixture in `test.ts`; inert for a
+      // suite that imports `test` from `@playwright/test`. Stays relative
+      // because the fixture re-resolves it against the config file's
+      // directory, which is what the baked `cd <playground>` uses too.
+      plumixPlayground: hasSharedDb ? options.playground : undefined,
     },
     projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
     webServer: {

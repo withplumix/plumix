@@ -5,17 +5,17 @@
 // the actual oRPC + D1 round-trip.
 
 import type { Locator, Page } from "@playwright/test";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "plumix/test/playwright";
 
 // MenuItemEditor.tsx — must match the constant in the component
 // because drag projection compares `delta.x` against this width.
 const INDENTATION_WIDTH = 24;
 
-// The worker-assigned slug of the menu the first test creates. Not
-// hard-codable as `primary`: `.wrangler/state` is wiped once per suite
-// run, not per attempt, so a retry's "Primary" lands beside the
-// abandoned first one as `primary-2`, and every later click on the
-// stale `primary` opens an empty tree.
+// The worker-assigned slug of the menu the first test creates. The rig
+// hands every attempt an empty database, so this now resolves to
+// `primary` every time — it stays read rather than hard-coded because
+// the slug is the server's to choose, and the assertion on its shape is
+// the only thing in this suite guarding `slugify`.
 let menuSlug = "";
 
 // Tests share state across the serial sequence: the menu created in
