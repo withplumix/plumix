@@ -51,28 +51,27 @@ describe("core/rich-text walker render", () => {
     expect(html).toContain("<p>hi</p>");
   });
 
-  test("returns a React-element body verbatim rather than re-wrapping it", () => {
-    // Driven through `render`, not the walker: stored attrs are JSON, so no
-    // tree can carry an element. See the note in `index.tsx`.
+  // Only a string body is authored HTML; everything else takes the empty
+  // fallback. Driven through `render` rather than the walker: `BlockNode.attrs`
+  // is JSON, so no tree can express the element case. That case was once routed
+  // past the sanitiser instead — #1895 removed the branch.
+  test.each([
+    ["a React element", <span>unsanitised</span>],
+    ["a number", 42],
+    ["an absent body", undefined],
+  ])("renders the empty fallback for %s", (_label, body) => {
     const RichText = richTextBlock.render;
-    const adminElement = (
-      <div data-editor-portal="true">
-        <span>inline editor mock</span>
-      </div>
-    );
 
     const html = renderToStaticMarkup(
       <RichText
-        attrs={{ body: adminElement }}
+        attrs={{ body }}
         context={DEFAULT_BLOCK_CONTEXT}
         loaders={{}}
         blockProps={{}}
       />,
     );
 
-    expect(html).toBe(
-      '<div data-editor-portal="true"><span>inline editor mock</span></div>',
-    );
+    expect(html).toBe("<div></div>");
   });
 
   test("hydrates a multi-element HTML body verbatim (lists, headings, marks)", () => {

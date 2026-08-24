@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { isValidElement } from "react";
 
 import type { BlockNodeRenderProps } from "../render-block-tree.js";
 import { defineBlock } from "../block-registry.js";
@@ -10,19 +9,11 @@ import { expandShortcodes } from "../shortcodes/expand.js";
 // The trust boundary is the stored bytes: a string body is authored HTML and
 // is sanitised at render like `core/html`, which also covers content stored
 // before this gate.
-//
-// The element branch skips that sanitiser. It cannot be reached through the
-// walker at all — `isValidElement` needs a symbol `$$typeof`, which stored JSON
-// cannot carry — so the only way in is a direct call to this spec's `render`,
-// which the `plumix/blocks` façade exports. Nothing in the repo does that. Kept
-// rather than removed because deleting it is a behaviour change; #1895 tracks
-// removing it.
 function RichTextBlockRender({
   attrs,
   context,
 }: BlockNodeRenderProps): ReactNode {
   const allowlist = useHtmlAllowlist();
-  if (isValidElement(attrs.body)) return attrs.body;
   if (typeof attrs.body !== "string") return <div />;
   // Shortcode output is escaped, so a single sanitise over the expansion
   // covers both the body and the expanded result.
