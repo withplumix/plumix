@@ -5,6 +5,7 @@
 // traverse; the build-time `manifest-projection.ts` reads a snapshot of it.
 // Re-exported unchanged from the public `@plumix/core/manifest` barrel.
 
+import type { AnyRouter } from "@orpc/server";
 import type { SQL } from "drizzle-orm";
 
 import type {
@@ -747,8 +748,18 @@ export interface RegisteredScheduledTask extends ScheduledTask {
   readonly registeredBy: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type PluginRpcRouter = Record<string, any>;
+/**
+ * The shape `registerRpcRouter` accepts: procedures keyed by the name each is
+ * called under, nested to any depth (`menu.locations.list` is a `locations`
+ * router holding a `list`). Core's own name for oRPC's `AnyRouter`, so a plugin
+ * can say what its router-building function returns without taking a direct
+ * dependency on `@orpc/server`.
+ *
+ * Name a router's shape with a `type` and not an `interface` — TypeScript
+ * withholds the implicit index signature from interface declarations, so an
+ * interface never assigns here. `json.ts` carries the same caveat.
+ */
+export type PluginRpcRouter = AnyRouter;
 
 export interface RegisteredMcpTool {
   readonly tool: McpTool;

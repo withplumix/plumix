@@ -1,4 +1,5 @@
 import type { JsonObject } from "plumix";
+import type { PluginRpcRouter } from "plumix/plugin";
 import { and, count, eq, inArray, sql } from "plumix/db";
 import { authenticated, base, slugify } from "plumix/plugin";
 import { entries, entryTerm, settings, terms } from "plumix/schema";
@@ -115,9 +116,7 @@ interface SaveResponse {
   readonly modified: readonly number[];
 }
 
-// Neither JSON nor an open bag: this is core's `PluginRpcRouter`, which
-// `registerRpcRouter` accepts but core does not export yet (#1896).
-export function createMenuRouter(): Record<string, unknown> {
+export function createMenuRouter(): PluginRpcRouter {
   const list = base
     .use(authenticated)
     .handler(async ({ context, errors }): Promise<readonly MenuListItem[]> => {

@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import {
+  base,
   buildManifest,
   createPluginRegistry,
   definePlugin,
@@ -75,8 +76,8 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
         });
         // 4. Plugin RPC namespace.
         ctx.registerRpcRouter({
-          list: () => ({ items: [] }),
-          say: ({ word }: { word: string }) => ({ echo: word }),
+          list: base.handler(() => ({ items: [] })),
+          say: base.handler(() => ({ echo: "hi" })),
         });
         // 5. Raw HTTP routes (public + authenticated + capability-gated).
         ctx.registerRoute({
