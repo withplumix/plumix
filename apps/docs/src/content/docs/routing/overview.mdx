@@ -1,0 +1,171 @@
+---
+title: Overview
+description: How a URL becomes a rendered page, from the compiled route map through the matched route intent to the resolver that builds the response.
+tier: P0
+sidebar:
+  order: 10
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+Plumix compiles one route map at boot from what your plugins registered, then matches each public request against it in priority order. The first rule that matches decides what the page is about, and nothing downstream reads the URL again to change that answer.
+
+## Route intents
+
+There is no routes file and no directory of URL handlers. Registering `recipe` as an entry type is what puts `/recipe/sicilian-caponata` on the site, and registering `cuisine` as a taxonomy is what puts `/cuisine/italian` there. Both leading segments default to the registered name, and `rewrite: { slug: "recipes" }` in the quickstart below is what turns the first one into `/recipes/sicilian-caponata`. The route map is a projection of the registry.
+
+A match produces a **route intent**, which is what the matched URL represents. There are eight kinds.
+
+| Intent       | What it means                            | Example URL                   |
+| ------------ | ---------------------------------------- | ----------------------------- |
+| `single`     | One entry of a named type                | `/recipes/sicilian-caponata`  |
+| `archive`    | The paginated listing for one entry type | `/recipes`, `/recipes/page/2` |
+| `taxonomy`   | The entries carrying one term            | `/cuisine/italian/sicilian`   |
+| `author`     | One author's published entries           | `/authors/marco`              |
+| `date`       | A year, month or day of entries          | `/2026`, `/2026/04/18`        |
+| `front-page` | The site root and its later pages        | `/`, `/page/2`                |
+| `search`     | A search result set                      | `/search/caponata`            |
+| `custom`     | An archive a plugin registered whole     | whatever the plugin declared  |
+
+The intent carries only the route shape. The slug, term path and page number ride alongside it as the parameters URLPattern captured. A resolver per kind reads both, loads the data, and hands a typed payload to the theme, which picks a template for it.
+
+`front-page` is the intent whose listing core defines outright rather than deriving from a registration, so its rule lives here. It selects published entries from every public non-hierarchical entry type, orders them newest publish time first, and pages them twenty at a time. That page size is a core constant, so `archivePerPage` does not move it the way it moves an entry-type or taxonomy archive. Hierarchical types are excluded on purpose, which is why the pages plugin's `page` entries never appear in the front feed.
+
+`search` is the one intent that rewrites its own URL. A plain HTML form submitting `GET /search?q=caponata` 301s to `/search/caponata`, so the result page is shareable rather than query-string bound. It borrows the same twenty-per-page listing and matches on entry title only.
+
+Only `GET` and `HEAD` reach the public site. Any other method on a public URL returns 405 with an `Allow: GET, HEAD` header, before any lookup runs.
+
+## Quickstart
+
+<Steps>
+
+1. **Register a type and a taxonomy.** Create `plugins/recipes.ts`:
+
+   ```ts
+   import { definePlugin } from "plumix/plugin";
+
+   export const recipes = definePlugin("recipes", {
+     setup: (ctx) => {
+       ctx.registerEntryType("recipe", {
+         label: "Recipes",
+         labels: { singular: "Recipe", plural: "Recipes" },
+         hasArchive: true,
+         rewrite: { slug: "recipes" },
+         termTaxonomies: ["cuisine"],
+       });
+
+       ctx.registerTermTaxonomy("cuisine", {
+         label: "Cuisines",
+         isHierarchical: true,
+         entryTypes: ["recipe"],
+       });
+     },
+   });
+   ```
+
+   Declare the link on both sides. The taxonomy's `entryTypes` is what the term-archive resolver filters the listing by, and the entry type's `termTaxonomies` is what the editor's term picker reads. Omit the second and no author can put a cuisine on a recipe, so `/cuisine/italian` compiles as a route and then lists nothing.
+
+2. **Install it.** Import `recipes` in `plumix.config.ts` and add it to the `plugins` array.
+
+3. **Start the dev server and visit the routes those two calls compiled.**
+
+   ```sh
+   pnpm dev
+   ```
+
+   | URL                          | Intent                                             |
+   | ---------------------------- | -------------------------------------------------- |
+   | `/recipes`                   | `archive` for `recipe`                             |
+   | `/recipes/page/2`            | the same archive, page two                         |
+   | `/recipes/sicilian-caponata` | `single` for `recipe`                              |
+   | `/cuisine/italian`           | `taxonomy` for `cuisine`                           |
+   | `/cuisine/italian/sicilian`  | the nested term, because `cuisine` is hierarchical |
+   | `/cuisine/italian/page/2`    | that term archive, page two                        |
+
+   You wrote no patterns. Every row came out of `rewrite.slug`, `hasArchive` and `isHierarchical`.
+
+</Steps>
+
+## The request pipeline
+
+A request reaches the public router only after several earlier steps decline it. In order:
+
+1. **The dispatcher strips the base path.** With `basePath: "/kitchen"` in `plumix.config.ts`, it rewrites `/kitchen/recipes` to `/recipes` once, at the edge, so nothing downstream is base-path aware. A request that is not under the base gets a 404, because it is not part of the mounted site.
+2. **The platform's own endpoints answer.** Everything under `/_plumix/` belongs to the platform: the RPC endpoint, the sign-in flows, the admin app at `/_plumix/admin`, the MCP endpoint, the REST API at `/_plumix/api/v1`, and any raw route a plugin mounted at `/_plumix/<pluginId>`. A `/_plumix/` path that matches none of them returns 404 rather than falling through to your content.
+3. **The SEO endpoints answer.** `robots.txt`, `sitemap.xml` and its sub-sitemaps, and the feeds resolve here. These sit ahead of the route map on purpose, so no rewrite rule can shadow them.
+4. **Redirect rules run.** Plumix matches the rules from `plumix.config.ts`, from plugins and from the theme as one precedence-ordered set. A match ends the request with a 301, 302, 307, 308 or a 410.
+5. **Asset-shaped misses stop early.** A path ending in `.ico`, `.css`, `.js`, `.png`, `.woff2` or another asset extension returns a cacheable 404 without touching the database.
+6. **The canonical normalizer runs.** A non-canonical shape 301s to its canonical form before routing. See [Permalinks and Slugs](/routing/permalinks/) for what counts as canonical.
+7. **The route map runs.** First rule wins. An unmatched `/` is the front page; any other unmatched URL is a 404, and that 404 is never cached.
+8. **The intent resolves and renders.** The resolver loads the entries, the term or the author, then the theme's [template hierarchy](/themes/hierarchy/) turns the payload into HTML.
+
+<Aside type="note" title="Where the access gate sits">
+  Between the match and the render, Plumix loads the
+  [principal](/access/overview/) and evaluates any access policy attached to the
+  matched route. A gate that refuses short-circuits before content resolves, so
+  a gated entry type refuses a URL whether or not an entry with that slug
+  exists.
+</Aside>
+
+## How rules are ordered
+
+Every compiled rule carries a numeric priority, and lower wins. Rules at equal priority keep the order the compiler emitted them in, and the compiler emits by kind before it emits by registration. It emits the framework routes first, then the taxonomies, then the entry types, then the `registerRewriteRule` rules, then the `registerArchiveType` routes. So at priority 10 every rewrite rule sits ahead of every archive-type route no matter which plugin registered first, and registration order only breaks ties inside one of those groups.
+
+| Priority | Rules                                                                                                              |
+| -------- | ------------------------------------------------------------------------------------------------------------------ |
+| 5        | Framework routes: `/page/:page`, `/search`, `/authors/:slug`, the date archives, and the paginated variant of each |
+| 10       | Explicit `registerRewriteRule` and `registerArchiveType` routes, by default                                        |
+| 50       | The single and archive rules generated from `registerEntryType` and `registerTermTaxonomy`                         |
+| 60       | A single rule whose type set `rewrite: { slug: "" }`, so its pattern matches at the URL root                       |
+
+Only the 10 is a default. `registerRewriteRule` takes a third argument `{ priority }`, and `registerArchiveType` takes a `priority` in its options, both of which replace it outright. A rule numbered below 5 therefore lands ahead of the framework routes, and one numbered above 60 lands behind the root catch-all. The other three rows are fixed by the compiler.
+
+Two consequences are worth knowing before you name anything.
+
+Date archives are framework routes, so `/2026` is the year archive and a recipe slugged `2026` is unreachable at the root of a type mounted there. The compiler emits taxonomy rules ahead of entry-type rules, so a taxonomy named `cuisine` and an entry type with `rewrite: { slug: "cuisine" }` resolve taxonomy-first instead of racing on registration order.
+
+Two rules that compile to the identical pattern throw at boot, and the error names both registering plugins. A silent shadow would be worse than a failed deploy.
+
+The last priority band is how the pages plugin serves `/about/team`. Its `page` type registers `rewrite: { slug: "" }`, which compiles to a `/:path+` catch-all at the URL root, and the 60 keeps that catch-all behind every sibling plugin's rules so resolution does not depend on install order.
+
+## Registering your own routes
+
+Two calls put URLs on the map that no entry-type registration would produce.
+
+`registerRewriteRule(pattern, intent, options?)` maps a URLPattern pathname onto an existing intent. Use it to serve a type at a second URL, or to give an archive a shape the generated rules do not cover. The only option is `priority`, which defaults to 10.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerRewriteRule("/kitchen/:slug", {
+      kind: "single",
+      entryType: "recipe",
+    });
+  },
+});
+```
+
+`registerArchiveType(name, options)` registers a whole archive, meaning its URL patterns, a resolver that returns the data or `null` for a 404, an optional feed, and an optional `priority`. It compiles to the `custom` intent, and the theme targets it by name. Reach for it when core has no concept of the archive at all, such as a printable weekly menu.
+
+<Aside type="caution" title="Asset extensions are unroutable">
+  A rewrite pattern ending in `.js`, `.png`, `.woff2` or another asset extension
+  can never match, because the asset-shaped 404 runs first. Content-plausible
+  extensions stay routable, so `.txt`, `.xml`, `.json` and `.html` patterns
+  work.
+</Aside>
+
+## Seeing what matched
+
+In development the debug bar carries a Template panel showing what the request resolved to and which template rule won, along with every rule that was skipped or never reached. On an error page it shows nothing, because an error page resolves no node.
+
+## Related
+
+Plumix compiles the route map from registrations rather than from a declaration you write, so [Entry Types](/content-modelling/entry-types/) and [Taxonomies and Terms](/content-modelling/taxonomies/) are where a URL shape is really decided. Everything after the match belongs to the theme. [Template Hierarchy](/themes/hierarchy/) covers how an intent resolves to a template, and [Template Data](/themes/template-data/) covers the payload each resolver hands over. `basePath` and `redirects` are both slots in [Configuration](/getting-started/configuration/). The blog and pages plugins each register types with deliberate URL shapes, described in [Blog](/plugins/blog/) and [Pages](/plugins/pages/).
+
+## Next steps
+
+Read [Permalinks and Slugs](/routing/permalinks/) for the outbound half of routing: what a slug may contain, how Plumix composes one into a permalink, and which URL it treats as canonical. Then [Template Hierarchy](/themes/hierarchy/) picks the request up where this page leaves it.
+
+Four pages in this section are not written yet, and everything they describe already ships. Archives covers the paginated listing routes, the `archivePerPage` page size and what an out-of-range page number returns. Redirects covers the three places redirect rules come from, the URLPattern and RegExp forms of `from`, query preservation, and answering `410 Gone` for content you removed on purpose. Rewrite Rules goes deeper into `registerRewriteRule` and `registerArchiveType`, including priorities and the patterns that can never match. Base Path covers serving the whole site under a subdirectory.

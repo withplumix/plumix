@@ -1,0 +1,486 @@
+---
+title: Core Blocks
+description: Every block Plumix registers on its own, with the inputs each one accepts and what it renders.
+tier: P0
+roster: true
+sidebar:
+  order: 20
+tableOfContents:
+  maxHeadingLevel: 3
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Eighteen block specs ship inside Plumix and every site boots with all of them. This page is the whole set, in the order core registers them, with the inputs each block accepts and the markup it produces.
+
+## Overview
+
+The `core/` namespace is closed. `registerBlock` throws for any name starting `core/`, and the `blocks` a theme declares are checked the same way, which is why these 18 are always present rather than something a site opts into. Nothing replaces one either. Boot merges the registry core first, then plugin blocks, then the theme's, and the later layer wins a name collision, but no contributed spec is allowed a `core/` name, so that ordering only ever settles a plugin against the theme.
+
+Seventeen of the 18 declare a category, and the editor's inserter groups its palette by it. Four appear here, `text`, `layout`, `media` and `interactive`. `core/pattern-ref` declares none, and the inserter would file a category-less spec under `uncategorized`. It never files this one, because it drops every `inserter: false` spec before it buckets by category. Five of the 18 set `inserter: false` and never appear in the palette at all, because something else creates them. `core/table` seeds the four table row and cell blocks, and inserting a pattern that registers itself as a reference writes a `core/pattern-ref`.
+
+The examples below are stored nodes, the shape a block takes inside an entry's content tree. Most are a value you could put straight in the `blocks` array of an entry's content. `core/column` is the exception. It declares `requiresParent: ["core/columns"]`, so a save that puts one at the top level fails validation with a `requires_parent` error, and the node belongs inside a `core/columns` node's `columns` slot instead. [Overview](/blocks/overview/) covers what those fields mean and how the renderer walks the tree.
+
+## The core blocks
+
+### `core/rich-text`
+
+A run of formatted prose. An empty document renders an Add a block button rather than starting one of these, so an author picks it from the inserter like any other block.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const intro: BlockNode = {
+  id: "caponata-intro",
+  name: "core/rich-text",
+  attrs: {
+    body: "<p>Sicilian <strong>sweet-and-sour</strong> aubergine.</p>",
+  },
+};
+```
+
+Category `text`. One input, `body`, of type `richtext`, holding an HTML string. A fresh block starts at `<p>Enter text here…</p>`.
+
+The body is authored HTML, so the renderer treats it as untrusted on the way out. Shortcodes in it expand first, then the renderer sanitizes the whole result against the same allowlist `core/html` uses, and that is what reaches the page.
+
+A shortcode is a bracketed text macro an author types into the body, and expanding one replaces the tag with escaped text. Core registers two, `[year]` and `[month]`. Expansion is a single left-to-right pass, so a shortcode that returns `[year]` stays literal. An unregistered tag passes through as typed, and `[[year]]` renders the literal `[year]`.
+
+The block also declares the keywords `paragraph`, `text` and `body`. The inserter matches a query as a plain substring of a block's name, title or keywords, so typing `paragraph` finds it. No slash-command surface ships, so `/paragraph` matches nothing.
+
+### `core/separator`
+
+A horizontal rule between sections.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const beforeMethod: BlockNode = {
+  id: "caponata-rule",
+  name: "core/separator",
+};
+```
+
+Category `text`. No inputs. It renders an `<hr>` and puts the block's own class and styles on that element, so a theme rule targeting `hr` and an author's style edit act on the same node.
+
+Its seeded styles drop the browser's bevel and paint the line with three custom properties: `--plumix-separator-thickness`, `--plumix-separator-color` and `--plumix-separator-margin-y`. Declaring those in a theme restyles every separator on the site.
+
+### `core/code`
+
+A block of source code, highlighted at render.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const brineSnippet: BlockNode = {
+  id: "caponata-brine",
+  name: "core/code",
+  attrs: {
+    text: "const brine = { water: 1000, salt: 30 };",
+    language: "ts",
+  },
+};
+```
+
+Category `text`. Two inputs: `text`, a `textarea`, and `language`, a `combobox` offering 26 common languages.
+
+The language field is a combobox rather than a select, so the stored value stays free text and content authored against an older list survives. Fourteen short forms map to a canonical id on the way in, `ts` to `typescript` and `py` to `python` among them. Highlighting runs synchronously inside the same render, which is why the server output and the editor canvas agree. A language the highlighter does not know keeps its `data-language` attribute and renders plain. The token colours ride along as one deduplicated stylesheet, themeable through the `--plumix-code-*` properties.
+
+### `core/group`
+
+A container that holds other blocks and takes every layout decision from its styles. It is titled Box in the editor.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const timings: BlockNode = {
+  id: "caponata-timings",
+  name: "core/group",
+  style: { large: { display: "flex", gap: "1rem" } },
+  attrs: {
+    content: [
+      {
+        id: "caponata-prep",
+        name: "core/rich-text",
+        attrs: { body: "<p>Prep 25 minutes</p>" },
+      },
+      {
+        id: "caponata-cook",
+        name: "core/rich-text",
+        attrs: { body: "<p>Cook 40 minutes</p>" },
+      },
+    ],
+  },
+};
+```
+
+Category `layout`. One input, `content`, a slot that accepts any block.
+
+There is no layout property to set. `display`, `gap`, padding and the rest are style declarations on the node, as in the example, and the block puts its class on its own `div` so its slot children are the flex or grid items. A node `tagName` swaps that `div` for another container tag.
+
+### `core/section`
+
+A full-width band whose contents are centred at a maximum width.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const method: BlockNode = {
+  id: "caponata-method",
+  name: "core/section",
+  attrs: {
+    maxWidth: "720px",
+    content: [
+      {
+        id: "caponata-method-text",
+        name: "core/rich-text",
+        attrs: { body: "<p>Salt the aubergine for an hour.</p>" },
+      },
+    ],
+  },
+};
+```
+
+Category `layout`. Two inputs: `maxWidth`, a text field defaulting to `1200px`, and `content`, a slot seeded with one rich-text child so a new section is not bare.
+
+It renders a `<section>` with an inner `div` centred at `maxWidth`. Vertical and horizontal padding arrive as editable style values, 3rem and 1.25rem, rather than baked CSS. The band fills its container, not the viewport. Edge-to-edge bleed stays an explicit style choice, because a viewport-width default overflows by the width of the scrollbar.
+
+### `core/columns`
+
+A row of columns that stacks at a breakpoint.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const ingredientsRow: BlockNode = {
+  id: "caponata-row",
+  name: "core/columns",
+  attrs: {
+    stackAt: "tablet",
+    reverseWhenStacked: false,
+    columns: [
+      {
+        id: "caponata-col-1",
+        name: "core/column",
+        attrs: {
+          content: [
+            {
+              id: "caponata-col-1-text",
+              name: "core/rich-text",
+              attrs: { body: "<p>Aubergine, celery, olives.</p>" },
+            },
+          ],
+        },
+      },
+      {
+        id: "caponata-col-2",
+        name: "core/column",
+        attrs: {
+          content: [
+            {
+              id: "caponata-col-2-text",
+              name: "core/rich-text",
+              attrs: { body: "<p>Vinegar, sugar, capers.</p>" },
+            },
+          ],
+        },
+      },
+    ],
+  },
+};
+```
+
+Category `layout`. Three inputs: `stackAt`, a select over `tablet`, `mobile` and `never`; `reverseWhenStacked`, a boolean; and `columns`, a slot that accepts `core/column` and nothing else, seeded with two.
+
+The row is a flex container with a 20px gap. Stacking is not a seeded style. The block emits its own scoped media query, keyed to the theme's `tablet` or `mobile` breakpoint, that flips `flex-direction` to `column`. With `reverseWhenStacked` set it flips to `column-reverse`, which is how a picture on the right of a wide screen lands above its text on a narrow one.
+
+### `core/column`
+
+One cell of a `core/columns` row.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const wideColumn: BlockNode = {
+  id: "caponata-col-1",
+  name: "core/column",
+  attrs: {
+    width: "60%",
+    content: [
+      {
+        id: "caponata-col-1-text",
+        name: "core/rich-text",
+        attrs: { body: "<p>Aubergine, celery, olives.</p>" },
+      },
+    ],
+  },
+};
+```
+
+Category `layout`. Two inputs: `width`, a text field, and `content`, a slot seeded with one rich-text child.
+
+It declares `requiresParent: ["core/columns"]`, so the inserter offers it nowhere else and the server rejects a save that puts a column at the top level of a document. Leave `width` empty and columns share the row evenly. Set it and the column takes that width as its flex basis while still able to shrink, so several fixed widths compress to fit instead of overflowing. The block reads a bare number as a percentage. It ignores a value carrying any unit other than `px`, `%`, `rem`, `em`, `vw`, `vh` or `ch`, and the column stays equal.
+
+### `core/button`
+
+A call to action, rendered as a link when it has somewhere to go.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const printLink: BlockNode = {
+  id: "caponata-print",
+  name: "core/button",
+  attrs: {
+    label: "Print this recipe",
+    href: "/recipes/sicilian-caponata?print=1",
+    openInNewTab: true,
+  },
+};
+```
+
+Category `interactive`. Three inputs: `label` and `href` as text, and `openInNewTab` as a boolean. A fresh button is labelled Click.
+
+The block checks the href first. It has to start with `http://`, `https://`, `mailto:`, `tel:`, `/`, `#`, `?`, `./` or `../`. Anything else, an empty field included, and the block renders a `<button type="button">` instead of an anchor, so a `javascript:` URL never becomes a clickable link. Opening in a new tab adds `rel="noopener noreferrer"` along with the target. The default look comes from `--plumix-button-padding-y`, `--plumix-button-padding-x`, `--plumix-button-radius`, `--plumix-button-bg` and `--plumix-button-fg`.
+
+### `core/details`
+
+A summary line that expands to reveal what is under it.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const substitutions: BlockNode = {
+  id: "caponata-substitutions",
+  name: "core/details",
+  attrs: {
+    summary: "Substitutions",
+    open: false,
+    content: [
+      {
+        id: "caponata-substitutions-text",
+        name: "core/rich-text",
+        attrs: { body: "<p>Red wine vinegar works in place of white.</p>" },
+      },
+    ],
+  },
+};
+```
+
+Category `layout`. Three inputs: `summary` as text, `open` as a checkbox, and `content` as a slot.
+
+It renders a native `<details>` and `<summary>` pair, so the open and close behaviour is the browser's and costs no JavaScript. An empty summary falls back to the word Details. Setting `open` starts the block expanded on first paint.
+
+### `core/video`
+
+A self-hosted video with the browser's own controls.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const searingClip: BlockNode = {
+  id: "caponata-clip",
+  name: "core/video",
+  attrs: {
+    src: "https://media.example.com/caponata-searing.mp4",
+    poster: "https://media.example.com/caponata-poster.jpg",
+    controls: true,
+    loop: false,
+    muted: false,
+    playsinline: true,
+  },
+};
+```
+
+Category `media`. Seven inputs: `src` and `poster` as URLs, then `controls`, `autoplay`, `loop`, `muted` and `playsinline` as booleans. Controls and inline playback are on by default; autoplay, loop and muted are off.
+
+The block omits an empty `src` rather than emitting `src=""`, which would send the browser after the current page URL. The default box is full width at a 16 by 9 ratio with `object-fit: contain`, so a differently proportioned video letterboxes instead of stretching. Width, ratio, background and corner radius are all `--plumix-video-*` properties.
+
+### `core/embed`
+
+Third-party media from a pasted URL.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const techniqueVideo: BlockNode = {
+  id: "caponata-technique",
+  name: "core/embed",
+  attrs: {
+    url: "https://www.youtube.com/watch?v=aaaaaaaaaaa",
+    title: "Dicing aubergine for caponata",
+    caption: "Knife work, two minutes.",
+  },
+};
+```
+
+Category `media`. Three inputs: `url`, plus `title` and `caption` as text. The title becomes the iframe's accessible name and falls back to Embedded content.
+
+The block recognizes five providers by hostname and rewrites the URL to that provider's embed endpoint. YouTube is served from `youtube-nocookie.com`, Vimeo and Loom get a 16 by 9 box, Spotify a fixed 352 pixels and CodePen 400. Any other `http` or `https` URL is still embeddable, framed under a strict sandbox at 16 by 9. Other schemes resolve to nothing.
+
+<Aside type="tip" title="The iframe is not in the server HTML">
+  A facade renders in its place and mounts the real iframe on the reader's first
+  click. The browser fetches the code for that mount earlier, once the block
+  scrolls into view, so the click has nothing to wait for. The provider gets no
+  connection from a reader who never clicks.
+</Aside>
+
+### `core/html`
+
+Raw markup, for the embed snippet or the one-off widget no other block covers.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const nutritionTable: BlockNode = {
+  id: "caponata-nutrition",
+  name: "core/html",
+  attrs: {
+    html: '<p><abbr title="kilocalories">kcal</abbr> 190 per serving</p>',
+  },
+};
+```
+
+Category `interactive`. One input, `html`, a `textarea`. A fresh block holds `<p>Custom HTML</p>`.
+
+What you type is not what renders. Plumix sanitizes the stored string against an allowlist on every render, on the server and in the editor canvas alike. The baseline permits a fixed set of text and inline elements, headings, lists, `figure`, `figcaption`, `blockquote`, `pre`, `code`, `a` and `span` among them. It permits three attribute groups: `href` and `title` on an anchor, `title` on an `abbr`, and `data-language` on a `code`. Links may use `http`, `https`, `mailto` and `tel`, and a protocol-relative URL is refused. The sanitizer drops everything outside that list from the output, and the stored text stays as the author wrote it.
+
+A site widens the allowlist through `blocks.htmlAllowlist` in its configuration. `extraTags` and `extraAttributes` merge with the baseline; `schemes` and `allowProtocolRelative` replace it. Under all four is a floor no override reaches past. Twenty-five tags can never be allowlisted, `script`, `iframe`, `object`, `embed`, `style`, `link`, `form`, `input`, `svg`, `math` and `template` among them, either because they execute and fetch or because their children parse as text on one pass and as markup on the next. Any attribute beginning `on`, plus `style`, is denied on every tag. So are the schemes `javascript`, `vbscript`, `data`, `blob` and `view-source`. A `<script>` typed into this block does not run, and no configuration makes it run.
+
+### `core/table`
+
+A table, built from row and cell blocks rather than from a grid control.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const timingTable: BlockNode = {
+  id: "caponata-timings-table",
+  name: "core/table",
+  attrs: {
+    rows: [
+      {
+        id: "caponata-timings-head",
+        name: "core/table-header-row",
+        attrs: {
+          cells: [
+            {
+              id: "caponata-timings-head-1",
+              name: "core/table-header-cell",
+              attrs: { text: "Stage" },
+            },
+            {
+              id: "caponata-timings-head-2",
+              name: "core/table-header-cell",
+              attrs: { text: "Minutes", align: "right" },
+            },
+          ],
+        },
+      },
+      {
+        id: "caponata-timings-row-1",
+        name: "core/table-body-row",
+        attrs: {
+          cells: [
+            {
+              id: "caponata-timings-row-1-1",
+              name: "core/table-cell",
+              attrs: { text: "Salting" },
+            },
+            {
+              id: "caponata-timings-row-1-2",
+              name: "core/table-cell",
+              attrs: { text: "60", align: "right" },
+            },
+          ],
+        },
+      },
+    ],
+  },
+};
+```
+
+Category `text`. One input, `rows`, a slot that accepts `core/table-header-row` and `core/table-body-row`. Dropping a table seeds one header row and two body rows of three cells each, so it reads as a grid immediately.
+
+Rows render straight into a `<tbody>`, which the browser would insert anyway, so the markup React hydrates stays valid. The slot renders its children without the editor's drop-target wrapper, since a `<div>` inside a `<table>` is not legal HTML. Baseline borders, padding and header shading come from the `--plumix-table-*` properties.
+
+### `core/table-header-row`
+
+The header row of a table. Hidden from the inserter; you get one by adding a table.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const headerRow: BlockNode = {
+  id: "caponata-timings-head",
+  name: "core/table-header-row",
+  attrs: {
+    cells: [
+      {
+        id: "caponata-timings-head-1",
+        name: "core/table-header-cell",
+        attrs: { text: "Stage" },
+      },
+    ],
+  },
+};
+```
+
+Category `text`. One input, `cells`, a slot restricted to `core/table-header-cell`. It renders a `<tr data-header>` and puts its own class on that element.
+
+### `core/table-body-row`
+
+A data row of a table, and the header row's sibling. Its `cells` slot accepts `core/table-cell`, and it renders a plain `<tr>` with no `data-header` marker. See [`core/table-header-row`](#coretable-header-row) for the shape.
+
+Category `text`. Hidden from the inserter.
+
+### `core/table-header-cell`
+
+One heading cell.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const stageHeading: BlockNode = {
+  id: "caponata-timings-head-1",
+  name: "core/table-header-cell",
+  attrs: { text: "Stage", align: "left" },
+};
+```
+
+Category `text`. Two inputs: `text`, and `align`, a select over `left`, `center` and `right` whose control reads Left when nothing is chosen. It renders a `<th scope="col">`, which is what tells a screen reader the cell heads its column. The alignment travels as `data-align`, and the table's stylesheet acts on it. Hidden from the inserter.
+
+### `core/table-cell`
+
+One data cell, and the header cell's sibling. Same `text` and `align` inputs, rendered as a `<td>` with no `scope`. See [`core/table-header-cell`](#coretable-header-cell) for the shape.
+
+Category `text`. Hidden from the inserter.
+
+### `core/pattern-ref`
+
+A pointer to a registered pattern, resolved at render rather than copied into the entry.
+
+```ts
+import type { BlockNode } from "plumix/blocks";
+
+export const chefBio: BlockNode = {
+  id: "caponata-chef-bio",
+  name: "core/pattern-ref",
+  attrs: { slug: "recipes/chef-bio" },
+};
+```
+
+One input, `slug`. No category, and hidden from the inserter. An author writes a node of this shape by inserting a pattern that registered itself with `insert: "reference"`. The default is the other mode, which splices a copy of the pattern's body into the entry.
+
+The walker handles this name before it consults the registry. It looks the slug up in the pattern registry handed to `renderBlockTree` as its `patterns` option and renders that pattern's blocks in place, which is what would make editing the pattern change every entry referencing it.
+
+No shipped caller passes `patterns`. `BlockRenderer` does not, and neither does the editor canvas, so the lookup finds nothing today and every node of this shape takes the unresolved branch. An unresolved slug warns once per slug through `console.warn`, in production as well as in development, and renders nothing. In development it also leaves a `<template data-plumix-unresolved-pattern-ref>` marker in the markup.
+
+## Related
+
+What a stored node holds, how boot assembles the registry and what the renderer does with a name it cannot resolve are on [Overview](/blocks/overview/). [Configuration](/getting-started/configuration/) holds the allowlist governing `core/html` and `core/rich-text`, under `blocks.htmlAllowlist`. A theme reads the rendered tree through the entry projection [template data](/themes/template-data/) describes, and the custom properties named throughout this page are what a theme declares to restyle these blocks in bulk.
+
+## Next steps
+
+Read [Fields](/fields/overview/) next. A block tree is one half of what an entry stores, and meta-box fields are the other, the declared keys of the entry's `meta` bag.
+
+Several pages that would go deeper are not written yet, and what they cover already ships. Authoring a Block covers `defineBlock`, the input types a spec may declare, and registering one from a plugin or a theme, which is the route to anything the 18 above do not do. Styles covers the style buckets and breakpoints the layout blocks lean on. Marks lists the inline formatters a `core/rich-text` body can carry. Variations and Patterns cover preset configurations of one block and reusable arrangements of several, which is what `core/pattern-ref` points at.

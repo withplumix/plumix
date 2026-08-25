@@ -7,11 +7,13 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     include: ["src/**/*.build.test.{ts,tsx}"],
-    // The first test to reach the sample check pays for the TypeScript program
-    // built over `plumix`'s published types — ~1.5s on a warm laptop, and the
-    // 5s default leaves too little headroom for a cold CI box, where it has
-    // timed out. 15s matches `packages/admin-editor` and absorbs the variance
-    // without masking a genuine hang.
-    testTimeout: 15_000,
+    // The first test to reach the sample check pays for one TypeScript program
+    // built over `plumix`'s published types, and every fenced sample in the
+    // tree compiles into it. That cost scales with the content: 15s was set
+    // when the estate held a handful of samples, and the 30 P0 pages took it to
+    // 176, which timed out on CI while passing in about 7s on a warm laptop.
+    // 60s holds the same ratio of headroom to observed cost. Raise it again
+    // when the tree grows, rather than trimming samples to fit.
+    testTimeout: 60_000,
   },
 });

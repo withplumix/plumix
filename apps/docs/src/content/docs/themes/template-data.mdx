@@ -1,0 +1,271 @@
+---
+title: Template Data
+description: The nine shapes a template's render function can receive, the kind that discriminates them, and the guard that narrows each one.
+tier: P0
+roster: true
+sidebar:
+  order: 40
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+`TemplateData` is the union of everything a resolved request can hand a template. Nine members, each tagged with a `kind`, each with a guard that narrows to it.
+
+## Overview
+
+Which member arrives depends on which rule matched. Bind a template through a builder that already knows the shape, such as `archive()` or `forEntryType("recipe")`, and the type parameter is settled for you. `data` is `ArchiveData` and nothing else. Bind it through `fallback()` and `data` is the whole union, because a catch-all can receive any of the nine.
+
+Narrow the union in one of two ways. A `switch` on `data.kind` narrows in every branch.
+
+```tsx
+import { defineTemplate } from "plumix/theme";
+
+export const anything = defineTemplate({
+  render: ({ data }) => {
+    switch (data.kind) {
+      case "entry":
+        return <h1>{data.entry.title}</h1>;
+      case "search":
+        return <h1>{data.query}</h1>;
+      default:
+        return <h1>{data.kind}</h1>;
+    }
+  },
+});
+```
+
+Dropping the `default` does not make the compiler demand the other seven. `render` returns `ReactNode`, `ReactNode` includes `undefined`, and the shared tsconfig sets no `noImplicitReturns`, so a switch that falls off its last case compiles and renders nothing. To turn a missing case into a build error, replace the `default` return with `const exhaustive: never = data;`, which stops compiling the day a tenth kind lands.
+
+For a single branch, the guards below read better. Each is a plain function exported from `plumix` that takes `TemplateData` and narrows.
+
+Three projections recur across the shapes.
+
+- `ResolvedEntry` is the stored entry row with `meta` replaced by its decoded counterpart, with every [reference field](/fields/field-types/) hydrated, plus `terms`, `author`, `contentBlocks` and `url`. `contentBlocks` is the content narrowed to the block-tree shape, and `null` when the stored JSON does not fit that shape. `url` is `null` for a hierarchical entry still awaiting an ancestor-chain walk.
+- `ResolvedTerm` is the term row plus its own `url`. Its `meta` does not get the entry treatment. The public render path hands you the raw JSON column, so a reference field on a term arrives as the stored id rather than the row it points at.
+- `ResolvedAuthor` is `id`, `slug`, `name` and `avatarUrl`. There is no email and no auth column. On the entry path the query selects those four columns and nothing else; on an author archive the resolver loads the whole user row to find the author, then copies the same four fields into a fresh object rather than spreading the row.
+
+Six of the nine shapes carry `entries` and a `Pagination` of `page`, `perPage`, `total` and `pageCount`. Every listing shape is generic over the entry projection and defaults to `ResolvedEntry`, so a targeted rule can hand you a narrower entry type without a cast.
+
+<Aside type="note" title="Narrowing is not access control">
+  A guard tells you what shape arrived, nothing more. The [read
+  layer](/access/overview/) settled what this principal may see before the
+  resolver built the data, and a template cannot widen it.
+</Aside>
+
+## The shapes
+
+### `EntryData`
+
+One entry. `kind: "entry"`, guard `isEntry`, bound directly by the `entry` tier and by `forEntryType(name).template()`.
+
+```tsx
+import { isEntry } from "plumix";
+import { BlockRenderer } from "plumix/blocks/renderer";
+import { defineTemplate } from "plumix/theme";
+
+export const single = defineTemplate({
+  render: ({ data }) =>
+    isEntry(data) ? (
+      <article>
+        <h1>{data.entry.title}</h1>
+        {data.entry.contentBlocks ? (
+          <BlockRenderer content={data.entry.contentBlocks} />
+        ) : null}
+      </article>
+    ) : null,
+});
+```
+
+`data.entry` is the only field. It is a full `ResolvedEntry`, so the title, excerpt, status, publish date, author, terms and decoded meta are all on it. It is one of the three listing-free shapes, alongside `CustomArchiveData` and `ErrorData`. There is no `entries` and no `pagination` on any of them.
+
+### `ArchiveData`
+
+An entry type's listing. `kind: "archive"`, guard `isArchive`, bound by the `archive` tier and by `forEntryType(name).archive.template()`.
+
+```tsx
+import { isArchive } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+export const listing = defineTemplate({
+  render: ({ data }) =>
+    isArchive(data) ? (
+      <section>
+        <h1>{data.contentType}</h1>
+        <ol>
+          {data.entries.map((item) => (
+            <li key={item.id}>{item.title}</li>
+          ))}
+        </ol>
+        <p>
+          Page {data.pagination.page} of {data.pagination.pageCount}
+        </p>
+      </section>
+    ) : null,
+});
+```
+
+`data.contentType` is the entry type being listed, so one template can serve every archive on the site. A page number past the last page 404s before the template runs, which spares the template an empty-listing branch for that case.
+
+### `TaxonomyData`
+
+A term archive. `kind: "taxonomy"`, guard `isTaxonomy`, bound by the `taxonomy` tier and by `forTermTaxonomy(name)`.
+
+```tsx
+import { isTaxonomy } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+export const terms = defineTemplate({
+  render: ({ data }) =>
+    isTaxonomy(data) ? (
+      <section data-taxonomy={data.taxonomy}>
+        <h1>{data.term.name}</h1>
+        {data.term.description ? <p>{data.term.description}</p> : null}
+        <p>{data.pagination.total} entries</p>
+      </section>
+    ) : null,
+});
+```
+
+`data.term` is the subject and `data.taxonomy` names which taxonomy it belongs to, so you can tell `cuisine` from `diet` without reading the term. `entries` stays the base entry shape here, because one taxonomy can classify several entry types.
+
+### `AuthorArchiveData`
+
+An author's entries. `kind: "author"`, guard `isAuthor`, bound by the `author` tier and by `forAuthor()`.
+
+```tsx
+import { isAuthor } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+export const byAuthor = defineTemplate({
+  render: ({ data }) =>
+    isAuthor(data) ? (
+      <section>
+        <h1>{data.author.name ?? data.author.slug}</h1>
+        {data.author.avatarUrl ? (
+          <img src={data.author.avatarUrl} alt="" />
+        ) : null}
+        <p>{data.pagination.total} published</p>
+      </section>
+    ) : null,
+});
+```
+
+`data.author` is a `ResolvedAuthor`, and `name` is nullable, so fall back to the slug rather than rendering an empty heading.
+
+### `DateArchiveData`
+
+Entries published in one period. `kind: "date"`, guard `isDate`, bound by the `date` tier and by `forDate(...)`.
+
+```tsx
+import { isDate } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+export const period = defineTemplate({
+  render: ({ data }) => {
+    if (!isDate(data)) return null;
+    const label = [data.year, data.month, data.day]
+      .filter((part) => part !== null)
+      .join("/");
+    return <h1>{label}</h1>;
+  },
+});
+```
+
+`year` is always a number. `month` and `day` are 1-based and `null` at a coarser granularity. The three together tell you which archive you are on, and a year archive has both of them `null`.
+
+### `CustomArchiveData`
+
+A plugin-registered archive. `kind: "custom"`, guard `isCustom`, bound by `forArchiveType(name)`.
+
+```tsx
+import { isCustom } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+export const pluginArchive = defineTemplate({
+  render: ({ data }) => (isCustom(data) ? <h1>{data.name}</h1> : null),
+});
+```
+
+Core only ever sees the base shape, which is `kind` and `name`. The [plugin](/plugins/overview/) that called `registerArchiveType` extends it with whatever its archive lists and declares the extended type in `ArchiveTypeRegistry`, so `forArchiveType("seasonal")` types `data` as the plugin's shape rather than this one. Reached through `fallback` instead, it stays the base, and the guard is how you find out which archive you are on.
+
+### `FrontPageData`
+
+The site root. `kind: "frontPage"`, guard `isFrontPage`, bound by the `frontPage` tier.
+
+```tsx
+import { isFrontPage } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+export const home = defineTemplate({
+  render: ({ data }) =>
+    isFrontPage(data) ? (
+      <main>
+        <h1>Latest</h1>
+        <ol>
+          {data.entries.map((item) => (
+            <li key={item.id}>{item.title}</li>
+          ))}
+        </ol>
+      </main>
+    ) : null,
+});
+```
+
+The feed is the latest published entries across every public non-hierarchical type. Hierarchical types are standalone content and stay out of it, so a page never appears here alongside a recipe.
+
+### `SearchData`
+
+Search results. `kind: "search"`, guard `isSearch`, bound by the `search` tier.
+
+```tsx
+import { isSearch } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+export const results = defineTemplate({
+  render: ({ data }) =>
+    isSearch(data) ? (
+      <main>
+        <h1>{data.query}</h1>
+        <p>{data.pagination.total} matches</p>
+      </main>
+    ) : null,
+});
+```
+
+`data.query` is the decoded query string, ready to render. Everything else on the shape is the same listing pair as an archive.
+
+### `ErrorData`
+
+A 404 or a 500. `kind: "error"`, guard `isError`, bound by the `notFound` and `serverError` tiers.
+
+```tsx
+import { isError } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+export const failed = defineTemplate({
+  render: ({ data }) => {
+    if (!isError(data)) return null;
+    return (
+      <main>
+        <h1>Something went wrong</h1>
+        <p>{new URL(data.request.url).pathname}</p>
+        {data.errorId ? <code>{data.errorId}</code> : null}
+      </main>
+    );
+  },
+});
+```
+
+There is no `Error` field on this shape, by design, so an internal exception message has no path into the rendered page. `request` is the failing request. `hint` is an optional short string. `errorId` is the request's telemetry id, and only the 500 path sets it. That is the field to test when one template serves both cases.
+
+## Related
+
+[Templates](/themes/templates/) is where each builder names the shape it accepts, so binding through the right one removes the need for a guard. [Template Hierarchy](/themes/hierarchy/) is how the resolver decides which rule, and therefore which shape, a request produces. [Overview](/themes/overview/) covers the theme descriptor and the `plumix/blocks/renderer` primitives the examples above use.
+
+[Content Modelling](/content-modelling/overview/) models the entry and term rows behind `ResolvedEntry` and `ResolvedTerm`, and the decoded `meta` bag on each comes from the meta boxes in [Fields](/fields/overview/). [Blocks](/blocks/overview/) describes the tree `contentBlocks` carries.
+
+## Next steps
+
+Go back to [Templates](/themes/templates/) and bind each shape to the tier or matcher that produces it, then to [Template Hierarchy](/themes/hierarchy/) to order those rules.
+
+Two unwritten pages in this section carry what a template does with the data once it has it. Component Primitives covers `Link` and `Image`, which turn a `ResolvedEntry` into markup that respects the base path and the site's image handling, along with `useAuth` for a page that changes with the signed-in visitor. Tokens and Breakpoints covers the design values those components render against.

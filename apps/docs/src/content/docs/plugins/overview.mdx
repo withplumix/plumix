@@ -1,0 +1,220 @@
+---
+title: Overview
+description: Installing a published plugin, configuring it, and the two version tracks that decide which number you pin.
+tier: P0
+sidebar:
+  order: 10
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+The `plugins` array in `plumix.config.ts` is how you add an entry type, a route or an admin page to your site. It is not the whole registration surface. Core registers its own blocks, a theme's descriptor declares templates, blocks, shortcodes and redirects statically, and the `redirects` key in `plumix.config.ts` contributes redirect rules with no plugin involved. Installing a published plugin is a package install and one entry in that array.
+
+## What a plugin is
+
+A published plugin and the local plugin your site keeps for its own model are the same object. Both come from `definePlugin`, both carry an id and a `setup` function, and the site calls each one's `setup` once at boot with the same registration context. [Content Modelling](/content-modelling/overview/) covers writing one. This page covers installing one you did not write.
+
+Six plugins ship under the `@plumix/plugin-*` scope. A scaffolded project installs only the ones you ticked, and a project scaffolded with none has none.
+
+- `@plumix/plugin-blog` registers the `post` entry type with the `category` and `tag` taxonomies.
+- `@plumix/plugin-pages` registers the hierarchical `page` entry type rooted at `/`.
+- `@plumix/plugin-media` registers a `media` entry type, a two-phase upload, and a `media()` field builder. The upload sends bytes straight to storage when the storage adapter implements `presignPut`, and routes them through the worker when it does not.
+- `@plumix/plugin-menu` registers navigation menus and the named locations a theme renders them into.
+- `@plumix/plugin-comments` adds threaded, moderated discussion to the entry types you nominate.
+- `@plumix/plugin-audit-log` records an activity feed and adds an `audit` helper to the request context.
+
+The registration context a plugin receives is the same one your own plugin receives, and it is wide. Entry types and taxonomies, meta boxes on entries, terms and users, blocks, marks, shortcodes and patterns, field types, settings groups and pages, RPC routers, REST resources, raw routes, rewrite rules, redirects, archive types, MCP tools, scheduled tasks, capabilities, admin pages, dashboard widgets, login links, lookup adapters, template deps, filters and actions all arrive through the same `ctx`. A package that registers one shortcode installs exactly like a package that registers six entry types.
+
+Installing one changes two things in your repository and can change two more at run time. The package lands in `package.json` and the descriptor lands in the `plugins` array. Beyond that, a plugin that owns database tables needs a migration generated and applied before its first request, and a plugin that registers an entry type mints that type's capabilities, so roles gain permissions nobody wrote by hand.
+
+## Quickstart
+
+Adding comments to the recipe site. Of the six, `comments` is one of the two that own a database table, so this walks the longest install path.
+
+Install the package with whichever package manager the project uses:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-comments
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-comments
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-comments
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun add @plumix/plugin-comments
+```
+
+  </TabItem>
+</Tabs>
+
+Then:
+
+<Steps>
+
+1. **Put it in the `plugins` array.** `comments` is a factory, so you call it. The site's own plugin stays in the array beside it.
+
+   ```ts no-typecheck
+   import { auth, plumix } from "plumix";
+
+   import { comments } from "@plumix/plugin-comments";
+   import {
+     cloudflare,
+     cloudflareDeployOrigin,
+     d1,
+   } from "@plumix/runtime-cloudflare";
+
+   import { recipes } from "./plugins/recipes";
+   import { theme } from "./theme";
+
+   export default plumix({
+     runtime: cloudflare(),
+     database: d1({ binding: "DB", session: "auto" }),
+     auth: auth({
+       passkey: {
+         rpName: "Recipes",
+         ...cloudflareDeployOrigin({
+           workerName: "recipes",
+           accountSubdomain: "your-account",
+           localOrigin: "http://localhost:5173",
+         }),
+       },
+     }),
+     plugins: [recipes, comments({ entryTypes: ["recipe"] })],
+     theme,
+   });
+   ```
+
+2. **Generate and apply the migration.** `plumix migrate generate` rewrites `.plumix/schema.ts` from the resolved config, so it picks up the new table only once the descriptor is in the array.
+
+   ```sh
+   pnpm plumix migrate generate
+   pnpm plumix migrate apply --local
+   ```
+
+3. **Restart the dev server.**
+
+   ```sh
+   pnpm dev
+   ```
+
+   Recipes now accept comments, and the moderation queue is in the admin.
+
+</Steps>
+
+## Two shapes of export
+
+A plugin package exports either a descriptor or a function that returns one, and which of the two decides whether you write `blog` or `blog()`.
+
+`@plumix/plugin-blog` and `@plumix/plugin-pages` take no options, so they export the descriptor itself.
+
+```ts no-typecheck
+import type { PlumixConfigInput } from "plumix";
+
+import { blog } from "@plumix/plugin-blog";
+import { pages } from "@plumix/plugin-pages";
+
+export const plugins: PlumixConfigInput["plugins"] = [blog, pages];
+```
+
+The other four take options, so they export a factory. Options are read at boot, either in the factory call itself or when the plugin's `setup` runs, and nothing re-reads them after that. Changing an option means editing the call and restarting.
+
+```ts no-typecheck
+import type { PlumixConfigInput } from "plumix";
+
+import { auditLog } from "@plumix/plugin-audit-log";
+import { comments } from "@plumix/plugin-comments";
+import { media } from "@plumix/plugin-media";
+import { menu } from "@plumix/plugin-menu";
+
+export const plugins: PlumixConfigInput["plugins"] = [
+  media(),
+  menu({ locations: { primary: { label: "Primary navigation" } } }),
+  comments({ entryTypes: ["recipe"], mode: "all", maxDepth: 2 }),
+  auditLog(),
+];
+```
+
+Every option a factory takes has a default, so the empty parentheses on `media()` and `auditLog()` are a complete call. `comments()` on its own holds an address's first comment for review and auto-approves once that address has an approved comment behind it. Its other defaults are three levels of reply nesting, twenty root comments to a page, and five submissions per source per ten minutes.
+
+<Aside type="caution" title="One descriptor per id">
+  Each descriptor carries an id, and two descriptors with the same id throw at
+  boot rather than one overwriting the other. Calling a factory twice produces
+  two descriptors with the same id, so a second `comments({ ... })` for a second
+  entry type is a boot failure. Pass both types to one call.
+</Aside>
+
+## Install order
+
+The array is the order `setup` runs in. A plugin that reads what another registered has to sit after it.
+
+One step runs earlier than that and does not care about order. A descriptor's optional `provides` function runs for every plugin in the array before any plugin's `setup` runs, so a helper published with `extendPluginContext` is on every plugin's setup context whatever the order.
+
+`provides` has a second call, `extendAppContext`, which puts a helper on the per-request context instead of the setup context. That is the one `@plumix/plugin-audit-log` uses for `audit`, so `ctx.audit` is there for any plugin's routes, hooks and RPC procedures at request time, and no plugin's `setup` can reach it.
+
+Public URLs do not depend on array order either. The router compiles taxonomy rules ahead of entry-type rules and sorts every rule by a priority number, so a plugin whose entry type sits at the URL root cannot shadow another plugin's routes by being listed first. [Routing](/routing/overview/) covers how a URL reaches the rule that serves it.
+
+## Plugins that own tables
+
+`@plumix/plugin-comments` and `@plumix/plugin-audit-log` each store rows in a table of their own, and both declare a `schemaModule` naming where that table's definition lives. `plumix migrate generate` reads the resolved config, writes `.plumix/schema.ts` re-exporting core's schema plus every declared plugin schema, and hands the file to drizzle-kit. Skip the generate step and the emitted migration contains core's tables only, so the plugin's first query fails on a missing table.
+
+The other four add no tables. `@plumix/plugin-blog` and `@plumix/plugin-pages` register entry types, and every entry of every type is a row in the shared `entries` table. `@plumix/plugin-menu` goes further and reuses the same tables for its own model: a menu is a row in `terms`, a menu item is a row in `entries`, and membership is a row in `entry_term`. `@plumix/plugin-media` stores an asset as an entry and the bytes in object storage.
+
+[Cloudflare Workers](/deployment/cloudflare/) covers applying a migration to a deployed D1 database rather than the local one.
+
+## Plugins that ship admin UI
+
+Four of the six carry admin screens: media has the library, menu has the menu builder, comments has the moderation queue, and audit-log has the activity feed. Each declares a path to an admin entry module, and the Vite plugin compiles every declared entry into one bundle for your site during `plumix build` and `plumix dev`.
+
+The consequence is that a newly installed admin-facing plugin appears after a build, not after a config reload. If the admin looks unchanged once the package is in the array, stop the dev server and start it again.
+
+## Two version tracks
+
+The platform releases in lockstep. `plumix` and the five packages behind it, `@plumix/core`, `@plumix/blocks`, `@plumix/admin`, `@plumix/admin-editor` and `@plumix/admin-ui`, share one version number and go out together. You depend on `plumix` and get the rest transitively, so there is one platform number to pin. Your runtime adapter, `@plumix/runtime-cloudflare`, sits outside that group and carries its own number.
+
+The six plugins each release on their own number, and those numbers have already diverged from each other and from the platform. One plugin sitting several minor versions ahead of another says nothing about either one's compatibility with the platform or with each other.
+
+Compatibility is carried by a peer dependency instead. Each plugin declares `plumix` as a peer with the range `>=0.1.0 <1.0.0`, so any pre-1.0 platform release satisfies every plugin, and upgrading `plumix` does not oblige you to upgrade the plugins beside it. A plugin republishes when its own code changes, not because the platform moved.
+
+<Aside type="caution" title="Pre-1.0">
+  A range that wide is a statement about the 0.x line, not a promise that a
+  minor platform release cannot change what a plugin renders. Pin both the
+  platform version and each plugin version, and read the release notes before
+  moving either.
+</Aside>
+
+## Scaffolding with plugins already wired
+
+`create-plumix-app` can do the install and the array entry for you. Each plugin package describes itself to the scaffolder, which splices the import, the registration and any config slot the plugin needs into the generated `plumix.config.ts` and `wrangler.jsonc`.
+
+```sh
+pnpm create plumix-app my-site --plugins blog,pages
+```
+
+Picking media this way is what puts `storage: r2({ binding: "MEDIA" })` in the config and an `r2_buckets` entry in the Workers configuration. [Installation](/getting-started/installation/) walks the wizard, and [Project Structure](/getting-started/project-structure/) covers what it wrote.
+
+## Related
+
+The `plugins` array is one slot among twenty in [Configuration](/getting-started/configuration/), which covers the file these snippets edit. Writing a descriptor rather than installing one is [Content Modelling](/content-modelling/overview/), and the registration options these plugins pass are documented in [Entry Types](/content-modelling/entry-types/). A plugin that contributes a field type, as the media plugin does, extends the roster in [Field Types](/fields/field-types/). A plugin can also contribute a per-request data dependency a template declares and receives, which the blog and comments plugins both do, and [Themes](/themes/overview/) covers the render layer that reads it.
+
+## Next steps
+
+Read [Blog](/plugins/blog/) and [Pages](/plugins/pages/) next. Between them they cover the two entry types most sites install before anything else, and each is a worked example of the registration options this page only names.
+
+Ten pages in this section are not written yet, though everything they cover ships today. Menu documents navigation menus and the locations a theme renders them into. Comments documents threading, the moderation queue and the trust policy the quickstart above configured. Media documents the library, the upload flow and the `media` field types. Audit Log documents the activity feed. Publishing a Plugin covers taking a local plugin to npm, The Plugin Descriptor documents every slot on the descriptor object, Config Schema covers validating the options a factory takes, Admin Entry covers shipping admin screens, Translation Catalogs covers the `i18n` slot, and Versioning and Peer Ranges goes further into the two tracks described above.

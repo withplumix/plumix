@@ -1,0 +1,146 @@
+---
+title: Passkeys
+description: WebAuthn sign-in, the one auth method every Plumix site configures, and the path the first admin takes into a fresh deploy.
+tier: P0
+sidebar:
+  order: 20
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+A passkey is a public-key credential the browser holds and Plumix verifies. Plumix stores the public half and never sees a shared secret. On a fresh deploy a passkey is the only credential that reaches the admin, and `passkey` is the one block `auth()` requires.
+
+## Overview
+
+Enrolment and sign-in are two ceremonies, each two requests. The browser asks for options, the operating system prompts the person, and the browser sends the signed result back for verification. Plumix mounts four endpoints under `/_plumix/auth/passkey/`, two more under `/_plumix/auth/invite/register/` for the invitation rail, and `/_plumix/auth/signout`.
+
+Four admin surfaces drive them. The login screen calls the two `login/*` endpoints. The bootstrap screen and the profile Passkeys card both call the two `register/*` ones. The accept-invite screen calls the invite pair. You do not call any of them directly unless you are building a sign-in page of your own.
+
+Three values anchor the credential, and all three live in the `passkey` block.
+
+- `rpName` is the display name in the operating system's prompt. It is a plain string.
+- `rpId` is the relying-party id, normally the bare hostname. It is what the credential is bound to. It is a plain string too, and deliberately takes no `(env) => …` resolver, because a passkey enrolled under one `rpId` cannot verify under another, so the value has to be constant across environments.
+- `origin` is the scheme-and-host the browser reports back. Verification compares it against this value, plus anything in the optional `allowedOrigins` list. `origin` and `allowedOrigins` are the two values in the block that accept a resolver.
+
+`origin` does double duty. It is also the canonical site origin, so the CSRF check and every absolute URL Plumix generates read the same value.
+
+A verified credential becomes a row in `credentials` holding the public key, the authenticator's signature counter, its transports, and an optional name the owner can edit. A successful ceremony then mints a session and sets the `plumix_session` cookie, and from that point the request looks like any other authenticated request.
+
+## Quickstart
+
+<Steps>
+
+1. **Configure the block.** For local development, the `rpId` is `localhost` and the origin carries the dev server's port:
+
+   ```ts
+   import { auth } from "plumix";
+
+   export const recipeAuth = auth({
+     passkey: {
+       rpName: "Recipes",
+       rpId: "localhost",
+       origin: "http://localhost:5173",
+     },
+   });
+   ```
+
+   Pass it as the `auth` slot of `plumix({ … })` in `plumix.config.ts`.
+
+2. **Enrol the first admin.**
+
+   ```sh
+   pnpm dev
+   ```
+
+   Open `/_plumix/admin`. While the `users` table is empty the admin routes to `/bootstrap` rather than `/login`. Give it an email and an optional name, approve the prompt, and you are signed in as `admin`.
+
+3. **Add a second credential.** Open your own user in the admin's Users section. The Passkeys card lists what you have enrolled and adds another. Do it before you need it. A single enrolled laptop is a laptop you can lose.
+
+</Steps>
+
+<Aside type="tip" title="Bootstrap closes behind you">
+  The bootstrap route only provisions while the `users` table is empty. From the
+  second user onwards, an unauthenticated registration attempt is refused with
+  `registration_closed`, and new people arrive by invitation instead.
+</Aside>
+
+## How a person gets a credential
+
+There are exactly three routes to a `credentials` row, and the server decides which one applies from the request rather than from anything the client claims.
+
+**Bootstrap.** No session, no users. Plumix provisions the user and elects it `admin` inside the insert statement, so concurrent attempts cannot both win.
+
+**Invitation.** An admin creates the user in the admin's Users section, choosing the role. That mints a single-use token valid for seven days and returns a link of the form `/_plumix/admin/accept-invite/<token>`. Core does not send it. Delivery is yours, and the `user:invited` action carries the raw token so a plugin can put it in an email. Accepting validates the token, runs the registration ceremony against the invited user's id, persists the credential, consumes the token and signs the person in. An invite is refused if the user already holds a credential, so it cannot be replayed as a re-registration.
+
+**Adding a device.** A signed-in person enrols another authenticator for themselves. The email in the request has to match their own, and the options include every credential they already hold as an exclusion list, so an authenticator cannot be registered twice on one account. Ten credentials per user is the ceiling.
+
+Removal is self-scoped, with one guard. You cannot delete your last passkey. The check happens inside the delete statement, so two concurrent deletions cannot race past it, and the attempt comes back as a conflict naming `last_credential`. Rotate by enrolling the replacement first.
+
+## Origins
+
+`rpId` decides which hosts a credential is valid on, and the WebAuthn rule is that the reported origin's host has to be the `rpId` or a subdomain of it. Plumix checks the same rule at config time. Every entry in `allowedOrigins` has to be an `https://` origin whose host satisfies it, or `auth()` throws before the site boots.
+
+An entry is either an exact origin or a subdomain wildcard.
+
+```ts
+import { auth } from "plumix";
+
+export const recipeAuth = auth({
+  passkey: {
+    rpName: "Recipes",
+    rpId: "recipes.example.com",
+    origin: (env) => env.PUBLIC_ORIGIN,
+    allowedOrigins: ["https://www.recipes.example.com"],
+  },
+});
+
+declare module "plumix" {
+  interface PlumixEnv {
+    readonly PUBLIC_ORIGIN: string;
+  }
+}
+```
+
+The wildcard form, `https://*.example.com`, is how one passkey spans an unbounded set of preview hosts. It matches strictly: HTTPS only, the default port, and a real label in front of the base, anchored at the dot, so `evilexample.com` cannot pass for `example.com`.
+
+`origin` and `allowedOrigins` both accept an `(env) => …` resolver, which keeps a value that differs per deploy out of the source. Plumix runs each resolver once per isolate and caches the result against the function's identity, and `env` is isolate-stable, so the resolver picks one value for the whole worker rather than one per request. A single build therefore has a single `origin`. Spanning several hosts is what `allowedOrigins` and its wildcard form are for. On Cloudflare, `cloudflareDeployOrigin` was written to derive `rpId` and `origin` per deploy and cannot, so write both out yourself. [Cloudflare Workers](/deployment/cloudflare/) has the block and the reason.
+
+You write the declaration block above yourself. It is what makes `env.PUBLIC_ORIGIN` type-check. A scaffolded project gets a `declare module "plumix"` block only when a sign-in method you selected needs one, such as the OAuth client id and secret, so a passkey-only scaffold has none, and `PUBLIC_ORIGIN` is not a name the scaffolder knows. The Cloudflare scaffold spreads `cloudflareDeployOrigin({ … })` into the `passkey` block instead of reaching for a resolver at all.
+
+<Aside
+  type="caution"
+  title="A custom domain and a platform subdomain are two anchors"
+>
+  A credential enrolled on `example.com` does not verify on
+  `example.workers.dev`, and no `allowedOrigins` entry can bridge them. They are
+  different registrable domains, and that boundary is what WebAuthn is built on.
+  A site that needs both signs in on one of them by another method.
+</Aside>
+
+## What verification checks
+
+Both ceremonies open with the same checks, and each one is a refusal rather than a warning.
+
+The response has to decode. The client data has to name the ceremony that was asked for, `create` or `get`. The origin has to pass the policy above. The hash of the relying-party id inside the authenticator data has to match `rpId`. The challenge has to be one Plumix issued. Challenges are stored hashed, live five minutes, and are consumed in a single delete-and-return statement, so a replayed one finds nothing. The user-present flag has to be set, which means somebody touched the authenticator.
+
+Registration adds two of its own. The attestation format has to be `none`, and the public key has to be ES256 on the P-256 curve. Plumix advertises RS256 for compatibility with older authenticators and then rejects it at verification.
+
+Sign-in loads the stored credential by id and checks the signature counter, which has to strictly increase. A counter that stood still or went backwards is how a cloned authenticator shows up, and Plumix refuses the assertion. An authenticator reporting a constant zero tracks no counter at all, and passes. Last comes the signature itself, an ECDSA verification against the stored public key over the authenticator data and the hash of the client data. Only then does Plumix write the new counter and mint the session.
+
+Failures come back as a stable code, among them `challenge_not_found`, `invalid_origin`, `counter_replay` and `credential_limit_reached`. The diagnostic detail behind an origin mismatch is logged rather than returned, so a rejected ceremony tells an attacker nothing about the configured policy.
+
+## Signing in without a stored email
+
+The sign-in ceremony works with or without an email. Give it one and Plumix narrows the options to that user's credentials. Give it nothing and the browser offers whatever discoverable passkey it holds for the `rpId`, and the credential id in the response identifies the user. Plumix issues the login challenge unbound to any user for exactly this reason, then resolves the user from the credential the browser picked.
+
+## Related
+
+A completed ceremony hands off to the session and principal model in [Overview](/access/overview/), which is where the cookie, its lifetime and the authenticator chain are described. The `rpId` and `origin` you set here are the two values that change when the site moves off localhost, so read them alongside [Cloudflare Workers](/deployment/cloudflare/), whose adapter derives all three passkey origin values from the build environment. Anything in the block that varies per deploy belongs in [Secrets](/deployment/secrets/) as a resolver rather than a literal. A [theme](/themes/overview/) can host its own sign-in page instead of sending people to the admin, reading the configured methods from the render context so the page tracks the config.
+
+## Next steps
+
+Passkeys are the default rather than the whole story. Magic Links and OAuth are the other two blocks of the same `auth()` call, and neither page is written yet. One covers email sign-in and the mailer it needs, the other covers third-party providers. Both are refused while the site has no users, because the first admin goes through the passkey rail unless you say otherwise with `bootstrapVia`.
+
+Roles is also unwritten, and it is what gives the invitation step above its meaning. The role you pick decides what the invited person can do the moment they enrol.
+
+With sign-in working, [Content Modelling](/content-modelling/overview/) is where the site starts having something to sign in for.

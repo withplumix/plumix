@@ -1,0 +1,478 @@
+---
+title: Project Structure
+description: What the scaffolder wrote, what the build generates under .plumix, and every subpath the plumix package publishes.
+tier: P0
+roster: true
+sidebar:
+  order: 30
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+A scaffolded Plumix project is seven files, and two of them are yours to write. The rest configure the tooling. Everything the site does arrives through the `plumix` package and whichever plugins you installed.
+
+## Overview
+
+Here is a project created with the blog and media plugins and GitHub sign-in, which is what adds the eighth file:
+
+```
+my-site/
+├── plumix.config.ts     the site: runtime, database, auth, plugins, theme
+├── theme/
+│   └── index.tsx        the public site: templates, tokens, document manifest
+├── wrangler.jsonc       Cloudflare bindings, assets, cron triggers
+├── package.json         dependencies and the four scripts
+├── tsconfig.json        compiler options, and what is in the program
+├── .dev.vars            local secrets, written only when a slot needs one
+├── .gitignore
+└── README.md
+```
+
+Nothing here is a copy of a fixed template. The scaffolder resolves your runtime and plugin choices into imports, config slots and registrations, then splices them into one config file. Choosing the media plugin is what put `storage` and `imageDelivery` in the config and an `r2_buckets` entry in `wrangler.jsonc`.
+
+Two directories appear later. `drizzle/` holds the SQL migrations `plumix migrate generate` emits. `.plumix/` holds everything the build generates, and both it and `.wrangler/` are in `.gitignore`.
+
+**`plumix.config.ts`**
+
+The one file the CLI has to find. It default-exports the result of `plumix({ ... })`, which is where the runtime adapter, the database adapter, the auth setup, the plugin array and the theme meet. A site with two plugins that both register an entry type called `recipe` fails here, at boot, rather than at the first request.
+
+The CLI locates it as `plumix.config.ts`, `.js` or `.mjs` in the project root; `--config <path>` overrides that.
+
+**`theme/index.tsx`**
+
+The public site. `defineTheme` takes the template list, the design tokens, the breakpoints, the theme's own blocks and the document manifest. The scaffolded version registers three rules against two template components. `fallback(index)` answers anything with no better match, `entry(single)` answers any single entry, and `forEntryType("page").template(single)` is what makes the pages plugin's `page` type render once you install it. The document manifest sets a `titleTemplate` and nothing else. It is deliberately plain so you replace it rather than unpick it.
+
+A site that registers no theme at all still renders. The framework falls back to a built-in welcome theme, so a config without a `theme` slot serves a self-contained welcome page instead of an error.
+
+**`wrangler.jsonc`**
+
+Cloudflare's own config, not Plumix's. It declares the D1 binding, points `main` at the generated `.plumix/worker.ts`, serves `.plumix/public` through the assets binding, and sets two cron triggers.
+
+Those triggers matter more than they look. `0 3 * * *` fires the core session-cleanup task and `*/5 * * * *` fires `publish-scheduled`, which is what moves a scheduled entry to published. Remove them and scheduled entries stay scheduled with no error to explain why.
+
+The generated `database_id` is the placeholder `local-development-only`, which is enough for local D1 and not enough to deploy.
+
+**`package.json`**
+
+Four scripts. `dev` and `build` wrap the CLI as `plumix dev` and `plumix build`. `typecheck` is `tsc --noEmit`, and `clean` is `git clean -xdf .plumix .wrangler dist node_modules`, so neither of those two goes through Plumix at all. The dependencies are `plumix`, the runtime adapter, `react`, and whichever plugin packages you ticked.
+
+**`tsconfig.json`**
+
+Strict, `moduleResolution: "bundler"`, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, and `types` set to Node, the Workers types and React. Its `include` is three entries: `plumix.config.ts`, `theme`, and `.plumix`. That last one is why a type error in generated code reaches your editor.
+
+**`.dev.vars`**
+
+Local secret values for `plumix dev`, one `NAME=` per line, and only written when something in your selection needs one. Picking GitHub OAuth is what puts `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` there. It is gitignored, and production secrets go to the deploy rather than into this file.
+
+## What the build generates
+
+`.plumix/` is regenerated from your config on every dev start and every build. Do not edit it, and do not commit it. Six files land there.
+
+`worker.ts` is the Worker entry point, which is why `wrangler.jsonc` points `main` at it rather than at anything you wrote. `schema.ts` is the resolved database schema, core's tables plus every table your plugins declare, and it is what `plumix migrate generate` hands to drizzle-kit.
+
+Four more are client entry points, each bundled as its own chunk so the browser fetches only what a page needs.
+
+`client-entry.ts` carries the CSS your theme declares, and in development it lazy-imports `plumix/core/dev-client` behind Vite's `import.meta.hot` gate. That import is what installs the island error dialog, the compile-error overlay and the forwarder that prints browser errors in your terminal. Nothing in the module runs on import, so the whole thing tree-shakes out of a production build along with the gate.
+
+`islands-entry.ts` is a single side-effect import of `plumix/blocks/island-runtime`, which registers the `<plumix-island>` custom element and the hydration strategies. The server injects its script tag only on a page that contains at least one island. `islands-renderer-entry.ts` re-exports `plumix/blocks/island-renderer`, the React half, which the custom element dynamic-imports on first hydration. React therefore never loads on a page whose islands all defer.
+
+`editor-entry.ts` calls `bootEditor` from `plumix/editor-runtime` to mount the block editor canvas, and the server injects it only when the edit gate authorizes the request.
+
+`public/` is the staged asset directory the assets binding serves.
+
+## Import from plumix, never from @plumix/core
+
+Every example on this site imports from `plumix` or one of its subpaths. That is the rule, stated once here and assumed everywhere else.
+
+The `plumix` package is a façade over several published packages. `@plumix/core`, `@plumix/blocks` and the three `@plumix/admin*` packages are all on npm and all resolvable, and none of their package metadata says you should not import them. Reach for one anyway and you are writing against the half that moves without warning. `plumix` re-exports a curated surface, and a rename behind it is only a breaking change if it crosses the façade.
+
+```ts no-typecheck
+// Wrong. Resolves, compiles, and breaks on a minor version.
+import { defineBlock } from "@plumix/blocks";
+import { definePlugin } from "@plumix/core";
+```
+
+```ts
+import { defineBlock } from "plumix/blocks";
+import { definePlugin } from "plumix/plugin";
+```
+
+The rule is about the packages the façade covers, which are `@plumix/core`, `@plumix/blocks` and the three `@plumix/admin*` packages. Anything you install yourself you import by its own name.
+
+`@plumix/runtime-cloudflare` is the one you meet immediately. It is a direct dependency of your project and a direct import, because a runtime is a thing you choose, and `cloudflare`, `d1`, `r2`, `images`, `kv` and `edge` all come from there. The plugin packages work the same way. `@plumix/plugin-blog`, `@plumix/plugin-pages`, `@plumix/plugin-menu`, `@plumix/plugin-comments`, `@plumix/plugin-media` and `@plumix/plugin-audit-log` are each imported by name, and a plugin may publish subpaths of its own, such as `@plumix/plugin-media/fields`.
+
+<Aside type="note" title="One specifier for type augmentation">
+  Extending a Plumix interface always goes through `declare module "plumix"`,
+  even for a registry whose value API lives on a subpath. Block and pattern
+  registries are re-exported onto the root specifier for exactly this reason.
+  Augmenting through two specifiers fractures the interface, and half your
+  declarations stop being visible.
+</Aside>
+
+## Writing the site
+
+### plumix
+
+The root. Config (`plumix`, `auth`), the request context, hooks, redirects, access policy, telemetry, and every type the rest of the surface refers to. It is also the specifier every `declare module` block targets.
+
+The subpaths below are not disjoint halves of the root. Most of them narrow it to what one job needs, and a few widen it. Importing `definePlugin` from `plumix` and from `plumix/plugin` gets you the same binding.
+
+```ts
+import { auth } from "plumix";
+
+export const recipeAuth = auth({
+  passkey: {
+    rpName: "Recipes",
+    rpId: "localhost",
+    origin: "http://localhost:5173",
+  },
+});
+```
+
+### plumix/plugin
+
+The entire root surface, plus valibot re-exported as `v` so a plugin can declare its own config schema without a second dependency. `definePlugin` and the registration context are what you come here for, and both are on the root specifier as well.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryType("recipe", {
+      label: "Recipes",
+      labels: { singular: "Recipe", plural: "Recipes" },
+      hasArchive: true,
+      rewrite: { slug: "recipes" },
+    });
+  },
+});
+```
+
+### plumix/theme
+
+`defineTheme`, `defineTemplate` and the document-manifest types, narrowed to what a theme file needs. All of them are on the root specifier too. The template builders `fallback`, `entry` and `forEntryType` are only on the root, which is why the scaffolded theme imports the whole set from `plumix` rather than splitting the import in two.
+
+```tsx
+import type { EntryData } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+export const recipe = defineTemplate<EntryData>({
+  render: ({ data }) => (
+    <article>
+      <h1>{data.entry.title}</h1>
+    </article>
+  ),
+});
+```
+
+### plumix/vite
+
+The Vite plugin, plus `emitPlumixSources` for tooling that has to force the generated files into existence before Vite starts. You rarely import it by hand, because `plumix dev` and `plumix build` wire it up.
+
+```ts
+import { plumix } from "plumix/vite";
+
+export default {
+  plugins: [plumix({ configFile: "plumix.config.ts" })],
+};
+```
+
+## Extending the admin
+
+The admin ships precompiled and is closed for modification. A plugin contributes to it by shipping an `adminEntry` module, which the build bundles into a chunk the admin loads at runtime. Inside that chunk you write bare imports as normal, and the build rewrites `react`, `radix-ui`, `@tanstack/react-query` and eleven more to the shims below, so your chunk shares the shell's singletons rather than bundling its own. [`plumix/admin/react`](/getting-started/project-structure/#plumixadminreact) carries the worked example the other thirteen refer back to.
+
+### plumix/admin
+
+The hand-imported half: `getRuntime`, which reads the shared runtime object off `window.plumix`, plus the constants naming which specifier maps to which shim.
+
+```ts
+import { getRuntime } from "plumix/admin";
+
+export function activeQueryClient(): unknown {
+  return getRuntime().reactQuery;
+}
+```
+
+### plumix/admin/react
+
+The React shim. Every export is read off the admin shell's own React instance, so a plugin chunk shares hooks, context and the reconciler with the pages around it rather than mounting a second React.
+
+```tsx
+import { useState } from "plumix/admin/react";
+
+export function Counter(): React.ReactNode {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(count + 1)}>{count}</button>;
+}
+```
+
+You do not normally write that import. Write `from "react"` and let the plugin-chunk build rewrite it.
+
+### plumix/admin/react-jsx-runtime
+
+The automatic JSX runtime off the same React instance. Same mechanism as the React shim above; the compiler emits this import rather than you writing it.
+
+### plumix/admin/react-dom
+
+`react-dom` off the shell's instance. Same mechanism as the React shim above.
+
+### plumix/admin/react-dom-client
+
+`react-dom/client` off the shell's instance. Same mechanism as the React shim above. A plugin chunk almost never needs it, since the shell owns the root.
+
+### plumix/admin/react-query
+
+TanStack Query off the shell's instance. Same mechanism as the React shim above, and the reason a plugin's `useQuery` hits the cache the admin already populated instead of refetching.
+
+### plumix/admin/react-router
+
+TanStack Router off the shell's instance. Same mechanism as the React shim above, so a plugin page navigates inside the admin's router rather than reloading the document.
+
+### plumix/admin/orpc-client
+
+The oRPC client off the shell's instance. Same mechanism as the React shim above. It is how a plugin page calls the RPC routes its own server half registered.
+
+### plumix/admin/orpc-client-fetch
+
+The oRPC fetch link, `@orpc/client/fetch`. Same mechanism as the React shim above.
+
+### plumix/admin/orpc-tanstack-query
+
+The bridge between oRPC and TanStack Query. Same mechanism as the React shim above.
+
+### plumix/admin/lingui-core
+
+Lingui's `i18n` singleton, which carries the loaded catalogs and the active locale. Same mechanism as the React shim above. Sharing it is what stops a plugin chunk from seeing an empty catalog.
+
+### plumix/admin/lingui-react
+
+Lingui's React bindings, including the provider the admin mounts at boot. Same mechanism as the React shim above; without the shim, `useLingui()` inside a plugin route returns null.
+
+### plumix/admin/radix
+
+Radix primitives off the shell's instance. Same mechanism as the React shim above. They carry React context, so a plugin's `<Tooltip>` finds the shell's `<TooltipProvider>` only because both sides are the same module.
+
+### plumix/admin/sonner
+
+The toast library. Same mechanism as the React shim above. `toast()` is a module singleton bound to the `<Toaster>` the shell mounted, so a second copy would render nothing.
+
+### plumix/admin/tailwind-merge
+
+The class-merging helper behind `cn()`. Same mechanism as the React shim above.
+
+### plumix/admin/ui
+
+The shared component library the admin renders. It and `plumix/admin` above are the two admin subpaths you import by hand; every other entry in this list is a shim the plugin-chunk build rewrites to. Unlike the shims it ships real source, which the plugin-chunk build bundles into your chunk with its own React and Radix imports aliased to the shims. A wrapper costs about a kilobyte; Radix itself is not duplicated.
+
+```tsx
+import { Button } from "plumix/admin/ui";
+
+export function PublishButton(): React.ReactNode {
+  return <Button variant="default">Publish</Button>;
+}
+```
+
+## Blocks and rendering
+
+### plumix/blocks
+
+The block value API: `defineBlock`, the registry, `renderBlockTree`, `validateEntryContent`, marks, shortcodes, variations and transforms.
+
+```ts
+import { defineBlock } from "plumix/blocks";
+
+export const cookTime = defineBlock({
+  name: "recipes/cook-time",
+  title: "Cook time",
+  inputs: [{ name: "minutes", type: "number", label: "Minutes" }],
+  defaults: { minutes: 30 },
+  render: ({ attrs }) => `${String(attrs.minutes)} minutes`,
+});
+```
+
+### plumix/blocks/renderer
+
+The render-time primitives a theme or a block reaches for: `Link` and `Image`, `PlumixProvider`, and hooks like `useAuth`, `useTokens`, `useQueriedEntry` and `useIsEditing`.
+
+```tsx
+import { Image, Link } from "plumix/blocks/renderer";
+
+export function RecipeCard(): React.ReactNode {
+  return (
+    <Link href="/recipes/sicilian-caponata">
+      <Image
+        src="/media/caponata.jpg"
+        width={640}
+        height={360}
+        alt="Caponata"
+      />
+    </Link>
+  );
+}
+```
+
+### plumix/blocks/test
+
+Helpers for testing a block you wrote: render one spec or a whole tree to HTML, and validate content against a registry.
+
+```ts
+import { defineBlock } from "plumix/blocks";
+import { renderBlockSpecToHtml } from "plumix/blocks/test";
+
+const cookTime = defineBlock({
+  name: "recipes/cook-time",
+  title: "Cook time",
+  inputs: [{ name: "minutes", type: "number", label: "Minutes" }],
+  render: ({ attrs }) => `${String(attrs.minutes)} minutes`,
+});
+
+export const html = renderBlockSpecToHtml(cookTime, { minutes: 45 });
+```
+
+### plumix/blocks/island-runtime
+
+The browser half of the island system. Importing it registers the `<plumix-island>` custom element and the hydration strategies, so it is imported for the side effect and nothing else. The generated `.plumix/islands-entry.ts` is one line:
+
+```ts
+import "plumix/blocks/island-runtime";
+```
+
+### plumix/blocks/island-renderer
+
+The React half of the island system, split into its own chunk. The custom element dynamic-imports it the first time an island actually hydrates, which keeps React off a page whose islands all defer. The generated `.plumix/islands-renderer-entry.ts` re-exports it:
+
+```ts
+export * from "plumix/blocks/island-renderer";
+```
+
+### plumix/editor-runtime
+
+`bootEditor`, which mounts the block editor canvas into the server-rendered content root. The generated `.plumix/editor-entry.ts` calls it, and the server injects that chunk only when the edit gate authorizes the request.
+
+```ts
+import { bootEditor } from "plumix/editor-runtime";
+
+bootEditor();
+```
+
+### plumix/core/dev-client
+
+`installDevClient`, the single install point for the development-only browser tools: the island error dialog, the compile and import error overlay, and the forwarder that prints browser errors to your terminal. The generated client entry calls it behind Vite's `import.meta.hot` gate, so production never sees it.
+
+```ts
+import { installDevClient } from "plumix/core/dev-client";
+
+installDevClient();
+```
+
+## Data and fields
+
+### plumix/schema
+
+The database schema as types and tables: the `entries`, `terms` and `users` tables among others, plus the unions behind them such as `EntryStatus` and `UserRole`.
+
+```ts
+import type { EntryStatus } from "plumix/schema";
+
+export const publicStatuses: readonly EntryStatus[] = ["published"];
+```
+
+### plumix/db
+
+The direct-write toolkit. Drizzle's query operators, the schema tables, table introspection and the cache-tag vocabulary, all in one place so a plugin writing through `ctx.db` never takes its own `drizzle-orm` dependency.
+
+```ts
+import { and, eq } from "plumix/db";
+import { entries } from "plumix/schema";
+
+export const publishedRecipes = and(
+  eq(entries.type, "recipe"),
+  eq(entries.status, "published"),
+);
+```
+
+### plumix/db/libsql
+
+The libSQL database adapter, on its own subpath so its driver stays out of a bundle that never imports it. It is a single endpoint with strong consistency, which is the difference from D1's read replicas.
+
+```ts
+import { libsql } from "plumix/db/libsql";
+
+export const database = libsql((env) => ({
+  url: env.LIBSQL_URL,
+  authToken: env.LIBSQL_AUTH_TOKEN,
+}));
+
+declare module "plumix" {
+  interface PlumixEnv {
+    readonly LIBSQL_URL: string;
+    readonly LIBSQL_AUTH_TOKEN: string;
+  }
+}
+```
+
+### plumix/fields
+
+The meta-box field builders. Every builder is fluent and typed so that a chain which does not apply is a compile error. The reference factories are builders too, not options objects. `user(key)`, `entry(key, entryTypes)` and `term(key, taxonomies)` each return a reference builder whose chain is gated by kind, so `.roles()` and `.includeDisabled()` compile only on a `user` reference and `.status()` and `.includeTrashed()` only on an `entry` one, while `.multiple()`, `.max()` and `.returns()` apply to all three.
+
+```ts
+import { number, repeater, select, text } from "plumix/fields";
+
+export const recipeDetails = [
+  number("prepMinutes").label("Prep (minutes)").min(0),
+  number("servings").min(1).required(),
+  select("difficulty").options(["easy", "medium", "hard"]),
+  repeater("ingredients").fields([
+    number("amount"),
+    text("unit"),
+    text("item").required(),
+  ]),
+];
+```
+
+### plumix/i18n
+
+The translation surface: the `Label` type and `resolveLabel`, the `formatDate`, `formatNumber` and `formatRelative` helpers, and Lingui's `Trans`, `useLingui` and `i18n`.
+
+```ts
+import { formatRelative } from "plumix/i18n";
+
+export function publishedAgo(at: Date): string {
+  return formatRelative("en", at);
+}
+```
+
+## Testing
+
+### plumix/test
+
+The unit-test surface: an in-memory database, a request context factory, entity factories, hook spies and a request builder.
+
+```ts
+import type { AppContext } from "plumix";
+import { createTestContext, createTestDb } from "plumix/test";
+
+export async function contextForRecipes(): Promise<AppContext> {
+  return createTestContext({ db: await createTestDb() });
+}
+```
+
+### plumix/test/playwright
+
+The end-to-end surface, aimed at a plugin author testing admin pages against a running site: `definePlumixE2EConfig`, a `test`/`expect` pair with Plumix fixtures, `actingAs` for signing in as a role, and helpers for mocking RPC and the plugin manifest.
+
+```ts
+import { definePlumixE2EConfig } from "plumix/test/playwright";
+
+export default definePlumixE2EConfig({ testDir: "./e2e" });
+```
+
+## Related
+
+[Configuration](/getting-started/configuration/) is the reference for the config file described above. [Themes](/themes/overview/) covers what goes in `theme/index.tsx` and how a request resolves to a template. [Plugins](/plugins/overview/) covers installing published plugins and what a plugin may contribute. [Bindings and Environment](/deployment/bindings/) covers the `wrangler.jsonc` side of the runtime slots. [Blocks](/blocks/overview/) covers the block tree the editor entry mounts against.
+
+Four subpaths above have no page of their own, on purpose. `plumix/blocks/island-runtime`, `plumix/blocks/island-renderer`, `plumix/editor-runtime` and `plumix/core/dev-client` are the generated runtime entries. The scaffolder and the Vite plugin wire them, and a site never imports them by hand.
+
+## Next steps
+
+Read [Configuration](/getting-started/configuration/) next for the twenty slots `plumix.config.ts` accepts and how a secret reaches one. Then [Content Modelling](/content-modelling/overview/), which turns the empty `plugins` array into a real content model. When you are ready to ship, [Deploy Your Site](/getting-started/deploy/) covers the path to a live URL.

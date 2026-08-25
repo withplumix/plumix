@@ -1,0 +1,195 @@
+---
+title: Pages
+description: The pages plugin registers one hierarchical entry type whose URLs sit at the site root, with no prefix, no archive and no taxonomies.
+tier: P0
+sidebar:
+  order: 30
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+`@plumix/plugin-pages` registers one entry type and nothing else. A `page` nests under a parent, serves at the URL its ancestor chain spells out, and stays out of every listing the site generates.
+
+## Overview
+
+The plugin exports one descriptor named `pages`. It takes no options, registers no taxonomies, and adds no database tables, so installing it is a package install and one array entry.
+
+A page holds content that is reached by name rather than found in a feed. About, Contact, Terms, a nested handbook. Two things separate it from a post. It has a parent, and no listing route ever includes it.
+
+Two options in its registration produce all of that. `isHierarchical: true` gives the type a parent and makes its URLs nest. `rewrite: { slug: "" }` empties the URL prefix, so a page's address is its ancestor chain and its own slug with nothing in front.
+
+<Aside type="note" title="The root itself is not a page">
+  "Rooted at `/`" means page URLs carry no prefix, not that a page can serve
+  `/`. The compiled pattern needs at least one path segment, so the site root
+  always resolves to the front-page listing instead.
+</Aside>
+
+## Quickstart
+
+Install the package with whichever package manager the project uses:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-pages
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-pages
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-pages
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun add @plumix/plugin-pages
+```
+
+  </TabItem>
+</Tabs>
+
+Then:
+
+<Steps>
+
+1. **Add `pages` to the `plugins` array.** No call, no options.
+
+   ```ts no-typecheck
+   import type { PlumixConfigInput } from "plumix";
+
+   import { pages } from "@plumix/plugin-pages";
+
+   import { recipes } from "./plugins/recipes";
+
+   export const plugins: PlumixConfigInput["plugins"] = [recipes, pages];
+   ```
+
+2. **Restart the dev server.**
+
+   ```sh
+   pnpm dev
+   ```
+
+3. **Create two pages.** The admin sidebar gains a Pages item under Entries, at `/_plumix/admin/entries/pages`. Publish one slugged `about` and it serves at `/about`. Publish a second slugged `team`, set its parent to About, and it serves at `/about/team`.
+
+</Steps>
+
+## The page entry type
+
+This is the registration the plugin makes, wrapped in a plugin of your own. The plugin passes translatable descriptors everywhere the sample passes a plain string, and its `labels` table carries seventeen keys where the sample shows two.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const example = definePlugin("example", {
+  setup: (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      labels: { singular: "Page", plural: "Pages" },
+      description: "Hierarchical static pages",
+      supports: ["title", "editor", "slug", "excerpt", "revisions", "autosave"],
+      versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
+      isHierarchical: true,
+      isPublic: true,
+      hasArchive: false,
+      rewrite: { slug: "" },
+      capabilityType: "page",
+      menuIcon: "layout",
+      keywords: ["static", "page"],
+    });
+  },
+});
+```
+
+`hasArchive: false` means no listing route compiles for the type. There is no `/pages` index, and adding one is not a matter of flipping the flag, because the empty prefix leaves no URL for an index to sit at. A site that wants a page index builds it as a page.
+
+`supports` carries `slug`, which nothing in core or the admin reads today. The five values that change behaviour are `title`, `editor`, `excerpt`, `revisions` and `autosave`. `slug` records intent, and [Entry Types](/content-modelling/entry-types/) explains why the list is conventional rather than closed.
+
+`keywords` gives the admin command palette two synonyms to match alongside the sidebar label, so typing "static" finds Pages.
+
+## URLs at the root
+
+An entry type with an empty rewrite prefix claims every path shape on the site, so the router gives its rule priority 60 rather than the 50 an ordinary entry-type rule carries. Rules sort ascending and the first match wins, so at default priorities every other rule in the map is tried before the page pattern, and the page pattern picks up what is left.
+
+Sixty is a default, not a floor. Priority is an open number, so a rewrite rule or an archive type registered above 60 sorts behind the page pattern and never sees a path that pattern already matches.
+
+One thing runs ahead of the route map entirely, and three groups of compiled routes sit ahead of the page pattern inside it.
+
+Redirects are matched first. The dispatcher runs the site's `redirects` config, every plugin's `registerRedirects` rules and the theme's `redirects` array against the URL before it consults the route map at all, so a redirect whose `from` covers a page's path answers that path and the page never resolves.
+
+Framework routes come next, at priority 5. `/search`, `/search/<query>`, `/authors/<slug>`, `/page/2`, and the date archives `/2026`, `/2026/08` and `/2026/08/25` are compiled by the router itself, and `/search/<query>`, `/authors/<slug>` and the three date shapes each compile a `/page/<n>` variant at the same priority. A page slugged `search` is therefore unreachable, and so is a page slugged `2026`, because the year pattern only matches four digits and that is exactly what the slug is.
+
+Routes a plugin registered by hand come after those, at priority 10 unless the registration passes a number of its own. These are rewrite rules and custom archive types.
+
+Auto-compiled routes from other registrations come last before the page pattern, at priority 50. `/posts/<slug>` from the blog plugin, `/category/<path>` and `/tag/<term>` from its taxonomies, `/recipes` and `/recipes/<slug>` from your own type. A page nested so that its URL is `/recipes/caponata` never resolves, because the recipe rule matches that shape first.
+
+The practical rule is short. Give a top-level page a slug that no route prefix and no redirect on the site already uses, and check the framework list above before choosing one.
+
+<Aside type="caution" title="A shadowed page fails silently">
+  Nothing warns you at boot. The page saves, the admin shows it as published,
+  and its public URL serves the other route's content or a 404. If a page will
+  not appear, the first thing to check is whether something else claims its
+  path.
+</Aside>
+
+## Nesting
+
+A page's URL is its ancestors' slugs followed by its own. Set the parent of `team` to `about` and the URL becomes `/about/team`, with no separate field to keep in sync.
+
+Resolution runs the same walk backwards, and it is strict. The router looks the last segment up by type and slug, loads that row's real ancestor chain, and compares it segment by segment against the rest of the URL. Any difference is a 404: an extra segment, a missing one, or a right leaf under the wrong parent. `/team` alone does not serve the team page while its parent is About, and neither does `/company/team`. Each page has exactly one URL.
+
+One consequence is easy to trip over. An entry's slug is unique per type across the whole site, not per parent, so two pages cannot both be slugged `team` even under different parents. Give the second one a slug of its own.
+
+<Aside type="note" title="Drafts and previews">
+  The walk only matches published pages. A draft returns a 404 on its public URL
+  unless the request carries a valid preview token, which is what the admin's
+  preview action mints.
+</Aside>
+
+## Pages stay out of listings
+
+The site root lists published entries from every public non-hierarchical type, and the filter that builds that list drops hierarchical types by name. A page is never in the front-page feed, whatever its publish date.
+
+With `hasArchive: false` on top of that, pages appear only where you link them. Nothing generates navigation for you. `@plumix/plugin-menu` is where site navigation lives. A menu item stores the id of the entry it points at, so a menu can carry a page and follow it if the page moves.
+
+## Capabilities it mints
+
+Registering `page` derives eight capabilities under the `page` family, each mapped to a minimum role on the ladder from subscriber up to admin.
+
+| Capability                    | Minimum role |
+| ----------------------------- | ------------ |
+| `entry:page:read`             | subscriber   |
+| `entry:page:create`           | contributor  |
+| `entry:page:edit_own`         | contributor  |
+| `entry:page:publish`          | author       |
+| `entry:page:edit_any`         | editor       |
+| `entry:page:delete`           | editor       |
+| `entry:page:read_revisions`   | editor       |
+| `entry:page:restore_revision` | editor       |
+
+The family name comes from `capabilityType: "page"`, which matches the type name here. Register a second hierarchical type with `capabilityType: "page"` and it is gated by these same eight rather than minting its own.
+
+Because `page` opts into `revisions` and `autosave`, every write that lands on a page's stored columns captures a revision, and editing a live page writes to a per-user pending draft until you publish it. The snapshot is taken after the write commits, so a revision holds the version that write produced rather than the one it replaced. Twenty-five are kept per page, and the oldest are deleted past that.
+
+## Related
+
+[Entry Types](/content-modelling/entry-types/) documents every option this registration uses, including hierarchy and archive behaviour, and [Overview](/plugins/overview/) covers installing plugins and the version track this one is on. The precedence order above is the router's, and [Routing](/routing/overview/) covers how a URL becomes a rendered page while [Permalinks and Slugs](/routing/permalinks/) covers the addresses themselves. What a principal sees at a page's URL depends on [Statuses and Publishing](/content-modelling/statuses/) and on the template chosen by [Template Hierarchy](/themes/hierarchy/). The capability table is enforced by the model in [Access & Identity](/access/overview/).
+
+## Next steps
+
+Read [Blog](/plugins/blog/) if the site also needs dated content. Between them the two plugins cover the split most sites start from: pages for standing content, posts for a feed.
+
+To give a page fields beyond title, slug, content and excerpt, [Meta Boxes](/fields/meta-boxes/) covers attaching a card of fields to an installed type from your own plugin.
+
+To put pages on screen, [Templates](/themes/templates/) covers the builders that bind a template to the `page` type, and [Template Data](/themes/template-data/) covers the shape a single-entry template receives.

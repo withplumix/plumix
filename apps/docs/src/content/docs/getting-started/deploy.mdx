@@ -1,0 +1,146 @@
+---
+title: Deploy Your Site
+description: Five minutes from a local Plumix project to a live Cloudflare Worker, with a real D1 database and a passkey that verifies against the deployed origin.
+tier: P0
+sidebar:
+  order: 50
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+A scaffolded project runs locally against a placeholder database and a localhost passkey origin. Deploying means replacing both with real values, applying the migrations remotely, and running two commands.
+
+## Overview
+
+`plumix deploy` hands off to `wrangler deploy`, so what ships is whatever `wrangler.jsonc` describes plus the bundle `plumix build` produced. Three things in a scaffolded project point at localhost and need real values first.
+
+The D1 `database_id` is the literal string `local-development-only`. That works for the local database in `.wrangler`, and it is not a real database id, so a remote deploy needs the one Cloudflare hands you.
+
+The passkey origin resolves to `http://localhost:5173`, and `cloudflareDeployOrigin` cannot move it off localhost today. The helper reads `WORKERS_CI` through a local variable rather than the literal `process.env.WORKERS_CI` the Plumix Vite plugin substitutes, so the check survives into the bundle and runs inside the Worker, where that variable never exists. Every deploy takes the localhost branch, whether you built on your own machine or on Cloudflare Workers Builds, and `accountSubdomain` changes nothing about it. Write `rpId` and `origin` for the deployed host yourself, which is what step 2 does.
+
+Any secret you have been reading out of `.dev.vars` has to be set on the deploy. `.dev.vars` is gitignored and local by design; it never travels.
+
+Two things need no work. The cron triggers are already in `wrangler.jsonc`, so session cleanup and scheduled publishing fire as soon as the worker is live. The admin is part of the bundle, so there is nothing separate to host.
+
+## Quickstart
+
+<Aside type="caution" title="The scaffolded passkey origin stays on localhost">
+  The scaffolded config spreads `cloudflareDeployOrigin`, and that helper
+  returns `rpId: "localhost"` on every deploy, so the passkey in step 6 cannot
+  verify against the deployed host. Pushing to Cloudflare Workers Builds does
+  not change it, for the reason the Overview above gives. Step 2 replaces the
+  spread with literal values. [Cloudflare Workers](/deployment/cloudflare/)
+  covers the same block and what changes on a custom domain.
+</Aside>
+
+<Steps>
+
+1. **Create the database and paste its id.**
+
+   ```sh
+   wrangler d1 create recipes
+   ```
+
+   Copy the `database_id` it prints into the `d1_databases` entry in `wrangler.jsonc`, replacing `local-development-only`.
+
+2. **Point the passkey at the deployed host.** In `plumix.config.ts`, replace the scaffolded `cloudflareDeployOrigin` spread with literal values. Anchor `rpId` to your `workers.dev` subdomain and allow the wildcard beneath it, so one passkey covers production and every preview branch, and keep the localhost pair behind `process.env.PLUMIX_DEV`, which the Vite plugin substitutes as `"1"` under `plumix dev` and empty under `plumix build`.
+
+   ```ts no-typecheck
+   import { auth } from "plumix";
+
+   export const recipeAuth = auth({
+     passkey: {
+       rpName: "Recipes",
+       ...(process.env.PLUMIX_DEV
+         ? { rpId: "localhost", origin: "http://localhost:5173" }
+         : {
+             rpId: "your-account.workers.dev",
+             origin: "https://recipes.your-account.workers.dev",
+             allowedOrigins: ["https://*.your-account.workers.dev"],
+           }),
+     },
+   });
+   ```
+
+   Running on your own domain instead? Drop `allowedOrigins` and write `rpId: "recipes.example"` with `origin: "https://recipes.example"`. Previews on `workers.dev` then need magic links or Cloudflare Access, because the two are different registrable domains.
+
+3. **Set every secret the config resolves.** One command per name in `.dev.vars`:
+
+   ```sh
+   wrangler secret put GITHUB_CLIENT_ID
+   wrangler secret put GITHUB_CLIENT_SECRET
+   ```
+
+4. **Apply the migrations to the remote database.**
+
+   ```sh
+   pnpm exec plumix migrate generate
+   pnpm exec plumix migrate apply --remote
+   ```
+
+   `generate` writes the resolved schema and emits SQL into `drizzle/`; `apply --remote` runs the pending files against the D1 database you just created. Run it again after adding a plugin that carries its own tables.
+
+5. **Build and deploy.**
+
+   ```sh
+   pnpm build
+   pnpm exec plumix deploy
+   ```
+
+   `plumix build` builds the client bundle first and then the worker, because the worker bakes the client's asset manifest into itself. `plumix deploy` passes any extra arguments straight to `wrangler deploy`.
+
+6. **Claim the admin account.** Open `https://recipes.<your-account>.workers.dev/_plumix/admin` and create your passkey before anyone else does. The database is empty, so the first registration wins the admin account and every later one is refused. This is the step the caution above blocks while the config still spreads `cloudflareDeployOrigin`.
+
+</Steps>
+
+<Aside type="danger" title="Deploy and claim in the same sitting">
+  A deployed site with an empty users table hands the admin account to whoever
+  reaches `/_plumix/admin` first. There is no invite step in front of it. Claim
+  the account immediately, or keep the deploy unreachable until you can.
+</Aside>
+
+## Resources the config expects to exist
+
+Adding a plugin or a slot can add a binding, and `wrangler deploy` will not create the resource behind it.
+
+Choosing the media plugin puts an `r2_buckets` entry named `<project>-media` in `wrangler.jsonc`. Create the bucket before the first deploy:
+
+```sh
+wrangler r2 bucket create recipes-media
+```
+
+The `kv` slot is the case the scaffolder does not cover. The Cloudflare runtime declares a `kv` capability that carries a `kv_namespaces` binding, but the scaffolder only applies a capability that a selected plugin asks for, and no shipped plugin asks for `kv`. Nothing regenerates `wrangler.jsonc` after scaffolding either, so adding `kv({ binding: "KV" })` to `plumix.config.ts` leaves the worker with no namespace bound. Create the namespace and add the binding by hand:
+
+```sh
+wrangler kv namespace create KV
+```
+
+```jsonc
+"kv_namespaces": [{ "binding": "KV", "id": "<the id wrangler printed>" }]
+```
+
+The edge cache needs no resource, but it does check for two values before it stores anything. `edge()` reads `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN` from the environment and returns an inactive cache when either is missing, because a cache with no way to purge would serve a stale page forever. A `workers.dev` host has no zone, so caching stays off there and switches on when you attach a domain and set both secrets.
+
+## Deploying from git
+
+Connecting the repository to Cloudflare's build service does not remove step 2. The build service does set `WORKERS_CI` and `WORKERS_CI_BRANCH`, and the Vite plugin does read them, but `cloudflareDeployOrigin` never receives them, so a Workers Builds deploy carries `rpId: "localhost"` exactly as a local build does. The literal `rpId` and `origin` from step 2 still have to be in `plumix.config.ts`, and a passkey anchored to the scaffolded `your-account` placeholder matches no browser either way.
+
+What the build service gives you is a deploy per push. A push to the default branch ships production on `recipes.your-account.workers.dev`, and a push to any other branch ships that branch's own `<branch>-recipes.your-account.workers.dev` preview host.
+
+The step 2 block anchors the passkey relying-party id to `your-account.workers.dev` and allows the account-wide wildcard origin, so one passkey enrolled once works on production and on every per-branch preview, because they are all subdomains of the same registrable domain.
+
+A custom production domain breaks that span, and no configuration can restore it. A custom domain and `workers.dev` are different registrable domains, so a credential anchored to one cannot verify against the other. Sign in to previews with magic links or Cloudflare Access when production runs on your own domain.
+
+## Checking the deploy
+
+`plumix doctor` prints what the CLI resolved from your config, which is the runtime name, the database kind, the plugins with their versions, and a `schema tables` count. That count sums the tables the plugins declare and nothing else, so a project with no schema-carrying plugin reports 0 even though core's `entries`, `terms`, `users`, `sessions` and `credentials` are all in the generated schema. Run it before a deploy after adding a plugin, to confirm its tables arrived.
+
+`plumix types` runs `wrangler types` to regenerate the binding types, which is worth doing after any change to `wrangler.jsonc`.
+
+## Related
+
+[Deployment](/deployment/overview/) is the section this page compresses, and it covers what each step here glosses over. [Cloudflare Workers](/deployment/cloudflare/) covers D1, R2, KV, Images and the edge cache one at a time. [Bindings and Environment](/deployment/bindings/) covers how a binding in `wrangler.jsonc` reaches a config slot. [Secrets](/deployment/secrets/) covers `.dev.vars`, `EnvInput` and production secrets in full. [Configuration](/getting-started/configuration/) is the reference for the slots you edited above. [Passkeys](/access/passkeys/) covers the relying-party id, allowed origins and adding a second device.
+
+## Next steps
+
+Read [Deployment](/deployment/overview/) next for the parts this page names but does not explain, particularly [Bindings and Environment](/deployment/bindings/) and [Secrets](/deployment/secrets/). If the site is live but empty, [Content Modelling](/content-modelling/overview/) is where the model gets built, and [Plugins](/plugins/overview/) covers installing [Blog](/plugins/blog/) or [Pages](/plugins/pages/) if you want their entry types rather than your own.

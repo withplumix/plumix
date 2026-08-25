@@ -1,0 +1,182 @@
+---
+title: Statuses and Publishing
+description: The four statuses an entry moves between, what each one makes visible, and how scheduled publishing reaches a live URL.
+tier: P0
+roster: true
+sidebar:
+  order: 40
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Every entry carries exactly one of four statuses. The status decides who can read the entry, whether the router will serve it, and which lifecycle hooks fire when it changes.
+
+## Overview
+
+`status` is a column on the `entries` table, not null, defaulting to `draft`. The four values below are all of them. The column itself is plain SQLite text carrying no check constraint, so what rejects a fifth value is the input schema on the RPC boundary. A direct write through `plumix/db` goes around that schema and around everything else on this page.
+
+Two rules cover most of the behaviour.
+
+A public request sees `published` and nothing else. The single-entry resolver queries for the slug and the `published` status together, and an archive adds a second condition, a publish time that is not null. Anything else 404s, unless the request carries a preview token.
+
+The read service clamps an admin read to what the caller may see. It pins a caller without `entry:<type>:edit_any` to `published` no matter what they ask for, and returns an empty list rather than an error when they ask for anything else. A caller who does hold it sees everything except `trash` by default and asks for trash explicitly.
+
+Writing a status has a capability attached too. Creating an entry straight to `published` or `scheduled` needs `entry:<type>:publish` on top of `entry:<type>:create`, and so does moving an existing entry to `published`.
+
+The examples below subscribe to the lifecycle from a plugin's `setup`, through the two methods the context carries. `ctx.addFilter` registers a filter, which receives a value and returns one, so a `before_save` handler is handed the entry about to be written and returns the entry to write. `ctx.addAction` registers an action, which returns nothing and runs for its side effects, so a `published` handler only learns that a recipe went live. Both take a hook name, and the names are fixed strings core declares. The Hooks section, which lists every name with its arguments, is not written yet.
+
+## The four statuses
+
+### draft
+
+Work in progress, and the status a new entry gets when nothing says otherwise.
+
+A draft has no public surface. It does not resolve at its own URL, it stays off archives, feeds and the sitemap, and only its author or someone holding `entry:<type>:edit_any` can read it back through the API.
+
+Plumix validates a draft save leniently. Required meta-box fields may be empty, bounds may be unmet, and the save still lands, because work in progress must never fail over a field you have not reached yet. The full constraint set lands later, at the moment the entry becomes public.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    // Runs on every save of a recipe, draft or not; the guard narrows it.
+    ctx.addFilter("entry:recipe:before_save", (entry) => {
+      if (entry.status !== "draft") return entry;
+      return { ...entry, title: entry.title || "Untitled recipe" };
+    });
+  },
+});
+```
+
+Restoring an entry from the trash returns it here, not to whatever status it held before.
+
+### published
+
+Live. The entry resolves at its permalink and appears on its archives and its term archives, and anyone holding the type's `read` capability can read it.
+
+The transition also stamps `publishedAt`. An entry with no publish time gets the current time, and promoting a scheduled entry early replaces its future time with the current one, so it does not sort to the top of a feed dated ahead of everything else. An entry that already has a publish time in the past keeps it, which is what makes an unpublish-and-republish cycle non-destructive.
+
+Publishing runs the strict validation the draft path deferred. The check covers the resulting meta bag rather than the current patch, so a required field a draft left empty blocks the transition even if this save never touched it.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.addAction("entry:recipe:published", (entry) => {
+      console.info(
+        `[recipes] ${entry.slug} went live at ${
+          entry.publishedAt?.toISOString() ?? "an unrecorded time"
+        }`,
+      );
+    });
+  },
+});
+```
+
+`entry:recipe:published` fires alongside the type-free `entry:published`. Both always fire, so subscribe to whichever granularity you need rather than filtering by type inside a generic handler.
+
+### scheduled
+
+Published at a time that has not arrived yet.
+
+`scheduled` is the one status with a rule of its own. Plumix rejects the write unless the entry carries a `publishedAt` in the future. That is checked on the way in, so no entry is ever left scheduled with no time to fire at. Editing an already-scheduled entry whose time has since slipped into the past is still allowed, since the fix would otherwise be blocked by the problem. That holds only while the update leaves `status` out and supplies no `publishedAt`. Send either one and the guard re-checks the effective time, finds the stale past date and rejects the write with `scheduled_requires_future_date`, so a client that echoes the whole entry back has to send a fresh future time with it.
+
+A scheduled entry is invisible in public. It is not on its archive, and its URL 404s until the cron flips it.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.addAction("entry:recipe:transition", (entry, oldStatus) => {
+      if (entry.status !== "scheduled") return;
+      const waitMs = (entry.publishedAt?.getTime() ?? 0) - Date.now();
+      console.info(
+        `[recipes] ${entry.slug} left ${oldStatus}, publishing in ${String(
+          Math.round(waitMs / 60_000),
+        )} minutes`,
+      );
+    });
+  },
+});
+```
+
+See [Scheduled publishing](#scheduled-publishing) below for what the cron does and what your deployment owes it.
+
+### trash
+
+Removed from view, still on disk. Trashing is a status change rather than a delete. The row, its meta, its term assignments and its revisions all survive.
+
+A trashed entry is excluded from the default admin listing, has no public URL, and cannot be previewed even with a valid preview token. Restoring it sets the status to `draft`.
+
+Permanent deletion is a separate operation and refuses to run on anything that is not already in the trash, which makes the trash a required stop rather than an optional one. The delete also removes the entry's revision and autosave rows, which are linked by an encoded slug rather than a foreign key and would otherwise be orphaned.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.addAction("entry:recipe:trashed", (entry) => {
+      console.info(`[recipes] ${entry.slug} moved to trash`);
+    });
+
+    ctx.addAction("entry:recipe:restored", (entry) => {
+      console.info(`[recipes] ${entry.slug} restored as ${entry.status}`);
+    });
+  },
+});
+```
+
+## Transitions
+
+Any status can reach any other. No state machine forbids a pair. What varies is the capability the move demands and the work that runs alongside it.
+
+- Into `published`, from anywhere: needs `entry:<type>:publish`, and runs strict meta validation over the resulting bag.
+- Into `scheduled`: needs `entry:<type>:publish` when the entry is created that way. An update that moves an existing entry to `scheduled` is gated by the edit capabilities alone, and still runs the strict validation.
+- Into `trash`, from anywhere: needs `entry:<type>:delete`, plus `entry:<type>:edit_any` when the caller is not the author. Trashing something already trashed changes nothing and fires nothing.
+- Out of `trash`: the restore procedure, which lands on `draft`.
+- Out of `published` back to `draft`: an ordinary update, with no publish capability and no strict validation. The other direction is the publish transition in the first bullet.
+
+`entry:transition` fires with the entry and its old status, and only when the status actually changed. A save that leaves the status alone fires `entry:updated` and no transition. The type-scoped `entry:<type>:transition` fires first, then the generic one.
+
+Trashing, restoring and deleting come in single and bulk forms. Bulk trash and bulk restore skip rows that are already in the target state; bulk permanent delete refuses the whole batch if any selected row is not in the trash, rather than half-applying an unrecoverable operation.
+
+## Scheduled publishing
+
+A scheduled entry becomes live through a cron task that core registers at boot. `publish-scheduled` runs every five minutes, selects the entries whose status is `scheduled` and whose `publishedAt` has arrived, and flips each one to `published`.
+
+The flip keeps the scheduled time as the publish time, so a recipe scheduled for 09:00 and picked up at 09:03 still reads as published at 09:00. Each flipped entry fires `entry:updated`, `entry:transition` and `entry:published`, the same three the editor's publish path fires. Cache purging and sitemap invalidation therefore run whichever way the entry went live.
+
+Two things the cron deliberately skips: the `entry:before_save` filter and revision capture. A cron run has no signed-in user, so there is no author to attribute a snapshot to, and the scheduling save already took one.
+
+<Aside
+  type="caution"
+  title="The cron only fires if your deployment declares it"
+>
+  Core registers the task with the cron expression `*/5 * * * *`, and the
+  runtime dispatches a scheduled invocation to the tasks whose expression
+  matches the fired one exactly, string for string. Your Cloudflare Workers
+  configuration has to carry `"*/5 * * * *"` in its `triggers.crons` array, byte
+  for byte, or `publish-scheduled` never runs. Scheduled entries then sit
+  scheduled and nothing reports an error.
+</Aside>
+
+The worst-case lag between an entry's scheduled time and its going live is one cron interval, so five minutes.
+
+## Previewing before publishing
+
+A preview link shows a draft or a scheduled entry to someone with no account. It is a URL of the form `/recipes/sicilian-caponata?preview=<token>`, minted for one entry, valid for seven days, and issued only to someone who can already read that entry.
+
+A request carrying a preview token bypasses the shared edge cache entirely, so a draft never lands in a cache other visitors read from. The token grants that one entry and nothing else, and a trashed entry is never previewable.
+
+## Related
+
+Which statuses a given person can write depends on the capabilities a type mints, covered in [Entry Types](/content-modelling/entry-types/) and enforced by [Access & Identity](/access/overview/). Publishing is where meta-box field validation turns strict, so read [Fields](/fields/overview/) for what those constraints are. A published entry resolves through the router described in [Routing](/routing/overview/) and renders through the template chosen in [Template Hierarchy](/themes/hierarchy/). The cron that publishes scheduled entries needs a trigger in your Workers configuration, which [Cloudflare Workers](/deployment/cloudflare/) covers.
+
+## Next steps
+
+Go back to [Entry Types](/content-modelling/entry-types/) if `supports: ["revisions"]` is not on your type yet. Plumix captures a snapshot when a save lands on the live row, so a type without that value publishes with no history behind it. Then read [Taxonomies and Terms](/content-modelling/taxonomies/), because a term archive is one of the surfaces a publish makes an entry appear on.
+
+Revisions and Autosave, which covers snapshot history and the per-user pending draft that sits alongside a published entry, is not written yet.

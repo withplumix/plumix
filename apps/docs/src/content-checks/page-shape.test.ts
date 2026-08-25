@@ -52,6 +52,16 @@ describe("checkPageShape", () => {
     expect(rulesFor("well-formed.mdx")).toEqual([]);
   });
 
+  it("exempts a page titled Overview from carrying a second one", () => {
+    expect(rulesFor("landing/exempt.mdx")).toEqual([]);
+  });
+
+  it("still requires the overview of a page not titled Overview", () => {
+    expect(rulesFor("landing/still-required.mdx")).toEqual([
+      "page-shape/missing-overview",
+    ]);
+  });
+
   it("exempts a roster page from the quickstart", () => {
     expect(rulesFor("rosters/field-types.mdx")).toEqual([]);
   });
@@ -79,6 +89,7 @@ describe("checkPageShape", () => {
 
     expect(offenders.sort()).toEqual([
       "headings-in-code.mdx",
+      "landing/still-required.mdx",
       "markdown-page.md",
       "missing-lede-jsx.mdx",
       "missing-lede.mdx",

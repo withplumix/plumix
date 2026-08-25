@@ -1,0 +1,127 @@
+---
+title: Overview
+description: What a meta-box field is, and why declaring one is the only way to register a meta key.
+tier: P0
+sidebar:
+  order: 10
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+An entry carries a title, a slug, an excerpt and a content tree. Everything else it holds lives in one JSON meta bag, and a meta-box field is the declaration that gives one key in that bag a label, a storage type, an admin control and a write contract.
+
+## Meta boxes and fields
+
+Two nouns carry this section.
+
+- A **meta box** is a registered card of fields on an editor form. It is a visual unit, since the admin draws it as one card, and a storage unit, since its fields are the keys the server will accept.
+- A **meta-box field** is one declared field inside that card. `prepMinutes` is one. It reads and writes the `prepMinutes` key of whatever entity the box is scoped to.
+
+Declaring the box is the only way to register a meta key. There is no `registerMeta` call to pair with it, no admin screen that adds a key, and no way to write a key nothing declared. The write path rejects an undeclared key rather than storing it.
+
+That single declaration is also the whole contract. The admin reads it to pick an input control, the write pipeline reads it to coerce and validate the incoming value, the read pipeline reads it to resolve references and project temporal values, and the REST layer reads it to decide whether the value is public at all. Nothing repeats the declaration anywhere else, so a field cannot be right in one of those places and wrong in another.
+
+Fields come from `plumix/fields` as fluent builders. `number("servings").min(1).required()` is a complete field. The chain is typed, so an option that does not apply to a field type is a compile error rather than a silently ignored property.
+
+## Quickstart
+
+<Steps>
+
+1. **Declare a box.** Add it to the recipes plugin in `plugins/recipes.ts`:
+
+   ```ts
+   import { number, select } from "plumix/fields";
+   import { definePlugin } from "plumix/plugin";
+
+   export const recipes = definePlugin("recipes", {
+     setup: (ctx) => {
+       ctx.registerEntryMetaBox("recipe-details", {
+         label: "Recipe details",
+         entryTypes: ["recipe"],
+         fields: [
+           number("prepMinutes").label("Prep (minutes)").min(0),
+           number("cookMinutes").label("Cook (minutes)").min(0),
+           number("servings").min(1).required(),
+           select("difficulty").options(["easy", "medium", "hard"]),
+         ],
+       });
+     },
+   });
+   ```
+
+2. **Install it.** In `plumix.config.ts`, import `recipes` from `./plugins/recipes` and add it to the `plugins` array.
+
+3. **Start the dev server.**
+
+   ```sh
+   pnpm dev
+   ```
+
+   Open Sicilian Caponata in the admin. A "Recipe details" card now sits in the editor's right rail, with three number inputs and a dropdown. Save, and the four values land in the entry's `meta` column under those four keys.
+
+</Steps>
+
+## What a field declaration decides
+
+Four properties do most of the work, and every field type carries them.
+
+`key` is the meta key, taken from the builder's first argument. It has to match `/^[a-zA-Z0-9_:-]+$/`, and registration throws if it does not, because the write path would reject it anyway. Registration also refuses a key beginning `__plumix_`, since core reserves that prefix for its own meta.
+
+`label` is what the admin prints above the input. Leave it off and the builder derives one from the key, so `prepMinutes` becomes "Prep minutes" and `heroImage` becomes "Hero image". Pass a `Label` descriptor instead of a string when the field needs translating.
+
+`inputType` is the field type, fixed by which builder you called. It is the discriminator the admin dispatches its renderer on and the write pipeline dispatches its constraints on. There are 24 built-in ones, listed in [Field Types](/fields/field-types/).
+
+`type` is the storage type, one of `string`, `number`, `boolean` or `json`, and the builder sets it for you. It is what the value is coerced to before anything else looks at it. A `repeater` stores `json` because rows are JSON, and a `toggle` stores `boolean` so a saved `"true"` never reads back as a truthy string.
+
+## Where meta lives
+
+Meta is a single JSON column on the row, not a side table. Entries, terms and users each have one, and each takes its own kind of meta box: `registerEntryMetaBox`, `registerTermMetaBox` and `registerUserMetaBox`. The field shape is identical across all three. Only the scope differs, and [Meta Boxes](/fields/meta-boxes/) covers that.
+
+Because the column travels with the row, a recipe's `prepMinutes` and its `ingredients` rows are written in the same save as its title, and read in the same query. Declaring a field creates no table and needs no migration.
+
+Settings groups reuse the same field builders with different storage. A settings group's values are stored per group and per field name rather than on an entity row, and each group saves on its own button. That page is not written yet.
+
+<Aside type="caution" title="The reserved prefix is enforced at registration">
+  A key starting `__plumix_` throws from the `register*` call itself, before the
+  site finishes booting. Core keeps its own meta under that prefix, such as the
+  `__plumix_snapshot` envelope a revision is written into, so the rule stops a
+  plugin shadowing a key core adds in a later release.
+</Aside>
+
+## What the server does with a saved value
+
+Every value takes the same five steps, per field, in order.
+
+1. **Coercion** to the field's storage `type`. A number input arriving as `"12"` becomes `12` here, and a value that cannot become the declared type is rejected with an error against that field.
+2. **Shape normalization**, fixed by the field type rather than written by you. A `link` is rebuilt from its `url`, `label` and `newTab` keys, so an unrecognized property never persists. A `color` has to be hex and comes back lowercased. A multi-value `select` has to be an array, and it is de-duplicated. A `richtext` document is walked against its allowlists.
+3. **`sanitize`**, if the field declares one. It runs server-side only and its return value replaces the caller's input, which is where trimming and site-specific normalizing belong. No builder injects one, so the step does nothing unless you wrote a callback. Whatever the callback returns goes back through steps 1 and 2 before anything else sees it.
+4. **Declarative constraints**, meaning the ones you wrote into the chain. `required`, `min` and `max`, `maxLength`, option membership, the address pattern on an `email`, repeater row counts. Two checks in this step are structural rather than business rules, so they run whatever the mode. A temporal value has to parse as the shape its type stores, and a `url` has to clear the safe-scheme allowlist.
+5. **`validate`**, if the field declares one. Sync or async, returning `true` or a failure message the editor shows.
+
+None of the five steps throws. Failures come back as `{ path, message }` pairs and the RPC layer aggregates them across the whole patch, so one save reports every bad field at once. The path is dot-joined from the meta key down into nested rows, so a bad amount in the third ingredient reports as `ingredients.2.amount`.
+
+Strictness has two modes. `strict` enforces every step. `draft` skips the fifth and the business-rule half of the fourth, so a half-finished bag never fails on a `required` field or an unmet bound. Coercion, shape normalization, `sanitize`, temporal validity and URL safety still run in `draft`, which is what stops a draft save persisting corrupt or unsafe data.
+
+The mode follows the status the save lands on rather than whether the save was an autosave. `entry.update` runs the bag in `strict` when the resulting status is `published` or `scheduled`, and in `draft` for every other status, so an ordinary save of a draft entry is lenient too. `entry.create` uses `draft` unless the caller creates straight to published or scheduled, and the autosave path is always `draft`. Publishing re-runs the whole bag in `strict`, which is where a value that slid past a draft save is caught.
+
+## What a read gives back
+
+A read is not the raw column. Two things happen on the way out, and one thing readers expect does not.
+
+Reference fields resolve. A `user` field stores a user id, and a read hands you the user summary rather than the id, resolved in a batch shared with every other reference of that kind on the page. A reference whose target is gone reads as absent for a single field, and drops out of the array for a list field, so a list never contains holes. `.returns("id")` opts a field out of that resolution and gives you the stored id back.
+
+Temporal fields keep their stored ISO string unless you asked otherwise. `.returns("date")` projects the stored string into a JS `Date` whose wall-clock components are anchored to UTC, and the write contract stays the ISO string either way.
+
+Defaults do not apply. The decoder walks the keys storage actually holds, so an absent key reads back as `undefined` whatever `.default("medium")` says. A default prefills the admin form instead, and it reaches storage the first time someone saves that form. A template that needs a fallback for a key nobody has saved yet supplies one at the read site.
+
+Meta stays out of the public REST API, which is default-deny per field, and a field opts in with `.showInApi()`. The admin RPC is unaffected.
+
+## Related
+
+Meta-box fields are one half of what an entry holds. [Blocks](/blocks/overview/) are the other half, the tree that entry content is stored as. Fields belong to a plugin descriptor like every other registration, and [Content Modelling](/content-modelling/overview/) is the page that explains why. [Entry Types](/content-modelling/entry-types/) covers the `entryTypes` scope a meta box is pinned to. A theme reads the values back through its templates, and [Template Data](/themes/template-data/) names the shapes they arrive in.
+
+## Next steps
+
+Read [Meta Boxes](/fields/meta-boxes/) for the three registration calls, their options, and what registration refuses. [Field Types](/fields/field-types/) is the full roster of 24 built-in types grouped by family, each with an example. [Field Builders](/fields/builders/) covers the fluent chain itself, including why an invalid chain fails to compile and how a declaration types a template's meta reads.
+
+Four pages in this section are not written yet, and what they cover already ships. Reference Fields goes deeper into the six reference kinds and the lookup adapters behind their pickers. Repeaters and Groups covers structured rows and nested field groups. Settings covers settings groups and settings pages. Conditional Fields covers showing a field based on a sibling's value.

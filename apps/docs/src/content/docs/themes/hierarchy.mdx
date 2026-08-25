@@ -1,0 +1,172 @@
+---
+title: Template Hierarchy
+description: How a request becomes a resolved node, and the three-step walk that picks one of your theme's rules to render it.
+tier: P0
+sidebar:
+  order: 30
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+Every public request ends at exactly one template. Two steps sit between the URL and that template. The router decides what the URL represents, then the resolver walks your theme's rules until one claims the result.
+
+## Overview
+
+A matched URL carries a route intent, meaning what the route is for rather than which row it points at. There are eight of them: `single`, `archive`, `taxonomy`, `author`, `date`, `front-page`, `search`, and a `custom` archive a plugin registered. The resolver takes that intent, loads the content behind it and produces two things. One is the [template data](/themes/template-data/) your render function receives. The other is a resolved node, carrying identity alone: a kind, a type name, and a slug, an id or a set of date components.
+
+Resolution then walks the theme's `templates` array three times over.
+
+1. **Targeted rules, in declaration order.** The first one whose matcher fits the node wins. The walk compares identity first, then calls the rule's predicate if it has one.
+2. **The generic tier for the node's kind.** One lookup, by kind, using the table below.
+3. **`fallback`.** The universal catch-all.
+
+If none of the three produces a rule, the request 404s and the `notFound` template renders instead.
+
+The kind-to-tier map is fixed. It is not something a theme configures.
+
+| Resolved node               | Kind                   | Generic tier |
+| --------------------------- | ---------------------- | ------------ |
+| One entry                   | `content`              | `entry`      |
+| An entry type's archive     | `content-type-archive` | `archive`    |
+| A term archive              | `term`                 | `taxonomy`   |
+| An author archive           | `author`               | `author`     |
+| A date archive              | `date`                 | `date`       |
+| A plugin-registered archive | `custom`               | `fallback`   |
+| The site root               | `front-page`           | `frontPage`  |
+| Search results              | `search`               | `search`     |
+
+`custom` is the row worth reading twice. A plugin archive has no generic tier of its own, so it goes to `fallback` unless a `forArchiveType` rule claims it first.
+
+## Quickstart
+
+<Steps>
+
+1. **Cover the tiers first.** A theme with `fallback` alone is already complete, because every node reaches it. Add tiers as the pages diverge.
+
+   ```tsx
+   import type { ArchiveData, EntryData } from "plumix";
+   import { archive, entry, fallback } from "plumix";
+   import { defineTemplate } from "plumix/theme";
+
+   const anything = defineTemplate({
+     render: ({ data }) => <main data-kind={data.kind} />,
+   });
+
+   const single = defineTemplate<EntryData>({
+     render: ({ data }) => <h1>{data.entry.title}</h1>,
+   });
+
+   const listing = defineTemplate<ArchiveData>({
+     render: ({ data }) => <h1>{data.contentType}</h1>,
+   });
+
+   export const rules = [fallback(anything), entry(single), archive(listing)];
+   ```
+
+2. **Add a targeted rule above them.** Order matters among targeted rules, so put the narrower one first.
+
+   ```tsx
+   import type { EntryData, ResolvedEntry } from "plumix";
+   import { entry, forEntryType } from "plumix";
+   import { defineTemplate } from "plumix/theme";
+
+   declare module "plumix" {
+     interface EntryTypeRegistry {
+       recipe: { entry: ResolvedEntry };
+     }
+   }
+
+   const single = defineTemplate<EntryData>({
+     render: ({ data }) => <h1>{data.entry.title}</h1>,
+   });
+
+   const caponata = defineTemplate<EntryData>({
+     render: ({ data }) => <h1>Featured: {data.entry.title}</h1>,
+   });
+
+   export const rules = [
+     forEntryType("recipe").slug("sicilian-caponata").template(caponata),
+     forEntryType("recipe").template(single),
+     entry(single),
+   ];
+   ```
+
+3. **Check what won.** Run the dev server and open `/recipes/sicilian-caponata`. Plumix renders a debug bar into every dev page, on unless `plumix.config.ts` sets `debugBar: false`, and dropped from a production build entirely. Its Template panel names the winning rule and lists every rule the walk passed over, with the reason.
+
+</Steps>
+
+## What a targeted matcher compares
+
+A matcher holds a node kind and a type name, plus whichever narrowing the builder chain added. The walk compares those fields one by one, and an unset field matches anything.
+
+- `forEntryType("recipe")` fixes kind to `content` and type to `recipe`. `.slug()` and `.id()` add a further exact comparison against the node's slug or database id.
+- `forEntryType("recipe").archive` fixes kind to `content-type-archive` instead, so it never collides with the single-entry rules above it.
+- `forTermTaxonomy("cuisine")` fixes kind to `term` and compares the type against the node's taxonomy.
+- `forAuthor()` fixes kind to `author` and carries a fixed type of `author`, then narrows by slug or id like a term.
+- `forDate(2026, 7)` fixes kind to `date` and compares year, month and day exactly. A component the builder never received has to be `null` on the node, so `forDate(2026)` matches the year archive and leaves `/2026/07` to the `date` tier.
+- `forArchiveType("seasonal")` fixes kind to `custom` and compares the type against the archive name the plugin registered.
+
+## Predicates run second
+
+`.whereMeta()`, `.where()` and `.named()` attach a predicate to the matcher. The walk evaluates identity first and calls the predicate only if identity fits, so a predicate never sees a node from another type.
+
+```tsx
+import type { EntryData, ResolvedEntry } from "plumix";
+import { forEntryType } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+declare module "plumix" {
+  interface EntryTypeRegistry {
+    recipe: { entry: ResolvedEntry };
+  }
+}
+
+const sicilian = defineTemplate<EntryData>({
+  render: ({ data }) => <h1>{data.entry.title}</h1>,
+});
+
+export const rules = [
+  forEntryType("recipe")
+    .where((data) => data.entry.terms.some((term) => term.slug === "sicilian"))
+    .template(sicilian),
+];
+```
+
+A predicate reads resolved data, so it only matches where the resolver has data in hand. `.whereMeta("difficulty", "hard")` is the shorthand for an equality test against one stored meta key. Its key and value are typed against the folded stored meta shape for that entry type. That shape is what sits in the JSON column, not the read-time resolved value.
+
+`.named("wide", "Wide layout")` is the same mechanism pointed at an author's choice. The id and label go to the editor's template picker, the editor stores the choice under the reserved `__plumix_template` meta key, and the generated predicate compares that key back against the id.
+
+## Declaration order, and what ignores it
+
+Order only affects targeted rules. Resolution finds a generic tier by a lookup keyed on the node's kind, so moving `entry(single)` to the top or the bottom of the array changes nothing. `fallback` is the same. Write the array in whatever order reads best and reserve the ordering decision for the targeted rules, where the first match wins.
+
+The practical rule is narrow before broad. `forEntryType("recipe").slug("sicilian-caponata")` above `forEntryType("recipe")` gives one recipe its own layout; the other way round, the broad rule matches first and the narrow one never runs.
+
+<Aside type="caution" title="A broad targeted rule beats every tier">
+  `forEntryType("recipe").template(single)` and `entry(single)` look similar and
+  do not compete on equal terms. Resolution tries the targeted rule in step 1
+  and the tier in step 2, so the targeted rule wins for every recipe, whatever
+  their order in the array.
+</Aside>
+
+## Errors resolve separately
+
+Nothing resolves to `notFound` or `serverError`, and no walk reaches them. The framework looks the tier up directly when a request finds no template, when no route matches at all, or when a render throws. That is why they never fall through to `fallback`, and why a theme with only a `fallback` rule still gets a plain built-in 404 page rather than its own.
+
+## Seeing a resolution
+
+In development the debug bar carries a Template panel with the whole walk for the current request. The panel gives every rule a status: `matched` for the winner, `skipped` for a targeted rule the walk evaluated and rejected, and `never-evaluated` for the rules an earlier match made unreachable. A rule carrying a predicate also reports whether the predicate ran and what it returned. That separates "identity did not fit" from "the predicate said no".
+
+The panel costs nothing to leave alone. The resolver runs the plain walk first and attaches the explanation to the request's `template` span as a thunk, and only an active telemetry collector calls a thunk. With nothing collecting, the walk is never re-run. The debug bar is the collector that activates in dev, but it is not the only one, so a production request sampled by a telemetry consumer you registered pays for the explanation too, predicates included.
+
+## Related
+
+[Templates](/themes/templates/) is the roster of the builders these rules come from, including every selector a targeted matcher can carry. [Template Data](/themes/template-data/) is the other half of what the resolver produces, the shape your render function reads. [Overview](/themes/overview/) covers the theme descriptor the `templates` array sits in.
+
+[Routing](/routing/overview/) and [Permalinks and Slugs](/routing/permalinks/) cover how a URL gets its intent in the first place. A plugin registers the type and taxonomy names the targeted matchers compare against, in [Entry Types](/content-modelling/entry-types/) and [Taxonomies and Terms](/content-modelling/taxonomies/). Status decides whether a request resolves at all, since a draft is invisible to a public request. [Statuses and Publishing](/content-modelling/statuses/) has the rules.
+
+## Next steps
+
+Read [Template Data](/themes/template-data/) next for the fields on each shape, and the guard that narrows the union inside a `fallback` template.
+
+Two unwritten pages in this section pick up from here. Document Manifest covers the per-template `document` fragment, which the framework resolves after the walk picks a winner and merges over the theme's own. Template Dependencies covers the dep arrays a template declares, which the framework loads in parallel once the template is known.

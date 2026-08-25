@@ -1,0 +1,410 @@
+---
+title: Field Types
+description: Every built-in meta-box field type, grouped by family, with what it stores and a chain that declares it.
+tier: P0
+roster: true
+sidebar:
+  order: 30
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Plumix ships 24 field types you can author out of the box. They come from `plumix/fields` as 21 builder functions, since `userList`, `entryList` and `termList` are produced by `.multiple()` on the `user`, `entry` and `term` chains rather than by list-named functions. This page is all 24.
+
+## Overview
+
+A field type is the concrete kind of a meta-box field, carried on the declaration as `inputType`. It is the discriminator everything downstream dispatches on: the admin picks a renderer from it, the write pipeline picks its constraints from it, and the read pipeline decides from it whether the stored value needs resolving before you see it.
+
+The 24 types fall into six families, and the families are the source's own grouping rather than an ordering invented here. A family shares a storage shape and a set of chain methods, so knowing one member gets you most of the next.
+
+| Family     | Types                                                        | Shared storage               |
+| ---------- | ------------------------------------------------------------ | ---------------------------- |
+| String     | `text`, `textarea`, `email`, `url`, `password`               | `string`                     |
+| Temporal   | `date`, `datetime`, `time`                                   | ISO `string`                 |
+| Scalar     | `number`, `color`, `range`, `json`                           | `number`, `string`, `json`   |
+| Reference  | `user`, `userList`, `entry`, `entryList`, `term`, `termList` | id `string` or id array      |
+| Choice     | `select`, `toggle`                                           | `string`, array or `boolean` |
+| Structural | `richtext`, `repeater`, `group`, `link`                      | `json`                       |
+
+Two more types, `media` and `mediaList`, arrive with the media plugin rather than with core. Three older ones, `checkbox`, `radio` and `multiselect`, are retired. Both sets are at the foot of this page.
+
+Every example below is one field. Fields go in the `fields` array of a meta box, like this:
+
+```ts
+import { number, select } from "plumix/fields";
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("recipe-details", {
+      label: "Recipe details",
+      entryTypes: ["recipe"],
+      fields: [
+        number("servings").min(1).required(),
+        select("difficulty").options(["easy", "medium", "hard"]),
+      ],
+    });
+  },
+});
+```
+
+Some chain methods are universal, so the entries below name only what is particular to a type. `.label()`, `.description()`, `.default()`, `.required()`, `.span()`, `.capability()`, `.showInApi()`, `.visibleWhen()`, `.orVisibleWhen()`, `.sanitize()` and `.validate()` are on nearly every builder, and [Field Builders](/fields/builders/) covers them once.
+
+## String fields
+
+Five types share one shape. Storage is a plain string, and all five take `.maxLength()`, `.placeholder()`, `.prepend()` and `.append()`. They differ in the control the admin renders and, for `email` and `url`, in the format the server checks on write.
+
+### text
+
+A single-line text input.
+
+```ts
+import { text } from "plumix/fields";
+
+export const unit = text("unit").placeholder("g").maxLength(12);
+```
+
+`.prepend()` and `.append()` put static adornments beside the input, which is how a unit suffix or a currency symbol gets there without becoming part of the value.
+
+### textarea
+
+A multi-line text input. Storage and every chain method match [`text`](#text); only the control differs, so a long value gets a box that grows rather than a line that scrolls.
+
+### email
+
+A text input the admin renders as `type="email"`.
+
+```ts
+import { email } from "plumix/fields";
+
+export const submittedBy = email("submittedBy").label("Submitted by");
+```
+
+The address pattern is a business rule, so it is checked on a publish and skipped on a draft save. A half-typed address survives an autosave and fails the publish.
+
+### url
+
+A text input for a URL.
+
+```ts
+import { url } from "plumix/fields";
+
+export const sourceUrl = url("sourceUrl").placeholder("https://");
+```
+
+The value is checked against the same allowlist rich-text link marks use, which admits relative forms along with `http`, `https`, `mailto` and `tel`, and rejects `javascript:` and `data:`. That one is a security gate rather than a business rule, so it also runs on a draft save.
+
+For a URL that needs link text or a new-tab flag beside it, reach for [`link`](#link) instead.
+
+### password
+
+A masked text input, so the value is not readable over a shoulder in a shared session.
+
+```ts
+import { password } from "plumix/fields";
+
+export const supplierKey = password("supplierApiKey").label("Supplier API key");
+```
+
+<Aside type="caution" title="Masking is a display choice">
+  Storage matches `text`, and anyone who can write the entity can read the value
+  back through the RPC. A real secret belongs in a config slot backed by the
+  environment, covered in [Secrets](/deployment/secrets/), rather than in meta.
+</Aside>
+
+## Temporal fields
+
+Three types store an ISO string and render the matching native input. All three take `.min()` and `.max()` in the same format the field stores, which the constraint walker compares lexicographically because ISO shapes sort in temporal order. All three also take `.returns("date")`, which projects the read into a JS `Date` anchored to UTC while leaving storage and the write contract as the string.
+
+### date
+
+A calendar date with no time and no timezone, stored as `YYYY-MM-DD`.
+
+```ts
+import { date } from "plumix/fields";
+
+export const seasonStart = date("seasonStart").min("2020-01-01");
+```
+
+### datetime
+
+A date and a time, stored as `YYYY-MM-DDTHH:MM` with optional seconds. The value is naive local time, exactly what the author's `datetime-local` input produced, with no offset baked in.
+
+```ts
+import { datetime } from "plumix/fields";
+
+export const testedAt = datetime("testedAt").returns("date");
+```
+
+A consumer that needs timezone semantics anchors the value explicitly rather than assuming one.
+
+### time
+
+A clock time with no date, stored as `HH:MM` with optional seconds.
+
+```ts
+import { time } from "plumix/fields";
+
+export const servesFrom = time("servesFrom").max("23:00");
+```
+
+Pair it with a [`date`](#date) field when both halves matter.
+
+## Scalar fields
+
+Four single-value types, each with its own storage type and its own small set of options.
+
+### number
+
+A numeric input storing a number.
+
+```ts
+import { number } from "plumix/fields";
+
+export const servings = number("servings").min(1).max(50).step(1).required();
+```
+
+The constraint walker enforces `.min()` and `.max()` server-side. `.step()` only shapes the input, and omitting it leaves the renderer at 1.
+
+### color
+
+A hex colour picker storing the `#rrggbb` string the native input produces.
+
+```ts
+import { color } from "plumix/fields";
+
+export const accent = color("accent").default("#b45309");
+```
+
+A write that is not hex is rejected, and a valid one is lowercased on the way in.
+
+### range
+
+A bounded slider storing a number.
+
+```ts
+import { range } from "plumix/fields";
+
+export const spiceLevel = range("spiceLevel").bounds(0, 5).step(1).default(2);
+```
+
+`.bounds(min, max)` is the only method available until you call it, so a slider with no track cannot be built. The bounds ride on the compiled definition as `min` and `max`, and the constraint walker enforces them server-side, rejecting an out-of-range value rather than clamping it.
+
+Nothing is injected into `.sanitize()`, so writing your own does not displace the bounds check. The walker runs after the callback and re-checks whatever it returned. Bounds are a business rule, which means a draft save accepts an out-of-range value and the publish rejects it.
+
+### json
+
+A free-form JSON value, stored as whatever survives a round trip through the JSON serializer.
+
+```ts
+import { json } from "plumix/fields";
+
+export const nutrition = json("nutrition").description(
+  "Per-serving values, written by the importer",
+);
+```
+
+Nothing checks the shape for you, so `.sanitize()` and `.validate()` are the whole contract. For a structure you control, [`group`](#group) and [`repeater`](#repeater) give you typed reads that `json` cannot.
+
+## Reference fields
+
+Six types store foreign ids and resolve them at read time. Three builders produce them, and the list variants come from `.multiple()` on the same chain rather than from list-named functions.
+
+Storage is a bare id string, or a JSON array of them under `.multiple()`. A read hands back a summary rather than an id: an entry reference resolves to type, title, slug and permalink, a term to taxonomy, name, slug and archive URL, a user to name, slug and avatar. Resolution is batched by kind and scope across the whole response and chunked under the query's id limit, so an archive of 100 recipes does not become a query per row. `.returns("id")` opts a field out of it and hands back the stored ids instead.
+
+Targets can disappear after the id is written. A single reference reads as absent when its target is gone or out of scope, even when the field is `.required()`, since required is a write-time rule. A list reference drops the missing ids, so the array you read is dense and you can iterate it without a null check.
+
+### user
+
+A reference to one user. Storage is the user id.
+
+```ts
+import { user } from "plumix/fields";
+
+export const chef = user("chef").roles(["author", "editor"]);
+```
+
+`.roles()` limits both the picker and the write check, and disabled accounts stay hidden unless you add `.includeDisabled()`.
+
+### userList
+
+An array of user ids, produced by calling `.multiple()` on a [`user`](#user) chain. The scope methods are the same, `.max()` caps the array, and reads give a dense array of user summaries: `user("testers").multiple().max(5)`.
+
+### entry
+
+A reference to one entry. The entry-type scope is the second argument, and it is required, since a reference without one would offer the whole content table to the picker.
+
+```ts
+import { entry } from "plumix/fields";
+
+export const pairsWith = entry("pairsWith", ["recipe"]).status("published");
+```
+
+`.status("published")` is what keeps a draft from surfacing on a public page. Trashed entries are hidden by default, and `.includeTrashed()` brings them back for an admin-only field.
+
+### entryList
+
+An array of entry ids, produced by calling `.multiple()` on an [`entry`](#entry) chain. Scope rules are identical and `.max()` caps the array: `entry("pairsWith", ["recipe"]).multiple().max(3)`.
+
+### term
+
+A reference to one term. The taxonomy scope is the second argument and is required, so a picker never mixes cuisines with diets in one indistinct list.
+
+```ts
+import { term } from "plumix/fields";
+
+export const primaryCuisine = term("primaryCuisine", ["cuisine"]);
+```
+
+This is a reference to a term, which is a different thing from the `cuisine` picker an entry type gets from its `termTaxonomies`. Use the taxonomy for classification, and a `term` field when one term plays a particular role for the entry.
+
+### termList
+
+An array of term ids, produced by calling `.multiple()` on a [`term`](#term) chain: `term("garnishes", ["diet"]).multiple()`.
+
+## Choice fields
+
+Two types over a fixed set of values.
+
+### select
+
+A choice over an option list you declare.
+
+```ts
+import { select } from "plumix/fields";
+
+export const difficulty = select("difficulty")
+  .options(["easy", "medium", "hard"])
+  .appearance("radio")
+  .default("medium");
+```
+
+`.options()` is the only method available until you call it, and it infers the value union, so `.default("simple")` fails to compile against that list. A string option derives its label from its own value, and the object form `{ value, label }` sets both.
+
+`.multiple()` flips storage to an array of values and unlocks `.max()`. `.appearance()` picks the control and never changes the value: single-value fields take `select`, `radio` or `buttons`, multi-value fields take `buttons` or `checkboxes`, and an illegal pairing fails to compile in either call order.
+
+### toggle
+
+A boolean switch, stored as a real boolean rather than a string.
+
+```ts
+import { toggle } from "plumix/fields";
+
+export const vegetarian = toggle("vegetarian").onText("Yes").offText("No");
+```
+
+`.onText()` and `.offText()` label the current state beside the switch. For conditions, `.isOn()` and `.isOff()` read better than comparing to `true`.
+
+## Structural fields
+
+Four types storing composite JSON.
+
+### richtext
+
+A rich-text document stored as ProseMirror JSON.
+
+```ts
+import { richtext } from "plumix/fields";
+
+export const method = richtext("method")
+  .marks(["bold", "italic", "link"])
+  .nodes(["bulletList", "orderedList"]);
+```
+
+`.marks()`, `.nodes()` and `.blocks()` are strict allowlists rather than additions to a default set. A name you leave out is rejected on write even when it is a standard extension, and the admin toolbar shows only the buttons the allowlist admits.
+
+Five node names are always included. ProseMirror needs `doc` and `text`, the editor mounts an implicit `paragraph`, `hardBreak` is the Shift+Enter line break, and `listItem` comes in structurally with whatever list you allowed. That last one is why the example above allowlists `bulletList` and `orderedList` without naming the item node, and why a Shift+Enter break survives a write that never declared it.
+
+This is rich text inside a meta field. Entry content is a different mechanism, covered in [Blocks](/blocks/overview/).
+
+### repeater
+
+A list of rows that all share one row schema.
+
+```ts
+import { number, repeater, text } from "plumix/fields";
+
+export const ingredients = repeater("ingredients")
+  .fields([number("amount"), text("unit"), text("item").required()])
+  .collapsed("item")
+  .min(1)
+  .max(60)
+  .layout("table");
+```
+
+`.fields()` is the only method available until you call it, and it types everything after, so `.collapsed()` accepts only a key the row declares. Rows may hold any field type, including further repeaters and groups.
+
+`.min()` and `.max()` bound the row count. Before they run, the walker drops any row whose every value is `null`, `undefined` or `""`, so a half-added empty row does not count against the minimum. A row holding `0` or `false` survives, because those are values.
+
+`.layout()` chooses `block` (the default card stack), `row` (one line per row) or `table` (aligned lines under a shared header), and `.dialogSize()` widens the row editor. None of them changes what is stored.
+
+### group
+
+A named set of fields stored as a nested object under the group's own key.
+
+```ts
+import { group, number, select } from "plumix/fields";
+
+export const oven = group("oven").fields([
+  number("temperature").min(0),
+  select("mode").options(["fan", "conventional"]),
+]);
+```
+
+Keys are not flattened, so this reads as `meta.oven.temperature` rather than `meta.temperature`. `.fields()` is the only method available until you call it, and members may nest further groups and repeaters.
+
+### link
+
+A call-to-action destination, stored as `{ url, label?, newTab? }`.
+
+```ts
+import { link } from "plumix/fields";
+
+export const video = link("video").label("Video walkthrough");
+```
+
+The admin's entry picker can fill the URL from an entry, which stores that entry's permalink as a path. On write, the value is rebuilt from those three keys, so a stray property never persists, and the URL is checked against the same allowlist rich-text link marks use: relative forms, plus `http`, `https`, `mailto` and `tel`. A `javascript:` or `data:` URL fails, because the value ends up in an anchor `href`.
+
+## Plugin field types
+
+Two more types live in the union so their fields narrow correctly, but core ships neither builder. They come from `@plumix/plugin-media`, whose `media()` builder registers its own admin renderer and lookup adapter through the same seam any plugin uses. Install the plugin and import the builder from `@plumix/plugin-media/fields`.
+
+The package exports two different functions under the name `media`, so the specifier decides which one you get. `@plumix/plugin-media/fields` gives you the field builder shown below. The package root gives you the plugin descriptor factory, which is the one that goes in the `plugins` array of `plumix.config.ts`. Import both in one file and you have to alias one of them.
+
+#### media
+
+A reference to one media item, following the same chain as [`user`](#user): storage is the bare media id, reads hydrate to a summary carrying title, MIME type, size, alt text, URL, thumbnail URL and pixel dimensions, and `.returns("id")` opts out.
+
+Three methods are its own. `.accept()` filters the picker and the write check by MIME, taking either a prefix such as `"image/"` or an array of exact types. `.featured()` marks the field as the entry's representative image, which is what the `og:image` head wiring reads. `.ogImage()` sets an explicit social-share image that outranks the featured one. Both are single-value only, and core allows at most one featured field per entry type.
+
+The recipe box's hero image is `media("heroImage").accept("image/").featured()`.
+
+#### mediaList
+
+An array of media ids, produced by calling `.multiple()` on a `media` chain, with `.max()` capping the array. It is to `media` what [`userList`](#userlist) is to `user`.
+
+## Retired types
+
+Three older input types are reserved rather than removed. A plugin cannot claim their names, and the admin still renders a registration that uses them, so an old object-literal field keeps working. They have no builder and no narrowed type, so new code has a replacement instead.
+
+#### checkbox
+
+A single boolean rendered as a checkbox. Use [`toggle`](#toggle), which stores a real boolean and renders the admin's switch.
+
+#### radio
+
+A single choice rendered as a radio group. Use `select("difficulty").options([...]).appearance("radio")`, which is the same control with a typed option list.
+
+#### multiselect
+
+A multi-value choice rendered as a button group. Use `select("garnishes").options([...]).multiple()`, whose default multi-value appearance is that button group.
+
+## Related
+
+Every type here lands in the `fields` array of a box registered by [Meta Boxes](/fields/meta-boxes/), and [Overview](/fields/overview/) covers what a declaration decides. The reference fields point at things declared in [Entry Types](/content-modelling/entry-types/) and [Taxonomies and Terms](/content-modelling/taxonomies/). The `media` builder ships with a plugin, and [Plugins](/plugins/overview/) covers installing one.
+
+## Next steps
+
+[Field Builders](/fields/builders/) is the chain itself: what every builder shares, why `number("servings").maxLength(10)` is a compile error, and how a fields array becomes a typed `entry.meta` read in a theme.
+
+Three pages go deeper than a roster entry can, and none is written yet. Reference Fields covers the six reference kinds and the lookup adapters behind their pickers. Repeaters and Groups covers nesting, row typing and the read shape. Conditional Fields covers `.visibleWhen()`, the rule factories each builder exposes, and how a hidden field behaves on save.

@@ -1,0 +1,190 @@
+---
+title: Overview
+description: What a Plumix deploy is made of, and the sequence that takes a recipe site from your machine to a live Worker.
+tier: P0
+sidebar:
+  order: 10
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+A Plumix site deploys as one Cloudflare Worker. The build turns `plumix.config.ts` into a worker entry, stages the admin and your static files beside it, and every resource the site reads at runtime arrives as a binding on the Worker env.
+
+## What a deploy is
+
+Two files decide what a deploy is. `plumix.config.ts` picks the runtime adapter and names the binding each slot reads. `wrangler.jsonc` declares those bindings as real Cloudflare resources and sets the Worker's compatibility flags. A binding name appears once in each file, and the two spellings have to match or the first request fails with a list of what is missing.
+
+Secret values are in neither file. A secret's name may appear in `wrangler.jsonc` under `secrets.required`, which makes `wrangler deploy` fail when the value is not configured, but the value itself arrives on `env` only when a request runs. That is why a secret-bearing slot takes an `(env) => value` resolver instead of a literal. Read [Secrets](/deployment/secrets/) for that shape.
+
+Everything else is a build output. `plumix build` writes a generated worker entry, a generated Drizzle schema, and a static directory holding the admin SPA plus anything in your `public/` folder. You commit none of it.
+
+There is no origin server. The Worker answers the public site, the admin at `/_plumix/admin`, and the cron invocations, all from the same script.
+
+## Running the commands
+
+The scaffolder adds `plumix` to your project rather than to your PATH, so reach it through your package runner.
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm exec plumix deploy
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npx plumix deploy
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn plumix deploy
+```
+
+  </TabItem>
+</Tabs>
+
+The rest of this page writes the commands bare. `wrangler` works the same way.
+
+## Quickstart
+
+This is the path from a scaffolded recipe site to a live one. It assumes a site made with `pnpm create plumix-app` and a signed-in `wrangler`.
+
+<Aside type="caution" title="The scaffolded passkey origin stays on localhost">
+  The scaffolded `plumix.config.ts` spreads `cloudflareDeployOrigin`, and that
+  helper returns `rpId: "localhost"` on every deploy, so the passkey in step 8
+  cannot verify against the deployed host. It reads `WORKERS_CI` through a local
+  variable rather than the literal `process.env.WORKERS_CI` the Plumix Vite
+  plugin substitutes, so the check survives into the bundle and runs inside the
+  Worker, where that variable never exists. A Cloudflare Workers Builds deploy
+  lands on localhost for the same reason a local build does. Write `rpId` and
+  `origin` yourself, as step 1 does. [Cloudflare
+  Workers](/deployment/cloudflare/) has the full block.
+</Aside>
+
+<Steps>
+
+1. **Point the passkey at the deployed host.** The scaffolded `plumix.config.ts` spreads `cloudflareDeployOrigin` into `auth.passkey`. Replace that spread with a literal `rpId` of `your-account.workers.dev`, an `origin` of `https://recipes.your-account.workers.dev` and `allowedOrigins: ["https://*.your-account.workers.dev"]`, keeping the localhost pair behind `process.env.PLUMIX_DEV`. That one wildcard covers production and every preview branch. [Cloudflare Workers](/deployment/cloudflare/) has the block.
+
+2. **Create the database.** The scaffolded `wrangler.jsonc` ships a placeholder `database_id` that works only for local dev.
+
+   ```sh
+   wrangler d1 create recipes
+   ```
+
+   Paste the returned id into the `d1_databases` entry in `wrangler.jsonc`. Both this edit and step 1 have to land before the build, because the build copies `wrangler.jsonc` into the bundle directory and bundles the config module into the worker entry.
+
+3. **Generate the migrations.**
+
+   ```sh
+   plumix migrate generate
+   ```
+
+   This writes `.plumix/schema.ts` from your config, then runs `drizzle-kit generate` over it. The SQL lands in `drizzle/`, which you do commit.
+
+4. **Apply them to the remote database.**
+
+   ```sh
+   plumix migrate apply --remote
+   ```
+
+   Without `--remote` the same command applies to your local D1 copy. Everything after the command name passes through to `wrangler d1 migrations apply`.
+
+5. **Build the site.**
+
+   ```sh
+   plumix build
+   ```
+
+   The build fails here rather than in production if a plugin registration or a config slot is wrong, because it constructs the whole app before Vite starts.
+
+6. **Deploy.**
+
+   ```sh
+   plumix deploy
+   ```
+
+   This is `wrangler deploy` with your arguments appended.
+
+7. **Set the secrets your resolvers read.** One command per key.
+
+   ```sh
+   wrangler secret put RESEND_API_KEY
+   ```
+
+   You can run this before the first deploy too. Point `wrangler secret put` at a Worker that does not exist yet and it asks whether to create one. That prompt defaults to yes and answers itself yes in a non-interactive shell, uploads a stub Worker under the name, then stores the secret on it. Name the key under `secrets.required` in `wrangler.jsonc` and the deploy refuses until the value is set, telling you to ship it with `wrangler deploy --secrets-file <path>`.
+
+8. **Enrol the first passkey.** Open `/_plumix/admin` on the deployed origin. The first admin has to arrive through the passkey bootstrap rail, so do this before inviting anyone.
+
+</Steps>
+
+## What the build produces
+
+`plumix build` regenerates the `.plumix/` directory before Vite starts. Nothing in it is yours to edit, and every file carries a header saying so.
+
+`.plumix/worker.ts` is the Worker entry, and `wrangler.jsonc` points its `main` at it. The file imports your config, calls `buildApp` once per isolate, and hands each request to `config.runtime.buildFetchHandler(app)`. Regenerating it on every build is what keeps the entry in step with the config.
+
+`.plumix/schema.ts` is the Drizzle schema assembled from core's tables plus every table a plugin contributes. `plumix migrate generate` reads it.
+
+`.plumix/client-entry.ts` is the browser bundle's entry, and it carries the CSS files your theme declared. Plumix emits it even when it is empty, because the Vite plugin lists it as a client entry unconditionally.
+
+Three more entries are emitted on every build and each becomes its own client chunk. `.plumix/islands-entry.ts` imports the island runtime that registers the `<plumix-island>` custom element, and the server injects it only on a page that contains one. `.plumix/islands-renderer-entry.ts` is the React half of that runtime, dynamically imported on first hydration so React is never fetched for a page whose islands all defer. `.plumix/editor-entry.ts` carries the editor canvas and the block modules it renders, and the server injects it only when the edit gate authorizes the request.
+
+`.plumix/public` holds the static half: your `public/` directory copied in, and the precompiled admin SPA staged under `_plumix/admin/`.
+
+Vite then builds twice, client first and worker second, because the worker bakes the client's asset manifest into its own bundle. The output is a `dist/client` directory of static assets and a `dist/<worker-name>/` directory holding the worker bundle and a `wrangler.json` the Cloudflare Vite plugin writes from your `wrangler.jsonc`. The plugin also drops a `.wrangler/deploy/config.json` redirect pointing at that copy, so `plumix deploy` ships the built snapshot rather than re-reading the file you edited.
+
+## Build time against request time
+
+Your config module evaluates twice. `plumix build` runs it on your machine to write `.plumix/schema.ts` and `.plumix/worker.ts`, and that generated entry imports it again, so it also runs once per isolate inside the deployed Worker. The Vite plugin freezes six `process.env` member expressions into the bundle as literals, `WORKERS_CI`, `WORKERS_CI_BRANCH`, `PLUMIX_DEV`, `PLUMIX_EDITOR`, `PLUMIX_EDITOR_PATH_MAP` and `PLUMIX_FORWARD_ERRORS`, and it rewrites those spellings and nothing else. Every other read of `process.env` runs inside the Worker, where your shell is not. Reading one of the six through a variable instead of writing `process.env.NAME` out in full puts it on the wrong side of that line, which is what happened to `cloudflareDeployOrigin`.
+
+Bindings and secrets exist only inside a request. The runtime adapter connects each slot per request by handing it the Worker `env`, so `d1({ binding: "DB" })` stores the string `"DB"` at build time and resolves it to a live D1 handle when a request arrives.
+
+That split is why the secret-bearing slots take a resolver. `mailer`, an OAuth provider's `clientSecret`, `passkey.origin` and R2's S3 credentials all accept either a literal or an `(env) => value` function, and the framework calls the function once per isolate with the real env. R2's S3 credentials are the odd one there. An R2 binding cannot mint a presigned upload URL, so the adapter needs an account id and an S3 key pair on top of the binding before it can offer one.
+
+## Migrations
+
+Plumix generates migrations from your config rather than from a hand-written schema file. Registering an entry type adds no table, so most content modelling needs no migration at all. A plugin that ships its own tables does.
+
+Run `plumix migrate generate` after adding or removing such a plugin, commit the SQL in `drizzle/`, and apply it with `plumix migrate apply --remote` before the deploy that needs it. The command reads the database name out of your wrangler config, so pass one explicitly only when the config declares more than one D1 database.
+
+## Scheduled tasks
+
+Core registers two scheduled tasks: a daily session cleanup and a `publish-scheduled` task that flips due entries from `scheduled` to `published`. Neither runs unless the Worker declares a matching cron trigger.
+
+```jsonc
+// wrangler.jsonc
+{
+  "triggers": {
+    "crons": ["0 3 * * *", "*/5 * * * *"],
+  },
+}
+```
+
+<Aside type="caution" title="A missing trigger is silent">
+  With no cron trigger, a scheduled recipe stays scheduled and nothing reports
+  the problem. The scaffolded `wrangler.jsonc` ships both crons, so this bites
+  when a hand-written config drops them.
+</Aside>
+
+## Preview deploys
+
+Workers Builds gives every branch its own `*.workers.dev` host. A passkey is anchored to a hostname, so a credential enrolled on production will not verify on a preview unless the two share a registrable domain.
+
+Anchor `rpId` to `your-account.workers.dev` and add the `allowedOrigins` wildcard `https://*.your-account.workers.dev`, and one passkey spans production and each preview branch, because every one of those hosts sits under the same registrable domain. `cloudflareDeployOrigin` was meant to derive that pair from the build environment and cannot, so write it out yourself. See [Cloudflare Workers](/deployment/cloudflare/) for the full shape and for what changes when production runs on a custom domain.
+
+## Related
+
+Your passkey origin is a deploy concern and an identity concern at once, so [Passkeys](/access/passkeys/) is worth reading alongside this page. Scheduled publishing is described from the content side in [Statuses and Publishing](/content-modelling/statuses/). The generated files under `.plumix/` are catalogued from the repository side in [Project Structure](/getting-started/project-structure/).
+
+Two pages in this section are not written yet, and what they cover already ships. CLI Reference is the exhaustive listing of the seven commands and the five global flags. Runtime Adapters describes the `RuntimeAdapter` contract, which is what a runtime other than Cloudflare Workers would implement.
+
+## Next steps
+
+Read [Cloudflare Workers](/deployment/cloudflare/) next for the adapters that fill each slot, then [Bindings and Environment](/deployment/bindings/) for how a name in `wrangler.jsonc` reaches your config. [Secrets](/deployment/secrets/) covers the values neither file may contain.
+
+If you have not deployed anything yet, [Deploy Your Site](/getting-started/deploy/) is the shorter path and comes back here for depth. [Configuration](/getting-started/configuration/) is the reference for every config slot named above.

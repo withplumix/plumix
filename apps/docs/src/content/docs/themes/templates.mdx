@@ -1,0 +1,427 @@
+---
+title: Templates
+description: defineTemplate and the sixteen builders that bind a template to a generic tier or to one targeted node.
+tier: P0
+roster: true
+sidebar:
+  order: 20
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+A theme's `templates` array holds rules, and every rule comes from one of the builders below. Ten bind a template to a generic tier, five target a specific node, and `defineTemplate` is what they all wrap.
+
+## Overview
+
+A rule is `{ template, tier }` or `{ template, match }`, never both. The generic builders mint the first shape. `entry(recipe)` says "render any single entry with this". The targeted builders mint the second, so `forEntryType("recipe").slug("sicilian-caponata").template(caponata)` says "render exactly this entry with this". Resolution tries targeted rules first, in the order you wrote them, and [Template Hierarchy](/themes/hierarchy/) is the full walk.
+
+Every sample below ends in an `export const rules` array. `rules` is not an API name. The array is what you hand `defineTheme` as its `templates` slot, and [Overview](/themes/overview/) shows the whole descriptor it sits in.
+
+Each builder types the template it accepts. `archive()` takes a template written against `ArchiveData`, so `data.pagination` is there and `data.entry` is not. The rule that comes back erases that type, and the erasure keeps `templates` a single array rather than a tuple of ten shapes.
+
+The targeted builders go further and read the registries. `forEntryType` autocompletes against `EntryTypeRegistry`, rejects a name nothing registered, and types `data.entry` from that type's projection, including its folded meta. You declare the projection next to the plugin that registers the type, and every sample below assumes this one:
+
+```ts
+import type { ResolvedEntry, ResolvedTerm } from "plumix";
+
+declare module "plumix" {
+  interface EntryTypeRegistry {
+    recipe: { entry: ResolvedEntry };
+  }
+  interface TermTaxonomyRegistry {
+    cuisine: { term: ResolvedTerm };
+    diet: { term: ResolvedTerm };
+  }
+}
+```
+
+<Aside type="note" title="One specifier">
+  Augment through `declare module "plumix"` and nothing else. The registries are
+  re-exported from several packages, and augmenting two specifiers gives you two
+  views, each missing the other's keys.
+</Aside>
+
+## The builders
+
+### `defineTemplate`
+
+Wraps a render function into a branded template object. Every builder below takes one.
+
+```tsx
+import type { EntryData } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+export const recipe = defineTemplate<EntryData>({
+  render: ({ data, ctx }) => (
+    <article lang={ctx.locale.code}>
+      <h1>{data.entry.title}</h1>
+      {data.entry.excerpt ? <p>{data.entry.excerpt}</p> : null}
+    </article>
+  ),
+});
+```
+
+The type parameter names the data shape and defaults to the whole union. `render` receives `data`, `ctx` and the results of any template deps the template declares. Two optional keys ride alongside it: `document`, a head fragment merged over the theme's, either a literal or a function called per request; and `prefetchArchiveLoaders`, which resolves block loader data for every entry in a listing in one pass.
+
+The brand is a module-local symbol, so nothing outside `defineTemplate` can mint a template. Plumix rejects a hand-written `{ render }` literal at boot rather than ignoring the fields it cannot read, and wraps a plain component instead.
+
+### `fallback`
+
+The universal catch-all. It matches every resolved node, so it is the last thing resolution tries and the one rule that guarantees a page rather than a 404.
+
+```tsx
+import { fallback } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const anything = defineTemplate({
+  render: ({ data }) => <main data-kind={data.kind}>Nothing here yet</main>,
+});
+
+export const rules = [fallback(anything)];
+```
+
+Its template is typed against the whole `TemplateData` union, so narrow on `data.kind` or with the guards in [Template Data](/themes/template-data/) before reading anything shape-specific. Archives a [plugin](/plugins/overview/) registered have no generic tier of their own and land here unless a `forArchiveType` rule claims them.
+
+### `entry`
+
+Any single entry, of any type. This is the tier behind `/recipes/sicilian-caponata`.
+
+```tsx
+import type { EntryData } from "plumix";
+import { entry } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const single = defineTemplate<EntryData>({
+  render: ({ data }) => <h1>{data.entry.title}</h1>,
+});
+
+export const rules = [entry(single)];
+```
+
+`data.entry` is a `ResolvedEntry`. That is the stored row with its meta decoded and its references hydrated, plus `terms`, `author`, `contentBlocks` and a pre-resolved `url`.
+
+### `archive`
+
+The listing for one entry type, at `/recipes` and its `/page/2` variants.
+
+```tsx
+import type { ArchiveData } from "plumix";
+import { archive } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const listing = defineTemplate<ArchiveData>({
+  render: ({ data }) => (
+    <ol>
+      {data.entries.map((item) => (
+        <li key={item.id}>{item.title}</li>
+      ))}
+    </ol>
+  ),
+});
+
+export const rules = [archive(listing)];
+```
+
+`data.contentType` names the type being listed, so one template can serve every archive on the site. `data.pagination` carries `page`, `perPage`, `total` and `pageCount`; a page number past the end 404s before the template runs.
+
+### `taxonomy`
+
+A term archive, in any taxonomy. Both `/cuisine/italian/sicilian` and `/diet/vegetarian` reach it.
+
+```tsx
+import type { TaxonomyData } from "plumix";
+import { taxonomy } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const terms = defineTemplate<TaxonomyData>({
+  render: ({ data }) => (
+    <section>
+      <h1>{data.term.name}</h1>
+      <p>
+        {data.pagination.total} recipes in {data.taxonomy}
+      </p>
+    </section>
+  ),
+});
+
+export const rules = [taxonomy(terms)];
+```
+
+`data.term` is the resolved term and `data.taxonomy` is its taxonomy name. `data.entries` stays the base entry shape, because a taxonomy can span several entry types.
+
+### `author`
+
+An author archive, at `/authors/{slug}`.
+
+```tsx
+import type { AuthorArchiveData } from "plumix";
+import { author } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const byAuthor = defineTemplate<AuthorArchiveData>({
+  render: ({ data }) => (
+    <section>
+      <h1>{data.author.name ?? data.author.slug}</h1>
+      <p>{data.pagination.total} published</p>
+    </section>
+  ),
+});
+
+export const rules = [author(byAuthor)];
+```
+
+`data.author` carries four fields, `id`, `slug`, `name` and `avatarUrl`. The resolver loads the whole user row to find the author archive, then copies those four fields into a fresh object rather than spreading the row, so the email and the auth columns stop at the resolver and a theme cannot leak them.
+
+### `date`
+
+A date archive at any granularity, from `/2026` down to `/2026/07/21`.
+
+```tsx
+import type { DateArchiveData } from "plumix";
+import { date } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const period = defineTemplate<DateArchiveData>({
+  render: ({ data }) => (
+    <h1>{data.month === null ? data.year : `${data.month}/${data.year}`}</h1>
+  ),
+});
+
+export const rules = [date(period)];
+```
+
+`year` is always set. `month` and `day` are 1-based and `null` at a coarser granularity, so a year archive arrives as `{ year, month: null, day: null }`.
+
+### `frontPage`
+
+The site root. Its entries are the latest published ones across every non-hierarchical public type, so a page never appears in the feed.
+
+```tsx
+import type { FrontPageData } from "plumix";
+import { frontPage } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const home = defineTemplate<FrontPageData>({
+  render: ({ data }) => (
+    <main>
+      <h1>Latest recipes</h1>
+      <p>{data.entries.length} on this page</p>
+    </main>
+  ),
+});
+
+export const rules = [frontPage(home)];
+```
+
+### `search`
+
+The search results page.
+
+```tsx
+import type { SearchData } from "plumix";
+import { search } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const results = defineTemplate<SearchData>({
+  render: ({ data }) => (
+    <main>
+      <h1>{data.query}</h1>
+      <p>{data.pagination.total} matches</p>
+    </main>
+  ),
+});
+
+export const rules = [search(results)];
+```
+
+`data.query` is the decoded query string. Paginate it through `data.pagination` exactly as an archive.
+
+### `notFound`
+
+The 404 handler. Nothing matches it against a node. It fires when resolution finds no rule, and when a URL matches no route at all.
+
+```tsx
+import type { ErrorData } from "plumix";
+import { notFound } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const missing = defineTemplate<ErrorData>({
+  render: ({ data }) => (
+    <main>
+      <h1>Not found</h1>
+      <p>{new URL(data.request.url).pathname}</p>
+    </main>
+  ),
+});
+
+export const rules = [notFound(missing)];
+```
+
+A theme that declares no `notFound` gets a built-in 404 page. Resolution never falls through to `fallback` here, because the framework looks the error tiers up on their own.
+
+### `serverError`
+
+The 500 handler, fired when a render throws.
+
+```tsx
+import type { ErrorData } from "plumix";
+import { serverError } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const failed = defineTemplate<ErrorData>({
+  render: ({ data }) => (
+    <main>
+      <h1>Something broke</h1>
+      {data.errorId ? <code>{data.errorId}</code> : null}
+    </main>
+  ),
+});
+
+export const rules = [serverError(failed)];
+```
+
+`ErrorData` carries no `Error`, by shape, so an internal exception message has no route into the page. `errorId` is the failing request's telemetry id and is set only here, never on a 404; print it and a user report maps back to the exact failure in your logs.
+
+### `forEntryType`
+
+Targets one registered entry type, and is the busiest builder on this page.
+
+```tsx
+import type { ArchiveData, EntryData } from "plumix";
+import { forEntryType } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const single = defineTemplate<EntryData>({
+  render: ({ data }) => <h1>{data.entry.title}</h1>,
+});
+
+const caponata = defineTemplate<EntryData>({
+  render: ({ data }) => <h1>Featured: {data.entry.title}</h1>,
+});
+
+const index = defineTemplate<ArchiveData>({
+  render: ({ data }) => <h1>{data.entries.length} recipes</h1>,
+});
+
+export const rules = [
+  forEntryType("recipe").slug("sicilian-caponata").template(caponata),
+  forEntryType("recipe").template(single),
+  forEntryType("recipe").archive.template(index),
+];
+```
+
+The bare `.template()` matches every entry of the type. Five selectors narrow it:
+
+- `.slug("sicilian-caponata")` and `.id(42)` match one entry.
+- `.whereMeta("difficulty", "hard")` matches on a stored meta value. The key and the value are typed against the type's folded stored meta, which is the shape sitting in the JSON column rather than the read-time resolved one.
+- `.where((data) => ...)` takes any predicate over the resolved data.
+- `.named("wide", "Wide layout")` registers an author-selectable template. The id and label reach the editor's template picker, and the choice is stored in the reserved `__plumix_template` meta key, which the matching predicate reads back.
+
+`.archive.template()` is the sibling that targets the type's archive listing rather than its entries, so one file can style `recipe` and its `/recipes` index.
+
+A predicate rule only matches when the resolver has data in hand. The walk compares identity first and calls the predicate second.
+
+### `forTermTaxonomy`
+
+Targets one registered taxonomy, with the same selectors as `forEntryType` minus the archive.
+
+```tsx
+import type { TaxonomyData } from "plumix";
+import { forTermTaxonomy } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const cuisinePage = defineTemplate<TaxonomyData>({
+  render: ({ data }) => <h1>{data.term.name}</h1>,
+});
+
+export const rules = [
+  forTermTaxonomy("cuisine").slug("sicilian").template(cuisinePage),
+  forTermTaxonomy("diet").template(cuisinePage),
+];
+```
+
+`.slug()`, `.id()`, `.whereMeta()` and `.where()` behave as they do on `forEntryType`, reading term meta instead of entry meta. `data.term` is typed from the taxonomy's term projection.
+
+`.named()` is the exception. It registers the same predicate here, comparing the term's `__plumix_template` meta key against the id, but the admin collects author-selectable templates from entry rules alone and writes that key only on entries. A named rule on a taxonomy therefore never matches through the admin, so reach for `.whereMeta()` against a meta-box field of your own instead.
+
+### `forAuthor`
+
+Targets author archives. There is one author kind and no registry to autocomplete, so it takes no name.
+
+```tsx
+import type { AuthorArchiveData } from "plumix";
+import { forAuthor } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const chefPage = defineTemplate<AuthorArchiveData>({
+  render: ({ data }) => <h1>Recipes by {data.author.slug}</h1>,
+});
+
+export const rules = [forAuthor().slug("nadia").template(chefPage)];
+```
+
+Chain `.slug()` or `.id()` to reach one author. The bare `.template()` matches every author archive, the same thing the `author` tier does. Reach for the tier unless you need to order the rule against other targeted rules.
+
+### `forDate`
+
+Targets one date archive. The components are positional, because a month has no meaning without a year.
+
+```tsx
+import type { DateArchiveData } from "plumix";
+import { forDate } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+const summer = defineTemplate<DateArchiveData>({
+  render: ({ data }) => <h1>Recipes from {data.year}</h1>,
+});
+
+export const rules = [
+  forDate(2026).template(summer),
+  forDate(2026, 7).template(summer),
+  forDate(2026, 7, 21).template(summer),
+];
+```
+
+Each match is exact at its own granularity. `forDate(2026)` matches the year archive alone and leaves that year's month and day archives to the `date` tier.
+
+### `forArchiveType`
+
+Targets an archive a plugin registered with `registerArchiveType`. Core knows nothing about that archive, and it still dispatches and templates like a built-in one.
+
+```tsx
+import type { CustomArchiveData } from "plumix";
+import { forArchiveType } from "plumix";
+import { defineTemplate } from "plumix/theme";
+
+interface SeasonalData extends CustomArchiveData {
+  readonly kind: "custom";
+  readonly name: "seasonal";
+  readonly season: string;
+}
+
+declare module "plumix" {
+  interface ArchiveTypeRegistry {
+    seasonal: { data: SeasonalData };
+  }
+}
+
+const seasonal = defineTemplate<SeasonalData>({
+  render: ({ data }) => <h1>{data.season}</h1>,
+});
+
+export const rules = [forArchiveType("seasonal").template(seasonal)];
+```
+
+Augment `ArchiveTypeRegistry` under the same name the plugin registered, and `data` is typed from your projection rather than from the bare `{ kind, name }` core sees. Without a targeted rule these archives resolve to `fallback`, since no generic tier claims them.
+
+## Related
+
+[Template Hierarchy](/themes/hierarchy/) is the order these rules are tried in and how a URL becomes the node they match against. [Template Data](/themes/template-data/) documents each shape a `render` receives, with the guard that narrows it. [Overview](/themes/overview/) puts `templates` beside the theme's other slots.
+
+A plugin registers the entry types and taxonomies the targeted builders name, in [Entry Types](/content-modelling/entry-types/) and [Taxonomies and Terms](/content-modelling/taxonomies/). The meta keys `whereMeta` reads come from a meta box, covered in [Meta Boxes](/fields/meta-boxes/). [Permalinks and Slugs](/routing/permalinks/) covers what a URL has to look like to reach a given tier.
+
+## Next steps
+
+Read [Template Hierarchy](/themes/hierarchy/) next. Once two rules can match the same request, their order decides the page, and that page also covers what happens when no rule matches.
+
+Then [Template Data](/themes/template-data/) for the fields on each shape above. Template Dependencies, not written yet, covers the dep arrays a template declares next to `render` and the override and extend forms a template can use against its theme's declaration.

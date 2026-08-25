@@ -272,13 +272,25 @@ are genuinely required and a page missing one fails the build.
 | # | Section | Required | Notes |
 | --- | --- | --- | --- |
 | 1 | **Lede** | **yes** | One or two sentences under the `<h1>`. Written to stand alone — it is an agent's first line of context. |
-| 2 | `## Overview` | **yes** | What this is and when you reach for it. Definitions land here. |
+| 2 | `## Overview` | **yes**² | What this is and when you reach for it. Definitions land here. |
 | 3 | `## Quickstart` | **yes**¹ | The smallest runnable thing. Uses `<Steps>`. |
 | 4 | Body `##` sections | yes | Concept material. Screenshots inline, here. |
 | 5 | Generated reference | conditional | Renders only when frontmatter provides it. |
 | 6 | `## Recipes` | no | Worked examples beyond the quickstart. |
 | 7 | `## Related` | **yes** | **Lateral** links — concepts this page touches. |
 | 8 | `## Next steps` | **yes** | **Forward** path — what the reader does after. Not the same section as `Related`; do not merge them. |
+
+² Exempt on a **section landing page**, whose own title is already `Overview`. The two rules
+collide there: §3 names every section landing page `Overview`, and this table requires a `## Overview`
+under it, so the page renders the word as its `<h1>` and again as its first `<h2>`. The page *is* the
+overview. Give that opening section a heading naming what it actually covers — `## The content model`,
+`## Route intents` — and the reader loses nothing. Enforced by `isSectionLanding` in
+`apps/docs/src/content-checks/page-shape.ts`, which reads `title === "Overview"`.
+
+Starlight labels its own top-of-page table-of-contents link `Overview` too, which duplicates the word
+in the right rail of every page carrying the mandatory section, landing page or not. That is settled
+separately, by overriding the `tableOfContents.overview` UI string to `Top` in
+`apps/docs/src/content/i18n/en.json`. Do not solve it by renaming the body section.
 
 ¹ Exempt only when the page is a pure roster **and** every item carries its own runnable example —
 the example moved, it did not vanish.
