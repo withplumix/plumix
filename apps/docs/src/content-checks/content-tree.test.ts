@@ -24,6 +24,8 @@ describe("readContentTree", () => {
       "code-samples/valid.mdx",
       "headings-in-code.mdx",
       "index.mdx",
+      "landing/exempt.mdx",
+      "landing/still-required.mdx",
       "legacy-note.markdown",
       "markdown-page.md",
       "missing-lede-jsx.mdx",

@@ -67,7 +67,9 @@ const MANDATORY_SECTIONS: readonly MandatorySection[] = [
   {
     heading: "Overview",
     rule: "page-shape/missing-overview",
-    message: "Missing the mandatory `## Overview` section.",
+    message:
+      "Missing the mandatory `## Overview` section. Only a section landing page — one whose own title is already `Overview` — is exempt.",
+    exempt: isSectionLanding,
   },
   {
     heading: "Quickstart",
@@ -97,6 +99,15 @@ const MANDATORY_SECTIONS: readonly MandatorySection[] = [
  */
 function isDocumentationPage(page: ContentFile): boolean {
   return page.frontmatter.template !== "splash";
+}
+
+/**
+ * The overview exemption: a page whose `<h1>` already reads "Overview" is its
+ * section's landing page, so a `## Overview` under it renders the word twice in
+ * a row and adds a heading that repeats the title. The page is the overview.
+ */
+function isSectionLanding(page: ContentFile): boolean {
+  return page.frontmatter.title === "Overview";
 }
 
 /**

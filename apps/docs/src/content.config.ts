@@ -1,4 +1,5 @@
-import { docsSchema } from "@astrojs/starlight/schema";
+import { i18nLoader } from "@astrojs/starlight/loaders";
+import { docsSchema, i18nSchema } from "@astrojs/starlight/schema";
 import { defineCollection, z } from "astro:content";
 import { glob } from "astro/loaders";
 import { autoSidebarLoader } from "starlight-auto-sidebar/loader";
@@ -25,6 +26,10 @@ export const collections = {
     loader: glob({ base: "./src/content/docs", pattern: docsPattern }),
     schema: docsSchema({ extend: frontmatterExtension }),
   }),
+  // Renames only Starlight's top-of-page link, which ships labelled "Overview"
+  // and so reads twice in the right rail of every page carrying the house
+  // template's mandatory `## Overview`.
+  i18n: defineCollection({ loader: i18nLoader(), schema: i18nSchema() }),
   autoSidebar: defineCollection({
     loader: autoSidebarLoader(),
     schema: autoSidebarSchema(),
