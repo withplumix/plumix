@@ -4,6 +4,9 @@ name: Link Check
 # on a schedule rather than per-PR — where they'd red-X unrelated changes. The
 # per-PR CI job checks internal/relative links offline. A failure here notifies
 # maintainers via GitHub's scheduled-workflow failure email.
+#
+# Remote URLs are remote wherever they're written, so this is the one job that
+# spans both link domains — see "Link validation" in CONTRIBUTING.md.
 on:
   schedule:
     - cron: "0 6 * * 1" # Mondays, 06:00 UTC
@@ -25,7 +28,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # `--scheme` restricts this to remote URLs, which is what lets `md,mdx`
+      # cover the docs tree too. Fragments stay off: a remote `#anchor` needs
+      # markup lychee has to fetch, and too much of the web renders ids
+      # client-side for that to mean anything.
       - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
-          args: "--no-progress '**/*.md'"
+          args: "--no-progress --hidden --scheme https --scheme http --extensions md,mdx ."
           fail: true
