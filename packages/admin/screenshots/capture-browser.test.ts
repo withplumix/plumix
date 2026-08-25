@@ -7,6 +7,7 @@ import {
   captureBrowserImage,
   captureBrowserPort,
   captureBrowserRunArgs,
+  waitForServer,
 } from "./capture-browser.js";
 
 function argPair(args: string[], flag: string): string | undefined {
@@ -73,5 +74,40 @@ describe("assertCaptureEndpoint", () => {
     expect(() => {
       assertCaptureEndpoint({});
     }).toThrow(/pnpm docs:screenshots/);
+  });
+});
+
+describe("waitForServer", () => {
+  // Reads the log the way `startCaptureBrowser` does: one snapshot per poll.
+  function reader(snapshots: (string | undefined)[]): () => string | undefined {
+    let at = 0;
+    return () => snapshots[Math.min(at++, snapshots.length - 1)];
+  }
+
+  it("keeps waiting while the server has not announced itself", async () => {
+    // The bug this replaced returned on the published port, which docker
+    // accepts about a second before anything inside is listening.
+    const read = reader(["", "", "Listening on ws://0.0.0.0:3000/"]);
+    const seen: string[] = [];
+
+    await waitForServer(() => {
+      const log = read();
+      seen.push(log ?? "<gone>");
+      return log;
+    }, 5_000);
+
+    expect(seen).toEqual(["", "", "Listening on ws://0.0.0.0:3000/"]);
+  });
+
+  it("gives up on a container docker has already reaped", async () => {
+    await expect(waitForServer(reader([undefined]), 5_000)).rejects.toThrow(
+      /exited as it started/,
+    );
+  });
+
+  it("carries the log it gave up on into the timeout", async () => {
+    await expect(
+      waitForServer(reader(["Error: EACCES /playwright-core/cli.js"]), 150),
+    ).rejects.toThrow(/EACCES \/playwright-core\/cli\.js/);
   });
 });
