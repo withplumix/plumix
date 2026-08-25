@@ -14,6 +14,18 @@ function withPortOffset<T>(value: string | undefined, fn: () => T): T {
   }
 }
 
+function withCI<T>(value: string | undefined, fn: () => T): T {
+  const original = process.env.CI;
+  if (value === undefined) delete process.env.CI;
+  else process.env.CI = value;
+  try {
+    return fn();
+  } finally {
+    if (original === undefined) delete process.env.CI;
+    else process.env.CI = original;
+  }
+}
+
 function webServerCommandOf(config: ReturnType<typeof definePlumixE2EConfig>) {
   return config.webServer && "command" in config.webServer
     ? config.webServer.command
@@ -141,9 +153,7 @@ describe("definePlumixE2EConfig", () => {
   });
 
   test("CI reporter writes the html report with open: never", () => {
-    const original = process.env.CI;
-    process.env.CI = "true";
-    try {
+    withCI("true", () => {
       const config = definePlumixE2EConfig({ playground: "../playground" });
       const reporters = Array.isArray(config.reporter) ? config.reporter : [];
       const htmlReporter = reporters.find(
@@ -151,10 +161,7 @@ describe("definePlumixE2EConfig", () => {
           Array.isArray(entry) && entry[0] === "html",
       );
       expect(htmlReporter?.[1]?.open).toBe("never");
-    } finally {
-      if (original === undefined) delete process.env.CI;
-      else process.env.CI = original;
-    }
+    });
   });
 
   test("webServer readiness defaults to URL-based polling against baseURL", () => {
@@ -212,19 +219,44 @@ describe("definePlumixE2EConfig", () => {
   });
 
   test("reuses no existing server, on CI and locally alike", () => {
-    const original = process.env.CI;
-    delete process.env.CI;
-    try {
+    withCI(undefined, () => {
       const config = definePlumixE2EConfig({ playground: "../playground" });
       const reuse =
         config.webServer && "reuseExistingServer" in config.webServer
           ? config.webServer.reuseExistingServer
           : undefined;
       expect(reuse).toBe(false);
-    } finally {
-      if (original === undefined) delete process.env.CI;
-      else process.env.CI = original;
-    }
+    });
+  });
+
+  test("a suite with no shared database runs parallel workers on CI", () => {
+    withCI("true", () => {
+      const config = definePlumixE2EConfig({
+        port: 3040,
+        webServerCommand: "noop",
+      });
+
+      expect(config.workers).toBeUndefined();
+    });
+  });
+
+  test("a playground pins to one worker — its D1 is shared mutable state", () => {
+    withCI("true", () => {
+      const config = definePlumixE2EConfig({ playground: "../playground" });
+
+      expect(config.workers).toBe(1);
+    });
+  });
+
+  test("applyMigrations: false means no shared D1, so workers stay parallel", () => {
+    withCI("true", () => {
+      const config = definePlumixE2EConfig({
+        playground: "../playground",
+        applyMigrations: false,
+      });
+
+      expect(config.workers).toBeUndefined();
+    });
   });
 });
 
