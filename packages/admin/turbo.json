@@ -3,8 +3,11 @@
   "extends": ["//"],
   "tasks": {
     "test:e2e": {
-      "dependsOn": ["build", "^build", "plumix#build"],
-      "cache": false
+      // `plumix#build` closes a copy race with this suite's preview server
+      // (#321). The `cache: false` that sat here arrived inside an unrelated
+      // feature PR with no reason given, and it pinned the repository's
+      // longest suite — 130 tests — to running on every commit.
+      "dependsOn": ["build", "^build", "plumix#build"]
     }
   }
 }
