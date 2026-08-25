@@ -7,6 +7,10 @@ import starlightLlmsTxt from "starlight-llms-txt";
 
 export default defineConfig({
   site: "https://docs.plumix.dev",
+  // The site has no splash page: the IA spec makes Getting Started's
+  // Introduction the front door, so `/` lands there rather than on a second
+  // page competing to be first.
+  redirects: { "/": "/getting-started/introduction/" },
   integrations: [
     starlight({
       title: "Plumix",
