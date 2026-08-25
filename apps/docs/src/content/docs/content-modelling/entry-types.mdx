@@ -1,0 +1,215 @@
+---
+title: Entry Types
+description: Declare a kind of entry with registerEntryType, and read what its labels, hierarchy, archive and capabilities each control.
+tier: P0
+sidebar:
+  order: 20
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+An entry type is a registered kind of entry. You name one with `registerEntryType`, and the admin screens, the public URLs and the capability set all follow from the options you pass it.
+
+## Overview
+
+`registerEntryType(name, options)` takes the name that lands in the entry's `type` column, plus the options that tell the rest of the site how to treat those rows. Only `label` is required, and the defaults behind the rest are conservative. A type carrying nothing but a label is public and flat, has no archive route, and opts into no editor features.
+
+Nothing in the database changes when you register a type. Entries of every type share one `entries` table and are told apart by that `type` column, so a slug is unique per type rather than site-wide, and two types can both hold a `sicilian-caponata`.
+
+Registration happens inside a plugin's `setup`, which [Overview](/content-modelling/overview/) explains in full. Registering the same name twice throws at boot rather than letting the second registration win.
+
+## Quickstart
+
+<Steps>
+
+1. **Register the type.** Create `plugins/recipes.ts`:
+
+   ```ts
+   import { definePlugin } from "plumix/plugin";
+
+   export const recipes = definePlugin("recipes", {
+     setup: (ctx) => {
+       ctx.registerEntryType("recipe", {
+         label: "Recipes",
+         labels: { singular: "Recipe", plural: "Recipes" },
+         supports: ["title", "editor", "excerpt", "revisions", "autosave"],
+         hasArchive: true,
+         rewrite: { slug: "recipes" },
+       });
+     },
+   });
+   ```
+
+2. **Install it.** In `plumix.config.ts`, import `recipes` from `./plugins/recipes` and add it to the `plugins` array.
+
+3. **Start the dev server.**
+
+   ```sh
+   pnpm dev
+   ```
+
+   Recipes appears in the admin sidebar, listed at `/_plumix/admin/entries/recipes`. Publish Sicilian Caponata and it serves at `/recipes/sicilian-caponata`, listed on an archive at `/recipes`.
+
+</Steps>
+
+## Labels
+
+`label` is the sidebar string. `labels` holds the rest of the admin chrome, and every key in it is optional. Where one is missing the admin falls back to a generic noun-free string, so "Add New" rather than "Add Recipe".
+
+Every label accepts either a plain string or a Lingui message descriptor. A string is the right choice for a site that ships in one language; a descriptor is what makes the string translatable.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryType("recipe", {
+      label: "Recipes",
+      labels: {
+        singular: "Recipe",
+        plural: "Recipes",
+        addNewItem: "Add Recipe",
+        editItem: "Edit Recipe",
+        searchItems: "Search recipes…",
+        notFound: "No recipes yet",
+        itemPublished: "Recipe published",
+        moveToTrash: "Move recipe to trash?",
+      },
+    });
+  },
+});
+```
+
+`labels.plural` does one job beyond display. It becomes the admin URL segment, slugified by the manifest build, so "Recipes" gives `/_plumix/admin/entries/recipes`. Leave `plural` out and the slug falls back to the type name plus an `s`, which is fine for `recipe` and wrong for anything with an irregular plural. Two types whose plurals slugify to the same string fail the manifest build rather than shadowing each other in the admin router.
+
+There are 28 label keys in all. The full list, with what each one renders, belongs on the entry type reference page, which is not written yet.
+
+## Hierarchy
+
+`isHierarchical: true` gives entries of the type a parent. The editor grows a parent picker, the router matches nested URLs through a catch-all segment instead of a single slug, and the permalink builder walks the `parentId` chain to assemble the path. That is how `page`, from the pages plugin, serves `/about/team`.
+
+Reparenting is guarded on the way in. A parent must be an entry of the same type that the caller can already read, and the server walks the chain upward before writing, so it rejects `A` under `B` under `A` rather than storing it. The ancestor walk that builds a URL stops at 50 levels.
+
+`rewrite.isHierarchical: false` keeps the flat single-segment URL while the data stays a tree. Reach for it when the parent groups entries in the admin but should not appear in the address.
+
+Recipes are flat, so `recipe` leaves both alone.
+
+## Archives and URLs
+
+Two options decide the public shape of a type.
+
+`rewrite.slug` sets the URL prefix. With `rewrite: { slug: "recipes" }` a single recipe serves at `/recipes/:slug`. Drop `rewrite` and the prefix falls back to the type name, giving `/recipe/:slug`. Set it to the empty string and the type claims the site root, which is what the pages plugin does; the router sorts those root-level patterns after every other auto-generated rule so a page cannot swallow another type's URLs.
+
+`hasArchive` decides whether a listing route exists at all, and it is off unless you ask for it. `true` mounts the archive at the same prefix the singles use, so `/recipes` and `/recipes/page/2`. A string mounts it somewhere else, and has to be a single lowercase path segment.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryType("recipe", {
+      label: "Recipes",
+      labels: { singular: "Recipe", plural: "Recipes" },
+      hasArchive: "cookbook",
+      rewrite: { slug: "recipes" },
+      archivePerPage: 12,
+    });
+  },
+});
+```
+
+That registration serves single recipes under `/recipes/` and lists them at `/cookbook`, twelve to a page. `archivePerPage` defaults to 20.
+
+An archive lists entries that are `published` and carry a publish time. A scheduled recipe is absent until the cron flips it, and a draft never appears. [Statuses and Publishing](/content-modelling/statuses/) covers what each status makes visible.
+
+## Supports
+
+`supports` is the feature list a type opts into. Its type is `readonly string[]`, and the code accepts any string you put in it.
+
+<Aside type="note" title="This list is conventional, not closed">
+  There is no registry of valid `supports` values and no validation against one.
+  The values below are the ones core and the admin read today, and a plugin is
+  free to define its own. Treat an absent value as a feature nothing currently
+  reads, not as an error.
+</Aside>
+
+Five values change what the product does.
+
+- `title` renders the title input on the editor.
+- `editor` puts the entry on the block editor canvas. Omit `supports` altogether and the canvas is on anyway, which keeps types registered before the list existed working. Supply a `supports` array without `editor` and the entry gets the plain form instead.
+- `excerpt` renders the excerpt field.
+- `revisions` turns on snapshotting. Plumix captures nothing for a type that leaves it out.
+- `autosave` gives a published entry a per-user pending draft, so editing a live recipe writes to that draft until you promote it.
+
+`versioning` tunes the revision machinery, and Plumix reads it only when `revisions` is present. `maxRevisions` caps retained snapshots per entry at 25 by default, and `autosaveIntervalSeconds` sets the editor's autosave cadence, 60 by default.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryType("recipe", {
+      label: "Recipes",
+      labels: { singular: "Recipe", plural: "Recipes" },
+      supports: ["title", "editor", "excerpt", "revisions", "autosave"],
+      versioning: { maxRevisions: 50, autosaveIntervalSeconds: 30 },
+    });
+  },
+});
+```
+
+Plugin-defined values work the same way. The comments plugin enables discussion on a type that declares `comments`, and reads the array directly. The pages plugin declares `slug` on `page`, which nothing in core branches on today, and that is exactly what an open list permits.
+
+## Visibility
+
+`isPublic` is the master switch and defaults to `true`. Set it to `false` and the router compiles no routes for the type, while the permalink builder returns null for its entries. There is nothing public left to link to.
+
+Narrower flags cascade from it, and you set one only when you want a single surface to differ from the rest.
+
+- `showUI` supplies the default `showInSidebar` inherits, so turning it off takes the sidebar entry with it.
+- `showInSidebar` is the flag the admin reads. `false` drops the type from the sidebar and from the dashboard's quick-create tiles, which is how a plugin ships its own management page in place of the generic list.
+- `excludeFromSearch` keeps the type out of site search results while leaving its own URLs live.
+- `excludeFromGenericRpc` resolves the same way, from `isPublic`, and is recorded on the registration.
+
+## Capabilities
+
+Registering a type mints eight capabilities named `entry:<type>:<action>`, each mapped to a minimum role on the ladder `subscriber < contributor < author < editor < admin`.
+
+| Capability                      | Minimum role |
+| ------------------------------- | ------------ |
+| `entry:recipe:read`             | subscriber   |
+| `entry:recipe:create`           | contributor  |
+| `entry:recipe:edit_own`         | contributor  |
+| `entry:recipe:publish`          | author       |
+| `entry:recipe:edit_any`         | editor       |
+| `entry:recipe:delete`           | editor       |
+| `entry:recipe:read_revisions`   | editor       |
+| `entry:recipe:restore_revision` | editor       |
+
+`capabilities` raises or lowers the minimum role per action. `capabilityType` points a type's capabilities at another name, so two types sharing `capabilityType: "recipe"` pool one permission set rather than minting two.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryType("recipe", {
+      label: "Recipes",
+      labels: { singular: "Recipe", plural: "Recipes" },
+      capabilities: { publish: "editor", create: "author" },
+    });
+  },
+});
+```
+
+With that registration a contributor can no longer create a recipe, and publishing one takes an editor.
+
+## Related
+
+Taxonomies attach to an entry type through the `termTaxonomies` option, and [Taxonomies and Terms](/content-modelling/taxonomies/) covers both sides of that pairing. Everything a recipe stores beyond title, slug, content and excerpt is a [meta-box field](/fields/overview/). The routes described above are the router's default output, and [Permalinks and Slugs](/routing/permalinks/) covers reshaping them. Themes match a template against the type name, which [Template Hierarchy](/themes/hierarchy/) explains. The capability table is one half of the picture in [Access & Identity](/access/overview/); the other half is which role a principal holds.
+
+## Next steps
+
+Read [Taxonomies and Terms](/content-modelling/taxonomies/) to classify recipes by cuisine and diet, then [Statuses and Publishing](/content-modelling/statuses/) for what happens between a draft and a live URL. When the model is settled, [Meta Boxes](/fields/meta-boxes/) is where you attach the Recipe details card that holds prep time, servings and ingredients.
+
+Two built-in types are worth reading as worked registrations: [Blog](/plugins/blog/) registers `post` with no archive and a `posts` prefix, and [Pages](/plugins/pages/) registers a hierarchical `page` rooted at `/`.

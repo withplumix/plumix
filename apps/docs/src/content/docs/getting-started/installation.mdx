@@ -1,0 +1,143 @@
+---
+title: Installation
+description: Scaffold a Plumix project with pnpm create plumix-app, start the dev server, and claim the admin account with a passkey.
+tier: P0
+sidebar:
+  order: 20
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+One command writes a working project. The scaffolder asks four questions, installs dependencies, creates a local database and leaves you with a dev server and an admin waiting for its first passkey.
+
+## Overview
+
+`create-plumix-app` assembles a project rather than copying a fixed template. It reads the runtime you pick and the plugins you tick, then splices their imports, their config slots and their registrations into one `plumix.config.ts`. Choosing the media plugin is what puts `storage: r2({ binding: "MEDIA" })` in the config and an `r2_buckets` entry in `wrangler.jsonc`. Choosing none leaves both out.
+
+You need Node 22 or newer and one of npm, pnpm, yarn or bun. The scaffolder reads `npm_config_user_agent` to work out which manager invoked it and uses that one for the install; `--pm` overrides the guess.
+
+The target directory must not exist, or must be empty, and its parent must exist. Its last path segment becomes the project name, so it has to match npm's package grammar: lowercase letters, digits, and `-`, `_` or `.`, up to 214 characters. The name is spliced into `package.json`, into `wrangler.jsonc` and into the passkey relying-party name, so the scaffolder rejects an out-of-grammar name up front rather than emitting a project that will not build.
+
+## Quickstart
+
+Run the scaffolder with whichever package manager you use:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm create plumix-app my-site
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm create plumix-app my-site
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn create plumix-app my-site
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun create plumix-app my-site
+```
+
+  </TabItem>
+</Tabs>
+
+Then work through the rest:
+
+<Steps>
+
+1. **Answer the wizard.** It asks where to create the project, which runtime to target, which plugins to include, and which sign-in methods to add. Cloudflare is the only runtime today. Passkeys are always on, so the sign-in question is about what to layer beside them.
+
+2. **Let the post-scaffold steps run.** The scaffolder installs dependencies, runs `plumix migrate generate` and `plumix migrate apply --local`, then initializes a git repository and makes one commit. Each step is optional; each prints a recovery command if it fails.
+
+3. **Start the dev server.**
+
+   ```sh
+   cd my-site
+   pnpm dev
+   ```
+
+   Vite serves the worker at `http://localhost:5173`, against a local D1 database in `.wrangler`.
+
+4. **Claim the admin account.** Open `http://localhost:5173/_plumix/admin`. With no users in the database, the admin sends you to "Create admin account". Enter an email and an optional name, submit, and the browser runs the WebAuthn ceremony. The account you create this way is an admin. The role is decided inside the insert statement itself, so two people submitting the form at the same moment cannot both be elected.
+
+5. **Confirm the public site renders.** Open `http://localhost:5173`. The scaffolded theme greets you and links back to the admin.
+
+</Steps>
+
+<Aside
+  type="caution"
+  title="Change the dev port and the passkey stops verifying"
+>
+  The generated config pins the passkey origin to `http://localhost:5173`.
+  WebAuthn compares that string against the origin the browser reports, so
+  `plumix dev --port 3000` fails the ceremony with an origin mismatch. Change
+  `localOrigin` in `plumix.config.ts` to match whichever port you run.
+</Aside>
+
+## Registration closes after the first account
+
+The passkey registration endpoint counts the users table before it issues a challenge. Zero rows means bootstrap, and the request is allowed without a session. One row or more means registration is closed, and an unauthenticated request is refused with `registration_closed`. An already-signed-in user hitting the same endpoint is adding a device instead, and the email in the request has to match their own.
+
+So the first person to reach a fresh deploy owns it. Deploy and claim the account in the same sitting, or gate the deploy until you have.
+
+## Scaffolding without the wizard
+
+Every prompt has a flag, and `--yes` accepts the defaults for whatever you did not pass. That combination is what makes the scaffolder usable from a script or a CI job, where there is no terminal to prompt into. The wizard only runs on a real TTY and never under `CI`.
+
+```sh
+pnpm create plumix-app my-site --plugins blog,pages,media --pm pnpm --yes
+```
+
+The flags are:
+
+- `--runtime <id>` picks the runtime. Defaults to `cloudflare`.
+- `-p, --plugins <ids>` takes a comma-separated list. The ids are `blog`, `pages`, `menu`, `comments`, `media` and `audit-log`. Defaults to none.
+- `--pm <name>` forces `npm`, `pnpm`, `yarn` or `bun` instead of the detected one.
+- `--no-install` skips the dependency install.
+- `--no-db` skips generating and applying the local migration.
+- `--no-git` skips `git init` and the first commit.
+- `-y, --yes` accepts defaults for everything not flagged.
+
+Skipping a step is not skipping the work. A project whose migration never ran fails on the first request with a missing-table error, so run them yourself:
+
+```sh
+cd my-site
+pnpm install
+pnpm exec plumix migrate generate
+pnpm exec plumix migrate apply --local
+```
+
+`plumix migrate generate` writes the resolved schema to `.plumix/schema.ts` and hands it to drizzle-kit, which emits SQL into `drizzle/`. The tables come from core plus whatever tables your plugins declare, so adding a plugin that carries its own tables means generating again. `plumix migrate apply --local` runs those files against the local D1 database.
+
+## Adding a sign-in method later
+
+The wizard's sign-in question saves you an edit. It locks nothing in. Picking GitHub OAuth adds a `github(...)` provider to the `auth` block and writes `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` into `.dev.vars`. Picking magic links adds a `magicLink` block and sets `mailer: consoleMailer()`, which logs the sign-in link to the terminal instead of sending mail. Both are edits to `plumix.config.ts` you can make by hand afterwards.
+
+Cloudflare Access appears in the same list when the runtime is Cloudflare. It replaces the request authenticator rather than adding a login form, so the identity provider in front of the worker decides who the user is.
+
+<Aside type="note" title="Secrets never live in the config file">
+  A secret-bearing slot takes an `(env) => value` resolver rather than a literal, because on Workers
+  the secret arrives per request through the `env` binding and the config module is evaluated long
+  before any request. The scaffolder writes the matching `declare module "plumix"` block so the
+  resolver type-checks.
+</Aside>
+
+## Related
+
+[Project Structure](/getting-started/project-structure/) is the file-by-file account of what the scaffolder just wrote. [Configuration](/getting-started/configuration/) is the reference for the config file it assembled. [Passkeys](/access/passkeys/) covers the WebAuthn ceremony, the relying-party id and adding a second device. [Secrets](/deployment/secrets/) covers `.dev.vars`, `EnvInput` and production secrets. [Plugins](/plugins/overview/) covers installing and configuring the six official plugins.
+
+## Next steps
+
+Read [Project Structure](/getting-started/project-structure/) next, then model something. [Content Modelling](/content-modelling/overview/) shows how a local plugin registers an entry type, a taxonomy and a meta box, and it is the page every later section assumes you have read. When the model is settled, [Deploy Your Site](/getting-started/deploy/) takes the project to a live URL.

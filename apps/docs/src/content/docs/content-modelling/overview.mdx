@@ -1,0 +1,197 @@
+---
+title: Overview
+description: How Plumix models content, and why you declare an entry type, a taxonomy and a meta-box field inside a plugin.
+tier: P0
+sidebar:
+  order: 10
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+Plumix has no admin screen for inventing an entry type. You declare the model in TypeScript inside a plugin, and the site builds the admin UI, the public URLs and the capability checks from that declaration at boot.
+
+## The content model
+
+Four nouns carry the model.
+
+- An **entry** is one row of authored content. It has a type, a title, a slug, content, a status, an author and a meta bag.
+- An **entry type** is a registered kind of entry. `recipe` is one. `post` and `page` are two more, and they arrive from the [blog](/plugins/blog/) and [pages](/plugins/pages/) plugins rather than from core.
+- A **taxonomy** is a named way of classifying entries, and a **term** is one value in it. `cuisine` is a taxonomy, and Sicilian is one of its terms.
+- A **meta-box field** is a declared field that reads and writes one key in an entry's meta bag. `prepMinutes` is one.
+
+Storage under all four is generic. Every entry of every type is a row in one `entries` table, told apart by its `type` column, and a slug is unique per type rather than site-wide. Terms share a `terms` table keyed by `taxonomy`. Meta is a single JSON column on the row. Declaring an entry type creates no table and needs no migration.
+
+Registration is code, and the code lives in a plugin. `definePlugin` returns a descriptor, [`plumix.config.ts`](/getting-started/configuration/) lists that descriptor in its `plugins` array, and the site calls each descriptor's `setup` once at boot with a context of `register*` methods. There is no second route in. An entry type that no plugin registers does not exist.
+
+A plugin does not have to be published, and most are not. A typical site keeps one local plugin file that never leaves the repository. That file holds the model the site was built for, and any installed plugins sit beside it in the same array. Distribution is a mode rather than a kind. The descriptor you write for yourself and the descriptor `@plumix/plugin-blog` exports are the same object, made by the same function, and the site treats them identically. [Plugins](/plugins/overview/) covers installing one you did not write.
+
+Every example in this documentation models the same recipe site: a `recipe` entry type, a hierarchical `cuisine` taxonomy, a flat `diet` taxonomy, and a "Recipe details" meta box. Two recipes recur, Sicilian Caponata and Weeknight Ragu.
+
+## Quickstart
+
+<Steps>
+
+1. **Declare the type.** Create `plugins/recipes.ts`:
+
+   ```ts
+   import { definePlugin } from "plumix/plugin";
+
+   export const recipes = definePlugin("recipes", {
+     setup: (ctx) => {
+       ctx.registerEntryType("recipe", {
+         label: "Recipes",
+         labels: { singular: "Recipe", plural: "Recipes" },
+         supports: ["title", "editor", "excerpt", "revisions", "autosave"],
+         hasArchive: true,
+         rewrite: { slug: "recipes" },
+       });
+     },
+   });
+   ```
+
+2. **Install it.** In `plumix.config.ts`, import `recipes` from `./plugins/recipes` and add it to the `plugins` array. The array is the install order.
+
+3. **Start the dev server.**
+
+   ```sh
+   pnpm dev
+   ```
+
+   Recipes now has its own section in the admin sidebar, with a list page and an editor. Publish one and it serves at `/recipes/sicilian-caponata`, under an archive at `/recipes`.
+
+</Steps>
+
+## The plugin descriptor
+
+`definePlugin(id, { setup })` is all a plugin has to declare. The id has to match `/^[a-z][a-z0-9_-]*$/` and run to at most 64 characters, because it becomes a URL path segment, an RPC namespace key and an admin nav group id with no quoting anywhere. Listing two plugins with the same id throws at boot instead of letting one overwrite the other.
+
+`setup` receives the registration context and may be async. Beyond the content registrations below, that context carries [`registerBlock`](/blocks/overview/), `registerRoute`, `registerRestResource`, `registerSettingsGroup`, `registerScheduledTask`, `addFilter` and `addAction`, among others. One plugin can contribute to any part of the site, which is why a site's own plugin is a reasonable place to put a route or a hook that has nowhere else to go.
+
+The descriptor has optional slots that other sections of this documentation own: `version`, `schema` and `schemaModule` for a plugin carrying its own database tables, `adminEntry` for admin UI, `i18n` for translation catalogs, and `provides` for helpers other plugins consume. `provides` runs for every plugin before any `setup` runs, so a plugin that consumes another's helper does not have to be ordered after it.
+
+## Entries and entry types
+
+`registerEntryType` takes a name and its options. The name is what lands in the `type` column, and the rest describes how the admin, the router and the access layer treat those rows.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryType("recipe", {
+      label: "Recipes",
+      labels: { singular: "Recipe", plural: "Recipes" },
+      description: "Dishes with ingredients, timings and a method",
+      supports: ["title", "editor", "excerpt", "revisions", "autosave"],
+      termTaxonomies: ["cuisine", "diet"],
+      hasArchive: true,
+      rewrite: { slug: "recipes" },
+      archivePerPage: 12,
+    });
+  },
+});
+```
+
+Three parts of the site then read that one registration.
+
+The [router](/routing/overview/) compiles URLs from it. `rewrite.slug` fixes the prefix, so you get `/recipes` for the archive, `/recipes/page/:page` for its later pages, and `/recipes/:slug` for a single recipe. Drop `rewrite` and the prefix falls back to the type name, giving `/recipe/:slug`. Set `hasArchive: false` and the router compiles no archive route at all. Set `isHierarchical: true` and the single route becomes a nested catch-all, which is how `page` serves `/about/team`.
+
+The [access layer](/access/overview/) derives capabilities from it. Registering `recipe` mints eight, among them `entry:recipe:read`, `entry:recipe:create`, `entry:recipe:publish`, `entry:recipe:edit_any` and `entry:recipe:restore_revision`, each mapped to a minimum role. Nothing else in your code has to grant them.
+
+The admin builds its chrome from it. It reads the registration through the plugin manifest and renders the sidebar entry, the list page, the editor and the command-palette result. `labels` is what stops that chrome saying "Add Post" over a recipe form.
+
+`supports` is the feature list the type opts into, conventionally `title`, `editor`, `excerpt`, `slug`, `revisions` and `autosave`. Plumix never snapshots a type that leaves `revisions` out, and a type without `autosave` gets no per-user pending draft.
+
+## Taxonomies and terms
+
+You register a taxonomy the same way, and hierarchy is the choice that separates the two in the example. `cuisine` is hierarchical, so Sicilian sits under Italian and a term URL nests. `diet` is flat, so vegetarian, vegan and gluten-free are siblings.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerTermTaxonomy("cuisine", {
+      label: "Cuisines",
+      labels: { singular: "Cuisine", plural: "Cuisines" },
+      isHierarchical: true,
+      entryTypes: ["recipe"],
+      hasAdminColumn: true,
+    });
+
+    ctx.registerTermTaxonomy("diet", {
+      label: "Diets",
+      labels: { singular: "Diet", plural: "Diets" },
+      isHierarchical: false,
+      entryTypes: ["recipe"],
+    });
+  },
+});
+```
+
+You declare the pairing from both sides, and each side does a different job. `termTaxonomies` on the entry type puts the cuisine and diet pickers on the recipe editor. `entryTypes` on the taxonomy is what the cache purge reads, so editing the Sicilian term purges the recipe pages carrying it.
+
+Hierarchy also shapes the term URLs: `/cuisine/italian/sicilian` for the nested taxonomy, `/diet/vegetarian` for the flat one, each with a `/page/:page` variant.
+
+Terms are rows in the shared `terms` table, so a term's slug is unique within its taxonomy and a `cuisine` term and a `diet` term may both be called `italian`.
+
+## Statuses
+
+An entry is in one of four statuses: `draft`, `published`, `scheduled` or `trash`. A new row defaults to `draft`. A public request sees `published` and nothing else, because the read service clamps the status filter to what the caller may see. `trash` is a status rather than a deletion, so the row survives until something removes it.
+
+`scheduled` is the one status with a rule attached. Plumix rejects the write unless the entry carries a `publishedAt` in the future, so no scheduled entry is left with no time to fire at. The core `publish-scheduled` task runs every five minutes, flips each due entry to `published`, keeps the scheduled time as the publish time, and fires the same lifecycle hooks an editor publish fires. Cache purging and sitemap invalidation therefore run either way.
+
+<Aside type="caution" title="Scheduling needs a cron trigger">
+  The `publish-scheduled` task only fires if your deploy declares a matching
+  cron trigger in its [Cloudflare Workers](/deployment/cloudflare/)
+  configuration. Without one, scheduled entries stay scheduled and no error says
+  so.
+</Aside>
+
+## Meta-box fields
+
+Everything beyond title, slug, content and excerpt is meta. A meta box is a card of fields on an editor form, and declaring the box is the only way to register a meta key. There is no separate `registerMeta` step. The fields in the box are both the admin input contract and the server-side storage and validation contract, and the manifest build rejects two boxes that write the same key on one entry type.
+
+```ts
+import { number, repeater, select, text, user } from "plumix/fields";
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("recipe-details", {
+      label: "Recipe details",
+      entryTypes: ["recipe"],
+      fields: [
+        number("prepMinutes").label("Prep (minutes)").min(0),
+        number("cookMinutes").label("Cook (minutes)").min(0),
+        number("servings").min(1).required(),
+        select("difficulty").options(["easy", "medium", "hard"]),
+        repeater("ingredients").fields([
+          number("amount"),
+          text("unit"),
+          text("item").required(),
+        ]),
+        user("chef"),
+      ],
+    });
+  },
+});
+```
+
+`entryTypes` scopes the box, so this card appears on the recipe editor and nowhere else. Values land in the entry's `meta` column under the field keys, which means `prepMinutes` and the `ingredients` rows travel with the entry through one save. Registration refuses any key beginning `__plumix_`, because the framework reserves that prefix for its own meta.
+
+[Field types](/fields/field-types/) come from two places. `plumix/fields` carries the built-in builders, including the `user` reference used for `chef`, which stores a user id and resolves to the user at read time. Plugins contribute types of their own. The media plugin exports a `media` builder, and `media("heroImage")` is how the recipe box gets its hero image.
+
+Terms and users take meta boxes too, through `registerTermMetaBox` and `registerUserMetaBox`. The field shape is identical; only the scope differs.
+
+## Related
+
+Meta-box fields are one half of what an entry holds. The other half is its content, which Plumix stores as a [tree of blocks](/blocks/overview/) rather than as HTML, built from the [core blocks](/blocks/core-blocks/) every site boots with. [Themes](/themes/overview/) read entry types and taxonomies when they resolve a request to a template, so the names you choose here reappear in [template targeting](/themes/hierarchy/). The [access layer](/access/overview/) weighs the capabilities each registration derives against a principal's role. The URLs above are the router's default output, and [permalink settings and rewrite rules](/routing/permalinks/) can reshape them.
+
+## Next steps
+
+Read [Entry Types](/content-modelling/entry-types/) next for the full set of registration options, including hierarchy, visibility, per-type capability overrides and archive behaviour. [Taxonomies and Terms](/content-modelling/taxonomies/) goes deeper into classifying entries and scoping a taxonomy to more than one type. [Statuses and Publishing](/content-modelling/statuses/) covers the transitions between the four statuses and how scheduling behaves in practice.
+
+Two further pages in this section are not written yet. What they cover already ships. Revisions and Autosave describes the revision history an entry type gets from `supports: ["revisions"]`, the per-user autosave that sits alongside a published entry, and restoring an earlier version. Entry Type Reference is the exhaustive listing of every entry-type option and every label the admin chrome reads.
+
+When the model is settled, the [Fields](/fields/overview/) section takes over: what each field type stores, how the [fluent builders](/fields/builders/) make an invalid chain a compile error, and how a theme reads typed meta off an entry.

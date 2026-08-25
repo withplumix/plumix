@@ -1,0 +1,234 @@
+---
+title: Cloudflare Workers
+description: The Cloudflare runtime adapter, and the factories that fill the database, storage, KV, image and cache slots with D1, R2, Workers KV, Image Transformations and the edge cache.
+tier: P0
+sidebar:
+  order: 20
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+Cloudflare Workers is the runtime Plumix ships today. `@plumix/runtime-cloudflare` holds the adapter that bridges the Worker to Plumix, plus one small factory per platform service, and each factory goes in the config slot named after the job it does.
+
+## Overview
+
+The runtime is a slot like any other. `runtime: cloudflare()` tells Plumix which platform it is running on, and the rest of the package fills the slots beside it.
+
+| Factory            | Slot            | What it wires up                         |
+| ------------------ | --------------- | ---------------------------------------- |
+| `cloudflare()`     | `runtime`       | The Workers fetch and scheduled handlers |
+| `d1({ binding })`  | `database`      | A D1 database                            |
+| `r2({ binding })`  | `storage`       | An R2 bucket                             |
+| `kv({ binding })`  | `kv`            | A Workers KV namespace                   |
+| `images({ zone })` | `imageDelivery` | Cloudflare Image Transformations         |
+| `edge({ ttl })`    | `cache`         | The Workers Cache API and purge by tag   |
+
+Two more exports do not fill a slot. `cloudflareDeployOrigin` derives the passkey origin for whichever host this build is served on, and `cfAccess` replaces the request authenticator with a Cloudflare Access JWT check.
+
+Only `runtime`, `database` and `auth` are required. A site with no `storage` slot has no uploads, and a site with no `cache` slot renders every public page live.
+
+`cloudflare()` also tells the CLI where its commands live. That is how `plumix dev`, `plumix build`, `plumix deploy`, `plumix types` and `plumix migrate apply` exist at all. They come from the runtime rather than from core, and swapping the runtime swaps them.
+
+## Install
+
+`pnpm create plumix-app` installs this for you when you pick the Cloudflare runtime. Adding it to an existing project takes three packages, the runtime plus `wrangler` and the ambient Workers types.
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/runtime-cloudflare
+pnpm add -D wrangler @cloudflare/workers-types
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/runtime-cloudflare
+npm install -D wrangler @cloudflare/workers-types
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/runtime-cloudflare
+yarn add -D wrangler @cloudflare/workers-types
+```
+
+  </TabItem>
+</Tabs>
+
+## Quickstart
+
+<Steps>
+
+1. **Point the config at the runtime.** In `plumix.config.ts`:
+
+   ```ts no-typecheck
+   import { auth, plumix } from "plumix";
+
+   import {
+     cloudflare,
+     cloudflareDeployOrigin,
+     d1,
+   } from "@plumix/runtime-cloudflare";
+
+   import { recipes } from "./plugins/recipes";
+   import { theme } from "./theme";
+
+   export default plumix({
+     runtime: cloudflare(),
+     database: d1({ binding: "DB", session: "auto" }),
+     auth: auth({
+       passkey: {
+         rpName: "Recipes",
+         ...cloudflareDeployOrigin({
+           workerName: "recipes",
+           accountSubdomain: "your-account",
+           localOrigin: "http://localhost:5173",
+         }),
+       },
+     }),
+     plugins: [recipes],
+     theme,
+   });
+   ```
+
+2. **Declare the same names in `wrangler.jsonc`.**
+
+   ```jsonc
+   {
+     "name": "recipes",
+     "main": ".plumix/worker.ts",
+     "compatibility_date": "2026-04-01",
+     "compatibility_flags": ["nodejs_compat"],
+     "d1_databases": [
+       {
+         "binding": "DB",
+         "database_name": "recipes",
+         "database_id": "paste-the-id-from-wrangler-d1-create",
+         "migrations_dir": "drizzle",
+       },
+     ],
+     "assets": {
+       "directory": ".plumix/public",
+       "binding": "ASSETS",
+       "not_found_handling": "none",
+     },
+     "triggers": {
+       "crons": ["0 3 * * *", "*/5 * * * *"],
+     },
+   }
+   ```
+
+3. **Run it.**
+
+   ```sh
+   plumix dev
+   ```
+
+   The dev server runs the real Worker under `workerd` through Vite, against a local D1 file. What you exercise locally is the same handler the deploy runs.
+
+</Steps>
+
+<Aside type="caution" title="nodejs_compat is not optional">
+  Plumix carries its request context in `AsyncLocalStorage`. Without
+  `"compatibility_flags": ["nodejs_compat"]` the bundle fails to load with a
+  `module not found: node:async_hooks` error at the first request, and the
+  adapter raises a second, clearer error if the runtime stubs the symbol
+  instead.
+</Aside>
+
+## D1 and the database slot
+
+`d1({ binding })` wraps the D1 binding in Drizzle, with `casing: "snake_case"` so the generated migrations and the runtime queries agree on column names.
+
+The `session` option decides how reads are routed, and it takes three values.
+
+`"disabled"` is the default. Every read and write goes to the primary database, so a read always sees the write that preceded it.
+
+`"auto"` turns on the D1 Sessions API. Writes go to the primary. A read from a request carrying a Plumix session cookie resumes the caller's prior bookmark when one is present and well formed, so a signed-in editor never reads behind their own write. Anonymous reads go to the nearest replica.
+
+`"primary-first"` uses the Sessions API but defaults to the primary, so you get the bookmark machinery without nearest-replica routing.
+
+Under `"auto"` and `"primary-first"`, Plumix carries the bookmark in a cookie named `__plumix_d1_bookmark`, and writes it only for authenticated requests. Rename it with `bookmarkCookie` if that collides with something. If the deployed `workerd` predates the Sessions API, the adapter falls back to the plain binding rather than failing.
+
+## R2 and the storage slot
+
+`r2({ binding })` gives the site server-side reads, writes, listing and deletes against a bucket. Two capabilities beyond that are conditional.
+
+Public URLs need a base. Pass `publicUrlBase: "https://media.recipes.example"` or set the `<BINDING>_PUBLIC_URL_BASE` env key, which for the conventional `MEDIA` binding is `MEDIA_PUBLIC_URL_BASE`. With neither, the storage slot returns `null` for an object's public URL, and a plugin that needs one serves the file through the Worker instead. That default is deliberate. A bucket with no custom domain would otherwise hand out storage keys that nobody can guess but that nothing re-checks against the entry's status.
+
+Presigned uploads need S3 credentials, because an R2 binding cannot mint a presigned URL. Supply them as `s3: { bucket, accountId, accessKeyId, secretAccessKey }`, or as an `(env) => ...` resolver, or leave the option off and set four env keys: `CF_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `<BINDING>_BUCKET`. All four have to be present. With a partial set, presigned uploads stay switched off rather than failing at upload time. Presigned PUT URLs expire after 60 seconds unless the caller asks for longer.
+
+## Images
+
+`images()` builds Cloudflare Image Transformations URLs of the form `/cdn-cgi/image/width=800,format=webp/<source>`. It resizes and re-encodes what is already in your bucket, so it pairs with `r2` rather than replacing it, and the zone has to have Image Transformations enabled in the dashboard first.
+
+`zone` is a bare hostname with no scheme and no path. Omit it and the adapter reads `MEDIA_PUBLIC_URL_BASE` at request time, which pairs automatically only with a bucket bound as `MEDIA`. With no zone resolved either way, image delivery is absent and `<Image>` renders the source URL untouched.
+
+## KV
+
+`kv({ binding })` binds a Workers KV namespace onto the request context as `ctx.kv`, with `get`, `put`, `delete` and `list` over string values. Core reads nothing from it. The slot is there for plugin handlers that want a cheap key/value store, and `memoryKv()` from `plumix` stands in for it in tests.
+
+Workers KV rejects an `expirationTtl` under 60 seconds at write time, so treat that as the floor.
+
+## The edge cache
+
+`edge({ ttl, staleWhileRevalidate })` caches public pages in the Workers Cache API and purges them by cache tag through the zone API. You add it to the config as `cache: edge({ ttl: 3600, staleWhileRevalidate: 86400 })`. `ttl` becomes `s-maxage` in seconds, and `staleWhileRevalidate` is how long a colo may serve an expired copy while it refetches.
+
+The slot disables itself unless the Worker env carries both `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN`. That is not a convenience check. Without a zone and a purge token the site could store a page it can never purge, so caching stays off and every page renders live. This is why a `workers.dev` deploy sees no caching even with the slot configured.
+
+Four route kinds are cacheable: a single entry, an archive, a taxonomy archive and the front page. Search is excluded, because one cache entry per query string pollutes the cache for no gain. A request that carries a session cookie, an `Authorization` header, a `?preview=` token or `?plumix.edit` bypasses the cache entirely, and stored responses have their `Set-Cookie` headers stripped before they are written.
+
+Publishing a recipe queues a purge for the tags its pages were stored under, and the runtime defers that call past the response, so a failed purge is logged rather than failing the publish. The tag vocabulary itself belongs to the caching page, which is not written yet.
+
+## Passkey origins across deploys
+
+A passkey is bound to a hostname. Workers Builds gives production `recipes.your-account.workers.dev` and each branch `<branch>-recipes.your-account.workers.dev`, so hardcoding one origin means re-enrolling on every preview.
+
+`cloudflareDeployOrigin` reads the `WORKERS_CI` and `WORKERS_CI_BRANCH` variables Workers Builds injects at build time and returns `rpId`, `origin` and `allowedOrigins` together. Spread all three into `passkey`, as the Quickstart above does. `rpId` anchors to `your-account.workers.dev`, the registrable domain every deploy shares, and `allowedOrigins` is the wildcard `https://*.your-account.workers.dev`, so one passkey verifies on production and on every branch. Outside Workers Builds it falls back to `localhost` and your `localOrigin`, which defaults to `http://localhost:8787`.
+
+Production on a custom domain is the one case that needs a second field. Workers Builds does not expose the custom domain, so pass `productionOrigin: "https://recipes.example"`. The default branch then anchors to that hostname while preview branches stay on `workers.dev`. A custom domain and `workers.dev` are different registrable domains, so no single passkey covers both, and previews then need magic-link or Cloudflare Access to sign in.
+
+## Cloudflare Access
+
+`cfAccess` replaces the request authenticator with a check on the `Cf-Access-Jwt-Assertion` header that Cloudflare Access sets once a request has passed the application's policy.
+
+```ts no-typecheck
+import { auth } from "plumix";
+
+import { cfAccess } from "@plumix/runtime-cloudflare";
+
+export const recipeAuth = auth({
+  passkey: {
+    rpName: "Recipes",
+    rpId: "recipes.example",
+    origin: "https://recipes.example",
+  },
+  authenticator: cfAccess({
+    teamDomain: "your-team.cloudflareaccess.com",
+    audience: "your-cf-access-aud",
+    defaultRole: "editor",
+  }),
+  bootstrapVia: "first-method-wins",
+});
+```
+
+`teamDomain` has to end in `.cloudflareaccess.com`, and the adapter rejects anything else at boot rather than failing every request later. `audience` is the application's AUD tag from the Access dashboard, checked against the JWT's `aud` claim so a token minted for a different application on the same team is refused. `defaultRole` is required, because the Access JWT carries an email and an identity provider but no Plumix role.
+
+The built-in sign-in routes stay mounted underneath. Firewall `/_plumix/auth/*` at the edge if you want Access to be the only way in, or leave them live to keep passkeys as a fallback.
+
+## Commands the runtime adds
+
+`plumix dev` boots Vite with `@cloudflare/vite-plugin` and takes `--port` and `--inspector-port`. `plumix build` builds the client environment first and the worker second, because the worker bakes the client's asset manifest into its bundle. `plumix deploy` and `plumix types` forward to `wrangler deploy` and `wrangler types` with your arguments appended. `plumix migrate apply` forwards to `wrangler d1 migrations apply`, reading the database name out of your wrangler config when you do not name one.
+
+## Related
+
+[Bindings and Environment](/deployment/bindings/) covers the naming contract these factories rest on and what happens when a name is wrong. [Secrets](/deployment/secrets/) covers the `(env) => value` resolver form, which is how R2's S3 credentials reach the adapter without being written into the config file. The passkey story here is one half of [Passkeys](/access/passkeys/), which covers enrolment and the bootstrap rail.
+
+## Next steps
+
+Go to [Bindings and Environment](/deployment/bindings/) for the wrangler side of every `binding` string above, then [Secrets](/deployment/secrets/) for the values that never appear in either file. [Configuration](/getting-started/configuration/) lists every slot these factories plug into, including the ones no Cloudflare adapter fills.

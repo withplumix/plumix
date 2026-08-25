@@ -1,0 +1,196 @@
+---
+title: Meta Boxes
+description: Registering a card of fields on the entry editor, the term form or the user form.
+tier: P0
+sidebar:
+  order: 20
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+A meta box is a registered card of fields. It is where the fields appear in the admin and, at the same time, the declaration of which meta keys the server will accept for that entity.
+
+## Overview
+
+Three calls register one, and they differ only in what the box is scoped to.
+
+- `ctx.registerEntryMetaBox(id, options)` puts a card on the entry editor, scoped by `entryTypes`.
+- `ctx.registerTermMetaBox(id, options)` puts a card on the term edit form, scoped by `termTaxonomies`.
+- `ctx.registerUserMetaBox(id, options)` puts a card on the user edit form. Users have a flat meta keyspace, so there is no scope to pass.
+
+All three take the same option shape underneath. `label` names the card, `description` prints under that name, `fields` is the array of builders, `priority` orders the card against its siblings, and `capability` decides who sees it. Every one of them is scoped to the entity kind it was registered for, so an `id` may repeat across the three calls without colliding.
+
+The `id` is a registration key rather than anything a reader sees. It appears in the manifest, in the drift message when two boxes claim one meta key, and in the type-level declaration that gives a box typed reads. Registering the same id twice on the same surface throws `DuplicateRegistrationError` at boot.
+
+## Quickstart
+
+<Steps>
+
+1. **Write the box.** In `plugins/recipes.ts`, register it inside the plugin's `setup`:
+
+   ```ts
+   import { number, repeater, select, text, user } from "plumix/fields";
+   import { definePlugin } from "plumix/plugin";
+
+   export const recipes = definePlugin("recipes", {
+     setup: (ctx) => {
+       ctx.registerEntryMetaBox("recipe-details", {
+         label: "Recipe details",
+         description: "Timings, yield and the method's shopping list",
+         entryTypes: ["recipe"],
+         priority: 10,
+         fields: [
+           number("prepMinutes").label("Prep (minutes)").min(0),
+           number("cookMinutes").label("Cook (minutes)").min(0),
+           number("servings").min(1).required(),
+           select("difficulty").options(["easy", "medium", "hard"]),
+           repeater("ingredients")
+             .fields([number("amount"), text("unit"), text("item").required()])
+             .collapsed("item")
+             .min(1),
+           user("chef").roles(["author", "editor"]),
+         ],
+       });
+     },
+   });
+   ```
+
+2. **Install it.** In `plumix.config.ts`, import `recipes` from `./plugins/recipes` and add it to the `plugins` array.
+
+3. **Open a recipe.** Sicilian Caponata now shows a "Recipe details" card in the editor's right rail. The ingredients repeater adds rows, each collapsing to its `item` value, and the chef picker lists only users whose role is author or editor.
+
+</Steps>
+
+The recipe box takes one more field, `heroImage`, and it comes from a plugin. The media plugin ships a `media` builder that registers alongside the built-in ones, so `media("heroImage").accept("image/").featured()` slots into the same `fields` array. [Field Types](/fields/field-types/) covers what it stores and what `.featured()` does.
+
+## Entry meta boxes
+
+`entryTypes` is the scope, and it is a list, so one box can serve several types.
+
+```ts
+import { text, textarea } from "plumix/fields";
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("share-card", {
+      label: "Share card",
+      entryTypes: ["recipe", "post"],
+      fields: [
+        text("shareTitle").maxLength(70).showInApi(),
+        textarea("shareSummary").maxLength(200).showInApi(),
+      ],
+    });
+  },
+});
+```
+
+Both keys are now declared on `recipe` and on `post`, and an entry of any other type rejects a write to either.
+
+Every registered entry box renders as a collapsible section in the editor's right rail, which is fixed at 256px. Fields there always take the full row. `EntryMetaBoxOptions` still accepts a `location` of `"bottom"` or `"sidebar"`, but the editor stopped partitioning boxes by it. It is deprecated, and new code leaves it out.
+
+## Term meta boxes
+
+`termTaxonomies` is the scope, and the form stacks one card per box.
+
+```ts
+import { color, textarea } from "plumix/fields";
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerTermMetaBox("cuisine-details", {
+      label: "Cuisine details",
+      termTaxonomies: ["cuisine"],
+      fields: [
+        textarea("about").maxLength(400).span(12),
+        color("accent").default("#b45309").span(4),
+      ],
+    });
+  },
+});
+```
+
+Editing the Sicilian term now writes `about` and `accent` into that term's own meta. A term box scoped to `cuisine` leaves `diet` terms alone.
+
+## User meta boxes
+
+Users have one flat keyspace. There is no scope argument, so every registered user box appears on every user's form.
+
+```ts
+import { text, url } from "plumix/fields";
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerUserMetaBox("chef-profile", {
+      label: "Chef profile",
+      fields: [
+        text("kitchen").description("Where this chef cooks"),
+        url("website").placeholder("https://"),
+      ],
+    });
+  },
+});
+```
+
+This is the box behind the `chef` reference in the recipe details card. The recipe stores a user id, the user row stores the profile, and a theme reading `chef` gets the user summary back.
+
+## Ordering and layout
+
+`priority` orders cards within their region. Lower runs first, a box that omits it sorts last, and ties break alphabetically by `id`. It is the same convention entry types use for the admin sidebar, so a site can order its whole admin on one scale.
+
+Fields lay out on a 12-column grid inside the card. `.span(4)` gives a field a third of the row, `.span(12)` the whole row, and omitting it means full width. The object form is mobile-first, so `.span({ base: 12, md: 6 })` stacks on a narrow card and pairs on a wide one. Those breakpoints key off the card's own width rather than the viewport, which is what keeps a box laid out the same whether it lands in a full-width route or a narrow rail. Values outside 1 to 12 are clamped when the field renders.
+
+The entry editor's rail is the exception. It is too narrow to divide, so it accepts `span` and ignores it, and the entry wire projection strips the property.
+
+## Who sees a box
+
+`capability` on the box is a display filter. The admin hides a card from a viewer whose capability set lacks it, and that is all it does.
+
+<Aside type="danger" title="Box capability is not a write gate">
+  The server enforces only the entity-level write gate, meaning
+  `<entryType>:edit*`, `<taxonomy>:edit`, `user:edit` or `settings:manage`.
+  Any user who can write the entity can write any field registered on it
+  through the raw RPC, whatever `capability` the box carries. Do not put a
+  secret behind it.
+</Aside>
+
+`capability` on a field is a real gate. The admin hides the field, and the server rejects any write that includes that field's key, counting deletes as writes so a viewer cannot blank a value they cannot see. It applies to top-level fields only. A capability on a repeater subfield is ignored, because a row's gate is the gate on the repeater that holds it.
+
+```ts
+import { number, text } from "plumix/fields";
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("recipe-costing", {
+      label: "Costing",
+      entryTypes: ["recipe"],
+      capability: "entry:recipe:edit_any",
+      fields: [
+        number("unitCost").min(0).capability("entry:recipe:edit_any"),
+        text("supplier").capability("entry:recipe:edit_any"),
+      ],
+    });
+  },
+});
+```
+
+## What registration refuses
+
+Six checks run, and each one throws rather than degrading.
+
+A field key outside `/^[a-zA-Z0-9_:-]+$/` is refused, because the RPC input schema would reject it later. A key starting `__plumix_` is refused, because core reserves that prefix. Two fields in one box sharing a key are refused. A `visibleWhen` rule naming a key no field in the box declares is refused, and the check runs in a second pass so the driver may be declared after the field that reads it. A box carrying more than 200 fields is refused, which caps the admin's per-request payload and flags a modelling problem. Repeater and group subfields get their own pass, adding a rejection for `__proto__`, `constructor` and `prototype`, which match the key pattern but would poison a row object.
+
+One check waits until the manifest is built, because it is about two registrations at once. Two boxes declaring the same field key on the same scope fail with both box ids in the message, so `box-a` and `box-b` both claiming `title` on `post` stops the boot.
+
+## Related
+
+Every registration here happens inside a plugin's `setup`, and [Content Modelling](/content-modelling/overview/) is where that descriptor is explained. The `entryTypes` scope names types declared with [Entry Types](/content-modelling/entry-types/), and `termTaxonomies` names ones declared with [Taxonomies and Terms](/content-modelling/taxonomies/). The capability strings above come from the per-type set an entry-type registration mints, described in [Access & Identity](/access/overview/).
+
+## Next steps
+
+[Field Types](/fields/field-types/) is the roster of what can go in a `fields` array, including the reference fields the `chef` picker is built from. [Field Builders](/fields/builders/) covers the chain every builder shares, and the declaration that turns a box into typed `entry.meta` reads in a theme.
+
+Settings groups reuse this exact field shape with per-group storage and their own save button. That page is not written yet.

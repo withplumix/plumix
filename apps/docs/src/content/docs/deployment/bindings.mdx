@@ -1,0 +1,182 @@
+---
+title: Bindings and Environment
+description: How a name declared in wrangler.jsonc becomes the D1 handle, R2 bucket or KV namespace that a Plumix config slot reads at request time.
+tier: P0
+sidebar:
+  order: 30
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+A binding is a name. You declare it once in `wrangler.jsonc` against a real Cloudflare resource, you write the same name into a config slot, and Cloudflare puts the live object on the Worker `env` under that name when a request arrives.
+
+## Overview
+
+Nothing in `plumix.config.ts` holds a database handle. `d1({ binding: "DB" })` stores the two-character string `DB`, because the config module evaluates on your machine during the build and no Worker env exists yet. The runtime adapter resolves the string against the real `env` on every request.
+
+That indirection is what lets one config serve every deploy. Production, a preview branch and your laptop all run the same bundle with a different `DB` bound behind the same name.
+
+Three config slots take a binding name, and each expects a different kind of resource.
+
+- `database: d1({ binding })` reads a D1 database declared under `d1_databases`.
+- `storage: r2({ binding })` reads an R2 bucket declared under `r2_buckets`.
+- `kv: kv({ binding })` reads a Workers KV namespace declared under `kv_namespaces`.
+
+A fourth name is not yours to choose. The admin's static files reach the browser through a Fetcher that has to be bound as `ASSETS`, and the section below says what breaks otherwise.
+
+Plain values live on the same `env`. Anything in the wrangler `vars` block arrives as a string, and so does anything set with `wrangler secret put`. Some Cloudflare adapters look for particular keys there by convention, which is the last section on this page.
+
+## Quickstart
+
+Add an R2 bucket to the recipe site so the [`heroImage` media field](/fields/field-types/) has somewhere to store files.
+
+<Steps>
+
+1. **Create the bucket.**
+
+   ```sh
+   wrangler r2 bucket create recipes-media
+   ```
+
+2. **Declare it.** In `wrangler.jsonc`:
+
+   ```jsonc
+   {
+     "r2_buckets": [
+       {
+         "binding": "MEDIA",
+         "bucket_name": "recipes-media",
+       },
+     ],
+   }
+   ```
+
+   `binding` is the name your code sees. `bucket_name` is the name Cloudflare knows. They may differ, and R2's S3 API addresses the bucket by `bucket_name` rather than by the binding.
+
+3. **Name it in the config slot.** `storage: r2({ binding: "MEDIA" })`, spelled exactly as the wrangler entry spells it.
+
+4. **Regenerate the env types.**
+
+   ```sh
+   plumix types
+   ```
+
+   This forwards to `wrangler types`, which reads your wrangler config and writes `worker-configuration.d.ts` declaring one member of `Cloudflare.Env` per binding.
+
+5. **Restart the dev server.** `plumix dev` reads the wrangler config at boot, so a new binding needs a restart rather than a reload.
+
+</Steps>
+
+## What checks the names
+
+The adapter walks the `database`, `storage` and `kv` slots for the bindings they declared as required, then asserts every one of those names is present on `env`. The check runs once per Worker isolate and the result is memoized, so it costs nothing after the first request.
+
+A failure produces one 500 response naming every missing binding at once.
+
+```json
+{
+  "error": "bindings_missing",
+  "message": "@plumix/runtime-cloudflare: missing required env bindings: DB, MEDIA. Declare them in wrangler.toml and ensure the names match the adapter config.",
+  "missing": ["DB", "MEDIA"]
+}
+```
+
+The body carries the detail on purpose. A missing binding is deploy metadata rather than user input, so an operator with no access to `wrangler tail` can still read what went wrong over plain HTTP.
+
+Past that check, each adapter validates the shape of what it found. A name bound to the wrong kind of resource fails with a message naming the binding, because `r2()` probes for a `put` method and `kv()` probes for a `get` before using either.
+
+<Aside type="tip" title="Typos surface at the first request, not at deploy">
+  `wrangler deploy` is happy to ship a Worker whose config names a binding your
+  code never reads, or reads under another spelling. The mismatch shows up on
+  the first request. Hit the deployed site once after changing a binding name.
+</Aside>
+
+## The ASSETS binding
+
+Static files reach the browser through Workers Assets, and Plumix expects that Fetcher to be bound as `ASSETS`.
+
+```jsonc
+{
+  "assets": {
+    "directory": ".plumix/public",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+  },
+}
+```
+
+This name is convention rather than configuration. Bind the Fetcher as something else and requests to `/_plumix/admin/*` fall through to an `admin-not-available` response, because the dispatcher has no other way to reach the staged SPA. `not_found_handling: "none"` matters too. It hands an unmatched path back to the Worker so Plumix can route it, rather than letting the asset layer answer with a 404 first.
+
+## Typing the env
+
+Two mechanisms fill in the type of the `env` your resolvers receive, and they cover different things.
+
+`wrangler types` covers whatever the wrangler config declares. It emits members of the `Cloudflare.Env` interface, and importing `@plumix/runtime-cloudflare` makes `PlumixEnv` extend that interface. So a binding you declared in `wrangler.jsonc` becomes typed on `env` with no further work, once you have run `plumix types`.
+
+Everything else you declare yourself, through the one augmentation specifier Plumix uses.
+
+```ts
+import type { PlumixEnv } from "plumix";
+
+declare module "plumix" {
+  interface PlumixEnv {
+    readonly CF_ZONE_ID: string;
+    readonly CF_CACHE_PURGE_TOKEN: string;
+  }
+}
+
+export function purgeToken(env: PlumixEnv): string {
+  return env.CF_CACHE_PURGE_TOKEN;
+}
+```
+
+Put that beside your config. Augmenting `"plumix"` is the whole rule, and reaching for `@plumix/core` here would open a second, separate interface that neither half sees. The augmentation applies only in a file where `plumix` is already part of the compilation, which your config file guarantees by importing from it.
+
+## Vars against secrets
+
+The wrangler `vars` block is for values that may sit in your repository. The Turnstile site key on a demo deploy is one, because it ships in the page HTML anyway. Anything else belongs in a secret, and both arrive on `env` as strings, indistinguishable at read time.
+
+Wrangler will also assert that a secret exists before a deploy goes out, if you list it:
+
+```jsonc
+{
+  "secrets": {
+    "required": ["TURNSTILE_SECRET_KEY"],
+  },
+}
+```
+
+That declares the name, never the value. [Secrets](/deployment/secrets/) covers how the value gets there and how a slot reads it.
+
+## Keys the Cloudflare adapters read by convention
+
+Three adapters look for particular env keys when you have not passed the value in config. Set them as vars or as secrets, whichever the value warrants.
+
+| Key                         | Read by                                      | Effect when absent                                                |
+| --------------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
+| `MEDIA_PUBLIC_URL_BASE`     | `r2({ binding: "MEDIA" })`, `images()`       | Object URLs resolve to `null` and images are served untransformed |
+| `<BINDING>_PUBLIC_URL_BASE` | `r2({ binding })` for any other binding name | Same, for that bucket                                             |
+| `<BINDING>_BUCKET`          | `r2({ binding })`                            | Presigned uploads stay off                                        |
+| `CF_ACCOUNT_ID`             | `r2()`                                       | Presigned uploads stay off                                        |
+| `R2_ACCESS_KEY_ID`          | `r2()`                                       | Presigned uploads stay off                                        |
+| `R2_SECRET_ACCESS_KEY`      | `r2()`                                       | Presigned uploads stay off                                        |
+| `CF_ZONE_ID`                | `edge()`                                     | The edge cache stays off and pages render live                    |
+| `CF_CACHE_PURGE_TOKEN`      | `edge()`                                     | The edge cache stays off and pages render live                    |
+
+The four R2 credential keys are read as a set. A partial set leaves presigned uploads switched off rather than failing at the moment someone tries to upload a hero image. `edge()` behaves the same way with its pair, which is what makes the cache slot safe to leave in the config of a `workers.dev` deploy.
+
+Passing the value in config beats the env key. `r2({ publicUrlBase })` and `images({ zone })` both win over what the env carries.
+
+## Local development
+
+`plumix dev` runs the Worker under `workerd` with a local stand-in for every binding, persisted under `.wrangler/` in your project. The placeholder `database_id` the scaffolder writes is enough for all of it. Nothing touches your Cloudflare account until you pass `--remote` to a migration or run `plumix deploy`.
+
+That is also why the first remote deploy needs `wrangler d1 create` and a real `database_id`. Local dev never asked for one, so the omission stays invisible until deploy time.
+
+## Related
+
+[Cloudflare Workers](/deployment/cloudflare/) documents what each adapter does with the binding once it has resolved. [Secrets](/deployment/secrets/) covers the values that must not appear in `wrangler.jsonc` at all. [Project Structure](/getting-started/project-structure/) is where the generated `.plumix/` directory and the rest of a scaffolded repository are catalogued.
+
+## Next steps
+
+Read [Secrets](/deployment/secrets/) next, since half the env keys above are credentials. [Configuration](/getting-started/configuration/) lists every config slot, including the ones no binding backs. For the shape of the whole deploy, go back to [Overview](/deployment/overview/).

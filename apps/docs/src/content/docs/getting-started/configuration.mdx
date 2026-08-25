@@ -1,0 +1,382 @@
+---
+title: Configuration
+description: plumix.config.ts, the three slots it requires, the seventeen it accepts, and how a secret reaches one through an EnvInput resolver.
+tier: P0
+roster: true
+sidebar:
+  order: 40
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+`plumix.config.ts` default-exports one call to `plumix()`. Three slots are required, seventeen are optional, and each one is either a value or a factory from the package that owns it.
+
+## Overview
+
+The config file is the CLI's entry point and the worker's. `plumix dev`, `plumix build`, `plumix deploy`, `plumix migrate generate` and `plumix doctor` all load it first, and `--config <path>` points them somewhere other than `plumix.config.ts` in the project root.
+
+```ts no-typecheck
+import { auth, plumix } from "plumix";
+
+import {
+  cloudflare,
+  cloudflareDeployOrigin,
+  d1,
+} from "@plumix/runtime-cloudflare";
+
+import { recipes } from "./plugins/recipes";
+import { theme } from "./theme";
+
+export default plumix({
+  runtime: cloudflare(),
+  database: d1({ binding: "DB", session: "auto" }),
+  auth: auth({
+    passkey: {
+      rpName: "Recipes",
+      ...cloudflareDeployOrigin({
+        workerName: "recipes",
+        accountSubdomain: "your-account",
+        localOrigin: "http://localhost:5173",
+      }),
+    },
+  }),
+  plugins: [recipes],
+  theme,
+});
+```
+
+`plumix()` returns a resolved config rather than the object you passed. Four slots gain a default on the way through. A missing `theme` becomes the built-in welcome theme, a missing `plugins` becomes an empty array, a missing `redirects` becomes an empty array, and a missing `i18n` becomes English only. `basePath` is normalized, so `docs`, `/docs` and `/docs/` all resolve to `/docs`.
+
+One cross-slot rule is checked here rather than at request time: `auth.magicLink` without a `mailer` throws at build. Email sign-in with nothing to send the email through would otherwise fail silently on the first sign-in attempt.
+
+Every slot below is optional unless it appears under "Required slots". Leaving one out is a decision with a consequence rather than an oversight. With no `cache` slot every public page renders live; with no `storage` slot there is nowhere for uploads to go; with no `mcp` or `api` block the dispatcher returns 404 for those paths before it imports either handler graph.
+
+## Secrets and EnvInput
+
+A slot that carries a secret does not take the secret. It takes `EnvInput<T>`, which is `T | ((env: PlumixEnv) => T)`. Pass a literal value, or pass a resolver that derives one from the runtime environment.
+
+The resolver form exists because of when things happen. On Workers a secret arrives per request through the `env` binding, and the config module is evaluated long before any request. A literal would have to be in the file, which means in git. A resolver runs later, with `env` in hand.
+
+`PlumixEnv` is an interface you extend, which is what makes `env.RESEND_API_KEY` type-check rather than resolve to `any`:
+
+```ts
+import type { EnvInput, Mailer } from "plumix";
+
+declare module "plumix" {
+  interface PlumixEnv {
+    readonly RESEND_API_KEY: string;
+  }
+}
+
+export const resend: EnvInput<Mailer> = (env) => ({
+  async send(message) {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${env.RESEND_API_KEY}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Recipes <hello@recipes.example.com>",
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+      }),
+    });
+    if (!response.ok) throw new Error(`resend: ${String(response.status)}`);
+  },
+});
+```
+
+The resolver runs once per isolate rather than once per request. The result is memoized by the resolver's identity, so a value that owns a connection, such as an SMTP transport or a pooled client, is built once and reused. `env` is stable across an isolate's lifetime, which is what makes that safe.
+
+The slots that take an `EnvInput` are `mailer`, the passkey `origin` and `allowedOrigins`, and each OAuth provider's client credentials. Locally their values come from `.dev.vars`; in production they are secrets on the deploy.
+
+<Aside type="caution" title="T has to be a non-callable value">
+  `resolveEnvInput` tells a literal from a resolver with `typeof input ===
+  "function"`. Every slot that accepts an `EnvInput` today resolves to an
+  object, so the test is unambiguous. A slot whose value were itself a function
+  could not use this form.
+</Aside>
+
+## Required slots
+
+### runtime
+
+The runtime adapter. It builds the fetch handler and the scheduled handler, contributes the `dev`, `build`, `deploy` and `types` commands to the CLI, and resolves the platform bindings the other slots name. Cloudflare Workers is the one shipped adapter.
+
+```ts no-typecheck
+import { cloudflare } from "@plumix/runtime-cloudflare";
+
+export const runtime = cloudflare();
+```
+
+### database
+
+The database adapter. `d1` is the Cloudflare one; `session: "auto"` opts into D1's Sessions API so reads can go to a replica. The alternative shipped today is `libsql` from `plumix/db/libsql`, a single endpoint with strong consistency and no replica hook.
+
+```ts no-typecheck
+import { d1 } from "@plumix/runtime-cloudflare";
+
+export const database = d1({ binding: "DB", session: "auto" });
+```
+
+### auth
+
+Sign-in and session policy. `passkey` is required inside it, and everything else is opt-in: `oauth` providers, `magicLink`, a `sessions` policy, a replacement `authenticator`, `selfSignup`, `bootstrapVia` and `loginPath`. `auth()` validates its input and throws on a bad shape rather than deferring to the first sign-in.
+
+```ts
+import { auth } from "plumix";
+
+export const recipeAuth = auth({
+  passkey: {
+    rpName: "Recipes",
+    rpId: "recipes.example.com",
+    origin: "https://recipes.example.com",
+  },
+  loginPath: "/sign-in",
+});
+```
+
+`rpId` is deliberately not an `EnvInput`. It anchors the credential, so a passkey enrolled against one value cannot verify against another, and it has to be constant across environments.
+
+## Optional slots
+
+### storage
+
+Object storage for uploads. `r2` binds a bucket; the media plugin requires this slot and `imageDelivery` alongside it.
+
+```ts no-typecheck
+import { r2 } from "@plumix/runtime-cloudflare";
+
+export const storage = r2({ binding: "MEDIA" });
+```
+
+### imageDelivery
+
+On-the-fly image transforms behind the `<Image>` component: width, height, fit, quality, format and DPR. It pairs with `storage`, which holds the original.
+
+```ts no-typecheck
+import { images } from "@plumix/runtime-cloudflare";
+
+export const imageDelivery = images();
+```
+
+### kv
+
+A key/value store exposed on the request context as `ctx.kv`. Core never reads it; it is there for plugins that need a cheap store outside the database.
+
+```ts no-typecheck
+import { kv } from "@plumix/runtime-cloudflare";
+
+export const kvStore = kv({ binding: "KV" });
+```
+
+### cache
+
+The read-through edge cache for anonymous public renders. `ttl` is the freshness window in seconds and `staleWhileRevalidate` is how long a stale copy may still be served while a fresh one is fetched.
+
+```ts no-typecheck
+import { edge } from "@plumix/runtime-cloudflare";
+
+export const cache = edge({ ttl: 3600, staleWhileRevalidate: 86400 });
+```
+
+`edge()` disables itself when the deploy lacks the zone id and purge token it needs, because a cache that cannot purge would serve a stale recipe forever. That is why the cache is inert on a `workers.dev` host and live on a zone.
+
+### mailer
+
+The outbound email transport, shared by every feature that sends mail. The interface is one method, `send(message)`, so any provider fits. `consoleMailer()` logs the message instead of sending it, which is how you copy a magic-link URL out of the dev terminal.
+
+```ts
+import { consoleMailer } from "plumix";
+
+export const mailer = consoleMailer();
+```
+
+### theme
+
+The site's presentation layer. Omit it and the built-in welcome theme renders instead, so a site with no theme still serves pages.
+
+```tsx
+import type { TemplateData } from "plumix";
+import { fallback } from "plumix";
+import { defineTemplate, defineTheme } from "plumix/theme";
+
+const index = defineTemplate<TemplateData>({
+  render: () => <main>Recipes</main>,
+});
+
+export const theme = defineTheme({
+  templates: [fallback(index)],
+  document: {
+    titleTemplate: (title) => (title ? `${title} · Recipes` : "Recipes"),
+  },
+});
+```
+
+### plugins
+
+The plugin descriptors to install, in order. This array is the only way an entry type, a taxonomy, a meta box, a block or a route reaches the site.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+import { definePlugin } from "plumix/plugin";
+
+const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryType("recipe", { label: "Recipes" });
+  },
+});
+
+export const plugins: PlumixConfigInput["plugins"] = [recipes];
+```
+
+Two descriptors with the same id throw at boot rather than one quietly overwriting the other.
+
+### i18n
+
+The locale registry. `defaultLocale` has to appear in `locales` and has to be enabled, or `plumix()` throws. Each locale is a code or an object with a label, a text direction and an `enabled` flag; the direction is derived from the code when you leave it out. `resolveLocale` is an escape hatch for sites that want Accept-Language detection or URL-prefix routing.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const i18n: PlumixConfigInput["i18n"] = {
+  defaultLocale: "en",
+  locales: ["en", "uk", { code: "ar", label: "العربية" }],
+};
+```
+
+This is the admin's language, not your content's. Translating entries is a userland concern.
+
+### redirects
+
+The site's own public-route redirects and `410 Gone` rules. A rule matches on a `from` string or RegExp, or on a `match(url)` function, and yields either a target or `{ gone: true }`. The dispatcher checks them before the content route map, so a redirect shadows a page that would otherwise exist.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const redirects: PlumixConfigInput["redirects"] = [
+  { from: "/recipe/:slug", to: "/recipes/:slug" },
+  { from: "/old-caponata", to: "/recipes/sicilian-caponata", status: 302 },
+  { from: "/drafts/:slug", gone: true },
+];
+```
+
+A rule with no `status` is a 301. The request's query string is appended to the target unless the target carries its own `?`, or you set `preserveQuery: false`. Config rules merge ahead of plugin rules and theme rules, so the site wins a tie.
+
+### basePath
+
+Serves the whole site under a subdirectory, for a reverse proxy that mounts Plumix below the domain root. It is path-only and never touches the passkey origin, which stays a scheme and host because WebAuthn requires it.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const basePath: PlumixConfigInput["basePath"] = "/recipes";
+```
+
+### mcp
+
+The Model Context Protocol endpoint at `/_plumix/mcp`, where an MCP client reaches the site's tools. Default-off, and the gate is early. With no `mcp` block the dispatcher answers 404 before it imports the handler graph at all.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const mcp: PlumixConfigInput["mcp"] = { enabled: true };
+```
+
+### api
+
+The REST API and its OpenAPI document at `/_plumix/api/v1/`. Default-off, and cross-origin access is default-closed on top of that. With no `cors` block no `Access-Control-Allow-Origin` header is ever emitted. `origins: "*"` opens anonymous reads to any origin, an array allows only those, and a response authenticated with an API token is never CORS-exposed either way.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const api: PlumixConfigInput["api"] = {
+  enabled: true,
+  cors: { origins: ["https://recipes.example.com"] },
+};
+```
+
+### debugBar
+
+The development-only debug bar. It defaults on in development and is compiled out of a production build. Pass `false` to suppress it, or an object to move it, open it by default, or silence panels by id. The core panels are `app`, `request`, `database`, `template` and `timeline`.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const debugBar: PlumixConfigInput["debugBar"] = {
+  position: "bottom-left",
+  disable: ["database"],
+};
+```
+
+### telemetry
+
+Where request telemetry goes. Each consumer votes on whether to sample a request, and receives the finished snapshot after the response rather than during it, so export latency never lands in the response time. With no consumers the collector is a permanent no-op and production pays nothing.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const telemetry: PlumixConfigInput["telemetry"] = {
+  consumers: [
+    {
+      id: "slow-requests",
+      onRequestEnd: (snapshot) => {
+        console.log(snapshot.spans.length);
+      },
+    },
+  ],
+};
+```
+
+The sampling vote runs before authentication, so `ctx.user` is null inside it even when the request carries a session cookie. Decide from cheap request-shaped facts, and do not throw, because a throwing vote fails the request.
+
+### blocks
+
+Block-system configuration. Today it carries `htmlAllowlist`, the override feeding the sanitizer that both the public render and the editor canvas apply to stored HTML. `extraTags` and `extraAttributes` merge with the baseline; `schemes` and `allowProtocolRelative` replace it.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const blocks: PlumixConfigInput["blocks"] = {
+  htmlAllowlist: {
+    extraTags: ["figure", "figcaption"],
+    extraAttributes: { figure: ["data-recipe-step"] },
+  },
+};
+```
+
+Under all four options is a floor no override can widen past. Script-capable URL schemes, `on*` event attributes and `style` stay denied whatever you write here.
+
+### images
+
+Image handling for the `<Image>` component. `remotePatterns` is the allowlist of remote hosts it may optimize. Same-origin sources are always allowed, and an unlisted remote source still renders without optimization.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const images: PlumixConfigInput["images"] = {
+  remotePatterns: [{ protocol: "https", hostname: "images.example.com" }],
+};
+```
+
+### vite
+
+A Vite config object merged with the one Plumix builds. It stays structurally typed so core carries no Vite dependency, which is why the value is a plain object rather than the result of `defineConfig`.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+
+export const vite: PlumixConfigInput["vite"] = {
+  resolve: { alias: { "~": "/src" } },
+};
+```
+
+## Related
+
+[Project Structure](/getting-started/project-structure/) covers the rest of the files this one sits beside. [Secrets](/deployment/secrets/) goes further into `.dev.vars`, production secrets and the `EnvInput` slots. [Bindings and Environment](/deployment/bindings/) covers the `wrangler.jsonc` half of the runtime slots. [Cloudflare Workers](/deployment/cloudflare/) covers what each adapter factory actually binds to. [Access & Identity](/access/overview/) covers the `auth` slot's principals and sessions, and [Passkeys](/access/passkeys/) covers the relying-party fields inside it. [Plugins](/plugins/overview/) covers what goes in the `plugins` array. [Themes](/themes/overview/) covers the `theme` slot. [Permalinks and Slugs](/routing/permalinks/) covers the URLs `redirects` and `basePath` reshape.
+
+## Next steps
+
+With the config understood, fill the `plugins` array. [Content Modelling](/content-modelling/overview/) shows a local plugin registering an entry type, a taxonomy and a meta box, and [Entry Types](/content-modelling/entry-types/) covers the registration options in full. When the model is settled, [Deploy Your Site](/getting-started/deploy/) takes it live, and [Deployment](/deployment/overview/) covers the parts this page only names.

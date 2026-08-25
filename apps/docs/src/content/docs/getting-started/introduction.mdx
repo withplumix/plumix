@@ -1,0 +1,111 @@
+---
+title: Introduction
+description: Plumix is a headless CMS that deploys as a single Cloudflare Worker, with the content model, the admin UI and the public site all declared in TypeScript.
+tier: P0
+sidebar:
+  order: 10
+---
+
+import { Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+import PinYourVersion from "../_partials/pin-your-version.mdx";
+
+Plumix is a CMS you write rather than click together. You declare the content model in TypeScript, and the site builds its admin screens, its public URLs and its capability checks from that declaration when the worker boots.
+
+## Overview
+
+A Plumix site deploys as one Cloudflare Worker. Content lives in D1, uploads live in R2, and the public pages render server-side from a theme you own. There is no origin server behind the worker and no second process to keep alive.
+
+The site is made of four things, and you write three of them.
+
+A **config file**, `plumix.config.ts`, names the runtime adapter, the database, the auth setup, the plugins and the theme. It is the only file the CLI has to find.
+
+**Plugins** register the model. An entry type, a taxonomy, a meta box, a block, a route, a scheduled task and a hook all arrive through a plugin's `setup` function. Most sites keep one local plugin file that never leaves the repository, and add published plugins beside it in the same array.
+
+A **theme** renders the public site. It is a set of React templates plus design tokens and a document manifest, and the framework picks which template answers a request from the entry type, the taxonomy and the URL.
+
+The **admin** is the one part you do not write. It ships precompiled with the framework and mounts at `/_plumix/admin`, reading your registrations through the plugin manifest to build its sidebar, its list screens and its editor forms.
+
+Under all of it, storage is generic. Every entry of every type is a row in one `entries` table told apart by its `type` column, terms share one `terms` table keyed by taxonomy, and per-entry custom values sit in a single JSON `meta` column. Declaring a new entry type creates no table and needs no migration.
+
+Sign-in is a passkey by default. The first person to reach the admin on an empty database claims the admin account, and after that unauthenticated registration is refused.
+
+Client JavaScript is opt-in. A template renders to HTML on the server, and only a component you mark as an island ships a script and hydrates. A page with no island ships no JavaScript.
+
+<PinYourVersion />
+
+## Quickstart
+
+Scaffold a project with whichever package manager you use:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm create plumix-app my-site
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm create plumix-app my-site
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn create plumix-app my-site
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun create plumix-app my-site
+```
+
+  </TabItem>
+</Tabs>
+
+Then three steps:
+
+<Steps>
+
+1. **Answer the wizard.** It asks where to put the project, which runtime to target, which official plugins to install and which sign-in methods to add beyond passkeys. It then installs dependencies, generates the first migration, applies it to a local database and makes a git commit.
+
+2. **Start the dev server.**
+
+   ```sh
+   cd my-site
+   pnpm dev
+   ```
+
+3. **Claim the admin account.** Open `http://localhost:5173/_plumix/admin`. The empty database sends you to a "Create admin account" screen. Enter an email, and your browser or password manager creates the passkey.
+
+</Steps>
+
+## Who this is for
+
+You write TypeScript and you want the content model in version control. That is the whole audience. Plumix has no admin screen for inventing an entry type, so changing a site's shape is a code review rather than a click path, and two deploys of the same repository cannot disagree about what the model is.
+
+These pages assume you know React well enough to write a component, have used a SQL database, and can run a command in a terminal. Cloudflare experience is not assumed. Nothing here asks you to have read the page before it.
+
+Every example across this site models one recipe site: a `recipe` entry type, a hierarchical `cuisine` taxonomy, a flat `diet` taxonomy, and a "Recipe details" meta box. Two recipes recur, Sicilian Caponata and Weeknight Ragu. It is deliberately not a blog, because `post` and `page` are real entry types that arrive from plugins, and using them would blur what Plumix gives you against what you declared.
+
+## What ships in the box
+
+Core carries the parts every site needs: entries, taxonomies, meta-box fields, blocks and marks, the block editor, the template hierarchy, sessions and roles, the REST and RPC layers, redirects, sitemaps and feeds, the edge cache, and scheduled tasks.
+
+The content types most sites want are plugins rather than core. `post`, `category` and `tag` come from the blog plugin. The hierarchical `page` type rooted at `/` comes from the pages plugin. Menus, comments, a media library and an audit log are four more. Installing one is a line in the `plugins` array.
+
+Two version tracks run side by side. The platform packages move in lockstep and share one version number, `plumix` among them. The six official plugins carry their own numbers and release on their own schedule, so a plugin at 0.1 sitting beside a platform at 0.15 is normal rather than a mismatch. Read an install snippet with that in mind.
+
+## Related
+
+The content model is where most of the reading happens after setup, and [Content Modelling](/content-modelling/overview/) explains how a plugin descriptor registers an entry type, a taxonomy and a meta box. [Fields](/fields/overview/) covers what a meta-box field stores and how the fluent builders reject an invalid chain at compile time. [Blocks](/blocks/overview/) covers entry content, which Plumix stores as a tree of blocks rather than as HTML. [Themes](/themes/overview/) covers templates and the fallback theme a site without one renders. [Access & Identity](/access/overview/) covers principals, sessions and roles.
+
+## Next steps
+
+[Installation](/getting-started/installation/) walks the scaffolder from one command to a running dev server and your first passkey. [Project Structure](/getting-started/project-structure/) explains every file the scaffolder wrote and lists the subpaths the `plumix` package publishes. [Configuration](/getting-started/configuration/) is the reference for `plumix.config.ts` and its twenty slots. [Deploy Your Site](/getting-started/deploy/) is the five-minute path from a local project to a live URL.

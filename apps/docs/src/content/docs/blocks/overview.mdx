@@ -1,0 +1,138 @@
+---
+title: Overview
+description: Entry content is a tree of block nodes stored as JSON on the entry, rendered by looking each node up in the block registry the site booted with.
+tier: P0
+sidebar:
+  order: 10
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+An entry's content is not a string of HTML. Plumix stores it as a tree of block nodes in the entry's `content` column, and a theme renders that tree by resolving each node's name against the block registry the site booted with.
+
+## Specs and nodes
+
+The word block covers two things, and this documentation keeps them apart.
+
+- A **block spec** is the registered definition. It carries a name, a title, the inputs an author edits, and the React component that renders it. `core/rich-text` is one.
+- A **block node** is one stored instance of a spec inside an entry. It carries an id, the spec's name, and the values the author typed. A recipe's opening paragraph is one.
+
+The registry maps names to specs, and boot builds it once. The tree of nodes is per entry and lives in the database. A node does not say what it looks like. The spec its name resolves to decides that, which is why reinstalling a plugin makes its blocks render again without touching a stored tree.
+
+Content sits under a version envelope, `{ version: "plumix.v2", blocks: [...] }`, and lands in `entries.content` as JSON text. Children are not a separate field. A block that accepts children declares a slot input, and its children live inside `attrs` under that slot's key, so the whole document stays one JSON value.
+
+```ts
+import { defineEntryContent } from "plumix/blocks";
+
+export const caponata = defineEntryContent([
+  {
+    id: "caponata-intro",
+    name: "core/rich-text",
+    attrs: { body: "<p>Sicilian sweet-and-sour aubergine.</p>" },
+  },
+  {
+    id: "caponata-method",
+    name: "core/section",
+    attrs: {
+      maxWidth: "720px",
+      content: [
+        {
+          id: "caponata-method-text",
+          name: "core/rich-text",
+          attrs: { body: "<p>Salt the aubergine for an hour.</p>" },
+        },
+      ],
+    },
+  },
+]);
+```
+
+## Quickstart
+
+<Steps>
+
+1. **Render the tree.** A template receives the entry on `data.entry`, and its parsed block tree on `contentBlocks`. Hand that to `BlockRenderer`:
+
+   ```tsx
+   import type { EntryData } from "plumix";
+   import type { ReactNode } from "react";
+   import { BlockRenderer } from "plumix/blocks/renderer";
+   import { defineTemplate } from "plumix/theme";
+
+   export const recipeSingle = defineTemplate<EntryData>({
+     render: ({ data }): ReactNode => (
+       <article>
+         <h1>{data.entry.title}</h1>
+         {data.entry.contentBlocks ? (
+           <BlockRenderer content={data.entry.contentBlocks} />
+         ) : null}
+       </article>
+     ),
+   });
+   ```
+
+   `BlockRenderer` needs no registry prop. The framework wraps every template render in a provider carrying the registry, the theme's breakpoints, the active locale and the HTML allowlist, and the component reads them from there.
+
+2. **Write some content.** Open Sicilian Caponata in the editor, add a paragraph and a section, and publish. Saving writes the tree above to the entry's `content` column in one request.
+
+3. **Load `/recipes/sicilian-caponata`.** Each node became one element. The page ships no JavaScript unless one of the blocks on it mounts an island.
+
+</Steps>
+
+## What a node holds
+
+Every node carries an `id` and a `name`. The rest is optional, and a different part of the render reads each key.
+
+| Key         | What it holds                                                                                                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`        | Unique within the entry. React keys the element by it, and when it is a plain identifier the renderer also uses it to name the node's style class, `plumix-block-<id>`.        |
+| `name`      | The registered spec name, such as `core/columns`. A name the registry does not know renders nothing.                                                                           |
+| `attrs`     | The values behind the spec's inputs. A slot input holds its child nodes here.                                                                                                  |
+| `style`     | CSS declarations in three buckets: `large`, `medium` and `small`.                                                                                                              |
+| `hidden`    | Per-device visibility, kept out of `style` so hiding a block never overwrites its layout `display`.                                                                            |
+| `htmlAttrs` | Author-set HTML attributes on the block's root element.                                                                                                                        |
+| `className` | Author CSS classes, merged alongside the generated style class.                                                                                                                |
+| `tagName`   | An override for the root element, taken from nine container tags: `div`, `section`, `article`, `aside`, `header`, `footer`, `nav`, `main`, `figure`. Anything else is ignored. |
+| `label`     | The name shown in the editor's layers tree. Editor metadata; the renderer ignores it.                                                                                          |
+
+The renderer, not the save, filters two of those keys. `htmlAttrs` survives only for `id`, `title`, `role`, `lang`, `dir` and any `aria-` or `data-` name, minus the framework's own `data-plumix-` prefix, so an `onclick` an author typed never reaches the DOM. `tagName` falls back to the block's own element when it names anything outside the nine.
+
+The `style` buckets become a `<style>` element beside the block, scoped to that node's class. `large` emits unconditionally, `medium` inside `@media (max-width: 991px)` and `small` inside `@media (max-width: 640px)`. A theme moves both maxima by declaring its own `tablet` and `mobile` breakpoints. The editor canvas reads the same two numbers, so the preview breaks where the page does.
+
+## Where the registry comes from
+
+Three layers contribute specs, and boot merges them in one order: the 18 core blocks first, then every block a [plugin](/plugins/overview/) registered through `registerBlock`, then the blocks the [theme](/themes/overview/) declares. Later layers overwrite earlier ones on a name collision, so a theme can replace a plugin's block and a plugin can replace a core one. The `core/` namespace is closed against new registrations, which is why all 18 are always present rather than opt-in.
+
+<Aside type="caution" title="An unknown name renders nothing">
+  When a node's name is not in the registry, the renderer emits no output for
+  it on a production page. In development it logs the name once and leaves a
+  `<template data-plumix-unknown-block>` in the markup. The stored node is
+  untouched either way, so uninstalling a plugin blanks its blocks rather than
+  deleting them.
+</Aside>
+
+## How the render walks the tree
+
+`BlockRenderer` walks the nodes in order. For each one it looks up the spec, materializes the attrs, and calls the spec's `render`.
+
+Materializing is the step that makes slots work. Before it calls `render`, the walker replaces every attr holding an array of child nodes with a component that renders those children. A container block therefore receives `attrs.content` as a component it drops into its JSX, and React renders the children lazily instead of the walker building them up front. That is also why a block's rendered attrs are not JSON, while the stored ones are.
+
+Around `render`, the walker builds the node's root element. It merges the allowlisted `htmlAttrs`, the author's classes and the generated style class into one set of props. A block that declares `selfSeam` spreads those props onto its own element, which is how `core/separator` puts them on the `<hr>` and `core/table-cell` on the `<td>`, where a wrapper `<div>` would be invalid. Every other block gets the wrapper.
+
+One name skips the registry lookup. The walker resolves `core/pattern-ref` against the pattern registry and renders that pattern's blocks in place. A block that declared loaders gets its resolved data, or its `errorFallback` when a loader rejected.
+
+## Building a tree outside the editor
+
+The editor is the usual writer, but any code holding the entry can build a tree: a seed script, an import from another system, a migration. Use `defineEntryContent` to stamp the envelope, as in the Overview above. A tree without the envelope fails the shape check and reads back as no content at all.
+
+Saving through the API validates the tree against the live registry first, and reports every problem in one response rather than the first. It rejects three things: a node whose name no spec claims, a child in a slot whose `allowedBlocks` does not list it, and a block with `requiresParent` sitting anywhere but under one of the parents it names. Each error carries the path that failed, spelled `blocks[2].content[0]`. A separate cap rejects content whose serialized form runs past 1,000,000 bytes.
+
+## Related
+
+Entry content is one half of what an entry holds. The other half is its [meta-box fields](/fields/overview/), which store everything outside title, slug, excerpt and content. The [content model](/content-modelling/overview/) decides which entry types get an editor at all, through the `editor` entry in the [`supports`](/content-modelling/entry-types/) list. Themes receive `contentBlocks` on the entry projection that [template data](/themes/template-data/) describes, and the allowlist that governs stored markup is a [configuration](/getting-started/configuration/) slot, `blocks.htmlAllowlist`.
+
+## Next steps
+
+Read [Core Blocks](/blocks/core-blocks/) next. It is the complete list of what the 18 registered specs accept and what each one renders, including what the sanitizer does to markup typed into `core/html`.
+
+Seven further pages in this section are not written yet, and everything they cover already ships. Authoring a Block covers `defineBlock`, input types, and registering a spec from a plugin or a theme. Marks lists the inline formatters a rich-text body can carry. Styles goes into the style buckets, design tokens and viewport breakpoints. Entry Content and Validation covers `validateEntryContent` and the errors above in detail. Variations, Patterns and Shortcodes cover preset configurations of a block, reusable arrangements of several, and the text macros that expand at render.

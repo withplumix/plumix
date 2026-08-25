@@ -1,0 +1,253 @@
+---
+title: Blog
+description: The blog plugin registers the post entry type, the hierarchical category taxonomy, the flat tag taxonomy, and a related-posts loader a theme can render.
+tier: P0
+sidebar:
+  order: 20
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+`@plumix/plugin-blog` makes four registrations and takes no options. A `post` entry type, a hierarchical `category` taxonomy, a flat `tag` taxonomy, and a `relatedPosts` loader a theme declares on a template.
+
+## Overview
+
+The plugin exports one descriptor named `blog`. It has no factory and no configuration, so you add the export itself to the `plugins` array. It adds no database tables, so installing it needs no migration.
+
+Nothing it registers is special. Every option it passes is one your own plugin could pass, so the rest of this page reads as a worked registration.
+
+`post` is the standard non-hierarchical entry type. `category` classifies posts in a tree, so Baking can sit under Food. `tag` classifies posts in a flat list. Both taxonomies are scoped to `post` and to nothing else, so registering a `recipe` type of your own does not put category and tag pickers on the recipe editor.
+
+<Aside type="note" title="Post is a type, not a synonym for entry">
+  "Post" names this one entry type. The general noun for a row of authored
+  content is entry, and a recipe is an entry that is not a post. The distinction
+  matters most in permalinks and capabilities, where `post` is a literal string
+  in the URL and in the capability names.
+</Aside>
+
+## Quickstart
+
+Install the package with whichever package manager the project uses:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-blog
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-blog
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-blog
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun add @plumix/plugin-blog
+```
+
+  </TabItem>
+</Tabs>
+
+Then:
+
+<Steps>
+
+1. **Add `blog` to the `plugins` array.** No call, no options.
+
+   ```ts no-typecheck
+   import type { PlumixConfigInput } from "plumix";
+
+   import { blog } from "@plumix/plugin-blog";
+
+   import { recipes } from "./plugins/recipes";
+
+   export const plugins: PlumixConfigInput["plugins"] = [recipes, blog];
+   ```
+
+2. **Restart the dev server.**
+
+   ```sh
+   pnpm dev
+   ```
+
+3. **Write a post.** The admin sidebar gains a Posts section at `/entries/posts`, with Categories and Tags beneath it. Publish one and it serves at `/posts/<slug>` and appears on the site root.
+
+</Steps>
+
+## The post entry type
+
+This is the registration, transcribed from the plugin with its label table collapsed to a string.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const example = definePlugin("example", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      labels: { singular: "Post", plural: "Posts" },
+      description: "Standard blog posts",
+      supports: ["title", "editor", "excerpt", "revisions", "autosave"],
+      versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
+      termTaxonomies: ["category", "tag"],
+      isHierarchical: false,
+      isPublic: true,
+      hasArchive: false,
+      rewrite: { slug: "posts" },
+      capabilityType: "post",
+      menuIcon: "file-text",
+    });
+  },
+});
+```
+
+Four of those options are worth reading closely.
+
+`hasArchive: false` is the option most worth noticing, because it means no `/posts` route compiles. The site root already lists published entries, so a type archive would serve the same rows again under a second URL. The plugin leaves it off rather than ship the duplicate.
+
+`rewrite: { slug: "posts" }` fixes the prefix on single posts. Without it the prefix would fall back to the type name and you would get `/post/<slug>`. Because `hasArchive` is false, `posts` appears in single-post URLs only, and `/posts` on its own resolves to whatever else claims it.
+
+`versioning` restates the framework defaults rather than changing them. Twenty-five retained snapshots per post and a sixty-second autosave cadence are what any type with `supports: ["revisions", "autosave"]` gets when it omits the option. Writing them out pins the numbers to the plugin.
+
+`capabilityType: "post"` names the capability family, and here it matches the type name, so it changes nothing on its own. It exists so a second entry type can opt into the same family. Register a `news` type with `capabilityType: "post"` and it is gated by `entry:post:*` rather than minting `entry:news:*`, which is how two types share one set of permissions.
+
+The full label table carries thirteen strings, from `addNewItem` ("Add Post") through `moveToTrash` ("Move post to trash?"). That table is what keeps the admin from saying "Add Entry" over a post form. Each string is a translatable descriptor rather than a bare string, which is why the plugin also declares an `i18n` slot and ships catalogs.
+
+## The URLs it compiles
+
+With only the blog installed, five public route shapes exist that would not exist without it.
+
+- `/posts/<slug>` is one post. The pattern captures a single segment, because `post` is not hierarchical.
+- `/category/<path>` is a category archive. The path can nest, so `/category/food/baking` is the Baking term under Food.
+- `/category/<path>/page/2` is the second page of that archive, twenty entries to a page.
+- `/tag/<term>` is a tag archive, one segment because tags do not nest.
+- `/tag/<term>/page/2` is its pagination.
+
+The site root is not in that list because it is always there. `/` lists published entries from every public non-hierarchical type, newest publish time first, twenty per page, with `/page/2` onward for the rest. Install the blog beside a `recipe` type and both appear in that one feed, interleaved by date. A hierarchical type is excluded, which is why pages never show up there.
+
+## Categories and tags
+
+The two taxonomies differ in one option and inherit the rest.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const example = definePlugin("example", {
+  setup: (ctx) => {
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      labels: { singular: "Category", plural: "Categories" },
+      isHierarchical: true,
+      entryTypes: ["post"],
+      isPublic: true,
+      hasAdminColumn: true,
+      rewrite: { slug: "category", isHierarchical: true },
+    });
+
+    ctx.registerTermTaxonomy("tag", {
+      label: "Tags",
+      labels: { singular: "Tag", plural: "Tags" },
+      isHierarchical: false,
+      entryTypes: ["post"],
+      isPublic: true,
+      hasAdminColumn: true,
+      rewrite: { slug: "tag" },
+    });
+  },
+});
+```
+
+`isHierarchical` decides both the data and the URL. A category can name a parent and its archive URL nests to match, so a term whose parent is Food lives at `/category/food/baking` and nowhere else. Ask for `/category/baking` and you get a 404, because the leaf's real ancestor chain does not match the one the URL claims. A tag has no parent and one segment.
+
+`entryTypes: ["post"]` is the half of the pairing the cache purge reads. Editing a term purges the stored pages of the entry types listed here. The other half, `termTaxonomies: ["category", "tag"]` on the entry type, is what puts the two pickers on the post editor. Both registrations name each other, and each name does a different job. [Taxonomies and Terms](/content-modelling/taxonomies/) covers the pairing in full, including why `hasAdminColumn: true` records intent without adding a column today.
+
+Terms live in one shared table keyed by taxonomy, so a `category` term and a `tag` term can both be slugged `pasta` without colliding.
+
+## Capabilities it mints
+
+Registering `post` derives eight capabilities, each mapped to a minimum role on the ladder from subscriber up to admin.
+
+| Capability                    | Minimum role |
+| ----------------------------- | ------------ |
+| `entry:post:read`             | subscriber   |
+| `entry:post:create`           | contributor  |
+| `entry:post:edit_own`         | contributor  |
+| `entry:post:publish`          | author       |
+| `entry:post:edit_any`         | editor       |
+| `entry:post:delete`           | editor       |
+| `entry:post:read_revisions`   | editor       |
+| `entry:post:restore_revision` | editor       |
+
+Each taxonomy derives five more, so `category` and `tag` each mint `read` at subscriber, `assign` at contributor, and `edit`, `delete` and `manage` at editor. A contributor can therefore tag a draft but cannot rename the tag.
+
+Nothing in your code grants any of these. They exist because the registration ran. [Access & Identity](/access/overview/) covers how a principal's role is checked against them.
+
+## Related posts in a theme
+
+Beyond the three content registrations, the plugin registers a per-request data dependency named `relatedPosts`. A template declares it and receives the result alongside its data.
+
+```tsx no-typecheck
+import type { EntryData, ResolvedEntry } from "plumix";
+import { defineTemplate, forEntryType } from "plumix";
+import { Link } from "plumix/blocks/renderer";
+
+import type { RelatedPosts } from "@plumix/plugin-blog";
+
+declare module "plumix" {
+  interface EntryTypeRegistry {
+    post: { entry: ResolvedEntry };
+  }
+}
+
+const post = defineTemplate<EntryData>({
+  relatedPosts: ["related"],
+  render: ({ data, relatedPosts }) => (
+    <article>
+      <h1>{data.entry.title}</h1>
+      <ul>
+        {(relatedPosts?.related ?? []).map((other) => (
+          <li key={other.id}>
+            <Link entry={other}>{other.title}</Link>
+          </li>
+        ))}
+      </ul>
+    </article>
+  ),
+});
+
+export const rules = [forEntryType("post").template(post)];
+```
+
+The string `"related"` is a slug you choose, and it is the key the result comes back under. The loader ignores it otherwise, so one name is as good as another. `other.url` is nullable, because the permalink builder returns null for an entry whose type is unregistered or not public. `<Link entry={...}>` reads that field and renders the children without an anchor when it is null, so the strip never emits a dead link.
+
+What the loader returns is narrow on purpose. At most three entries, published and carrying a publish time, of the same entry type as the one being rendered, sharing at least one term with it, newest first. The current entry is excluded. On a route that is not a single entry, or on a post with no terms, or on a post whose terms nobody else uses, the loader returns nothing and the strip renders empty.
+
+The `RelatedPosts` import is load-bearing even though the sample never names the type in a signature. Importing it pulls the declaration that adds `relatedPosts` to the template registry, and without it the key is not a valid template option.
+
+## What the plugin does not do
+
+It registers no meta boxes, so a post stores title, slug, content and excerpt and nothing else until you declare fields for it from a plugin of your own. It registers no theme and no templates, so a site with the blog and no theme renders the built-in welcome screen rather than a post. It adds no comment form; discussion is `@plumix/plugin-comments`, installed separately. And it creates no tables, so there is no `plumix migrate generate` step after installing it.
+
+## Related
+
+Every option on this page is documented in full in [Entry Types](/content-modelling/entry-types/) and [Taxonomies and Terms](/content-modelling/taxonomies/), which cover the registration surface the plugin is using. [Overview](/plugins/overview/) covers installing plugins in general and the version track this one is on. The URL shapes above are the router's default output, and [Permalinks and Slugs](/routing/permalinks/) covers reshaping them. Which posts are visible at those URLs depends on [Statuses and Publishing](/content-modelling/statuses/). The capability table is enforced by the model in [Access & Identity](/access/overview/), and the template that renders a post comes from [Themes](/themes/overview/).
+
+## Next steps
+
+Read [Pages](/plugins/pages/) next if the site needs standing content such as About or Contact. It registers the other built-in entry type, and the two are usually installed together.
+
+If you want posts to carry structured data beyond the four built-in columns, [Meta Boxes](/fields/meta-boxes/) is where you attach a card of fields to an installed type from your own plugin, and [Field Types](/fields/field-types/) lists what those fields can be.
+
+To put posts on screen, [Template Hierarchy](/themes/hierarchy/) covers how a request for `/posts/<slug>` finds a template, and [Templates](/themes/templates/) covers the builders that bind one to the `post` type.

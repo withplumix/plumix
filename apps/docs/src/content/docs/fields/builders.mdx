@@ -1,0 +1,224 @@
+---
+title: Field Builders
+description: The fluent chain that declares a meta-box field, and why an option that does not apply is a compile error.
+tier: P0
+sidebar:
+  order: 40
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+A field builder is an immutable chain that compiles to one field definition. The chain's type carries the state of the declaration so far, which is what lets the compiler reject an option that cannot apply to the field you are declaring.
+
+## Overview
+
+Every builder works the same way. A function from `plumix/fields` takes the field key and returns a builder. Each chained call returns a fresh instance carrying the new option. Registration calls `build()` on whatever it finds in a `fields` array, and what comes out is the plain definition the manifest ships and the server enforces.
+
+```ts
+import { number } from "plumix/fields";
+
+export const servings = number("servings").min(1).max(50).required();
+```
+
+Chaining never mutates. `number("servings").min(1)` and the builder it was called on are two different objects, so passing a partial chain around cannot leak an option into an unrelated field.
+
+A `fields` array accepts a builder or a compiled definition, since object-literal fields still register. Only the builder carries the phantom type parameters behind typed reads. An object literal declares a field the server enforces exactly as it enforces any other, and that field then drops out of the typed meta a theme reads.
+
+The label is the one option you can usually skip. Leave `.label()` off and the builder derives one from the key by splitting camel case and title-casing the result, so `prepMinutes` becomes "Prep minutes" and `heroImage` becomes "Hero image".
+
+## Quickstart
+
+<Steps>
+
+1. **Write one chain.** Order does not matter for most options, so read it as a sentence:
+
+   ```ts
+   import { text } from "plumix/fields";
+
+   export const unit = text("unit")
+     .label("Unit")
+     .description("g, ml, tbsp")
+     .maxLength(12)
+     .required();
+   ```
+
+2. **Share the options two fields agree on.** The key is fixed by the constructor, so wrap the chain rather than forking one instance:
+
+   ```ts
+   import { number } from "plumix/fields";
+
+   const minutes = <K extends string>(key: K) =>
+     number(key).min(0).max(600).step(5);
+
+   export const prepMinutes = minutes("prepMinutes").label("Prep (minutes)");
+   export const cookMinutes = minutes("cookMinutes").label("Cook (minutes)");
+   ```
+
+   The wrapper keeps the key literal, which is what later types the read as `meta.prepMinutes`.
+
+3. **Watch an invalid chain fail.** Add a string option to a numeric field and the compiler stops you before the site boots:
+
+   ```ts no-typecheck
+   import { number } from "plumix/fields";
+
+   number("servings").maxLength(3);
+   // Property 'maxLength' does not exist on type 'NumberFieldBuilder<"servings">'.
+   ```
+
+</Steps>
+
+## The options every builder shares
+
+Ten methods appear on nearly every builder, and the type of the argument changes with the field.
+
+`.label()` and `.description()` set what the admin prints above and below the input. Both take a string or a `Label` descriptor for translation.
+
+`.default()` supplies a value for an absent key. It applies at decode time and seeds the admin form, and it never writes anything, so storage can still lack the key while a read gives you the default.
+
+`.required()` marks the field required. The constraint walker enforces it on write, in `strict` mode only, so an autosave of an unfinished entry does not fail on it.
+
+`.span()` sets the field's width in the meta box's 12-column grid. `.capability()` gates the field on a capability string, which the server enforces on write. `.showInApi()` opts the value into public REST responses, which are default-deny per field.
+
+`.sanitize()` normalizes a value after coercion and before persistence, and its return value replaces the caller's input. `.validate()` runs last and returns `true` or a failure message, sync or async. Both are typed against the field's own value type, so a `number` field's validator receives a `number`.
+
+`.visibleWhen()` and `.orVisibleWhen()` decide whether the admin shows the field. Rules come from sibling builders rather than from string keys, so a renamed field takes its conditions with it:
+
+```ts
+import { number, select } from "plumix/fields";
+
+const difficulty = select("difficulty").options(["easy", "medium", "hard"]);
+
+export const fields = [
+  difficulty,
+  number("restMinutes").visibleWhen(difficulty.is("hard")),
+];
+```
+
+Each builder exposes the rule factories that suit its values. Every one has `.is()`, `.isNot()`, `.isEmpty()` and `.isNotEmpty()`. Numeric builders add `.gt()` and `.lt()`, `toggle` adds `.isOn()` and `.isOff()`, and a multi-value `select` adds `.contains()`, `.notContains()`, `.countGt()` and `.countLt()`. Registration rejects a rule naming a key no field in the box declares.
+
+## Why an invalid chain does not compile
+
+Four mechanisms do the work, and none of them is a runtime check.
+
+**The method is not there.** Each field type has its own builder class carrying only the options its renderer and its constraints understand. `maxLength` is on the string chain, `min` and `max` on the numeric and temporal ones, `marks` on `richtext` alone. Reaching for the wrong one is an ordinary missing-property error.
+
+**A seed blocks the chain until you supply what the type cannot work without.** `select`, `repeater`, `group` and `range` return a seed object with exactly one method on it. Until you call it, there is no `build()`, and registration takes only things that have one.
+
+```ts no-typecheck
+import { range, select } from "plumix/fields";
+
+select("difficulty").required();
+// Property 'required' does not exist on type 'SelectFieldSeed<"difficulty">'.
+
+range("spiceLevel").step(1);
+// Property 'step' does not exist on type 'RangeFieldSeed<"spiceLevel">'.
+```
+
+`select` needs `.options()`, `range` needs `.bounds()`, and `repeater` and `group` need `.fields()`. A choice field with no choices and a slider with no track cannot be registered, and neither costs a runtime guard.
+
+**A `this` type gates a method on the chain's state.** Some methods only make sense once an earlier call has run, or only for one reference kind.
+
+```ts no-typecheck
+import { entry, select, user } from "plumix/fields";
+
+select("garnishes").options(["basil", "mint"]).max(2);
+// The 'this' context of type 'SelectFieldBuilder<..., false, ...>' is not
+// assignable to method's 'this' of type 'SelectFieldBuilder<..., true, ...>'.
+
+entry("pairsWith", ["recipe"]).roles(["editor"]);
+// '.roles()' is a user-reference method.
+
+user("testers").required().multiple();
+// '.multiple()' after '.required()' would widen a shape already narrowed.
+```
+
+`.max()` wants an array to cap, so it waits for `.multiple()`. `.roles()` and `.includeDisabled()` belong to `user`, `.status()` and `.includeTrashed()` to `entry`. `.multiple()` has to come before `.required()`, because required narrows the value and the stored shape, and flipping to an array afterwards would leave the declared type lying about what is stored. On a `select`, `.default()` closes the same door.
+
+**An inferred literal union closes the value set.** `.options()` reads its argument as literals, so the option list types everything downstream of it.
+
+```ts no-typecheck
+import { select } from "plumix/fields";
+
+select("difficulty").options(["easy", "medium", "hard"]).default("simple");
+// Argument of type '"simple"' is not assignable to parameter of type
+// '"easy" | "medium" | "hard"'.
+```
+
+The same inference gates `.appearance()`. A single-value field takes `select`, `radio` or `buttons`, and a multi-value field takes `buttons` or `checkboxes`. The chain tracks both halves, so `.appearance("radio").multiple()` and `.multiple().appearance("radio")` both fail.
+
+<Aside type="tip" title="Two shapes, not one">
+  `.required()` and `.default()` look alike and are not. `.required()` narrows
+  both what you read and what is stored, because the write is enforced.
+  `.default()` narrows only what you read, because nothing was written. That
+  split is why a builder tracks the two separately.
+</Aside>
+
+## From a fields array to typed meta
+
+A `register*` call happens at runtime and cannot augment a type, so typed reads cost one declaration per box. Write the fields as a named const, declare the contribution against it, and register the same const.
+
+```ts
+import type { EntryMeta, ResolvedEntry } from "plumix";
+import { number, select, text } from "plumix/fields";
+import { definePlugin } from "plumix/plugin";
+
+const recipeFields = [
+  number("servings").min(1).required(),
+  select("difficulty").options(["easy", "medium", "hard"]).default("medium"),
+  text("unit"),
+];
+
+declare module "plumix" {
+  interface EntryTypeRegistry {
+    recipe: { entry: ResolvedEntry };
+  }
+  interface EntryMetaContributions {
+    "recipe-details": EntryMeta<"recipe", typeof recipeFields>;
+  }
+}
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("recipe-details", {
+      label: "Recipe details",
+      entryTypes: ["recipe"],
+      fields: recipeFields,
+    });
+  },
+});
+```
+
+The key in `EntryMetaContributions` is the box id, and `EntryMeta` takes the entry type and the fields. The entry-type name is checked against `EntryTypeRegistry`, so a typo errors at the declaration rather than at a read site far away.
+
+`MetaOf<"recipe">` then folds every contribution targeting `recipe` into one record:
+
+```ts
+import type { MetaOf } from "plumix";
+
+export function summarise(meta: MetaOf<"recipe">): string {
+  return `Serves ${String(meta.servings)}, ${meta.difficulty}`;
+}
+```
+
+`meta.servings` is `number` because the field is required. `meta.difficulty` is `"easy" | "medium" | "hard"` because a default removed the `undefined`. `meta.unit` is `string | undefined`. The record is closed, with no index signature, so `meta.serving` is an error rather than `unknown`.
+
+The declaration and the registration check each other. `registerEntryMetaBox` intersects a drift type onto its options, so an `entryTypes` list or a fields array that disagrees with the declaration fails the call with a message naming the mismatch. A box with no declaration registers as normal and reads as absent, and any package downstream can supply the missing declaration by merging the interface.
+
+`TermMeta`, `UserMeta` and `SettingsMeta` follow the same pattern for the other three surfaces, folding through `TermMetaOf`, `UserMetaOf` and `SettingsOf`. Users have a flat keyspace, so a `UserMeta` contribution takes fields and no target.
+
+<Aside type="caution" title="Augment through one specifier">
+  Type augmentation goes through `declare module "plumix"` and nothing else.
+  Declaring against a deeper package path builds a second interface the compiler
+  never merges with the one `plumix` exports, so the contribution is not there
+  at all when a theme reads the meta back.
+</Aside>
+
+## Related
+
+The builders here declare fields for boxes registered in [Meta Boxes](/fields/meta-boxes/), and [Field Types](/fields/field-types/) lists what each builder function produces. [Overview](/fields/overview/) covers what the compiled definition does at write time and read time. A theme consumes `MetaOf` through its template data, described in [Template Data](/themes/template-data/), and the entry type names it is keyed by come from [Entry Types](/content-modelling/entry-types/).
+
+## Next steps
+
+Go back to [Field Types](/fields/field-types/) for the chain methods particular to each type, or on to [Themes](/themes/overview/) to read the values back out in a template.
+
+Two pages ahead of this one are not written yet. Conditional Fields goes deeper into `.visibleWhen()`, including how a hidden field behaves when the entry is saved. Settings covers settings groups, which take the same builders and store their values per group instead of on an entity.

@@ -1,0 +1,194 @@
+---
+title: Taxonomies and Terms
+description: Register a taxonomy, scope it to the entry types it classifies, and learn what hierarchy changes about term URLs and term archives.
+tier: P0
+sidebar:
+  order: 30
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+A taxonomy is a named way of classifying entries, and a term is one value inside it. Cuisine and diet are taxonomies; Sicilian and vegetarian are terms.
+
+## Overview
+
+`registerTermTaxonomy(name, options)` declares the taxonomy. Terms themselves are content rather than declarations. You create them in the admin or through the term API, the same way you create entries.
+
+Three tables carry the model. Every term of every taxonomy is a row in `terms`, told apart by its `taxonomy` column, so a slug is unique within a taxonomy and a `cuisine` term and a `diet` term can both be called `italian`. A term's `parentId` points at another term for hierarchy. Assignments live in `entry_term`, one row per entry-and-term pair.
+
+The choice that separates the two example taxonomies is hierarchy. `cuisine` is hierarchical, so Sicilian sits under Italian and the term URL nests. `diet` is flat, so vegetarian, vegan and gluten-free are siblings.
+
+Registration goes through a plugin's `setup`, alongside the entry types it classifies. [Overview](/content-modelling/overview/) covers that arrangement.
+
+## Quickstart
+
+<Steps>
+
+1. **Register both taxonomies.** In `plugins/recipes.ts`:
+
+   ```ts
+   import { definePlugin } from "plumix/plugin";
+
+   export const recipes = definePlugin("recipes", {
+     setup: (ctx) => {
+       ctx.registerTermTaxonomy("cuisine", {
+         label: "Cuisines",
+         labels: { singular: "Cuisine", plural: "Cuisines" },
+         isHierarchical: true,
+         entryTypes: ["recipe"],
+       });
+
+       ctx.registerTermTaxonomy("diet", {
+         label: "Diets",
+         labels: { singular: "Diet", plural: "Diets" },
+         isHierarchical: false,
+         entryTypes: ["recipe"],
+       });
+     },
+   });
+   ```
+
+2. **Point the entry type at them.** Add `termTaxonomies: ["cuisine", "diet"]` to the `registerEntryType("recipe", …)` call in the same plugin.
+
+3. **Create some terms.** Open `/_plumix/admin/terms/cuisine`. Add Italian, then add Sicilian with Italian as its parent. Add vegetarian and vegan under `/_plumix/admin/terms/diet`.
+
+4. **Classify a recipe.** Open Sicilian Caponata in the editor. The editor sidebar now carries a Cuisines picker and a Diets picker. Choose Sicilian and vegetarian, and once the recipe is published it appears on the archives at `/cuisine/italian/sicilian` and `/diet/vegetarian`.
+
+</Steps>
+
+## Declaring the pairing from both sides
+
+An entry type and a taxonomy each name the other, and the two declarations do different jobs.
+
+`termTaxonomies` on the entry type is what puts the pickers on the editor. The editor intersects that list with the taxonomies the current user holds `term:<taxonomy>:assign` for, so a contributor who cannot assign diets sees only the Cuisines picker rather than one that fails on save.
+
+`entryTypes` on the taxonomy decides what a term archive contains and what a term edit purges. The archive at `/cuisine/italian/sicilian` lists entries whose type appears in that array; a taxonomy registered with no `entryTypes` yields an empty archive rather than a page of everything. The same array drives cache purging, so editing the Sicilian term purges the stored pages of every entry type the taxonomy classifies.
+
+Leave one side out and half the behaviour goes missing quietly. Declare both.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryType("recipe", {
+      label: "Recipes",
+      labels: { singular: "Recipe", plural: "Recipes" },
+      termTaxonomies: ["cuisine", "diet"],
+      hasArchive: true,
+      rewrite: { slug: "recipes" },
+    });
+
+    ctx.registerTermTaxonomy("cuisine", {
+      label: "Cuisines",
+      labels: { singular: "Cuisine", plural: "Cuisines" },
+      isHierarchical: true,
+      entryTypes: ["recipe"],
+      hasAdminColumn: true,
+    });
+  },
+});
+```
+
+A taxonomy may list more than one entry type. That is why `entryTypes` is an array rather than a single name. Adding a second type widens the term archive without touching the terms already stored.
+
+## Hierarchy and term URLs
+
+A hierarchical taxonomy nests its term URLs. Sicilian under Italian serves at `/cuisine/italian/sicilian`, and each level has a `/page/:page` variant for later pages of the archive. A flat taxonomy stays at one segment, so vegetarian serves at `/diet/vegetarian`.
+
+The prefix is the taxonomy name unless `rewrite.slug` overrides it, and `rewrite.isHierarchical: false` keeps the flat URL shape even where the term tree itself is a tree.
+
+A term's parent has to belong to the same taxonomy, and the server rejects a cross-taxonomy parent on write. Deleting a term re-roots its children rather than removing them, setting their `parentId` to null, and drops that term's assignments.
+
+<Aside type="caution" title="Renaming a parent slug moves every term under it">
+  Plumix assembles the nested path from the ancestors' slugs at render time.
+  Rename Italian to italian-regional and every URL below it changes with no
+  redirect behind it. Treat a parent slug as part of the public contract.
+</Aside>
+
+## Term archives
+
+A term archive is a paginated listing of the entries carrying that term. It shows entries that are `published` and carry a publish time, so a scheduled recipe stays off its cuisine archive until the cron flips it.
+
+`archivePerPage` sets the page size and defaults to 20. It sits on the taxonomy, so cuisine archives and diet archives can page differently.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerTermTaxonomy("cuisine", {
+      label: "Cuisines",
+      labels: { singular: "Cuisine", plural: "Cuisines" },
+      isHierarchical: true,
+      entryTypes: ["recipe"],
+      rewrite: { slug: "cuisines", isHierarchical: true },
+      archivePerPage: 12,
+    });
+  },
+});
+```
+
+Term archive routes compile ahead of entry-type routes, so a taxonomy prefix wins a collision against an entry type that claimed the same prefix.
+
+## Capabilities
+
+Registering a taxonomy mints five capabilities named `term:<taxonomy>:<action>`.
+
+| Capability            | Minimum role | Gates                                     |
+| --------------------- | ------------ | ----------------------------------------- |
+| `term:cuisine:read`   | subscriber   | Listing and reading terms                 |
+| `term:cuisine:assign` | contributor  | Attaching a term to an entry              |
+| `term:cuisine:edit`   | editor       | Creating and editing terms                |
+| `term:cuisine:delete` | editor       | Deleting a term                           |
+| `term:cuisine:manage` | editor       | Nothing in core; a gate plugins can claim |
+
+The `term:` prefix keeps the namespaces apart, so a `cuisine` taxonomy and a `cuisine` entry type would never share a capability. `capabilities` on the registration raises or lowers the minimum role for any of the five, the same way it does for an entry type.
+
+Core's own term procedures gate on `edit` and `delete`; `manage` is there for a plugin that wants one taxonomy-wide switch. The menu plugin uses it, gating every menu mutation on `term:menu:manage`.
+
+Assigning is deliberately a lower bar than editing. A contributor can tag a recipe Sicilian; adding Sicilian to the taxonomy in the first place takes an editor.
+
+## Assigning terms
+
+Term assignment travels with the entry, in a `terms` patch keyed by taxonomy name and holding term ids. The server rewrites each taxonomy in the patch independently. A taxonomy the patch omits keeps its assignments, and an empty array clears one taxonomy without touching the others.
+
+The server validates the whole patch before it writes anything. An unregistered taxonomy, a term id from a different taxonomy, or a missing `assign` capability rejects the save rather than leaving a half-classified entry behind.
+
+## Term meta
+
+Terms carry their own meta bag and their own meta boxes. `registerTermMetaBox` scopes a card of fields to one or more taxonomies, and the field shape is the same one entries use.
+
+```ts
+import { text, textarea } from "plumix/fields";
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerTermMetaBox("cuisine-details", {
+      label: "Cuisine details",
+      termTaxonomies: ["cuisine"],
+      fields: [
+        text("region").label("Region"),
+        textarea("history").label("Culinary history"),
+      ],
+    });
+  },
+});
+```
+
+## Options that stay server-side
+
+Not every option reaches the browser. The projection that builds the plugin manifest works from an allowlist, and it holds back `hasAdminColumn`, `isInQuickEdit`, `rewrite` and `capabilities`. Declaring them is harmless and records intent; do not expect `hasAdminColumn: true` to add a column to the entry list today.
+
+`isPublic: false` removes the taxonomy's public surface altogether. No term archive routes compile, and the term URL builder returns null.
+
+## Related
+
+Taxonomies classify entries, and [Entry Types](/content-modelling/entry-types/) covers the type on the other side of the pairing. Term meta boxes use the field builders described in [Fields](/fields/overview/) and the types listed in [Field Types](/fields/field-types/). Term archive URLs are one output of the router, which [Permalinks and Slugs](/routing/permalinks/) covers, and a theme picks the template for one through [Template Hierarchy](/themes/hierarchy/). The access layer described in [Access & Identity](/access/overview/) enforces the capability table above.
+
+## Next steps
+
+Read [Statuses and Publishing](/content-modelling/statuses/) for what has to be true before a classified recipe shows up on its term archive. Then attach the Recipe details card with [Meta Boxes](/fields/meta-boxes/), which is where prep time, servings and ingredients live.
+
+For a worked pair of registrations, [Blog](/plugins/blog/) ships a hierarchical `category` and a flat `tag`, both scoped to `post`.

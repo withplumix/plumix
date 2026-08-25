@@ -1,0 +1,175 @@
+---
+title: Overview
+description: How a request resolves to a principal, what a session is made of, and the hasSession contract a custom authenticator implements.
+tier: P0
+sidebar:
+  order: 10
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+Every request into a Plumix site resolves to a principal: a loaded user, or the anonymous absence of one. One authenticator makes that call for the whole site, and the admin, the RPC layer, plugin routes and the theme all read the same answer off the request context.
+
+## The access model
+
+Four nouns carry the access model.
+
+- A **principal** is the actor a request resolved to. Handlers read it as `ctx.user`, which is an authenticated user or `null`.
+- A **session** is a server-issued credential a browser carries in a cookie. One row in `sessions`, one `plumix_session` cookie, one user.
+- An **authenticator** decides who a request is. It reads credentials and returns a user or `null`. It never mints a session and never sets a cookie.
+- A **capability** is a permission string shaped `<entity>:<type>:<action>`, each mapped to a minimum role. Code asks `ctx.auth.can("entry:recipe:publish")` instead of comparing roles by hand.
+
+`ctx.user` is a projection of the user row rather than the row itself: `id`, `email`, `name`, `role` and the stored `meta` bag. Nothing on it is a credential, so a handler can log it or pass it to a hook without leaking anything.
+
+Roles are one ordered ladder: `subscriber`, `contributor`, `author`, `editor`, `admin`. A capability names the lowest role that holds it, and every role above that holds it too, so there is no per-user permission list to maintain. Registering the `recipe` entry type mints eight capabilities for it, from `entry:recipe:read` up to `entry:recipe:restore_revision`; registering the `cuisine` taxonomy mints five.
+
+The `auth` slot is not optional. A config without one does not type-check, and `auth()` validates its input as the config module loads, throwing `PlumixConfigError` with the offending path named. Its one required block is `passkey`, so every site has a working sign-in method from its first deploy.
+
+## Quickstart
+
+<Steps>
+
+1. **Declare the auth slot.** Create `auth.ts` beside your config:
+
+   ```ts
+   import { auth } from "plumix";
+
+   export const recipesAuth = auth({
+     passkey: {
+       rpName: "Recipes",
+       rpId: "localhost",
+       origin: "http://localhost:5173",
+     },
+   });
+   ```
+
+2. **Wire it in.** In `plumix.config.ts`, import `recipesAuth` and pass it as the `auth` slot of `plumix({ … })`, beside the `runtime` and `database` slots.
+
+3. **Enrol the first user.**
+
+   ```sh
+   pnpm dev
+   ```
+
+   Open `/_plumix/admin`. With an empty `users` table the admin routes to its bootstrap screen instead of the login screen. Enter an email and approve the browser's passkey prompt. The insert that creates the row elects the first user `admin` inside the statement itself, so two concurrent bootstraps cannot both win.
+
+4. **Read the principal.** Any plugin can mount a raw route and let the dispatcher gate it:
+
+   ```ts
+   import { definePlugin } from "plumix/plugin";
+
+   export const recipes = definePlugin("recipes", {
+     setup: (ctx) => {
+       ctx.registerRoute({
+         method: "GET",
+         path: "/whoami",
+         auth: "authenticated",
+         handler: (_request, appCtx) =>
+           Response.json({
+             email: appCtx.user?.email ?? null,
+             role: appCtx.user?.role ?? null,
+             canPublish: appCtx.auth.can("entry:recipe:publish"),
+           }),
+       });
+     },
+   });
+   ```
+
+   The route serves at `/_plumix/recipes/whoami`. Signed out it answers 401 and your handler never runs; `auth: { capability: "entry:recipe:publish" }` instead of `"authenticated"` turns the shortfall into a 403.
+
+</Steps>
+
+## Sessions
+
+A session token is 192 bits of randomness. Plumix hashes it with SHA-256 and stores the row under the hash, so the raw value exists in the cookie and nowhere else, and a dump of the `sessions` table yields nothing anyone could present.
+
+The cookie is `plumix_session`, set `HttpOnly` and `SameSite=Lax`, scoped to the site's base path, and marked `Secure` whenever the request arrived over HTTPS. Plumix reads it from the `Cookie` header only, never from a query string or a form field.
+
+Lifetime is a sliding 30 days under a hard ceiling of 90. Validation extends the expiry only once more than half the window has elapsed, which keeps an active browsing session from writing to the database on every request. Passing the ceiling, or finding the user disabled, deletes the row on the spot, so a stolen token stops working on first use rather than at expiry. Set `sessions` in the auth config to change all three numbers.
+
+Signing out at `/_plumix/auth/signout` deletes the row and returns a cookie that clears itself. The admin lists the sessions on your own account with their recorded IP and user agent, and revokes any one of them or all the others at once. It refuses to revoke the session making the request, since signing out is what that is for. Both recorded values come off request headers, and whoever sent the request chose them, so read them as a memory aid for the "is this me?" question rather than as evidence.
+
+<Aside type="caution" title="Session cleanup needs a cron trigger">
+  The core `session-cleanup` task reaps expired rows daily at 03:00 UTC, and it
+  only fires if your deploy declares a matching cron trigger. Without one,
+  expired sessions accumulate as rows. They are never honoured either way,
+  because validation checks expiry before it returns a user.
+</Aside>
+
+## Authenticators
+
+An authenticator has one required method, `authenticate(request, db)`, resolving to a user or to `null`. Returning `null` means "no credential on this request", and the caller decides whether that is a 401 or an anonymous render. Throwing means the credential was present and malformed, which the dispatcher maps to a typed error. A returned user may come with a `tokenScopes` list, which narrows what that one request may do. `ctx.auth.can()` intersects the scopes with the role's capabilities, so a scoped credential holds fewer capabilities than its owner and never more.
+
+Out of the box Plumix chains two of them. The first reads the `plumix_session` cookie. The second reads `Authorization: Bearer pl_pat_…` and resolves it against the hashed `api_tokens` table. First non-null wins, so browser traffic and API clients both work with no configuration. Set `authenticator` in the auth config to replace the chain, and wrap your own with the API-token one if you want bearer credentials alongside it.
+
+### The hasSession contract
+
+A public page render skips authentication for traffic that carries no session. Loading a user on every anonymous hit would cost a database read per request and make the render depend on who is asking. The predicate that decides is `hasSession(request)`, the optional, synchronous method a custom authenticator owes the public render path. Omit it and the default applies, which is that the `plumix_session` cookie is present.
+
+That default is right for anything cookie-shaped and wrong for everything else. An authenticator carrying its credential in a header sees every public request as anonymous, so a signed-in principal gets the signed-out page and every capability-gated render decision takes the anonymous branch. Returning `false` opts out on purpose. The API-token authenticator does exactly that, because an API token belongs to an API client rather than to a browser session, and a cross-site navigation carrying an `Authorization` header should not touch the token's `lastUsedAt`.
+
+```ts
+import type { RequestAuthenticator } from "plumix";
+import { apiTokenAuthenticator, chainAuthenticators } from "plumix";
+import { eq } from "plumix/db";
+import { users } from "plumix/schema";
+
+const IDENTITY_HEADER = "x-forwarded-email";
+
+function proxyIdentity(): RequestAuthenticator {
+  return {
+    async authenticate(request, db) {
+      const email = request.headers.get(IDENTITY_HEADER);
+      if (!email) return null;
+      const user = await db.query.users.findFirst({
+        where: eq(users.email, email.toLowerCase()),
+      });
+      return user ? { user } : null;
+    },
+    // Without this, a public render never loads the proxied user.
+    hasSession(request) {
+      return request.headers.has(IDENTITY_HEADER);
+    },
+    signOutUrl() {
+      return "https://identity.example.com/logout";
+    },
+  };
+}
+
+export const authenticator = chainAuthenticators(
+  proxyIdentity(),
+  apiTokenAuthenticator(),
+);
+```
+
+<Aside
+  type="danger"
+  title="A header is only trustworthy if something strips it"
+>
+  The example above believes whatever `x-forwarded-email` says. That is safe
+  only when a proxy in front of the worker sets the header and removes any
+  inbound copy of it. If a request can reach Plumix with a header you did not
+  set, anyone can be anyone. The Cloudflare adapter's own `cfAccess`
+  authenticator avoids the problem by verifying a signed JWT rather than
+  trusting a header value.
+</Aside>
+
+`signOutUrl` matters for any identity provider that keeps its own session. Clearing the local cookie is not enough there. The next request still carries the provider's credential, so the provider signs the same person straight back in. Plumix passes the URL to the admin client after sign-out and drops anything that is not an `https://` URL or a same-origin path.
+
+## Capabilities and the staff boundary
+
+`ctx.auth.can(capability)` is the one place a capability decision happens. It resolves the capability's minimum role from core's table plus every capability plugins registered, compares it against the principal's role, and intersects the result with the request's token scopes. Nothing in core or in a plugin compares roles directly, which is why adding an authenticator that returns scopes works everywhere at once.
+
+Not every signed-in principal is staff. The lowest role allowed into the admin shell is `contributor`, so Plumix redirects a signed-in `subscriber` to the site root rather than hand over a shell whose every call would answer 403. That is the tier open signup hands out, and it is the tier a theme's own membership area is built on.
+
+## Related
+
+The capabilities above are not written by hand. [Content Modelling](/content-modelling/overview/) covers the registrations that mint them, so the names you choose for an entry type and a taxonomy decide the capability strings that gate them. The auth slot sits in `plumix.config.ts` alongside the rest of the site's configuration, described in [Configuration](/getting-started/configuration/), and any value in it that is a secret takes an `(env) => …` resolver rather than a literal, covered in [Secrets](/deployment/secrets/). A [theme](/themes/overview/) reads the same principal the admin does, which is how a signed-in principal gets a different page from an anonymous one.
+
+## Next steps
+
+Read [Passkeys](/access/passkeys/) next. It is the sign-in method the config above turned on, the only one available on a fresh install, and the path the first admin takes.
+
+Seven pages in this section are not written yet, though everything they cover already ships. Roles is the exhaustive listing of the five roles and the staff boundary. Magic Links covers email sign-in and the mailer slot it needs; OAuth covers third-party providers and the `oauth_accounts` rows they create; both are optional blocks in the same `auth()` call. Capabilities lists every core capability and the per-type actions derived from your registrations. API Tokens covers the `pl_pat_` bearer credentials, their scopes, and the device flow a CLI uses to obtain one. Access Policy covers `definePolicy`, the audience segments a policy may grant, and the three gate outcomes. Gating Content builds on it for teasers, paywalls and what a gated page tells a crawler.
+
+After that, the [Deployment](/deployment/overview/) section covers what changes when the site stops running on localhost, starting with the origins a passkey is anchored to.
