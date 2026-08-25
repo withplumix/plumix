@@ -146,13 +146,6 @@ jobs:
     name: Smoke (scaffold)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      # Build from source rather than restoring artifacts. This job packs what
-      # it builds and asks whether *this commit* breaks generated projects, so
-      # a restored artifact is the one thing it must not trust — and pulling
-      # every package's artifact adds to a concurrent-restore burst that the
-      # remote cache answers with 429s (see #1382).
-      TURBO_TOKEN: ""
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -166,6 +159,13 @@ jobs:
       # packs — `@plumix-apps/docs` above all, already covered by the `docs` job.
       # `smoke.mjs` throws for anything publishable it cannot pack, so nothing
       # keeps this filter in sync by hand.
+      #
+      # This used to build from source with the caches off, citing #1382. That
+      # issue says the remote-cache 429s were "a red herring" and its real cause
+      # — build and typecheck sharing one tsbuildinfo, so `dist` could silently
+      # not emit — is fixed. Verified on a 29/29 cached build: the generated
+      # projects still typecheck and build, and removing `dist` from one
+      # plugin's `files` still fails the job.
       - run: pnpm exec turbo run build --filter './packages/**'
       - run: pnpm --filter create-plumix-app smoke:scaffold
 

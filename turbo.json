@@ -3,7 +3,21 @@
   "ui": "tui",
   "tasks": {
     "topo": {
-      "dependsOn": ["^topo"]
+      // A synthetic ordering node: nothing runs it, but `lint` and `typecheck`
+      // depend on `^topo` to reach upstream packages that have no `build`.
+      // Its default inputs are every file in the package, so one edited unit
+      // test in `@plumix/core` reached the hash of every dependent's lint and
+      // typecheck — 35 tasks for a file no compiler reads. Same exclusions as
+      // `build` below; keep them in step.
+      "dependsOn": ["^topo"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.spec.ts",
+        "!e2e/**",
+        "!screenshots/**"
+      ]
     },
     "i18n:compile": {
       "inputs": ["locales/*.po"],
@@ -11,6 +25,18 @@
     },
     "build": {
       "dependsOn": ["^build", "i18n:compile"],
+      // Every `tsconfig.build.json` already excludes these, so the compiler
+      // never read them — turbo's hash just did not say so, and the difference
+      // cascaded through `^build` into every dependent. Verified: narrowing
+      // this leaves `dist/` byte-identical.
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.spec.ts",
+        "!e2e/**",
+        "!screenshots/**"
+      ],
       "outputs": [".cache/build.tsbuildinfo", "dist/**"],
       "env": [
         "WORKERS_CI",
@@ -59,8 +85,15 @@
       "dependsOn": ["^build"]
     },
     "test:e2e": {
+      // Cached, like `test:unit`, `test:build` and `docs:screenshots` — which
+      // drives this same rig (#1949). With the inputs above, a hit means
+      // nothing a suite exercises has moved; a change to core still runs all
+      // nine, and a change to one plugin runs that plugin's.
+      //
+      // The cost, stated plainly: `retries: 2` means a suite that only went
+      // green on its third attempt stays green until its inputs change.
+      // Caching does not lower that bar, it stops re-rolling identical inputs.
       "dependsOn": ["build", "^build"],
-      "cache": false,
       "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
     },
     "docs:screenshots": {
@@ -90,17 +123,47 @@
       "cache": false
     },
     "publint": {
-      "dependsOn": ["build"]
+      // Validates the published tarball, which is `dist/` plus the manifest —
+      // no package ships `src/`, so a unit test cannot change the answer.
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.spec.ts",
+        "!e2e/**",
+        "!screenshots/**"
+      ]
     },
     "attw": {
-      "dependsOn": ["build"]
+      // Same surface as publint above.
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.spec.ts",
+        "!e2e/**",
+        "!screenshots/**"
+      ]
     },
     "i18n:check": {
-      "dependsOn": ["plumix#build"],
-      "cache": false
+      // Cacheable: a pure comparison of the message ids in source against the
+      // active msgids in `locales/*.po`. It was `cache: false` with no reason
+      // recorded, which made these nine tasks — and the `plumix#build` they
+      // pull — the floor under every commit, including README-only ones.
+      // Verified: deleting a msgid from every locale still fails on a warm cache.
+      "dependsOn": ["plumix#build"]
     },
     "i18n:ratchet:check": {
-      "cache": false
+      // Re-runs eslint over `STRICT_UNWRAPPED_FILES` with
+      // `lingui/no-unlocalized-strings` forced back to error, so a file that
+      // has since been wrapped fails until it leaves the denylist.
+      //
+      // `^topo` is load-bearing, not ordering: the verdict depends on the
+      // shared eslint config, which lives in another package. Without it a
+      // cached pass would survive a rule change that should have moved it.
+      "dependsOn": ["^topo"]
     }
   },
   "globalPassThroughEnv": [

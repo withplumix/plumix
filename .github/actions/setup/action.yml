@@ -13,3 +13,23 @@ runs:
 
     - shell: bash
       run: pnpm install --frozen-lockfile
+
+    # Turbo checks its local cache before the remote one and never opens a
+    # connection when the local copy answers. Without this every job starts
+    # empty, so all ~40 of its tasks go to the remote at once — seventeen jobs
+    # doing that concurrently is what the remote answers with 429s, which is
+    # why a docs-only pull request still re-ran 26 of 39 lint tasks.
+    #
+    # The whole build/lint/typecheck/publint/attw cache measures ~24 MB, so
+    # this is small against the repository's Actions cache budget.
+    #
+    # Keyed per job: each one caches only the tasks it runs, and restores its
+    # own previous state rather than racing the other sixteen for one key.
+    - shell: bash
+      run: echo "TURBO_CACHE_DIR=.turbo/cache" >> "$GITHUB_ENV"
+
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .turbo/cache
+        key: turbo-${{ github.job }}-${{ github.sha }}
+        restore-keys: turbo-${{ github.job }}-

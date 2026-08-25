@@ -33,7 +33,6 @@ pnpm add -g @pnpm/merge-driver
 pnpm dlx npm-merge-driver install --driver-name pnpm-merge-driver --driver "pnpm-merge-driver %A %O %B %P" --files pnpm-lock.yaml
 ```
 
-
 ## Development
 
 ```bash
@@ -95,7 +94,7 @@ enforced yet.
 `apps/docs` publishes screenshots of the admin, and they are committed rather
 than built, so that a pull request diff shows which visuals a change moved. CI
 keeps that promise honest: it re-renders them and fails the **Test (e2e)** job
-on the step *Assert the committed images are the ones the capture produces* if
+on the step _Assert the committed images are the ones the capture produces_ if
 what it rendered is not what you committed.
 
 That step failing means your change moved something the images show. Regenerate
@@ -151,6 +150,27 @@ remote to lychee, so it is checked weekly rather than on the PR that writes it.
 
 `lychee.toml` is the only exclude list; the docs-side validator carries no host
 policy of its own.
+
+## What CI re-runs
+
+Turborepo skips a task when nothing it reads has changed, so most pull
+requests execute a small fraction of the pipeline. Two rules decide what you
+will see:
+
+- **Test files are not build inputs.** `turbo.json` excludes `*.test.ts`,
+  `*.spec.ts`, `e2e/` and `screenshots/` from the `build` and `topo` tasks,
+  because every `tsconfig.build.json` already excludes them. Editing a test in
+  `@plumix/core` therefore re-runs that package's own lint, typecheck and unit
+  tests — not every dependent's.
+- **Everything is cached, including e2e.** A suite is skipped when the packages
+  it exercises are untouched. A change to `@plumix/core` still runs all nine
+  e2e suites, because everything depends on it.
+
+If you need to see a task run that turbo wants to skip, pass `--force`.
+
+The scaffolder smoke job deliberately opts out of both caches: it packs what it
+builds to ask whether _this commit_ breaks a generated project, so a replayed
+artifact is the one thing it must not trust.
 
 ## Making changes
 
