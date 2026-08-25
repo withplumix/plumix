@@ -18,6 +18,7 @@ const MOUNTED_CORE = "/playwright-core";
 // What `run-server` prints once it is actually accepting connections.
 const READY_MARKER = "Listening on";
 const READY_TIMEOUT_MS = 30_000;
+const POLL_INTERVAL_MS = 100;
 
 // `playwright-core` is @playwright/test's dependency, not admin's, so it
 // resolves from there rather than from this file.
@@ -137,7 +138,7 @@ export async function startCaptureBrowser(): Promise<CaptureBrowser> {
   };
 
   try {
-    await waitForServer(id);
+    await waitForServer(() => containerLog(id));
   } catch (cause) {
     stop();
     throw cause;
@@ -168,14 +169,22 @@ function runDocker(args: string[], image: string): string {
 }
 
 /**
- * Waits for the marker rather than for the port: docker publishes the port when
- * it creates the container, so a TCP connect succeeds against the proxy about a
- * second before anything inside is listening.
+ * Polls until the server announces itself. Watching the log rather than the
+ * port is the whole point: docker publishes the port when it *creates* the
+ * container, so a TCP connect succeeds against the proxy about a second before
+ * anything inside is listening.
+ *
+ * Takes the reader rather than a container id — what it does is poll until a
+ * marker shows up, and `docker logs` is only where this caller happens to read
+ * from. Exported for direct testing only.
  */
-async function waitForServer(id: string): Promise<void> {
-  const deadline = Date.now() + READY_TIMEOUT_MS;
+export async function waitForServer(
+  readLog: () => string | undefined,
+  timeoutMs: number = READY_TIMEOUT_MS,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
   for (;;) {
-    const log = containerLog(id);
+    const log = readLog();
     if (log === undefined) {
       throw new Error(
         "The capture browser exited as it started, and `--rm` took its logs with it.",
@@ -185,10 +194,10 @@ async function waitForServer(id: string): Promise<void> {
     if (Date.now() > deadline) {
       throw new Error(
         `The capture browser never reported "${READY_MARKER}" within ` +
-          `${String(READY_TIMEOUT_MS)}ms.\n${log}`,
+          `${String(timeoutMs)}ms.\n${log}`,
       );
     }
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 }
 
