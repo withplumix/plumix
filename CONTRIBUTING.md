@@ -90,6 +90,34 @@ Every test-having package ships a `vitest.config.ts` with coverage wired
 (`pnpm exec vitest run --coverage` inside the package). Thresholds are not
 enforced yet.
 
+### If CI says the committed screenshots are stale
+
+`apps/docs` publishes screenshots of the admin, and they are committed rather
+than built, so that a pull request diff shows which visuals a change moved. CI
+keeps that promise honest: it re-renders them and fails the **Test (e2e)** job
+on the step *Assert the committed images are the ones the capture produces* if
+what it rendered is not what you committed.
+
+That step failing means your change moved something the images show. Regenerate
+them and commit the result alongside it:
+
+```bash
+pnpm docs:screenshots   # needs a running Docker; the capture renders in a container
+git add apps/docs/src/assets/screenshots
+```
+
+Two things make this cheaper than it sounds:
+
+- **The rendering is not your machine's.** It happens in a pinned Playwright
+  container, so the bytes you commit are the bytes CI renders. You are not
+  chasing a diff that only exists because you are on macOS and CI is on Linux.
+- **It only runs when it could matter.** The capture is a turbo task keyed on
+  the admin package and everything it is built from, so a change that cannot
+  move a pixel takes a cache hit and the step passes without rendering at all.
+
+[`packages/admin/README.md`](packages/admin/README.md) has the rest — what a
+subject is, how to add one, and why the container is pinned the way it is.
+
 ## Making changes
 
 ### Commit messages
