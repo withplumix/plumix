@@ -16,7 +16,7 @@ A scaffolded project runs locally against a placeholder database and a localhost
 
 The D1 `database_id` is the literal string `local-development-only`. That works for the local database in `.wrangler`, and it is not a real database id, so a remote deploy needs the one Cloudflare hands you.
 
-The passkey origin resolves to `http://localhost:5173`. `cloudflareDeployOrigin` decides that while `plumix build` runs, off a `WORKERS_CI` variable the Vite plugin bakes into the bundle as a literal and only Cloudflare Workers Builds sets. A build on your own machine ships `rpId: "localhost"` and your `localOrigin` whatever `accountSubdomain` says. Getting the deployed half right therefore takes two things, the subdomain in `plumix.config.ts` and a build that resolves it, which means either pushing the repository and letting Workers Builds run the build or writing `rpId` and `origin` literally for the host you deploy to.
+The passkey origin resolves to `http://localhost:5173`, and `cloudflareDeployOrigin` cannot move it off localhost today. The helper reads `WORKERS_CI` through a local variable rather than the literal `process.env.WORKERS_CI` the Plumix Vite plugin substitutes, so the check survives into the bundle and runs inside the Worker, where that variable never exists. Every deploy takes the localhost branch, whether you built on your own machine or on Cloudflare Workers Builds, and `accountSubdomain` changes nothing about it. Write `rpId` and `origin` for the deployed host yourself, which is what step 2 does.
 
 Any secret you have been reading out of `.dev.vars` has to be set on the deploy. `.dev.vars` is gitignored and local by design; it never travels.
 
@@ -24,17 +24,13 @@ Two things need no work. The cron triggers are already in `wrangler.jsonc`, so s
 
 ## Quickstart
 
-<Aside
-  type="caution"
-  title="A build on your machine bakes a localhost passkey origin"
->
-  Step 2 sets the subdomain, and on its own that is not enough. Step 5 builds
-  locally, so the bundle carries `rpId: "localhost"` and the passkey in step 6
-  cannot verify against the deployed host. Either push the repository and let
-  Cloudflare Workers Builds run the build, covered under [Deploying from
-  git](#deploying-from-git) below, or write `rpId` and `origin` literally for
-  the host you deploy to. [Cloudflare Workers](/deployment/cloudflare/) has both
-  shapes.
+<Aside type="caution" title="The scaffolded passkey origin stays on localhost">
+  The scaffolded config spreads `cloudflareDeployOrigin`, and that helper
+  returns `rpId: "localhost"` on every deploy, so the passkey in step 6 cannot
+  verify against the deployed host. Pushing to Cloudflare Workers Builds does
+  not change it, for the reason the Overview above gives. Step 2 replaces the
+  spread with literal values. [Cloudflare Workers](/deployment/cloudflare/)
+  covers the same block and what changes on a custom domain.
 </Aside>
 
 <Steps>
@@ -47,26 +43,26 @@ Two things need no work. The cron triggers are already in `wrangler.jsonc`, so s
 
    Copy the `database_id` it prints into the `d1_databases` entry in `wrangler.jsonc`, replacing `local-development-only`.
 
-2. **Point the passkey at the deployed host.** In `plumix.config.ts`, set `accountSubdomain` to your `workers.dev` subdomain. Every `workers.dev` host and relying-party id the helper derives is built from that one string, so a passkey enrolled against the scaffolded `your-account` placeholder verifies nowhere.
+2. **Point the passkey at the deployed host.** In `plumix.config.ts`, replace the scaffolded `cloudflareDeployOrigin` spread with literal values. Anchor `rpId` to your `workers.dev` subdomain and allow the wildcard beneath it, so one passkey covers production and every preview branch, and keep the localhost pair behind `process.env.PLUMIX_DEV`, which the Vite plugin substitutes as `"1"` under `plumix dev` and empty under `plumix build`.
 
    ```ts no-typecheck
    import { auth } from "plumix";
 
-   import { cloudflareDeployOrigin } from "@plumix/runtime-cloudflare";
-
    export const recipeAuth = auth({
      passkey: {
        rpName: "Recipes",
-       ...cloudflareDeployOrigin({
-         workerName: "recipes",
-         accountSubdomain: "your-account",
-         localOrigin: "http://localhost:5173",
-       }),
+       ...(process.env.PLUMIX_DEV
+         ? { rpId: "localhost", origin: "http://localhost:5173" }
+         : {
+             rpId: "your-account.workers.dev",
+             origin: "https://recipes.your-account.workers.dev",
+             allowedOrigins: ["https://*.your-account.workers.dev"],
+           }),
      },
    });
    ```
 
-   Running on your own domain instead? Add `productionOrigin: "https://recipes.example.com"` alongside `accountSubdomain`.
+   Running on your own domain instead? Drop `allowedOrigins` and write `rpId: "recipes.example"` with `origin: "https://recipes.example"`. Previews on `workers.dev` then need magic links or Cloudflare Access, because the two are different registrable domains.
 
 3. **Set every secret the config resolves.** One command per name in `.dev.vars`:
 
@@ -93,7 +89,7 @@ Two things need no work. The cron triggers are already in `wrangler.jsonc`, so s
 
    `plumix build` builds the client bundle first and then the worker, because the worker bakes the client's asset manifest into itself. `plumix deploy` passes any extra arguments straight to `wrangler deploy`.
 
-6. **Claim the admin account.** Open `https://recipes.<your-account>.workers.dev/_plumix/admin` and create your passkey before anyone else does. The database is empty, so the first registration wins the admin account and every later one is refused. This is the step the caution above blocks when the build ran on your machine.
+6. **Claim the admin account.** Open `https://recipes.<your-account>.workers.dev/_plumix/admin` and create your passkey before anyone else does. The database is empty, so the first registration wins the admin account and every later one is refused. This is the step the caution above blocks while the config still spreads `cloudflareDeployOrigin`.
 
 </Steps>
 
@@ -127,11 +123,11 @@ The edge cache needs no resource, but it does check for two values before it sto
 
 ## Deploying from git
 
-Connecting the repository to Cloudflare's build service does not remove step 2. `accountSubdomain` is a required field on `cloudflareDeployOrigin`, and every `workers.dev` host and relying-party id is built from it, so it still has to be set in `plumix.config.ts`. Leave the scaffolded placeholder `your-account` in place and the deploy anchors its passkeys to `your-account.workers.dev`, which no browser will match, so every registration and sign-in fails.
+Connecting the repository to Cloudflare's build service does not remove step 2. The build service does set `WORKERS_CI` and `WORKERS_CI_BRANCH`, and the Vite plugin does read them, but `cloudflareDeployOrigin` never receives them, so a Workers Builds deploy carries `rpId: "localhost"` exactly as a local build does. The literal `rpId` and `origin` from step 2 still have to be in `plumix.config.ts`, and a passkey anchored to the scaffolded `your-account` placeholder matches no browser either way.
 
-What the build service removes is the edit per deploy. `cloudflareDeployOrigin` reads `WORKERS_CI` and `WORKERS_CI_BRANCH` out of the build environment, and those are the only two values it takes from there. A push to the default branch then resolves the production origin and a push to any other branch resolves that branch's own preview host, both from the one `accountSubdomain` you set once.
+What the build service gives you is a deploy per push. A push to the default branch ships production on `recipes.your-account.workers.dev`, and a push to any other branch ships that branch's own `<branch>-recipes.your-account.workers.dev` preview host.
 
-On a `workers.dev` deploy it also anchors the passkey relying-party id to `<account>.workers.dev` and allows the account-wide wildcard origin. One passkey enrolled once therefore works on production and on every per-branch preview, because they are all subdomains of the same registrable domain.
+The step 2 block anchors the passkey relying-party id to `your-account.workers.dev` and allows the account-wide wildcard origin, so one passkey enrolled once works on production and on every per-branch preview, because they are all subdomains of the same registrable domain.
 
 A custom production domain breaks that span, and no configuration can restore it. A custom domain and `workers.dev` are different registrable domains, so a credential anchored to one cannot verify against the other. Sign in to previews with magic links or Cloudflare Access when production runs on your own domain.
 

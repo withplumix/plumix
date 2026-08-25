@@ -8,7 +8,7 @@ sidebar:
 
 import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
-The `plugins` array in `plumix.config.ts` is the only way an entry type, a route or an admin page reaches your site. Blocks are the one exception, because core registers its own set and a theme declares more in its descriptor, but everything else on the registration surface arrives through a plugin. Installing a published plugin is a package install and one entry in that array.
+The `plugins` array in `plumix.config.ts` is how you add an entry type, a route or an admin page to your site. It is not the whole registration surface. Core registers its own blocks, a theme's descriptor declares templates, blocks, shortcodes and redirects statically, and the `redirects` key in `plumix.config.ts` contributes redirect rules with no plugin involved. Installing a published plugin is a package install and one entry in that array.
 
 ## What a plugin is
 

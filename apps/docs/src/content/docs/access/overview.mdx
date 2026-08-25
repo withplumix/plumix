@@ -19,7 +19,7 @@ Four nouns carry the access model.
 - An **authenticator** decides who a request is. It reads credentials and returns a user or `null`. It never mints a session and never sets a cookie.
 - A **capability** is a permission string mapped to a minimum role. Code asks `ctx.auth.can("entry:recipe:publish")` instead of comparing roles by hand.
 
-Capabilities come in two shapes. A per-type capability carries three segments, `<entity>:<type>:<action>`, as in `entry:recipe:publish` or `term:cuisine:manage`. An entity-level capability carries two, `<entity>:<action>`, with no type segment at all, as in `user:list`, `user:promote`, `plugin:manage` and `settings:manage`. Core ships seventeen. Eight are the `entry:post:*` set for the built-in `post` entry type; the other nine are flat.
+Capabilities come in two shapes. A per-type capability carries three segments, `<entity>:<type>:<action>`, as in `entry:recipe:publish` or `term:cuisine:manage`. An entity-level capability carries two, `<entity>:<action>`, with no type segment at all, as in `user:list`, `user:promote`, `plugin:manage` and `settings:manage`. Core ships seventeen. Eight are the `entry:post:*` set, baked into core whether or not you install the blog plugin that registers the `post` entry type; the other nine are flat.
 
 `ctx.user` is a projection of the user row rather than the row itself, carrying `id`, `email`, `name`, `role` and the stored `meta` bag. Nothing on it is a credential. It is still personal data, and core's own hook documentation says so, so keep the whole object out of third-party logging and analytics. `email`, `name` and whatever a plugin wrote into `meta` all ride along.
 

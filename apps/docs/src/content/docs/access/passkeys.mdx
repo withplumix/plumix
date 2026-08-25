@@ -14,7 +14,7 @@ A passkey is a public-key credential the browser holds and Plumix verifies. Plum
 
 Enrolment and sign-in are two ceremonies, each two requests. The browser asks for options, the operating system prompts the person, and the browser sends the signed result back for verification. Plumix mounts four endpoints under `/_plumix/auth/passkey/`, two more under `/_plumix/auth/invite/register/` for the invitation rail, and `/_plumix/auth/signout`.
 
-Three admin screens drive them. The login screen calls the two `login/*` endpoints. The bootstrap screen and the profile Passkeys card both call the two `register/*` ones. The accept-invite screen calls the invite pair. You do not call any of them directly unless you are building a sign-in page of your own.
+Four admin surfaces drive them. The login screen calls the two `login/*` endpoints. The bootstrap screen and the profile Passkeys card both call the two `register/*` ones. The accept-invite screen calls the invite pair. You do not call any of them directly unless you are building a sign-in page of your own.
 
 Three values anchor the credential, and all three live in the `passkey` block.
 
@@ -103,7 +103,7 @@ declare module "plumix" {
 
 The wildcard form, `https://*.example.com`, is how one passkey spans an unbounded set of preview hosts. It matches strictly: HTTPS only, the default port, and a real label in front of the base, anchored at the dot, so `evilexample.com` cannot pass for `example.com`.
 
-`origin` and `allowedOrigins` both accept an `(env) => …` resolver, which keeps a value that differs per deploy out of the source. Plumix runs each resolver once per isolate and caches the result against the function's identity, and `env` is isolate-stable, so the resolver picks one value for the whole worker rather than one per request. A single build therefore has a single `origin`. Spanning several hosts is what `allowedOrigins` and its wildcard form are for, and on Cloudflare `cloudflareDeployOrigin` derives all three values from the build environment, one build per host.
+`origin` and `allowedOrigins` both accept an `(env) => …` resolver, which keeps a value that differs per deploy out of the source. Plumix runs each resolver once per isolate and caches the result against the function's identity, and `env` is isolate-stable, so the resolver picks one value for the whole worker rather than one per request. A single build therefore has a single `origin`. Spanning several hosts is what `allowedOrigins` and its wildcard form are for. On Cloudflare, `cloudflareDeployOrigin` was written to derive `rpId` and `origin` per deploy and cannot, so write both out yourself. [Cloudflare Workers](/deployment/cloudflare/) has the block and the reason.
 
 You write the declaration block above yourself. It is what makes `env.PUBLIC_ORIGIN` type-check. A scaffolded project gets a `declare module "plumix"` block only when a sign-in method you selected needs one, such as the OAuth client id and secret, so a passkey-only scaffold has none, and `PUBLIC_ORIGIN` is not a name the scaffolder knows. The Cloudflare scaffold spreads `cloudflareDeployOrigin({ … })` into the `passkey` block instead of reaching for a resolver at all.
 

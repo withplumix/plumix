@@ -54,23 +54,21 @@ The rest of this page writes the commands bare. `wrangler` works the same way.
 
 This is the path from a scaffolded recipe site to a live one. It assumes a site made with `pnpm create plumix-app` and a signed-in `wrangler`.
 
-<Aside
-  type="caution"
-  title="A build on your machine bakes a localhost passkey origin"
->
-  Step 1 sets the subdomain, and on its own that is not enough.
-  `cloudflareDeployOrigin` resolves while `plumix build` runs, off the
-  `WORKERS_CI` variable that only Cloudflare Workers Builds sets. Build on your
-  own machine and the bundle carries `rpId: "localhost"` and your `localOrigin`,
-  so the passkey in step 8 cannot verify against the deployed host whatever
-  `accountSubdomain` says. Either push the repository and let Workers Builds run
-  the build, or write `rpId` and `origin` literally for the host you deploy to.
-  [Cloudflare Workers](/deployment/cloudflare/) has both shapes.
+<Aside type="caution" title="The scaffolded passkey origin stays on localhost">
+  The scaffolded `plumix.config.ts` spreads `cloudflareDeployOrigin`, and that
+  helper returns `rpId: "localhost"` on every deploy, so the passkey in step 8
+  cannot verify against the deployed host. It reads `WORKERS_CI` through a local
+  variable rather than the literal `process.env.WORKERS_CI` the Plumix Vite
+  plugin substitutes, so the check survives into the bundle and runs inside the
+  Worker, where that variable never exists. A Cloudflare Workers Builds deploy
+  lands on localhost for the same reason a local build does. Write `rpId` and
+  `origin` yourself, as step 1 does. [Cloudflare
+  Workers](/deployment/cloudflare/) has the full block.
 </Aside>
 
 <Steps>
 
-1. **Point the passkey at the deployed host.** The scaffolded `plumix.config.ts` spreads `cloudflareDeployOrigin` into `auth.passkey` with the placeholder `accountSubdomain: "your-account"`. Put your own `workers.dev` subdomain there. Every `workers.dev` host and relying-party id the helper derives is built from that one string, so a passkey enrolled against the placeholder verifies nowhere.
+1. **Point the passkey at the deployed host.** The scaffolded `plumix.config.ts` spreads `cloudflareDeployOrigin` into `auth.passkey`. Replace that spread with a literal `rpId` of `your-account.workers.dev`, an `origin` of `https://recipes.your-account.workers.dev` and `allowedOrigins: ["https://*.your-account.workers.dev"]`, keeping the localhost pair behind `process.env.PLUMIX_DEV`. That one wildcard covers production and every preview branch. [Cloudflare Workers](/deployment/cloudflare/) has the block.
 
 2. **Create the database.** The scaffolded `wrangler.jsonc` ships a placeholder `database_id` that works only for local dev.
 
@@ -78,7 +76,7 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
    wrangler d1 create recipes
    ```
 
-   Paste the returned id into the `d1_databases` entry in `wrangler.jsonc`. Both this edit and step 1 have to land before the build, because the build copies `wrangler.jsonc` into the bundle directory and bakes the config module's values into the worker.
+   Paste the returned id into the `d1_databases` entry in `wrangler.jsonc`. Both this edit and step 1 have to land before the build, because the build copies `wrangler.jsonc` into the bundle directory and bundles the config module into the worker entry.
 
 3. **Generate the migrations.**
 
@@ -118,7 +116,7 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
    wrangler secret put RESEND_API_KEY
    ```
 
-   This runs after the first deploy because `wrangler secret put` needs the Worker to exist. Name the key under `secrets.required` in `wrangler.jsonc` and that first deploy refuses instead, telling you to ship the values with `wrangler deploy --secrets-file <path>`.
+   You can run this before the first deploy too. Point `wrangler secret put` at a Worker that does not exist yet and it asks whether to create one. That prompt defaults to yes and answers itself yes in a non-interactive shell, uploads a stub Worker under the name, then stores the secret on it. Name the key under `secrets.required` in `wrangler.jsonc` and the deploy refuses until the value is set, telling you to ship it with `wrangler deploy --secrets-file <path>`.
 
 8. **Enrol the first passkey.** Open `/_plumix/admin` on the deployed origin. The first admin has to arrive through the passkey bootstrap rail, so do this before inviting anyone.
 
@@ -142,7 +140,7 @@ Vite then builds twice, client first and worker second, because the worker bakes
 
 ## Build time against request time
 
-Your config module evaluates once, on your machine, during the build. Anything it reads from `process.env` is baked in. Nothing in the Worker env exists yet.
+Your config module evaluates twice. `plumix build` runs it on your machine to write `.plumix/schema.ts` and `.plumix/worker.ts`, and that generated entry imports it again, so it also runs once per isolate inside the deployed Worker. The Vite plugin freezes six `process.env` member expressions into the bundle as literals, `WORKERS_CI`, `WORKERS_CI_BRANCH`, `PLUMIX_DEV`, `PLUMIX_EDITOR`, `PLUMIX_EDITOR_PATH_MAP` and `PLUMIX_FORWARD_ERRORS`, and it rewrites those spellings and nothing else. Every other read of `process.env` runs inside the Worker, where your shell is not. Reading one of the six through a variable instead of writing `process.env.NAME` out in full puts it on the wrong side of that line, which is what happened to `cloudflareDeployOrigin`.
 
 Bindings and secrets exist only inside a request. The runtime adapter connects each slot per request by handing it the Worker `env`, so `d1({ binding: "DB" })` stores the string `"DB"` at build time and resolves it to a live D1 handle when a request arrives.
 
@@ -177,7 +175,7 @@ Core registers two scheduled tasks: a daily session cleanup and a `publish-sched
 
 Workers Builds gives every branch its own `*.workers.dev` host. A passkey is anchored to a hostname, so a credential enrolled on production will not verify on a preview unless the two share a registrable domain.
 
-`cloudflareDeployOrigin` handles that. It reads the Workers Builds environment, anchors `rpId` to `<account>.workers.dev`, and returns an `allowedOrigins` wildcard covering every host beneath it, so one passkey spans production and each preview branch. See [Cloudflare Workers](/deployment/cloudflare/) for the full shape and for what changes when production runs on a custom domain.
+Anchor `rpId` to `your-account.workers.dev` and add the `allowedOrigins` wildcard `https://*.your-account.workers.dev`, and one passkey spans production and each preview branch, because every one of those hosts sits under the same registrable domain. `cloudflareDeployOrigin` was meant to derive that pair from the build environment and cannot, so write it out yourself. See [Cloudflare Workers](/deployment/cloudflare/) for the full shape and for what changes when production runs on a custom domain.
 
 ## Related
 

@@ -95,8 +95,10 @@ It transliterates rather than percent-encodes. Diacritics fold to ASCII, and Cyr
   CJK and a few other scripts have no ASCII transliteration, so `slugify`
   returns an empty string for them. The entry editor's slug field requires at
   least one character, so it rejects the empty slug inline and asks the author
-  to type one. The term form has no such minimum, so a CJK term name saved with
-  the slug field blank derives an empty slug and fails at the server instead.
+  to type one. The term create form has no such minimum, so it checks the name
+  and the slug box together. Leave the slug blank on a name that transliterates
+  to nothing and the form stops the submit before the RPC goes out and asks you
+  to type a slug manually.
 </Aside>
 
 Creating a term with the slug field blank fills it from the term name with the same helper. Editing one does not. A blank slug on the edit form is sent as `undefined`, which leaves the stored slug alone, so renaming a term does not move its URL. The entry editor never derives a slug from the title at all, so an entry's slug is yours to type.
@@ -140,7 +142,7 @@ Templates get permalinks pre-resolved. Every `ResolvedEntry` carries `url`, ever
 
 `<Link>` from `plumix/blocks/renderer` handles both. Given `entry` or `term` it reads `url`, and when that is null it renders the children with no anchor, so a listing never emits a dead link. Given a raw `href` it prepends the base path to root-relative paths, adds `rel="noopener noreferrer"` to external ones, and refuses `javascript:`, `data:`, `vbscript:` and `blob:` targets.
 
-Two surfaces do pay for the ancestor walk and so escape the second case. The taxonomy resolver builds `data.term.url` for the term whose archive you are on with the async builder, and the sitemap composes every `<loc>` with it, so a nested entry has a sitemap URL even when its own `ResolvedEntry.url` is null. The walk is one recursive query, not one query per ancestor.
+Six surfaces do pay for the ancestor walk and so escape the second case. The taxonomy resolver builds `data.term.url` for the term whose archive you are on with the async builder, and the sitemap composes every `<loc>` with it, so a nested entry has a sitemap URL even when its own `ResolvedEntry.url` is null. The feeds, the entry lookup and term lookup procedures behind the admin's reference fields and menu items, and the preview-link procedure call the async builders too. The walk is one recursive query, not one query per ancestor.
 
 ## Canonical URLs
 
