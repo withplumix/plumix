@@ -118,6 +118,40 @@ Two things make this cheaper than it sounds:
 [`packages/admin/README.md`](packages/admin/README.md) has the rest — what a
 subject is, how to add one, and why the container is pinned the way it is.
 
+## Link validation
+
+Links mean two different things in this repo, so two gates check them; every
+file belongs to one or the other.
+
+**Repository prose** — everything outside `apps/docs/src/content/docs`:
+`README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/**`, the changelogs, the
+package READMEs. Links here resolve against the file tree, the way GitHub
+renders them, so they are ordinary relative paths. The `Links` CI job checks
+them offline with [lychee](https://lychee.cli.rs), including `#anchor`
+fragments.
+
+**Published docs pages** — the content collection under
+`apps/docs/src/content/docs`. Links here resolve against Starlight's routing
+table, not the file tree: `/fields/` is a route built from collection slugs and
+`_meta.yml`, and no such directory exists on disk.
+`starlight-links-validator` runs inside `astro build` and checks them, anchors
+included; the `Docs (build)` CI job is where that fails. For the form a link
+in a docs page takes, see [`apps/docs/README.md`](apps/docs/README.md).
+
+Pointing lychee at the docs tree would report every correct cross-reference as
+broken, which is why the two never overlap — `lychee.toml` excludes that tree
+by path. The one job that spans both is the weekly `Link Check` workflow: a
+remote URL is remote wherever it is written, so that job reads `.md` and `.mdx`
+alike and restricts itself to `http(s)`.
+
+Two things sit outside both gates, deliberately. A page marked `draft: true` is
+skipped by the docs validator, so its links go unchecked until it is published.
+And a link from repository prose to a `https://docs.plumix.dev/...` route is
+remote to lychee, so it is checked weekly rather than on the PR that writes it.
+
+`lychee.toml` is the only exclude list; the docs-side validator carries no host
+policy of its own.
+
 ## Making changes
 
 ### Commit messages

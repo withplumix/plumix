@@ -1,5 +1,9 @@
 # Configuration for lychee (link checker). Read automatically by both the
 # per-PR offline check and the weekly external check in .github/workflows.
+#
+# lychee owns repository prose, whose links resolve against the file tree. Docs
+# pages resolve against Starlight's routing table and are validated by the docs
+# build instead. See "Link validation" in CONTRIBUTING.md.
 
 # Example / local-only hosts that appear in docs snippets — not real links.
 exclude = [
@@ -9,3 +13,12 @@ exclude = [
   "example\\.org",
   "api\\.resend\\.com",
 ]
+
+# A regex, not a glob — the value reads like a path and is easy to "fix" wrongly.
+#
+# Fixtures for the docs content checks are inputs to a test, not prose — a
+# roster-drift fixture is free to carry a deliberately broken link, and that must
+# not read as a repo-wide link failure. True of both jobs, so it lives here; the
+# docs *content* tree is excluded per-job instead, because only the offline job
+# resolves against the file tree. See the `Links` job in ci.yml.
+exclude_path = ["(^|/)apps/docs/test/fixtures/"]

@@ -298,9 +298,36 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Repository prose only — links here resolve against the file tree, docs
+      # pages against Starlight's routing table. CONTRIBUTING.md "Link
+      # validation" has the split; the `docs` job below is the other half.
+      #
       # Offline: verify relative/local links resolve. External URLs are checked
       # weekly by link-check.yml so a flaky remote never blocks a PR.
+      #
+      # `--exclude-path` and not `--extensions md` is what holds the boundary:
+      # Starlight serves `.md` as readily as `.mdx`, so one `.md` page in the
+      # content tree would otherwise reach lychee, which resolves `/blocks/`
+      # against the file tree and cannot find it. It is on this job rather than
+      # in lychee.toml because the weekly job must still read those files — a
+      # remote URL is remote whichever tree it sits in.
+      #
+      # `--hidden` reaches `.changeset/` and `.github/`, which lychee skips by
+      # default. A directory rather than a glob — see lychee.toml.
       - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
-          args: "--offline --no-progress '**/*.md'"
+          args: "--offline --hidden --include-fragments --no-progress --extensions md --exclude-path 'apps/docs/src/content/docs' ."
           fail: true
+
+  docs:
+    name: Docs (build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      # `starlight-links-validator` runs inside `astro build`, so building the
+      # docs site is the link-and-anchor gate for every published page.
+      - run: pnpm exec turbo run build --filter @plumix-apps/docs
