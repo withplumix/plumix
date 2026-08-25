@@ -284,6 +284,13 @@ drifts from a pairing Astro ships. Starlight's `^0.41.5` floor is a third
 matter again: `0.41.4` and `0.41.5` fixed `docsSchema({ extend })` bugs with
 Zod enums and unions that the frontmatter schema needs.
 
+Watch the override's own slack. Its window admits several versions, so pnpm
+keeps whichever it resolved first and `--frozen-lockfile` preserves that
+indefinitely — while no gate distinguishes the version Astro declares from one
+merely inside the window, because both compile. The tree sat a patch below
+Astro's declared `0.3.6` on exactly that footing until
+[#1939](https://github.com/withplumix/plumix/issues/1939).
+
 Overriding `satteri` to `0.10.5` is the obvious inverse, and it is the wrong
 one: `0.10.5` sits outside the `satteri: ^0.9.1` Starlight declares, so
 Starlight would compile against a version its own manifest excludes. Capping
