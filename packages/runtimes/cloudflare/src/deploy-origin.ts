@@ -35,6 +35,15 @@ export interface DeployOrigin {
   readonly allowedOrigins?: readonly string[];
 }
 
+// Read as the literal member expressions `process.env.WORKERS_CI` /
+// `process.env.WORKERS_CI_BRANCH`: the Plumix Vite plugin's `define` rewrites
+// those exact spellings and nothing else, and the deployed Worker's own
+// `process.env` never carries the names. Routing either read through an alias
+// or a helper puts it on the wrong side of that rewrite, and every deploy falls
+// back to localhost (#1947). The local `declare` re-shadows the `process: any`
+// @cloudflare/workers-types puts in scope; it emits nothing.
+declare const process: { env: Record<string, string | undefined> };
+
 /**
  * Resolve the passkey `rpId` / `origin` / `allowedOrigins` for a Cloudflare
  * Workers deploy from the build-time env Workers Builds injects (`WORKERS_CI`,
@@ -58,12 +67,8 @@ export interface DeployOrigin {
  * Falls back to localhost when not running under Workers Builds (local dev).
  */
 export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
-  // @cloudflare/workers-types declares a global `process: any` that shadows
-  // @types/node's typed global (both are in this package's tsconfig `types`),
-  // so read the build-time Workers Builds env through a typed view.
-  const env = readEnv();
   const localOrigin = input.localOrigin ?? "http://localhost:8787";
-  if (env.WORKERS_CI !== "1") {
+  if (process.env.WORKERS_CI !== "1") {
     return { rpId: "localhost", origin: localOrigin };
   }
   const defaultBranch = input.defaultBranch ?? "main";
@@ -72,7 +77,7 @@ export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
   // an empty value as "the default branch" keeps production CSRF
   // working instead of falling back to localhost (which would fail
   // every deployed request).
-  const raw = (env.WORKERS_CI_BRANCH ?? "").trim();
+  const raw = (process.env.WORKERS_CI_BRANCH ?? "").trim();
   const branch = raw === "" ? defaultBranch : raw;
   const isProduction = branch === defaultBranch;
 
@@ -96,10 +101,6 @@ export function cloudflareDeployOrigin(input: DeployOriginInput): DeployOrigin {
     origin: `https://${host}`,
     allowedOrigins: [`https://*.${accountDomain}`],
   };
-}
-
-function readEnv(): Record<string, string | undefined> {
-  return (process as { env: Record<string, string | undefined> }).env;
 }
 
 // Cloudflare lowercases branch names and replaces non-alphanumerics

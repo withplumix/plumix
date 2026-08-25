@@ -23,7 +23,7 @@ The runtime is a slot like any other. `runtime: cloudflare()` tells Plumix which
 | `images({ zone })` | `imageDelivery` | Cloudflare Image Transformations         |
 | `edge({ ttl })`    | `cache`         | The Workers Cache API and purge by tag   |
 
-Three more exports do not fill a slot. `cloudflareDeployOrigin` is meant to derive the passkey origin for whichever host a build is served on and cannot do that today, which [Passkey origins across deploys](#passkey-origins-across-deploys) below covers. `cfAccess` replaces the request authenticator with a Cloudflare Access JWT check, and `cfAccessLogoutUrl` builds the Access sign-out URL that check needs on the way back out.
+Three more exports do not fill a slot. `cloudflareDeployOrigin` derives the passkey origin for whichever host a Workers Builds build is served on, which [Passkey origins across deploys](#passkey-origins-across-deploys) below covers. `cfAccess` replaces the request authenticator with a Cloudflare Access JWT check, and `cfAccessLogoutUrl` builds the Access sign-out URL that check needs on the way back out.
 
 Only `runtime`, `database` and `auth` are required. A site with no `storage` slot has no uploads, and a site with no `cache` slot renders every public page live.
 
@@ -189,11 +189,28 @@ Publishing a recipe queues a purge for the tags its pages were stored under, and
 
 A passkey is bound to a hostname. Workers Builds gives production `recipes.your-account.workers.dev` and each branch `<branch>-recipes.your-account.workers.dev`, so a credential anchored to one of those hosts means re-enrolling on every preview. Anchoring it to the registrable domain they share is what avoids that.
 
-`cloudflareDeployOrigin` was written to hand you that span, and it cannot resolve a deployed origin today. Do not spread it into `passkey`.
+`cloudflareDeployOrigin` hands you that span. Spread it into `passkey` and it returns `rpId: "your-account.workers.dev"`, the `origin` of whichever host this build is served on, and `allowedOrigins: ["https://*.your-account.workers.dev"]`.
 
-The Plumix Vite plugin does substitute `process.env.WORKERS_CI` and `process.env.WORKERS_CI_BRANCH` into the bundle as literals, taking both from the machine running `plumix build`, because a Worker's own `process.env` holds bindings and never those names. A `define` rewrites that exact member expression and nothing else, and the helper reads the variables through a local view of `process.env` instead, so the substitution passes it by. The check therefore survives into the bundle and runs inside the deployed Worker, where `WORKERS_CI` is absent, and the helper returns `rpId: "localhost"` with your `localOrigin`, which defaults to `http://localhost:8787`. The deployed Worker advertises localhost as its relying party and the browser refuses every registration and every sign-in on the deployed host. This happens on a Cloudflare Workers Builds deploy as much as on a local one, and `accountSubdomain` and `productionOrigin` change nothing on that path, because the localhost fallback returns before either is read.
+```ts no-typecheck
+import { auth } from "plumix";
 
-Until that is fixed, a deploy whose passkeys have to work states the origin in the config itself. Anchor `rpId` to `your-account.workers.dev` with the wildcard `https://*.your-account.workers.dev` in `allowedOrigins`, so one passkey still spans production and every preview branch, and keep the localhost pair behind `process.env.PLUMIX_DEV`, which the plugin does substitute as a literal, `"1"` under `plumix dev` and empty under `plumix build`.
+import { cloudflareDeployOrigin } from "@plumix/runtime-cloudflare";
+
+export const recipeAuth = auth({
+  passkey: {
+    rpName: "Recipes",
+    ...cloudflareDeployOrigin({
+      workerName: "recipes",
+      accountSubdomain: "your-account",
+      localOrigin: "http://localhost:5173",
+    }),
+  },
+});
+```
+
+It reads that host out of `WORKERS_CI` and `WORKERS_CI_BRANCH`, which only Cloudflare Workers Builds sets. The Plumix Vite plugin substitutes both into the bundle as literals, taking them from the machine running `plumix build`, because a Worker's own `process.env` holds bindings and never those names. So the helper resolves a real origin on a build that runs on Workers Builds, and returns `rpId: "localhost"` with your `localOrigin` — which defaults to `http://localhost:8787` — on a build that does not. A `plumix build` on your own machine is the second case, whether you go on to deploy it or not.
+
+A locally built deploy whose passkeys have to work therefore states the origin in the config itself. Anchor `rpId` to `your-account.workers.dev` with the wildcard `https://*.your-account.workers.dev` in `allowedOrigins`, so one passkey still spans production and every preview branch, and keep the localhost pair behind `process.env.PLUMIX_DEV`, which the plugin substitutes as a literal too, `"1"` under `plumix dev` and empty under `plumix build`.
 
 ```ts no-typecheck
 import { auth } from "plumix";
@@ -214,7 +231,7 @@ export const recipeAuth = auth({
 
 `rpId` takes a plain string rather than an `(env) => string` resolver, so it has to be the same in every environment, and the config validator checks that every literal `allowedOrigins` entry has a host that is `rpId` or a subdomain of it. The wildcard above passes because its base host is `rpId` exactly.
 
-Production on a custom domain drops `allowedOrigins` and writes `rpId: "recipes.example"` with `origin: "https://recipes.example"`. A custom domain and `workers.dev` are different registrable domains, so no single passkey covers both, and previews then need magic-link or Cloudflare Access to sign in.
+Production on a custom domain drops `allowedOrigins` and writes `rpId: "recipes.example"` with `origin: "https://recipes.example"`. The helper's `productionOrigin: "https://recipes.example"` says the same thing — Workers Builds does not expose the custom domain, so it has to be declared — and leaves previews on their `workers.dev` host. It applies to the default branch only, which the helper takes as `main` unless you pass `defaultBranch`. Get that wrong and production is treated as a preview: it lands back on `workers.dev`, under an `rpId` the custom domain cannot match, and no wildcard covers the gap. A custom domain and `workers.dev` are different registrable domains, so no single passkey covers both, and previews then need magic-link or Cloudflare Access to sign in.
 
 ## Cloudflare Access
 
