@@ -82,7 +82,9 @@ stale build. A busy port fails loudly instead; move the block with the offset.
 `packages/admin` carries a second Playwright project on the same config — the
 documentation captures, run by `pnpm docs:screenshots`. It binds admin's e2e
 port, so it collides with a running admin suite or preview the same way any two
-suites would, and the offset above is the escape hatch for that too.
+suites would, and the offset above is the escape hatch for that too — it shifts
+`:5190`, where the capture publishes its containerised browser, along with the
+rest.
 
 Every test-having package ships a `vitest.config.ts` with coverage wired
 (`pnpm exec vitest run --coverage` inside the package). Thresholds are not

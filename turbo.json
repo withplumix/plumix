@@ -67,16 +67,20 @@
       // Same graph as `test:e2e`: the capture drives the built admin through
       // `vite preview`.
       //
-      // Uncached, but not because the outputs are unreachable — turbo restores
-      // `apps/docs/src/assets/` from outside the package fine. The blocker is
-      // that PNG bytes depend on the platform that rendered them (font
-      // rasterization; see packages/admin/README.md) while turbo's hash does
-      // not, so a shared remote cache would restore CI's ubuntu images into a
-      // macOS checkout and a contributor regenerating locally would commit
-      // images they never rendered. Pin the capture to one platform (#1935)
-      // and this caches.
+      // The images land in `apps/docs`, not here, so the outputs reach across
+      // packages. That is safe to cache because the capture renders in a
+      // pinned container (see packages/admin/README.md) rather than on
+      // whatever machine ran it: a remote-cache hit restores the same bytes a
+      // local run would have written. The hit also skips the CI check this
+      // task doubles as, which is fine — the hash covers the admin package and
+      // everything it is built from, so a hit means nothing that could move a
+      // selector changed.
+      //
+      // The glob owns a directory of its own rather than the shared assets
+      // one: turbo restores outputs over whatever is in their way, so a glob
+      // across `src/assets` would revert edits to hand-authored images there.
       "dependsOn": ["build", "^build"],
-      "cache": false,
+      "outputs": ["../../apps/docs/src/assets/screenshots/**"],
       "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
     },
     "clean": {

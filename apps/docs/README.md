@@ -153,13 +153,16 @@ service optimises the committed captures into `webp` at build time.
 
 `pnpm docs:screenshots`, from the repo root. It builds the admin, drives it
 through the Playwright estate that already runs against it, and rewrites
-`src/assets/<subject>-light.png` and `-dark.png` for every subject listed in
+`src/assets/screenshots/<subject>-light.png` and `-dark.png` for every subject in
 `packages/admin/screenshots/subjects.ts`.
+
+It renders in a pinned container rather than in a local browser, so it needs a
+running Docker and the images do not carry the machine that took them.
 
 Adding one is two edits: the subject there, then the page that places the pair.
 [`packages/admin/README.md`](../../packages/admin/README.md) owns the rest — what
-a subject is, what makes a re-run reproducible, and why regenerating on a
-different platform rewrites every image.
+a subject is, and what keeps a re-run byte-for-byte reproducible wherever it is
+run.
 
 ## Content checks
 

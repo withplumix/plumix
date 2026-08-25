@@ -8,6 +8,11 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: "jsdom",
+      // Concatenated onto the base include (src, test) by `mergeConfig`.
+      // `screenshots/` is build tooling rather than admin source, so the
+      // base globs do not reach it, and its tests belong beside the module
+      // they cover like every other test here.
+      include: ["screenshots/**/*.test.ts"],
       setupFiles: ["./test/setup.ts"],
       // Scaffolding has no tests yet; infra is wired so the first real
       // feature component can add one without setup friction.

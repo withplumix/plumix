@@ -210,8 +210,13 @@ jobs:
       # Running the capture is the check: markup that moved stops resolving by
       # test id and the command fails. No baselines, no pixel diff — see
       # packages/admin/README.md. A step rather than its own job because it
-      # reuses the chromium install above and the failure upload below; the
-      # images it writes go with the runner.
+      # reuses the checkout, the build and the failure upload below; the images
+      # it writes go with the runner.
+      #
+      # It renders in the pinned playwright container, not in the chromium
+      # installed above, so this pulls that image on a cache miss. Turbo caches
+      # the task now that its output no longer depends on the machine, so most
+      # runs skip both.
       #
       # Deliberately no `if: always()`. This is a second playwright run in the
       # same package, and playwright clears `playwright-report/` and
@@ -219,6 +224,16 @@ jobs:
       # delete the artifacts the upload below exists to collect.
       - name: Assert docs screenshot capture succeeds
         run: pnpm docs:screenshots
+
+      # The capture renders in a pinned container, so this runner writes the
+      # bytes a contributor's machine writes. That makes the committed images
+      # checkable rather than merely present: a diff here is either images that
+      # were not regenerated alongside the admin change, or a container that
+      # stopped being deterministic — both worth failing for. Skipped along
+      # with the capture on a turbo cache hit, which is exactly when nothing
+      # that could move a pixel changed.
+      - name: Assert the committed images are the ones the capture produces
+        run: git diff --exit-code -- apps/docs/src/assets/screenshots
 
       - name: Upload Playwright reports + traces on failure
         if: failure()

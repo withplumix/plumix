@@ -5,6 +5,7 @@ import {
   resolveE2EPort,
 } from "@plumix/core/test/playwright";
 
+import { CAPTURE_ENDPOINT_ENV } from "./screenshots/capture-browser.js";
 import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
 
 // E2E always runs against the production build via `vite preview`. The
@@ -45,6 +46,14 @@ const config = definePlumixE2EConfig({
 // what makes a re-run with no UI change produce an equivalent image, and that
 // holds across every subject or not at all. 2x is what a reader on a retina
 // display needs; the docs build downscales from it.
+//
+// The browser is not this machine's. `pnpm docs:screenshots` starts the pinned
+// container and publishes its endpoint here, so the bytes come out the same
+// wherever the capture was run from; `<loopback>` tunnels the preview server —
+// which still runs here — back to it. Unset means the run bypassed that
+// command, and `capture.spec.ts` refuses rather than render locally.
+const captureEndpoint = process.env[CAPTURE_ENDPOINT_ENV];
+
 export default defineConfig({
   ...config,
   projects: [
@@ -52,10 +61,17 @@ export default defineConfig({
     {
       name: "screenshots",
       testDir: "./screenshots",
+      // The directory carries vitest's `*.test.ts` beside playwright's spec,
+      // and playwright's default match would claim both.
+      testMatch: "**/*.spec.ts",
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1280, height: 800 },
         deviceScaleFactor: 2,
+        connectOptions:
+          captureEndpoint === undefined
+            ? undefined
+            : { wsEndpoint: captureEndpoint, exposeNetwork: "<loopback>" },
       },
     },
   ],
