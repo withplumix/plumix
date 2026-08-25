@@ -222,10 +222,10 @@ export function definePlumixE2EConfig(
     fullyParallel: true,
     forbidOnly: Boolean(process.env.CI),
     retries: process.env.CI ? 2 : 0,
-    // Tests sharing one mutable D1 race across workers, and would each
-    // restore the baseline mid-run (see `test.ts`). CI was already
-    // single-worker; this extends it to local runs.
-    workers: hasSharedDb || process.env.CI ? 1 : undefined,
+    // Tests sharing one mutable D1 race across workers and would each restore
+    // the baseline mid-run (see `test.ts`). Nothing else needs serializing —
+    // this used to pin every suite whenever CI was set.
+    workers: hasSharedDb ? 1 : undefined,
     // On CI: write the HTML report alongside the inline GitHub annotations
     // so the failure-artifact upload (which globs `**/playwright-report/`)
     // has something to capture — without `["html"]` it never gets generated.

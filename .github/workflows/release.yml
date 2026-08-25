@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # `Release gate` is a required check and the merge queue validates
+  # `merge_group` refs — one that never reports there stalls the entry. Both
+  # jobs below skip on their own `if:`, which counts as passing.
+  merge_group:
 
 concurrency:
   # never cancel an in-flight publish; PR gate runs are cancellable

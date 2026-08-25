@@ -23,7 +23,7 @@
     "knip": "knip",
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
-    "postinstall": "pnpm dlx sherif@latest",
+    "postinstall": "sherif",
     "publint": "turbo run publint",
     "release": "pnpm run build && changeset publish",
     "smoke": "node .github/scripts/smoke.mjs",
@@ -46,6 +46,7 @@
     "knip": "^6.32.2",
     "pkg-pr-new": "^0.0.75",
     "prettier": "catalog:",
+    "sherif": "^1.13.0",
     "turbo": "^2.10.11"
   },
   "pnpm": {

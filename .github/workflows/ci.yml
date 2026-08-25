@@ -161,7 +161,12 @@ jobs:
       # The scaffolder packs every publishable package to redirect the
       # generated projects at this commit. It depends on none of them, so
       # turbo's `^build` won't build them — do it explicitly.
-      - run: pnpm build
+      #
+      # Filtered because a bare `pnpm build` also builds `apps/*`, which it never
+      # packs — `@plumix-apps/docs` above all, already covered by the `docs` job.
+      # `smoke.mjs` throws for anything publishable it cannot pack, so nothing
+      # keeps this filter in sync by hand.
+      - run: pnpm exec turbo run build --filter './packages/**'
       - run: pnpm --filter create-plumix-app smoke:scaffold
 
   test-e2e:
