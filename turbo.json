@@ -123,17 +123,47 @@
       "cache": false
     },
     "publint": {
-      "dependsOn": ["build"]
+      // Validates the published tarball, which is `dist/` plus the manifest —
+      // no package ships `src/`, so a unit test cannot change the answer.
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.spec.ts",
+        "!e2e/**",
+        "!screenshots/**"
+      ]
     },
     "attw": {
-      "dependsOn": ["build"]
+      // Same surface as publint above.
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.spec.ts",
+        "!e2e/**",
+        "!screenshots/**"
+      ]
     },
     "i18n:check": {
-      "dependsOn": ["plumix#build"],
-      "cache": false
+      // Cacheable: a pure comparison of the message ids in source against the
+      // active msgids in `locales/*.po`. It was `cache: false` with no reason
+      // recorded, which made these nine tasks — and the `plumix#build` they
+      // pull — the floor under every commit, including README-only ones.
+      // Verified: deleting a msgid from every locale still fails on a warm cache.
+      "dependsOn": ["plumix#build"]
     },
     "i18n:ratchet:check": {
-      "cache": false
+      // Re-runs eslint over `STRICT_UNWRAPPED_FILES` with
+      // `lingui/no-unlocalized-strings` forced back to error, so a file that
+      // has since been wrapped fails until it leaves the denylist.
+      //
+      // `^topo` is load-bearing, not ordering: the verdict depends on the
+      // shared eslint config, which lives in another package. Without it a
+      // cached pass would survive a rule change that should have moved it.
+      "dependsOn": ["^topo"]
     }
   },
   "globalPassThroughEnv": [
