@@ -45,7 +45,7 @@ export default plumix({
 });
 ```
 
-`plumix()` returns a resolved config rather than the object you passed. Four slots gain a default on the way through. A missing `theme` becomes the built-in welcome theme, a missing `plugins` becomes an empty array, a missing `redirects` becomes an empty array, and a missing `i18n` becomes English only. `basePath` is normalized, so `docs`, `/docs` and `/docs/` all resolve to `/docs`.
+`plumix()` returns a resolved config rather than the object you passed. Five slots gain a default on the way through. A missing `theme` becomes the built-in welcome theme, a missing `plugins` becomes an empty array, a missing `redirects` becomes an empty array, a missing `i18n` becomes English only, and a missing `basePath` becomes `""`. That last one is normalization as well as defaulting, so `docs`, `/docs` and `/docs/` all resolve to `/docs`.
 
 One cross-slot rule is checked here rather than at request time: `auth.magicLink` without a `mailer` throws at build. Email sign-in with nothing to send the email through would otherwise fail silently on the first sign-in attempt.
 
@@ -90,13 +90,14 @@ export const resend: EnvInput<Mailer> = (env) => ({
 
 The resolver runs once per isolate rather than once per request. The result is memoized by the resolver's identity, so a value that owns a connection, such as an SMTP transport or a pooled client, is built once and reused. `env` is stable across an isolate's lifetime, which is what makes that safe.
 
-The slots that take an `EnvInput` are `mailer`, the passkey `origin` and `allowedOrigins`, and each OAuth provider's client credentials. Locally their values come from `.dev.vars`; in production they are secrets on the deploy.
+The slots that take an `EnvInput` are `mailer`, the passkey `origin` and `allowedOrigins`, each OAuth provider's client credentials, R2's `s3` credentials, and the whole libSQL connection config, which is typed `EnvInput<LibsqlConfig>` rather than exposing one resolver field. Locally their values come from `.dev.vars`; in production they are secrets on the deploy.
 
 <Aside type="caution" title="T has to be a non-callable value">
   `resolveEnvInput` tells a literal from a resolver with `typeof input ===
-  "function"`. Every slot that accepts an `EnvInput` today resolves to an
-  object, so the test is unambiguous. A slot whose value were itself a function
-  could not use this form.
+  "function"`, so `T` can be anything that is not itself callable. Today's slots
+  resolve to objects, to a string (the passkey `origin`) and to a string array
+  (`allowedOrigins`), and all three pass the test. A slot whose value were
+  itself a function could not use this form.
 </Aside>
 
 ## Required slots
@@ -123,7 +124,17 @@ export const database = d1({ binding: "DB", session: "auto" });
 
 ### auth
 
-Sign-in and session policy. `passkey` is required inside it, and everything else is opt-in: `oauth` providers, `magicLink`, a `sessions` policy, a replacement `authenticator`, `selfSignup`, `bootstrapVia` and `loginPath`. `auth()` validates its input and throws on a bad shape rather than deferring to the first sign-in.
+Sign-in and session policy. `passkey` is required inside it and everything else is opt-in. `auth()` validates its input and throws on a bad shape rather than deferring to the first sign-in.
+
+The seven optional keys are these.
+
+- `oauth` adds providers such as `github(...)`, each carrying its own client credentials.
+- `magicLink` adds email sign-in, and it needs a top-level `mailer` or the build throws.
+- `sessions` replaces the session policy, which covers lifetime and renewal.
+- `authenticator` replaces how a request is identified. The default chains the session cookie and then the API-token bearer header. Override it for transparent SSO, such as `cfAccess({ teamDomain })`, and note the built-in login routes stay mounted, so firewall `/_plumix/auth/*` at the edge if you want them gone.
+- `bootstrapVia` decides how the first admin enrols on a fresh deploy. The default `"passkey"` refuses magic-link and OAuth signup while the users table is empty. `"first-method-wins"` lets any verified flow mint that first admin, which suits a deploy already gated in front of the worker.
+- `selfSignup` opens public registration. Omit it and signup stays gated to the `allowed_domains` table.
+- `loginPath` is where an access policy's `redirectToLogin()` sends an anonymous visitor, and it defaults to `/_plumix/admin/login`. Point it at a page that is not itself gated, or the visitor bounces between the gate and the login forever.
 
 ```ts
 import { auth } from "plumix";
@@ -137,6 +148,8 @@ export const recipeAuth = auth({
   loginPath: "/sign-in",
 });
 ```
+
+The passkey block appears in two shapes across this site, and they are the same block. The literal shape above writes `rpId` and `origin` by hand, which is what a fixed hostname wants. The other shape spreads `cloudflareDeployOrigin({ ... })` into the block, which returns `rpId`, `origin` and sometimes `allowedOrigins` computed from the deploy, and it is what the scaffolder writes into a new project. Open your own `plumix.config.ts` and you will see the spread. `localOrigin` is an option of `cloudflareDeployOrigin`, not a passkey key, so it only exists in that shape.
 
 `rpId` is deliberately not an `EnvInput`. It anchors the credential, so a passkey enrolled against one value cannot verify against another, and it has to be constant across environments.
 
@@ -263,7 +276,7 @@ export const redirects: PlumixConfigInput["redirects"] = [
 ];
 ```
 
-A rule with no `status` is a 301. The request's query string is appended to the target unless the target carries its own `?`, or you set `preserveQuery: false`. Config rules merge ahead of plugin rules and theme rules, so the site wins a tie.
+A rule with no `status` is a 301. The request's query string is appended to the target only when the target contains neither a `?` nor a `#`, and only when `preserveQuery` is not `false`. A target with a fragment, such as `/recipes/sicilian-caponata#method`, drops the query, because appending after a `#` would fold the query into the fragment. Config rules merge ahead of plugin rules and theme rules, so the site wins a tie.
 
 ### basePath
 
@@ -277,7 +290,9 @@ export const basePath: PlumixConfigInput["basePath"] = "/recipes";
 
 ### mcp
 
-The Model Context Protocol endpoint at `/_plumix/mcp`, where an MCP client reaches the site's tools. Default-off, and the gate is early. With no `mcp` block the dispatcher answers 404 before it imports the handler graph at all.
+The Model Context Protocol endpoint at `/_plumix/mcp`, where an MCP client reaches the site's tools. Default-off in production, and the gate is early. With no `mcp` block a production dispatcher answers 404 before it imports the handler graph at all.
+
+`plumix dev` bypasses that gate. The dispatcher also serves the endpoint whenever `devCsrfLocalhost` is set, which the app resolves from `PLUMIX_DEV=1`, so a connected coding agent reaches your tools locally with no config flag. The flag is statically false in a production build, so the bypass cannot follow you to the deploy.
 
 ```ts
 import type { PlumixConfigInput } from "plumix";
@@ -347,11 +362,13 @@ export const blocks: PlumixConfigInput["blocks"] = {
 };
 ```
 
-Under all four options is a floor no override can widen past. Script-capable URL schemes, `on*` event attributes and `style` stay denied whatever you write here.
+Under all four options is a floor no override can widen past, and it has three parts. Script-capable URL schemes stay denied, `on*` event attributes and `style` stay denied, and a hard tag denylist stays denied. That last one covers `script`, `iframe`, `object`, `embed`, `style`, `link`, `meta`, `base`, `form`, `input`, `svg` and the rest of the execution and parser-context surface. An `extraTags: ["script"]` is dropped on the way through rather than merged, so the override silently has no effect.
 
 ### images
 
 Image handling for the `<Image>` component. `remotePatterns` is the allowlist of remote hosts it may optimize. Same-origin sources are always allowed, and an unlisted remote source still renders without optimization.
+
+This slot is not the Cloudflare `images()` factory. Two different things are called `images` here. The factory imported from `@plumix/runtime-cloudflare` fills the `imageDelivery` slot and picks the resizing service; this `images` slot is a plain object that decides which remote hosts `<Image>` will touch. Writing `images: images()` sets the wrong slot from the wrong value.
 
 ```ts
 import type { PlumixConfigInput } from "plumix";

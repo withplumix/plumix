@@ -9,7 +9,7 @@ sidebar:
 
 import { Aside } from "@astrojs/starlight/components";
 
-Plumix ships 24 field types you can author out of the box. They come from `plumix/fields`, one builder function per type, and this page is all of them.
+Plumix ships 24 field types you can author out of the box. They come from `plumix/fields` as 21 builder functions, since `userList`, `entryList` and `termList` are produced by `.multiple()` on the `user`, `entry` and `term` chains rather than by list-named functions. This page is all 24.
 
 ## Overview
 
@@ -188,7 +188,9 @@ import { range } from "plumix/fields";
 export const spiceLevel = range("spiceLevel").bounds(0, 5).step(1).default(2);
 ```
 
-`.bounds(min, max)` is the only method available until you call it, so a slider with no track cannot be built. The bounds also compile into a sanitizer that refuses an out-of-range value on write rather than clamping it, and a `.sanitize()` of your own replaces that one outright.
+`.bounds(min, max)` is the only method available until you call it, so a slider with no track cannot be built. The bounds ride on the compiled definition as `min` and `max`, and the constraint walker enforces them server-side, rejecting an out-of-range value rather than clamping it.
+
+Nothing is injected into `.sanitize()`, so writing your own does not displace the bounds check. The walker runs after the callback and re-checks whatever it returned. Bounds are a business rule, which means a draft save accepts an out-of-range value and the publish rejects it.
 
 ### json
 
@@ -309,7 +311,9 @@ export const method = richtext("method")
   .nodes(["bulletList", "orderedList"]);
 ```
 
-`.marks()`, `.nodes()` and `.blocks()` are strict allowlists rather than additions to a default set. A name you leave out is rejected on write even when it is a standard extension, and the admin toolbar shows only the buttons the allowlist admits. `doc`, `paragraph` and `text` are always included, because no document parses without them.
+`.marks()`, `.nodes()` and `.blocks()` are strict allowlists rather than additions to a default set. A name you leave out is rejected on write even when it is a standard extension, and the admin toolbar shows only the buttons the allowlist admits.
+
+Five node names are always included. ProseMirror needs `doc` and `text`, the editor mounts an implicit `paragraph`, `hardBreak` is the Shift+Enter line break, and `listItem` comes in structurally with whatever list you allowed. That last one is why the example above allowlists `bulletList` and `orderedList` without naming the item node, and why a Shift+Enter break survives a write that never declared it.
 
 This is rich text inside a meta field. Entry content is a different mechanism, covered in [Blocks](/blocks/overview/).
 
@@ -364,6 +368,8 @@ The admin's entry picker can fill the URL from an entry, which stores that entry
 ## Plugin field types
 
 Two more types live in the union so their fields narrow correctly, but core ships neither builder. They come from `@plumix/plugin-media`, whose `media()` builder registers its own admin renderer and lookup adapter through the same seam any plugin uses. Install the plugin and import the builder from `@plumix/plugin-media/fields`.
+
+The package exports two different functions under the name `media`, so the specifier decides which one you get. `@plumix/plugin-media/fields` gives you the field builder shown below. The package root gives you the plugin descriptor factory, which is the one that goes in the `plugins` array of `plumix.config.ts`. Import both in one file and you have to alias one of them.
 
 #### media
 

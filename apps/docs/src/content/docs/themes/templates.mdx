@@ -15,6 +15,8 @@ A theme's `templates` array holds rules, and every rule comes from one of the bu
 
 A rule is `{ template, tier }` or `{ template, match }`, never both. The generic builders mint the first shape. `entry(recipe)` says "render any single entry with this". The targeted builders mint the second, so `forEntryType("recipe").slug("sicilian-caponata").template(caponata)` says "render exactly this entry with this". Resolution tries targeted rules first, in the order you wrote them, and [Template Hierarchy](/themes/hierarchy/) is the full walk.
 
+Every sample below ends in an `export const rules` array. `rules` is not an API name. The array is what you hand `defineTheme` as its `templates` slot, and [Overview](/themes/overview/) shows the whole descriptor it sits in.
+
 Each builder types the template it accepts. `archive()` takes a template written against `ArchiveData`, so `data.pagination` is there and `data.entry` is not. The rule that comes back erases that type, and the erasure keeps `templates` a single array rather than a tuple of ten shapes.
 
 The targeted builders go further and read the registries. `forEntryType` autocompletes against `EntryTypeRegistry`, rejects a name nothing registered, and types `data.entry` from that type's projection, including its folded meta. You declare the projection next to the plugin that registers the type, and every sample below assumes this one:
@@ -47,7 +49,7 @@ Wraps a render function into a branded template object. Every builder below take
 
 ```tsx
 import type { EntryData } from "plumix";
-import { defineTemplate } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 export const recipe = defineTemplate<EntryData>({
   render: ({ data, ctx }) => (
@@ -68,7 +70,8 @@ The brand is a module-local symbol, so nothing outside `defineTemplate` can mint
 The universal catch-all. It matches every resolved node, so it is the last thing resolution tries and the one rule that guarantees a page rather than a 404.
 
 ```tsx
-import { defineTemplate, fallback } from "plumix";
+import { fallback } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const anything = defineTemplate({
   render: ({ data }) => <main data-kind={data.kind}>Nothing here yet</main>,
@@ -85,7 +88,8 @@ Any single entry, of any type. This is the tier behind `/recipes/sicilian-capona
 
 ```tsx
 import type { EntryData } from "plumix";
-import { defineTemplate, entry } from "plumix";
+import { entry } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const single = defineTemplate<EntryData>({
   render: ({ data }) => <h1>{data.entry.title}</h1>,
@@ -102,7 +106,8 @@ The listing for one entry type, at `/recipes` and its `/page/2` variants.
 
 ```tsx
 import type { ArchiveData } from "plumix";
-import { archive, defineTemplate } from "plumix";
+import { archive } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const listing = defineTemplate<ArchiveData>({
   render: ({ data }) => (
@@ -125,7 +130,8 @@ A term archive, in any taxonomy. Both `/cuisine/italian/sicilian` and `/diet/veg
 
 ```tsx
 import type { TaxonomyData } from "plumix";
-import { defineTemplate, taxonomy } from "plumix";
+import { taxonomy } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const terms = defineTemplate<TaxonomyData>({
   render: ({ data }) => (
@@ -149,7 +155,8 @@ An author archive, at `/authors/{slug}`.
 
 ```tsx
 import type { AuthorArchiveData } from "plumix";
-import { author, defineTemplate } from "plumix";
+import { author } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const byAuthor = defineTemplate<AuthorArchiveData>({
   render: ({ data }) => (
@@ -163,7 +170,7 @@ const byAuthor = defineTemplate<AuthorArchiveData>({
 export const rules = [author(byAuthor)];
 ```
 
-`data.author` is the public-safe projection: `id`, `slug`, `name` and `avatarUrl`. The query never selects the email or any auth column, so a theme cannot leak them.
+`data.author` carries four fields, `id`, `slug`, `name` and `avatarUrl`. The resolver loads the whole user row to find the author archive, then copies those four fields into a fresh object rather than spreading the row, so the email and the auth columns stop at the resolver and a theme cannot leak them.
 
 ### `date`
 
@@ -171,7 +178,8 @@ A date archive at any granularity, from `/2026` down to `/2026/07/21`.
 
 ```tsx
 import type { DateArchiveData } from "plumix";
-import { date, defineTemplate } from "plumix";
+import { date } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const period = defineTemplate<DateArchiveData>({
   render: ({ data }) => (
@@ -190,7 +198,8 @@ The site root. Its entries are the latest published ones across every non-hierar
 
 ```tsx
 import type { FrontPageData } from "plumix";
-import { defineTemplate, frontPage } from "plumix";
+import { frontPage } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const home = defineTemplate<FrontPageData>({
   render: ({ data }) => (
@@ -210,7 +219,8 @@ The search results page.
 
 ```tsx
 import type { SearchData } from "plumix";
-import { defineTemplate, search } from "plumix";
+import { search } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const results = defineTemplate<SearchData>({
   render: ({ data }) => (
@@ -232,7 +242,8 @@ The 404 handler. Nothing matches it against a node. It fires when resolution fin
 
 ```tsx
 import type { ErrorData } from "plumix";
-import { defineTemplate, notFound } from "plumix";
+import { notFound } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const missing = defineTemplate<ErrorData>({
   render: ({ data }) => (
@@ -254,7 +265,8 @@ The 500 handler, fired when a render throws.
 
 ```tsx
 import type { ErrorData } from "plumix";
-import { defineTemplate, serverError } from "plumix";
+import { serverError } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const failed = defineTemplate<ErrorData>({
   render: ({ data }) => (
@@ -276,10 +288,15 @@ Targets one registered entry type, and is the busiest builder on this page.
 
 ```tsx
 import type { ArchiveData, EntryData } from "plumix";
-import { defineTemplate, forEntryType } from "plumix";
+import { forEntryType } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const single = defineTemplate<EntryData>({
   render: ({ data }) => <h1>{data.entry.title}</h1>,
+});
+
+const caponata = defineTemplate<EntryData>({
+  render: ({ data }) => <h1>Featured: {data.entry.title}</h1>,
 });
 
 const index = defineTemplate<ArchiveData>({
@@ -287,7 +304,7 @@ const index = defineTemplate<ArchiveData>({
 });
 
 export const rules = [
-  forEntryType("recipe").slug("sicilian-caponata").template(single),
+  forEntryType("recipe").slug("sicilian-caponata").template(caponata),
   forEntryType("recipe").template(single),
   forEntryType("recipe").archive.template(index),
 ];
@@ -310,7 +327,8 @@ Targets one registered taxonomy, with the same selectors as `forEntryType` minus
 
 ```tsx
 import type { TaxonomyData } from "plumix";
-import { defineTemplate, forTermTaxonomy } from "plumix";
+import { forTermTaxonomy } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const cuisinePage = defineTemplate<TaxonomyData>({
   render: ({ data }) => <h1>{data.term.name}</h1>,
@@ -322,7 +340,9 @@ export const rules = [
 ];
 ```
 
-`.slug()`, `.id()`, `.whereMeta()`, `.where()` and `.named()` all behave as they do on `forEntryType`, reading term meta instead of entry meta. `data.term` is typed from the taxonomy's term projection.
+`.slug()`, `.id()`, `.whereMeta()` and `.where()` behave as they do on `forEntryType`, reading term meta instead of entry meta. `data.term` is typed from the taxonomy's term projection.
+
+`.named()` is the exception. It registers the same predicate here, comparing the term's `__plumix_template` meta key against the id, but the admin collects author-selectable templates from entry rules alone and writes that key only on entries. A named rule on a taxonomy therefore never matches through the admin, so reach for `.whereMeta()` against a meta-box field of your own instead.
 
 ### `forAuthor`
 
@@ -330,7 +350,8 @@ Targets author archives. There is one author kind and no registry to autocomplet
 
 ```tsx
 import type { AuthorArchiveData } from "plumix";
-import { defineTemplate, forAuthor } from "plumix";
+import { forAuthor } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const chefPage = defineTemplate<AuthorArchiveData>({
   render: ({ data }) => <h1>Recipes by {data.author.slug}</h1>,
@@ -347,7 +368,8 @@ Targets one date archive. The components are positional, because a month has no 
 
 ```tsx
 import type { DateArchiveData } from "plumix";
-import { defineTemplate, forDate } from "plumix";
+import { forDate } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 const summer = defineTemplate<DateArchiveData>({
   render: ({ data }) => <h1>Recipes from {data.year}</h1>,
@@ -368,7 +390,8 @@ Targets an archive a plugin registered with `registerArchiveType`. Core knows no
 
 ```tsx
 import type { CustomArchiveData } from "plumix";
-import { defineTemplate, forArchiveType } from "plumix";
+import { forArchiveType } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 interface SeasonalData extends CustomArchiveData {
   readonly kind: "custom";

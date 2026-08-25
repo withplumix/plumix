@@ -12,7 +12,7 @@ An entry type is a registered kind of entry. You name one with `registerEntryTyp
 
 ## Overview
 
-`registerEntryType(name, options)` takes the name that lands in the entry's `type` column, plus the options that tell the rest of the site how to treat those rows. Only `label` is required, and the defaults behind the rest are conservative. A type carrying nothing but a label is public and flat, has no archive route, and opts into no editor features.
+`registerEntryType(name, options)` takes the name that lands in the entry's `type` column, plus the options that tell the rest of the site how to treat those rows. Only `label` is required, and the defaults behind the rest are conservative. A type carrying nothing but a label is public and flat, and has no archive route. `supports` is the one omission that still turns something on. Leave it out and the type gets the block editor canvas, but no title field, no excerpt field, no revisions and no autosave.
 
 Nothing in the database changes when you register a type. Entries of every type share one `entries` table and are told apart by that `type` column, so a slug is unique per type rather than site-wide, and two types can both hold a `sicilian-caponata`.
 
@@ -54,7 +54,7 @@ Registration happens inside a plugin's `setup`, which [Overview](/content-modell
 
 ## Labels
 
-`label` is the sidebar string. `labels` holds the rest of the admin chrome, and every key in it is optional. Where one is missing the admin falls back to a generic noun-free string, so "Add New" rather than "Add Recipe".
+`labels.plural` is the sidebar string, and `label` is what the sidebar falls back to when `plural` is absent. `labels` holds the rest of the admin chrome, and every key in it is optional. Where one is missing the admin falls back to a generic noun-free string, so `addNewItem` renders as "Add" rather than "Add Recipe".
 
 Every label accepts either a plain string or a Lingui message descriptor. A string is the right choice for a site that ships in one language; a descriptor is what makes the string translatable.
 
@@ -80,7 +80,7 @@ export const recipes = definePlugin("recipes", {
 });
 ```
 
-`labels.plural` does one job beyond display. It becomes the admin URL segment, slugified by the manifest build, so "Recipes" gives `/_plumix/admin/entries/recipes`. Leave `plural` out and the slug falls back to the type name plus an `s`, which is fine for `recipe` and wrong for anything with an irregular plural. Two types whose plurals slugify to the same string fail the manifest build rather than shadowing each other in the admin router.
+`labels.plural` reaches further than the other keys. It is the string the sidebar renders, and the manifest build also slugifies it into the admin URL segment, so "Recipes" gives `/_plumix/admin/entries/recipes`. Leave `plural` out and the sidebar falls back to `label` while the slug falls back to the type name plus an `s`, which is fine for `recipe` and wrong for anything with an irregular plural. Two types whose plurals slugify to the same string fail the manifest build rather than shadowing each other in the admin router. A taxonomy works the other way round, and its sidebar item reads `label` rather than `labels.plural`.
 
 There are 28 label keys in all. The full list, with what each one renders, belongs on the entry type reference page, which is not written yet.
 
@@ -164,12 +164,12 @@ Plugin-defined values work the same way. The comments plugin enables discussion 
 
 `isPublic` is the master switch and defaults to `true`. Set it to `false` and the router compiles no routes for the type, while the permalink builder returns null for its entries. There is nothing public left to link to.
 
-Narrower flags cascade from it, and you set one only when you want a single surface to differ from the rest.
+Narrower flags cascade from it, and you set one when you want a single surface to differ from the rest. Three of the four reach a surface today.
 
 - `showUI` supplies the default `showInSidebar` inherits, so turning it off takes the sidebar entry with it.
 - `showInSidebar` is the flag the admin reads. `false` drops the type from the sidebar and from the dashboard's quick-create tiles, which is how a plugin ships its own management page in place of the generic list.
 - `excludeFromSearch` keeps the type out of site search results while leaving its own URLs live.
-- `excludeFromGenericRpc` resolves the same way, from `isPublic`, and is recorded on the registration.
+- `excludeFromGenericRpc` resolves the same way, from `isPublic`, and is stored on the registration. Nothing in core, the admin or any shipped plugin reads it today, and the manifest projection drops it, so setting it changes no behaviour.
 
 ## Capabilities
 

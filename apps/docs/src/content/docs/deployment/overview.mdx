@@ -14,7 +14,7 @@ A Plumix site deploys as one Cloudflare Worker. The build turns `plumix.config.t
 
 Two files decide what a deploy is. `plumix.config.ts` picks the runtime adapter and names the binding each slot reads. `wrangler.jsonc` declares those bindings as real Cloudflare resources and sets the Worker's compatibility flags. A binding name appears once in each file, and the two spellings have to match or the first request fails with a list of what is missing.
 
-Secrets are in neither file. They arrive on `env` when a request runs, which is why a secret-bearing slot takes an `(env) => value` resolver instead of a literal. Read [Secrets](/deployment/secrets/) for that shape.
+Secret values are in neither file. A secret's name may appear in `wrangler.jsonc` under `secrets.required`, which makes `wrangler deploy` fail when the value is not configured, but the value itself arrives on `env` only when a request runs. That is why a secret-bearing slot takes an `(env) => value` resolver instead of a literal. Read [Secrets](/deployment/secrets/) for that shape.
 
 Everything else is a build output. `plumix build` writes a generated worker entry, a generated Drizzle schema, and a static directory holding the admin SPA plus anything in your `public/` folder. You commit none of it.
 
@@ -54,15 +54,23 @@ The rest of this page writes the commands bare. `wrangler` works the same way.
 
 This is the path from a scaffolded recipe site to a live one. It assumes a site made with `pnpm create plumix-app` and a signed-in `wrangler`.
 
+<Aside
+  type="caution"
+  title="A build on your machine bakes a localhost passkey origin"
+>
+  Step 1 sets the subdomain, and on its own that is not enough.
+  `cloudflareDeployOrigin` resolves while `plumix build` runs, off the
+  `WORKERS_CI` variable that only Cloudflare Workers Builds sets. Build on your
+  own machine and the bundle carries `rpId: "localhost"` and your `localOrigin`,
+  so the passkey in step 8 cannot verify against the deployed host whatever
+  `accountSubdomain` says. Either push the repository and let Workers Builds run
+  the build, or write `rpId` and `origin` literally for the host you deploy to.
+  [Cloudflare Workers](/deployment/cloudflare/) has both shapes.
+</Aside>
+
 <Steps>
 
-1. **Build the site.**
-
-   ```sh
-   plumix build
-   ```
-
-   The build fails here rather than in production if a plugin registration or a config slot is wrong, because it constructs the whole app before Vite starts.
+1. **Point the passkey at the deployed host.** The scaffolded `plumix.config.ts` spreads `cloudflareDeployOrigin` into `auth.passkey` with the placeholder `accountSubdomain: "your-account"`. Put your own `workers.dev` subdomain there. Every `workers.dev` host and relying-party id the helper derives is built from that one string, so a passkey enrolled against the placeholder verifies nowhere.
 
 2. **Create the database.** The scaffolded `wrangler.jsonc` ships a placeholder `database_id` that works only for local dev.
 
@@ -70,7 +78,7 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
    wrangler d1 create recipes
    ```
 
-   Paste the returned id into the `d1_databases` entry in `wrangler.jsonc`.
+   Paste the returned id into the `d1_databases` entry in `wrangler.jsonc`. Both this edit and step 1 have to land before the build, because the build copies `wrangler.jsonc` into the bundle directory and bakes the config module's values into the worker.
 
 3. **Generate the migrations.**
 
@@ -88,7 +96,15 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
 
    Without `--remote` the same command applies to your local D1 copy. Everything after the command name passes through to `wrangler d1 migrations apply`.
 
-5. **Deploy.**
+5. **Build the site.**
+
+   ```sh
+   plumix build
+   ```
+
+   The build fails here rather than in production if a plugin registration or a config slot is wrong, because it constructs the whole app before Vite starts.
+
+6. **Deploy.**
 
    ```sh
    plumix deploy
@@ -96,7 +112,15 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
 
    This is `wrangler deploy` with your arguments appended.
 
-6. **Enrol the first passkey.** Open `/_plumix/admin` on the deployed origin. The first admin has to arrive through the passkey bootstrap rail, so do this before inviting anyone.
+7. **Set the secrets your resolvers read.** One command per key.
+
+   ```sh
+   wrangler secret put RESEND_API_KEY
+   ```
+
+   This runs after the first deploy because `wrangler secret put` needs the Worker to exist. Name the key under `secrets.required` in `wrangler.jsonc` and that first deploy refuses instead, telling you to ship the values with `wrangler deploy --secrets-file <path>`.
+
+8. **Enrol the first passkey.** Open `/_plumix/admin` on the deployed origin. The first admin has to arrive through the passkey bootstrap rail, so do this before inviting anyone.
 
 </Steps>
 
@@ -110,9 +134,11 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
 
 `.plumix/client-entry.ts` is the browser bundle's entry, and it carries the CSS files your theme declared. Plumix emits it even when it is empty, because the Vite plugin lists it as a client entry unconditionally.
 
+Three more entries are emitted on every build and each becomes its own client chunk. `.plumix/islands-entry.ts` imports the island runtime that registers the `<plumix-island>` custom element, and the server injects it only on a page that contains one. `.plumix/islands-renderer-entry.ts` is the React half of that runtime, dynamically imported on first hydration so React is never fetched for a page whose islands all defer. `.plumix/editor-entry.ts` carries the editor canvas and the block modules it renders, and the server injects it only when the edit gate authorizes the request.
+
 `.plumix/public` holds the static half: your `public/` directory copied in, and the precompiled admin SPA staged under `_plumix/admin/`.
 
-Vite then builds twice, client first and worker second, because the worker bakes the client's asset manifest into its own bundle. The output is a `dist/client` directory of static assets and a `dist/<worker-name>/` directory holding the worker bundle and the `wrangler.json` the Cloudflare Vite plugin writes.
+Vite then builds twice, client first and worker second, because the worker bakes the client's asset manifest into its own bundle. The output is a `dist/client` directory of static assets and a `dist/<worker-name>/` directory holding the worker bundle and a `wrangler.json` the Cloudflare Vite plugin writes from your `wrangler.jsonc`. The plugin also drops a `.wrangler/deploy/config.json` redirect pointing at that copy, so `plumix deploy` ships the built snapshot rather than re-reading the file you edited.
 
 ## Build time against request time
 
@@ -120,7 +146,7 @@ Your config module evaluates once, on your machine, during the build. Anything i
 
 Bindings and secrets exist only inside a request. The runtime adapter connects each slot per request by handing it the Worker `env`, so `d1({ binding: "DB" })` stores the string `"DB"` at build time and resolves it to a live D1 handle when a request arrives.
 
-That split is why the secret-bearing slots take a resolver. `mailer`, an OAuth provider's `clientSecret`, R2's S3 credentials and `passkey.origin` all accept either a literal or an `(env) => value` function, and the framework calls the function once per isolate with the real env.
+That split is why the secret-bearing slots take a resolver. `mailer`, an OAuth provider's `clientSecret`, `passkey.origin` and R2's S3 credentials all accept either a literal or an `(env) => value` function, and the framework calls the function once per isolate with the real env. R2's S3 credentials are the odd one there. An R2 binding cannot mint a presigned upload URL, so the adapter needs an account id and an S3 key pair on top of the binding before it can offer one.
 
 ## Migrations
 

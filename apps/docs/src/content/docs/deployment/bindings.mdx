@@ -63,7 +63,7 @@ Add an R2 bucket to the recipe site so the [`heroImage` media field](/fields/fie
 
    This forwards to `wrangler types`, which reads your wrangler config and writes `worker-configuration.d.ts` declaring one member of `Cloudflare.Env` per binding.
 
-5. **Restart the dev server.** `plumix dev` reads the wrangler config at boot, so a new binding needs a restart rather than a reload.
+5. **Let the dev server restart itself.** Saving `wrangler.jsonc` in step 2 already did it. `@cloudflare/vite-plugin` watches the wrangler config path and `.dev.vars`, and calls Vite's own restart when either changes, so a new binding is bound without a manual restart. The watcher listens for changes to a file that exists, not for a new one, so restart by hand the first time you add `.dev.vars`.
 
 </Steps>
 
@@ -83,7 +83,7 @@ A failure produces one 500 response naming every missing binding at once.
 
 The body carries the detail on purpose. A missing binding is deploy metadata rather than user input, so an operator with no access to `wrangler tail` can still read what went wrong over plain HTTP.
 
-Past that check, each adapter validates the shape of what it found. A name bound to the wrong kind of resource fails with a message naming the binding, because `r2()` probes for a `put` method and `kv()` probes for a `get` before using either.
+Past that check, two of the three adapters validate the shape of what they found. `r2()` probes for a `put` method and `kv()` probes for a `get`, so a name bound to the wrong kind of resource fails with a message naming the binding. `d1()` only checks that something is there. Point it at a KV namespace or an R2 bucket and it takes the object, and the failure surfaces later, when the first query runs, as an error from Drizzle rather than from the adapter.
 
 <Aside type="tip" title="Typos surface at the first request, not at deploy">
   `wrangler deploy` is happy to ship a Worker whose config names a binding your
@@ -130,7 +130,7 @@ export function purgeToken(env: PlumixEnv): string {
 }
 ```
 
-Put that beside your config. Augmenting `"plumix"` is the whole rule, and reaching for `@plumix/core` here would open a second, separate interface that neither half sees. The augmentation applies only in a file where `plumix` is already part of the compilation, which your config file guarantees by importing from it.
+Put that beside your config. Augmenting `"plumix"` is the whole rule, and reaching for `@plumix/core` here would open a second, separate interface that neither half sees. The file has to be a module of its own, which the `import type` line above makes it, and it has to be inside the same TypeScript program. Once it is, the merged members are visible everywhere in that program, so declare each key once and never repeat the block per file.
 
 ## Vars against secrets
 
@@ -150,7 +150,7 @@ That declares the name, never the value. [Secrets](/deployment/secrets/) covers 
 
 ## Keys the Cloudflare adapters read by convention
 
-Three adapters look for particular env keys when you have not passed the value in config. Set them as vars or as secrets, whichever the value warrants.
+Three adapters look for particular env keys, and not in the same way. For `r2()` and `images()` the env is a fallback the config can beat. For `edge()` it is the only route in, because `EdgeConfig` takes `ttl` and `staleWhileRevalidate` and nothing else. Set the keys as vars or as secrets, whichever the value warrants.
 
 | Key                         | Read by                                      | Effect when absent                                                |
 | --------------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
@@ -165,7 +165,7 @@ Three adapters look for particular env keys when you have not passed the value i
 
 The four R2 credential keys are read as a set. A partial set leaves presigned uploads switched off rather than failing at the moment someone tries to upload a hero image. `edge()` behaves the same way with its pair, which is what makes the cache slot safe to leave in the config of a `workers.dev` deploy.
 
-Passing the value in config beats the env key. `r2({ publicUrlBase })` and `images({ zone })` both win over what the env carries.
+Passing the value in config beats the env key, for the two adapters that offer the choice. `r2({ publicUrlBase })` and `images({ zone })` both win over what the env carries. `edge()` has no such option, so `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN` have to be on the env.
 
 ## Local development
 

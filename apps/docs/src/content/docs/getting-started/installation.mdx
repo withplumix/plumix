@@ -8,13 +8,15 @@ sidebar:
 
 import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
-One command writes a working project. The scaffolder asks four questions, installs dependencies, creates a local database and leaves you with a dev server and an admin waiting for its first passkey.
+One command writes a working project. The scaffolder asks up to four questions, installs dependencies, creates a local database and leaves you with a dev server and an admin waiting for its first passkey.
 
 ## Overview
 
 `create-plumix-app` assembles a project rather than copying a fixed template. It reads the runtime you pick and the plugins you tick, then splices their imports, their config slots and their registrations into one `plumix.config.ts`. Choosing the media plugin is what puts `storage: r2({ binding: "MEDIA" })` in the config and an `r2_buckets` entry in `wrangler.jsonc`. Choosing none leaves both out.
 
-You need Node 22 or newer and one of npm, pnpm, yarn or bun. The scaffolder reads `npm_config_user_agent` to work out which manager invoked it and uses that one for the install; `--pm` overrides the guess.
+You need one of npm, pnpm, yarn or bun. No published Plumix package declares an `engines` range, so no Node version is enforced at install time. The repository is developed and tested on Node 24, which is what its `.nvmrc` pins.
+
+The scaffolder does not work out which package manager invoked it. `detectPackageManager` takes the `npm_config_user_agent` string, but the binary calls it with nothing, so it always falls through to `npm` and the post-scaffold install runs `npm install` inside your new project. Pass `--pm pnpm`, `--pm yarn` or `--pm bun` to get the manager you actually use.
 
 The target directory must not exist, or must be empty, and its parent must exist. Its last path segment becomes the project name, so it has to match npm's package grammar: lowercase letters, digits, and `-`, `_` or `.`, up to 214 characters. The name is spliced into `package.json`, into `wrangler.jsonc` and into the passkey relying-party name, so the scaffolder rejects an out-of-grammar name up front rather than emitting a project that will not build.
 
@@ -57,9 +59,11 @@ Then work through the rest:
 
 <Steps>
 
-1. **Answer the wizard.** It asks where to create the project, which runtime to target, which plugins to include, and which sign-in methods to add. Cloudflare is the only runtime today. Passkeys are always on, so the sign-in question is about what to layer beside them.
+1. **Answer the wizard.** It asks only for what the command line did not already supply, so the command above, which names the directory, gets three questions rather than four. Those are which runtime to target, which plugins to include, and which sign-in methods to add. Run `pnpm create plumix-app` with no directory and it asks where to create the project first. Cloudflare is the only runtime today. Passkeys are always on, so the sign-in question is about what to layer beside them.
 
-2. **Let the post-scaffold steps run.** The scaffolder installs dependencies, runs `plumix migrate generate` and `plumix migrate apply --local`, then initializes a git repository and makes one commit. Each step is optional; each prints a recovery command if it fails.
+2. **Let the post-scaffold steps run.** The scaffolder installs dependencies, runs `plumix migrate generate` and `plumix migrate apply --local`, then initializes a git repository and makes one commit. Each step is skippable with a flag, and none of them throws, so a failure never leaves you without a project.
+
+   The three do not report failure equally. A failed install and a failed database setup are both named in the output, and the printed next steps then carry the commands to finish by hand. The migration steps run the installed `plumix` binary, so they are skipped whenever the install did not succeed, with no message saying they were skipped. Git reports nothing either way. A failed `git init`, or a commit rejected for want of a configured git identity, prints no warning and no recovery step, and `git init` is skipped outright when the target directory is already inside a repository.
 
 3. **Start the dev server.**
 
@@ -94,7 +98,9 @@ So the first person to reach a fresh deploy owns it. Deploy and claim the accoun
 
 ## Scaffolding without the wizard
 
-Every prompt has a flag, and `--yes` accepts the defaults for whatever you did not pass. That combination is what makes the scaffolder usable from a script or a CI job, where there is no terminal to prompt into. The wizard only runs on a real TTY and never under `CI`.
+Three of the four prompts have a flag, and `--yes` accepts the defaults for whatever you did not pass. That combination is what makes the scaffolder usable from a script or a CI job, where there is no terminal to prompt into. The wizard only runs on a real TTY and never under `CI`.
+
+The sign-in question is the fourth, and it has no flag behind it. A non-interactive run always scaffolds with passkeys alone, so GitHub OAuth, magic links and Cloudflare Access have to be added to `plumix.config.ts` afterwards. [Adding a sign-in method later](#adding-a-sign-in-method-later) is what each one costs.
 
 ```sh
 pnpm create plumix-app my-site --plugins blog,pages,media --pm pnpm --yes
@@ -104,7 +110,7 @@ The flags are:
 
 - `--runtime <id>` picks the runtime. Defaults to `cloudflare`.
 - `-p, --plugins <ids>` takes a comma-separated list. The ids are `blog`, `pages`, `menu`, `comments`, `media` and `audit-log`. Defaults to none.
-- `--pm <name>` forces `npm`, `pnpm`, `yarn` or `bun` instead of the detected one.
+- `--pm <name>` picks `npm`, `pnpm`, `yarn` or `bun`. Without it you get `npm`. An unrecognised name exits with an error rather than falling back.
 - `--no-install` skips the dependency install.
 - `--no-db` skips generating and applying the local migration.
 - `--no-git` skips `git init` and the first commit.

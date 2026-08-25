@@ -122,14 +122,13 @@ export const recipes = definePlugin("recipes", {
       labels: { singular: "Cuisine", plural: "Cuisines" },
       isHierarchical: true,
       entryTypes: ["recipe"],
-      rewrite: { slug: "cuisines", isHierarchical: true },
       archivePerPage: 12,
     });
   },
 });
 ```
 
-Term archive routes compile ahead of entry-type routes, so a taxonomy prefix wins a collision against an entry type that claimed the same prefix.
+Term archive routes compile ahead of entry-type routes, so a taxonomy prefix wins a collision against an entry type that claimed the same prefix. Ordering only settles a collision between two different patterns. A hierarchical taxonomy and a hierarchical entry type sharing one prefix both emit the raw pattern `/<prefix>/:path+`, and the compiler throws `duplicate_rewrite_rule` at boot rather than picking a winner, so the site fails to start.
 
 ## Capabilities
 
@@ -179,7 +178,7 @@ export const recipes = definePlugin("recipes", {
 
 ## Options that stay server-side
 
-Not every option reaches the browser. The projection that builds the plugin manifest works from an allowlist, and it holds back `hasAdminColumn`, `isInQuickEdit`, `rewrite` and `capabilities`. Declaring them is harmless and records intent; do not expect `hasAdminColumn: true` to add a column to the entry list today.
+Not every option reaches the browser. The projection that builds the plugin manifest works from an allowlist, and it holds back `hasAdminColumn`, `isInQuickEdit`, `rewrite` and `capabilities`. Two of those four still do their work on the server. `rewrite` sets the compiled route's base slug and decides whether term URLs nest, and `capabilities` overrides the minimum role for each of the five actions above. The other two reach nothing today, so do not expect `hasAdminColumn: true` to add a column to the entry list, or `isInQuickEdit` to change the quick-edit form.
 
 `isPublic: false` removes the taxonomy's public surface altogether. No term archive routes compile, and the term URL builder returns null.
 

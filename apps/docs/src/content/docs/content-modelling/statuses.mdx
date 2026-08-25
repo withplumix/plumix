@@ -13,7 +13,7 @@ Every entry carries exactly one of four statuses. The status decides who can rea
 
 ## Overview
 
-`status` is a column on the `entries` table, not null, defaulting to `draft`. The four values below are all of them. The column is an enum and nothing writes a fifth.
+`status` is a column on the `entries` table, not null, defaulting to `draft`. The four values below are all of them. The column itself is plain SQLite text carrying no check constraint, so what rejects a fifth value is the input schema on the RPC boundary. A direct write through `plumix/db` goes around that schema and around everything else on this page.
 
 Two rules cover most of the behaviour.
 
@@ -22,6 +22,8 @@ A public request sees `published` and nothing else. The single-entry resolver qu
 The read service clamps an admin read to what the caller may see. It pins a caller without `entry:<type>:edit_any` to `published` no matter what they ask for, and returns an empty list rather than an error when they ask for anything else. A caller who does hold it sees everything except `trash` by default and asks for trash explicitly.
 
 Writing a status has a capability attached too. Creating an entry straight to `published` or `scheduled` needs `entry:<type>:publish` on top of `entry:<type>:create`, and so does moving an existing entry to `published`.
+
+The examples below subscribe to the lifecycle from a plugin's `setup`, through the two methods the context carries. `ctx.addFilter` registers a filter, which receives a value and returns one, so a `before_save` handler is handed the entry about to be written and returns the entry to write. `ctx.addAction` registers an action, which returns nothing and runs for its side effects, so a `published` handler only learns that a recipe went live. Both take a hook name, and the names are fixed strings core declares. The Hooks section, which lists every name with its arguments, is not written yet.
 
 ## The four statuses
 
@@ -79,7 +81,7 @@ export const recipes = definePlugin("recipes", {
 
 Published at a time that has not arrived yet.
 
-`scheduled` is the one status with a rule of its own. Plumix rejects the write unless the entry carries a `publishedAt` in the future. That is checked on the way in, so no entry is ever left scheduled with no time to fire at. Editing an already-scheduled entry whose time has since slipped into the past is still allowed, since the fix would otherwise be blocked by the problem.
+`scheduled` is the one status with a rule of its own. Plumix rejects the write unless the entry carries a `publishedAt` in the future. That is checked on the way in, so no entry is ever left scheduled with no time to fire at. Editing an already-scheduled entry whose time has since slipped into the past is still allowed, since the fix would otherwise be blocked by the problem. That holds only while the update leaves `status` out and supplies no `publishedAt`. Send either one and the guard re-checks the effective time, finds the stale past date and rejects the write with `scheduled_requires_future_date`, so a client that echoes the whole entry back has to send a fresh future time with it.
 
 A scheduled entry is invisible in public. It is not on its archive, and its URL 404s until the cron flips it.
 
@@ -135,7 +137,7 @@ Any status can reach any other. No state machine forbids a pair. What varies is 
 - Into `scheduled`: needs `entry:<type>:publish` when the entry is created that way. An update that moves an existing entry to `scheduled` is gated by the edit capabilities alone, and still runs the strict validation.
 - Into `trash`, from anywhere: needs `entry:<type>:delete`, plus `entry:<type>:edit_any` when the caller is not the author. Trashing something already trashed changes nothing and fires nothing.
 - Out of `trash`: the restore procedure, which lands on `draft`.
-- Between `draft` and `published` in either direction: an ordinary update.
+- Out of `published` back to `draft`: an ordinary update, with no publish capability and no strict validation. The other direction is the publish transition in the first bullet.
 
 `entry:transition` fires with the entry and its old status, and only when the status actually changed. A save that leaves the status alone fires `entry:updated` and no transition. The type-scoped `entry:<type>:transition` fires first, then the generic one.
 

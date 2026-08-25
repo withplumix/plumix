@@ -15,10 +15,10 @@ import { Aside } from "@astrojs/starlight/components";
 
 Which member arrives depends on which rule matched. Bind a template through a builder that already knows the shape, such as `archive()` or `forEntryType("recipe")`, and the type parameter is settled for you. `data` is `ArchiveData` and nothing else. Bind it through `fallback()` and `data` is the whole union, because a catch-all can receive any of the nine.
 
-Narrow the union in one of two ways. A `switch` on `data.kind` narrows in every branch, and dropping the `default` makes the compiler demand a case for each of the nine.
+Narrow the union in one of two ways. A `switch` on `data.kind` narrows in every branch.
 
 ```tsx
-import { defineTemplate } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 export const anything = defineTemplate({
   render: ({ data }) => {
@@ -34,13 +34,15 @@ export const anything = defineTemplate({
 });
 ```
 
+Dropping the `default` does not make the compiler demand the other seven. `render` returns `ReactNode`, `ReactNode` includes `undefined`, and the shared tsconfig sets no `noImplicitReturns`, so a switch that falls off its last case compiles and renders nothing. To turn a missing case into a build error, replace the `default` return with `const exhaustive: never = data;`, which stops compiling the day a tenth kind lands.
+
 For a single branch, the guards below read better. Each is a plain function exported from `plumix` that takes `TemplateData` and narrows.
 
 Three projections recur across the shapes.
 
 - `ResolvedEntry` is the stored entry row with `meta` replaced by its decoded counterpart, with every [reference field](/fields/field-types/) hydrated, plus `terms`, `author`, `contentBlocks` and `url`. `contentBlocks` is the content narrowed to the block-tree shape, and `null` when the stored JSON does not fit that shape. `url` is `null` for a hierarchical entry still awaiting an ancestor-chain walk.
-- `ResolvedTerm` is the term row with the same meta treatment, plus its own `url`.
-- `ResolvedAuthor` is `id`, `slug`, `name` and `avatarUrl`. There is no email and no auth column, because the query never selects them.
+- `ResolvedTerm` is the term row plus its own `url`. Its `meta` does not get the entry treatment. The public render path hands you the raw JSON column, so a reference field on a term arrives as the stored id rather than the row it points at.
+- `ResolvedAuthor` is `id`, `slug`, `name` and `avatarUrl`. There is no email and no auth column. On the entry path the query selects those four columns and nothing else; on an author archive the resolver loads the whole user row to find the author, then copies the same four fields into a fresh object rather than spreading the row.
 
 Six of the nine shapes carry `entries` and a `Pagination` of `page`, `perPage`, `total` and `pageCount`. Every listing shape is generic over the entry projection and defaults to `ResolvedEntry`, so a targeted rule can hand you a narrower entry type without a cast.
 
@@ -57,8 +59,9 @@ Six of the nine shapes carry `entries` and a `Pagination` of `page`, `perPage`, 
 One entry. `kind: "entry"`, guard `isEntry`, bound directly by the `entry` tier and by `forEntryType(name).template()`.
 
 ```tsx
-import { defineTemplate, isEntry } from "plumix";
+import { isEntry } from "plumix";
 import { BlockRenderer } from "plumix/blocks/renderer";
+import { defineTemplate } from "plumix/theme";
 
 export const single = defineTemplate({
   render: ({ data }) =>
@@ -73,14 +76,15 @@ export const single = defineTemplate({
 });
 ```
 
-`data.entry` is the only field. It is a full `ResolvedEntry`, so the title, excerpt, status, publish date, author, terms and decoded meta are all on it. This is the one listing-free shape: no `entries`, no `pagination`.
+`data.entry` is the only field. It is a full `ResolvedEntry`, so the title, excerpt, status, publish date, author, terms and decoded meta are all on it. It is one of the three listing-free shapes, alongside `CustomArchiveData` and `ErrorData`. There is no `entries` and no `pagination` on any of them.
 
 ### `ArchiveData`
 
 An entry type's listing. `kind: "archive"`, guard `isArchive`, bound by the `archive` tier and by `forEntryType(name).archive.template()`.
 
 ```tsx
-import { defineTemplate, isArchive } from "plumix";
+import { isArchive } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 export const listing = defineTemplate({
   render: ({ data }) =>
@@ -107,7 +111,8 @@ export const listing = defineTemplate({
 A term archive. `kind: "taxonomy"`, guard `isTaxonomy`, bound by the `taxonomy` tier and by `forTermTaxonomy(name)`.
 
 ```tsx
-import { defineTemplate, isTaxonomy } from "plumix";
+import { isTaxonomy } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 export const terms = defineTemplate({
   render: ({ data }) =>
@@ -128,7 +133,8 @@ export const terms = defineTemplate({
 An author's entries. `kind: "author"`, guard `isAuthor`, bound by the `author` tier and by `forAuthor()`.
 
 ```tsx
-import { defineTemplate, isAuthor } from "plumix";
+import { isAuthor } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 export const byAuthor = defineTemplate({
   render: ({ data }) =>
@@ -151,7 +157,8 @@ export const byAuthor = defineTemplate({
 Entries published in one period. `kind: "date"`, guard `isDate`, bound by the `date` tier and by `forDate(...)`.
 
 ```tsx
-import { defineTemplate, isDate } from "plumix";
+import { isDate } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 export const period = defineTemplate({
   render: ({ data }) => {
@@ -171,7 +178,8 @@ export const period = defineTemplate({
 A plugin-registered archive. `kind: "custom"`, guard `isCustom`, bound by `forArchiveType(name)`.
 
 ```tsx
-import { defineTemplate, isCustom } from "plumix";
+import { isCustom } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 export const pluginArchive = defineTemplate({
   render: ({ data }) => (isCustom(data) ? <h1>{data.name}</h1> : null),
@@ -185,7 +193,8 @@ Core only ever sees the base shape, which is `kind` and `name`. The [plugin](/pl
 The site root. `kind: "frontPage"`, guard `isFrontPage`, bound by the `frontPage` tier.
 
 ```tsx
-import { defineTemplate, isFrontPage } from "plumix";
+import { isFrontPage } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 export const home = defineTemplate({
   render: ({ data }) =>
@@ -209,7 +218,8 @@ The feed is the latest published entries across every public non-hierarchical ty
 Search results. `kind: "search"`, guard `isSearch`, bound by the `search` tier.
 
 ```tsx
-import { defineTemplate, isSearch } from "plumix";
+import { isSearch } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 export const results = defineTemplate({
   render: ({ data }) =>
@@ -229,7 +239,8 @@ export const results = defineTemplate({
 A 404 or a 500. `kind: "error"`, guard `isError`, bound by the `notFound` and `serverError` tiers.
 
 ```tsx
-import { defineTemplate, isError } from "plumix";
+import { isError } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 export const failed = defineTemplate({
   render: ({ data }) => {
@@ -257,4 +268,4 @@ There is no `Error` field on this shape, by design, so an internal exception mes
 
 Go back to [Templates](/themes/templates/) and bind each shape to the tier or matcher that produces it, then to [Template Hierarchy](/themes/hierarchy/) to order those rules.
 
-Two unwritten pages in this section carry what a template does with the data once it has it. Component Primitives covers `Link`, `Image` and the auth-aware wrappers, which turn a `ResolvedEntry` into markup that respects the base path and the site's image handling. Tokens and Breakpoints covers the design values those components render against.
+Two unwritten pages in this section carry what a template does with the data once it has it. Component Primitives covers `Link` and `Image`, which turn a `ResolvedEntry` into markup that respects the base path and the site's image handling, along with `useAuth` for a page that changes with the signed-in visitor. Tokens and Breakpoints covers the design values those components render against.

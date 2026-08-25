@@ -57,7 +57,7 @@ Every example in this documentation models the same recipe site: a `recipe` entr
    pnpm dev
    ```
 
-   Recipes now has its own section in the admin sidebar, with a list page and an editor. Publish one and it serves at `/recipes/sicilian-caponata`, under an archive at `/recipes`.
+   Recipes now appears in the admin sidebar under Entries, with a list page and an editor. Publish one and it serves at `/recipes/sicilian-caponata`, under an archive at `/recipes`.
 
 </Steps>
 
@@ -116,7 +116,6 @@ export const recipes = definePlugin("recipes", {
       labels: { singular: "Cuisine", plural: "Cuisines" },
       isHierarchical: true,
       entryTypes: ["recipe"],
-      hasAdminColumn: true,
     });
 
     ctx.registerTermTaxonomy("diet", {
@@ -129,7 +128,7 @@ export const recipes = definePlugin("recipes", {
 });
 ```
 
-You declare the pairing from both sides, and each side does a different job. `termTaxonomies` on the entry type puts the cuisine and diet pickers on the recipe editor. `entryTypes` on the taxonomy is what the cache purge reads, so editing the Sicilian term purges the recipe pages carrying it.
+You declare the pairing from both sides, and each side does a different job. `termTaxonomies` on the entry type puts the cuisine and diet pickers on the recipe editor. `entryTypes` on the taxonomy is what the cache purge reads. A term edit enqueues one `t:<type>` tag for each entry type in that array, so editing the Sicilian term purges every stored recipe page rather than only the ones carrying the term.
 
 Hierarchy also shapes the term URLs: `/cuisine/italian/sicilian` for the nested taxonomy, `/diet/vegetarian` for the flat one, each with a `/page/:page` variant.
 

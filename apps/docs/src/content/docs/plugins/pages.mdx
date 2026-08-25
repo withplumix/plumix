@@ -81,13 +81,13 @@ Then:
    pnpm dev
    ```
 
-3. **Create two pages.** The admin sidebar gains a Pages section at `/entries/pages`. Publish one slugged `about` and it serves at `/about`. Publish a second slugged `team`, set its parent to About, and it serves at `/about/team`.
+3. **Create two pages.** The admin sidebar gains a Pages item under Entries, at `/_plumix/admin/entries/pages`. Publish one slugged `about` and it serves at `/about`. Publish a second slugged `team`, set its parent to About, and it serves at `/about/team`.
 
 </Steps>
 
 ## The page entry type
 
-This is the registration, transcribed from the plugin with its label table collapsed to a string.
+This is the registration the plugin makes, wrapped in a plugin of your own. The plugin passes translatable descriptors everywhere the sample passes a plain string, and its `labels` table carries seventeen keys where the sample shows two.
 
 ```ts
 import { definePlugin } from "plumix/plugin";
@@ -106,6 +106,7 @@ export const example = definePlugin("example", {
       rewrite: { slug: "" },
       capabilityType: "page",
       menuIcon: "layout",
+      keywords: ["static", "page"],
     });
   },
 });
@@ -115,19 +116,25 @@ export const example = definePlugin("example", {
 
 `supports` carries `slug`, which nothing in core or the admin reads today. The five values that change behaviour are `title`, `editor`, `excerpt`, `revisions` and `autosave`. `slug` records intent, and [Entry Types](/content-modelling/entry-types/) explains why the list is conventional rather than closed.
 
+`keywords` gives the admin command palette two synonyms to match alongside the sidebar label, so typing "static" finds Pages.
+
 ## URLs at the root
 
-An entry type with an empty rewrite prefix claims every path shape on the site, so the router gives its rule the lowest precedence of any rule it compiles. Every other route is tried first, and the page pattern picks up what is left.
+An entry type with an empty rewrite prefix claims every path shape on the site, so the router gives its rule priority 60 rather than the 50 an ordinary entry-type rule carries. Rules sort ascending and the first match wins, so at default priorities every other rule in the map is tried before the page pattern, and the page pattern picks up what is left.
 
-Three groups of routes sit ahead of it.
+Sixty is a default, not a floor. Priority is an open number, so a rewrite rule or an archive type registered above 60 sorts behind the page pattern and never sees a path that pattern already matches.
 
-Framework routes come first. `/search`, `/search/<query>`, `/authors/<slug>`, `/page/2`, and the date archives `/2026`, `/2026/08` and `/2026/08/25` are compiled by the router itself and always win. A page slugged `search` is therefore unreachable, and so is a page slugged `2026`, because the year pattern only matches four digits and that is exactly what the slug is.
+One thing runs ahead of the route map entirely, and three groups of compiled routes sit ahead of the page pattern inside it.
 
-Routes a plugin registered by hand come next: rewrite rules and custom archive types, each carrying a priority number you can set.
+Redirects are matched first. The dispatcher runs the site's `redirects` config, every plugin's `registerRedirects` rules and the theme's `redirects` array against the URL before it consults the route map at all, so a redirect whose `from` covers a page's path answers that path and the page never resolves.
 
-Auto-compiled routes from other registrations come last before the page pattern. `/posts/<slug>` from the blog plugin, `/category/<path>` and `/tag/<term>` from its taxonomies, `/recipes` and `/recipes/<slug>` from your own type. A page nested so that its URL is `/recipes/caponata` never resolves, because the recipe rule matches that shape first.
+Framework routes come next, at priority 5. `/search`, `/search/<query>`, `/authors/<slug>`, `/page/2`, and the date archives `/2026`, `/2026/08` and `/2026/08/25` are compiled by the router itself, and `/search/<query>`, `/authors/<slug>` and the three date shapes each compile a `/page/<n>` variant at the same priority. A page slugged `search` is therefore unreachable, and so is a page slugged `2026`, because the year pattern only matches four digits and that is exactly what the slug is.
 
-The practical rule is short. Give a top-level page a slug that no route prefix on the site already uses, and check the framework list above before choosing one.
+Routes a plugin registered by hand come after those, at priority 10 unless the registration passes a number of its own. These are rewrite rules and custom archive types.
+
+Auto-compiled routes from other registrations come last before the page pattern, at priority 50. `/posts/<slug>` from the blog plugin, `/category/<path>` and `/tag/<term>` from its taxonomies, `/recipes` and `/recipes/<slug>` from your own type. A page nested so that its URL is `/recipes/caponata` never resolves, because the recipe rule matches that shape first.
+
+The practical rule is short. Give a top-level page a slug that no route prefix and no redirect on the site already uses, and check the framework list above before choosing one.
 
 <Aside type="caution" title="A shadowed page fails silently">
   Nothing warns you at boot. The page saves, the admin shows it as published,
@@ -173,7 +180,7 @@ Registering `page` derives eight capabilities under the `page` family, each mapp
 
 The family name comes from `capabilityType: "page"`, which matches the type name here. Register a second hierarchical type with `capabilityType: "page"` and it is gated by these same eight rather than minting its own.
 
-Because `page` opts into `revisions` and `autosave`, publishing over a page snapshots the previous version and editing a live page writes to a per-user pending draft until you publish it. Twenty-five snapshots are retained per page.
+Because `page` opts into `revisions` and `autosave`, every write that lands on a page's stored columns captures a revision, and editing a live page writes to a per-user pending draft until you publish it. The snapshot is taken after the write commits, so a revision holds the version that write produced rather than the one it replaced. Twenty-five are kept per page, and the oldest are deleted past that.
 
 ## Related
 

@@ -8,7 +8,7 @@ sidebar:
 
 import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
-The `plugins` array in `plumix.config.ts` is the only way an entry type, a block, a route or an admin page reaches your site. Installing a published plugin is a package install and one entry in that array.
+The `plugins` array in `plumix.config.ts` is the only way an entry type, a route or an admin page reaches your site. Blocks are the one exception, because core registers its own set and a theme declares more in its descriptor, but everything else on the registration surface arrives through a plugin. Installing a published plugin is a package install and one entry in that array.
 
 ## What a plugin is
 
@@ -18,7 +18,7 @@ Six plugins ship under the `@plumix/plugin-*` scope. A scaffolded project instal
 
 - `@plumix/plugin-blog` registers the `post` entry type with the `category` and `tag` taxonomies.
 - `@plumix/plugin-pages` registers the hierarchical `page` entry type rooted at `/`.
-- `@plumix/plugin-media` registers a `media` entry type, a two-phase upload that sends bytes to storage without passing them through the worker, and a `media()` field builder.
+- `@plumix/plugin-media` registers a `media` entry type, a two-phase upload, and a `media()` field builder. The upload sends bytes straight to storage when the storage adapter implements `presignPut`, and routes them through the worker when it does not.
 - `@plumix/plugin-menu` registers navigation menus and the named locations a theme renders them into.
 - `@plumix/plugin-comments` adds threaded, moderated discussion to the entry types you nominate.
 - `@plumix/plugin-audit-log` records an activity feed and adds an `audit` helper to the request context.
@@ -133,7 +133,7 @@ import { pages } from "@plumix/plugin-pages";
 export const plugins: PlumixConfigInput["plugins"] = [blog, pages];
 ```
 
-The other four take options, so they export a factory. Options are read once, at the moment you call it, and the descriptor that comes back holds the resolved values for the life of the process. There is no later hook that re-reads them.
+The other four take options, so they export a factory. Options are read at boot, either in the factory call itself or when the plugin's `setup` runs, and nothing re-reads them after that. Changing an option means editing the call and restarting.
 
 ```ts no-typecheck
 import type { PlumixConfigInput } from "plumix";
@@ -164,7 +164,9 @@ Every option a factory takes has a default, so the empty parentheses on `media()
 
 The array is the order `setup` runs in. A plugin that reads what another registered has to sit after it.
 
-One step runs earlier than that and does not care about order. A descriptor's optional `provides` function runs for every plugin in the array before any plugin's `setup` runs, which is how the audit-log plugin can put `audit` on the request context and a plugin listed ahead of it can still call it. Helpers published through `provides` are available to every `setup`, whatever the order.
+One step runs earlier than that and does not care about order. A descriptor's optional `provides` function runs for every plugin in the array before any plugin's `setup` runs, so a helper published with `extendPluginContext` is on every plugin's setup context whatever the order.
+
+`provides` has a second call, `extendAppContext`, which puts a helper on the per-request context instead of the setup context. That is the one `@plumix/plugin-audit-log` uses for `audit`, so `ctx.audit` is there for any plugin's routes, hooks and RPC procedures at request time, and no plugin's `setup` can reach it.
 
 Public URLs do not depend on array order either. The router compiles taxonomy rules ahead of entry-type rules and sorts every rule by a priority number, so a plugin whose entry type sits at the URL root cannot shadow another plugin's routes by being listed first. [Routing](/routing/overview/) covers how a URL reaches the rule that serves it.
 
@@ -215,4 +217,4 @@ The `plugins` array is one slot among twenty in [Configuration](/getting-started
 
 Read [Blog](/plugins/blog/) and [Pages](/plugins/pages/) next. Between them they cover the two entry types most sites install before anything else, and each is a worked example of the registration options this page only names.
 
-Ten pages in this section are not written yet, though everything they cover ships today. Menu documents navigation menus and the locations a theme renders them into. Comments documents threading, the moderation queue and the trust policy the quickstart above configured. Media documents the library, the upload flow and the `media` field types. Audit Log documents the activity feed. Publishing a Plugin covers taking a local plugin to npm, The Plugin Descriptor covers the difference between `setup` and `provides`, Config Schema covers validating the options a factory takes, Admin Entry covers shipping admin screens, Translation Catalogs covers the `i18n` slot, and Versioning and Peer Ranges goes further into the two tracks described above.
+Ten pages in this section are not written yet, though everything they cover ships today. Menu documents navigation menus and the locations a theme renders them into. Comments documents threading, the moderation queue and the trust policy the quickstart above configured. Media documents the library, the upload flow and the `media` field types. Audit Log documents the activity feed. Publishing a Plugin covers taking a local plugin to npm, The Plugin Descriptor documents every slot on the descriptor object, Config Schema covers validating the options a factory takes, Admin Entry covers shipping admin screens, Translation Catalogs covers the `i18n` slot, and Versioning and Peer Ranges goes further into the two tracks described above.

@@ -43,16 +43,16 @@ The same composition runs in both directions. Inbound, Plumix splits the request
 
    Drop `rewrite` and the prefix falls back to the type name, giving `/recipe/sicilian-caponata`.
 
-2. **Set the entry slug.** The editor creates a new entry with a generated placeholder slug, so two authors clicking "add" in the same millisecond cannot collide. Open the recipe in the editor, type `sicilian-caponata` into the slug field, and save. The slug saves on its own, separately from the content autosave.
+2. **Set the entry slug.** The editor creates a new entry with a generated placeholder slug, so two authors clicking "add" in the same millisecond cannot collide. Open the recipe in the editor and type `sicilian-caponata` into the slug field. There is no save button for it. The slug rides a debounced write to the live row, on its own debouncer, separate from the one carrying the content autosave.
 
-3. **Link to it from a template.** Every entry a resolver hands your theme already carries its permalink on `url`:
+3. **Link to it from a template, and put that template in the theme.** Every entry a resolver hands your theme already carries its permalink on `url`:
 
    ```tsx
    import type { ArchiveData } from "plumix";
+   import { archive, defineTemplate, defineTheme } from "plumix";
    import { Link } from "plumix/blocks/renderer";
-   import { defineTemplate } from "plumix/theme";
 
-   export const recipeArchive = defineTemplate<ArchiveData>({
+   const recipeArchive = defineTemplate<ArchiveData>({
      render: ({ data }) => (
        <ul>
          {data.entries.map((recipe) => (
@@ -63,7 +63,13 @@ The same composition runs in both directions. Inbound, Plumix splits the request
        </ul>
      ),
    });
+
+   export const recipesTheme = defineTheme({
+     templates: [archive(recipeArchive)],
+   });
    ```
+
+   A bare `defineTemplate` export renders nothing. The theme's `templates` array is the only place the resolver looks for a template, so the `archive(...)` rule is what puts this one on `/recipes`. To bind one entry type's listing rather than every archive, swap it for `forEntryType("recipe").archive.template(recipeArchive)`.
 
    Passing the whole entry rather than `href={recipe.url}` is what keeps the link correct under a base path and safe when the permalink is null.
 
@@ -71,7 +77,9 @@ The same composition runs in both directions. Inbound, Plumix splits the request
 
 ## What a slug may contain
 
-A stored slug is lowercase ASCII alphanumerics in single-dash groups, matching `/^[a-z0-9]+(?:-[a-z0-9]+)*$/`, at most 200 characters, never empty. No leading dash, no trailing dash, no double dash. The admin forms and the server validate against the same two constants, so a slug the form accepts is a slug the server accepts.
+A stored slug is lowercase ASCII alphanumerics in single-dash groups, matching `/^[a-z0-9]+(?:-[a-z0-9]+)*$/`, at most 200 characters, never empty. No leading dash, no trailing dash, no double dash. The entry editor and the user profile form validate against the same pattern and length constants the server does, so a slug either of those accepts is a slug the server accepts.
+
+The term form is the one exception. Its slug field is optional, and it validates against a looser `/^[a-z0-9-]*$/` so an in-progress `sicilian-` does not error under your cursor. That means the term form accepts a leading, trailing or doubled dash the server then rejects on save.
 
 `slugify` turns an authored title into that shape:
 
@@ -85,12 +93,13 @@ It transliterates rather than percent-encodes. Diacritics fold to ASCII, and Cyr
 
 <Aside type="caution" title="Some scripts transliterate to nothing">
   CJK and a few other scripts have no ASCII transliteration, so `slugify`
-  returns an empty string for them. The admin form rejects the empty slug inline
-  and asks the author to type one, rather than letting the save fail at the
-  server.
+  returns an empty string for them. The entry editor's slug field requires at
+  least one character, so it rejects the empty slug inline and asks the author
+  to type one. The term form has no such minimum, so a CJK term name saved with
+  the slug field blank derives an empty slug and fails at the server instead.
 </Aside>
 
-The term form fills the slug from the term name with the same helper when you leave the field blank. The entry editor does not, so an entry's slug is yours to type.
+Creating a term with the slug field blank fills it from the term name with the same helper. Editing one does not. A blank slug on the edit form is sent as `undefined`, which leaves the stored slug alone, so renaming a term does not move its URL. The entry editor never derives a slug from the title at all, so an entry's slug is yours to type.
 
 ## How a permalink is composed
 
@@ -127,15 +136,19 @@ Templates get permalinks pre-resolved. Every `ResolvedEntry` carries `url`, ever
 `url` is `string | null`, and the null cases are worth knowing.
 
 - The entry type or taxonomy is registered `isPublic: false`, so no public URL exists for it at all.
-- The entry or term is a nested child under a hierarchical registration, and the listing that produced it resolved rows in one batch rather than walking each ancestor chain.
+- The entry or term is a nested child under a hierarchical registration. Composing that URL needs a walk up the ancestor chain, and the builder behind `data.entries` and `entry.terms` uses the sync variant, which returns null rather than run one. This is not an archive-only condition. The single-entry path builds its entry through the same builder, so a nested entry carries `url: null` on its own page too.
 
 `<Link>` from `plumix/blocks/renderer` handles both. Given `entry` or `term` it reads `url`, and when that is null it renders the children with no anchor, so a listing never emits a dead link. Given a raw `href` it prepends the base path to root-relative paths, adds `rel="noopener noreferrer"` to external ones, and refuses `javascript:`, `data:`, `vbscript:` and `blob:` targets.
+
+Two surfaces do pay for the ancestor walk and so escape the second case. The taxonomy resolver builds `data.term.url` for the term whose archive you are on with the async builder, and the sitemap composes every `<loc>` with it, so a nested entry has a sitemap URL even when its own `ResolvedEntry.url` is null. The walk is one recursive query, not one query per ancestor.
 
 ## Canonical URLs
 
 The canonical URL is the configured site origin plus the request path in one fixed shape. Plumix strips trailing slashes, collapses a trailing `/page/1` to the bare listing, and drops the query string and fragment so URL variants consolidate onto one address.
 
-That one value drives four things: the `<link rel="canonical">` tag, the 301 normalizer, `og:url`, and the `<loc>` of every sitemap entry. One function computes all four, so they cannot disagree.
+Three things read that one value. The `<link rel="canonical">` tag and `og:url` both call `canonicalUrl`, and the 301 normalizer builds its target from the same path-normalizing helper, so the three cannot disagree about the shape they point at.
+
+The sitemap is not one of the three. It builds every `<loc>` itself, from the site origin plus a freshly composed permalink, and never calls `canonicalUrl`. The two agree on ordinary entry and term pages because both compose the same registration and the same slug, not because one function produced both.
 
 The origin comes from `auth.passkey.origin` in `plumix.config.ts` rather than from the inbound request. A worker serving the same site from another region therefore emits the same canonical URL.
 

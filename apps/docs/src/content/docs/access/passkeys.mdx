@@ -12,13 +12,15 @@ A passkey is a public-key credential the browser holds and Plumix verifies. Plum
 
 ## Overview
 
-Enrolment and sign-in are two ceremonies, each two requests. The browser asks for options, the operating system prompts the person, and the browser sends the signed result back for verification. Plumix mounts four endpoints for them under `/_plumix/auth/passkey/`, plus `/_plumix/auth/signout`. The admin's login screen drives all of them; you do not call them directly unless you are building a sign-in page of your own.
+Enrolment and sign-in are two ceremonies, each two requests. The browser asks for options, the operating system prompts the person, and the browser sends the signed result back for verification. Plumix mounts four endpoints under `/_plumix/auth/passkey/`, two more under `/_plumix/auth/invite/register/` for the invitation rail, and `/_plumix/auth/signout`.
+
+Three admin screens drive them. The login screen calls the two `login/*` endpoints. The bootstrap screen and the profile Passkeys card both call the two `register/*` ones. The accept-invite screen calls the invite pair. You do not call any of them directly unless you are building a sign-in page of your own.
 
 Three values anchor the credential, and all three live in the `passkey` block.
 
-- `rpName` is the display name in the operating system's prompt.
-- `rpId` is the relying-party id, normally the bare hostname. It is what the credential is bound to. This is the one auth value that cannot be an `(env) => …` resolver, because a passkey enrolled under one `rpId` cannot verify under another.
-- `origin` is the scheme-and-host the browser reports back. Verification compares it against this value, plus anything in the optional `allowedOrigins` list.
+- `rpName` is the display name in the operating system's prompt. It is a plain string.
+- `rpId` is the relying-party id, normally the bare hostname. It is what the credential is bound to. It is a plain string too, and deliberately takes no `(env) => …` resolver, because a passkey enrolled under one `rpId` cannot verify under another, so the value has to be constant across environments.
+- `origin` is the scheme-and-host the browser reports back. Verification compares it against this value, plus anything in the optional `allowedOrigins` list. `origin` and `allowedOrigins` are the two values in the block that accept a resolver.
 
 `origin` does double duty. It is also the canonical site origin, so the CSRF check and every absolute URL Plumix generates read the same value.
 
@@ -33,7 +35,7 @@ A verified credential becomes a row in `credentials` holding the public key, the
    ```ts
    import { auth } from "plumix";
 
-   export const recipesAuth = auth({
+   export const recipeAuth = auth({
      passkey: {
        rpName: "Recipes",
        rpId: "localhost",
@@ -83,7 +85,7 @@ An entry is either an exact origin or a subdomain wildcard.
 ```ts
 import { auth } from "plumix";
 
-export const recipesAuth = auth({
+export const recipeAuth = auth({
   passkey: {
     rpName: "Recipes",
     rpId: "recipes.example.com",
@@ -101,7 +103,9 @@ declare module "plumix" {
 
 The wildcard form, `https://*.example.com`, is how one passkey spans an unbounded set of preview hosts. It matches strictly: HTTPS only, the default port, and a real label in front of the base, anchored at the dot, so `evilexample.com` cannot pass for `example.com`.
 
-`origin` and `allowedOrigins` both accept an `(env) => …` resolver, read per request, which is how one build serves several hosts. The declaration block above is what makes `env.PUBLIC_ORIGIN` type-check; a scaffolded project already has one.
+`origin` and `allowedOrigins` both accept an `(env) => …` resolver, which keeps a value that differs per deploy out of the source. Plumix runs each resolver once per isolate and caches the result against the function's identity, and `env` is isolate-stable, so the resolver picks one value for the whole worker rather than one per request. A single build therefore has a single `origin`. Spanning several hosts is what `allowedOrigins` and its wildcard form are for, and on Cloudflare `cloudflareDeployOrigin` derives all three values from the build environment, one build per host.
+
+You write the declaration block above yourself. It is what makes `env.PUBLIC_ORIGIN` type-check. A scaffolded project gets a `declare module "plumix"` block only when a sign-in method you selected needs one, such as the OAuth client id and secret, so a passkey-only scaffold has none, and `PUBLIC_ORIGIN` is not a name the scaffolder knows. The Cloudflare scaffold spreads `cloudflareDeployOrigin({ … })` into the `passkey` block instead of reaching for a resolver at all.
 
 <Aside
   type="caution"

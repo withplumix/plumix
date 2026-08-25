@@ -45,7 +45,8 @@ The kind-to-tier map is fixed. It is not something a theme configures.
 
    ```tsx
    import type { ArchiveData, EntryData } from "plumix";
-   import { archive, defineTemplate, entry, fallback } from "plumix";
+   import { archive, entry, fallback } from "plumix";
+   import { defineTemplate } from "plumix/theme";
 
    const anything = defineTemplate({
      render: ({ data }) => <main data-kind={data.kind} />,
@@ -66,7 +67,8 @@ The kind-to-tier map is fixed. It is not something a theme configures.
 
    ```tsx
    import type { EntryData, ResolvedEntry } from "plumix";
-   import { defineTemplate, entry, forEntryType } from "plumix";
+   import { entry, forEntryType } from "plumix";
+   import { defineTemplate } from "plumix/theme";
 
    declare module "plumix" {
      interface EntryTypeRegistry {
@@ -89,7 +91,7 @@ The kind-to-tier map is fixed. It is not something a theme configures.
    ];
    ```
 
-3. **Check what won.** Run the dev server and open `/recipes/sicilian-caponata`. The debug bar's Template panel names the winning rule and lists every rule the walk passed over, with the reason.
+3. **Check what won.** Run the dev server and open `/recipes/sicilian-caponata`. Plumix renders a debug bar into every dev page, on unless `plumix.config.ts` sets `debugBar: false`, and dropped from a production build entirely. Its Template panel names the winning rule and lists every rule the walk passed over, with the reason.
 
 </Steps>
 
@@ -110,7 +112,8 @@ A matcher holds a node kind and a type name, plus whichever narrowing the builde
 
 ```tsx
 import type { EntryData, ResolvedEntry } from "plumix";
-import { defineTemplate, forEntryType } from "plumix";
+import { forEntryType } from "plumix";
+import { defineTemplate } from "plumix/theme";
 
 declare module "plumix" {
   interface EntryTypeRegistry {
@@ -154,7 +157,7 @@ Nothing resolves to `notFound` or `serverError`, and no walk reaches them. The f
 
 In development the debug bar carries a Template panel with the whole walk for the current request. The panel gives every rule a status: `matched` for the winner, `skipped` for a targeted rule the walk evaluated and rejected, and `never-evaluated` for the rules an earlier match made unreachable. A rule carrying a predicate also reports whether the predicate ran and what it returned. That separates "identity did not fit" from "the predicate said no".
 
-The trace is dev-only work. On a live render the resolver does the plain walk and builds no explanation.
+The panel costs nothing to leave alone. The resolver runs the plain walk first and attaches the explanation to the request's `template` span as a thunk, and only an active telemetry collector calls a thunk. With nothing collecting, the walk is never re-run. The debug bar is the collector that activates in dev, but it is not the only one, so a production request sampled by a telemetry consumer you registered pays for the explanation too, predicates included.
 
 ## Related
 

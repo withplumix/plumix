@@ -19,7 +19,7 @@ A site has one theme, and it arrives through the `theme` slot in `plumix.config.
 `templates` is the only required slot. It holds an array of rules built by the [template builders](/themes/templates/), or a bare component as shorthand for a theme with nothing but a catch-all. The rest are optional:
 
 - `document` is the `<head>` descriptor: `title`, `titleTemplate`, `meta`, `link`, `script`, plus attributes for `<html>` and `<body>`. A template can merge its own fragment over it per render.
-- `tokens` are named design values, grouped by CSS property, emitted as custom properties on the page. The known groups are `color`, `spacing`, `fontFamily`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `borderWidth`, `borderRadius`, `boxShadow`, `textShadow`, `backgroundImage` and `maxWidth`, and a theme may add a group for any other CSS property.
+- `tokens` are named design values grouped by CSS property, and they are a registry rather than a stylesheet. Plumix emits no CSS for them. Picking a token in the editor writes `var(--plumix-<group>-<slug>, <value>)` into the block's style, where `<group>` is the group name in kebab-case and `<value>` is the token's registered literal, used as the inline fallback. A token registered without a `value` gets the bare reference and no fallback. Your own stylesheet declares the custom property. The known groups are `color`, `spacing`, `fontFamily`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `borderWidth`, `borderRadius`, `boxShadow`, `textShadow`, `backgroundImage` and `maxWidth`, and a theme may add a group for any other CSS property.
 - `breakpoints` sets the `tablet` and `mobile` max-widths in pixels, defaulting to 991 and 640. The server style emitter and the editor canvas read the same two numbers, so what an author previews is what ships.
 - `blocks` and `shortcodes` are presentation components the theme owns. They merge into the per-app registries at boot at the highest precedence, ahead of plugin and core registrations of the same name. The `core/` block namespace is reserved and `defineTheme` throws on a theme block that claims it.
 - `redirects` are public-route rules the theme owns, for URL moves that belong to the design rather than to the content model. They lose a tie against `config.redirects` and against plugin-registered rules.
@@ -34,8 +34,9 @@ A site has one theme, and it arrives through the `theme` slot in `plumix.config.
 
    ```tsx
    import type { EntryData } from "plumix";
-   import { defineTemplate, defineTheme, entry, fallback } from "plumix";
+   import { entry, fallback } from "plumix";
    import { BlockRenderer } from "plumix/blocks/renderer";
+   import { defineTemplate, defineTheme } from "plumix/theme";
 
    const listing = defineTemplate({
      render: () => (
@@ -74,6 +75,8 @@ A site has one theme, and it arrives through the `theme` slot in `plumix.config.
 
    Sicilian Caponata now renders through the `entry` template at `/recipes/sicilian-caponata`. Every other public URL, the archive at `/recipes` included, falls through to `fallback`.
 
+   The `/recipes/*` routes exist because a plugin registered the `recipe` entry type. A theme targets types, it does not declare them, and [Entry Types](/content-modelling/entry-types/) is where `recipe` comes from.
+
 </Steps>
 
 ## What a template receives
@@ -82,7 +85,7 @@ A site has one theme, and it arrives through the `theme` slot in `plumix.config.
 
 `data` is the discriminated union of everything a request can resolve to, keyed by `kind`. Which member arrives depends on which rule matched, and the builder you bind with types it. `ctx` is the request context, carrying `db`, `request`, `user`, `locale`, `basePath`, `hooks` and the rest. Declared template deps arrive as further keys on the same argument, one per kind, each a record keyed by slug.
 
-A template may also carry `document`, either a literal manifest merged over the theme's at boot or a function called per request with the same argument `render` sees. That is how one page contributes an `og:image` without every page paying for it.
+A template may also carry `document`, either a literal manifest or a function called per request with the same argument `render` sees. Both forms resolve after the walk has picked a winner, and merge over the theme's manifest for that request alone. That is how one page contributes an `og:image` without every page paying for it.
 
 <Aside type="tip" title="A plain component still works">
   A slot accepts a bare React component taking `{data}`. The framework wraps it
@@ -95,7 +98,7 @@ A template may also carry `document`, either a literal manifest merged over the 
 
 The `theme` slot is optional. A config that omits it gets `welcomeTheme`, a built-in substituted at config resolution, so nothing downstream can tell a theme-less site from one with a theme of its own.
 
-It is the smallest theme there is: one `fallback` rule, one `defineTemplate`, no tokens and no stylesheet. The rendered screen inlines its CSS rather than linking one, so it fetches nothing, and it reads `ctx.locale.code` to pick its strings. English, German, Ukrainian, Arabic and Simplified Chinese ship; any other locale renders English. It carries a link to `/_plumix/admin`, built through `ctx.basePath` so it stays right on a site served from a subdirectory.
+It is the smallest theme there is: one `fallback` rule, one `defineTemplate`, no tokens and no stylesheet. The rendered screen inlines its CSS rather than linking one, so it fetches nothing, and it reads `ctx.locale.code` to pick its strings. Catalogs ship for English, German, Ukrainian, Arabic and Simplified Chinese, but only the English one carries strings today. The other four are empty `.po` files, and `lingui compile` backfills an empty entry with its English source, so every locale renders English until a translator fills one in. It carries a link to `/_plumix/admin`, built through `ctx.basePath` so it stays right on a site served from a subdirectory.
 
 Its document manifest sets `robots` to `noindex`. A welcome screen reaching production is a misconfiguration, and search engines should not index one.
 
@@ -122,6 +125,6 @@ The entry types and taxonomies your templates target are declared in a plugin, n
 
 Read [Templates](/themes/templates/) next, then [Template Hierarchy](/themes/hierarchy/), which together cover what you declare and how a request finds it.
 
-Four further pages in this section are not written yet, and what they cover already ships. Document Manifest goes through `DocumentManifest` and the `theme:document` boot-time filter that lets a plugin contribute head tags. Tokens and Breakpoints covers the token groups above and the custom properties they emit. Component Primitives documents `Link`, `Image`, `PlumixProvider`, `useAuth` and the signed-in and signed-out wrappers. Template Dependencies covers declaring a dep kind on a theme or a template, and the override and extend forms.
+Four further pages in this section are not written yet, and what they cover already ships. Document Manifest goes through `DocumentManifest` and the `theme:document` boot-time filter that lets a plugin contribute head tags. Tokens and Breakpoints covers the token groups above and the `var(--plumix-*)` references a theme declares them for. Component Primitives documents `Link`, `Image`, `PlumixProvider`, the hooks that read its value such as `useUser`, `useTokens` and `useBasePath`, and `useAuth`, which fetches the signed-in visitor on the client. Template Dependencies covers declaring a dep kind on a theme or a template, and the override and extend forms.
 
 When the theme renders, [Routing](/routing/overview/) explains which URLs reach it and [Deployment](/deployment/overview/) takes the result to Cloudflare Workers.

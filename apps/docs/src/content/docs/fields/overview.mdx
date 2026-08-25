@@ -19,7 +19,7 @@ Two nouns carry this section.
 
 Declaring the box is the only way to register a meta key. There is no `registerMeta` call to pair with it, no admin screen that adds a key, and no way to write a key nothing declared. The write path rejects an undeclared key rather than storing it.
 
-That single declaration is also the whole contract. The admin reads it to pick an input control, the write pipeline reads it to coerce and validate the incoming value, the read pipeline reads it to apply defaults and resolve references, and the REST layer reads it to decide whether the value is public at all. Nothing repeats the declaration anywhere else, so a field cannot be right in one of those places and wrong in another.
+That single declaration is also the whole contract. The admin reads it to pick an input control, the write pipeline reads it to coerce and validate the incoming value, the read pipeline reads it to resolve references and project temporal values, and the REST layer reads it to decide whether the value is public at all. Nothing repeats the declaration anywhere else, so a field cannot be right in one of those places and wrong in another.
 
 Fields come from `plumix/fields` as fluent builders. `number("servings").min(1).required()` is a complete field. The chain is typed, so an option that does not apply to a field type is a compile error rather than a silently ignored property.
 
@@ -90,28 +90,31 @@ Settings groups reuse the same field builders with different storage. A settings
 
 ## What the server does with a saved value
 
-Every value takes the same four steps, per field, in order.
+Every value takes the same five steps, per field, in order.
 
 1. **Coercion** to the field's storage `type`. A number input arriving as `"12"` becomes `12` here, and a value that cannot become the declared type is rejected with an error against that field.
-2. **`sanitize`**, if the field declares one. It runs server-side only and its return value replaces the caller's input, which is where trimming and normalizing belong. Some field types inject their own: `range` gets one that rejects out-of-bounds values, and `link` gets one that rebuilds the value from its known keys so unrecognized properties never persist.
-3. **Declarative constraints**, meaning the ones you wrote into the chain. `required`, `min` and `max`, `maxLength`, option membership, repeater row counts, the hex format on a `color`, the URL allowlist on a `url`.
-4. **`validate`**, if the field declares one. Sync or async, returning `true` or a failure message the editor shows.
+2. **Shape normalization**, fixed by the field type rather than written by you. A `link` is rebuilt from its `url`, `label` and `newTab` keys, so an unrecognized property never persists. A `color` has to be hex and comes back lowercased. A multi-value `select` has to be an array, and it is de-duplicated. A `richtext` document is walked against its allowlists.
+3. **`sanitize`**, if the field declares one. It runs server-side only and its return value replaces the caller's input, which is where trimming and site-specific normalizing belong. No builder injects one, so the step does nothing unless you wrote a callback. Whatever the callback returns goes back through steps 1 and 2 before anything else sees it.
+4. **Declarative constraints**, meaning the ones you wrote into the chain. `required`, `min` and `max`, `maxLength`, option membership, the address pattern on an `email`, repeater row counts. Two checks in this step are structural rather than business rules, so they run whatever the mode. A temporal value has to parse as the shape its type stores, and a `url` has to clear the safe-scheme allowlist.
+5. **`validate`**, if the field declares one. Sync or async, returning `true` or a failure message the editor shows.
 
-None of the four steps throws. Failures come back as `{ path, message }` pairs and the RPC layer aggregates them across the whole patch, so one save reports every bad field at once. The path is dot-joined from the meta key down into nested rows, so a bad amount in the third ingredient reports as `ingredients.2.amount`.
+None of the five steps throws. Failures come back as `{ path, message }` pairs and the RPC layer aggregates them across the whole patch, so one save reports every bad field at once. The path is dot-joined from the meta key down into nested rows, so a bad amount in the third ingredient reports as `ingredients.2.amount`.
 
-Strictness has two modes. `strict` is the default and enforces all four steps. `draft` skips the third and fourth, so an autosave of half-finished work never fails on a `required` field or an unmet bound. Coercion, shape normalization, `sanitize`, temporal validity and URL safety still run in `draft`, which is what stops an autosave persisting corrupt or unsafe data. Publishing re-runs the whole bag in `strict`.
+Strictness has two modes. `strict` enforces every step. `draft` skips the fifth and the business-rule half of the fourth, so a half-finished bag never fails on a `required` field or an unmet bound. Coercion, shape normalization, `sanitize`, temporal validity and URL safety still run in `draft`, which is what stops a draft save persisting corrupt or unsafe data.
+
+The mode follows the status the save lands on rather than whether the save was an autosave. `entry.update` runs the bag in `strict` when the resulting status is `published` or `scheduled`, and in `draft` for every other status, so an ordinary save of a draft entry is lenient too. `entry.create` uses `draft` unless the caller creates straight to published or scheduled, and the autosave path is always `draft`. Publishing re-runs the whole bag in `strict`, which is where a value that slid past a draft save is caught.
 
 ## What a read gives back
 
-A read is not the raw column. Three things happen on the way out.
-
-Defaults apply at decode. A field with `.default("medium")` reads as `"medium"` when the key is absent, and storage still has no key, so the default is not silently written for you.
+A read is not the raw column. Two things happen on the way out, and one thing readers expect does not.
 
 Reference fields resolve. A `user` field stores a user id, and a read hands you the user summary rather than the id, resolved in a batch shared with every other reference of that kind on the page. A reference whose target is gone reads as absent for a single field, and drops out of the array for a list field, so a list never contains holes. `.returns("id")` opts a field out of that resolution and gives you the stored id back.
 
 Temporal fields keep their stored ISO string unless you asked otherwise. `.returns("date")` projects the stored string into a JS `Date` whose wall-clock components are anchored to UTC, and the write contract stays the ISO string either way.
 
-One thing does not happen. Meta stays out of the public REST API, which is default-deny per field, and a field opts in with `.showInApi()`. The admin RPC is unaffected.
+Defaults do not apply. The decoder walks the keys storage actually holds, so an absent key reads back as `undefined` whatever `.default("medium")` says. A default prefills the admin form instead, and it reaches storage the first time someone saves that form. A template that needs a fallback for a key nobody has saved yet supplies one at the read site.
+
+Meta stays out of the public REST API, which is default-deny per field, and a field opts in with `.showInApi()`. The admin RPC is unaffected.
 
 ## Related
 

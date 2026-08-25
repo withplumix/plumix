@@ -75,7 +75,7 @@ export const caponata = defineEntryContent([
 
 2. **Write some content.** Open Sicilian Caponata in the editor, add a paragraph and a section, and publish. Saving writes the tree above to the entry's `content` column in one request.
 
-3. **Load `/recipes/sicilian-caponata`.** Each node became one element. The page ships no JavaScript unless one of the blocks on it mounts an island.
+3. **Load `/recipes/sicilian-caponata`.** Both nodes rendered. The rich-text node is a framework wrapper element around the block's own `<div>`, and the section node is its `<section>` around a centring inner `div`. The page ships no JavaScript unless one of the blocks on it mounts an island.
 
 </Steps>
 
@@ -101,7 +101,7 @@ The `style` buckets become a `<style>` element beside the block, scoped to that 
 
 ## Where the registry comes from
 
-Three layers contribute specs, and boot merges them in one order: the 18 core blocks first, then every block a [plugin](/plugins/overview/) registered through `registerBlock`, then the blocks the [theme](/themes/overview/) declares. Later layers overwrite earlier ones on a name collision, so a theme can replace a plugin's block and a plugin can replace a core one. The `core/` namespace is closed against new registrations, which is why all 18 are always present rather than opt-in.
+Three layers contribute specs, and boot merges them in one order: the 18 core blocks first, then every block a [plugin](/plugins/overview/) registered through `registerBlock`, then the blocks the [theme](/themes/overview/) declares. The later layer wins a name collision, so a theme can replace a plugin's block. Neither can replace a core one. `registerBlock` rejects any name starting `core/` before it reaches the registry, and a theme's `blocks` are checked the same way, so all 18 are always present rather than opt-in and the collision rule only ever settles a plugin against the theme.
 
 <Aside type="caution" title="An unknown name renders nothing">
   When a node's name is not in the registry, the renderer emits no output for
@@ -119,7 +119,7 @@ Materializing is the step that makes slots work. Before it calls `render`, the w
 
 Around `render`, the walker builds the node's root element. It merges the allowlisted `htmlAttrs`, the author's classes and the generated style class into one set of props. A block that declares `selfSeam` spreads those props onto its own element, which is how `core/separator` puts them on the `<hr>` and `core/table-cell` on the `<td>`, where a wrapper `<div>` would be invalid. Every other block gets the wrapper.
 
-One name skips the registry lookup. The walker resolves `core/pattern-ref` against the pattern registry and renders that pattern's blocks in place. A block that declared loaders gets its resolved data, or its `errorFallback` when a loader rejected.
+One name skips the registry lookup. The walker handles `core/pattern-ref` itself, looking the node's `slug` up in the pattern registry passed to `renderBlockTree` as its `patterns` option and rendering that pattern's blocks in place. No shipped caller passes that option, not `BlockRenderer` and not the editor canvas, so the lookup finds nothing today and every `core/pattern-ref` node renders nothing. A block that declared loaders gets its resolved data, or its `errorFallback` when a loader rejected.
 
 ## Building a tree outside the editor
 
@@ -129,7 +129,7 @@ Saving through the API validates the tree against the live registry first, and r
 
 ## Related
 
-Entry content is one half of what an entry holds. The other half is its [meta-box fields](/fields/overview/), which store everything outside title, slug, excerpt and content. The [content model](/content-modelling/overview/) decides which entry types get an editor at all, through the `editor` entry in the [`supports`](/content-modelling/entry-types/) list. Themes receive `contentBlocks` on the entry projection that [template data](/themes/template-data/) describes, and the allowlist that governs stored markup is a [configuration](/getting-started/configuration/) slot, `blocks.htmlAllowlist`.
+Entry content is one half of what an entry holds. The other half is its [meta-box fields](/fields/overview/), which write to the entry's `meta` JSON column. The `entries` table keeps `type`, `status`, `authorId`, `parentId`, `sortOrder` and the timestamps as columns of their own, outside meta. The [content model](/content-modelling/overview/) decides which entry types get an editor at all, through the `editor` entry in the [`supports`](/content-modelling/entry-types/) list. Themes receive `contentBlocks` on the entry projection that [template data](/themes/template-data/) describes, and the allowlist that governs stored markup is a [configuration](/getting-started/configuration/) slot, `blocks.htmlAllowlist`.
 
 ## Next steps
 

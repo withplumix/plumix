@@ -15,17 +15,17 @@ Eighteen block specs ship inside Plumix and every site boots with all of them. T
 
 ## Overview
 
-The `core/` namespace is closed. A plugin or a theme cannot register a name inside it, which is why these 18 are always present rather than something a site opts into. They can still be replaced. Boot merges the registry core first, then plugins, then the theme, and a later layer wins a name collision.
+The `core/` namespace is closed. `registerBlock` throws for any name starting `core/`, and the `blocks` a theme declares are checked the same way, which is why these 18 are always present rather than something a site opts into. Nothing replaces one either. Boot merges the registry core first, then plugin blocks, then the theme's, and the later layer wins a name collision, but no contributed spec is allowed a `core/` name, so that ordering only ever settles a plugin against the theme.
 
-Each block declares a category, and the editor's inserter groups its palette by it. Four categories appear here: `text`, `layout`, `media` and `interactive`. Five of the 18 set `inserter: false` and never appear in the palette at all, because something else creates them. `core/table` seeds the four table row and cell blocks, and inserting a pattern that registers itself as a reference writes a `core/pattern-ref`.
+Seventeen of the 18 declare a category, and the editor's inserter groups its palette by it. Four appear here, `text`, `layout`, `media` and `interactive`. `core/pattern-ref` declares none, and the inserter files a category-less spec under `uncategorized`. Five of the 18 set `inserter: false` and never appear in the palette at all, because something else creates them. `core/table` seeds the four table row and cell blocks, and inserting a pattern that registers itself as a reference writes a `core/pattern-ref`.
 
-The examples below are stored nodes, the shape a block takes inside an entry's content tree. Each one is a value you could put in the `blocks` array of an entry's content. [Overview](/blocks/overview/) covers what those fields mean and how the renderer walks the tree.
+The examples below are stored nodes, the shape a block takes inside an entry's content tree. Most are a value you could put straight in the `blocks` array of an entry's content. `core/column` is the exception. It declares `requiresParent: ["core/columns"]`, so a save that puts one at the top level fails validation with a `requires_parent` error, and the node belongs inside a `core/columns` node's `columns` slot instead. [Overview](/blocks/overview/) covers what those fields mean and how the renderer walks the tree.
 
 ## The core blocks
 
 ### `core/rich-text`
 
-A run of formatted prose, and the block an author gets by typing into an empty document.
+A run of formatted prose. An empty document renders an Add a block button rather than starting one of these, so an author picks it from the inserter like any other block.
 
 ```ts
 import type { BlockNode } from "plumix/blocks";
@@ -41,7 +41,11 @@ export const intro: BlockNode = {
 
 Category `text`. One input, `body`, of type `richtext`, holding an HTML string. A fresh block starts at `<p>Enter text here…</p>`.
 
-The body is authored HTML, so the renderer treats it as untrusted on the way out. Shortcodes in it expand first. The renderer then sanitizes the whole result against the same allowlist `core/html` uses, and that is what reaches the page. The block also answers to the keywords `paragraph`, `text` and `body`, so typing `/paragraph` in the editor finds it.
+The body is authored HTML, so the renderer treats it as untrusted on the way out. Shortcodes in it expand first, then the renderer sanitizes the whole result against the same allowlist `core/html` uses, and that is what reaches the page.
+
+A shortcode is a bracketed text macro an author types into the body, and expanding one replaces the tag with escaped text. Core registers two, `[year]` and `[month]`. Expansion is a single left-to-right pass, so a shortcode that returns `[year]` stays literal. An unregistered tag passes through as typed, and `[[year]]` renders the literal `[year]`.
+
+The block also declares the keywords `paragraph`, `text` and `body`. The inserter matches a query as a plain substring of a block's name, title or keywords, so typing `paragraph` finds it. No slash-command surface ships, so `/paragraph` matches nothing.
 
 ### `core/separator`
 
@@ -79,7 +83,7 @@ export const brineSnippet: BlockNode = {
 
 Category `text`. Two inputs: `text`, a `textarea`, and `language`, a `combobox` offering 26 common languages.
 
-The language field is a combobox rather than a select, so the stored value stays free text and content authored against an older list survives. Fifteen short forms map to a canonical id on the way in, `ts` to `typescript` and `py` to `python` among them. Highlighting runs synchronously inside the same render, which is why the server output and the editor canvas agree. A language the highlighter does not know keeps its `data-language` attribute and renders plain. The token colours ride along as one deduplicated stylesheet, themeable through the `--plumix-code-*` properties.
+The language field is a combobox rather than a select, so the stored value stays free text and content authored against an older list survives. Fourteen short forms map to a canonical id on the way in, `ts` to `typescript` and `py` to `python` among them. Highlighting runs synchronously inside the same render, which is why the server output and the editor canvas agree. A language the highlighter does not know keeps its `data-language` attribute and renders plain. The token colours ride along as one deduplicated stylesheet, themeable through the `--plumix-code-*` properties.
 
 ### `core/group`
 
@@ -467,7 +471,9 @@ export const chefBio: BlockNode = {
 
 One input, `slug`. No category, and hidden from the inserter. An author writes a node of this shape by inserting a pattern that registered itself with `insert: "reference"`. The default is the other mode, which splices a copy of the pattern's body into the entry.
 
-The walker handles this name before it consults the registry. It looks the slug up in the pattern registry and renders that pattern's blocks in place, which means editing the pattern changes every entry referencing it. An unresolved slug renders nothing on a production page, and in development logs the slug once and leaves a `<template>` marker.
+The walker handles this name before it consults the registry. It looks the slug up in the pattern registry handed to `renderBlockTree` as its `patterns` option and renders that pattern's blocks in place, which is what would make editing the pattern change every entry referencing it.
+
+No shipped caller passes `patterns`. `BlockRenderer` does not, and neither does the editor canvas, so the lookup finds nothing today and every node of this shape takes the unresolved branch. An unresolved slug warns once per slug through `console.warn`, in production as well as in development, and renders nothing. In development it also leaves a `<template data-plumix-unresolved-pattern-ref>` marker in the markup.
 
 ## Related
 
@@ -475,6 +481,6 @@ What a stored node holds, how boot assembles the registry and what the renderer 
 
 ## Next steps
 
-Read [Overview](/blocks/overview/) if you have not, for the storage and render model these blocks sit inside.
+Read [Fields](/fields/overview/) next. A block tree is one half of what an entry stores, and meta-box fields are the other, the declared keys of the entry's `meta` bag.
 
 Several pages that would go deeper are not written yet, and what they cover already ships. Authoring a Block covers `defineBlock`, the input types a spec may declare, and registering one from a plugin or a theme, which is the route to anything the 18 above do not do. Styles covers the style buckets and breakpoints the layout blocks lean on. Marks lists the inline formatters a `core/rich-text` body can carry. Variations and Patterns cover preset configurations of one block and reusable arrangements of several, which is what `core/pattern-ref` points at.

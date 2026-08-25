@@ -40,7 +40,7 @@ The CLI locates it as `plumix.config.ts`, `.js` or `.mjs` in the project root; `
 
 **`theme/index.tsx`**
 
-The public site. `defineTheme` takes the template list, the design tokens, the breakpoints, the theme's own blocks and the document manifest. The scaffolded version has two templates, a catch-all and a single-entry one, plus a title template, and it is deliberately plain so you replace it rather than unpick it.
+The public site. `defineTheme` takes the template list, the design tokens, the breakpoints, the theme's own blocks and the document manifest. The scaffolded version registers three rules against two template components. `fallback(index)` answers anything with no better match, `entry(single)` answers any single entry, and `forEntryType("page").template(single)` is what makes the pages plugin's `page` type render once you install it. The document manifest sets a `titleTemplate` and nothing else. It is deliberately plain so you replace it rather than unpick it.
 
 A site that registers no theme at all still renders. The framework falls back to a built-in welcome theme, so a config without a `theme` slot serves a self-contained welcome page instead of an error.
 
@@ -54,7 +54,7 @@ The generated `database_id` is the placeholder `local-development-only`, which i
 
 **`package.json`**
 
-Four scripts, each a thin wrapper over the CLI: `plumix dev`, `plumix build`, `tsc --noEmit`, and a `clean` that removes the generated directories. The dependencies are `plumix`, the runtime adapter, `react`, and whichever plugin packages you ticked.
+Four scripts. `dev` and `build` wrap the CLI as `plumix dev` and `plumix build`. `typecheck` is `tsc --noEmit`, and `clean` is `git clean -xdf .plumix .wrangler dist node_modules`, so neither of those two goes through Plumix at all. The dependencies are `plumix`, the runtime adapter, `react`, and whichever plugin packages you ticked.
 
 **`tsconfig.json`**
 
@@ -97,7 +97,9 @@ import { defineBlock } from "plumix/blocks";
 import { definePlugin } from "plumix/plugin";
 ```
 
-The runtime adapter is the exception you will meet immediately. `@plumix/runtime-cloudflare` is a direct dependency of your project and a direct import, because a runtime is a thing you choose. `cloudflare`, `d1`, `r2`, `images`, `kv` and `edge` all come from there.
+The rule is about the packages the façade covers, which are `@plumix/core`, `@plumix/blocks` and the three `@plumix/admin*` packages. Anything you install yourself you import by its own name.
+
+`@plumix/runtime-cloudflare` is the one you meet immediately. It is a direct dependency of your project and a direct import, because a runtime is a thing you choose, and `cloudflare`, `d1`, `r2`, `images`, `kv` and `edge` all come from there. The plugin packages work the same way. `@plumix/plugin-blog`, `@plumix/plugin-pages`, `@plumix/plugin-menu`, `@plumix/plugin-comments`, `@plumix/plugin-media` and `@plumix/plugin-audit-log` are each imported by name, and a plugin may publish subpaths of its own, such as `@plumix/plugin-media/fields`.
 
 <Aside type="note" title="One specifier for type augmentation">
   Extending a Plumix interface always goes through `declare module "plumix"`,
@@ -113,6 +115,8 @@ The runtime adapter is the exception you will meet immediately. `@plumix/runtime
 
 The root. Config (`plumix`, `auth`), the request context, hooks, redirects, access policy, telemetry, and every type the rest of the surface refers to. It is also the specifier every `declare module` block targets.
 
+The subpaths below are not disjoint halves of the root. Most of them narrow it to what one job needs, and a few widen it. Importing `definePlugin` from `plumix` and from `plumix/plugin` gets you the same binding.
+
 ```ts
 import { auth } from "plumix";
 
@@ -127,7 +131,7 @@ export const recipeAuth = auth({
 
 ### plumix/plugin
 
-`definePlugin` and the registration context, plus valibot re-exported as `v` so a plugin can declare its own config schema without a second dependency.
+The entire root surface, plus valibot re-exported as `v` so a plugin can declare its own config schema without a second dependency. `definePlugin` and the registration context are what you come here for, and both are on the root specifier as well.
 
 ```ts
 import { definePlugin } from "plumix/plugin";
@@ -146,7 +150,7 @@ export const recipes = definePlugin("recipes", {
 
 ### plumix/theme
 
-`defineTheme`, `defineTemplate`, and the document-manifest types. The template builders themselves come from the root specifier.
+`defineTheme`, `defineTemplate` and the document-manifest types, narrowed to what a theme file needs. All of them are on the root specifier too. The template builders `fallback`, `entry` and `forEntryType` are only on the root, which is why the scaffolded theme imports the whole set from `plumix` rather than splitting the import in two.
 
 ```tsx
 import type { EntryData } from "plumix";
@@ -258,7 +262,7 @@ The class-merging helper behind `cn()`. Same mechanism as the React shim above.
 
 ### plumix/admin/ui
 
-The shared component library the admin renders, and the one admin subpath you do import by hand. Unlike the shims it ships real source, which the plugin-chunk build bundles into your chunk with its own React and Radix imports aliased to the shims. A wrapper costs about a kilobyte; Radix itself is not duplicated.
+The shared component library the admin renders. It and `plumix/admin` above are the two admin subpaths you import by hand; every other entry in this list is a shim the plugin-chunk build rewrites to. Unlike the shims it ships real source, which the plugin-chunk build bundles into your chunk with its own React and Radix imports aliased to the shims. A wrapper costs about a kilobyte; Radix itself is not duplicated.
 
 ```tsx
 import { Button } from "plumix/admin/ui";
@@ -409,7 +413,7 @@ declare module "plumix" {
 
 ### plumix/fields
 
-The meta-box field builders. The scalar builders are fluent and typed so that a chain which does not apply is a compile error; the reference factories take flat options.
+The meta-box field builders. Every builder is fluent and typed so that a chain which does not apply is a compile error. The reference factories are builders too, not options objects. `user(key)`, `entry(key, entryTypes)` and `term(key, taxonomies)` each return a reference builder whose chain is gated by kind, so `.roles()` and `.includeDisabled()` compile only on a `user` reference and `.status()` and `.includeTrashed()` only on an `entry` one, while `.multiple()`, `.max()` and `.returns()` apply to all three.
 
 ```ts
 import { number, repeater, select, text } from "plumix/fields";

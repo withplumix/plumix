@@ -23,7 +23,7 @@ The runtime is a slot like any other. `runtime: cloudflare()` tells Plumix which
 | `images({ zone })` | `imageDelivery` | Cloudflare Image Transformations         |
 | `edge({ ttl })`    | `cache`         | The Workers Cache API and purge by tag   |
 
-Two more exports do not fill a slot. `cloudflareDeployOrigin` derives the passkey origin for whichever host this build is served on, and `cfAccess` replaces the request authenticator with a Cloudflare Access JWT check.
+Three more exports do not fill a slot. `cloudflareDeployOrigin` derives the passkey origin for whichever host this build is served on, `cfAccess` replaces the request authenticator with a Cloudflare Access JWT check, and `cfAccessLogoutUrl` builds the Access sign-out URL that check needs on the way back out.
 
 Only `runtime`, `database` and `auth` are required. A site with no `storage` slot has no uploads, and a site with no `cache` slot renders every public page live.
 
@@ -165,9 +165,9 @@ Presigned uploads need S3 credentials, because an R2 binding cannot mint a presi
 
 ## Images
 
-`images()` builds Cloudflare Image Transformations URLs of the form `/cdn-cgi/image/width=800,format=webp/<source>`. It resizes and re-encodes what is already in your bucket, so it pairs with `r2` rather than replacing it, and the zone has to have Image Transformations enabled in the dashboard first.
+`images()` builds Cloudflare Image Transformations URLs of the form `https://<zone>/cdn-cgi/image/width=800,format=webp/<source>`. The zone is part of the URL, not an ambient setting, which is why the adapter no-ops without one. It resizes and re-encodes what is already in your bucket, so it pairs with `r2` rather than replacing it, and the zone has to have Image Transformations enabled in the dashboard first.
 
-`zone` is a bare hostname with no scheme and no path. Omit it and the adapter reads `MEDIA_PUBLIC_URL_BASE` at request time, which pairs automatically only with a bucket bound as `MEDIA`. With no zone resolved either way, image delivery is absent and `<Image>` renders the source URL untouched.
+`zone` is a bare hostname with no scheme and no path. Omit it and the adapter reads `MEDIA_PUBLIC_URL_BASE` at request time, which pairs automatically only with a bucket bound as `MEDIA`. With no zone resolved either way, image delivery is absent and `<Image>` renders the source URL untouched. A source already on the zone has its host stripped and a site-relative source loses its leading slash, so the transform addresses the object by its path either way.
 
 ## KV
 
@@ -181,7 +181,9 @@ Workers KV rejects an `expirationTtl` under 60 seconds at write time, so treat t
 
 The slot disables itself unless the Worker env carries both `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN`. That is not a convenience check. Without a zone and a purge token the site could store a page it can never purge, so caching stays off and every page renders live. This is why a `workers.dev` deploy sees no caching even with the slot configured.
 
-Four route kinds are cacheable: a single entry, an archive, a taxonomy archive and the front page. Search is excluded, because one cache entry per query string pollutes the cache for no gain. A request that carries a session cookie, an `Authorization` header, a `?preview=` token or `?plumix.edit` bypasses the cache entirely, and stored responses have their `Set-Cookie` headers stripped before they are written.
+Four built-in route kinds are cacheable: a single entry, an archive, a taxonomy archive and the front page. Search is excluded, because one cache entry per query string pollutes the cache for no gain. A custom archive that a plugin registered is the fifth kind, and it caches only when that registration passed `cacheable: true`, since core cannot work out what a plugin's archive depends on.
+
+A request that carries a session cookie, an `Authorization` header or a `?preview=` token bypasses the cache entirely. `?plumix.edit` is checked separately, on a route that carries an access policy, where the resolved audience segment would otherwise be cacheable. On a route with no policy the editor request is already caught by its session cookie. Stored responses have their `Set-Cookie` headers stripped before they are written.
 
 Publishing a recipe queues a purge for the tags its pages were stored under, and the runtime defers that call past the response, so a failed purge is logged rather than failing the publish. The tag vocabulary itself belongs to the caching page, which is not written yet.
 
@@ -189,7 +191,25 @@ Publishing a recipe queues a purge for the tags its pages were stored under, and
 
 A passkey is bound to a hostname. Workers Builds gives production `recipes.your-account.workers.dev` and each branch `<branch>-recipes.your-account.workers.dev`, so hardcoding one origin means re-enrolling on every preview.
 
-`cloudflareDeployOrigin` reads the `WORKERS_CI` and `WORKERS_CI_BRANCH` variables Workers Builds injects at build time and returns `rpId`, `origin` and `allowedOrigins` together. Spread all three into `passkey`, as the Quickstart above does. `rpId` anchors to `your-account.workers.dev`, the registrable domain every deploy shares, and `allowedOrigins` is the wildcard `https://*.your-account.workers.dev`, so one passkey verifies on production and on every branch. Outside Workers Builds it falls back to `localhost` and your `localOrigin`, which defaults to `http://localhost:8787`.
+`cloudflareDeployOrigin` reads the `WORKERS_CI` and `WORKERS_CI_BRANCH` variables Workers Builds injects, and returns `rpId`, `origin` and `allowedOrigins` together. Spread all three into `passkey`, as the Quickstart above does. `rpId` anchors to `your-account.workers.dev`, the registrable domain every deploy shares, and `allowedOrigins` is the wildcard `https://*.your-account.workers.dev`, so one passkey verifies on production and on every branch.
+
+That read happens while the bundle is built, not while a request runs. The Plumix Vite plugin substitutes `process.env.WORKERS_CI` and `process.env.WORKERS_CI_BRANCH` into the bundle as literals, taking both from the machine running `plumix build`, because a Worker's own `process.env` is empty and the helper would otherwise fall back on every deployed request. On any machine that is not a Workers Builds runner both are empty, the helper returns `rpId: "localhost"` with your `localOrigin`, which defaults to `http://localhost:8787`, and the deployed Worker advertises localhost as its relying party. The browser then refuses every registration and every sign-in on the deployed host. `accountSubdomain` and `productionOrigin` change nothing on that path, because the localhost fallback returns before either is read.
+
+A deploy whose passkeys have to work therefore does one of two things. Either the build runs inside Workers Builds, which is what connecting the repository to Cloudflare's build service buys you, or the config states the origin itself.
+
+```ts no-typecheck
+import { auth } from "plumix";
+
+export const recipeAuth = auth({
+  passkey: {
+    rpName: "Recipes",
+    rpId: "recipes.example",
+    origin: "https://recipes.example",
+  },
+});
+```
+
+Written that way the value is fixed for every deploy, so previews on `workers.dev` no longer share the credential and need another way in.
 
 Production on a custom domain is the one case that needs a second field. Workers Builds does not expose the custom domain, so pass `productionOrigin: "https://recipes.example"`. The default branch then anchors to that hostname while preview branches stay on `workers.dev`. A custom domain and `workers.dev` are different registrable domains, so no single passkey covers both, and previews then need magic-link or Cloudflare Access to sign in.
 
@@ -212,6 +232,7 @@ export const recipeAuth = auth({
     teamDomain: "your-team.cloudflareaccess.com",
     audience: "your-cf-access-aud",
     defaultRole: "editor",
+    bootstrapAllowed: true,
   }),
   bootstrapVia: "first-method-wins",
 });
@@ -219,7 +240,11 @@ export const recipeAuth = auth({
 
 `teamDomain` has to end in `.cloudflareaccess.com`, and the adapter rejects anything else at boot rather than failing every request later. `audience` is the application's AUD tag from the Access dashboard, checked against the JWT's `aud` claim so a token minted for a different application on the same team is refused. `defaultRole` is required, because the Access JWT carries an email and an identity provider but no Plumix role.
 
+The two bootstrap options in that example do different jobs. `bootstrapAllowed` belongs to `cfAccess` and defaults to false, and while it is false an Access user arriving at an empty users table is refused with `registration_closed`, the authenticator returns no principal, and nobody gets in through Access at all. `bootstrapVia` belongs to core and gates the built-in flows instead. Its default `"passkey"` refuses magic-link and OAuth signup while the users table is empty, so the first admin has to enrol through the passkey rail. `"first-method-wins"` lets the first account through any of those flows take the admin role. Setting only `bootstrapVia` is the trap, because it leaves Access itself shut. The example sets both, so the first admin can arrive through Access or through a built-in flow.
+
 The built-in sign-in routes stay mounted underneath. Firewall `/_plumix/auth/*` at the edge if you want Access to be the only way in, or leave them live to keep passkeys as a fallback.
+
+Signing out takes one more piece. Clearing the Plumix session cookie leaves the Access JWT on the next request, and the reader is signed straight back in. `cfAccessLogoutUrl("your-team.cloudflareaccess.com")` returns `https://your-team.cloudflareaccess.com/cdn-cgi/access/logout`, the URL that clears the Access session. Point your sign-out control at it.
 
 ## Commands the runtime adds
 

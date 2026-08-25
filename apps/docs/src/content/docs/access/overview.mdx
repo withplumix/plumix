@@ -17,11 +17,13 @@ Four nouns carry the access model.
 - A **principal** is the actor a request resolved to. Handlers read it as `ctx.user`, which is an authenticated user or `null`.
 - A **session** is a server-issued credential a browser carries in a cookie. One row in `sessions`, one `plumix_session` cookie, one user.
 - An **authenticator** decides who a request is. It reads credentials and returns a user or `null`. It never mints a session and never sets a cookie.
-- A **capability** is a permission string shaped `<entity>:<type>:<action>`, each mapped to a minimum role. Code asks `ctx.auth.can("entry:recipe:publish")` instead of comparing roles by hand.
+- A **capability** is a permission string mapped to a minimum role. Code asks `ctx.auth.can("entry:recipe:publish")` instead of comparing roles by hand.
 
-`ctx.user` is a projection of the user row rather than the row itself: `id`, `email`, `name`, `role` and the stored `meta` bag. Nothing on it is a credential, so a handler can log it or pass it to a hook without leaking anything.
+Capabilities come in two shapes. A per-type capability carries three segments, `<entity>:<type>:<action>`, as in `entry:recipe:publish` or `term:cuisine:manage`. An entity-level capability carries two, `<entity>:<action>`, with no type segment at all, as in `user:list`, `user:promote`, `plugin:manage` and `settings:manage`. Core ships seventeen. Eight are the `entry:post:*` set for the built-in `post` entry type; the other nine are flat.
 
-Roles are one ordered ladder: `subscriber`, `contributor`, `author`, `editor`, `admin`. A capability names the lowest role that holds it, and every role above that holds it too, so there is no per-user permission list to maintain. Registering the `recipe` entry type mints eight capabilities for it, from `entry:recipe:read` up to `entry:recipe:restore_revision`; registering the `cuisine` taxonomy mints five.
+`ctx.user` is a projection of the user row rather than the row itself, carrying `id`, `email`, `name`, `role` and the stored `meta` bag. Nothing on it is a credential. It is still personal data, and core's own hook documentation says so, so keep the whole object out of third-party logging and analytics. `email`, `name` and whatever a plugin wrote into `meta` all ride along.
+
+Roles are one ordered ladder, `subscriber`, `contributor`, `author`, `editor`, `admin`. A capability names the lowest role that holds it, and every role above that holds it too, so there is no per-user permission list to maintain. Registering the `recipe` entry type mints eight capabilities for it, from `entry:recipe:read` up to `entry:recipe:restore_revision`; registering the `cuisine` taxonomy mints five.
 
 The `auth` slot is not optional. A config without one does not type-check, and `auth()` validates its input as the config module loads, throwing `PlumixConfigError` with the offending path named. Its one required block is `passkey`, so every site has a working sign-in method from its first deploy.
 
@@ -29,12 +31,12 @@ The `auth` slot is not optional. A config without one does not type-check, and `
 
 <Steps>
 
-1. **Declare the auth slot.** Create `auth.ts` beside your config:
+1. **Declare the auth slot.** The `auth()` call lives in `plumix.config.ts`, which is where the scaffolder writes it:
 
    ```ts
    import { auth } from "plumix";
 
-   export const recipesAuth = auth({
+   export const recipeAuth = auth({
      passkey: {
        rpName: "Recipes",
        rpId: "localhost",
@@ -43,7 +45,7 @@ The `auth` slot is not optional. A config without one does not type-check, and `
    });
    ```
 
-2. **Wire it in.** In `plumix.config.ts`, import `recipesAuth` and pass it as the `auth` slot of `plumix({ … })`, beside the `runtime` and `database` slots.
+2. **Wire it in.** Pass `recipeAuth` as the `auth` slot of `plumix({ … })`, beside the `runtime` and `database` slots. The scaffolder inlines the whole `auth({ … })` call into that literal rather than naming it first. Both shapes produce the same slot value.
 
 3. **Enrol the first user.**
 
@@ -85,7 +87,9 @@ A session token is 192 bits of randomness. Plumix hashes it with SHA-256 and sto
 
 The cookie is `plumix_session`, set `HttpOnly` and `SameSite=Lax`, scoped to the site's base path, and marked `Secure` whenever the request arrived over HTTPS. Plumix reads it from the `Cookie` header only, never from a query string or a form field.
 
-Lifetime is a sliding 30 days under a hard ceiling of 90. Validation extends the expiry only once more than half the window has elapsed, which keeps an active browsing session from writing to the database on every request. Passing the ceiling, or finding the user disabled, deletes the row on the spot, so a stolen token stops working on first use rather than at expiry. Set `sessions` in the auth config to change all three numbers.
+Lifetime is a sliding 30 days under a hard ceiling of 90. Validation extends the expiry once half the window has elapsed, and it measures that fraction from the row's `createdAt`, which never moves. A session validates without writing for its first 15 days. After that every validation issues an `UPDATE`, until the sliding expiry reaches the 90-day ceiling and stops changing. Set `sessions` in the auth config to change the window, the ceiling and the 0.5 threshold.
+
+Finding the user disabled deletes the row on the spot, so disabling an account stops its sessions on their next use rather than at expiry. Validation deletes on the ceiling too, but a row cannot pass the ceiling before it has passed its own expiry, so that branch is cleanup rather than revocation.
 
 Signing out at `/_plumix/auth/signout` deletes the row and returns a cookie that clears itself. The admin lists the sessions on your own account with their recorded IP and user agent, and revokes any one of them or all the others at once. It refuses to revoke the session making the request, since signing out is what that is for. Both recorded values come off request headers, and whoever sent the request chose them, so read them as a memory aid for the "is this me?" question rather than as evidence.
 
@@ -98,7 +102,7 @@ Signing out at `/_plumix/auth/signout` deletes the row and returns a cookie that
 
 ## Authenticators
 
-An authenticator has one required method, `authenticate(request, db)`, resolving to a user or to `null`. Returning `null` means "no credential on this request", and the caller decides whether that is a 401 or an anonymous render. Throwing means the credential was present and malformed, which the dispatcher maps to a typed error. A returned user may come with a `tokenScopes` list, which narrows what that one request may do. `ctx.auth.can()` intersects the scopes with the role's capabilities, so a scoped credential holds fewer capabilities than its owner and never more.
+An authenticator has one required method, `authenticate(request, db)`, resolving to a user or to `null`. Returning `null` means "no credential on this request", and the caller decides whether that is a 401 or an anonymous render. Throwing is reserved for a credential that was present and malformed, a bad signature or a replay. Nothing turns that throw into a typed error today. No call site wraps the authenticator, so on a plugin route or the admin shell the error reaches the dispatcher's one top-level catch, which logs `dispatch_failed` and answers `{ "error": "internal_error" }` at 500; on an RPC procedure it lands as an internal server error the same way. Return `null` for a malformed credential if you want the caller's 401 instead. A returned user may come with a `tokenScopes` list, which narrows what that one request may do. `ctx.auth.can()` intersects the scopes with the role's capabilities, so a scoped credential holds fewer capabilities than its owner and never more.
 
 Out of the box Plumix chains two of them. The first reads the `plumix_session` cookie. The second reads `Authorization: Bearer pl_pat_…` and resolves it against the hashed `api_tokens` table. First non-null wins, so browser traffic and API clients both work with no configuration. Set `authenticator` in the auth config to replace the chain, and wrap your own with the API-token one if you want bearer credentials alongside it.
 
@@ -158,9 +162,11 @@ export const authenticator = chainAuthenticators(
 
 ## Capabilities and the staff boundary
 
-`ctx.auth.can(capability)` is the one place a capability decision happens. It resolves the capability's minimum role from core's table plus every capability plugins registered, compares it against the principal's role, and intersects the result with the request's token scopes. Nothing in core or in a plugin compares roles directly, which is why adding an authenticator that returns scopes works everywhere at once.
+`ctx.auth.can(capability)` is the one place a capability decision happens. It resolves the capability's minimum role from core's table plus every capability plugins registered, compares it against the principal's role, and intersects the result with the request's token scopes. Every capability check in core and in plugins reads through it, which is why an authenticator that returns scopes narrows all of them at once.
 
-Not every signed-in principal is staff. The lowest role allowed into the admin shell is `contributor`, so Plumix redirects a signed-in `subscriber` to the site root rather than hand over a shell whose every call would answer 403. That is the tier open signup hands out, and it is the tier a theme's own membership area is built on.
+Two role checks sit outside it, and token scopes do not reach either. `canAccessAdmin(role)` compares the role's level against `STAFF_MIN_ROLE` to decide who gets the admin shell. `rolePolicy(required)` makes the same comparison for an access policy. Both ask about a tier on the ladder rather than about a named permission, so a scoped credential whose owner holds the tier still passes them.
+
+Not every signed-in principal is staff. `STAFF_MIN_ROLE` is `contributor`, so Plumix redirects a signed-in `subscriber` to the site root rather than hand over a shell whose every call would answer 403. That is the tier open signup hands out, and it is the tier a theme's own membership area is built on.
 
 ## Related
 

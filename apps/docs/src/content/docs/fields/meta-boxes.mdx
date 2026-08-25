@@ -61,7 +61,7 @@ The `id` is a registration key rather than anything a reader sees. It appears in
 
 </Steps>
 
-The recipe box takes one more field, `heroImage`, and it comes from a plugin. The media plugin ships a `media` builder that registers alongside the built-in ones, so `media("heroImage").accept("image/").featured()` slots into the same `fields` array. [Field Types](/fields/field-types/) covers what it stores and what `.featured()` does.
+The recipe box takes one more field, `heroImage`, and it comes from a plugin. The media plugin ships a `media` builder that registers alongside the built-in ones. Import it from `@plumix/plugin-media/fields` rather than from the package root, which exports a different `media` function that builds the plugin descriptor. The builder then slots into the same `fields` array as `media("heroImage").accept("image/").featured()`. [Field Types](/fields/field-types/) covers what it stores and what `.featured()` does.
 
 ## Entry meta boxes
 
@@ -87,7 +87,9 @@ export const recipes = definePlugin("recipes", {
 
 Both keys are now declared on `recipe` and on `post`, and an entry of any other type rejects a write to either.
 
-Every registered entry box renders as a collapsible section in the editor's right rail, which is fixed at 256px. Fields there always take the full row. `EntryMetaBoxOptions` still accepts a `location` of `"bottom"` or `"sidebar"`, but the editor stopped partitioning boxes by it. It is deprecated, and new code leaves it out.
+Every name in that list has to be a registered entry type. `recipe` comes from the `registerEntryType` call in [Entry Types](/content-modelling/entry-types/), and `post` comes from `@plumix/plugin-blog`, so this particular box needs that plugin installed. Name a type nothing registered and the manifest build throws `metaBoxReferencesUnknownScope` at boot, rather than rendering a card that could never write. `termTaxonomies` works the same way.
+
+Every registered entry box renders as a collapsible section in the editor's right rail, which is fixed at 18rem, 288px at the default root font size. Fields there always take the full row. `EntryMetaBoxOptions` still accepts a `location` of `"bottom"` or `"sidebar"`, but the editor stopped partitioning boxes by it. It is deprecated, and new code leaves it out.
 
 ## Term meta boxes
 
@@ -149,11 +151,13 @@ The entry editor's rail is the exception. It is too narrow to divide, so it acce
 `capability` on the box is a display filter. The admin hides a card from a viewer whose capability set lacks it, and that is all it does.
 
 <Aside type="danger" title="Box capability is not a write gate">
-  The server enforces only the entity-level write gate, meaning
-  `<entryType>:edit*`, `<taxonomy>:edit`, `user:edit` or `settings:manage`.
-  Any user who can write the entity can write any field registered on it
-  through the raw RPC, whatever `capability` the box carries. Do not put a
-  secret behind it.
+  The server enforces only the entity-level write gate. For an entry it is
+  `entry:<capabilityType>:edit_own` or `entry:<capabilityType>:edit_any`, and
+  `capabilityType` defaults to the entry type's own name, so a `recipe` type
+  mints `entry:recipe:edit_any`. For a term it is `term:<taxonomy>:edit`, for a
+  user `user:edit`, and for a setting `settings:manage`. Any user who can write
+  the entity can write any field registered on it through the raw RPC, whatever
+  `capability` the box carries. Do not put a secret behind it.
 </Aside>
 
 `capability` on a field is a real gate. The admin hides the field, and the server rejects any write that includes that field's key, counting deletes as writes so a viewer cannot blank a value they cannot see. It applies to top-level fields only. A capability on a repeater subfield is ignored, because a row's gate is the gate on the repeater that holds it.
@@ -181,9 +185,11 @@ export const recipes = definePlugin("recipes", {
 
 Six checks run, and each one throws rather than degrading.
 
-A field key outside `/^[a-zA-Z0-9_:-]+$/` is refused, because the RPC input schema would reject it later. A key starting `__plumix_` is refused, because core reserves that prefix. Two fields in one box sharing a key are refused. A `visibleWhen` rule naming a key no field in the box declares is refused, and the check runs in a second pass so the driver may be declared after the field that reads it. A box carrying more than 200 fields is refused, which caps the admin's per-request payload and flags a modelling problem. Repeater and group subfields get their own pass, adding a rejection for `__proto__`, `constructor` and `prototype`, which match the key pattern but would poison a row object.
+A field key outside `/^[a-zA-Z0-9_:-]+$/` is refused, because the RPC input schema would reject it later. A key starting `__plumix_` is refused, because core reserves that prefix. Two fields in one box sharing a key are refused. A `visibleWhen` rule naming a key no field in the box declares is refused, and the check runs in a second pass so the driver may be declared after the field that reads it. A box carrying more than 200 fields is refused, which caps the admin's per-request payload and flags a modelling problem. Repeater and group subfields get their own pass, which runs when you call `.fields()` rather than when you register the box. It repeats the key-pattern and duplicate-key checks against the row schema, adds a rejection for `__proto__`, `constructor` and `prototype`, which match the key pattern but would poison a row object, and refuses any subfield carrying a `visibleWhen`. Nested conditions are not wired, because the admin evaluator and the write pipeline both read driver values from the top-level box scope, so a condition inside a row would be a silent no-op.
 
-One check waits until the manifest is built, because it is about two registrations at once. Two boxes declaring the same field key on the same scope fail with both box ids in the message, so `box-a` and `box-b` both claiming `title` on `post` stops the boot.
+Three more checks wait until the manifest is built, because each weighs registrations against each other rather than reading one box in isolation.
+
+Two boxes declaring the same field key on the same scope fail with both box ids in the message, so `box-a` and `box-b` both claiming `title` on `post` stops the boot. A box naming an entry type or taxonomy that no registration declares fails as well, which is what turns a typo'd scope into a boot error instead of a card that never renders. And an entry type may carry at most one `.featured()` media field, with no role-tagged field allowed to be multi-value, so two boxes each marking their own hero image as featured on `recipe` stops the boot too.
 
 ## Related
 

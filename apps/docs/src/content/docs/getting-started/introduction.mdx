@@ -1,6 +1,6 @@
 ---
 title: Introduction
-description: Plumix is a headless CMS that deploys as a single Cloudflare Worker, with the content model, the admin UI and the public site all declared in TypeScript.
+description: Plumix is a CMS you declare in TypeScript. It deploys as one Cloudflare Worker that renders the public site from a theme you own and builds its admin screens from your content model.
 tier: P0
 sidebar:
   order: 10
@@ -33,6 +33,8 @@ Sign-in is a passkey by default. The first person to reach the admin on an empty
 Client JavaScript is opt-in. A template renders to HTML on the server, and only a component you mark as an island ships a script and hydrates. A page with no island ships no JavaScript.
 
 <PinYourVersion />
+
+Appearing on this site is not a stability promise. A documented API can still change in a minor release before 1.0.
 
 ## Quickstart
 
@@ -73,7 +75,7 @@ Then three steps:
 
 <Steps>
 
-1. **Answer the wizard.** It asks where to put the project, which runtime to target, which official plugins to install and which sign-in methods to add beyond passkeys. It then installs dependencies, generates the first migration, applies it to a local database and makes a git commit.
+1. **Answer the wizard.** It asks only what the command line did not already give it, so naming the directory above leaves three questions, which are the runtime to target, the official plugins to install and the sign-in methods to add beyond passkeys. It then installs dependencies, generates the first migration, applies it to a local database and makes a git commit.
 
 2. **Start the dev server.**
 
@@ -100,7 +102,7 @@ Core carries the parts every site needs: entries, taxonomies, meta-box fields, b
 
 The content types most sites want are plugins rather than core. `post`, `category` and `tag` come from the blog plugin. The hierarchical `page` type rooted at `/` comes from the pages plugin. Menus, comments, a media library and an audit log are four more. Installing one is a line in the `plugins` array.
 
-Two version tracks run side by side. The platform packages move in lockstep and share one version number, `plumix` among them. The six official plugins carry their own numbers and release on their own schedule, so a plugin at 0.1 sitting beside a platform at 0.15 is normal rather than a mismatch. Read an install snippet with that in mind.
+Version numbers do not run in step across the whole set. Six packages move in lockstep and share one number, and they are `plumix`, `@plumix/core`, `@plumix/blocks`, `@plumix/admin`, `@plumix/admin-editor` and `@plumix/admin-ui`. Everything else releases on its own schedule, including the six official plugins, `@plumix/runtime-cloudflare` and `create-plumix-app`. A plugin at 0.1 and a runtime adapter at 0.8 sitting beside a platform at 0.15 is normal rather than a mismatch. Read an install snippet with that in mind, and do not assume the platform number applies to the runtime adapter.
 
 ## Related
 
