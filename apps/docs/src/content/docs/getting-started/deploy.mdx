@@ -16,7 +16,7 @@ A scaffolded project runs locally against a placeholder database and a localhost
 
 The D1 `database_id` is the literal string `local-development-only`. That works for the local database in `.wrangler`, and it is not a real database id, so a remote deploy needs the one Cloudflare hands you.
 
-The passkey origin resolves to `http://localhost:5173`, and `cloudflareDeployOrigin` cannot move it off localhost today. The helper reads `WORKERS_CI` through a local variable rather than the literal `process.env.WORKERS_CI` the Plumix Vite plugin substitutes, so the check survives into the bundle and runs inside the Worker, where that variable never exists. Every deploy takes the localhost branch, whether you built on your own machine or on Cloudflare Workers Builds, and `accountSubdomain` changes nothing about it. Write `rpId` and `origin` for the deployed host yourself, which is what step 2 does.
+The passkey origin resolves to `http://localhost:5173`. The scaffolded `cloudflareDeployOrigin` spread reads the build environment Cloudflare Workers Builds injects, so it resolves the deployed host on a build that runs there and takes its `localOrigin` fallback on one that does not. The quickstart below builds on your own machine, which is the second case, so step 2 writes `rpId` and `origin` out literally. [Deploying from git](#deploying-from-git) covers the first.
 
 Any secret you have been reading out of `.dev.vars` has to be set on the deploy. `.dev.vars` is gitignored and local by design; it never travels.
 
@@ -24,13 +24,17 @@ Two things need no work. The cron triggers are already in `wrangler.jsonc`, so s
 
 ## Quickstart
 
-<Aside type="caution" title="The scaffolded passkey origin stays on localhost">
-  The scaffolded config spreads `cloudflareDeployOrigin`, and that helper
-  returns `rpId: "localhost"` on every deploy, so the passkey in step 6 cannot
-  verify against the deployed host. Pushing to Cloudflare Workers Builds does
-  not change it, for the reason the Overview above gives. Step 2 replaces the
-  spread with literal values. [Cloudflare Workers](/deployment/cloudflare/)
-  covers the same block and what changes on a custom domain.
+<Aside
+  type="caution"
+  title="A locally built deploy keeps the localhost passkey origin"
+>
+  The scaffolded config spreads `cloudflareDeployOrigin`, which resolves the
+  deployed host only from the environment Cloudflare Workers Builds sets. A
+  `plumix build` on your own machine sets none of it, so the helper returns
+  `rpId: "localhost"` and the passkey in step 6 cannot verify against the
+  deployed host. Step 2 replaces the spread with literal values. [Cloudflare
+  Workers](/deployment/cloudflare/) covers the same block and what changes on a
+  custom domain.
 </Aside>
 
 <Steps>
@@ -62,7 +66,7 @@ Two things need no work. The cron triggers are already in `wrangler.jsonc`, so s
    });
    ```
 
-   Running on your own domain instead? Drop `allowedOrigins` and write `rpId: "recipes.example"` with `origin: "https://recipes.example"`. Previews on `workers.dev` then need magic links or Cloudflare Access, because the two are different registrable domains.
+   Running on your own domain instead? Drop `allowedOrigins` and write `rpId: "recipes.example"` with `origin: "https://recipes.example"`. Previews on `workers.dev` then need magic links or Cloudflare Access, because the two are different registrable domains. The helper's `productionOrigin` option says the same thing when the build runs on Workers Builds, paired with `defaultBranch` if your production branch is not `main`.
 
 3. **Set every secret the config resolves.** One command per name in `.dev.vars`:
 
@@ -89,7 +93,7 @@ Two things need no work. The cron triggers are already in `wrangler.jsonc`, so s
 
    `plumix build` builds the client bundle first and then the worker, because the worker bakes the client's asset manifest into itself. `plumix deploy` passes any extra arguments straight to `wrangler deploy`.
 
-6. **Claim the admin account.** Open `https://recipes.<your-account>.workers.dev/_plumix/admin` and create your passkey before anyone else does. The database is empty, so the first registration wins the admin account and every later one is refused. This is the step the caution above blocks while the config still spreads `cloudflareDeployOrigin`.
+6. **Claim the admin account.** Open `https://recipes.<your-account>.workers.dev/_plumix/admin` and create your passkey before anyone else does. The database is empty, so the first registration wins the admin account and every later one is refused. This is the step the caution above blocks while a locally built deploy still carries the localhost origin.
 
 </Steps>
 
@@ -123,13 +127,13 @@ The edge cache needs no resource, but it does check for two values before it sto
 
 ## Deploying from git
 
-Connecting the repository to Cloudflare's build service does not remove step 2. The build service does set `WORKERS_CI` and `WORKERS_CI_BRANCH`, and the Vite plugin does read them, but `cloudflareDeployOrigin` never receives them, so a Workers Builds deploy carries `rpId: "localhost"` exactly as a local build does. The literal `rpId` and `origin` from step 2 still have to be in `plumix.config.ts`, and a passkey anchored to the scaffolded `your-account` placeholder matches no browser either way.
+Connecting the repository to Cloudflare's build service is the one case where step 2 can be skipped. The build service sets `WORKERS_CI` and `WORKERS_CI_BRANCH`, the Vite plugin freezes both into the bundle, and `cloudflareDeployOrigin` reads them, so the scaffolded spread resolves the deployed host on its own. Replace the scaffolded `your-account` placeholder with your real subdomain and leave the spread in place — a passkey anchored to the placeholder matches no browser.
 
 What the build service gives you is a deploy per push. A push to the default branch ships production on `recipes.your-account.workers.dev`, and a push to any other branch ships that branch's own `<branch>-recipes.your-account.workers.dev` preview host.
 
-The step 2 block anchors the passkey relying-party id to `your-account.workers.dev` and allows the account-wide wildcard origin, so one passkey enrolled once works on production and on every per-branch preview, because they are all subdomains of the same registrable domain.
+The helper anchors the passkey relying-party id to `your-account.workers.dev` and allows the account-wide wildcard origin, and the step 2 block writes the same pair out by hand. Either way one passkey enrolled once works on production and on every per-branch preview, because they are all subdomains of the same registrable domain.
 
-A custom production domain breaks that span, and no configuration can restore it. A custom domain and `workers.dev` are different registrable domains, so a credential anchored to one cannot verify against the other. Sign in to previews with magic links or Cloudflare Access when production runs on your own domain.
+A custom production domain breaks that span, and no configuration can restore it. Workers Builds does not expose the custom domain either, so the helper needs `productionOrigin: "https://recipes.example"` to anchor the default branch to it, and previews stay on `workers.dev`. Pass `defaultBranch` alongside it if yours is not `main` — production would otherwise resolve as a preview and never reach the custom domain at all. A custom domain and `workers.dev` are different registrable domains, so a credential anchored to one cannot verify against the other. Sign in to previews with magic links or Cloudflare Access when production runs on your own domain.
 
 ## Checking the deploy
 

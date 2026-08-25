@@ -149,7 +149,7 @@ export const recipeAuth = auth({
 });
 ```
 
-The passkey block appears in two shapes across this site, and they are the same block. The literal shape above writes `rpId` and `origin` by hand, which is what a fixed hostname wants. The other shape spreads `cloudflareDeployOrigin({ ... })` into the block, which returns `rpId`, `origin` and sometimes `allowedOrigins` computed from the deploy, and it is what the scaffolder writes into a new project. Open your own `plumix.config.ts` and you will see the spread. `localOrigin` is an option of `cloudflareDeployOrigin`, not a passkey key, so it only exists in that shape.
+The passkey block appears in two shapes across this site, and they are the same block. The literal shape above writes `rpId` and `origin` by hand, which is what a fixed hostname wants. The other shape spreads `cloudflareDeployOrigin({ ... })` into the block, which returns `rpId`, `origin` and sometimes `allowedOrigins` computed from the host a Cloudflare Workers Builds deploy is served on, and it is what the scaffolder writes into a new project. A build that runs anywhere else, your own machine included, gets the `localOrigin` fallback. Open your own `plumix.config.ts` and you will see the spread. `localOrigin` is an option of `cloudflareDeployOrigin`, not a passkey key, so it only exists in that shape.
 
 `rpId` is deliberately not an `EnvInput`. It anchors the credential, so a passkey enrolled against one value cannot verify against another, and it has to be constant across environments.
 
