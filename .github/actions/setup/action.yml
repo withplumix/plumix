@@ -1,13 +1,6 @@
 name: "Setup and install"
 description: "Common setup steps for CI"
 
-inputs:
-  turbo-cache:
-    description: >-
-      Restore turbo's local artifact cache. Off for jobs that must execute
-      rather than replay — see the smoke job.
-    default: "true"
-
 runs:
   using: composite
   steps:
@@ -32,12 +25,10 @@ runs:
     #
     # Keyed per job: each one caches only the tasks it runs, and restores its
     # own previous state rather than racing the other sixteen for one key.
-    - if: inputs.turbo-cache == 'true'
-      shell: bash
+    - shell: bash
       run: echo "TURBO_CACHE_DIR=.turbo/cache" >> "$GITHUB_ENV"
 
-    - if: inputs.turbo-cache == 'true'
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .turbo/cache
         key: turbo-${{ github.job }}-${{ github.sha }}

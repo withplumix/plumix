@@ -8,6 +8,10 @@ on:
   pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [closed]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   pull-requests: write
 
@@ -16,6 +20,7 @@ jobs:
     if: github.event.pull_request.merged == true
     name: First-time contributor
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
