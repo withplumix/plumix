@@ -158,6 +158,10 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+        with:
+          # Same reason TURBO_TOKEN is empty above: a replayed artifact is the
+          # one thing this job must not trust, local cache included.
+          turbo-cache: "false"
       # The scaffolder packs every publishable package to redirect the
       # generated projects at this commit. It depends on none of them, so
       # turbo's `^build` won't build them — do it explicitly.
@@ -178,6 +182,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # `--affected` below diffs against the base branch. A shallow
+          # checkout makes turbo treat every package as changed — it fails
+          # safe, but it also makes the flag pointless.
+          fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup
 
@@ -210,7 +218,14 @@ jobs:
         working-directory: packages/admin
         run: pnpm exec playwright install-deps chromium
 
-      - run: pnpm test:e2e
+      # Every other turbo task is cacheable, so an unaffected one is already a
+      # millisecond replay. `test:e2e` is `cache: false`, so it is the one task
+      # where nothing but skipping it helps: a docs-only pull request runs 0 of
+      # the 9 real suites here instead of all 9. Pull requests only — `main`
+      # runs everything, and `merge_group` has no base ref for turbo to diff.
+      - run: pnpm test:e2e $AFFECTED
+        env:
+          AFFECTED: ${{ github.event_name == 'pull_request' && '--affected' || '' }}
 
       # Running the capture is the check: markup that moved stops resolving by
       # test id and the command fails. No baselines, no pixel diff — see

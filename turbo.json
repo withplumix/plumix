@@ -59,6 +59,16 @@
       "dependsOn": ["^build"]
     },
     "test:e2e": {
+      // Deliberately uncached (#1949). A cache hit is a pass that never ran,
+      // and this is the tier where flakes live: `retries: 2` means a suite
+      // that only went green on its third attempt would then be replayed as
+      // green for as long as nothing under `packages/` changed.
+      //
+      // The argument for caching was that a docs-only pull request should not
+      // pay 4 minutes for it. CI answers that with `--affected` instead, which
+      // skips the suites a change cannot reach without claiming they passed.
+      // `docs:screenshots` below is cached despite driving the same rig,
+      // because it produces an artifact whose bytes are the assertion.
       "dependsOn": ["build", "^build"],
       "cache": false,
       "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
