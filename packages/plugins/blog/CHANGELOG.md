@@ -1,5 +1,15 @@
 # @plumix/plugin-blog
 
+## 0.2.0
+
+### Minor Changes
+
+- [#1953](https://github.com/withplumix/plumix/pull/1953) [`ed83fe4`](https://github.com/withplumix/plumix/commit/ed83fe49e45dc6919c791257f31c546bfaaaf5bd) Thanks [@nasyrov](https://github.com/nasyrov)! - `blog` is now a factory that accepts a per-registration override, so a site can move the post type off `/posts`, give it an archive, retitle it, or skip a taxonomy without forking the plugin.
+
+  Each of `post`, `category` and `tag` takes a partial of the options the plugin passes to `registerEntryType` / `registerTermTaxonomy`; object-valued options merge key by key, arrays replace or compose via `(prev) => next`, and `false` skips the registration. `relatedPosts` takes a `limit` or `false`.
+
+  Breaking: `blog` must now be called. Update `plugins: [blog]` to `plugins: [blog()]`.
+
 ## 0.1.2
 
 ### Patch Changes

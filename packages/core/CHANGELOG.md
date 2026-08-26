@@ -1,5 +1,117 @@
 # @plumix/core
 
+## 0.16.0
+
+### Minor Changes
+
+- [#1936](https://github.com/withplumix/plumix/pull/1936) [`1a475b5`](https://github.com/withplumix/plumix/commit/1a475b599314a315a850832fd59f0cedec22e675) Thanks [@nasyrov](https://github.com/nasyrov)! - Runs `settings.upsert` through the field pipeline, so a settings value is decoded on the way in
+  rather than type-checked one read at a time on the way out.
+
+  `settings.value` was `unknown` on the column because a value reached it straight off the RPC without
+  passing any pipeline — nothing had proved its shape, so every reader narrowed it by hand. Keys a
+  registered group owns now take the same write path as entry and term meta (coercion, `.sanitize()`,
+  the declared constraints); keys nobody registered keep the laissez-faire write but still have to be
+  JSON. The column, `SettingsBag`, and the `settings.get` / `settings.upsert` bags now say so, as does
+  `SiteSettings` in `@plumix/blocks`, which is the same bag one hop downstream.
+
+  Three consequences for callers. A registered field's declared constraints are enforced where they
+  previously were not: a `number("per_page").max(50)` rejects `99` instead of storing it, and the
+  rejection arrives as a `CONFLICT` with `reason: "settings_invalid_value"` carrying the same
+  `{ path, message }` error list the meta write path returns — the settings card pins each one on the
+  input it addresses, as the entry and term forms already did. A value arrives in its declared shape:
+  the string `"10"` on a number field lands as `10`. And clearing a key a registered field marks
+  `.required()` is refused rather than silently deleted, which is what the same `null` already meant on
+  entry and term meta.
+
+  The meta pipeline's own scalar coercion decodes with valibot instead of hand-written `typeof`
+  ladders, and `.sanitize()` output is decoded on the same terms as its input. The descriptor types a
+  callback's return as `JsonValue`, but nothing enforced that at runtime: a callback handing back a
+  `Date` used to reach storage as one and become whatever `JSON.stringify` made of it later. Three
+  edges move with it, all of them reachable only from a callback that ignores its declared return
+  type. Returning `undefined` still means "write nothing", but now short-circuits the remaining
+  constraints instead of running them against a value there is none of — on a `link()` or `color()`
+  field that turns a rejected write into a skipped one. Returning `null` from a `string` / `number` /
+  `boolean` field's callback is `invalid` rather than stored as `null`. And returning a value the
+  field's declared type cannot hold is `invalid` rather than stored.
+
+- [#1950](https://github.com/withplumix/plumix/pull/1950) [`f9b705f`](https://github.com/withplumix/plumix/commit/f9b705f4e423aea61cbdb13e9c2b3ca86a544257) Thanks [@nasyrov](https://github.com/nasyrov)! - Runs Playwright with parallel workers on CI unless the suite shares a database.
+
+  `definePlumixE2EConfig` set `workers: 1` whenever `process.env.CI` was present. The only reason ever
+  written down is narrower than that: a playground drives one mutable D1, so its tests race across
+  workers and each would restore the baseline mid-run. `hasSharedDb` already says exactly that, and is
+  now the only thing that pins a suite. A suite that passes no `playground` — or `applyMigrations:
+false`, which is how a playground says it builds its database per session — runs at Playwright's
+  default concurrency instead.
+
+  A downstream suite that turns out to need serial execution for some other reason should say so with
+  `workers: 1` in its own config, rather than inheriting it from the environment.
+
+### Patch Changes
+
+- [#1929](https://github.com/withplumix/plumix/pull/1929) [`b2b6510`](https://github.com/withplumix/plumix/commit/b2b6510460703249f17dcd0ba676dab3b7ef2caa) Thanks [@nasyrov](https://github.com/nasyrov)! - Narrows the two user-meta bags on the public surface to `JsonObject`, and gives the framework's
+  remaining open dictionaries names.
+
+  `AuthenticatedUser.meta` and its `@plumix/blocks` mirror `RendererUser.meta` were
+  `Record<string, unknown>`. Both are the `users.meta` column read straight off the row, and that
+  column has been `JsonObject` since the storage migration — the projection just never followed. A
+  custom `RequestAuthenticator` that builds an `AuthenticatedUser` from a bag typed
+  `Record<string, unknown>` now has to say `JsonObject`; reading `ctx.user.meta` is unaffected.
+
+  Everything else here is a rename. The bags that are genuinely not serialized data — logger metadata,
+  a settings group, a drizzle schema module, the Vite config passthrough, a template's resolved deps,
+  island props, the block context's entry and site settings — are now named types (`LogMeta`,
+  `SettingsBag`, `SchemaModule`, `ViteUserConfig`, `LoadedTemplateDeps`, `SerializedProps`,
+  `HydratedEntry`, `SiteSettings`, and others), each declared once with a note saying what puts a
+  non-serializable value in it. The types they alias are unchanged, so existing annotations keep
+  compiling.
+
+  This is the contract step of the JSON dictionary migration: a new `plumix/no-unsafe-dictionary` lint
+  rule now rejects `Record<string, unknown>` written inline, so "JSON nobody has parsed" and "a bag
+  that is open by design" can no longer share a spelling.
+
+- [#1925](https://github.com/withplumix/plumix/pull/1925) [`9927a8f`](https://github.com/withplumix/plumix/commit/9927a8f7e1470a5f6bef1e5517545e3250d91feb) Thanks [@nasyrov](https://github.com/nasyrov)! - `openPlaygroundDb` now sets `busy_timeout = 5000` on the connection it
+  returns. libsql opens with no busy handler, so a test-side write that
+  overlapped one from the running worker — or from a sibling Playwright
+  worker on the same file — failed on the first attempt instead of waiting.
+
+- [#1931](https://github.com/withplumix/plumix/pull/1931) [`6cc8e74`](https://github.com/withplumix/plumix/commit/6cc8e742f4ac44bc06a44cdc440e2852f7124900) Thanks [@nasyrov](https://github.com/nasyrov)! - Wires `blocks.htmlAllowlist` through to the renderer. All four of its fields — `extraTags`,
+  `extraAttributes`, `schemes`, `allowProtocolRelative` — now change what `core/html` and
+  `core/rich-text` render, on the public page and in the editor canvas.
+
+  The allowlist was typed, documented, and built at boot, but nothing mounted `HtmlAllowlistProvider`,
+  so every render fell back to the context default — the baseline. Setting
+  `htmlAllowlist: { extraTags: ["img"] }` produced silence, not an image.
+
+  `HtmlAllowlistProvider` is the seam, mounted in both consumers. The public render mounts it from
+  `renderEnv.htmlAllowlist`, alongside the existing `PlumixProvider`. The editor canvas is a fresh
+  React tree inside an iframe with no server context, so the allowlist crosses the boundary the way
+  tokens and breakpoints already did: on the JSON embed the SSR emits next to the mount root, read back
+  at mount. Without that second mount the canvas would keep sanitizing against the baseline while the
+  published page used the operator's list, and an author would see their markup stripped in the editor
+  and intact on the site.
+
+  That embed is now `[data-plumix-render-env]` rather than `[data-plumix-style-env]` — it carries more
+  than styles. Nothing outside the editor runtime reads it, and the SSR and the runtime that reads it
+  ship together.
+
+  This lands alongside the three floor changesets in the same release: the denials in
+  `enforceHtmlFloors` are what an override cannot widen past, and they went in before anything could
+  reach the renderer through them.
+
+  `PlumixApp.htmlAllowlist` documented the missing step as `<EntryContent htmlAllowlist={...}>`.
+  `EntryContent` is an interface, not a component, so that seam never existed and could not be
+  followed; the field now describes the provider.
+
+- [#1928](https://github.com/withplumix/plumix/pull/1928) [`9cf71d9`](https://github.com/withplumix/plumix/commit/9cf71d92e67aa95635a06cfef8e019bb6fab603d) Thanks [@nasyrov](https://github.com/nasyrov)! - Worker-driven e2e suites can now start every attempt from the same
+  database. Import `test` from `plumix/test/playwright` instead of
+  `@playwright/test` and a worker-scoped fixture restores the playground D1
+  to its post-`globalSetup` baseline once per attempt — the cadence a retry
+  needs, since `.wrangler/state` is wiped once per suite run. Suites whose
+  playground has a shared D1 are also pinned to a single worker, which that
+  shared database always required.
+- Updated dependencies [[`2f70692`](https://github.com/withplumix/plumix/commit/2f70692410fc65a66e843a4db33170c1ad954dc1), [`b2b6510`](https://github.com/withplumix/plumix/commit/b2b6510460703249f17dcd0ba676dab3b7ef2caa), [`1a475b5`](https://github.com/withplumix/plumix/commit/1a475b599314a315a850832fd59f0cedec22e675), [`1b97c01`](https://github.com/withplumix/plumix/commit/1b97c01a99828538110e1cefd60dbcff3828c92f), [`6cc8e74`](https://github.com/withplumix/plumix/commit/6cc8e742f4ac44bc06a44cdc440e2852f7124900), [`efe3834`](https://github.com/withplumix/plumix/commit/efe3834bebb073105d6912152091627cce700a63)]:
+  - @plumix/blocks@0.16.0
+
 ## 0.15.0
 
 ### Minor Changes

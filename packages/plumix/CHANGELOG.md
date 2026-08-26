@@ -1,5 +1,16 @@
 # plumix
 
+## 0.16.0
+
+### Patch Changes
+
+- Updated dependencies [[`2f70692`](https://github.com/withplumix/plumix/commit/2f70692410fc65a66e843a4db33170c1ad954dc1), [`b2b6510`](https://github.com/withplumix/plumix/commit/b2b6510460703249f17dcd0ba676dab3b7ef2caa), [`9927a8f`](https://github.com/withplumix/plumix/commit/9927a8f7e1470a5f6bef1e5517545e3250d91feb), [`1a475b5`](https://github.com/withplumix/plumix/commit/1a475b599314a315a850832fd59f0cedec22e675), [`1b97c01`](https://github.com/withplumix/plumix/commit/1b97c01a99828538110e1cefd60dbcff3828c92f), [`6cc8e74`](https://github.com/withplumix/plumix/commit/6cc8e742f4ac44bc06a44cdc440e2852f7124900), [`f9b705f`](https://github.com/withplumix/plumix/commit/f9b705f4e423aea61cbdb13e9c2b3ca86a544257), [`efe3834`](https://github.com/withplumix/plumix/commit/efe3834bebb073105d6912152091627cce700a63), [`9cf71d9`](https://github.com/withplumix/plumix/commit/9cf71d92e67aa95635a06cfef8e019bb6fab603d)]:
+  - @plumix/blocks@0.16.0
+  - @plumix/core@0.16.0
+  - @plumix/admin@0.16.0
+  - @plumix/admin-editor@0.16.0
+  - @plumix/admin-ui@0.16.0
+
 ## 0.15.0
 
 ### Minor Changes
