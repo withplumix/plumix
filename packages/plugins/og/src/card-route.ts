@@ -1,11 +1,18 @@
+import type { EntryData, ResolvedNode, TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
-import { serveRenderedAsset } from "plumix";
+import {
+  buildResolvedEntries,
+  loadTemplateDeps,
+  serveRenderedAsset,
+} from "plumix";
 import { and, eq } from "plumix/db";
-import { entries, settings } from "plumix/schema";
+import { entries } from "plumix/schema";
 
+import type { CardRegistry } from "./card-registry.js";
+import type { CardArgs } from "./card.js";
 import type { CardRenderer } from "./renderer.js";
-import { cardKey } from "./card-key.js";
-import { defaultCard } from "./default-card.js";
+import { cardStorageKey } from "./card-key.js";
+import { cardSourceHash } from "./card-source.js";
 import { OgPluginError } from "./errors.js";
 import { CARD_HEIGHT, CARD_WIDTH, extensionFor } from "./renderer.js";
 
@@ -31,6 +38,8 @@ export interface CardRouteOptions {
   readonly renderer: CardRenderer;
   /** Asset-layer paths, in fallback order. */
   readonly fonts: readonly string[];
+  /** What the theme declared, behind the plugin's own default. */
+  readonly cards: CardRegistry;
 }
 
 /**
@@ -40,7 +49,7 @@ export interface CardRouteOptions {
 export function createCardRoute(
   options: CardRouteOptions,
 ): (request: Request, ctx: AppContext) => Promise<Response> {
-  const { renderer, fonts } = options;
+  const { renderer, fonts, cards } = options;
   const extension = extensionFor(renderer.contentType);
 
   return async (request, ctx) => {
@@ -53,31 +62,44 @@ export function createCardRoute(
     );
     if (id === null) return notFound();
 
-    const title = await publishedEntryTitle(ctx, id);
-    if (title === null) return notFound();
+    const resolved = await resolveEntryNode(ctx, id);
+    if (resolved === null) return notFound();
 
-    const card = defaultCard({ title, siteName: await siteName(ctx) });
-    const key = await cardKey({
-      target: `entry/${String(id)}`,
-      node: card.node,
-      stylesheets: card.stylesheets,
-      fonts,
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
-      extension,
-    });
+    const rule = cards.resolve(resolved.node, resolved.data);
+    if (rule === undefined) return notFound();
+    const { card } = rule;
+
+    const args: CardArgs<TemplateData> = {
+      // Spread first, so a dep kind named `data` or `ctx` cannot displace the
+      // framework-owned pair — the same ordering the template renderer uses.
+      ...(await loadTemplateDeps({ ...card }, ctx.plugins.templateDeps, ctx)),
+      data: resolved.data,
+      ctx,
+    };
+    // Read once: the size the key describes has to be the size that was
+    // rendered, or the stored bytes are not what the key says they are.
+    const width = card.width ?? CARD_WIDTH;
+    const height = card.height ?? CARD_HEIGHT;
 
     const response = await serveRenderedAsset({
       request,
-      key,
+      key: await cardStorageKey({
+        target: `entry/${String(id)}`,
+        hash: card.key(args).hash,
+        sourceHash: await cardSourceHash(card),
+        fonts,
+        width,
+        height,
+        extension,
+      }),
       contentType: renderer.contentType,
       cacheControl: CACHE_CONTROL,
       storage: ctx.storage,
       render: async () =>
-        renderer.render(card.node, {
-          width: CARD_WIDTH,
-          height: CARD_HEIGHT,
-          stylesheets: card.stylesheets,
+        renderer.render(card.render(args), {
+          width,
+          height,
+          stylesheets: card.styles ?? [],
           fonts: await loadFonts(ctx, fonts),
           fetch: ctx.fetch,
         }),
@@ -120,12 +142,22 @@ async function loadFonts(
   );
 }
 
-async function publishedEntryTitle(
+interface EntryNode {
+  readonly node: ResolvedNode;
+  readonly data: EntryData;
+}
+
+/**
+ * The published entry behind a card URL, in the shape card rules resolve
+ * against: the node a matcher matches on, and the same `data` the entry's own
+ * template would receive.
+ */
+async function resolveEntryNode(
   ctx: AppContext,
   id: number,
-): Promise<string | null> {
+): Promise<EntryNode | null> {
   const [row] = await ctx.db
-    .select({ type: entries.type, title: entries.title })
+    .select()
     .from(entries)
     .where(and(eq(entries.id, id), eq(entries.status, "published")))
     .limit(1);
@@ -136,18 +168,18 @@ async function publishedEntryTitle(
   // at all, so it is the same answer.
   const entryType = ctx.plugins.entryTypes.get(row.type);
   if (entryType === undefined || entryType.isPublic === false) return null;
-  return row.title;
-}
 
-async function siteName(ctx: AppContext): Promise<string | undefined> {
-  const [row] = await ctx.db
-    .select({ value: settings.value })
-    .from(settings)
-    .where(and(eq(settings.group, "site"), eq(settings.key, "title")))
-    .limit(1);
-  return typeof row?.value === "string" && row.value.length > 0
-    ? row.value
-    : undefined;
+  const [entry] = await buildResolvedEntries(ctx, [row]);
+  if (entry === undefined) return null;
+  return {
+    node: {
+      kind: "content",
+      entryType: row.type,
+      slug: row.slug,
+      databaseId: row.id,
+    },
+    data: { kind: "entry", entry },
+  };
 }
 
 // 15 digits max keeps the parsed value below Number.MAX_SAFE_INTEGER.
