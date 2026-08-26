@@ -726,6 +726,7 @@ type _EveryPerTypeFilterUsesTheStar = Assert<
  * between them.
  */
 const ACTION_HOOKS = [
+  "theme:ready",
   "entry:*:published",
   "entry:*:updated",
   "entry:*:trashed",

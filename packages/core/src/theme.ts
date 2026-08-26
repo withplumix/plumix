@@ -24,16 +24,30 @@ import type { Template, TemplateDepDeclarations } from "./template.js";
 import { RESERVED_DEP_KIND_NAMES } from "./template-deps.js";
 import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
 
-// `theme:document` is a boot-time filter chain. `buildApp` fires it once,
-// after plugins install, threading the theme's own `document` manifest
-// (or `{}` if absent) through every registered filter. The merged result
-// is frozen on `PlumixApp.document` so per-request renders pay zero merge
-// cost.
 declare module "./hooks/types.js" {
   interface FilterRegistry {
+    /**
+     * Threads the theme's own `document` manifest (or `{}` if absent) through
+     * every registered filter. The merged result is frozen on
+     * `PlumixApp.document` so per-request renders pay zero merge cost.
+     */
     "theme:document": (
       manifest: DocumentManifest,
     ) => DocumentManifest | Promise<DocumentManifest>;
+  }
+
+  interface ActionRegistry {
+    /**
+     * Boot-time handover of the theme's own descriptor, fired once after
+     * plugins install and before core aggregates anything — so a subscriber
+     * that registers off the back of what it read is still in time for every
+     * registry below.
+     *
+     * An action rather than a filter, because the descriptor is not the
+     * plugin's to rewrite, and because `applyFilter` structured-clones its
+     * input — which a descriptor carrying template components cannot survive.
+     */
+    "theme:ready": (theme: ThemeDescriptor) => void | Promise<void>;
   }
 }
 

@@ -13,6 +13,7 @@ import { plumix } from "./config.js";
 import { definePlugin } from "./plugin/define.js";
 import { fallback } from "./route/render/template-builders.js";
 import { buildApp } from "./runtime/app.js";
+import { createDispatcherHarness, plumixRequest } from "./test/dispatcher.js";
 import {
   defineTheme,
   isArchive,
@@ -31,6 +32,20 @@ const stubDatabase = { kind: "test", connect: () => ({ db: {} }) };
 const stubAuth = auth({
   passkey: { rpName: "t", rpId: "t", origin: "https://t" },
 });
+
+// Stands in for a field a plugin contributes from outside core — the OG
+// plugin's `ogCards` is the real case.
+declare module "./theme.js" {
+  interface ThemeDescriptor {
+    readonly testCards?: readonly string[];
+  }
+}
+
+declare module "./context/app.js" {
+  interface AppContextExtensions {
+    testCards: { readonly list: () => readonly string[] };
+  }
+}
 
 describe("buildApp — theme:document filter", () => {
   test("app.document mirrors theme.document when no plugin filters are registered", async () => {
@@ -255,6 +270,143 @@ describe("buildApp — core site settings", () => {
         }),
       ),
     ).rejects.toThrow(/already registered/i);
+  });
+});
+
+describe("buildApp — theme:ready action", () => {
+  test("hands the theme's own descriptor to every subscribed plugin", async () => {
+    const seen: (readonly string[] | undefined)[] = [];
+    const reader = definePlugin("reader", (ctx) => {
+      ctx.addAction("theme:ready", (descriptor) => {
+        seen.push(descriptor.testCards);
+      });
+    });
+    const second = definePlugin("second", (ctx) => {
+      ctx.addAction("theme:ready", (descriptor) => {
+        seen.push(descriptor.testCards);
+      });
+    });
+
+    await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme: defineTheme({
+          templates: [fallback(() => null)],
+          testCards: ["home", "post"],
+        }),
+        plugins: [reader, second],
+      }),
+    );
+
+    expect(seen).toEqual([
+      ["home", "post"],
+      ["home", "post"],
+    ]);
+  });
+
+  test("fires only once every plugin has installed", async () => {
+    const order: string[] = [];
+    const early = definePlugin("early", (ctx) => {
+      order.push("early:setup");
+      ctx.addAction("theme:ready", () => {
+        order.push("early:ready");
+      });
+    });
+    const late = definePlugin("late", () => {
+      order.push("late:setup");
+    });
+
+    await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme: defineTheme({ templates: [fallback(() => null)] }),
+        plugins: [early, late],
+      }),
+    );
+
+    expect(order).toEqual(["early:setup", "late:setup", "early:ready"]);
+  });
+
+  // The two assertions catch different misplacements: firing below the
+  // shortcode assembly drops the shortcode, firing below the document chain
+  // drops the meta tag.
+  test("a subscriber's registrations still reach every registry below", async () => {
+    const contributor = definePlugin("contributor", (ctx) => {
+      ctx.addAction("theme:ready", (descriptor) => {
+        for (const card of descriptor.testCards ?? []) {
+          ctx.registerShortcode({ name: card, render: () => card });
+          ctx.addFilter("theme:document", (manifest) => ({
+            ...manifest,
+            meta: [...(manifest.meta ?? []), { name: "card", content: card }],
+          }));
+        }
+      });
+    });
+
+    const app = await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme: defineTheme({
+          templates: [fallback(() => null)],
+          testCards: ["home"],
+        }),
+        plugins: [contributor],
+      }),
+    );
+
+    expect(app.shortcodes.get("home")).toBeDefined();
+    expect(app.document.meta).toEqual([{ name: "card", content: "home" }]);
+  });
+});
+
+describe("theme:ready — theme-declared data reaching a request", () => {
+  // `extendAppContext` is reachable only from `provides`, which runs before
+  // every `setup`, so the holder is registered there and filled at boot.
+  const cardsPlugin = () => {
+    const declared: string[] = [];
+    return definePlugin("cards", {
+      provides: (ctx) => {
+        ctx.extendAppContext("testCards", { list: () => declared });
+      },
+      setup: (ctx) => {
+        ctx.addAction("theme:ready", (descriptor) => {
+          declared.push(...(descriptor.testCards ?? []));
+        });
+        ctx.registerRoute({
+          method: "GET",
+          path: "/list",
+          auth: "public",
+          handler: (_request, appCtx) =>
+            new Response(appCtx.testCards.list().join(",")),
+        });
+      },
+    });
+  };
+
+  test("a route serves the field the theme declared, once per boot", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [cardsPlugin()],
+      theme: defineTheme({
+        templates: [fallback(() => null)],
+        testCards: ["home", "post"],
+      }),
+    });
+    const get = () =>
+      h.dispatch(plumixRequest("/_plumix/cards/list", { method: "GET" }));
+
+    const first = await get();
+    const second = await get();
+
+    expect(first.status).toBe(200);
+    expect(await first.text()).toBe("home,post");
+    // A handover that re-ran per request would append a second time.
+    expect(await second.text()).toBe("home,post");
   });
 });
 

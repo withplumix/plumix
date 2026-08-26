@@ -24,6 +24,7 @@ import type {
   ResolvedEntry,
   ResolvedTerm,
   TemplateDepRegistry,
+  ThemeDescriptor,
 } from "plumix";
 import { forArchiveType, forEntryType, forTermTaxonomy } from "plumix";
 
@@ -57,6 +58,9 @@ declare module "plumix" {
   interface ReferenceHydrationShapes {
     guard_ref: { id: string; label: string };
   }
+  interface ThemeDescriptor {
+    guard_theme_field?: readonly string[];
+  }
 }
 
 // Theme-side seams: each fails if its augmentation didn't merge into the
@@ -72,6 +76,7 @@ void forArchiveType("guard_archive");
 // @ts-expect-error -- number is not the merged `heading: string` shape
 block("guard/block", { heading: 123 });
 void ("guard_cat" satisfies NonNullable<BlockPattern["category"]>);
+void ("guard_theme_field" satisfies keyof ThemeDescriptor);
 
 // Co-merge assertions: the theme-side `guard_*` key AND a plugin-contributed
 // key must both live in the same registry view. If the specifier fracture
