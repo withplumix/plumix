@@ -76,6 +76,11 @@ export {
   typeTag,
 } from "./cache/tags.js";
 export { enqueuePurgeTags } from "./cache/purge.js";
+// Exposed for plugin routes that own an expensive-to-produce payload — a
+// generated social card, a derived image — so each route doesn't restate the
+// storage and ETag round-trips (#1958).
+export { serveRenderedAsset } from "./cache/rendered-asset.js";
+export type { RenderedAssetArgs } from "./cache/rendered-asset.js";
 export {
   archive,
   author,
