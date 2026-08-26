@@ -142,7 +142,7 @@ describe("scaffold — blank Cloudflare app", () => {
     await scaffold({ targetDir: target, pluginIds: ["blog", "media"] });
 
     const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
-    expect(config).toContain("blog,");
+    expect(config).toContain("blog(),");
     expect(config).toContain("media(),");
     expect(config).toContain('storage: r2({ binding: "MEDIA" })');
     expect(config).toContain("imageDelivery: images()");
@@ -165,7 +165,7 @@ describe("scaffold — blank Cloudflare app", () => {
     await scaffold({ targetDir: target, pluginIds: ["blog", "blog"] });
 
     const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
-    expect(config.match(/^\s*blog,$/gm)).toHaveLength(1);
+    expect(config.match(/^\s*blog\(\),$/gm)).toHaveLength(1);
   });
 
   test("rejects an unknown plugin id", async () => {

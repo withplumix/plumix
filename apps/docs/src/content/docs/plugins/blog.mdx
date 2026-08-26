@@ -65,7 +65,7 @@ Then:
 
 <Steps>
 
-1. **Add `blog` to the `plugins` array.** No call, no options.
+1. **Add `blog()` to the `plugins` array.** No arguments needed; see [Reshaping what it registers](#reshaping-what-it-registers) to change what it registers.
 
    ```ts no-typecheck
    import type { PlumixConfigInput } from "plumix";
@@ -74,7 +74,7 @@ Then:
 
    import { recipes } from "./plugins/recipes";
 
-   export const plugins: PlumixConfigInput["plugins"] = [recipes, blog];
+   export const plugins: PlumixConfigInput["plugins"] = [recipes, blog()];
    ```
 
 2. **Restart the dev server.**
@@ -180,6 +180,40 @@ export const example = definePlugin("example", {
 `entryTypes: ["post"]` is what a term archive queries. `/category/food` lists published entries whose type appears in that list and nothing else, and a taxonomy registered with an empty list serves an empty archive. The same list is what the cache purge reads, so editing a term purges the stored pages of the types named here. The other half, `termTaxonomies: ["category", "tag"]` on the entry type, is what puts the two pickers on the post editor. Both registrations name each other, and each name does a different job. [Taxonomies and Terms](/content-modelling/taxonomies/) covers the pairing in full, including why `hasAdminColumn: true` records intent without adding a column today.
 
 Terms live in one shared table keyed by taxonomy, so a `category` term and a `tag` term can both be slugged `pasta` without colliding.
+
+## Reshaping what it registers
+
+`blog()` takes an override per registration — `post`, `category`, `tag`, and `relatedPosts`. Each one is a partial of the options the plugin passes to `registerEntryType` / `registerTermTaxonomy`, so anything those accept can be overridden, and anything you leave out keeps the plugin's default.
+
+A site that serves its blog at `/insights` with a paginated archive:
+
+```ts no-typecheck
+import type { PlumixConfigInput } from "plumix";
+
+import { blog } from "@plumix/plugin-blog";
+
+export const plugins: PlumixConfigInput["plugins"] = [
+  blog({
+    post: {
+      rewrite: { slug: "insights" },
+      hasArchive: true,
+      archivePerPage: 4,
+    },
+  }),
+];
+```
+
+Three rules govern the merge.
+
+- **Object-valued options merge key by key.** Overriding `labels.singular` leaves the other twelve labels alone, rather than replacing the table.
+- **Arrays and plain values replace.** `supports: ["title", "editor"]` is the whole list, not an addition to it.
+- **An array can compose instead** by passing a function: `supports: (prev) => prev.filter((s) => s !== "revisions")` drops one entry and keeps the rest, so you do not restate a list to remove one item from it.
+
+Passing `false` in place of an override skips that registration entirely. `blog({ tag: false })` registers posts and categories and no tag taxonomy — and drops `"tag"` from the post type's own `termTaxonomies`, so the type never advertises a taxonomy that is not there.
+
+The registered names — `post`, `category`, `tag` — are not overridable. They are the values stored in the `type` column on every entry and the `taxonomy` column on every term, and the keys a theme's `forEntryType("post")` matches on, so renaming one would orphan existing rows and silently stop templates matching. Change `labels` to change what the admin displays.
+
+One caveat on `rewrite.slug`: keep it to a single path segment. A slug containing `/` compiles and the archive page renders, but the feed router reads only the first segment when it matches `/<taxonomy>/<term>/feed`, so term feeds under a nested base stop resolving.
 
 ## Capabilities it mints
 

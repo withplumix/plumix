@@ -1,10 +1,24 @@
 import type { Label } from "plumix/i18n";
-import type { EntryTypeLabels, TermTaxonomyLabels } from "plumix/plugin";
+import type {
+  EntryTypeLabels,
+  EntryTypeOptions,
+  PluginDescriptor,
+  TermTaxonomyLabels,
+  TermTaxonomyOptions,
+} from "plumix/plugin";
 import { withContext } from "plumix/i18n";
 import { definePlugin } from "plumix/plugin";
 
-import { relatedPostsLoader } from "./related.js";
+import type { BlogOptions } from "./options.js";
+import { applyOverride } from "./options.js";
+import { createRelatedPostsLoader } from "./related.js";
 
+export type {
+  BlogOptions,
+  EntryTypeOverride,
+  RelatedPostsOptions,
+  TermTaxonomyOverride,
+} from "./options.js";
 export type { RelatedPosts } from "./related.js";
 
 // Plain descriptor literals — server-side plugin code can't run the
@@ -148,56 +162,95 @@ const BLOG_KEYWORDS = {
   ],
 } satisfies Record<string, readonly Label[]>;
 
-export const blog = definePlugin("blog", {
-  i18n: {
-    sourceLocale: "en",
-    locales: ["en"],
-    catalogPath: "./locales",
-  },
-  setup: (ctx) => {
-    ctx.registerEntryType("post", {
-      label: POST_LABELS.plural,
-      labels: POST_LABELS,
-      description: "Standard blog posts",
-      supports: ["title", "editor", "excerpt", "revisions", "autosave"],
-      versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
-      termTaxonomies: ["category", "tag"],
-      isHierarchical: false,
-      isPublic: true,
-      // No type archive: the front page is the post listing (WordPress's
-      // default `post` behavior), which avoids a duplicate /posts route.
-      hasArchive: false,
-      rewrite: { slug: "posts" },
-      capabilityType: "post",
-      menuIcon: "file-text",
-      keywords: BLOG_KEYWORDS.post,
-    });
+const POST_TAXONOMIES = ["category", "tag"] as const;
 
-    ctx.registerTermTaxonomy("category", {
-      label: CATEGORY_PLURAL,
-      labels: CATEGORY_LABELS,
-      isHierarchical: true,
-      entryTypes: ["post"],
-      isPublic: true,
-      hasAdminColumn: true,
-      rewrite: { slug: "category", isHierarchical: true },
-      keywords: BLOG_KEYWORDS.category,
-    });
+const POST_DEFAULTS: EntryTypeOptions = {
+  label: POST_LABELS.plural,
+  labels: POST_LABELS,
+  description: "Standard blog posts",
+  supports: ["title", "editor", "excerpt", "revisions", "autosave"],
+  versioning: { maxRevisions: 25, autosaveIntervalSeconds: 60 },
+  isHierarchical: false,
+  isPublic: true,
+  // No type archive: the front page is the post listing (WordPress's default
+  // `post` behavior), which avoids a duplicate /posts route.
+  hasArchive: false,
+  rewrite: { slug: "posts" },
+  capabilityType: "post",
+  menuIcon: "file-text",
+  keywords: BLOG_KEYWORDS.post,
+};
 
-    ctx.registerTermTaxonomy("tag", {
-      label: TAG_PLURAL,
-      labels: TAG_LABELS,
-      isHierarchical: false,
-      entryTypes: ["post"],
-      isPublic: true,
-      hasAdminColumn: true,
-      rewrite: { slug: "tag" },
-      keywords: BLOG_KEYWORDS.tag,
-    });
+const CATEGORY_DEFAULTS: TermTaxonomyOptions = {
+  label: CATEGORY_PLURAL,
+  labels: CATEGORY_LABELS,
+  isHierarchical: true,
+  entryTypes: ["post"],
+  isPublic: true,
+  hasAdminColumn: true,
+  rewrite: { slug: "category", isHierarchical: true },
+  keywords: BLOG_KEYWORDS.category,
+};
 
-    // Related-by-term posts for the single-post view. A blog concern (it
-    // reads the category/tag taxonomy registered above), so it ships as a
-    // template dep here rather than in core.
-    ctx.registerTemplateDep("relatedPosts", { load: relatedPostsLoader });
-  },
-});
+const TAG_DEFAULTS: TermTaxonomyOptions = {
+  label: TAG_PLURAL,
+  labels: TAG_LABELS,
+  isHierarchical: false,
+  entryTypes: ["post"],
+  isPublic: true,
+  hasAdminColumn: true,
+  rewrite: { slug: "tag" },
+  keywords: BLOG_KEYWORDS.tag,
+};
+
+// Keyed by name so the roster that drives pruning is the same one that drives
+// registration — a third taxonomy is one entry, not three edits.
+const TAXONOMY_DEFAULTS = {
+  category: CATEGORY_DEFAULTS,
+  tag: TAG_DEFAULTS,
+} satisfies Record<(typeof POST_TAXONOMIES)[number], TermTaxonomyOptions>;
+
+export function blog(options: BlogOptions = {}): PluginDescriptor {
+  return definePlugin("blog", {
+    i18n: {
+      sourceLocale: "en",
+      locales: ["en"],
+      catalogPath: "./locales",
+    },
+    setup: (ctx) => {
+      const taxonomies = POST_TAXONOMIES.filter(
+        (name) => options[name] !== false,
+      );
+
+      if (options.post !== false) {
+        // Prune before the override, not after, so a site that spells
+        // `termTaxonomies` explicitly still gets exactly what it asked for.
+        ctx.registerEntryType(
+          "post",
+          applyOverride(
+            { ...POST_DEFAULTS, termTaxonomies: taxonomies },
+            options.post,
+          ),
+        );
+      }
+
+      for (const name of POST_TAXONOMIES) {
+        const override = options[name];
+        if (override === false) continue;
+        ctx.registerTermTaxonomy(
+          name,
+          applyOverride(TAXONOMY_DEFAULTS[name], override),
+        );
+      }
+
+      // Related-by-term posts for the single-post view. A blog concern (it
+      // reads the category/tag taxonomy registered above), so it ships as a
+      // template dep here rather than in core.
+      if (options.relatedPosts !== false) {
+        ctx.registerTemplateDep("relatedPosts", {
+          load: createRelatedPostsLoader(options.relatedPosts?.limit),
+        });
+      }
+    },
+  });
+}

@@ -22,7 +22,7 @@ export default plumix({
   cache: edge({ ttl: 3600, staleWhileRevalidate: 86400 }),
   mailer: consoleMailer(),
   plugins: [
-    blog,
+    blog(),
     comments({ entryTypes: ["post"] }),
     pages,
     media(),
