@@ -48,6 +48,8 @@ Object-valued options (`labels`, `rewrite`, `versioning`) merge key by key; arra
 
 The registered names (`post`, `category`, `tag`) are fixed: they are the stored `type`/`taxonomy` column values and the keys a theme's `forEntryType("post")` matches on.
 
+Keep `rewrite.slug` to a single literal segment. Nothing validates it: a `/` breaks term feeds under the nested base, and URL-pattern syntax such as `":anything"` or `"*"` compiles into a route matching every two-segment URL on the site.
+
 ## Support
 
 Have a question? Start a [discussion](https://github.com/withplumix/plumix/discussions). Found a bug? [Open an issue](https://github.com/withplumix/plumix/issues).

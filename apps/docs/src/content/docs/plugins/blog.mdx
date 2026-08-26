@@ -213,7 +213,7 @@ Passing `false` in place of an override skips that registration entirely. `blog(
 
 The registered names — `post`, `category`, `tag` — are not overridable. They are the values stored in the `type` column on every entry and the `taxonomy` column on every term, and the keys a theme's `forEntryType("post")` matches on, so renaming one would orphan existing rows and silently stop templates matching. Change `labels` to change what the admin displays.
 
-One caveat on `rewrite.slug`: keep it to a single path segment. A slug containing `/` compiles and the archive page renders, but the feed router reads only the first segment when it matches `/<taxonomy>/<term>/feed`, so term feeds under a nested base stop resolving.
+One caveat on `rewrite.slug`: keep it to a single literal path segment. Nothing validates it, and two shapes fail quietly rather than loudly. A slug containing `/` compiles and the archive page renders, but the feed router reads only the first segment when it matches `/<taxonomy>/<term>/feed`, so term feeds under a nested base stop resolving. A slug containing URL-pattern syntax is worse: `":anything"` or `"*"` compiles into a route that matches every two-segment URL on the site, so the type silently swallows other plugins' pages.
 
 ## Capabilities it mints
 
