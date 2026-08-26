@@ -2,9 +2,20 @@ import type { PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
 import type { CardRenderer } from "./renderer.js";
+import { createCardRegistry } from "./card-registry.js";
 import { CARD_ROUTE_PATH, createCardRoute } from "./card-route.js";
+import { defaultCards } from "./default-card.js";
 import { bundledRenderer } from "./default-renderer.js";
 
+export type {
+  CardArgs,
+  CardDefinition,
+  CardRule,
+  CardSelector,
+} from "./card.js";
+export { card } from "./card.js";
+export type { CardKey } from "./card-key.js";
+export { cardKey } from "./card-key.js";
 export type {
   CardContainerNode,
   CardNode,
@@ -54,10 +65,19 @@ export interface OgPluginOptions {
  */
 export function og(options: OgPluginOptions = {}): PluginDescriptor {
   const renderer = options.renderer ?? bundledRenderer();
-  const handler = createCardRoute({ renderer, fonts: options.fonts ?? [] });
+  const cards = createCardRegistry(defaultCards);
+  const handler = createCardRoute({
+    renderer,
+    fonts: options.fonts ?? [],
+    cards,
+  });
 
   return definePlugin("og", {
     setup: (ctx) => {
+      // The theme is validated after plugins install, so its cards arrive on
+      // the boot-time handover rather than here. One snapshot serves every
+      // request — nothing about a rule set is request-scoped.
+      ctx.addAction("theme:ready", (theme) => cards.load(theme.ogCards ?? []));
       ctx.registerRoute({
         method: "GET",
         path: CARD_ROUTE_PATH,

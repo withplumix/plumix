@@ -164,6 +164,7 @@ export type {
   TemplateRender,
   TemplateRenderArgs,
 } from "./template.js";
+export { loadTemplateDeps } from "./template-deps.js";
 export type { TemplateDepLoader } from "./template-deps.js";
 export {
   defineTheme,
