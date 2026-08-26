@@ -23,6 +23,10 @@ describe("the key helpers", () => {
     expect(cardKey.of("Hello, World!").hash).toBe("hello-world");
   });
 
+  test("reduce a part that is nothing but separators", () => {
+    expect(cardKey.of("---").hash).toBe("x");
+  });
+
   test("keep two different readings off one key", () => {
     expect(cardKey.of("a-b", "c").hash).not.toBe(cardKey.of("a", "b-c").hash);
   });

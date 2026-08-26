@@ -97,12 +97,15 @@ function joinParts(parts: readonly (string | number)[]): string {
 }
 
 // A key part reaches a URL path and a cache tag, so it is reduced to the
-// characters both accept rather than escaped for each.
+// characters both accept rather than escaped for each. A part carries entry
+// content, so the trim matches one dash rather than a run: the collapse above
+// leaves no run for it to find, and `-+$` would backtrack across a title made
+// of separators.
 function slugify(value: string): string {
   return (
     value
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "x"
+      .replace(/^-|-$/g, "") || "x"
   );
 }
