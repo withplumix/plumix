@@ -93,11 +93,19 @@ describe("serveRenderedAsset", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("finds its ETag in a list, weak or strong", async () => {
-    const served = await serve();
-
+  // An entry past the first keeps the separator's optional whitespace, so the
+  // `W/` prefix is only there to strip once the tag has been trimmed. Each
+  // case below pins a different half of that: the weak forms catch stripping
+  // before the trim, the strong one catches trimming only as part of the
+  // strip, and the pair of positions catches scanning less than the whole list.
+  it.each([
+    ["strong, past the first entry", `"superseded", ${KEY_ETAG}`],
+    ["weak, past the first entry", `"superseded", W/${KEY_ETAG}`],
+    ["weak, ahead of a later entry", `W/${KEY_ETAG}, "superseded"`],
+    ["weak, packed without a space", `"superseded",W/${KEY_ETAG}`],
+  ])("finds its ETag in a list: %s", async (_form, ifNoneMatch) => {
     const revalidated = await serve({
-      request: GET({ "if-none-match": `"superseded", W/${etagOf(served)}` }),
+      request: GET({ "if-none-match": ifNoneMatch }),
     });
 
     expect(revalidated.status).toBe(304);
@@ -133,6 +141,17 @@ describe("serveRenderedAsset", () => {
 
     const response = await serve({
       request: GET({ "if-none-match": etagOf(stale) }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("card");
+  });
+
+  it("serves the bytes when its ETag is absent from the client's list", async () => {
+    const response = await serve({
+      request: GET({
+        "if-none-match": '"og%2Fsuperseded.png", W/"og%2Funrelated.png"',
+      }),
     });
 
     expect(response.status).toBe(200);
