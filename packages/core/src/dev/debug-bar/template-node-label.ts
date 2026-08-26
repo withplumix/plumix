@@ -1,4 +1,4 @@
-import type { ResolvedNode } from "../../route/render/template-hierarchy.js";
+import type { ResolvedNode } from "../../route/render/rule-resolver.js";
 
 /** Panel id + collector namespace for the template hierarchy resolution. */
 export const TEMPLATE_PANEL_ID = "template";
