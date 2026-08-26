@@ -6,17 +6,28 @@ export interface FakeRenderer {
   readonly inputs: readonly CardRenderInput[];
 }
 
+export interface FakeRendererOptions {
+  /**
+   * What the renderer declares it produces. SVG by default, which keeps the
+   * bytes readable; a suite that cares about the format the route names — or
+   * about what reaches a scraper — passes a raster type instead.
+   */
+  readonly contentType?: string;
+}
+
 /**
  * A renderer that writes the card's text into its bytes, so a suite asserts on
  * the served body rather than on the shape of the node tree behind it. Every
  * test outside `takumi.test.ts` renders through this.
  */
-export function createFakeRenderer(): FakeRenderer {
+export function createFakeRenderer(
+  options: FakeRendererOptions = {},
+): FakeRenderer {
   const inputs: CardRenderInput[] = [];
   return {
     inputs,
     renderer: {
-      contentType: "image/svg+xml",
+      contentType: options.contentType ?? "image/svg+xml",
       render: (node, input) => {
         inputs.push(input);
         const lines = collectText(node).map(

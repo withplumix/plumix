@@ -186,7 +186,15 @@ export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
         url: ctx.request.url,
         method: ctx.request.method,
       });
-      response = jsonResponse({ error: "internal_error" }, { status: 500 });
+      // Everything mounted under `/_plumix/` — a plugin route above all — lands
+      // here rather than on the public render's error path, so it gets the same
+      // dev treatment: the exception and its stack instead of an opaque code.
+      // These routes are machine-facing by default, so the page is served only
+      // to a client that actually asked for HTML — a browser opening the URL.
+      // `*/*` (a bare `fetch`) takes the JSON, which is what it can parse.
+      response =
+        devFailureResponse(ctx, error, negotiatesHtml(ctx.request)) ??
+        jsonResponse({ error: "internal_error" }, { status: 500 });
     }
     deliverTelemetrySnapshot(ctx, response.status, startedAt);
     return response;
@@ -772,77 +780,95 @@ async function renderPublicError(
     url: url.href,
     err: err instanceof Error ? err.message : String(err),
   });
-  if (acceptsHtml(ctx.request)) {
-    // Dev-only: bypass the theme entirely and serve the standalone dev error
-    // page, which shows the exception and stack and renders even when the
-    // theme is what broke. `process.env.PLUMIX_DEV` is Vite-empty in prod
-    // builds, so this branch and `renderDevErrorPage` tree-shake out —
-    // production keeps the themed 500 below, unchanged. A failing dev-page
-    // render falls through to the plain-text 500 (#1582).
-    if (process.env.PLUMIX_DEV) {
-      try {
-        // Match "how to fix" hints for the caught error via the dev-only
-        // `error_page:hints` filter (core's typed + untyped matchers, plus
-        // any plugin subscribers) and surface them above the stack.
-        const hints = collectDevErrorHints(ctx.hooks, err, ctx);
-        // The request/route/database/timeline/application sections, read from
-        // the same request-scoped collectors the debug bar uses (#1598). Dev
-        // sampling is ensured regardless of the debug bar, so these are
-        // populated even when the bar is off.
-        const context = collectDevErrorContext(ctx);
-        // Plugin-contributed panels via the dev-only `error_page:panels`
-        // filter (#1626), each rendered in isolation and shown below the
-        // context. No subscribers → an empty list and no extra sections.
-        const panels = collectDevErrorPanels(ctx.hooks, err, ctx);
-        return new Response(renderDevErrorPage(err, hints, context, panels), {
-          status: 500,
-          headers: { "content-type": "text/html; charset=utf-8" },
-        });
-      } catch (devErr) {
-        ctx.logger.error("dev_error_page_failed", {
-          url: url.href,
-          err: devErr instanceof Error ? devErr.message : String(devErr),
-        });
-      }
-    } else {
-      try {
-        const html = await renderErrorThroughTheme({
-          ctx,
-          renderEnv,
-          kind: "server-error",
-          data: {
-            kind: "error",
-            request: ctx.request,
-            errorId: ctx.requestId,
-          },
-        });
-        return new Response(html, {
-          status: 500,
-          headers: { "content-type": "text/html; charset=utf-8" },
-        });
-      } catch (templateErr) {
-        ctx.logger.error("error_template_failed", {
-          url: url.href,
-          err:
-            templateErr instanceof Error
-              ? templateErr.message
-              : String(templateErr),
-        });
-      }
+  const devResponse = devFailureResponse(ctx, err, acceptsHtml(ctx.request));
+  if (devResponse) return devResponse;
+  // Production only — every dev answer is above (#1582).
+  if (!process.env.PLUMIX_DEV && acceptsHtml(ctx.request)) {
+    try {
+      const html = await renderErrorThroughTheme({
+        ctx,
+        renderEnv,
+        kind: "server-error",
+        data: { kind: "error", request: ctx.request, errorId: ctx.requestId },
+      });
+      return new Response(html, {
+        status: 500,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    } catch (templateErr) {
+      ctx.logger.error("error_template_failed", {
+        url: url.href,
+        err:
+          templateErr instanceof Error
+            ? templateErr.message
+            : String(templateErr),
+      });
     }
-  } else if (process.env.PLUMIX_DEV) {
-    // Non-HTML request (an API/fetch call): return the exception as JSON so the
-    // caller sees what broke instead of the bare "Internal Server Error" text
-    // (#1599). Same dev gate as the HTML branch above, so it tree-shakes out.
-    return jsonResponse(
-      devErrorJson(err, collectDevErrorHints(ctx.hooks, err, ctx)),
-      { status: 500 },
-    );
   }
   return new Response("Internal Server Error", {
     status: 500,
     headers: { "content-type": "text/plain; charset=utf-8" },
   });
+}
+
+/**
+ * The dev-only answer to a caught failure: the standalone error page, which is
+ * theme-independent so it renders even when the theme is what threw, or JSON
+ * for a caller `wantsHtml` says can't use one (#1599). Null in production and
+ * when the dev page itself broke — the caller's plain 500 covers both (#1582).
+ *
+ * `process.env.PLUMIX_DEV` is Vite-empty in production builds, so this body and
+ * the dev-page renderer it reaches tree-shake out.
+ */
+function devFailureResponse(
+  ctx: AppContext,
+  err: unknown,
+  wantsHtml: boolean,
+): Response | null {
+  if (process.env.PLUMIX_DEV) {
+    if (!wantsHtml) {
+      return jsonResponse(
+        devErrorJson(err, collectDevErrorHints(ctx.hooks, err, ctx)),
+        { status: 500 },
+      );
+    }
+    try {
+      // Match "how to fix" hints for the caught error via the dev-only
+      // `error_page:hints` filter (core's typed + untyped matchers, plus any
+      // plugin subscribers) and surface them above the stack.
+      const hints = collectDevErrorHints(ctx.hooks, err, ctx);
+      // The request/route/database/timeline/application sections, read from the
+      // same request-scoped collectors the debug bar uses (#1598). Dev sampling
+      // is ensured regardless of the debug bar, so these are populated even
+      // when the bar is off.
+      const context = collectDevErrorContext(ctx);
+      // Plugin-contributed panels via the dev-only `error_page:panels` filter
+      // (#1626), each rendered in isolation and shown below the context. No
+      // subscribers → an empty list and no extra sections.
+      const panels = collectDevErrorPanels(ctx.hooks, err, ctx);
+      return new Response(renderDevErrorPage(err, hints, context, panels), {
+        status: 500,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    } catch (devErr) {
+      ctx.logger.error("dev_error_page_failed", {
+        url: ctx.request.url,
+        err: devErr instanceof Error ? devErr.message : String(devErr),
+      });
+    }
+  }
+  return null;
+}
+
+// Whether the client named HTML outright. Stricter than `acceptsHtml`: a bare
+// `fetch` sends `*/*` and gets a document it can only fail to parse, so the
+// machine-facing `/_plumix/` surface asks this question instead.
+function negotiatesHtml(request: Request): boolean {
+  const accept = request.headers.get("accept");
+  if (accept === null) return false;
+  return (
+    accept.includes("text/html") || accept.includes("application/xhtml+xml")
+  );
 }
 
 // Whether an error response should render through the theme at all. A missing

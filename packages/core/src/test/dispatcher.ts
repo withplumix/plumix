@@ -14,7 +14,7 @@ import type {
   InterfaceToggle,
   PlumixConfigInput,
 } from "../config.js";
-import type { AppContext, DeferFn } from "../context/app.js";
+import type { AppContext, DeferFn, Logger } from "../context/app.js";
 import type { TelemetryConfig } from "../context/telemetry.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type { DebugBarInput } from "../dev/debug-bar/config.js";
@@ -182,6 +182,11 @@ export interface CreateDispatcherHarnessOptions {
    * fallback.
    */
   readonly assetManifest?: AssetManifest;
+  /**
+   * Logger the request context carries. Defaults to the silent one; pass a
+   * capturing logger to assert on what a handler reported.
+   */
+  readonly logger?: Logger;
 }
 
 export interface DispatcherHarness {
@@ -233,6 +238,7 @@ export interface DispatcherHarness {
 
 function withRequest(
   app: PlumixApp,
+  logger: Logger,
   db: TestDb,
   env: PlumixEnv,
   assets: AssetsBinding | undefined,
@@ -253,7 +259,7 @@ function withRequest(
     blocks: app.blocks,
     marks: app.marks,
     shortcodes: app.shortcodes,
-    logger: silentLogger,
+    logger,
     user: user
       ? { id: user.id, email: user.email, role: user.role, meta: user.meta }
       : undefined,
@@ -326,6 +332,7 @@ export async function createDispatcherHarness(
     dispatch: async (request, user = null) => {
       const ctx = withRequest(
         app,
+        options.logger ?? silentLogger,
         db,
         env,
         assets,
@@ -344,6 +351,7 @@ export async function createDispatcherHarness(
       const request = await buildRequest(db, path, fetchOptions);
       const ctx = withRequest(
         app,
+        options.logger ?? silentLogger,
         db,
         env,
         assets,

@@ -4,20 +4,40 @@ import {
   buildResolvedEntries,
   loadTemplateDeps,
   serveRenderedAsset,
+  withBasePath,
 } from "plumix";
 import { and, eq } from "plumix/db";
-import { entries } from "plumix/schema";
+import { entries, settings } from "plumix/schema";
 
 import type { CardRegistry } from "./card-registry.js";
 import type { CardArgs } from "./card.js";
 import type { CardRenderer } from "./renderer.js";
 import { cardStorageKey } from "./card-key.js";
+import { entryCardNode } from "./card-registry.js";
 import { cardSourceHash } from "./card-source.js";
 import { OgPluginError } from "./errors.js";
 import { CARD_HEIGHT, CARD_WIDTH, extensionFor } from "./renderer.js";
+import { isShareableEntry } from "./shareable.js";
 
 /** Where the plugin mounts the route, relative to its own prefix. */
 export const CARD_ROUTE_PATH = "/entry/*";
+
+// The same path once mounted: core prefixes a plugin route with
+// `/_plumix/<pluginId>`, and the head has to name the URL the route answers on.
+const CARD_URL_PREFIX = "/_plumix/og/entry";
+
+/**
+ * One entry's card URL. Absolute, because a scraper reads it out of the page
+ * and never resolves it against anything.
+ */
+export function cardUrl(
+  ctx: AppContext,
+  id: number,
+  extension: string,
+): string {
+  const path = `${CARD_URL_PREFIX}/${String(id)}.${extension}`;
+  return `${ctx.origin}${withBasePath(path, ctx.basePath)}`;
+}
 
 // The URL names a card, not one immutable render — a retitled post keeps its
 // card URL and changes what is behind it. Freshness therefore comes from the
@@ -50,11 +70,12 @@ export function createCardRoute(
   options: CardRouteOptions,
 ): (request: Request, ctx: AppContext) => Promise<Response> {
   const { renderer, fonts, cards } = options;
+  // A format with no extension has no URL to serve a card at, so the route is
+  // decided here rather than re-asked on every request.
   const extension = extensionFor(renderer.contentType);
+  if (extension === undefined) return () => Promise.resolve(notFound());
 
   return async (request, ctx) => {
-    if (extension === undefined) return notFound();
-
     const { pathname } = new URL(request.url);
     const id = parseEntryId(
       pathname.slice(pathname.lastIndexOf("/") + 1),
@@ -81,32 +102,80 @@ export function createCardRoute(
     const width = card.width ?? CARD_WIDTH;
     const height = card.height ?? CARD_HEIGHT;
 
-    const response = await serveRenderedAsset({
-      request,
-      key: await cardStorageKey({
-        target: `entry/${String(id)}`,
-        hash: card.key(args).hash,
-        sourceHash: await cardSourceHash(card),
-        fonts,
-        width,
-        height,
-        extension,
-      }),
-      contentType: renderer.contentType,
-      cacheControl: CACHE_CONTROL,
-      storage: ctx.storage,
-      render: async () =>
-        renderer.render(card.render(args), {
+    let response: Response;
+    try {
+      response = await serveRenderedAsset({
+        request,
+        key: await cardStorageKey({
+          target: `entry/${String(id)}`,
+          hash: card.key(args).hash,
+          sourceHash: await cardSourceHash(card),
+          fonts,
           width,
           height,
-          stylesheets: card.styles ?? [],
-          fonts: await loadFonts(ctx, fonts),
-          fetch: ctx.fetch,
+          extension,
         }),
-    });
+        contentType: renderer.contentType,
+        cacheControl: CACHE_CONTROL,
+        storage: ctx.storage,
+        render: async () =>
+          renderer.render(card.render(args), {
+            width,
+            height,
+            stylesheets: card.styles ?? [],
+            fonts: await loadFonts(ctx, fonts),
+            fetch: ctx.fetch,
+          }),
+      });
+    } catch (error) {
+      ctx.logger.error("og_card_render_failed", {
+        url: ctx.request.url,
+        err: error instanceof Error ? error.message : String(error),
+      });
+      // In development the developer is the audience, not a scraper: let the
+      // throw through so it reaches the dev error page with its stack intact.
+      if (process.env.PLUMIX_DEV) throw error;
+      return siteDefaultRedirect(ctx);
+    }
     response.headers.set("content-security-policy", SANDBOX_CSP);
     return response;
   };
+}
+
+/**
+ * What a card that could not be produced answers with. The page's head shipped
+ * this URL before anything rendered and cannot take it back, so an error status
+ * would leave a promised image broken; the site's own default is the closest
+ * thing to what the page meant. Never cached — the next render may well work.
+ */
+async function siteDefaultRedirect(ctx: AppContext): Promise<Response> {
+  const fallback = await siteSetting(ctx, "default_og_image");
+  const location = fallback === undefined ? null : absolute(ctx, fallback);
+  if (location === null) return notFound();
+  return new Response(null, {
+    status: 302,
+    headers: { location, "cache-control": "no-store" },
+  });
+}
+
+// The setting holds whatever an operator typed: a full URL, or a path into the
+// site's own media. A `Location` has to be neither ambiguous nor malformed.
+function absolute(ctx: AppContext, value: string): string | null {
+  return URL.parse(value, ctx.origin)?.href ?? null;
+}
+
+async function siteSetting(
+  ctx: AppContext,
+  key: string,
+): Promise<string | undefined> {
+  const [row] = await ctx.db
+    .select({ value: settings.value })
+    .from(settings)
+    .where(and(eq(settings.group, "site"), eq(settings.key, key)))
+    .limit(1);
+  return typeof row?.value === "string" && row.value.length > 0
+    ? row.value
+    : undefined;
 }
 
 /**
@@ -114,9 +183,9 @@ export function createCardRoute(
  * adding cards costs no deployment size. The engine reads TTF, OTF and WOFF —
  * not WOFF2, which is what most font packages ship.
  *
- * A declared font that cannot be read fails the request rather than rendering
- * without it: the engine's fallback face would silently answer 200 with a card
- * nobody meant to publish.
+ * A declared font that cannot be read fails the render rather than dropping to
+ * the engine's own fallback face, which would answer 200 with a card nobody
+ * meant to publish. The failure then takes the route's fallback path.
  */
 async function loadFonts(
   ctx: AppContext,
@@ -159,27 +228,13 @@ async function resolveEntryNode(
   const [row] = await ctx.db
     .select()
     .from(entries)
-    .where(and(eq(entries.id, id), eq(entries.status, "published")))
+    .where(eq(entries.id, id))
     .limit(1);
-  if (!row) return null;
-  // A card is a public artefact: a type the site does not publish has no
-  // shareable page, so it gets no shareable image either. An unregistered type
-  // — a row left behind by a plugin the config no longer installs — has no page
-  // at all, so it is the same answer.
-  const entryType = ctx.plugins.entryTypes.get(row.type);
-  if (entryType === undefined || entryType.isPublic === false) return null;
+  if (!row || !isShareableEntry(ctx, row)) return null;
 
   const [entry] = await buildResolvedEntries(ctx, [row]);
   if (entry === undefined) return null;
-  return {
-    node: {
-      kind: "content",
-      entryType: row.type,
-      slug: row.slug,
-      databaseId: row.id,
-    },
-    data: { kind: "entry", entry },
-  };
+  return { node: entryCardNode(row), data: { kind: "entry", entry } };
 }
 
 // 15 digits max keeps the parsed value below Number.MAX_SAFE_INTEGER.

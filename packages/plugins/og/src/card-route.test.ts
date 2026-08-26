@@ -1,73 +1,11 @@
-import type { DispatcherHarness } from "plumix/test";
-import { memoryStorage } from "plumix";
 import { eq } from "plumix/db";
-import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
-import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
-import type { OgPluginOptions } from "./index.js";
-import { og } from "./index.js";
 import { createFakeRenderer } from "./test/fake-renderer.js";
+import { createHarness, seedEntry } from "./test/harness.js";
 
-// A host plugin registering one public entry type and one private one, so the
-// harness app has both a shareable page and an unshareable one.
-const testBlog = definePlugin("test_blog", {
-  setup: (ctx) => {
-    ctx.registerEntryType("post", {
-      label: "Posts",
-      isPublic: true,
-      rewrite: { slug: "posts" },
-    });
-    ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
-  },
-});
-
-interface HarnessOptions extends OgPluginOptions {
-  readonly withStorage?: boolean;
-  readonly withSiteTitle?: boolean;
-  readonly assets?: { fetch: (request: Request) => Promise<Response> };
-}
-
-async function createHarness(
-  options: HarnessOptions = {},
-): Promise<DispatcherHarness> {
-  const { withStorage = true, withSiteTitle = true, assets, ...rest } = options;
-  const harness = await createDispatcherHarness({
-    plugins: [
-      testBlog,
-      og({ renderer: createFakeRenderer().renderer, ...rest }),
-    ],
-    storage: withStorage ? memoryStorage().connect({}) : undefined,
-    assets,
-  });
-  if (withSiteTitle) {
-    await harness.factory.setting.create({
-      group: "site",
-      key: "title",
-      value: "Example Site",
-    });
-  }
-  return harness;
-}
-
-async function seedEntry(
-  harness: DispatcherHarness,
-  overrides: {
-    readonly title?: string;
-    readonly status?: "published" | "draft";
-    readonly type?: string;
-  } = {},
-): Promise<number> {
-  const author = await harness.factory.user.create({});
-  const entry = await harness.factory.entry.create({
-    type: overrides.type ?? "post",
-    title: overrides.title ?? "Hello World",
-    status: overrides.status ?? "published",
-    authorId: author.id,
-  });
-  return entry.id;
-}
+const SITE_DEFAULT = "https://cdn.example/site-default.png";
 
 describe("the card route", () => {
   test("serves a card from the default template with no theme configuration", async () => {
@@ -191,11 +129,35 @@ describe("the card route", () => {
     (await harness.fetch(path)).assertStatus(404);
   });
 
+  test("names the format the renderer produces in the URL it serves", async () => {
+    const harness = await createHarness({
+      renderer: createFakeRenderer({ contentType: "image/jpeg" }).renderer,
+    });
+    const id = await seedEntry(harness);
+
+    const served = await harness.fetch(`/_plumix/og/entry/${String(id)}.jpg`);
+
+    expect(served.assertStatus(200).headers.get("content-type")).toBe(
+      "image/jpeg",
+    );
+  });
+
   test("answers 404 for an extension the renderer does not produce", async () => {
     const harness = await createHarness();
     const id = await seedEntry(harness);
 
     (await harness.fetch(`/_plumix/og/entry/${String(id)}.png`)).assertStatus(
+      404,
+    );
+  });
+
+  test("answers 404 for a format that has no URL to serve a card at", async () => {
+    const harness = await createHarness({
+      renderer: createFakeRenderer({ contentType: "image/avif" }).renderer,
+    });
+    const id = await seedEntry(harness);
+
+    (await harness.fetch(`/_plumix/og/entry/${String(id)}.avif`)).assertStatus(
       404,
     );
   });
@@ -222,26 +184,73 @@ describe("the card route", () => {
     expect(fake.inputs[0]?.fonts).toEqual([face]);
   });
 
-  test("fails loudly when a declared font is missing from the asset layer", async () => {
+  test("hands a failed render to the site default, and says what broke", async () => {
+    const logged: { message: string; meta?: unknown }[] = [];
     const harness = await createHarness({
       fonts: ["/fonts/absent.ttf"],
       assets: {
         fetch: () => Promise.resolve(new Response(null, { status: 404 })),
       },
+      siteDefaultImage: SITE_DEFAULT,
+      logger: {
+        debug: () => undefined,
+        info: () => undefined,
+        warn: () => undefined,
+        error: (message, meta) => logged.push({ message, meta }),
+      },
     });
     const id = await seedEntry(harness);
 
-    (await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`)).assertStatus(
-      500,
+    const response = await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`);
+
+    // The head shipped this URL before anything rendered, so an error status
+    // here is a broken unfurl on a page that promised an image. The scraper
+    // gets the site's own default instead — and the failure still surfaces,
+    // because nothing else about the response says a card is broken.
+    expect(response.assertStatus(302).headers.get("location")).toBe(
+      SITE_DEFAULT,
     );
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(logged).toHaveLength(1);
+    expect(logged[0]?.message).toBe("og_card_render_failed");
   });
 
-  test("fails loudly when fonts are declared on a runtime with no asset layer", async () => {
+  test("surfaces a failed render on the dev error page instead", async () => {
+    const original = process.env.PLUMIX_DEV;
+    process.env.PLUMIX_DEV = "1";
+    try {
+      const harness = await createHarness({
+        fonts: ["/fonts/absent.ttf"],
+        assets: {
+          fetch: () => Promise.resolve(new Response(null, { status: 404 })),
+        },
+        siteDefaultImage: SITE_DEFAULT,
+      });
+      const id = await seedEntry(harness);
+
+      // What a developer opening the card URL in a browser sends.
+      const response = await harness.fetch(
+        `/_plumix/og/entry/${String(id)}.svg`,
+        { headers: { accept: "text/html" } },
+      );
+
+      // A developer is the one looking at a card during development, and the
+      // site default would hide the broken one behind something that works.
+      const body = await response.assertStatus(500).text();
+      expect(body).toContain("plumix-dev-error");
+      expect(body).toContain("/fonts/absent.ttf");
+    } finally {
+      if (original === undefined) delete process.env.PLUMIX_DEV;
+      else process.env.PLUMIX_DEV = original;
+    }
+  });
+
+  test("answers 404 for a failed render on a site with no default", async () => {
     const harness = await createHarness({ fonts: ["/fonts/Inter.ttf"] });
     const id = await seedEntry(harness);
 
     (await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`)).assertStatus(
-      500,
+      404,
     );
   });
 

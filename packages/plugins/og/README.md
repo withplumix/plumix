@@ -24,11 +24,17 @@ export default plumix({
 
 ## What you get
 
-- **A card per published entry**, at `/_plumix/og/entry/<id>.<ext>` — the extension is whatever the connected renderer produces, `.svg` by default. It is composited from a bundled default template: the entry's title over your site's name.
-- **A card you can look at today.** The plugin serves the route; it does not yet write the URL into a page's `og:image`, so cards are not advertised to scrapers until that lands. Output is SVG for the same reason — it is viewable in a browser, and no scraper would accept it.
+- **A card per published entry**, at `/_plumix/og/entry/<id>.<ext>` — PNG by default, and the extension always names what the renderer produces. It is composited from a bundled default template: the entry's title over your site's name.
+- **Share a link and the card is what appears.** The entry's page carries the card as its `og:image`, with `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. An author's own `.ogImage()` or `.featured()` image still wins; the card only outranks the site-wide default.
 - **Render once, serve cheaply** — a card is rendered on the first request, written to your storage bucket, and read back after that. A matching `If-None-Match` answers `304`.
-- **A renderer you can swap.** `renderer:` takes the bundled engine (`takumi()`), the same engine's SVG output (`svgOnly()`), or `remote({ url })` to render off-box.
+- **A renderer you can swap.** `renderer:` takes the bundled engine (`takumi()`, or `takumi({ format: "jpeg" })` for a photo-heavy design), the same engine's SVG output (`svgOnly()`), or `remote({ url })` to render off-box.
 - **Cards your theme designs**, declared beside its templates — see below.
+
+## When a card cannot be advertised
+
+A card reaches a page's head only when the connected renderer produces a format scrapers render — PNG or JPEG, the intersection of what X, Facebook and LinkedIn all document. Anything else still serves its route, so you can build and look at your cards with no rasterizer in play, but the head falls through to your site-wide default: an SVG `og:image` unfurls as nothing at all, and WebP unfurls inconsistently, both worse than a generic image that works everywhere.
+
+A render that throws is the same story from the other end: the page already shipped the card's URL and cannot take it back, so the route redirects to your site default and logs what broke rather than answering an error a scraper would render as a hole. In development it stops at the dev error page instead, with the stack.
 
 ## Cards your theme declares
 

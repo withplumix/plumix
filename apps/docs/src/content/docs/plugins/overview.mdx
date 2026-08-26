@@ -22,7 +22,7 @@ Seven plugins ship under the `@plumix/plugin-*` scope. A scaffolded project inst
 - `@plumix/plugin-menu` registers navigation menus and the named locations a theme renders them into.
 - `@plumix/plugin-comments` adds threaded, moderated discussion to the entry types you nominate.
 - `@plumix/plugin-audit-log` records an activity feed and adds an `audit` helper to the request context.
-- `@plumix/plugin-og` renders a social card per published entry and serves it from a route of its own.
+- `@plumix/plugin-og` renders a social card per published entry, serves it from a route of its own, and carries it into the page's `og:image`.
 
 The registration context a plugin receives is the same one your own plugin receives, and it is wide. Entry types and taxonomies, meta boxes on entries, terms and users, blocks, marks, shortcodes and patterns, field types, settings groups and pages, RPC routers, REST resources, raw routes, rewrite rules, redirects, archive types, MCP tools, scheduled tasks, capabilities, admin pages, dashboard widgets, login links, lookup adapters, template deps, filters and actions all arrive through the same `ctx`. A package that registers one shortcode installs exactly like a package that registers six entry types.
 

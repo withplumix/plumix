@@ -6,6 +6,8 @@ import { createCardRegistry } from "./card-registry.js";
 import { CARD_ROUTE_PATH, createCardRoute } from "./card-route.js";
 import { defaultCards } from "./default-card.js";
 import { bundledRenderer } from "./default-renderer.js";
+import { cardImage } from "./head.js";
+import { advertisedExtension } from "./renderer.js";
 
 export type {
   CardArgs,
@@ -29,8 +31,11 @@ export { remote } from "./remote.js";
 export interface OgPluginOptions {
   /**
    * How a card's node tree becomes bytes. Defaults to the engine bundled with
-   * this package; `svgOnly()` and `takumi()` on the `/takumi` subpath and
-   * {@link remote} are the shipped alternatives.
+   * this package, rasterizing to PNG; `takumi({ format: "jpeg" })` and
+   * `svgOnly()` on the `/takumi` subpath and {@link remote} are the shipped
+   * alternatives. Only PNG and JPEG reach a page's head — what X, Facebook and
+   * LinkedIn all render. Any other format still gets its route, so a card is
+   * viewable while you build it, but the head keeps the site-wide default.
    *
    * Selecting one does not shrink the deploy: the default is resolved inside
    * this package, so the engine is part of the install either way, and the
@@ -71,6 +76,9 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
     fonts: options.fonts ?? [],
     cards,
   });
+  // Advertising is decided by what the renderer declares it produces, not by a
+  // flag of its own.
+  const advertised = advertisedExtension(renderer.contentType);
 
   return definePlugin("og", {
     setup: (ctx) => {
@@ -84,6 +92,18 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
         auth: "public",
         handler,
       });
+      if (advertised === undefined) return;
+      // One link below an author's own `.ogImage()` / `.featured()` choice and
+      // one above the site-wide default, which is where a generated card
+      // belongs: it beats a generic image and never overrides a deliberate one.
+      // Hence `image ??` first — a value already on the chain is another
+      // contributor's deliberate choice, and a generated card does not outrank
+      // it however the `plugins: []` array happened to be ordered.
+      ctx.addFilter(
+        "seo:og_image",
+        (image, data, appCtx) =>
+          image ?? cardImage(data, appCtx, advertised, cards),
+      );
     },
   });
 }
