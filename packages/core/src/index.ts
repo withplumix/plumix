@@ -37,7 +37,7 @@ export type {
   RedirectStatus,
   RedirectTarget,
 } from "./route/redirects.js";
-export type { ResolvedNode } from "./route/render/template-hierarchy.js";
+export type { ResolvedNode } from "./route/render/rule-resolver.js";
 export * from "./rpc/index.js";
 export type * from "./runtime/adapter.js";
 export { buildApp } from "./runtime/app.js";
@@ -128,6 +128,7 @@ export type {
   UserMetaContributions,
   UserMetaOf,
 } from "./plugin/fields/contributions.js";
+export { resolveErrorRule, resolveRule } from "./route/render/rule-resolver.js";
 export {
   resolveErrorTemplate,
   resolveTemplate,
@@ -179,5 +180,6 @@ export type {
   TemplateEntry,
   TemplateRule,
   ThemeDescriptor,
+  TierMatchRule,
 } from "./theme.js";
 export { ThemeError, ThemeRegistrationError } from "./theme-errors.js";

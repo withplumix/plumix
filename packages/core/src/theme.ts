@@ -138,14 +138,23 @@ export interface TargetMatcher {
 }
 
 /**
+ * The part of a rule that resolution reads: a generic `tier` or a targeted
+ * `match` — exactly one, as the builders never produce both. Payload-free, so
+ * any rule kind declared against the node hierarchy resolves through the one
+ * `resolveRule` instead of carrying its own copy of the precedence walk.
+ */
+export interface TierMatchRule {
+  readonly tier?: GenericTier;
+  readonly match?: TargetMatcher;
+}
+
+/**
  * One entry in a theme's `templates` array: a template bound to either a
  * generic `tier` or a targeted `match`. Exactly one is set — the builders never
  * produce both.
  */
-export interface TemplateRule {
+export interface TemplateRule extends TierMatchRule {
   readonly template: TemplateEntry<TemplateData>;
-  readonly tier?: GenericTier;
-  readonly match?: TargetMatcher;
 }
 
 /**

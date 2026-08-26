@@ -33,7 +33,8 @@ import type { EditModeDecision } from "../edit-mode.js";
 import type { AssetManifest, ViteCommand } from "./asset-manifest.js";
 import type { RenderEnv } from "./render-env.js";
 import type { ErrorData } from "./resolved-entry.js";
-import type { ResolvedNode, TemplateResolution } from "./template-hierarchy.js";
+import type { ResolvedNode } from "./rule-resolver.js";
+import type { TemplateResolution } from "./template-hierarchy.js";
 import { PlumixAdminBar } from "../../admin-bar/component.js";
 import { PlumixDebugBar } from "../../dev/debug-bar/component.js";
 import {
@@ -59,12 +60,12 @@ import {
 } from "./asset-manifest.js";
 import { injectEditorBootstrap } from "./inject-editor-bootstrap.js";
 import { injectIslandsBootstrap } from "./inject-islands-bootstrap.js";
+import { ruleLabel } from "./rule-resolver.js";
 import { templateRules } from "./template-builders.js";
 import {
   explainTemplateResolution,
   resolveErrorTemplate,
   resolveTemplate,
-  ruleLabel,
 } from "./template-hierarchy.js";
 
 declare module "../../hooks/types.js" {

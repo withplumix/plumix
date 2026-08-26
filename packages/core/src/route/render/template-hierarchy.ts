@@ -1,206 +1,44 @@
 /**
- * Template resolution for the array-based `templates`. `resolveTemplate` walks a
- * theme's rules — targeted matchers (`forEntryType`/`forTermTaxonomy`) in
- * declaration order, then the generic tier for the node's kind, then the
- * universal `fallback`. `resolveErrorTemplate` looks up the 404/500 tiers.
- *
- * The `ResolvedNode` shapes carry the identity the resolver matches on (kind +
- * type + slug/id).
+ * The template binding of the shared tier/matcher resolution in
+ * `rule-resolver.ts`: `resolveTemplate` / `resolveErrorTemplate` pin that
+ * resolver to `TemplateRule`, and `explainTemplateResolution` replays the walk
+ * for the debug bar.
  */
 
-import type {
-  GenericTier,
-  TargetMatcher,
-  TemplateData,
-  TemplateRule,
-} from "../../theme.js";
+import type { TemplateData, TemplateRule } from "../../theme.js";
+import type { ResolvedNode } from "./rule-resolver.js";
+import {
+  matchesIdentity,
+  resolveErrorRule,
+  resolveRule,
+  ruleLabel,
+} from "./rule-resolver.js";
 
-export type ResolvedNode =
-  | ResolvedTermNode
-  | ResolvedContentNode
-  | ResolvedContentTypeArchive
-  | ResolvedAuthorNode
-  | ResolvedDateNode
-  | ResolvedCustomNode
-  | ResolvedFrontPage
-  | ResolvedSearch;
-
-interface ResolvedTermNode {
-  readonly kind: "term";
-  readonly taxonomy: string;
-  readonly slug: string;
-  readonly databaseId: number;
-}
-
-interface ResolvedAuthorNode {
-  readonly kind: "author";
-  readonly slug: string;
-  readonly databaseId: number;
-}
-
-interface ResolvedDateNode {
-  readonly kind: "date";
-  readonly year: number;
-  readonly month: number | null;
-  readonly day: number | null;
-}
-
-interface ResolvedCustomNode {
-  readonly kind: "custom";
-  /** The registered archive-type name (`registerArchiveType`). */
-  readonly name: string;
-}
-
-interface ResolvedContentNode {
-  readonly kind: "content";
-  readonly entryType: string;
-  readonly slug: string;
-  readonly databaseId: number;
-}
-
-interface ResolvedContentTypeArchive {
-  readonly kind: "content-type-archive";
-  readonly entryType: string;
-}
-
-interface ResolvedFrontPage {
-  readonly kind: "front-page";
-}
-
-interface ResolvedSearch {
-  readonly kind: "search";
-}
-
-// Maps each resolved-node kind to the generic tier that renders it. `fallback`
-// (universal) and the `notFound`/`serverError` handlers are not node-matched —
-// the former is the terminal, the latter fire on a condition, not a node.
-const GENERIC_TIER_FOR_NODE: Record<ResolvedNode["kind"], GenericTier> = {
-  content: "entry",
-  "content-type-archive": "archive",
-  term: "taxonomy",
-  author: "author",
-  date: "date",
-  // Plugin archives have no dedicated generic tier — they template via a
-  // `forArchiveType(name)` targeted rule, else the universal `fallback`.
-  custom: "fallback",
-  "front-page": "frontPage",
-  search: "search",
-};
+export type { ResolvedNode } from "./rule-resolver.js";
+export { ruleLabel } from "./rule-resolver.js";
 
 /**
- * The identity part of a match: node kind + type name, then the optional
- * `slug`/`id` narrowing — an unset selector matches any.
- */
-function matchesIdentity(match: TargetMatcher, node: ResolvedNode): boolean {
-  if (match.nodeKind !== node.kind) return false;
-  switch (node.kind) {
-    case "content-type-archive":
-      return match.type === node.entryType;
-    case "content":
-      return (
-        match.type === node.entryType &&
-        (match.slug === undefined || match.slug === node.slug) &&
-        (match.id === undefined || match.id === node.databaseId)
-      );
-    case "term":
-      return (
-        match.type === node.taxonomy &&
-        (match.slug === undefined || match.slug === node.slug) &&
-        (match.id === undefined || match.id === node.databaseId)
-      );
-    case "author":
-      // Author matchers carry a fixed `type` of "author"; identity narrows by
-      // slug/id like a term.
-      return (
-        match.type === "author" &&
-        (match.slug === undefined || match.slug === node.slug) &&
-        (match.id === undefined || match.id === node.databaseId)
-      );
-    case "date":
-      // Date matchers carry a fixed `type` of "date" and match one exact
-      // granularity: an unset component (`forDate(2026)` has no month/day)
-      // requires the node's component to be null, so a year matcher matches the
-      // year archive only, not that year's month/day archives.
-      return (
-        match.type === "date" &&
-        match.year === node.year &&
-        (match.month ?? null) === node.month &&
-        (match.day ?? null) === node.day
-      );
-    case "custom":
-      // A `forArchiveType(name)` matcher carries the archive-type name as `type`.
-      return match.type === node.name;
-    default:
-      return false;
-  }
-}
-
-/**
- * Does a targeted matcher apply? Identity first, then the optional data
- * predicate (`whereMeta`/`where`/`named`) — which needs the resolved data, so a
- * predicate rule never matches when `data` is absent.
- */
-function matchesNode(
-  match: TargetMatcher,
-  node: ResolvedNode,
-  data: TemplateData | undefined,
-): boolean {
-  if (!matchesIdentity(match, node)) return false;
-  if (match.predicate === undefined) return true;
-  return data !== undefined && match.predicate(data);
-}
-
-/**
- * Resolve a node to its template rule from a theme's `templates` array:
- * (1) targeted rules (`forEntryType`/`forTermTaxonomy`, incl. `whereMeta`/`where`/
- * `named` predicates) in declaration order, first match wins; (2) the generic
- * tier for the node's kind; (3) the universal `fallback`. Returns `undefined`
- * when nothing matches — the caller then renders the `notFound` (404) template.
- * `data` is required for predicate rules to match.
+ * {@link resolveRule} at `TemplateRule`: resolve a node to its template from a
+ * theme's `templates` array. Returns `undefined` when nothing matches — the
+ * caller then renders the `notFound` (404) template.
  */
 export function resolveTemplate(
   rules: readonly TemplateRule[],
   node: ResolvedNode,
   data?: TemplateData,
 ): TemplateRule | undefined {
-  for (const rule of rules) {
-    if (rule.match !== undefined && matchesNode(rule.match, node, data)) {
-      return rule;
-    }
-  }
-  const tier = GENERIC_TIER_FOR_NODE[node.kind];
-  return (
-    rules.find((r) => r.tier === tier) ??
-    rules.find((r) => r.tier === "fallback")
-  );
+  return resolveRule(rules, node, data);
 }
 
 /**
- * Look up an error-tier template (`notFound` → 404, `serverError` → 500).
- * Separate from `resolveTemplate` because error pages are triggered by a
- * condition (no match, or a render throw), not by a resolved node.
+ * {@link resolveErrorRule} at `TemplateRule`: the `notFound` (404) and
+ * `serverError` (500) templates.
  */
 export function resolveErrorTemplate(
   rules: readonly TemplateRule[],
   tier: "notFound" | "serverError",
 ): TemplateRule | undefined {
-  return rules.find((r) => r.tier === tier);
-}
-
-/**
- * A short human label for a rule — its tier, or (for a targeted rule) the type
- * plus any `:slug` / `#id` narrowing. Used by the debug bar and as the
- * normalize-error slot name.
- */
-export function ruleLabel(rule: TemplateRule): string {
-  if (rule.tier !== undefined) return rule.tier;
-  const m = rule.match;
-  if (m === undefined) return "?";
-  let sel = "";
-  if (m.slug !== undefined) sel = `:${m.slug}`;
-  else if (m.id !== undefined) sel = `#${m.id}`;
-  const prefix = m.nodeKind === "content-type-archive" ? "archive:" : "";
-  return `${prefix}${m.type}${sel}`;
+  return resolveErrorRule(rules, tier);
 }
 
 /** What happened to a rule during resolution. */
@@ -242,7 +80,7 @@ export type TemplateResolution = ResolutionTrace &
  * Replay `resolveTemplate` and classify every rule for the debug bar: which one
  * won, which targeted rules were evaluated-but-skipped (with their predicate
  * result), and which were never reached because an earlier zone already won.
- * Dev-only — `resolveTemplate` stays allocation-free on the render hot path.
+ * Dev-only — `resolveRule` stays allocation-free on the render hot path.
  */
 export function explainTemplateResolution(
   rules: readonly TemplateRule[],
