@@ -112,8 +112,7 @@ export function segmentCacheKey(request: Request, segment: Segment): Request {
 /**
  * The cache-key request for a plugin route that opted into the edge cache: its
  * own URL, query string included, with the cookie dropped so every visitor
- * collapses onto one entry. There is no segment axis — the opt-in already
- * claimed one document for everyone.
+ * collapses onto one entry.
  */
 export function routeCacheKey(request: Request): Request {
   const keyed = new Request(request);
@@ -121,10 +120,7 @@ export function routeCacheKey(request: Request): Request {
   return keyed;
 }
 
-/**
- * Whether the method may reach the cache at all: a write's response answers
- * that one caller, so it is never a document to share or to serve from a store.
- */
+/** Whether the method may reach the cache at all. */
 export function methodIsCacheable(method: string): boolean {
   return method === "GET" || method === "HEAD";
 }
@@ -163,12 +159,12 @@ export function cacheBypassReason(
 export function responseAllowsSharedStorage(response: Response): boolean {
   const declared = response.headers.get("cache-control");
   if (declared === null) return true;
-  // The directive name is the token before any argument: `private` may carry
-  // the field list it covers (`private="set-cookie"`).
-  const names = declared
-    .split(",")
-    .map((directive) => directive.split("=")[0]?.trim().toLowerCase());
-  return !names.includes("private") && !names.includes("no-store");
+  return !declared.split(",").some((directive) => {
+    // The directive name is the token before any argument: `private` may carry
+    // the field list it covers (`private="set-cookie"`).
+    const name = directive.split("=")[0]?.trim().toLowerCase();
+    return name === "private" || name === "no-store";
+  });
 }
 
 /**

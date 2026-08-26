@@ -243,21 +243,22 @@ export interface PluginSetupContextBase {
    *  handler emits locale-bearing HTML, set `Vary: Cookie, Accept-Language`
    *  yourself — the dispatcher can't infer it from `ctx`.
    *
-   *  `cacheable: true` opts the route into the edge cache: a GET (or HEAD)
-   *  request is answered from the entry stored under its URL, so the handler
-   *  runs once per URL rather than once per request; any other method
-   *  dispatches live. Take it only where the route answers every visitor with
-   *  the same document — the entry is keyed with the cookie dropped, so a
-   *  signed-in visitor and a locale-varying response share it too, and
-   *  registering it on a route that isn't `auth: "public"` throws. The whole
-   *  URL is the key, query string included, so any parameter a caller invents
-   *  is another entry.
+   *  `cacheable: true` opts the route into the edge cache: a GET is answered
+   *  from the entry stored under its URL, so the handler runs once per URL
+   *  rather than once per request; every other method runs the handler. Take
+   *  it only where the route answers every visitor with the same document. The
+   *  whole URL is the key — query string included, so any parameter a caller
+   *  invents is another entry — and nothing else is: the cookie is dropped, a
+   *  `Vary` the handler sets is not a key axis here, and registering the
+   *  opt-in on a route that isn't `auth: "public"` throws.
    *
    *  Freshness is the handler's: it keeps a `cache-control` it set, and a
-   *  response that set none takes the site's page TTL. Nothing is stored under
-   *  a `private` or `no-store` response — that is how a handler keeps one
-   *  personalized answer out of a shared entry — and nothing purges a route
-   *  entry, so `immutable` belongs only on a content-addressed URL. */
+   *  response that set none takes the site's page TTL. Nothing purges a route
+   *  entry, so `immutable` belongs only on a content-addressed URL. A response
+   *  answering a request that carried a session, an `Authorization` header or
+   *  a `?preview=` token is never stored, nor is one that sets a cookie or
+   *  declares itself `private` / `no-store` — that last is how a handler keeps
+   *  one personalized answer out of the shared entry. */
   registerRoute(options: {
     readonly method: PluginRouteMethod;
     readonly path: string;

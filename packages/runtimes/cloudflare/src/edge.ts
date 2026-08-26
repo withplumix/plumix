@@ -53,10 +53,9 @@ function pageCacheControl(config: EdgeConfig): string {
 // page uncacheable.
 function storageCacheControl(response: Response, config: EdgeConfig): string {
   const declared = response.headers.get("cache-control");
-  if (declared === null || !responseAllowsSharedStorage(response)) {
-    return pageCacheControl(config);
-  }
-  return declared;
+  if (declared !== null && responseAllowsSharedStorage(response))
+    return declared;
+  return pageCacheControl(config);
 }
 
 // Clone with the storage cache-control + cache tags applied and any Set-Cookie

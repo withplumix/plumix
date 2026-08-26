@@ -1778,6 +1778,44 @@ describe("dispatcher — plugin-route edge cache (#1959)", () => {
     expect(await response.text()).toBe("CACHED");
   });
 
+  test("a write method through a cacheable route runs the handler live", async () => {
+    const { cache, match, put } = cacheStub(
+      new Response("CACHED", { status: 200 }),
+    );
+    // `method: "*"` is the only registration that lets a non-GET reach an
+    // opted-in route at all.
+    const anyMethod = definePlugin("og", (ctx) => {
+      ctx.registerRoute({
+        method: "*",
+        path: "/card/*",
+        auth: "public",
+        cacheable: true,
+        handler: () => new Response("REBUILT", { status: 200 }),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [anyMethod], cache });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/og/card/abc.png", { method: "POST" }),
+    );
+    await h.drainDeferred();
+
+    expect(await response.text()).toBe("REBUILT");
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  test("an opted-in route runs live when the deploy bound no cache", async () => {
+    const h = await createDispatcherHarness({ plugins: [cards] });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("PNG");
+  });
+
   test("a route that did not opt in never touches the cache", async () => {
     const { cache, match, put } = cacheStub(
       new Response("CACHED", { status: 200 }),

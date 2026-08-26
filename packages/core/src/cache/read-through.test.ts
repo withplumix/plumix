@@ -247,15 +247,17 @@ describe("readThroughRoute", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it("keys the entry off the URL with the visitor's cookie dropped", async () => {
+  it("looks up and stores under one key, the visitor's cookie dropped", async () => {
     const { cache, match, put } = spies();
     const render = vi.fn(() =>
       Promise.resolve(new Response("card", { status: 200 })),
     );
 
     await readThroughRoute({
+      // A cookie that isn't a session — this visitor is not privileged, so the
+      // render is storable, and the entry it fills is the one everyone reads.
       request: new Request("https://site.test/_plumix/og/card/abc.png", {
-        headers: { cookie: "plumix_session=alice" },
+        headers: { cookie: "plumix_locale=fr" },
       }),
       cache,
       defer: immediateDefer,
@@ -335,20 +337,35 @@ describe("readThroughRoute", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it("does not store a non-200 render", async () => {
+  it.each([
+    [
+      "the request was privileged",
+      new Request("https://site.test/_plumix/og/card/abc.png", {
+        headers: { authorization: "Bearer token" },
+      }),
+      new Response("card", { status: 200 }),
+    ],
+    [
+      "the response sets a cookie",
+      GET("https://site.test/_plumix/og/card/abc.png"),
+      new Response("card", {
+        status: 200,
+        headers: { "set-cookie": "csrf=abc" },
+      }),
+    ],
+  ])("serves but does not store when %s", async (_case, request, fresh) => {
     const { cache, match, put } = spies();
-    const render = vi.fn(() =>
-      Promise.resolve(new Response("nope", { status: 404 })),
-    );
+    const render = vi.fn(() => Promise.resolve(fresh));
 
-    await readThroughRoute({
-      request: GET("https://site.test/_plumix/og/card/missing.png"),
+    const result = await readThroughRoute({
+      request,
       cache,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
     });
 
+    expect(result).toBe(fresh);
     expect(match).toHaveBeenCalledOnce();
     expect(put).not.toHaveBeenCalled();
   });

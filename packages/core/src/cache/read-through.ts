@@ -6,6 +6,7 @@ import type { ConnectedCache } from "../runtime/slots.js";
 import {
   cacheBypassReason,
   methodIsCacheable,
+  requestIsPrivileged,
   responseAllowsSharedStorage,
   responseIsStorable,
   routeCacheKey,
@@ -90,7 +91,7 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
   });
 }
 
-interface RouteReadThroughArgs {
+interface ReadThroughRouteArgs {
   readonly request: Request;
   readonly cache: ConnectedCache;
   readonly defer: DeferFn;
@@ -108,13 +109,11 @@ interface RouteReadThroughArgs {
  * the URL with the cookie dropped and a signed-in visitor shares it rather than
  * bypassing it. Freshness stays the handler's to declare: the provider keeps a
  * `cache-control` it set and falls back to the site's page TTL only when it set
- * none, and a response that declared itself unshareable is not stored at all.
- *
- * Nothing tags the entry — core can't name what a raw route's response depends
- * on — so what expires it is that freshness, never a purge.
+ * none. Nothing tags the entry — core can't name what a raw route's response
+ * depends on — so what expires it is that freshness, never a purge.
  */
 export async function readThroughRoute(
-  args: RouteReadThroughArgs,
+  args: ReadThroughRouteArgs,
 ): Promise<Response> {
   const { request, cache, defer, telemetry, render } = args;
 
@@ -130,10 +129,23 @@ export async function readThroughRoute(
     telemetry,
     fact: {},
     tags: () => [],
-    // The opt-in speaks for the route; this response speaks for itself.
-    storable: responseAllowsSharedStorage,
+    storable: (fresh) => routeResponseIsShareable(request, fresh),
     render,
   });
+}
+
+// The opt-in speaks for the route; each response still speaks for itself, and
+// the entry it would fill is untagged — no purge reaches a mistake. So a
+// response that came out for one visitor stays out of the store: `auth:
+// "public"` only means *core* doesn't gate the route, and a handler checking a
+// bearer token core knows nothing about is exactly the shape at risk. A
+// `Set-Cookie` says the same thing (the provider would strip it, leaving later
+// visitors a body whose cookie went missing), as does a `private`/`no-store`
+// the provider would otherwise overwrite with the page TTL.
+function routeResponseIsShareable(request: Request, fresh: Response): boolean {
+  if (requestIsPrivileged(request)) return false;
+  if (fresh.headers.has("set-cookie")) return false;
+  return responseAllowsSharedStorage(fresh);
 }
 
 interface LookupArgs {
@@ -142,7 +154,11 @@ interface LookupArgs {
   readonly cache: ConnectedCache;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
-  /** Fields stamped on every `cache` record this lookup emits. */
+  /**
+   * Spread into every `cache` record this lookup emits. A bag rather than a
+   * field because the route path has no segment at all, and a `segment:
+   * undefined` key is not a `JsonValue`.
+   */
   readonly fact: { readonly segment?: Segment };
   readonly render: () => Promise<Response>;
   readonly tags: () => readonly string[];

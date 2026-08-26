@@ -909,10 +909,8 @@ export function matchPluginRawRoute(
   return null;
 }
 
-// A raw route reaches the edge cache only on its own `cacheable: true` opt-in,
-// and only where the deploy bound a cache. Core can't know what a plugin
-// handler depends on, so the opt-in is the plugin's claim that the route
-// answers every visitor with one shared document.
+// A raw route reaches the edge cache on its own `cacheable: true` opt-in, and
+// only where the deploy bound a cache.
 function dispatchPluginRawRoute(
   route: RegisteredRawRoute,
   ctx: AppContext,
