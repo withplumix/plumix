@@ -34,6 +34,8 @@ export default plumix({
 
 A card reaches a page's head only when the connected renderer produces a format scrapers render — PNG or JPEG, the intersection of what X, Facebook and LinkedIn all document. Anything else still serves its route, so you can build and look at your cards with no rasterizer in play, but the head falls through to your site-wide default: an SVG `og:image` unfurls as nothing at all, and WebP unfurls inconsistently, both worse than a generic image that works everywhere.
 
+An entry the access layer keeps from an anonymous visitor gets no card either, and its route answers `404`. A card carries the entry's title, sits at a sequential id anyone can walk, and is served from a shared cache, so it is refused on the same terms its page is — asked of a scraper carrying no session, whoever happens to be reading. A _soft_ gate is the exception on purpose: its page serves a public teaser at 200, so the teaser unfurls with a card like any other page.
+
 A render that throws is the same story from the other end: the page already shipped the card's URL and cannot take it back, so the route redirects to your site default and logs what broke rather than answering an error a scraper would render as a hole. In development it stops at the dev error page instead, with the stack.
 
 ## Cards your theme declares

@@ -1,3 +1,4 @@
+import { ACCESS_POLICY_META_KEY } from "plumix";
 import { definePlugin } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
@@ -103,6 +104,73 @@ describe("the card in the page head", () => {
     // lays out a box the bytes do not fill.
     expect(html).toContain('<meta property="og:image:width" content="1600"/>');
     expect(html).toContain('<meta property="og:image:height" content="900"/>');
+  });
+
+  test("advertises no card for an entry a scraper could not reach", async () => {
+    const harness = await createHarness({
+      renderer: createFakeRenderer(RASTER).renderer,
+      siteDefaultImage: SITE_DEFAULT,
+    });
+    await seedEntry(harness, { type: "gated", slug: "locked" });
+    const member = await harness.seedUser("subscriber");
+
+    // The page renders — for this visitor. The URL its head would advertise is
+    // fetched by a scraper carrying no session, and the gate turns that away,
+    // so the head must not name it however privileged the reader is.
+    const response = await harness.dispatch(
+      new Request("https://cms.example/gated/locked"),
+      member,
+    );
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(html).toContain(
+      `<meta property="og:image" content="${SITE_DEFAULT}"/>`,
+    );
+    expect(html).not.toContain("/_plumix/og/entry/");
+  });
+
+  test("advertises no card for an entry that gated itself", async () => {
+    const harness = await createHarness({
+      renderer: createFakeRenderer(RASTER).renderer,
+      siteDefaultImage: SITE_DEFAULT,
+    });
+    await seedEntry(harness, {
+      type: "column",
+      slug: "locked",
+      meta: { [ACCESS_POLICY_META_KEY]: "members" },
+    });
+    const member = await harness.seedUser("subscriber");
+
+    const response = await harness.dispatch(
+      new Request("https://cms.example/column/locked"),
+      member,
+    );
+    const html = await response.text();
+
+    // The status matters: an empty body from a redirect would satisfy the
+    // assertion below without the page ever having rendered.
+    expect(response.status).toBe(200);
+    expect(html).toContain(
+      `<meta property="og:image" content="${SITE_DEFAULT}"/>`,
+    );
+    expect(html).not.toContain("/_plumix/og/entry/");
+  });
+
+  test("advertises a card for an entry behind a soft gate", async () => {
+    const harness = await createHarness({
+      renderer: createFakeRenderer(RASTER).renderer,
+      siteDefaultImage: SITE_DEFAULT,
+    });
+    const id = await seedEntry(harness, { type: "teaser", slug: "preview" });
+
+    const html = await (await harness.fetch("/teaser/preview")).text();
+
+    // The teaser is a public document at the plain URL, so it unfurls — and the
+    // route the head names answers the anonymous scraper that follows it.
+    const url = `https://cms.example/_plumix/og/entry/${String(id)}.png`;
+    expect(html).toContain(`<meta property="og:image" content="${url}"/>`);
+    (await harness.fetch(new URL(url).pathname)).assertStatus(200);
   });
 
   test("advertises no card on a page the default template does not cover", async () => {

@@ -7,6 +7,10 @@
  * for the cache key), and
  * {@link gateToResponse} turns a non-`allow` gate into an HTTP response — a 302
  * to sign-in (with a `returnTo`), or a terminal challenge response.
+ *
+ * {@link entryAllowsAnonymousAccess} asks the same question off that path, for
+ * a public artefact a site publishes about an entry rather than for the entry's
+ * own page.
  */
 
 import type { PlumixAuthConfig } from "../auth/config.js";
@@ -14,11 +18,14 @@ import type { AppContext } from "../context/app.js";
 import type { JsonObject } from "../json.js";
 import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";
+import type { ResolvedMeta } from "../rpc/meta/core.js";
 import type { AccessPolicy, Gate } from "./policy.js";
 import { withBasePath } from "../base-path.js";
+import { resolveLocale } from "../i18n/resolve-locale.js";
 import { resolveSingleEntry } from "../route/single-entry.js";
 import { redirectTo } from "../runtime/http.js";
 import { ACCESS_POLICY_META_KEY } from "./meta-key.js";
+import { resolveAccess } from "./policy.js";
 
 // Where `redirectToLogin()` sends a visitor when the operator sets no override.
 const DEFAULT_LOGIN_PATH = "/_plumix/admin/login";
@@ -106,13 +113,86 @@ export function selectEntryPolicy(
   return access.default;
 }
 
+/** The parts of an entry an access decision reads. */
+export interface EntryAccessSubject {
+  readonly type: string;
+  /**
+   * Where a per-entry policy choice lives. Either form is read: the stored
+   * `JsonObject`, or the decoded {@link ResolvedMeta} a read surface hands to a
+   * template — the reserved access key is a plain string and survives decoding
+   * untouched, so both spell the choice the same way.
+   */
+  readonly meta?: JsonObject | ResolvedMeta | null;
+}
+
 // The per-entry access choice stored under the reserved meta key, or `undefined`
 // when unset (or stored as a non-string by some out-of-band write).
-function readAccessKey(
-  meta: JsonObject | null | undefined,
-): string | undefined {
+function readAccessKey(meta: EntryAccessSubject["meta"]): string | undefined {
   const value = meta?.[ACCESS_POLICY_META_KEY];
   return typeof value === "string" ? value : undefined;
+}
+
+/**
+ * Whether an entry's own page is open to a visitor carrying no session.
+ *
+ * This is the question a *public artefact about an entry* has to ask — a
+ * generated social card, and anything else a site publishes on an entry's
+ * behalf. Not "may the caller read it": such an artefact is advertised in the
+ * page's head, fetched by a scraper that carries no session, and served from a
+ * shared cache. So the policy is resolved against an anonymous principal
+ * whoever is asking, which is what keeps the answer principal-invariant — and
+ * what lets the artefact carry a `public` `cache-control` at all.
+ *
+ * Only the access policy is weighed. Whether the entry is published, and
+ * whether its type has a public page in the first place, stay the caller's
+ * questions.
+ *
+ * Costs one resolver run, and cannot reuse the one the dispatcher already made
+ * for the page: that answered for the actual principal, this answers for a
+ * scraper. A policied type whose resolver reaches for an external entitlement
+ * check therefore pays for it twice on a page that advertises a card. An
+ * un-policied type — every type by default — returns before resolving anything.
+ */
+export async function entryAllowsAnonymousAccess(
+  ctx: AppContext,
+  entry: EntryAccessSubject,
+): Promise<boolean> {
+  const access = ctx.plugins.entryTypes.get(entry.type)?.access;
+  if (access === undefined) return true;
+  const policy = selectEntryPolicy(access, readAccessKey(entry.meta));
+  const { gate } = await resolveAccess(asAnonymous(ctx), policy);
+  return gateAllowsRender(gate);
+}
+
+// The context as a visitor with no session sees it — the inverse of `withUser`,
+// and applied whether or not there is a principal to drop, so a resolver cannot
+// tell the two askers apart. Everything the principal confers goes together:
+// `auth.can`, or a resolver reading a capability rather than `ctx.user` would
+// decide on the asker's privileges; the token scopes narrowing it; the locale
+// they selected; and the decision the dispatcher already reached for them.
+//
+// `ctx.request` still carries their session cookie, so a resolver that
+// re-authenticates from it out of band sees through this. Nothing shipped does,
+// and stripping the request would take the URL and headers a policy legitimately
+// reads with it.
+function asAnonymous(ctx: AppContext): AppContext {
+  return {
+    ...ctx,
+    user: null,
+    tokenScopes: null,
+    auth: { can: () => false },
+    locale: resolveLocale({ request: ctx.request, user: null, i18n: ctx.i18n }),
+    access: null,
+  };
+}
+
+// Whether a resolved gate lets content render at all: an `allow`, or a *soft*
+// challenge (which serves a teaser at 200). A redirect and a hard challenge
+// both send none. `gateToResponse` is the same rule, turned into a response.
+function gateAllowsRender(gate: Gate): boolean {
+  return (
+    gate.type === "allow" || (gate.type === "challenge" && gate.soft === true)
+  );
 }
 
 interface GateResponseArgs {
@@ -147,7 +227,7 @@ export function gateToResponse(
         { "cache-control": "private, no-store", vary: "cookie" },
       );
     case "challenge":
-      return gate.soft ? null : challengeResponse(gate.kind);
+      return gateAllowsRender(gate) ? null : challengeResponse(gate.kind);
   }
 }
 

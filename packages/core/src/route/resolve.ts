@@ -6,6 +6,7 @@ import { expandShortcodes } from "@plumix/blocks";
 import type { AppContext } from "../context/app.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { Term } from "../db/schema/terms.js";
+import type { JsonObject } from "../json.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
 import type { RenderEnv } from "./render/render-env.js";
@@ -18,6 +19,7 @@ import type {
   SearchData,
   TaxonomyData,
 } from "./render/resolved-entry.js";
+import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
 import { accumulateEmbeddedTags } from "../cache/embedded-tags.js";
@@ -640,8 +642,30 @@ async function overlayPreviewAutosave(
     excerpt: autosave.excerpt,
     // Keep the reserved template key so an unsaved `named`-template pick still
     // drives resolution — otherwise preview would fall back to the default.
-    meta: stripReservedMeta(autosave.meta, [NAMED_TEMPLATE_META_KEY]),
+    meta: withLiveAccessChoice(
+      entry.meta,
+      stripReservedMeta(autosave.meta, [NAMED_TEMPLATE_META_KEY]),
+    ),
   };
+}
+
+/**
+ * Carry the *live* row's per-entry access choice through the overlay. Unlike
+ * the template pick, an unsaved access pick must not drive the preview: the
+ * gate resolves its policy from the persisted row (`policyForMatch` never sees
+ * this overlay), so a bag reporting the draft's pick would tell the page one
+ * thing about its own visibility and the gate another — and anything the page
+ * publishes on the entry's behalf, a social card above all, would be decided
+ * against a choice that gates nothing.
+ */
+function withLiveAccessChoice(
+  live: JsonObject,
+  drafted: JsonObject,
+): JsonObject {
+  const choice = live[ACCESS_POLICY_META_KEY];
+  return choice === undefined
+    ? drafted
+    : { ...drafted, [ACCESS_POLICY_META_KEY]: choice };
 }
 
 async function findTermForTaxonomy(

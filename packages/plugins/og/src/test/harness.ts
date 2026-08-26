@@ -1,6 +1,14 @@
-import type { AnyPluginDescriptor, Logger } from "plumix";
+import type { AnyPluginDescriptor, JsonObject, Logger } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
-import { defineTheme, fallback, memoryStorage } from "plumix";
+import {
+  anonymousPolicy,
+  authenticatedPolicy,
+  challenge,
+  definePolicy,
+  defineTheme,
+  fallback,
+  memoryStorage,
+} from "plumix";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 
@@ -9,8 +17,10 @@ import type { OgPluginOptions } from "../index.js";
 import { og } from "../index.js";
 import { createFakeRenderer } from "./fake-renderer.js";
 
-// A host plugin registering one public entry type and one private one, so the
-// harness app has both a shareable page and an unshareable one.
+// A host plugin registering the shapes a card has to tell apart: a public type,
+// a private one, and three access-policied ones — gated by the type, gated by
+// the entry's own choice, and behind a *soft* gate whose page a scraper still
+// reaches.
 const testBlog = definePlugin("test_blog", {
   setup: (ctx) => {
     ctx.registerEntryType("post", {
@@ -20,6 +30,34 @@ const testBlog = definePlugin("test_blog", {
       rewrite: { slug: "posts" },
     });
     ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
+    ctx.registerEntryType("gated", {
+      label: "Gated",
+      isPublic: true,
+      access: { default: authenticatedPolicy },
+    });
+    ctx.registerEntryType("column", {
+      label: "Columns",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          {
+            key: "members",
+            label: "Members only",
+            policy: authenticatedPolicy,
+          },
+        ],
+      },
+    });
+    ctx.registerEntryType("teaser", {
+      label: "Teasers",
+      isPublic: true,
+      access: {
+        default: definePolicy({
+          resolve: () => challenge("subscribe", { soft: true }),
+        }),
+      },
+    });
   },
 });
 
@@ -98,6 +136,8 @@ export interface SeedEntryOverrides {
   readonly slug?: string;
   readonly status?: "published" | "draft";
   readonly type?: string;
+  /** Carries a per-entry access choice under the reserved key. */
+  readonly meta?: JsonObject;
 }
 
 export async function seedEntry(
@@ -111,6 +151,7 @@ export async function seedEntry(
     ...(overrides.slug === undefined ? {} : { slug: overrides.slug }),
     status: overrides.status ?? "published",
     authorId: author.id,
+    ...(overrides.meta === undefined ? {} : { meta: overrides.meta }),
   });
   return entry.id;
 }

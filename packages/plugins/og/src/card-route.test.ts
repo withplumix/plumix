@@ -1,7 +1,9 @@
+import { ACCESS_POLICY_META_KEY } from "plumix";
 import { eq } from "plumix/db";
 import { entries } from "plumix/schema";
 import { describe, expect, test } from "vitest";
 
+import type { SeedEntryOverrides } from "./test/harness.js";
 import { createFakeRenderer } from "./test/fake-renderer.js";
 import { createHarness, seedEntry } from "./test/harness.js";
 
@@ -107,10 +109,19 @@ describe("the card route", () => {
     expect(await after.text()).toContain("Second Title");
   });
 
-  test.each([
-    ["a draft entry", { status: "draft" as const }],
+  // A card carries the entry's title, is served from a shared cache, and sits
+  // at an enumerable id, so every entry with no page a scraper can reach has to
+  // be refused — whether that is publication status, the type's visibility, or
+  // the access layer turning an anonymous visitor away.
+  test.each<[string, SeedEntryOverrides]>([
+    ["a draft entry", { status: "draft" }],
     ["an entry type the site does not publish", { type: "secret" }],
     ["an entry type nothing registers any more", { type: "ghost" }],
+    ["an entry its type gates behind sign-in", { type: "gated" }],
+    [
+      "an entry that selected a gating policy of its own",
+      { type: "column", meta: { [ACCESS_POLICY_META_KEY]: "members" } },
+    ],
   ])("answers 404 for %s", async (_label, overrides) => {
     const harness = await createHarness();
     const id = await seedEntry(harness, overrides);
@@ -118,6 +129,21 @@ describe("the card route", () => {
     const response = await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`);
 
     response.assertStatus(404);
+  });
+
+  // The other side of the same rule: a policied *type* must not cost every
+  // entry on it its card, and a soft gate serves a public teaser at 200 at the
+  // plain URL — the whole point of which is that it unfurls.
+  test.each<[string, SeedEntryOverrides]>([
+    ["a sibling entry that selected nothing", { type: "column", meta: {} }],
+    ["an entry behind a soft gate", { type: "teaser" }],
+  ])("serves a card for %s", async (_label, overrides) => {
+    const harness = await createHarness();
+    const id = await seedEntry(harness, overrides);
+
+    (await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`)).assertStatus(
+      200,
+    );
   });
 
   test.each([
