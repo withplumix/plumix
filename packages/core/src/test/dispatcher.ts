@@ -249,6 +249,7 @@ function withRequest(
     request,
     hooks: app.hooks,
     plugins: app.plugins,
+    appContextExtensions: app.appContextExtensions,
     blocks: app.blocks,
     marks: app.marks,
     shortcodes: app.shortcodes,

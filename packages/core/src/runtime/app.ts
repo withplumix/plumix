@@ -301,6 +301,10 @@ export async function buildApp(
     throw ThemeRegistrationError.missingTheme();
   }
 
+  // Before core aggregates anything, so a subscriber's own registrations still
+  // land in every registry assembled below.
+  await hooks.doAction("theme:ready", config.theme);
+
   const schema: Record<string, unknown> = { ...coreSchema };
   const origin = new Map<string, string>();
   for (const key of Object.keys(coreSchema)) origin.set(key, "core");
