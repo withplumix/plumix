@@ -1,0 +1,75 @@
+import { memoryStorage } from "plumix";
+import { definePlugin } from "plumix/plugin";
+import { createDispatcherHarness } from "plumix/test";
+import { describe, expect, test } from "vitest";
+
+import type { CardNode } from "./renderer.js";
+import { og } from "./index.js";
+import { takumi } from "./takumi.js";
+
+// The only two tests that load the real wasm: one proving the engine encodes,
+// one proving the configuration a fresh install gets reaches it. Everything
+// else renders through the fake in `test/fake-renderer.ts` — exercising the
+// engine harder than this tests upstream rather than us.
+describe("the bundled engine", () => {
+  test("turns a node tree into raster bytes", async () => {
+    const renderer = takumi();
+    const render = (children: CardNode[]): Promise<Uint8Array> =>
+      renderer.render(
+        { type: "container", className: "card", children },
+        {
+          width: 1200,
+          height: 630,
+          stylesheets: [
+            ":root { --ink: #ffffff }",
+            ".card { width: 1200px; height: 630px; background-color: #0b1220 }",
+            ".title { color: var(--ink); font-size: 76px }",
+          ],
+          fonts: [],
+          fetch: () => Promise.reject(new Error("the engine must not fetch")),
+        },
+      );
+
+    const titled = await render([
+      { type: "text", className: "title", text: "Hello World" },
+    ]);
+    const empty = await render([]);
+
+    expect(renderer.contentType).toBe("image/png");
+    // The PNG signature — the bytes are an encoded raster, not a string.
+    expect([...titled.slice(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+    // The failure this engine was chosen over is a valid-but-blank image, and a
+    // signature check passes on one. The title has to reach the pixels.
+    expect(titled).not.toEqual(empty);
+  });
+
+  test("is what a plugin with no renderer configured serves through", async () => {
+    const harness = await createDispatcherHarness({
+      plugins: [
+        definePlugin("test_blog", {
+          setup: (ctx) => {
+            ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+          },
+        }),
+        og(),
+      ],
+      storage: memoryStorage().connect({}),
+    });
+    const author = await harness.factory.user.create({});
+    const entry = await harness.factory.entry.create({
+      type: "post",
+      title: "Hello World",
+      status: "published",
+      authorId: author.id,
+    });
+
+    const response = await harness.fetch(
+      `/_plumix/og/entry/${String(entry.id)}.svg`,
+    );
+
+    expect(response.assertStatus(200).headers.get("content-type")).toBe(
+      "image/svg+xml",
+    );
+    expect(await response.text()).toContain("<svg");
+  });
+});

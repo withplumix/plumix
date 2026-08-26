@@ -14,7 +14,7 @@ The `plugins` array in `plumix.config.ts` is how you add an entry type, a route 
 
 A published plugin and the local plugin your site keeps for its own model are the same object. Both come from `definePlugin`, both carry an id and a `setup` function, and the site calls each one's `setup` once at boot with the same registration context. [Content Modelling](/content-modelling/overview/) covers writing one. This page covers installing one you did not write.
 
-Six plugins ship under the `@plumix/plugin-*` scope. A scaffolded project installs only the ones you ticked, and a project scaffolded with none has none.
+Seven plugins ship under the `@plumix/plugin-*` scope. A scaffolded project installs only the ones you ticked, and a project scaffolded with none has none.
 
 - `@plumix/plugin-blog` registers the `post` entry type with the `category` and `tag` taxonomies.
 - `@plumix/plugin-pages` registers the hierarchical `page` entry type rooted at `/`.
@@ -22,6 +22,7 @@ Six plugins ship under the `@plumix/plugin-*` scope. A scaffolded project instal
 - `@plumix/plugin-menu` registers navigation menus and the named locations a theme renders them into.
 - `@plumix/plugin-comments` adds threaded, moderated discussion to the entry types you nominate.
 - `@plumix/plugin-audit-log` records an activity feed and adds an `audit` helper to the request context.
+- `@plumix/plugin-og` renders a social card per published entry and serves it from a route of its own.
 
 The registration context a plugin receives is the same one your own plugin receives, and it is wide. Entry types and taxonomies, meta boxes on entries, terms and users, blocks, marks, shortcodes and patterns, field types, settings groups and pages, RPC routers, REST resources, raw routes, rewrite rules, redirects, archive types, MCP tools, scheduled tasks, capabilities, admin pages, dashboard widgets, login links, lookup adapters, template deps, filters and actions all arrive through the same `ctx`. A package that registers one shortcode installs exactly like a package that registers six entry types.
 
@@ -29,7 +30,7 @@ Installing one changes two things in your repository and can change two more at 
 
 ## Quickstart
 
-Adding comments to the recipe site. Of the six, `comments` is one of the two that own a database table, so this walks the longest install path.
+Adding comments to the recipe site. Of the seven, `comments` is one of the two that own a database table, so this walks the longest install path.
 
 Install the package with whichever package manager the project uses:
 
@@ -181,7 +182,7 @@ The other four add no tables. `@plumix/plugin-blog` and `@plumix/plugin-pages` r
 
 ## Plugins that ship admin UI
 
-Four of the six carry admin screens: media has the library, menu has the menu builder, comments has the moderation queue, and audit-log has the activity feed. Each declares a path to an admin entry module, and the Vite plugin compiles every declared entry into one bundle for your site during `plumix build` and `plumix dev`.
+Four of the seven carry admin screens: media has the library, menu has the menu builder, comments has the moderation queue, and audit-log has the activity feed. Each declares a path to an admin entry module, and the Vite plugin compiles every declared entry into one bundle for your site during `plumix build` and `plumix dev`.
 
 The consequence is that a newly installed admin-facing plugin appears after a build, not after a config reload. If the admin looks unchanged once the package is in the array, stop the dev server and start it again.
 
