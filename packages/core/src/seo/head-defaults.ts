@@ -21,12 +21,22 @@ function robotsDirective(input: {
   return input.noindex ? ROBOTS_SEARCH : ROBOTS_INDEX;
 }
 
+/**
+ * A page's resolved social image. `width`/`height` are absent when the image's
+ * size isn't known.
+ */
+export interface OgImage {
+  readonly url: string;
+  readonly width?: number;
+  readonly height?: number;
+}
+
 interface SeoInputs {
   readonly canonical: string;
   readonly title: string | undefined;
   readonly description: string | null;
   readonly ogType: "article" | "website";
-  readonly ogImage: string | null;
+  readonly ogImage: OgImage | null;
   readonly siteName: string | null;
   readonly ogLocale: string;
   readonly noindex: boolean;
@@ -75,14 +85,24 @@ export function seoHeadDefaults(
       noindex: inputs.noindex,
     }),
   );
-  addName("twitter:card", inputs.ogImage ? "summary_large_image" : "summary");
+  // An image with no usable url is no image: every tag below hangs off it.
+  const image = nonEmpty(inputs.ogImage?.url) ? inputs.ogImage : null;
+  addName("twitter:card", image ? "summary_large_image" : "summary");
   addProperty("og:title", inputs.title ?? null);
   addProperty("og:type", inputs.ogType);
   addProperty("og:url", inputs.canonical);
   addProperty("og:site_name", inputs.siteName);
   addProperty("og:description", inputs.description);
   addProperty("og:locale", inputs.ogLocale);
-  addProperty("og:image", inputs.ogImage);
+  // The image tags describe one picture, so they travel as a group: a template
+  // that declared its own `og:image` owns it, and a size or twitter mirror
+  // appended beside it would describe some other image.
+  if (image && !hasProperty(existing, "og:image")) {
+    addProperty("og:image", image.url);
+    addProperty("og:image:width", image.width?.toString() ?? null);
+    addProperty("og:image:height", image.height?.toString() ?? null);
+    addName("twitter:image", image.url);
+  }
 
   if (additions.length === 0) return manifest;
   return { ...manifest, meta: [...(existing ?? []), ...additions] };
@@ -93,51 +113,93 @@ function toOgLocale(localeCode: string): string {
   return localeCode.replace("-", "_");
 }
 
-// A hydrated media reference exposes a string `url`; an orphaned single
+// A hydrated media reference exposes a string `url` and the row's measured
+// `width`/`height` (null until something measures them); an orphaned single
 // reference hydrates to null. Read structurally — core can't import the media
 // plugin's `MediaReference` type.
-function mediaUrl(value: unknown): string | null {
-  if (value !== null && typeof value === "object" && "url" in value) {
-    return nonEmpty(value.url);
+function mediaImage(value: unknown): OgImage | null {
+  if (value === null || typeof value !== "object" || !("url" in value)) {
+    return null;
   }
-  return null;
+  const url = nonEmpty(value.url);
+  if (!url) return null;
+  const width = measured("width" in value ? value.width : null);
+  const height = measured("height" in value ? value.height : null);
+  // The size travels as a pair or not at all: one axis alone tells a scraper
+  // nothing it can lay out with.
+  return width !== null && height !== null ? { url, width, height } : { url };
+}
+
+// The parse `mediaImage`'s structural read defers, `nonEmpty`'s sibling for the
+// axes: a media row carries null on both until something measures it.
+function measured(value: unknown): number | null {
+  return typeof value === "number" ? value : null;
 }
 
 /**
  * Resolve an entry's `og:image` from its role-tagged media fields: an explicit
  * `.ogImage()` override outranks the `.featured()` image. Reads the hydrated
  * `entry.meta` value structurally, so an orphaned reference (null) or a value
- * with no usable url falls through. Returns null when nothing resolves, leaving
- * the caller to fall back to the site-wide default.
+ * with no usable url falls through. Returns null when nothing resolves, handing
+ * the rest of the chain to {@link resolveOgImage}.
  */
 export function resolveEntryOgImage(
   fields: readonly MetaBoxField[],
   meta: ResolvedMeta,
-): string | null {
+): OgImage | null {
   for (const role of ["ogImage", "featured"] as const) {
     for (const field of fields) {
       if (field.role !== role) continue;
-      const url = mediaUrl(meta[field.key]);
-      if (url) return url;
+      const image = mediaImage(meta[field.key]);
+      if (image) return image;
     }
   }
   return null;
 }
 
 /**
- * The per-entity `og:image` for a request, or null for non-entry pages (which
- * fall back to the site default). Scopes {@link resolveEntryOgImage} to the
+ * The per-entity `og:image` for a request, or null for non-entry pages (and for
+ * an entry that tags no image). Scopes {@link resolveEntryOgImage} to the
  * entry's own content-type fields.
  */
 export function entryOgImage(
   plugins: PluginRegistry,
   data: TemplateData,
-): string | null {
+): OgImage | null {
   if (data.kind !== "entry") return null;
   return resolveEntryOgImage(
     listEntryMetaFields(plugins, data.entry.type),
     data.entry.meta,
   );
+}
+
+declare module "../hooks/types.js" {
+  interface FilterRegistry {
+    /**
+     * Supply the page's `og:image`. Sits one link below the entry's role-tagged
+     * media (`.ogImage()`, then `.featured()`) and one above the site-wide
+     * default: an image returned here beats that default, and passing the value
+     * through falls back to it. The role chain short-circuits before this runs,
+     * so an author's explicit choice is never overridden.
+     */
+    "seo:og_image": (
+      image: OgImage | null,
+      data: TemplateData,
+      ctx: AppContext,
+    ) => OgImage | null | Promise<OgImage | null>;
+  }
+}
+
+/** The `og:image` for a request, resolved down the chain. */
+export async function resolveOgImage(
+  ctx: AppContext,
+  data: TemplateData,
+  siteDefault: string | null,
+): Promise<OgImage | null> {
+  const role = entryOgImage(ctx.plugins, data);
+  if (role) return role;
+  const filtered = await ctx.hooks.applyFilter("seo:og_image", null, data, ctx);
+  return filtered ?? (siteDefault ? { url: siteDefault } : null);
 }
 
 /**
@@ -163,7 +225,7 @@ export async function applyHeadMeta(
     title,
     description,
     ogType: data.kind === "entry" ? "article" : "website",
-    ogImage: entryOgImage(ctx.plugins, data) ?? nonEmpty(site.default_og_image),
+    ogImage: await resolveOgImage(ctx, data, nonEmpty(site.default_og_image)),
     siteName: nonEmpty(site.title),
     ogLocale: toOgLocale(ctx.locale.code),
     // Search-results pages are thin; keep them out of the index.

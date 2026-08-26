@@ -661,6 +661,7 @@ const FILTER_HOOKS = [
   "resolve:front-page:data",
   "resolve:search:data",
   "seo:feed:items",
+  "seo:og_image",
   "seo:robots-txt",
   "seo:sitemap:urls",
   "theme:document",

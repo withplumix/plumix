@@ -218,6 +218,36 @@ describe("SEO — default head meta", () => {
     expect(head).toContain('<meta name="twitter:card" content="summary"/>');
   });
 
+  test("the seo:og_image filter supplies the image the site default would have", async () => {
+    const card = definePlugin("og-card-test", (ctx) => {
+      ctx.addFilter("seo:og_image", () => ({
+        url: "https://cms.example/card.png",
+        width: 1200,
+        height: 630,
+      }));
+    });
+    const theme = defineTheme({ templates: [fallback(() => null)] });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, card],
+      theme,
+    });
+    await seedSiteSettings(h, {
+      default_og_image: "https://cms.example/og.png",
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain(
+      '<meta property="og:image" content="https://cms.example/card.png"/>',
+    );
+    expect(head).toContain('<meta property="og:image:width" content="1200"/>');
+    expect(head).toContain('<meta property="og:image:height" content="630"/>');
+    expect(head).toContain(
+      '<meta name="twitter:image" content="https://cms.example/card.png"/>',
+    );
+  });
+
   test("a search-results route emits noindex", async () => {
     const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
