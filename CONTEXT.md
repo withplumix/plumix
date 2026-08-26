@@ -249,6 +249,9 @@ A coarse label a stored page carries for invalidation — a type tag (`t:<type>`
 Invalidation of stored responses by tag.
 _Avoid_: bust, invalidate
 
+**Rendered asset**:
+Bytes a route produces once and then serves from object storage — a generated social card, a derived image. Read-through like the edge cache, but keyed by a content-addressed storage key rather than by the request, so a changed input lands on a new key and there is nothing to purge.
+
 ## SEO
 
 **Canonical URL**:
@@ -275,6 +278,10 @@ them distinct by **always qualifying** them; bare use is a smell.
 - **template** — the **theme render unit** (this glossary) vs the stored
   **page-template** choice an entry can pick vs the **project template** in the
   scaffolder. Qualify when both are in play.
+- **read-through** — the **edge cache** sense (a stored response, keyed by the
+  request and purged by tag) vs the **rendered asset** sense (bytes behind a
+  content-addressed storage key, which nothing purges). Qualify when both are
+  in play.
 - **entry vs post** — the canonical noun is **entry**. "post" is a specific
   entry type only; storage defaults and permalink helpers still say "post" but
   that is drift, not the domain word.
