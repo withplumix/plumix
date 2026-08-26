@@ -8,7 +8,7 @@ import {
 } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
-import { findRelatedEntries } from "./related.js";
+import { createRelatedPostsLoader, findRelatedEntries } from "./related.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
@@ -56,7 +56,7 @@ describe("findRelatedEntries", () => {
     // Shares the term but is a different type — must not surface as related.
     await make("Page sibling", "published", new Date(2200), topic.id, "page");
 
-    const related = await findRelatedEntries(ctxFor(db), current.id);
+    const related = await findRelatedEntries(ctxFor(db), current.id, 3);
 
     expect(related.map((e) => e.title)).toEqual(["Newer", "Older"]);
     expect(related.map((e) => e.id)).toEqual([newer.id, older.id]);
@@ -73,7 +73,7 @@ describe("findRelatedEntries", () => {
       authorId: author.id,
     });
 
-    expect(await findRelatedEntries(ctxFor(db), entry.id)).toEqual([]);
+    expect(await findRelatedEntries(ctxFor(db), entry.id, 3)).toEqual([]);
   });
 
   test("shares the current entry's type read with earlier consumers in the request", async () => {
@@ -100,7 +100,7 @@ describe("findRelatedEntries", () => {
       // e.g. the comments plugin's enablement gate, earlier in the render.
       await readEntryType(ctx, current.id);
       const before = dbQueryCount();
-      const rows = await findRelatedEntries(ctx, current.id);
+      const rows = await findRelatedEntries(ctx, current.id, 3);
       // Terms, sibling ids, and the final list — the type read replays
       // from the request memo instead of re-querying.
       expect(dbQueryCount() - before).toBe(3);
@@ -108,5 +108,70 @@ describe("findRelatedEntries", () => {
     });
 
     expect(related.map((e) => e.id)).toEqual([sibling.id]);
+  });
+});
+
+describe("the configurable limit", () => {
+  test("caps the strip at the requested size", async () => {
+    const db = await createTestDb();
+    const f = factoriesFor(db);
+    const author = await f.user.create({});
+    const topic = await f.term.create({ taxonomy: "category" });
+
+    const make = async (title: string, publishedAt: Date) => {
+      const entry = await f.entry.create({
+        type: "post",
+        title,
+        status: "published",
+        publishedAt,
+        authorId: author.id,
+      });
+      await f.entryTerm.create({ entryId: entry.id, termId: topic.id });
+      return entry;
+    };
+
+    const current = await make("Current", new Date(5000));
+    await make("A", new Date(4000));
+    await make("B", new Date(3000));
+    await make("C", new Date(2000));
+
+    expect(await findRelatedEntries(ctxFor(db), current.id, 2)).toHaveLength(2);
+    // The plugin's default when a site sets no limit.
+    expect(await findRelatedEntries(ctxFor(db), current.id, 3)).toHaveLength(3);
+  });
+});
+
+describe("createRelatedPostsLoader", () => {
+  test("honours the limit the plugin threads in from its options", async () => {
+    const { harness, ctx, run } = await createTracedContext();
+    const f = harness.factory;
+    const author = await f.user.create({});
+    const topic = await f.term.create({ taxonomy: "category" });
+
+    const make = async (publishedAt: Date) => {
+      const entry = await f.entry.create({
+        type: "post",
+        status: "published",
+        publishedAt,
+        authorId: author.id,
+      });
+      await f.entryTerm.create({ entryId: entry.id, termId: topic.id });
+      return entry;
+    };
+
+    const current = await make(new Date(5000));
+    await make(new Date(4000));
+    await make(new Date(3000));
+    await make(new Date(2000));
+    ctx.resolvedEntity = { kind: "entry", id: current.id };
+
+    const capped = await run(() => createRelatedPostsLoader(2)(["strip"], ctx));
+    expect(capped.strip).toHaveLength(2);
+
+    // No `limit` in the options ⇒ the loader's own default of three.
+    const defaulted = await run(() =>
+      createRelatedPostsLoader(undefined)(["strip"], ctx),
+    );
+    expect(defaulted.strip).toHaveLength(3);
   });
 });

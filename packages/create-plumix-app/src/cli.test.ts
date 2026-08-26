@@ -131,7 +131,7 @@ describe("runCli", () => {
     expect(code).toBe(0);
     expect(stderr).toEqual([]);
     const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
-    expect(config).toContain("blog,");
+    expect(config).toContain("blog(),");
     expect(config).toContain("media(),");
   });
 

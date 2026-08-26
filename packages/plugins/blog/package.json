@@ -84,7 +84,7 @@
       "label": "Blog",
       "description": "Posts, categories, and tags",
       "category": "content",
-      "registration": "blog",
+      "registration": "blog()",
       "imports": [
         "import { blog } from \"@plumix/plugin-blog\";"
       ]

@@ -1,4 +1,4 @@
-import type { ResolvedEntry } from "plumix";
+import type { ResolvedEntry, TemplateDepLoader } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
 import { and, desc, eq, inArray, isNotNull, ne } from "drizzle-orm";
@@ -32,6 +32,7 @@ const RELATED_POSTS_LIMIT = 3;
 export async function findRelatedEntries(
   ctx: AppContext,
   currentId: number,
+  limit: number,
 ): Promise<readonly Entry[]> {
   const [selfType, termRows] = await Promise.all([
     readEntryType(ctx, currentId),
@@ -68,24 +69,25 @@ export async function findRelatedEntries(
       ),
     )
     .orderBy(desc(entries.publishedAt), desc(entries.id))
-    .limit(RELATED_POSTS_LIMIT);
+    .limit(limit);
 }
 
 /**
- * `relatedPosts` template-dep loader. Only resolves on a single-entry route
- * (reads `ctx.resolvedEntity`); a non-entry route or a post with no shared
- * matches yields no slugs, so the theme's strip stays hidden.
+ * Build the `relatedPosts` template-dep loader. Only resolves on a single-entry
+ * route (reads `ctx.resolvedEntity`); a non-entry route or a post with no
+ * shared matches yields no slugs, so the theme's strip stays hidden.
  */
-export async function relatedPostsLoader(
-  slugs: readonly string[],
-  ctx: AppContext,
-): Promise<Record<string, RelatedPosts>> {
-  const current = ctx.resolvedEntity;
-  if (current?.kind !== "entry") return {};
+export function createRelatedPostsLoader(
+  limit = RELATED_POSTS_LIMIT,
+): TemplateDepLoader<"relatedPosts"> {
+  return async (slugs, ctx) => {
+    const current = ctx.resolvedEntity;
+    if (current?.kind !== "entry") return {};
 
-  const rows = await findRelatedEntries(ctx, current.id);
-  if (rows.length === 0) return {};
+    const rows = await findRelatedEntries(ctx, current.id, limit);
+    if (rows.length === 0) return {};
 
-  const resolved = await buildResolvedEntries(ctx, rows);
-  return Object.fromEntries(slugs.map((slug) => [slug, resolved]));
+    const resolved = await buildResolvedEntries(ctx, rows);
+    return Object.fromEntries(slugs.map((slug) => [slug, resolved]));
+  };
 }

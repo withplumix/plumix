@@ -8,7 +8,7 @@ This Plumix plugin adds a **blog** to your site — a `post` entry type with cat
 pnpm add @plumix/plugin-blog
 ```
 
-Then drop it into your `plumix.config.ts`. `blog` is a ready-made plugin, so you add it as-is (no call needed):
+Then drop it into your `plumix.config.ts`:
 
 ```ts
 import { plumix } from "plumix";
@@ -17,7 +17,7 @@ import { blog } from "@plumix/plugin-blog";
 
 export default plumix({
   // …your runtime, database, and auth
-  plugins: [blog],
+  plugins: [blog()],
 });
 ```
 
@@ -28,7 +28,27 @@ export default plumix({
 - **`tag` taxonomy** — flat, for lightweight labels.
 - **Related posts** — a `relatedPosts` template dependency your theme can render, matched by shared categories and tags.
 
-No configuration and no extra migrations — add the plugin and the post editor shows up in the admin.
+No extra migrations — add the plugin and the post editor shows up in the admin.
+
+## Reshaping what it registers
+
+`blog()` takes an override per registration. Each is a partial of the options the plugin passes to `registerEntryType` / `registerTermTaxonomy`, so anything those accept can be changed and anything omitted keeps the default:
+
+```ts
+blog({
+  post: {
+    rewrite: { slug: "insights" },
+    hasArchive: true,
+    archivePerPage: 4,
+  },
+});
+```
+
+Object-valued options (`labels`, `rewrite`, `versioning`) merge key by key; arrays and plain values replace, or compose via `(prev) => next`. Passing `false` — `blog({ tag: false })` — skips a registration and drops it from the post type's `termTaxonomies`.
+
+The registered names (`post`, `category`, `tag`) are fixed: they are the stored `type`/`taxonomy` column values and the keys a theme's `forEntryType("post")` matches on.
+
+Keep `rewrite.slug` to a single literal segment. Nothing validates it: a `/` breaks term feeds under the nested base, and URL-pattern syntax such as `":anything"` or `"*"` compiles into a route matching every two-segment URL on the site.
 
 ## Support
 
