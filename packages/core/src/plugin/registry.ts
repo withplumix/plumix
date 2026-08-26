@@ -657,6 +657,11 @@ export interface RegisteredRawRoute {
   readonly method: PluginRouteMethod;
   readonly path: string;
   readonly auth: PluginRouteAuth;
+  /**
+   * Whether the route opted into the edge cache — see `registerRoute`, which
+   * documents what taking it claims and rejects it on a gated route.
+   */
+  readonly cacheable?: boolean;
   readonly handler: (
     request: Request,
     ctx: AppContext,

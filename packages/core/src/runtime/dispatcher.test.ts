@@ -1711,6 +1711,131 @@ describe("dispatcher — custom-archive edge cache (#1693)", () => {
   });
 });
 
+describe("dispatcher — plugin-route edge cache (#1959)", () => {
+  function cacheStub(hit?: Response) {
+    const match = vi.fn<ConnectedCache["match"]>(() => Promise.resolve(hit));
+    const put = vi.fn<ConnectedCache["put"]>(() => Promise.resolve());
+    const purgeTags = vi.fn<ConnectedCache["purgeTags"]>(() =>
+      Promise.resolve(),
+    );
+    const cache: ConnectedCache = { match, put, purgeTags };
+    return { cache, match, put };
+  }
+
+  // A content-addressed asset: it opts into the edge cache and declares its own
+  // immutable freshness, which the provider keeps.
+  const cards = definePlugin("og", (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/card/*",
+      auth: "public",
+      cacheable: true,
+      handler: () =>
+        new Response("PNG", {
+          status: 200,
+          headers: { "cache-control": "public, max-age=31536000, immutable" },
+        }),
+    });
+  });
+
+  // The same route left at the default (opted out).
+  const uncachedCards = definePlugin("og", (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/card/*",
+      auth: "public",
+      handler: () => new Response("PNG", { status: 200 }),
+    });
+  });
+
+  test("stores an opted-in plugin route's response on a miss", async () => {
+    const { cache, put } = cacheStub();
+    const h = await createDispatcherHarness({ plugins: [cards], cache });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
+    );
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("PNG");
+    expect(put).toHaveBeenCalledOnce();
+    const stored = put.mock.calls[0]?.[1];
+    expect(stored?.headers.get("cache-control")).toBe(
+      "public, max-age=31536000, immutable",
+    );
+  });
+
+  test("serves the stored response on a subsequent request", async () => {
+    const { cache, match } = cacheStub(new Response("CACHED", { status: 200 }));
+    const h = await createDispatcherHarness({ plugins: [cards], cache });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
+    );
+
+    expect(match).toHaveBeenCalledOnce();
+    expect(await response.text()).toBe("CACHED");
+  });
+
+  test("a write method through a cacheable route runs the handler live", async () => {
+    const { cache, match, put } = cacheStub(
+      new Response("CACHED", { status: 200 }),
+    );
+    // `method: "*"` is the only registration that lets a non-GET reach an
+    // opted-in route at all.
+    const anyMethod = definePlugin("og", (ctx) => {
+      ctx.registerRoute({
+        method: "*",
+        path: "/card/*",
+        auth: "public",
+        cacheable: true,
+        handler: () => new Response("REBUILT", { status: 200 }),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [anyMethod], cache });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/og/card/abc.png", { method: "POST" }),
+    );
+    await h.drainDeferred();
+
+    expect(await response.text()).toBe("REBUILT");
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  test("an opted-in route runs live when the deploy bound no cache", async () => {
+    const h = await createDispatcherHarness({ plugins: [cards] });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("PNG");
+  });
+
+  test("a route that did not opt in never touches the cache", async () => {
+    const { cache, match, put } = cacheStub(
+      new Response("CACHED", { status: 200 }),
+    );
+    const h = await createDispatcherHarness({
+      plugins: [uncachedCards],
+      cache,
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
+    );
+    await h.drainDeferred();
+
+    expect(await response.text()).toBe("PNG");
+    expect(match).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+  });
+});
+
 // Depth-first span-tree walk shared by the telemetry assertions.
 function flattenSpans(spans: readonly TelemetrySpan[]): TelemetrySpan[] {
   return spans.flatMap((span) => [span, ...flattenSpans(span.children)]);

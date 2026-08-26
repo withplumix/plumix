@@ -81,6 +81,10 @@ export { enqueuePurgeTags } from "./cache/purge.js";
 // storage and ETag round-trips (#1958).
 export { serveRenderedAsset } from "./cache/rendered-asset.js";
 export type { RenderedAssetArgs } from "./cache/rendered-asset.js";
+// Exposed for a `cache:` provider: which responses a shared cache may hold is
+// framework policy, not the runtime's, and a provider's `put` reads the same
+// rule core does when it decides whether to store at all.
+export { responseAllowsSharedStorage } from "./cache/decision.js";
 export {
   archive,
   author,

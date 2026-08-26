@@ -110,6 +110,22 @@ export function segmentCacheKey(request: Request, segment: Segment): Request {
 }
 
 /**
+ * The cache-key request for a plugin route that opted into the edge cache: its
+ * own URL, query string included, with the cookie dropped so every visitor
+ * collapses onto one entry.
+ */
+export function routeCacheKey(request: Request): Request {
+  const keyed = new Request(request);
+  keyed.headers.delete("cookie");
+  return keyed;
+}
+
+/** Whether the method may reach the cache at all. */
+export function methodIsCacheable(method: string): boolean {
+  return method === "GET" || method === "HEAD";
+}
+
+/**
  * The gate for whether the edge cache may participate in this request at all —
  * both reading a stored response and storing a fresh one. Returns `null` when
  * the request is cacheable, otherwise the first failing check — the reason the
@@ -118,7 +134,7 @@ export function segmentCacheKey(request: Request, segment: Segment): Request {
 export function cacheBypassReason(
   req: CacheableRequest,
 ): CacheBypassReason | null {
-  if (req.method !== "GET" && req.method !== "HEAD") return "method";
+  if (!methodIsCacheable(req.method)) return "method";
   if (req.segment === PRIVATE_SEGMENT) return "private";
   // A custom archive caches only on its explicit opt-in; the built-in intents
   // are fixed by CACHEABLE_INTENTS.
@@ -127,6 +143,28 @@ export function cacheBypassReason(
       ? req.customArchiveCacheable === true
       : CACHEABLE_INTENTS.has(req.intentKind);
   return cacheable ? null : "intent";
+}
+
+/**
+ * Whether a response left itself storable in a *shared* cache: `no-store`
+ * forbids storing it at all, `private` forbids anyone but its own visitor
+ * holding it. Read on the plugin-route path, where the handler's own directive
+ * is the one signal core has that a particular response came out personalized
+ * — the route may still be worth caching on every other request.
+ *
+ * The page path deliberately doesn't ask. Core stamps `private, no-store` on a
+ * segment variant's client copy precisely so no intermediary reuses it, while
+ * the segment-keyed edge copy it stores alongside is shared on purpose.
+ */
+export function responseAllowsSharedStorage(response: Response): boolean {
+  const declared = response.headers.get("cache-control");
+  if (declared === null) return true;
+  return !declared.split(",").some((directive) => {
+    // The directive name is the token before any argument: `private` may carry
+    // the field list it covers (`private="set-cookie"`).
+    const name = directive.split("=")[0]?.trim().toLowerCase();
+    return name === "private" || name === "no-store";
+  });
 }
 
 /**
