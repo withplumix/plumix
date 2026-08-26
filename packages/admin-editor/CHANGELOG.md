@@ -1,5 +1,42 @@
 # @plumix/admin-editor
 
+## 0.16.0
+
+### Patch Changes
+
+- [#1931](https://github.com/withplumix/plumix/pull/1931) [`6cc8e74`](https://github.com/withplumix/plumix/commit/6cc8e742f4ac44bc06a44cdc440e2852f7124900) Thanks [@nasyrov](https://github.com/nasyrov)! - Wires `blocks.htmlAllowlist` through to the renderer. All four of its fields — `extraTags`,
+  `extraAttributes`, `schemes`, `allowProtocolRelative` — now change what `core/html` and
+  `core/rich-text` render, on the public page and in the editor canvas.
+
+  The allowlist was typed, documented, and built at boot, but nothing mounted `HtmlAllowlistProvider`,
+  so every render fell back to the context default — the baseline. Setting
+  `htmlAllowlist: { extraTags: ["img"] }` produced silence, not an image.
+
+  `HtmlAllowlistProvider` is the seam, mounted in both consumers. The public render mounts it from
+  `renderEnv.htmlAllowlist`, alongside the existing `PlumixProvider`. The editor canvas is a fresh
+  React tree inside an iframe with no server context, so the allowlist crosses the boundary the way
+  tokens and breakpoints already did: on the JSON embed the SSR emits next to the mount root, read back
+  at mount. Without that second mount the canvas would keep sanitizing against the baseline while the
+  published page used the operator's list, and an author would see their markup stripped in the editor
+  and intact on the site.
+
+  That embed is now `[data-plumix-render-env]` rather than `[data-plumix-style-env]` — it carries more
+  than styles. Nothing outside the editor runtime reads it, and the SSR and the runtime that reads it
+  ship together.
+
+  This lands alongside the three floor changesets in the same release: the denials in
+  `enforceHtmlFloors` are what an override cannot widen past, and they went in before anything could
+  reach the renderer through them.
+
+  `PlumixApp.htmlAllowlist` documented the missing step as `<EntryContent htmlAllowlist={...}>`.
+  `EntryContent` is an interface, not a component, so that seam never existed and could not be
+  followed; the field now describes the provider.
+
+- Updated dependencies [[`2f70692`](https://github.com/withplumix/plumix/commit/2f70692410fc65a66e843a4db33170c1ad954dc1), [`b2b6510`](https://github.com/withplumix/plumix/commit/b2b6510460703249f17dcd0ba676dab3b7ef2caa), [`9927a8f`](https://github.com/withplumix/plumix/commit/9927a8f7e1470a5f6bef1e5517545e3250d91feb), [`1a475b5`](https://github.com/withplumix/plumix/commit/1a475b599314a315a850832fd59f0cedec22e675), [`1b97c01`](https://github.com/withplumix/plumix/commit/1b97c01a99828538110e1cefd60dbcff3828c92f), [`6cc8e74`](https://github.com/withplumix/plumix/commit/6cc8e742f4ac44bc06a44cdc440e2852f7124900), [`f9b705f`](https://github.com/withplumix/plumix/commit/f9b705f4e423aea61cbdb13e9c2b3ca86a544257), [`efe3834`](https://github.com/withplumix/plumix/commit/efe3834bebb073105d6912152091627cce700a63), [`9cf71d9`](https://github.com/withplumix/plumix/commit/9cf71d92e67aa95635a06cfef8e019bb6fab603d)]:
+  - @plumix/blocks@0.16.0
+  - @plumix/core@0.16.0
+  - @plumix/admin-ui@0.16.0
+
 ## 0.15.0
 
 ### Minor Changes
