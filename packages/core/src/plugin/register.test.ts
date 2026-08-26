@@ -703,6 +703,37 @@ describe("registerRoute", () => {
     ]);
   });
 
+  test("carries the edge-cache opt-in onto the registered route", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("og", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/card/*",
+        auth: "public",
+        cacheable: true,
+        handler: noop,
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(registry.rawRoutes[0]?.cacheable).toBe(true);
+  });
+
+  test("rejects the edge-cache opt-in on a route that is not public", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("og", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/card/*",
+        auth: "authenticated",
+        cacheable: true,
+        handler: noop,
+      });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /GET \/card\/\* is not public/,
+    );
+  });
+
   test("rejects a duplicate (method, path) pair from the same plugin", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("media", (ctx) => {

@@ -104,6 +104,38 @@ describe("connected cache put", () => {
     expect(store.put).not.toHaveBeenCalled();
   });
 
+  it("keeps a response's own shared freshness instead of the page TTL", async () => {
+    await connect().put(
+      new Request("https://site.test/og/abc.png"),
+      new Response("body", {
+        status: 200,
+        headers: { "cache-control": "public, max-age=31536000, immutable" },
+      }),
+      [],
+    );
+
+    expect(storedResponse().headers.get("cache-control")).toBe(
+      "public, max-age=31536000, immutable",
+    );
+  });
+
+  it("applies the page TTL to a response whose cache-control forbids sharing", async () => {
+    // A segment variant tells the *client* copy not to be stored while its
+    // edge copy is deliberately shared — that directive must not survive here.
+    await connect().put(
+      new Request("https://site.test/members"),
+      new Response("body", {
+        status: 200,
+        headers: { "cache-control": "private, no-store" },
+      }),
+      [],
+    );
+
+    expect(storedResponse().headers.get("cache-control")).toBe(
+      "public, s-maxage=60, stale-while-revalidate=600",
+    );
+  });
+
   it("omits stale-while-revalidate when the policy has none", async () => {
     await connect({ ttl: 30 }).put(
       new Request("https://site.test/post"),

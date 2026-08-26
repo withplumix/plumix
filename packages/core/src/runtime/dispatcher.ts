@@ -28,7 +28,7 @@ import {
 } from "../cache/decision.js";
 import { embeddedPageTags } from "../cache/embedded-tags.js";
 import { flushPurgeTags } from "../cache/purge.js";
-import { readThrough } from "../cache/read-through.js";
+import { readThrough, readThroughRoute } from "../cache/read-through.js";
 import { pageTags } from "../cache/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
@@ -909,7 +909,29 @@ export function matchPluginRawRoute(
   return null;
 }
 
-async function dispatchPluginRawRoute(
+// A raw route reaches the edge cache only on its own `cacheable: true` opt-in,
+// and only where the deploy bound a cache. Core can't know what a plugin
+// handler depends on, so the opt-in is the plugin's claim that the route
+// answers every visitor with one shared document.
+function dispatchPluginRawRoute(
+  route: RegisteredRawRoute,
+  ctx: AppContext,
+): Promise<Response> {
+  const cache = ctx.cache;
+  if (route.cacheable !== true || cache === undefined) {
+    return runPluginRawRoute(route, ctx);
+  }
+  return readThroughRoute({
+    request: ctx.request,
+    cache,
+    defer: ctx.defer,
+    telemetry: ctx.telemetry,
+    render: () => runPluginRawRoute(route, ctx),
+  });
+}
+
+// The route's own work: enforce its `auth` gate, then run its handler.
+async function runPluginRawRoute(
   route: RegisteredRawRoute,
   ctx: AppContext,
 ): Promise<Response> {

@@ -241,11 +241,28 @@ export interface PluginSetupContextBase {
    *  dispatcher. `ctx.locale` reflects the visitor's pick (cookie +
    *  Accept-Language) since the route sits under `/_plumix/`; if the
    *  handler emits locale-bearing HTML, set `Vary: Cookie, Accept-Language`
-   *  yourself — the dispatcher can't infer it from `ctx`. */
+   *  yourself — the dispatcher can't infer it from `ctx`.
+   *
+   *  `cacheable: true` opts the route into the edge cache: a GET (or HEAD)
+   *  request is answered from the entry stored under its URL, so the handler
+   *  runs once per URL rather than once per request; any other method
+   *  dispatches live. Take it only where the route answers every visitor with
+   *  the same document — the entry is keyed with the cookie dropped, so a
+   *  signed-in visitor and a locale-varying response share it too, and
+   *  registering it on a route that isn't `auth: "public"` throws. The whole
+   *  URL is the key, query string included, so any parameter a caller invents
+   *  is another entry.
+   *
+   *  Freshness is the handler's: it keeps a `cache-control` it set, and a
+   *  response that set none takes the site's page TTL. Nothing is stored under
+   *  a `private` or `no-store` response — that is how a handler keeps one
+   *  personalized answer out of a shared entry — and nothing purges a route
+   *  entry, so `immutable` belongs only on a content-addressed URL. */
   registerRoute(options: {
     readonly method: PluginRouteMethod;
     readonly path: string;
     readonly auth: PluginRouteAuth;
+    readonly cacheable?: boolean;
     readonly handler: (
       request: Request,
       ctx: AppContext,
@@ -607,8 +624,15 @@ export function createPluginSetupContext({
       registry.mcpTools.set(tool.name, { tool, registeredBy: pluginId });
     },
 
-    registerRoute: ({ method, path, auth, handler }) => {
+    registerRoute: ({ method, path, auth, cacheable, handler }) => {
       assertValidPluginRoutePath(pluginId, path);
+      if (cacheable === true && auth !== "public") {
+        throw PluginContextError.cacheableRouteNotPublic({
+          pluginId,
+          method,
+          path,
+        });
+      }
       for (const existing of registry.rawRoutes) {
         if (
           existing.pluginId === pluginId &&
@@ -623,6 +647,7 @@ export function createPluginSetupContext({
         method,
         path,
         auth,
+        cacheable,
         handler,
       });
     },

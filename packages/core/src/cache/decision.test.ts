@@ -4,7 +4,9 @@ import {
   cacheBypassReason,
   requestCarriesEphemeralGrant,
   requestIsPrivileged,
+  responseAllowsSharedStorage,
   responseIsStorable,
+  routeCacheKey,
   SEGMENT_KEY_PARAM,
   segmentCacheKey,
 } from "./decision.js";
@@ -265,5 +267,54 @@ describe("responseIsStorable", () => {
 
   it("does not store HEAD responses (the Cache API only persists GET)", () => {
     expect(responseIsStorable("HEAD", 200)).toBe(false);
+  });
+});
+
+describe("routeCacheKey", () => {
+  it("keys off the whole URL with the visitor's cookie dropped", () => {
+    const key = routeCacheKey(
+      new Request("https://site.test/_plumix/og/card/abc.png?w=1200", {
+        headers: { cookie: "plumix_session=alice" },
+      }),
+    );
+
+    expect(key.url).toBe("https://site.test/_plumix/og/card/abc.png?w=1200");
+    expect(key.headers.has("cookie")).toBe(false);
+  });
+});
+
+describe("responseAllowsSharedStorage", () => {
+  const withCacheControl = (value: string) =>
+    new Response("body", { headers: { "cache-control": value } });
+
+  it("allows a response that declared nothing", () => {
+    expect(responseAllowsSharedStorage(new Response("body"))).toBe(true);
+  });
+
+  it("allows freshness a shared cache can act on", () => {
+    expect(
+      responseAllowsSharedStorage(
+        withCacheControl("public, max-age=31536000, immutable"),
+      ),
+    ).toBe(true);
+  });
+
+  it("refuses private and no-store", () => {
+    expect(responseAllowsSharedStorage(withCacheControl("private"))).toBe(
+      false,
+    );
+    expect(
+      responseAllowsSharedStorage(withCacheControl("no-store, max-age=0")),
+    ).toBe(false);
+  });
+
+  it("refuses a no-share directive that names the fields it covers", () => {
+    // `private="set-cookie"` is still `private` — the argument names which
+    // headers it covers, so a whole-token comparison would miss it.
+    expect(
+      responseAllowsSharedStorage(
+        withCacheControl('private="set-cookie", max-age=60'),
+      ),
+    ).toBe(false);
   });
 });

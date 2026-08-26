@@ -1,4 +1,5 @@
 import type { CacheProvider, ConnectedCache } from "plumix";
+import { responseAllowsSharedStorage } from "plumix";
 
 import { EdgeCacheError } from "./errors.js";
 import { readEnvString } from "./read-env.js";
@@ -32,7 +33,7 @@ function defaultStore(): EdgeStore | null {
   return store?.default ?? null;
 }
 
-function cacheControl(config: EdgeConfig): string {
+function pageCacheControl(config: EdgeConfig): string {
   const directives = [`public`, `s-maxage=${String(config.ttl)}`];
   if (config.staleWhileRevalidate !== undefined) {
     directives.push(
@@ -42,7 +43,23 @@ function cacheControl(config: EdgeConfig): string {
   return directives.join(", ");
 }
 
-// Clone with the edge cache-control + cache tags applied and any Set-Cookie
+// The freshness the stored copy carries: the caller's own where it declared one
+// a shared cache may act on — a content-addressed asset asking for
+// `max-age=31536000, immutable` keeps exactly that — and the site-wide page TTL
+// otherwise. `private` and `no-store` are the two that never survive, because
+// they address the copy going back to the visitor rather than this one: a
+// segment variant sends them so no intermediary reuses its render, while its
+// edge entry is deliberately shared, and honoring them here would leave that
+// page uncacheable.
+function storageCacheControl(response: Response, config: EdgeConfig): string {
+  const declared = response.headers.get("cache-control");
+  if (declared === null || !responseAllowsSharedStorage(response)) {
+    return pageCacheControl(config);
+  }
+  return declared;
+}
+
+// Clone with the storage cache-control + cache tags applied and any Set-Cookie
 // stripped — a shared cache entry must never carry a per-request cookie, and
 // the Workers Cache API rejects responses that do.
 function forStorage(
@@ -52,7 +69,7 @@ function forStorage(
 ): Response {
   const headers = new Headers(response.headers);
   headers.delete("set-cookie");
-  headers.set("cache-control", cacheControl(config));
+  headers.set("cache-control", storageCacheControl(response, config));
   if (tags.length > 0) headers.set("cache-tag", tags.join(","));
   return new Response(response.body, {
     status: response.status,

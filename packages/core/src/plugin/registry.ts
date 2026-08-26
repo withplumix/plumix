@@ -657,6 +657,13 @@ export interface RegisteredRawRoute {
   readonly method: PluginRouteMethod;
   readonly path: string;
   readonly auth: PluginRouteAuth;
+  /**
+   * Whether the route opted into the edge cache — see `registerRoute`, which
+   * documents what taking it claims. Only a `"public"` route may: a gated
+   * response must never land in a shared cache. Mirrors
+   * `registerArchiveType({ cacheable: true })`.
+   */
+  readonly cacheable?: boolean;
   readonly handler: (
     request: Request,
     ctx: AppContext,
