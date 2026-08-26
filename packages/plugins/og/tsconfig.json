@@ -1,0 +1,8 @@
+{
+  "extends": "@plumix/typescript-config/library.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": ["src"]
+}
