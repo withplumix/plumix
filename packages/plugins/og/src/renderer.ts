@@ -44,6 +44,7 @@ export interface CardRenderer {
 
 export const SVG_CONTENT_TYPE = "image/svg+xml";
 export const PNG_CONTENT_TYPE = "image/png";
+export const JPEG_CONTENT_TYPE = "image/jpeg";
 
 /** The size every major scraper expects. */
 export const CARD_WIDTH = 1200;
@@ -55,10 +56,29 @@ export const CARD_HEIGHT = 630;
 const EXTENSIONS = new Map<string, string>([
   [SVG_CONTENT_TYPE, "svg"],
   [PNG_CONTENT_TYPE, "png"],
-  ["image/jpeg", "jpg"],
+  [JPEG_CONTENT_TYPE, "jpg"],
   ["image/webp", "webp"],
 ]);
 
 export function extensionFor(contentType: string): string | undefined {
   return EXTENSIONS.get(contentType);
+}
+
+// What every major scraper renders. X takes PNG, JPEG, WebP and GIF; Facebook
+// and LinkedIn document PNG, JPEG and GIF — and the plugin's own engine emits
+// the first two. The exclusion that matters is SVG: it is a document rather
+// than a raster, and an SVG `og:image` unfurls as nothing at all, which is
+// strictly worse than the site's generic default.
+const SCRAPER_SAFE = new Set([PNG_CONTENT_TYPE, JPEG_CONTENT_TYPE]);
+
+/**
+ * The extension a card in this format is advertised under, or undefined when
+ * scrapers do not render it. Such a format still gets its route — a developer
+ * with no rasterizer can look at their cards — but the head falls through to
+ * the site-wide default.
+ */
+export function advertisedExtension(contentType: string): string | undefined {
+  return SCRAPER_SAFE.has(contentType)
+    ? EXTENSIONS.get(contentType)
+    : undefined;
 }

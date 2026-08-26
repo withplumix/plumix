@@ -2,17 +2,31 @@ import type { Node, SyncInitInput } from "@takumi-rs/wasm";
 import { initSync, Renderer } from "@takumi-rs/wasm";
 
 import type { CardNode, CardRenderer, CardRenderInput } from "./renderer.js";
-import { PNG_CONTENT_TYPE, SVG_CONTENT_TYPE } from "./renderer.js";
+import {
+  JPEG_CONTENT_TYPE,
+  PNG_CONTENT_TYPE,
+  SVG_CONTENT_TYPE,
+} from "./renderer.js";
 
-/** The bundled engine, rasterizing — around 27 KB for a representative card. */
-export function takumi(): CardRenderer {
+export interface TakumiOptions {
+  /**
+   * The raster format. PNG by default — lossless, and around 27 KB for a
+   * representative card. JPEG suits a photo-heavy design, where a flat template
+   * is not what the encoder is being handed.
+   */
+  readonly format?: "png" | "jpeg";
+}
+
+/** The bundled engine, rasterizing to a format every scraper accepts. */
+export function takumi(options: TakumiOptions = {}): CardRenderer {
+  const format = options.format ?? "png";
   return {
-    contentType: PNG_CONTENT_TYPE,
+    contentType: format === "jpeg" ? JPEG_CONTENT_TYPE : PNG_CONTENT_TYPE,
     render: async (node, input) => {
       const engine = await renderer();
       return engine.render(toEngineNode(node), {
         ...sharedOptions(input),
-        format: "png",
+        format,
       });
     },
   };

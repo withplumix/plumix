@@ -7,10 +7,10 @@ import type { CardNode } from "./renderer.js";
 import { og } from "./index.js";
 import { takumi } from "./takumi.js";
 
-// The only two tests that load the real wasm: one proving the engine encodes,
-// one proving the configuration a fresh install gets reaches it. Everything
-// else renders through the fake in `test/fake-renderer.ts` — exercising the
-// engine harder than this tests upstream rather than us.
+// The only tests that load the real wasm: two proving the engine encodes each
+// format it offers, one proving the configuration a fresh install gets reaches
+// it. Everything else renders through the fake in `test/fake-renderer.ts` —
+// exercising the engine harder than this tests upstream rather than us.
 describe("the bundled engine", () => {
   test("turns a node tree into raster bytes", async () => {
     const renderer = takumi();
@@ -43,6 +43,29 @@ describe("the bundled engine", () => {
     expect(titled).not.toEqual(empty);
   });
 
+  test("encodes JPEG instead when a photo-heavy card asks for it", async () => {
+    const renderer = takumi({ format: "jpeg" });
+
+    const bytes = await renderer.render(
+      {
+        type: "container",
+        className: "card",
+        children: [{ type: "text", className: "title", text: "Hello World" }],
+      },
+      {
+        width: 1200,
+        height: 630,
+        stylesheets: [".card { width: 1200px; height: 630px }"],
+        fonts: [],
+        fetch: () => Promise.reject(new Error("the engine must not fetch")),
+      },
+    );
+
+    expect(renderer.contentType).toBe("image/jpeg");
+    // SOI marker: the bytes are JPEG, not the PNG the same call defaults to.
+    expect([...bytes.slice(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
+  });
+
   test("is what a plugin with no renderer configured serves through", async () => {
     const harness = await createDispatcherHarness({
       plugins: [
@@ -64,12 +87,15 @@ describe("the bundled engine", () => {
     });
 
     const response = await harness.fetch(
-      `/_plumix/og/entry/${String(entry.id)}.svg`,
+      `/_plumix/og/entry/${String(entry.id)}.png`,
     );
 
     expect(response.assertStatus(200).headers.get("content-type")).toBe(
-      "image/svg+xml",
+      "image/png",
     );
-    expect(await response.text()).toContain("<svg");
+    // The signature's ASCII tag survives the harness's text decode, which is
+    // all this needs: that the engine rasterized rather than emitting the SVG
+    // a card would be advertised with nowhere.
+    expect(await response.text()).toContain("PNG");
   });
 });

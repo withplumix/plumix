@@ -2632,6 +2632,19 @@ describe("dispatcher — dev error page", () => {
     ],
   });
 
+  // The same failure from a plugin route, which the public render's error path
+  // never sees — it reaches the dispatcher's own catch instead.
+  const throwingRoute = definePlugin("boom", (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/card",
+      auth: "public",
+      handler: () => {
+        throw new Error("render kaboom");
+      },
+    });
+  });
+
   test("dev gate on: a throwing template returns the standalone dev error page, not the themed 500", async () => {
     process.env.PLUMIX_DEV = "1";
     const h = await createDispatcherHarness({ theme: throwingTheme });
@@ -2736,6 +2749,47 @@ describe("dispatcher — dev error page", () => {
     // The themed fallback, never the dev page.
     expect(body).toContain("Something went wrong while rendering");
     expect(body).not.toContain("plumix-dev-error");
+  });
+
+  test("a throwing plugin route lands on the dev page too, not an opaque JSON 500", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const h = await createDispatcherHarness({ plugins: [throwingRoute] });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/boom/card", { headers: { accept: "text/html" } }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toBe(
+      "text/html; charset=utf-8",
+    );
+    const body = await response.text();
+    expect(body).toContain("plumix-dev-error");
+    expect(body).toContain("render kaboom");
+  });
+
+  test("a caller that did not ask for HTML gets the exception as JSON", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const h = await createDispatcherHarness({ plugins: [throwingRoute] });
+
+    // A bare `fetch` sends `*/*`. The `/_plumix/` surface is machine-facing, so
+    // a document here would only fail to parse and bury the exception with it.
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/boom/card", { headers: { accept: "*/*" } }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({ message: "render kaboom" });
+  });
+
+  test("dev gate off: the same plugin-route throw stays the opaque 500", async () => {
+    delete process.env.PLUMIX_DEV;
+    const h = await createDispatcherHarness({ plugins: [throwingRoute] });
+
+    const response = await h.dispatch(plumixRequest("/_plumix/boom/card"));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "internal_error" });
   });
 
   test("prod: the themed 500 surfaces a correlation id equal to the request's telemetry id", async () => {
