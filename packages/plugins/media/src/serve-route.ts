@@ -123,9 +123,11 @@ function cacheControl(): string {
 }
 
 function weakEtagMatch(ifNoneMatch: string, etag: string): boolean {
-  // `If-None-Match` accepts comma-separated tags; either side may be
-  // weak (`W/"..."`). Normalize and check membership.
-  const normalize = (s: string): string => s.replace(/^W\//, "").trim();
+  // `If-None-Match` is a comma-separated list and either side may be
+  // weak (`W/"..."`). Trim before stripping — every entry past the
+  // first still carries the separator's whitespace, which would stop
+  // `W/` anchoring.
+  const normalize = (s: string): string => s.trim().replace(/^W\//, "");
   const target = normalize(etag);
   return ifNoneMatch
     .split(",")

@@ -1303,6 +1303,40 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
     expect(response.headers.get("content-disposition")).toMatch(/^attachment;/);
   });
 
+  test("If-None-Match revalidates on a listed tag, weak or strong", async () => {
+    // A browser that has cached under several tags sends them all, and a
+    // proxy may weaken any of them.
+    const storage = memoryStorage().connect({});
+    const h = await createDispatcherHarness({ plugins: [media()], storage });
+    const owner = await h.seedUser("contributor");
+    const seeded = await seedPublishedMedia(h, storage, owner.id, "etag.png");
+    const path = `/_plumix/media/serve/${String(seeded.id)}`;
+
+    const first = await h.dispatch(plumixRequest(path));
+    const etag = first.headers.get("etag");
+    if (!etag) throw new Error("expected an etag on the first response");
+    const weak = `W/${etag}`;
+
+    const cases: readonly (readonly [string, number])[] = [
+      [etag, 304],
+      [weak, 304],
+      [`"stale-a", ${etag}`, 304],
+      [`"stale-a", ${weak}`, 304],
+      [`"stale-a", "stale-b", ${weak}`, 304],
+      ["*", 304],
+      // Held to 200 so an over-matching normalize can't pass: a matcher
+      // that stripped the quotes too would revalidate on anything.
+      [`"stale-a", "stale-b"`, 200],
+      [`W/"stale-a"`, 200],
+    ];
+    for (const [ifNoneMatch, status] of cases) {
+      const response = await h.dispatch(
+        plumixRequest(path, { headers: { "if-none-match": ifNoneMatch } }),
+      );
+      expect(response.status, `if-none-match=${ifNoneMatch}`).toBe(status);
+    }
+  });
+
   test("anonymous GET works — published media is publicly embeddable", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });
