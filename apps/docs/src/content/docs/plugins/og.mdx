@@ -12,9 +12,9 @@ import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
 ## Overview
 
-The plugin exports a factory named `og`. It adds no database tables, so installing it needs no migration, and it takes three options — `renderer`, `fonts` and `preview` — each with a default.
+The plugin exports a factory named `og`. It adds no database tables, so installing it needs no migration, and it takes four options — `renderer`, `fonts`, `preview` and `palette` — each with a default.
 
-A **route** at `/_plumix/og/card/<target>/<digest>.<ext>` renders one page's card on the first request, writes it to your storage bucket and reads it back on every request after. A **`seo:og_image` subscriber** puts that URL in the page's head, alongside `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. A **theme's `ogCards` array** replaces the bundled template with cards of your own, declared beside its `templates` and styled in its own design tokens.
+A **route** at `/_plumix/og/card/<target>/<digest>.<ext>` renders one page's card on the first request, writes it to your storage bucket and reads it back on every request after. A **`seo:og_image` subscriber** puts that URL in the page's head, alongside `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. A **theme's `ogCards` array** replaces the bundled template with cards of your own, declared beside its `templates` and styled in its own design tokens. The bundled template reads three of those tokens too, so a card looks like the rest of the site before you have declared a card at all.
 
 The URL is content-addressed. Its digest covers everything the card read — the entry's `updatedAt`, the card's own source, the font set, the theme's tokens — and the bytes are served `immutable`. It is also the only thing that makes X, Facebook and LinkedIn refetch an image they already hold: a purge reaches Cloudflare and stops there, while an edit publishes a _different_ URL.
 
@@ -144,6 +144,26 @@ Two things leave a page with no card in its head, and they do not go equally far
 An entry a scraper could not reach has none, and its card URL answers `404` rather than merely going unadvertised — the head and the route ask one question, so the head can never promise a URL the route refuses. Three things fail it: the entry is not published, its type is unregistered or not public, or the access layer refuses it. That last one is asked about an anonymous visitor whoever is calling, because a card carries the entry's title, sits at a sequential id and is served from a shared cache.
 
 A renderer whose output scrapers do not render is the other, and it is head-only: the route still serves the card, so you can look at it, but only PNG and JPEG reach a head — an SVG `og:image` unfurls as nothing at all.
+
+## The default card's palette
+
+The bundled card paints from three of your theme's `color` tokens: `background` for its ground, `foreground` for the headline, and `muted-foreground` for the site name beneath it. A theme spelling its palette those three ways gets a card in its own colours for declaring nothing at all.
+
+Most themes spell them their own way. Name the roles yours does:
+
+```ts no-typecheck
+og({
+  palette: { background: "paper", foreground: "ink", mutedForeground: "muted" },
+});
+```
+
+Each key is a role the card paints and each value is one of your `color` token slugs. A role you leave out keeps the convention name. The keys are camelCase because they are TypeScript; the slugs they default to are kebab-case because that is what `defineTheme` accepts.
+
+The card takes your palette only when **all three** resolve. Name two and it keeps its own three rather than mixing them, because the theme's paper under the bundled card's near-white ink is an unreadable card — worse than one that merely looks unlike the site. A token declared without a `value` does not resolve either: a card renders away from the page, where your own stylesheet never loads, so a custom property your CSS defines is one the card cannot read.
+
+Only colour follows the theme. The card's spacing and type sizes are its own, so a `spacing` token changes nothing about it — a card is one fixed 1200×630 composition rather than a page that reflows.
+
+Only the bundled card reads any of this. A card your theme declares styles itself from the same tokens directly, under whatever names it likes.
 
 ## Cards your theme declares
 

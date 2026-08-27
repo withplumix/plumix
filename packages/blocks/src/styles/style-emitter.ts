@@ -148,14 +148,25 @@ export function tokenIdFromCssVar(
  * resolving the same tokens can never disagree about which ones exist.
  */
 export function resolveThemeTokens(tokens: ThemeTokens): ResolvedThemeTokens {
-  const resolved: Record<string, Record<string, string>> = {};
+  // Null-prototype throughout. `SAFE_CSS_TOKEN_RE` admits `__proto__`, and on a
+  // plain object `resolved.__proto__ ??= {}` reads back `Object.prototype`
+  // rather than undefined — so that category's tokens would be written onto
+  // every object in the isolate. The groups get it too, so a consumer asking
+  // whether a slug exists is answered about the theme rather than about
+  // `Object`.
+  const resolved = Object.create(null) as Record<
+    string,
+    Record<string, string>
+  >;
   for (const [category, group] of Object.entries(tokens)) {
     if (!SAFE_CSS_TOKEN_RE.test(category)) continue;
     for (const [slug, entry] of Object.entries(group ?? {})) {
       if (!SAFE_CSS_TOKEN_RE.test(slug) || entry.value === undefined) continue;
       const value = sanitizeCssValue(entry.value);
       if (value === null) continue;
-      (resolved[category] ??= {})[slug] = value;
+      (resolved[category] ??= Object.create(null) as Record<string, string>)[
+        slug
+      ] = value;
     }
   }
   return resolved;
