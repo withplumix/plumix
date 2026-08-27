@@ -9,6 +9,24 @@ import { pluginCatalogStagedPath } from "@plumix/core";
 import { VitePluginError } from "./errors.js";
 
 /**
+ * Package-name candidates for a plugin id, most specific first: the first-party
+ * `@plumix/plugin-<id>` scope, then the unscoped `plumix-plugin-<id>` community
+ * convention.
+ *
+ * `PLUGIN_ID_RE` admits `_`, npm names conventionally use `-`, and nothing makes
+ * a plugin reconcile the two — `audit_log` ships as `@plumix/plugin-audit-log`.
+ * So an id carrying `_` gets a hyphenated candidate for each convention, tried
+ * after the literal one: a plugin whose package really does contain `_` still
+ * resolves on the literal, and the fallback only runs when that missed.
+ */
+function packageNameCandidates(pluginId: string): string[] {
+  const ids = pluginId.includes("_")
+    ? [pluginId, pluginId.replaceAll("_", "-")]
+    : [pluginId];
+  return ids.flatMap((id) => [`@plumix/plugin-${id}`, `plumix-plugin-${id}`]);
+}
+
+/**
  * Find the absolute path of a plugin's installed package root, used by
  * the bundler to resolve `i18n.catalogPath` against the plugin's own
  * directory (not the consumer's `projectRoot`).
@@ -28,14 +46,7 @@ export function findPluginPackageRoot(input: {
   const { pluginId, projectRoot } = input;
   const requireFrom = input.requireFrom ?? createRequire;
   const require = requireFrom(resolve(projectRoot, "package.json"));
-  // First-party scope first; community plugins follow the unscoped
-  // `plumix-plugin-<id>` convention. Anything else needs to declare
-  // its own resolution path, out of scope for this slice.
-  const candidates = [
-    `@plumix/plugin-${pluginId}`,
-    `plumix-plugin-${pluginId}`,
-  ];
-  for (const name of candidates) {
+  for (const name of packageNameCandidates(pluginId)) {
     try {
       return dirname(require.resolve(`${name}/package.json`));
     } catch {
@@ -91,17 +102,19 @@ export function isAdminBundledPlugin(input: {
 }): boolean {
   const { bundledPluginsDir } = input;
   if (bundledPluginsDir === null) return false;
-  const entryPath = resolve(
-    input.projectRoot,
-    "node_modules",
-    "@plumix",
-    `plugin-${input.pluginId}`,
-  );
-  try {
-    return dirname(realpathSync(entryPath)) === bundledPluginsDir;
-  } catch {
-    return false;
-  }
+  // Same id-to-package-name slack `findPluginPackageRoot` allows: `audit_log`
+  // is installed as `@plumix/plugin-audit-log`, and reading the literal id
+  // alone reports every such plugin as unbundled.
+  return packageNameCandidates(input.pluginId)
+    .filter((name) => name.startsWith("@plumix/"))
+    .some((name) => {
+      const entryPath = resolve(input.projectRoot, "node_modules", name);
+      try {
+        return dirname(realpathSync(entryPath)) === bundledPluginsDir;
+      } catch {
+        return false;
+      }
+    });
 }
 
 // admin-served path `buildManifest` published in `pluginI18n[id].catalogs[locale]`

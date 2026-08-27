@@ -74,6 +74,40 @@ describe("findPluginPackageRoot", () => {
     expect(root).toBe("/site/node_modules/plumix-plugin-translate");
   });
 
+  // `audit_log` ships as `@plumix/plugin-audit-log`: `PLUGIN_ID_RE` admits `_`,
+  // npm names use `-`, and nothing reconciles them. Reading the id literally
+  // resolves nothing, which surfaced as `adminAssetNotFound` for a plugin whose
+  // catalogs were sitting in the tarball all along.
+  test("falls back to the hyphenated name for an id carrying an underscore", () => {
+    const requireFrom = makeRequireFrom({
+      "@plumix/plugin-audit-log/package.json":
+        "/site/node_modules/@plumix/plugin-audit-log/package.json",
+    });
+    const root = findPluginPackageRoot({
+      pluginId: "audit_log",
+      projectRoot: "/site",
+      requireFrom,
+    });
+    expect(root).toBe("/site/node_modules/@plumix/plugin-audit-log");
+  });
+
+  test("prefers a package whose name keeps the underscore verbatim", () => {
+    // The literal id is tried first, so a package that really is named with `_`
+    // still wins over the hyphenated fallback.
+    const requireFrom = makeRequireFrom({
+      "@plumix/plugin-odd_name/package.json":
+        "/site/node_modules/@plumix/plugin-odd_name/package.json",
+      "@plumix/plugin-odd-name/package.json":
+        "/site/node_modules/@plumix/plugin-odd-name/package.json",
+    });
+    const root = findPluginPackageRoot({
+      pluginId: "odd_name",
+      projectRoot: "/site",
+      requireFrom,
+    });
+    expect(root).toBe("/site/node_modules/@plumix/plugin-odd_name");
+  });
+
   test("returns null when no naming convention resolves", () => {
     const requireFrom = makeRequireFrom({});
     const root = findPluginPackageRoot({

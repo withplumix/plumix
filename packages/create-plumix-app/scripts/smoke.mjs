@@ -107,12 +107,25 @@ function assertNothingFromRegistry(appDir) {
  *
  * Which plugins reach it is not obvious and not stable: a plugin only qualifies
  * for a locale it declares in its own `i18n` slot and that isn't its
- * `sourceLocale`. Most first-party plugins declare `["en"]` today. So the
- * expectation is spelled out rather than derived — a plugin dropping the locale
- * should fail here, not quietly reduce what this smoke covers to nothing.
+ * `sourceLocale`. Every first-party plugin now declares the full set it ships,
+ * so all of them qualify. The expectation is spelled out rather than derived —
+ * a plugin dropping the locale should fail here, not quietly reduce what this
+ * smoke covers to nothing.
+ *
+ * Keyed by plugin id, which is what the staged path uses: `audit_log` is the id
+ * behind `@plumix/plugin-audit-log`, and that gap is the one thing here that
+ * resolution has to bridge rather than assume.
  */
 const SECOND_LOCALE = "uk";
-const EXPECT_CATALOGS = ["comments", "og"];
+const EXPECT_CATALOGS = [
+  "audit_log",
+  "blog",
+  "comments",
+  "media",
+  "menu",
+  "og",
+  "pages",
+];
 
 function enableSecondLocale(appDir) {
   const configPath = join(appDir, "plumix.config.ts");
