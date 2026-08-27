@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import type { ActionName } from "plumix";
 import type { EntryStatus } from "plumix/schema";
 import {
@@ -32,6 +32,11 @@ type ShortActionList = SourceHookName<"entry:*:published" | "entry:published">;
 // @ts-expect-error -- an action list short of a source name must not satisfy Equals.
 type _ShortHookListIsCaught = Assert<Equals<ShortActionList, ActionName>>;
 
+/** A manifest no import reaches, because it is not one of its own subpaths. */
+function manifestOf<T>(url: URL): T {
+  return JSON.parse(readFileSync(url, "utf8")) as T;
+}
+
 function itemsOf(page: string): readonly string[] {
   const roster = ROSTERS.find((candidate) => candidate.page === page);
   if (roster === undefined) throw new Error(`No roster registered for ${page}`);
@@ -39,12 +44,12 @@ function itemsOf(page: string): readonly string[] {
 }
 
 describe("the roster inventory", () => {
-  // The IA spec settles the site at seventeen rosters. Pinning the count is
-  // what stops an eighteenth arriving without anyone deciding how it binds to
+  // The IA spec settles the site at eighteen rosters. Pinning the count is
+  // what stops a nineteenth arriving without anyone deciding how it binds to
   // its source — the page-side half comes free with registration, so an
   // unbound roster looks guarded until it drifts.
   it("covers every roster the site promises", () => {
-    expect(ROSTERS).toHaveLength(17);
+    expect(ROSTERS).toHaveLength(18);
   });
 
   // And the tally stops a roster losing the binding it already had. Deleting
@@ -110,16 +115,12 @@ describe("the rosters bound to their source at runtime", () => {
     ]);
   });
 
-  // Read off disk because a manifest is not one of the subpaths it declares,
-  // so no import reaches it. The `..` count walks out of `content-checks/` to
-  // the repo root and moving this file breaks it.
+  // Read off disk for the reason `manifestOf` gives. The `..` count walks out
+  // of `content-checks/` to the repo root and moving this file breaks it.
   it("binds the façade-subpath roster to the exports map that publishes them", () => {
-    const manifest = JSON.parse(
-      readFileSync(
-        new URL("../../../../packages/plumix/package.json", import.meta.url),
-        "utf8",
-      ),
-    ) as { readonly exports: Readonly<Record<string, unknown>> };
+    const manifest = manifestOf<{
+      readonly exports: Readonly<Record<string, unknown>>;
+    }>(new URL("../../../../packages/plumix/package.json", import.meta.url));
 
     expect(itemsOf("getting-started/project-structure.mdx")).toEqual(
       Object.keys(manifest.exports).map((subpath) =>
@@ -136,5 +137,23 @@ describe("the rosters bound to their source at runtime", () => {
       typeTag("*"),
       entryTag(7).replace("7", "*"),
     ]);
+  });
+
+  // Sorted on both sides — `PLUGIN_PACKAGES` says why order is the page's here.
+  it("binds the plugin roster to the plugin packages that publish", () => {
+    const dir = new URL("../../../../packages/plugins/", import.meta.url);
+    const published = readdirSync(dir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) =>
+        manifestOf<{ readonly name: string; readonly private?: boolean }>(
+          new URL(`${entry.name}/package.json`, dir),
+        ),
+      )
+      .filter((manifest) => manifest.private !== true)
+      .map((manifest) => manifest.name);
+
+    expect([...itemsOf("plugins/overview.mdx")].sort()).toEqual(
+      [...published].sort(),
+    );
   });
 });

@@ -838,6 +838,27 @@ const CLI_REFERENCE = [
   "--version",
 ] as const;
 
+// --- Plugins ---------------------------------------------------------------
+
+/**
+ * Every plugin package that ships. Source: the directories under
+ * `packages/plugins/` whose manifest is not private — runtime, because
+ * `apps/docs` depends on none of them, so no type carries their names.
+ *
+ * Membership only, unlike the runtime bindings above: a directory's sole order
+ * is alphabetical, the one order the IA spec tells a roster page not to adopt.
+ * Its page is a narrative one, so every `###` anywhere on it reads as an item.
+ */
+const PLUGIN_PACKAGES = [
+  "@plumix/plugin-blog",
+  "@plumix/plugin-pages",
+  "@plumix/plugin-media",
+  "@plumix/plugin-menu",
+  "@plumix/plugin-comments",
+  "@plumix/plugin-audit-log",
+  "@plumix/plugin-og",
+] as const;
+
 /**
  * How a roster's items reach the source they enumerate. Naming it per entry is
  * what makes losing a binding visible: deleting an `Assert` is a one-line diff
@@ -893,4 +914,5 @@ export const ROSTERS: readonly RegisteredRoster[] = [
   { page: "hooks/reference.mdx", items: HOOKS, binding: "type-level" },
   { page: "going-further/caching.mdx", items: CACHE_TAGS, binding: "runtime" },
   { page: "deployment/cli.mdx", items: CLI_REFERENCE, binding: "page-only" },
+  { page: "plugins/overview.mdx", items: PLUGIN_PACKAGES, binding: "runtime" },
 ];
