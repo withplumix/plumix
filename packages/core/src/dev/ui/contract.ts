@@ -144,7 +144,7 @@ export interface DevErrorHint {
 }
 
 /** A "read more" link on a {@link DevErrorHint}. */
-interface DevErrorHintDoc {
+export interface DevErrorHintDoc {
   readonly label: string;
   readonly href: string;
 }

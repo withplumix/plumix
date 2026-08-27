@@ -4,6 +4,7 @@ import type { AppContext } from "../../../context/app.js";
 import type { HookExecutor } from "../../../hooks/registry.js";
 import type { RenderedDevErrorPanel } from "../../ui/index.js";
 import type { DevErrorPanel } from "./types.js";
+import { DevErrorEmptyNote } from "../../ui/panel-primitives.js";
 
 import "./types.js";
 
@@ -64,9 +65,9 @@ function renderPanelHtml(
       err,
     );
     return renderToStaticMarkup(
-      <p className="plumix-dev-error__empty">
+      <DevErrorEmptyNote>
         Panel “{panel.id}” failed to render.
-      </p>,
+      </DevErrorEmptyNote>,
     );
   }
 }

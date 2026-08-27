@@ -3,7 +3,6 @@ import type { ReactElement, ReactNode } from "react";
 
 import type {
   DevErrorContext,
-  DevErrorFact,
   DevErrorFrame,
   DevErrorHint,
   DevErrorHydrationDiff,
@@ -19,6 +18,11 @@ import {
   DEV_ERROR_SOURCE_ENDPOINT,
   relativeFramePath,
 } from "./frames.js";
+import {
+  DevErrorEmptyNote,
+  DevErrorFacts,
+  DevErrorSubhead,
+} from "./panel-primitives.js";
 
 /**
  * The shared dev-error renderer (#1580). Theme-independent: it renders the
@@ -277,7 +281,7 @@ function HydrationDiff({
           className="plumix-dev-error__hydration-pane"
           data-testid="plumix-dev-error-hydration-server"
         >
-          <h3 className="plumix-dev-error__subhead">Server (SSR)</h3>
+          <DevErrorSubhead>Server (SSR)</DevErrorSubhead>
           <pre className="plumix-dev-error__hydration-pre">
             <code>{diff.server}</code>
           </pre>
@@ -286,7 +290,7 @@ function HydrationDiff({
           className="plumix-dev-error__hydration-pane"
           data-testid="plumix-dev-error-hydration-client"
         >
-          <h3 className="plumix-dev-error__subhead">Client (recovered)</h3>
+          <DevErrorSubhead>Client (recovered)</DevErrorSubhead>
           <pre className="plumix-dev-error__hydration-pre">
             <code>{diff.client}</code>
           </pre>
@@ -347,7 +351,7 @@ function ContextSections({
       <DatabaseSection queries={context.queries} />
       <TimelineSection timeline={context.timeline} />
       <ContextSection id="app" title="Application">
-        <FactList facts={context.app} />
+        <DevErrorFacts facts={context.app} />
       </ContextSection>
     </div>
   );
@@ -361,7 +365,7 @@ function RequestSection({
   const { request } = context;
   return (
     <ContextSection id="request" title="Request">
-      <FactList
+      <DevErrorFacts
         facts={[
           { label: "Method", value: request.method },
           { label: "URL", value: request.url },
@@ -369,8 +373,8 @@ function RequestSection({
       />
       {request.headers.length > 0 ? (
         <>
-          <h3 className="plumix-dev-error__subhead">Headers</h3>
-          <FactList facts={request.headers} />
+          <DevErrorSubhead>Headers</DevErrorSubhead>
+          <DevErrorFacts facts={request.headers} />
         </>
       ) : null}
     </ContextSection>
@@ -386,13 +390,13 @@ function RouteSection({
   if (entity === undefined && template === undefined) {
     return (
       <ContextSection id="route" title="Route">
-        <EmptyNote>No route resolved.</EmptyNote>
+        <DevErrorEmptyNote>No route resolved.</DevErrorEmptyNote>
       </ContextSection>
     );
   }
   return (
     <ContextSection id="route" title="Route">
-      <FactList
+      <DevErrorFacts
         facts={[
           { label: "Entity", value: entity ?? "—" },
           { label: "Template", value: template ?? "—" },
@@ -417,7 +421,7 @@ function DatabaseSection({
       }
     >
       {queries.length === 0 ? (
-        <EmptyNote>No queries recorded.</EmptyNote>
+        <DevErrorEmptyNote>No queries recorded.</DevErrorEmptyNote>
       ) : (
         <>
           <ol className="plumix-dev-error__queries">
@@ -487,7 +491,7 @@ function TimelineSection({
   if (timeline.rows.length === 0) {
     return (
       <ContextSection id="timeline" title="Timeline">
-        <EmptyNote>No spans recorded.</EmptyNote>
+        <DevErrorEmptyNote>No spans recorded.</DevErrorEmptyNote>
       </ContextSection>
     );
   }
@@ -549,31 +553,6 @@ function ContextSection({
       {children}
     </section>
   );
-}
-
-function FactList({
-  facts,
-}: {
-  readonly facts: readonly DevErrorFact[];
-}): ReactElement {
-  return (
-    <dl className="plumix-dev-error__facts">
-      {facts.map((fact, index) => (
-        <div key={`${index}:${fact.label}`} className="plumix-dev-error__fact">
-          <dt className="plumix-dev-error__fact-label">{fact.label}</dt>
-          <dd className="plumix-dev-error__fact-value">{fact.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function EmptyNote({
-  children,
-}: {
-  readonly children: ReactNode;
-}): ReactElement {
-  return <p className="plumix-dev-error__empty">{children}</p>;
 }
 
 function HintCard({ hint }: { readonly hint: DevErrorHint }): ReactElement {
