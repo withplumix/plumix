@@ -87,7 +87,9 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
   const advertised = advertisedExtension(renderer.contentType);
 
   return definePlugin("og", {
-    setup: (ctx) => {
+    // Async because of the dev import below; core awaits `setup` before it
+    // reads any registry, so registration order is unaffected.
+    setup: async (ctx) => {
       // The theme is validated after plugins install, so its cards arrive on
       // the boot-time handover rather than here. One snapshot serves every
       // request — nothing about a rule set is request-scoped.
@@ -120,6 +122,13 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
           inputs: inputs(),
         }),
       );
+      // Behind the development gate and a dynamic import, the way core mounts
+      // its own dev-only routes: the branch is dead code in a build, so the
+      // preview and the debug panel leave nothing in a production bundle.
+      if (process.env.PLUMIX_DEV) {
+        const { registerDevSurfaces } = await import("./dev/index.js");
+        registerDevSurfaces(ctx, { renderer, cards, inputs });
+      }
     },
   });
 }

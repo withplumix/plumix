@@ -32,6 +32,7 @@ import {
 
 import type { CardKey } from "./card-key.js";
 import type { CardNode } from "./renderer.js";
+import { CARD_HEIGHT, CARD_WIDTH } from "./renderer.js";
 
 /**
  * A card's render arguments: a template's render arguments, plus the theme's
@@ -84,6 +85,23 @@ export interface CardDefinition<TData extends TemplateData> extends CardDeps {
   readonly styles?: readonly string[];
   readonly width?: number;
   readonly height?: number;
+}
+
+export interface CardSize {
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * A card's own size, or the one every major scraper lays out for. One function
+ * because the size the storage key describes has to be the size that was
+ * rendered, which has to be the size the head advertised.
+ */
+export function cardSize(card: CardDefinition<TemplateData>): CardSize {
+  return {
+    width: card.width ?? CARD_WIDTH,
+    height: card.height ?? CARD_HEIGHT,
+  };
 }
 
 /**

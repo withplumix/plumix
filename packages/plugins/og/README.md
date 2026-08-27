@@ -199,6 +199,40 @@ og({ fonts: ["/fonts/Inter-SemiBold.ttf"] });
 
 The engine reads **TTF, OTF and WOFF — not WOFF2**, which is what most font packages ship by default. A WOFF2 file produces a card with no text on it. With no `fonts:` declared, the engine's own fallback face is used.
 
+## Building a card
+
+Two surfaces exist only in development. Both are behind the same gate core uses
+for its own dev routes (`PLUMIX_DEV`) and a dynamic import, so neither leaves
+anything in a production build.
+
+**`/_plumix/og/preview`** renders every declared rule against sample data, with
+one card per rule at `/_plumix/og/preview/<n>.<ext>`. They are listed in the
+order a page resolves against them — every targeted matcher, then the generic
+tiers, then `fallback` — which is not the order they were declared in, so the
+list reads as the precedence it actually is. Nothing is read from storage and
+nothing is cached: a refresh re-renders, so an edit shows up. That bypass is a
+requirement rather than a convenience — the URL a card is served at carries its
+digest, so every edit publishes a _different_ one and the previous render sits
+immutable in your bucket, and without it the authoring loop is copy-pasting
+URLs out of page source.
+
+The sample data is invented, never looked up, so the preview works on a site
+with no content in it. A rule's matcher contributes the names it narrows on:
+`card.forEntryType("recipe")` previews a recipe.
+
+**The debug bar's "OG image" panel** answers the other question. Four links
+resolve one `og:image` and the rendered page says nothing about which of them
+won, so the panel names it — the explicit role, the featured photo, the card
+(and which rule produced it), or your site default — along with the reason
+there is no card on the page. That is where a renderer whose format scrapers
+cannot read is reported, which is why there is no boot-time warning for it.
+
+The panel reports the chain as this plugin sees it, so a `seo:og_image`
+subscriber registered _after_ `og()` in your `plugins:` array can override the
+answer without the panel learning; the page's own `og:image` meta tag is the
+last word. An explicit `.ogImage()` field short-circuits above the filter, so
+the panel names that link but cannot show its value either.
+
 ## What the renderer costs
 
 The default renderer is resolved inside this package, so the engine is part of your install whichever implementation you select — roughly 2.3 MB against the Workers 3 MB compressed ceiling. Selecting `svgOnly()` does **not** give those bytes back: it is the same engine's SVG output. `remote({ url })` is the only implementation that leaves the engine unexecuted, and even then it stays installed.

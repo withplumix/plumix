@@ -26,6 +26,10 @@ export type { TracedQuery } from "./db/trace.js";
 export * from "./hooks/index.js";
 export * from "./i18n/index.js";
 export type { JsonObject, JsonValue } from "./json.js";
+// The narrowings that go with them: anything reading stored meta, a telemetry
+// record or a block prop is handed a `JsonValue` and has to narrow it before it
+// can read a field.
+export { isJsonArray, isJsonObject } from "./json.js";
 export * from "./mcp/index.js";
 export * from "./plugin/index.js";
 export { isCurrentSource } from "./route/current.js";
@@ -88,6 +92,15 @@ export { serveRenderedAsset } from "./cache/rendered-asset.js";
 export type { RenderedAssetArgs } from "./cache/rendered-asset.js";
 // The `seo:og_image` filter's value type, for a subscriber that names it.
 export type { OgImage } from "./seo/head-defaults.js";
+// The debug bar's presentational primitives, so a plugin panel contributed
+// through `debug_bar:panels` reads like the ones core registers instead of
+// re-spelling their class names. Dev-only in effect — nothing collects
+// outside the `PLUMIX_DEV` gate — but exported here because a plugin's panel
+// module is its own, and it has nowhere else to import them from.
+export { DebugKV, DebugSection } from "./dev/debug-bar/primitives.js";
+export type { DebugKVRow } from "./dev/debug-bar/primitives.js";
+export type { DebugPanel } from "./dev/debug-bar/types.js";
+export type { DebugSnapshot } from "./dev/debug-bar/snapshot.js";
 // Exposed for a `cache:` provider: which responses a shared cache may hold is
 // framework policy, not the runtime's, and a provider's `put` reads the same
 // rule core does when it decides whether to store at all.
@@ -162,7 +175,11 @@ export type {
   UserMetaContributions,
   UserMetaOf,
 } from "./plugin/fields/contributions.js";
-export { resolveErrorRule, resolveRule } from "./route/render/rule-resolver.js";
+export {
+  resolveErrorRule,
+  resolveRule,
+  ruleLabel,
+} from "./route/render/rule-resolver.js";
 export {
   resolveErrorTemplate,
   resolveTemplate,

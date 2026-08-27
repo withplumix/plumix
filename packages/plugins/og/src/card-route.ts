@@ -13,18 +13,19 @@ import type { CardInputs } from "./card-identity.js";
 import type { CardRegistry } from "./card-registry.js";
 import type { CardRenderer } from "./renderer.js";
 import { resolveCardIdentity } from "./card-identity.js";
-import { resolveCardImages } from "./card-images.js";
 import { entryCardNode } from "./card-registry.js";
-import { OgPluginError } from "./errors.js";
+import { renderCardBytes, SANDBOX_CSP } from "./card-render.js";
 import { extensionFor } from "./renderer.js";
 import { isShareableEntry } from "./shareable.js";
 
 /** Where the plugin mounts the route, relative to its own prefix. */
 export const CARD_ROUTE_PATH = "/entry/*";
 
-// The same path once mounted: core prefixes a plugin route with
-// `/_plumix/<pluginId>`, and the head has to name the URL the route answers on.
-const CARD_URL_PREFIX = "/_plumix/og/entry";
+// Where core mounts this plugin's routes — it prefixes each with
+// `/_plumix/<pluginId>` — spelled once because the head has to name the URL the
+// route answers on, and a preview link has to reach the preview route.
+export const OG_ROUTE_PREFIX = "/_plumix/og";
+const CARD_URL_PREFIX = `${OG_ROUTE_PREFIX}/entry`;
 
 /**
  * One card's URL. Absolute, because a scraper reads it out of the page and
@@ -39,7 +40,7 @@ export function cardUrl(
   digest: string,
   extension: string,
 ): string {
-  const path = `/_plumix/og/${entryCardPath(id, digest, extension)}`;
+  const path = `${OG_ROUTE_PREFIX}/${entryCardPath(id, digest, extension)}`;
   return `${ctx.origin}${withBasePath(path, ctx.basePath)}`;
 }
 
@@ -49,14 +50,6 @@ export function cardUrl(
 function entryCardPath(id: number, digest: string, extension: string): string {
   return `entry/${String(id)}/${digest}.${extension}`;
 }
-
-// A card is bytes a renderer produced, and the renderer is a slot: `remote()`
-// and any third-party implementation can answer with whatever they like, served
-// inline from the site's own origin. SVG is a document to a browser, so a
-// direct navigation would run whatever script those bytes carried. The media
-// plugin answers the same hazard by forcing a download; a card has to stay
-// viewable, so it is defused here instead.
-const SANDBOX_CSP = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
 
 export interface CardRouteOptions {
   readonly renderer: CardRenderer;
@@ -114,7 +107,7 @@ export function createCardRoute(
       rendered,
       extension,
     );
-    const { args, width, height } = identity;
+    const { args } = identity;
 
     // The digest in the URL is never taken as the key: a crafted one would
     // otherwise mint an entry per request, in storage and at the edge alike.
@@ -135,25 +128,8 @@ export function createCardRoute(
         key: `og/${entryCardPath(target.id, identity.digest, extension)}`,
         contentType: renderer.contentType,
         storage: ctx.storage,
-        render: async () => {
-          const [{ node, images }, faces] = await Promise.all([
-            resolveCardImages(card.render(args), ctx),
-            loadFonts(ctx, rendered.fonts),
-          ]);
-          return renderer.render(node, {
-            width,
-            height,
-            // The theme's sheet first: a card is written against those
-            // properties, and one that redefines a token is meant to win.
-            stylesheets: [
-              ...rendered.tokens.stylesheets,
-              ...(card.styles ?? []),
-            ],
-            images,
-            fonts: faces,
-            fetch: ctx.fetch,
-          });
-        },
+        render: () =>
+          renderCardBytes({ card, args, ctx, renderer, inputs: rendered }),
       });
     } catch (error) {
       ctx.logger.error("og_card_render_failed", {
@@ -209,39 +185,6 @@ async function siteSetting(
   return typeof row?.value === "string" && row.value.length > 0
     ? row.value
     : undefined;
-}
-
-/**
- * Fonts come from the platform asset layer rather than the Worker bundle, so
- * adding cards costs no deployment size. The engine reads TTF, OTF and WOFF —
- * not WOFF2, which is what most font packages ship.
- *
- * A declared font that cannot be read fails the render rather than dropping to
- * the engine's own fallback face, which would answer 200 with a card nobody
- * meant to publish. The failure then takes the route's fallback path.
- */
-async function loadFonts(
-  ctx: AppContext,
-  paths: readonly string[],
-): Promise<Uint8Array[]> {
-  if (paths.length === 0) return [];
-  const assets = ctx.assets;
-  if (assets === undefined) throw OgPluginError.assetLayerMissing({ paths });
-
-  return Promise.all(
-    paths.map(async (path) => {
-      const response = await assets.fetch(
-        new Request(new URL(path, ctx.origin)),
-      );
-      if (!response.ok) {
-        throw OgPluginError.fontAssetMissing({
-          path,
-          status: response.status,
-        });
-      }
-      return new Uint8Array(await response.arrayBuffer());
-    }),
-  );
 }
 
 interface EntryNode {

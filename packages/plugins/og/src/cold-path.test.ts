@@ -10,6 +10,11 @@ import { describe, expect, test } from "vitest";
 const ENTRY = "index.ts";
 const ENGINE = "takumi.ts";
 const ENGINE_LOADER = "./takumi.js";
+// The developer surfaces — preview route and debug-bar panel. Reached only
+// through the `PLUMIX_DEV` branch's dynamic import, so a build drops the
+// branch and the whole module with it.
+const DEV = path.join("dev", "index.ts");
+const DEV_LOADER = "./dev/index.js";
 
 const SRC = import.meta.dirname;
 
@@ -134,5 +139,18 @@ describe("the engine stays off the default graph", () => {
       importsOf(file).dynamic.includes(ENGINE_LOADER),
     );
     expect(loaders.map((file) => path.relative(SRC, file))).not.toEqual([]);
+  });
+});
+
+describe("the developer surfaces stay off the default graph", () => {
+  test("nothing the entry reaches statically imports the dev module", () => {
+    expect(chainTo(path.join(SRC, DEV))).toBeUndefined();
+  });
+
+  test("the entry still reaches the dev module lazily", () => {
+    const loaders = [...CLOSURE.keys()].filter((file) =>
+      importsOf(file).dynamic.includes(DEV_LOADER),
+    );
+    expect(loaders.map((file) => path.relative(SRC, file))).toEqual([ENTRY]);
   });
 });

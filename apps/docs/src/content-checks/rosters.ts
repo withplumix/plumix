@@ -641,8 +641,10 @@ export type SourceHookName<TName extends string> =
  * `@plumix/core`'s barrel anchors (`hooks/public-hooks.ts`). That is the same
  * boundary a plugin author sees, so a hook missing from here is a hook they
  * cannot type either — which is why the roster follows the façade rather than
- * the repo. The dev-only `debug_bar:panels`, `error_page:panels` and
- * `error_page:hints` are outside it, and the Dev Tools page documents them.
+ * the repo. `debug_bar:panels` is inside it despite being dev-only, because a
+ * shipping plugin contributes a panel through it and could not otherwise name
+ * the hook at all; `error_page:panels` and `error_page:hints` have no such
+ * consumer yet and stay outside, where the Dev Tools page documents them.
  */
 const FILTER_HOOKS = [
   "admin_bar:nodes",
@@ -650,6 +652,7 @@ const FILTER_HOOKS = [
   "block:before_render",
   "block:after_render",
   "blocks:loader:error",
+  "debug_bar:panels",
   "entry:before_save",
   "entry:*:before_save",
   "render:document",

@@ -7,6 +7,8 @@ export interface CardRegistry {
   /** Called once, from `theme:ready`, with whatever the theme declared. */
   load(themeCards: readonly CardRule[]): void;
   resolve(node: ResolvedNode, data: TemplateData): CardRule | undefined;
+  /** Every rule, in declaration order — the theme's, then the plugin's own. */
+  list(): readonly CardRule[];
 }
 
 /**
@@ -43,5 +45,6 @@ export function createCardRegistry(
       rules = [...themeCards, ...defaults];
     },
     resolve: (node, data) => resolveRule(rules, node, data),
+    list: () => rules,
   };
 }
