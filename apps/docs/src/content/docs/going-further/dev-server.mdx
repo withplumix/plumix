@@ -1,0 +1,101 @@
+---
+title: The Dev Server
+description: What plumix dev exposes that a deployed site does not, why those surfaces answer only over loopback, and how to open them deliberately when you need to review off-box.
+tier: P1
+sidebar:
+  order: 10
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+`plumix dev` runs the same worker your deploy runs, plus a set of surfaces that exist only while you are developing: a debug bar carrying the request's SQL, a captured request history, an error page carrying stacks. Those answer only to requests that arrived over loopback.
+
+## Overview
+
+Two gates stand in front of every development surface, and both have to be open.
+
+The first is **the build**. `process.env.PLUMIX_DEV` is a literal the Vite plugin substitutes — `"1"` under `plumix dev`, empty under `plumix build` — so each surface sits inside a branch that is dead code in a production bundle. The modules behind it are not merely unreachable in a deploy; they are absent from it.
+
+The second is **the request**. A dev server is routinely reachable from somewhere other than the machine running it: a tunnel opened to test a webhook, a container bound to `0.0.0.0`, a forwarded codespace port. The environment variable says nothing about who is on the other end of the socket, so core reads the request's `Host` as a proxy for the interface it arrived on and serves a development surface only when that host is loopback — `localhost`, `127.0.0.0/8` or `[::1]`.
+
+Off-loopback the surfaces are not merely refused, they are absent: the debug bar is not injected, the history route 404s, and a failure renders your theme's own error page instead of the dev one. What is withheld is the disclosure, not the site.
+
+## Quickstart
+
+<Steps>
+
+1. **Develop on the machine running the server.** Nothing to configure — `http://localhost:5173` is loopback, so the bar, the history and the dev error page are all there.
+
+2. **Reach it from somewhere else and they go quiet.** A phone on the LAN, a tunnel hostname, a forwarded codespace port: the pages render, the development surfaces do not.
+
+3. **Open them for that session, deliberately:**
+
+   ```sh
+   PLUMIX_DEV_ALLOW_REMOTE=1 pnpm dev
+   ```
+
+   Every surface behaves as it does over loopback, for anyone who can reach the port. Set it when you are reviewing on a phone or demoing through a tunnel; leave it unset the rest of the time.
+
+</Steps>
+
+<Aside type="caution" title="The variable is read at bundle time">
+  Like `PLUMIX_EDITOR` and the other dev-only variables,
+  `PLUMIX_DEV_ALLOW_REMOTE` is substituted into the bundle when the dev server
+  starts, not read per request. Restart the server after changing it. `plumix
+  build` substitutes it as empty, so it cannot follow you to a deploy.
+</Aside>
+
+## What sits behind the development gate
+
+- **The debug bar**, injected into every rendered page — its panels carry the request's queries, the resolved template and the full telemetry tree.
+- **`/_plumix/debug/requests`** and `/_plumix/debug/requests/<id>`, the captured history the bar's switcher reads, holding the same detail for every recent request.
+- **The dev error page**, which renders the exception, its stack and the request context that led to it. Off-loopback the theme's `server-error` template answers instead, exactly as it does in a deploy.
+- **The dev server's own endpoints** — the source-excerpt reader behind the error page's frames, the sourcemap resolvers behind the island overlay, and the browser-errors-to-terminal sink. These are Vite middlewares that answer ahead of the worker, and the source reader hands back any file under Vite's fs allowlist, so it is the widest of the set.
+- **Every plugin route registered `auth: "development"`** — the `@plumix/plugin-og` card preview at `/_plumix/og/preview` is the one that ships.
+
+## Registering a development route
+
+A plugin route that exists only while you are developing declares `auth: "development"`, and core applies both gates to it:
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const preview = definePlugin("preview", (ctx) => {
+  if (!process.env.PLUMIX_DEV) return;
+  ctx.registerRoute({
+    method: "GET",
+    path: "/inspect",
+    auth: "development",
+    handler: () => new Response("what the renderer sees"),
+  });
+});
+```
+
+The `process.env.PLUMIX_DEV` branch is what keeps the handler and its imports out of a production bundle; `auth: "development"` is what decides, per request, whether the route answers. Off-loopback it returns 404 rather than 401 — the existence of the route is itself development detail.
+
+<Aside type="note" title="Prefer it to a public route">
+  A development route is usually wider than the site around it: it runs
+  theme-authored code, resolves whatever data that code declares, and does so
+  for a request carrying no session. Declaring it public leaves the environment
+  variable as the only boundary.
+</Aside>
+
+## Why the host, and what it does not cover
+
+The `Host` header is the honest client's statement of what it dialled. A browser reaching an exposed dev server sends the exposed name, which is not loopback, so the surfaces stay closed. It also covers DNS rebinding, where the address resolves to `127.0.0.1` but the `Host` remains the attacker's domain.
+
+What it does not cover is a non-browser attacker already on your network, who can forge `Host: localhost` and be believed. That is an accepted residual rather than an oversight: the check is a floor under an environment variable, not a substitute for not exposing the port. Do not expose `plumix dev` to a network you do not control.
+
+A tunnel configured to rewrite the host — `ngrok --host-header=rewrite` and its equivalents — presents every request as loopback, so the surfaces stay open through it. That is the tunnel telling the server it is being reached locally, and nothing here can see past it. Prefer a tunnel that forwards the original host, which is the default for both `ngrok` and `cloudflared`.
+
+It also does less than the MCP gate it is modelled on, which pairs the same Host check with an Origin allowlist. The surfaces here are GET-shaped disclosure, so the same-origin policy already stops a page in your browser from reading one — but a `POST` development route is permitted by the model, and its handler is yours to write. Treat a development route as reachable by any page open in the developer's browser.
+
+The MCP endpoint is gated separately and more strictly, because what it grants is tool access rather than disclosure. Off-loopback it falls back to bearer-token authentication instead of closing, and `PLUMIX_DEV_ALLOW_REMOTE` does not reach it. [Configuration](/getting-started/configuration/) covers that endpoint.
+
+## Related
+
+The build-time half of the gate is the Vite plugin's `define`, described in [Project Structure](/getting-started/project-structure/). The route-auth model a `"development"` route joins — `"public"`, `"authenticated"` and capability gates — is in [Access & Identity](/access/overview/). The card preview that motivated the second gate is documented in [OG Cards](/plugins/og/).
+
+## Next steps
+
+Read [Configuration](/getting-started/configuration/) for the MCP endpoint's own dev relaxation and the `debugBar` options, and [Deploy](/getting-started/deploy/) for what changes when the same worker is built rather than served.

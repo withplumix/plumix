@@ -4,7 +4,7 @@ import type { CardRenderer } from "../renderer.js";
 import { createFakeRenderer } from "../test/fake-renderer.js";
 import {
   createHarness,
-  headOf,
+  DEV_ORIGIN,
   ogImageOf,
   seedEntry,
 } from "../test/harness.js";
@@ -32,7 +32,9 @@ describe("the og:image debug panel", () => {
     const harness = await createHarness({ renderer: rasterRenderer() });
     await seedEntry(harness, { slug: "hello-world" });
 
-    const html = await headOf(harness, "hello-world");
+    const html = await harness
+      .fetch(`${DEV_ORIGIN}/posts/hello-world`)
+      .then((r) => r.text());
 
     expect(html).toContain(PANEL);
     expect(html).toContain("Generated card");
@@ -50,7 +52,9 @@ describe("the og:image debug panel", () => {
     const harness = await createHarness({ renderer: rasterRenderer() });
     await seedEntry(harness, { slug: "with-photo", featured: { url: PHOTO } });
 
-    const html = await headOf(harness, "with-photo");
+    const html = await harness
+      .fetch(`${DEV_ORIGIN}/posts/with-photo`)
+      .then((r) => r.text());
 
     expect(html).toContain("Featured photo");
     expect(html).toContain(PHOTO);
@@ -62,7 +66,9 @@ describe("the og:image debug panel", () => {
     const harness = await createHarness({});
     await seedEntry(harness, { slug: "svg-card" });
 
-    const html = await headOf(harness, "svg-card");
+    const html = await harness
+      .fetch(`${DEV_ORIGIN}/posts/svg-card`)
+      .then((r) => r.text());
 
     expect(html).toContain("format is not scraper-safe");
     expect(html).toContain("Site default");
@@ -77,7 +83,7 @@ describe("the og:image debug panel", () => {
     // by an anonymous scraper the gate turns away. Without the panel the only
     // symptom is a head that quietly kept the site-wide default.
     const response = await harness.dispatch(
-      new Request("https://cms.example/gated/locked"),
+      new Request(`${DEV_ORIGIN}/gated/locked`),
       member,
     );
     const html = await response.text();
@@ -93,7 +99,9 @@ describe("the og:image debug panel", () => {
       shareImage: { url: "https://media.example/chosen.png" },
     });
 
-    const html = await headOf(harness, "explicit");
+    const html = await harness
+      .fetch(`${DEV_ORIGIN}/posts/explicit`)
+      .then((r) => r.text());
 
     expect(html).toContain("Explicit og:image role");
   });

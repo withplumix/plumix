@@ -105,6 +105,11 @@ export type { OgImage } from "./seo/head-defaults.js";
 // re-spelling their class names. Dev-only in effect — nothing collects
 // outside the `PLUMIX_DEV` gate — but exported here because a plugin's panel
 // module is its own, and it has nowhere else to import them from.
+// The dev-surface host gate (#2007), for the Vite plugin's own dev middlewares:
+// they answer ahead of the worker proxy, so they hold a Node `req` rather than
+// a Request and apply the check themselves. Only `configureServer` calls it,
+// which is why it carries no `PLUMIX_DEV` gate of its own.
+export { isTrustedDevHost } from "./dev/trust.js";
 export { DebugKV, DebugSection } from "./dev/debug-bar/primitives.js";
 export type { DebugKVRow } from "./dev/debug-bar/primitives.js";
 export type { DebugPanel } from "./dev/debug-bar/types.js";

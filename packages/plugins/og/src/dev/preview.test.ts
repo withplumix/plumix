@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { cardKey } from "../card-key.js";
 import { card } from "../card.js";
 import { createFakeRenderer } from "../test/fake-renderer.js";
-import { createHarness } from "../test/harness.js";
+import { createHarness, DEV_ORIGIN } from "../test/harness.js";
+
+const PREVIEW = `${DEV_ORIGIN}/_plumix/og/preview`;
 
 const original = process.env.PLUMIX_DEV;
 
@@ -30,7 +32,7 @@ describe("the preview route", () => {
       cards: [titleCard],
     });
 
-    const response = await harness.fetch("/_plumix/og/preview/0.svg");
+    const response = await harness.fetch(`${PREVIEW}/0.svg`);
 
     expect(response.assertStatus(200).headers.get("content-type")).toBe(
       "image/svg+xml",
@@ -49,8 +51,8 @@ describe("the preview route", () => {
       cards: [titleCard],
     });
 
-    await harness.fetch("/_plumix/og/preview/0.svg");
-    const second = await harness.fetch("/_plumix/og/preview/0.svg");
+    await harness.fetch(`${PREVIEW}/0.svg`);
+    const second = await harness.fetch(`${PREVIEW}/0.svg`);
 
     expect(fake.inputs).toHaveLength(2);
     expect(second.headers.get("cache-control")).toBe("no-store");
@@ -60,7 +62,7 @@ describe("the preview route", () => {
   test("indexes every declared rule, the plugin's own default included", async () => {
     const harness = await createHarness({ cards: [titleCard] });
 
-    const index = await (await harness.fetch("/_plumix/og/preview")).text();
+    const index = await (await harness.fetch(PREVIEW)).text();
 
     // The theme's rule, then the default the plugin keeps behind it.
     expect(index).toContain('src="/_plumix/og/preview/0.svg"');
@@ -82,7 +84,7 @@ describe("the preview route", () => {
       ],
     });
 
-    const index = await (await harness.fetch("/_plumix/og/preview")).text();
+    const index = await (await harness.fetch(PREVIEW)).text();
 
     expect(index).toContain("0. post");
     expect(index).toContain("1. entry");
@@ -99,18 +101,28 @@ describe("the preview route", () => {
       ],
     });
 
-    const svg = await (await harness.fetch("/_plumix/og/preview/0.svg")).text();
+    const svg = await (await harness.fetch(`${PREVIEW}/0.svg`)).text();
 
     // The card renders its own taxonomy name, which only the matcher supplies —
     // the sample data is invented, so nothing looked "category" up.
     expect(svg).toContain("category");
   });
 
+  test("does not exist for a dev server reached off-box", async () => {
+    const harness = await createHarness({ cards: [titleCard] });
+
+    // A theme-authored `render` and whatever template deps its card declared,
+    // run against an unauthenticated request — so the gate is the dev server's
+    // environment variable *and* a loopback request (#2007).
+    (await harness.fetch("/_plumix/og/preview")).assertStatus(404);
+    (await harness.fetch("/_plumix/og/preview/0.svg")).assertStatus(404);
+  });
+
   test("does not exist without the development gate", async () => {
     delete process.env.PLUMIX_DEV;
     const harness = await createHarness({ cards: [titleCard] });
 
-    (await harness.fetch("/_plumix/og/preview")).assertStatus(404);
-    (await harness.fetch("/_plumix/og/preview/0.svg")).assertStatus(404);
+    (await harness.fetch(PREVIEW)).assertStatus(404);
+    (await harness.fetch(`${PREVIEW}/0.svg`)).assertStatus(404);
   });
 });

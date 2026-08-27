@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { createDispatcherHarness } from "../../test/dispatcher.js";
+import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
 import { DEBUG_REQUESTS_PATH } from "./requests-path.js";
 
 interface DebugRequestListShape {
@@ -13,17 +13,17 @@ interface DebugRequestListShape {
 // empty and the whole module tree-shakes; here we toggle it directly to prove
 // the runtime gate. Dispatching an unknown URL renders the 404 through the
 // shared renderTree, so this also covers error-page injection.
-const UNKNOWN_URL = "https://cms.example/no-such-page";
+const UNKNOWN_URL = `${DEV_ORIGIN}/no-such-page`;
+
+// The same page reached the way an off-box client reaches an exposed dev server
+// — through the tunnel's or the container's own hostname, not loopback (#2007).
+const REMOTE_URL = "https://cms.example/no-such-page";
 
 describe("debug bar injection", () => {
-  const original = process.env.PLUMIX_DEV;
-  afterEach(() => {
-    if (original === undefined) delete process.env.PLUMIX_DEV;
-    else process.env.PLUMIX_DEV = original;
-  });
+  afterEach(() => void vi.unstubAllEnvs());
 
   test("is injected into the rendered page (incl. 404) in dev", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     const h = await createDispatcherHarness();
 
     const res = await h.dispatch(new Request(UNKNOWN_URL));
@@ -34,8 +34,28 @@ describe("debug bar injection", () => {
     expect(html).toContain('data-testid="plumix-debug-panel-request"');
   });
 
+  test("is absent off-loopback: an exposed dev server discloses no SQL or spans", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await createDispatcherHarness();
+
+    const html = await (await h.dispatch(new Request(REMOTE_URL))).text();
+
+    expect(html).not.toContain("plumix-debug-bar");
+    expect(html).not.toContain("plumix-debug-switcher");
+  });
+
+  test("PLUMIX_DEV_ALLOW_REMOTE puts the bar back on an exposed dev server", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    vi.stubEnv("PLUMIX_DEV_ALLOW_REMOTE", "1");
+    const h = await createDispatcherHarness();
+
+    const html = await (await h.dispatch(new Request(REMOTE_URL))).text();
+
+    expect(html).toContain('data-testid="plumix-debug-bar"');
+  });
+
   test("is absent from the rendered page when not in dev (prod build)", async () => {
-    delete process.env.PLUMIX_DEV;
+    vi.stubEnv("PLUMIX_DEV", "");
     const h = await createDispatcherHarness();
 
     const res = await h.dispatch(new Request(UNKNOWN_URL));
@@ -54,17 +74,17 @@ describe("debug bar injection", () => {
   // contract the script uses: the option's value is the captured id, and that
   // id's `?format=html` returns the panels.
   test("lists a captured request in the switcher and renders its panels", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     const h = await createDispatcherHarness();
 
     // Drive a request and let capture run.
-    await h.dispatch(new Request("https://cms.example/no-such-page"));
+    await h.dispatch(new Request(UNKNOWN_URL));
     await h.drainDeferred();
 
     // The captured id — the value the switcher <option> carries and the script
     // fetches on selection.
     const list = (await (
-      await h.dispatch(new Request(`https://cms.example${DEBUG_REQUESTS_PATH}`))
+      await h.dispatch(new Request(`${DEV_ORIGIN}${DEBUG_REQUESTS_PATH}`))
     ).json()) as DebugRequestListShape[];
     const captured = list.find((item) => item.path === "/no-such-page");
     expect(captured).toBeDefined();
@@ -72,7 +92,7 @@ describe("debug bar injection", () => {
     // The next page's bar surfaces the switcher, its script, and an option for
     // the captured request keyed by that exact id.
     const pageHtml = await (
-      await h.dispatch(new Request("https://cms.example/another-missing"))
+      await h.dispatch(new Request(`${DEV_ORIGIN}/another-missing`))
     ).text();
     expect(pageHtml).toContain('data-testid="plumix-debug-switcher"');
     expect(pageHtml).toContain('data-testid="plumix-debug-switcher-script"');
@@ -82,7 +102,7 @@ describe("debug bar injection", () => {
     // Selecting it fetches the pre-rendered panels the script swaps in.
     const panelsRes = await h.dispatch(
       new Request(
-        `https://cms.example${DEBUG_REQUESTS_PATH}/${captured?.id}?format=html`,
+        `${DEV_ORIGIN}${DEBUG_REQUESTS_PATH}/${captured?.id}?format=html`,
       ),
     );
     expect(panelsRes.headers.get("content-type")).toContain("text/html");

@@ -41,6 +41,7 @@ import {
   TEMPLATE_PANEL_ID,
   templateNodeLabel,
 } from "../../dev/debug-bar/template-node-label.js";
+import { isTrustedDevRequest } from "../../dev/trust.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { escapeHtml } from "../../escape-html.js";
 import { applyCanonical } from "../../seo/canonical.js";
@@ -461,8 +462,12 @@ function renderTree({
     // Dev-only debug bar — standalone and auth-independent (unlike the admin
     // bar it never gates on a user). `process.env.PLUMIX_DEV` is Vite-empty
     // in prod builds, so this branch and the whole debug-bar module tree-shake
-    // out. Dropped in edit mode alongside the admin bar.
-    process.env.PLUMIX_DEV && editMode.mode !== "edit"
+    // out. Dropped in edit mode alongside the admin bar, and off-loopback,
+    // where the bar's SQL and span tree would go to whoever reached the dev
+    // server rather than to the developer running it (#2007).
+    process.env.PLUMIX_DEV &&
+      isTrustedDevRequest(ctx.request) &&
+      editMode.mode !== "edit"
       ? createElement(PlumixDebugBar, { ctx })
       : null,
     createElement(TemplateAdapter),

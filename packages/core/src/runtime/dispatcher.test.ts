@@ -22,7 +22,11 @@ import { debugHistory } from "../dev/debug-bar/history.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { defineTemplate } from "../template.js";
-import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
+import {
+  createDispatcherHarness,
+  DEV_ORIGIN,
+  plumixRequest,
+} from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
 import { matchPluginRawRoute } from "./dispatcher.js";
 
@@ -2645,20 +2649,127 @@ describe("dispatcher — ctx.fetch tracing", () => {
   });
 });
 
-describe("dispatcher — dev error page", () => {
-  const original = process.env.PLUMIX_DEV;
-  afterEach(() => {
-    if (original === undefined) delete process.env.PLUMIX_DEV;
-    else process.env.PLUMIX_DEV = original;
+// A theme whose only template throws, so a dispatch lands on the error path.
+const throwingTheme = defineTheme({
+  templates: [
+    fallback(() => {
+      throw new Error("render kaboom");
+    }),
+  ],
+});
+
+describe("dispatcher — dev surfaces are loopback-only (#2007)", () => {
+  afterEach(() => void vi.unstubAllEnvs());
+
+  const devRoute = definePlugin("og", (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/preview",
+      auth: "development",
+      handler: () => new Response("card", { status: 200 }),
+    });
   });
 
-  const throwingTheme = defineTheme({
-    templates: [
-      fallback(() => {
-        throw new Error("render kaboom");
-      }),
-    ],
+  test("the request history is served over loopback", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await createDispatcherHarness();
+
+    const response = await h.dispatch(
+      plumixRequest(`${DEV_ORIGIN}/_plumix/debug/requests`),
+    );
+
+    expect(response.status).toBe(200);
   });
+
+  test("the request history 404s when the dev server was reached off-box", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await createDispatcherHarness();
+
+    // A tunnel, a container on 0.0.0.0, a forwarded codespace port — the Host
+    // is the exposed name, not loopback, so the SQL and span tree stay in.
+    const response = await h.dispatch(
+      plumixRequest("https://cms.example/_plumix/debug/requests"),
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  test("PLUMIX_DEV_ALLOW_REMOTE re-opens the history off-loopback", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    vi.stubEnv("PLUMIX_DEV_ALLOW_REMOTE", "1");
+    const h = await createDispatcherHarness();
+
+    const response = await h.dispatch(
+      plumixRequest("https://cms.example/_plumix/debug/requests"),
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  test("the dev error page — stacks included — is withheld off-loopback", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await createDispatcherHarness({ theme: throwingTheme });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    // The theme's own error template, exactly as a deploy answers — what is
+    // withheld off-loopback is the stack, not the page.
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toBe(
+      "text/html; charset=utf-8",
+    );
+    const body = await response.text();
+    expect(body).toContain("Something went wrong while rendering");
+    expect(body).not.toContain("plumix-dev-error");
+    expect(body).not.toContain("render kaboom");
+  });
+
+  test('an `auth: "development"` route is served over loopback', async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await createDispatcherHarness({ plugins: [devRoute] });
+
+    const response = await h.dispatch(
+      plumixRequest(`${DEV_ORIGIN}/_plumix/og/preview`),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("card");
+  });
+
+  test('an `auth: "development"` route 404s off-loopback, disclosing nothing', async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await createDispatcherHarness({ plugins: [devRoute] });
+
+    const response = await h.dispatch(
+      plumixRequest("https://cms.example/_plumix/og/preview"),
+    );
+
+    // 404 rather than 401, and byte-identical to the 404 a `/_plumix/` path
+    // that never existed gets: the route's existence is itself dev-only detail,
+    // so a distinguishable answer would disclose what the 401 would.
+    expect(response.status).toBe(404);
+    const missing = await h.dispatch(
+      plumixRequest("https://cms.example/_plumix/og/no-such-route"),
+    );
+    expect(response.headers.get("x-plumix-hint")).toBe(
+      missing.headers.get("x-plumix-hint"),
+    );
+  });
+
+  test('an `auth: "development"` route 404s in production, loopback or not', async () => {
+    vi.stubEnv("PLUMIX_DEV", "");
+    const h = await createDispatcherHarness({ plugins: [devRoute] });
+
+    const response = await h.dispatch(
+      plumixRequest(`${DEV_ORIGIN}/_plumix/og/preview`),
+    );
+
+    expect(response.status).toBe(404);
+  });
+});
+
+describe("dispatcher — dev error page", () => {
+  afterEach(() => void vi.unstubAllEnvs());
 
   // The same failure from a plugin route, which the public render's error path
   // never sees — it reaches the dispatcher's own catch instead.
@@ -2674,9 +2785,9 @@ describe("dispatcher — dev error page", () => {
   });
 
   test("dev gate on: a throwing template returns the standalone dev error page, not the themed 500", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     const h = await createDispatcherHarness({ theme: throwingTheme });
-    const response = await h.dispatch(new Request("https://cms.example/"));
+    const response = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
 
     expect(response.status).toBe(500);
     expect(response.headers.get("content-type")).toBe(
@@ -2692,7 +2803,7 @@ describe("dispatcher — dev error page", () => {
   });
 
   test("dev page renders even when the theme itself is the culprit", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     // A theme whose every template throws stands in for a broken theme; the
     // dev page must still render because it never re-enters the theme.
     const brokenTheme = defineTheme({
@@ -2703,7 +2814,7 @@ describe("dispatcher — dev error page", () => {
       ],
     });
     const h = await createDispatcherHarness({ theme: brokenTheme });
-    const response = await h.dispatch(new Request("https://cms.example/"));
+    const response = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
 
     expect(response.status).toBe(500);
     const body = await response.text();
@@ -2713,7 +2824,7 @@ describe("dispatcher — dev error page", () => {
   });
 
   test("a recognized error surfaces its how-to-fix hint card", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     const noSuchTableTheme = defineTheme({
       templates: [
         fallback(() => {
@@ -2722,7 +2833,7 @@ describe("dispatcher — dev error page", () => {
       ],
     });
     const h = await createDispatcherHarness({ theme: noSuchTableTheme });
-    const response = await h.dispatch(new Request("https://cms.example/"));
+    const response = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
 
     const body = await response.text();
     expect(body).toContain("plumix-dev-error-hints");
@@ -2731,9 +2842,9 @@ describe("dispatcher — dev error page", () => {
   });
 
   test("an unrecognized error renders no hint card", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     const h = await createDispatcherHarness({ theme: throwingTheme });
-    const response = await h.dispatch(new Request("https://cms.example/"));
+    const response = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
 
     const body = await response.text();
     // Still the dev page, but with nothing to suggest.
@@ -2742,9 +2853,9 @@ describe("dispatcher — dev error page", () => {
   });
 
   test("the dev page shows the request/route/database/timeline/application context", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     const h = await createDispatcherHarness({ theme: throwingTheme });
-    const response = await h.dispatch(new Request("https://cms.example/"));
+    const response = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
 
     const body = await response.text();
     // The standalone dev page, not the themed 500.
@@ -2756,7 +2867,7 @@ describe("dispatcher — dev error page", () => {
     expect(body).toContain('data-testid="plumix-dev-error-timeline"');
     expect(body).toContain('data-testid="plumix-dev-error-app"');
     // The request section carries the method and full URL.
-    expect(body).toContain("https://cms.example/");
+    expect(body).toContain(`${DEV_ORIGIN}/`);
     // The timeline was collected even though the debug bar isn't configured —
     // dev sampling is ensured independently of it (#1574).
     expect(body).not.toContain("No spans recorded");
@@ -2765,7 +2876,7 @@ describe("dispatcher — dev error page", () => {
   });
 
   test("dev gate off: a throwing template returns the existing themed 500, unchanged", async () => {
-    delete process.env.PLUMIX_DEV;
+    vi.stubEnv("PLUMIX_DEV", "");
     const h = await createDispatcherHarness({ theme: throwingTheme });
     const response = await h.dispatch(new Request("https://cms.example/"));
 
@@ -2780,11 +2891,13 @@ describe("dispatcher — dev error page", () => {
   });
 
   test("a throwing plugin route lands on the dev page too, not an opaque JSON 500", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     const h = await createDispatcherHarness({ plugins: [throwingRoute] });
 
     const response = await h.dispatch(
-      plumixRequest("/_plumix/boom/card", { headers: { accept: "text/html" } }),
+      plumixRequest(`${DEV_ORIGIN}/_plumix/boom/card`, {
+        headers: { accept: "text/html" },
+      }),
     );
 
     expect(response.status).toBe(500);
@@ -2797,13 +2910,15 @@ describe("dispatcher — dev error page", () => {
   });
 
   test("a caller that did not ask for HTML gets the exception as JSON", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     const h = await createDispatcherHarness({ plugins: [throwingRoute] });
 
     // A bare `fetch` sends `*/*`. The `/_plumix/` surface is machine-facing, so
     // a document here would only fail to parse and bury the exception with it.
     const response = await h.dispatch(
-      plumixRequest("/_plumix/boom/card", { headers: { accept: "*/*" } }),
+      plumixRequest(`${DEV_ORIGIN}/_plumix/boom/card`, {
+        headers: { accept: "*/*" },
+      }),
     );
 
     expect(response.status).toBe(500);
@@ -2811,17 +2926,19 @@ describe("dispatcher — dev error page", () => {
   });
 
   test("dev gate off: the same plugin-route throw stays the opaque 500", async () => {
-    delete process.env.PLUMIX_DEV;
+    vi.stubEnv("PLUMIX_DEV", "");
     const h = await createDispatcherHarness({ plugins: [throwingRoute] });
 
-    const response = await h.dispatch(plumixRequest("/_plumix/boom/card"));
+    const response = await h.dispatch(
+      plumixRequest("https://cms.example/_plumix/boom/card"),
+    );
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "internal_error" });
   });
 
   test("prod: the themed 500 surfaces a correlation id equal to the request's telemetry id", async () => {
-    delete process.env.PLUMIX_DEV;
+    vi.stubEnv("PLUMIX_DEV", "");
     const snapshots: TelemetrySnapshot[] = [];
     const h = await createDispatcherHarness({
       theme: throwingTheme,
@@ -2832,7 +2949,7 @@ describe("dispatcher — dev error page", () => {
       },
     });
 
-    const response = await h.dispatch(new Request("https://cms.example/"));
+    const response = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
     await h.drainDeferred();
 
     expect(response.status).toBe(500);
@@ -2847,30 +2964,18 @@ describe("dispatcher — dev error page", () => {
 });
 
 describe("dispatcher — dev JSON error (non-HTML 5xx)", () => {
-  const original = process.env.PLUMIX_DEV;
-  afterEach(() => {
-    if (original === undefined) delete process.env.PLUMIX_DEV;
-    else process.env.PLUMIX_DEV = original;
-  });
-
-  const throwingTheme = defineTheme({
-    templates: [
-      fallback(() => {
-        throw new Error("render kaboom");
-      }),
-    ],
-  });
+  afterEach(() => void vi.unstubAllEnvs());
 
   // A request that explicitly negotiates away from HTML — an API/fetch call, as
   // opposed to a browser navigation. `acceptsHtml` returns false for these, so
   // they never see the themed page or the standalone dev HTML page.
   const jsonRequest = () =>
-    new Request("https://cms.example/", {
+    new Request(`${DEV_ORIGIN}/`, {
       headers: { accept: "application/json" },
     });
 
   test("dev gate on: a non-HTML 5xx returns JSON with error, message, and stack", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     const h = await createDispatcherHarness({ theme: throwingTheme });
     const response = await h.dispatch(jsonRequest());
 
@@ -2886,7 +2991,7 @@ describe("dispatcher — dev JSON error (non-HTML 5xx)", () => {
   });
 
   test("a recognized error includes its how-to-fix hint", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     const noSuchTableTheme = defineTheme({
       templates: [
         fallback(() => {
@@ -2902,7 +3007,7 @@ describe("dispatcher — dev JSON error (non-HTML 5xx)", () => {
   });
 
   test("an unrecognized error omits the hints field", async () => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
     const h = await createDispatcherHarness({ theme: throwingTheme });
     const response = await h.dispatch(jsonRequest());
 
@@ -2911,7 +3016,7 @@ describe("dispatcher — dev JSON error (non-HTML 5xx)", () => {
   });
 
   test("dev gate off: a non-HTML 5xx returns the plain-text response, unchanged", async () => {
-    delete process.env.PLUMIX_DEV;
+    vi.stubEnv("PLUMIX_DEV", "");
     const h = await createDispatcherHarness({ theme: throwingTheme });
     const response = await h.dispatch(jsonRequest());
 

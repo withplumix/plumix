@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "vitest";
 
 import { definePlugin } from "../../plugin/define.js";
 import { fallback } from "../../route/render/template-builders.js";
-import { createDispatcherHarness } from "../../test/dispatcher.js";
+import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
 import { defineTheme } from "../../theme.js";
 
 const blogPlugin = definePlugin("blog", (ctx) => {
@@ -36,7 +36,7 @@ describe("debug bar Timeline panel (end to end)", () => {
       publishedAt: new Date(),
     });
 
-    const res = await h.dispatch(new Request("https://cms.example/post/hello"));
+    const res = await h.dispatch(new Request(`${DEV_ORIGIN}/post/hello`));
     const html = await res.text();
 
     expect(html).toContain('data-testid="plumix-debug-panel-timeline"');
