@@ -81,6 +81,14 @@ describe("parsePortClaims", () => {
     ]);
   });
 
+  it("ignores a port a block comment mentions", () => {
+    const source = `/* Was port: 3070, moved when apps/demo took it. */
+      definePlumixE2EConfig({ port: 3080 });`;
+    expect(parsePortClaims(source).claims).toEqual([
+      { option: "port", port: 3080 },
+    ]);
+  });
+
   it("reports a port it cannot resolve rather than passing over it", () => {
     const source = "definePlumixE2EConfig({ port: PORTS.og });";
     expect(parsePortClaims(source)).toEqual({

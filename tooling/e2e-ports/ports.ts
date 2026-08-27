@@ -53,16 +53,34 @@ const PORT_OPTION = /(?<![\w$])(\w*[Pp]ort)\s*:\s*([^,\n}]+)/g;
 const PORT_FLAG = /--([\w-]*port)[= ](\d+)(?![\w.])/g;
 const NUMERIC_CONST = /(?<![\w$])const\s+([\w$]+)\s*=\s*(\d+)\s*;/g;
 const INTEGER = /^\d+$/;
-
 // The configs write their port allocation down in prose — apps/demo's says
 // where its pair sits relative to the plugin suites — so a comment is as
 // likely to hold a port as the code is. `//` comments are cut only where they
 // own the line: prettier puts every comment in these files on its own, and a
 // blunter cut would take a `port:` trailing a `http://localhost` with it.
 function withoutComments(source: string): string {
-  return source
-    .replaceAll(/\/\*[\s\S]*?\*\//g, "")
-    .replaceAll(/^[^\S\n]*\/\/.*$/gm, "");
+  return withoutBlockComments(source).replaceAll(/^[^\S\n]*\/\/.*$/gm, "");
+}
+
+// Scanned rather than matched. Every regex spelling of a `/* … */` pair is
+// quadratic on a run of `a/*` — the global scan restarts at each unterminated
+// opener, which CodeQL fails as a polynomial ReDoS — while walking the string
+// once cannot be. An opener with no closer ends the walk: there is nothing
+// after it but comment.
+function withoutBlockComments(source: string): string {
+  let kept = "";
+  let at = 0;
+  for (
+    let open = source.indexOf("/*");
+    open !== -1;
+    open = source.indexOf("/*", at)
+  ) {
+    const close = source.indexOf("*/", open + 2);
+    if (close === -1) break;
+    kept += source.slice(at, open);
+    at = close + 2;
+  }
+  return kept + source.slice(at);
 }
 
 function numericConsts(source: string): Map<string, number> {
