@@ -11,6 +11,8 @@
 // `FILTER_HOOKS`/`ACTION_HOOKS` binding fails otherwise.
 import "../admin-bar/types.js"; // admin_bar:nodes
 import "../dev/debug-bar/types.js"; // debug_bar:panels
+import "../dev/server/hints/types.js"; // error_page:hints
+import "../dev/server/panels/types.js"; // error_page:panels
 import "../route/render/render-template.js"; // render:document
 import "../route/resolve.js"; // resolve:{single,archive,term,author,date,front-page,search}:data
 import "../seo/feed.js"; // seo:feed:items

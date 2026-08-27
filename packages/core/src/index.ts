@@ -109,6 +109,20 @@ export { DebugKV, DebugSection } from "./dev/debug-bar/primitives.js";
 export type { DebugKVRow } from "./dev/debug-bar/primitives.js";
 export type { DebugPanel } from "./dev/debug-bar/types.js";
 export type { DebugSnapshot } from "./dev/debug-bar/snapshot.js";
+// The dev error page's equivalents, for `error_page:hints` and
+// `error_page:panels`: the contribution shapes and the pieces a panel body is
+// built from.
+export type { DevErrorPanel } from "./dev/server/panels/types.js";
+export type {
+  DevErrorFact,
+  DevErrorHint,
+  DevErrorHintDoc,
+} from "./dev/ui/contract.js";
+export {
+  DevErrorEmptyNote,
+  DevErrorFacts,
+  DevErrorSubhead,
+} from "./dev/ui/panel-primitives.js";
 // The role links of the `og:image` chain, for a subscriber that has to say
 // which one an image came from rather than only what the chain resolved to.
 export { entryRoleImage } from "./seo/head-defaults.js";
