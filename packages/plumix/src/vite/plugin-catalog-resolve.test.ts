@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import {
   mkdir,
   mkdtemp,
@@ -12,11 +13,39 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
+import type { ResolvedLocale } from "@plumix/core";
+import {
+  buildManifest,
+  createPluginRegistry,
+  definePlugin,
+  pluginCatalogStagedPath,
+} from "@plumix/core";
+
 import {
   findAdminBundledPluginsDir,
   findPluginPackageRoot,
   isAdminBundledPlugin,
+  stagePluginCatalogs,
 } from "./plugin-catalog-resolve.js";
+
+const EN: ResolvedLocale = {
+  code: "en",
+  label: "English",
+  direction: "ltr",
+  enabled: true,
+};
+const UK: ResolvedLocale = {
+  code: "uk",
+  label: "Ukrainian",
+  direction: "ltr",
+  enabled: true,
+};
+const DE: ResolvedLocale = {
+  code: "de",
+  label: "German",
+  direction: "ltr",
+  enabled: true,
+};
 
 describe("findPluginPackageRoot", () => {
   test("resolves via the `@plumix/plugin-<id>` convention", () => {
@@ -263,6 +292,108 @@ test("the admin plugin-catalog glob and findAdminBundledPluginsDir name the same
   );
 
   expect(findAdminBundledPluginsDir(adminRoot)).toBe(scanned);
+});
+
+// The copy itself, driven the way a consumer's `plumix build` drives it: a plugin
+// whose catalogs admin does not bake in, so its compiled `.mjs` has to reach the
+// staged admin dist for the runtime `import(url)` to find it. Every other test in
+// this file stops at resolution — whether a path resolves, whose `plugins/` dir it
+// lands in — and never copies anything. That left the manifest-driven half of the
+// pipeline uncovered, which is how a slot declaring only its source locale shipped
+// four releases with unreachable translations.
+describe("stagePluginCatalogs — real FS", () => {
+  let projectRoot: string;
+  let dest: string;
+
+  const SITE_I18N = {
+    defaultLocale: EN,
+    locales: [EN, UK, { ...DE, enabled: false }],
+  };
+
+  beforeEach(async () => {
+    projectRoot = await realpath(
+      await mkdtemp(join(tmpdir(), "plumix-catalog-stage-")),
+    );
+    await writeFile(join(projectRoot, "package.json"), JSON.stringify({}));
+    dest = join(projectRoot, "dist/_plumix/admin");
+  });
+
+  afterEach(async () => {
+    await rm(projectRoot, { recursive: true, force: true });
+  });
+
+  async function installPlugin(locales: readonly string[]): Promise<void> {
+    const pluginDir = join(projectRoot, "node_modules/@plumix/plugin-vendor");
+    await mkdir(join(pluginDir, "locales"), { recursive: true });
+    await writeFile(
+      join(pluginDir, "package.json"),
+      JSON.stringify({
+        name: "@plumix/plugin-vendor",
+        type: "module",
+        exports: { "./package.json": "./package.json" },
+      }),
+    );
+    for (const locale of locales) {
+      await writeFile(
+        join(pluginDir, "locales", `${locale}.mjs`),
+        `export const messages = ${JSON.stringify({ "vendor.hello": locale })};\n`,
+      );
+    }
+  }
+
+  function stage(declared: readonly string[]): Promise<void> {
+    const plugin = definePlugin("vendor", () => undefined, {
+      i18n: {
+        sourceLocale: "en",
+        locales: declared,
+        catalogPath: "./locales",
+      },
+    });
+    const manifest = buildManifest(createPluginRegistry(), {
+      plugins: [plugin],
+      i18n: SITE_I18N,
+    });
+    return stagePluginCatalogs(dest, [plugin], manifest, projectRoot);
+  }
+
+  test("copies a declared, site-enabled locale into the staged admin dist", async () => {
+    await installPlugin(["en", "uk", "de"]);
+    await stage(["en", "uk", "de"]);
+
+    const staged = join(dest, pluginCatalogStagedPath("vendor", "uk"));
+    expect(await readFile(staged, "utf8")).toContain('"vendor.hello":"uk"');
+  });
+
+  test("skips the source locale and any locale the site has not enabled", async () => {
+    await installPlugin(["en", "uk", "de"]);
+    await stage(["en", "uk", "de"]);
+
+    // `en` is the source locale — admin already has those strings as
+    // `descriptor.message`. `de` ships a catalog and is declared, but the site
+    // left it disabled, so the intersection drops it before staging.
+    for (const locale of ["en", "de"]) {
+      expect(
+        existsSync(join(dest, pluginCatalogStagedPath("vendor", locale))),
+      ).toBe(false);
+    }
+  });
+
+  test("stages nothing when the slot declares only its source locale", async () => {
+    // The bug this guards: catalogs present on disk, but a slot naming only `en`
+    // projects an empty catalog map, so the plugin never reaches `pluginI18n` and
+    // the copy loop never runs.
+    await installPlugin(["en", "uk", "de"]);
+    await stage(["en"]);
+
+    expect(existsSync(dest)).toBe(false);
+  });
+
+  test("throws adminAssetNotFound when a declared locale has no compiled catalog", async () => {
+    // `buildManifest` has already committed to a URL admin will fetch, so a
+    // missing `.mjs` has to fail the build rather than 404 in production.
+    await installPlugin(["en"]);
+    await expect(stage(["en", "uk"])).rejects.toThrow(/uk/);
+  });
 });
 
 // Minimal createRequire stub for resolution tests. Maps known package
