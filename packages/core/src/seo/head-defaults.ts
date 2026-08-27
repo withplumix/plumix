@@ -136,56 +136,66 @@ function measured(value: unknown): number | null {
   return typeof value === "number" ? value : null;
 }
 
+/** The semantic role a media field plays for its entry. */
+type MediaFieldRole = NonNullable<MetaBoxField["role"]>;
+
 /**
- * Resolve an entry's `og:image` from its role-tagged media fields: an explicit
- * `.ogImage()` override outranks the `.featured()` image. Reads the hydrated
- * `entry.meta` value structurally, so an orphaned reference (null) or a value
- * with no usable url falls through. Returns null when nothing resolves, handing
- * the rest of the chain to {@link resolveOgImage}.
+ * Resolve one role's image from an entry's role-tagged media fields. Reads the
+ * hydrated `entry.meta` value structurally, so an orphaned reference (null) or
+ * a value with no usable url falls through to the next field of the same role.
+ * Returns null when nothing resolves, handing the rest of the chain to
+ * {@link resolveOgImage}.
  */
-export function resolveEntryOgImage(
+export function resolveEntryRoleImage(
   fields: readonly MetaBoxField[],
   meta: ResolvedMeta,
+  role: MediaFieldRole,
 ): OgImage | null {
-  for (const role of ["ogImage", "featured"] as const) {
-    for (const field of fields) {
-      if (field.role !== role) continue;
-      const image = mediaImage(meta[field.key]);
-      if (image) return image;
-    }
+  for (const field of fields) {
+    if (field.role !== role) continue;
+    const image = mediaImage(meta[field.key]);
+    if (image) return image;
   }
   return null;
 }
 
-/**
- * The per-entity `og:image` for a request, or null for non-entry pages (and for
- * an entry that tags no image). Scopes {@link resolveEntryOgImage} to the
- * entry's own content-type fields.
- */
-export function entryOgImage(
+// Scopes the role walk to the entry's own content-type fields; null for any
+// page that is not a single entry.
+function entryRoleImage(
   plugins: PluginRegistry,
   data: TemplateData,
+  role: MediaFieldRole,
 ): OgImage | null {
   if (data.kind !== "entry") return null;
-  return resolveEntryOgImage(
+  return resolveEntryRoleImage(
     listEntryMetaFields(plugins, data.entry.type),
     data.entry.meta,
+    role,
   );
 }
 
 declare module "../hooks/types.js" {
   interface FilterRegistry {
     /**
-     * Supply the page's `og:image`. Sits one link below the entry's role-tagged
-     * media (`.ogImage()`, then `.featured()`) and one above the site-wide
-     * default: an image returned here beats that default, and passing the value
-     * through falls back to it. The role chain short-circuits before this runs,
-     * so an author's explicit choice is never overridden.
+     * Supply the page's `og:image`. Sits below an author's explicit
+     * `.ogImage()` role — which short-circuits before this runs, so a
+     * deliberate choice is never overridden — and above the entry's
+     * `.featured()` photo and the site-wide default.
+     *
+     * Returning null, the value handed in, leaves the chain alone: the photo
+     * is used, then the site default. Returning an image outranks both, so a
+     * subscriber that only handles some pages must pass the value through on
+     * the rest rather than answer for them.
+     *
+     * `featured` is that photo, passed alongside rather than as the value, so
+     * a subscriber can improve on it — crop it to a social card's shape, say —
+     * instead of only replacing it, and so that declining stays free.
      */
     "seo:og_image": (
       image: OgImage | null,
       data: TemplateData,
       ctx: AppContext,
+      featured: OgImage | null,
     ) => OgImage | null | Promise<OgImage | null>;
   }
 }
@@ -196,10 +206,17 @@ export async function resolveOgImage(
   data: TemplateData,
   siteDefault: string | null,
 ): Promise<OgImage | null> {
-  const role = entryOgImage(ctx.plugins, data);
-  if (role) return role;
-  const filtered = await ctx.hooks.applyFilter("seo:og_image", null, data, ctx);
-  return filtered ?? (siteDefault ? { url: siteDefault } : null);
+  const explicit = entryRoleImage(ctx.plugins, data, "ogImage");
+  if (explicit) return explicit;
+  const featured = entryRoleImage(ctx.plugins, data, "featured");
+  const filtered = await ctx.hooks.applyFilter(
+    "seo:og_image",
+    null,
+    data,
+    ctx,
+    featured,
+  );
+  return filtered ?? featured ?? (siteDefault ? { url: siteDefault } : null);
 }
 
 /**
