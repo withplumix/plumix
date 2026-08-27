@@ -16,9 +16,9 @@ export interface FakeRendererOptions {
 }
 
 /**
- * A renderer that writes the card's text into its bytes, so a suite asserts on
- * the served body rather than on the shape of the node tree behind it. Every
- * test outside `takumi.test.ts` renders through this.
+ * A renderer that writes the card's text and image sources into its bytes, so a
+ * suite asserts on the served body rather than on the shape of the node tree
+ * behind it. Every test outside `takumi.test.ts` renders through this.
  */
 export function createFakeRenderer(
   options: FakeRendererOptions = {},
@@ -30,12 +30,10 @@ export function createFakeRenderer(
       contentType: options.contentType ?? "image/svg+xml",
       render: (node, input) => {
         inputs.push(input);
-        const lines = collectText(node).map(
-          (line) => `<text>${escape(line)}</text>`,
-        );
+        const elements = toSvgElements(node);
         return Promise.resolve(
           new TextEncoder().encode(
-            `<svg xmlns="http://www.w3.org/2000/svg">${lines.join("")}</svg>`,
+            `<svg xmlns="http://www.w3.org/2000/svg">${elements.join("")}</svg>`,
           ),
         );
       },
@@ -43,9 +41,10 @@ export function createFakeRenderer(
   };
 }
 
-function collectText(node: CardNode): string[] {
-  if (node.type === "text") return [node.text];
-  return (node.children ?? []).flatMap(collectText);
+function toSvgElements(node: CardNode): string[] {
+  if (node.type === "text") return [`<text>${escape(node.text)}</text>`];
+  if (node.type === "image") return [`<image href="${escape(node.src)}" />`];
+  return (node.children ?? []).flatMap(toSvgElements);
 }
 
 function escape(value: string): string {

@@ -21,6 +21,8 @@ export type { CardKey } from "./card-key.js";
 export { cardKey } from "./card-key.js";
 export type {
   CardContainerNode,
+  CardImage,
+  CardImageNode,
   CardNode,
   CardRenderer,
   CardRenderInput,

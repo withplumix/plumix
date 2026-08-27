@@ -1,4 +1,9 @@
-import type { AnyPluginDescriptor, JsonObject, Logger } from "plumix";
+import type {
+  AnyPluginDescriptor,
+  ConnectedObjectStorage,
+  JsonObject,
+  Logger,
+} from "plumix";
 import type { ThemeTokens } from "plumix/blocks";
 import type { DispatcherHarness } from "plumix/test";
 import {
@@ -63,7 +68,11 @@ const testBlog = definePlugin("test_blog", {
 });
 
 export interface HarnessOptions extends OgPluginOptions {
-  readonly withStorage?: boolean;
+  /**
+   * The bucket the app connects — pass a seeded one to read out of it, or
+   * `null` for a deploy that declared no storage at all.
+   */
+  readonly storage?: ConnectedObjectStorage | null;
   readonly withSiteTitle?: boolean;
   readonly assets?: { fetch: (request: Request) => Promise<Response> };
   /** Seeds `site.default_og_image`, the last link of the precedence chain. */
@@ -85,12 +94,17 @@ export interface HarnessOptions extends OgPluginOptions {
   readonly tokens?: ThemeTokens;
 }
 
+/** A fresh in-memory bucket, which is what a harness gets unless told otherwise. */
+function bucket(): ConnectedObjectStorage {
+  return memoryStorage().connect({});
+}
+
 /** An app with the plugin installed, rendering through the fake renderer. */
 export async function createHarness(
   options: HarnessOptions = {},
 ): Promise<DispatcherHarness> {
   const {
-    withStorage = true,
+    storage,
     withSiteTitle = true,
     assets,
     siteDefaultImage,
@@ -106,7 +120,7 @@ export async function createHarness(
       ...before,
       og({ renderer: createFakeRenderer().renderer, ...rest }),
     ],
-    storage: withStorage ? memoryStorage().connect({}) : undefined,
+    storage: storage === null ? undefined : (storage ?? bucket()),
     assets,
     logger,
     ...(cards === undefined && tokens === undefined
@@ -141,7 +155,7 @@ export interface SeedEntryOverrides {
   readonly slug?: string;
   readonly status?: "published" | "draft";
   readonly type?: string;
-  /** Carries a per-entry access choice under the reserved key. */
+  /** Written verbatim — a per-entry access choice, a media row's own fields. */
   readonly meta?: JsonObject;
 }
 
@@ -159,4 +173,26 @@ export async function seedEntry(
     ...(overrides.meta === undefined ? {} : { meta: overrides.meta }),
   });
   return entry.id;
+}
+
+export interface SeedMediaOverrides {
+  readonly status?: "published" | "draft";
+  readonly mime?: string;
+}
+
+/**
+ * A media row pointing at `storageKey`, in the shape the media plugin writes:
+ * what its serve route resolves an id through.
+ */
+export function seedMedia(
+  harness: DispatcherHarness,
+  storageKey: string,
+  overrides: SeedMediaOverrides = {},
+): Promise<number> {
+  return seedEntry(harness, {
+    type: "media",
+    title: "Hero",
+    ...(overrides.status === undefined ? {} : { status: overrides.status }),
+    meta: { storageKey, mime: overrides.mime ?? "image/png", size: 6 },
+  });
 }

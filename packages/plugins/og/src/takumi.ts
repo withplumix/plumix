@@ -1,7 +1,12 @@
 import type { Node, SyncInitInput } from "@takumi-rs/wasm";
 import { initSync, Renderer } from "@takumi-rs/wasm";
 
-import type { CardNode, CardRenderer, CardRenderInput } from "./renderer.js";
+import type {
+  CardImage,
+  CardNode,
+  CardRenderer,
+  CardRenderInput,
+} from "./renderer.js";
 import {
   JPEG_CONTENT_TYPE,
   PNG_CONTENT_TYPE,
@@ -56,12 +61,14 @@ function sharedOptions(input: CardRenderInput): {
   height: number;
   stylesheets: string[];
   fonts: Uint8Array[];
+  images: CardImage[];
 } {
   return {
     width: input.width,
     height: input.height,
     stylesheets: [...input.stylesheets],
     fonts: [...input.fonts],
+    images: [...input.images],
   };
 }
 
@@ -102,6 +109,15 @@ function renderer(): Promise<Renderer> {
 function toEngineNode(node: CardNode): Node {
   if (node.type === "text") {
     return { type: "text", text: node.text, className: node.className };
+  }
+  if (node.type === "image") {
+    return {
+      type: "image",
+      src: node.src,
+      width: node.width,
+      height: node.height,
+      className: node.className,
+    };
   }
   return {
     type: "container",
