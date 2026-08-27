@@ -47,3 +47,16 @@ export type TokenCategory = KnownTokenCategory | (string & {});
  */
 export type ThemeTokens = Partial<Record<KnownTokenCategory, ThemeTokenGroup>> &
   Readonly<Record<string, ThemeTokenGroup | undefined>>;
+
+/** One category's tokens, slug to the CSS value the theme declared. */
+export type ResolvedTokenGroup = Readonly<Record<string, string>>;
+
+/**
+ * A theme's tokens reduced to the values that can actually be written into a
+ * declaration — what `resolveThemeTokens` returns, and the set a card both
+ * styles with and reads.
+ */
+export type ResolvedThemeTokens = Partial<
+  Record<KnownTokenCategory, ResolvedTokenGroup>
+> &
+  Readonly<Record<string, ResolvedTokenGroup | undefined>>;

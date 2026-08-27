@@ -66,6 +66,8 @@ export interface CardStorageKeyParts {
   readonly hash: string;
   /** The card's source, so a redesign lands on a fresh key. */
   readonly sourceHash: string;
+  /** The theme's token sheet, so a retuned palette lands on a fresh key. */
+  readonly tokens: readonly string[];
   /** Asset-layer paths, not bytes — a swapped font file lands on a new path. */
   readonly fonts: readonly string[];
   readonly width: number;

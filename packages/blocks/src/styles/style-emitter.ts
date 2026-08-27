@@ -1,4 +1,8 @@
-import type { ThemeTokens, TokenCategory } from "./types.js";
+import type {
+  ResolvedThemeTokens,
+  ThemeTokens,
+  TokenCategory,
+} from "./types.js";
 import { sanitizeCssValue } from "./sanitize-css.js";
 
 /**
@@ -129,6 +133,49 @@ export function tokenIdFromCssVar(
   if (!value.startsWith(prefix)) return null;
   const id = /^[A-Za-z0-9_-]+/.exec(value.slice(prefix.length))?.[0];
   return id ?? null;
+}
+
+/**
+ * A theme's tokens reduced to what a stylesheet can carry: category to slug to
+ * CSS value. A token declared without a `value` is dropped — the theme's own
+ * CSS is what defines those — and so is any name or value that would break out
+ * of the declaration it is written into. `defineTheme` rejects most of those at
+ * boot, but a descriptor reaches the runtime without having passed through it,
+ * and this is called with whatever a caller has.
+ *
+ * The one filter: {@link emitThemeTokenCss} formats this rather than walking
+ * the declarations again, so a consumer reading these values and a stylesheet
+ * resolving the same tokens can never disagree about which ones exist.
+ */
+export function resolveThemeTokens(tokens: ThemeTokens): ResolvedThemeTokens {
+  const resolved: Record<string, Record<string, string>> = {};
+  for (const [category, group] of Object.entries(tokens)) {
+    if (!SAFE_CSS_TOKEN_RE.test(category)) continue;
+    for (const [slug, entry] of Object.entries(group ?? {})) {
+      if (!SAFE_CSS_TOKEN_RE.test(slug) || entry.value === undefined) continue;
+      const value = sanitizeCssValue(entry.value);
+      if (value === null) continue;
+      (resolved[category] ??= {})[slug] = value;
+    }
+  }
+  return resolved;
+}
+
+/**
+ * The theme's tokens as a `:root` block of custom properties — the same
+ * `--plumix-<category>-<slug>` names {@link tokenCssVar} builds references to.
+ * A stylesheet rendered away from the page, where the theme's own CSS never
+ * loads, prepends this so its `var()` references resolve.
+ */
+export function emitThemeTokenCss(tokens: ThemeTokens): string {
+  const declarations = Object.entries(resolveThemeTokens(tokens)).flatMap(
+    ([category, group]) =>
+      Object.entries(group ?? {}).map(
+        ([slug, value]) =>
+          `--plumix-${categoryToSegment(category)}-${slug}: ${value};`,
+      ),
+  );
+  return declarations.length === 0 ? "" : `:root { ${declarations.join(" ")} }`;
 }
 
 export function emitBlockStyleCss(

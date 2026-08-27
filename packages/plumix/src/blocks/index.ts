@@ -21,9 +21,11 @@ export {
   createBlockRegistry,
   defineBlock,
   defineEntryContent,
+  emitThemeTokenCss,
   isEntryContent,
   isBlockNodeArray,
   renderBlockTree,
+  resolveThemeTokens,
   richTextBlock,
   resolveBlockTransforms,
   expandBlockVariations,
@@ -58,4 +60,16 @@ export type {
   RenderBlockTreeOptions,
   ResolvedTransformTarget,
   ShortcodeSpec,
+} from "@plumix/blocks";
+
+// The theme's design vocabulary, for a theme typing its own token module and
+// for `emitThemeTokenCss`.
+export type {
+  KnownTokenCategory,
+  ResolvedThemeTokens,
+  ResolvedTokenGroup,
+  ThemeTokenEntry,
+  ThemeTokenGroup,
+  ThemeTokens,
+  TokenCategory,
 } from "@plumix/blocks";
