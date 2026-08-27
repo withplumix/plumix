@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { cardKey } from "./card-key.js";
 import { card } from "./card.js";
 import { createFakeRenderer } from "./test/fake-renderer.js";
-import { createHarness, seedEntry } from "./test/harness.js";
+import { createHarness, fetchCard, seedEntry } from "./test/harness.js";
 
 const TOKENS = {
   color: { accent: { value: "#b5472d", label: "Accent" } },
@@ -18,10 +18,6 @@ const themedCard = card.fallback().define({
   render: () => ({ type: "text", className: "card", text: "Themed" }),
 });
 
-function cardPath(id: number): string {
-  return `/_plumix/og/entry/${String(id)}.svg`;
-}
-
 describe("a theme's design tokens", () => {
   test("reach the renderer as a stylesheet the card's var() references resolve against", async () => {
     const fake = createFakeRenderer();
@@ -32,7 +28,7 @@ describe("a theme's design tokens", () => {
     });
     const id = await seedEntry(harness);
 
-    await harness.fetch(cardPath(id));
+    await fetchCard(harness, id);
 
     // Ahead of the card's own sheet: the card is written against these, and a
     // card that redefines one is meant to win.
@@ -57,7 +53,7 @@ describe("a theme's design tokens", () => {
     });
     const id = await seedEntry(harness);
 
-    const body = await (await harness.fetch(cardPath(id))).text();
+    const body = await (await fetchCard(harness, id)).text();
 
     // The value itself, not the `var()` reference a stylesheet would carry.
     expect(body).toContain("#b5472d");
@@ -71,7 +67,7 @@ describe("a theme's design tokens", () => {
     });
     const id = await seedEntry(harness);
 
-    const body = await (await harness.fetch(cardPath(id))).text();
+    const body = await (await fetchCard(harness, id)).text();
 
     expect(body).toContain("Themed");
     expect(fake.inputs[0]?.stylesheets).toEqual([CARD_STYLES]);
@@ -97,7 +93,7 @@ describe("a theme's design tokens", () => {
     });
     const id = await seedEntry(harness);
 
-    const body = await (await harness.fetch(cardPath(id))).text();
+    const body = await (await fetchCard(harness, id)).text();
 
     expect(body).toContain("unresolved");
     // Not an empty `:root` rule either — nothing resolved, nothing shipped.
@@ -111,7 +107,7 @@ describe("a theme's design tokens", () => {
         tokens: { color: { accent: { value: accent } } },
       });
       const id = await seedEntry(harness);
-      return (await harness.fetch(cardPath(id))).headers.get("etag");
+      return (await fetchCard(harness, id)).headers.get("etag");
     };
 
     // Nothing else about the card moved: the palette is the whole difference,

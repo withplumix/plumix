@@ -49,7 +49,7 @@ Records an activity feed and adds an `audit` helper to the request context.
 
 ### `@plumix/plugin-og`
 
-Renders a social card per published entry, serves it from a route of its own, and carries it into the page's `og:image`.
+Renders a social card per published entry, serves it from a route of its own, and carries it into the page's `og:image`. The URL carries the card's digest and is served immutable, so an edit publishes a link the scrapers have to fetch again.
 
 ## Quickstart
 

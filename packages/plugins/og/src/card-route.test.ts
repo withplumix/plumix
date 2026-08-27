@@ -1,11 +1,19 @@
-import { ACCESS_POLICY_META_KEY } from "plumix";
+import type { ConnectedCache } from "plumix";
+import { ACCESS_POLICY_META_KEY, entryPurgeTags, entryTag } from "plumix";
 import { eq } from "plumix/db";
 import { entries } from "plumix/schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { SeedEntryOverrides } from "./test/harness.js";
+import { cardKey } from "./card-key.js";
+import { card } from "./card.js";
 import { createFakeRenderer } from "./test/fake-renderer.js";
-import { createHarness, seedEntry } from "./test/harness.js";
+import {
+  cardPath,
+  createHarness,
+  fetchCard,
+  seedEntry,
+} from "./test/harness.js";
 
 const SITE_DEFAULT = "https://cdn.example/site-default.png";
 
@@ -15,7 +23,7 @@ describe("the card route", () => {
     const harness = await createHarness({ renderer: fake.renderer });
     const id = await seedEntry(harness);
 
-    const response = await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`);
+    const response = await fetchCard(harness, id);
 
     expect(response.assertStatus(200).headers.get("content-type")).toBe(
       "image/svg+xml",
@@ -29,7 +37,7 @@ describe("the card route", () => {
     const fake = createFakeRenderer();
     const harness = await createHarness({ renderer: fake.renderer });
     const id = await seedEntry(harness);
-    const path = `/_plumix/og/entry/${String(id)}.svg`;
+    const path = await cardPath(harness, id);
 
     const first = await (await harness.fetch(path)).text();
     const second = await (await harness.fetch(path)).text();
@@ -45,7 +53,7 @@ describe("the card route", () => {
       storage: null,
     });
     const id = await seedEntry(harness);
-    const path = `/_plumix/og/entry/${String(id)}.svg`;
+    const path = await cardPath(harness, id);
 
     await harness.fetch(path);
     const second = await harness.fetch(path);
@@ -58,15 +66,18 @@ describe("the card route", () => {
     const harness = await createHarness();
     const id = await seedEntry(harness);
 
-    const { headers } = await harness.fetch(
-      `/_plumix/og/entry/${String(id)}.svg`,
-    );
+    const { headers } = await fetchCard(harness, id);
 
-    // Deliberately not `immutable`: the URL is stable while the card behind it
-    // is not, so freshness rides the ETag rather than an age.
+    // `immutable` is honest here only because the URL carries the card's
+    // digest: an edit publishes a different URL rather than changing what this
+    // one answers. No `Vary` and no `Set-Cookie` go with it — the route reads
+    // neither session nor locale, and the Cache API refuses to store a
+    // response carrying a cookie.
     expect(headers.get("cache-control")).toBe(
-      "public, max-age=0, must-revalidate",
+      "public, max-age=31536000, immutable",
     );
+    expect(headers.get("vary")).toBeNull();
+    expect(headers.get("set-cookie")).toBeNull();
     expect(headers.get("x-content-type-options")).toBe("nosniff");
     expect(headers.get("content-security-policy")).toBe(
       "default-src 'none'; style-src 'unsafe-inline'; sandbox",
@@ -77,7 +88,7 @@ describe("the card route", () => {
   test("answers 304 when the client already holds the card", async () => {
     const harness = await createHarness();
     const id = await seedEntry(harness);
-    const path = `/_plumix/og/entry/${String(id)}.svg`;
+    const path = await cardPath(harness, id);
     const etag = (await harness.fetch(path)).headers.get("etag");
 
     const revalidated = await harness.fetch(path, {
@@ -88,25 +99,50 @@ describe("the card route", () => {
     // revalidated but with nothing to hold.
     expect(revalidated.assertStatus(304).headers.get("etag")).toBe(etag);
     expect(revalidated.headers.get("cache-control")).toBe(
-      "public, max-age=0, must-revalidate",
+      "public, max-age=31536000, immutable",
     );
   });
 
-  test("re-renders under a fresh entity tag when the title changes", async () => {
+  test("publishes a fresh URL when the title changes", async () => {
     const fake = createFakeRenderer();
     const harness = await createHarness({ renderer: fake.renderer });
     const id = await seedEntry(harness, { title: "First Title" });
-    const path = `/_plumix/og/entry/${String(id)}.svg`;
-    const before = (await harness.fetch(path)).headers.get("etag");
+    const before = await cardPath(harness, id);
 
     await harness.db
       .update(entries)
       .set({ title: "Second Title" })
       .where(eq(entries.id, id));
-    const after = await harness.fetch(path);
+    const after = await cardPath(harness, id);
 
-    expect(after.headers.get("etag")).not.toBe(before);
-    expect(await after.text()).toContain("Second Title");
+    // The URL moving is the whole mechanism: a purge reaches Cloudflare, and
+    // nothing reaches the image caches X, Facebook and LinkedIn keep, so the
+    // only way to make them refetch is to give them a link they don't hold.
+    expect(after).not.toBe(before);
+    const served = await harness.fetch(after);
+    expect(served.headers.get("etag")).not.toBe(
+      (await harness.fetch(before)).headers.get("etag"),
+    );
+    expect(await served.text()).toContain("Second Title");
+  });
+
+  test("sends a superseded card URL on to the one that replaced it", async () => {
+    const harness = await createHarness();
+    const id = await seedEntry(harness, { title: "First Title" });
+    const stale = await cardPath(harness, id);
+
+    await harness.db
+      .update(entries)
+      .set({ title: "Second Title" })
+      .where(eq(entries.id, id));
+    const response = await harness.fetch(stale);
+
+    // A scraper holding last week's URL gets pointed at this week's card
+    // rather than a 404 — and a URL carrying a digest nothing rendered never
+    // mints an entry of its own, in storage or at the edge.
+    const location = response.assertStatus(302).headers.get("location");
+    expect(new URL(location ?? "").pathname).toBe(await cardPath(harness, id));
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
   // A card carries the entry's title, is served from a shared cache, and sits
@@ -126,7 +162,7 @@ describe("the card route", () => {
     const harness = await createHarness();
     const id = await seedEntry(harness, overrides);
 
-    const response = await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`);
+    const response = await fetchCard(harness, id);
 
     response.assertStatus(404);
   });
@@ -141,9 +177,7 @@ describe("the card route", () => {
     const harness = await createHarness();
     const id = await seedEntry(harness, overrides);
 
-    (await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`)).assertStatus(
-      200,
-    );
+    (await fetchCard(harness, id)).assertStatus(200);
   });
 
   test.each([
@@ -155,13 +189,30 @@ describe("the card route", () => {
     (await harness.fetch(path)).assertStatus(404);
   });
 
+  test("serves a card on a site mounted under a subdirectory", async () => {
+    const harness = await createHarness({
+      renderer: createFakeRenderer({ contentType: "image/png" }).renderer,
+      basePath: "/blog",
+    });
+    const id = await seedEntry(harness, { slug: "hello-world" });
+
+    const html = await (await harness.fetch("/blog/posts/hello-world")).text();
+    const path = await cardPath(harness, id, "png", "/blog");
+
+    // A route handler is given a request whose mount has already been stripped,
+    // while the head has to put it back — so the two are only in step if each
+    // reads the base path from the side it is on.
+    expect(html).toContain(`content="https://cms.example${path}"`);
+    (await harness.fetch(path)).assertStatus(200);
+  });
+
   test("names the format the renderer produces in the URL it serves", async () => {
     const harness = await createHarness({
       renderer: createFakeRenderer({ contentType: "image/jpeg" }).renderer,
     });
     const id = await seedEntry(harness);
 
-    const served = await harness.fetch(`/_plumix/og/entry/${String(id)}.jpg`);
+    const served = await fetchCard(harness, id, { extension: "jpg" });
 
     expect(served.assertStatus(200).headers.get("content-type")).toBe(
       "image/jpeg",
@@ -172,9 +223,7 @@ describe("the card route", () => {
     const harness = await createHarness();
     const id = await seedEntry(harness);
 
-    (await harness.fetch(`/_plumix/og/entry/${String(id)}.png`)).assertStatus(
-      404,
-    );
+    (await fetchCard(harness, id, { extension: "png" })).assertStatus(404);
   });
 
   test("answers 404 for a format that has no URL to serve a card at", async () => {
@@ -183,9 +232,7 @@ describe("the card route", () => {
     });
     const id = await seedEntry(harness);
 
-    (await harness.fetch(`/_plumix/og/entry/${String(id)}.avif`)).assertStatus(
-      404,
-    );
+    (await fetchCard(harness, id, { extension: "avif" })).assertStatus(404);
   });
 
   test("renders with the fonts the platform asset layer serves", async () => {
@@ -204,7 +251,7 @@ describe("the card route", () => {
     });
     const id = await seedEntry(harness);
 
-    await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`);
+    await fetchCard(harness, id);
 
     expect(asked).toEqual(["/fonts/Inter-SemiBold.ttf"]);
     expect(fake.inputs[0]?.fonts).toEqual([face]);
@@ -227,7 +274,7 @@ describe("the card route", () => {
     });
     const id = await seedEntry(harness);
 
-    const response = await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`);
+    const response = await fetchCard(harness, id);
 
     // The head shipped this URL before anything rendered, so an error status
     // here is a broken unfurl on a page that promised an image. The scraper
@@ -255,10 +302,9 @@ describe("the card route", () => {
       const id = await seedEntry(harness);
 
       // What a developer opening the card URL in a browser sends.
-      const response = await harness.fetch(
-        `/_plumix/og/entry/${String(id)}.svg`,
-        { headers: { accept: "text/html" } },
-      );
+      const response = await fetchCard(harness, id, {
+        headers: { accept: "text/html" },
+      });
 
       // A developer is the one looking at a card during development, and the
       // site default would hide the broken one behind something that works.
@@ -275,20 +321,179 @@ describe("the card route", () => {
     const harness = await createHarness({ fonts: ["/fonts/Inter.ttf"] });
     const id = await seedEntry(harness);
 
-    (await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`)).assertStatus(
-      404,
-    );
+    (await fetchCard(harness, id)).assertStatus(404);
   });
 
   test("leaves the site line off a card when the site has no title", async () => {
     const harness = await createHarness({ withSiteTitle: false });
     const id = await seedEntry(harness);
 
-    const body = await (
-      await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`)
-    ).text();
+    const body = await (await fetchCard(harness, id)).text();
 
     expect(body).toContain("Hello World");
     expect(body).not.toContain("Example Site");
+  });
+});
+
+describe("a card at the edge", () => {
+  function edgeStub(seeded?: [string, Response]) {
+    const store = new Map<string, Response>(seeded ? [seeded] : []);
+    const put = vi.fn<ConnectedCache["put"]>((request, response) => {
+      store.set(request.url, response);
+      return Promise.resolve();
+    });
+    const match = vi.fn<ConnectedCache["match"]>((request) =>
+      Promise.resolve(store.get(request.url)?.clone()),
+    );
+    const cache: ConnectedCache = {
+      match,
+      put,
+      purgeTags: () => Promise.resolve(),
+    };
+    return { cache, match, put };
+  }
+
+  test("stores the card under the tag the entry's own publish purges", async () => {
+    const { cache, put } = edgeStub();
+    const harness = await createHarness({ cache });
+    const id = await seedEntry(harness);
+
+    await fetchCard(harness, id);
+    await harness.drainDeferred();
+
+    // The card key emits the URL hash and this tag from one call, so a card
+    // keyed on an entry lands under the entry tag. Asserted against core's own
+    // purge vocabulary rather than a spelled-out string: what makes this one
+    // caching story is that the set an `entry:published` sweeps covers what
+    // the card stored under, and either side moving has to break this.
+    const stored = [...(put.mock.calls[0]?.[2] ?? [])];
+    expect(stored).toEqual([entryTag(id)]);
+    expect(entryPurgeTags("post", id)).toEqual(expect.arrayContaining(stored));
+  });
+
+  test("renders once, then answers the next request from the edge", async () => {
+    const { cache, match, put } = edgeStub();
+    const fake = createFakeRenderer();
+    const harness = await createHarness({ cache, renderer: fake.renderer });
+    const id = await seedEntry(harness);
+    const path = await cardPath(harness, id);
+
+    const first = await (await harness.fetch(path)).text();
+    await harness.drainDeferred();
+    const second = await harness.fetch(path);
+
+    expect(await second.text()).toBe(first);
+    expect(put).toHaveBeenCalledOnce();
+    // Looked up twice and stored once: the second request was answered out of
+    // the edge entry the first one filled. (`cardPath` resolves the pointer,
+    // which is a lookup of its own — hence the filter.)
+    const lookups = match.mock.calls.filter(
+      ([request]) => new URL(request.url).pathname === path,
+    );
+    expect(lookups).toHaveLength(2);
+    expect(fake.inputs).toHaveLength(1);
+  });
+
+  test("keeps a crafted query string from minting an entry of its own", async () => {
+    const { cache, put } = edgeStub();
+    const harness = await createHarness({ cache });
+    const id = await seedEntry(harness);
+    const path = await cardPath(harness, id);
+
+    for (const junk of [0, 1, 2]) {
+      await harness.fetch(`${path}?junk=${String(junk)}`);
+    }
+    await harness.drainDeferred();
+
+    // The edge keys on the whole URL, so answering these would leave three
+    // entries holding one card's immutable bytes — from an unauthenticated
+    // route at an enumerable id.
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  test("answers from the stored copy without reaching the route", async () => {
+    const path = "https://cms.example/_plumix/og/entry/1/deadbeef.svg";
+    const { cache, match } = edgeStub([path, new Response("EDGE COPY")]);
+    const harness = await createHarness({ cache });
+
+    const response = await harness.fetch(new URL(path).pathname);
+
+    expect(await response.text()).toBe("EDGE COPY");
+    expect(match).toHaveBeenCalledOnce();
+  });
+
+  test("hands a signed-in visitor the one entry everybody reads", async () => {
+    const path = "https://cms.example/_plumix/og/entry/1/deadbeef.svg";
+    const { cache, match } = edgeStub([path, new Response("EDGE COPY")]);
+    const harness = await createHarness({ cache });
+    const reader = await harness.seedUser("subscriber");
+
+    const response = await harness.fetch(new URL(path).pathname, {
+      as: reader,
+    });
+
+    // Session and locale cookies are scoped to `/_plumix/`, so a signed-in
+    // visitor's browser does send them here. A card is the same image for
+    // everyone, so they are not a key axis — the cookie comes off the lookup
+    // and the shared entry answers.
+    expect(await response.text()).toBe("EDGE COPY");
+    expect(match.mock.calls[0]?.[0].headers.has("cookie")).toBe(false);
+  });
+});
+
+describe("a card and the visitor's locale", () => {
+  const I18N = { defaultLocale: "en", locales: ["en", "fr"] };
+
+  // A card keyed on the locale is the documented pattern, and the locale is
+  // exactly what the two askers disagree about: `resolveLocale` reads
+  // `Accept-Language` and the `Path=/_plumix/` cookie on the card's own route
+  // and on neither the page the head renders on.
+  const localeCard = card.fallback().define({
+    key: ({ ctx }) => cardKey.of("card", ctx.locale.code),
+    render: ({ ctx }) => ({ type: "text", text: `locale:${ctx.locale.code}` }),
+  });
+
+  test.each([
+    ["an Accept-Language header", { headers: { "accept-language": "fr" } }],
+    ["a locale cookie", { headers: { cookie: "plumix_locale=fr" } }],
+  ])(
+    "serves the card the head published to a scraper sending %s",
+    async (_case, init) => {
+      const harness = await createHarness({ cards: [localeCard], i18n: I18N });
+      const id = await seedEntry(harness);
+      const path = await cardPath(harness, id);
+
+      const response = await harness.fetch(path, init);
+
+      // Anything but a 200 here is a scraper redirected away from the image its
+      // page promised, on every request it makes.
+      response.assertStatus(200);
+      expect(await response.text()).toContain("locale:en");
+    },
+  );
+
+  test("refuses a locale asked for in the query rather than answering it", async () => {
+    const harness = await createHarness({ cards: [localeCard], i18n: I18N });
+    const id = await seedEntry(harness);
+    const path = await cardPath(harness, id);
+
+    const response = await harness.fetch(`${path}?lang=fr`);
+
+    const location = response.assertStatus(302).headers.get("location");
+    expect(new URL(location ?? "").pathname).toBe(path);
+  });
+
+  test("renders every card in the site's own locale", async () => {
+    const harness = await createHarness({ cards: [localeCard], i18n: I18N });
+    const id = await seedEntry(harness);
+
+    const body = await (
+      await fetchCard(harness, id, { headers: { "accept-language": "fr" } })
+    ).text();
+
+    // Whoever asks first decides what is behind a content-addressed URL for a
+    // year, and no purge replaces stored bytes under an unchanged key. So the
+    // card reads the site's locale, not the visitor's.
+    expect(body).toContain("locale:en");
   });
 });

@@ -24,9 +24,10 @@ export default plumix({
 
 ## What you get
 
-- **A card per published entry**, at `/_plumix/og/entry/<id>.<ext>` — PNG by default, and the extension always names what the renderer produces. It is composited from a bundled default template: the entry's title over your site's name.
+- **A card per published entry**, at `/_plumix/og/entry/<id>/<digest>.<ext>` — PNG by default, and the extension always names what the renderer produces. It is composited from a bundled default template: the entry's title over your site's name. Drop the digest — `/_plumix/og/entry/<id>.<ext>` — and you land on whichever render is current, which is how you open a card by hand.
 - **Share a link and the card is what appears.** The entry's page carries the card as its `og:image`, with `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. An entry that has a picture of its own shares the picture instead, cropped to the card's shape — see [which image a page shares](#which-image-a-page-shares).
 - **Render once, serve cheaply** — a card is rendered on the first request, written to your storage bucket, and read back after that. A matching `If-None-Match` answers `304`.
+- **Cached where your pages are cached.** With a `cache:` slot configured, a card is stored at the edge under the same `e:<id>` tag its entry's pages carry, so the publish that clears the page clears the card with it. The URL carries the card's digest and is served `immutable`: an edit publishes a _different_ URL, which is the only thing that makes X, Facebook and LinkedIn refetch an image they already hold — a purge reaches Cloudflare and stops there.
 - **A renderer you can swap.** `renderer:` takes the bundled engine (`takumi()`, or `takumi({ format: "jpeg" })` for a photo-heavy design), the same engine's SVG output (`svgOnly()`), or `remote({ url })` to render off-box.
 - **Cards your theme designs**, declared beside its templates and styled in its own design tokens — see below.
 
@@ -133,14 +134,14 @@ A token your theme declared without a `value` — one its own CSS defines — ha
 
 ### Which page kinds are servable today
 
-Only entries have a card URL — `/_plumix/og/entry/<id>.<ext>`. The builders for the other page kinds (`card.frontPage()`, `card.archive()`, `card.taxonomy()`, `card.author()`, `card.date()`, `card.forTermTaxonomy()`, `card.forDate()`, `card.forArchiveType()`) type-check and resolve, but nothing addresses those pages yet, so a rule declared against one is not served. They arrive with the routes that serve them.
+Only entries have a card URL — `/_plumix/og/entry/<id>/<digest>.<ext>`. The builders for the other page kinds (`card.frontPage()`, `card.archive()`, `card.taxonomy()`, `card.author()`, `card.date()`, `card.forTermTaxonomy()`, `card.forDate()`, `card.forArchiveType()`) type-check and resolve, but nothing addresses those pages yet, so a rule declared against one is not served. They arrive with the routes that serve them.
 
 ### Every rule needs a key
 
 `key` names everything the card read. It is required rather than derived, because a card reading a setting or a dep has an input no derivation can see and no type can describe. The helpers keep it to one line and emit the URL hash and the cache tag together, so the two cannot drift:
 
-- `cardKey.entry(entry)` — one entry, keyed on its `updatedAt` so an edit reaches the card, tagged for that entry's purge.
-- `cardKey.of("home", locale)` — anything else, keyed and tagged on what you name.
+- `cardKey.entry(entry)` — one entry, keyed on its `updatedAt` so an edit reaches the card, tagged `e:<id>` so the publish that clears the entry's pages clears its card too.
+- `cardKey.of("home", locale)` — anything else, keyed and tagged on what you name. The tag lands in an `og:` namespace of its own, because only you know what the card read: nothing purges it, and the URL is what invalidates such a card — change an input and the link changes with it.
 
 Read something the helper does not cover? Append it: `cardKey.entry(entry, siteName)`.
 
@@ -150,8 +151,8 @@ Four things it does not cover, each with the same answer — name it in the `key
 
 - `updatedAt` holds whole seconds, so two edits inside one second share a key. A card that renders entry content should name that content: `cardKey.entry(entry, entry.title)`.
 - Two renderers declaring the same content type share keys, so swapping between them serves what the previous one stored.
-- An image is resolved during the render, so nothing about it is in the key. A card painting one should name what identifies it — `cardKey.entry(entry, hero.url)`, since a replaced upload lands on a new storage key and so a new URL. Unpublishing an image is invisible to the key, so a card already rendered keeps showing it until something purges the card.
-- Nothing deletes a card's predecessor. Every key change leaves the old object in your bucket, so a site that redesigns often accumulates a generation per redesign.
+- An image is resolved during the render, so nothing about it is in the key. A card painting one should name what identifies it — `cardKey.entry(entry, hero.url)`, since a replaced upload lands on a new storage key and so a new URL. Unpublishing an image is invisible to the key, so a card already rendered keeps showing it: a purge clears the edge, and the next request reads the same bytes back out of your bucket under an unchanged key. Only a key change replaces a card's bytes.
+- Nothing deletes a card's predecessor. Every key change leaves the old object in your bucket, so a site that redesigns often accumulates a generation per redesign. The URL it was served at redirects to the current card rather than answering the bytes it was published with.
 
 ## Images in a card
 

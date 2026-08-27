@@ -1,13 +1,19 @@
 import type {
   AnyPluginDescriptor,
+  ConnectedCache,
   ConnectedObjectStorage,
+  I18nInput,
   ImageDelivery,
   JsonObject,
   Logger,
   OgImage,
 } from "plumix";
 import type { ThemeTokens } from "plumix/blocks";
-import type { DispatcherHarness } from "plumix/test";
+import type {
+  DispatcherHarness,
+  FetchOptions,
+  TestResponse,
+} from "plumix/test";
 import {
   anonymousPolicy,
   authenticatedPolicy,
@@ -103,6 +109,8 @@ export interface HarnessOptions extends OgPluginOptions {
    * `null` for a deploy that declared no storage at all.
    */
   readonly storage?: ConnectedObjectStorage | null;
+  /** The edge cache the deploy bound; omitted, the route runs live. */
+  readonly cache?: ConnectedCache;
   readonly withSiteTitle?: boolean;
   readonly assets?: { fetch: (request: Request) => Promise<Response> };
   /** Seeds `site.default_og_image`, the last link of the precedence chain. */
@@ -124,6 +132,10 @@ export interface HarnessOptions extends OgPluginOptions {
   readonly cards?: readonly CardRule[];
   /** Design tokens the theme declares. */
   readonly tokens?: ThemeTokens;
+  /** Serve the site under a subdirectory, as a mounted deploy does. */
+  readonly basePath?: string;
+  /** Locales the site enables, for asserting a card ignores them. */
+  readonly i18n?: I18nInput;
 }
 
 /** A fresh in-memory bucket, which is what a harness gets unless told otherwise. */
@@ -137,6 +149,7 @@ export async function createHarness(
 ): Promise<DispatcherHarness> {
   const {
     storage,
+    cache,
     withSiteTitle = true,
     assets,
     siteDefaultImage,
@@ -145,6 +158,8 @@ export async function createHarness(
     before = [],
     cards,
     tokens,
+    basePath,
+    i18n,
     ...rest
   } = options;
   const harness = await createDispatcherHarness({
@@ -154,7 +169,10 @@ export async function createHarness(
       og({ renderer: createFakeRenderer().renderer, ...rest }),
     ],
     storage: storage === null ? undefined : (storage ?? bucket()),
+    cache,
     assets,
+    basePath,
+    i18n,
     logger,
     imageDelivery,
     ...(cards === undefined && tokens === undefined
@@ -182,6 +200,40 @@ export async function createHarness(
     });
   }
   return harness;
+}
+
+/**
+ * Where one entry's card is served, found the way anything that isn't already
+ * holding the URL has to find it: through the digest-less pointer, which names
+ * whichever render is current.
+ */
+export async function cardPath(
+  harness: DispatcherHarness,
+  id: number,
+  extension = "svg",
+  basePath = "",
+): Promise<string> {
+  const pointer = `${basePath}/_plumix/og/entry/${String(id)}.${extension}`;
+  const location = (await harness.fetch(pointer)).headers.get("location");
+  // Nothing to point at — a draft, an unserved format, an entry nobody may
+  // see. The pointer's own 404 is then what a caller fetches, which is the
+  // answer they were asking for.
+  return location === null ? pointer : new URL(location).pathname;
+}
+
+/** The card itself. */
+export async function fetchCard(
+  harness: DispatcherHarness,
+  id: number,
+  options: FetchCardOptions = {},
+): Promise<TestResponse> {
+  const { extension = "svg", ...init } = options;
+  return harness.fetch(await cardPath(harness, id, extension), init);
+}
+
+export interface FetchCardOptions extends FetchOptions {
+  /** The format the renderer declares, which the URL names. */
+  readonly extension?: string;
 }
 
 export interface SeedEntryOverrides {

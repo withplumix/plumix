@@ -10,6 +10,7 @@ import { cardKey } from "./card-key.js";
 import { card } from "./card.js";
 import { og } from "./index.js";
 import { createFakeRenderer } from "./test/fake-renderer.js";
+import { fetchCard } from "./test/harness.js";
 
 const testBlog = definePlugin("test_blog", {
   setup: (ctx) => {
@@ -64,10 +65,6 @@ async function seedEntry(
   return entry.id;
 }
 
-function cardPath(id: number): string {
-  return `/_plumix/og/entry/${String(id)}.svg`;
-}
-
 function siteTitle(settings: CardArgs<TemplateData>["settings"]): string {
   const title = settings?.site?.title;
   return typeof title === "string" ? title : "";
@@ -85,7 +82,7 @@ describe("cards a theme declares", () => {
     });
     const id = await seedEntry(harness);
 
-    const body = await (await harness.fetch(cardPath(id))).text();
+    const body = await (await fetchCard(harness, id)).text();
 
     expect(body).toContain("Themed Card");
     expect(body).not.toContain("Hello World");
@@ -111,7 +108,7 @@ describe("cards a theme declares", () => {
     const page = await seedEntry(harness, { type: "page", title: "About" });
 
     const served = async (id: number): Promise<string> =>
-      (await harness.fetch(cardPath(id))).text();
+      (await fetchCard(harness, id)).text();
 
     expect(await served(post)).toContain("Post Card");
     expect(await served(page)).toContain("Entry Card");
@@ -137,7 +134,7 @@ describe("cards a theme declares", () => {
     const other = await seedEntry(harness, { slug: "something-else" });
 
     const served = async (id: number): Promise<string> =>
-      (await harness.fetch(cardPath(id))).text();
+      (await fetchCard(harness, id)).text();
 
     expect(await served(announcement)).toContain("The Announcement");
     expect(await served(other)).toContain("Any Post");
@@ -159,7 +156,7 @@ describe("cards a theme declares", () => {
     });
     const id = await seedEntry(harness, { title: "Hello World" });
 
-    const body = await (await harness.fetch(cardPath(id))).text();
+    const body = await (await fetchCard(harness, id)).text();
 
     expect(body).toContain("HELLO WORLD");
   });
@@ -184,7 +181,7 @@ describe("cards a theme declares", () => {
     });
     const id = await seedEntry(harness);
 
-    const body = await (await harness.fetch(cardPath(id))).text();
+    const body = await (await fetchCard(harness, id)).text();
 
     expect(body).toContain("Example Site");
   });
@@ -194,7 +191,7 @@ describe("what a card's key covers", () => {
   const etagOf = async (options: HarnessOptions): Promise<string | null> => {
     const harness = await createHarness(options);
     const id = await seedEntry(harness);
-    return (await harness.fetch(cardPath(id))).headers.get("etag");
+    return (await fetchCard(harness, id)).headers.get("etag");
   };
 
   // Every card here keys on a constant, so the ETag is a statement about the
