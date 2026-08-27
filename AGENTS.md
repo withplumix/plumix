@@ -104,7 +104,7 @@ return has not solved a typing problem, it has exported one to every caller, and
 an assertion. Return the shape the function produces — `JsonValue` / `JsonObject` for serialized
 data, a union naming what it can hand back, or the output of the valibot schema that decoded the
 input. A function named as a parser must not hand back an unparsed value. `unknown` stays correct
-as a *parameter* (that is what a parse boundary takes) and inside a wider type.
+as a _parameter_ (that is what a parse boundary takes) and inside a wider type.
 
 The rule stays silent where the return was never yours to choose: a signature an outside contract
 already declares open (a proxy trap, a `JSON.parse` reviver) and a function type used as a
@@ -149,7 +149,7 @@ Four positions stay silent, and they are as much the rule as the report is. A ba
 reach through. A union the compiler already knows: `typeof` picking the arm of a `Label` or of an
 `EnvInput` config slot is the documented idiom. A key read off a dictionary — or an element of an
 `unknown[]`: the index signature already declared its values undescribed. A shape that merely
-*carries* an index signature beside declared members is not a bag and does report, so parsing with
+_carries_ an index signature beside declared members is not a bag and does report, so parsing with
 a loose-object schema buys no silence for the fields it left undescribed. And a comparison against
 `"function"` or `"symbol"`: no serialized value produces either tag, so asking for one is a
 structural question about the object in hand rather than a decode that was skipped.
