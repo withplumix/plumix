@@ -30,6 +30,7 @@
   },
   "files": [
     "dist",
+    "locales",
     "README.md",
     "LICENSE"
   ],
