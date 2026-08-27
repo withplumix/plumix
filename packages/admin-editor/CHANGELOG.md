@@ -1,5 +1,14 @@
 # @plumix/admin-editor
 
+## 0.17.0
+
+### Patch Changes
+
+- Updated dependencies [[`db7cdba`](https://github.com/withplumix/plumix/commit/db7cdbaaaec94601ff4f630559ccb0d01bfde33f), [`06dee0c`](https://github.com/withplumix/plumix/commit/06dee0c4de59a7d93f1545f75bd93e63b1c0199c), [`228ef18`](https://github.com/withplumix/plumix/commit/228ef184588c7815a029f51bb764a15de022dde7), [`f169434`](https://github.com/withplumix/plumix/commit/f1694341ec80ac99e9f31243605f35fbb7c6f823), [`7bbef7c`](https://github.com/withplumix/plumix/commit/7bbef7c47a4ddb2162daf215f25b9dadf1ea3125), [`5b30da7`](https://github.com/withplumix/plumix/commit/5b30da79f79563e1578bc940f46fd26836570287), [`3a7c64a`](https://github.com/withplumix/plumix/commit/3a7c64a56238e148af7088f28e447acca9b4ab79), [`f5d786a`](https://github.com/withplumix/plumix/commit/f5d786ad6fa0341e6c72c12f011ada40204470fc), [`2a81bf2`](https://github.com/withplumix/plumix/commit/2a81bf24a2d163e8cc3965770ed9bdae9afd5a2e), [`1c67995`](https://github.com/withplumix/plumix/commit/1c67995236f52b0c01a3594d7eab3746191cac5d), [`ce79cc1`](https://github.com/withplumix/plumix/commit/ce79cc17a931bcd5809bad80c71ebcaaed473cd2), [`d4f1001`](https://github.com/withplumix/plumix/commit/d4f10014d60ec42ee40afbe12217b6e0cd810690), [`e581fcf`](https://github.com/withplumix/plumix/commit/e581fcf310170f9a12f6dd264879c851ef08b0d1), [`0390823`](https://github.com/withplumix/plumix/commit/0390823543fb23edf83c8df54671cb7933c9a51f), [`86deb49`](https://github.com/withplumix/plumix/commit/86deb49d04e398de9ded95844ace7a8594d254bd), [`9950906`](https://github.com/withplumix/plumix/commit/9950906203c3174ff99e9fe48f196b64754b1fb8), [`c5945d4`](https://github.com/withplumix/plumix/commit/c5945d4e055b53d546aa87a9bdf4f9c0e9384f91), [`d3c61bf`](https://github.com/withplumix/plumix/commit/d3c61bfa26d2a9cd1b02a4d61a912148e414189b), [`107724d`](https://github.com/withplumix/plumix/commit/107724d272cf534946443eb567848949c4ca3eaa)]:
+  - @plumix/core@0.17.0
+  - @plumix/blocks@0.17.0
+  - @plumix/admin-ui@0.17.0
+
 ## 0.16.0
 
 ### Patch Changes

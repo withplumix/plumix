@@ -1,5 +1,111 @@
 # plumix
 
+## 0.17.0
+
+### Minor Changes
+
+- [#2039](https://github.com/withplumix/plumix/pull/2039) [`db7cdba`](https://github.com/withplumix/plumix/commit/db7cdbaaaec94601ff4f630559ccb0d01bfde33f) Thanks [@nasyrov](https://github.com/nasyrov)! - Puts a second gate in front of every development-only surface. `PLUMIX_DEV` says a dev server is
+  running; it says nothing about who reached it, and `plumix dev` is routinely reachable from off-box
+  — a tunnel opened to test a webhook, a container bound to `0.0.0.0`, a forwarded codespace port.
+  Core now also requires the request to have arrived over loopback before it injects the debug bar,
+  serves `/_plumix/debug/requests`, or renders the dev error page, and the Vite plugin applies the
+  same rule to the dev endpoints that answer ahead of the worker — the source-excerpt reader behind
+  the error page's frames, the two sourcemap resolvers, and the browser-errors-to-terminal sink.
+  Off-loopback each is absent rather than refused: no bar in the markup, a 404 on the history, and
+  the theme's own `server-error` page in place of the dev one. What is withheld is the disclosure,
+  not the site.
+
+  Adds `auth: "development"` to the plugin route model, so a route that exists only while you are
+  developing declares that rather than `auth: "public"` and inherits the same two gates. It answers
+  404 off-loopback, since the existence of the route is itself development detail. The OG plugin's
+  card preview takes it — the surface that motivated the change, since it runs a theme-authored
+  `render` and resolves whatever template deps the card declared against a request carrying no
+  session. `registerRestResource` keeps the narrower `RestResourceAuth`: a REST resource is part of
+  the documented public API and has nowhere to publish a dev-only gate.
+
+  `PLUMIX_DEV_ALLOW_REMOTE=1` is the deliberate opt-out, for reviewing on a phone, demoing through a
+  tunnel or working in a codespace. Like the other dev-only variables it is substituted at bundle
+  time and empty in a production build, so it cannot follow you to a deploy. The MCP endpoint keeps
+  its own stricter gate — off-loopback it falls back to bearer-token authentication rather than
+  closing, so the opt-out has nothing to open there.
+
+- [#2038](https://github.com/withplumix/plumix/pull/2038) [`06dee0c`](https://github.com/withplumix/plumix/commit/06dee0c4de59a7d93f1545f75bd93e63b1c0199c) Thanks [@nasyrov](https://github.com/nasyrov)! - Makes the dev error page's two filters nameable outside core. `error_page:hints` and
+  `error_page:panels` were both documented as the plugin-facing way to contribute to the page, but
+  their type augmentations sat outside the closure the package barrel anchors, so a plugin writing
+  `ctx.addFilter("error_page:panels", …)` got `Argument of type '"error_page:panels"' is not
+assignable to parameter of type 'FilterName'` — the same defect `debug_bar:panels` had. Core now
+  anchors both.
+
+  Promoting them rather than correcting the comments is what the code already implied:
+  `error_page:panels` has no core subscriber at all, so every panel it collects has to come from a
+  plugin. A filter nothing outside core can name collects nothing, ever, and the honest alternative
+  was deleting it.
+
+  The contribution shapes `DevErrorHint` and `DevErrorPanel` are exported alongside the
+  presentational pieces a panel body is built from — `DevErrorFacts`, `DevErrorSubhead` and
+  `DevErrorEmptyNote`, the same three the page's own sections use, so a contributed panel wears the
+  page's markup instead of re-spelling its class names.
+
+- [#2005](https://github.com/withplumix/plumix/pull/2005) [`7bbef7c`](https://github.com/withplumix/plumix/commit/7bbef7c47a4ddb2162daf215f25b9dadf1ea3125) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds two development-only surfaces to the OG plugin. `/_plumix/og/preview` renders every declared
+  card rule against sample data, one card per rule at `/_plumix/og/preview/<n>.<ext>`, listed in the
+  order a page resolves against them rather than the order they were declared in. It reads nothing
+  from storage and caches nothing, so a refresh re-renders and an edit shows up; that bypass is a
+  requirement rather than a convenience, since a served card is content-addressed and every edit otherwise lands on a different
+  URL with the previous render sitting immutable in the bucket. The sample data is invented rather
+  than looked up, so the preview works on a site with no content in it, and a rule's matcher
+  contributes the names it narrows on.
+
+  A debug-bar panel answers the second question a card author asks. Four links resolve a page's
+  `og:image` and the rendered markup says nothing about which of them won, so the panel names it — the explicit `.ogImage()`
+  role, the entry's featured photo, the card and the rule that produced it, or the site-wide default
+  — along with the reason there is no card on the page. That is where a renderer whose format
+  scrapers cannot read is reported, which is why no boot-time warning exists for it.
+
+  Both surfaces sit behind the `PLUMIX_DEV` gate and a dynamic import, the same shape core uses for
+  its own dev-only routes, so neither leaves anything in a production build.
+
+  Makes `debug_bar:panels` a hook a plugin can actually name. Its declaration was outside the closure
+  the package barrel anchors, so nothing outside core could subscribe to it however clearly the docs
+  said otherwise; core now anchors it and exports the bar's presentational primitives
+  (`DebugSection`, `DebugKV`) so a contributed panel reads like the ones core registers.
+  `ruleLabel` joins `resolveRule` on the public surface, and the `isJsonObject` and `isJsonArray`
+  guards join the `JsonValue` type they narrow.
+
+### Patch Changes
+
+- [#2011](https://github.com/withplumix/plumix/pull/2011) [`712f764`](https://github.com/withplumix/plumix/commit/712f764f212ba3a8c02c60f01efed40fa393ed49) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes plugin admin catalogs never being staged or fetched on a pnpm-installed site. The bundler
+  decided a plugin's catalogs were already baked into the admin bundle by asking whether
+  `node_modules/@plumix/plugin-<id>` is a symlink — but under pnpm every package is one, registry
+  tarballs included, so it skipped emitting catalog URLs for plugins that bundle had never seen. It
+  now resolves the entry and keeps the skip only for a target inside the plumix monorepo's
+  `packages/plugins`, the directory the bundle's glob actually covers.
+
+  npm sites were never affected, and a pnpm site whose plugin versions matched its `@plumix/admin`
+  saw correct translations anyway, since that bundle carries first-party catalogs of its own. What
+  was broken is everything outside that overlap: a plugin newer than the installed admin, a plugin
+  its glob never saw, or a string added since it was built, all fell back to English with no way to
+  load the catalog that would have covered them. pnpm and npm sites no longer diverge here.
+
+- [#2010](https://github.com/withplumix/plumix/pull/2010) [`d9cb874`](https://github.com/withplumix/plumix/commit/d9cb87447fd859a1d940dd8ce990571b79b88469) Thanks [@nasyrov](https://github.com/nasyrov)! - Resolves a plugin package whose id carries an underscore. `PLUGIN_ID_RE` admits
+  `_`, npm names conventionally use `-`, and nothing reconciles the two —
+  `audit_log` ships as `@plumix/plugin-audit-log`. `findPluginPackageRoot` built
+  its candidates from the id verbatim, so it resolved nothing for that plugin and
+  `plumix build` failed with `adminAssetNotFound` for catalogs sitting in the
+  tarball all along. `isAdminBundledPlugin` read the same name and reported every
+  such plugin as unbundled. Both now try the hyphenated form after the literal
+  one, so a package whose name really does contain `_` still wins.
+
+  Previously masked: `audit_log` was the only affected first-party plugin, and it
+  declared only its source locale, so the manifest never emitted a catalog URL and
+  the resolution was never attempted.
+
+- Updated dependencies [[`db7cdba`](https://github.com/withplumix/plumix/commit/db7cdbaaaec94601ff4f630559ccb0d01bfde33f), [`06dee0c`](https://github.com/withplumix/plumix/commit/06dee0c4de59a7d93f1545f75bd93e63b1c0199c), [`228ef18`](https://github.com/withplumix/plumix/commit/228ef184588c7815a029f51bb764a15de022dde7), [`f169434`](https://github.com/withplumix/plumix/commit/f1694341ec80ac99e9f31243605f35fbb7c6f823), [`7bbef7c`](https://github.com/withplumix/plumix/commit/7bbef7c47a4ddb2162daf215f25b9dadf1ea3125), [`5b30da7`](https://github.com/withplumix/plumix/commit/5b30da79f79563e1578bc940f46fd26836570287), [`3a7c64a`](https://github.com/withplumix/plumix/commit/3a7c64a56238e148af7088f28e447acca9b4ab79), [`f5d786a`](https://github.com/withplumix/plumix/commit/f5d786ad6fa0341e6c72c12f011ada40204470fc), [`2a81bf2`](https://github.com/withplumix/plumix/commit/2a81bf24a2d163e8cc3965770ed9bdae9afd5a2e), [`1c67995`](https://github.com/withplumix/plumix/commit/1c67995236f52b0c01a3594d7eab3746191cac5d), [`ce79cc1`](https://github.com/withplumix/plumix/commit/ce79cc17a931bcd5809bad80c71ebcaaed473cd2), [`d4f1001`](https://github.com/withplumix/plumix/commit/d4f10014d60ec42ee40afbe12217b6e0cd810690), [`e581fcf`](https://github.com/withplumix/plumix/commit/e581fcf310170f9a12f6dd264879c851ef08b0d1), [`0390823`](https://github.com/withplumix/plumix/commit/0390823543fb23edf83c8df54671cb7933c9a51f), [`86deb49`](https://github.com/withplumix/plumix/commit/86deb49d04e398de9ded95844ace7a8594d254bd), [`9950906`](https://github.com/withplumix/plumix/commit/9950906203c3174ff99e9fe48f196b64754b1fb8), [`c5945d4`](https://github.com/withplumix/plumix/commit/c5945d4e055b53d546aa87a9bdf4f9c0e9384f91), [`d3c61bf`](https://github.com/withplumix/plumix/commit/d3c61bfa26d2a9cd1b02a4d61a912148e414189b), [`107724d`](https://github.com/withplumix/plumix/commit/107724d272cf534946443eb567848949c4ca3eaa)]:
+  - @plumix/core@0.17.0
+  - @plumix/blocks@0.17.0
+  - @plumix/admin@0.17.0
+  - @plumix/admin-editor@0.17.0
+  - @plumix/admin-ui@0.17.0
+
 ## 0.16.0
 
 ### Patch Changes
