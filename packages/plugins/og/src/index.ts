@@ -8,8 +8,18 @@ import { CARD_ROUTE_PATH, createCardRoute } from "./card-route.js";
 import { defaultCards } from "./default-card.js";
 import { bundledRenderer } from "./default-renderer.js";
 import { pageOgImage } from "./head.js";
+import {
+  CARD_PREVIEW_FIELD_KEY,
+  CARD_PREVIEW_INPUT_TYPE,
+} from "./preview-box.js";
 import { advertisedExtension } from "./renderer.js";
+import { createOgRouter } from "./rpc.js";
 import { compileThemeTokens } from "./tokens.js";
+
+// Where the built admin chunk sits once the package is installed. The vite
+// plugin resolves it from the consuming site's root and folds it into the
+// per-site admin bundle.
+const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-og/dist/admin/index.js";
 
 export type {
   CardArgs,
@@ -30,6 +40,7 @@ export type {
   CardRenderInput,
   CardTextNode,
 } from "./renderer.js";
+export type { CardPreview, CardPreviewOutcome } from "./preview.js";
 export type { RemoteRendererOptions } from "./remote.js";
 export { remote } from "./remote.js";
 
@@ -56,6 +67,20 @@ export interface OgPluginOptions {
    * with no text on it. Left empty, the engine's own fallback face is used.
    */
   readonly fonts?: readonly string[];
+  /**
+   * Entry types whose editor shows a live preview of the card the entry will
+   * be shared with, and which link of the `og:image` chain produced it.
+   *
+   * Named rather than defaulted: a meta box is registered against entry types
+   * by name and an unregistered name fails the boot, so a guess here would
+   * crash a site for installing a plugin.
+   *
+   * @example
+   * ```ts
+   * og({ preview: ["post", "page"] });
+   * ```
+   */
+  readonly preview?: readonly string[];
 }
 
 /**
@@ -77,6 +102,7 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
   const renderer = options.renderer ?? bundledRenderer();
   const cards = createCardRegistry(defaultCards);
   const fonts = options.fonts ?? [];
+  const preview = options.preview ?? [];
   let tokens = compileThemeTokens();
   // One accessor for both readers: the head and the route have to land on the
   // same digest, and they only do that if they read the same inputs.
@@ -87,6 +113,15 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
   const advertised = advertisedExtension(renderer.contentType);
 
   return definePlugin("og", {
+    // Only when a site asked for the box: the chunk exists to register the
+    // preview's field renderer, so with no box it would be dead weight folded
+    // into every og install's admin bundle.
+    ...(preview.length > 0 ? { adminEntry: ADMIN_ENTRY_PATH } : {}),
+    i18n: {
+      sourceLocale: "en",
+      locales: ["en", "uk", "ar", "de", "zh-CN"],
+      catalogPath: "./locales",
+    },
     // Async because of the dev import below; core awaits `setup` before it
     // reads any registry, so registration order is unaffected.
     setup: async (ctx) => {
@@ -108,6 +143,35 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
         cacheable: true,
         handler,
       });
+      if (preview.length > 0) {
+        ctx.registerRpcRouter(
+          createOgRouter({
+            cards,
+            renderer,
+            inputs,
+            extension: advertised,
+            entryTypes: preview,
+          }),
+        );
+        ctx.registerEntryMetaBox("card_preview", {
+          label: {
+            id: "plugin.og.preview.box.label",
+            message: "Social card",
+          },
+          entryTypes: preview,
+          fields: [
+            {
+              key: CARD_PREVIEW_FIELD_KEY,
+              label: {
+                id: "plugin.og.preview.field.label",
+                message: "Shared image",
+              },
+              type: "json",
+              inputType: CARD_PREVIEW_INPUT_TYPE,
+            },
+          ],
+        });
+      }
       // Subscribed whatever the renderer makes: the featured-photo crop needs
       // no rasterizer, so it is the one link of the chain a deploy that cannot
       // render a card still gets.

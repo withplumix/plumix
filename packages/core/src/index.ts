@@ -101,6 +101,18 @@ export { DebugKV, DebugSection } from "./dev/debug-bar/primitives.js";
 export type { DebugKVRow } from "./dev/debug-bar/primitives.js";
 export type { DebugPanel } from "./dev/debug-bar/types.js";
 export type { DebugSnapshot } from "./dev/debug-bar/snapshot.js";
+// The role links of the `og:image` chain, for a subscriber that has to say
+// which one an image came from rather than only what the chain resolved to.
+export { entryRoleImage } from "./seo/head-defaults.js";
+// The `site` settings bag, memoized per request alongside the head defaults
+// and the template dep that read it — so a plugin asking for one setting joins
+// that read instead of opening a second query for a bag already in hand.
+export { loadSiteSettings } from "./seo/site-settings.js";
+// The caller's pending autosave for an entry. A surface that renders what an
+// author is editing has to overlay it the way `entry.get`'s preview mode does;
+// reading the live row alone shows a published entry's pre-edit state.
+export { getAutosave } from "./revisions/repository.js";
+export type { AutosavePairInput } from "./revisions/repository.js";
 // Exposed for a `cache:` provider: which responses a shared cache may hold is
 // framework policy, not the runtime's, and a provider's `put` reads the same
 // rule core does when it decides whether to store at all.

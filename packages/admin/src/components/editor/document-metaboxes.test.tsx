@@ -8,10 +8,15 @@ import type { EntryMetaBoxManifestEntry } from "@plumix/core/manifest";
 
 import { renderWithI18n } from "../../../test/render-with-i18n.js";
 import { diffMetaBag } from "../../editor/meta-diff.js";
+import {
+  _resetPluginRegistry,
+  registerPluginFieldType,
+} from "../../lib/plugin-registry.js";
 import { DocumentMetaBoxes } from "./document-settings.js";
 
 afterEach(() => {
   cleanup();
+  _resetPluginRegistry();
   vi.restoreAllMocks();
 });
 
@@ -89,5 +94,44 @@ describe("DocumentMetaBoxes foreign-key retention", () => {
 
     const emittedOnMount = onMetaChange.mock.calls.at(-1)?.[0];
     expect(diffMetaBag(seeded, emittedOnMount ?? {})).toEqual({});
+  });
+});
+
+// A plugin field renderer that only *shows* something — @plumix/plugin-og's
+// card preview is the first — still needs a field to hang off, so it occupies
+// a meta key it never writes to. Opening an entry must not therefore emit a
+// key the diff reads as a change and autosaves on sight.
+describe("DocumentMetaBoxes display-only fields", () => {
+  test("a renderer that never writes leaves the diff empty", () => {
+    registerPluginFieldType("previewOnly", () => <p>nothing to write</p>);
+    const displayBox: EntryMetaBoxManifestEntry = {
+      id: "preview",
+      label: "Preview",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "card_preview",
+          label: "Card",
+          type: "json",
+          inputType: "previewOnly",
+        },
+      ],
+    };
+    const seeded = { subtitle: "old" };
+    const onMetaChange = vi.fn<(next: Record<string, unknown>) => void>();
+
+    const queryClient = createQueryClient();
+    renderWithI18n(
+      <QueryClientProvider client={queryClient}>
+        <DocumentMetaBoxes
+          boxes={[box, displayBox]}
+          initialMeta={seeded}
+          onMetaChange={onMetaChange}
+        />
+      </QueryClientProvider>,
+    );
+
+    const emitted = onMetaChange.mock.calls.at(-1)?.[0];
+    expect(diffMetaBag(seeded, emitted ?? {})).toEqual({});
   });
 });

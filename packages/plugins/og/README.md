@@ -30,6 +30,7 @@ export default plumix({
 - **Cached where your pages are cached.** With a `cache:` slot configured, a card is stored at the edge under the same `e:<id>` tag its entry's pages carry, so the publish that clears the page clears the card with it. The URL carries the card's digest and is served `immutable`: an edit publishes a _different_ URL, which is the only thing that makes X, Facebook and LinkedIn refetch an image they already hold — a purge reaches Cloudflare and stops there.
 - **A renderer you can swap.** `renderer:` takes the bundled engine (`takumi()`, or `takumi({ format: "jpeg" })` for a photo-heavy design), the same engine's SVG output (`svgOnly()`), or `remote({ url })` to render off-box.
 - **Cards your theme designs**, declared beside its templates and styled in its own design tokens — see below.
+- **A preview in the editor**, opt-in per entry type, showing what the entry will be shared with and which of the four links produced it — see [preview a card while you write](#preview-a-card-while-you-write).
 
 ## Which image a page shares
 
@@ -55,6 +56,43 @@ card.forEntryType("post").define({
 An image some other plugin put on the chain through the `seo:og_image` filter is left exactly as it arrived: neither outranked nor cropped.
 
 Cropping is a feature of this plugin, and it takes its target size from the card rule that matched — so a site that wants cropped share images but no generated cards still declares a card rule to say what shape to crop to.
+
+## Preview a card while you write
+
+Name the entry types whose editor should carry it:
+
+```ts
+og({ preview: ["post", "page"] });
+```
+
+Each named type gains a **Social card** box in the editor rail: the image the
+entry will be shared with, a line naming which of the four links above produced
+it, and — where there is no card — the reason, in the same words the debug
+bar's og panel uses. "I set a featured image and nothing changed" reads back as
+_The card steps aside for the featured image_.
+
+The preview renders on request and reads nothing back from storage, so a draft
+has one too — which is the point, since a card's URL is addressed by a digest
+over what the card read and a draft has no stable one. It also sees through a
+pending autosave, so a featured image you picked on an already-published post
+shows up before you publish again. A card costs a render, so the box fetches
+once and has a **Refresh** button for after you save.
+
+An entry a scraper could never reach — a private type, or one an access policy
+gates — gets no card here either, exactly as its page's head gets none.
+
+The list is not defaulted because a meta box is registered against entry types
+by name and a name nothing registered fails the boot. Leave `preview` out and
+neither the box, the procedure behind it, nor the plugin's admin chunk is
+registered at all.
+
+It shows; it does not choose. There is no per-entry override here — the links
+above are the one precedence authority, and a fifth control added before
+authors can see the outcome would only be a fifth thing to be surprised by.
+
+The card is rendered by whatever `renderer:` names. With `remote({ url })` that
+means a draft's title and card content are POSTed to that endpoint on every
+preview — your own service, but worth knowing before you point it off-box.
 
 ## When a card cannot be advertised
 

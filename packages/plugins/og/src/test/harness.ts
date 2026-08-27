@@ -50,6 +50,11 @@ const testBlog = definePlugin("test_blog", {
       isPublic: true,
       hasArchive: true,
       rewrite: { slug: "posts" },
+      // As `@plumix/plugin-blog` declares it: an editor's meta edits on a
+      // *published* post of a type supporting autosave land on a per-user
+      // draft row rather than the live one, which anything rendering what an
+      // author is editing has to account for.
+      supports: ["title", "editor", "autosave"],
     });
     ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
     ctx.registerEntryType("gated", {

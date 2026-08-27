@@ -159,12 +159,19 @@ export function resolveEntryRoleImage(
   return null;
 }
 
-// Scopes the role walk to the entry's own content-type fields; null for any
-// page that is not a single entry.
-function entryRoleImage(
+/**
+ * One role's image for a page — null for anything that is not a single entry.
+ * Scopes {@link resolveEntryRoleImage} to the entry's own content-type fields.
+ *
+ * Public because the `og:image` chain has links either side of the
+ * `seo:og_image` filter: a subscriber that has to say which link an image came
+ * from reads them here rather than re-deriving them and matching URLs against
+ * the result.
+ */
+export function entryRoleImage(
   plugins: PluginRegistry,
   data: TemplateData,
-  role: MediaFieldRole,
+  role: NonNullable<MetaBoxField["role"]>,
 ): OgImage | null {
   if (data.kind !== "entry") return null;
   return resolveEntryRoleImage(

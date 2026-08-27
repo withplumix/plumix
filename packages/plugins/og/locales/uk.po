@@ -1,0 +1,95 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-08-27\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: uk\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14) ? 2 : 3);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.og.preview.box.label"
+msgstr "Картка для соцмереж"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.og.preview.field.label"
+msgstr "Зображення для поширення"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.loading"
+msgstr "Малюємо…"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.failed"
+msgstr "Не вдалося намалювати попередній перегляд."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.unsaved"
+msgstr "Збережіть запис, щоб побачити, як його поширять."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.refresh"
+msgstr "Оновити"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.alt"
+msgstr "Попередній перегляд зображення, з яким поширять цей запис"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.ogImage"
+msgstr "Зображення для поширення, задане для цього запису; воно має перевагу над карткою."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.card"
+msgstr "Картка, згенерована з цього запису."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.featured"
+msgstr "Головне зображення цього запису."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.siteDefault"
+msgstr "Типове зображення сайту."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.supplied"
+msgstr "Зображення, надане іншим плагіном."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.noRule"
+msgstr "Жодне правило картки не підходить цьому запису."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.rendererFormat"
+msgstr "Рендерер створює формат, який соцмережі не показують."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.notShareable"
+msgstr "Без картки: цей запис недоступний публічно."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.featuredPreferred"
+msgstr "Картка поступається головному зображенню."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.pageKind"
+msgstr "Картку отримують лише записи."
+

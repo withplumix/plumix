@@ -218,7 +218,8 @@ export async function upsertAutosave(
   return row;
 }
 
-interface AutosavePairInput {
+/** Which entry, and whose pending draft of it — autosaves are per author. */
+export interface AutosavePairInput {
   readonly entryId: number;
   readonly authorId: number;
 }

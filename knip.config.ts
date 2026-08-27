@@ -87,6 +87,9 @@ const config: KnipConfig = {
     "packages/plugins/comments/playground": {
       entry: ["plumix.config.ts"],
     },
+    "packages/plugins/og/playground": {
+      entry: ["plumix.config.ts"],
+    },
     "packages/plugins/blog/playground": {
       entry: ["plumix.config.ts"],
     },
@@ -335,6 +338,26 @@ const config: KnipConfig = {
       ],
       ignoreDependencies: ["@plumix/runtime-cloudflare"],
       // See packages/admin above for why the playwright plugin is off.
+      playwright: false,
+    },
+    // Admin chunk loaded via `adminEntry` at consumer build time; the engine
+    // subpath is reached through a dynamic import so the wasm stays off the
+    // graph of anything that merely installs the plugin; the playwright rig
+    // (globalSetup + spec) runs under plumix dev. None are static imports knip
+    // can follow.
+    "packages/plugins/og": {
+      entry: [
+        "src/index.ts",
+        "src/takumi.ts",
+        "src/admin/index.tsx",
+        "e2e/globalSetup.ts",
+        "e2e/*.spec.ts",
+        "lingui.config.ts",
+        "locales/*.mjs",
+      ],
+      // Playground-only devDeps; see packages/plugins/media above. Blog is
+      // here because the playground needs an entry type to hang a card off.
+      ignoreDependencies: ["@plumix/runtime-cloudflare", "@plumix/plugin-blog"],
       playwright: false,
     },
     // Admin chunk loaded via `adminEntry` at consumer build time; the

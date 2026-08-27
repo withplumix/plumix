@@ -1,4 +1,5 @@
 import type { CardImage, CardRenderer } from "./renderer.js";
+import { toBase64 } from "./base64.js";
 import { OgPluginError } from "./errors.js";
 import { PNG_CONTENT_TYPE } from "./renderer.js";
 
@@ -49,16 +50,6 @@ export function remote(options: RemoteRendererOptions): CardRenderer {
   };
 }
 
-// Chunked rather than spread whole: a card-sized image is megabytes of
-// arguments, which is a stack overflow rather than a slow call.
-const CHUNK_BYTES = 0x8000;
-
 function encodeImage(image: CardImage): { src: string; data: string } {
-  let binary = "";
-  for (let offset = 0; offset < image.data.length; offset += CHUNK_BYTES) {
-    binary += String.fromCharCode(
-      ...image.data.subarray(offset, offset + CHUNK_BYTES),
-    );
-  }
-  return { src: image.src, data: btoa(binary) };
+  return { src: image.src, data: toBase64(image.data) };
 }

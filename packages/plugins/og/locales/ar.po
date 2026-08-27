@@ -1,0 +1,95 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-08-27\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: ar\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.og.preview.box.label"
+msgstr "بطاقة التواصل الاجتماعي"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.og.preview.field.label"
+msgstr "صورة المشاركة"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.loading"
+msgstr "جارٍ الرسم…"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.failed"
+msgstr "تعذّر إنشاء المعاينة."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.unsaved"
+msgstr "احفظ المدخل لترى كيف ستتم مشاركته."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.refresh"
+msgstr "تحديث"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.alt"
+msgstr "معاينة الصورة التي ستُشارَك مع هذا المدخل"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.ogImage"
+msgstr "صورة المشاركة المحددة لهذا المدخل، وهي تتقدّم على البطاقة."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.card"
+msgstr "بطاقة أُنشئت من هذا المدخل."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.featured"
+msgstr "الصورة البارزة لهذا المدخل."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.siteDefault"
+msgstr "الصورة الافتراضية للموقع."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.supplied"
+msgstr "صورة قدّمها مكوّن إضافي آخر."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.noRule"
+msgstr "لا توجد قاعدة بطاقة تطابق هذا المدخل."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.rendererFormat"
+msgstr "يُنتج المُصيِّر صيغة لا تعرضها شبكات التواصل."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.notShareable"
+msgstr "لا بطاقة: هذا المدخل غير متاح للعامة."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.featuredPreferred"
+msgstr "تتنحّى البطاقة لصالح الصورة البارزة."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.pageKind"
+msgstr "المداخل وحدها تحصل على بطاقة."
+
