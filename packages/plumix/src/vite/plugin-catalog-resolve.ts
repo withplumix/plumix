@@ -1,4 +1,4 @@
-import { lstatSync } from "node:fs";
+import { realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 
@@ -40,37 +40,59 @@ export function findPluginPackageRoot(input: {
 }
 
 /**
- * Detect whether a plugin is loaded via a pnpm workspace symlink — i.e.,
- * `node_modules/@plumix/plugin-<id>` is itself a symlink to a sibling
- * monorepo package. Used by the manifest layer to skip URL emission
- * for plugins admin already bakes into its bundle via
- * `import.meta.glob("../../../plugins/*"/locales/*.mjs")`.
+ * The directory admin's `import.meta.glob("../../../plugins/*"/locales/*.mjs")`
+ * scans. That glob is written from `packages/admin/src/lib`, so the directory
+ * is the admin package's own sibling — which makes the installed
+ * `@plumix/admin` the anchor, rather than the shape of any path.
  *
- * Intentionally scoped to the `@plumix/plugin-<id>` convention only —
- * admin's glob covers `packages/plugins/*` in the plumix monorepo,
- * which by convention houses `@plumix/`-scoped plugins. Workspace
- * plugins under a different convention (`plumix-plugin-<id>`,
- * community forks) aren't covered by admin's glob either, so emitting
- * a URL for them is correct.
- *
- * Inspects the symlink at `node_modules/@plumix/plugin-<id>` directly
- * with `lstat` — `require.resolve` would follow the symlink and yield
- * the realpath, defeating the check. `lstat` on the path itself
- * reports `isSymbolicLink()` for the dir-entry, ignoring symlinked
- * ancestors (macOS tmpdir).
+ * Canonicalized once here so `isAdminBundledPlugin` can compare it against a
+ * resolved link without paying a throwing syscall per plugin, and `null`
+ * anywhere but the plumix monorepo: a consumer's installed admin has no such
+ * sibling, so nothing is baked in and every plugin needs a URL.
  */
-export function isWorkspaceSymlinkedPlugin(input: {
+export function findAdminBundledPluginsDir(
+  adminPackageRoot: string,
+): string | null {
+  try {
+    return realpathSync(resolve(adminPackageRoot, "../plugins"));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Detect whether a plugin's admin catalogs are already baked into the admin
+ * bundle by that glob, so the manifest layer can skip `pluginI18n` URL
+ * emission and spare admin a double-load at boot.
+ *
+ * Under pnpm every `node_modules` entry is a symlink — registry tarballs
+ * included — so symlink-ness says nothing about a plugin's provenance. What
+ * settles it is where the entry resolves to: only a target sitting in
+ * `bundledPluginsDir` is in the bundle.
+ *
+ * Scoped to the `@plumix/plugin-<id>` convention only — `packages/plugins/*`
+ * houses `@plumix/`-scoped plugins by convention, so a workspace plugin under
+ * another name isn't covered by admin's glob either and does need a URL.
+ *
+ * Every unanticipated failure lands on `false`, which is the safe direction:
+ * a wrong `false` costs a redundant catalog fetch, a wrong `true` costs
+ * silently-English admin strings.
+ */
+export function isAdminBundledPlugin(input: {
   readonly pluginId: string;
   readonly projectRoot: string;
+  readonly bundledPluginsDir: string | null;
 }): boolean {
-  const symlinkPath = resolve(
+  const { bundledPluginsDir } = input;
+  if (bundledPluginsDir === null) return false;
+  const entryPath = resolve(
     input.projectRoot,
     "node_modules",
     "@plumix",
     `plugin-${input.pluginId}`,
   );
   try {
-    return lstatSync(symlinkPath).isSymbolicLink();
+    return dirname(realpathSync(entryPath)) === bundledPluginsDir;
   } catch {
     return false;
   }

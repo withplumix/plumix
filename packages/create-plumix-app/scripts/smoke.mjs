@@ -98,6 +98,62 @@ function assertNothingFromRegistry(appDir) {
   }
 }
 
+/**
+ * Turn on a second locale, and name the plugins whose catalogs that should
+ * pull through. A plugin's admin catalogs are only staged for locales the site
+ * enables, so the scaffold's single-locale default stops short of the seam a
+ * consumer install is here to prove — the manifest emits no catalog URLs, and
+ * nothing copies `<plugin>/locales/<locale>.mjs` out of the installed tarball.
+ *
+ * Which plugins reach it is not obvious and not stable: a plugin only qualifies
+ * for a locale it declares in its own `i18n` slot and that isn't its
+ * `sourceLocale`. Most first-party plugins declare `["en"]` today. So the
+ * expectation is spelled out rather than derived — a plugin dropping the locale
+ * should fail here, not quietly reduce what this smoke covers to nothing.
+ */
+const SECOND_LOCALE = "uk";
+const EXPECT_CATALOGS = ["comments", "og"];
+
+function enableSecondLocale(appDir) {
+  const configPath = join(appDir, "plumix.config.ts");
+  const config = readFileSync(configPath, "utf8");
+  // `src/compose/config.ts` closes the call with the theme slot — but may then
+  // append an `declare module` block, so this is not end-of-file.
+  const anchor = "  theme,\n});";
+  if (!config.includes(anchor)) {
+    throw new Error(
+      "plumix.config.ts no longer closes with the theme slot — see " +
+        "packages/create-plumix-app/src/compose/config.ts.",
+    );
+  }
+  const i18n = `  i18n: { defaultLocale: "en", locales: ["en", "${SECOND_LOCALE}"] },\n`;
+  writeFileSync(
+    configPath,
+    config.replace(anchor, `  theme,\n${i18n}});`),
+    "utf8",
+  );
+}
+
+/**
+ * The build stages each declared catalog into the admin assets it serves.
+ * Asserting they arrived is what makes the locale above a regression pin
+ * rather than a passenger: the manifest can silently skip URL emission for a
+ * plugin it wrongly believes admin already bundled, and the build stays green
+ * either way.
+ */
+function assertCatalogsStaged(appDir) {
+  const adminDir = join(appDir, "dist/client/_plumix/admin/plugins");
+  const missing = EXPECT_CATALOGS.filter(
+    (id) => !existsSync(join(adminDir, id, "locales", `${SECOND_LOCALE}.mjs`)),
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `No ${SECOND_LOCALE} catalog staged under ${adminDir} for: ${missing.join(", ")}. ` +
+        `The manifest emitted no catalog URL for them, so a site would fall back to English.`,
+    );
+  }
+}
+
 function smoke(combo, tarballs) {
   const dir = mkdtempSync(join(tmpdir(), `plumix-smoke-${combo.name}-`));
   const app = join(dir, "app");
@@ -112,12 +168,14 @@ function smoke(combo, tarballs) {
       "--no-db",
     ]);
 
+    if (combo.secondLocale) enableSecondLocale(app);
     redirectToTarballs(app, tarballs);
     run("pnpm", ["install", "--ignore-workspace", "--silent"], app);
     assertNothingFromRegistry(app);
 
     run("pnpm", ["run", "typecheck"], app);
     run("pnpm", ["run", "build"], app);
+    if (combo.secondLocale) assertCatalogsStaged(app);
     console.log(`=== ${combo.name}: ok ===`);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -138,7 +196,11 @@ try {
   // declaring `requires`, so all-plugins covers the capability seam too.
   const combos = [
     { name: "blank", args: ["-y"] },
-    { name: "all-plugins", args: ["-y", "-p", plugins.join(",")] },
+    {
+      name: "all-plugins",
+      args: ["-y", "-p", plugins.join(",")],
+      secondLocale: true,
+    },
   ];
   for (const combo of combos) smoke(combo, tarballs);
   console.log(

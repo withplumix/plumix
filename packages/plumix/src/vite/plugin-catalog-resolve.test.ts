@@ -1,18 +1,21 @@
 import {
   mkdir,
   mkdtemp,
+  readFile,
   realpath,
   rm,
   symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import {
+  findAdminBundledPluginsDir,
   findPluginPackageRoot,
-  isWorkspaceSymlinkedPlugin,
+  isAdminBundledPlugin,
 } from "./plugin-catalog-resolve.js";
 
 describe("findPluginPackageRoot", () => {
@@ -60,8 +63,9 @@ describe("findPluginPackageRoot", () => {
 // `exports` map, `require.resolve("<name>/package.json")` throws and
 // the unit tests miss the regression. These fixtures drive the
 // production `createRequire` path against a tmpdir layout.
-describe("findPluginPackageRoot — real FS", () => {
+describe("plugin catalog resolution — real FS", () => {
   let projectRoot: string;
+  let bundledPluginsDir: string;
 
   beforeEach(async () => {
     // `realpath` because macOS tmpdir symlinks `/var/folders` →
@@ -70,6 +74,11 @@ describe("findPluginPackageRoot — real FS", () => {
     projectRoot = await realpath(
       await mkdtemp(join(tmpdir(), "plumix-plugin-resolve-")),
     );
+    // The plumix monorepo's `packages/plugins`, as `findAdminBundledPluginsDir`
+    // hands it to the predicate: present, so a case that expects `false` has to
+    // earn it on the comparison rather than on a missing directory.
+    bundledPluginsDir = join(projectRoot, "packages/plugins");
+    await mkdir(bundledPluginsDir, { recursive: true });
     await writeFile(join(projectRoot, "package.json"), JSON.stringify({}));
   });
 
@@ -93,55 +102,114 @@ describe("findPluginPackageRoot — real FS", () => {
     expect(root).toBe(pluginDir);
   });
 
-  test("isWorkspaceSymlinkedPlugin returns true when the package dir is a symlink (pnpm workspace)", async () => {
-    // pnpm symlinks `node_modules/@plumix/plugin-real` to the
-    // workspace's `packages/plugins/real`. The `lstat` check
-    // distinguishes a real symlink from a symlinked ancestor path
-    // (which macOS tmpdir always exhibits).
-    const realPluginDir = join(projectRoot, "packages/plugins/real");
-    await mkdir(realPluginDir, { recursive: true });
-    await writeFile(
-      join(realPluginDir, "package.json"),
-      JSON.stringify({
-        name: "@plumix/plugin-real",
-        type: "module",
-        exports: { "./package.json": "./package.json" },
-      }),
-    );
-    const scopeDir = join(projectRoot, "node_modules/@plumix");
-    await mkdir(scopeDir, { recursive: true });
-    await symlink(realPluginDir, join(scopeDir, "plugin-real"), "dir");
-
-    expect(isWorkspaceSymlinkedPlugin({ pluginId: "real", projectRoot })).toBe(
-      true,
-    );
-  });
-
-  test("isWorkspaceSymlinkedPlugin returns false for a real (non-symlink) install", async () => {
-    // Third-party npm install — no symlink, real directory.
-    const pluginDir = join(projectRoot, "node_modules/@plumix/plugin-vendor");
+  test("isAdminBundledPlugin returns true for a symlink into admin's bundled plugins dir", async () => {
+    // The plumix monorepo: pnpm links `node_modules/@plumix/plugin-real`
+    // straight at `packages/plugins/real`, which is exactly what admin's
+    // `import.meta.glob("../../../plugins/*/locales/*.mjs")` baked in.
+    const pluginDir = join(bundledPluginsDir, "real");
     await mkdir(pluginDir, { recursive: true });
-    await writeFile(
-      join(pluginDir, "package.json"),
-      JSON.stringify({
-        name: "@plumix/plugin-vendor",
-        type: "module",
-        exports: { "./package.json": "./package.json" },
-      }),
-    );
+    await linkPlugin(projectRoot, "real", pluginDir);
 
     expect(
-      isWorkspaceSymlinkedPlugin({ pluginId: "vendor", projectRoot }),
+      isAdminBundledPlugin({
+        pluginId: "real",
+        projectRoot,
+        bundledPluginsDir,
+      }),
+    ).toBe(true);
+  });
+
+  test("isAdminBundledPlugin returns false for a pnpm store symlink (registry install)", async () => {
+    // Regression pin: under pnpm EVERY `node_modules` entry is a symlink,
+    // including registry tarballs, which resolve into `.pnpm/`. Treating
+    // symlink-ness alone as "workspace" silently dropped the plugin's catalog
+    // URLs on every pnpm consumer site.
+    const storeDir = join(
+      projectRoot,
+      "node_modules/.pnpm/@plumix+plugin-published@0.1.0/node_modules/@plumix/plugin-published",
+    );
+    await mkdir(storeDir, { recursive: true });
+    await linkPlugin(projectRoot, "published", storeDir);
+
+    expect(
+      isAdminBundledPlugin({
+        pluginId: "published",
+        projectRoot,
+        bundledPluginsDir,
+      }),
     ).toBe(false);
   });
 
-  test("isWorkspaceSymlinkedPlugin returns false when the package isn't found at all", () => {
-    // `lstatSync` throws ENOENT; the helper's catch swallows it and
-    // returns false. Distinct from the "real install" path above,
-    // which exercises the `isSymbolicLink() === false` branch.
-    expect(isWorkspaceSymlinkedPlugin({ pluginId: "ghost", projectRoot })).toBe(
-      false,
-    );
+  test("isAdminBundledPlugin returns false for a symlink to a local plugin outside the bundled dir", async () => {
+    // `pnpm link` / `file:` deps also produce a symlink, but to a directory
+    // admin's glob never scanned.
+    const localDir = join(projectRoot, "vendor/my-plugin");
+    await mkdir(localDir, { recursive: true });
+    await linkPlugin(projectRoot, "local", localDir);
+
+    expect(
+      isAdminBundledPlugin({
+        pluginId: "local",
+        projectRoot,
+        bundledPluginsDir,
+      }),
+    ).toBe(false);
+  });
+
+  test("isAdminBundledPlugin returns false for a real (non-symlink) install", async () => {
+    await mkdir(join(projectRoot, "node_modules/@plumix/plugin-vendor"), {
+      recursive: true,
+    });
+
+    expect(
+      isAdminBundledPlugin({
+        pluginId: "vendor",
+        projectRoot,
+        bundledPluginsDir,
+      }),
+    ).toBe(false);
+  });
+
+  test("isAdminBundledPlugin returns false off the monorepo, where nothing is baked in", async () => {
+    // What a consumer site looks like: `findAdminBundledPluginsDir` found no
+    // sibling of the installed admin, so no plugin can be bundled — not even
+    // one whose link happens to land in a `packages/plugins` of the site's own.
+    const pluginDir = join(bundledPluginsDir, "real");
+    await mkdir(pluginDir, { recursive: true });
+    await linkPlugin(projectRoot, "real", pluginDir);
+
+    expect(
+      isAdminBundledPlugin({
+        pluginId: "real",
+        projectRoot,
+        bundledPluginsDir: null,
+      }),
+    ).toBe(false);
+  });
+
+  test("isAdminBundledPlugin returns false when the package isn't found at all", () => {
+    expect(
+      isAdminBundledPlugin({
+        pluginId: "ghost",
+        projectRoot,
+        bundledPluginsDir,
+      }),
+    ).toBe(false);
+  });
+
+  test("findAdminBundledPluginsDir resolves the admin package's sibling", async () => {
+    const adminRoot = join(projectRoot, "packages/admin");
+    await mkdir(adminRoot, { recursive: true });
+
+    expect(findAdminBundledPluginsDir(adminRoot)).toBe(bundledPluginsDir);
+  });
+
+  test("findAdminBundledPluginsDir returns null when the sibling doesn't exist", async () => {
+    // An installed `@plumix/admin`, whose siblings are other npm packages.
+    const adminRoot = join(projectRoot, "node_modules/@plumix/admin");
+    await mkdir(adminRoot, { recursive: true });
+
+    expect(findAdminBundledPluginsDir(adminRoot)).toBeNull();
   });
 
   test("returns null when a plugin package omits exports.['./package.json']", async () => {
@@ -165,6 +233,38 @@ describe("findPluginPackageRoot — real FS", () => {
   });
 });
 
+// `findAdminBundledPluginsDir` mirrors a glob written in another package: admin
+// bakes plugin catalogs in with `import.meta.glob` over a path relative to
+// `packages/admin/src/lib`, and this one derives the same directory from the
+// installed admin package root. Two path expressions, two packages, nothing in
+// the type system holding them together — move `catalog-globs.ts` a directory,
+// or widen the glob, and the predicate silently stops matching it. The drift is
+// quiet in the direction that matters: plugins admin *did* bake in would be told
+// to fetch a catalog nobody staged.
+test("the admin plugin-catalog glob and findAdminBundledPluginsDir name the same directory", async () => {
+  const adminRoot = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "../../../admin",
+  );
+  const globsFile = resolve(adminRoot, "src/lib/catalog-globs.ts");
+  const glob =
+    /PLUGIN_CATALOGS\s*=\s*import\.meta\.glob<[^>]*>\(\s*"([^"]+)"/.exec(
+      await readFile(globsFile, "utf8"),
+    )?.[1];
+  if (glob === undefined) {
+    throw new Error(`no PLUGIN_CATALOGS glob literal in ${globsFile}`);
+  }
+
+  // The glob's fixed prefix — everything above its first wildcard — is the
+  // directory it scans, resolved from the file that declares it.
+  const scanned = resolve(
+    dirname(globsFile),
+    glob.slice(0, glob.indexOf("*")).replace(/\/$/, ""),
+  );
+
+  expect(findAdminBundledPluginsDir(adminRoot)).toBe(scanned);
+});
+
 // Minimal createRequire stub for resolution tests. Maps known package
 // specifiers to their resolved absolute paths; unknown specifiers
 // throw the same MODULE_NOT_FOUND shape Node's resolver emits, which
@@ -181,4 +281,16 @@ function makeRequireFrom(
       });
     },
   });
+}
+
+// pnpm's `node_modules/@plumix/plugin-<id>` link, pointed wherever the
+// test needs it.
+async function linkPlugin(
+  projectRoot: string,
+  pluginId: string,
+  target: string,
+): Promise<void> {
+  const scopeDir = join(projectRoot, "node_modules/@plumix");
+  await mkdir(scopeDir, { recursive: true });
+  await symlink(target, join(scopeDir, `plugin-${pluginId}`), "dir");
 }
