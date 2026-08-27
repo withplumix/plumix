@@ -99,7 +99,7 @@ import { definePlugin } from "plumix/plugin";
 
 The rule is about the packages the façade covers, which are `@plumix/core`, `@plumix/blocks` and the three `@plumix/admin*` packages. Anything you install yourself you import by its own name.
 
-`@plumix/runtime-cloudflare` is the one you meet immediately. It is a direct dependency of your project and a direct import, because a runtime is a thing you choose, and `cloudflare`, `d1`, `r2`, `images`, `kv` and `edge` all come from there. The plugin packages work the same way. `@plumix/plugin-blog`, `@plumix/plugin-pages`, `@plumix/plugin-menu`, `@plumix/plugin-comments`, `@plumix/plugin-media` and `@plumix/plugin-audit-log` are each imported by name, and a plugin may publish subpaths of its own, such as `@plumix/plugin-media/fields`.
+`@plumix/runtime-cloudflare` is the one you meet immediately. It is a direct dependency of your project and a direct import, because a runtime is a thing you choose, and `cloudflare`, `d1`, `r2`, `images`, `kv` and `edge` all come from there. The plugin packages work the same way. `@plumix/plugin-blog`, `@plumix/plugin-pages`, `@plumix/plugin-menu`, `@plumix/plugin-comments`, `@plumix/plugin-media`, `@plumix/plugin-audit-log` and `@plumix/plugin-og` are each imported by name, and a plugin may publish subpaths of its own, such as `@plumix/plugin-media/fields` and `@plumix/plugin-og/takumi`.
 
 <Aside type="note" title="One specifier for type augmentation">
   Extending a Plumix interface always goes through `declare module "plumix"`,
