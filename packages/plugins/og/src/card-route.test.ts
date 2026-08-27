@@ -42,7 +42,7 @@ describe("the card route", () => {
     const fake = createFakeRenderer();
     const harness = await createHarness({
       renderer: fake.renderer,
-      withStorage: false,
+      storage: null,
     });
     const id = await seedEntry(harness);
     const path = `/_plumix/og/entry/${String(id)}.svg`;

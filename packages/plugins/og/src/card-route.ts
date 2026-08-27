@@ -13,6 +13,7 @@ import type { CardRegistry } from "./card-registry.js";
 import type { CardArgs } from "./card.js";
 import type { CardRenderer } from "./renderer.js";
 import type { ThemeTokenSet } from "./tokens.js";
+import { resolveCardImages } from "./card-images.js";
 import { cardStorageKey } from "./card-key.js";
 import { entryCardNode } from "./card-registry.js";
 import { cardSourceHash } from "./card-source.js";
@@ -128,16 +129,22 @@ export function createCardRoute(
         contentType: renderer.contentType,
         cacheControl: CACHE_CONTROL,
         storage: ctx.storage,
-        render: async () =>
-          renderer.render(card.render(args), {
+        render: async () => {
+          const [{ node, images }, faces] = await Promise.all([
+            resolveCardImages(card.render(args), ctx),
+            loadFonts(ctx, fonts),
+          ]);
+          return renderer.render(node, {
             width,
             height,
             // The theme's sheet first: a card is written against those
             // properties, and one that redefines a token is meant to win.
             stylesheets: [...themeTokens.stylesheets, ...(card.styles ?? [])],
-            fonts: await loadFonts(ctx, fonts),
+            images,
+            fonts: faces,
             fetch: ctx.fetch,
-          }),
+          });
+        },
       });
     } catch (error) {
       ctx.logger.error("og_card_render_failed", {

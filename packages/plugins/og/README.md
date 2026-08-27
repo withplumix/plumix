@@ -121,11 +121,47 @@ Read something the helper does not cover? Append it: `cardKey.entry(entry, siteN
 
 Three more inputs fold in automatically. The **card's own source** does, so a redesign invalidates what it replaced without a version bump — note this covers the card's own body, not a component it calls out to, so a card whose design lives in a child needs the child's identity in its `key`. The **font set** does too, since a swapped face changes every card, and so do your **theme's tokens**, since a retuned palette repaints every card written against it.
 
-Three things it does not cover, each with the same answer — name it in the `key`:
+Four things it does not cover, each with the same answer — name it in the `key`:
 
 - `updatedAt` holds whole seconds, so two edits inside one second share a key. A card that renders entry content should name that content: `cardKey.entry(entry, entry.title)`.
 - Two renderers declaring the same content type share keys, so swapping between them serves what the previous one stored.
+- An image is resolved during the render, so nothing about it is in the key. A card painting one should name what identifies it — `cardKey.entry(entry, hero.url)`, since a replaced upload lands on a new storage key and so a new URL. Unpublishing an image is invisible to the key, so a card already rendered keeps showing it until something purges the card.
 - Nothing deletes a card's predecessor. Every key change leaves the old object in your bucket, so a site that redesigns often accumulates a generation per redesign.
+
+## Images in a card
+
+A card paints an image with an `image` node, and the plugin resolves what it points at before anything renders:
+
+```ts
+card.forEntryType("post").define({
+  key: ({ data }) => cardKey.entry(data.entry, data.entry.title),
+  render: ({ data }) => ({
+    type: "container",
+    className: "card",
+    children: [
+      {
+        type: "image",
+        src: data.entry.meta.hero.url,
+        width: 1200,
+        height: 360,
+      },
+      { type: "text", text: data.entry.title },
+    ],
+  }),
+});
+```
+
+Three sources resolve:
+
+- **Anything in your media library.** Both shapes a media reference's `url` takes work — the bucket's own public URL when your storage has one, and the `/_plumix/media/serve/<id>` route when it does not. Media has to be published, the same condition that route enforces. Reach for `url`, not `thumbnailUrl`: a thumbnail is a URL on your transform CDN, which is fetched rather than stored, so it does not resolve.
+- **Anything else in your storage bucket**, addressed by the URL the bucket would mint for it.
+- **A `data:` URI**, which passes through untouched — it carries its own bytes, so it stays the escape hatch for a small inline asset such as a logo.
+
+Two things are dropped even after resolving: an object over 8 MB, and one whose stored content type is not an image. Neither is a picture a 1200x630 card wants, and the engine throws on bytes it cannot decode, which would cost the card its whole render rather than one image.
+
+**Anything else is dropped too, and the card renders without it.** An `https://` URL pointing anywhere the plugin cannot resolve through a slot is not fetched, because **no image a card names is ever fetched** — the bytes are resolved before the render, and there is no path from an image node to an outbound request. That removes a class of problem rather than mitigating it: the equivalent Nuxt module has shipped fixes for three separate advisories rooted in a renderer being steerable into fetching attacker-influenced URLs. It also keeps a render deterministic — no network means no timeouts and no half-drawn cards — and keeps the key honest, since a fetched image would be an input the key could not see. If you need a remote image on a card, put it in your media library.
+
+The same discipline runs through the route: **no render option is ever read from the card's URL.** The server derives the size, the format and the key; the URL identifies a card and carries nothing else.
 
 ## Fonts
 
