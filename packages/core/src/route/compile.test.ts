@@ -446,4 +446,69 @@ describe("compileRouteMap", () => {
     ]);
     expect(() => compileRouteMap(dots)).toThrow(/invalid hasArchive/);
   });
+
+  test("entry-type rewrite.slug rejects URL-pattern syntax and multi-segment input", async () => {
+    const greedy = await buildRegistry([
+      definePlugin("greedy", (ctx) => {
+        ctx.registerEntryType("product", {
+          label: "Products",
+          isPublic: true,
+          rewrite: { slug: "*" },
+        });
+      }),
+    ]);
+    // Precise here, loose below: the message has to name the type and the slug.
+    expect(() => compileRouteMap(greedy)).toThrow(
+      /Entry type "product" has invalid rewrite\.slug "\*"/,
+    );
+
+    const nested = await buildRegistry([
+      definePlugin("nested", (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          rewrite: { slug: "insights/category" },
+        });
+      }),
+    ]);
+    expect(() => compileRouteMap(nested)).toThrow(/invalid rewrite\.slug/);
+  });
+
+  test("taxonomy rewrite.slug gets the same check, and empty is rejected there too", async () => {
+    const greedy = await buildRegistry([
+      definePlugin("greedy", (ctx) => {
+        ctx.registerTermTaxonomy("topic", {
+          label: "Topics",
+          rewrite: { slug: ":evil" },
+        });
+      }),
+    ]);
+    expect(() => compileRouteMap(greedy)).toThrow(
+      /Term taxonomy "topic" has invalid rewrite\.slug/,
+    );
+
+    // No root branch for a taxonomy: `""` would compile to `//:term`.
+    const rooted = await buildRegistry([
+      definePlugin("rooted", (ctx) => {
+        ctx.registerTermTaxonomy("topic", {
+          label: "Topics",
+          rewrite: { slug: "" },
+        });
+      }),
+    ]);
+    expect(() => compileRouteMap(rooted)).toThrow(/invalid rewrite\.slug/);
+  });
+
+  test("empty entry-type rewrite.slug still claims the site root", async () => {
+    const registry = await buildRegistry([
+      definePlugin("pages", (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          rewrite: { slug: "" },
+        });
+      }),
+    ]);
+    expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual(["/:slug"]);
+  });
 });

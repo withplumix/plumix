@@ -98,7 +98,7 @@ Recipes are flat, so `recipe` leaves both alone.
 
 Two options decide the public shape of a type.
 
-`rewrite.slug` sets the URL prefix. With `rewrite: { slug: "recipes" }` a single recipe serves at `/recipes/:slug`. Drop `rewrite` and the prefix falls back to the type name, giving `/recipe/:slug`. Set it to the empty string and the type claims the site root, which is what the pages plugin does; the router sorts those root-level patterns after every other auto-generated rule so a page cannot swallow another type's URLs.
+`rewrite.slug` sets the URL prefix. With `rewrite: { slug: "recipes" }` a single recipe serves at `/recipes/:slug`. Drop `rewrite` and the prefix falls back to the type name, giving `/recipe/:slug`. Set it to the empty string and the type claims the site root, which is what the pages plugin does; the router sorts those root-level patterns after every other auto-generated rule so a page cannot swallow another type's URLs. Apart from that empty string, `rewrite.slug` has to be a single lowercase path segment: a `/` or URL-pattern syntax such as `":anything"` or `"*"` throws at boot rather than compiling into a route that shadows every other type's URLs.
 
 `hasArchive` decides whether a listing route exists at all, and it is off unless you ask for it. `true` mounts the archive at the same prefix the singles use, so `/recipes` and `/recipes/page/2`. A string mounts it somewhere else, and has to be a single lowercase path segment.
 

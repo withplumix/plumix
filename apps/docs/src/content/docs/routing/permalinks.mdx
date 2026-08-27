@@ -117,7 +117,7 @@ The recipe site declares a `recipe` type prefixed `recipes`, a hierarchical `cui
 
 Four options on the registration move those URLs.
 
-`rewrite.slug` replaces the leading segment for both the single and the archive routes. The empty string is meaningful. It mounts the type at the URL root, which is how the pages plugin serves `/about` with no prefix.
+`rewrite.slug` replaces the leading segment for both the single and the archive routes. The empty string is meaningful. It mounts the type at the URL root, which is how the pages plugin serves `/about` with no prefix. Anything else has to be one path segment, under the same rule as `hasArchive` below. A slug with a slash in it leaves term feeds unroutable, and one carrying URL-pattern syntax such as `":anything"` or `"*"` compiles into a rule matching every two-segment URL on the site, so an invalid one throws at boot. A taxonomy gets the same check without the empty-string case, having no root form to compile.
 
 `hasArchive` accepts `true`, `false` or a string. The string form gives the archive its own slug, separate from the single prefix, and it has to be one path segment matching `/^[a-z0-9][a-z0-9-]*$/`. A slug with a slash in it would let one plugin shadow another's routes, so an invalid one throws at boot instead.
 
