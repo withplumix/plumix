@@ -6,13 +6,14 @@ import { createCardRegistry } from "./card-registry.js";
 import { CARD_ROUTE_PATH, createCardRoute } from "./card-route.js";
 import { defaultCards } from "./default-card.js";
 import { bundledRenderer } from "./default-renderer.js";
-import { cardImage } from "./head.js";
+import { pageOgImage } from "./head.js";
 import { advertisedExtension } from "./renderer.js";
 import { compileThemeTokens } from "./tokens.js";
 
 export type {
   CardArgs,
   CardDefinition,
+  CardMode,
   CardRule,
   CardSelector,
 } from "./card.js";
@@ -100,17 +101,18 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
         auth: "public",
         handler,
       });
-      if (advertised === undefined) return;
-      // One link below an author's own `.ogImage()` / `.featured()` choice and
-      // one above the site-wide default, which is where a generated card
-      // belongs: it beats a generic image and never overrides a deliberate one.
-      // Hence `image ??` first — a value already on the chain is another
-      // contributor's deliberate choice, and a generated card does not outrank
-      // it however the `plugins: []` array happened to be ordered.
-      ctx.addFilter(
-        "seo:og_image",
-        (image, data, appCtx) =>
-          image ?? cardImage(data, appCtx, advertised, cards),
+      // Subscribed whatever the renderer makes: the featured-photo crop needs
+      // no rasterizer, so it is the one link of the chain a deploy that cannot
+      // render a card still gets.
+      ctx.addFilter("seo:og_image", (image, data, appCtx, featured) =>
+        pageOgImage({
+          image,
+          featured,
+          data,
+          ctx: appCtx,
+          extension: advertised,
+          cards,
+        }),
       );
     },
   });

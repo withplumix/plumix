@@ -45,6 +45,12 @@ export type CardArgs<TData extends TemplateData> = TemplateRenderArgs<TData> & {
 };
 
 /**
+ * Which image an entry that has both a generated card and a `.featured()`
+ * photo shares — see {@link CardDefinition.mode}.
+ */
+export type CardMode = "auto" | "card";
+
+/**
  * Template deps a card declares. Only the literal form: a card is not
  * inherited from, so the `(prev) => next` form templates use to extend what
  * their theme declared would have nothing to extend.
@@ -64,6 +70,16 @@ export interface CardDefinition<TData extends TemplateData> extends CardDeps {
    */
   readonly key: (args: CardArgs<TData>) => CardKey;
   readonly render: (args: CardArgs<TData>) => CardNode;
+  /**
+   * What this card does on an entry that carries a `.featured()` photo.
+   * `"auto"` — the default, and the same as leaving this out — steps aside for
+   * the photo, cropped to this card's own size. `"card"` shares the card
+   * anyway, for a theme whose share image is branded rather than the picture.
+   *
+   * A setting rather than a flag because a per-entry select will later refine
+   * this same one, rather than open a second precedence authority beside it.
+   */
+  readonly mode?: CardMode;
   /** Stylesheets the card's class names are written against. */
   readonly styles?: readonly string[];
   readonly width?: number;

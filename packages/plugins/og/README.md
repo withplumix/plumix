@@ -25,14 +25,39 @@ export default plumix({
 ## What you get
 
 - **A card per published entry**, at `/_plumix/og/entry/<id>.<ext>` — PNG by default, and the extension always names what the renderer produces. It is composited from a bundled default template: the entry's title over your site's name.
-- **Share a link and the card is what appears.** The entry's page carries the card as its `og:image`, with `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. An author's own `.ogImage()` or `.featured()` image still wins; the card only outranks the site-wide default.
+- **Share a link and the card is what appears.** The entry's page carries the card as its `og:image`, with `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. An entry that has a picture of its own shares the picture instead, cropped to the card's shape — see [which image a page shares](#which-image-a-page-shares).
 - **Render once, serve cheaply** — a card is rendered on the first request, written to your storage bucket, and read back after that. A matching `If-None-Match` answers `304`.
 - **A renderer you can swap.** `renderer:` takes the bundled engine (`takumi()`, or `takumi({ format: "jpeg" })` for a photo-heavy design), the same engine's SVG output (`svgOnly()`), or `remote({ url })` to render off-box.
 - **Cards your theme designs**, declared beside its templates and styled in its own design tokens — see below.
 
+## Which image a page shares
+
+Four links, in order:
+
+1. **An explicit `.ogImage()` field** on the entry. An author who picked a share image gets it, untouched.
+2. **A `.featured()` field** on the entry — the entry's own photo — **cropped to the card's size** through your `imageDelivery:` slot. A photo shot at 4:3 unfurls letterboxed or badly cropped in a 1.91:1 slot; this is what fixes it. The crop is pure URL math, so it costs no CPU and needs no rasterizer: **a post with a photo never reaches the renderer**, which is what makes this path work on the Workers free plan. With no delivery configured — or one with nothing attached to transform through — the photo is emitted as it stands rather than dropped, at its own size.
+3. **The generated card.**
+4. **Your site-wide default** (`site.default_og_image`).
+
+A card may take the second slot for itself:
+
+```ts
+card.forEntryType("post").define({
+  mode: "card",
+  key: ({ data }) => cardKey.entry(data.entry),
+  render: ({ data }) => ({ type: "text", text: data.entry.title }),
+});
+```
+
+`mode: "card"` shares the card even on an entry that has a photo — the choice for a theme whose share image is branded rather than the picture itself. The default, `"auto"`, steps aside for the photo. A card that cannot be advertised at all — an SVG-only renderer — still yields to the photo whatever `mode` says.
+
+An image some other plugin put on the chain through the `seo:og_image` filter is left exactly as it arrived: neither outranked nor cropped.
+
+Cropping is a feature of this plugin, and it takes its target size from the card rule that matched — so a site that wants cropped share images but no generated cards still declares a card rule to say what shape to crop to.
+
 ## When a card cannot be advertised
 
-A card reaches a page's head only when the connected renderer produces a format scrapers render — PNG or JPEG, the intersection of what X, Facebook and LinkedIn all document. Anything else still serves its route, so you can build and look at your cards with no rasterizer in play, but the head falls through to your site-wide default: an SVG `og:image` unfurls as nothing at all, and WebP unfurls inconsistently, both worse than a generic image that works everywhere.
+A card reaches a page's head only when the connected renderer produces a format scrapers render — PNG or JPEG, the intersection of what X, Facebook and LinkedIn all document. Anything else still serves its route, so you can build and look at your cards with no rasterizer in play, but the head falls through to the rest of the chain — the entry's own photo, then your site-wide default: an SVG `og:image` unfurls as nothing at all, and WebP unfurls inconsistently, both worse than a picture that works everywhere.
 
 An entry the access layer keeps from an anonymous visitor gets no card either, and its route answers `404`. A card carries the entry's title, sits at a sequential id anyone can walk, and is served from a shared cache, so it is refused on the same terms its page is — asked of a scraper carrying no session, whoever happens to be reading. A _soft_ gate is the exception on purpose: its page serves a public teaser at 200, so the teaser unfurls with a card like any other page.
 
