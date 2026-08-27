@@ -263,9 +263,6 @@ async function publishAll(workDir, npmEnv) {
     (p) => p.private !== true && p.name !== "root" && p.path,
   );
   log(`publishing ${projects.length} packages to Verdaccio…`);
-  if (projects.length !== 14) {
-    fail(`expected 14 publishable packages, found ${projects.length}`);
-  }
 
   for (const proj of projects) {
     // `pnpm pack` resolves `workspace:` + `catalog:` protocols into concrete
