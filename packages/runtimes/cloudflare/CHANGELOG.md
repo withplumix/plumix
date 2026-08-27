@@ -1,5 +1,15 @@
 # @plumix/runtime-cloudflare
 
+## 0.9.0
+
+### Minor Changes
+
+- [#1978](https://github.com/withplumix/plumix/pull/1978) [`d4f1001`](https://github.com/withplumix/plumix/commit/d4f10014d60ec42ee40afbe12217b6e0cd810690) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds an edge-cache opt-in for plugin routes: `registerRoute({ cacheable: true })` serves a public
+  raw route through the edge cache instead of running its handler on every request. A response that
+  sets its own `Cache-Control` now keeps that freshness through storage — an immutable
+  content-addressed asset stays immutable — and the configured page TTL applies only to responses
+  that set none.
+
 ## 0.8.2
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @plumix/plugin-comments
 
+## 0.1.5
+
+### Patch Changes
+
+- [#2009](https://github.com/withplumix/plumix/pull/2009) [`17fa3cc`](https://github.com/withplumix/plumix/commit/17fa3cc4c852a6590bd72696cf535b76adbf4344) Thanks [@nasyrov](https://github.com/nasyrov)! - Ships each plugin's compiled Lingui catalogs in the published tarball. Every one
+  of these plugins declares an `i18n` slot pointing at `./locales`, which the
+  plumix Vite plugin copies out of the installed package at build time — but
+  `package.json#files` allowlisted only `dist`, so the directory was absent from
+  the tarball and a site installing the plugin from npm failed `plumix build` with
+  `adminAssetNotFound`. Inside this repo a plugin resolves to a symlinked source
+  tree, where the catalogs are always present, which is why nothing caught it.
+
 ## 0.1.4
 
 ### Patch Changes
