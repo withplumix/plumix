@@ -3,6 +3,7 @@ import type {
   RegisteredEntryType,
   RegisteredTermTaxonomy,
 } from "../plugin/manifest.js";
+import type { RegistrationKind } from "./errors.js";
 import type { RouteIntent, RouteRule } from "./intent.js";
 import { RouteCompileError } from "./errors.js";
 
@@ -168,7 +169,7 @@ export function compileRouteMap(
 }
 
 function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
-  const baseSlug = entryType.rewrite?.slug ?? entryType.name;
+  const baseSlug = baseSlugFor(entryType, "entry_type");
   const archiveSlug = archiveSlugFor(entryType, baseSlug);
   const rules: CompiledRule[] = [];
 
@@ -235,7 +236,7 @@ export function exposesHierarchicalUrls(spec: {
 function autoRulesForTermTaxonomy(
   taxonomy: RegisteredTermTaxonomy,
 ): CompiledRule[] {
-  const baseSlug = taxonomy.rewrite?.slug ?? taxonomy.name;
+  const baseSlug = baseSlugFor(taxonomy, "term_taxonomy");
   // Mirror the entry-type branch: hierarchical taxonomies expose nested
   // term URLs via `:path+` (e.g. /region/europe/france); the
   // rewrite.isHierarchical:false override keeps the flat `:term` shape
@@ -262,10 +263,39 @@ function autoRulesForTermTaxonomy(
   ];
 }
 
-// Archive slugs need to be a single path segment — slashes would let a
-// plugin silently shadow other routes. Empty is reserved (would match
-// `front-page`).
-const ARCHIVE_SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
+// Base and archive slugs need to be a single literal path segment. A slash
+// would let a plugin silently shadow other routes and leaves term feeds
+// unroutable (the feed router reads only the first segment); URL-pattern
+// syntax such as `:x` or `*` widens the compiled rule into a catch-all over
+// every other plugin's URLs.
+const PATH_SEGMENT_RE = /^[a-z0-9][a-z0-9-]*$/;
+
+/**
+ * The empty string is the one shape the regex rejects but the compiler accepts,
+ * and only for entry types — it mounts the type at the URL root, which
+ * `@plumix/plugin-pages` relies on. A taxonomy has no root branch, so `""`
+ * there would compile to `//:term`.
+ *
+ * Only the slug is checked. The registered name it falls back to is also the
+ * stored `type` / `taxonomy` column value, so its shape is a registration-time
+ * question with constraints of its own rather than a routing one.
+ */
+function baseSlugFor(
+  spec: RegisteredEntryType | RegisteredTermTaxonomy,
+  registration: RegistrationKind,
+): string {
+  const slug = spec.rewrite?.slug;
+  if (slug === undefined) return spec.name;
+  if (slug === "" && registration === "entry_type") return slug;
+  if (!PATH_SEGMENT_RE.test(slug)) {
+    throw RouteCompileError.invalidRewriteSlug({
+      registration,
+      registrationName: spec.name,
+      rewriteSlug: slug,
+    });
+  }
+  return slug;
+}
 
 function archiveSlugFor(
   entryType: RegisteredEntryType,
@@ -273,8 +303,10 @@ function archiveSlugFor(
 ): string | null {
   const { hasArchive } = entryType;
   if (!hasArchive) return null;
+  // No empty branch here, unlike `baseSlugFor`: an archive at the root would
+  // collide with `front-page`.
   if (typeof hasArchive === "string") {
-    if (!ARCHIVE_SLUG_RE.test(hasArchive)) {
+    if (!PATH_SEGMENT_RE.test(hasArchive)) {
       throw RouteCompileError.invalidArchiveSlug({
         entryType: entryType.name,
         hasArchive,

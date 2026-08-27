@@ -96,7 +96,7 @@ A taxonomy may list more than one entry type. That is why `entryTypes` is an arr
 
 A hierarchical taxonomy nests its term URLs. Sicilian under Italian serves at `/cuisine/italian/sicilian`, and each level has a `/page/:page` variant for later pages of the archive. A flat taxonomy stays at one segment, so vegetarian serves at `/diet/vegetarian`.
 
-The prefix is the taxonomy name unless `rewrite.slug` overrides it, and `rewrite.isHierarchical: false` keeps the flat URL shape even where the term tree itself is a tree.
+The prefix is the taxonomy name unless `rewrite.slug` overrides it, and `rewrite.isHierarchical: false` keeps the flat URL shape even where the term tree itself is a tree. That override is a single lowercase path segment, and unlike an entry type a taxonomy cannot take the empty string — a slug the router cannot compile into `/<prefix>/:term` throws at boot.
 
 A term's parent has to belong to the same taxonomy, and the server rejects a cross-taxonomy parent on write. Deleting a term re-roots its children rather than removing them, setting their `parentId` to null, and drops that term's assignments.
 

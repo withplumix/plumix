@@ -27,6 +27,45 @@ describe("RouteCompileError.invalidArchiveSlug", () => {
   });
 });
 
+describe("RouteCompileError.invalidRewriteSlug", () => {
+  test("class identity, code, and exposed registration + slug", () => {
+    const err = RouteCompileError.invalidRewriteSlug({
+      registration: "entry_type",
+      registrationName: "product",
+      rewriteSlug: "*",
+    });
+    expect(err).toBeInstanceOf(RouteCompileError);
+    expect(err.name).toBe("RouteCompileError");
+    expect(err.code).toBe("invalid_rewrite_slug");
+    expect(err.registration).toBe("entry_type");
+    expect(err.registrationName).toBe("product");
+    expect(err.rewriteSlug).toBe("*");
+  });
+
+  test("entry-type message names the type, the slug, and the root exception", () => {
+    const err = RouteCompileError.invalidRewriteSlug({
+      registration: "entry_type",
+      registrationName: "product",
+      rewriteSlug: "shop/all",
+    });
+    expect(err.message).toContain('Entry type "product"');
+    expect(err.message).toContain('invalid rewrite.slug "shop/all"');
+    expect(err.message).toContain("single lowercase kebab-case path segment");
+    expect(err.message).toContain('(or "" to claim the site root)');
+  });
+
+  test("taxonomy message names the taxonomy and omits the root exception", () => {
+    const err = RouteCompileError.invalidRewriteSlug({
+      registration: "term_taxonomy",
+      registrationName: "topic",
+      rewriteSlug: "",
+    });
+    expect(err.message).toContain('Term taxonomy "topic"');
+    expect(err.message).toContain('invalid rewrite.slug ""');
+    expect(err.message).not.toContain("site root");
+  });
+});
+
 describe("RouteCompileError.duplicateRewriteRule", () => {
   test("class identity, code, and exposed pattern + owners", () => {
     const err = RouteCompileError.duplicateRewriteRule({
