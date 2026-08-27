@@ -26,8 +26,10 @@ import {
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 
+import type { CardTarget } from "../card-target.js";
 import type { CardRule } from "../card.js";
 import type { OgPluginOptions } from "../index.js";
+import { cardTargetPath } from "../card-target.js";
 import { og } from "../index.js";
 import { createFakeRenderer } from "./fake-renderer.js";
 
@@ -76,6 +78,15 @@ const testBlog = definePlugin("test_blog", {
         ],
       },
     });
+    // A type whose *archive* is gated: `policyForMatch` resolves an archive
+    // intent against the type's `access.default`, so its listing page redirects
+    // an anonymous visitor and its card has to refuse them too.
+    ctx.registerEntryType("memo", {
+      label: "Memos",
+      isPublic: true,
+      hasArchive: true,
+      access: { default: authenticatedPolicy },
+    });
     ctx.registerEntryType("teaser", {
       label: "Teasers",
       isPublic: true,
@@ -84,6 +95,17 @@ const testBlog = definePlugin("test_blog", {
           resolve: () => challenge("subscribe", { soft: true }),
         }),
       },
+    });
+    // A public taxonomy and a private one, so a term card can be asked for on
+    // both sides of the reachability line the route draws.
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      entryTypes: ["post"],
+    });
+    ctx.registerTermTaxonomy("mood", {
+      label: "Moods",
+      entryTypes: ["post"],
+      isPublic: false,
     });
     ctx.registerEntryMetaBox("social", {
       label: "Social",
@@ -207,18 +229,24 @@ export async function createHarness(
   return harness;
 }
 
+/** A bare number reads as the entry it is, which is what most of the suite asks for. */
+function targetOf(target: number | CardTarget): CardTarget {
+  return typeof target === "number" ? { kind: "entry", id: target } : target;
+}
+
 /**
- * Where one entry's card is served, found the way anything that isn't already
+ * Where one page's card is served, found the way anything that isn't already
  * holding the URL has to find it: through the digest-less pointer, which names
  * whichever render is current.
  */
 export async function cardPath(
   harness: DispatcherHarness,
-  id: number,
+  target: number | CardTarget,
   extension = "svg",
   basePath = "",
 ): Promise<string> {
-  const pointer = `${basePath}/_plumix/og/entry/${String(id)}.${extension}`;
+  const named = cardTargetPath(targetOf(target));
+  const pointer = `${basePath}/_plumix/og/card/${named}.${extension}`;
   const location = (await harness.fetch(pointer)).headers.get("location");
   // Nothing to point at — a draft, an unserved format, an entry nobody may
   // see. The pointer's own 404 is then what a caller fetches, which is the
@@ -229,11 +257,11 @@ export async function cardPath(
 /** The card itself. */
 export async function fetchCard(
   harness: DispatcherHarness,
-  id: number,
+  target: number | CardTarget,
   options: FetchCardOptions = {},
 ): Promise<TestResponse> {
   const { extension = "svg", ...init } = options;
-  return harness.fetch(await cardPath(harness, id, extension), init);
+  return harness.fetch(await cardPath(harness, target, extension), init);
 }
 
 export interface FetchCardOptions extends FetchOptions {
@@ -246,6 +274,10 @@ export interface SeedEntryOverrides {
   readonly slug?: string;
   readonly status?: "published" | "draft";
   readonly type?: string;
+  /** Whose byline, for a suite asking about an author archive. */
+  readonly authorId?: number;
+  /** When, for a suite asking about a date archive. */
+  readonly publishedAt?: Date;
   /** Written verbatim — a per-entry access choice, a media row's own fields. */
   readonly meta?: JsonObject;
   /** The entry's `.featured()` photo — the link above a generated card. */
@@ -258,12 +290,16 @@ export async function seedEntry(
   harness: DispatcherHarness,
   overrides: SeedEntryOverrides = {},
 ): Promise<number> {
-  const author = await harness.factory.user.create({});
+  const authorId =
+    overrides.authorId ?? (await harness.factory.user.create({})).id;
   const { featured, shareImage } = overrides;
   const entry = await harness.factory.entry.create({
     type: overrides.type ?? "post",
     title: overrides.title ?? "Hello World",
     ...(overrides.slug === undefined ? {} : { slug: overrides.slug }),
+    ...(overrides.publishedAt === undefined
+      ? {}
+      : { publishedAt: overrides.publishedAt }),
     status: overrides.status ?? "published",
     meta: {
       ...overrides.meta,
@@ -272,7 +308,7 @@ export async function seedEntry(
         ? {}
         : { [OG_IMAGE_KEY]: mediaRow(shareImage) }),
     },
-    authorId: author.id,
+    authorId,
   });
   return entry.id;
 }
@@ -306,6 +342,30 @@ function mediaRow(image: OgImage): JsonObject {
     width: image.width ?? null,
     height: image.height ?? null,
   };
+}
+
+/** A term in `category`, with `entryIds` filed under it. */
+export async function seedTerm(
+  harness: DispatcherHarness,
+  overrides: SeedTermOverrides = {},
+): Promise<number> {
+  const term = await harness.factory.term.create({
+    taxonomy: overrides.taxonomy ?? "category",
+    name: overrides.name ?? "Design",
+    slug: overrides.slug ?? "design",
+  });
+  for (const entryId of overrides.entryIds ?? []) {
+    await harness.factory.entryTerm.create({ entryId, termId: term.id });
+  }
+  return term.id;
+}
+
+export interface SeedTermOverrides {
+  readonly taxonomy?: string;
+  readonly name?: string;
+  readonly slug?: string;
+  /** Entries filed under the term, which is what makes its archive non-empty. */
+  readonly entryIds?: readonly number[];
 }
 
 /** The rendered head of one post, which is what the chain is asserted through. */

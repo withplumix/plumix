@@ -1,9 +1,11 @@
 import type { TemplateData } from "plumix";
-import { isEntry } from "plumix";
+import type { AppContext } from "plumix/plugin";
+import { isEntry, labelSourceText } from "plumix";
 
 import type { CardArgs, CardRule } from "./card.js";
 import type { CardNode } from "./renderer.js";
 import { cardKey } from "./card-key.js";
+import { cardIdentityFor, cardTargetPath } from "./card-target.js";
 import { card } from "./card.js";
 import { CARD_HEIGHT, CARD_WIDTH } from "./renderer.js";
 
@@ -39,44 +41,110 @@ const STYLESHEET = `
 `;
 
 /**
- * What a fresh install renders, with no theme configuration: the page's title
- * over the site's name on a plain ground. Declared as an ordinary `fallback`
- * rule, so a theme's own `ogCards` outrank it by sitting ahead of it.
+ * What a fresh install renders, with no theme configuration: the page's own
+ * title over the site's name on a plain ground — for every page kind a card is
+ * served for, not just an entry, so "install the plugin and cards work" holds
+ * on a tag archive as much as on a post.
+ *
+ * Declared as an ordinary `fallback` rule, so a theme's own `ogCards` outrank
+ * it by sitting ahead of it.
  */
 export const defaultCards: readonly CardRule[] = [
   card.fallback().define({
     settings: ["site"],
     styles: [STYLESHEET],
-    // The card renders a title and a site name, so the key names both — an
-    // entry's second-resolution `updatedAt` alone would let a same-second
-    // retitle keep the old card.
-    key: ({ data, settings }) => {
-      const site = siteName(settings);
-      return isEntry(data)
-        ? cardKey.entry(data.entry, data.entry.title, site)
-        : cardKey.of(data.kind, site);
+    // The card renders two lines, so the key names both — an entry's
+    // second-resolution `updatedAt` alone would let a same-second retitle keep
+    // the old card, and two archives of one site would otherwise collide on the
+    // site name alone.
+    key: (args) => {
+      const [headline, footer] = lines(args);
+      return isEntry(args.data)
+        ? cardKey.entry(args.data.entry, headline, footer)
+        : cardKey.of(pageName(args.data), headline, footer);
     },
-    render: ({ data, settings }) =>
-      cardNode(isEntry(data) ? data.entry.title : "", siteName(settings)),
+    render: (args) => cardNode(...lines(args)),
   }),
 ];
 
-function cardNode(title: string, site: string): CardNode {
+/** The two lines the card carries: the page's own title, then the site's name. */
+function lines(args: CardArgs<TemplateData>): readonly [string, string] {
+  const site = siteSetting(args, "title");
+  // On the front page the headline *is* the site, so the line below it carries
+  // the tagline instead of saying the same thing twice.
+  return args.data.kind === "frontPage"
+    ? [site, siteSetting(args, "tagline")]
+    : [pageTitle(args.data, args.ctx), site];
+}
+
+/**
+ * What the page calls itself, read from the page's own data rather than from
+ * whoever resolved it: the head and the route both reach this, and a title
+ * either could not reproduce would put them on different digests and redirect
+ * every scraper away from its image.
+ */
+function pageTitle(data: TemplateData, ctx: AppContext): string {
+  switch (data.kind) {
+    case "entry":
+      return data.entry.title;
+    case "taxonomy":
+      return data.term.name;
+    case "author":
+      return data.author.name ?? data.author.slug;
+    case "archive": {
+      const type = ctx.plugins.entryTypes.get(data.contentType);
+      return type
+        ? labelSourceText(type.labels?.plural ?? type.label)
+        : data.contentType;
+    }
+    case "date":
+      return dateTitle(data.year, data.month, data.day);
+    default:
+      return "";
+  }
+}
+
+// Core's own date-archive title, spelled the way `page-data.ts` spells it: the
+// card's headline is the page's own title, so the two have to stay in step. Not
+// `dateSegment`, which pads the year for a URL that has to round-trip.
+function dateTitle(
+  year: number,
+  month: number | null,
+  day: number | null,
+): string {
+  const parts = [String(year)];
+  if (month !== null) parts.push(String(month).padStart(2, "0"));
+  if (day !== null) parts.push(String(day).padStart(2, "0"));
+  return parts.join("-");
+}
+
+// Which page this is, for the key. Two archives on one site render the same two
+// lines only by coincidence, but a card keyed on what it renders alone would
+// hand them one URL the first time they did.
+function pageName(data: TemplateData): string {
+  const identity = cardIdentityFor(data);
+  return identity === null ? data.kind : cardTargetPath(identity.target);
+}
+
+function cardNode(title: string, footer: string): CardNode {
   const children: CardNode[] = [
     { type: "text", className: "plumix-og-card__title", text: title },
   ];
-  if (site.length > 0) {
+  if (footer.length > 0) {
     children.push({
       type: "text",
       className: "plumix-og-card__site",
-      text: site,
+      text: footer,
     });
   }
   return { type: "container", className: "plumix-og-card", children };
 }
 
-/** Empty on a site that has not set one, which leaves the footer line off. */
-function siteName(settings: CardArgs<TemplateData>["settings"]): string {
-  const title = settings?.site?.title;
-  return typeof title === "string" ? title : "";
+/** Empty on a site that has not set one, which leaves that line off. */
+function siteSetting(
+  args: CardArgs<TemplateData>,
+  key: "title" | "tagline",
+): string {
+  const value = args.settings?.site?.[key];
+  return typeof value === "string" ? value : "";
 }

@@ -64,6 +64,14 @@ export { runScheduledTasks } from "./runtime/scheduled.js";
 export type * from "./runtime/slots.js";
 export { slugify } from "./slugify.js";
 export { buildResolvedEntries } from "./route/render/build-resolved-entries.js";
+// The listing pages core routes, resolved from an identity rather than from a
+// URL — for a plugin serving something of its own *about* a page it did not
+// route to, such as a social card at a URL of its own (#1981).
+export { resolveListingPage } from "./route/render/page-data.js";
+export type {
+  ListingPageTarget,
+  ResolvedListingPage,
+} from "./route/render/page-data.js";
 export { resolveReferences } from "./rpc/meta/core.js";
 export type { ResolvedMeta, WithResolvedMeta } from "./rpc/meta/core.js";
 export { readEntryType } from "./entries/read-service.js";

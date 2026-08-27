@@ -85,8 +85,10 @@ export interface OgPluginOptions {
 
 /**
  * Generated social cards. Installing it and configuring nothing serves a card
- * per published entry at `/_plumix/og/entry/<id>/<digest>.<ext>`, composited
- * from the bundled default template — the entry's title over the site's name.
+ * for every page kind that has one — an entry, a term archive, a content-type
+ * archive, an author, a date, the front page — at
+ * `/_plumix/og/card/<target>/<digest>.<ext>`, composited from the bundled
+ * default template: the page's own title over the site's name.
  *
  * @example
  * ```ts

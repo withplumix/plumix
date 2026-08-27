@@ -73,9 +73,9 @@ describe("the card preview in the entry editor", () => {
     // The route serves published entries only, so nothing on disk could have
     // answered this — which is the point of rendering it here.
     expect(
-      (await harness.fetch(`/_plumix/og/entry/${String(id)}.png`)).assertStatus(
-        404,
-      ),
+      (
+        await harness.fetch(`/_plumix/og/card/entry/${String(id)}.png`)
+      ).assertStatus(404),
     ).toBeDefined();
   });
 

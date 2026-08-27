@@ -168,9 +168,21 @@ export function compileRouteMap(
   return rules;
 }
 
+/**
+ * The slug this type's archive is routed at, or null where it has none — the
+ * question `compileRoutes` asks before it emits an archive route at all.
+ * Exported so anything addressing an archive off the routing path can ask the
+ * same question rather than restate a near-miss of it.
+ */
+export function archiveSlugForEntryType(
+  entryType: RegisteredEntryType,
+): string | null {
+  return archiveSlugFor(entryType, baseSlugFor(entryType, "entry_type"));
+}
+
 function autoRulesForEntryType(entryType: RegisteredEntryType): CompiledRule[] {
   const baseSlug = baseSlugFor(entryType, "entry_type");
-  const archiveSlug = archiveSlugFor(entryType, baseSlug);
+  const archiveSlug = archiveSlugForEntryType(entryType);
   const rules: CompiledRule[] = [];
 
   if (archiveSlug !== null) {

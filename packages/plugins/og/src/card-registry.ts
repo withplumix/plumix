@@ -12,25 +12,6 @@ export interface CardRegistry {
 }
 
 /**
- * The node a card rule matches against, for an entry that has one. The route
- * builds it from the database row and the head from the entry the page is
- * rendering, and both have to name the same node or they resolve to different
- * rules — and then disagree about the card's size.
- */
-export function entryCardNode(entry: {
-  readonly id: number;
-  readonly type: string;
-  readonly slug: string;
-}): ResolvedNode {
-  return {
-    kind: "content",
-    entryType: entry.type,
-    slug: entry.slug,
-    databaseId: entry.id,
-  };
-}
-
-/**
  * The plugin's own copy of what the theme declared, snapshotted at boot.
  * `defaults` sit behind the theme's rules in declaration order, which is all
  * that makes a declared card outrank the plugin's own — including at the

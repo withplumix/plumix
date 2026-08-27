@@ -1,6 +1,3 @@
-import type { SQL } from "drizzle-orm";
-import { count } from "drizzle-orm";
-
 import { expandShortcodes } from "@plumix/blocks";
 
 import type { AppContext } from "../context/app.js";
@@ -9,46 +6,34 @@ import type { Term } from "../db/schema/terms.js";
 import type { JsonObject } from "../json.js";
 import type { RouteIntent } from "./intent.js";
 import type { RouteMatch } from "./match.js";
+import type { ResolvedListingPage } from "./render/page-data.js";
 import type { RenderEnv } from "./render/render-env.js";
-import type {
-  ArchiveData,
-  AuthorArchiveData,
-  DateArchiveData,
-  EntryData,
-  FrontPageData,
-  SearchData,
-  TaxonomyData,
-} from "./render/resolved-entry.js";
+import type { EntryData, SearchData } from "./render/resolved-entry.js";
 import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
 import { accumulateEmbeddedTags } from "../cache/embedded-tags.js";
-import {
-  and,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNotNull,
-  lt,
-  sql,
-} from "../db/index.js";
+import { and, eq, inArray, isNotNull, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
-import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
-import { labelSourceText } from "../i18n/label.js";
 import { getAutosave } from "../revisions/repository.js";
 import { stripReservedMeta } from "../revisions/snapshot-envelope.js";
 import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
 import { notFound, permanentRedirect } from "../runtime/http.js";
-import { dateRange } from "./date-range.js";
 import { resolveEditMode } from "./edit-mode.js";
-import { paginate } from "./paginate.js";
 import { findTermByPath } from "./path-chain.js";
-import { buildTermArchiveUrl } from "./permalink.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
 import { buildResolvedEntries } from "./render/build-resolved-entries.js";
+import {
+  archiveData,
+  authorData,
+  dateData,
+  DEFAULT_ARCHIVE_PER_PAGE,
+  frontPageData,
+  paginatedEntries,
+  termData,
+} from "./render/page-data.js";
 import { renderThroughTheme } from "./render/render-template.js";
 import { NAMED_TEMPLATE_META_KEY } from "./render/template-builders.js";
 import { resolveSingleEntry } from "./single-entry.js";
@@ -56,39 +41,10 @@ import { resolveSingleEntry } from "./single-entry.js";
 declare module "../hooks/types.js" {
   interface FilterRegistry {
     "resolve:single:data": (data: EntryData) => EntryData | Promise<EntryData>;
-    "resolve:archive:data": (
-      data: ArchiveData,
-    ) => ArchiveData | Promise<ArchiveData>;
-    "resolve:term:data": (
-      data: TaxonomyData,
-    ) => TaxonomyData | Promise<TaxonomyData>;
-    "resolve:author:data": (
-      data: AuthorArchiveData,
-    ) => AuthorArchiveData | Promise<AuthorArchiveData>;
-    "resolve:date:data": (
-      data: DateArchiveData,
-    ) => DateArchiveData | Promise<DateArchiveData>;
-    "resolve:front-page:data": (
-      data: FrontPageData,
-    ) => FrontPageData | Promise<FrontPageData>;
     "resolve:search:data": (
       data: SearchData,
     ) => SearchData | Promise<SearchData>;
   }
-}
-
-const DEFAULT_ARCHIVE_PER_PAGE = 20;
-
-/**
- * The public, non-hierarchical entry types — a site's posts, not its standalone
- * pages. The front page, author archives, and date archives all list this set.
- */
-function publicListingTypes(ctx: AppContext): string[] {
-  return Array.from(ctx.plugins.entryTypes.entries())
-    .filter(
-      ([, spec]) => spec.isPublic !== false && spec.isHierarchical !== true,
-    )
-    .map(([key]) => key);
 }
 
 // `renderThroughTheme` returns `null` when the theme has no rule for the node
@@ -98,6 +54,17 @@ function htmlResponseOrNotFound(html: string | null, reason: string): Response {
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
+}
+
+/** Every listing page renders the same way once its data is resolved. */
+async function renderListing(
+  ctx: AppContext,
+  renderEnv: RenderEnv,
+  page: ResolvedListingPage,
+  reason: string,
+): Promise<Response> {
+  const html = await renderThroughTheme({ ctx, renderEnv, ...page });
+  return htmlResponseOrNotFound(html, reason);
 }
 
 export async function resolvePublicRoute(
@@ -130,48 +97,9 @@ async function resolveFrontPage(
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  const page = parsePageParam(params.page);
-  // The latest-posts front feed excludes hierarchical types (pages) — they
-  // are standalone content, not blog entries. (A configurable front-page /
-  // posts-page model is the larger follow-up.)
-  const publicTypes = publicListingTypes(ctx);
-  const where =
-    publicTypes.length === 0
-      ? null
-      : and(
-          eq(entries.status, "published"),
-          isNotNull(entries.publishedAt),
-          inArray(entries.type, publicTypes),
-        );
-  const result = await paginatedEntries(
-    ctx,
-    where,
-    page,
-    DEFAULT_ARCHIVE_PER_PAGE,
-  );
-  if (result.outOfRange) return notFound("public-front-page-page-out-of-range");
-
-  const initial: FrontPageData = {
-    kind: "frontPage",
-    entries: await buildResolvedEntries(ctx, result.rows),
-    pagination: {
-      page,
-      perPage: DEFAULT_ARCHIVE_PER_PAGE,
-      total: result.total,
-      pageCount: result.pageCount,
-    },
-  };
-  const data = await ctx.hooks.applyFilter("resolve:front-page:data", initial);
-  const html = await renderThroughTheme({
-    ctx,
-    renderEnv,
-    node: { kind: "front-page" },
-    data,
-    // Public-route content i18n is a deferred userland seam; "Home"
-    // (site root) stays English here.
-    title: "Home",
-  });
-  return htmlResponseOrNotFound(html, "public-front-page-no-template");
+  const page = await frontPageData(ctx, parsePageParam(params.page));
+  if (page === null) return notFound("public-front-page-page-out-of-range");
+  return renderListing(ctx, renderEnv, page, "public-front-page-no-template");
 }
 
 function decodeSearchQuery(raw: string | undefined): string {
@@ -260,62 +188,9 @@ async function resolveTaxonomy(
 
   ctx.resolvedEntity = { kind: "term", id: term.id };
 
-  const taxonomy = ctx.plugins.termTaxonomies.get(intent.taxonomy);
-  const allowedTypes = taxonomy?.entryTypes ?? [];
-  const page = parsePageParam(params.page);
-
-  // Empty `allowedTypes` short-circuits — a taxonomy registered without
-  // any attached entry types yields an empty archive.
-  const where =
-    allowedTypes.length === 0
-      ? null
-      : and(
-          eq(entries.status, "published"),
-          isNotNull(entries.publishedAt),
-          inArray(entries.type, allowedTypes),
-          inArray(
-            entries.id,
-            ctx.db
-              .select({ id: entryTerm.entryId })
-              .from(entryTerm)
-              .where(eq(entryTerm.termId, term.id)),
-          ),
-        );
-
-  const perPage = taxonomy?.archivePerPage ?? DEFAULT_ARCHIVE_PER_PAGE;
-  const result = await paginatedEntries(ctx, where, page, perPage);
-  if (result.outOfRange) return notFound("public-term-page-out-of-range");
-
-  const initial: TaxonomyData = {
-    kind: "taxonomy",
-    taxonomy: intent.taxonomy,
-    // Single archive term: the async builder walks ancestors for the full
-    // nested URL (one call — no N+1).
-    term: { ...term, url: await buildTermArchiveUrl(ctx, term) },
-    entries: await buildResolvedEntries(ctx, result.rows),
-    pagination: {
-      page,
-      perPage,
-      total: result.total,
-      pageCount: result.pageCount,
-    },
-  };
-  const data = await ctx.hooks.applyFilter("resolve:term:data", initial);
-  const html = await renderThroughTheme({
-    ctx,
-    renderEnv,
-    node: {
-      kind: "term",
-      taxonomy: intent.taxonomy,
-      slug: term.slug,
-      databaseId: term.id,
-    },
-    data,
-    title: taxonomy
-      ? labelSourceText(taxonomy.labels?.singular ?? taxonomy.label)
-      : term.name,
-  });
-  return htmlResponseOrNotFound(html, "public-taxonomy-no-template");
+  const page = await termData(ctx, term, parsePageParam(params.page));
+  if (page === null) return notFound("public-term-page-out-of-range");
+  return renderListing(ctx, renderEnv, page, "public-taxonomy-no-template");
 }
 
 async function resolveAuthor(
@@ -334,68 +209,20 @@ async function resolveAuthor(
 
   ctx.resolvedEntity = { kind: "author", id: author.id };
 
-  const page = parsePageParam(params.page);
-  // Author archives list the same public, non-hierarchical type set as the
-  // front page — a person's posts, not their standalone pages.
-  const publicTypes = publicListingTypes(ctx);
-  const where =
-    publicTypes.length === 0
-      ? null
-      : and(
-          eq(entries.authorId, author.id),
-          eq(entries.status, "published"),
-          isNotNull(entries.publishedAt),
-          inArray(entries.type, publicTypes),
-        );
-  const result = await paginatedEntries(
+  // Explicit projection — never spread the full user row (it carries email
+  // and auth columns) into the public template payload.
+  const page = await authorData(
     ctx,
-    where,
-    page,
-    DEFAULT_ARCHIVE_PER_PAGE,
-  );
-  if (result.outOfRange) return notFound("public-author-page-out-of-range");
-
-  const initial: AuthorArchiveData = {
-    kind: "author",
-    // Explicit projection — never spread the full user row (it carries email
-    // and auth columns) into the public template payload.
-    author: {
+    {
       id: author.id,
       slug: author.slug,
       name: author.name,
       avatarUrl: author.avatarUrl,
     },
-    entries: await buildResolvedEntries(ctx, result.rows),
-    pagination: {
-      page,
-      perPage: DEFAULT_ARCHIVE_PER_PAGE,
-      total: result.total,
-      pageCount: result.pageCount,
-    },
-  };
-  const data = await ctx.hooks.applyFilter("resolve:author:data", initial);
-  const html = await renderThroughTheme({
-    ctx,
-    renderEnv,
-    node: { kind: "author", slug: author.slug, databaseId: author.id },
-    data,
-    title: data.author.name ?? data.author.slug,
-  });
-  return htmlResponseOrNotFound(html, "public-author-no-template");
-}
-
-function pad2(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
-function dateTitle(
-  year: number,
-  month: number | null,
-  day: number | null,
-): string {
-  if (month === null) return String(year);
-  if (day === null) return `${String(year)}-${pad2(month)}`;
-  return `${String(year)}-${pad2(month)}-${pad2(day)}`;
+    parsePageParam(params.page),
+  );
+  if (page === null) return notFound("public-author-page-out-of-range");
+  return renderListing(ctx, renderEnv, page, "public-author-no-template");
 }
 
 async function resolveDate(
@@ -403,56 +230,19 @@ async function resolveDate(
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  const year = Number(params.year);
-  const month = params.month === undefined ? null : Number(params.month);
-  const day = params.day === undefined ? null : Number(params.day);
-  const range = dateRange(year, month, day);
-  if (range === null) return notFound("public-date-invalid");
-
-  const page = parsePageParam(params.page);
-  // Date archives list the same public, non-hierarchical type set as the front
-  // page, filtered to a published-at window.
-  const publicTypes = publicListingTypes(ctx);
-  const where =
-    publicTypes.length === 0
-      ? null
-      : and(
-          eq(entries.status, "published"),
-          isNotNull(entries.publishedAt),
-          gte(entries.publishedAt, range.start),
-          lt(entries.publishedAt, range.end),
-          inArray(entries.type, publicTypes),
-        );
-  const result = await paginatedEntries(
+  const page = await dateData(
     ctx,
-    where,
-    page,
-    DEFAULT_ARCHIVE_PER_PAGE,
-  );
-  if (result.outOfRange) return notFound("public-date-page-out-of-range");
-
-  const initial: DateArchiveData = {
-    kind: "date",
-    year,
-    month,
-    day,
-    entries: await buildResolvedEntries(ctx, result.rows),
-    pagination: {
-      page,
-      perPage: DEFAULT_ARCHIVE_PER_PAGE,
-      total: result.total,
-      pageCount: result.pageCount,
+    {
+      year: Number(params.year),
+      month: params.month === undefined ? null : Number(params.month),
+      day: params.day === undefined ? null : Number(params.day),
     },
-  };
-  const data = await ctx.hooks.applyFilter("resolve:date:data", initial);
-  const html = await renderThroughTheme({
-    ctx,
-    renderEnv,
-    node: { kind: "date", year, month, day },
-    data,
-    title: dateTitle(year, month, day),
-  });
-  return htmlResponseOrNotFound(html, "public-date-no-template");
+    parsePageParam(params.page),
+  );
+  // One answer for an unparseable date and for a page past the end of a real
+  // one: both name a URL with no archive behind it.
+  if (page === null) return notFound("public-date-not-found");
+  return renderListing(ctx, renderEnv, page, "public-date-no-template");
 }
 
 // The open seam: a plugin-registered archive type (`registerArchiveType`). The
@@ -556,50 +346,18 @@ async function resolveArchive(
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  const page = parsePageParam(params.page);
-  const where = and(
-    eq(entries.type, intent.entryType),
-    eq(entries.status, "published"),
-    isNotNull(entries.publishedAt),
-  );
-
-  const registered = ctx.plugins.entryTypes.get(intent.entryType);
-  const perPage = registered?.archivePerPage ?? DEFAULT_ARCHIVE_PER_PAGE;
-  const result = await paginatedEntries(ctx, where, page, perPage);
-  if (result.outOfRange) return notFound("public-archive-page-out-of-range");
-
-  // Set after the query so a thrown query doesn't leave a stale entity
-  // on ctx for any downstream middleware (logging, error pages) that
-  // reads it.
+  // Set before the listing resolves, as the taxonomy and author routes set
+  // theirs: a `resolve:archive:data` subscriber reads the entity off ctx, and
+  // it is this route's own intent rather than anything the query returns.
   ctx.resolvedEntity = { kind: "archive", entryType: intent.entryType };
 
-  // SSR-side: descriptor labels fall back to source text until the
-  // ctx.i18n route wiring lands (slice 11 #680 covered tRPC errors;
-  // route titles pending).
-  const title = registered
-    ? labelSourceText(registered.labels?.plural ?? registered.label)
-    : intent.entryType;
-
-  const initial: ArchiveData = {
-    kind: "archive",
-    contentType: intent.entryType,
-    entries: await buildResolvedEntries(ctx, result.rows),
-    pagination: {
-      page,
-      perPage,
-      total: result.total,
-      pageCount: result.pageCount,
-    },
-  };
-  const data = await ctx.hooks.applyFilter("resolve:archive:data", initial);
-  const html = await renderThroughTheme({
+  const page = await archiveData(
     ctx,
-    renderEnv,
-    node: { kind: "content-type-archive", entryType: intent.entryType },
-    data,
-    title,
-  });
-  return htmlResponseOrNotFound(html, "public-archive-no-template");
+    intent.entryType,
+    parsePageParam(params.page),
+  );
+  if (page === null) return notFound("public-archive-page-out-of-range");
+  return renderListing(ctx, renderEnv, page, "public-archive-no-template");
 }
 
 // URL :page captures are always strings; invalid input (non-numeric,
@@ -684,58 +442,4 @@ async function findTermForTaxonomy(
       where: and(eq(terms.taxonomy, taxonomy), eq(terms.slug, slug)),
     })) ?? null
   );
-}
-
-/**
- * Shared paginated-entries query used by archive and taxonomy
- * resolvers. Returns `{ outOfRange: true }` so the caller can pick the
- * 404 reason. `where === null` short-circuits to an empty result with
- * no DB round-trip — used by the taxonomy resolver when a taxonomy is
- * registered without any attached entry types.
- */
-async function paginatedEntries(
-  ctx: AppContext,
-  where: SQL | null | undefined,
-  page: number,
-  perPage: number,
-): Promise<{
-  readonly rows: readonly Entry[];
-  readonly outOfRange: boolean;
-  readonly total: number;
-  readonly pageCount: number;
-}> {
-  if (where == null) {
-    const slice = paginate({ page, perPage, total: 0 });
-    return {
-      rows: [],
-      outOfRange: slice.outOfRange,
-      total: 0,
-      pageCount: slice.totalPages,
-    };
-  }
-
-  const totalRow = await ctx.db
-    .select({ total: count() })
-    .from(entries)
-    .where(where);
-  const total = totalRow[0]?.total ?? 0;
-
-  const slice = paginate({ page, perPage, total });
-  if (slice.outOfRange) {
-    return {
-      rows: [],
-      outOfRange: true,
-      total,
-      pageCount: slice.totalPages,
-    };
-  }
-
-  const rows = await ctx.db
-    .select()
-    .from(entries)
-    .where(where)
-    .orderBy(desc(entries.publishedAt), desc(entries.id))
-    .limit(slice.limit)
-    .offset(slice.offset);
-  return { rows, outOfRange: false, total, pageCount: slice.totalPages };
 }

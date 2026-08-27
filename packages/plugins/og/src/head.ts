@@ -1,17 +1,18 @@
 import type { OgImage, TemplateData } from "plumix";
-import type { AppContext, EntryAccessSubject } from "plumix/plugin";
-import { ruleLabel } from "plumix";
+import type { AppContext } from "plumix/plugin";
+import { resolveListingPage, ruleLabel } from "plumix";
 
 import type { CardInputs } from "./card-identity.js";
 import type { CardRegistry } from "./card-registry.js";
+import type { CardTarget } from "./card-target.js";
 import type { CardDefinition, CardSize } from "./card.js";
 import type { OgCardSkip, OgChainTrace } from "./chain-trace.js";
 import { resolveCardIdentity } from "./card-identity.js";
-import { entryCardNode } from "./card-registry.js";
 import { cardUrl } from "./card-route.js";
+import { cardIdentityFor } from "./card-target.js";
 import { cardSize } from "./card.js";
 import { OG_PANEL_ID } from "./chain-trace.js";
-import { isShareableEntry } from "./shareable.js";
+import { isShareablePage } from "./shareable.js";
 
 interface PageOgImageInput {
   /** Whatever an earlier `seo:og_image` subscriber supplied, if any. */
@@ -55,7 +56,7 @@ interface ChainResolution {
 }
 
 async function resolveChain(input: PageOgImageInput): Promise<ChainResolution> {
-  const { image, featured, data, ctx, extension, cards, inputs } = input;
+  const { image, featured, ctx, extension, cards, inputs } = input;
   // An image already on the chain is another contributor's deliberate choice,
   // which a generated card does not outrank however the `plugins: []` array
   // happened to be ordered.
@@ -71,12 +72,13 @@ async function resolveChain(input: PageOgImageInput): Promise<ChainResolution> {
       },
     };
   }
+  const data = await cardPageData(ctx, input.data);
   const chosen = await chooseCard({ data, ctx, cards, featured, extension });
   if (chosen.card === null) return noCard({ ...chosen, featured });
   const url = await cardOgImageUrl({
     card: chosen.card,
     data,
-    entryId: chosen.entryId,
+    target: chosen.target,
     ctx,
     inputs,
     extension: chosen.extension,
@@ -93,6 +95,29 @@ async function resolveChain(input: PageOgImageInput): Promise<ChainResolution> {
   };
 }
 
+/**
+ * The page a card is rendered from, which is not always the page the head is
+ * rendering. A card names an archive rather than one paginated slice of it, and
+ * the route only ever resolves the archive's first page — so a head deeper in
+ * the pagination has to ask the same question the route will, or it publishes a
+ * digest taken over a different set of entries and every scraper following it
+ * is redirected away from the image the page promised.
+ *
+ * Costs a listing query, and only on `/page/2` and beyond: on the first page
+ * the head is already holding exactly what the route would resolve.
+ */
+async function cardPageData(
+  ctx: AppContext,
+  data: TemplateData,
+): Promise<TemplateData> {
+  const identity = cardIdentityFor(data);
+  if (identity === null || identity.kind === "entry" || identity.page === 1) {
+    return data;
+  }
+  const first = await resolveListingPage(ctx, identity.target);
+  return first?.data ?? data;
+}
+
 export interface CardChoiceInput {
   readonly data: TemplateData;
   readonly ctx: AppContext;
@@ -105,14 +130,14 @@ export interface CardChoiceInput {
    */
   readonly extension: string | undefined;
   /**
-   * Whether this entry may carry a card at all. Defaults to the question the
+   * Whether this page may carry a card at all. Defaults to the question the
    * route answers; the editor preview passes the same question minus its
    * status half, so a draft previews while an entry no scraper could reach
    * still gets no card.
    */
   readonly shareable?: (
     ctx: AppContext,
-    entry: EntryAccessSubject & { readonly status: string },
+    data: TemplateData,
   ) => Promise<boolean>;
 }
 
@@ -120,7 +145,7 @@ export interface CardChoiceInput {
 export type CardChoice =
   | {
       readonly card: CardDefinition<TemplateData>;
-      readonly entryId: number;
+      readonly target: CardTarget;
       readonly extension: string;
       readonly rule: string;
       readonly photo: null;
@@ -142,14 +167,15 @@ export type CardChoice =
  */
 export async function chooseCard(input: CardChoiceInput): Promise<CardChoice> {
   const { data, ctx, cards, featured, extension } = input;
-  const shareable = input.shareable ?? isShareableEntry;
-  // Only entries have a card URL. A rule declared against any other page kind
-  // resolves, but nothing addresses those pages yet.
-  if (data.kind !== "entry") {
+  const shareable = input.shareable ?? isShareablePage;
+  // A rule declared against a search page or a plugin archive resolves, but
+  // neither can be named by an identity a URL carries, so neither has a card
+  // URL to advertise.
+  const identity = cardIdentityFor(data);
+  if (identity === null) {
     return { card: null, photo: null, rule: null, skipped: "page-kind" };
   }
-  const { entry } = data;
-  const rule = cards.resolve(entryCardNode(entry), data);
+  const rule = cards.resolve(identity.node, data);
   if (rule === undefined) {
     return { card: null, photo: null, rule: null, skipped: "no-rule" };
   }
@@ -163,18 +189,18 @@ export async function chooseCard(input: CardChoiceInput): Promise<CardChoice> {
   if (photo !== null && card.mode !== "card") {
     return { card: null, photo, rule: matched, skipped: "featured-preferred" };
   }
-  // A card only for an entry the route will serve, in a format a scraper
+  // A card only for a page the route will serve, in a format a scraper
   // renders. Failing either, the shaped photo goes out instead — even where a
   // card declared itself the share image, since there is no card for it to be.
   if (extension === undefined) {
     return { card: null, photo, rule: matched, skipped: "renderer-format" };
   }
-  if (!(await shareable(ctx, entry))) {
+  if (!(await shareable(ctx, data))) {
     return { card: null, photo, rule: matched, skipped: "not-shareable" };
   }
   return {
     card,
-    entryId: entry.id,
+    target: identity.target,
     extension,
     rule: matched,
     photo: null,
@@ -185,8 +211,8 @@ export async function chooseCard(input: CardChoiceInput): Promise<CardChoice> {
 interface CardOgImageInput {
   readonly card: CardDefinition<TemplateData>;
   readonly data: TemplateData;
-  /** Narrowed off `data` by the caller, which has already asked. */
-  readonly entryId: number;
+  /** Named off `data` by the caller, which has already asked. */
+  readonly target: CardTarget;
   readonly ctx: AppContext;
   readonly inputs: CardInputs;
   readonly extension: string;
@@ -197,7 +223,7 @@ interface CardOgImageInput {
 // holding. Taken from the same call the route makes, because a digest the
 // route would not recognise redirects every scraper away from its own image.
 async function cardOgImageUrl(input: CardOgImageInput): Promise<string> {
-  const { card, data, entryId, ctx, inputs, extension } = input;
+  const { card, data, target, ctx, inputs, extension } = input;
   const { digest } = await resolveCardIdentity(
     card,
     data,
@@ -205,7 +231,7 @@ async function cardOgImageUrl(input: CardOgImageInput): Promise<string> {
     inputs,
     extension,
   );
-  return cardUrl(ctx, entryId, digest, extension);
+  return cardUrl(ctx, target, digest, extension);
 }
 
 interface NoCardInput {

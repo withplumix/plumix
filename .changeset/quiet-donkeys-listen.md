@@ -5,7 +5,7 @@
 
 Refuses a social card for an entry the access layer keeps from anonymous visitors.
 
-A card carries the entry's title, sits at a sequential id anyone can walk, and is served from a shared cache. It was gated on publication status and the entry type's `isPublic` alone, so an entry behind an `access` policy — one whose page redirects a signed-out visitor to sign-in, or answers a 402/403 — still had a card at `/_plumix/og/entry/<id>.<ext>`. The route now asks the access layer too, and answers `404` when the page is gated.
+A card carries the entry's title, sits at a sequential id anyone can walk, and is served from a shared cache. It was gated on publication status and the entry type's `isPublic` alone, so an entry behind an `access` policy — one whose page redirects a signed-out visitor to sign-in, or answers a 402/403 — still had a card at `/_plumix/og/card/entry/<id>.<ext>`. The route now asks the access layer too, and answers `404` when the page is gated.
 
 The head asks the same question, so it never advertises a URL the route refuses — including on a page rendering for a signed-in visitor who _can_ read it, since the scraper that follows the URL cannot. A _soft_ gate keeps its card on purpose: that page serves a public teaser at 200, so the teaser is meant to unfurl.
 
