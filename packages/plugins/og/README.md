@@ -22,6 +22,12 @@ export default plumix({
 });
 ```
 
+The `storage:` slot is where a rendered card is kept; without one, every request renders it again. On a new site `create-plumix-app` writes all of this — the import, the registration, the slot and the bucket binding behind it:
+
+```bash
+pnpm create plumix-app my-site --plugins blog,og
+```
+
 ## What you get
 
 - **A card per published entry**, at `/_plumix/og/entry/<id>/<digest>.<ext>` — PNG by default, and the extension always names what the renderer produces. It is composited from a bundled default template: the entry's title over your site's name. Drop the digest — `/_plumix/og/entry/<id>.<ext>` — and you land on whichever render is current, which is how you open a card by hand.
@@ -273,7 +279,11 @@ the panel names that link but cannot show its value either.
 
 ## What the renderer costs
 
-The default renderer is resolved inside this package, so the engine is part of your install whichever implementation you select — roughly 2.3 MB against the Workers 3 MB compressed ceiling. Selecting `svgOnly()` does **not** give those bytes back: it is the same engine's SVG output. `remote({ url })` is the only implementation that leaves the engine unexecuted, and even then it stays installed.
+The default renderer is resolved inside this package, so the engine is part of your install whichever implementation you select — roughly 2.3 MB against a Worker size ceiling of 10 MB gzipped on the paid plan, 3 MB on the free one. Selecting `svgOnly()` does **not** give those bytes back: it is the same engine's SVG output. `remote({ url })` is the only implementation that leaves the engine unexecuted, and even then it stays installed.
+
+Rendering one costs CPU, and the Workers **free plan allows 10 ms of it per invocation** — not enough to rasterize a card. The limit applies to scheduled handlers exactly as it does to fetch handlers, so precomputing cards on a cron does not route around it; `remote({ url })`, which renders off-box, is what does.
+
+A free-plan site is not left without share images. The featured-image path above never reaches the renderer: an entry's own photo is cropped to the card's shape by URL math through your `imageDelivery:` slot, so a site whose entries carry photos unfurls correctly with nothing rendered at all. Declare a card rule anyway — it is what says which shape to crop to.
 
 ## Support
 

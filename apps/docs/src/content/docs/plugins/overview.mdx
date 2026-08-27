@@ -156,7 +156,7 @@ import { pages } from "@plumix/plugin-pages";
 export const plugins: PlumixConfigInput["plugins"] = [pages];
 ```
 
-The other five take options, so they export a factory. Options are read at boot, either in the factory call itself or when the plugin's `setup` runs, and nothing re-reads them after that. Changing an option means editing the call and restarting.
+The other six take options, so they export a factory. Options are read at boot, either in the factory call itself or when the plugin's `setup` runs, and nothing re-reads them after that. Changing an option means editing the call and restarting.
 
 ```ts no-typecheck
 import type { PlumixConfigInput } from "plumix";
@@ -166,6 +166,7 @@ import { blog } from "@plumix/plugin-blog";
 import { comments } from "@plumix/plugin-comments";
 import { media } from "@plumix/plugin-media";
 import { menu } from "@plumix/plugin-menu";
+import { og } from "@plumix/plugin-og";
 
 export const plugins: PlumixConfigInput["plugins"] = [
   blog(),
@@ -173,10 +174,11 @@ export const plugins: PlumixConfigInput["plugins"] = [
   menu({ locations: { primary: { label: "Primary navigation" } } }),
   comments({ entryTypes: ["recipe"], mode: "all", maxDepth: 2 }),
   auditLog(),
+  og(),
 ];
 ```
 
-Every option a factory takes has a default, so the empty parentheses on `blog()`, `media()` and `auditLog()` are a complete call. `comments()` on its own holds an address's first comment for review and auto-approves once that address has an approved comment behind it. Its other defaults are three levels of reply nesting, twenty root comments to a page, and five submissions per source per ten minutes.
+Every option a factory takes has a default, so the empty parentheses on `blog()`, `media()`, `auditLog()` and `og()` are a complete call. `comments()` on its own holds an address's first comment for review and auto-approves once that address has an approved comment behind it. Its other defaults are three levels of reply nesting, twenty root comments to a page, and five submissions per source per ten minutes.
 
 <Aside type="caution" title="One descriptor per id">
   Each descriptor carries an id, and two descriptors with the same id throw at
@@ -213,7 +215,7 @@ The consequence is that a newly installed admin-facing plugin appears after a bu
 
 The platform releases in lockstep. `plumix` and the five packages behind it, `@plumix/core`, `@plumix/blocks`, `@plumix/admin`, `@plumix/admin-editor` and `@plumix/admin-ui`, share one version number and go out together. You depend on `plumix` and get the rest transitively, so there is one platform number to pin. Your runtime adapter, `@plumix/runtime-cloudflare`, sits outside that group and carries its own number.
 
-The six plugins each release on their own number, and those numbers have already diverged from each other and from the platform. One plugin sitting several minor versions ahead of another says nothing about either one's compatibility with the platform or with each other.
+The seven plugins each release on their own number, and those numbers have already diverged from each other and from the platform. One plugin sitting several minor versions ahead of another says nothing about either one's compatibility with the platform or with each other.
 
 Compatibility is carried by a peer dependency instead. Each plugin declares `plumix` as a peer with the range `>=0.1.0 <1.0.0`, so any pre-1.0 platform release satisfies every plugin, and upgrading `plumix` does not oblige you to upgrade the plugins beside it. A plugin republishes when its own code changes, not because the platform moved.
 
@@ -240,6 +242,6 @@ The `plugins` array is one slot among twenty in [Configuration](/getting-started
 
 ## Next steps
 
-Read [Blog](/plugins/blog/) and [Pages](/plugins/pages/) next. Between them they cover the two entry types most sites install before anything else, and each is a worked example of the registration options this page only names.
+Read [Blog](/plugins/blog/) and [Pages](/plugins/pages/) next. Between them they cover the two entry types most sites install before anything else, and each is a worked example of the registration options this page only names. [OG Cards](/plugins/og/) renders a share image per published entry, and needs no configuration beyond the array entry to do it.
 
 Ten pages in this section are not written yet, though everything they cover ships today. Menu documents navigation menus and the locations a theme renders them into. Comments documents threading, the moderation queue and the trust policy the quickstart above configured. Media documents the library, the upload flow and the `media` field types. Audit Log documents the activity feed. Publishing a Plugin covers taking a local plugin to npm, The Plugin Descriptor documents every slot on the descriptor object, Config Schema covers validating the options a factory takes, Admin Entry covers shipping admin screens, Translation Catalogs covers the `i18n` slot, and Versioning and Peer Ranges goes further into the two tracks described above.

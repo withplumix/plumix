@@ -1,0 +1,278 @@
+---
+title: OG Cards
+description: The og plugin renders a social card per published entry, serves it from a content-addressed route, and carries it into the page's og:image.
+tier: P1
+sidebar:
+  order: 80
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+`@plumix/plugin-og` renders the image a link unfurls into on X, LinkedIn or Slack, and serves it from your own site. Installing it and configuring nothing serves a card per published entry, composited from a bundled template — its title over your site's name.
+
+## Overview
+
+The plugin exports a factory named `og`. It adds no database tables, so installing it needs no migration, and it takes three options — `renderer`, `fonts` and `preview` — each with a default.
+
+A **route** at `/_plumix/og/entry/<id>/<digest>.<ext>` renders one entry's card on the first request, writes it to your storage bucket and reads it back on every request after. A **`seo:og_image` subscriber** puts that URL in the page's head, alongside `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. A **theme's `ogCards` array** replaces the bundled template with cards of your own, declared beside its `templates` and styled in its own design tokens.
+
+The URL is content-addressed. Its digest covers everything the card read — the entry's `updatedAt`, the card's own source, the font set, the theme's tokens — and the bytes are served `immutable`. It is also the only thing that makes X, Facebook and LinkedIn refetch an image they already hold: a purge reaches Cloudflare and stops there, while an edit publishes a _different_ URL.
+
+<Aside type="note" title="Entries today, other page kinds later">
+  Only entries have a card URL. The builders for the front page, archives,
+  taxonomy, author and date pages type-check and resolve, but nothing addresses
+  those pages yet, so a rule declared against one is not served. They arrive
+  with the routes that serve them.
+</Aside>
+
+## Quickstart
+
+Install the package with whichever package manager the project uses:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-og
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-og
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-og
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun add @plumix/plugin-og
+```
+
+  </TabItem>
+</Tabs>
+
+Then:
+
+<Steps>
+
+1. **Configure a `storage:` slot, then add `og()` to the `plugins` array.** The bucket is where a rendered card is kept; without one every request renders the card again.
+
+   ```ts no-typecheck
+   import { auth, plumix } from "plumix";
+
+   import { og } from "@plumix/plugin-og";
+   import {
+     cloudflare,
+     cloudflareDeployOrigin,
+     d1,
+     r2,
+   } from "@plumix/runtime-cloudflare";
+
+   import { theme } from "./theme";
+
+   export default plumix({
+     runtime: cloudflare(),
+     database: d1({ binding: "DB", session: "auto" }),
+     storage: r2({ binding: "MEDIA" }),
+     auth: auth({
+       passkey: {
+         rpName: "Recipes",
+         ...cloudflareDeployOrigin({
+           workerName: "recipes",
+           accountSubdomain: "your-account",
+           localOrigin: "http://localhost:5173",
+         }),
+       },
+     }),
+     plugins: [og()],
+     theme,
+   });
+   ```
+
+2. **Restart the dev server.**
+
+   ```sh
+   pnpm dev
+   ```
+
+3. **Open a published entry that has no featured image and read its head.** It carries an `og:image` pointing at `/_plumix/og/entry/<id>/<digest>.png`. Open that URL and the card is there — the entry's title over the site's name, 1200x630. An entry that _does_ have a photo shares the photo instead, which is the next section.
+
+</Steps>
+
+[`create-plumix-app`](/getting-started/installation/) writes all of that — the import, the registration, the `storage:` slot and the bucket binding behind it — for a site scaffolded with `--plugins og`. Nothing else is required: a card renders with the engine's own font face, and the `imageDelivery:` slot below sharpens the featured-image path without any card needing it.
+
+## Which image a page shares
+
+Four links resolve one `og:image`, in this order:
+
+1. **An explicit `.ogImage()` field** on the entry. An author who picked a share image gets it, untouched.
+2. **A `.featured()` field** on the entry — the entry's own photo — **cropped to the card's size** through your `imageDelivery:` slot. A photo shot at 4:3 unfurls letterboxed or badly cropped in a 1.91:1 slot, and this is what fixes it. The crop is URL math, so it costs no CPU and reaches no rasterizer. With no delivery slot configured the photo is emitted as it stands rather than dropped.
+3. **The generated card.**
+4. **Your site-wide default**, `site.default_og_image` in the site settings.
+
+A card takes the second slot for itself when its rule says so:
+
+```ts no-typecheck
+card.forEntryType("post").define({
+  mode: "card",
+  key: ({ data }) => cardKey.entry(data.entry, data.entry.title),
+  render: ({ data }) => ({ type: "text", text: data.entry.title }),
+});
+```
+
+`mode: "card"` shares the card even on an entry that has a photo — the choice for a theme whose share image is branded rather than the picture itself. The default, `"auto"`, steps aside for the photo.
+
+Cropping is a feature of this plugin, and it takes its target size from the card rule that matched. A site that wants cropped share images but no generated cards still declares a rule, to say what shape to crop to.
+
+An image an earlier `seo:og_image` subscriber supplied is left exactly as it arrived — neither outranked nor cropped. A subscriber registered after `og()` sees the card and can replace it, so the array order decides who has the last word.
+
+Two things leave a page with no card in its head, and they do not go equally far.
+
+An entry a scraper could not reach has none, and its card URL answers `404` rather than merely going unadvertised — the head and the route ask one question, so the head can never promise a URL the route refuses. Three things fail it: the entry is not published, its type is unregistered or not public, or the access layer refuses it. That last one is asked about an anonymous visitor whoever is calling, because a card carries the entry's title, sits at a sequential id and is served from a shared cache.
+
+A renderer whose output scrapers do not render is the other, and it is head-only: the route still serves the card, so you can look at it, but only PNG and JPEG reach a head — an SVG `og:image` unfurls as nothing at all.
+
+## Cards your theme declares
+
+A theme adds an `ogCards` array beside its `templates`, in the vocabulary it already uses: a generic tier, or a targeted matcher narrowed the same way. The first rule that matches wins, and anything a theme declares sits ahead of the bundled default.
+
+```ts no-typecheck
+import { defineTheme } from "plumix/theme";
+
+import { card, cardKey } from "@plumix/plugin-og";
+
+export default defineTheme({
+  templates: [],
+  ogCards: [
+    card.forEntryType("post").define({
+      key: ({ data }) => cardKey.entry(data.entry, data.entry.title),
+      styles: [
+        ".card { display: flex; padding: 72px; background: var(--plumix-color-ground) }",
+        ".card__title { font-size: 76px; color: var(--plumix-color-ink) }",
+      ],
+      render: ({ data }) => ({
+        type: "container",
+        className: "card",
+        children: [
+          { type: "text", className: "card__title", text: data.entry.title },
+        ],
+      }),
+    }),
+    card.fallback().define({
+      key: () => cardKey.of("site"),
+      render: () => ({ type: "container" }),
+    }),
+  ],
+});
+```
+
+`forEntryType("post")` autocompletes against your registered types and rejects a typo at compile time, and both callbacks receive that type's entry projection. A card declares template deps — `settings`, `menus` and the rest — as slug arrays and receives their results alongside `data` and `ctx`.
+
+Styling is ordinary CSS against ordinary class names. Whatever your theme declared in `tokens` is compiled to a `:root` block of custom properties and handed to the renderer ahead of the card's own stylesheet, so `var()`, `calc()` and the `--plumix-<category>-<slug>` names your site's CSS already reads all resolve. The same tokens arrive in both callbacks as resolved values, for what a card decides in JavaScript rather than in CSS.
+
+### Every rule needs a key
+
+`key` names everything the card read. It is required rather than derived, because a card reading a setting or a dep has an input no derivation can see. The helpers keep it to one line and emit the URL's digest and the cache tag together, so the two cannot drift:
+
+- `cardKey.entry(entry)` — one entry, keyed on its `updatedAt` so an edit reaches the card, tagged `e:<id>` so the publish that clears the entry's pages clears its card too.
+- `cardKey.of("home", locale)` — anything else, keyed and tagged on what you name. Its tag lands in an `og:` namespace of its own, because only you know what such a card read.
+
+Three inputs fold in without being named: the card's own source, so a redesign invalidates what it replaced with no version bump; the font set; and the theme's tokens.
+
+Two do not, and the answer to both is to name them:
+
+- `updatedAt` holds whole seconds, so two edits inside one second share a key. A card rendering entry content should name that content — `cardKey.entry(entry, entry.title)`.
+- An image is resolved during the render, so nothing about it reaches the key. A card painting one should name what identifies it, since a replaced upload lands on a new storage key.
+
+Two more are consequences to know rather than things a key can fix. Two renderers declaring the same content type share keys, so swapping between them serves what the previous one stored. And nothing deletes a card's predecessor: every key change leaves the old object in your bucket, and the URL it was served at redirects to the current card.
+
+## Building a card
+
+Three surfaces show what a card looks like, and why a page has none.
+
+**`/_plumix/og/preview`** renders every declared rule against invented sample data, one card per rule, listed in the order a page resolves against them rather than the order they were declared in. Storage and the cache are both bypassed, so a refresh re-renders and an edit shows up — a served card cannot, since its URL is the immutable one described above.
+
+**The debug bar's OG image panel** names which of the four links above produced the page's image, which rule produced a card, and the reason there is no card. "I set a featured image and nothing changed" reads back as _the card steps aside for the featured image_.
+
+**A preview in the entry editor**, for the entry types you name:
+
+```ts no-typecheck
+og({ preview: ["post", "page"] });
+```
+
+Each named type gains a Social card box in the editor rail: the image the entry will be shared with, and a line naming which link produced it. It renders on request and reads nothing back from storage, so a draft has one too, and it sees through a pending autosave. It shows what will be shared; it does not change it. There is no per-entry override. It also models this plugin's own contribution to the chain, so a `seo:og_image` subscriber registered after `og()` can change what the page advertises without changing what the box says.
+
+The list is not defaulted, because a meta box is registered against entry types by name and a name nothing registered fails the boot. Leave `preview` out and neither the box, the procedure behind it, nor the plugin's admin chunk is registered at all.
+
+Both dev surfaces sit behind the same development gate core uses for its own, reached through a dynamic import, so neither leaves anything in a production build.
+
+## What fails quietly
+
+Each of these fails without an error message.
+
+### WOFF2 is not read
+
+The engine reads **TTF, OTF and WOFF**. It does not read WOFF2, which is what most font packages ship by default, and the failure is a card with no text on it — a correct render of a font with no glyphs.
+
+```ts no-typecheck
+og({ fonts: ["/fonts/Inter-SemiBold.ttf"] });
+```
+
+Paths point into the platform asset layer — your `.plumix/public` directory, served through the `ASSETS` binding — and are read at render time, so a declared font costs nothing in the Worker bundle. Declare none, as a scaffolded site does, and the engine's own face is used. A path that answers anything but `200` fails the render outright rather than quietly dropping to that face.
+
+### Rasterizing in the Worker needs a paid plan
+
+The Workers free plan allows **10 ms of CPU per invocation**, and rasterizing a card does not fit in it. That limit applies to scheduled handlers exactly as it does to fetch handlers, so precomputing cards on a cron does not route around it.
+
+A free-plan site uses link two instead: the entry's own photo, cropped and never rendered. Declare a card rule anyway — that is what names the shape to crop to.
+
+### Choosing the SVG renderer does not shrink the bundle
+
+`renderer:` takes the bundled engine (`takumi()`, or `takumi({ format: "jpeg" })` for a photo-heavy design) or that same engine's SVG output (`svgOnly()`), both on the `@plumix/plugin-og/takumi` subpath, or `remote({ url })` from the package root to render off-box.
+
+```ts no-typecheck
+import { og } from "@plumix/plugin-og";
+import { takumi } from "@plumix/plugin-og/takumi";
+
+og({ renderer: takumi({ format: "jpeg" }) });
+```
+
+`svgOnly()` gives no bytes back: it runs through the same engine and loads the same wasm, around 2.3 MB against a Worker size ceiling of 10 MB gzipped on the paid plan and 3 MB on the free one. `remote({ url })` is the only implementation that leaves the engine unexecuted, and the dependency stays installed either way, because the default renderer is resolved inside the package.
+
+### A card cannot fetch an external image
+
+No image a card names is ever fetched. The plugin resolves every `image` node before the render and hands the renderer bytes, so three sources work and nothing else does: anything published in your media library, anything else in your storage bucket addressed by the URL the bucket mints for it, and a `data:` URI, which carries its own bytes and is the escape hatch for a small inline asset such as a logo. An `https://` URL pointing anywhere else is dropped, and the card renders without it.
+
+That removes a class of problem rather than mitigating it: the equivalent Nuxt module has shipped fixes for advisories rooted in exactly this — a renderer steered into fetching a URL someone else chose. It also keeps a render deterministic and keeps the key honest, since a fetched image would be an input the key could not see. The same discipline runs through the route, against the other root those advisories share: no render option is ever read from a card's URL. If you need a remote image on a card, put it in your media library.
+
+<Aside type="caution" title="Two more images are dropped during resolution">
+  An object over 8 MB, and one whose stored content type is not an image.
+  Neither is a picture a 1200x630 card wants, and the engine throws on bytes it
+  cannot decode — which would cost the card its whole render rather than one
+  image.
+</Aside>
+
+## Related
+
+The `storage:` and `imageDelivery:` slots this plugin reads are two of the twenty in [Configuration](/getting-started/configuration/), and [Bindings](/deployment/bindings/) covers the R2 bucket behind the first of them on Cloudflare. [Overview](/plugins/overview/) covers installing a plugin and the version track this one is on, and [Scaffolding](/getting-started/installation/) covers the wizard that writes the wiring above.
+
+Cards are declared where a theme declares its templates: [Templates](/themes/templates/) covers the builders `card.*` mirrors, [Template Hierarchy](/themes/hierarchy/) the tier-and-matcher resolution both share, and [Template Data](/themes/template-data/) the `data` a card's callbacks receive. The tokens a card styles with are in [Themes](/themes/overview/).
+
+The `.featured()` and `.ogImage()` roles that outrank a card are meta-box fields — [Meta Boxes](/fields/meta-boxes/) covers declaring them and [Field Types](/fields/field-types/) the media types they hold. Whether an entry may carry a card at all follows [Statuses and Publishing](/content-modelling/statuses/) and the model in [Access & Identity](/access/overview/).
+
+## Next steps
+
+Read [Blog](/plugins/blog/) if the site has no entry type yet: a card hangs off a published entry, so `post` or `page` comes first.
+
+To design a card rather than take the bundled one, [Templates](/themes/templates/) is the vocabulary `ogCards` reuses, and the package's own README carries the full builder reference — every matcher, the key helpers, and images in a card.
+
+To put the cropped-photo path to work on the free plan, [Configuration](/getting-started/configuration/) covers the `imageDelivery` slot that does the cropping and [Cloudflare Workers](/deployment/cloudflare/) the adapter behind it.

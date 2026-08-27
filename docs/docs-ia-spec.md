@@ -13,14 +13,14 @@ sixteen tickets, assembled into one artifact that writing sessions execute again
 
 ## 1. The shape
 
-**15 sections · 104 pages · two levels throughout.** Section → page, never deeper.
+**15 sections · 105 pages · two levels throughout.** Section → page, never deeper.
 
 The first release ships the **30 P0 pages**, written to the full page template. Everything else is
 absent from the navigation and named in prose in its section's `Overview`.
 
 Flatness is not an independent rule — it falls out of the roster policy. Sites that put each roster
 item on its own page run 240–450 pages and three or four levels; folding rosters into indexed pages
-is what keeps 104 pages flat. Section size is the lever, and the largest section here is 13.
+is what keeps 105 pages flat. Section size is the lever, and the largest section here is 14.
 
 ---
 
@@ -44,9 +44,9 @@ landing page, because a Starlight group label cannot itself be a link.
 | 11  | Extending the Admin | 7       | 0      |
 | 12  | Going Further       | 9       | 0      |
 | 13  | Deployment          | 6       | 4      |
-| 14  | Plugins             | 13      | 3      |
+| 14  | Plugins             | 14      | 3      |
 | 15  | Releases & Upgrades | 2       | 0      |
-|     | **Total**           | **104** | **30** |
+|     | **Total**           | **105** | **30** |
 
 ---
 
@@ -226,6 +226,7 @@ entry — content-editor material is out of scope for this site.
 | `plugins/comments`      | Comments                   | P1  | Threaded, moderated discussion.                                                                              | `@plumix/plugin-comments`  |
 | `plugins/media`         | Media                      | P1  | Media library, uploads, the `media` field types.                                                             | `@plumix/plugin-media`     |
 | `plugins/audit-log`     | Audit Log                  | P2  | Activity feed.                                                                                               | `@plumix/plugin-audit-log` |
+| `plugins/og`            | OG Cards                   | P1  | Generated social cards, the `og:image` chain, and the renderer's limits.                                     | `@plumix/plugin-og`        |
 | `plugins/publishing`    | Publishing a Plugin        | P2  | Taking a local plugin to npm.                                                                                | distribution               |
 | `plugins/descriptor`    | The Plugin Descriptor      | P2  | `id`, `version`, `setup` vs `provides`.                                                                      | descriptor surface         |
 | `plugins/config-schema` | Config Schema              | P2  | `schema` / `schemaModule` and validation.                                                                    | plugin config schema       |
@@ -430,7 +431,7 @@ per-page copy-as-markdown affordance.
 - One site-wide statement, in `Introduction`: the docs describe the current release; pin your
   version. **Appearing on the site is not a stability promise.**
 - `since` markers on roster items that arrived recently.
-- **Two version tracks.** Platform packages move in lockstep; the six plugins version independently.
+- **Two version tracks.** Platform packages move in lockstep; the seven plugins version independently.
   Every install snippet must be right about which track it is on.
 
 ---
@@ -455,7 +456,7 @@ Every area of the public surface has a home. Mapping from the inventory:
 | admin pages · widgets · login links · plugin chunk · shims · CSS        | Extending the Admin                                                   |
 | caching · SEO · search · i18n · cron · telemetry · testing · dev tools  | Going Further                                                         |
 | runtime adapter · bindings · secrets · CLI                              | Deployment                                                            |
-| 6 official plugins · descriptor · packaging                             | Plugins                                                               |
+| 7 official plugins · descriptor · packaging                             | Plugins                                                               |
 
 **Deliberately undocumented:** the contribution guide and all core-contributor material; all
 content-editor material; the editor bridge (`EDITOR_BRIDGE_CHANNEL` and kin, editor-internal); the

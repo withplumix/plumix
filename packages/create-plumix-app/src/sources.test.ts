@@ -3,6 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import type { Selection } from "./compose/types.js";
+import { assembleConfig } from "./compose/config.js";
+import { resolveContributions } from "./compose/contributions.js";
+import { assembleRuntimeFiles } from "./compose/files.js";
 import { loadRegistry } from "./registry.js";
 import { buildSnapshot, serializeSnapshot } from "./snapshot.js";
 import { loadSources } from "./sources.js";
@@ -71,5 +75,45 @@ describe("live cloudflare runtime capabilities", () => {
     expect(kv?.wrangler?.kv_namespaces).toEqual([
       { binding: "KV", id: "local-development-only" },
     ]);
+  });
+});
+
+describe("live og plugin descriptor", () => {
+  const liveOg = async () => (await loadRegistry(REPO_ROOT)).plugins;
+
+  it("registers og() against a storage requirement and nothing else", async () => {
+    const og = (await liveOg()).find((p) => p.id === "og");
+
+    expect(og?.registration).toBe("og()");
+    expect(og?.imports).toContain('import { og } from "@plumix/plugin-og";');
+    expect(og?.deps["@plumix/plugin-og"]).toBeDefined();
+    // Media asks for `imageDelivery` beside storage; a card needs no delivery
+    // slot, so the two descriptors have to stay distinguishable.
+    expect(og?.requires).toEqual(["storage"]);
+  });
+
+  it("composes the bucket a rendered card is kept in", async () => {
+    const registry = await loadRegistry(REPO_ROOT);
+    const runtime = registry.runtimes.find((r) => r.id === "cloudflare");
+    const og = registry.plugins.find((p) => p.id === "og");
+    if (!runtime || !og) throw new Error("cloudflare or og is not offered");
+
+    const selection: Selection = {
+      projectName: "my-app",
+      runtime,
+      plugins: [og],
+      authMethods: [],
+    };
+    const contributions = resolveContributions(selection);
+    const config = assembleConfig(selection, contributions);
+    const wrangler = assembleRuntimeFiles(selection, contributions.wrangler)[
+      "wrangler.jsonc"
+    ];
+
+    expect(config).toContain("og(),");
+    // Without the slot every request renders the card again, so the storage
+    // requirement has to reach both the config and the binding behind it.
+    expect(config).toContain('storage: r2({ binding: "MEDIA" }),');
+    expect(wrangler).toContain('"bucket_name": "my-app-media"');
   });
 });

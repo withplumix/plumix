@@ -205,8 +205,8 @@ try {
   const plugins = (await loadRegistry(REPO)).plugins.map((p) => p.id);
 
   // `-y` on every combo: without it the runtime stays an open prompt and the
-  // CLI drops into the wizard on a terminal. Media is the only plugin
-  // declaring `requires`, so all-plugins covers the capability seam too.
+  // CLI drops into the wizard on a terminal. Media and og are the only plugins
+  // that declare `requires`, so all-plugins covers the capability seam too.
   const combos = [
     { name: "blank", args: ["-y"] },
     {

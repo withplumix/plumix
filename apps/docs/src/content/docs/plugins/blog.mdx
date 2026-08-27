@@ -8,11 +8,11 @@ sidebar:
 
 import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
-`@plumix/plugin-blog` makes four registrations and takes no options. A `post` entry type, a hierarchical `category` taxonomy, a flat `tag` taxonomy, and a `relatedPosts` loader a theme declares on a template.
+`@plumix/plugin-blog` makes four registrations: a `post` entry type, a hierarchical `category` taxonomy, a flat `tag` taxonomy, and a `relatedPosts` loader a theme declares on a template. Each of the four can be reshaped or switched off.
 
 ## Overview
 
-The plugin exports one descriptor named `blog`. It has no factory and no configuration, so you add the export itself to the `plugins` array. It adds no database tables, so installing it needs no migration.
+The plugin exports a factory named `blog`, so you call it. Every option has a default and `blog()` on its own is a complete registration; the four options it takes — `post`, `category`, `tag` and `relatedPosts` — each reshape or drop one of the registrations above, and [Reshaping what it registers](#reshaping-what-it-registers) covers them. It adds no database tables, so installing it needs no migration.
 
 Nothing it registers is special. Every option it passes is one your own plugin could pass, so the rest of this page reads as a worked registration.
 

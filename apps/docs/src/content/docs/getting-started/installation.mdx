@@ -12,7 +12,7 @@ One command writes a working project. The scaffolder asks up to four questions, 
 
 ## Overview
 
-`create-plumix-app` assembles a project rather than copying a fixed template. It reads the runtime you pick and the plugins you tick, then splices their imports, their config slots and their registrations into one `plumix.config.ts`. Choosing the media plugin is what puts `storage: r2({ binding: "MEDIA" })` in the config and an `r2_buckets` entry in `wrangler.jsonc`. Choosing none leaves both out.
+`create-plumix-app` assembles a project rather than copying a fixed template. It reads the runtime you pick and the plugins you tick, then splices their imports, their config slots and their registrations into one `plumix.config.ts`. Choosing the media or the OG plugin is what puts `storage: r2({ binding: "MEDIA" })` in the config and an `r2_buckets` entry in `wrangler.jsonc`. Both declare a storage requirement, and it is fulfilled once however many of them you tick. Choosing neither leaves both out.
 
 You need one of npm, pnpm, yarn or bun. No published Plumix package declares an `engines` range, so no Node version is enforced at install time. The repository is developed and tested on Node 24, which is what its `.nvmrc` pins.
 
@@ -109,7 +109,7 @@ pnpm create plumix-app my-site --plugins blog,pages,media --pm pnpm --yes
 The flags are:
 
 - `--runtime <id>` picks the runtime. Defaults to `cloudflare`.
-- `-p, --plugins <ids>` takes a comma-separated list. The ids are `blog`, `pages`, `menu`, `comments`, `media` and `audit-log`. Defaults to none.
+- `-p, --plugins <ids>` takes a comma-separated list. The ids are `blog`, `pages`, `menu`, `comments`, `media`, `audit-log` and `og`. Defaults to none.
 - `--pm <name>` picks `npm`, `pnpm`, `yarn` or `bun`. Without it you get `npm`. An unrecognised name exits with an error rather than falling back.
 - `--no-install` skips the dependency install.
 - `--no-db` skips generating and applying the local migration.
@@ -142,7 +142,7 @@ Cloudflare Access appears in the same list when the runtime is Cloudflare. It re
 
 ## Related
 
-[Project Structure](/getting-started/project-structure/) is the file-by-file account of what the scaffolder just wrote. [Configuration](/getting-started/configuration/) is the reference for the config file it assembled. [Passkeys](/access/passkeys/) covers the WebAuthn ceremony, the relying-party id and adding a second device. [Secrets](/deployment/secrets/) covers `.dev.vars`, `EnvInput` and production secrets. [Plugins](/plugins/overview/) covers installing and configuring the six official plugins.
+[Project Structure](/getting-started/project-structure/) is the file-by-file account of what the scaffolder just wrote. [Configuration](/getting-started/configuration/) is the reference for the config file it assembled. [Passkeys](/access/passkeys/) covers the WebAuthn ceremony, the relying-party id and adding a second device. [Secrets](/deployment/secrets/) covers `.dev.vars`, `EnvInput` and production secrets. [Plugins](/plugins/overview/) covers installing and configuring the seven official plugins.
 
 ## Next steps
 
