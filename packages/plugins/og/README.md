@@ -35,6 +35,7 @@ pnpm create plumix-app my-site --plugins blog,og
 - **Render once, serve cheaply** — a card is rendered on the first request, written to your storage bucket, and read back after that. A matching `If-None-Match` answers `304`.
 - **Cached where your pages are cached.** With a `cache:` slot configured, a card is stored at the edge under the same `e:<id>` tag its entry's pages carry, so the publish that clears the page clears the card with it. The URL carries the card's digest and is served `immutable`: an edit publishes a _different_ URL, which is the only thing that makes X, Facebook and LinkedIn refetch an image they already hold — a purge reaches Cloudflare and stops there.
 - **A renderer you can swap.** `renderer:` takes the bundled engine (`takumi()`, or `takumi({ format: "jpeg" })` for a photo-heavy design), the same engine's SVG output (`svgOnly()`), or `remote({ url })` to render off-box.
+- **A default card in your theme's colours**, from three `color` tokens it looks for by name — see [the default card's palette](#the-default-cards-palette).
 - **Cards your theme designs**, declared beside its templates and styled in its own design tokens — see below.
 - **A preview in the editor**, opt-in per entry type, showing what the entry will be shared with and which of the four links produced it — see [preview a card while you write](#preview-a-card-while-you-write).
 
@@ -107,6 +108,26 @@ A card reaches a page's head only when the connected renderer produces a format 
 An entry the access layer keeps from an anonymous visitor gets no card either, and its route answers `404`. A card carries the entry's title, sits at a sequential id anyone can walk, and is served from a shared cache, so it is refused on the same terms its page is — asked of a scraper carrying no session, whoever happens to be reading. A _soft_ gate is the exception on purpose: its page serves a public teaser at 200, so the teaser unfurls with a card like any other page.
 
 A render that throws is the same story from the other end: the page already shipped the card's URL and cannot take it back, so the route redirects to your site default and logs what broke rather than answering an error a scraper would render as a hole. In development it stops at the dev error page instead, with the stack.
+
+## The default card's palette
+
+The bundled card paints from three of your theme's `color` tokens: `background` for its ground, `foreground` for the headline, and `muted-foreground` for the site name beneath it. A theme spelling its palette those three ways gets a card in its own colours for declaring nothing at all.
+
+Most themes spell them their own way. Name the roles yours does:
+
+```ts
+og({
+  palette: { background: "paper", foreground: "ink", mutedForeground: "muted" },
+});
+```
+
+Each key is a role the card paints and each value is one of your `color` token slugs. A role you leave out keeps the convention name. The keys are camelCase because they are TypeScript; the slugs they default to are kebab-case because that is what `defineTheme` accepts.
+
+The card takes your palette only when **all three** resolve. Name two and it keeps its own three rather than mixing them, because the theme's paper under the bundled card's near-white ink is an unreadable card — worse than one that merely looks unlike the site. A token declared without a `value` does not resolve either, for the reason [below](#your-themes-tokens): a card renders away from the page, where your own stylesheet never loads, so a custom property your CSS defines is one the card cannot read.
+
+Only colour follows the theme. The card's spacing and type sizes are its own, so a `spacing` token changes nothing about it — a card is one fixed 1200×630 composition rather than a page that reflows.
+
+Only the bundled card reads any of this. A card your theme declares styles itself from the same tokens directly, under whatever names it likes.
 
 ## Cards your theme declares
 

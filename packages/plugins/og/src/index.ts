@@ -2,6 +2,7 @@ import type { PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
 import type { CardInputs } from "./card-identity.js";
+import type { CardPalette } from "./default-card.js";
 import type { CardRenderer } from "./renderer.js";
 import { createCardRegistry } from "./card-registry.js";
 import { CARD_ROUTE_PATH, createCardRoute } from "./card-route.js";
@@ -29,6 +30,7 @@ export type {
   CardSelector,
 } from "./card.js";
 export { card } from "./card.js";
+export type { CardPalette } from "./default-card.js";
 export type { CardKey } from "./card-key.js";
 export { cardKey } from "./card-key.js";
 export type {
@@ -81,6 +83,26 @@ export interface OgPluginOptions {
    * ```
    */
   readonly preview?: readonly string[];
+  /**
+   * Which of the theme's `color` tokens the bundled default card paints from:
+   * its ground, its headline, and the site name beneath. Left out, each looks
+   * for a slug of its own name — the convention a theme can adopt to get a card
+   * in its own palette for declaring nothing here at all. Name only the roles
+   * your theme spells differently.
+   *
+   * The card takes the theme's colours only when all three resolve. A theme
+   * that names two of them keeps the bundled card's own palette rather than
+   * mixing the two, because half a palette is what makes a card unreadable.
+   *
+   * A theme's own `ogCards` are unaffected — they style themselves from the
+   * same tokens directly.
+   *
+   * @example
+   * ```ts
+   * og({ palette: { background: "paper", foreground: "ink", mutedForeground: "muted" } });
+   * ```
+   */
+  readonly palette?: CardPalette;
 }
 
 /**
@@ -105,7 +127,8 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
   const cards = createCardRegistry(defaultCards);
   const fonts = options.fonts ?? [];
   const preview = options.preview ?? [];
-  let tokens = compileThemeTokens();
+  const palette = options.palette;
+  let tokens = compileThemeTokens({}, palette);
   // One accessor for both readers: the head and the route have to land on the
   // same digest, and they only do that if they read the same inputs.
   const inputs = (): CardInputs => ({ fonts, tokens });
@@ -132,7 +155,7 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
       // request — nothing about a rule set is request-scoped.
       ctx.addAction("theme:ready", (theme) => {
         cards.load(theme.ogCards ?? []);
-        tokens = compileThemeTokens(theme.tokens);
+        tokens = compileThemeTokens(theme.tokens, palette);
       });
       ctx.registerRoute({
         method: "GET",

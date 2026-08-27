@@ -1,4 +1,5 @@
 import type { TemplateData } from "plumix";
+import type { ResolvedThemeTokens } from "plumix/blocks";
 import type { AppContext } from "plumix/plugin";
 import { isEntry, labelSourceText } from "plumix";
 
@@ -9,36 +10,88 @@ import { cardIdentityFor, cardTargetPath } from "./card-target.js";
 import { card } from "./card.js";
 import { CARD_HEIGHT, CARD_WIDTH } from "./renderer.js";
 
-// Ordinary CSS against ordinary class names, custom properties included —
-// the same shape a theme-declared card is written in, and the reason the
-// engine has to resolve `var()` rather than take flattened values.
-const STYLESHEET = `
-:root {
-  --plumix-og-ground: #0b1220;
-  --plumix-og-ink: #f8fafc;
-  --plumix-og-muted: #94a3b8;
-  --plumix-og-gutter: 72px;
+/**
+ * Which of the theme's `color` tokens the bundled card paints from — a token
+ * slug per role it fills. Documented on `OgPluginOptions.palette`, which is
+ * where a site sets it.
+ */
+export interface CardPalette {
+  readonly background?: string;
+  readonly foreground?: string;
+  readonly mutedForeground?: string;
 }
+
+// Not an identity map: `defineTheme` holds token slugs to `[a-z][a-z0-9-]*`,
+// so the kebab-case slug a theme has to declare and the camelCase key this
+// option is read with cannot be the same string.
+const CONVENTION = {
+  background: "background",
+  foreground: "foreground",
+  mutedForeground: "muted-foreground",
+} satisfies Required<CardPalette>;
+
+// Ordinary CSS against ordinary class names, custom properties included — the
+// same shape a theme-declared card is written in, and the reason the engine has
+// to resolve `var()` rather than take flattened values. Each bundled colour is
+// a `var()` fallback rather than a `:root` block of the card's own: such a
+// block ships after the theme's and beats it, which is what kept a theme's
+// palette out of this card entirely.
+const STYLESHEET = `
 .plumix-og-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   width: ${CARD_WIDTH}px;
   height: ${CARD_HEIGHT}px;
-  padding: var(--plumix-og-gutter);
-  background-color: var(--plumix-og-ground);
+  padding: 72px;
+  background-color: var(--plumix-og-background, #0b1220);
 }
 .plumix-og-card__title {
-  color: var(--plumix-og-ink);
+  color: var(--plumix-og-foreground, #f8fafc);
   font-size: 76px;
   font-weight: 700;
   line-height: 1.15;
 }
 .plumix-og-card__site {
-  color: var(--plumix-og-muted);
+  color: var(--plumix-og-muted-foreground, #94a3b8);
   font-size: 32px;
 }
 `;
+
+/**
+ * The theme's palette mapped onto the properties {@link STYLESHEET} falls back
+ * to, or `""` for a theme whose palette the card leaves alone.
+ *
+ * All-or-nothing because a half-taken palette is worse than an untaken one: the
+ * theme's paper under the bundled card's near-white ink is unreadable, while a
+ * card that took nothing merely looks unlike the site.
+ *
+ * A slug is a lookup key here and never reaches the CSS. Only values do, and
+ * those came through `sanitizeCssValue` on their way out of
+ * `resolveThemeTokens`.
+ */
+export function defaultCardPaletteCss(
+  tokens: ResolvedThemeTokens,
+  palette: CardPalette = {},
+): string {
+  const colors = tokens.color ?? {};
+  // Own properties only. A palette naming `constructor` or `toString` would
+  // otherwise resolve to something off the prototype and stringify it into the
+  // sheet, braces and all.
+  const declared = (slug: string): string | undefined =>
+    Object.hasOwn(colors, slug) ? colors[slug] : undefined;
+  const background = declared(palette.background ?? CONVENTION.background);
+  const foreground = declared(palette.foreground ?? CONVENTION.foreground);
+  const muted = declared(palette.mutedForeground ?? CONVENTION.mutedForeground);
+  if (
+    background === undefined ||
+    foreground === undefined ||
+    muted === undefined
+  ) {
+    return "";
+  }
+  return `:root { --plumix-og-background: ${background}; --plumix-og-foreground: ${foreground}; --plumix-og-muted-foreground: ${muted}; }`;
+}
 
 /**
  * What a fresh install renders, with no theme configuration: the page's own

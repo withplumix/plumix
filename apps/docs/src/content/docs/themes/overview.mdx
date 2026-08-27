@@ -26,6 +26,8 @@ A site has one theme, and it arrives through the `theme` slot in `plumix.config.
 - `css` lists stylesheet paths. The strings never enter the config module graph. The Vite plugin generates a client entry that imports each one, so Vite emits hashed bundles.
 - Template dep kinds sit at the top level too, one array of slugs per kind. A theme declaring `settings: ["site"]` has that data loaded and passed into every template's render.
 
+Slugs are yours to choose. One convention is worth knowing: `@plumix/plugin-og` paints its bundled social card from `color.background`, `color.foreground` and `color.muted-foreground`, so a theme spelling those three that way gets a social card in its own palette the moment the plugin is installed. It is all three or none — name two and the card keeps its own — and [the default card's palette](/plugins/og/#the-default-cards-palette) covers the option that points it at whatever your theme calls them instead.
+
 ## Quickstart
 
 <Steps>

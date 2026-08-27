@@ -1,3 +1,4 @@
+import type { ThemeTokens } from "plumix/blocks";
 import { memoryStorage } from "plumix";
 import { emitThemeTokenCss } from "plumix/blocks";
 import { definePlugin } from "plumix/plugin";
@@ -6,15 +7,12 @@ import { describe, expect, test } from "vitest";
 
 import type { CardImage, CardNode, CardRenderInput } from "./renderer.js";
 import { og } from "./index.js";
-import { takumi } from "./takumi.js";
-import { fetchCard } from "./test/harness.js";
+import { svgOnly, takumi } from "./takumi.js";
+import { createHarness, fetchCard, seedEntry } from "./test/harness.js";
 
-// The only tests that load the real wasm: two proving the engine encodes each
-// format it offers, one proving it resolves the CSS a themed card is written
-// in, one proving it paints an image out of the bytes it was handed, and one
-// proving the configuration a fresh install gets reaches it. Everything else
-// renders through the fake in `test/fake-renderer.ts` — exercising the engine
-// harder than this tests upstream rather than us.
+// The only tests that load the real wasm. Everything else renders through the
+// fake in `test/fake-renderer.ts` — exercising the engine harder than this
+// tests upstream rather than us.
 // The engine must never reach the network: a card is rendered from what the
 // request already resolved, which is what keeps the storage key complete.
 const input = (
@@ -140,6 +138,32 @@ describe("the bundled engine", () => {
 
     expect(painted).not.toEqual(blank);
     expect(inline).toEqual(painted);
+  });
+
+  test("paints the bundled card in the theme's own palette", async () => {
+    // Every fill the served card carries, in paint order: the ground, then the
+    // headline, then the site line beneath it. `renderSvg` emits glyphs as
+    // `<use>` references, so the colours are the only part of a card this can
+    // read — and they are the whole of what a palette decides. Nothing else in
+    // the document is written as a hex triplet.
+    const fillsOf = async (tokens?: ThemeTokens): Promise<string[]> => {
+      const harness = await createHarness({ renderer: svgOnly(), tokens });
+      const id = await seedEntry(harness);
+      const svg = await (await fetchCard(harness, id)).assertStatus(200).text();
+      return svg.match(/#[0-9a-f]{6}/g) ?? [];
+    };
+
+    expect(
+      await fillsOf({
+        color: {
+          background: { value: "#fbfaf8" },
+          foreground: { value: "#1b1a17" },
+          "muted-foreground": { value: "#6f6b63" },
+        },
+      }),
+    ).toEqual(["#fbfaf8", "#1b1a17", "#6f6b63"]);
+    // A theme that named none of them leaves the card the three it ships with.
+    expect(await fillsOf()).toEqual(["#0b1220", "#f8fafc", "#94a3b8"]);
   });
 
   test("is what a plugin with no renderer configured serves through", async () => {
