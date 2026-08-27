@@ -30,7 +30,7 @@ pnpm create plumix-app my-site --plugins blog,og
 
 ## What you get
 
-- **A card per published entry**, at `/_plumix/og/entry/<id>/<digest>.<ext>` — PNG by default, and the extension always names what the renderer produces. It is composited from a bundled default template: the entry's title over your site's name. Drop the digest — `/_plumix/og/entry/<id>.<ext>` — and you land on whichever render is current, which is how you open a card by hand.
+- **A card per page**, at `/_plumix/og/card/<target>/<digest>.<ext>` — PNG by default, and the extension always names what the renderer produces. `<target>` names the page: `entry/12`, `term/3`, `archive/post`, `author/7`, `date/2026-03`, `front-page`. Each is composited from a bundled default template: the page's own title over your site's name. Drop the digest — `/_plumix/og/card/entry/12.png` — and you land on whichever render is current, which is how you open a card by hand.
 - **Share a link and the card is what appears.** The entry's page carries the card as its `og:image`, with `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. An entry that has a picture of its own shares the picture instead, cropped to the card's shape — see [which image a page shares](#which-image-a-page-shares).
 - **Render once, serve cheaply** — a card is rendered on the first request, written to your storage bucket, and read back after that. A matching `If-None-Match` answers `304`.
 - **Cached where your pages are cached.** With a `cache:` slot configured, a card is stored at the edge under the same `e:<id>` tag its entry's pages carry, so the publish that clears the page clears the card with it. The URL carries the card's digest and is served `immutable`: an edit publishes a _different_ URL, which is the only thing that makes X, Facebook and LinkedIn refetch an image they already hold — a purge reaches Cloudflare and stops there.
@@ -176,9 +176,26 @@ card.fallback().define({
 
 A token your theme declared without a `value` — one its own CSS defines — has nothing to resolve, so it appears in neither route. Nor does one your theme's CSS would have rejected: both routes are filtered together, so what a card can style with is what it can read.
 
-### Which page kinds are servable today
+### Which page kinds have a card
 
-Only entries have a card URL — `/_plumix/og/entry/<id>/<digest>.<ext>`. The builders for the other page kinds (`card.frontPage()`, `card.archive()`, `card.taxonomy()`, `card.author()`, `card.date()`, `card.forTermTaxonomy()`, `card.forDate()`, `card.forArchiveType()`) type-check and resolve, but nothing addresses those pages yet, so a rule declared against one is not served. They arrive with the routes that serve them.
+Six, each named by an identity a URL can carry:
+
+| Page                   | Target                | Shareable when                                                     |
+| ---------------------- | --------------------- | ------------------------------------------------------------------ |
+| An entry               | `entry/<id>`          | Published, of a public type, and reachable by an anonymous visitor |
+| A term archive         | `term/<id>`           | Its taxonomy has a public archive, and it lists something          |
+| A content-type archive | `archive/<type>`      | The type has a public archive, and it lists something              |
+| An author archive      | `author/<id>`         | They have published something                                      |
+| A date archive         | `date/YYYY[-MM[-DD]]` | Something was published in it                                      |
+| The front page         | `front-page`          | Always                                                             |
+
+A listing page that lists nothing answers `404`, the same way a draft entry's card does. Its page still renders — an empty term archive is a real page — but a card is minted at an enumerable URL and kept immutable in your bucket, and that rule is what keeps the calendar from being three million of them, and `author/<id>` from being a walk through your user list on a site where nobody has published yet.
+
+A card names the archive, not one paginated slice of it: `/posts/page/2` advertises the same card `/posts` does, and a card rule for a listing always renders from the archive's first page. So `data.entries` in a listing card is page one, whichever page is being viewed.
+
+An archive whose entry type carries an `access` policy is refused on the same terms its listing page is — asked of a scraper carrying no session, whoever happens to be reading — because a theme card that renders `data.entries` would otherwise put gated titles on a public, immutable, edge-cached URL.
+
+`card.search()` and `card.forArchiveType()` rules type-check and resolve, but neither page has a card: a search page's subject is whatever the visitor typed, and a `registerArchiveType` archive is resolved by its own plugin from route parameters no card URL names.
 
 ### Every rule needs a key
 

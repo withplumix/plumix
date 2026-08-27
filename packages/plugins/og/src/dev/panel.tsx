@@ -20,13 +20,16 @@ const OUTCOME_LABEL: Record<OgChainOutcome, string> = {
 // warning of its own.
 const SKIP_REASON: Record<OgCardSkip, string> = {
   "page-kind":
-    "Only entries have a card URL — nothing addresses this page kind",
+    "This page kind cannot be named by a card URL — a search page's subject " +
+    "is whatever was typed, and a plugin archive resolves from route " +
+    "parameters",
   "no-rule": "No card rule matched",
   "renderer-format":
     "The renderer's format is not scraper-safe, so the route serves the card " +
     "but the head cannot advertise it",
   "not-shareable":
-    "The entry is not publicly shareable — draft, private type, or access-gated",
+    "The page is not publicly shareable — a draft, a private or access-gated " +
+    "entry, or an archive that lists nothing",
   "featured-preferred":
     'mode: "auto" — a card steps aside for an entry that has a photo of its own',
 };

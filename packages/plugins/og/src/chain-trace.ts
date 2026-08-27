@@ -16,12 +16,13 @@ export type OgChainOutcome =
 
 /** Why the page carries no generated card. */
 export type OgCardSkip =
-  /** Only entries have a card URL; nothing addresses the other page kinds yet. */
+  /** A search page or a plugin archive: no identity a card URL could name. */
   | "page-kind"
   | "no-rule"
   /** The connected renderer makes a format scrapers do not render. */
   | "renderer-format"
-  /** Draft, private type, or access-gated — the route would refuse it too. */
+  /** Draft, private, access-gated, or an archive listing nothing — the route
+   *  would refuse it too. */
   | "not-shareable"
   /** The entry's own photo won, which is what `mode: "auto"` asks for. */
   | "featured-preferred";

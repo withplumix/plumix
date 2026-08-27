@@ -14,15 +14,19 @@ import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
 The plugin exports a factory named `og`. It adds no database tables, so installing it needs no migration, and it takes three options — `renderer`, `fonts` and `preview` — each with a default.
 
-A **route** at `/_plumix/og/entry/<id>/<digest>.<ext>` renders one entry's card on the first request, writes it to your storage bucket and reads it back on every request after. A **`seo:og_image` subscriber** puts that URL in the page's head, alongside `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. A **theme's `ogCards` array** replaces the bundled template with cards of your own, declared beside its `templates` and styled in its own design tokens.
+A **route** at `/_plumix/og/card/<target>/<digest>.<ext>` renders one page's card on the first request, writes it to your storage bucket and reads it back on every request after. A **`seo:og_image` subscriber** puts that URL in the page's head, alongside `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. A **theme's `ogCards` array** replaces the bundled template with cards of your own, declared beside its `templates` and styled in its own design tokens.
 
 The URL is content-addressed. Its digest covers everything the card read — the entry's `updatedAt`, the card's own source, the font set, the theme's tokens — and the bytes are served `immutable`. It is also the only thing that makes X, Facebook and LinkedIn refetch an image they already hold: a purge reaches Cloudflare and stops there, while an edit publishes a _different_ URL.
 
-<Aside type="note" title="Entries today, other page kinds later">
-  Only entries have a card URL. The builders for the front page, archives,
-  taxonomy, author and date pages type-check and resolve, but nothing addresses
-  those pages yet, so a rule declared against one is not served. They arrive
-  with the routes that serve them.
+`<target>` names the page a card is about — `entry/12`, `term/3`, `archive/post`, `author/7`, `date/2026-03`, `front-page` — and each of those six gets a card from the bundled template with nothing configured. See [which page kinds have a card](#which-page-kinds-have-a-card) for when each one is served.
+
+<Aside type="note" title="Two page kinds have no card">
+  A search page and a `registerArchiveType` archive get none: a search page's
+  subject is whatever the visitor typed, so a card per query would fill your
+  bucket from the query string, and a plugin archive is resolved by its own
+  plugin from route parameters no card URL can name. `card.search()` and
+  `card.forArchiveType()` rules still type-check and resolve — they are simply
+  never addressed.
 </Aside>
 
 ## Quickstart
@@ -104,7 +108,7 @@ Then:
    pnpm dev
    ```
 
-3. **Open a published entry that has no featured image and read its head.** It carries an `og:image` pointing at `/_plumix/og/entry/<id>/<digest>.png`. Open that URL and the card is there — the entry's title over the site's name, 1200x630. An entry that _does_ have a photo shares the photo instead, which is the next section.
+3. **Open a published entry that has no featured image and read its head.** It carries an `og:image` pointing at `/_plumix/og/card/entry/<id>/<digest>.png`. Open that URL and the card is there — the entry's title over the site's name, 1200x630. An entry that _does_ have a photo shares the photo instead, which is the next section.
 
 </Steps>
 
@@ -194,6 +198,30 @@ Two do not, and the answer to both is to name them:
 - An image is resolved during the render, so nothing about it reaches the key. A card painting one should name what identifies it, since a replaced upload lands on a new storage key.
 
 Two more are consequences to know rather than things a key can fix. Two renderers declaring the same content type share keys, so swapping between them serves what the previous one stored. And nothing deletes a card's predecessor: every key change leaves the old object in your bucket, and the URL it was served at redirects to the current card.
+
+## Which page kinds have a card
+
+Six, each named by an identity a URL can carry. Every one of them is served from the bundled template with no theme configuration at all.
+
+| Page                   | Target                | Shareable when                                                             |
+| ---------------------- | --------------------- | -------------------------------------------------------------------------- |
+| An entry               | `entry/<id>`          | Published, of a public type, and reachable by an anonymous visitor         |
+| A term archive         | `term/<id>`           | Its taxonomy has a public archive, and it lists something                  |
+| A content-type archive | `archive/<type>`      | The type's archive is routed and anonymously readable, and lists something |
+| An author archive      | `author/<id>`         | They have published something                                              |
+| A date archive         | `date/YYYY[-MM[-DD]]` | Something was published in it                                              |
+| The front page         | `front-page`          | Always                                                                     |
+
+A listing page that lists nothing answers `404`, the way a draft entry's card does. Its page still renders — an empty term archive is a real page — but a card is minted at an enumerable URL and kept immutable in your bucket, and that rule is what keeps the calendar from being three million of them, and `author/<id>` from being a walk through your user list on a site where nobody has published yet. The front page is the exception: it is the site, so it is shareable whether or not anything is on it.
+
+<Aside type="caution" title="A listing card renders from page one">
+  A card names the archive, not one paginated slice of it — `/posts/page/2`
+  advertises the same card `/posts` does. So `data.entries` in a listing card is
+  always the archive's first page, whichever page is being viewed, and keying a
+  card on `data.pagination.page` names something the route never renders.
+</Aside>
+
+An archive whose entry type carries an `access` policy is refused on the same terms its listing page is, asked of a scraper carrying no session — otherwise a theme card rendering `data.entries` would put gated titles on a public, immutable, edge-cached URL.
 
 ## Building a card
 

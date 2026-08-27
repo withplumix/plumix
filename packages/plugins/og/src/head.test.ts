@@ -45,7 +45,7 @@ const testDelivery = (zone: string | null): ImageDelivery => ({
 // a scraper ever has.
 function cardUrlPattern(id: number): RegExp {
   return new RegExp(
-    `^https://cms\\.example/_plumix/og/entry/${String(id)}/[0-9a-f]+\\.png$`,
+    `^https://cms\\.example/_plumix/og/card/entry/${String(id)}/[0-9a-f]+\\.png$`,
   );
 }
 
@@ -90,7 +90,7 @@ describe("the card in the page head", () => {
     // than the site's generic default. The route still serves it, so a
     // developer with no rasterizer can still look at their cards.
     expect(ogImageOf(html)).toBe(SITE_DEFAULT);
-    expect(html).not.toContain("/_plumix/og/entry/");
+    expect(html).not.toContain("/_plumix/og/card/entry/");
     served.assertStatus(200);
   });
 
@@ -137,7 +137,7 @@ describe("the card in the page head", () => {
     expect(html).toContain(
       `<meta property="og:image" content="${SITE_DEFAULT}"/>`,
     );
-    expect(html).not.toContain("/_plumix/og/entry/");
+    expect(html).not.toContain("/_plumix/og/card/entry/");
   });
 
   test("advertises no card for an entry that gated itself", async () => {
@@ -164,7 +164,7 @@ describe("the card in the page head", () => {
     expect(html).toContain(
       `<meta property="og:image" content="${SITE_DEFAULT}"/>`,
     );
-    expect(html).not.toContain("/_plumix/og/entry/");
+    expect(html).not.toContain("/_plumix/og/card/entry/");
   });
 
   test("advertises a card for an entry behind a soft gate", async () => {
@@ -183,19 +183,19 @@ describe("the card in the page head", () => {
     (await harness.fetch(new URL(url).pathname)).assertStatus(200);
   });
 
-  test("advertises no card on a page the default template does not cover", async () => {
+  test("advertises no card on a page kind no card URL can name", async () => {
     const harness = await createHarness({
       renderer: rasterRenderer(),
       siteDefaultImage: SITE_DEFAULT,
     });
     await seedEntry(harness, { slug: "hello-world" });
 
-    const html = await (await harness.fetch("/posts")).text();
+    const html = await (await harness.fetch("/search/hello")).text();
 
-    // Only entries have a default card; a term or archive page waits on a
-    // theme-declared one.
+    // A search page's subject is whatever the caller typed, so there is no
+    // identity for a card URL to carry — see `CardTarget`.
     expect(ogImageOf(html)).toBe(SITE_DEFAULT);
-    expect(html).not.toContain("/_plumix/og/entry/");
+    expect(html).not.toContain("/_plumix/og/card/");
   });
 });
 
@@ -236,7 +236,7 @@ describe("the og:image precedence chain", () => {
     // The author picked this photo for this entry; a generated card is the
     // answer for an entry that has no picture of its own.
     expect(ogImageOf(html)).toBe(PHOTO);
-    expect(html).not.toContain("/_plumix/og/entry/");
+    expect(html).not.toContain("/_plumix/og/card/entry/");
   });
 
   test("crops the featured photo to the card's size", async () => {
@@ -378,6 +378,6 @@ describe("the og:image precedence chain", () => {
 
     // Neither outranked nor fed through a transform meant for library media.
     expect(ogImageOf(html)).toBe(chosen);
-    expect(html).not.toContain("/_plumix/og/entry/");
+    expect(html).not.toContain("/_plumix/og/card/entry/");
   });
 });

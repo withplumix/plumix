@@ -9,7 +9,7 @@ import type { CardRenderer } from "./renderer.js";
 import { toBase64 } from "./base64.js";
 import { buildCardArgs, renderCardBytes } from "./card-render.js";
 import { chooseCard } from "./head.js";
-import { isReachableEntry } from "./shareable.js";
+import { isPreviewablePage } from "./shareable.js";
 import { siteDefaultImage } from "./site.js";
 
 /**
@@ -70,11 +70,11 @@ export async function previewCard(
     cards,
     featured,
     extension,
-    // The status half of `isShareableEntry` is deliberately dropped — showing
+    // The status half of `isShareablePage` is deliberately dropped — showing
     // a draft's card is the point — and the rest of it deliberately is not: an
     // entry whose page a scraper can never reach gets no card in the head, so
     // naming one here would preview an image the page will not use.
-    shareable: isReachableEntry,
+    shareable: isPreviewablePage,
   });
 
   if (chosen.card !== null) {

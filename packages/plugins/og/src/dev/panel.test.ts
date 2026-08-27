@@ -40,7 +40,9 @@ describe("the og:image debug panel", () => {
     // The card's URL carries its digest, so the panel is asserted against the
     // one the head published rather than against a URL spelled by hand.
     const advertised = ogImageOf(html);
-    expect(advertised).toMatch(/\/_plumix\/og\/entry\/\d+\/[0-9a-f]+\.png$/);
+    expect(advertised).toMatch(
+      /\/_plumix\/og\/card\/entry\/\d+\/[0-9a-f]+\.png$/,
+    );
     expect(html).toContain(String(advertised));
   });
 
@@ -80,7 +82,7 @@ describe("the og:image debug panel", () => {
     );
     const html = await response.text();
 
-    expect(html).toContain("draft, private type, or access-gated");
+    expect(html).toContain("a private or access-gated");
     expect(html).not.toContain("format is not scraper-safe");
   });
 

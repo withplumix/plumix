@@ -10,12 +10,12 @@ for the page and for the card it advertises, rather than two. A card keyed with 
 tagged in an `og:` namespace instead, since only its author knows what it read; nothing purges
 those, and the URL is what invalidates them.
 
-A card URL now carries the card's digest — `/_plumix/og/entry/<id>/<digest>.<ext>` — and is served
+A card URL now carries the card's digest — `/_plumix/og/card/entry/<id>/<digest>.<ext>` — and is served
 `public, max-age=31536000, immutable`. That is the point of the tag purge being belt and braces
 rather than the mechanism: purging reaches Cloudflare and stops there, while the image caches X,
 Facebook and LinkedIn keep hold an `og:image` by URL for weeks, so the only lever on them is
 publishing a URL they do not have. An edit produces one. The digest-less URL still resolves —
-`/_plumix/og/entry/<id>.<ext>` redirects to whichever render is current — which is how you open a
+`/_plumix/og/card/entry/<id>.<ext>` redirects to whichever render is current — which is how you open a
 card by hand, and a URL an edit has superseded redirects there too rather than 404ing on a scraper.
 
 Cards carry no audience-segment axis. The session and locale cookies are scoped to `/_plumix/`, so a

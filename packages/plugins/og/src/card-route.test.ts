@@ -181,8 +181,8 @@ describe("the card route", () => {
   });
 
   test.each([
-    ["an unknown entry", "/_plumix/og/entry/4242.svg"],
-    ["a path that is not an entry id", "/_plumix/og/entry/nope.svg"],
+    ["an unknown entry", "/_plumix/og/card/entry/4242.svg"],
+    ["a path that is not an entry id", "/_plumix/og/card/entry/nope.svg"],
   ])("answers 404 for %s", async (_label, path) => {
     const harness = await createHarness();
 
@@ -412,7 +412,7 @@ describe("a card at the edge", () => {
   });
 
   test("answers from the stored copy without reaching the route", async () => {
-    const path = "https://cms.example/_plumix/og/entry/1/deadbeef.svg";
+    const path = "https://cms.example/_plumix/og/card/entry/1/deadbeef.svg";
     const { cache, match } = edgeStub([path, new Response("EDGE COPY")]);
     const harness = await createHarness({ cache });
 
@@ -423,7 +423,7 @@ describe("a card at the edge", () => {
   });
 
   test("hands a signed-in visitor the one entry everybody reads", async () => {
-    const path = "https://cms.example/_plumix/og/entry/1/deadbeef.svg";
+    const path = "https://cms.example/_plumix/og/card/entry/1/deadbeef.svg";
     const { cache, match } = edgeStub([path, new Response("EDGE COPY")]);
     const harness = await createHarness({ cache });
     const reader = await harness.seedUser("subscriber");
