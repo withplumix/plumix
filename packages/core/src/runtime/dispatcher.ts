@@ -29,6 +29,7 @@ import {
 import { embeddedPageTags } from "../cache/embedded-tags.js";
 import { flushPurgeTags } from "../cache/purge.js";
 import { readThrough, readThroughRoute } from "../cache/read-through.js";
+import { cacheTagsFor } from "../cache/route-tags.js";
 import { pageTags } from "../cache/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
@@ -951,6 +952,9 @@ function dispatchPluginRawRoute(
     defer: ctx.defer,
     telemetry: ctx.telemetry,
     render: () => runPluginRawRoute(route, ctx),
+    // Read after the handler ran: a route resolves the entity it answers for
+    // mid-request, and `tagCacheEntry` is where it names what that was.
+    tags: () => cacheTagsFor(ctx),
   });
 }
 

@@ -76,6 +76,11 @@ export {
   typeTag,
 } from "./cache/tags.js";
 export { enqueuePurgeTags } from "./cache/purge.js";
+// Exposed for a `cacheable: true` plugin route, which is the only party that
+// knows what its own response read. Core tags a page from its resolved intent;
+// a raw route has none, so it names its own tags in the same vocabulary and the
+// publish purge that clears the page clears the route's entry with it.
+export { tagCacheEntry } from "./cache/route-tags.js";
 // Exposed for plugin routes that own an expensive-to-produce payload — a
 // generated social card, a derived image — so each route doesn't restate the
 // storage and ETag round-trips (#1958).
