@@ -183,7 +183,7 @@ export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: {
       sourceLocale: "en",
-      locales: ["en"],
+      locales: ["en", "uk", "ar", "de", "zh-CN"],
       catalogPath: "./locales",
     },
     setup: (ctx) => {

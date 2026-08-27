@@ -51,7 +51,7 @@ const PAGE_LABELS = {
 export const pages = definePlugin("pages", {
   i18n: {
     sourceLocale: "en",
-    locales: ["en", "de"],
+    locales: ["en", "uk", "ar", "de", "zh-CN"],
     catalogPath: "./locales",
   },
   setup: (ctx) => {
