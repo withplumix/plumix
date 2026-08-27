@@ -734,6 +734,25 @@ describe("registerRoute", () => {
     );
   });
 
+  // Load-bearing beyond consistency: the dispatcher's read-through happens
+  // *outside* the per-route auth gate, so a cacheable dev route would serve a
+  // stored answer to an off-loopback request without the gate ever running.
+  test("rejects the edge-cache opt-in on a development route", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("og", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/preview/*",
+        auth: "development",
+        cacheable: true,
+        handler: noop,
+      });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /GET \/preview\/\* is not public/,
+    );
+  });
+
   test("rejects a duplicate (method, path) pair from the same plugin", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("media", (ctx) => {

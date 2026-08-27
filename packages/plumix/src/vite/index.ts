@@ -31,6 +31,7 @@ import {
   HookRegistry,
   injectManifestIntoHtml,
   installPlugins,
+  isTrustedDevHost,
 } from "@plumix/core";
 import {
   DEV_ERROR_CLIENT_ERRORS_ENDPOINT,
@@ -134,6 +135,16 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         // gets a static boolean (no `process` lookup at runtime).
         "process.env.PLUMIX_DEV": JSON.stringify(
           env.command === "build" ? "" : "1",
+        ),
+        // The opt-out from the loopback-only gate on core's dev surfaces —
+        // the debug bar, the request history, the dev error page and every
+        // `auth: "development"` route (#2007). Set it to review on a phone,
+        // demo through a tunnel or work in a codespace; empty in a production
+        // build, where all of those tree-shake out regardless.
+        "process.env.PLUMIX_DEV_ALLOW_REMOTE": JSON.stringify(
+          env.command === "build"
+            ? ""
+            : (process.env.PLUMIX_DEV_ALLOW_REMOTE ?? ""),
         ),
         // The dev-only open-in-editor scheme (#1581). Substituted from the dev
         // machine's env at bundle time so the dev worker — whose `process.env`
@@ -358,7 +369,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
           (req.method === "GET" || req.method === "HEAD") &&
           (rawUrl === DEV_ERROR_SOURCE_ENDPOINT ||
             rawUrl.startsWith(DEV_ERROR_SOURCE_ENDPOINT + "?"));
-        if (!isSourceRequest) {
+        // Widest disclosure the dev server has — any file under the fs
+        // allowlist — so the loopback gate matters here most of all (#2007).
+        if (!isSourceRequest || !isTrustedDevHost(req.headers.host)) {
           next();
           return;
         }
@@ -402,7 +415,11 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         handle: (body: string) => Promise<{ status: number; body?: string }>,
       ): void => {
         server.middlewares.use((req, res, next) => {
-          if (req.method !== "POST" || (req.url ?? "") !== endpoint) {
+          if (
+            req.method !== "POST" ||
+            (req.url ?? "") !== endpoint ||
+            !isTrustedDevHost(req.headers.host)
+          ) {
             next();
             return;
           }
@@ -449,7 +466,8 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       server.middlewares.use((req, res, next) => {
         if (
           req.method !== "GET" ||
-          (req.url ?? "") !== DEV_ERROR_CLIENT_ERRORS_ENDPOINT
+          (req.url ?? "") !== DEV_ERROR_CLIENT_ERRORS_ENDPOINT ||
+          !isTrustedDevHost(req.headers.host)
         ) {
           next();
           return;

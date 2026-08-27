@@ -46,7 +46,8 @@ export function isLoopbackHostname(hostname: string): boolean {
   );
 }
 
-/** True when an Origin header value parses to a loopback host. */
+/** True when a URL string — an Origin header value, a request URL — parses to a
+ *  loopback host. */
 export function isLoopbackOrigin(origin: string): boolean {
   try {
     return isLoopbackHostname(new URL(origin).hostname);

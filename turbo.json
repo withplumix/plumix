@@ -42,6 +42,7 @@
         "WORKERS_CI",
         "WORKERS_CI_BRANCH",
         "PLUMIX_DEV",
+        "PLUMIX_DEV_ALLOW_REMOTE",
         "PLUMIX_EDITOR",
         "PLUMIX_EDITOR_PATH_MAP",
         "PLUMIX_FORWARD_ERRORS"

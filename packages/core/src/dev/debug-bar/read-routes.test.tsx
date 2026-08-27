@@ -4,7 +4,7 @@ import type { AppContext } from "../../context/app.js";
 import type { DebugHistoryEntry } from "./history.js";
 import type { DebugSnapshot } from "./snapshot.js";
 import { HookRegistry } from "../../hooks/registry.js";
-import { createDispatcherHarness } from "../../test/dispatcher.js";
+import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
 import { registerCoreDebugPanels } from "./core-panels.js";
 import { createDebugHistoryStore } from "./history.js";
 import { handleDebugRequests } from "./read-routes.js";
@@ -177,11 +177,11 @@ describe("debug read routes through the dispatcher", () => {
     const h = await createDispatcherHarness();
 
     // Drive a request; the history writer captures it after the response.
-    await h.dispatch(new Request("https://cms.example/no-such-page"));
+    await h.dispatch(new Request(`${DEV_ORIGIN}/no-such-page`));
     await h.drainDeferred();
 
     const listRes = await h.dispatch(
-      new Request(`https://cms.example${DEBUG_REQUESTS_PATH}`),
+      new Request(`${DEV_ORIGIN}${DEBUG_REQUESTS_PATH}`),
     );
     expect(listRes.status).toBe(200);
     const list = (await listRes.json()) as DebugRequestListShape[];
@@ -197,7 +197,7 @@ describe("debug read routes through the dispatcher", () => {
     expect(typeof newest?.timestamp).toBe("number");
 
     const getRes = await h.dispatch(
-      new Request(`https://cms.example${DEBUG_REQUESTS_PATH}/${newest?.id}`),
+      new Request(`${DEV_ORIGIN}${DEBUG_REQUESTS_PATH}/${newest?.id}`),
     );
     expect(getRes.status).toBe(200);
     const snapshot = (await getRes.json()) as DebugSnapshot;
@@ -206,7 +206,7 @@ describe("debug read routes through the dispatcher", () => {
 
     const htmlRes = await h.dispatch(
       new Request(
-        `https://cms.example${DEBUG_REQUESTS_PATH}/${newest?.id}?format=html`,
+        `${DEV_ORIGIN}${DEBUG_REQUESTS_PATH}/${newest?.id}?format=html`,
       ),
     );
     expect(htmlRes.headers.get("content-type")).toContain("text/html");
@@ -221,10 +221,10 @@ describe("debug read routes through the dispatcher", () => {
 
     // Hit the read route, let capture run, then list — the read request
     // itself must never show up as a captured entry.
-    await h.dispatch(new Request(`https://cms.example${DEBUG_REQUESTS_PATH}`));
+    await h.dispatch(new Request(`${DEV_ORIGIN}${DEBUG_REQUESTS_PATH}`));
     await h.drainDeferred();
     const res = await h.dispatch(
-      new Request(`https://cms.example${DEBUG_REQUESTS_PATH}`),
+      new Request(`${DEV_ORIGIN}${DEBUG_REQUESTS_PATH}`),
     );
     const list = (await res.json()) as DebugRequestListShape[];
 
@@ -239,11 +239,11 @@ describe("debug read routes through the dispatcher", () => {
 
     // Drive a request first: with the gate off no consumer samples it, so
     // nothing is captured and the route below is a plain plumix 404.
-    await h.dispatch(new Request("https://cms.example/no-such-page"));
+    await h.dispatch(new Request(`${DEV_ORIGIN}/no-such-page`));
     await h.drainDeferred();
 
     const res = await h.dispatch(
-      new Request(`https://cms.example${DEBUG_REQUESTS_PATH}`),
+      new Request(`${DEV_ORIGIN}${DEBUG_REQUESTS_PATH}`),
     );
     expect(res.status).toBe(404);
   });

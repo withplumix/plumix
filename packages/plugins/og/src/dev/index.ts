@@ -32,7 +32,11 @@ export function registerDevSurfaces(
   ctx.registerRoute({
     method: "GET",
     path: PREVIEW_ROUTE_PATH,
-    auth: "public",
+    // Wider than the card route beside it: this runs the theme's own `render`
+    // and resolves whatever template deps the card declared, against a request
+    // carrying no session. `"development"` is core's gate for that (#2007) —
+    // the dev server's environment variable *and* a loopback request.
+    auth: "development",
     handler: createPreviewRoute({
       renderer,
       rules: () => cards.list(),

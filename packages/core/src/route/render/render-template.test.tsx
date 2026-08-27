@@ -10,7 +10,7 @@ import type { ResolvedEntry } from "./resolved-entry.js";
 import { entries as entriesTable } from "../../db/schema/entries.js";
 import { definePlugin } from "../../plugin/define.js";
 import { defineTemplate } from "../../template.js";
-import { createDispatcherHarness } from "../../test/dispatcher.js";
+import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
 import { defineTheme } from "../../theme.js";
 import {
   archive,
@@ -2325,7 +2325,7 @@ describe("resolvePublicRoute — block loader dev-fatal escalation (#1600)", () 
     await seedLoaderPost(h, "acme/throwing-loader");
 
     const response = await h.dispatch(
-      new Request("https://cms.example/post/with-loader"),
+      new Request(`${DEV_ORIGIN}/post/with-loader`),
     );
 
     expect(response.status).toBe(500);
@@ -2348,7 +2348,7 @@ describe("resolvePublicRoute — block loader dev-fatal escalation (#1600)", () 
     await seedLoaderPost(h, "acme/throwing-loader");
 
     const response = await h.dispatch(
-      new Request("https://cms.example/post/with-loader"),
+      new Request(`${DEV_ORIGIN}/post/with-loader`),
     );
 
     // Per-block isolation: the page renders, the block degrades to `{}`.
@@ -2368,7 +2368,7 @@ describe("resolvePublicRoute — block loader dev-fatal escalation (#1600)", () 
     await seedLoaderPost(h, "acme/failing-query");
 
     const response = await h.dispatch(
-      new Request("https://cms.example/post/with-loader"),
+      new Request(`${DEV_ORIGIN}/post/with-loader`),
     );
 
     expect(response.status).toBe(500);

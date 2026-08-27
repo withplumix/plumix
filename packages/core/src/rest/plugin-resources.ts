@@ -1,8 +1,8 @@
 import * as v from "valibot";
 
 import type {
-  PluginRouteAuth,
   RegisteredRestResource,
+  RestResourceAuth,
 } from "../plugin/manifest.js";
 import type { RestContext } from "./base.js";
 import type { RestErrors } from "./errors.js";
@@ -12,7 +12,7 @@ import { base } from "./base.js";
 // `public` is open; `authenticated` requires a real bearer principal (not the
 // anonymous public one); a capability gate defers to the principal's grants.
 function enforceRestAuth(
-  auth: PluginRouteAuth,
+  auth: RestResourceAuth,
   context: RestContext,
   errors: RestErrors,
 ): void {

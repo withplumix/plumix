@@ -4,7 +4,10 @@ import type { DevErrorPanel } from "../../../index.js";
 import { DevErrorFacts, DevErrorSubhead } from "../../../index.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { fallback } from "../../../route/render/template-builders.js";
-import { createDispatcherHarness } from "../../../test/dispatcher.js";
+import {
+  createDispatcherHarness,
+  DEV_ORIGIN,
+} from "../../../test/dispatcher.js";
 import { defineTheme } from "../../../theme.js";
 
 // A plugin panel author's happy path on the dev error page: contribute a panel
@@ -56,7 +59,7 @@ describe("dev error page plugin panel", () => {
       theme: boomTheme,
     });
 
-    const res = await h.dispatch(new Request("https://cms.example/"));
+    const res = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
     const html = await res.text();
 
     expect(res.status).toBe(500);
@@ -74,7 +77,7 @@ describe("dev error page plugin panel", () => {
     process.env.PLUMIX_DEV = "1";
     const h = await createDispatcherHarness({ theme: boomTheme });
 
-    const res = await h.dispatch(new Request("https://cms.example/"));
+    const res = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
     const html = await res.text();
 
     expect(res.status).toBe(500);

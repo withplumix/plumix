@@ -285,7 +285,10 @@ The engine reads **TTF, OTF and WOFF — not WOFF2**, which is what most font pa
 
 Two surfaces exist only in development. Both are behind the same gate core uses
 for its own dev routes (`PLUMIX_DEV`) and a dynamic import, so neither leaves
-anything in a production build.
+anything in a production build, and both answer only over loopback: the preview
+route is registered `auth: "development"` and the panel rides the debug bar,
+which core injects on the same terms. Reviewing on a phone or through a tunnel
+means starting the dev server with `PLUMIX_DEV_ALLOW_REMOTE=1`.
 
 **`/_plumix/og/preview`** renders every declared rule against sample data, with
 one card per rule at `/_plumix/og/preview/<n>.<ext>`. They are listed in the

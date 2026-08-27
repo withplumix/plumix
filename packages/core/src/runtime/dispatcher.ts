@@ -37,6 +37,7 @@ import { collectDevErrorContext } from "../dev/server/context.js";
 import { collectDevErrorHints } from "../dev/server/hints/collect.js";
 import { collectDevErrorPanels } from "../dev/server/panels/collect.js";
 import { devErrorJson, renderDevErrorPage } from "../dev/server/render.js";
+import { isTrustedDevRequest } from "../dev/trust.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { exposesHierarchicalUrls } from "../route/compile.js";
 import { extractParams, matchRoute } from "../route/match.js";
@@ -326,6 +327,7 @@ async function tryPlumixRoutes(
   // in a build; see DEBUG_REQUESTS_PREFIX for the tree-shaking rationale).
   if (
     process.env.PLUMIX_DEV &&
+    isTrustedDevRequest(ctx.request) &&
     (pathname === DEBUG_REQUESTS_PREFIX ||
       pathname.startsWith(`${DEBUG_REQUESTS_PREFIX}/`))
   ) {
@@ -400,7 +402,7 @@ async function tryPlumixRoutes(
   }
 
   if (pathname.startsWith(PLUMIX_PREFIX)) {
-    return notFound("unknown-plumix-route");
+    return notFound(UNKNOWN_PLUMIX_ROUTE);
   }
 
   return null;
@@ -783,8 +785,16 @@ async function renderPublicError(
   });
   const devResponse = devFailureResponse(ctx, err, acceptsHtml(ctx.request));
   if (devResponse) return devResponse;
-  // Production only — every dev answer is above (#1582).
-  if (!process.env.PLUMIX_DEV && acceptsHtml(ctx.request)) {
+  // Every *trusted* dev answer is above (#1582); this is what production and an
+  // untrusted dev request both get. Withholding the dev page off-loopback
+  // withholds the stack, not the page — a reviewer on a phone still sees the
+  // theme's own error template rather than a bare string (#2007). The literal
+  // short-circuits to true in a production build, so the branch survives DCE
+  // there exactly as it did.
+  if (
+    (!process.env.PLUMIX_DEV || !isTrustedDevRequest(ctx.request)) &&
+    acceptsHtml(ctx.request)
+  ) {
     try {
       const html = await renderErrorThroughTheme({
         ctx,
@@ -826,7 +836,7 @@ function devFailureResponse(
   err: unknown,
   wantsHtml: boolean,
 ): Response | null {
-  if (process.env.PLUMIX_DEV) {
+  if (process.env.PLUMIX_DEV && isTrustedDevRequest(ctx.request)) {
     if (!wantsHtml) {
       return jsonResponse(
         devErrorJson(err, collectDevErrorHints(ctx.hooks, err, ctx)),
@@ -906,6 +916,10 @@ async function resolvePublicRouteOrFallback(
   return notFound("public-route-not-found");
 }
 
+// What an unrecognised `/_plumix/` path answers with, shared so a dev-only
+// route's off-loopback 404 is byte-identical to a path that never existed.
+const UNKNOWN_PLUMIX_ROUTE = "unknown-plumix-route";
+
 interface PluginRawRouteMatch {
   readonly route: RegisteredRawRoute;
 }
@@ -966,6 +980,15 @@ async function runPluginRawRoute(
   const gate = route.auth;
   if (gate === "public") {
     return route.handler(ctx.request, ctx);
+  }
+
+  // A dev-only route is not "unauthorized" off-loopback, it is absent — so this
+  // answers with the same 404, hint included, that an unmatched `/_plumix/` path
+  // gets. A distinguishable one would disclose what a 401 would.
+  if (gate === "development") {
+    return isTrustedDevRequest(ctx.request)
+      ? route.handler(ctx.request, ctx)
+      : notFound(UNKNOWN_PLUMIX_ROUTE);
   }
 
   // Same authenticator the RPC layer uses — session cookie by default,

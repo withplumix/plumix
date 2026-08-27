@@ -649,8 +649,17 @@ export interface RegisteredFieldType extends FieldTypeOptions {
 export type PluginRouteMethod =
   "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "*";
 
+/**
+ * How the dispatcher gates a registered route before its handler runs.
+ * `"development"` is the dev-surface gate (#2007): the route exists only while
+ * `plumix dev` is running *and* the request arrived over loopback, and it 404s
+ * otherwise — the route's existence being itself dev-only detail. Take it for
+ * anything that renders authoring-time internals; `"public"` on such a route
+ * leaves the environment variable as the only boundary, which a tunnel, a
+ * container on `0.0.0.0` or a forwarded codespace port all walk straight past.
+ */
 export type PluginRouteAuth =
-  "public" | "authenticated" | { readonly capability: string };
+  "public" | "authenticated" | "development" | { readonly capability: string };
 
 export interface RegisteredRawRoute {
   readonly pluginId: string;
@@ -671,6 +680,13 @@ export interface RegisteredRawRoute {
 export type RestResourceMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /**
+ * `registerRestResource`'s gate. The same model as a raw route minus
+ * `"development"`: a REST resource is part of the documented public API and
+ * appears in `openapi.json`, so a dev-only one has nowhere to be published.
+ */
+export type RestResourceAuth = Exclude<PluginRouteAuth, "development">;
+
+/**
  * A REST resource a plugin contributes into the shared `/_plumix/api/v1/`
  * namespace. `path` is relative to that prefix (e.g. `/{type}/{id}/comments`)
  * and uses `{param}` segments. `auth` reuses the declarative route model; core
@@ -680,7 +696,7 @@ export type RestResourceMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export interface RestResourceOptions {
   readonly method?: RestResourceMethod;
   readonly path: string;
-  readonly auth: PluginRouteAuth;
+  readonly auth: RestResourceAuth;
   /* eslint-disable @typescript-eslint/no-explicit-any -- one registry slot holds every plugin's heterogeneous valibot schemas */
   readonly input?: any;
   readonly output: any;

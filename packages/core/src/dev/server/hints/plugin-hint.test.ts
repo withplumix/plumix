@@ -3,7 +3,10 @@ import { afterEach, describe, expect, test } from "vitest";
 import type { DevErrorHint } from "../../../index.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { fallback } from "../../../route/render/template-builders.js";
-import { createDispatcherHarness } from "../../../test/dispatcher.js";
+import {
+  createDispatcherHarness,
+  DEV_ORIGIN,
+} from "../../../test/dispatcher.js";
 import { defineTheme } from "../../../theme.js";
 
 // A hint author's happy path: recognize the caught error and prepend a hint
@@ -48,7 +51,7 @@ describe("dev error page plugin hint", () => {
       theme: boomTheme,
     });
 
-    const res = await h.dispatch(new Request("https://cms.example/"));
+    const res = await h.dispatch(new Request(`${DEV_ORIGIN}/`));
     const html = await res.text();
 
     expect(res.status).toBe(500);

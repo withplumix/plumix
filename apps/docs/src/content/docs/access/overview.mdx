@@ -79,6 +79,8 @@ The `auth` slot is not optional. A config without one does not type-check, and `
 
    The route serves at `/_plumix/recipes/whoami`. Signed out it answers 401 and your handler never runs; `auth: { capability: "entry:recipe:publish" }` instead of `"authenticated"` turns the shortfall into a 403.
 
+   A fourth gate, `auth: "development"`, is not about a principal at all: the route exists only while `plumix dev` is running and only for requests that reached it over loopback, and answers 404 otherwise. [The Dev Server](/going-further/dev-server/) covers what belongs behind it.
+
 </Steps>
 
 ## Sessions

@@ -33,6 +33,8 @@ import { cardTargetPath } from "../card-target.js";
 import { og } from "../index.js";
 import { createFakeRenderer } from "./fake-renderer.js";
 
+export { DEV_ORIGIN } from "plumix/test";
+
 /** The role-tagged fields {@link seedEntry} writes through. */
 const FEATURED_KEY = "hero";
 const OG_IMAGE_KEY = "shareImage";

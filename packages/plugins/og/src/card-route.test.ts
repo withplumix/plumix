@@ -11,6 +11,7 @@ import { createFakeRenderer } from "./test/fake-renderer.js";
 import {
   cardPath,
   createHarness,
+  DEV_ORIGIN,
   fetchCard,
   seedEntry,
 } from "./test/harness.js";
@@ -302,9 +303,12 @@ describe("the card route", () => {
       const id = await seedEntry(harness);
 
       // What a developer opening the card URL in a browser sends.
-      const response = await fetchCard(harness, id, {
-        headers: { accept: "text/html" },
-      });
+      // The dev error page is loopback-only, which is where a developer
+      // opening the card URL is (#2007).
+      const response = await harness.fetch(
+        `${DEV_ORIGIN}${await cardPath(harness, id)}`,
+        { headers: { accept: "text/html" } },
+      );
 
       // A developer is the one looking at a card during development, and the
       // site default would hide the broken one behind something that works.
