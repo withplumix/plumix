@@ -6,6 +6,7 @@ export default definePlumixE2EConfig({
   // turbo. Convention: HTTP 30N0 ↔ inspector 93N0 (3010↔9310,
   // 3020↔9320, …). `@cloudflare/vite-plugin` otherwise auto-allocates
   // inspector ports from 9229 upward and collides under parallelism.
+  // `@plumix/e2e-ports` fails the unit suite if two configs claim one port.
   port: 3010,
   inspectorPort: 9310,
   playground: "../playground",
