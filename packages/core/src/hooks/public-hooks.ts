@@ -7,8 +7,10 @@
 // barrel — and tsc strips modules reached only through value or `import type`
 // edges, so their augmentations never load downstream. A side-effect import is
 // the edge tsc preserves (same idiom as `./template-deps-core.js`). Add a line
-// here when a new hook joins the public plugin API; `test-types/` fails otherwise.
+// here when a new hook joins the public plugin API; the docs roster's
+// `FILTER_HOOKS`/`ACTION_HOOKS` binding fails otherwise.
 import "../admin-bar/types.js"; // admin_bar:nodes
+import "../dev/debug-bar/types.js"; // debug_bar:panels
 import "../route/render/render-template.js"; // render:document
 import "../route/resolve.js"; // resolve:{single,archive,term,author,date,front-page,search}:data
 import "../seo/feed.js"; // seo:feed:items

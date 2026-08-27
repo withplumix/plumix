@@ -1741,6 +1741,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
+      '@types/react':
+        specifier: catalog:react
+        version: 19.2.18
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 4.1.11(vitest@4.1.11)
@@ -1756,6 +1759,9 @@ importers:
       publint:
         specifier: 'catalog:'
         version: 0.3.24
+      react:
+        specifier: catalog:react
+        version: 19.2.8
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

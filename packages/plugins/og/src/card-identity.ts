@@ -1,13 +1,13 @@
 import type { TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
-import { loadTemplateDeps } from "plumix";
 
 import type { CardKey } from "./card-key.js";
 import type { CardArgs, CardDefinition } from "./card.js";
 import type { ThemeTokenSet } from "./tokens.js";
+import { buildCardArgs } from "./card-render.js";
 import { cardSourceHash } from "./card-source.js";
+import { cardSize } from "./card.js";
 import { shortDigest } from "./digest.js";
-import { CARD_HEIGHT, CARD_WIDTH } from "./renderer.js";
 
 /**
  * What a card resolves to before anything renders: the arguments it is
@@ -54,24 +54,11 @@ export async function resolveCardIdentity(
   inputs: CardInputs,
   extension: string,
 ): Promise<CardIdentity> {
-  const cardCtx = pinLocale(ctx);
-  const args: CardArgs<TemplateData> = {
-    // Spread first, so a dep kind named `data`, `ctx` or `tokens` cannot
-    // displace the framework-owned set — the same ordering the template
-    // renderer uses.
-    ...(await loadTemplateDeps(
-      { ...card },
-      cardCtx.plugins.templateDeps,
-      cardCtx,
-    )),
-    data,
-    ctx: cardCtx,
-    tokens: inputs.tokens.values,
-  };
-  // Read once: the size the digest describes has to be the size that is
-  // rendered, or the stored bytes are not what the URL says they are.
-  const width = card.width ?? CARD_WIDTH;
-  const height = card.height ?? CARD_HEIGHT;
+  const args = await buildCardArgs(card, data, pinLocale(ctx), inputs.tokens);
+  // Read through the same call the render makes: the size the digest describes
+  // has to be the size that is rendered, or the stored bytes are not what the
+  // URL says they are.
+  const { width, height } = cardSize(card);
   const key = card.key(args);
 
   return {

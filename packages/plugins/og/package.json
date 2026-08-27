@@ -56,7 +56,8 @@
     "@takumi-rs/wasm": "^2.12.0"
   },
   "peerDependencies": {
-    "plumix": "workspace:>=0.1.0 <1.0.0"
+    "plumix": "workspace:>=0.1.0 <1.0.0",
+    "react": "catalog:react"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
@@ -65,11 +66,13 @@
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
     "@types/node": "catalog:",
+    "@types/react": "catalog:react",
     "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
     "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",
+    "react": "catalog:react",
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
   },
