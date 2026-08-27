@@ -3,22 +3,30 @@ import type {
   ArchiveDataOf,
   ArchiveTypeName,
   AuthorArchiveData,
+  AuthorTargets,
   DateArchiveData,
+  DateTargets,
   EntryData,
   EntryTypeName,
+  EntryTypeTargets,
   FrontPageData,
   ResolvedEntryFor,
   ResolvedTermFor,
   SearchData,
-  StoredMetaOf,
-  StoredTermMetaOf,
-  TargetMatcher,
   TaxonomyData,
   TemplateData,
   TemplateDepRegistry,
   TemplateRenderArgs,
   TermTaxonomyName,
+  TermTaxonomyTargets,
   TierMatchRule,
+} from "plumix";
+import {
+  archiveTypeTargets,
+  authorTargets,
+  dateTargets,
+  entryTypeTargets,
+  termTaxonomyTargets,
 } from "plumix";
 
 import type { CardKey } from "./card-key.js";
@@ -78,9 +86,7 @@ export interface CardSelector<TData extends TemplateData> {
 }
 
 // The per-tier data type is erased on the way into the rule, the way the
-// template builders erase theirs: the resolver only ever hands a rule the data
-// of the node whose tier it was built for, so `TData` is restored before either
-// callback is called, and `ogCards` stays a homogeneous array.
+// template builders erase theirs, so `ogCards` stays a homogeneous array.
 function selector<TData extends TemplateData>(
   where: TierMatchRule,
 ): CardSelector<TData> {
@@ -93,148 +99,61 @@ function selector<TData extends TemplateData>(
   };
 }
 
-interface CardEntryTypeBuilder<K extends EntryTypeName> extends CardSelector<
+// The narrowings below come from core's shared selection vocabulary — the same
+// one the template builders compose — so a matcher core adds or fixes reaches
+// cards without being mirrored here. `named` is not among them: it is half a
+// contract with the editor's template picker, and there is no card picker.
+
+type CardEntrySelector<K extends EntryTypeName> = CardSelector<
   EntryData<ResolvedEntryFor<K>>
-> {
-  /** Narrow to one entry by slug. */
-  slug(slug: string): CardSelector<EntryData<ResolvedEntryFor<K>>>;
-  /** Narrow to one entry by numeric id. */
-  id(id: number): CardSelector<EntryData<ResolvedEntryFor<K>>>;
-  /** Narrow by an entry-meta value, typed against the type's stored meta shape. */
-  whereMeta<M extends keyof StoredMetaOf<K>>(
-    key: M,
-    value: StoredMetaOf<K>[M],
-  ): CardSelector<EntryData<ResolvedEntryFor<K>>>;
-  /** Narrow by an arbitrary predicate over the resolved data. */
-  where(
-    predicate: (data: EntryData<ResolvedEntryFor<K>>) => boolean,
-  ): CardSelector<EntryData<ResolvedEntryFor<K>>>;
-  /** The type's archive listing. */
-  readonly archive: CardSelector<ArchiveData<ResolvedEntryFor<K>>>;
-}
+>;
 
-interface CardTermTaxonomyBuilder<
-  K extends TermTaxonomyName,
-> extends CardSelector<TaxonomyData<ResolvedTermFor<K>>> {
-  /** Narrow to one term by slug. */
-  slug(slug: string): CardSelector<TaxonomyData<ResolvedTermFor<K>>>;
-  /** Narrow to one term by numeric id. */
-  id(id: number): CardSelector<TaxonomyData<ResolvedTermFor<K>>>;
-  /** Narrow by a term-meta value, typed against the taxonomy's stored meta shape. */
-  whereMeta<M extends keyof StoredTermMetaOf<K>>(
-    key: M,
-    value: StoredTermMetaOf<K>[M],
-  ): CardSelector<TaxonomyData<ResolvedTermFor<K>>>;
-  /** Narrow by an arbitrary predicate over the resolved taxonomy data. */
-  where(
-    predicate: (data: TaxonomyData<ResolvedTermFor<K>>) => boolean,
-  ): CardSelector<TaxonomyData<ResolvedTermFor<K>>>;
-}
+type CardEntryArchiveSelector<K extends EntryTypeName> = CardSelector<
+  ArchiveData<ResolvedEntryFor<K>>
+>;
 
-interface CardAuthorBuilder extends CardSelector<AuthorArchiveData> {
-  /** Narrow to one author by slug. */
-  slug(slug: string): CardSelector<AuthorArchiveData>;
-  /** Narrow to one author by numeric id. */
-  id(id: number): CardSelector<AuthorArchiveData>;
-}
+type CardTaxonomySelector<K extends TermTaxonomyName> = CardSelector<
+  TaxonomyData<ResolvedTermFor<K>>
+>;
 
-function metaEquals(
-  key: string,
-  value: unknown,
-): (data: TemplateData) => boolean {
-  return (data) => "entry" in data && data.entry.meta[key] === value;
-}
-
-function termMetaEquals(
-  key: string,
-  value: unknown,
-): (data: TemplateData) => boolean {
-  return (data) => "term" in data && data.term.meta[key] === value;
-}
+interface CardEntryTypeBuilder<K extends EntryTypeName>
+  extends
+    CardEntrySelector<K>,
+    EntryTypeTargets<K, CardEntrySelector<K>, CardEntryArchiveSelector<K>> {}
 
 function forEntryType<K extends EntryTypeName>(
   name: K,
 ): CardEntryTypeBuilder<K> {
-  const content = (
-    extra?: Partial<TargetMatcher>,
-  ): CardSelector<EntryData<ResolvedEntryFor<K>>> =>
-    selector({ match: { nodeKind: "content", type: name, ...extra } });
-  return {
-    ...content(),
-    slug: (slug) => content({ slug }),
-    id: (id) => content({ id }),
-    whereMeta: (key, value) =>
-      content({ predicate: metaEquals(String(key), value) }),
-    where: (predicate) =>
-      content({
-        // Safety: the surrounding matcher pins `nodeKind` and `type`, so the
-        // resolver only calls this predicate with the entry data it was
-        // written against.
-        predicate: predicate as unknown as (d: TemplateData) => boolean,
-      }),
-    archive: selector({
-      match: { nodeKind: "content-type-archive", type: name },
-    }),
-  };
+  return entryTypeTargets(
+    name,
+    selector<EntryData<ResolvedEntryFor<K>>>,
+    selector<ArchiveData<ResolvedEntryFor<K>>>,
+  );
 }
+
+interface CardTermTaxonomyBuilder<K extends TermTaxonomyName>
+  extends
+    CardTaxonomySelector<K>,
+    TermTaxonomyTargets<K, CardTaxonomySelector<K>> {}
 
 function forTermTaxonomy<K extends TermTaxonomyName>(
   name: K,
 ): CardTermTaxonomyBuilder<K> {
-  const term = (
-    extra?: Partial<TargetMatcher>,
-  ): CardSelector<TaxonomyData<ResolvedTermFor<K>>> =>
-    selector({ match: { nodeKind: "term", type: name, ...extra } });
-  return {
-    ...term(),
-    slug: (slug) => term({ slug }),
-    id: (id) => term({ id }),
-    whereMeta: (key, value) =>
-      term({ predicate: termMetaEquals(String(key), value) }),
-    where: (predicate) =>
-      term({
-        // Safety: the surrounding matcher pins `nodeKind` and `type`, so the
-        // resolver only calls this predicate with the term data it was written
-        // against.
-        predicate: predicate as unknown as (d: TemplateData) => boolean,
-      }),
-  };
+  return termTaxonomyTargets(name, selector<TaxonomyData<ResolvedTermFor<K>>>);
 }
+
+interface CardAuthorBuilder
+  extends
+    CardSelector<AuthorArchiveData>,
+    AuthorTargets<CardSelector<AuthorArchiveData>> {}
 
 function forAuthor(): CardAuthorBuilder {
-  const authorNode = (
-    extra?: Partial<TargetMatcher>,
-  ): CardSelector<AuthorArchiveData> =>
-    selector({ match: { nodeKind: "author", type: "author", ...extra } });
-  return {
-    ...authorNode(),
-    slug: (slug) => authorNode({ slug }),
-    id: (id) => authorNode({ id }),
-  };
+  return authorTargets(selector<AuthorArchiveData>);
 }
 
-function forDate(year: number): CardSelector<DateArchiveData>;
-function forDate(year: number, month: number): CardSelector<DateArchiveData>;
-function forDate(
-  year: number,
-  month: number,
-  day: number,
-): CardSelector<DateArchiveData>;
-function forDate(
-  year: number,
-  month?: number,
-  day?: number,
-): CardSelector<DateArchiveData> {
-  return selector({
-    match: {
-      nodeKind: "date",
-      type: "date",
-      year,
-      ...(month !== undefined ? { month } : {}),
-      ...(day !== undefined ? { day } : {}),
-    },
-  });
-}
+const forDate: DateTargets<CardSelector<DateArchiveData>> = dateTargets(
+  selector<DateArchiveData>,
+);
 
 /**
  * Builders for a theme's `ogCards`, mirroring the template builders one for
@@ -284,5 +203,5 @@ export const card = {
   forArchiveType: <K extends ArchiveTypeName>(
     name: K,
   ): CardSelector<ArchiveDataOf<K>> =>
-    selector({ match: { nodeKind: "custom", type: name } }),
+    archiveTypeTargets(name, selector<ArchiveDataOf<K>>),
 };

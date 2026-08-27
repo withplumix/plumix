@@ -106,6 +106,24 @@ export {
   templateRules,
 } from "./route/render/template-builders.js";
 export type { NamedTemplateChoice } from "./route/render/template-builders.js";
+// The selection half of the hierarchy, public for the same reason `TierMatchRule`
+// and `TargetMatcher` are: a plugin declaring its own rule kind against the node
+// hierarchy (the OG plugin's `ogCards`) builds its selectors out of these rather
+// than restating core's matchers.
+export {
+  archiveTypeTargets,
+  authorTargets,
+  dateTargets,
+  entryTypeTargets,
+  termTaxonomyTargets,
+} from "./route/render/rule-selectors.js";
+export type {
+  AuthorTargets,
+  BindRule,
+  DateTargets,
+  EntryTypeTargets,
+  TermTaxonomyTargets,
+} from "./route/render/rule-selectors.js";
 export type {
   ArchiveDataOf,
   ArchiveTypeName,
