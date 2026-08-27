@@ -119,7 +119,7 @@ The same subpath carries `<Link>` and `<Image>`. `<Link>` takes a resolved entry
 
 Every rule in the `templates` array comes from a builder, and [Templates](/themes/templates/) enumerates all sixteen of them with an example each. [Template Hierarchy](/themes/hierarchy/) is how one of those rules gets picked for a given request, and [Template Data](/themes/template-data/) is the union your render function destructures.
 
-The entry types and taxonomies your templates target are declared in a plugin, not in the theme, and [Content Modelling](/content-modelling/overview/) covers how. [Blocks](/blocks/overview/) covers the blocks a theme's pages are built from. The `theme` slot sits beside every other slot in [Configuration](/getting-started/configuration/).
+[Custom Rule Kinds](/themes/rule-kinds/) is for the other direction: a plugin adding a slot of its own beside `templates`, resolved by the same walk. The entry types and taxonomies your templates target are declared in a plugin, not in the theme, and [Content Modelling](/content-modelling/overview/) covers how. [Blocks](/blocks/overview/) covers the blocks a theme's pages are built from. The `theme` slot sits beside every other slot in [Configuration](/getting-started/configuration/).
 
 ## Next steps
 

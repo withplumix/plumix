@@ -15,9 +15,12 @@
  * Nothing here knows what a rule carries or who reads it. A narrowing that is
  * one half of a contract with another surface — `named`, which the editor's
  * template picker writes and `collectNamedTemplates` reads back — belongs to
- * the rule kind that holds up the other half, not to this layer. The `*Match`
- * constructors are exported for exactly that: a rule kind building a narrowing
- * of its own still mints the node prefix from one place.
+ * the rule kind that holds up the other half, not to this layer.
+ *
+ * The `*Match` constructors are module-exported so `template-builders.ts`
+ * mints the node prefix from one place while building `named`. They are *not*
+ * on the `plumix` façade, so a third-party rule kind cannot yet build a
+ * narrowing of its own the same way — see #2033.
  */
 
 import type {

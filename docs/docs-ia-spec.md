@@ -13,14 +13,19 @@ sixteen tickets, assembled into one artifact that writing sessions execute again
 
 ## 1. The shape
 
-**15 sections · 105 pages · two levels throughout.** Section → page, never deeper.
+**15 sections · 106 pages · two levels throughout.** Section → page, never deeper.
 
 The first release ships the **30 P0 pages**, written to the full page template. Everything else is
 absent from the navigation and named in prose in its section's `Overview`.
 
+Tier orders the writing; it does not gate shipping. A page written ahead of its tier goes into the
+navigation with the rest rather than being held back — `plugins/og` (P1) and `themes/rule-kinds` (P2)
+are the first two, each written because an issue needed the surface documented rather than because
+the tier came up. What stays absent is what is unwritten.
+
 Flatness is not an independent rule — it falls out of the roster policy. Sites that put each roster
 item on its own page run 240–450 pages and three or four levels; folding rosters into indexed pages
-is what keeps 105 pages flat. Section size is the lever, and the largest section here is 14.
+is what keeps 106 pages flat. Section size is the lever, and the largest section here is 14.
 
 ---
 
@@ -36,7 +41,7 @@ landing page, because a Starlight group label cannot itself be a link.
 | 3   | Fields              | 8       | 4      |
 | 4   | Blocks              | 9       | 2      |
 | 5   | Islands             | 4       | 0      |
-| 6   | Themes              | 8       | 4      |
+| 6   | Themes              | 9       | 4      |
 | 7   | Routing             | 6       | 2      |
 | 8   | Access & Identity   | 9       | 2      |
 | 9   | APIs                | 7       | 0      |
@@ -46,7 +51,7 @@ landing page, because a Starlight group label cannot itself be a link.
 | 13  | Deployment          | 6       | 4      |
 | 14  | Plugins             | 14      | 3      |
 | 15  | Releases & Upgrades | 2       | 0      |
-|     | **Total**           | **105** | **30** |
+|     | **Total**           | **106** | **30** |
 
 ---
 
@@ -117,16 +122,17 @@ subsystem summary. This is the one naming exception in the tree.
 
 ### 6. Themes
 
-| Slug                   | Title                  | T   | Purpose                                                                  | Covers                       |
-| ---------------------- | ---------------------- | --- | ------------------------------------------------------------------------ | ---------------------------- |
-| `themes/overview`      | Overview               | P0  | What a theme is; the fallback `welcomeTheme` when none is registered.    | `defineTheme`, welcome theme |
-| `themes/templates`     | Templates              | P0  | **Roster page.** `defineTemplate` and the builders.                      | 16 template builders         |
-| `themes/hierarchy`     | Template Hierarchy     | P0  | How a request resolves to a template; generic tiers and target matchers. | resolution, tiers, matchers  |
-| `themes/template-data` | Template Data          | P0  | **Roster page.** Every data shape with its guard.                        | 9 shapes, 9 guards           |
-| `themes/document`      | Document Manifest      | P1  | Contributing to `<head>`.                                                | `DocumentManifest` and kin   |
-| `themes/tokens`        | Tokens and Breakpoints | P1  | Theme tokens and breakpoints.                                            | tokens, breakpoints          |
-| `themes/primitives`    | Component Primitives   | P1  | `Link`, `Image`, `SignedIn`/`SignedOut`, `useAuth`, `PlumixProvider`.    | renderer primitives          |
-| `themes/template-deps` | Template Dependencies  | P2  | Declaring what a template needs loaded.                                  | `TemplateDepRegistry`        |
+| Slug                   | Title                  | T   | Purpose                                                                        | Covers                       |
+| ---------------------- | ---------------------- | --- | ------------------------------------------------------------------------------ | ---------------------------- |
+| `themes/overview`      | Overview               | P0  | What a theme is; the fallback `welcomeTheme` when none is registered.          | `defineTheme`, welcome theme |
+| `themes/templates`     | Templates              | P0  | **Roster page.** `defineTemplate` and the builders.                            | 16 template builders         |
+| `themes/hierarchy`     | Template Hierarchy     | P0  | How a request resolves to a template; generic tiers and target matchers.       | resolution, tiers, matchers  |
+| `themes/template-data` | Template Data          | P0  | **Roster page.** Every data shape with its guard.                              | 9 shapes, 9 guards           |
+| `themes/document`      | Document Manifest      | P1  | Contributing to `<head>`.                                                      | `DocumentManifest` and kin   |
+| `themes/tokens`        | Tokens and Breakpoints | P1  | Theme tokens and breakpoints.                                                  | tokens, breakpoints          |
+| `themes/primitives`    | Component Primitives   | P1  | `Link`, `Image`, `SignedIn`/`SignedOut`, `useAuth`, `PlumixProvider`.          | renderer primitives          |
+| `themes/template-deps` | Template Dependencies  | P2  | Declaring what a template needs loaded.                                        | `TemplateDepRegistry`        |
+| `themes/rule-kinds`    | Custom Rule Kinds      | P2  | **Roster page.** Declaring a rule kind of your own against the node hierarchy. | 5 target constructors        |
 
 ### 7. Routing
 
@@ -339,16 +345,22 @@ Each item carries, in order:
 `textarea` against `text`, `userList` against `user` — which links to the sibling's example and
 states only what differs.
 
-### The 18 rosters
+### The 19 rosters
 
 `Field Types` · `Core Blocks` · `Marks` · `Shortcodes` · `Hook Reference` · `Capabilities` · `Roles` ·
 `Hydration Strategies` · `Configuration` · `Entry Type Reference` · `Statuses and Publishing` ·
 `Templates` · `Template Data` · `CLI Reference` · `MCP` · `Caching` (tag vocabulary) ·
-`Project Structure` (façade subpaths) · `Plugins` (the shipped `@plumix/plugin-*` packages).
+`Project Structure` (façade subpaths) · `Plugins` (the shipped `@plumix/plugin-*` packages) ·
+`Custom Rule Kinds` (the target constructors a plugin-authored rule kind selects with).
 
 **`supports` is deliberately not a roster.** The code accepts any string, so no complete list exists
 to promise. Its page presents a **conventional, not closed** list and says so visibly — otherwise
 someone will add a guard later assuming the omission was an oversight.
+
+**Façade exports are deliberately not bound to pages.** A roster binds a page to a source; nothing
+binds the set of exported names to the set of pages, so a new façade export fails no guard. The
+reasoning — and the two alternatives it rejects — is recorded on `FacadeExport` in
+`apps/docs/src/content-checks/rosters.ts`, next to the code the decision is about.
 
 **The guard is authoritative for what a roster contains.** `apps/docs/src/content-checks/rosters.ts`
 holds each roster's items and binds them to source; the sizes in the page briefs above are a
@@ -440,23 +452,23 @@ per-page copy-as-markdown affordance.
 
 Every area of the public surface has a home. Mapping from the inventory:
 
-| Surface                                                                 | Home                                                                  |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| 34 façade subpaths                                                      | `Project Structure` (15 admin shims folded into `The Shared Runtime`) |
-| 20 config options                                                       | `Configuration`                                                       |
-| 4 statuses · entry types · taxonomies                                   | Content Modelling                                                     |
-| 24 field types · builders · references · repeaters                      | Fields                                                                |
-| 18 blocks · 13 marks · shortcodes · patterns · styles                   | Blocks                                                                |
-| 5+3 hydration axes · `IslandProps`                                      | Islands                                                               |
-| 16 builders · 9 data shapes · 9 guards · manifest · tokens · primitives | Themes                                                                |
-| permalinks · archives · redirects · rewrites · base path                | Routing                                                               |
-| 5 roles · 17+8+5 capabilities · 4 auth methods · policy · gating        | Access & Identity                                                     |
-| RPC · REST · 9 MCP tools · raw routes · db toolkit · request context    | APIs                                                                  |
-| 105 hooks · type augmentation                                           | Hooks                                                                 |
-| admin pages · widgets · login links · plugin chunk · shims · CSS        | Extending the Admin                                                   |
-| caching · SEO · search · i18n · cron · telemetry · testing · dev tools  | Going Further                                                         |
-| runtime adapter · bindings · secrets · CLI                              | Deployment                                                            |
-| 7 official plugins · descriptor · packaging                             | Plugins                                                               |
+| Surface                                                                                         | Home                                                                  |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 34 façade subpaths                                                                              | `Project Structure` (15 admin shims folded into `The Shared Runtime`) |
+| 20 config options                                                                               | `Configuration`                                                       |
+| 4 statuses · entry types · taxonomies                                                           | Content Modelling                                                     |
+| 24 field types · builders · references · repeaters                                              | Fields                                                                |
+| 18 blocks · 13 marks · shortcodes · patterns · styles                                           | Blocks                                                                |
+| 5+3 hydration axes · `IslandProps`                                                              | Islands                                                               |
+| 16 builders · 9 data shapes · 9 guards · manifest · tokens · primitives · 5 target constructors | Themes                                                                |
+| permalinks · archives · redirects · rewrites · base path                                        | Routing                                                               |
+| 5 roles · 17+8+5 capabilities · 4 auth methods · policy · gating                                | Access & Identity                                                     |
+| RPC · REST · 9 MCP tools · raw routes · db toolkit · request context                            | APIs                                                                  |
+| 105 hooks · type augmentation                                                                   | Hooks                                                                 |
+| admin pages · widgets · login links · plugin chunk · shims · CSS                                | Extending the Admin                                                   |
+| caching · SEO · search · i18n · cron · telemetry · testing · dev tools                          | Going Further                                                         |
+| runtime adapter · bindings · secrets · CLI                                                      | Deployment                                                            |
+| 7 official plugins · descriptor · packaging                                                     | Plugins                                                               |
 
 **Deliberately undocumented:** the contribution guide and all core-contributor material; all
 content-editor material; the editor bridge (`EDITOR_BRIDGE_CHANNEL` and kin, editor-internal); the

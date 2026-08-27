@@ -1,0 +1,361 @@
+---
+title: Custom Rule Kinds
+description: Declaring a rule kind of your own against the node hierarchy, so a plugin's per-page setting resolves through the same walk a theme's templates do.
+tier: P2
+roster: true
+sidebar:
+  order: 90
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+`templates` is one rule kind, not the only one. A plugin can open a second slot on the theme descriptor, let a theme fill it with the selectors it already knows, and resolve it through the same walk — without a second copy of the precedence rules.
+
+## Overview
+
+A rule kind is two halves. The framework owns one: every rule carries either a generic `tier` or a targeted `match`, and `TierMatchRule` is exactly that pair. Both fields are optional and nothing rejects a rule setting both — the builders simply never mint one, and yours should not either, since resolution reads `match` first and the `tier` would never be consulted. You own the other: whatever the rule is _for_, hanging off the same object. A `TemplateRule` is `TierMatchRule` plus a `template`. `@plumix/plugin-og`'s `CardRule` is `TierMatchRule` plus a `card`. Yours is `TierMatchRule` plus whatever you need.
+
+`resolveRule` reads the two framework fields and nothing else, so it never learns what your rule carries. That is what makes one walk serve every rule kind. It takes the rules, a `ResolvedNode` and the resolved data, and returns the winner: targeted rules in declaration order, then the generic tier for the node's kind, then `fallback`. [Template Hierarchy](/themes/hierarchy/) documents that walk in full, and your rule kind inherits all of it — including which tier serves which node.
+
+Four pieces make a rule kind:
+
+- **A rule type** extending `TierMatchRule`.
+- **A bind function** — a `BindRule<S>` — turning a selected match into your selector. The [contract it has to keep](#what-a-bind-function-has-to-return) is the one thing on this page that fails at runtime rather than at compile time.
+- **A slot on `ThemeDescriptor`**, declared through `declare module "plumix"`, so swapping the theme swaps its rules with it.
+- **A snapshot at `theme:ready`**, because a rule set is boot-time state rather than request state.
+
+The selectors themselves you do not write. `entryTypeTargets` and its four siblings mint every matcher the framework knows how to compare, and they take your bind function so the chain ends in _your_ terminal — `.template(...)`, `.define(...)`, whatever you named it.
+
+Every sample below assumes these registrations, the same ones the rest of this section uses:
+
+```ts
+import type { ResolvedEntry, ResolvedTerm } from "plumix";
+
+declare module "plumix" {
+  interface EntryTypeRegistry {
+    recipe: { entry: ResolvedEntry };
+  }
+  interface TermTaxonomyRegistry {
+    cuisine: { term: ResolvedTerm };
+  }
+}
+```
+
+<Aside type="note" title="One specifier">
+  Augment through `declare module "plumix"` and nothing else. The registries and
+  `ThemeDescriptor` are re-exported from several packages, and augmenting two
+  specifiers gives you two views, each missing the other's keys.
+</Aside>
+
+## Quickstart
+
+A `feeds` rule kind: which syndication feed each page advertises. It is small enough to read in one sitting and it exercises every piece.
+
+<Steps>
+
+1. **Declare the rule, the slot and the builders.** The rule is `TierMatchRule` plus an `href`. `selector` is the bind function. The builders wrap the target constructors so the chain ends in `.advertise(...)`.
+
+   ```ts
+   import type {
+     ArchiveData,
+     EntryData,
+     EntryTypeName,
+     EntryTypeTargets,
+     ResolvedEntryFor,
+     TemplateData,
+     TierMatchRule,
+   } from "plumix";
+   import { entryTypeTargets } from "plumix";
+
+   export interface FeedRule extends TierMatchRule {
+     readonly href: (data: TemplateData) => string;
+   }
+
+   interface FeedSelector<TData extends TemplateData> {
+     advertise(href: (data: TData) => string): FeedRule;
+   }
+
+   function selector<TData extends TemplateData>(
+     where: TierMatchRule,
+   ): FeedSelector<TData> {
+     return {
+       advertise: (href) => ({
+         ...where,
+         // Safety: `where` is what confines this rule to nodes carrying `TData`.
+         href: href as unknown as (data: TemplateData) => string,
+       }),
+     };
+   }
+
+   interface FeedEntryTypeBuilder<K extends EntryTypeName>
+     extends
+       FeedSelector<EntryData<ResolvedEntryFor<K>>>,
+       EntryTypeTargets<
+         K,
+         FeedSelector<EntryData<ResolvedEntryFor<K>>>,
+         FeedSelector<ArchiveData<ResolvedEntryFor<K>>>
+       > {}
+
+   export const feed = {
+     fallback: (): FeedSelector<TemplateData> => selector({ tier: "fallback" }),
+     forEntryType: <K extends EntryTypeName>(
+       name: K,
+     ): FeedEntryTypeBuilder<K> =>
+       entryTypeTargets(
+         name,
+         selector<EntryData<ResolvedEntryFor<K>>>,
+         selector<ArchiveData<ResolvedEntryFor<K>>>,
+       ),
+   };
+
+   declare module "plumix" {
+     interface ThemeDescriptor {
+       readonly feeds?: readonly FeedRule[];
+     }
+   }
+
+   export const feeds = [
+     feed.forEntryType("recipe").archive.advertise(() => "/recipes/feed.xml"),
+     feed.fallback().advertise(() => "/feed.xml"),
+   ];
+   ```
+
+   `feeds` is not an API name. It is what a theme hands `defineTheme` as the slot you just declared, next to its `templates`.
+
+2. **Snapshot what the theme declared, then resolve against it.** The theme is validated after plugins install, so its rules arrive on the `theme:ready` handover rather than in `setup`. One snapshot serves every request.
+
+   ```ts
+   import type { ResolvedNode, TemplateData, ThemeDescriptor } from "plumix";
+   import { resolveErrorRule, resolveRule } from "plumix";
+   import { definePlugin } from "plumix/plugin";
+
+   let rules: NonNullable<ThemeDescriptor["feeds"]> = [];
+
+   export const feedsPlugin = definePlugin("feeds", {
+     setup: (ctx) => {
+       ctx.addAction("theme:ready", (theme) => {
+         rules = theme.feeds ?? [];
+       });
+     },
+   });
+
+   export function feedFor(
+     node: ResolvedNode,
+     data: TemplateData,
+   ): string | undefined {
+     return resolveRule(rules, node, data)?.href(data);
+   }
+
+   export function feedForMissing(data: TemplateData): string | undefined {
+     return resolveErrorRule(rules, "notFound")?.href(data);
+   }
+   ```
+
+   `theme.feeds` is typed because step 1 declared that slot; the augmentation is what carries it here, not an import. `resolveRule` needs the resolved data as well as the node, because a rule narrowed by `.where(...)` carries a predicate that reads it. Pass it and predicate rules can match; leave it out and they never do.
+
+</Steps>
+
+Everything the walk does for `templates` it now does for `feeds`. A theme writes `feed.forEntryType("recipe")` and gets autocompletion off `EntryTypeRegistry`, a rejection for a name nothing registered, and an `href` typed against that type's projection.
+
+## The target constructors
+
+Five constructors, one per matcher family. Between them they reach all six node kinds — `entryTypeTargets` is the one that covers two, an entry and that entry type's archive — and they mint every matcher the shared vocabulary knows how to compare. Each takes your bind function and returns the selector chain with the narrowings hung off it, so the shapes stay identical across rule kinds and a matcher the framework adds reaches yours without being mirrored.
+
+The samples below bind to a bare probe — a selector that keeps the selected match and carries no payload at all — because what each constructor publishes is the vocabulary, not what any one rule kind does with it.
+
+### `entryTypeTargets`
+
+Entries of one registered type, and that type's archive. It takes two bind functions because `.archive` selects a different node kind carrying a different data shape.
+
+```ts
+import type { TierMatchRule } from "plumix";
+import { entryTypeTargets } from "plumix";
+
+const bind = (selected: TierMatchRule) => ({ selected });
+
+const recipes = entryTypeTargets("recipe", bind, bind);
+
+export const matchers = [
+  recipes.selected,
+  recipes.slug("sicilian-caponata").selected,
+  recipes.id(42).selected,
+  recipes.where((data) => data.entry.terms.length > 0).selected,
+  recipes.archive.selected,
+];
+```
+
+`name` is checked against `EntryTypeRegistry`, so a typo is a compile error rather than a rule that silently never matches. The bare selector mints `{ nodeKind: "content", type: "recipe" }`; `.slug()` and `.id()` add an exact comparison; `.where()` and `.whereMeta()` attach a predicate the walk evaluates after identity fits. `.archive` is not a call — it is the already-bound selector for `{ nodeKind: "content-type-archive" }`.
+
+### `termTaxonomyTargets`
+
+Terms of one registered taxonomy. One bind function: a taxonomy has no archive of its own to select.
+
+```ts
+import type { TierMatchRule } from "plumix";
+import { termTaxonomyTargets } from "plumix";
+
+const bind = (selected: TierMatchRule) => ({ selected });
+
+const cuisines = termTaxonomyTargets("cuisine", bind);
+
+export const matchers = [
+  cuisines.selected,
+  cuisines.slug("sicilian").selected,
+  cuisines.where((data) => data.term.description !== null).selected,
+];
+```
+
+`name` is checked against `TermTaxonomyRegistry`. The narrowings are `entryTypeTargets`' minus the archive, reading term meta rather than entry meta, and `.where()` receives the resolved taxonomy data.
+
+### `authorTargets`
+
+Author archives. No name, because there is one author kind and no registry to autocomplete against.
+
+```ts
+import type { TierMatchRule } from "plumix";
+import { authorTargets } from "plumix";
+
+const bind = (selected: TierMatchRule) => ({ selected });
+
+const authors = authorTargets(bind);
+
+export const matchers = [
+  authors.selected,
+  authors.slug("nadia").selected,
+  authors.id(7).selected,
+];
+```
+
+The matcher carries a fixed `type` of `"author"` and narrows by slug or id like a term. The bare selector matches every author archive, which is what the `author` tier already does — reach for the constructor when you need the rule ordered against other targeted rules.
+
+### `dateTargets`
+
+One date archive, at the granularity the arguments give. It returns a callable rather than an object, so there is nothing to chain.
+
+```ts
+import type { TierMatchRule } from "plumix";
+import { dateTargets } from "plumix";
+
+const bind = (selected: TierMatchRule) => ({ selected });
+
+const forDate = dateTargets(bind);
+
+export const matchers = [
+  forDate(2026).selected,
+  forDate(2026, 7).selected,
+  forDate(2026, 7, 21).selected,
+];
+```
+
+The three overloads rather than optional parameters are what reject `(2026, undefined, 5)`: a day is meaningless without the month above it. Each match is exact at its own granularity, so `forDate(2026)` claims the year archive and leaves that year's months and days to the `date` tier.
+
+### `archiveTypeTargets`
+
+One archive a plugin registered with `registerArchiveType`. No narrowings — a custom archive is a single node, so the name is the whole matcher.
+
+```ts
+import type { TierMatchRule } from "plumix";
+import { archiveTypeTargets } from "plumix";
+
+const bind = (selected: TierMatchRule) => ({ selected });
+
+export const matcher = archiveTypeTargets("seasonal", bind).selected;
+```
+
+`name` is a plain `string` here, unlike the two above it. The constructor mints `{ nodeKind: "custom", type: "seasonal" }` and types nothing from it, so a rule kind that wants the name checked against `ArchiveTypeRegistry` adds that constraint on its own wrapper — which is also where it would type the payload against the archive's data shape. Without a rule at all these archives fall to `fallback`, since no generic tier claims them.
+
+## What a bind function has to return
+
+A `BindRule<S>` has to return **a fresh object literal carrying nothing but its own terminal**. `entryTypeTargets`, `termTaxonomyTargets` and `authorTargets` spread what it returns and hang the narrowings off the result, so anything that is not an own, enumerable key is lost, and any own key named for a narrowing is overwritten by it. `dateTargets` and `archiveTypeTargets` have no narrowings to hang and return your selector untouched — but the contract is what all five hold you to, because one bind function normally serves the lot.
+
+Both failures typecheck cleanly. Neither shows up until a request runs.
+
+A selector that inherits its terminal loses it:
+
+```ts
+import type { TierMatchRule } from "plumix";
+import { entryTypeTargets } from "plumix";
+
+class Selection {
+  constructor(readonly selected: TierMatchRule) {}
+  advertise(href: string): TierMatchRule & { href: string } {
+    return { ...this.selected, href };
+  }
+}
+
+const recipes = entryTypeTargets(
+  "recipe",
+  (where) => new Selection(where),
+  (where) => new Selection(where),
+);
+
+export const gone = recipes.advertise;
+```
+
+`advertise` lives on the prototype. The spread copies own keys, so `recipes.advertise` is `undefined` at runtime while the type says it is a method.
+
+A selector carrying an own key named for a narrowing loses that instead:
+
+```ts
+import type { TierMatchRule } from "plumix";
+import { entryTypeTargets } from "plumix";
+
+interface Selection {
+  readonly selected: TierMatchRule;
+  readonly slug: string;
+}
+
+const bind = (selected: TierMatchRule): Selection => ({
+  selected,
+  slug: selected.match?.slug ?? "",
+});
+
+const recipes = entryTypeTargets("recipe", bind, bind);
+
+export const overwritten = recipes.slug;
+```
+
+The spread puts your `slug` in first and the constructor's `slug` narrowing replaces it. `recipes.slug` is the narrowing function, and the type is the intersection of both, which reads as though you can have either.
+
+The five reserved names are `slug`, `id`, `where`, `whereMeta` and `archive`, reserved by the three constructors that spread. Name your terminal anything else — `template`, `define`, `advertise` — and return it from a literal.
+
+## Why `named` is template-only
+
+`.named("wide", "Wide layout")` is missing from the shared vocabulary, and deliberately. It is half a contract with the editor's template picker: the id it registers is what the picker writes into an entry's reserved `__plumix_template` meta key, and `collectNamedTemplates` reads the labels back out to populate that picker. A rule kind with no picker behind it holds up no end of that contract. The narrowing would still compile and still attach its predicate — and that predicate reads `__plumix_template`, so the rule would match whichever entries happen to carry the template picker's own value for that id. Silently borrowing another surface's meta key is a worse failure than doing nothing.
+
+It is therefore absent from every constructor above, and reaching for it is a compile error:
+
+```ts
+import type { TierMatchRule } from "plumix";
+import { entryTypeTargets } from "plumix";
+
+const bind = (selected: TierMatchRule) => ({ selected });
+
+const recipes = entryTypeTargets("recipe", bind, bind);
+
+// @ts-expect-error - `named` belongs to the rule kind that holds up the
+// picker's half of the contract, not to the shared vocabulary.
+export const missing = recipes.named;
+```
+
+If what you want is an author-selectable choice, the mechanism underneath `named` is available to you: add a field to a [meta box](/fields/meta-boxes/) and narrow on it with `.where()`. That gives you the same predicate against a key you own, and a place in the admin where the author actually sets it.
+
+## The worked example
+
+`@plumix/plugin-og` is this page in production. Its `ogCards` slot on `ThemeDescriptor` holds `CardRule`, which is `TierMatchRule` plus a `card`; its `card.forEntryType("recipe").define({ ... })` builders come from the same five constructors; it snapshots the theme's rules at `theme:ready` into a registry whose own defaults sit behind them in declaration order, so a card the theme declared outranks the plugin's; and it resolves through `resolveRule` rather than a second walk. A theme therefore places a social card exactly the way it places a template.
+
+Two decisions in it are worth copying. Its selectors erase the per-tier data type on the way into the rule, which keeps `ogCards` a homogeneous array rather than a tuple of one shape per tier. And its defaults are appended rather than merged, which makes "the theme wins" a property of array order instead of a precedence rule someone has to maintain.
+
+[OG Cards](/plugins/og/) is the other side of it — declaring cards as a theme author, without any of the machinery above.
+
+## Related
+
+[Template Hierarchy](/themes/hierarchy/) is the walk your rule kind inherits: the three steps, the kind-to-tier map, and what happens when nothing matches. [Templates](/themes/templates/) is the rule kind the framework ships, and the roster of the builders a theme writes against these same constructors. [Template Data](/themes/template-data/) documents the shapes a predicate and an `href` receive.
+
+[Overview](/themes/overview/) puts the descriptor your slot joins beside its other slots. A plugin registers the entry types and taxonomies the constructors name, in [Entry Types](/content-modelling/entry-types/) and [Taxonomies and Terms](/content-modelling/taxonomies/), and [Meta Boxes](/fields/meta-boxes/) is where the keys `.whereMeta()` reads come from.
+
+## Next steps
+
+Read [Template Hierarchy](/themes/hierarchy/) if you have not, because ordering decides your rules exactly as it decides templates: targeted before generic, narrow before broad, first match wins.
+
+Then [OG Cards](/plugins/og/) to see the finished surface from a theme author's seat, and [Plugins](/plugins/overview/) for the descriptor your `theme:ready` snapshot hangs off. Two unwritten pages in this section pick up from here — Document Manifest covers the head fragment a resolved rule would contribute to, and Tokens and Breakpoints covers the other theme-declared values a plugin reads at boot.

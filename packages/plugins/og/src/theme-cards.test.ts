@@ -254,13 +254,17 @@ describe("what a card's key covers", () => {
 });
 
 describe("what the builders refuse to compile", () => {
-  test("an unregistered entry type and a card with no key", () => {
+  test("an unregistered entry type, a card with no key, and `named`", () => {
     // @ts-expect-error - "nope" is not a registered entry type
     card.forEntryType("nope");
     // @ts-expect-error - "nope" is not a registered taxonomy
     card.forTermTaxonomy("nope");
     // @ts-expect-error - every rule has to say what its card reads
     card.fallback().define({ render: () => ({ type: "text", text: "x" }) });
+    // The consumer half of core's `"named" in widget === false`: the picker
+    // writes that choice onto entries and no card picker reads it back.
+    // @ts-expect-error - `named` is template-only
+    expect(card.forEntryType("post").named).toBeUndefined();
     expect(card.forEntryType("post")).toBeDefined();
   });
 });

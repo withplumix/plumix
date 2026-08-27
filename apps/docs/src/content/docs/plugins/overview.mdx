@@ -49,7 +49,7 @@ Records an activity feed and adds an `audit` helper to the request context.
 
 ### `@plumix/plugin-og`
 
-Renders a social card per page — an entry, a term or content-type archive, an author, a date, the front page — serves it from a route of its own, and carries it into the page's `og:image`. The URL carries the card's digest and is served immutable, so an edit publishes a link the scrapers have to fetch again.
+Renders a social card per page — an entry, a term or content-type archive, an author, a date, the front page — serves it from a route of its own, and carries it into the page's `og:image`. The URL carries the card's digest and is served immutable, so an edit publishes a link the scrapers have to fetch again. Its `ogCards` slot is a rule kind of the theme descriptor's, resolved by the same walk `templates` uses — [Custom Rule Kinds](/themes/rule-kinds/) takes it apart as the worked example.
 
 ## Quickstart
 

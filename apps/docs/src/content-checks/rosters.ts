@@ -417,6 +417,24 @@ const HYDRATION: readonly string[] = [
 
 // --- Themes ----------------------------------------------------------------
 
+/**
+ * Every name the façade publishes as a value. Used only as a *constraint* —
+ * `satisfies FacadeExport`, `Partial<Record<FacadeExport, …>>` — so a roster
+ * naming an export fails on the day the export is renamed.
+ *
+ * **Deliberately not an exhaustive key set documentation has to cover.** The
+ * façade publishes 285 value exports against a planned 105 pages, and much of
+ * the difference is plumbing no page will ever name: `entryRouter`,
+ * `hookStore`, `txStore`, `generateWorkerSource`. Binding export to page
+ * forces one of two things — a heading per export, which is the generated API
+ * appendix the IA spec rejects outright, or a hand-kept allowlist of the
+ * exports that need no page, which is a second unbound list drifting exactly
+ * the way a roster page does.
+ *
+ * So a new façade export fails no roster. What catches an undocumented
+ * surface is a person deciding it deserves a page, and the roster that binds
+ * that page to its source once it has one.
+ */
 type FacadeExport = keyof typeof PlumixFacade;
 
 /**
@@ -482,6 +500,45 @@ const TEMPLATES: readonly string[] = [
   ...GENERIC_TIERS,
   ...Object.keys(TARGETED_MATCHERS),
 ];
+
+/**
+ * The constructors a plugin-authored rule kind builds its selectors from, each
+ * against the matcher it backs. Source: the same node-kind targets
+ * `TARGETED_MATCHERS` lists, since both sides exist to mint the same
+ * `TargetMatcher` shapes.
+ *
+ * `satisfies` pins each key to a façade export, so a rename fails on its own
+ * line. The assertion catches the direction nothing else does: a sixth entry
+ * in `TARGETED_MATCHERS` arriving without a constructor here. Its own page
+ * would not report that — `templates.mdx` already carries the matcher as a
+ * `###`, so its roster stays green while this page silently stops being
+ * complete.
+ *
+ * It shares the holes the map above admits to, for the same reason: the values
+ * are compared as a union, so a swapped pairing and a sixth key duplicating an
+ * existing matcher both pass. Roster drift catches the second — six keys
+ * against five `###` headings — and nothing catches the first.
+ *
+ * The rest of that page is not a roster. `resolveRule`, `BindRule` and
+ * `TierMatchRule` are a mechanism, not a set, so the page carries them as
+ * prose and promises completeness only here.
+ */
+const TARGET_CONSTRUCTORS = {
+  entryTypeTargets: "forEntryType",
+  termTaxonomyTargets: "forTermTaxonomy",
+  authorTargets: "forAuthor",
+  dateTargets: "forDate",
+  archiveTypeTargets: "forArchiveType",
+} as const satisfies Partial<
+  Record<FacadeExport, keyof typeof TARGETED_MATCHERS>
+>;
+
+type _EveryTargetedMatcherHasAConstructor = Assert<
+  Equals<
+    (typeof TARGET_CONSTRUCTORS)[keyof typeof TARGET_CONSTRUCTORS],
+    keyof typeof TARGETED_MATCHERS
+  >
+>;
 
 /**
  * Every shape a template can receive, named as a reader would import it.
@@ -909,6 +966,11 @@ export const ROSTERS: readonly RegisteredRoster[] = [
   {
     page: "themes/template-data.mdx",
     items: TEMPLATE_DATA,
+    binding: "type-level",
+  },
+  {
+    page: "themes/rule-kinds.mdx",
+    items: Object.keys(TARGET_CONSTRUCTORS),
     binding: "type-level",
   },
   { page: "access/roles.mdx", items: ROLES, binding: "type-level" },

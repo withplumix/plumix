@@ -161,12 +161,14 @@ The panel costs nothing to leave alone. The resolver runs the plain walk first a
 
 ## Related
 
-[Templates](/themes/templates/) is the roster of the builders these rules come from, including every selector a targeted matcher can carry. [Template Data](/themes/template-data/) is the other half of what the resolver produces, the shape your render function reads. [Overview](/themes/overview/) covers the theme descriptor the `templates` array sits in.
+[Templates](/themes/templates/) is the roster of the builders these rules come from, including every selector a targeted matcher can carry. [Custom Rule Kinds](/themes/rule-kinds/) is the other side of this walk: `templates` is one rule kind, and a plugin can declare a second one that resolves through the same three steps. [Template Data](/themes/template-data/) is the other half of what the resolver produces, the shape your render function reads. [Overview](/themes/overview/) covers the theme descriptor the `templates` array sits in.
 
 [Routing](/routing/overview/) and [Permalinks and Slugs](/routing/permalinks/) cover how a URL gets its intent in the first place. A plugin registers the type and taxonomy names the targeted matchers compare against, in [Entry Types](/content-modelling/entry-types/) and [Taxonomies and Terms](/content-modelling/taxonomies/). Status decides whether a request resolves at all, since a draft is invisible to a public request. [Statuses and Publishing](/content-modelling/statuses/) has the rules.
 
 ## Next steps
 
 Read [Template Data](/themes/template-data/) next for the fields on each shape, and the guard that narrows the union inside a `fallback` template.
+
+Then [Custom Rule Kinds](/themes/rule-kinds/) if you are writing a plugin rather than a theme, for how a per-page setting of your own reaches this walk.
 
 Two unwritten pages in this section pick up from here. Document Manifest covers the per-template `document` fragment, which the framework resolves after the walk picks a winner and merges over the theme's own. Template Dependencies covers the dep arrays a template declares, which the framework loads in parallel once the template is known.
