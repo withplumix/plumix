@@ -21,17 +21,17 @@ interface CardImage {
  * theme card may declare its own, and a scraper that lays out 1200x630 for a
  * 1600x900 card gets a cropped or letterboxed preview.
  */
-export function cardImage(
+export async function cardImage(
   data: TemplateData,
   ctx: AppContext,
   extension: string,
   cards: CardRegistry,
-): CardImage | null {
+): Promise<CardImage | null> {
   // Only entries have a card URL. A rule declared against any other page kind
   // resolves, but nothing addresses those pages yet.
   if (data.kind !== "entry") return null;
   const { entry } = data;
-  if (!isShareableEntry(ctx, entry)) return null;
+  if (!(await isShareableEntry(ctx, entry))) return null;
   const rule = cards.resolve(entryCardNode(entry), data);
   if (rule === undefined) return null;
   return {

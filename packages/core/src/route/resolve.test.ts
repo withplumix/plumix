@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
+import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { createPreviewToken } from "../auth/preview-token.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
@@ -425,6 +426,61 @@ describe("resolvePublicRoute — single", () => {
     expect(previewBody).toContain("<h1>Fresh Title</h1>");
     expect(previewBody).toContain("Draft body.");
     expect(previewBody).not.toContain("Original Title");
+  });
+
+  test("a preview overlay reports the live per-entry access choice, not the draft's", async () => {
+    // The gate resolves its policy from the persisted row — `policyForMatch`
+    // never sees this overlay — so the bag the template reads has to agree with
+    // it. Anything the page publishes on the entry's behalf (a social card) is
+    // decided from this value, and a draft's pick gates nothing.
+    const metaTheme = defineTheme({
+      templates: [
+        fallback(({ data }) => {
+          if (!("entry" in data)) return null;
+          const choice = data.entry.meta[ACCESS_POLICY_META_KEY];
+          return createElement(
+            "h1",
+            null,
+            `access:${typeof choice === "string" ? choice : "none"}`,
+          );
+        }),
+      ],
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: metaTheme,
+    });
+    const author = await h.seedUser("admin");
+    const live = await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Live Title",
+      content: TIPTAP_BODY,
+      status: "published",
+      authorId: author.id,
+      meta: { [ACCESS_POLICY_META_KEY]: "members" },
+    });
+    // The draft moved the pick to `public`. Unsaved, so it gates nothing yet.
+    await upsertAutosave(h.db, {
+      entry: live,
+      authorId: author.id,
+      patch: {
+        title: "Live Title",
+        content: TIPTAP_BODY,
+        excerpt: null,
+        meta: { [ACCESS_POLICY_META_KEY]: "public" },
+      },
+    });
+    const token = await createPreviewToken(h.db, {
+      entryId: live.id,
+      userId: author.id,
+    });
+
+    const preview = await h.dispatch(
+      new Request(`https://cms.example/post/hello?preview=${token}`),
+    );
+
+    expect(await preview.text()).toContain("access:members");
   });
 
   test("a preview overlay honors an unsaved named-template choice", async () => {

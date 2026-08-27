@@ -230,7 +230,7 @@ async function resolveEntryNode(
     .from(entries)
     .where(eq(entries.id, id))
     .limit(1);
-  if (!row || !isShareableEntry(ctx, row)) return null;
+  if (!row || !(await isShareableEntry(ctx, row))) return null;
 
   const [entry] = await buildResolvedEntries(ctx, [row]);
   if (entry === undefined) return null;

@@ -1,4 +1,5 @@
-import type { AppContext } from "plumix/plugin";
+import type { AppContext, EntryAccessSubject } from "plumix/plugin";
+import { entryAllowsAnonymousAccess } from "plumix";
 
 /**
  * Whether an entry may have a card at all — the one question the route and the
@@ -8,12 +9,18 @@ import type { AppContext } from "plumix/plugin";
  * the entry is a draft. An unregistered type — a row left behind by a plugin
  * the config no longer installs — has no public page either, so it answers the
  * same as a private one.
+ *
+ * The access layer is asked last, and asked about an anonymous visitor whoever
+ * is calling: a card carries the entry's title, sits at an enumerable id, and
+ * is served from a shared cache, so an entry whose own page a scraper never
+ * reaches must not have one either.
  */
-export function isShareableEntry(
+export async function isShareableEntry(
   ctx: AppContext,
-  entry: { readonly status: string; readonly type: string },
-): boolean {
+  entry: EntryAccessSubject & { readonly status: string },
+): Promise<boolean> {
   if (entry.status !== "published") return false;
   const entryType = ctx.plugins.entryTypes.get(entry.type);
-  return entryType !== undefined && entryType.isPublic !== false;
+  if (entryType === undefined || entryType.isPublic === false) return false;
+  return entryAllowsAnonymousAccess(ctx, entry);
 }
