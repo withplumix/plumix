@@ -1,5 +1,5 @@
 import type { OgImage, TemplateData } from "plumix";
-import type { AppContext } from "plumix/plugin";
+import type { AppContext, EntryAccessSubject } from "plumix/plugin";
 import { ruleLabel } from "plumix";
 
 import type { CardInputs } from "./card-identity.js";
@@ -71,61 +71,114 @@ async function resolveChain(input: PageOgImageInput): Promise<ChainResolution> {
       },
     };
   }
+  const chosen = await chooseCard({ data, ctx, cards, featured, extension });
+  if (chosen.card === null) return noCard({ ...chosen, featured });
+  const url = await cardOgImageUrl({
+    card: chosen.card,
+    data,
+    entryId: chosen.entryId,
+    ctx,
+    inputs,
+    extension: chosen.extension,
+  });
+  return {
+    image: { url, ...cardSize(chosen.card) },
+    trace: {
+      phase: "chain",
+      outcome: "card",
+      url,
+      rule: chosen.rule,
+      skipped: null,
+    },
+  };
+}
+
+export interface CardChoiceInput {
+  readonly data: TemplateData;
+  readonly ctx: AppContext;
+  readonly cards: CardRegistry;
+  /** The entry's `.featured()` photo, handed over by core. */
+  readonly featured: OgImage | null;
+  /**
+   * The format a card would be served in, or undefined for a renderer whose
+   * output scrapers do not render.
+   */
+  readonly extension: string | undefined;
+  /**
+   * Whether this entry may carry a card at all. Defaults to the question the
+   * route answers; the editor preview passes the same question minus its
+   * status half, so a draft previews while an entry no scraper could reach
+   * still gets no card.
+   */
+  readonly shareable?: (
+    ctx: AppContext,
+    entry: EntryAccessSubject & { readonly status: string },
+  ) => Promise<boolean>;
+}
+
+/** A card to render, or the reason there is none and the photo standing in. */
+export type CardChoice =
+  | {
+      readonly card: CardDefinition<TemplateData>;
+      readonly entryId: number;
+      readonly extension: string;
+      readonly rule: string;
+      readonly photo: null;
+      readonly skipped: null;
+    }
+  | {
+      readonly card: null;
+      /** The entry's photo shaped to the card that was going to carry it. */
+      readonly photo: OgImage | null;
+      readonly rule: string | null;
+      readonly skipped: OgCardSkip;
+    };
+
+/**
+ * Whether this page gets a generated card, and what stands in when it does
+ * not. One branch order, so the head and the editor preview cannot disagree
+ * about which link of the chain wins — the whole point of a preview being that
+ * it says what the page will say.
+ */
+export async function chooseCard(input: CardChoiceInput): Promise<CardChoice> {
+  const { data, ctx, cards, featured, extension } = input;
+  const shareable = input.shareable ?? isShareableEntry;
   // Only entries have a card URL. A rule declared against any other page kind
   // resolves, but nothing addresses those pages yet.
-  if (data.kind !== "entry") return noCard({ featured, skipped: "page-kind" });
+  if (data.kind !== "entry") {
+    return { card: null, photo: null, rule: null, skipped: "page-kind" };
+  }
   const { entry } = data;
   const rule = cards.resolve(entryCardNode(entry), data);
-  if (rule === undefined) return noCard({ featured, skipped: "no-rule" });
+  if (rule === undefined) {
+    return { card: null, photo: null, rule: null, skipped: "no-rule" };
+  }
   const { card } = rule;
   const matched = ruleLabel(rule);
-  // A theme card may declare its own size, and a scraper laying out 1200x630
-  // for a 1600x900 card gets a letterboxed preview — so the size comes off the
-  // rule the route would resolve, not off the defaults.
-  const size = cardSize(card);
   // The photo standing in for the card needs nothing else resolved — not the
   // route's format, not the access question below, and not the card's digest,
   // each of which costs a resolver run of its own on every page that asks it.
-  const photo = featured === null ? null : cropToCard(ctx, featured, size);
+  const photo =
+    featured === null ? null : cropToCard(ctx, featured, cardSize(card));
   if (photo !== null && card.mode !== "card") {
-    return noCard({
-      photo,
-      featured,
-      rule: matched,
-      skipped: "featured-preferred",
-    });
+    return { card: null, photo, rule: matched, skipped: "featured-preferred" };
   }
   // A card only for an entry the route will serve, in a format a scraper
   // renders. Failing either, the shaped photo goes out instead — even where a
   // card declared itself the share image, since there is no card for it to be.
   if (extension === undefined) {
-    return noCard({
-      photo,
-      featured,
-      rule: matched,
-      skipped: "renderer-format",
-    });
+    return { card: null, photo, rule: matched, skipped: "renderer-format" };
   }
-  if (!(await isShareableEntry(ctx, entry))) {
-    return noCard({ photo, featured, rule: matched, skipped: "not-shareable" });
+  if (!(await shareable(ctx, entry))) {
+    return { card: null, photo, rule: matched, skipped: "not-shareable" };
   }
-  const url = await cardOgImageUrl({
-    card,
-    data,
-    entryId: entry.id,
-    ctx,
-    inputs,
-    extension,
-  });
   return {
-    image: { url, ...size },
-    trace: {
-      phase: "chain",
-      outcome: "card",
-      url,
-      rule: matched,
-      skipped: null,
-    },
+    card,
+    entryId: entry.id,
+    extension,
+    rule: matched,
+    photo: null,
+    skipped: null,
   };
 }
 
@@ -161,10 +214,10 @@ interface NoCardInput {
    * where a rule matched and something after it refused the card, absent where
    * there was no card to take a shape from.
    */
-  readonly photo?: OgImage | null;
+  readonly photo: OgImage | null;
   /** The uncropped photo, which core falls to when this returns nothing. */
   readonly featured: OgImage | null;
-  readonly rule?: string | null;
+  readonly rule: string | null;
   readonly skipped: OgCardSkip;
 }
 
@@ -174,7 +227,7 @@ interface NoCardInput {
  * the trace names that photo whichever of the two supplies it.
  */
 function noCard(input: NoCardInput): ChainResolution {
-  const { photo = null, featured, rule = null, skipped } = input;
+  const { photo, featured, rule, skipped } = input;
   const shared = photo ?? featured;
   return {
     image: photo,

@@ -1,0 +1,20 @@
+{
+  "extends": "@plumix/typescript-config/base.json",
+  "compilerOptions": {
+    // The plugin's dev surfaces are `.tsx`, and this program resolves the
+    // plugin from source rather than dist.
+    "jsx": "react-jsx",
+    "types": ["node", "@cloudflare/workers-types"],
+    // Resolve workspace packages from `src/` (not `dist/`) — see the comment
+    // in `packages/plugins/media/playground/tsconfig.json` for the rationale.
+    "paths": {
+      "plumix": ["../../../plumix/src/index.ts"],
+      "@plumix/plugin-og": ["../src/index.ts"],
+      "@plumix/plugin-blog": ["../../blog/src/index.ts"],
+      "@plumix/runtime-cloudflare": [
+        "../../../runtimes/cloudflare/src/index.ts"
+      ]
+    }
+  },
+  "include": ["plumix.config.ts", ".plumix"]
+}

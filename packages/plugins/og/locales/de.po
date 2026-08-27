@@ -1,0 +1,95 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-08-27\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.og.preview.box.label"
+msgstr "Social-Card"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.og.preview.field.label"
+msgstr "Geteiltes Bild"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.loading"
+msgstr "Wird gerendert…"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.failed"
+msgstr "Die Vorschau konnte nicht gerendert werden."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.unsaved"
+msgstr "Speichere den Eintrag, um zu sehen, wie er geteilt wird."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.refresh"
+msgstr "Aktualisieren"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.alt"
+msgstr "Vorschau des Bildes, mit dem dieser Eintrag geteilt wird"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.ogImage"
+msgstr "Das für diesen Eintrag gesetzte Teilen-Bild, das die Card übertrumpft."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.card"
+msgstr "Eine aus diesem Eintrag erzeugte Card."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.featured"
+msgstr "Das Beitragsbild dieses Eintrags."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.siteDefault"
+msgstr "Das seitenweite Standardbild."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.supplied"
+msgstr "Ein Bild, das ein anderes Plugin geliefert hat."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.noRule"
+msgstr "Keine Card-Regel passt zu diesem Eintrag."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.rendererFormat"
+msgstr "Der Renderer erzeugt ein Format, das soziale Netzwerke nicht anzeigen."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.notShareable"
+msgstr "Keine Card: dieser Eintrag ist nicht öffentlich erreichbar."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.featuredPreferred"
+msgstr "Die Card tritt hinter das Beitragsbild zurück."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.pageKind"
+msgstr "Nur Einträge bekommen eine Card."
+

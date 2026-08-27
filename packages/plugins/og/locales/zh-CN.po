@@ -1,0 +1,95 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-08-27\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: zh-CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.og.preview.box.label"
+msgstr "社交卡片"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.og.preview.field.label"
+msgstr "分享图片"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.loading"
+msgstr "正在渲染…"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.failed"
+msgstr "无法渲染预览。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.unsaved"
+msgstr "保存条目后即可查看分享效果。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.refresh"
+msgstr "刷新"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.alt"
+msgstr "此条目分享时所用图片的预览"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.ogImage"
+msgstr "为此条目设置的分享图片，其优先级高于卡片。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.card"
+msgstr "根据此条目生成的卡片。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.featured"
+msgstr "此条目的特色图片。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.siteDefault"
+msgstr "站点默认图片。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.supplied"
+msgstr "由其他插件提供的图片。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.noRule"
+msgstr "没有匹配此条目的卡片规则。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.rendererFormat"
+msgstr "渲染器输出的格式社交网络不显示。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.notShareable"
+msgstr "没有卡片：此条目无法公开访问。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.featuredPreferred"
+msgstr "卡片让位于特色图片。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.pageKind"
+msgstr "只有条目才有卡片。"
+

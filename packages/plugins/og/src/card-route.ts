@@ -6,8 +6,8 @@ import {
   tagCacheEntry,
   withBasePath,
 } from "plumix";
-import { and, eq } from "plumix/db";
-import { entries, settings } from "plumix/schema";
+import { eq } from "plumix/db";
+import { entries } from "plumix/schema";
 
 import type { CardInputs } from "./card-identity.js";
 import type { CardRegistry } from "./card-registry.js";
@@ -17,6 +17,7 @@ import { entryCardNode } from "./card-registry.js";
 import { renderCardBytes, SANDBOX_CSP } from "./card-render.js";
 import { extensionFor } from "./renderer.js";
 import { isShareableEntry } from "./shareable.js";
+import { siteDefaultImage } from "./site.js";
 
 /** Where the plugin mounts the route, relative to its own prefix. */
 export const CARD_ROUTE_PATH = "/entry/*";
@@ -153,8 +154,7 @@ export function createCardRoute(
  * thing to what the page meant. Never cached — the next render may well work.
  */
 async function siteDefaultRedirect(ctx: AppContext): Promise<Response> {
-  const fallback = await siteSetting(ctx, "default_og_image");
-  const location = fallback === undefined ? null : absolute(ctx, fallback);
+  const location = await siteDefaultImage(ctx);
   return location === null ? notFound() : redirect(location);
 }
 
@@ -165,26 +165,6 @@ function redirect(location: string): Response {
     status: 302,
     headers: { location, "cache-control": "no-store" },
   });
-}
-
-// The setting holds whatever an operator typed: a full URL, or a path into the
-// site's own media. A `Location` has to be neither ambiguous nor malformed.
-function absolute(ctx: AppContext, value: string): string | null {
-  return URL.parse(value, ctx.origin)?.href ?? null;
-}
-
-async function siteSetting(
-  ctx: AppContext,
-  key: string,
-): Promise<string | undefined> {
-  const [row] = await ctx.db
-    .select({ value: settings.value })
-    .from(settings)
-    .where(and(eq(settings.group, "site"), eq(settings.key, key)))
-    .limit(1);
-  return typeof row?.value === "string" && row.value.length > 0
-    ? row.value
-    : undefined;
 }
 
 interface EntryNode {

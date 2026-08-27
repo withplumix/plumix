@@ -1,0 +1,5 @@
+# `lingui compile` emits single-line catalogs with an `eslint-disable`
+# header. Prettier would reformat every run; the files are machine-
+# written and not meant to be read in diffs. Same exclusion as admin's
+# .prettierignore.
+locales/*.mjs

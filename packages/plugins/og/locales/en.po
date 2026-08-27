@@ -1,0 +1,95 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-08-27\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.og.preview.box.label"
+msgstr "Social card"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.og.preview.field.label"
+msgstr "Shared image"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.loading"
+msgstr "Rendering…"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.failed"
+msgstr "Could not render the preview."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.unsaved"
+msgstr "Save the entry to see how it will be shared."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.refresh"
+msgstr "Refresh"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.alt"
+msgstr "Preview of the image this entry will be shared with"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.ogImage"
+msgstr "The share image set on this entry, which outranks the card."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.card"
+msgstr "A card generated from this entry."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.featured"
+msgstr "This entry's featured image."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.siteDefault"
+msgstr "The site-wide default image."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.outcome.supplied"
+msgstr "An image another plugin supplied."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.noRule"
+msgstr "No card rule matches this entry."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.rendererFormat"
+msgstr "The renderer makes a format social networks do not display."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.notShareable"
+msgstr "No card: this entry is not publicly reachable."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.featuredPreferred"
+msgstr "The card steps aside for the featured image."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.og.preview.skip.pageKind"
+msgstr "Only entries get a card."
+
