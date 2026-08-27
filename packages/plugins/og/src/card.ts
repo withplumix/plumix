@@ -21,6 +21,7 @@ import type {
   TermTaxonomyTargets,
   TierMatchRule,
 } from "plumix";
+import type { ResolvedThemeTokens } from "plumix/blocks";
 import {
   archiveTypeTargets,
   authorTargets,
@@ -32,8 +33,16 @@ import {
 import type { CardKey } from "./card-key.js";
 import type { CardNode } from "./renderer.js";
 
-/** A card's render arguments, which are a template's render arguments. */
-export type CardArgs<TData extends TemplateData> = TemplateRenderArgs<TData>;
+/**
+ * A card's render arguments: a template's render arguments, plus the theme's
+ * tokens resolved to values for the decisions a card makes in JavaScript.
+ * Styling goes through CSS — the same tokens reach the renderer as a
+ * stylesheet, so a card's `var()` references resolve without passing through
+ * here.
+ */
+export type CardArgs<TData extends TemplateData> = TemplateRenderArgs<TData> & {
+  readonly tokens: ResolvedThemeTokens;
+};
 
 /**
  * Template deps a card declares. Only the literal form: a card is not

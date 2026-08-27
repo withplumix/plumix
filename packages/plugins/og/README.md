@@ -28,7 +28,7 @@ export default plumix({
 - **Share a link and the card is what appears.** The entry's page carries the card as its `og:image`, with `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. An author's own `.ogImage()` or `.featured()` image still wins; the card only outranks the site-wide default.
 - **Render once, serve cheaply** — a card is rendered on the first request, written to your storage bucket, and read back after that. A matching `If-None-Match` answers `304`.
 - **A renderer you can swap.** `renderer:` takes the bundled engine (`takumi()`, or `takumi({ format: "jpeg" })` for a photo-heavy design), the same engine's SVG output (`svgOnly()`), or `remote({ url })` to render off-box.
-- **Cards your theme designs**, declared beside its templates — see below.
+- **Cards your theme designs**, declared beside its templates and styled in its own design tokens — see below.
 
 ## When a card cannot be advertised
 
@@ -66,6 +66,46 @@ export default defineTheme({
 
 `forEntryType("post")` autocompletes against your registered types and rejects a typo at compile time, and both callbacks receive that type's entry projection. A card declares template deps (`settings`, `menus`, …) as slug arrays and receives their results alongside `data` and `ctx` — the `(prev) => next` form templates use to extend their theme's declaration does not apply, since nothing inherits from a card.
 
+### Your theme's tokens
+
+Whatever your theme declared in `tokens` is compiled to a `:root` block of custom properties and handed to the renderer ahead of the card's own stylesheet — the same `--plumix-<category>-<slug>` names your site's CSS reads. So a card is styled the way the rest of the theme is:
+
+```ts
+// theme: tokens: { color: { accent: { value: "#b5472d" } } }
+
+card.fallback().define({
+  key: ({ data }) => cardKey.entry(data.entry),
+  styles: [
+    ".card { --gutter: 36px; padding: calc(var(--gutter) * 2) }",
+    ".card__rule { background-color: var(--plumix-color-accent) }",
+  ],
+  render: ...,
+});
+```
+
+`var()`, `calc()` and custom properties of your own all resolve, and a card that redefines a token wins — its sheet comes second. Retune a token and every card lands on a fresh key, the same way editing the card itself does.
+
+The same tokens reach both callbacks as **resolved values**, for what a card decides in JavaScript rather than in CSS:
+
+```ts
+card.fallback().define({
+  key: ({ data, tokens }) =>
+    cardKey.entry(data.entry, tokens.color?.accent ?? ""),
+  render: ({ data, tokens }) => ({
+    type: "container",
+    // The card's own sheet paints the accent bar; a theme that declared no
+    // accent gets the plain design rather than a bar in the wrong colour.
+    className:
+      tokens.color?.accent === undefined ? "card" : "card card--accented",
+    children: [
+      { type: "text", className: "card__title", text: data.entry.title },
+    ],
+  }),
+});
+```
+
+A token your theme declared without a `value` — one its own CSS defines — has nothing to resolve, so it appears in neither route. Nor does one your theme's CSS would have rejected: both routes are filtered together, so what a card can style with is what it can read.
+
 ### Which page kinds are servable today
 
 Only entries have a card URL — `/_plumix/og/entry/<id>.<ext>`. The builders for the other page kinds (`card.frontPage()`, `card.archive()`, `card.taxonomy()`, `card.author()`, `card.date()`, `card.forTermTaxonomy()`, `card.forDate()`, `card.forArchiveType()`) type-check and resolve, but nothing addresses those pages yet, so a rule declared against one is not served. They arrive with the routes that serve them.
@@ -79,7 +119,7 @@ Only entries have a card URL — `/_plumix/og/entry/<id>.<ext>`. The builders fo
 
 Read something the helper does not cover? Append it: `cardKey.entry(entry, siteName)`.
 
-Two more inputs fold in automatically. The **card's own source** does, so a redesign invalidates what it replaced without a version bump — note this covers the card's own body, not a component it calls out to, so a card whose design lives in a child needs the child's identity in its `key`. The **font set** does too, since a swapped face changes every card.
+Three more inputs fold in automatically. The **card's own source** does, so a redesign invalidates what it replaced without a version bump — note this covers the card's own body, not a component it calls out to, so a card whose design lives in a child needs the child's identity in its `key`. The **font set** does too, since a swapped face changes every card, and so do your **theme's tokens**, since a retuned palette repaints every card written against it.
 
 Three things it does not cover, each with the same answer — name it in the `key`:
 

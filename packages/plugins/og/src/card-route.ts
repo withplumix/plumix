@@ -12,6 +12,7 @@ import { entries, settings } from "plumix/schema";
 import type { CardRegistry } from "./card-registry.js";
 import type { CardArgs } from "./card.js";
 import type { CardRenderer } from "./renderer.js";
+import type { ThemeTokenSet } from "./tokens.js";
 import { cardStorageKey } from "./card-key.js";
 import { entryCardNode } from "./card-registry.js";
 import { cardSourceHash } from "./card-source.js";
@@ -60,6 +61,11 @@ export interface CardRouteOptions {
   readonly fonts: readonly string[];
   /** What the theme declared, behind the plugin's own default. */
   readonly cards: CardRegistry;
+  /**
+   * The theme's compiled tokens. Read per request rather than captured,
+   * because the theme hands them over after the route is built.
+   */
+  readonly tokens: () => ThemeTokenSet;
 }
 
 /**
@@ -69,7 +75,7 @@ export interface CardRouteOptions {
 export function createCardRoute(
   options: CardRouteOptions,
 ): (request: Request, ctx: AppContext) => Promise<Response> {
-  const { renderer, fonts, cards } = options;
+  const { renderer, fonts, cards, tokens } = options;
   // A format with no extension has no URL to serve a card at, so the route is
   // decided here rather than re-asked on every request.
   const extension = extensionFor(renderer.contentType);
@@ -90,12 +96,15 @@ export function createCardRoute(
     if (rule === undefined) return notFound();
     const { card } = rule;
 
+    const themeTokens = tokens();
     const args: CardArgs<TemplateData> = {
-      // Spread first, so a dep kind named `data` or `ctx` cannot displace the
-      // framework-owned pair — the same ordering the template renderer uses.
+      // Spread first, so a dep kind named `data`, `ctx` or `tokens` cannot
+      // displace the framework-owned set — the same ordering the template
+      // renderer uses.
       ...(await loadTemplateDeps({ ...card }, ctx.plugins.templateDeps, ctx)),
       data: resolved.data,
       ctx,
+      tokens: themeTokens.values,
     };
     // Read once: the size the key describes has to be the size that was
     // rendered, or the stored bytes are not what the key says they are.
@@ -110,6 +119,7 @@ export function createCardRoute(
           target: `entry/${String(id)}`,
           hash: card.key(args).hash,
           sourceHash: await cardSourceHash(card),
+          tokens: themeTokens.stylesheets,
           fonts,
           width,
           height,
@@ -122,7 +132,9 @@ export function createCardRoute(
           renderer.render(card.render(args), {
             width,
             height,
-            stylesheets: card.styles ?? [],
+            // The theme's sheet first: a card is written against those
+            // properties, and one that redefines a token is meant to win.
+            stylesheets: [...themeTokens.stylesheets, ...(card.styles ?? [])],
             fonts: await loadFonts(ctx, fonts),
             fetch: ctx.fetch,
           }),

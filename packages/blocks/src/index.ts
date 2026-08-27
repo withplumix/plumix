@@ -124,11 +124,16 @@ export type {
 // ─── Style emission + theme tokens ──────────────────────────────────────────
 // The token↔CSS-var codec (`tokenIdToCssVar`, `tokenIdFromCssVar`,
 // `tokenCssVar`, `tokenCategoryForProperty`, `normalizeStyleValue`) is
-// package-internal — it stays behind `createStyleField`/`createStyleFields` and
-// the SSR `emitBlockStyleCss`, so no consumer parses or builds a `var()` string.
+// package-internal — it stays behind `createStyleField`/`createStyleFields`,
+// the SSR `emitBlockStyleCss` and `emitThemeTokenCss`, so no consumer parses or
+// builds a `var()` string. `emitThemeTokenCss` writes the other side of that
+// codec — the custom properties those references resolve against — for a
+// surface rendering away from the page, where the theme's own CSS never loads.
 export {
   DEFAULT_BREAKPOINTS,
   emitBlockStyleCss,
+  emitThemeTokenCss,
+  resolveThemeTokens,
   VIEWPORT_MAX_PX,
 } from "./styles/style-emitter.js";
 export type {
@@ -149,6 +154,8 @@ export { parseLoaderData, serializeLoaderData } from "./loader-data.js";
 export { findBlockNode } from "./find-block-node.js";
 export type {
   KnownTokenCategory,
+  ResolvedThemeTokens,
+  ResolvedTokenGroup,
   ThemeTokenEntry,
   ThemeTokenGroup,
   ThemeTokens,

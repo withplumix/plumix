@@ -1,4 +1,5 @@
 import type { AnyPluginDescriptor, JsonObject, Logger } from "plumix";
+import type { ThemeTokens } from "plumix/blocks";
 import type { DispatcherHarness } from "plumix/test";
 import {
   anonymousPolicy,
@@ -75,11 +76,13 @@ export interface HarnessOptions extends OgPluginOptions {
    */
   readonly before?: readonly AnyPluginDescriptor[];
   /**
-   * Cards the theme declares, ahead of the plugin's own default. Supplying any
-   * swaps the harness's default theme for a bare one, so a page renders its
-   * head and nothing else.
+   * Cards the theme declares, ahead of the plugin's own default. Supplying
+   * either these or {@link HarnessOptions.tokens} swaps the harness's default
+   * theme for a bare one, so a page renders its head and nothing else.
    */
   readonly cards?: readonly CardRule[];
+  /** Design tokens the theme declares. */
+  readonly tokens?: ThemeTokens;
 }
 
 /** An app with the plugin installed, rendering through the fake renderer. */
@@ -94,6 +97,7 @@ export async function createHarness(
     logger,
     before = [],
     cards,
+    tokens,
     ...rest
   } = options;
   const harness = await createDispatcherHarness({
@@ -105,12 +109,13 @@ export async function createHarness(
     storage: withStorage ? memoryStorage().connect({}) : undefined,
     assets,
     logger,
-    ...(cards === undefined
+    ...(cards === undefined && tokens === undefined
       ? {}
       : {
           theme: defineTheme({
             templates: [fallback(() => null)],
             ogCards: cards,
+            tokens,
           }),
         }),
   });

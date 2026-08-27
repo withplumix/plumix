@@ -4,7 +4,9 @@ import type { ResponsiveStyleSlot } from "./style-emitter.js";
 import type { ThemeTokens } from "./types.js";
 import {
   emitBlockStyleCss,
+  emitThemeTokenCss,
   normalizeStyleValue,
+  resolveThemeTokens,
   tokenCategoryForProperty,
   tokenCssVar,
   tokenIdFromCssVar,
@@ -261,5 +263,71 @@ describe("emitBlockStyleCss", () => {
     };
 
     expect(emitBlockStyleCss("b", style)).toBe(".b { --brandColor: #0c2238; }");
+  });
+});
+
+describe("emitThemeTokenCss", () => {
+  test("emits every valued token as the custom property its var() names", () => {
+    const tokens: ThemeTokens = {
+      color: { accent: { value: "#b5472d", label: "Accent" } },
+      fontFamily: { serif: { value: "Georgia, serif" } },
+    };
+
+    expect(emitThemeTokenCss(tokens)).toBe(
+      ":root { --plumix-color-accent: #b5472d; --plumix-font-family-serif: Georgia, serif; }",
+    );
+  });
+
+  test("leaves out a token the theme's own CSS defines", () => {
+    const tokens: ThemeTokens = {
+      color: { accent: { label: "Accent" }, ink: { value: "#1b1a17" } },
+    };
+
+    expect(emitThemeTokenCss(tokens)).toBe(
+      ":root { --plumix-color-ink: #1b1a17; }",
+    );
+  });
+
+  test("emits nothing for a theme with no tokens", () => {
+    expect(emitThemeTokenCss({})).toBe("");
+    expect(emitThemeTokenCss({ color: {} })).toBe("");
+  });
+
+  test("drops a category whose name would not be a property name", () => {
+    const tokens: ThemeTokens = {
+      "color } body { display:none;--x": { accent: { value: "#b5472d" } },
+    };
+
+    expect(emitThemeTokenCss(tokens)).toBe("");
+  });
+
+  test("drops a value carrying a breakout vector", () => {
+    const tokens: ThemeTokens = {
+      color: { accent: { value: "#b5472d } body { display:none" } },
+    };
+
+    expect(emitThemeTokenCss(tokens)).toBe("");
+  });
+});
+
+describe("resolveThemeTokens", () => {
+  test("carries exactly the tokens the stylesheet does", () => {
+    const tokens: ThemeTokens = {
+      color: { accent: { value: "#b5472d" }, ink: { label: "Ink" } },
+      "not a category": { accent: { value: "#b5472d" } },
+      spacing: { gutter: { value: "72px" } },
+    };
+
+    const resolved = resolveThemeTokens(tokens);
+
+    // The two routes a card reads a theme through cannot disagree about which
+    // tokens exist: one is formatted from the other.
+    expect(resolved).toEqual({
+      color: { accent: "#b5472d" },
+      spacing: { gutter: "72px" },
+    });
+    expect(emitThemeTokenCss(tokens)).toBe(
+      ":root { --plumix-color-accent: #b5472d; --plumix-spacing-gutter: 72px; }",
+    );
   });
 });

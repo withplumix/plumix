@@ -1,33 +1,39 @@
 import { memoryStorage } from "plumix";
+import { emitThemeTokenCss } from "plumix/blocks";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
-import type { CardNode } from "./renderer.js";
+import type { CardNode, CardRenderInput } from "./renderer.js";
 import { og } from "./index.js";
 import { takumi } from "./takumi.js";
 
 // The only tests that load the real wasm: two proving the engine encodes each
-// format it offers, one proving the configuration a fresh install gets reaches
-// it. Everything else renders through the fake in `test/fake-renderer.ts` —
+// format it offers, one proving it resolves the CSS a themed card is written
+// in, and one proving the configuration a fresh install gets reaches it.
+// Everything else renders through the fake in `test/fake-renderer.ts` —
 // exercising the engine harder than this tests upstream rather than us.
+// The engine must never reach the network: a card is rendered from what the
+// request already resolved, which is what keeps the storage key complete.
+const input = (stylesheets: string[]): CardRenderInput => ({
+  width: 1200,
+  height: 630,
+  stylesheets,
+  fonts: [],
+  fetch: () => Promise.reject(new Error("the engine must not fetch")),
+});
+
 describe("the bundled engine", () => {
   test("turns a node tree into raster bytes", async () => {
     const renderer = takumi();
     const render = (children: CardNode[]): Promise<Uint8Array> =>
       renderer.render(
         { type: "container", className: "card", children },
-        {
-          width: 1200,
-          height: 630,
-          stylesheets: [
-            ":root { --ink: #ffffff }",
-            ".card { width: 1200px; height: 630px; background-color: #0b1220 }",
-            ".title { color: var(--ink); font-size: 76px }",
-          ],
-          fonts: [],
-          fetch: () => Promise.reject(new Error("the engine must not fetch")),
-        },
+        input([
+          ":root { --ink: #ffffff }",
+          ".card { width: 1200px; height: 630px; background-color: #0b1220 }",
+          ".title { color: var(--ink); font-size: 76px }",
+        ]),
       );
 
     const titled = await render([
@@ -52,18 +58,44 @@ describe("the bundled engine", () => {
         className: "card",
         children: [{ type: "text", className: "title", text: "Hello World" }],
       },
-      {
-        width: 1200,
-        height: 630,
-        stylesheets: [".card { width: 1200px; height: 630px }"],
-        fonts: [],
-        fetch: () => Promise.reject(new Error("the engine must not fetch")),
-      },
+      input([".card { width: 1200px; height: 630px }"]),
     );
 
     expect(renderer.contentType).toBe("image/jpeg");
     // SOI marker: the bytes are JPEG, not the PNG the same call defaults to.
     expect([...bytes.slice(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
+  });
+
+  test("resolves a theme's tokens to what the card meant", async () => {
+    const renderer = takumi();
+    const render = (stylesheets: string[]): Promise<Uint8Array> =>
+      renderer.render(
+        {
+          type: "container",
+          className: "card",
+          children: [{ type: "text", className: "title", text: "Hello World" }],
+        },
+        input([
+          ".card { width: 1200px; height: 630px; background-color: #0b1220 }",
+          ".title { color: #f8fafc; font-size: 76px }",
+          ...stylesheets,
+        ]),
+      );
+
+    // The whole route a theme's design takes to a card: the sheet the plugin
+    // compiles from the theme's own tokens, and a card written against the
+    // names it emits.
+    const themed = await render([
+      emitThemeTokenCss({ spacing: { gutter: { value: "36px" } } }),
+      ".card { padding: calc(var(--plumix-spacing-gutter) * 2) }",
+    ]);
+
+    // Identical pixels to the value written out by hand — the reference was
+    // resolved and the arithmetic done, not dropped.
+    expect(themed).toEqual(await render([".card { padding: 72px }"]));
+    // And the padding is load-bearing, so equality above is not two cards that
+    // both ignored it.
+    expect(themed).not.toEqual(await render([".card { padding: 36px }"]));
   });
 
   test("is what a plugin with no renderer configured serves through", async () => {
