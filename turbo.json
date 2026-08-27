@@ -70,6 +70,14 @@
       // they depend on nothing generated — no build, no i18n:compile.
       "dependsOn": []
     },
+    "@plumix/e2e-ports#test:unit": {
+      // The guard scans every playwright config in the repo, so its verdict
+      // turns on files outside this package. Without these inputs turbo would
+      // hash only `tooling/e2e-ports/` and serve a cached pass for exactly the
+      // change that introduces a collision — the PR that edits one suite's
+      // config and nothing else.
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/**/playwright.config.ts"]
+    },
     "test:build": {
       // Tests that need the build graph (`*.build.test.ts`): plumix inspects
       // the artifacts of a real Vite build, and the docs content checks compile

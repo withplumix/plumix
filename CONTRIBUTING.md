@@ -63,14 +63,21 @@ a `test:e2e` script in the packages that have them (`packages/admin`,
 one config helper, `definePlumixE2EConfig`.
 
 Each suite binds a distinct port so a parallel `turbo run test:e2e` doesn't
-collide. Those are base values: set `PLUMIX_E2E_PORT_OFFSET` to shift every
-port a suite owns — HTTP, workerd inspector, and readiness — by the same
+collide: the plugin playgrounds and `apps/demo` take HTTP `30N0` with the
+matching workerd inspector port `93N0`, and the two admin suites preview on
+`5180`/`5181`. Those are base values: set `PLUMIX_E2E_PORT_OFFSET` to shift
+every port a suite owns — HTTP, workerd inspector, and readiness — by the same
 amount, which is how you run the suites from a second checkout or alongside
 another project holding one of the default ports.
 
 ```bash
 PLUMIX_E2E_PORT_OFFSET=100 pnpm test:e2e
 ```
+
+Two suites on one base port only fails under CI's parallel run, and it fails in
+the suite that _lost_ the port rather than the one that took it — so
+`@plumix/e2e-ports` reads the ports out of every `playwright.config.ts` and
+fails `pnpm test:unit` on a duplicate, naming both packages.
 
 The suites never reuse a server that is already listening. Playwright does not
 check that the responder is this suite's build, and reuse would skip the setup

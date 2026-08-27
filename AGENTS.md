@@ -52,7 +52,7 @@ packages/
 ├── plumix/              plumix                    — public umbrella; subpath exports re-export internals
 ├── create-plumix-app/                             — scaffolder
 ├── plugins/
-│   ├── audit-log/ blog/ comments/ media/ menu/ pages/ — first-party plugins
+│   ├── audit-log/ blog/ comments/ media/ menu/ og/ pages/ — first-party plugins
 └── runtimes/
     └── cloudflare/      @plumix/runtime-cloudflare — Cloudflare D1/R2/KV bindings
 apps/
@@ -60,6 +60,7 @@ apps/
 ├── marketing/  @plumix-apps/marketing — marketing site on plumix (scaffold)
 └── docs/       @plumix-apps/docs      — Astro Starlight documentation site
 tooling/{eslint,lingui,prettier,typescript,vitest} — shared configs as workspace packages
+tooling/e2e-ports — guards every Playwright suite's ports against every other suite's
 ```
 
 ### The umbrella rule
