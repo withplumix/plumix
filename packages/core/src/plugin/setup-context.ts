@@ -253,8 +253,10 @@ export interface PluginSetupContextBase {
    *  opt-in on a route that isn't `auth: "public"` throws.
    *
    *  Freshness is the handler's: it keeps a `cache-control` it set, and a
-   *  response that set none takes the site's page TTL. Nothing purges a route
-   *  entry, so `immutable` belongs only on a content-addressed URL. A response
+   *  response that set none takes the site's page TTL. So are the tags: the
+   *  entry stores untagged unless the handler calls `tagCacheEntry` while it
+   *  runs, and `immutable` belongs only on a content-addressed URL, since a
+   *  purge reaches Cloudflare but never a browser or a scraper. A response
    *  answering a request that carried a session, an `Authorization` header or
    *  a `?preview=` token is never stored, nor is one that sets a cookie or
    *  declares itself `private` / `no-store` — that last is how a handler keeps

@@ -1,7 +1,10 @@
 import type { OgImage, TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
 
+import type { CardInputs } from "./card-identity.js";
 import type { CardRegistry } from "./card-registry.js";
+import type { CardDefinition } from "./card.js";
+import { resolveCardIdentity } from "./card-identity.js";
 import { entryCardNode } from "./card-registry.js";
 import { cardUrl } from "./card-route.js";
 import { CARD_HEIGHT, CARD_WIDTH } from "./renderer.js";
@@ -26,6 +29,8 @@ interface PageOgImageInput {
    */
   readonly extension: string | undefined;
   readonly cards: CardRegistry;
+  /** What a card renders with, which is half of what addresses it. */
+  readonly inputs: CardInputs;
 }
 
 /**
@@ -35,7 +40,7 @@ interface PageOgImageInput {
 export async function pageOgImage(
   input: PageOgImageInput,
 ): Promise<OgImage | null> {
-  const { image, featured, data, ctx, extension, cards } = input;
+  const { image, featured, data, ctx, extension, cards, inputs } = input;
   // An image already on the chain is another contributor's deliberate choice,
   // which a generated card does not outrank however the `plugins: []` array
   // happened to be ordered.
@@ -55,8 +60,8 @@ export async function pageOgImage(
     height: card.height ?? CARD_HEIGHT,
   };
   // The photo standing in for the card needs nothing else resolved — not the
-  // route's format, and not the access question below, which costs a policy
-  // resolver run of its own on every page that asks it.
+  // route's format, not the access question below, and not the card's digest,
+  // each of which costs a resolver run of its own on every page that asks it.
   const cropped = featured === null ? null : cropToCard(ctx, featured, size);
   if (cropped !== null && card.mode !== "card") return cropped;
 
@@ -65,9 +70,44 @@ export async function pageOgImage(
   // share image, since there is no card for it to be.
   const generated =
     extension !== undefined && (await isShareableEntry(ctx, entry))
-      ? { url: cardUrl(ctx, entry.id, extension), ...size }
+      ? await cardOgImage({
+          card,
+          data,
+          entryId: entry.id,
+          ctx,
+          inputs,
+          extension,
+          size,
+        })
       : null;
   return generated ?? cropped;
+}
+
+interface CardOgImageInput {
+  readonly card: CardDefinition<TemplateData>;
+  readonly data: TemplateData;
+  /** Narrowed off `data` by the caller, which has already asked. */
+  readonly entryId: number;
+  readonly ctx: AppContext;
+  readonly inputs: CardInputs;
+  readonly extension: string;
+  readonly size: CardSize;
+}
+
+// The digest is what makes this URL worth publishing: it moves when the card
+// does, so an edit hands X, Facebook and LinkedIn a link they are not already
+// holding. Taken from the same call the route makes, because a digest the
+// route would not recognise redirects every scraper away from its own image.
+async function cardOgImage(input: CardOgImageInput): Promise<OgImage> {
+  const { card, data, entryId, ctx, inputs, extension, size } = input;
+  const { digest } = await resolveCardIdentity(
+    card,
+    data,
+    ctx,
+    inputs,
+    extension,
+  );
+  return { url: cardUrl(ctx, entryId, digest, extension), ...size };
 }
 
 // Cropping the photo to the card's shape is what stops a scraper cropping it

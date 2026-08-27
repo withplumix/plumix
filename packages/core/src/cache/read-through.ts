@@ -98,6 +98,11 @@ interface ReadThroughRouteArgs {
   readonly telemetry: TelemetryCollector;
   /** Runs the plugin's handler. Called once on a miss, never on a hit. */
   readonly render: () => Promise<Response>;
+  /**
+   * The tags the stored response should carry. Evaluated after `render`,
+   * which is the only moment the handler has named what it resolved.
+   */
+  readonly tags: () => readonly string[];
 }
 
 /**
@@ -109,13 +114,14 @@ interface ReadThroughRouteArgs {
  * the URL with the cookie dropped and a signed-in visitor shares it rather than
  * bypassing it. Freshness stays the handler's to declare: the provider keeps a
  * `cache-control` it set and falls back to the site's page TTL only when it set
- * none. Nothing tags the entry — core can't name what a raw route's response
- * depends on — so what expires it is that freshness, never a purge.
+ * none. Tags are the handler's too — core can't name what a raw route's
+ * response depends on, but the handler can, through `tagCacheEntry` — and a
+ * handler that names none stores an entry no purge reaches.
  */
 export async function readThroughRoute(
   args: ReadThroughRouteArgs,
 ): Promise<Response> {
-  const { request, cache, defer, telemetry, render } = args;
+  const { request, cache, defer, telemetry, render, tags } = args;
 
   if (!methodIsCacheable(request.method)) {
     telemetry.record("cache", { decision: "bypass", reason: "method" });
@@ -128,20 +134,20 @@ export async function readThroughRoute(
     defer,
     telemetry,
     fact: {},
-    tags: () => [],
+    tags,
     storable: (fresh) => routeResponseIsShareable(request, fresh),
     render,
   });
 }
 
 // The opt-in speaks for the route; each response still speaks for itself, and
-// the entry it would fill is untagged — no purge reaches a mistake. So a
-// response that came out for one visitor stays out of the store: `auth:
-// "public"` only means *core* doesn't gate the route, and a handler checking a
-// bearer token core knows nothing about is exactly the shape at risk. A
-// `Set-Cookie` says the same thing (the provider would strip it, leaving later
-// visitors a body whose cookie went missing), as does a `private`/`no-store`
-// the provider would otherwise overwrite with the page TTL.
+// the entry it would fill is reachable only by whatever tags the handler
+// declared — often none. So a response that came out for one visitor stays out
+// of the store: `auth: "public"` only means *core* doesn't gate the route, and
+// a handler checking a bearer token core knows nothing about is exactly the
+// shape at risk. A `Set-Cookie` says the same thing (the provider would strip
+// it, leaving later visitors a body whose cookie went missing), as does a
+// `private`/`no-store` the provider would otherwise overwrite with the page TTL.
 function routeResponseIsShareable(request: Request, fresh: Response): boolean {
   if (requestIsPrivileged(request)) return false;
   if (fresh.headers.has("set-cookie")) return false;

@@ -243,7 +243,7 @@ The declarative `<head>`/`<html>` descriptor (title, meta, link, script tags) a 
 The shared-document cache for anonymous public renders, served read-through: a hit returns the stored response; a miss renders live and stores without blocking the response.
 
 **Cache tag**:
-A coarse label a stored page carries for invalidation — a type tag (`t:<type>`) or an entry tag (`e:<id>`).
+A coarse label a stored response carries for invalidation — a type tag (`t:<type>`) or an entry tag (`e:<id>`). A page is tagged from its resolved intent; a plugin route that opted into the edge cache names its own with `tagCacheEntry`, in the same vocabulary or in a namespace of its own that nothing purges.
 
 **Purge**:
 Invalidation of stored responses by tag.

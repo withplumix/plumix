@@ -8,7 +8,13 @@ import type { CardNode } from "./renderer.js";
 import { cardKey } from "./card-key.js";
 import { card } from "./card.js";
 import { createFakeRenderer } from "./test/fake-renderer.js";
-import { createHarness, seedEntry, seedMedia } from "./test/harness.js";
+import {
+  cardPath,
+  createHarness,
+  fetchCard,
+  seedEntry,
+  seedMedia,
+} from "./test/harness.js";
 
 // Stands in for an uploaded file: what it decodes to does not matter to the
 // walk, only that the bytes the bucket holds are the bytes the renderer gets.
@@ -36,7 +42,7 @@ function imageCard(node: () => CardNode): CardRule {
 /** The card served for one seeded entry. */
 async function cardBody(harness: DispatcherHarness): Promise<string> {
   const id = await seedEntry(harness);
-  return (await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`)).text();
+  return (await fetchCard(harness, id)).text();
 }
 
 afterEach(() => {
@@ -193,20 +199,26 @@ describe("an image a card references", () => {
 
   // The root cause of all three advisories the no-fetch rule answers was a
   // render option taken from the URL. The server derives every one of them: the
-  // URL names a card and carries nothing else.
+  // URL names a card and carries nothing else — so a query string is not
+  // ignored, it is refused, since the edge keys on the whole URL and answering
+  // one would mint an entry per parameter a caller invents.
   test("cannot be steered by anything in the request URL", async () => {
     const fake = createFakeRenderer();
     const harness = await createHarness({ renderer: fake.renderer });
     const id = await seedEntry(harness);
-    const path = `/_plumix/og/entry/${String(id)}.svg`;
+    const path = await cardPath(harness, id);
 
-    const plain = await harness.fetch(path);
+    await harness.fetch(path);
     const steered = await harness.fetch(
       `${path}?width=8000&height=8000&url=https%3A%2F%2Felsewhere.example%2Fp.png`,
     );
 
-    expect(await steered.text()).toBe(await plain.text());
-    expect(steered.headers.get("etag")).toBe(plain.headers.get("etag"));
+    const location = steered.assertStatus(302).headers.get("location");
+    expect(new URL(location ?? "").pathname).toBe(path);
+    expect(new URL(location ?? "").search).toBe("");
+    expect(steered.headers.get("cache-control")).toBe("no-store");
+    // Nothing rendered for it either: the refusal lands before the card is
+    // resolved at all.
     expect(fake.inputs.map((input) => input.width)).toEqual([1200]);
   });
 });

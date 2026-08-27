@@ -7,7 +7,13 @@ import type { CardRule } from "./card.js";
 import type { CardRenderer } from "./renderer.js";
 import { card, cardKey } from "./index.js";
 import { createFakeRenderer } from "./test/fake-renderer.js";
-import { createHarness, headOf, ogImageOf, seedEntry } from "./test/harness.js";
+import {
+  createHarness,
+  fetchCard,
+  headOf,
+  ogImageOf,
+  seedEntry,
+} from "./test/harness.js";
 
 const SITE_DEFAULT = "https://cdn.example/site-default.png";
 const PHOTO = "https://media.example/hero.jpg";
@@ -34,6 +40,15 @@ const testDelivery = (zone: string | null): ImageDelivery => ({
       : `${zone}/${String(opts?.width)}x${String(opts?.height)},${String(opts?.fit)}/${src}`,
 });
 
+// The card URL is content-addressed, so a test cannot spell it — it matches
+// the shape and reads the one the head published, which is also the only thing
+// a scraper ever has.
+function cardUrlPattern(id: number): RegExp {
+  return new RegExp(
+    `^https://cms\\.example/_plumix/og/entry/${String(id)}/[0-9a-f]+\\.png$`,
+  );
+}
+
 describe("the card in the page head", () => {
   test("advertises the card as the page's og:image, at the size it renders", async () => {
     const harness = await createHarness({
@@ -44,11 +59,12 @@ describe("the card in the page head", () => {
 
     const html = await headOf(harness, "hello-world");
 
-    const url = `https://cms.example/_plumix/og/entry/${String(id)}.png`;
-    expect(ogImageOf(html)).toBe(url);
-    // The head names the URL by construction and the route answers on the path
-    // core mounts it at. Nothing else holds those two together, and a drift
-    // between them is a card that 404s on every scraper that follows it.
+    const url = ogImageOf(html) ?? "";
+    expect(url).toMatch(cardUrlPattern(id));
+    // The head names the URL by computing the card's digest and the route
+    // answers only on the digest it computes for itself. Nothing else holds
+    // those two together, and a drift between them is a card that redirects
+    // every scraper that follows it away from the image it was promised.
     const served = await harness.fetch(new URL(url).pathname);
     expect(served.assertStatus(200).headers.get("content-type")).toBe(
       "image/png",
@@ -68,7 +84,7 @@ describe("the card in the page head", () => {
     const id = await seedEntry(harness, { slug: "hello-world" });
 
     const html = await headOf(harness, "hello-world");
-    const served = await harness.fetch(`/_plumix/og/entry/${String(id)}.svg`);
+    const served = await fetchCard(harness, id);
 
     // An SVG og:image unfurls as nothing on X, Facebook and LinkedIn — worse
     // than the site's generic default. The route still serves it, so a
@@ -162,8 +178,8 @@ describe("the card in the page head", () => {
 
     // The teaser is a public document at the plain URL, so it unfurls — and the
     // route the head names answers the anonymous scraper that follows it.
-    const url = `https://cms.example/_plumix/og/entry/${String(id)}.png`;
-    expect(html).toContain(`<meta property="og:image" content="${url}"/>`);
+    const url = ogImageOf(html) ?? "";
+    expect(url).toMatch(cardUrlPattern(id));
     (await harness.fetch(new URL(url).pathname)).assertStatus(200);
   });
 
@@ -316,9 +332,7 @@ describe("the og:image precedence chain", () => {
 
     // Branding is the whole point of the theme's card, so it is what every
     // share shows — photo or no photo.
-    expect(ogImageOf(html)).toBe(
-      `https://cms.example/_plumix/og/entry/${String(id)}.png`,
-    );
+    expect(ogImageOf(html) ?? "").toMatch(cardUrlPattern(id));
   });
 
   test("a card declaring itself the share image still yields to an SVG-only renderer", async () => {

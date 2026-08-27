@@ -7,6 +7,7 @@ import { describe, expect, test } from "vitest";
 import type { CardImage, CardNode, CardRenderInput } from "./renderer.js";
 import { og } from "./index.js";
 import { takumi } from "./takumi.js";
+import { fetchCard } from "./test/harness.js";
 
 // The only tests that load the real wasm: two proving the engine encodes each
 // format it offers, one proving it resolves the CSS a themed card is written
@@ -161,9 +162,7 @@ describe("the bundled engine", () => {
       authorId: author.id,
     });
 
-    const response = await harness.fetch(
-      `/_plumix/og/entry/${String(entry.id)}.png`,
-    );
+    const response = await fetchCard(harness, entry.id, { extension: "png" });
 
     expect(response.assertStatus(200).headers.get("content-type")).toBe(
       "image/png",

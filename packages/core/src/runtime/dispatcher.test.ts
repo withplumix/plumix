@@ -16,6 +16,8 @@ import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { PlumixApp } from "./app.js";
 import type { ConnectedCache } from "./slots.js";
+import { tagCacheEntry } from "../cache/route-tags.js";
+import { entryPurgeTags } from "../cache/tags.js";
 import { debugHistory } from "../dev/debug-bar/history.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
@@ -1814,6 +1816,32 @@ describe("dispatcher — plugin-route edge cache (#1959)", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("PNG");
+  });
+
+  test("stores under the tags the handler declared while it ran", async () => {
+    const { cache, put } = cacheStub();
+    // What a card route does: it resolves the entry it is answering for, then
+    // names that entry in the vocabulary the publish purge already sweeps.
+    const taggedCards = definePlugin("og", (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/card/*",
+        auth: "public",
+        cacheable: true,
+        handler: (_request, appCtx) => {
+          tagCacheEntry(appCtx, entryPurgeTags("post", 7));
+          return new Response("PNG", { status: 200 });
+        },
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [taggedCards], cache });
+
+    await h.dispatch(
+      plumixRequest("/_plumix/og/card/abc.png", { method: "GET" }),
+    );
+    await h.drainDeferred();
+
+    expect(put.mock.calls[0]?.[2]).toEqual(["t:post", "e:7"]);
   });
 
   test("a route that did not opt in never touches the cache", async () => {

@@ -1,6 +1,7 @@
 import type { PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
+import type { CardInputs } from "./card-identity.js";
 import type { CardRenderer } from "./renderer.js";
 import { createCardRegistry } from "./card-registry.js";
 import { CARD_ROUTE_PATH, createCardRoute } from "./card-route.js";
@@ -59,8 +60,8 @@ export interface OgPluginOptions {
 
 /**
  * Generated social cards. Installing it and configuring nothing serves a card
- * per published entry at `/_plumix/og/entry/<id>.<ext>`, composited from the
- * bundled default template — the entry's title over the site's name.
+ * per published entry at `/_plumix/og/entry/<id>/<digest>.<ext>`, composited
+ * from the bundled default template — the entry's title over the site's name.
  *
  * @example
  * ```ts
@@ -75,13 +76,12 @@ export interface OgPluginOptions {
 export function og(options: OgPluginOptions = {}): PluginDescriptor {
   const renderer = options.renderer ?? bundledRenderer();
   const cards = createCardRegistry(defaultCards);
+  const fonts = options.fonts ?? [];
   let tokens = compileThemeTokens();
-  const handler = createCardRoute({
-    renderer,
-    fonts: options.fonts ?? [],
-    cards,
-    tokens: () => tokens,
-  });
+  // One accessor for both readers: the head and the route have to land on the
+  // same digest, and they only do that if they read the same inputs.
+  const inputs = (): CardInputs => ({ fonts, tokens });
+  const handler = createCardRoute({ renderer, cards, inputs });
   // Advertising is decided by what the renderer declares it produces, not by a
   // flag of its own.
   const advertised = advertisedExtension(renderer.contentType);
@@ -99,6 +99,11 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
         method: "GET",
         path: CARD_ROUTE_PATH,
         auth: "public",
+        // A card is one document for every visitor, and content-addressing is
+        // what guarantees it rather than an absence of reads: a card that reads
+        // something visitor-specific digests differently, so such a request is
+        // redirected away instead of filling the shared entry with its answer.
+        cacheable: true,
         handler,
       });
       // Subscribed whatever the renderer makes: the featured-photo crop needs
@@ -112,6 +117,7 @@ export function og(options: OgPluginOptions = {}): PluginDescriptor {
           ctx: appCtx,
           extension: advertised,
           cards,
+          inputs: inputs(),
         }),
       );
     },

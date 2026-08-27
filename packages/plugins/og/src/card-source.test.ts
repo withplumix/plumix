@@ -6,7 +6,7 @@ import { cardSourceHash } from "./card-source.js";
 
 function design(): CardDefinition<TemplateData> {
   return {
-    key: () => ({ hash: "fixed", tag: "og:fixed" }),
+    key: () => ({ id: "fixed", tag: "og:fixed" }),
     render: () => ({ type: "text", text: "Read this" }),
   };
 }
@@ -22,7 +22,7 @@ describe("the card-source hash", () => {
   test("ignores an edit to the key callback", async () => {
     const edited: CardDefinition<TemplateData> = {
       ...design(),
-      key: () => ({ hash: "fixed", tag: "og:fixed" }),
+      key: () => ({ id: "fixed", tag: "og:fixed" }),
     };
 
     expect(await cardSourceHash(edited)).toBe(await cardSourceHash(design()));

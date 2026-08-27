@@ -220,13 +220,37 @@ describe("readThroughRoute", () => {
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
+      tags: noTags,
     });
 
     expect(result).toBe(fresh);
     expect(match).toHaveBeenCalledOnce();
     expect(put).toHaveBeenCalledOnce();
-    // A raw route has no content dependency core can name, so it stores untagged.
+    // Core can't name a raw route's content dependencies, so a handler that
+    // declared none stores untagged — unreachable by any purge.
     expect(put.mock.calls[0]?.[2]).toEqual([]);
+  });
+
+  it("stores under the tags the handler declared while it ran", async () => {
+    const { cache, put } = spies();
+    const declared: string[] = [];
+    const render = vi.fn(() => {
+      declared.push("e:7", "t:post");
+      return Promise.resolve(new Response("card", { status: 200 }));
+    });
+
+    await readThroughRoute({
+      request: GET("https://site.test/_plumix/og/card/abc.png"),
+      cache,
+      defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
+      render,
+      // Read after the handler returns, which is the only moment it knows
+      // which entry it resolved.
+      tags: () => declared,
+    });
+
+    expect(put.mock.calls[0]?.[2]).toEqual(["e:7", "t:post"]);
   });
 
   it("returns the stored response without running the handler on a hit", async () => {
@@ -240,6 +264,7 @@ describe("readThroughRoute", () => {
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
+      tags: noTags,
     });
 
     expect(result).toBe(cached);
@@ -263,6 +288,7 @@ describe("readThroughRoute", () => {
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
+      tags: noTags,
     });
 
     const matchKey = match.mock.calls[0]?.[0];
@@ -286,6 +312,7 @@ describe("readThroughRoute", () => {
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
+      tags: noTags,
     });
 
     expect(result).toBe(fresh);
@@ -310,6 +337,7 @@ describe("readThroughRoute", () => {
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
+      tags: noTags,
     });
 
     expect(result).toBe(fresh);
@@ -331,6 +359,7 @@ describe("readThroughRoute", () => {
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
+      tags: noTags,
     });
 
     expect(match).toHaveBeenCalledOnce();
@@ -363,6 +392,7 @@ describe("readThroughRoute", () => {
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
       render,
+      tags: noTags,
     });
 
     expect(result).toBe(fresh);
