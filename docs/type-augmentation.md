@@ -2,7 +2,7 @@
 
 Plumix ships a handful of **augmentable registries** — TypeScript interfaces you
 extend with declaration merging so first-class APIs (`forEntryType`, `block`,
-`defineTemplate`, …) narrow to *your* names, autocomplete them, and reject typos
+`defineTemplate`, …) narrow to _your_ names, autocomplete them, and reject typos
 at compile time.
 
 ## The one rule
@@ -23,7 +23,7 @@ This is enforced by lint (`no-restricted-syntax`): augmenting `@plumix/core`,
 
 ### Why one specifier
 
-Module augmentation only merges cleanly when everyone targets the *same*
+Module augmentation only merges cleanly when everyone targets the _same_
 specifier. Augmenting the same interface through two of them — say `plumix` in a
 theme and `plumix/plugin` in a plugin — silently fractures the type: each view
 keeps its own keys and drops the other's. A theme that augmented `@plumix/core`
@@ -37,8 +37,8 @@ A plugin (or your app) registers an `insight` entry type and wants
 `forEntryType("insight")` to type-check in the theme:
 
 ```ts
-import { defineTheme, forEntryType } from "plumix";
 import type { ResolvedEntry } from "plumix";
+import { defineTheme, forEntryType } from "plumix";
 
 declare module "plumix" {
   interface EntryTypeRegistry {
@@ -60,15 +60,15 @@ to the base `ResolvedEntry`.
 
 ## The augmentable registries
 
-| Registry | Augment to type… | Read by |
-| --- | --- | --- |
-| `EntryTypeRegistry` | custom entry-type names + `data.entry` | `forEntryType` |
-| `TermTaxonomyRegistry` | custom taxonomy names + `data.term` | `forTermTaxonomy` |
-| `ArchiveTypeRegistry` | plugin archive-type names + `data` | `forArchiveType` |
-| `TemplateDepRegistry` | template dep-slot kinds + result type | `defineTemplate` / `registerTemplateDep` |
-| `BlockTypeRegistry` | block name → attrs shape | `block()` |
-| `PatternCategoryRegistry` | pattern category slugs | `definePattern` |
-| `ReferenceHydrationShapes` | reference kind → hydrated shape | reference fields |
+| Registry                   | Augment to type…                       | Read by                                  |
+| -------------------------- | -------------------------------------- | ---------------------------------------- |
+| `EntryTypeRegistry`        | custom entry-type names + `data.entry` | `forEntryType`                           |
+| `TermTaxonomyRegistry`     | custom taxonomy names + `data.term`    | `forTermTaxonomy`                        |
+| `ArchiveTypeRegistry`      | plugin archive-type names + `data`     | `forArchiveType`                         |
+| `TemplateDepRegistry`      | template dep-slot kinds + result type  | `defineTemplate` / `registerTemplateDep` |
+| `BlockTypeRegistry`        | block name → attrs shape               | `block()`                                |
+| `PatternCategoryRegistry`  | pattern category slugs                 | `definePattern`                          |
+| `ReferenceHydrationShapes` | reference kind → hydrated shape        | reference fields                         |
 
 All seven live behind `declare module "plumix"`.
 
@@ -76,14 +76,14 @@ All seven live behind `declare module "plumix"`.
 
 `declare module "plumix"` only resolves if the file (or its compilation) also
 imports from `plumix` — otherwise TypeScript reports
-*"module 'plumix' cannot be found"* at the plugin's own build. Most files import
+_"module 'plumix' cannot be found"_ at the plugin's own build. Most files import
 something from `plumix` already. If a file augments `plumix` but otherwise only
 imports from the `plumix/plugin` subpath, pull the types it uses from `plumix`
 instead (they're the same symbols), or add a bare `import type {} from "plumix"`:
 
 ```ts
 import type { HydratedReference } from "plumix"; // loads the augmentation target
-import { and, eq } from "plumix/plugin";         // runtime db helpers stay here
+import { and, eq } from "plumix/plugin"; // runtime db helpers stay here
 
 declare module "plumix" {
   interface ReferenceHydrationShapes {

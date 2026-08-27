@@ -1,5 +1,5 @@
-import configPnpmScopes from "@commitlint/config-pnpm-scopes";
 import type { RuleConfigCondition } from "@commitlint/types";
+import configPnpmScopes from "@commitlint/config-pnpm-scopes";
 
 // Only dependabot's scopes get an exception — everything else must
 // map to a workspace package or carry no scope.

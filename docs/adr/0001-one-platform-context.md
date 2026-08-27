@@ -20,7 +20,7 @@ starts).
   exact failure a ubiquitous language exists to prevent.
 - **Split the platform into Authoring / Delivery / Access contexts** (rejected).
   These are real subdomains, but no word means different things across them
-  (`entry` is authored in one and rendered in another — the *same* entry). They
+  (`entry` is authored in one and rendered in another — the _same_ entry). They
   are subheadings within one context, not separate contexts.
 
 ## Consequences
@@ -28,6 +28,6 @@ starts).
 - Adding a term means editing one file; there is no "which package's glossary?"
   question.
 - The one genuine second context is `create-plumix-app` scaffolding, where
-  `template` forks to mean *project template*. When that context is modelled, we
+  `template` forks to mean _project template_. When that context is modelled, we
   promote the root `CONTEXT.md` to a `CONTEXT-MAP.md` with two entries —
   `platform` and `scaffolding` — rather than N package entries.

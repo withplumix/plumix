@@ -35,8 +35,8 @@ This policy covers the following packages:
 
 ## Supported Versions
 
-| Version | Supported |
-|---------|-----------|
+| Version | Supported            |
+| ------- | -------------------- |
 | 0.x     | ✅ Latest minor only |
 
 We only support the latest minor release. Upgrade to receive security fixes.

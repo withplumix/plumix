@@ -18,7 +18,6 @@
 //                        minimal template's local CSRF origin)
 //   SMOKE_SKIP_BUILD=1   skip `pnpm build` (assume dist/ is already fresh)
 //   SMOKE_KEEP=1         keep temp dirs + registry running for debugging
-
 import { spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import fs from "node:fs/promises";
@@ -51,7 +50,8 @@ const bgProcs = [];
 const tempDirs = [];
 
 function killTree(child) {
-  if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
+  if (!child.pid || child.exitCode !== null || child.signalCode !== null)
+    return;
   // Children are spawned `detached`, so they lead their own process group;
   // a negative pid signals the whole group (miniflare/workerd/esbuild kids).
   for (const sig of ["SIGTERM", "SIGKILL"]) {
@@ -210,14 +210,19 @@ async function startRegistry(workDir) {
 
   const logFile = path.join(vdir, "verdaccio.log");
   log(`starting Verdaccio on ${REGISTRY} (logs: ${logFile})`);
-  spawnBg("verdaccio", "npx", [
-    "--yes",
-    `verdaccio@${VERDACCIO_VERSION}`,
-    "--config",
-    configPath,
-    "--listen",
-    String(REGISTRY_PORT),
-  ], { cwd: vdir, logFile });
+  spawnBg(
+    "verdaccio",
+    "npx",
+    [
+      "--yes",
+      `verdaccio@${VERDACCIO_VERSION}`,
+      "--config",
+      configPath,
+      "--listen",
+      String(REGISTRY_PORT),
+    ],
+    { cwd: vdir, logFile },
+  );
 
   await waitForHttp(`${REGISTRY}-/ping`, { timeoutMs: 90_000 });
   log("Verdaccio is up");
@@ -269,11 +274,9 @@ async function publishAll(workDir, npmEnv) {
     // versions in the packed manifest (plain `npm pack`/`npm publish` would
     // leave them literal and break install). It also runs `prepack`, which
     // bakes create-plumix-app's resolved `templates/` snapshot.
-    const out = await capture(
-      "pnpm",
-      ["pack", "--pack-destination", packs],
-      { cwd: proj.path },
-    );
+    const out = await capture("pnpm", ["pack", "--pack-destination", packs], {
+      cwd: proj.path,
+    });
     const tgz = out
       .split("\n")
       .map((l) => l.trim())
@@ -307,11 +310,10 @@ async function scaffoldAndInstall(workDir, npmEnv) {
   const appDir = path.join(scaffoldParent, "my-plumix-app");
 
   log(`scaffolding with create-plumix-app@${version} (from Verdaccio)…`);
-  await run(
-    "npx",
-    ["--yes", `create-plumix-app@${version}`, appDir],
-    { cwd: scaffoldParent, env: npmEnv },
-  );
+  await run("npx", ["--yes", `create-plumix-app@${version}`, appDir], {
+    cwd: scaffoldParent,
+    env: npmEnv,
+  });
 
   // `npm install` (not pnpm) so package build scripts — notably workerd's
   // binary download that miniflare needs — run without an interactive
@@ -324,11 +326,10 @@ async function scaffoldAndInstall(workDir, npmEnv) {
   // pins v4 — a types-only mismatch. If `--force` ever produced a genuinely
   // broken runtime tree, the 200 assertions below would catch it.
   log("installing the scaffolded app (real registry install)…");
-  await run(
-    "npm",
-    ["install", "--no-audit", "--no-fund", "--force"],
-    { cwd: appDir, env: npmEnv },
-  );
+  await run("npm", ["install", "--no-audit", "--no-fund", "--force"], {
+    cwd: appDir,
+    env: npmEnv,
+  });
 
   // Prove the dependency is a real install from the registry, not a
   // workspace symlink.
