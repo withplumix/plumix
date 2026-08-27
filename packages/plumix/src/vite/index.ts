@@ -66,21 +66,25 @@ import {
 } from "./island-transform.js";
 import { plumixPathAliases } from "./path-aliases.js";
 import {
+  findAdminBundledPluginsDir,
   findPluginPackageRoot,
-  isWorkspaceSymlinkedPlugin,
+  isAdminBundledPlugin,
 } from "./plugin-catalog-resolve.js";
 import { stageUserPublic } from "./public-staging.js";
 import { generateWorkerExportsSource } from "./worker-exports-codegen.js";
 
-// The pre-compiled admin SPA ships as its own package (@plumix/admin). Resolve
-// its dist directory so the vite plugin can stage it into the user's app. This
-// relies on @plumix/admin exposing its package.json — it declares no `exports`
-// map today; add a `"./package.json"` export there if one is ever introduced.
+// The pre-compiled admin SPA ships as its own package (@plumix/admin). Locate
+// it so the vite plugin can stage its dist into the user's app, and so the
+// catalogs it baked in can be told apart from the ones a site has to fetch.
+// This relies on @plumix/admin exposing its package.json — it declares no
+// `exports` map today; add a `"./package.json"` export if one is introduced.
 const require = createRequire(import.meta.url);
-const ADMIN_SOURCE_DIR = resolve(
-  dirname(require.resolve("@plumix/admin/package.json")),
-  "dist",
+const ADMIN_PACKAGE_ROOT = dirname(
+  require.resolve("@plumix/admin/package.json"),
 );
+const ADMIN_SOURCE_DIR = resolve(ADMIN_PACKAGE_ROOT, "dist");
+const ADMIN_BUNDLED_PLUGINS_DIR =
+  findAdminBundledPluginsDir(ADMIN_PACKAGE_ROOT);
 
 export interface PlumixVitePluginOptions {
   readonly configFile?: string;
@@ -618,24 +622,22 @@ async function computeManifestAndRegistry(
     hooks: new HookRegistry(),
     plugins,
   });
-  // Plugins whose `@plumix/plugin-<id>` package is a pnpm symlink in
-  // `node_modules` are workspace-mounted — admin's `import.meta.glob`
-  // already bakes their catalogs into the bundle. Skipping URL
-  // emission for them avoids a runtime double-load (#724).
-  //
-  // Caveat: the bundler's symlink detection here and admin's pre-baked
-  // glob are computed at different times. If `packages/plumix/dist/admin-app`
-  // is stale (a new workspace plugin was added since the last plumix
-  // build), the symlink exists but admin's glob doesn't cover it —
-  // the plugin's strings fall back to `descriptor.message` silently.
-  // Rebuild plumix to refresh. The warning below makes that
-  // debuggable.
+  // Caveat on the skip below: the glob that bakes catalogs in runs when
+  // @plumix/admin is built, this predicate runs when a site is configured.
+  // If `@plumix/admin`'s dist is stale — a workspace plugin added since it
+  // was last built — the link resolves but the glob never saw it, and the
+  // plugin's strings fall back to `descriptor.message` silently. Rebuild
+  // @plumix/admin to refresh. The info line below makes that debuggable.
   const adminBundledPluginIds = new Set(
     plugins
       .filter(
         (p) =>
           p.i18n !== undefined &&
-          isWorkspaceSymlinkedPlugin({ pluginId: p.id, projectRoot }),
+          isAdminBundledPlugin({
+            pluginId: p.id,
+            projectRoot,
+            bundledPluginsDir: ADMIN_BUNDLED_PLUGINS_DIR,
+          }),
       )
       .map((p) => p.id),
   );
