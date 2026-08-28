@@ -21,6 +21,7 @@ export {
   fireEntryUpdated,
   entryCapability,
 } from "./procedures/entry/lifecycle.js";
+export { previewableEntry } from "./procedures/entry/previewable.js";
 export { entryRouter } from "./procedures/entry/index.js";
 export type { EntryRouter } from "./procedures/entry/index.js";
 export { escapeLikePattern } from "./procedures/entry/search-terms.js";
