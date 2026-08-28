@@ -135,6 +135,10 @@ export { entryRoleImage } from "./seo/head-defaults.js";
 // and the template dep that read it — so a plugin asking for one setting joins
 // that read instead of opening a second query for a bag already in hand.
 export { loadSiteSettings } from "./seo/site-settings.js";
+// XML element-text escaping, for a plugin serializing a feed or a sitemap.
+// Core's own serializers use it; exported so two plugins don't each ship the
+// same five-character table.
+export { xmlEscape } from "./seo/xml.js";
 // The caller's pending autosave for an entry. A surface that renders what an
 // author is editing has to overlay it the way `entry.get`'s preview mode does;
 // reading the live row alone shows a published entry's pre-edit state.
@@ -223,6 +227,12 @@ export {
   resolveErrorTemplate,
   resolveTemplate,
 } from "./route/render/template-hierarchy.js";
+// What a page is, normalized: kind, pagination index, timestamps and
+// subjects. The projection is what a plugin cannot restate — core's `is*`
+// guards already answer the kind — so it reads core's answer rather than
+// walking the payload union itself.
+export { pageFacts } from "./route/render/page-facts.js";
+export type { PageFacts } from "./route/render/page-facts.js";
 export type {
   ArchiveData,
   AuthorArchiveData,

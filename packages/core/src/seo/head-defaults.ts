@@ -3,6 +3,7 @@ import type { MetaBoxField, PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedMeta } from "../rpc/meta/core.js";
 import type { DocumentManifest, DocumentMeta, TemplateData } from "../theme.js";
 import { listEntryMetaFields } from "../plugin/manifest.js";
+import { pageFacts } from "../route/render/page-facts.js";
 import { canonicalUrl } from "./canonical.js";
 import { applyFeedDiscovery } from "./feed.js";
 import { loadSiteSettings, nonEmpty } from "./site-settings.js";
@@ -239,21 +240,18 @@ export async function applyHeadMeta(
 ): Promise<DocumentManifest> {
   const site = await loadSiteSettings(ctx);
   const siteIsPrivate = site.public === false;
-  // Discriminate on `kind`, not duck-typed field presence — a plugin archive's
-  // (`CustomArchiveData`) payload is arbitrary and could carry an `entry` or
-  // `query` field that a `"… in data"` check would misread.
-  const excerpt = data.kind === "entry" ? nonEmpty(data.entry.excerpt) : null;
-  const description = excerpt ?? nonEmpty(site.tagline);
+  const { kind, entry } = pageFacts(data);
+  const description = nonEmpty(entry?.excerpt) ?? nonEmpty(site.tagline);
   const withMeta = seoHeadDefaults(manifest, {
     canonical: canonicalUrl(ctx),
     title,
     description,
-    ogType: data.kind === "entry" ? "article" : "website",
+    ogType: kind === "entry" ? "article" : "website",
     ogImage: await resolveOgImage(ctx, data, nonEmpty(site.default_og_image)),
     siteName: nonEmpty(site.title),
     ogLocale: toOgLocale(ctx.locale.code),
     // Search-results pages are thin; keep them out of the index.
-    noindex: data.kind === "search",
+    noindex: kind === "search",
     siteIsPrivate,
   });
   return applyFeedDiscovery(withMeta, data, ctx, { siteIsPrivate });
