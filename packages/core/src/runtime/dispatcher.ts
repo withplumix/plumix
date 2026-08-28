@@ -74,6 +74,26 @@ const API_PREFIX = "/_plumix/api";
 // build, so the branch and its import drop out). Keep in step with
 // `DEBUG_REQUESTS_PATH`.
 const DEBUG_REQUESTS_PREFIX = "/_plumix/debug/requests";
+// The `/_plumix/` sub-prefixes core answers itself, ahead of the plugin table.
+// A plugin whose id names one of them registers routes it can never serve, so
+// the raw-route branch skips those paths — and so does the CSRF exemption,
+// where it is load-bearing: without it a plugin id'd `rpc` could drop the
+// header gate in front of the cookie-authenticated RPC router it never runs.
+const CORE_PLUMIX_PREFIXES = [
+  RPC_PREFIX,
+  ADMIN_PREFIX,
+  AUTH_PREFIX,
+  DEBUG_REQUESTS_PREFIX,
+];
+
+function coreAnswersPlumixPath(pathname: string): boolean {
+  return CORE_PLUMIX_PREFIXES.some(
+    (prefix) =>
+      pathname === prefix ||
+      pathname.startsWith(prefix.endsWith("/") ? prefix : `${prefix}/`),
+  );
+}
+
 // Auth-flow handlers (passkey/oauth/magic-link/device/email-change) are
 // admin-login cold paths — never the public render path. Load them via one
 // memoized dynamic import on the first auth-flow request per isolate so their
@@ -177,35 +197,59 @@ export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
   };
 }
 
-function enforcePlumixCsrf(app: PlumixApp, ctx: AppContext): Response | null {
+function enforcePlumixCsrf(
+  app: PlumixApp,
+  ctx: AppContext,
+  pathname: string,
+): Response | null {
   if (!hasCsrfHeader(ctx.request)) {
-    return forbidden("csrf_header_missing");
+    if (!acceptsFormPost(app, ctx, pathname)) {
+      return forbidden("csrf_header_missing");
+    }
+    // Nothing is left in front of the route but the Origin check, so it has to
+    // be satisfied rather than merely not contradicted — `registerRoute`
+    // documents why that is enough on a route that took the opt-out.
+    return enforceOrigin(app, ctx);
   }
   // Defense-in-depth: the custom-header check already blocks cross-origin
   // POSTs (a browser can't set X-Plumix-Request without a CORS preflight,
   // which Plumix never grants). If an Origin header is present anyway,
   // reject mismatches too — protects against a future misconfigured CORS
   // layer or an intermediate that strips/forwards headers loosely.
-  if (
-    ctx.request.headers.has("origin") &&
-    !hasMatchingOrigin(ctx.request, { allowed: [ctx.origin] })
-  ) {
-    // A same-origin request — Origin equals the host it targets — is by
-    // definition not cross-site forgery, so accept it even when the canonical
-    // app.origin differs. This covers deploys served on more than one host and
-    // the demo sandbox, whose origin varies per deploy and can't be pinned in
-    // config. The X-Plumix-Request header gate above stays the primary defense.
-    if (isSameOrigin(ctx.request)) {
-      return null;
-    }
-    // devCsrfLocalhost is statically false in production builds; see its
-    // declaration on RuntimeContext for why dev needs the relaxation.
-    if (app.devCsrfLocalhost && hasLocalhostOrigin(ctx.request)) {
-      return null;
-    }
-    return forbidden("csrf_origin_mismatch");
-  }
-  return null;
+  if (!ctx.request.headers.has("origin")) return null;
+  return enforceOrigin(app, ctx);
+}
+
+// Narrowed to POST because that is all an HTML form can produce: a route
+// registered as `method: "*"` doesn't carry its exemption onto PUT or DELETE,
+// which no form could have sent. The table scan is reached by any headerless
+// POST under `/_plumix/`, an attacker's included, so it stays behind the two
+// cheap string tests above it.
+function acceptsFormPost(
+  app: PlumixApp,
+  ctx: AppContext,
+  pathname: string,
+): boolean {
+  if (ctx.request.method !== "POST") return false;
+  if (coreAnswersPlumixPath(pathname)) return false;
+  return (
+    matchPluginRawRoute(app.rawRoutes, pathname, "POST")?.route.formPost ===
+    true
+  );
+}
+
+function enforceOrigin(app: PlumixApp, ctx: AppContext): Response | null {
+  if (hasMatchingOrigin(ctx.request, { allowed: [ctx.origin] })) return null;
+  // A same-origin request — Origin equals the host it targets — is by
+  // definition not cross-site forgery, so accept it even when the canonical
+  // app.origin differs. This covers deploys served on more than one host and
+  // the demo sandbox, whose origin varies per deploy and can't be pinned in
+  // config.
+  if (isSameOrigin(ctx.request)) return null;
+  // devCsrfLocalhost is statically false in production builds; see its
+  // declaration on RuntimeContext for why dev needs the relaxation.
+  if (app.devCsrfLocalhost && hasLocalhostOrigin(ctx.request)) return null;
+  return forbidden("csrf_origin_mismatch");
 }
 
 function isSameOrigin(request: Request): boolean {
@@ -293,7 +337,7 @@ async function tryPlumixRoutes(
   pathname: string,
 ): Promise<Response | null> {
   if (pathname.startsWith(PLUMIX_PREFIX)) {
-    const csrfFailure = enforcePlumixCsrf(app, ctx);
+    const csrfFailure = enforcePlumixCsrf(app, ctx, pathname);
     if (csrfFailure) return csrfFailure;
   }
 
@@ -361,7 +405,7 @@ async function tryPlumixRoutes(
     return serveAdmin(ctx);
   }
 
-  if (pathname.startsWith(PLUMIX_PREFIX) && !pathname.startsWith(AUTH_PREFIX)) {
+  if (pathname.startsWith(PLUMIX_PREFIX) && !coreAnswersPlumixPath(pathname)) {
     const pluginMatch = matchPluginRawRoute(
       app.rawRoutes,
       pathname,

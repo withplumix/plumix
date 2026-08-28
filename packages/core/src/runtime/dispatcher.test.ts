@@ -1223,6 +1223,149 @@ describe("dispatcher — plugin raw routes", () => {
   });
 });
 
+// The #2018 opt-out: a plain HTML form cannot set a custom header, so a route
+// that declared `formPost` accepts the submit on the Origin check alone.
+describe("dispatcher — form-post routes (#2018)", () => {
+  const formPostPlugin = definePlugin("forms", (ctx) => {
+    ctx.registerRoute({
+      method: "POST",
+      path: "/submit",
+      auth: "public",
+      formPost: true,
+      handler: () => new Response("received", { status: 200 }),
+    });
+  });
+
+  test("a form-post route accepts a POST with no CSRF header", async () => {
+    const h = await createDispatcherHarness({ plugins: [formPostPlugin] });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/forms/submit", {
+        method: "POST",
+        headers: { origin: "https://cms.example" },
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("received");
+  });
+
+  test("a form-post route still rejects a cross-origin POST", async () => {
+    const h = await createDispatcherHarness({ plugins: [formPostPlugin] });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/forms/submit", {
+        method: "POST",
+        headers: { origin: "https://attacker.example" },
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { reason?: string };
+    expect(body.reason).toBe("csrf_origin_mismatch");
+  });
+
+  // With the header gone the Origin check is the only control left, so a
+  // request that names no origin at all fails it rather than skipping it.
+  test("a form-post route rejects a POST carrying neither Origin nor Referer", async () => {
+    const h = await createDispatcherHarness({ plugins: [formPostPlugin] });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/forms/submit", {
+        method: "POST",
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { reason?: string };
+    expect(body.reason).toBe("csrf_origin_mismatch");
+  });
+
+  // A plugin id may name a prefix core answers itself — nothing reserves
+  // `rpc` — and the plugin's handler never runs on those paths. Its opt-out
+  // must not run there either, or a route it cannot serve would drop the
+  // header gate in front of the cookie-authenticated RPC router.
+  test("the opt-out does not reach a path core answers itself", async () => {
+    const plugin = definePlugin("rpc", (ctx) => {
+      ctx.registerRoute({
+        method: "*",
+        path: "/*",
+        auth: "public",
+        formPost: true,
+        handler: () => new Response("received"),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/rpc/entry/list", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://cms.example",
+        },
+        body: JSON.stringify({ json: {} }),
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { reason?: string };
+    expect(body.reason).toBe("csrf_header_missing");
+  });
+
+  // An HTML form produces GET or POST and nothing else, so a wildcard-method
+  // route does not carry its exemption onto a method no form could have sent.
+  test("the opt-out does not extend past POST on a wildcard-method route", async () => {
+    const plugin = definePlugin("forms", (ctx) => {
+      ctx.registerRoute({
+        method: "*",
+        path: "/submit",
+        auth: "public",
+        formPost: true,
+        handler: () => new Response("received"),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/forms/submit", {
+        method: "DELETE",
+        headers: { origin: "https://cms.example" },
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { reason?: string };
+    expect(body.reason).toBe("csrf_header_missing");
+  });
+
+  // The opt-out is per route: a sibling that did not take it is still gated,
+  // even though the same plugin owns the prefix.
+  test("a sibling route without the opt-out still requires the header", async () => {
+    const plugin = definePlugin("forms", (ctx) => {
+      ctx.registerRoute({
+        method: "POST",
+        path: "/submit",
+        auth: "public",
+        formPost: true,
+        handler: () => new Response("received"),
+      });
+      ctx.registerRoute({
+        method: "POST",
+        path: "/purge",
+        auth: "public",
+        handler: () => new Response("purged"),
+      });
+    });
+    const h = await createDispatcherHarness({ plugins: [plugin] });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/_plumix/forms/purge", {
+        method: "POST",
+        headers: { origin: "https://cms.example" },
+      }),
+    );
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { reason?: string };
+    expect(body.reason).toBe("csrf_header_missing");
+  });
+});
+
 describe("dispatcher — basePath (served under a subdirectory)", () => {
   const blog = definePlugin("test-blog", (ctx) => {
     ctx.registerEntryType("post", { label: "Posts", isPublic: true });

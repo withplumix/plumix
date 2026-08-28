@@ -753,6 +753,37 @@ describe("registerRoute", () => {
     );
   });
 
+  test("carries the form-post opt-out onto the registered route", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("forms", (ctx) => {
+      ctx.registerRoute({
+        method: "POST",
+        path: "/submit",
+        auth: "public",
+        formPost: true,
+        handler: noop,
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(registry.rawRoutes[0]?.formPost).toBe(true);
+  });
+
+  test("rejects the form-post opt-out on a route that is not public", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("forms", (ctx) => {
+      ctx.registerRoute({
+        method: "POST",
+        path: "/submit",
+        auth: "authenticated",
+        formPost: true,
+        handler: noop,
+      });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /POST \/submit is not public/,
+    );
+  });
+
   test("rejects a duplicate (method, path) pair from the same plugin", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("media", (ctx) => {

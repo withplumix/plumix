@@ -24,6 +24,7 @@ type PluginContextErrorCode =
   | "path_contains_query_or_fragment"
   | "admin_page_path_contains_wildcard"
   | "cacheable_route_not_public"
+  | "form_post_route_not_public"
   | "route_path_wildcard_not_at_end"
   | "route_path_wildcard_not_after_slash"
   | "identifier_too_long"
@@ -134,6 +135,18 @@ export class PluginContextError extends Error {
     return new PluginContextError(
       "cacheable_route_not_public",
       `Plugin "${ctx.pluginId}" route ${ctx.method} ${ctx.path} is not public, so it cannot be cacheable — a gated response would be served from the shared cache to everyone.`,
+      { pluginId: ctx.pluginId, kind: ctx.method, path: ctx.path },
+    );
+  }
+
+  static formPostRouteNotPublic(ctx: {
+    pluginId: string;
+    method: string;
+    path: string;
+  }): PluginContextError {
+    return new PluginContextError(
+      "form_post_route_not_public",
+      `Plugin "${ctx.pluginId}" route ${ctx.method} ${ctx.path} is not public, so it cannot accept a plain form post — dropping the CSRF header on a gated route would let another site drive it with the visitor's session.`,
       { pluginId: ctx.pluginId, kind: ctx.method, path: ctx.path },
     );
   }

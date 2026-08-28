@@ -639,6 +639,12 @@ export interface RegisteredRawRoute {
    * documents what taking it claims and rejects it on a gated route.
    */
   readonly cacheable?: boolean;
+  /**
+   * Whether the route dropped the CSRF header requirement so a plain HTML form
+   * can post to it — see `registerRoute`, which documents what taking it means
+   * and rejects it on a gated route.
+   */
+  readonly formPost?: boolean;
   readonly handler: (
     request: Request,
     ctx: AppContext,

@@ -79,6 +79,10 @@ The `auth` slot is not optional. A config without one does not type-check, and `
 
    The route serves at `/_plumix/recipes/whoami`. Signed out it answers 401 and your handler never runs; `auth: { capability: "entry:recipe:publish" }` instead of `"authenticated"` turns the shortfall into a 403.
 
+   A write method on that route also passes the dispatcher's CSRF gate, which requires the `X-Plumix-Request` header — one a plain HTML `<form method="post">` cannot set, so a no-JavaScript submit cannot reach a plugin route at all. A route that has to accept one declares `formPost: true`, dropping the header requirement and leaving the Origin check as the whole control: the submit has to carry an Origin (or Referer) matching the site, where an ordinary request is only rejected for contradicting one. It exempts the POST and nothing else, so a route registered as `method: "*"` still gates every other write method. Only an `auth: "public"` route may take it, and declaring it on a gated route throws at registration.
+
+   The reasoning is what the header gate is for: stopping a cross-origin POST that rides on the visitor's ambient session authority. A public submit carries none, so an attacker forging one has merely submitted a form they could have submitted directly. That holds only while the handler keeps its side of the bargain — it must never derive privilege from a session. Recording who was signed in is fine; acting on their behalf, or making a write an anonymous visitor could not have made, is not.
+
    A fourth gate, `auth: "development"`, is not about a principal at all: the route exists only while `plumix dev` is running and only for requests that reached it over loopback, and answers 404 otherwise. [The Dev Server](/going-further/dev-server/) covers what belongs behind it.
 
 </Steps>
