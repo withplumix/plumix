@@ -1,0 +1,137 @@
+---
+title: SEO
+description: The seo plugin writes a page's head meta — description, robots directive, Open Graph, Twitter card — and owns the chain that resolves its social image.
+tier: P1
+sidebar:
+  order: 70
+---
+
+import { Aside, TabItem, Tabs } from "@astrojs/starlight/components";
+
+`@plumix/plugin-seo` writes what a public page tells a search engine and a social scraper. Core emits a canonical URL and nothing else, so without this plugin a page carries no description, no robots directive and no Open Graph tags at all.
+
+## Overview
+
+The plugin exports a factory named `seo`. It takes no options, adds no database tables, and registers one settings group, so installing it is a package install and one array entry.
+
+Every tag is written as a **gap-filler**: it is appended only when nothing has already set that `name` or `property`. A theme that declares its own `og:site_name` keeps it, and so does another plugin's — the contribution runs last on the `render:document` chain whatever order the `plugins` array is in, so nothing a site writes is overridden or duplicated. Installing this plugin adds what a page was missing and nothing else.
+
+## Quickstart
+
+Install the package with whichever package manager the project uses:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-seo
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-seo
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-seo
+```
+
+  </TabItem>
+</Tabs>
+
+Then add the descriptor to the `plugins` array:
+
+```ts no-typecheck title="plumix.config.ts"
+import { plumix } from "plumix";
+
+import { seo } from "@plumix/plugin-seo";
+
+export default plumix({
+  plugins: [seo()],
+});
+```
+
+## What lands in the head
+
+Every public page gets:
+
+- `description` — the entry's excerpt, falling back to the site tagline.
+- `robots` — `index,follow,max-image-preview:large` normally, `noindex,follow` on a search-results page, and `noindex,nofollow` across the whole site when indexing is turned off.
+- `og:title`, `og:type`, `og:url`, `og:site_name`, `og:description`, `og:locale`.
+- `twitter:card` — `summary_large_image` when a social image resolved, `summary` when none did.
+
+A single entry additionally gets `article:published_time`, `article:modified_time` and `article:author`. An archive, a term page, an author page, a date page and the front page are `og:type: website` and carry none of the three.
+
+`og:title` is the title core resolved for the page — an entry's title with its shortcodes expanded, an archive's plural label, `Search: <query>`, or the title a `registerArchiveType` resolver returned. `og:url` is the same canonical URL core's `<link rel="canonical">` and its redirect normalizer resolve, so the page cannot contradict where core sends traffic.
+
+When a social image resolves, `og:image` is emitted with `og:image:width`, `og:image:height` and `twitter:image` beside it. The four travel as a group: a theme that declared its own `og:image` keeps the whole group, because a size appended next to it would describe some other picture.
+
+## The social image chain
+
+Four links resolve one `og:image`, in this order:
+
+1. **The entry's explicit choice** — a media field the entry type tagged `.ogImage()`.
+2. **Whatever a `seo:og_image` subscriber returns** — where `@plumix/plugin-og` puts a generated card.
+3. **The entry's featured photo** — a media field tagged `.featured()`.
+4. **The site-wide default**, set on the SEO settings screen.
+
+The order is fixed here, not by subscription order, so a generated card never outranks an author's deliberate choice however the `plugins` array happens to be written.
+
+A subscriber receives the featured photo alongside the value rather than as the value, so it can improve on it — crop it to a card's shape, say — instead of only replacing it. Returning the value it was handed leaves the chain alone, so a subscriber that only handles some pages passes through on the rest.
+
+```ts no-typecheck
+ctx.addFilter("seo:og_image", (image, data, appCtx, featured) => {
+  if (image !== null) return image; // someone earlier already answered
+  if (data.kind !== "entry") return null; // decline; the chain carries on
+  return featured ?? { url: "https://example.com/fallback.png" };
+});
+```
+
+<Aside type="caution" title="The OG plugin needs this one">
+  `@plumix/plugin-og` contributes link 2 and nothing else. Installed without
+  `@plumix/plugin-seo`, its cards still render at their route but nothing puts
+  them in a page's head. Install both.
+</Aside>
+
+## Settings
+
+The plugin registers a **Search & social** settings group with two fields, on a settings page of its own:
+
+- **Allow search engines to index this site** — off puts `noindex,nofollow` on every page.
+- **Default social image URL** — the last link of the chain above.
+
+Both lived on core's Site identity group before this plugin existed. A site upgrading from that keeps its answers with no migration step: the plugin reads its own group first and falls back to the old `site.public` and `site.default_og_image` rows, and the settings form is seeded from the same fallback, so the next save writes the values through under the new keys.
+
+## Themes keep the last word
+
+A theme's `document` declaration is merged before this plugin's filter runs, so anything it sets survives:
+
+```ts no-typecheck title="theme.ts"
+export default defineTheme({
+  document: {
+    meta: [{ property: "og:site_name", content: "The Recipe Site" }],
+  },
+  templates: [...],
+});
+```
+
+The page carries exactly one `og:site_name`, and it is the theme's.
+
+## Related
+
+[Overview](/plugins/overview/) covers installing a plugin and the version track this one is on. [OG Cards](/plugins/og/) contributes the generated card that sits at link 2 of the chain above, and needs this plugin installed to reach a page's head.
+
+The `.featured()` and `.ogImage()` roles the chain reads are meta-box fields — [Meta Boxes](/fields/meta-boxes/) covers declaring them and [Field Types](/fields/field-types/) the media types they hold. The head this plugin writes into is the theme's: [Themes](/themes/overview/) covers the `document` declaration whose tags win, and [Template Data](/themes/template-data/) the `data` a `seo:og_image` subscriber receives.
+
+## Next steps
+
+Read [Blog](/plugins/blog/) if the site has no entry type yet: an entry is what carries an excerpt, a byline and the timestamps this plugin emits.
+
+To generate a social card per page rather than point every share at one default image, [OG Cards](/plugins/og/) takes the card pipeline apart.
+
+To change what a page says beyond what the settings group covers, the `render:document` filter is the same seam this plugin uses — [Overview](/plugins/overview/) covers the registration context a filter is added from.

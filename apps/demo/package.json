@@ -21,6 +21,7 @@
     "@plumix/plugin-media": "workspace:*",
     "@plumix/plugin-menu": "workspace:*",
     "@plumix/plugin-pages": "workspace:*",
+    "@plumix/plugin-seo": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
     "plumix": "workspace:*",
     "react": "catalog:react"

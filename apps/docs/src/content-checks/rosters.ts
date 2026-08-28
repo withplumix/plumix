@@ -722,7 +722,6 @@ const FILTER_HOOKS = [
   "resolve:front-page:data",
   "resolve:search:data",
   "seo:feed:items",
-  "seo:og_image",
   "seo:robots-txt",
   "seo:sitemap:urls",
   "theme:document",
@@ -918,6 +917,7 @@ const PLUGIN_PACKAGES = [
   "@plumix/plugin-comments",
   "@plumix/plugin-audit-log",
   "@plumix/plugin-og",
+  "@plumix/plugin-seo",
 ] as const;
 
 /**

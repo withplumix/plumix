@@ -1,6 +1,12 @@
 import type { PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
+// `@plumix/plugin-seo` declares the `seo:og_image` filter subscribed to below.
+// The augmentation reaches this compilation only through an import of the
+// package that declares it, and a side-effect import is the edge tsc keeps —
+// same idiom as core's `public-hooks.ts` anchor (#1698).
+import "@plumix/plugin-seo";
+
 import type { CardInputs } from "./card-identity.js";
 import type { CardPalette } from "./default-card.js";
 import type { CardRenderer } from "./renderer.js";

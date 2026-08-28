@@ -47,6 +47,10 @@ Adds threaded, moderated discussion to the entry types you nominate.
 
 Records an activity feed and adds an `audit` helper to the request context.
 
+### `@plumix/plugin-seo`
+
+Writes the head meta a public page needs: a description, a robots directive, the Open Graph set with an entry's timestamps and byline, the Twitter card, and the resolved social image. Every tag is gap-filled, so a theme that sets one keeps it. It also owns the `og:image` resolution chain that `@plumix/plugin-og` contributes a card to.
+
 ### `@plumix/plugin-og`
 
 Renders a social card per page — an entry, a term or content-type archive, an author, a date, the front page — serves it from a route of its own, and carries it into the page's `og:image`. The URL carries the card's digest and is served immutable, so an edit publishes a link the scrapers have to fetch again. Its `ogCards` slot is a rule kind of the theme descriptor's, resolved by the same walk `templates` uses — [Custom Rule Kinds](/themes/rule-kinds/) takes it apart as the worked example.

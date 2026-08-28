@@ -98,8 +98,13 @@ export { tagCacheEntry } from "./cache/route-tags.js";
 // storage and ETag round-trips (#1958).
 export { serveRenderedAsset } from "./cache/rendered-asset.js";
 export type { RenderedAssetArgs } from "./cache/rendered-asset.js";
-// The `seo:og_image` filter's value type, for a subscriber that names it.
-export type { OgImage } from "./seo/head-defaults.js";
+// The page's canonical URL — the same value core's `<link rel=canonical>` and
+// its redirect normalizer resolve, so a plugin naming the page (`og:url`, a
+// sitemap `<loc>`) cannot disagree with where core sends traffic.
+export { canonicalUrl } from "./seo/canonical.js";
+// The social image an entry's role-tagged field resolves to, for the plugin
+// that owns the chain the roles feed.
+export type { OgImage } from "./seo/entry-image.js";
 // The debug bar's presentational primitives, so a plugin panel contributed
 // through `debug_bar:panels` reads like the ones core registers instead of
 // re-spelling their class names. Dev-only in effect — nothing collects
@@ -130,11 +135,12 @@ export {
 } from "./dev/ui/panel-primitives.js";
 // The role links of the `og:image` chain, for a subscriber that has to say
 // which one an image came from rather than only what the chain resolved to.
-export { entryRoleImage } from "./seo/head-defaults.js";
-// The `site` settings bag, memoized per request alongside the head defaults
-// and the template dep that read it — so a plugin asking for one setting joins
-// that read instead of opening a second query for a bag already in hand.
-export { loadSiteSettings } from "./seo/site-settings.js";
+export { entryRoleImage } from "./seo/entry-image.js";
+// The `site` settings bag, and the general reader behind it. Both memoize per
+// request alongside the template dep that reads the same rows — so a plugin
+// asking for a settings group joins that read instead of opening a second
+// query for a bag already in hand.
+export { loadSettingsGroups, loadSiteSettings } from "./seo/site-settings.js";
 // XML element-text escaping, for a plugin serializing a feed or a sitemap.
 // Core's own serializers use it; exported so two plugins don't each ship the
 // same five-character table.

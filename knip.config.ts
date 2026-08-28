@@ -326,6 +326,9 @@ const config: KnipConfig = {
       ignoreDependencies: ["@plumix/runtime-cloudflare"],
       playwright: false,
     },
+    "packages/plugins/seo": {
+      entry: ["src/index.ts", "lingui.config.ts", "locales/*.mjs"],
+    },
     "packages/plugins/audit-log": {
       entry: [
         "src/index.ts",

@@ -658,6 +658,16 @@ msgstr ""
 #~ msgstr "无标题"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+#~ msgid "core.settings.site.public"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+#~ msgid "core.settings.site.default_og_image"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — 子项无法被选为父项。"
@@ -1029,11 +1039,6 @@ msgstr "所有作者"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.all"
 msgstr "所有角色"
-
-#. js-lingui-explicit-id
-#: src/lib/core-settings-i18n.ts
-msgid "core.settings.site.public"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -1713,11 +1718,6 @@ msgstr "仪表板"
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.defaultRole.label"
 msgstr "默认角色"
-
-#. js-lingui-explicit-id
-#: src/lib/core-settings-i18n.ts
-msgid "core.settings.site.default_og_image"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx

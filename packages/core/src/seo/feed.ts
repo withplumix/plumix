@@ -329,6 +329,11 @@ export async function handleFeed(
   // A private site is held out of syndication. (The sitemap returns an empty
   // 200 instead — there's no "valid but empty because private" feed idiom, so
   // 404 is the honest answer here.)
+  //
+  // `site.public` has no writer left in the product — the toggle moved into
+  // `@plumix/plugin-seo`'s settings group (#1997). Read here so an existing
+  // private site stays private; feeds follow the toggle again when they move
+  // into `@plumix/plugin-feeds` (#1996), on the same integration branch.
   if (site.public === false) return new Response(null, { status: 404 });
 
   const items = await collectFeedItems(ctx, scope);

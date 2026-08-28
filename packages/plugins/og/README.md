@@ -5,27 +5,30 @@ This Plumix plugin renders **social cards** — the title-on-your-branding image
 ## Install
 
 ```bash
-pnpm add @plumix/plugin-og
+pnpm add @plumix/plugin-og @plumix/plugin-seo
 ```
 
-Then add it to your `plumix.config.ts`:
+Then add both to your `plumix.config.ts`:
 
 ```ts
 import { plumix } from "plumix";
 
 import { og } from "@plumix/plugin-og";
+import { seo } from "@plumix/plugin-seo";
 
 export default plumix({
   // …your runtime, database, and auth
   storage: r2({ binding: "MEDIA" }),
-  plugins: [og()],
+  plugins: [seo(), og()],
 });
 ```
+
+`@plumix/plugin-seo` owns the page head this plugin's card has to reach. Without it the card still renders at its route, but nothing puts it in an `og:image` — so a shared link unfurls without it.
 
 The `storage:` slot is where a rendered card is kept; without one, every request renders it again. On a new site `create-plumix-app` writes all of this — the import, the registration, the slot and the bucket binding behind it:
 
 ```bash
-pnpm create plumix-app my-site --plugins blog,og
+pnpm create plumix-app my-site --plugins blog,seo,og
 ```
 
 ## What you get
@@ -46,7 +49,7 @@ Four links, in order:
 1. **An explicit `.ogImage()` field** on the entry. An author who picked a share image gets it, untouched.
 2. **A `.featured()` field** on the entry — the entry's own photo — **cropped to the card's size** through your `imageDelivery:` slot. A photo shot at 4:3 unfurls letterboxed or badly cropped in a 1.91:1 slot; this is what fixes it. The crop is pure URL math, so it costs no CPU and needs no rasterizer: **a post with a photo never reaches the renderer**, which is what makes this path work on the Workers free plan. With no delivery configured — or one with nothing attached to transform through — the photo is emitted as it stands rather than dropped, at its own size.
 3. **The generated card.**
-4. **Your site-wide default** (`site.default_og_image`).
+4. **Your site-wide default** (`seo.default_og_image`, from `@plumix/plugin-seo`).
 
 A card may take the second slot for itself:
 

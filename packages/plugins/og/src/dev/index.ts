@@ -44,9 +44,10 @@ export function registerDevSurfaces(
     }),
   });
   // Marks that a page render reached head assembly. The `seo:og_image` filter
-  // does not run when an explicit `.ogImage()` role short-circuits the chain
-  // above it, so without this the panel cannot tell that link from a request
-  // that rendered no page at all.
+  // does not always run — an explicit `.ogImage()` role short-circuits the
+  // chain above it, and an install without `@plumix/plugin-seo` never fires it
+  // — so without this the panel cannot tell either case from a request that
+  // rendered no page at all.
   ctx.addFilter("render:document", (manifest, data, appCtx) => {
     appCtx.telemetry.record(OG_PANEL_ID, (): OgPageTrace => ({
       phase: "page",

@@ -37,28 +37,28 @@ Install the package with whichever package manager the project uses:
   <TabItem label="pnpm">
 
 ```sh
-pnpm add @plumix/plugin-og
+pnpm add @plumix/plugin-og @plumix/plugin-seo
 ```
 
   </TabItem>
   <TabItem label="npm">
 
 ```sh
-npm install @plumix/plugin-og
+npm install @plumix/plugin-og @plumix/plugin-seo
 ```
 
   </TabItem>
   <TabItem label="yarn">
 
 ```sh
-yarn add @plumix/plugin-og
+yarn add @plumix/plugin-og @plumix/plugin-seo
 ```
 
   </TabItem>
   <TabItem label="bun">
 
 ```sh
-bun add @plumix/plugin-og
+bun add @plumix/plugin-og @plumix/plugin-seo
 ```
 
   </TabItem>
@@ -68,12 +68,13 @@ Then:
 
 <Steps>
 
-1. **Configure a `storage:` slot, then add `og()` to the `plugins` array.** The bucket is where a rendered card is kept; without one every request renders the card again.
+1. **Configure a `storage:` slot, then add `seo()` and `og()` to the `plugins` array.** The bucket is where a rendered card is kept; without one every request renders the card again. `@plumix/plugin-seo` owns the page head, so without it the card renders at its route but never reaches an `og:image`.
 
    ```ts no-typecheck
    import { auth, plumix } from "plumix";
 
    import { og } from "@plumix/plugin-og";
+   import { seo } from "@plumix/plugin-seo";
    import {
      cloudflare,
      cloudflareDeployOrigin,
@@ -97,7 +98,7 @@ Then:
          }),
        },
      }),
-     plugins: [og()],
+     plugins: [seo(), og()],
      theme,
    });
    ```
@@ -121,7 +122,7 @@ Four links resolve one `og:image`, in this order:
 1. **An explicit `.ogImage()` field** on the entry. An author who picked a share image gets it, untouched.
 2. **A `.featured()` field** on the entry — the entry's own photo — **cropped to the card's size** through your `imageDelivery:` slot. A photo shot at 4:3 unfurls letterboxed or badly cropped in a 1.91:1 slot, and this is what fixes it. The crop is URL math, so it costs no CPU and reaches no rasterizer. With no delivery slot configured the photo is emitted as it stands rather than dropped.
 3. **The generated card.**
-4. **Your site-wide default**, `site.default_og_image` in the site settings.
+4. **Your site-wide default**, the SEO plugin's default social image.
 
 A card takes the second slot for itself when its rule says so:
 

@@ -16,7 +16,7 @@ after the response is produced.
 | `render`                      | `route/render/render-template.tsx` — themed render, error pages included                      | `render.node`                                                  |
 | `template`                    | child of `render` — template-hierarchy resolution walk                                        | `resolution` (the full explain)                                |
 | `render: deps`                | child of `render` — declared template-dep loaders, in parallel                                | `deps.kinds`                                                   |
-| `render: head`                | child of `render` — SEO gap-fillers (`applyCanonical` + `applyHeadMeta`, reads site settings) | —                                                              |
+| `render: head`                | child of `render` — core's head gap-fillers (canonical + feed discovery)                      | —                                                              |
 | `render: loaders`             | child of `render` — block loader prefetch fan-out                                             | `loaders.blocks`                                               |
 | `render: react`               | child of `render` — the `renderToString` SSR pass                                             | —                                                              |
 | `db: <kind>`                  | `db/trace.ts` — one span per query, all drivers (libsql, D1, transactions)                    | `db.sql`, `db.params`, `db.rows`, `db.batch`                   |

@@ -2,7 +2,7 @@
   "name": "@plumix/plugin-og",
   "version": "0.1.0",
   "type": "module",
-  "description": "OG card plugin for Plumix \u2014 renders and serves social cards at the edge",
+  "description": "OG card plugin for Plumix — renders and serves social cards at the edge",
   "license": "MIT",
   "author": "Plumix Contributors",
   "homepage": "https://github.com/withplumix/plumix#readme",
@@ -62,6 +62,7 @@
     "valibot": "catalog:"
   },
   "peerDependencies": {
+    "@plumix/plugin-seo": "workspace:>=0.1.0 <1.0.0",
     "@tanstack/react-query": "catalog:tanstack",
     "@tanstack/react-router": "catalog:tanstack",
     "plumix": "workspace:>=0.1.0 <1.0.0",
@@ -74,6 +75,7 @@
     "@plumix/eslint-config": "workspace:*",
     "@plumix/lingui-config": "workspace:*",
     "@plumix/plugin-blog": "workspace:*",
+    "@plumix/plugin-seo": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
     "@plumix/typescript-config": "workspace:*",

@@ -26,6 +26,8 @@ import {
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 
+import { seo } from "@plumix/plugin-seo";
+
 import type { CardTarget } from "../card-target.js";
 import type { CardRule } from "../card.js";
 import type { OgPluginOptions } from "../index.js";
@@ -142,7 +144,7 @@ export interface HarnessOptions extends OgPluginOptions {
   readonly cache?: ConnectedCache;
   readonly withSiteTitle?: boolean;
   readonly assets?: { fetch: (request: Request) => Promise<Response> };
-  /** Seeds `site.default_og_image`, the last link of the precedence chain. */
+  /** Seeds the SEO plugin's default image, the last link of the chain. */
   readonly siteDefaultImage?: string;
   /** Capture what the request reported; silent by default. */
   readonly logger?: Logger;
@@ -192,8 +194,11 @@ export async function createHarness(
     ...rest
   } = options;
   const harness = await createDispatcherHarness({
+    // The head this suite asserts is written by `@plumix/plugin-seo`, which
+    // also owns the `og:image` chain this plugin contributes one link of.
     plugins: [
       testBlog,
+      seo(),
       ...before,
       og({ renderer: createFakeRenderer().renderer, ...rest }),
     ],
@@ -223,7 +228,7 @@ export async function createHarness(
   }
   if (siteDefaultImage !== undefined) {
     await harness.factory.setting.create({
-      group: "site",
+      group: "seo",
       key: "default_og_image",
       value: siteDefaultImage,
     });

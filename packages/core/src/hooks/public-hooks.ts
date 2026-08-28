@@ -16,7 +16,6 @@ import "../dev/server/panels/types.js"; // error_page:panels
 import "../route/render/render-template.js"; // render:document
 import "../route/resolve.js"; // resolve:{single,archive,term,author,date,front-page,search}:data
 import "../seo/feed.js"; // seo:feed:items
-import "../seo/head-defaults.js"; // seo:og_image
 import "../seo/robots.js"; // seo:robots-txt
 import "../seo/sitemap.js"; // seo:sitemap:urls
 import "../theme.js"; // theme:document, theme:ready

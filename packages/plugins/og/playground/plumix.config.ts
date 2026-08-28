@@ -2,6 +2,7 @@ import { auth, defineTheme, memoryStorage, plumix } from "plumix";
 
 import { blog } from "@plumix/plugin-blog";
 import { og } from "@plumix/plugin-og";
+import { seo } from "@plumix/plugin-seo";
 import {
   cloudflare,
   cloudflareDeployOrigin,
@@ -35,6 +36,6 @@ export default plumix({
       ...deployOrigin,
     },
   }),
-  plugins: [blog(), og({ preview: ["post"] })],
+  plugins: [blog(), seo(), og({ preview: ["post"] })],
   theme: defineTheme({ templates: () => null }),
 });

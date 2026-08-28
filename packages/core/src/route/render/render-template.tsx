@@ -45,7 +45,7 @@ import { isTrustedDevRequest } from "../../dev/trust.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { escapeHtml } from "../../escape-html.js";
 import { applyCanonical } from "../../seo/canonical.js";
-import { applyHeadMeta } from "../../seo/head-defaults.js";
+import { applyFeedDiscovery } from "../../seo/feed.js";
 import { loadSiteSettings, nonEmpty } from "../../seo/site-settings.js";
 import {
   loadTemplateDeps,
@@ -75,14 +75,21 @@ declare module "../../hooks/types.js" {
      * Per-request head transform — the entry point for `@plumix/plugin-seo` and
      * any plugin to inject, override, or remove document head fields with the
      * resolved `{data, ctx}` in hand. Fires on the assembled (theme + template)
-     * document and before core's SEO gap-fillers, so a subscriber can override
-     * any already-set field while core only backfills keys no one set. Real
-     * renders only — error pages don't fire it.
+     * document, so a theme's own tag is already present and a subscriber
+     * writing head meta gap-fills around it. Real renders only — error pages
+     * don't fire it.
+     *
+     * `title` is the title core resolved for this page — an entry's expanded
+     * title, an archive's label, `Search: <query>`, a plugin archive's own.
+     * Passed because a subscriber cannot derive it: the per-page-kind logic is
+     * core's, and a `registerArchiveType` archive's title is known only to the
+     * resolver that returned it.
      */
     "render:document": (
       manifest: DocumentManifest,
       data: TemplateData,
       ctx: AppContext,
+      title: string,
     ) => DocumentManifest | Promise<DocumentManifest>;
   }
 }
@@ -150,18 +157,23 @@ async function renderThroughThemeInner({
     merged,
     data,
     ctx,
+    title,
   );
-  // Head assembly reads site settings from the DB — worth its own row in the
+  // Feed discovery reads site settings from the DB — worth its own row in the
   // waterfall. The `render:document` subscribers above are already traced per
   // handler as `hook:` spans.
-  const renderDocument = await ctx.telemetry.span("render: head", () =>
-    applyHeadMeta(applyCanonical(filtered, ctx), data, ctx, title),
+  const site = await ctx.telemetry.span("render: head", () =>
+    loadSiteSettings(ctx),
+  );
+  const renderDocument = applyFeedDiscovery(
+    applyCanonical(filtered, ctx),
+    data,
+    ctx,
+    { siteIsPrivate: site.public === false },
   );
   const loaderData = await prefetchEntryLoaders(ctx, data, template);
   // The `<title>` falls back to the resolver title, then the site name — so an
-  // untitled entry gets `<title>Site</title>`, not an empty one. Settings are
-  // request-memoized, so this re-read is free after `applyHeadMeta`.
-  const site = await loadSiteSettings(ctx);
+  // untitled entry gets `<title>Site</title>`, not an empty one.
   const titleFallback = nonEmpty(title) ?? nonEmpty(site.title) ?? title;
   return renderTree({
     ctx,
