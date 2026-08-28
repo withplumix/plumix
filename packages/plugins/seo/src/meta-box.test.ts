@@ -42,6 +42,24 @@ function termBoxScope(h: DispatcherHarness): readonly string[] | undefined {
   )?.termTaxonomies;
 }
 
+describe("a registry name that cannot be a settings key", () => {
+  test("costs that type its per-type fields, not the boot", async () => {
+    const oddly = definePlugin("oddly-named", (ctx) => {
+      // Core validates neither entry-type nor taxonomy names, so this
+      // registers fine and must not take the app down when SEO installs.
+      ctx.registerEntryType("my type", { label: "Odd", isPublic: true });
+      ctx.registerEntryType("fine", { label: "Fine", isPublic: true });
+    });
+
+    const h = await createDispatcherHarness({ plugins: [oddly, seo()] });
+
+    const group = h.app.plugins.settingsGroups.get("seo");
+    const keys = group?.fields.map((field) => field.key) ?? [];
+    expect(keys).toContain("type:fine:title");
+    expect(keys.some((key) => key.includes("my type"))).toBe(false);
+  });
+});
+
 describe("SEO meta box scope", () => {
   test("covers publicly visible entry types and no others", async () => {
     const h = await createHarness();

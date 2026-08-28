@@ -459,6 +459,87 @@ describe("a sitemap at the edge", () => {
   });
 });
 
+describe("a scope held out of the index leaves the sitemap", () => {
+  test("an entry type defaulted to noindex drops out of the index", async () => {
+    const h = await createHarness();
+    await h.factory.setting.create({
+      group: "seo",
+      key: "type:post:indexable",
+      value: false,
+    });
+    await seedPost(h);
+
+    expect(await bodyOf(h, "/sitemap.xml")).not.toContain("sitemap-post-1.xml");
+  });
+
+  test("and its sub-sitemap serves an empty url-set", async () => {
+    const h = await createHarness();
+    await h.factory.setting.create({
+      group: "seo",
+      key: "type:post:indexable",
+      value: false,
+    });
+    await seedPost(h);
+
+    const body = await bodyOf(h, "/sitemap-post-1.xml");
+
+    expect(body).toContain("<urlset");
+    expect(body).not.toContain("<url>");
+  });
+
+  test("a taxonomy defaulted to noindex drops out too", async () => {
+    const h = await createHarness([taxonomyPlugin]);
+    await h.factory.setting.create({
+      group: "seo",
+      key: "taxonomy:category:indexable",
+      value: false,
+    });
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+    await seedPost(h);
+
+    const index = await bodyOf(h, "/sitemap.xml");
+
+    expect(index).not.toContain("sitemap-category-1.xml");
+    // The entry type is untouched — one scope leaving is not all of them.
+    expect(index).toContain("sitemap-post-1.xml");
+  });
+
+  test("a type and a taxonomy sharing a name are told apart", async () => {
+    const namesake = definePlugin("namesake", (ctx) => {
+      ctx.registerEntryType("topic", { label: "Topics", isPublic: true });
+      ctx.registerTermTaxonomy("topic", {
+        label: "Topics",
+        isHierarchical: false,
+        entryTypes: ["topic"],
+      });
+    });
+    const h = await createHarness([namesake]);
+    await h.factory.setting.create({
+      group: "seo",
+      key: "taxonomy:topic:indexable",
+      value: false,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "topic",
+      slug: "hello",
+      title: "Hello",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    // The entry type keeps its scope; only the taxonomy was held out, and the
+    // taxonomy never claimed a route because the type took the name first.
+    expect(await bodyOf(h, "/sitemap.xml")).toContain("sitemap-topic-1.xml");
+  });
+});
+
 describe("noindex keeps a page out of the sitemap", () => {
   test("an entry marked noindex is not listed", async () => {
     const h = await createHarness();

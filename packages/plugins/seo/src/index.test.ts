@@ -464,7 +464,7 @@ describe("per-entry overrides", () => {
     expect(head).toContain('<meta name="robots" content="noindex,follow"/>');
   });
 
-  test("a search title goes through the theme's title template", async () => {
+  test("a search title is the whole title, not a fragment for a template", async () => {
     const h = await createDispatcherHarness({
       plugins: [blogPlugin, seo()],
       theme: defineTheme({
@@ -476,9 +476,9 @@ describe("per-entry overrides", () => {
 
     const head = await dispatchHead(h, "https://cms.example/post/hello");
 
-    // The override is the page's title, so it composes like one. A page with
-    // no override sets no `title` at all and keeps core's own fallback.
-    expect(head).toContain("<title>How to knead dough · Demo</title>");
+    // An editor writing a search title has written the SERP line they want;
+    // appending the site name to it would be composing over their answer.
+    expect(head).toContain("<title>How to knead dough</title>");
   });
 
   test("a private site outranks an entry that set nothing", async () => {
@@ -489,5 +489,278 @@ describe("per-entry overrides", () => {
     const head = await dispatchHead(h, "https://cms.example/post/hello");
 
     expect(head).toContain('<meta name="robots" content="noindex,nofollow"/>');
+  });
+});
+
+describe("title patterns", () => {
+  const seedPattern = (
+    h: DispatcherHarness,
+    values: Record<string, JsonValue>,
+  ): Promise<void> => seedSettings(h, "seo", values);
+
+  test("a per-type pattern titles every entry of that type", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "site", { title: "Demo" });
+    await seedPattern(h, {
+      "type:post:title": "%%title%% %%sep%% %%sitename%%",
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain("<title>Hello · Demo</title>");
+    expect(head).toContain(
+      '<meta property="og:title" content="Hello · Demo"/>',
+    );
+  });
+
+  test("an entry's own search title outranks its type's pattern", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "site", { title: "Demo" });
+    await seedPattern(h, {
+      "type:post:title": "%%title%% %%sep%% %%sitename%%",
+    });
+    await seedPost(h, { meta: { seo_title: "Kneading, explained" } });
+
+    expect(await dispatchHead(h, "https://cms.example/post/hello")).toContain(
+      "<title>Kneading, explained</title>",
+    );
+  });
+
+  test("the site-wide pattern covers a page no type pattern does", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "site", { title: "Demo" });
+    await seedPattern(h, { title_pattern: "%%title%% %%sep%% %%sitename%%" });
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+
+    expect(
+      await dispatchHead(h, "https://cms.example/category/news"),
+    ).toContain("<title>Categories · Demo</title>");
+  });
+
+  test("a per-type pattern outranks the site-wide one", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "site", { title: "Demo" });
+    await seedPattern(h, {
+      title_pattern: "%%title%% %%sep%% site-wide",
+      "type:post:title": "%%title%% %%sep%% per-type",
+    });
+    await seedPost(h);
+
+    expect(await dispatchHead(h, "https://cms.example/post/hello")).toContain(
+      "<title>Hello · per-type</title>",
+    );
+  });
+
+  test("the separator is the site's own", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "site", { title: "Demo" });
+    await seedPattern(h, {
+      title_separator: "|",
+      "type:post:title": "%%title%% %%sep%% %%sitename%%",
+    });
+    await seedPost(h);
+
+    expect(await dispatchHead(h, "https://cms.example/post/hello")).toContain(
+      "<title>Hello | Demo</title>",
+    );
+  });
+
+  test("a term page resolves the term and count variables", async () => {
+    const h = await createHarness();
+    await seedPattern(h, { title_pattern: "%%term%% (%%count%%)" });
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+
+    expect(
+      await dispatchHead(h, "https://cms.example/category/news"),
+    ).toContain("<title>News (0)</title>");
+  });
+
+  test("a search page resolves the query and count variables", async () => {
+    const h = await createHarness();
+    await seedPattern(h, { title_pattern: "%%searchphrase%% (%%count%%)" });
+
+    expect(await dispatchHead(h, "https://cms.example/search/dough")).toContain(
+      "<title>dough (0)</title>",
+    );
+  });
+
+  test("an unknown variable is dropped rather than shipped into the SERP", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "site", { title: "Demo" });
+    await seedPattern(h, { title_pattern: "%%title%% %%titel%% %%sitename%%" });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain("<title>Hello Demo</title>");
+    expect(head).not.toContain("%%");
+  });
+
+  test("a composed title is escaped for the head", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "site", { title: "Ben & Jerry's <Shop>" });
+    await seedPattern(h, { title_pattern: "%%title%% %%sep%% %%sitename%%" });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain(
+      `<title>Hello · Ben &amp; Jerry's &lt;Shop&gt;</title>`,
+    );
+    // Both surfaces escape what would break out of them; a double-quoted
+    // attribute and a text node both leave a bare apostrophe alone.
+    expect(head).toContain(
+      `<meta property="og:title" content="Hello · Ben &amp; Jerry's &lt;Shop&gt;"/>`,
+    );
+  });
+
+  test("no pattern leaves the title exactly as core resolved it", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "site", { title: "Demo" });
+    await seedPost(h);
+
+    expect(await dispatchHead(h, "https://cms.example/post/hello")).toContain(
+      "<title>Hello</title>",
+    );
+  });
+});
+
+describe("a page that was not found", () => {
+  const dispatch404 = async (h: DispatcherHarness): Promise<string> => {
+    const res = await h.dispatch(
+      new Request("https://cms.example/never-existed"),
+    );
+    expect(res.status).toBe(404);
+    return headOf(await res.text());
+  };
+
+  test("is held out of the index by default", async () => {
+    const h = await createHarness();
+
+    expect(await dispatch404(h)).toContain(
+      '<meta name="robots" content="noindex,follow"/>',
+    );
+  });
+
+  test("declares no canonical and no og:url", async () => {
+    const h = await createHarness();
+
+    const head = await dispatch404(h);
+
+    // The URL resolved to nothing, so it is the canonical address of nothing.
+    expect(head).not.toContain('rel="canonical"');
+    expect(head).not.toContain("og:url");
+  });
+
+  test("still carries the rest of the set", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "site", { title: "Demo", tagline: "A tagline" });
+
+    const head = await dispatch404(h);
+
+    expect(head).toContain('<meta property="og:site_name" content="Demo"/>');
+    expect(head).toContain('<meta name="description" content="A tagline"/>');
+    expect(head).toContain('<meta property="og:type" content="website"/>');
+  });
+
+  test("a site that asks for it can index them", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "seo", { index_not_found: true });
+
+    expect(await dispatch404(h)).toContain(
+      '<meta name="robots" content="index,follow,max-image-preview:large"/>',
+    );
+  });
+});
+
+describe("paginated archives", () => {
+  // The archive pages at 20, so page two needs a twenty-first entry to exist
+  // at all — a shorter run would 404 and be held out by the not-found arm
+  // instead, which is not what these assert.
+  const seedTwoPages = async (h: DispatcherHarness): Promise<void> => {
+    const author = await h.seedUser("admin");
+    for (let n = 0; n < 21; n++) {
+      await h.factory.entry.create({
+        type: "post",
+        slug: `post-${String(n)}`,
+        title: `Post ${String(n)}`,
+        content: null,
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(),
+      });
+    }
+  };
+
+  test("page two is held out of the index, page one is not", async () => {
+    const h = await createHarness();
+    await seedTwoPages(h);
+
+    expect(await dispatchHead(h, "https://cms.example/post")).toContain(
+      '<meta name="robots" content="index,follow,max-image-preview:large"/>',
+    );
+    expect(await dispatchHead(h, "https://cms.example/post/page/2")).toContain(
+      '<meta name="robots" content="noindex,follow"/>',
+    );
+  });
+
+  test("a site that asks for it can index them", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "seo", { index_paginated: true });
+    await seedTwoPages(h);
+
+    expect(await dispatchHead(h, "https://cms.example/post/page/2")).toContain(
+      '<meta name="robots" content="index,follow,max-image-preview:large"/>',
+    );
+  });
+});
+
+describe("per-type and per-taxonomy robots defaults", () => {
+  test("a type held out covers its entries and its archive", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "seo", { "type:post:indexable": false });
+    await seedPost(h);
+
+    expect(await dispatchHead(h, "https://cms.example/post/hello")).toContain(
+      '<meta name="robots" content="noindex,follow"/>',
+    );
+    expect(await dispatchHead(h, "https://cms.example/post")).toContain(
+      '<meta name="robots" content="noindex,follow"/>',
+    );
+  });
+
+  test("a taxonomy held out covers its term archives", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "seo", { "taxonomy:category:indexable": false });
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+
+    expect(
+      await dispatchHead(h, "https://cms.example/category/news"),
+    ).toContain('<meta name="robots" content="noindex,follow"/>');
+  });
+
+  test("an entry override outranks its type's default", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "seo", { "type:post:indexable": false });
+    await seedPost(h, { meta: { seo_noindex: false } });
+
+    // The type default holds: an entry answering `false` has asked for nothing,
+    // the same as an entry that never answered.
+    expect(await dispatchHead(h, "https://cms.example/post/hello")).toContain(
+      '<meta name="robots" content="noindex,follow"/>',
+    );
   });
 });

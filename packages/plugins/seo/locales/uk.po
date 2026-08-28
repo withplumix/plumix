@@ -117,3 +117,58 @@ msgstr "Тип вмісту"
 #: src/overrides.ts
 msgid "plugin.seo.box.schema_type.description"
 msgstr "Як структуровані дані класифікують цей запис. Типово — стаття."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.separator"
+msgstr "Роздільник заголовка"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.separator.description"
+msgstr "На що перетворюється %%sep%% у шаблоні заголовка."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.title_pattern"
+msgstr "Типовий шаблон заголовка"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.title_pattern.description"
+msgstr "Застосовується там, де немає шаблону для типу. Порожнє поле лишає заголовки без змін."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_search"
+msgstr "Індексувати сторінки результатів пошуку"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_paginated"
+msgstr "Індексувати другу й наступні сторінки архіву"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_not_found"
+msgstr "Індексувати сторінки, які не знайдено"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.thin.description"
+msgstr "Типово вимкнено — ці сторінки неповні або дублюються."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.type_title.description"
+msgstr "Шаблон заголовка для записів цього типу."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.type_indexable.description"
+msgstr "Дозволити пошуковим системам індексувати записи цього типу."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.taxonomy_indexable.description"
+msgstr "Дозволити пошуковим системам індексувати архіви цієї таксономії."

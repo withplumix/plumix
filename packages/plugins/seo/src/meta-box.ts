@@ -1,10 +1,12 @@
 import type { PluginSetupContext } from "plumix/plugin";
 
+import type { PublicTarget } from "./scope.js";
 import {
   SEO_BOX_LABELS,
   SEO_ENTRY_FIELDS,
   SEO_META_FIELDS,
 } from "./overrides.js";
+import { publicTargets } from "./scope.js";
 
 /**
  * Which entry types and taxonomies carry the SEO box.
@@ -34,19 +36,10 @@ export function registerSeoMetaBoxes(
   options: SeoMetaBoxOptions,
 ): void {
   const excluded = new Set(options.exclude ?? []);
-  // Entry types and taxonomies answer the same two questions, so one walk
-  // serves both registries.
-  const scopeOf = (
-    targets: ReadonlyMap<
-      string,
-      { readonly name: string; readonly isPublic?: boolean }
-    >,
-  ): string[] =>
-    [...targets.values()]
-      .filter(
-        (target) => target.isPublic !== false && !excluded.has(target.name),
-      )
-      .map((target) => target.name);
+  const scopeOf = (targets: ReadonlyMap<string, PublicTarget>): string[] =>
+    publicTargets(targets)
+      .map((target) => target.name)
+      .filter((name) => !excluded.has(name));
 
   ctx.addAction("theme:ready", () => {
     const entryTypes = scopeOf(ctx.plugins.entryTypes);

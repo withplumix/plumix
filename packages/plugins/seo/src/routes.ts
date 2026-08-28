@@ -9,6 +9,7 @@ import {
   collectSitemapUrls,
   renderSitemapIndex,
   renderSubSitemap,
+  scopeIsOffered,
   sitemapIndexLocs,
   sitemapScopes,
 } from "./sitemap.js";
@@ -48,10 +49,11 @@ async function handleSitemapIndex(
 ): Promise<Response> {
   // `tagCacheEntry` unions, so scopes sharing a type tag need no dedupe here.
   tagCacheEntry(ctx, [SITEMAP_TAG, ...scopes.flatMap((scope) => scope.tags)]);
-  // A site held out of the index is held out of search: emit an empty index.
-  const { indexable } = await loadSeoSettings(ctx);
-  const locs = indexable ? await sitemapIndexLocs(ctx, scopes) : [];
-  return xmlResponse(renderSitemapIndex(locs));
+  // A site held out of the index is held out of search, and so is a scope its
+  // own default holds out: either way the scope simply leaves the set.
+  const settings = await loadSeoSettings(ctx);
+  const listed = scopes.filter((scope) => scopeIsOffered(scope, settings));
+  return xmlResponse(renderSitemapIndex(await sitemapIndexLocs(ctx, listed)));
 }
 
 async function handleSubSitemap(
@@ -60,8 +62,10 @@ async function handleSubSitemap(
   page: number,
 ): Promise<Response> {
   tagCacheEntry(ctx, [SITEMAP_TAG, ...scope.tags]);
-  const { indexable } = await loadSeoSettings(ctx);
-  const urls = indexable ? await collectSitemapUrls(ctx, scope, page) : [];
+  const settings = await loadSeoSettings(ctx);
+  const urls = scopeIsOffered(scope, settings)
+    ? await collectSitemapUrls(ctx, scope, page)
+    : [];
   return xmlResponse(renderSubSitemap(urls));
 }
 

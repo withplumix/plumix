@@ -117,3 +117,58 @@ msgstr "نوع المحتوى"
 #: src/overrides.ts
 msgid "plugin.seo.box.schema_type.description"
 msgstr "كيف تصنّف البيانات المنظَّمة هذا المُدخل. الافتراضي مقالة."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.separator"
+msgstr "فاصل العنوان"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.separator.description"
+msgstr "ما يتحول إليه %%sep%% في نمط العنوان."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.title_pattern"
+msgstr "نمط العنوان الافتراضي"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.title_pattern.description"
+msgstr "يُستخدم حيث لا ينطبق نمط خاص بالنوع. تركه فارغًا يبقي العناوين كما هي."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_search"
+msgstr "فهرسة صفحات نتائج البحث"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_paginated"
+msgstr "فهرسة الصفحة الثانية وما بعدها من الأرشيف"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_not_found"
+msgstr "فهرسة الصفحات غير الموجودة"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.thin.description"
+msgstr "معطّل افتراضيًا — هذه الصفحات ضعيفة المحتوى أو مكررة."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.type_title.description"
+msgstr "نمط العنوان لمدخلات هذا النوع."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.type_indexable.description"
+msgstr "السماح لمحركات البحث بفهرسة مدخلات هذا النوع."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.taxonomy_indexable.description"
+msgstr "السماح لمحركات البحث بفهرسة أرشيفات هذا التصنيف."

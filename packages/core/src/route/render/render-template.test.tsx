@@ -6,6 +6,7 @@ import { BlockRenderer } from "@plumix/blocks/renderer";
 
 import type { AppContext } from "../../context/app.js";
 import type { User } from "../../db/schema/users.js";
+import type { TemplateData } from "../../theme.js";
 import type { ResolvedEntry } from "./resolved-entry.js";
 import { entries as entriesTable } from "../../db/schema/entries.js";
 import { definePlugin } from "../../plugin/define.js";
@@ -3696,6 +3697,20 @@ describe("resolvePublicRoute — search through theme", () => {
 });
 
 describe("resolvePublicRoute — error pages through theme", () => {
+  test("a `$&` in a title is text, not a replacement pattern", async () => {
+    const theme = defineTheme({
+      templates: [fallback(() => null)],
+      document: { titleTemplate: "%s · Plumix", title: "Q&A: $& explained" },
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    expect(await response.text()).toContain(
+      "<title>Q&amp;A: $&amp; explained · Plumix</title>",
+    );
+  });
+
   test("404 page composes its title through the theme titleTemplate", async () => {
     const theme = defineTheme({
       templates: [
@@ -3712,6 +3727,77 @@ describe("resolvePublicRoute — error pages through theme", () => {
     expect(response.status).toBe(404);
     const body = await response.text();
     expect(body).toContain("<title>Not Found · Plumix</title>");
+  });
+
+  test("an error page runs the `render:document` chain like any other", async () => {
+    const theme = defineTheme({
+      templates: [fallback(() => null), notFound(() => <main />)],
+    });
+    const seen: TemplateData["kind"][] = [];
+    const headWriter = definePlugin("head-writer", (ctx) => {
+      ctx.addFilter("render:document", (manifest, data) => {
+        seen.push(data.kind);
+        return {
+          ...manifest,
+          meta: [
+            ...(manifest.meta ?? []),
+            { name: "robots", content: "noindex,follow" },
+          ],
+        };
+      });
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, headWriter],
+      theme,
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/never-existed"),
+    );
+
+    expect(response.status).toBe(404);
+    expect(seen).toContain("error");
+    expect(await response.text()).toContain(
+      '<meta name="robots" content="noindex,follow"/>',
+    );
+  });
+
+  test("a throwing head plugin leaves the 404 a 404", async () => {
+    const theme = defineTheme({
+      templates: [fallback(() => null), notFound(() => <main />)],
+    });
+    const brokenPlugin = definePlugin("broken-head", (ctx) => {
+      ctx.addFilter("render:document", () => {
+        throw new Error("subscriber blew up");
+      });
+    });
+
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, brokenPlugin],
+      theme,
+    });
+    const response = await h.dispatch(
+      new Request("https://cms.example/never-existed"),
+    );
+
+    // `applyFilter` does not isolate a throw, and this render is already the
+    // failure path — escalating it would hide the 404 behind a 500.
+    expect(response.status).toBe(404);
+  });
+
+  test("an error page declares no canonical of its own", async () => {
+    const theme = defineTheme({
+      templates: [fallback(() => null), notFound(() => <main />)],
+    });
+
+    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
+    const response = await h.dispatch(
+      new Request("https://cms.example/never-existed"),
+    );
+
+    // A URL that resolved to nothing must not tell a crawler it is the
+    // canonical address of anything.
+    expect(await response.text()).not.toContain('rel="canonical"');
   });
 
   test("registered `404` template renders for an unmatched URL", async () => {

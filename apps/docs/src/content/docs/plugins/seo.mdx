@@ -61,7 +61,7 @@ export default plumix({
 Every public page gets:
 
 - `description` — the entry's excerpt, falling back to the site tagline.
-- `robots` — `index,follow,max-image-preview:large` normally, `noindex,follow` on a search-results page or an entry an editor hid, and `noindex,nofollow` across the whole site when indexing is turned off.
+- `robots` — decided by the [assertion chain](#one-predicate-several-consumers) below.
 - `og:title`, `og:type`, `og:url`, `og:site_name`, `og:description`, `og:locale`.
 - `twitter:card` — `summary_large_image` when a social image resolved, `summary` when none did.
 - One `<script type="application/ld+json">` holding the page's [structured-data graph](#structured-data), on every page that is indexable.
@@ -141,12 +141,24 @@ seo({ metaBox: { exclude: ["landing_page"] } });
 
 ### One predicate, several consumers
 
-Whether a page is offered to a search engine is decided once, by an ordered set of assertions that short-circuits on the first that fires:
+Whether a page is offered to a search engine is decided once, by an ordered set of named assertions that short-circuits on the first that fires:
 
-1. `site_private` — indexing is turned off site-wide.
-2. `entry_override` — the entry or term is marked **Hide from search engines**.
-3. `search_results` — the page is a search-results listing.
-4. `default` — nothing asserted; the page is indexable.
+| #   | Reason             | Fires when                                                             |
+| --- | ------------------ | ---------------------------------------------------------------------- |
+| 1   | `site_private`     | Indexing is turned off site-wide.                                      |
+| 2   | `entry_override`   | The entry or term is marked **Hide from search engines**.              |
+| 3   | `type_default`     | Its entry type is held out — on the type's entries and on its archive. |
+| 4   | `taxonomy_default` | Its taxonomy is held out — on that taxonomy's term archives.           |
+| 5   | `search_results`   | The page is a search-results listing.                                  |
+| 6   | `paginated`        | Page 2 or beyond of an archive.                                        |
+| 7   | `not_found`        | The URL resolved to nothing.                                           |
+| —   | `default`          | Nothing asserted; the page is indexable.                               |
+
+The order is the design. A site held out of the index cannot be put back in by one entry, and an editor's answer for one entry outranks the default set for its whole type. The last three are off by default and each is a toggle on the settings screen.
+
+The directive it produces pairs that answer with the follow one: `index,follow,max-image-preview:large` when the page is offered, `noindex,follow` when it is not, and `nofollow` in place of `follow` when the site is private or the editor asked for it.
+
+A plugin archive registered with `registerArchiveType` always reports page 1 — core does not define that payload's pagination — so the `paginated` arm never fires on one. A plugin that paginates its own archive and wants page 2 held out can say so through `render:document`.
 
 The robots directive and sitemap membership both read that one answer, so a page cannot claim `noindex` in its head while still appearing in the sitemap. The reason travels with the decision rather than being thrown away, which is what lets an editor be told _why_ a page is excluded instead of being shown a bare toggle.
 
@@ -154,6 +166,45 @@ The robots directive and sitemap membership both read that one answer, so a page
   Turning site-wide indexing off outranks every per-entry answer. An entry that
   explicitly asked to be indexed still gets `noindex,nofollow` while the site is
   held out.
+</Aside>
+
+## Title patterns
+
+A pattern is a line with `%%variables%%` in it, resolved per page. Set one per entry type so every entry of that type is titled consistently, and a site-wide one for everything else:
+
+| Field                                      | What it covers                                                                           |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| **Default title pattern**                  | Every page no per-type pattern covers — term, author, date and search archives included. |
+| **&lt;Type&gt;** under the per-type fields | That type's entries and its archive.                                                     |
+
+An entry's own **Search title** outranks both. A pattern that resolves to nothing at all — every variable empty on this page — leaves the title exactly as the theme resolved it.
+
+### The variables
+
+| Variable           | Resolves to                                                                                        |
+| ------------------ | -------------------------------------------------------------------------------------------------- |
+| `%%title%%`        | The title the page already had.                                                                    |
+| `%%sitename%%`     | The site title, from Site identity.                                                                |
+| `%%sep%%`          | The **Title separator** setting; `·` unless changed.                                               |
+| `%%term%%`         | The term's name, on a term archive.                                                                |
+| `%%author%%`       | The author's display name (or slug), on an entry or an author archive.                             |
+| `%%date%%`         | An entry's publication date, or the period a date archive covers, at that archive's own precision. |
+| `%%searchphrase%%` | The query, on a search-results page.                                                               |
+| `%%count%%`        | How many entries the listing matched.                                                              |
+
+A variable the page has nothing for resolves to the empty string, and a separator left holding nothing together is trimmed away — so `%%term%% %%sep%% %%sitename%%` ships as `Demo`, not `· Demo`, on a page with no term. A name that is not a variable is dropped rather than emitted: shipping `%%titel%%` into a search result is worse than shipping a shorter title.
+
+```
+%%title%% %%sep%% %%sitename%%     → Kneading, explained · Demo
+%%searchphrase%% (%%count%%)       → dough (12)
+%%term%% %%sep%% %%sitename%%      → News · Demo
+```
+
+<Aside type="note" title="A pattern is the whole title">
+  When a pattern or a search title composes the title, the plugin ships it
+  verbatim — a theme's `titleTemplate` does not then append the site name a
+  second time. A page with no pattern and no override sets no title at all and
+  keeps whatever the theme composed.
 </Aside>
 
 ## Structured data
@@ -263,6 +314,10 @@ ctx.addFilter(
 
 `/sitemap.xml` is an index, not a URL list. It names one sub-sitemap per **scope** — every public entry type, every public taxonomy, and every archive a plugin registered a `sitemap` for — paged at 1,000 URLs each. A scope with nothing published is left out.
 
+A scope whose entry type or taxonomy is held out of the index leaves the set entirely — it is absent from the index and its sub-sitemap serves an empty `<urlset>`.
+
+Two seams are worth knowing about. An archive registered with `registerArchiveType` answers to neither per-type nor per-taxonomy default: it is a plugin's own URL space, and declaring a `sitemap` is what opts it in — so an archive listing permalinks of a `noindex` type would advertise pages that say `noindex`. And a taxonomy sharing a name with an entry type gets no sub-sitemap at all, because the entry type claims the scope name first; its term archives still say `index`.
+
 `/sitemap-<scope>-<page>.xml` is the URL list for one scope and page. Entry scopes list published entries with a `lastmod`; taxonomy scopes list term archives. Drafts, scheduled entries, non-public types and anything marked **Hide from search engines** never appear — the exclusion is a `WHERE`, so the count driving the index's pagination and the page it pages agree.
 
 Scopes are enumerated when the theme is ready, so the routes the plugin claims are exactly the scopes the site registered — `/sitemap-nope-1.xml` is a 404, not an empty document, and a page segment that is not a page number is a 404 too.
@@ -309,6 +364,9 @@ The plugin registers a **Search & social** settings group on a settings page of 
 - **Allow search engines to index this site** — off puts `noindex,nofollow` on every page, disallows all crawling in `robots.txt`, and empties the sitemap.
 - **Default social image URL** — the last link of the chain above.
 - **This site represents** — `Organization` or `Person`, which is what the graph's `publisher` piece is typed as.
+- **Title separator** and **Default title pattern** — the two title-pattern settings above.
+- **Index search-results pages**, **Index page 2 and beyond of an archive**, **Index pages that were not found** — the three arms of the chain that are off by default.
+- One **title pattern** and one **indexing toggle** per public entry type, and one **indexing toggle** per public taxonomy. Those fields are enumerated from what the site registered, so a type a plugin registers during its own `setup` gets its own. A type registered later — from a `theme:ready` handler in a plugin listed after this one — is too late to be enumerated, and a name that is not `[a-zA-Z0-9_-]+` cannot be a settings key, so it gets no per-type fields either.
 
 The first two lived on core's Site identity group before this plugin existed. A site upgrading from that keeps its answers with no migration step: the plugin reads its own group first and falls back to the old `site.public` and `site.default_og_image` rows, and the settings form is seeded from the same fallback, so the next save writes the values through under the new keys.
 

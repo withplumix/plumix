@@ -32,6 +32,14 @@ export interface PageFacts {
   readonly author: ResolvedAuthor | null;
   readonly term: ResolvedTerm | null;
   readonly entry: ResolvedEntry | null;
+  /**
+   * The entry type an entry-type archive lists, and null everywhere else —
+   * including on a single entry, whose own type is on `entry`.
+   *
+   * A date or author archive spans every type, and a plugin archive's payload
+   * is its own, so neither names one.
+   */
+  readonly contentType: string | null;
 }
 
 const NO_SUBJECT = {
@@ -40,6 +48,7 @@ const NO_SUBJECT = {
   author: null,
   term: null,
   entry: null,
+  contentType: null,
 } as const;
 
 /**
@@ -76,6 +85,12 @@ export function pageFacts(data: TemplateData): PageFacts {
         author: data.author,
       };
     case "archive":
+      return {
+        ...NO_SUBJECT,
+        kind: data.kind,
+        page: data.pagination.page,
+        contentType: data.contentType,
+      };
     case "date":
     case "frontPage":
     case "search":

@@ -1,11 +1,15 @@
 import type { PageFacts, ResolvedEntry, ResolvedTerm } from "plumix";
 import { describe, expect, test } from "vitest";
 
+import type { SeoSettings } from "./settings.js";
 import { indexable } from "./indexable.js";
 import { SEO_META_KEYS } from "./overrides.js";
 
-const withMeta = <T>(meta: Record<string, unknown>): T =>
-  ({ meta }) as unknown as T;
+const entryOf = (type: string, meta: Record<string, unknown> = {}) =>
+  ({ type, meta }) as unknown as ResolvedEntry;
+
+const termOf = (taxonomy: string, meta: Record<string, unknown> = {}) =>
+  ({ taxonomy, meta }) as unknown as ResolvedTerm;
 
 const facts = (overrides: Partial<PageFacts> = {}): PageFacts => ({
   kind: "entry",
@@ -14,77 +18,200 @@ const facts = (overrides: Partial<PageFacts> = {}): PageFacts => ({
   modified: null,
   author: null,
   term: null,
-  entry: withMeta<ResolvedEntry>({}),
+  entry: entryOf("post"),
+  contentType: null,
   ...overrides,
 });
 
-const PUBLIC = { indexable: true };
-const PRIVATE = { indexable: false };
+const settings = (overrides: Partial<SeoSettings> = {}): SeoSettings => ({
+  indexable: true,
+  defaultOgImage: null,
+  represents: "organization",
+  separator: "·",
+  titlePattern: null,
+  typeTitlePatterns: new Map(),
+  noindexTypes: new Set(),
+  noindexTaxonomies: new Set(),
+  indexSearch: false,
+  indexPaginated: false,
+  indexNotFound: false,
+  ...overrides,
+});
 
-describe("indexable", () => {
-  test("an ordinary entry on a public site is indexable", () => {
-    expect(indexable(facts(), PUBLIC)).toEqual({
-      indexable: true,
-      reason: "default",
-    });
-  });
-
-  test("a private site holds every page out, whatever the page is", () => {
-    for (const kind of ["entry", "search", "frontPage"] as const) {
-      expect(indexable(facts({ kind }), PRIVATE)).toEqual({
-        indexable: false,
-        reason: "site_private",
-      });
+describe("the assertion chain, arm by arm", () => {
+  test("site_private — a private site holds every page out", () => {
+    for (const kind of ["entry", "search", "frontPage", "error"] as const) {
+      expect(
+        indexable(facts({ kind }), settings({ indexable: false })),
+      ).toEqual({ indexable: false, reason: "site_private" });
     }
   });
 
-  test("a private site outranks an entry that asked to be indexed", () => {
-    const entry = withMeta<ResolvedEntry>({
-      [SEO_META_KEYS.noindex]: false,
-    });
-    expect(indexable(facts({ entry }), PRIVATE).reason).toBe("site_private");
-  });
-
-  test("an entry marked noindex is held out with its own reason", () => {
-    const entry = withMeta<ResolvedEntry>({ [SEO_META_KEYS.noindex]: true });
-    expect(indexable(facts({ entry }), PUBLIC)).toEqual({
+  test("entry_override — an entry or term marked noindex", () => {
+    const entry = entryOf("post", { [SEO_META_KEYS.noindex]: true });
+    expect(indexable(facts({ entry }), settings())).toEqual({
       indexable: false,
       reason: "entry_override",
     });
-  });
 
-  test("a term marked noindex is held out the same way an entry is", () => {
-    const term = withMeta<ResolvedTerm>({ [SEO_META_KEYS.noindex]: true });
+    const term = termOf("category", { [SEO_META_KEYS.noindex]: true });
     expect(
-      indexable(facts({ kind: "taxonomy", entry: null, term }), PUBLIC),
+      indexable(facts({ kind: "taxonomy", entry: null, term }), settings()),
     ).toEqual({ indexable: false, reason: "entry_override" });
   });
 
-  test("a term with no answer leaves its archive indexable", () => {
-    const term = withMeta<ResolvedTerm>({});
+  test("type_default — a whole entry type held out, on its entries", () => {
     expect(
-      indexable(facts({ kind: "taxonomy", entry: null, term }), PUBLIC).reason,
+      indexable(facts(), settings({ noindexTypes: new Set(["post"]) })),
+    ).toEqual({ indexable: false, reason: "type_default" });
+  });
+
+  test("type_default — and on that type's own archive", () => {
+    expect(
+      indexable(
+        facts({ kind: "archive", entry: null, contentType: "post" }),
+        settings({ noindexTypes: new Set(["post"]) }),
+      ),
+    ).toEqual({ indexable: false, reason: "type_default" });
+  });
+
+  test("type_default — another type is unaffected", () => {
+    expect(
+      indexable(
+        facts({ entry: entryOf("page") }),
+        settings({ noindexTypes: new Set(["post"]) }),
+      ).reason,
     ).toBe("default");
   });
 
-  test("search results are thin, so they stay out of the index", () => {
-    expect(indexable(facts({ kind: "search", entry: null }), PUBLIC)).toEqual({
+  test("taxonomy_default — a whole taxonomy's archives held out", () => {
+    expect(
+      indexable(
+        facts({ kind: "taxonomy", entry: null, term: termOf("tag") }),
+        settings({ noindexTaxonomies: new Set(["tag"]) }),
+      ),
+    ).toEqual({ indexable: false, reason: "taxonomy_default" });
+  });
+
+  test("search_results — thin by default, indexable on request", () => {
+    const search = facts({ kind: "search", entry: null });
+    expect(indexable(search, settings())).toEqual({
       indexable: false,
       reason: "search_results",
     });
-  });
-
-  test("a noindex entry short-circuits above the search arm", () => {
-    const entry = withMeta<ResolvedEntry>({ [SEO_META_KEYS.noindex]: true });
-    expect(indexable(facts({ kind: "search", entry }), PUBLIC).reason).toBe(
-      "entry_override",
+    expect(indexable(search, settings({ indexSearch: true })).reason).toBe(
+      "default",
     );
   });
 
-  test("a page with no subject at all is indexable", () => {
-    expect(indexable(facts({ kind: "archive", entry: null }), PUBLIC)).toEqual({
+  test("paginated — page two and beyond, by default", () => {
+    const page2 = facts({ kind: "archive", entry: null, page: 2 });
+    expect(indexable(page2, settings())).toEqual({
+      indexable: false,
+      reason: "paginated",
+    });
+    expect(indexable(page2, settings({ indexPaginated: true })).reason).toBe(
+      "default",
+    );
+    expect(
+      indexable(facts({ kind: "archive", entry: null, page: 1 }), settings())
+        .reason,
+    ).toBe("default");
+  });
+
+  test("not_found — an error page, by default", () => {
+    const missing = facts({ kind: "error", entry: null });
+    expect(indexable(missing, settings())).toEqual({
+      indexable: false,
+      reason: "not_found",
+    });
+    expect(indexable(missing, settings({ indexNotFound: true })).reason).toBe(
+      "default",
+    );
+  });
+
+  test("default — an ordinary entry on an ordinary site", () => {
+    expect(indexable(facts(), settings())).toEqual({
       indexable: true,
       reason: "default",
     });
+  });
+});
+
+describe("the chain short-circuits in its documented order", () => {
+  // Each case fires every arm at once and asserts the earliest one answers.
+  const everything = settings({
+    indexable: false,
+    noindexTypes: new Set(["post"]),
+    noindexTaxonomies: new Set(["category"]),
+  });
+  const loaded = facts({
+    kind: "search",
+    page: 3,
+    entry: entryOf("post", { [SEO_META_KEYS.noindex]: true }),
+    term: termOf("category"),
+    contentType: "post",
+  });
+
+  test("site_private outranks everything below it", () => {
+    expect(indexable(loaded, everything).reason).toBe("site_private");
+  });
+
+  test("entry_override outranks the type default", () => {
+    expect(
+      indexable(loaded, settings({ ...everything, indexable: true })).reason,
+    ).toBe("entry_override");
+  });
+
+  test("type_default outranks the taxonomy default", () => {
+    expect(
+      indexable(
+        { ...loaded, entry: entryOf("post") },
+        settings({ ...everything, indexable: true }),
+      ).reason,
+    ).toBe("type_default");
+  });
+
+  test("taxonomy_default outranks the search arm", () => {
+    expect(
+      indexable(
+        { ...loaded, entry: null, contentType: null },
+        settings({ ...everything, indexable: true, noindexTypes: new Set() }),
+      ).reason,
+    ).toBe("taxonomy_default");
+  });
+
+  test("search_results outranks the paginated arm", () => {
+    expect(
+      indexable(
+        { ...loaded, entry: null, term: null, contentType: null },
+        settings({
+          ...everything,
+          indexable: true,
+          noindexTypes: new Set(),
+          noindexTaxonomies: new Set(),
+        }),
+      ).reason,
+    ).toBe("search_results");
+  });
+
+  test("paginated outranks the not-found arm", () => {
+    expect(
+      indexable(
+        {
+          ...loaded,
+          kind: "error",
+          entry: null,
+          term: null,
+          contentType: null,
+        },
+        settings({
+          ...everything,
+          indexable: true,
+          noindexTypes: new Set(),
+          noindexTaxonomies: new Set(),
+        }),
+      ).reason,
+    ).toBe("paginated");
   });
 });

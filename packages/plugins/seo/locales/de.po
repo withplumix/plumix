@@ -117,3 +117,58 @@ msgstr "Inhaltstyp"
 #: src/overrides.ts
 msgid "plugin.seo.box.schema_type.description"
 msgstr "Wie strukturierte Daten diesen Eintrag einordnen. Standard ist ein Artikel."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.separator"
+msgstr "Titeltrennzeichen"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.separator.description"
+msgstr "Wofür %%sep%% in einem Titelmuster steht."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.title_pattern"
+msgstr "Standard-Titelmuster"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.title_pattern.description"
+msgstr "Gilt, wo kein Muster pro Typ greift. Leer lässt die Titel unverändert."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_search"
+msgstr "Suchergebnisseiten indexieren"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_paginated"
+msgstr "Seite 2 und folgende eines Archivs indexieren"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_not_found"
+msgstr "Nicht gefundene Seiten indexieren"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.thin.description"
+msgstr "Standardmäßig aus — diese Seiten sind dünn oder doppelt."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.type_title.description"
+msgstr "Titelmuster für Einträge dieses Typs."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.type_indexable.description"
+msgstr "Suchmaschinen das Indexieren von Einträgen dieses Typs erlauben."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.taxonomy_indexable.description"
+msgstr "Suchmaschinen das Indexieren der Archive dieser Taxonomie erlauben."
