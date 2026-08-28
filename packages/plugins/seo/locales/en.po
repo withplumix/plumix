@@ -117,3 +117,58 @@ msgstr "Content type"
 #: src/overrides.ts
 msgid "plugin.seo.box.schema_type.description"
 msgstr "How structured data files this entry. Defaults to an article."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.separator"
+msgstr "Title separator"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.separator.description"
+msgstr "What %%sep%% becomes in a title pattern."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.title_pattern"
+msgstr "Default title pattern"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.title_pattern.description"
+msgstr "Used where no per-type pattern applies. Empty leaves titles as they are."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_search"
+msgstr "Index search-results pages"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_paginated"
+msgstr "Index page 2 and beyond of an archive"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.index_not_found"
+msgstr "Index pages that were not found"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.thin.description"
+msgstr "Off by default — these pages are thin or duplicated."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.type_title.description"
+msgstr "Title pattern for entries of this type."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.type_indexable.description"
+msgstr "Allow search engines to index entries of this type."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.taxonomy_indexable.description"
+msgstr "Allow search engines to index this taxonomy's archives."

@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { TemplateData } from "../../theme.js";
 import type {
+  ArchiveData,
   AuthorArchiveData,
   CustomArchiveData,
   EntryData,
@@ -37,6 +38,29 @@ const pagination = (page: number): Pagination => ({
 });
 
 describe("pageFacts", () => {
+  test("an entry-type archive names the type it lists", () => {
+    const data: ArchiveData = {
+      kind: "archive",
+      contentType: "post",
+      entries: [],
+      pagination: pagination(1),
+    };
+    expect(pageFacts(data).contentType).toBe("post");
+  });
+
+  test("no other page kind names one", () => {
+    expect(pageFacts({ kind: "entry", entry }).contentType).toBeNull();
+    expect(
+      pageFacts({
+        kind: "taxonomy",
+        taxonomy: "category",
+        term,
+        entries: [],
+        pagination: pagination(1),
+      }).contentType,
+    ).toBeNull();
+  });
+
   test("an entry carries its own timestamps, author and payload", () => {
     const data: EntryData = { kind: "entry", entry };
     expect(pageFacts(data)).toEqual({
@@ -47,6 +71,7 @@ describe("pageFacts", () => {
       author,
       term: null,
       entry,
+      contentType: null,
     });
   });
 
@@ -118,6 +143,7 @@ describe("pageFacts", () => {
       author: null,
       term: null,
       entry: null,
+      contentType: null,
     });
   });
 
@@ -139,6 +165,7 @@ describe("pageFacts", () => {
       author: null,
       term: null,
       entry: null,
+      contentType: null,
     });
   });
 });

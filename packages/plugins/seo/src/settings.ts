@@ -1,9 +1,15 @@
 import type { JsonValue } from "plumix";
 import type { Label } from "plumix/i18n";
-import type { AppContext, PluginSetupContext } from "plumix/plugin";
+import type {
+  AppContext,
+  MetaBoxFieldInput,
+  PluginSetupContext,
+} from "plumix/plugin";
 import type { SettingsBag } from "plumix/schema";
 import { loadSettingsGroups, loadSiteSettings } from "plumix";
 import { tryGetContext } from "plumix/plugin";
+
+import { publicTargets } from "./scope.js";
 
 /** This plugin's settings group — the storage unit and the admin card. */
 export const SEO_SETTINGS_GROUP = "seo";
@@ -44,6 +50,51 @@ const D = {
     id: "plugin.seo.settings.page.description",
     message: "Site-wide search and social defaults.",
   },
+  separator: {
+    id: "plugin.seo.settings.separator",
+    message: "Title separator",
+  },
+  separatorDescription: {
+    id: "plugin.seo.settings.separator.description",
+    message: "What %%sep%% becomes in a title pattern.",
+  },
+  titlePattern: {
+    id: "plugin.seo.settings.title_pattern",
+    message: "Default title pattern",
+  },
+  titlePatternDescription: {
+    id: "plugin.seo.settings.title_pattern.description",
+    message:
+      "Used where no per-type pattern applies. Empty leaves titles as they are.",
+  },
+  indexSearch: {
+    id: "plugin.seo.settings.index_search",
+    message: "Index search-results pages",
+  },
+  indexPaginated: {
+    id: "plugin.seo.settings.index_paginated",
+    message: "Index page 2 and beyond of an archive",
+  },
+  indexNotFound: {
+    id: "plugin.seo.settings.index_not_found",
+    message: "Index pages that were not found",
+  },
+  thinDescription: {
+    id: "plugin.seo.settings.thin.description",
+    message: "Off by default — these pages are thin or duplicated.",
+  },
+  typeTitleDescription: {
+    id: "plugin.seo.settings.type_title.description",
+    message: "Title pattern for entries of this type.",
+  },
+  typeIndexableDescription: {
+    id: "plugin.seo.settings.type_indexable.description",
+    message: "Allow search engines to index entries of this type.",
+  },
+  taxonomyIndexableDescription: {
+    id: "plugin.seo.settings.taxonomy_indexable.description",
+    message: "Allow search engines to index this taxonomy's archives.",
+  },
 } as const satisfies Record<string, Label>;
 
 // The two answers and the schema.org type each names. One roster, so the
@@ -58,7 +109,7 @@ const REPRESENTS = [
 /** What the site says it is, in the one place structured data asks. */
 export type SiteRepresents = (typeof REPRESENTS)[number]["value"];
 
-/** The site-wide answers the head needs. */
+/** The site-wide answers the head, the robots chain and the sitemap need. */
 export interface SeoSettings {
   /** False holds the whole site out of the index. */
   readonly indexable: boolean;
@@ -66,42 +117,246 @@ export interface SeoSettings {
   readonly defaultOgImage: string | null;
   /** Who the structured-data graph names as the site's publisher. */
   readonly represents: SiteRepresents;
+  /** What `%%sep%%` resolves to. */
+  readonly separator: string;
+  /** The pattern for a page no per-type one covers, or null for none. */
+  readonly titlePattern: string | null;
+  /** Per-entry-type title patterns, keyed by type name. */
+  readonly typeTitlePatterns: ReadonlyMap<string, string>;
+  /**
+   * Entry types the site owner defaulted out of the index. Read off the stored
+   * keys, not intersected with the registry — a row left by an uninstalled
+   * plugin keeps answering, which no page exists for anyway.
+   */
+  readonly noindexTypes: ReadonlySet<string>;
+  readonly noindexTaxonomies: ReadonlySet<string>;
+  /** The three thin-page arms, each off by default and each overridable. */
+  readonly indexSearch: boolean;
+  readonly indexPaginated: boolean;
+  readonly indexNotFound: boolean;
+}
+
+/** What `%%sep%%` resolves to until a site says otherwise. */
+const DEFAULT_SEPARATOR = "\u00b7";
+
+// Settings keys are one flat namespace per group, so the per-type answers
+// carry their scope in the key. Colons are legal in a field key and read as
+// structure where an underscore would collide with a type actually named
+// `post_title`.
+const TYPE_TITLE = /^type:([^:]+):title$/;
+const TYPE_INDEXABLE = /^type:([^:]+):indexable$/;
+const TAXONOMY_INDEXABLE = /^taxonomy:([^:]+):indexable$/;
+
+/**
+ * A registry name reaches a settings key verbatim, and a meta-box field key is
+ * `[a-zA-Z0-9_:-]`. Core validates neither entry-type nor taxonomy names, so a
+ * type registered as `my type` would fail the boot naming *this plugin's*
+ * settings group rather than the type that caused it. Colons are excluded on
+ * top of that, so a name can never be read as key structure.
+ */
+const KEYABLE_NAME = /^[a-zA-Z0-9_-]+$/;
+
+/** The settings key a type's title pattern is stored under. */
+export function typeTitleKey(type: string): string {
+  return `type:${type}:title`;
+}
+
+/** The settings key a type's indexing default is stored under. */
+export function typeIndexableKey(type: string): string {
+  return `type:${type}:indexable`;
+}
+
+/** The settings key a taxonomy's indexing default is stored under. */
+export function taxonomyIndexableKey(taxonomy: string): string {
+  return `taxonomy:${taxonomy}:indexable`;
+}
+
+/**
+ * Fold the two stored bags into the answers every consumer reads.
+ *
+ * Split from {@link loadSeoSettings} so the per-scope key parsing — the part
+ * with a shape to get wrong — is readable without a request.
+ */
+export function readSeoSettings(
+  own: SettingsBag,
+  legacy: SettingsBag,
+): SeoSettings {
+  const typeTitlePatterns = new Map<string, string>();
+  const noindexTypes = new Set<string>();
+  const noindexTaxonomies = new Set<string>();
+  for (const [key, value] of Object.entries(own)) {
+    const title = TYPE_TITLE.exec(key);
+    if (title?.[1] !== undefined) {
+      const pattern = nonEmpty(value);
+      if (pattern !== null) typeTitlePatterns.set(title[1], pattern);
+      continue;
+    }
+    // Only an explicit `false` holds a scope out: an unanswered one is in, the
+    // same way an unanswered entry is.
+    const type = TYPE_INDEXABLE.exec(key);
+    if (type?.[1] !== undefined) {
+      if (value === false) noindexTypes.add(type[1]);
+      continue;
+    }
+    const taxonomy = TAXONOMY_INDEXABLE.exec(key);
+    if (taxonomy?.[1] !== undefined && value === false) {
+      noindexTaxonomies.add(taxonomy[1]);
+    }
+  }
+  return {
+    indexable:
+      boolish(own.indexable) ?? boolish(legacy[LEGACY_KEYS.indexable]) ?? true,
+    defaultOgImage:
+      nonEmpty(own.default_og_image) ??
+      nonEmpty(legacy[LEGACY_KEYS.default_og_image]),
+    represents:
+      REPRESENTS.find((option) => option.value === own.represents)?.value ??
+      REPRESENTS[0].value,
+    separator:
+      typeof own.title_separator === "string"
+        ? own.title_separator
+        : DEFAULT_SEPARATOR,
+    titlePattern: nonEmpty(own.title_pattern),
+    typeTitlePatterns,
+    noindexTypes,
+    noindexTaxonomies,
+    indexSearch: boolish(own.index_search) ?? false,
+    indexPaginated: boolish(own.index_paginated) ?? false,
+    indexNotFound: boolish(own.index_not_found) ?? false,
+  };
+}
+
+const PATTERN_MAX = 200;
+
+// Every field the site answers once, whatever it registered.
+const SITE_WIDE_FIELDS: readonly MetaBoxFieldInput[] = [
+  {
+    key: "indexable",
+    type: "boolean",
+    inputType: "toggle",
+    label: D.indexable,
+    default: true,
+  },
+  {
+    key: "default_og_image",
+    type: "string",
+    inputType: "url",
+    label: D.defaultOgImage,
+    maxLength: 500,
+  },
+  {
+    key: "represents",
+    type: "string",
+    inputType: "select",
+    label: D.represents,
+    default: REPRESENTS[0].value,
+    options: REPRESENTS,
+  },
+  {
+    key: "title_separator",
+    type: "string",
+    inputType: "text",
+    label: D.separator,
+    description: D.separatorDescription,
+    default: DEFAULT_SEPARATOR,
+    maxLength: 8,
+  },
+  {
+    key: "title_pattern",
+    type: "string",
+    inputType: "text",
+    label: D.titlePattern,
+    description: D.titlePatternDescription,
+    maxLength: PATTERN_MAX,
+  },
+  {
+    key: "index_search",
+    type: "boolean",
+    inputType: "toggle",
+    label: D.indexSearch,
+    description: D.thinDescription,
+    default: false,
+  },
+  {
+    key: "index_paginated",
+    type: "boolean",
+    inputType: "toggle",
+    label: D.indexPaginated,
+    description: D.thinDescription,
+    default: false,
+  },
+  {
+    key: "index_not_found",
+    type: "boolean",
+    inputType: "toggle",
+    label: D.indexNotFound,
+    description: D.thinDescription,
+    default: false,
+  },
+];
+
+/**
+ * The per-scope fields, one pair per public entry type and one toggle per
+ * public taxonomy.
+ *
+ * A scope's own registered label is its field label — already translated by
+ * whoever registered it, where a descriptor built here could not name it.
+ */
+function scopeFields(ctx: PluginSetupContext): MetaBoxFieldInput[] {
+  // A name that cannot be a key gets no fields, rather than taking the boot
+  // down over a type this plugin does not own.
+  const keyable = <T extends { readonly name: string }>(targets: T[]): T[] =>
+    targets.filter((target) => KEYABLE_NAME.test(target.name));
+  return [
+    ...keyable(publicTargets(ctx.plugins.entryTypes)).flatMap(
+      (type): MetaBoxFieldInput[] => [
+        {
+          key: typeTitleKey(type.name),
+          type: "string",
+          inputType: "text",
+          label: type.label,
+          description: D.typeTitleDescription,
+          maxLength: PATTERN_MAX,
+        },
+        {
+          key: typeIndexableKey(type.name),
+          type: "boolean",
+          inputType: "toggle",
+          label: type.label,
+          description: D.typeIndexableDescription,
+          default: true,
+        },
+      ],
+    ),
+    ...keyable(publicTargets(ctx.plugins.termTaxonomies)).map(
+      (taxonomy): MetaBoxFieldInput => ({
+        key: taxonomyIndexableKey(taxonomy.name),
+        type: "boolean",
+        inputType: "toggle",
+        label: taxonomy.label,
+        description: D.taxonomyIndexableDescription,
+        default: true,
+      }),
+    ),
+  ];
 }
 
 export function registerSeoSettings(ctx: PluginSetupContext): void {
-  ctx.registerSettingsGroup(SEO_SETTINGS_GROUP, {
-    label: D.groupLabel,
-    description: D.groupDescription,
-    fields: [
-      {
-        key: "indexable",
-        type: "boolean",
-        inputType: "toggle",
-        label: D.indexable,
-        default: true,
-      },
-      {
-        key: "default_og_image",
-        type: "string",
-        inputType: "url",
-        label: D.defaultOgImage,
-        maxLength: 500,
-      },
-      {
-        key: "represents",
-        type: "string",
-        inputType: "select",
-        label: D.represents,
-        default: REPRESENTS[0].value,
-        options: REPRESENTS,
-      },
-    ],
-  });
-  ctx.registerSettingsPage(SEO_SETTINGS_GROUP, {
-    label: D.pageLabel,
-    description: D.pageDescription,
-    groups: [SEO_SETTINGS_GROUP],
-    priority: 20,
+  // Deferred to `theme:ready` for the same reason the meta box is: the
+  // per-scope fields are read off the registry, which during `setup` holds
+  // only what the plugins ahead of this one registered.
+  ctx.addAction("theme:ready", () => {
+    ctx.registerSettingsGroup(SEO_SETTINGS_GROUP, {
+      label: D.groupLabel,
+      description: D.groupDescription,
+      fields: [...SITE_WIDE_FIELDS, ...scopeFields(ctx)],
+    });
+    ctx.registerSettingsPage(SEO_SETTINGS_GROUP, {
+      label: D.pageLabel,
+      description: D.pageDescription,
+      groups: [SEO_SETTINGS_GROUP],
+      priority: 20,
+    });
   });
   // What the admin form loads. Without it the form would show the registered
   // defaults over a site's legacy answers, and saving would turn indexing back
@@ -144,18 +399,7 @@ async function withLegacyDefaults(
  */
 export async function loadSeoSettings(ctx: AppContext): Promise<SeoSettings> {
   const groups = await loadSettingsGroups(ctx, [SEO_SETTINGS_GROUP, "site"]);
-  const own = groups[SEO_SETTINGS_GROUP] ?? {};
-  const legacy = groups.site ?? {};
-  return {
-    indexable:
-      boolish(own.indexable) ?? boolish(legacy[LEGACY_KEYS.indexable]) ?? true,
-    defaultOgImage:
-      nonEmpty(own.default_og_image) ??
-      nonEmpty(legacy[LEGACY_KEYS.default_og_image]),
-    represents:
-      REPRESENTS.find((option) => option.value === own.represents)?.value ??
-      REPRESENTS[0].value,
-  };
+  return readSeoSettings(groups[SEO_SETTINGS_GROUP] ?? {}, groups.site ?? {});
 }
 
 /** A value coerced to a non-empty string, or null. */

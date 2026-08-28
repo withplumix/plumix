@@ -2,48 +2,72 @@ import type { PageFacts } from "plumix";
 
 import type { SeoSettings } from "./settings.js";
 import { readPageOverrides } from "./overrides.js";
+import { scopedType } from "./scope.js";
 
 /**
  * Why a page is or is not offered to a search engine, in the order the
  * assertions are evaluated. `default` is nothing having fired.
  *
  * The reason travels with the decision so an editor can be told a page is out
- * because the whole site is, rather than being shown a toggle that looks like
- * it did nothing. The per-type, taxonomy, paginated and not-found arms join
- * the chain with the per-type defaults.
+ * because its whole type is, rather than being shown a toggle that looks like
+ * it did nothing.
  */
 export type IndexabilityReason =
-  "site_private" | "entry_override" | "search_results" | "default";
+  | "site_private"
+  | "entry_override"
+  | "type_default"
+  | "taxonomy_default"
+  | "search_results"
+  | "paginated"
+  | "not_found"
+  | "default";
 
 export interface Indexability {
   readonly indexable: boolean;
   readonly reason: IndexabilityReason;
 }
 
+function out(reason: IndexabilityReason): Indexability {
+  return { indexable: false, reason };
+}
+
 /**
  * Whether this page is offered to search engines, and why.
  *
- * Short-circuits on the first assertion that fires, so a site held out of the
- * index cannot be overridden back in by an entry.
+ * An ordered set of named assertions, short-circuiting on the first that
+ * fires. Order is the design: a site held out of the index cannot be
+ * overridden back in by an entry, and an editor's answer for one entry
+ * outranks the default set for its whole type.
  *
- * The sitemap answers the same two questions of whole tables rather than of a
- * page — the site arm in `routes.ts`, the entry arm as a `WHERE` in
- * `sitemap.ts` — so what they share is this module's key and this order, not a
- * call. A page cannot be `noindex` in its head and listed in the sitemap
- * because both read `SEO_META_KEYS.noindex`, and nothing else decides either.
+ * The sitemap answers the same questions of whole tables rather than of a page
+ * — the site and per-scope arms in `routes.ts`, the entry arm as a `WHERE` in
+ * `sitemap.ts` — so what they share is this module's keys and this order, not
+ * a call. The arms below `taxonomy_default` describe pages the sitemap never
+ * lists, so there is nothing for them to disagree about.
  */
 export function indexable(
   facts: PageFacts,
-  settings: Pick<SeoSettings, "indexable">,
+  settings: SeoSettings,
 ): Indexability {
-  if (!settings.indexable) {
-    return { indexable: false, reason: "site_private" };
+  if (!settings.indexable) return out("site_private");
+  if (readPageOverrides(facts).noindex) return out("entry_override");
+  const entryType = scopedType(facts);
+  if (entryType !== null && settings.noindexTypes.has(entryType)) {
+    return out("type_default");
   }
-  if (readPageOverrides(facts).noindex) {
-    return { indexable: false, reason: "entry_override" };
+  const taxonomy = facts.term?.taxonomy;
+  if (taxonomy !== undefined && settings.noindexTaxonomies.has(taxonomy)) {
+    return out("taxonomy_default");
   }
-  if (facts.kind === "search") {
-    return { indexable: false, reason: "search_results" };
+  if (facts.kind === "search" && !settings.indexSearch) {
+    return out("search_results");
+  }
+  // Page two of an archive duplicates its first page's purpose without adding
+  // a subject of its own. A plugin archive always reports page 1, since core
+  // does not define that payload's pagination.
+  if (facts.page > 1 && !settings.indexPaginated) return out("paginated");
+  if (facts.kind === "error" && !settings.indexNotFound) {
+    return out("not_found");
   }
   return { indexable: true, reason: "default" };
 }

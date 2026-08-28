@@ -75,11 +75,16 @@ declare module "../../hooks/types.js" {
      * any plugin to inject, override, or remove document head fields with the
      * resolved `{data, ctx}` in hand. Fires on the assembled (theme + template)
      * document, so a theme's own tag is already present and a subscriber
-     * writing head meta gap-fills around it. Real renders only — error pages
-     * don't fire it.
+     * writing head meta gap-fills around it. Error renders fire it too, with
+     * `data.kind` of `"error"` — a page that was not found is exactly the one
+     * a plugin needs to mark `noindex` — though `applyCanonical` does not run
+     * there, so nothing declares a canonical for a URL that resolved to
+     * nothing. A subscriber that throws on the error path is logged and
+     * skipped rather than turning a 404 into a 500.
      *
      * `title` is the title core resolved for this page — an entry's expanded
-     * title, an archive's label, `Search: <query>`, a plugin archive's own.
+     * title, an archive's label, `Search: <query>`, a plugin archive's own,
+     * and `Not Found` / `Internal Server Error` on an error render.
      * Passed because a subscriber cannot derive it: the per-page-kind logic is
      * core's, and a `registerArchiveType` archive's title is known only to the
      * resolver that returned it.
@@ -196,7 +201,9 @@ function composeTitle(document: DocumentManifest, fallback: string): string {
   const title = document.title === "" ? undefined : document.title;
   if (typeof titleTemplate === "function") return titleTemplate(title);
   if (typeof titleTemplate === "string" && title !== undefined) {
-    return titleTemplate.replaceAll("%s", title);
+    // A function replacement, so `$&` / `$\`` / `$'` in a title — "Q&A: $& explained"
+    // — are the characters an author typed rather than replacement patterns.
+    return titleTemplate.replaceAll("%s", () => title);
   }
   return title ?? fallback;
 }
@@ -250,12 +257,27 @@ async function renderErrorThroughThemeInner({
     templateDeps,
     ctx,
   );
-  const renderDocument = resolveRenderDocument({
+  const merged = resolveRenderDocument({
     template,
     document,
     data,
     ctx,
     deps,
+  });
+  // The same chain the happy path runs, so a plugin writing head tags reaches
+  // an error page too — a 404 that says `noindex` is the point of asking.
+  //
+  // Deliberately without `applyCanonical`: a URL that resolved to nothing must
+  // not declare itself the canonical address of anything.
+  //
+  // Caught, unlike the happy path's: `applyFilter` does not isolate a throwing
+  // subscriber, and this render is already the failure path. Letting one
+  // escalate would turn a clean 404 into a themed 500.
+  const renderDocument = await applyErrorDocumentFilter({
+    ctx,
+    merged,
+    data,
+    title: variant.title,
   });
   return renderTree({
     ctx,
@@ -277,6 +299,35 @@ async function renderErrorThroughThemeInner({
     themeCss: theme.css ?? [],
     editMode: LIVE_EDIT_MODE,
   });
+}
+
+interface ErrorDocumentArgs {
+  readonly ctx: AppContext;
+  readonly merged: DocumentManifest;
+  readonly data: ErrorData;
+  readonly title: string;
+}
+
+async function applyErrorDocumentFilter({
+  ctx,
+  merged,
+  data,
+  title,
+}: ErrorDocumentArgs): Promise<DocumentManifest> {
+  try {
+    return await ctx.hooks.applyFilter(
+      "render:document",
+      merged,
+      data,
+      ctx,
+      title,
+    );
+  } catch (error) {
+    ctx.logger.error("render:document failed on the error page", {
+      err: error,
+    });
+    return merged;
+  }
 }
 
 async function prefetchEntryLoaders(

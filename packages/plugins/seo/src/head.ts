@@ -13,8 +13,12 @@ import { breadcrumbTrail, siteRoot } from "./breadcrumbs.js";
 import { indexable } from "./indexable.js";
 import { resolveOgImage } from "./og-image.js";
 import { readPageOverrides } from "./overrides.js";
+import { patternTitle } from "./page-title.js";
 import { DEFAULT_SCHEMA_TYPE, schemaGraph, schemaScript } from "./schema.js";
 import { loadSeoSettings, nonEmpty } from "./settings.js";
+
+// `composeTitle` substitutes `%s`, so this is the template that changes nothing.
+const IDENTITY_TEMPLATE = "%s";
 
 // `max-image-preview` is an indexing hint, so it rides only on the arm that
 // asks to be indexed; `nofollow` is a separate answer from `noindex` and can
@@ -31,14 +35,19 @@ function robotsDirective(page: {
 
 /** Everything the tag set is written from, resolved. */
 export interface HeadInputs {
-  /** An editor's canonical override, else the one core derived. */
-  readonly canonical: string;
+  /**
+   * An editor's canonical override, else the one core derived — and null on a
+   * page that is the canonical address of nothing.
+   */
+  readonly canonical: string | null;
   /** The title core resolved for the page. */
   readonly title: string | null;
   /**
-   * The editor's search title, which outranks {@link title} everywhere it is
-   * set. Only it reaches `<title>` — writing the resolved title there would
-   * put every page through a `titleTemplate` it does not go through today.
+   * The title this plugin composed — an editor's search title, else the
+   * site's own pattern for this page. Outranks {@link title} everywhere it is
+   * set, and is the only thing that reaches `<title>`: writing the resolved
+   * title there would put every page through a theme's `titleTemplate` that
+   * it does not go through today.
    */
   readonly searchTitle: string | null;
   readonly description: string | null;
@@ -129,18 +138,25 @@ export function seoHeadMeta(
   // Written here rather than left to core's own gap-filler, which runs after
   // this and would otherwise declare the derived URL an editor overrode. With
   // no override the two agree, so core simply finds the tag already set.
-  const link = hasCanonical(manifest.link)
-    ? manifest.link
-    : [
-        ...(manifest.link ?? []),
-        { rel: "canonical", href: inputs.canonical } satisfies DocumentLink,
-      ];
+  const canonical = inputs.canonical;
+  const link =
+    canonical === null || hasCanonical(manifest.link)
+      ? manifest.link
+      : [
+          ...(manifest.link ?? []),
+          { rel: "canonical", href: canonical } satisfies DocumentLink,
+        ];
 
+  // Only a composed title reaches `<title>`, and it ships verbatim: a search
+  // title or a site's own pattern is the whole line, not a fragment for a
+  // theme's `titleTemplate` to finish. A page with none — or one whose theme
+  // set its own — goes on being titled the way core titles it.
+  const composed = manifest.title === undefined ? inputs.searchTitle : null;
   return {
     ...manifest,
-    // Only an override reaches `<title>`. A page with none goes on being
-    // titled the way core titles it.
-    title: manifest.title ?? inputs.searchTitle ?? undefined,
+    ...(composed === null
+      ? {}
+      : { title: composed, titleTemplate: IDENTITY_TEMPLATE }),
     link,
     meta: [...(existing ?? []), ...additions],
   };
@@ -185,10 +201,25 @@ export async function applySeoHead(
   const isEntry = kind === "entry";
   const overrides = readPageOverrides(facts);
   const decision = indexable(facts, seoSettings);
-  const canonical = overrides.canonical ?? canonicalUrl(ctx);
+  const siteName = nonEmpty(site.title);
+  // A URL that resolved to nothing is the canonical address of nothing, and
+  // core deliberately leaves an error page's canonical unwritten for the same
+  // reason — so neither the tag nor `og:url` is claimed there.
+  const canonical =
+    kind === "error" ? null : (overrides.canonical ?? canonicalUrl(ctx));
   const tagline = nonEmpty(site.tagline);
   const description =
     overrides.description ?? nonEmpty(entry?.excerpt) ?? tagline;
+  // The editor's search title, else the site's own pattern for this page.
+  const searchTitle =
+    overrides.title ??
+    patternTitle(seoSettings, {
+      facts,
+      data,
+      title,
+      siteName,
+      localeCode: ctx.locale.code,
+    });
   // `pageFacts` also carries an author archive's author, which is not the
   // byline of anything — only an entry has one.
   const byline = isEntry && author ? author : null;
@@ -196,11 +227,10 @@ export async function applySeoHead(
     override: overrides.ogImage,
     siteDefault: seoSettings.defaultOgImage,
   });
-  const siteName = nonEmpty(site.title);
   const withMeta = seoHeadMeta(manifest, {
     canonical,
     title: nonEmpty(title),
-    searchTitle: overrides.title,
+    searchTitle,
     description,
     ogType: isEntry ? "article" : "website",
     ogImage,
@@ -217,13 +247,17 @@ export async function applySeoHead(
 
   // A page asking not to be indexed has no rich result to be eligible for, so
   // it offers no structured data — the alternative is a page whose graph and
-  // whose robots directive say different things about it.
-  if (!decision.indexable || hasJsonLd(manifest.script)) return withMeta;
+  // whose robots directive say different things about it. Nor does a URL that
+  // resolved to nothing, which has no subject to describe and no canonical to
+  // hang one off.
+  if (canonical === null || !decision.indexable || hasJsonLd(manifest.script)) {
+    return withMeta;
+  }
 
   const graph = await schemaGraph(ctx, facts, {
     canonical,
     home: siteRoot(ctx),
-    title: overrides.title ?? nonEmpty(title),
+    title: searchTitle ?? nonEmpty(title),
     description,
     siteName,
     siteDescription: tagline,

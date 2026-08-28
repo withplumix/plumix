@@ -9,7 +9,9 @@ import {
 } from "plumix";
 import { and, entries, eq, sql, terms } from "plumix/db";
 
+import type { SeoSettings } from "./settings.js";
 import { SEO_META_KEYS } from "./overrides.js";
+import { publicTargets } from "./scope.js";
 
 // Well under the sitemaps.org 50k cap, and small enough to build + hold in
 // Worker memory per request.
@@ -81,6 +83,12 @@ export function renderSubSitemap(urls: readonly SitemapUrl[]): string {
  */
 export interface SitemapScope {
   readonly name: string;
+  /**
+   * Which registry the name came from. An entry type and a taxonomy may share
+   * one, and they carry separate indexing defaults, so the scope has to say
+   * which of the two it is rather than let the name answer.
+   */
+  readonly kind: "entryType" | "taxonomy" | "archive";
   readonly tags: readonly string[];
   readonly count: (ctx: AppContext) => Promise<number> | number;
   readonly urls: (
@@ -199,19 +207,19 @@ export function sitemapScopes(
     if (!scopes.has(scope.name)) scopes.set(scope.name, scope);
   };
 
-  for (const type of plugins.entryTypes.values()) {
-    if (type.isPublic === false) continue;
+  for (const type of publicTargets(plugins.entryTypes)) {
     claim({
       name: type.name,
+      kind: "entryType",
       tags: [typeTag(type.name)],
       count: (ctx) => entryCount(ctx, type.name),
       urls: (ctx, page) => entryUrls(ctx, type.name, page),
     });
   }
-  for (const taxonomy of plugins.termTaxonomies.values()) {
-    if (taxonomy.isPublic === false) continue;
+  for (const taxonomy of publicTargets(plugins.termTaxonomies)) {
     claim({
       name: taxonomy.name,
+      kind: "taxonomy",
       // A term archive is stored under the `t:<type>` tags of its taxonomy's
       // entry types, and a term change purges exactly those — so the list of
       // those archives rides the same signal.
@@ -225,6 +233,7 @@ export function sitemapScopes(
     if (!sitemap) continue;
     claim({
       name: archive.name,
+      kind: "archive",
       tags: sitemap.tags ?? [],
       count: sitemap.count,
       urls: sitemap.urls,
@@ -262,4 +271,28 @@ export async function sitemapIndexLocs(
     }
   }
   return locs;
+}
+
+/**
+ * Whether this scope's URLs may be offered at all — the `site_private`,
+ * `type_default` and `taxonomy_default` arms of `indexable`, asked of a whole
+ * scope rather than of a page, so a type held out of the index is not still
+ * advertised here.
+ *
+ * A registered archive answers to neither per-scope default: it is a plugin's
+ * own URL space, and the plugin declaring its `sitemap` is what opts it in.
+ */
+export function scopeIsOffered(
+  scope: SitemapScope,
+  settings: SeoSettings,
+): boolean {
+  if (!settings.indexable) return false;
+  switch (scope.kind) {
+    case "entryType":
+      return !settings.noindexTypes.has(scope.name);
+    case "taxonomy":
+      return !settings.noindexTaxonomies.has(scope.name);
+    case "archive":
+      return true;
+  }
 }
