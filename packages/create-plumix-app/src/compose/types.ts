@@ -85,6 +85,8 @@ export interface PluginDescriptor extends Contribution {
   readonly registration: string;
   /** Runtime capabilities this plugin needs (e.g. `["storage"]`). */
   readonly requires?: readonly string[];
+  /** Preselected in the wizard, and taken when no `--plugins` flag is given. */
+  readonly recommended?: boolean;
   /** App dependencies, derived from the plugin's package + peers. */
   readonly deps: Readonly<Record<string, string>>;
 }

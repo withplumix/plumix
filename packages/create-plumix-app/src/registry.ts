@@ -28,6 +28,8 @@ interface RawScaffoldMeta extends Contribution {
   readonly registration?: string;
   /** Plugin only: runtime capabilities the plugin needs. */
   readonly requires?: readonly string[];
+  /** Plugin only: the plugin recommends itself as a scaffold default. */
+  readonly recommended?: boolean;
 }
 
 interface RawPackageJson {
@@ -73,6 +75,11 @@ export async function loadRegistry(repoRoot: string): Promise<Registry> {
   runtimes.sort((a, b) => a.id.localeCompare(b.id));
   plugins.sort((a, b) => a.id.localeCompare(b.id));
   return { runtimes, plugins };
+}
+
+/** Ids of the plugins whose scaffold block opts them into a default project. */
+export function recommendedPluginIds(registry: Registry): readonly string[] {
+  return registry.plugins.filter((p) => p.recommended).map((p) => p.id);
 }
 
 async function readScaffold(
@@ -164,6 +171,7 @@ function toPluginDescriptor(
     registration,
     imports: meta.imports ?? [],
     requires: meta.requires,
+    recommended: meta.recommended,
     configSlots: meta.configSlots,
     wrangler: meta.wrangler,
     deps,

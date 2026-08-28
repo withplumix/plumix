@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { loadRegistry } from "./registry.js";
+import type { PluginDescriptor } from "./compose/types.js";
+import { loadRegistry, recommendedPluginIds } from "./registry.js";
 
 describe("loadRegistry", () => {
   let root: string;
@@ -131,6 +132,26 @@ describe("loadRegistry", () => {
     expect(registry.plugins[0]?.requires).toEqual(["storage", "imageDelivery"]);
   });
 
+  it("carries a plugin's self-recommendation through", async () => {
+    writePluginPackage("blog", {
+      kind: "plugin",
+      label: "Blog",
+      registration: "blog()",
+    });
+    writePluginPackage("seo", {
+      kind: "plugin",
+      label: "SEO",
+      registration: "seo()",
+      recommended: true,
+    });
+
+    const registry = await loadRegistry(root);
+
+    const [blog, seo] = registry.plugins;
+    expect(seo?.recommended).toBe(true);
+    expect(blog?.recommended).toBeUndefined();
+  });
+
   it("rejects a plugin scaffold block missing a registration", async () => {
     writePluginPackage("broken", { kind: "plugin", label: "Broken" });
 
@@ -148,5 +169,25 @@ describe("loadRegistry", () => {
     const registry = await loadRegistry(root);
 
     expect(registry.runtimes).toEqual([]);
+  });
+});
+
+describe("recommendedPluginIds", () => {
+  it("lists the plugins that recommend themselves, in registry order", () => {
+    const plugin = (id: string, recommended?: boolean): PluginDescriptor => ({
+      id,
+      label: id,
+      registration: `${id}()`,
+      imports: [],
+      deps: {},
+      recommended,
+    });
+
+    const ids = recommendedPluginIds({
+      runtimes: [],
+      plugins: [plugin("blog"), plugin("feeds", true), plugin("seo", true)],
+    });
+
+    expect(ids).toEqual(["feeds", "seo"]);
   });
 });

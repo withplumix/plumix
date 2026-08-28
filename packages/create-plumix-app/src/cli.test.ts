@@ -14,6 +14,13 @@ interface CapturedIO {
   readonly stderr: string[];
 }
 
+function dependenciesOf(dir: string): Record<string, string> {
+  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as {
+    dependencies?: Record<string, string>;
+  };
+  return pkg.dependencies ?? {};
+}
+
 function captureIO(): CapturedIO {
   const stdout: string[] = [];
   const stderr: string[] = [];
@@ -110,16 +117,19 @@ describe("runCli", () => {
     expect(existsSync(join(target, "wrangler.jsonc"))).toBe(true);
   });
 
-  test("--yes with no plugins scaffolds a blank app", async () => {
+  test("--yes with no --plugins scaffolds the recommended plugins", async () => {
     const { io, stderr } = captureIO();
-    const target = join(tmp, "yes-blank");
+    const target = join(tmp, "yes-recommended");
 
     const code = await run([target, "--yes"], io);
 
     expect(code).toBe(0);
     expect(stderr).toEqual([]);
     const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
-    expect(config).toContain("plugins: []");
+    expect(config).toContain("seo(),");
+    expect(config).toContain("feeds(),");
+    expect(dependenciesOf(target)).toHaveProperty("@plumix/plugin-seo");
+    expect(dependenciesOf(target)).toHaveProperty("@plumix/plugin-feeds");
   });
 
   test("-p includes comma-separated plugins in the scaffold", async () => {
@@ -133,6 +143,32 @@ describe("runCli", () => {
     const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
     expect(config).toContain("blog(),");
     expect(config).toContain("media(),");
+  });
+
+  test("-p replaces the recommended set rather than adding to it", async () => {
+    const { io } = captureIO();
+    const target = join(tmp, "deselected");
+
+    await run([target, "-p", "blog"], io);
+
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain("blog(),");
+    expect(config).not.toContain("seo(");
+    expect(config).not.toContain("feeds(");
+    expect(dependenciesOf(target)).not.toHaveProperty("@plumix/plugin-seo");
+    expect(dependenciesOf(target)).not.toHaveProperty("@plumix/plugin-feeds");
+  });
+
+  test("an empty --plugins list scaffolds a blank app", async () => {
+    const { io, stderr } = captureIO();
+    const target = join(tmp, "empty-plugins");
+
+    const code = await run([target, "--plugins="], io);
+
+    expect(code).toBe(0);
+    expect(stderr).toEqual([]);
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain("plugins: []");
   });
 
   test("exits 1 pointing at --plugins when the removed --template flag is used", async () => {

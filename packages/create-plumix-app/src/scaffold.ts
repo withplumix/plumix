@@ -14,7 +14,7 @@ interface ScaffoldOptions {
   readonly targetDir: string;
   /** Runtime to scaffold; defaults to the sole runtime today. */
   readonly runtimeId?: string;
-  /** Plugin ids to include; defaults to none (a blank app). */
+  /** Plugin ids to include; defaults to none. The CLI defaults to the recommended set. */
   readonly pluginIds?: readonly string[];
   /** Optional auth methods on top of passkey; defaults to none. */
   readonly authMethodIds?: readonly string[];

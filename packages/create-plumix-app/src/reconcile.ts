@@ -6,7 +6,8 @@ export type PromptKey = "targetDir" | "runtime" | "plugins";
 export interface Reconciliation {
   readonly targetDir: string | undefined;
   readonly runtimeId: string;
-  readonly pluginIds: readonly string[];
+  /** Plugins as flagged; `undefined` when no `--plugins` flag was given. */
+  readonly pluginIds: readonly string[] | undefined;
   readonly yes: boolean;
   /** Package-manager override; detected from the environment when absent. */
   readonly pm: string | undefined;
@@ -33,7 +34,8 @@ interface ParsedArgs {
  * would still prompt for. `--yes` accepts every default and empties the
  * plan; without it, each un-flagged field is reported so the caller (the
  * interactive wizard, in a later slice) can ask. Id validation is the
- * scaffolder's job — this stays a pure argv → intent mapping.
+ * scaffolder's job, and so is defaulting an absent `--plugins` (which needs
+ * the registry) — this stays a pure argv → intent mapping.
  */
 export function reconcile(argv: readonly string[]): Reconciliation {
   const parsed = parseArgs(argv);
@@ -45,7 +47,7 @@ export function reconcile(argv: readonly string[]): Reconciliation {
   return {
     targetDir: parsed.target,
     runtimeId: parsed.runtime ?? DEFAULT_RUNTIME,
-    pluginIds: parsed.plugins ?? [],
+    pluginIds: parsed.plugins,
     yes: parsed.yes,
     pm: parsed.pm,
     install: parsed.install,

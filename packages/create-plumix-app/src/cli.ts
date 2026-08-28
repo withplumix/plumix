@@ -10,6 +10,7 @@ import {
 } from "./package-manager.js";
 import { nextSteps, runPostScaffold, spawnRunner } from "./post-scaffold.js";
 import { reconcile } from "./reconcile.js";
+import { recommendedPluginIds } from "./registry.js";
 import { clackReporter, plainReporter } from "./reporter.js";
 import { DEFAULT_RUNTIME, loadScaffoldSources, scaffold } from "./scaffold.js";
 import { clackPrompter, runWizard } from "./wizard.js";
@@ -29,6 +30,7 @@ not exist (or must be empty); its parent must exist.
 Options:
   --runtime <id>       Runtime to target (default: ${DEFAULT_RUNTIME}).
   -p, --plugins <ids>  Comma-separated plugins to include (e.g. pages,comments).
+                       Defaults to the recommended set; --plugins= for none.
   --pm <name>          Package manager (npm, pnpm, yarn, bun); auto-detected.
   --no-install         Skip installing dependencies.
   --no-db              Skip generating and applying local migrations.
@@ -79,19 +81,30 @@ export async function runCli(
       ? reconciled.pm
       : detectPackageManager(deps.userAgent);
 
+  const interactive = reconciled.prompts.length > 0 && isInteractive();
+  const reporter: Reporter = interactive ? clackReporter : plainReporter(io);
+  // Ahead of the registry load, so a load failure cancels inside the session.
+  if (interactive) reporter.intro();
+
+  // Both paths need the registry up front: it names the plugins an unflagged
+  // run takes.
+  let sources: ScaffoldSources;
+  try {
+    sources = await loadScaffoldSources();
+  } catch (error) {
+    reporter.cancelled(messageOf(error));
+    return 1;
+  }
+
   let selection: WizardSelection = {
     targetDir: reconciled.targetDir,
     runtimeId: reconciled.runtimeId,
-    pluginIds: reconciled.pluginIds,
+    // Doubles as the wizard's preticked set when the plugins prompt runs.
+    pluginIds: reconciled.pluginIds ?? recommendedPluginIds(sources.registry),
     authMethodIds: [],
   };
 
-  const interactive = reconciled.prompts.length > 0 && isInteractive();
-  const reporter: Reporter = interactive ? clackReporter : plainReporter(io);
-  let sources: ScaffoldSources | undefined;
   if (interactive) {
-    sources = await loadScaffoldSources();
-    reporter.intro();
     const filled = await runWizard(
       reconciled.prompts,
       selection,
@@ -143,8 +156,11 @@ export async function runCli(
     });
     return 0;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    reporter.cancelled(message);
+    reporter.cancelled(messageOf(error));
     return 1;
   }
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

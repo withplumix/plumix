@@ -208,7 +208,8 @@ try {
   // CLI drops into the wizard on a terminal. Media and og are the only plugins
   // that declare `requires`, so all-plugins covers the capability seam too.
   const combos = [
-    { name: "blank", args: ["-y"] },
+    // `--plugins=` for none: a bare `-y` now takes the recommended plugins.
+    { name: "blank", args: ["-y", "--plugins="] },
     {
       name: "all-plugins",
       args: ["-y", "-p", plugins.join(",")],
