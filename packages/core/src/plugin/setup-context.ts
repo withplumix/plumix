@@ -48,6 +48,7 @@ import type {
   PluginRouteAuth,
   PluginRouteMethod,
   PluginRpcRouter,
+  PublicRouteOptions,
   RestResourceOptions,
   ScheduledTask,
   SettingsGroupOptions,
@@ -78,6 +79,7 @@ import {
   assertValidLookupAdapterKind,
   assertValidNavGroupId,
   assertValidPluginRoutePath,
+  assertValidPublicRoutePath,
   assertValidRestResourcePath,
   assertValidScheduledTask,
 } from "./validation/index.js";
@@ -271,6 +273,33 @@ export interface PluginSetupContextBase {
       ctx: AppContext,
     ) => Response | Promise<Response>;
   }): void;
+
+  /**
+   * Mount a route at the site root, outside the `/_plumix/<pluginId>/` prefix
+   * `registerRoute` confines a plugin to — how a plugin owns `/robots.txt`,
+   * `/sitemap.xml` or `/feed`. `path` is an exact pathname or a URLPattern
+   * pathname whose captured groups reach the handler as its third argument.
+   *
+   * The route matches ahead of the redirect table and the content route map,
+   * and the handler always answers: there is no fall-through to a page that
+   * would otherwise own the path. So register from the `theme:ready` action,
+   * where every entry type and taxonomy is known, and enumerate concrete paths
+   * rather than claiming an ambiguous pattern.
+   *
+   * Two plugins claiming one path, or a path inside `/_plumix/`, throws at
+   * boot. `cacheable` is the same opt-in `registerRoute` documents. The route
+   * answers GET and HEAD only — a write method 405s at the public method gate
+   * above it.
+   *
+   * The handler runs ahead of the access gate and the principal loader, so
+   * `ctx.user` is null however the request was authenticated: this is a machine
+   * endpoint that answers every visitor the same way. A handler that enumerates
+   * content is therefore enumerating it for an anonymous reader and has to
+   * exclude what an anonymous reader may not see. `ctx.request` has had any
+   * `basePath` stripped, so build outbound URLs from `ctx.origin` +
+   * `ctx.basePath`, never from `request.url`.
+   */
+  registerPublicRoute(options: PublicRouteOptions): void;
 
   /**
    * Contribute a REST resource into the shared `/_plumix/api/v1/` namespace.
@@ -653,6 +682,13 @@ export function createPluginSetupContext({
         cacheable,
         handler,
       });
+    },
+
+    registerPublicRoute: (options) => {
+      assertValidPublicRoutePath(pluginId, options.path);
+      // Collisions are a boot check, not a registration one: a plugin registers
+      // from `theme:ready`, so the full set exists only once every plugin has.
+      registry.publicRoutes.push({ ...options, pluginId });
     },
 
     registerRestResource: (options) => {

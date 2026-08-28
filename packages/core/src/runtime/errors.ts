@@ -2,7 +2,10 @@ type AppBootErrorCode =
   | "schema_export_conflict"
   | "plugin_id_collides_with_core_rpc_namespace"
   | "rest_resource_path_conflict"
-  | "rest_resource_shadows_core";
+  | "rest_resource_shadows_core"
+  | "public_route_path_conflict"
+  | "public_route_shadows_core"
+  | "public_route_pattern_invalid";
 
 export class AppBootError extends Error {
   static {
@@ -77,6 +80,45 @@ export class AppBootError extends Error {
       `Plugin "${ctx.pluginId}" REST resource "${ctx.method} ${ctx.path}" ` +
         `shadows a reserved core path.`,
       { pluginId: ctx.pluginId },
+    );
+  }
+
+  static publicRoutePathConflict(ctx: {
+    pluginId: string;
+    otherPluginId: string;
+    path: string;
+  }): AppBootError {
+    return new AppBootError(
+      "public_route_path_conflict",
+      `Plugin "${ctx.pluginId}" registers public route "${ctx.path}" ` +
+        `already registered by "${ctx.otherPluginId}".`,
+      { pluginId: ctx.pluginId, previousOwner: ctx.otherPluginId },
+    );
+  }
+
+  static publicRoutePatternInvalid(ctx: {
+    pluginId: string;
+    path: string;
+    cause: string;
+  }): AppBootError {
+    return new AppBootError(
+      "public_route_pattern_invalid",
+      `Plugin "${ctx.pluginId}" public route "${ctx.path}" is not a valid ` +
+        `URLPattern pathname: ${ctx.cause}`,
+      { pluginId: ctx.pluginId },
+    );
+  }
+
+  static publicRouteShadowsCore(ctx: {
+    pluginId: string;
+    path: string;
+  }): AppBootError {
+    return new AppBootError(
+      "public_route_shadows_core",
+      `Plugin "${ctx.pluginId}" registers public route "${ctx.path}" ` +
+        `inside the /_plumix/ prefix, which core owns; register it with ` +
+        `registerRoute instead.`,
+      { pluginId: ctx.pluginId, previousOwner: "core" },
     );
   }
 }

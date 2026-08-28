@@ -677,6 +677,30 @@ export interface RegisteredRawRoute {
   ) => Response | Promise<Response>;
 }
 
+/**
+ * A route a plugin owns at the site root — see `registerPublicRoute`, which
+ * documents what owning one means.
+ */
+export interface PublicRouteOptions {
+  /** An exact pathname, or a URLPattern pathname (`/sitemap-:scope-:page.xml`). */
+  readonly path: string;
+  /**
+   * Whether the route opted into the edge cache — see `registerRoute`, which
+   * documents what taking it claims.
+   */
+  readonly cacheable?: boolean;
+  /** `params` carries the pattern's captured groups; `{}` for a literal path. */
+  readonly handler: (
+    request: Request,
+    ctx: AppContext,
+    params: Record<string, string>,
+  ) => Response | Promise<Response>;
+}
+
+export interface RegisteredPublicRoute extends PublicRouteOptions {
+  readonly pluginId: string;
+}
+
 export type RestResourceMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /**
@@ -824,6 +848,7 @@ export interface PluginRegistry {
   readonly rpcRouters: ReadonlyMap<string, PluginRpcRouter>;
   readonly mcpTools: ReadonlyMap<string, RegisteredMcpTool>;
   readonly rawRoutes: readonly RegisteredRawRoute[];
+  readonly publicRoutes: readonly RegisteredPublicRoute[];
   readonly restResources: readonly RegisteredRestResource[];
   readonly loginLinks: readonly RegisteredLoginLink[];
   readonly adminPages: ReadonlyMap<string, RegisteredAdminPage>;
@@ -854,6 +879,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly rpcRouters: Map<string, PluginRpcRouter>;
   readonly mcpTools: Map<string, RegisteredMcpTool>;
   readonly rawRoutes: RegisteredRawRoute[];
+  readonly publicRoutes: RegisteredPublicRoute[];
   readonly restResources: RegisteredRestResource[];
   readonly loginLinks: RegisteredLoginLink[];
   readonly adminPages: Map<string, RegisteredAdminPage>;
@@ -885,6 +911,7 @@ export function createPluginRegistry(): MutablePluginRegistry {
     rpcRouters: new Map(),
     mcpTools: new Map(),
     rawRoutes: [],
+    publicRoutes: [],
     restResources: [],
     loginLinks: [],
     adminPages: new Map(),

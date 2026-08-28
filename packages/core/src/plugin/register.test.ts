@@ -798,6 +798,47 @@ describe("registerRoute", () => {
   });
 });
 
+describe("registerPublicRoute", () => {
+  const noop = () => new Response("ok");
+
+  test("stores the route with the plugin id attached", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("feeds", (ctx) => {
+      ctx.registerPublicRoute({ path: "/feed", handler: noop });
+      ctx.registerPublicRoute({
+        path: "/sitemap.xml",
+        cacheable: true,
+        handler: noop,
+      });
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(registry.publicRoutes).toEqual([
+      expect.objectContaining({ pluginId: "feeds", path: "/feed" }),
+      expect.objectContaining({
+        pluginId: "feeds",
+        path: "/sitemap.xml",
+        cacheable: true,
+      }),
+    ]);
+  });
+
+  test.each([
+    ["relative", "feed"],
+    ["double-slash", "/blog//feed"],
+    ["parent traversal", "/blog/../etc"],
+    ["query inline", "/feed?format=atom"],
+    ["fragment inline", "/feed#top"],
+  ])("rejects invalid path shape: %s", async (_name, path) => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("feeds", (ctx) => {
+      ctx.registerPublicRoute({ path, handler: noop });
+    });
+    await expect(
+      installPlugins({ hooks, plugins: [plugin] }),
+    ).rejects.toThrow();
+  });
+});
+
 describe("registerLoginLink", () => {
   test("stores entries with the plugin id attached", async () => {
     const hooks = new HookRegistry();
