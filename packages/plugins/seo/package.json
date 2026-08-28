@@ -87,6 +87,7 @@
       "label": "SEO",
       "description": "Head meta, Open Graph, structured data, robots.txt and the sitemap",
       "category": "content",
+      "recommended": true,
       "registration": "seo()",
       "imports": [
         "import { seo } from \"@plumix/plugin-seo\";"

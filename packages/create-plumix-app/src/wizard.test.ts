@@ -32,13 +32,19 @@ interface ScriptedAnswers {
   multiselect?: (string[] | null)[];
 }
 
-function fakePrompter(
-  answers: ScriptedAnswers,
-): Prompter & { calls: string[] } {
+interface FakePrompter extends Prompter {
+  readonly calls: string[];
+  /** The values each multiselect was opened preticked with, in call order. */
+  readonly preticked: (readonly string[] | undefined)[];
+}
+
+function fakePrompter(answers: ScriptedAnswers): FakePrompter {
   const calls: string[] = [];
+  const preticked: (readonly string[] | undefined)[] = [];
   const multiselects = [...(answers.multiselect ?? [])];
   return {
     calls,
+    preticked,
     text: () => {
       calls.push("text");
       return Promise.resolve(answers.text ?? null);
@@ -47,8 +53,9 @@ function fakePrompter(
       calls.push("select");
       return Promise.resolve(answers.select ?? null);
     },
-    multiselect: () => {
+    multiselect: (opts) => {
       calls.push("multiselect");
+      preticked.push(opts.initialValues);
       return Promise.resolve(multiselects.shift() ?? []);
     },
   };
@@ -108,6 +115,19 @@ describe("runWizard", () => {
     // runtime select + auth multiselect (plugins were flagged, so skipped)
     expect(prompter.calls).toEqual(["select", "multiselect"]);
     expect(result).toMatchObject({ targetDir: "given", pluginIds: ["blog"] });
+  });
+
+  it("opens the plugin prompt preticked with the ids it was handed", async () => {
+    const prompter = fakePrompter({ multiselect: [["blog"], []] });
+
+    await runWizard(
+      ["plugins"],
+      { ...defaults, pluginIds: ["blog"] },
+      registry,
+      prompter,
+    );
+
+    expect(prompter.preticked[0]).toEqual(["blog"]);
   });
 
   it("returns null when a prompt is cancelled", async () => {

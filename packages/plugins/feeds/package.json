@@ -75,6 +75,7 @@
       "label": "Feeds",
       "description": "RSS and Atom feeds for the site and every public archive",
       "category": "content",
+      "recommended": true,
       "registration": "feeds()",
       "imports": [
         "import { feeds } from \"@plumix/plugin-feeds\";"

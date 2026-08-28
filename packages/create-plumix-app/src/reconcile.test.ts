@@ -48,19 +48,24 @@ describe("reconcile", () => {
     expect(r.pm).toBe("bun");
   });
 
-  it("defaults the runtime and empty plugins, flagging both as prompts", () => {
+  it("defaults the runtime and leaves plugins unset, flagging both as prompts", () => {
     const r = reconcile(["my-app"]);
     expect(r.runtimeId).toBe("cloudflare");
-    expect(r.pluginIds).toEqual([]);
+    expect(r.pluginIds).toBeUndefined();
     expect(r.yes).toBe(false);
     expect(r.prompts).toEqual(["runtime", "plugins"]);
   });
 
-  it("suppresses all prompts under --yes, defaulting to a blank app", () => {
+  it("suppresses all prompts under --yes, leaving plugins unset", () => {
     const r = reconcile(["my-app", "-y"]);
-    expect(r.pluginIds).toEqual([]);
+    expect(r.pluginIds).toBeUndefined();
     expect(r.yes).toBe(true);
     expect(r.prompts).toEqual([]);
+  });
+
+  it("reads an explicit empty --plugins as the empty list", () => {
+    expect(reconcile(["my-app", "-p", ""]).pluginIds).toEqual([]);
+    expect(reconcile(["my-app", "--plugins="]).pluginIds).toEqual([]);
   });
 
   it("reports a missing target directory as a prompt", () => {

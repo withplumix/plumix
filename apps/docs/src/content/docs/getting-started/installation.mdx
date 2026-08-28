@@ -59,7 +59,7 @@ Then work through the rest:
 
 <Steps>
 
-1. **Answer the wizard.** It asks only for what the command line did not already supply, so the command above, which names the directory, gets three questions rather than four. Those are which runtime to target, which plugins to include, and which sign-in methods to add. Run `pnpm create plumix-app` with no directory and it asks where to create the project first. Cloudflare is the only runtime today. Passkeys are always on, so the sign-in question is about what to layer beside them.
+1. **Answer the wizard.** It asks only for what the command line did not already supply, so the command above, which names the directory, gets three questions rather than four. Those are which runtime to target, which plugins to include, and which sign-in methods to add. Run `pnpm create plumix-app` with no directory and it asks where to create the project first. Cloudflare is the only runtime today. Passkeys are always on, so the sign-in question is about what to layer beside them. The plugin question opens with SEO and Feeds ticked, so a new site serves head meta, `robots.txt`, a sitemap and feeds from the first request; nothing else is preselected. Untick either and the generated project has no import and no registration for it. One pairing is worth knowing before you do: `og` declares SEO as a peer and needs it registered to reach `og:image`, so unticking SEO while keeping OG installs the package without wiring it up.
 
 2. **Let the post-scaffold steps run.** The scaffolder installs dependencies, runs `plumix migrate generate` and `plumix migrate apply --local`, then initializes a git repository and makes one commit. Each step is skippable with a flag, and none of them throws, so a failure never leaves you without a project.
 
@@ -103,13 +103,13 @@ Three of the four prompts have a flag, and `--yes` accepts the defaults for what
 The sign-in question is the fourth, and it has no flag behind it. A non-interactive run always scaffolds with passkeys alone, so GitHub OAuth, magic links and Cloudflare Access have to be added to `plumix.config.ts` afterwards. [Adding a sign-in method later](#adding-a-sign-in-method-later) is what each one costs.
 
 ```sh
-pnpm create plumix-app my-site --plugins blog,pages,media --pm pnpm --yes
+pnpm create plumix-app my-site --plugins blog,pages,media,seo,feeds --pm pnpm --yes
 ```
 
 The flags are:
 
 - `--runtime <id>` picks the runtime. Defaults to `cloudflare`.
-- `-p, --plugins <ids>` takes a comma-separated list. The ids are `blog`, `pages`, `menu`, `comments`, `media`, `audit-log` and `og`. Defaults to none.
+- `-p, --plugins <ids>` takes a comma-separated list. The ids are `blog`, `pages`, `menu`, `comments`, `media`, `audit-log`, `og`, `seo` and `feeds`. Leave the flag off and you get `seo` and `feeds`. The flag replaces that pair rather than adding to it, so `--plugins blog` scaffolds blog alone, and `--plugins=` scaffolds none.
 - `--pm <name>` picks `npm`, `pnpm`, `yarn` or `bun`. Without it you get `npm`. An unrecognised name exits with an error rather than falling back.
 - `--no-install` skips the dependency install.
 - `--no-db` skips generating and applying the local migration.
@@ -142,7 +142,7 @@ Cloudflare Access appears in the same list when the runtime is Cloudflare. It re
 
 ## Related
 
-[Project Structure](/getting-started/project-structure/) is the file-by-file account of what the scaffolder just wrote. [Configuration](/getting-started/configuration/) is the reference for the config file it assembled. [Passkeys](/access/passkeys/) covers the WebAuthn ceremony, the relying-party id and adding a second device. [Secrets](/deployment/secrets/) covers `.dev.vars`, `EnvInput` and production secrets. [Plugins](/plugins/overview/) covers installing and configuring the seven official plugins.
+[Project Structure](/getting-started/project-structure/) is the file-by-file account of what the scaffolder just wrote. [Configuration](/getting-started/configuration/) is the reference for the config file it assembled. [Passkeys](/access/passkeys/) covers the WebAuthn ceremony, the relying-party id and adding a second device. [Secrets](/deployment/secrets/) covers `.dev.vars`, `EnvInput` and production secrets. [Plugins](/plugins/overview/) covers installing and configuring the nine official plugins.
 
 ## Next steps
 

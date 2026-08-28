@@ -30,14 +30,17 @@ pnpm create plumix-app my-blog --plugins blog,pages,media
 ```
 
 - `--runtime <id>` — runtime to target (default: `cloudflare`).
-- `-p, --plugins <ids>` — comma-separated plugins to include.
+- `-p, --plugins <ids>` — comma-separated plugins to include; replaces the
+  default `seo,feeds` rather than adding to it.
 - `--pm <name>` — package manager (npm, pnpm, yarn, bun); auto-detected.
 - `--no-install`, `--no-db`, `--no-git` — skip the matching post-scaffold step.
-- `-y, --yes` — accept defaults; with no `--plugins`, scaffolds a blank app.
+- `-y, --yes` — accept defaults for whatever you did not flag.
 
-A blank app is `@plumix/runtime-cloudflare` on D1 with passkey auth and a
-`consoleMailer()` default for development — the smallest working app. Each
-plugin adds its config, dependencies, and any runtime bindings it needs.
+The wizard opens with `seo` and `feeds` ticked, and a run with no `--plugins`
+takes them. Untick them, or pass `--plugins=`, and you get a blank app:
+`@plumix/runtime-cloudflare` on D1 with passkey auth and a `consoleMailer()`
+default for development. Each plugin adds its config, dependencies, and any
+runtime bindings it needs.
 
 ## Support
 
