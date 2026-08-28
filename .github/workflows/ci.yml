@@ -238,19 +238,50 @@ jobs:
       - name: Assert the committed images are the ones the capture produces
         run: git diff --exit-code -- apps/docs/src/assets/screenshots
 
+      # `playwright-report/` is the HTML report; `test-results/` carries the
+      # per-test artifacts that matter for diagnosing CI-only flakes —
+      # `trace.zip`, `error-context.md`, screenshots, videos.
+      #
+      # Collected here rather than handed to upload-artifact as `**/…`. A
+      # pattern with no literal prefix makes its globber search from the repo
+      # root, and it follows symlinks by default — so it walks pnpm's
+      # `node_modules/.pnpm` store once per workspace that links into it, and
+      # reports the same directory twice (once directly, once through the
+      # store). Measured on a tree this size: 56s wall / 366s CPU, against
+      # milliseconds for the pruned walk below. Negations wouldn't help, since
+      # `**` matches every directory, so nothing can be pruned early and the
+      # exclusion only applies to results. That cost landed on the one step
+      # that runs exclusively when the suite has already failed, so a failing
+      # e2e run looked like a hang and burned the job's timeout.
+      #
+      # Staging under the original relative paths leaves the real entries where
+      # the glob put them; only its duplicates are gone. `-prune` on the match
+      # branch stops `find` descending into a report it has already claimed —
+      # otherwise a nested pair copies twice, since `cp -R` into an existing
+      # destination copies *into* it. A copy that fails annotates and the walk
+      # continues: aborting would leave a partial artifact that reads as "those
+      # workspaces produced nothing", which is the failure this step exists to
+      # prevent.
+      - name: Collect Playwright reports
+        if: failure()
+        shell: bash
+        run: |
+          stage="${RUNNER_TEMP}/playwright-reports"
+          mkdir -p "$stage"
+          find . -type d \( -name node_modules -o -name .git -o -name .turbo \) -prune -o \
+                 -type d \( -name playwright-report -o -name test-results \) -prune -print0 |
+            while IFS= read -r -d '' dir; do
+              rel="${dir#./}"
+              mkdir -p "$stage/$(dirname "$rel")" && cp -R "$dir" "$stage/$rel" ||
+                echo "::warning::could not stage $rel"
+            done
+
       - name: Upload Playwright reports + traces on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-reports
-          # `playwright-report/` is the HTML report; `test-results/`
-          # carries the per-test artifacts that matter for diagnosing
-          # CI-only flakes — `trace.zip`, `error-context.md`,
-          # screenshots, videos. Globbing both keeps the upload self-
-          # contained per package without enumerating each workspace.
-          path: |
-            **/playwright-report/
-            **/test-results/
+          path: ${{ runner.temp }}/playwright-reports
           if-no-files-found: warn
           retention-days: 5
 
