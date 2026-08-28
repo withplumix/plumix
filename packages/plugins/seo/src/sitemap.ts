@@ -10,12 +10,16 @@ import {
 import { and, entries, eq, sql, terms } from "plumix/db";
 
 import type { SeoSettings } from "./settings.js";
+import { entryImages } from "./entry-images.js";
 import { SEO_META_KEYS } from "./overrides.js";
 import { publicTargets } from "./scope.js";
 
 // Well under the sitemaps.org 50k cap, and small enough to build + hold in
 // Worker memory per request.
 export const SITEMAP_PAGE_SIZE = 1000;
+
+/** Where the index answers, before any base prefix. */
+export const SITEMAP_INDEX_PATH = "/sitemap.xml";
 
 // The entry-override arm of `indexable`, asked of the whole table at once —
 // membership has to be a `WHERE`, or the count driving index pagination and
@@ -31,9 +35,17 @@ const NOINDEX_PATH = `$.${SEO_META_KEYS.noindex}`;
 const entryIsIndexable = sql`json_type(${entries.meta}, ${NOINDEX_PATH}) is not 'true'`;
 const termIsIndexable = sql`json_type(${terms.meta}, ${NOINDEX_PATH}) is not 'true'`;
 
+// Google's sitemap image extension — the one crawlers read image entries from.
+const IMAGE_NS = "http://www.google.com/schemas/sitemap-image/1.1";
+
 export interface SitemapUrl {
   readonly loc: string;
   readonly lastmod?: string;
+  /**
+   * Pictures this page shows, as absolute URLs. Listed so image search can
+   * find them without crawling the page for `<img>` tags.
+   */
+  readonly images?: readonly string[];
 }
 
 declare module "plumix" {
@@ -53,26 +65,55 @@ declare module "plumix" {
   }
 }
 
-export function renderSitemapIndex(locs: readonly string[]): string {
+// The declaration plus the stylesheet a browser renders the document through.
+// A crawler ignores the instruction and parses the same XML. The href goes in
+// unescaped — a processing instruction's content is not entity-parsed, so an
+// escape would be emitted literally — and it is a path this deployment's own
+// config produced, not anything a request carries.
+function prologue(stylesheet: string): string {
+  return (
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<?xml-stylesheet type="text/xsl" href="${stylesheet}"?>`
+  );
+}
+
+export function renderSitemapIndex(
+  locs: readonly string[],
+  stylesheet: string,
+): string {
   const body = locs
     .map((loc) => `<sitemap><loc>${xmlEscape(loc)}</loc></sitemap>`)
     .join("");
   return (
-    `<?xml version="1.0" encoding="UTF-8"?>` +
+    prologue(stylesheet) +
     `<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${body}</sitemapindex>`
   );
 }
 
-export function renderSubSitemap(urls: readonly SitemapUrl[]): string {
+export function renderSubSitemap(
+  urls: readonly SitemapUrl[],
+  stylesheet: string,
+): string {
   const body = urls
-    .map(({ loc, lastmod }) => {
+    .map(({ loc, lastmod, images }) => {
       const mod = lastmod ? `<lastmod>${xmlEscape(lastmod)}</lastmod>` : "";
-      return `<url><loc>${xmlEscape(loc)}</loc>${mod}</url>`;
+      const pictures = (images ?? [])
+        .map(
+          (url) =>
+            `<image:image><image:loc>${xmlEscape(url)}</image:loc></image:image>`,
+        )
+        .join("");
+      return `<url><loc>${xmlEscape(loc)}</loc>${mod}${pictures}</url>`;
     })
     .join("");
+  // The image namespace is declared only when a page carries one, so a set
+  // with no pictures serializes exactly as it did before images existed.
+  const imageNs = urls.some((url) => (url.images?.length ?? 0) > 0)
+    ? ` xmlns:image="${IMAGE_NS}"`
+    : "";
   return (
-    `<?xml version="1.0" encoding="UTF-8"?>` +
-    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${body}</urlset>`
+    prologue(stylesheet) +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${imageNs}>${body}</urlset>`
   );
 }
 
@@ -141,6 +182,7 @@ async function entryUrls(
       type: entries.type,
       parentId: entries.parentId,
       updatedAt: entries.updatedAt,
+      meta: entries.meta,
     })
     .from(entries)
     .where(publishedEntriesOf(type))
@@ -148,13 +190,19 @@ async function entryUrls(
     .limit(SITEMAP_PAGE_SIZE)
     .offset(offsetFor(page));
 
+  const images = await entryImages(
+    ctx,
+    type,
+    rows.map((row) => row.meta),
+  );
   const urls: SitemapUrl[] = [];
-  for (const row of rows) {
+  for (const [index, row] of rows.entries()) {
     const path = await buildEntryPermalink(ctx, row);
     if (path === null) continue;
     urls.push({
       loc: `${ctx.origin}${path}`,
       lastmod: row.updatedAt.toISOString(),
+      images: images[index] ?? [],
     });
   }
   return urls;
