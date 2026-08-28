@@ -102,6 +102,9 @@ const config: KnipConfig = {
     "packages/plugins/seo/playground": {
       entry: ["plumix.config.ts"],
     },
+    "packages/plugins/forms/playground": {
+      entry: ["plumix.config.ts"],
+    },
     // drizzle-kit is invoked by consumers as a CLI hint, not imported.
     "packages/plumix": {
       entry: [
@@ -387,6 +390,14 @@ const config: KnipConfig = {
     // Admin chunk loaded via `adminEntry` at consumer build time; the
     // playwright rig (globalSetup + spec) runs under plumix dev. None are
     // static imports knip can follow.
+    "packages/plugins/forms": {
+      entry: ["src/index.ts", "e2e/globalSetup.ts", "e2e/*.spec.ts"],
+      // Playground-only devDeps; see packages/plugins/media above. Pages
+      // is here because the playground composes it for the `page` entry
+      // type the seeded form lives on (#1883).
+      ignoreDependencies: ["@plumix/runtime-cloudflare", "@plumix/plugin-pages"],
+      playwright: false,
+    },
     "packages/plugins/comments": {
       entry: [
         "src/index.ts",

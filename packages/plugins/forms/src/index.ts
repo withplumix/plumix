@@ -9,10 +9,11 @@ import {
   SUBMIT_ROUTE_PATH,
   TEL_FIELD_COMPONENT,
   TEL_INPUT_TYPE,
+  TOKEN_ROUTE_PATH,
 } from "./contract.js";
 import * as schema from "./db/schema.js";
 import { createFormRegistry } from "./registry.js";
-import { createSubmitHandler } from "./server/submit.js";
+import { createSubmitHandler, tokenHandler } from "./server/submit.js";
 
 export type {
   FormAnswersOf,
@@ -24,7 +25,9 @@ export { FormsError } from "./errors.js";
 export type {
   FieldLabelSnapshot,
   FormAnswers,
+  FormFieldError,
   FormLabelSnapshot,
+  FormSubmitResponse,
   SubmissionStatus,
 } from "./types.js";
 export { SUBMISSION_STATUSES } from "./types.js";
@@ -104,6 +107,12 @@ export function forms(options: FormsConfig = {}) {
         // handler reads no session and acts on nobody's behalf.
         formPost: true,
         handler: createSubmitHandler(registry),
+      });
+      ctx.registerRoute({
+        method: "GET",
+        path: TOKEN_ROUTE_PATH,
+        auth: "public",
+        handler: tokenHandler,
       });
     },
   });

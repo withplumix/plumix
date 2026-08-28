@@ -1,0 +1,169 @@
+import { email, text } from "plumix/fields";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, test } from "vitest";
+
+import type { SubmittedValues } from "../answers.js";
+import type { FormFieldError } from "../types.js";
+import { TOKEN_FIELD } from "../contract.js";
+import { defineForm } from "../define-form.js";
+import { FormMarkup } from "./form-markup.js";
+
+const contact = defineForm("contact", {
+  title: "Get in touch",
+  fields: [
+    text("name").label("Your name").required().description("As it is spelled"),
+    email("email").label("Email"),
+  ],
+});
+
+function render(props: {
+  errors?: readonly FormFieldError[];
+  answers?: SubmittedValues;
+  token?: string | null;
+}): string {
+  return renderToStaticMarkup(
+    <FormMarkup
+      form={contact}
+      action="/_plumix/forms/submit"
+      idBase="f"
+      {...props}
+    />,
+  );
+}
+
+describe("a field's describing relationships", () => {
+  test("points the control at its own help text", () => {
+    const html = render({});
+
+    expect(html).toMatch(/id="f-name-help"/);
+    expect(html).toMatch(
+      /data-plumix-form-control="name"[^>]*aria-describedby="f-name-help"/,
+    );
+  });
+
+  test("points the control at the error it produced, and marks it invalid", () => {
+    const html = render({
+      errors: [{ field: "name", message: "Your name is required." }],
+    });
+
+    expect(html).toContain('id="f-name-error"');
+    expect(html).toMatch(
+      /data-plumix-form-control="name"[^>]*aria-describedby="f-name-help f-name-error"/,
+    );
+    expect(html).toMatch(
+      /data-plumix-form-control="name"[^>]*aria-invalid="true"/,
+    );
+  });
+
+  test("leaves a control with nothing to describe undescribed", () => {
+    const html = render({});
+
+    expect(html).not.toMatch(
+      /data-plumix-form-control="email"[^>]*aria-describedby/,
+    );
+  });
+});
+
+describe("the error summary", () => {
+  test("is announced and takes focus", () => {
+    const html = render({
+      errors: [{ field: "name", message: "Your name is required." }],
+    });
+
+    expect(html).toMatch(/data-plumix-form-summary[^>]*role="alert"/);
+    expect(html).toMatch(/data-plumix-form-summary[^>]*tabindex="-1"/);
+  });
+
+  test("links each message to the control that produced it", () => {
+    const html = render({
+      errors: [
+        { field: "name", message: "Your name is required." },
+        { field: "email", message: "Email must look like name@example.com." },
+      ],
+    });
+
+    expect(html).toContain('href="#f-name"');
+    expect(html).toContain('href="#f-email"');
+    expect(html).toContain("Email must look like name@example.com.");
+  });
+
+  test("is absent from a form nobody has failed to submit", () => {
+    expect(render({})).not.toContain("data-plumix-form-summary");
+  });
+});
+
+describe("what the markup carries", () => {
+  test("signals a required field by more than colour", () => {
+    const html = render({});
+
+    expect(html).toMatch(/data-plumix-form-required[^>]*aria-hidden="true"/);
+    expect(html).toMatch(/data-plumix-form-control="name"[^>]*required/);
+  });
+
+  test("keeps what the visitor answered", () => {
+    const html = render({
+      answers: { name: "Ada", email: "ada@example.test" },
+    });
+
+    expect(html).toMatch(/data-plumix-form-control="name"[^>]*value="Ada"/);
+  });
+
+  test("carries nothing per-visitor when no token was issued", () => {
+    expect(render({})).not.toContain(TOKEN_FIELD);
+  });
+
+  test("carries what the field declared about the answer it takes", () => {
+    const capped = defineForm("capped", {
+      fields: [
+        text("subject").label("Subject").maxLength(60).placeholder("Hi"),
+      ],
+    });
+
+    const html = renderToStaticMarkup(
+      <FormMarkup form={capped} action="/submit" idBase="f" />,
+    );
+
+    expect(html).toMatch(
+      /data-plumix-form-control="subject"[^>]*maxLength="60"/i,
+    );
+    expect(html).toMatch(
+      /data-plumix-form-control="subject"[^>]*placeholder="Hi"/,
+    );
+  });
+
+  test("carries the token the island fetched once it has one", () => {
+    const html = render({ token: "issued.signature" });
+
+    expect(html).toContain(`name="${TOKEN_FIELD}"`);
+    expect(html).toContain('value="issued.signature"');
+  });
+});
+
+describe("an error that belongs to no field", () => {
+  test("is listed without a link, since there is no control to send anyone to", () => {
+    const html = render({
+      errors: [{ field: "", message: "Your submission could not be sent." }],
+    });
+
+    expect(html).toContain("Your submission could not be sent.");
+    expect(html).not.toContain('href="#f-"');
+  });
+});
+
+describe("the enhanced form", () => {
+  test("says so in the markup, and leaves validation to the server", () => {
+    const html = renderToStaticMarkup(
+      <FormMarkup form={contact} action="/submit" idBase="f" enhanced />,
+    );
+
+    expect(html).toContain("data-plumix-form-enhanced");
+    expect(html).toContain("noValidate");
+  });
+
+  test("is not what the server renders, so a plain form keeps the browser's checks", () => {
+    const html = render({});
+
+    expect(html).not.toContain("data-plumix-form-enhanced");
+    expect(html).not.toContain("noValidate");
+  });
+});

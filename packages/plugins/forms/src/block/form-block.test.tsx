@@ -240,3 +240,12 @@ describe("a field with a visibility condition", () => {
     expect(html).not.toContain("seats");
   });
 });
+
+describe("the form block in the editor", () => {
+  test("renders the form as markup, so the editor arranges it rather than fills it in", () => {
+    const html = render("contact", "edit");
+
+    expect(html).toContain('data-plumix-form="contact"');
+    expect(html).toContain('data-plumix-form-control="name"');
+  });
+});
