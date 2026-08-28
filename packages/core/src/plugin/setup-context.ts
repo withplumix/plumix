@@ -291,9 +291,26 @@ export interface PluginSetupContextBase {
    *  public submission carries none — an attacker forging one has merely
    *  submitted a form they could have submitted directly. That is why the
    *  opt-in is rejected on any route that isn't `auth: "public"`, and why the
-   *  handler must never derive privilege from a session: it may record who was
-   *  signed in, but must not act on their behalf — no capability check, no
-   *  write the visitor could not have made anonymously. */
+   *  handler must never derive privilege from a session: no capability check,
+   *  no write the visitor could not have made anonymously.
+   *
+   *  That last part is structural, not a promise the handler is trusted to
+   *  keep. `ctx.user` is already null and `ctx.auth.can()` already anonymous on
+   *  any public route, so `ctx.authenticator` was the one door left open — and
+   *  on the request that took the exemption it resolves nobody: `authenticate`
+   *  returns null, `hasSession` is false. `getContext()` agrees, so a hook
+   *  listener the handler fires sees the same anonymous request it does.
+   *
+   *  It is per request, not per route: a JS-enhanced form posting to the same
+   *  endpoint sets the header, goes through the ordinary gate and arrives with
+   *  its session intact, so a handler that attributes a submission still can
+   *  wherever attributing one is safe. Neither path needs a branch — a public
+   *  route already has to cope with `authenticate` returning null.
+   *
+   *  Closing that door is the whole of it. The session cookie is still on
+   *  `ctx.request` and `defaultAuthenticator()` is one import away, so a
+   *  handler that goes looking recovers the user anyway; what is gone is the
+   *  reading that looks like ordinary code. */
   registerRoute(options: {
     readonly method: PluginRouteMethod;
     readonly path: string;

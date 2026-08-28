@@ -1,4 +1,5 @@
 import type { AppContext } from "../context/app.js";
+import type { RequestMemo } from "../context/memo.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import { tryGetContext } from "../context/stores.js";
 import { entryPurgeTags, termPurgeTags } from "./tags.js";
@@ -6,19 +7,26 @@ import { entryPurgeTags, termPurgeTags } from "./tags.js";
 // Per-request purge accumulator. Entry hooks fire one at a time during a
 // request (a bulk publish fires N), each adding tags here; the dispatcher
 // flushes once after the request so the whole mutation costs a single
-// purge call. Keyed off the request `AppContext`, which is GC'd with the
-// request — no manual cleanup needed beyond the flush's own delete.
-const pending = new WeakMap<AppContext, Set<string>>();
+// purge call.
+//
+// Keyed on the request's memo rather than on the context itself, for the reason
+// `route-tags.ts` is: core derives contexts by spreading (basePath stripping,
+// `withUser`, the formPost session swap), and the flush runs against the
+// outermost one — so a listener that enqueued against a derived context would
+// fill a set nothing reads, and skip the purge with no way to notice. The memo
+// is one object per request, carried by reference through every derivation, and
+// GC'd with it.
+const pending = new WeakMap<RequestMemo, Set<string>>();
 
 export function enqueuePurgeTags(
   ctx: AppContext,
   tags: readonly string[],
 ): void {
   if (ctx.cache === undefined || tags.length === 0) return;
-  let set = pending.get(ctx);
+  let set = pending.get(ctx.memo);
   if (set === undefined) {
     set = new Set();
-    pending.set(ctx, set);
+    pending.set(ctx.memo, set);
   }
   for (const tag of tags) set.add(tag);
 }
@@ -29,9 +37,9 @@ export function enqueuePurgeTags(
  * because Cloudflare's purge API hiccupped; TTL/SWR is the backstop.
  */
 export function flushPurgeTags(ctx: AppContext): void {
-  const set = pending.get(ctx);
+  const set = pending.get(ctx.memo);
   if (set === undefined) return;
-  pending.delete(ctx);
+  pending.delete(ctx.memo);
   const cache = ctx.cache;
   if (cache === undefined || set.size === 0) return;
   ctx.defer(cache.purgeTags([...set]));

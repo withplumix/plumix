@@ -1,4 +1,5 @@
 import type { Segment } from "../access/policy.js";
+import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { AppContext } from "../context/app.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
@@ -34,6 +35,7 @@ import { cacheTagsFor } from "../cache/route-tags.js";
 import { pageTags } from "../cache/tags.js";
 import { interfaceEnabled } from "../config.js";
 import { withUser } from "../context/app.js";
+import { requestStore } from "../context/stores.js";
 import { collectDevErrorContext } from "../dev/server/context.js";
 import { collectDevErrorHints } from "../dev/server/hints/collect.js";
 import { collectDevErrorPanels } from "../dev/server/panels/collect.js";
@@ -887,9 +889,52 @@ function servePublicRoute(
   });
 }
 
+// What makes `registerRoute`'s no-privilege-from-session rule structural: a
+// request admitted by the `formPost` CSRF exemption gets an authenticator that
+// resolves nobody. `hasSession` has to say so explicitly — `requestHasSession`
+// otherwise falls back to sniffing the session cookie, which is still on the
+// request.
+const anonymousAuthenticator: RequestAuthenticator = {
+  authenticate: () => Promise.resolve(null),
+  hasSession: () => false,
+};
+
+// Keyed on the header rather than the flag alone, because the exemption is per
+// request: a JS-enhanced form posting to the same endpoint sets the header and
+// went through the ordinary gate. The `formPost` half is then redundant —
+// `acceptsFormPost` admits no other headerless request this far — but it keeps
+// the function true on its own terms rather than on a gate 200 lines up.
+//
+// That coupling runs both ways, so anyone editing `enforcePlumixCsrf` has to
+// come back here: dropping its POST narrowing would widen what arrives
+// anonymous, and adding a second way past the header check — the shape
+// `devCsrfLocalhost` already takes for Origin — would let a request through
+// with its session still on it.
+function withoutAmbientSession(
+  route: RegisteredRawRoute,
+  ctx: AppContext,
+): AppContext {
+  if (route.formPost !== true || hasCsrfHeader(ctx.request)) return ctx;
+  return { ...ctx, authenticator: anonymousAuthenticator };
+}
+
+function dispatchPluginRawRoute(
+  route: RegisteredRawRoute,
+  ctx: AppContext,
+): Promise<Response> {
+  const scoped = withoutAmbientSession(route, ctx);
+  if (scoped === ctx) return cacheRawRoute(route, ctx);
+  // `getContext()` is the sanctioned way to read per-request state, and for a
+  // hook listener the handler fires it is the only way — a `formPost` route
+  // announcing a submission is exactly that shape. Leaving the ambient context
+  // un-swapped would shut the door the handler holds and leave the one behind
+  // it open, so the exempt context has to be the ambient one too.
+  return requestStore.run(scoped, () => cacheRawRoute(route, scoped));
+}
+
 // A raw route reaches the edge cache on its own `cacheable: true` opt-in, and
 // only where the deploy bound a cache.
-function dispatchPluginRawRoute(
+function cacheRawRoute(
   route: RegisteredRawRoute,
   ctx: AppContext,
 ): Promise<Response> {

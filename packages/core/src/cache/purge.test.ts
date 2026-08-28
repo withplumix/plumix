@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { AppContext } from "../context/app.js";
+import { createRequestMemo } from "../context/memo.js";
 import { requestStore } from "../context/stores.js";
 import { HookRegistry } from "../hooks/registry.js";
 import {
@@ -18,6 +19,7 @@ function fakeCtx(withCache = true) {
     cache: withCache ? { match: vi.fn(), put: vi.fn(), purgeTags } : undefined,
     defer,
     logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+    memo: createRequestMemo(),
     plugins: {
       termTaxonomies: new Map([["category", { entryTypes: ["post"] }]]),
     },
@@ -36,6 +38,19 @@ describe("purge accumulator", () => {
 
     expect(purgeTags).toHaveBeenCalledTimes(1);
     expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:1", "e:2"]);
+  });
+
+  // Core derives contexts by spreading — basePath stripping, `withUser`, the
+  // formPost session swap — and the flush runs against the outermost one. A
+  // handler handed a derived context would otherwise fill a set nothing reads.
+  it("flushes tags enqueued against a derived context", () => {
+    const { ctx, purgeTags } = fakeCtx();
+    const derived = { ...ctx, user: { id: 1 } } as unknown as AppContext;
+
+    enqueuePurgeTags(derived, ["t:post", "e:1"]);
+    flushPurgeTags(ctx);
+
+    expect(purgeTags).toHaveBeenCalledWith(["t:post", "e:1"]);
   });
 
   it("does nothing on flush when nothing was enqueued", () => {
