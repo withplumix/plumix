@@ -18,6 +18,7 @@
     "@plumix/blocks": "workspace:*",
     "@plumix/plugin-blog": "workspace:*",
     "@plumix/plugin-comments": "workspace:*",
+    "@plumix/plugin-feeds": "workspace:*",
     "@plumix/plugin-media": "workspace:*",
     "@plumix/plugin-menu": "workspace:*",
     "@plumix/plugin-pages": "workspace:*",

@@ -2,6 +2,7 @@ import { consoleMailer, plumix } from "plumix";
 
 import { blog } from "@plumix/plugin-blog";
 import { comments } from "@plumix/plugin-comments";
+import { feeds } from "@plumix/plugin-feeds";
 import { media } from "@plumix/plugin-media";
 import { menu } from "@plumix/plugin-menu";
 import { pages } from "@plumix/plugin-pages";
@@ -25,6 +26,7 @@ export default plumix({
   plugins: [
     blog(),
     comments({ entryTypes: ["post"] }),
+    feeds(),
     pages,
     media(),
     menu({

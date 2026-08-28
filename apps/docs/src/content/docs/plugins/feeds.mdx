@@ -1,0 +1,199 @@
+---
+title: Feeds
+description: The feeds plugin serves RSS 2.0 and Atom for the site and every public archive, and advertises each page's feed in its head.
+tier: P1
+sidebar:
+  order: 90
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+`@plumix/plugin-feeds` is syndication: the XML a reader subscribes to and an aggregator polls. Installing it and configuring nothing serves RSS and Atom for the whole site, for each entry type, for each taxonomy term, for each author and for each date period, and puts a `<link rel="alternate">` in the head of every page that has one.
+
+## Overview
+
+The plugin exports a factory named `feeds`. It takes no options, adds no database tables and ships no admin screens, so installing it is a package install and one array entry.
+
+Feeds are not a search-engine concern, which is why they are their own package rather than part of `@plumix/plugin-seo`. A crawler does not need them; a reader does.
+
+Nothing serves `/feed` until you install it. That is the boundary Plumix draws between core and a plugin: core owns what would be _wrong_ without a plugin installed, and a plugin owns what would merely be _absent_. A site with no feeds is a site with no feeds — it is not a broken one.
+
+Every path below is claimed during the `theme:ready` action, once every entry type and taxonomy is registered, so the plugin enumerates them and registers concrete routes. Nothing is guessed at from the shape of a request, which is what leaves a page slugged `feed` under some other prefix still rendering as content.
+
+### The URLs it serves
+
+Each row is RSS 2.0 at the path shown and Atom at that path plus `/atom`.
+
+| Scope          | Path                          | Contents                                  |
+| -------------- | ----------------------------- | ----------------------------------------- |
+| Site           | `/feed`                       | Published entries of every public type    |
+| Entry type     | `/<type>/feed`                | Published entries of that type            |
+| Taxonomy term  | `/<taxonomy>/<term>/feed`     | Published entries attached to that term   |
+| Author         | `/authors/<slug>/feed`        | That author's published entries           |
+| Date           | `/YYYY[/MM[/DD]]/feed`        | Published entries in the period           |
+| Plugin archive | whatever the archive declares | Whatever the archive's own filter selects |
+
+`<type>` is the registered entry-type name, not its `rewrite.slug` — a type registered as `post` and mounted at `/articles` still syndicates at `/post/feed`, which is what the archive page advertises.
+
+Twenty items, newest publish time first. A scope that resolves to nothing addressable — an unregistered entry type, a term slug nothing matches, an impossible date such as `2026/02/30` — is a 404 rather than an empty feed.
+
+A term feed sits directly under the term's own archive. A hierarchical taxonomy addresses a nested term at its full path (`/region/europe/france/feed`); a flat one addresses one segment, and a term parented inside a flat taxonomy therefore has an archive but no feed — the archive page advertises none, so the two agree.
+
+<Aside type="note" title="A private site has no feeds">
+  With `public` off in site settings every feed is a 404 and no page advertises
+  one. The sitemap serves an empty 200 instead, because an empty sitemap is a
+  meaningful answer and an empty feed is not.
+</Aside>
+
+## Quickstart
+
+Install the package with whichever package manager the project uses:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-feeds
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-feeds
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-feeds
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun add @plumix/plugin-feeds
+```
+
+  </TabItem>
+</Tabs>
+
+Then:
+
+<Steps>
+
+1. **Add `feeds()` to the `plugins` array.** Its position there does not matter — see below.
+
+   ```ts no-typecheck
+   import { plumix } from "plumix";
+
+   import { blog } from "@plumix/plugin-blog";
+   import { feeds } from "@plumix/plugin-feeds";
+
+   import { theme } from "./theme";
+
+   export default plumix({
+     plugins: [blog(), feeds()],
+     theme,
+   });
+   ```
+
+2. **Restart the dev server.**
+
+   ```sh
+   pnpm dev
+   ```
+
+3. **Read one.** `/feed` is the whole site, `/post/feed` is the blog, and `/feed/atom` is the same items as Atom.
+
+</Steps>
+
+Array order does not decide what gets a feed. The plugin reads the registry once, at `theme:ready`, which runs after every plugin's `setup` — so it sees `blog`'s entry types wherever `blog()` sits. The one thing it cannot see is a type registered from another plugin's own `theme:ready` handler that runs later, which is a reason to register in `setup`.
+
+## Discovery links
+
+The plugin subscribes to `render:document` and appends the page's own feed, both formats:
+
+```html
+<link
+  rel="alternate"
+  type="application/rss+xml"
+  href="https://example.com/feed"
+/>
+<link
+  rel="alternate"
+  type="application/atom+xml"
+  href="https://example.com/feed/atom"
+/>
+```
+
+Which feed a page advertises follows what the page is. An archive advertises its type's feed, a term archive its term's, an author archive that author's, a date archive that period's. A single entry advertises the **site** feed rather than its type's: someone subscribing from an article wants everything new, which is the convention every comparable CMS follows.
+
+Three page kinds advertise nothing. A search page is thin, an error page is not content, and a `registerArchiveType` archive is the plugin's own to advertise — the payload's shape is not core's to read.
+
+It gap-fills. A theme or another plugin that already set an `alternate` of a given type keeps it, and only the missing format is added.
+
+## Adjusting the items
+
+`feed:items` runs over the collected list before serialization, with the scope the items were collected for. Add, drop or re-order:
+
+```ts no-typecheck
+import { definePlugin } from "plumix/plugin";
+
+export const featured = definePlugin("featured", {
+  setup: (ctx) => {
+    ctx.addFilter("feed:items", (items, scope) =>
+      scope.kind === "site" ? items.slice(0, 5) : items,
+    );
+  },
+});
+```
+
+The plugin's own package must be installed for the hook name to type-check — it declares `feed:items` on `FilterRegistry` through the single `plumix` augmentation specifier, the same way every plugin declares a hook.
+
+## Syndicating a plugin archive
+
+`registerArchiveType` takes an optional `feed`, and that field is this plugin's augmentation rather than a core one — declare it and it type-checks once `@plumix/plugin-feeds` is a dependency. `routes` are the paths the feed answers, and `filter` returns the SQL row predicate for its entries, or `null` for a 404:
+
+```ts no-typecheck
+import { and, entries, eq } from "plumix/db";
+import { definePlugin } from "plumix/plugin";
+
+import "@plumix/plugin-feeds";
+
+export const events = definePlugin("events", {
+  setup: (ctx) => {
+    ctx.registerArchiveType("event-series", {
+      routes: ["/events/:series"],
+      resolve: (_ctx, params) => ({
+        data: { kind: "custom", name: "event-series" },
+        title: `Series: ${params.series}`,
+      }),
+      feed: {
+        routes: ["/events/:series/feed"],
+        filter: (_ctx, _params) =>
+          and(eq(entries.type, "event"), eq(entries.status, "published")) ??
+          null,
+      },
+    });
+  },
+});
+```
+
+Narrow by `params` however the archive models its subject — a join through `entry_term`, a meta column, whatever the resolver above already reads.
+
+Declare the base route only, and end it in `/feed`. The `/atom` variant of each is registered alongside it, so the two formats cannot drift apart; a route that is not feed-shaped is ignored, because a registered public route answers ahead of the content router and would serve XML at the archive's own page URL.
+
+## Related
+
+The plugin owns its paths through `registerPublicRoute`, the seam [Routing](/routing/overview/) documents — including why a registered route always answers and what that means for a path you did not claim. [Permalinks and Slugs](/routing/permalinks/) covers the URL shapes the feed paths hang off, and [Statuses and Publishing](/content-modelling/statuses/) covers which entries are in a feed at all.
+
+The site title and tagline a feed's channel carries come from the settings in [Configuration](/getting-started/configuration/), and [Overview](/plugins/overview/) covers installing a plugin and the version track this one is on. Its `feed:items` filter and its `feed` augmentation both reach a consumer through `declare module "plumix"`, the one specifier every extension point in [Content Modelling](/content-modelling/overview/) uses.
+
+## Next steps
+
+Read [Blog](/plugins/blog/) if the site has no dated entry type yet: a feed of nothing is still a valid feed, but not an interesting one.
+
+[OG Cards](/plugins/og/) is the other half of how a link travels — the image an unfurl shows, where this plugin is the XML an aggregator reads.

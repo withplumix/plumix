@@ -263,8 +263,12 @@ The single normalized source-of-truth URL driving `<link rel="canonical">`, the 
 **Sitemap**:
 The generated XML URL set, paged into scoped sub-sitemaps per entry type, taxonomy, or custom archive.
 
+## Syndication
+
 **Feed**:
-The recent-items syndication output (RSS/Atom).
+The recent-items syndication output (RSS/Atom). Not an SEO surface — a reader
+subscribes to it, a crawler does not read it — and served by
+`@plumix/plugin-feeds` rather than by core.
 
 ## Disambiguation — one word, several meanings
 

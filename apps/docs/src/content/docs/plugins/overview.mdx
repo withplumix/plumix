@@ -55,6 +55,10 @@ Writes the head meta a public page needs: a description, a robots directive, the
 
 Renders a social card per page — an entry, a term or content-type archive, an author, a date, the front page — serves it from a route of its own, and carries it into the page's `og:image`. The URL carries the card's digest and is served immutable, so an edit publishes a link the scrapers have to fetch again. Its `ogCards` slot is a rule kind of the theme descriptor's, resolved by the same walk `templates` uses — [Custom Rule Kinds](/themes/rule-kinds/) takes it apart as the worked example.
 
+### `@plumix/plugin-feeds`
+
+Serves RSS 2.0 and Atom for the site, each entry type, each taxonomy term, each author and each date period, and advertises the matching one in every page's head. Nothing serves `/feed` without it.
+
 ## Quickstart
 
 Adding comments to the recipe site. `comments` owns a database table, which makes this the longest install path any of them takes.
@@ -160,7 +164,7 @@ import { pages } from "@plumix/plugin-pages";
 export const plugins: PlumixConfigInput["plugins"] = [pages];
 ```
 
-The other six take options, so they export a factory. Options are read at boot, either in the factory call itself or when the plugin's `setup` runs, and nothing re-reads them after that. Changing an option means editing the call and restarting.
+The other seven export a factory instead, so you call it. Options are read at boot, either in the factory call itself or when the plugin's `setup` runs, and nothing re-reads them after that. Changing an option means editing the call and restarting.
 
 ```ts no-typecheck
 import type { PlumixConfigInput } from "plumix";
@@ -168,6 +172,7 @@ import type { PlumixConfigInput } from "plumix";
 import { auditLog } from "@plumix/plugin-audit-log";
 import { blog } from "@plumix/plugin-blog";
 import { comments } from "@plumix/plugin-comments";
+import { feeds } from "@plumix/plugin-feeds";
 import { media } from "@plumix/plugin-media";
 import { menu } from "@plumix/plugin-menu";
 import { og } from "@plumix/plugin-og";
@@ -179,10 +184,11 @@ export const plugins: PlumixConfigInput["plugins"] = [
   comments({ entryTypes: ["recipe"], mode: "all", maxDepth: 2 }),
   auditLog(),
   og(),
+  feeds(),
 ];
 ```
 
-Every option a factory takes has a default, so the empty parentheses on `blog()`, `media()`, `auditLog()` and `og()` are a complete call. `comments()` on its own holds an address's first comment for review and auto-approves once that address has an approved comment behind it. Its other defaults are three levels of reply nesting, twenty root comments to a page, and five submissions per source per ten minutes.
+`feeds()` takes no options at all, and every option the others take has a default, so the empty parentheses on `blog()`, `media()`, `auditLog()`, `og()` and `feeds()` are a complete call. `comments()` on its own holds an address's first comment for review and auto-approves once that address has an approved comment behind it. Its other defaults are three levels of reply nesting, twenty root comments to a page, and five submissions per source per ten minutes.
 
 <Aside type="caution" title="One descriptor per id">
   Each descriptor carries an id, and two descriptors with the same id throw at
@@ -205,13 +211,13 @@ Public URLs do not depend on array order either. The router compiles taxonomy ru
 
 `@plumix/plugin-comments` and `@plumix/plugin-audit-log` each store rows in a table of their own, and both declare a `schemaModule` naming where that table's definition lives. `plumix migrate generate` reads the resolved config, writes `.plumix/schema.ts` re-exporting core's schema plus every declared plugin schema, and hands the file to drizzle-kit. Skip the generate step and the emitted migration contains core's tables only, so the plugin's first query fails on a missing table.
 
-The rest add no tables of their own. `@plumix/plugin-blog` and `@plumix/plugin-pages` register entry types, and every entry of every type is a row in the shared `entries` table. `@plumix/plugin-menu` goes further and reuses the same tables for its own model: a menu is a row in `terms`, a menu item is a row in `entries`, and membership is a row in `entry_term`. `@plumix/plugin-media` stores an asset as an entry and the bytes in object storage, and `@plumix/plugin-og` stores a rendered card in the same bucket, keyed by its content.
+The rest add no tables of their own. `@plumix/plugin-feeds` reads the shared `entries` table and writes nothing at all. `@plumix/plugin-blog` and `@plumix/plugin-pages` register entry types, and every entry of every type is a row in the shared `entries` table. `@plumix/plugin-menu` goes further and reuses the same tables for its own model: a menu is a row in `terms`, a menu item is a row in `entries`, and membership is a row in `entry_term`. `@plumix/plugin-media` stores an asset as an entry and the bytes in object storage, and `@plumix/plugin-og` stores a rendered card in the same bucket, keyed by its content.
 
 [Cloudflare Workers](/deployment/cloudflare/) covers applying a migration to a deployed D1 database rather than the local one.
 
 ## Plugins that ship admin UI
 
-Media has the library, menu has the menu builder, comments has the moderation queue, and audit-log has the activity feed. The rest ship none. Each declares a path to an admin entry module, and the Vite plugin compiles every declared entry into one bundle for your site during `plumix build` and `plumix dev`.
+Media has the library, menu has the menu builder, comments has the moderation queue, and audit-log has the activity feed. The rest — blog, pages, og and feeds — ship none. Each declares a path to an admin entry module, and the Vite plugin compiles every declared entry into one bundle for your site during `plumix build` and `plumix dev`.
 
 The consequence is that a newly installed admin-facing plugin appears after a build, not after a config reload. If the admin looks unchanged once the package is in the array, stop the dev server and start it again.
 
@@ -219,7 +225,7 @@ The consequence is that a newly installed admin-facing plugin appears after a bu
 
 The platform releases in lockstep. `plumix` and the five packages behind it, `@plumix/core`, `@plumix/blocks`, `@plumix/admin`, `@plumix/admin-editor` and `@plumix/admin-ui`, share one version number and go out together. You depend on `plumix` and get the rest transitively, so there is one platform number to pin. Your runtime adapter, `@plumix/runtime-cloudflare`, sits outside that group and carries its own number.
 
-The seven plugins each release on their own number, and those numbers have already diverged from each other and from the platform. One plugin sitting several minor versions ahead of another says nothing about either one's compatibility with the platform or with each other.
+The eight plugins each release on their own number, and those numbers have already diverged from each other and from the platform. One plugin sitting several minor versions ahead of another says nothing about either one's compatibility with the platform or with each other.
 
 Compatibility is carried by a peer dependency instead. Each plugin declares `plumix` as a peer with the range `>=0.1.0 <1.0.0`, so any pre-1.0 platform release satisfies every plugin, and upgrading `plumix` does not oblige you to upgrade the plugins beside it. A plugin republishes when its own code changes, not because the platform moved.
 
@@ -246,6 +252,6 @@ The `plugins` array is one slot among twenty in [Configuration](/getting-started
 
 ## Next steps
 
-Read [Blog](/plugins/blog/) and [Pages](/plugins/pages/) next. Between them they cover the two entry types most sites install before anything else, and each is a worked example of the registration options this page only names. [OG Cards](/plugins/og/) renders a share image per published entry, and needs no configuration beyond the array entry to do it.
+Read [Blog](/plugins/blog/) and [Pages](/plugins/pages/) next. Between them they cover the two entry types most sites install before anything else, and each is a worked example of the registration options this page only names. [OG Cards](/plugins/og/) renders a share image per published entry, and [Feeds](/plugins/feeds/) syndicates those entries as RSS and Atom — neither needs configuration beyond the array entry.
 
 Ten pages in this section are not written yet, though everything they cover ships today. Menu documents navigation menus and the locations a theme renders them into. Comments documents threading, the moderation queue and the trust policy the quickstart above configured. Media documents the library, the upload flow and the `media` field types. Audit Log documents the activity feed. Publishing a Plugin covers taking a local plugin to npm, The Plugin Descriptor documents every slot on the descriptor object, Config Schema covers validating the options a factory takes, Admin Entry covers shipping admin screens, Translation Catalogs covers the `i18n` slot, and Versioning and Peer Ranges goes further into the two tracks described above.

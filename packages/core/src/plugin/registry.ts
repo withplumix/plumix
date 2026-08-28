@@ -6,7 +6,6 @@
 // Re-exported unchanged from the public `@plumix/core/manifest` barrel.
 
 import type { AnyRouter } from "@orpc/server";
-import type { SQL } from "drizzle-orm";
 
 import type {
   BlockPattern,
@@ -494,17 +493,6 @@ export interface CustomArchiveResolution {
   readonly tags?: readonly string[];
 }
 
-/** The RSS/Atom feed a `registerArchiveType` archive can own. */
-export interface ArchiveTypeFeed {
-  /** URLPattern pathnames the feed answers (e.g. `/events/:series/feed`). */
-  readonly routes: readonly string[];
-  /** SQL row filter for the feed's entries, or `null` → 404. */
-  readonly filter: (
-    ctx: AppContext,
-    params: Record<string, string>,
-  ) => Promise<SQL | null> | SQL | null;
-}
-
 /**
  * The sitemap URL space a `registerArchiveType` archive can own. The cached
  * output is retired by the same `entry:*` / `term:*` actions that bust the rest
@@ -522,8 +510,8 @@ export interface ArchiveTypeSitemap {
 }
 
 /**
- * `registerArchiveType` options — a URL pattern set + resolver (+ optional feed
- * and sitemap) that adds a whole archive type without patching core. The
+ * `registerArchiveType` options — a URL pattern set + resolver (+ an optional
+ * sitemap) that adds a whole archive type without patching core. The
  * resolver returns the render payload (`{ data, title }`) or `null` (404);
  * `data` extends {@link CustomArchiveData} and is typed via `ArchiveTypeRegistry`.
  */
@@ -544,7 +532,6 @@ export interface ArchiveTypeOptions {
     ctx: AppContext,
     params: Record<string, string>,
   ) => Promise<CustomArchiveResolution | null> | CustomArchiveResolution | null;
-  readonly feed?: ArchiveTypeFeed;
   /** Fold this archive into the native sitemap index (`/sitemap-<name>-<page>.xml`); absent otherwise. */
   readonly sitemap?: ArchiveTypeSitemap;
   /**
