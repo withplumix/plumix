@@ -913,6 +913,7 @@ const PLUGIN_PACKAGES = [
   "@plumix/plugin-media",
   "@plumix/plugin-menu",
   "@plumix/plugin-comments",
+  "@plumix/plugin-forms",
   "@plumix/plugin-audit-log",
   "@plumix/plugin-og",
   "@plumix/plugin-seo",

@@ -1567,6 +1567,67 @@ importers:
         specifier: catalog:cloudflare
         version: 4.125.0(@cloudflare/workers-types@5.20260823.1)
 
+  packages/plugins/forms:
+    dependencies:
+      drizzle-orm:
+        specifier: catalog:drizzle
+        version: 0.45.2(@cloudflare/workers-types@5.20260823.1)(@libsql/client@0.17.4)
+    devDependencies:
+      '@arethetypeswrong/cli':
+        specifier: 'catalog:'
+        version: 0.18.5
+      '@libsql/client':
+        specifier: 'catalog:'
+        version: 0.17.4
+      '@plumix/eslint-config':
+        specifier: workspace:*
+        version: link:../../../tooling/eslint
+      '@plumix/prettier-config':
+        specifier: workspace:*
+        version: link:../../../tooling/prettier
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../../../tooling/typescript
+      '@plumix/vitest-config':
+        specifier: workspace:*
+        version: link:../../../tooling/vitest
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
+      '@types/react':
+        specifier: catalog:react
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: catalog:react
+        version: 19.2.5(@types/react@19.2.18)
+      '@vitest/coverage-v8':
+        specifier: catalog:vitest
+        version: 4.1.11(vitest@4.1.11)
+      eslint:
+        specifier: 'catalog:'
+        version: 10.9.0(jiti@2.7.0)
+      plumix:
+        specifier: workspace:*
+        version: link:../../plumix
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.6
+      publint:
+        specifier: 'catalog:'
+        version: 0.3.24
+      react:
+        specifier: catalog:react
+        version: 19.2.8
+      react-dom:
+        specifier: catalog:react
+        version: 19.2.8(react@19.2.8)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: catalog:vitest
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+
   packages/plugins/media:
     dependencies:
       valibot:
