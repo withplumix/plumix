@@ -1,5 +1,6 @@
 import type { MetaBoxField } from "../manifest.js";
 import { PluginContextError } from "../errors.js";
+import { findUnknownConditionDriver } from "../fields/condition.js";
 
 // Must match the RPC input-schema regex for meta keys — any key that
 // doesn't match is dead code (the write path rejects it), so catch it
@@ -57,20 +58,13 @@ export function assertMetaBoxFields(
     }
     seen.add(field.key);
   }
-  // Second pass so declaration order doesn't matter — a condition may
-  // reference a driver declared later in the same box.
-  for (const field of fields) {
-    for (const group of field.visibleWhen ?? []) {
-      for (const rule of group) {
-        if (!seen.has(rule.key)) {
-          throw PluginContextError.metaBoxFieldUnknownConditionDriver({
-            kind,
-            id,
-            fieldKey: field.key,
-            driverKey: rule.key,
-          });
-        }
-      }
-    }
+  const unknown = findUnknownConditionDriver(fields, seen);
+  if (unknown !== undefined) {
+    throw PluginContextError.metaBoxFieldUnknownConditionDriver({
+      kind,
+      id,
+      fieldKey: unknown.fieldKey,
+      driverKey: unknown.driverKey,
+    });
   }
 }

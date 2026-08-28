@@ -96,6 +96,8 @@ export const fields = [
 
 Each builder exposes the rule factories that suit its values. `.isEmpty()` and `.isNotEmpty()` are on every one. `.is()` and `.isNot()` are on every one except `repeater` and `group`, which hold a row list and a member object rather than a scalar to compare against. `number` and `range` add `.gt()` and `.lt()`, `toggle` adds `.isOn()` and `.isOff()`, a multi-value `select` adds `.contains()`, `.notContains()`, `.countGt()` and `.countLt()`, and a reference field after `.multiple()` adds `.contains()` and `.notContains()`. Registration rejects a rule naming a key no field in the box declares.
 
+A repeater subfield or a group member may carry a condition too, judged against its own row or group rather than the box. A row's rules therefore read that row's siblings, and one row never speaks for another — which is what lets a row's `kind` decide which of its own fields apply. Registration holds those rules to the same scope: a rule inside a row or group that names a box-level key is rejected, because it could never pass. A hidden cell is inactive on save as well as in the admin: it runs under the same rules a draft does, so business constraints cannot fail on an input nobody can open, while coercion, `.sanitize()` and the safety gates still run and the value itself is kept. Keeping it matters more inside a row than at box level, because a row is rewritten whole on every save — a cell dropped once would be gone for good.
+
 ## Why an invalid chain does not compile
 
 Four mechanisms do the work, and none of them is a runtime check.

@@ -46,6 +46,32 @@ export type MetaFieldCondition = readonly (readonly MetaFieldConditionRule[])[];
 export type MetaFieldValues = Readonly<Record<string, unknown>>;
 
 /**
+ * The first `visibleWhen` rule naming a key outside `known`, if any. One pass
+ * over the whole list rather than per field, so a driver may be declared after
+ * the field that reads it. Both scopes that validate conditions — a box's
+ * fields and a repeater row's / group's — check the same way and differ only
+ * in the error they raise.
+ */
+export function findUnknownConditionDriver(
+  fields: readonly {
+    readonly key: string;
+    readonly visibleWhen?: MetaFieldCondition;
+  }[],
+  known: ReadonlySet<string>,
+): { readonly fieldKey: string; readonly driverKey: string } | undefined {
+  for (const field of fields) {
+    for (const group of field.visibleWhen ?? []) {
+      for (const rule of group) {
+        if (!known.has(rule.key)) {
+          return { fieldKey: field.key, driverKey: rule.key };
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
  * Evaluate a field's visibility against the sibling values of its box
  * (form values in the admin, the incoming meta bag on the server). A
  * field without a condition is always visible.

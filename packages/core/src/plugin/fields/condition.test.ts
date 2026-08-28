@@ -5,7 +5,16 @@ import { definePlugin } from "../define.js";
 import { buildManifest } from "../manifest.js";
 import { installPlugins } from "../register.js";
 import { isFieldVisible } from "./condition.js";
-import { number, range, repeater, select, text, toggle, url } from "./index.js";
+import {
+  group,
+  number,
+  range,
+  repeater,
+  select,
+  text,
+  toggle,
+  url,
+} from "./index.js";
 
 describe("condition authoring — visibleWhen / orVisibleWhen", () => {
   test("visibleWhen(...rules) compiles one AND group of wire rules", () => {
@@ -139,13 +148,56 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
     );
   });
 
-  test("repeater subfields reject visibleWhen — nested conditions are unsupported", () => {
+  test("a repeater subfield's condition rides the wire projection", () => {
+    const hasCta = toggle("hasCta");
+    const field = repeater("sections")
+      .fields([hasCta, url("ctaUrl").visibleWhen(hasCta.isOn())])
+      .build();
+    expect(field.subFields[1]?.visibleWhen).toEqual([
+      [{ key: "hasCta", op: "eq", value: true }],
+    ]);
+  });
+
+  test("a group member's condition rides the wire projection", () => {
+    const hasCta = toggle("hasCta");
+    const field = group("cta")
+      .fields([hasCta, url("ctaUrl").visibleWhen(hasCta.isOn())])
+      .build();
+    expect(field.fields[1]?.visibleWhen).toEqual([
+      [{ key: "hasCta", op: "eq", value: true }],
+    ]);
+  });
+
+  test("a row condition may name a sibling declared after it", () => {
     const hasCta = toggle("hasCta");
     expect(() =>
-      repeater("sections")
-        .fields([hasCta, url("ctaUrl").visibleWhen(hasCta.isOn())])
-        .label("Sections"),
-    ).toThrow(/does not support visibleWhen/);
+      repeater("sections").fields([
+        url("ctaUrl").visibleWhen(hasCta.isOn()),
+        hasCta,
+      ]),
+    ).not.toThrow();
+  });
+
+  test("a row condition naming a non-sibling is refused", () => {
+    // `layout` is a box-level field — a row reads its own siblings, so
+    // pointing at it from inside the row is a rule that can never pass.
+    const layout = select("layout").options(["standard", "video"]);
+    expect(() =>
+      repeater("sections").fields([
+        url("ctaUrl").visibleWhen(layout.is("video")),
+      ]),
+    ).toThrow(
+      /repeater\("sections"\) field "ctaUrl" condition references "layout", which is not a field in the same row/,
+    );
+  });
+
+  test("a group condition naming a non-member is refused", () => {
+    const layout = select("layout").options(["standard", "video"]);
+    expect(() =>
+      group("cta").fields([url("ctaUrl").visibleWhen(layout.is("video"))]),
+    ).toThrow(
+      /group\("cta"\) field "ctaUrl" condition references "layout", which is not a field in the same group/,
+    );
   });
 
   test("registration accepts a driver declared after its dependent", async () => {
