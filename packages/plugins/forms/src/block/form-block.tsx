@@ -7,12 +7,14 @@ import { labelSourceText } from "plumix/i18n";
 
 import type { FormDefinition } from "../define-form.js";
 import type { FormRegistry } from "../registry.js";
+import { defaultAnswers, visibleFields } from "../answers.js";
 import {
   FORM_BLOCK_NAME,
   FORM_SLUG_FIELD,
   HONEYPOT_FIELD,
   SUBMIT_PATH,
 } from "../contract.js";
+import { FormControl } from "./form-control.js";
 
 // The one piece of styling the plugin cannot leave to the theme: a trap
 // the visitor can see is a trap they fill in. Inline rather than in a
@@ -51,14 +53,7 @@ function FormField({
       >
         {labelSourceText(field.label)}
       </label>
-      <input
-        className="plumix-form-control"
-        data-plumix-form-control={field.key}
-        id={id}
-        name={field.key}
-        type={field.inputType === "email" ? "email" : "text"}
-        required={field.required}
-      />
+      <FormControl field={field} id={id} />
     </div>
   );
 }
@@ -72,6 +67,12 @@ function FormField({
  * Labels flatten to their source message rather than the visitor's
  * locale: a plugin has no catalog at render time, and a plain string
  * label (the common case) passes through untouched.
+ *
+ * A field whose condition fails against the form's own defaults is not
+ * rendered at all. The submit handler makes the same call against the
+ * answers that come back, and an answer the body does not carry falls
+ * back to the same default judged here — so an untouched form is read
+ * exactly as it was served.
  */
 export function FormMarkup({
   form,
@@ -83,6 +84,7 @@ export function FormMarkup({
   readonly idBase: string;
 }): ReactNode {
   const honeypotId = `${idBase}-${HONEYPOT_FIELD}`;
+  const fields = visibleFields(form.fields, defaultAnswers(form.fields));
   return (
     <form
       className="plumix-form"
@@ -96,7 +98,7 @@ export function FormMarkup({
         </h2>
       )}
       <input type="hidden" name={FORM_SLUG_FIELD} value={form.slug} readOnly />
-      {form.fields.map((field) => (
+      {fields.map((field) => (
         <FormField key={field.key} field={field} idBase={idBase} />
       ))}
       <div

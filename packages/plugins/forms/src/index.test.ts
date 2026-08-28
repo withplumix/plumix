@@ -3,6 +3,8 @@ import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
+import * as adminEntry from "./admin/index.js";
+import { TEL_FIELD_COMPONENT, TEL_INPUT_TYPE } from "./contract.js";
 import { defineForm } from "./define-form.js";
 import { forms } from "./index.js";
 import { createFormsHarness, seedPageWithForm } from "./test/harness.js";
@@ -111,5 +113,25 @@ describe("the form block on a public page", () => {
 
     expect(body).not.toContain("plumix-form");
     expect(body).not.toContain("ghost");
+  });
+});
+
+describe("the tel field type", () => {
+  test("is contributed to the host's field vocabulary", async () => {
+    const harness = await createFormsHarness([forms()]);
+
+    expect(harness.app.plugins.fieldTypes.get(TEL_INPUT_TYPE)).toMatchObject({
+      type: TEL_INPUT_TYPE,
+      component: TEL_FIELD_COMPONENT,
+      registeredBy: "forms",
+    });
+  });
+
+  // The admin bundler resolves the registration's `component` as a named
+  // export off this module. A rename on one side alone leaves every `tel`
+  // field falling through to the host's text-input fallback, and only at
+  // build time — nothing in `plumix dev` would say so.
+  test("names a component the admin entry actually exports", () => {
+    expect(adminEntry).toHaveProperty(TEL_FIELD_COMPONENT);
   });
 });

@@ -47,6 +47,8 @@ export interface StringFieldState {
  * Fluent chain for the string scalar fields (`text`, `textarea`,
  * `email`, `url`, `password`). Immutable — every call returns a fresh
  * instance, so a shared base chain can be forked without aliasing.
+ * `Input` is the `inputType` literal — one of the built-in five, or a
+ * plugin-contributed string input registered through `registerFieldType`.
  * `K` is the literal field key; `V` is the phantom value type the
  * field reads as: `string | undefined` unadorned, narrowed to `string`
  * by `.required()` / `.default()`; `S` is the phantom stored shape —
@@ -55,7 +57,7 @@ export interface StringFieldState {
  * Purely type-level — nothing at runtime carries them.
  */
 export class StringFieldBuilder<
-  Input extends StringInputType = StringInputType,
+  Input extends string = StringInputType,
   K extends string = string,
   V extends string | undefined = string | undefined,
   S extends string | undefined = string | undefined,

@@ -9,11 +9,11 @@ code that renders it, diffs in review, and reverts with `git revert`, so local,
 staging and production cannot drift apart. There is no builder, no export
 format, and nothing to migrate between environments.
 
-> This release is the first slice: text and email fields, one block, and the
-> stored submission. A submission is stored as it arrived — `required` renders
-> as an HTML attribute but is not yet enforced on the server, and neither is
-> email format. Validation callbacks, the wider field roster, conditional
-> visibility, multi-step forms, the inbox and export arrive next.
+> This release covers the v1 field roster and conditional visibility. A
+> submission is otherwise stored as it arrived — `required` renders as an HTML
+> attribute but is not yet enforced on the server, and neither is email format.
+> Validation callbacks, repeater and group fields, multi-step forms, the inbox
+> and export arrive next.
 
 ## Install
 
@@ -51,6 +51,57 @@ export default plumix({
   plugins: [forms({ forms: [contact] })],
 });
 ```
+
+## Fields
+
+A form's questions are the same fluent builders meta boxes use, so the
+submission payload types itself:
+
+| Builder             | Control              | Stored as               |
+| ------------------- | -------------------- | ----------------------- |
+| `text` / `textarea` | text input, textarea | `string`                |
+| `email` / `url`     | typed input          | `string`                |
+| `tel`               | telephone input      | `string`                |
+| `number`            | number input         | `number`                |
+| `date`              | date input           | ISO `string`            |
+| `select`            | dropdown             | option value, or values |
+| `toggle`            | checkbox             | `boolean`               |
+
+Everything but `tel` comes from `plumix/fields`. `tel` is this plugin's own
+contribution to the field vocabulary — core has no built-in for it — so it
+imports from `@plumix/plugin-forms/fields` and works anywhere a field does,
+meta boxes included:
+
+```ts
+import { tel } from "@plumix/plugin-forms/fields";
+```
+
+`FormAnswersOf<typeof contact>` is what one submission of that form stores —
+one property per field, optional unless `.required()`. Renaming a field breaks
+the build at every reader rather than in production.
+
+An answer the visitor never gave is absent from the row rather than stored
+empty. The exceptions are the two controls that always answer: an unticked
+checkbox reads `false`, and a multiple choice with nothing picked reads an
+empty list. A field its condition hid is absent too, `.required()` or not — so
+read a conditional field's answer as optional whatever its type says.
+
+## Fields that only sometimes apply
+
+A field can name a condition on a sibling, exactly as it would in a meta box:
+
+```ts
+const plan = select("plan").options(["basic", "pro"]);
+
+const signup = defineForm("signup", {
+  fields: [plan, number("seats").visibleWhen(plan.is("pro"))],
+});
+```
+
+The same rule is judged in both places: the markup leaves out a field the
+form's own defaults hide, and the server drops one the submitted answers hide —
+so a hidden field never reaches the stored payload, and is never held to its
+own `required`, even if something posts a value for it anyway.
 
 The slug is the form's identity. Submissions carry it and nothing else links
 them back, so renaming a form orphans its history. Two forms claiming one slug
