@@ -277,12 +277,29 @@ export interface PluginSetupContextBase {
    *  answering a request that carried a session, an `Authorization` header or
    *  a `?preview=` token is never stored, nor is one that sets a cookie or
    *  declares itself `private` / `no-store` — that last is how a handler keeps
-   *  one personalized answer out of the shared entry. */
+   *  one personalized answer out of the shared entry.
+   *
+   *  `formPost: true` drops the `X-Plumix-Request` requirement so a plain HTML
+   *  `<form method="post">` can reach the route — a browser cannot set a custom
+   *  header on an ordinary form submit, so without it no-JavaScript submission
+   *  is impossible. It exempts the POST and nothing else, so a route
+   *  registered as `method: "*"` still gates every other write method. The
+   *  Origin check is then the whole control: an exempt request has to carry an
+   *  Origin (or Referer) matching the site, where an ordinary one is only
+   *  rejected for contradicting it. The header gate exists
+   *  to stop a cross-origin POST carrying ambient session authority, and a
+   *  public submission carries none — an attacker forging one has merely
+   *  submitted a form they could have submitted directly. That is why the
+   *  opt-in is rejected on any route that isn't `auth: "public"`, and why the
+   *  handler must never derive privilege from a session: it may record who was
+   *  signed in, but must not act on their behalf — no capability check, no
+   *  write the visitor could not have made anonymously. */
   registerRoute(options: {
     readonly method: PluginRouteMethod;
     readonly path: string;
     readonly auth: PluginRouteAuth;
     readonly cacheable?: boolean;
+    readonly formPost?: boolean;
     readonly handler: (
       request: Request,
       ctx: AppContext,
@@ -673,14 +690,23 @@ export function createPluginSetupContext({
       registry.mcpTools.set(tool.name, { tool, registeredBy: pluginId });
     },
 
-    registerRoute: ({ method, path, auth, cacheable, handler }) => {
+    registerRoute: ({ method, path, auth, cacheable, formPost, handler }) => {
       assertValidPluginRoutePath(pluginId, path);
-      if (cacheable === true && auth !== "public") {
-        throw PluginContextError.cacheableRouteNotPublic({
-          pluginId,
-          method,
-          path,
-        });
+      if (auth !== "public") {
+        if (cacheable === true) {
+          throw PluginContextError.cacheableRouteNotPublic({
+            pluginId,
+            method,
+            path,
+          });
+        }
+        if (formPost === true) {
+          throw PluginContextError.formPostRouteNotPublic({
+            pluginId,
+            method,
+            path,
+          });
+        }
       }
       for (const existing of registry.rawRoutes) {
         if (
@@ -697,6 +723,7 @@ export function createPluginSetupContext({
         path,
         auth,
         cacheable,
+        formPost,
         handler,
       });
     },
