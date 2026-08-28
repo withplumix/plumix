@@ -30,6 +30,11 @@ msgstr "Default social image URL"
 
 #. js-lingui-explicit-id
 #: src/settings.ts
+msgid "plugin.seo.settings.represents"
+msgstr "This site represents"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
 msgid "plugin.seo.settings.page.label"
 msgstr "SEO"
 
@@ -102,3 +107,13 @@ msgstr "Also drops this from the sitemap."
 #: src/overrides.ts
 msgid "plugin.seo.box.nofollow.label"
 msgstr "Do not follow links on this page"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.label"
+msgstr "Content type"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.description"
+msgstr "How structured data files this entry. Defaults to an article."

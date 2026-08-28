@@ -30,6 +30,11 @@ msgstr "Standard-URL für das Social-Media-Bild"
 
 #. js-lingui-explicit-id
 #: src/settings.ts
+msgid "plugin.seo.settings.represents"
+msgstr "Diese Website steht für"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
 msgid "plugin.seo.settings.page.label"
 msgstr "SEO"
 
@@ -102,3 +107,13 @@ msgstr "Entfernt dies auch aus der Sitemap."
 #: src/overrides.ts
 msgid "plugin.seo.box.nofollow.label"
 msgstr "Links auf dieser Seite nicht folgen"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.label"
+msgstr "Inhaltstyp"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.description"
+msgstr "Wie strukturierte Daten diesen Eintrag einordnen. Standard ist ein Artikel."

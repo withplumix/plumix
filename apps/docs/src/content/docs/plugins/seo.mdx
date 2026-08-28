@@ -1,6 +1,6 @@
 ---
 title: SEO
-description: The seo plugin writes a page's head meta — description, robots directive, Open Graph, Twitter card — serves robots.txt and the sitemap, gives every entry and term its own search overrides, and owns the chain that resolves its social image.
+description: The seo plugin writes a page's head meta — description, robots directive, Open Graph, Twitter card — emits a cross-referenced JSON-LD graph with breadcrumbs, serves robots.txt and the sitemap, gives every entry and term its own search overrides, and owns the chain that resolves its social image.
 tier: P1
 sidebar:
   order: 70
@@ -8,7 +8,7 @@ sidebar:
 
 import { Aside, TabItem, Tabs } from "@astrojs/starlight/components";
 
-`@plumix/plugin-seo` writes what a site tells a search engine and a social scraper: a page's head meta, `/robots.txt`, and the sitemap, plus a per-entry and per-term box where an editor overrides any of it. Core emits a canonical URL and nothing else, so without this plugin a page carries no description, no robots directive and no Open Graph tags, and the site serves neither `robots.txt` nor a sitemap.
+`@plumix/plugin-seo` writes what a site tells a search engine and a social scraper: a page's head meta, its structured data, `/robots.txt`, and the sitemap, plus a per-entry and per-term box where an editor overrides any of it. Core emits a canonical URL and nothing else, so without this plugin a page carries no description, no robots directive, no Open Graph tags and no JSON-LD, and the site serves neither `robots.txt` nor a sitemap.
 
 ## Overview
 
@@ -64,6 +64,7 @@ Every public page gets:
 - `robots` — `index,follow,max-image-preview:large` normally, `noindex,follow` on a search-results page or an entry an editor hid, and `noindex,nofollow` across the whole site when indexing is turned off.
 - `og:title`, `og:type`, `og:url`, `og:site_name`, `og:description`, `og:locale`.
 - `twitter:card` — `summary_large_image` when a social image resolved, `summary` when none did.
+- One `<script type="application/ld+json">` holding the page's [structured-data graph](#structured-data), on every page that is indexable.
 
 A single entry additionally gets `article:published_time`, `article:modified_time` and `article:author`. An archive, a term page, an author page, a date page and the front page are `og:type: website` and carry none of the three.
 
@@ -101,7 +102,7 @@ ctx.addFilter("seo:og_image", (image, data, appCtx, featured) => {
 
 ## Per-entry and per-term overrides
 
-Every publicly-visible entry type and taxonomy gets a **Search & social** box, and it holds six fields:
+Every publicly-visible entry type and taxonomy gets a **Search & social** box:
 
 | Field                            | Meta key          | What it does                                                                               |
 | -------------------------------- | ----------------- | ------------------------------------------------------------------------------------------ |
@@ -111,6 +112,9 @@ Every publicly-visible entry type and taxonomy gets a **Search & social** box, a
 | Social image URL                 | `seo_og_image`    | Link 2 of the chain above.                                                                 |
 | Hide from search engines         | `seo_noindex`     | `noindex` in the head **and** out of the sitemap.                                          |
 | Do not follow links on this page | `seo_nofollow`    | `nofollow` in the head.                                                                    |
+| Content type                     | `seo_schema_type` | The schema.org type of the entry's article piece. Entry box only.                          |
+
+**Content type** is on the entry box and not the term box: only an entry has an article piece in the [structured-data graph](#structured-data) for the choice to retype, so a term box carrying the control would offer an answer nothing reads. The other six fields are on both.
 
 A search title is the page's title, so a theme's `titleTemplate` still composes it — `How to knead dough · Demo` under `"%s · Demo"`. A page with no override sets no title at all and keeps whatever core resolved.
 
@@ -151,6 +155,98 @@ The robots directive and sitemap membership both read that one answer, so a page
   explicitly asked to be indexed still gets `noindex,nofollow` while the site is
   held out.
 </Aside>
+
+## Structured data
+
+Every indexable page carries one `<script type="application/ld+json">` in its head, holding a **graph**: a set of pieces that reference each other by URL fragment rather than repeating themselves. That referencing convention is what makes it a graph instead of a pile of disconnected objects, and it is what a crawler follows to learn that the article on this page was written by the person named two pieces over.
+
+An entry page carries all seven pieces:
+
+| Piece        | `@type`                    | `@id`                                     |
+| ------------ | -------------------------- | ----------------------------------------- |
+| `website`    | `WebSite`                  | `<site>/#website`                         |
+| `publisher`  | `Organization` or `Person` | `<site>/#organization` / `<site>/#person` |
+| `webpage`    | `WebPage`                  | `<canonical>#webpage`                     |
+| `article`    | `Article` or a subtype     | `<canonical>#article`                     |
+| `breadcrumb` | `BreadcrumbList`           | `<canonical>#breadcrumb`                  |
+| `image`      | `ImageObject`              | `<canonical>#primaryimage`                |
+| `author`     | `Person`                   | `<site>/#/schema/person/<slug>`           |
+
+Every identifier is derived from the site root and the page's canonical URL, so two renders of one URL produce the same graph. Under a base path the site root is the prefix itself, so `<site>` reads `https://example.com/blog` and the identifiers follow it. A page that is not an entry — an archive, a term, an author, a date — carries the site-level pieces and no `article` or `author`. A piece with nothing to say is absent rather than empty: a page with no social image has no `ImageObject` and no `primaryImageOfPage` pointing at one, and a site that never set a title publishes no `name` rather than its own URL.
+
+The `ImageObject` is the page's own image — an entry's explicit choice, a generated card, or its featured photo. The site-wide **Default social image URL** is deliberately not used: it is a sharing fallback, so every article would otherwise claim the same bytes as its own `#primaryimage`, and `Article.image` is read as representative of the article it hangs off. The page is still shared with it.
+
+A page marked `noindex` emits no graph at all. Structured data exists to make a page eligible for a rich result, and a page asking not to be indexed is not — advertising one anyway would have the page's graph and its robots directive say different things about it.
+
+### Reshaping the graph
+
+Three filters, from the coarsest to the finest. Each is a place a plugin can describe its own content without forking this one.
+
+**Drop a piece** with `seo:schema:needs`. It is asked once per piece, and returning false leaves it out:
+
+```ts no-typecheck
+ctx.addFilter("seo:schema:needs", (needed, piece, facts) =>
+  piece === "breadcrumb" && facts.kind === "search" ? false : needed,
+);
+```
+
+**Reshape one piece** with `seo:schema:piece`. Keep the `@id` — it is what the rest of the graph points at:
+
+```ts no-typecheck
+ctx.addFilter("seo:schema:piece", (piece, name) =>
+  name === "publisher"
+    ? { ...piece, sameAs: ["https://example.social/@demo"] }
+    : piece,
+);
+```
+
+**Transform the whole graph** with `seo:schema:graph`, for a plugin adding nodes of its own. Returning an empty array emits no script:
+
+```ts no-typecheck
+ctx.addFilter("seo:schema:graph", (graph, facts, appCtx) => [
+  ...graph,
+  { "@type": "Product", "@id": `${appCtx.origin}/#product`, name: "A thing" },
+]);
+```
+
+<Aside type="caution" title="Dropping a piece leaves its references behind">
+  A dropped piece is removed from the graph, not from the pieces that point at
+  it. Drop `image` and the `webpage` still carries a `primaryImageOfPage` naming
+  an `@id` nothing answers to — reshape or drop the referrer too.
+</Aside>
+
+### Picking the type
+
+An entry's article piece is an `Article` unless the editor says otherwise. The **Content type** field on the SEO box offers `Article`, `BlogPosting`, `NewsArticle` and `TechArticle`; a stored value outside that roster is not an answer and the inferred type stands. The choice retypes the piece and nothing else — the `@id` and every reference to it stay where they were.
+
+### Serialization
+
+This plugin serializes the script itself. `<`, `>`, `&` and the U+2028 / U+2029 line separators become `\uXXXX` escapes — the same string to a JSON reader, inert to an HTML tokenizer — so an entry titled `</script><script>…` cannot close the element it is sitting in. `serializeJsonLd` is exported for a plugin emitting a script of its own.
+
+A theme that declared its own `application/ld+json` keeps it and this plugin emits none: a page making two claims about what it is helps nobody.
+
+## Breadcrumbs
+
+The trail is `Home` → the entry type's archive, where it has one → the page itself, with the last step unlinked as Google asks. A type that is not public gets no archive step even when it declares `hasArchive`, because the router skips it before it emits an archive route. A term archive, an author archive and a date archive get a two-step trail; the front page gets none, because it is already Home.
+
+The same trail feeds the `BreadcrumbList` in the graph and the `Breadcrumbs` component a theme renders, so what the page shows and what search results claim cannot disagree:
+
+```tsx no-typecheck title="theme/post.tsx"
+import { Breadcrumbs } from "@plumix/plugin-seo";
+
+export default function Post({ data }: { data: EntryData }) {
+  return (
+    <article>
+      <Breadcrumbs data={data} />
+      <h1>{data.entry.title}</h1>
+    </article>
+  );
+}
+```
+
+It renders a `<nav data-plumix-breadcrumbs>` wrapping an `<ol>`, and nothing at all on a page with no trail. Style it through that attribute — there is no class-name API to keep in step with. For a trail of your own shape, `breadcrumbTrail(ctx, data)` returns the same items the graph is built from.
+
+Ancestors are not walked: a hierarchical entry's parents and a nested term's parents would each cost a per-render round-trip, and both already carry their own resolved URL. A plugin archive gets no trail either — core does not define that payload, so its hierarchy is the owning plugin's to describe through `seo:schema:piece`.
 
 ## robots.txt and the sitemap
 
@@ -208,12 +304,13 @@ With no edge cache configured, every sitemap is generated per request.
 
 ## Settings
 
-The plugin registers a **Search & social** settings group with two fields, on a settings page of its own:
+The plugin registers a **Search & social** settings group on a settings page of its own:
 
 - **Allow search engines to index this site** — off puts `noindex,nofollow` on every page, disallows all crawling in `robots.txt`, and empties the sitemap.
 - **Default social image URL** — the last link of the chain above.
+- **This site represents** — `Organization` or `Person`, which is what the graph's `publisher` piece is typed as.
 
-Both lived on core's Site identity group before this plugin existed. A site upgrading from that keeps its answers with no migration step: the plugin reads its own group first and falls back to the old `site.public` and `site.default_og_image` rows, and the settings form is seeded from the same fallback, so the next save writes the values through under the new keys.
+The first two lived on core's Site identity group before this plugin existed. A site upgrading from that keeps its answers with no migration step: the plugin reads its own group first and falls back to the old `site.public` and `site.default_og_image` rows, and the settings form is seeded from the same fallback, so the next save writes the values through under the new keys.
 
 ## Themes keep the last word
 

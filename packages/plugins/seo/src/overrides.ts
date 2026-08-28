@@ -2,6 +2,8 @@ import type { PageFacts } from "plumix";
 import type { Label } from "plumix/i18n";
 import type { MetaBoxFieldInput } from "plumix/plugin";
 
+import type { SchemaType } from "./schema.js";
+import { SCHEMA_TYPES, toSchemaType } from "./schema.js";
 import { nonEmpty } from "./settings.js";
 
 /**
@@ -16,6 +18,7 @@ export const SEO_META_KEYS = {
   ogImage: "seo_og_image",
   noindex: "seo_noindex",
   nofollow: "seo_nofollow",
+  schemaType: "seo_schema_type",
 } as const;
 
 /** What an editor answered for one entry or term. Every arm optional. */
@@ -30,6 +33,8 @@ export interface SeoOverrides {
   readonly ogImage: string | null;
   readonly noindex: boolean;
   readonly nofollow: boolean;
+  /** Replaces the schema.org type the structured-data graph inferred. */
+  readonly schemaType: SchemaType | null;
 }
 
 const D = {
@@ -76,6 +81,14 @@ const D = {
     id: "plugin.seo.box.nofollow.label",
     message: "Do not follow links on this page",
   },
+  schemaType: {
+    id: "plugin.seo.box.schema_type.label",
+    message: "Content type",
+  },
+  schemaTypeDescription: {
+    id: "plugin.seo.box.schema_type.description",
+    message: "How structured data files this entry. Defaults to an article.",
+  },
 } as const satisfies Record<string, Label>;
 
 // Long enough for a title or a description a search engine will truncate
@@ -84,7 +97,7 @@ const D = {
 const TEXT_MAX = 300;
 const URL_MAX = 500;
 
-/** The one field set, shared by the entry box and the term box. */
+/** What an editor answers about any subject — the term box's whole set. */
 export const SEO_META_FIELDS: readonly MetaBoxFieldInput[] = [
   {
     key: SEO_META_KEYS.title,
@@ -135,6 +148,25 @@ export const SEO_META_FIELDS: readonly MetaBoxFieldInput[] = [
   },
 ];
 
+/**
+ * The entry box: the shared set plus the schema type. Only an entry has an
+ * article piece in the structured-data graph for the choice to retype, so a
+ * term box carrying the control would offer an answer nothing reads.
+ */
+export const SEO_ENTRY_FIELDS: readonly MetaBoxFieldInput[] = [
+  ...SEO_META_FIELDS,
+  {
+    key: SEO_META_KEYS.schemaType,
+    type: "string",
+    inputType: "select",
+    label: D.schemaType,
+    description: D.schemaTypeDescription,
+    // schema.org type names, not prose — the same word in every language, so
+    // they are spelled here rather than sent through the catalogs.
+    options: SCHEMA_TYPES.map((type) => ({ value: type, label: type })),
+  },
+];
+
 /** The box's own label and description, shared by both registrations. */
 export const SEO_BOX_LABELS = {
   label: D.boxLabel,
@@ -160,6 +192,9 @@ export function readSeoOverrides(meta: MetaBag): SeoOverrides {
     // set must not read as one somebody turned on.
     noindex: bag[SEO_META_KEYS.noindex] === true,
     nofollow: bag[SEO_META_KEYS.nofollow] === true,
+    // Narrowed to the roster: a stored value nothing offered is not an answer,
+    // and an unvetted string would become a schema.org type on the page.
+    schemaType: toSchemaType(nonEmpty(bag[SEO_META_KEYS.schemaType])),
   };
 }
 

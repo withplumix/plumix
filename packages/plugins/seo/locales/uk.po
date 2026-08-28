@@ -30,6 +30,11 @@ msgstr "URL типового зображення для соцмереж"
 
 #. js-lingui-explicit-id
 #: src/settings.ts
+msgid "plugin.seo.settings.represents"
+msgstr "Цей сайт представляє"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
 msgid "plugin.seo.settings.page.label"
 msgstr "SEO"
 
@@ -102,3 +107,13 @@ msgstr "Також вилучає це з мапи сайту."
 #: src/overrides.ts
 msgid "plugin.seo.box.nofollow.label"
 msgstr "Не переходити за посиланнями на цій сторінці"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.label"
+msgstr "Тип вмісту"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.description"
+msgstr "Як структуровані дані класифікують цей запис. Типово — стаття."

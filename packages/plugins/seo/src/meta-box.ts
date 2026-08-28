@@ -1,6 +1,10 @@
 import type { PluginSetupContext } from "plumix/plugin";
 
-import { SEO_BOX_LABELS, SEO_META_FIELDS } from "./overrides.js";
+import {
+  SEO_BOX_LABELS,
+  SEO_ENTRY_FIELDS,
+  SEO_META_FIELDS,
+} from "./overrides.js";
 
 /**
  * Which entry types and taxonomies carry the SEO box.
@@ -52,7 +56,7 @@ export function registerSeoMetaBoxes(
       ctx.registerEntryMetaBox(BOX_ID, {
         ...SEO_BOX_LABELS,
         entryTypes,
-        fields: SEO_META_FIELDS,
+        fields: SEO_ENTRY_FIELDS,
       });
     }
 

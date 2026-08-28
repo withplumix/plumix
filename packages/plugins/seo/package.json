@@ -2,7 +2,7 @@
   "name": "@plumix/plugin-seo",
   "version": "0.0.0",
   "type": "module",
-  "description": "SEO plugin for Plumix — head meta, Open Graph, robots.txt and the sitemap",
+  "description": "SEO plugin for Plumix — head meta, Open Graph, structured data, robots.txt and the sitemap",
   "license": "MIT",
   "author": "Plumix Contributors",
   "homepage": "https://github.com/withplumix/plumix#readme",
@@ -21,7 +21,9 @@
     "open-graph",
     "meta-tags",
     "sitemap",
-    "robots-txt"
+    "robots-txt",
+    "json-ld",
+    "structured-data"
   ],
   "sideEffects": false,
   "exports": {
@@ -55,7 +57,8 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "peerDependencies": {
-    "plumix": "workspace:>=0.1.0 <1.0.0"
+    "plumix": "workspace:>=0.1.0 <1.0.0",
+    "react": "catalog:react"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
@@ -66,11 +69,13 @@
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
     "@types/node": "catalog:",
+    "@types/react": "catalog:react",
     "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
     "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",
+    "react": "catalog:react",
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
   },
@@ -80,7 +85,7 @@
       "kind": "plugin",
       "id": "seo",
       "label": "SEO",
-      "description": "Head meta, Open Graph, robots.txt and the sitemap",
+      "description": "Head meta, Open Graph, structured data, robots.txt and the sitemap",
       "category": "content",
       "registration": "seo()",
       "imports": [
