@@ -658,6 +658,16 @@ msgstr ""
 #~ msgstr "Ohne Titel"
 
 #. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+#~ msgid "core.settings.site.public"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/core-settings-i18n.ts
+#~ msgid "core.settings.site.default_og_image"
+#~ msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
@@ -1029,11 +1039,6 @@ msgstr "Alle Autoren"
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.roleFilter.all"
 msgstr "Alle Rollen"
-
-#. js-lingui-explicit-id
-#: src/lib/core-settings-i18n.ts
-msgid "core.settings.site.public"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/allowed-domains/index.tsx
@@ -1713,11 +1718,6 @@ msgstr "Dashboard"
 #: src/routes/_authenticated/allowed-domains/index.tsx
 msgid "allowedDomains.add.defaultRole.label"
 msgstr "Standardrolle"
-
-#. js-lingui-explicit-id
-#: src/lib/core-settings-i18n.ts
-msgid "core.settings.site.default_og_image"
-msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx

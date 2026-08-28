@@ -5,6 +5,7 @@ import { comments } from "@plumix/plugin-comments";
 import { media } from "@plumix/plugin-media";
 import { menu } from "@plumix/plugin-menu";
 import { pages } from "@plumix/plugin-pages";
+import { seo } from "@plumix/plugin-seo";
 import { edge, images, r2 } from "@plumix/runtime-cloudflare";
 import { demoPreset } from "@plumix/runtime-cloudflare/demo";
 
@@ -32,6 +33,7 @@ export default plumix({
         footer: { label: "Footer" },
       },
     }),
+    seo(),
   ],
   theme: blogTheme,
   // Deploys this example as the anonymous demo sandbox: provides runtime /

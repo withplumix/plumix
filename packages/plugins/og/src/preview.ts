@@ -93,8 +93,8 @@ export async function previewCard(
     };
   }
 
-  // The photo shaped to the card that was going to carry it, else the one core
-  // itself falls to, else the site's own default.
+  // The photo shaped to the card that was going to carry it, else the one the
+  // chain itself falls to, else the site's own default.
   const shared = chosen.photo ?? featured;
   if (shared !== null) {
     return { outcome: "featured", skipped: chosen.skipped, src: shared.url };

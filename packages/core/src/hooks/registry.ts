@@ -153,9 +153,9 @@ export class HookRegistry implements HookExecutor {
     const telemetry = requestTelemetry();
     let current: unknown = input;
     for (const entry of sorted) {
-      // structuredClone isolates each filter — mutations inside one filter
-      // can't leak into the next. Clone cost is negligible vs. hook work.
-      const snapshot = structuredClone(current);
+      // Isolates each filter — mutations inside one filter can't leak into
+      // the next. Clone cost is negligible vs. hook work.
+      const snapshot = isolate(current);
       current = await runHandlerTraced(telemetry, name, entry.plugin, () =>
         entry.fn(snapshot, ...(rest as unknown[])),
       );
@@ -256,6 +256,25 @@ export class HookRegistry implements HookExecutor {
         }
       }
     }
+  }
+}
+
+/**
+ * A filter's own copy of the value, so mutating it cannot reach the next
+ * handler.
+ *
+ * A payload that carries a function is handed over as it stands: a document
+ * manifest holds the theme's `titleTemplate` callback, and there is no clone
+ * of that to make. Isolation is what such a payload loses — refusing to run
+ * the filter at all would cost the page.
+ */
+function isolate<T>(value: T): T {
+  try {
+    return structuredClone(value);
+  } catch (error) {
+    if ((error as { name?: string } | null)?.name !== "DataCloneError")
+      throw error;
+    return value;
   }
 }
 

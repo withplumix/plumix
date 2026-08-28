@@ -1,6 +1,12 @@
-import type { OgImage, TemplateData } from "plumix";
+// `@plumix/plugin-seo` owns the `seo:og_image` filter this plugin subscribes
+// to. Its module augmentation only reaches this compilation through an import
+// of the package that declares it, so the type import below is what makes the
+// subscription in `index.ts` typecheck.
+import type { TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import { resolveListingPage, ruleLabel } from "plumix";
+
+import type { OgImage } from "@plumix/plugin-seo";
 
 import type { CardInputs } from "./card-identity.js";
 import type { CardRegistry } from "./card-registry.js";
@@ -17,7 +23,7 @@ import { isShareablePage } from "./shareable.js";
 interface PageOgImageInput {
   /** Whatever an earlier `seo:og_image` subscriber supplied, if any. */
   readonly image: OgImage | null;
-  /** The entry's `.featured()` photo, handed over by core. */
+  /** The entry's `.featured()` photo, handed over by the chain. */
   readonly featured: OgImage | null;
   readonly data: TemplateData;
   readonly ctx: AppContext;
@@ -50,7 +56,7 @@ export async function pageOgImage(
 }
 
 interface ChainResolution {
-  /** What the filter returns — null leaves the chain to core's own tail. */
+  /** What the filter returns — null leaves the chain to its own tail. */
   readonly image: OgImage | null;
   readonly trace: OgChainTrace;
 }
@@ -122,7 +128,7 @@ export interface CardChoiceInput {
   readonly data: TemplateData;
   readonly ctx: AppContext;
   readonly cards: CardRegistry;
-  /** The entry's `.featured()` photo, handed over by core. */
+  /** The entry's `.featured()` photo, handed over by the chain. */
   readonly featured: OgImage | null;
   /**
    * The format a card would be served in, or undefined for a renderer whose
@@ -241,7 +247,7 @@ interface NoCardInput {
    * there was no card to take a shape from.
    */
   readonly photo: OgImage | null;
-  /** The uncropped photo, which core falls to when this returns nothing. */
+  /** The uncropped photo, which the chain falls to when this returns nothing. */
   readonly featured: OgImage | null;
   readonly rule: string | null;
   readonly skipped: OgCardSkip;
@@ -249,8 +255,8 @@ interface NoCardInput {
 
 /**
  * No card on the chain. The page lands on the entry's photo either way — this
- * one returning it shaped, or core's own next link taking it as it stands — so
- * the trace names that photo whichever of the two supplies it.
+ * one returning it shaped, or the chain's own next link taking it as it stands
+ * — so the trace names that photo whichever of the two supplies it.
  */
 function noCard(input: NoCardInput): ChainResolution {
   const { photo, featured, rule, skipped } = input;

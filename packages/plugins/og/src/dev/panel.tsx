@@ -5,9 +5,12 @@ import type { OgCardSkip, OgChainOutcome, OgTrace } from "../chain-trace.js";
 import { OG_PANEL_ID } from "../chain-trace.js";
 
 // What each link of the chain is called, in the vocabulary the README uses.
-// "if one is set" because core's tail is `?? (siteDefault ? … : null)`: with no
-// `site.default_og_image` row the page carries no `og:image` at all, and the
+// "if one is set" because the chain's tail is `?? (siteDefault ? … : null)`:
+// with no default image set the page carries no `og:image` at all, and this
 // plugin cannot see which of the two it is from inside the filter.
+//
+// `supplied` names an earlier subscriber rather than the chain's owner: the
+// value handed in is always null on the first subscriber to run.
 const OUTCOME_LABEL: Record<OgChainOutcome, string> = {
   supplied: "Another seo:og_image subscriber",
   card: "Generated card",
@@ -36,9 +39,9 @@ const SKIP_REASON: Record<OgCardSkip, string> = {
 
 /**
  * The `og:image` chain for the page, and which of its four links produced the
- * image. The chain resolves inside core and leaves no trace in the markup, so
- * without this the only way to tell a missing rule from an unadvertisable
- * format is to go and read the plugin.
+ * image. The chain resolves inside `@plumix/plugin-seo` and leaves no trace in
+ * the markup, so without this the only way to tell a missing rule from an
+ * unadvertisable format is to go and read the plugin.
  */
 export function ogDebugPanel(): DebugPanel {
   return {
@@ -65,15 +68,20 @@ function chainRows(snapshot: DebugSnapshot): readonly DebugKVRow[] {
   if (page === undefined) {
     return [{ label: "Chain", value: "No page rendered on this request" }];
   }
-  // The filter runs on every page render, so its absence is core's one
-  // short-circuit above it: an explicit `.ogImage()` role on the entry. Its
-  // value never reaches this plugin — the chain returned before the filter —
-  // so the row says where to read it rather than dropping out of the table.
+  // A page rendered but the filter never answered. Either the chain
+  // short-circuited above it — an explicit `.ogImage()` role on the entry, the
+  // one link `seo:og_image` never sees — or nothing fires the filter at all,
+  // which is what an install missing `@plumix/plugin-seo` looks like. This
+  // plugin cannot tell the two apart from inside the filter it was not called
+  // through, so the row names both rather than guessing.
   if (chain === undefined) {
     return [
       { label: "Page", value: page.pageKind },
       { label: "Resolved", value: "Read it off the page's og:image meta tag" },
-      { label: "Produced by", value: "Explicit og:image role" },
+      {
+        label: "Produced by",
+        value: "Explicit og:image role, or @plumix/plugin-seo is not installed",
+      },
     ];
   }
 

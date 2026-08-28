@@ -184,6 +184,12 @@ function xmlResponse(body: string): Response {
   });
 }
 
+// `site.public` has no writer left in the product — the toggle moved into
+// `@plumix/plugin-seo`'s own settings group (#1997). The row is still read here
+// so an existing private site stays private, and this surface follows the
+// toggle again when it moves into that plugin: #1998 for robots.txt and the
+// sitemap, #1996 for feeds. Both land on the same integration branch as #1997,
+// so the split never reaches a release.
 async function isPrivate(ctx: AppContext): Promise<boolean> {
   return (await loadSiteSettings(ctx)).public === false;
 }

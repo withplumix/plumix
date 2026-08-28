@@ -12,6 +12,9 @@ declare module "./types.js" {
       readonly count: number;
     };
     "test:passthrough": (value: string) => string;
+    "test:uncloneable": (value: { readonly render: () => string }) => {
+      readonly render: () => string;
+    };
     "test:with_rest": (value: number, multiplier: number) => number;
     "test:isolated": (
       value: readonly number[],
@@ -62,6 +65,23 @@ describe("applyFilter", () => {
     const result = await registry.applyFilter("test:passthrough", "start");
     expect(order).toEqual(["a50", "b100-first", "b100-second"]);
     expect(result).toBe("start-a-b-c");
+  });
+
+  test("a payload carrying a function still reaches its handlers", async () => {
+    const registry = new HookRegistry();
+    const seen: string[] = [];
+    registry.addFilter("test:uncloneable", (value) => {
+      seen.push(value.render());
+      return value;
+    });
+
+    // A document manifest carries a theme's `titleTemplate` callback, so the
+    // clone below cannot run. Isolation is what is lost, not the render.
+    const input = { render: () => "from the theme" };
+    const result = await registry.applyFilter("test:uncloneable", input);
+
+    expect(seen).toEqual(["from the theme"]);
+    expect(result.render()).toBe("from the theme");
   });
 
   test("cloning shields the caller's input from in-filter mutation", async () => {

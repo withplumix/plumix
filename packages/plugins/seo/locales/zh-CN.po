@@ -1,0 +1,39 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-08-28\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: zh-CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.label"
+msgstr "搜索与社交"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.description"
+msgstr "本站向搜索引擎和社交网络提供的信息。"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.indexable"
+msgstr "允许搜索引擎索引本站"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.default_og_image"
+msgstr "默认社交图片链接"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.page.label"
+msgstr "SEO"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.page.description"
+msgstr "全站搜索与社交默认设置。"

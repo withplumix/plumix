@@ -2,6 +2,7 @@ import { auth, plumix } from "plumix";
 
 import { media } from "@plumix/plugin-media";
 import { pages } from "@plumix/plugin-pages";
+import { seo } from "@plumix/plugin-seo";
 import { cloudflare, d1, r2 } from "@plumix/runtime-cloudflare";
 
 export default plumix({
@@ -23,7 +24,7 @@ export default plumix({
         : { rpId: "localhost", origin: "http://localhost:5173" }),
     },
   }),
-  plugins: [pages, media()],
+  plugins: [pages, media(), seo()],
   // No theme registered yet, so the public site still serves plumix's built-in
   // welcome screen — the landing page theme lands with the marketing-content
   // follow-up. Pages + media are wired so content can be authored now.
