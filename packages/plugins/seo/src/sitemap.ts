@@ -147,6 +147,11 @@ function subSitemapPath(ctx: AppContext, scope: string, page: number): string {
   return withBasePath(`/sitemap-${scope}-${String(page)}.xml`, ctx.basePath);
 }
 
+/** The absolute index URL, for a caller that publishes it — `robots.txt`, `llms.txt`. */
+export function sitemapIndexUrl(ctx: AppContext): string {
+  return `${ctx.origin}${withBasePath(SITEMAP_INDEX_PATH, ctx.basePath)}`;
+}
+
 function offsetFor(page: number): number {
   return (page - 1) * SITEMAP_PAGE_SIZE;
 }

@@ -5,6 +5,7 @@ import type { HeadInputs } from "./head.js";
 import { seoHeadMeta } from "./head.js";
 
 const baseInputs: HeadInputs = {
+  verification: [],
   canonical: "https://cms.example/post/hello",
   title: "Hello",
   description: "An excerpt",

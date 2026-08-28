@@ -9,13 +9,14 @@ import type {
 import type { AppContext } from "plumix/plugin";
 import { canonicalUrl, loadSiteSettings, pageFacts } from "plumix";
 
+import type { VerificationTag } from "./settings.js";
 import { breadcrumbTrail, siteRoot } from "./breadcrumbs.js";
 import { indexable } from "./indexable.js";
 import { resolveOgImage } from "./og-image.js";
 import { readPageOverrides } from "./overrides.js";
 import { patternTitle } from "./page-title.js";
 import { DEFAULT_SCHEMA_TYPE, schemaGraph, schemaScript } from "./schema.js";
-import { loadSeoSettings, nonEmpty } from "./settings.js";
+import { loadSeoSettings, loadVerificationTags, nonEmpty } from "./settings.js";
 
 // `composeTitle` substitutes `%s`, so this is the template that changes nothing.
 const IDENTITY_TEMPLATE = "%s";
@@ -61,6 +62,8 @@ export interface HeadInputs {
   readonly published: Date | null;
   readonly modified: Date | null;
   readonly author: string | null;
+  /** One entry per engine the site owner configured. */
+  readonly verification: readonly VerificationTag[];
 }
 
 function hasName(
@@ -104,6 +107,9 @@ export function seoHeadMeta(
 
   addName("description", inputs.description);
   addName("robots", robotsDirective(inputs));
+  // Ownership proofs, not page copy — each engine reads its own name, and a
+  // theme that already declared one keeps it like any other tag.
+  for (const tag of inputs.verification) addName(tag.name, tag.content);
   // An image with no usable url is no image: every tag below hangs off it.
   const image = nonEmpty(inputs.ogImage?.url) ? inputs.ogImage : null;
   addName("twitter:card", image ? "summary_large_image" : "summary");
@@ -192,9 +198,10 @@ export async function applySeoHead(
   title: string,
 ): Promise<DocumentManifest> {
   // `loadSeoSettings` reads the `site` group too, so this pair is one query.
-  const [site, seoSettings] = await Promise.all([
+  const [site, seoSettings, verification] = await Promise.all([
     loadSiteSettings(ctx),
     loadSeoSettings(ctx),
+    loadVerificationTags(ctx),
   ]);
   const facts = pageFacts(data);
   const { kind, entry, published, modified, author } = facts;
@@ -243,6 +250,7 @@ export async function applySeoHead(
     published,
     modified,
     author: byline ? (byline.name ?? byline.slug) : null,
+    verification,
   });
 
   // A page asking not to be indexed has no rich result to be eligible for, so

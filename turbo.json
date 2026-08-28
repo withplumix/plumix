@@ -97,7 +97,7 @@
       // Cached, like `test:unit`, `test:build` and `docs:screenshots` — which
       // drives this same rig (#1949). With the inputs above, a hit means
       // nothing a suite exercises has moved; a change to core still runs all
-      // nine, and a change to one plugin runs that plugin's.
+      // ten, and a change to one plugin runs that plugin's.
       //
       // The cost, stated plainly: `retries: 2` means a suite that only went
       // green on its third attempt stays green until its inputs change.

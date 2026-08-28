@@ -192,3 +192,143 @@ msgstr "允许搜索引擎索引此类型的条目。"
 #: src/settings.ts
 msgid "plugin.seo.settings.taxonomy_indexable.description"
 msgstr "允许搜索引擎索引此分类法的归档页。"
+
+#. js-lingui-explicit-id
+#: src/preview-box.ts
+msgid "plugin.seo.box.preview.label"
+msgstr "搜索结果预览"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.loading"
+msgstr "加载中…"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.failed"
+msgstr "无法加载预览。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.unsaved"
+msgstr "保存条目后即可查看它在搜索结果中的样子。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.refresh"
+msgstr "刷新"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.title"
+msgstr "标题"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.description"
+msgstr "描述"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.ok"
+msgstr "长度合适。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.over"
+msgstr "过长——搜索引擎会将其截断。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.empty"
+msgstr "为空。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.excluded"
+msgstr "不会提供给搜索引擎。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.site_private"
+msgstr "整个站点都不参与搜索。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.entry_override"
+msgstr "此条目已对搜索引擎隐藏。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.type_default"
+msgstr "此内容类型已在设置中排除于搜索之外。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.search_results"
+msgstr "搜索结果页面已在设置中排除于搜索之外。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.taxonomy_default"
+msgstr "此分类法已在设置中排除于搜索之外。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.paginated"
+msgstr "第二页及以后已在设置中排除于搜索之外。"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.not_found"
+msgstr "未找到的页面已在设置中排除于搜索之外。"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.label"
+msgstr "站点验证"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.description"
+msgstr "各搜索引擎发放的、用于证明你拥有本站的令牌。每个已填写的令牌都会出现在每个页面的 head 中。"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.google"
+msgstr "Google"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.bing"
+msgstr "Bing"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.yandex"
+msgstr "Yandex"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.baidu"
+msgstr "Baidu"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.pinterest"
+msgstr "Pinterest"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.label"
+msgstr "robots.txt"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.description"
+msgstr "替换自动生成的文件。无论你是否写入，站点地图行都会保留。"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.body"
+msgstr "robots.txt 内容"

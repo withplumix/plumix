@@ -99,6 +99,9 @@ const config: KnipConfig = {
     "packages/plugins/feeds/playground": {
       entry: ["plumix.config.ts"],
     },
+    "packages/plugins/seo/playground": {
+      entry: ["plumix.config.ts"],
+    },
     // drizzle-kit is invoked by consumers as a CLI hint, not imported.
     "packages/plumix": {
       entry: [
@@ -329,8 +332,23 @@ const config: KnipConfig = {
       ignoreDependencies: ["@plumix/runtime-cloudflare"],
       playwright: false,
     },
+    // Admin chunk loaded via `adminEntry` at consumer build time; the
+    // playwright rig (globalSetup + spec) runs under plumix dev. Neither is a
+    // static import knip can follow.
     "packages/plugins/seo": {
-      entry: ["src/index.ts", "lingui.config.ts", "locales/*.mjs"],
+      entry: [
+        "src/index.ts",
+        "src/admin/index.tsx",
+        "e2e/globalSetup.ts",
+        "e2e/*.spec.ts",
+        "lingui.config.ts",
+        "locales/*.mjs",
+      ],
+      // Playground-only devDeps; see packages/plugins/media above. Blog is
+      // here because the playground needs an entry type to hang a box off.
+      ignoreDependencies: ["@plumix/runtime-cloudflare", "@plumix/plugin-blog"],
+      // See packages/admin above for why the playwright plugin is off.
+      playwright: false,
     },
     "packages/plugins/audit-log": {
       entry: [

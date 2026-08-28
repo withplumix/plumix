@@ -4,7 +4,7 @@ import { definePlugin } from "plumix/plugin";
 import type { SeoMetaBoxOptions } from "./meta-box.js";
 import { applySeoHead } from "./head.js";
 import { registerIndexNow } from "./indexnow.js";
-import { registerSeoMetaBoxes } from "./meta-box.js";
+import { registerSeoEditorSurfaces } from "./meta-box.js";
 import { registerSeoRoutes } from "./routes.js";
 import { registerSeoSettings } from "./settings.js";
 // Augmentation anchors. A `declare module "plumix"` block reaches a consumer
@@ -21,6 +21,9 @@ import "./sitemap.js"; // seo:sitemap:urls
 
 // Well past the default of 100, so nothing a site writes lands after this.
 const LAST = 1000;
+
+// Resolved against the consuming site, the way every plugin admin entry is.
+const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-seo/dist/admin/index.js";
 
 // Re-exported so a subscriber to this plugin's `seo:og_image` filter names the
 // value type from the package that declares the filter — one import pulls both.
@@ -41,6 +44,14 @@ export type { Indexability, IndexabilityReason } from "./indexable.js";
 export { indexable } from "./indexable.js";
 export { SEO_META_KEYS } from "./overrides.js";
 export type { SeoMetaBoxOptions } from "./meta-box.js";
+// What the editor's SERP preview is written from, and the counters' limits —
+// shared with the admin chunk so the two cannot disagree about either.
+export type { SerpOverrides, SerpPreview, SerpResult } from "./serp.js";
+export {
+  resolveSerp,
+  SERP_DESCRIPTION_LIMIT,
+  SERP_TITLE_LIMIT,
+} from "./serp.js";
 // The structured-data vocabulary, for a plugin describing its own content
 // through the three `seo:schema:*` tiers, and the serializer behind it for one
 // emitting a script of its own.
@@ -89,6 +100,9 @@ export interface SeoOptions {
  */
 export function seo(options: SeoOptions = {}): PluginDescriptor {
   return definePlugin("seo", {
+    // The chunk the SERP preview's field renderer registers from. Without it
+    // the preview falls through to the admin's text-input fallback.
+    adminEntry: ADMIN_ENTRY_PATH,
     i18n: {
       sourceLocale: "en",
       locales: ["en", "uk", "ar", "de", "zh-CN"],
@@ -98,7 +112,7 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
       registerSeoSettings(ctx);
       registerSeoRoutes(ctx);
       registerIndexNow(ctx);
-      registerSeoMetaBoxes(ctx, options.metaBox ?? {});
+      registerSeoEditorSurfaces(ctx, options.metaBox ?? {});
       // The assembled theme + template document arrives here, which is what
       // makes gap-filling possible: a theme's own tag is already in hand.
       //

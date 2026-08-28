@@ -16,21 +16,16 @@ import type { Plugin, UserConfig } from "vite";
 import * as v from "valibot";
 import { mergeConfig } from "vite";
 
-import type { BlockSpec, ThemeBreakpoints, ThemeTokens } from "@plumix/blocks";
 import type {
   AnyPluginDescriptor,
   PluginRegistry,
   PlumixManifest,
-  ResolvedI18n,
 } from "@plumix/core";
 import {
-  buildManifest,
   collectNamedTemplates,
   generateSchemaSource,
   generateWorkerSource,
-  HookRegistry,
   injectManifestIntoHtml,
-  installPlugins,
   isTrustedDevHost,
 } from "@plumix/core";
 import {
@@ -64,10 +59,10 @@ import {
   SERIALIZE_VIRTUAL_ID,
   transformUseClientModule,
 } from "./island-transform.js";
+import { computeManifestAndRegistry } from "./manifest.js";
 import { plumixPathAliases } from "./path-aliases.js";
 import {
   findAdminBundledPluginsDir,
-  isAdminBundledPlugin,
   stagePluginCatalogs,
 } from "./plugin-catalog-resolve.js";
 import { stageUserPublic } from "./public-staging.js";
@@ -600,8 +595,10 @@ async function regenerate(
       namedTemplates: collectNamedTemplates(config.theme.templates),
       blocks: config.theme.blocks,
       i18n: config.i18n,
+      theme: config.theme,
+      projectRoot: cwd,
+      bundledPluginsDir: ADMIN_BUNDLED_PLUGINS_DIR,
     },
-    cwd,
   );
 
   return {
@@ -611,68 +608,6 @@ async function regenerate(
     plugins: config.plugins,
     workerExports: config.runtime.workerExports ?? [],
     editorBlockModules,
-  };
-}
-
-type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
-
-// Run plugin `setup()` callbacks into a throwaway hook registry just to
-// capture what's been registered. Hooks wired up here are discarded —
-// the manifest plus the populated registry are everything downstream
-// needs (manifest → wire payload, registry → admin-plugin-bundle's
-// auto-register synthesis). If a plugin throws on setup we surface it
-// as-is: a broken config should fail the build, not silently ship an
-// empty manifest. Note: `setup()` runs on every dev config-file change,
-// so plugins should keep setup free of IO.
-async function computeManifestAndRegistry(
-  plugins: PluginDescriptors,
-  options: {
-    readonly tokens?: ThemeTokens;
-    readonly breakpoints?: ThemeBreakpoints;
-    readonly namedTemplates?: ReturnType<typeof collectNamedTemplates>;
-    readonly blocks?: readonly BlockSpec[];
-    readonly i18n?: ResolvedI18n;
-  },
-  projectRoot: string,
-): Promise<{ manifest: PlumixManifest; registry: PluginRegistry }> {
-  const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
-    plugins,
-  });
-  // Caveat on the skip below: the glob that bakes catalogs in runs when
-  // @plumix/admin is built, this predicate runs when a site is configured.
-  // If `@plumix/admin`'s dist is stale — a workspace plugin added since it
-  // was last built — the link resolves but the glob never saw it, and the
-  // plugin's strings fall back to `descriptor.message` silently. Rebuild
-  // @plumix/admin to refresh. The info line below makes that debuggable.
-  const adminBundledPluginIds = new Set(
-    plugins
-      .filter(
-        (p) =>
-          p.i18n !== undefined &&
-          isAdminBundledPlugin({
-            pluginId: p.id,
-            projectRoot,
-            bundledPluginsDir: ADMIN_BUNDLED_PLUGINS_DIR,
-          }),
-      )
-      .map((p) => p.id),
-  );
-  if (adminBundledPluginIds.size > 0) {
-    console.info(
-      `[plumix] skipping pluginI18n URLs for workspace-bundled plugins (admin's import.meta.glob is expected to cover): ${Array.from(adminBundledPluginIds).join(", ")}`,
-    );
-  }
-  // Forward plugin descriptors so `buildManifest` can emit
-  // `pluginI18n` URL maps for plugins declaring an `i18n` slot
-  // (slice 17 #697 runtime catalog registry).
-  return {
-    manifest: buildManifest(registry, {
-      ...options,
-      plugins,
-      adminBundledPluginIds,
-    }),
-    registry,
   };
 }
 

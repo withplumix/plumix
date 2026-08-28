@@ -6,6 +6,8 @@ import {
   SEO_ENTRY_FIELDS,
   SEO_META_FIELDS,
 } from "./overrides.js";
+import { SERP_PREVIEW_FIELD } from "./preview-box.js";
+import { createSeoRouter } from "./rpc.js";
 import { publicTargets } from "./scope.js";
 
 /**
@@ -26,12 +28,16 @@ export interface SeoMetaBoxOptions {
 const BOX_ID = "seo";
 
 /**
- * Put the SEO box on every publicly-visible entry type and taxonomy.
+ * Put the SEO box on every publicly-visible entry type and taxonomy, and the
+ * procedure its preview reads from behind it.
  *
  * Deferred to `theme:ready` because scope is read off the registry: during
- * `setup` it holds only what the plugins ahead of this one registered.
+ * `setup` it holds only what the plugins ahead of this one registered. The
+ * procedure is registered here rather than beside the public routes because it
+ * answers for exactly the types the box was put on — one derivation, so a type
+ * with no box cannot be previewed and a type with one always can.
  */
-export function registerSeoMetaBoxes(
+export function registerSeoEditorSurfaces(
   ctx: PluginSetupContext,
   options: SeoMetaBoxOptions,
 ): void {
@@ -46,10 +52,13 @@ export function registerSeoMetaBoxes(
     // A box scoped to nothing renders nowhere, so registering one would put an
     // id and six meta keys on a site that has no page to write them for.
     if (entryTypes.length > 0) {
+      ctx.registerRpcRouter(createSeoRouter({ entryTypes }));
       ctx.registerEntryMetaBox(BOX_ID, {
         ...SEO_BOX_LABELS,
         entryTypes,
-        fields: SEO_ENTRY_FIELDS,
+        // The preview leads, the way it does in the editor it describes: an
+        // author reads the result first and edits the fields under it.
+        fields: [SERP_PREVIEW_FIELD, ...SEO_ENTRY_FIELDS],
       });
     }
 
@@ -58,6 +67,8 @@ export function registerSeoMetaBoxes(
       ctx.registerTermMetaBox(BOX_ID, {
         ...SEO_BOX_LABELS,
         termTaxonomies,
+        // No preview: it is written from an entry's own permalink and excerpt,
+        // and a term archive has neither.
         fields: SEO_META_FIELDS,
       });
     }

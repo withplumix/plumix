@@ -35,7 +35,7 @@
   },
   "files": [
     "dist",
-    "locales",
+    "locales/*.mjs",
     "README.md",
     "LICENSE"
   ],
@@ -53,29 +53,45 @@
     "i18n:extract": "lingui extract",
     "lint": "eslint",
     "publint": "publint",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "test:unit": "vitest run",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
+  "dependencies": {
+    "valibot": "catalog:"
+  },
   "peerDependencies": {
+    "@tanstack/react-query": "catalog:tanstack",
+    "@tanstack/react-router": "catalog:tanstack",
     "plumix": "workspace:>=0.1.0 <1.0.0",
     "react": "catalog:react"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@lingui/cli": "catalog:lingui",
+    "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/lingui-config": "workspace:*",
+    "@plumix/plugin-blog": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
+    "@plumix/runtime-cloudflare": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
+    "@tanstack/react-query": "catalog:tanstack",
+    "@tanstack/react-router": "catalog:tanstack",
+    "@testing-library/jest-dom": "catalog:testing-library",
+    "@testing-library/react": "catalog:testing-library",
     "@types/node": "catalog:",
     "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
     "@vitest/coverage-v8": "catalog:vitest",
     "eslint": "catalog:",
+    "jsdom": "catalog:",
     "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",
     "react": "catalog:react",
+    "react-dom": "catalog:react",
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
   },

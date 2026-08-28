@@ -1,6 +1,7 @@
 import type { AppContext } from "plumix/plugin";
 
-import { loadSeoSettings } from "./settings.js";
+import { loadRobotsBody, loadSeoSettings } from "./settings.js";
+import { sitemapIndexUrl } from "./sitemap.js";
 
 declare module "plumix" {
   interface FilterRegistry {
@@ -52,15 +53,64 @@ const AI_CRAWLERS = [
 
 const AI_CRAWLER_GROUP = `\n${AI_CRAWLERS.map((agent) => `User-agent: ${agent}\n`).join("")}Disallow: /\n`;
 
-/** `GET /robots.txt` — an indexable site allows all crawling, one held out of the index allows none. */
+// What a site that has written nothing serves: everything crawlable.
+const ALLOW_ALL = "User-agent: *\nDisallow:\n";
+const DISALLOW_ALL = "User-agent: *\nDisallow: /\n";
+
+// Case-insensitive and anchored to a line, so a `Sitemap:` inside a comment or
+// a path does not read as a declaration.
+const SITEMAP_LINE = /^\s*sitemap\s*:/im;
+
+// What the settings screen answers about the file.
+interface RobotsInputs {
+  readonly indexable: boolean;
+  readonly blockAiCrawlers: boolean;
+  /** Hand-written content replacing the generated rules, or null. */
+  readonly authored: string | null;
+  readonly sitemap: string;
+}
+
+/**
+ * The body `/robots.txt` serves.
+ *
+ * A site held out of the index disallows everything, whatever else is set —
+ * the site-wide answer is the one assertion nothing below overrides, and a
+ * blanket disallow already covers every AI agent the group would name.
+ *
+ * Otherwise the author's own rules are served if they wrote any, and the two
+ * site-wide answers are composed onto them: the AI-crawler group while that
+ * toggle is on, and the sitemap line unless they declared one themselves, so
+ * an edit cannot drop the reference by omission. It can still point it
+ * somewhere else, or disallow the path: this keeps the line, not the crawl.
+ */
+function robotsTxt(inputs: RobotsInputs): string {
+  if (!inputs.indexable) return DISALLOW_ALL;
+  const rules = endsInNewline(inputs.authored ?? ALLOW_ALL);
+  const ai = inputs.blockAiCrawlers ? AI_CRAWLER_GROUP : "";
+  const sitemap = SITEMAP_LINE.test(rules)
+    ? ""
+    : `\nSitemap: ${inputs.sitemap}\n`;
+  return `${rules}${ai}${sitemap}`;
+}
+
+function endsInNewline(body: string): string {
+  return body.endsWith("\n") ? body : `${body}\n`;
+}
+
+/** `GET /robots.txt`. */
 export async function handleRobotsTxt(ctx: AppContext): Promise<Response> {
-  const { indexable, blockAiCrawlers } = await loadSeoSettings(ctx);
-  // A site held out of the index already disallows every agent, so the AI
-  // group would say a second time what the first rule said.
-  const ai = indexable && blockAiCrawlers ? AI_CRAWLER_GROUP : "";
+  const [settings, authored] = await Promise.all([
+    loadSeoSettings(ctx),
+    loadRobotsBody(ctx),
+  ]);
   const body = await ctx.hooks.applyFilter(
     "seo:robots-txt",
-    `User-agent: *\n${indexable ? "Disallow:" : "Disallow: /"}\n${ai}`,
+    robotsTxt({
+      indexable: settings.indexable,
+      blockAiCrawlers: settings.blockAiCrawlers,
+      authored,
+      sitemap: sitemapIndexUrl(ctx),
+    }),
   );
   return new Response(body, {
     headers: { "content-type": "text/plain; charset=utf-8" },

@@ -1,11 +1,16 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
-import { enqueuePurgeTags, tagCacheEntry, withBasePath } from "plumix";
+import { enqueuePurgeTags, tagCacheEntry, typeTag, withBasePath } from "plumix";
 import { tryGetContext } from "plumix/plugin";
 
 import type { SitemapScope } from "./sitemap.js";
 import { handleLlmsTxt, LLMS_PATH } from "./llms.js";
 import { handleRobotsTxt } from "./robots.js";
-import { loadSeoSettings, SEO_SETTINGS_GROUP } from "./settings.js";
+import {
+  loadSeoSettings,
+  SEO_ROBOTS_GROUP,
+  SEO_SETTINGS_GROUP,
+  SEO_VERIFICATION_GROUP,
+} from "./settings.js";
 import {
   collectSitemapUrls,
   renderSitemapIndex,
@@ -30,6 +35,19 @@ const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
  * has to retire all of them — the one invalidation that is legitimately global.
  */
 export const SITEMAP_TAG = "seo:sitemap";
+
+// Which settings groups change what an already-cached response says: the
+// sitemap's URL set, or a page's robots directive, title and verification
+// tags. Content pages are retired by entry-type tag rather than individually —
+// the shipped cache has no site-wide tag, and every page core caches carries
+// the tag of the type it draws from. `site` is here because the site-wide
+// toggle answers from this plugin's own key falling back to the legacy one.
+const SEO_SETTINGS_GROUPS: ReadonlySet<string> = new Set([
+  SEO_SETTINGS_GROUP,
+  SEO_ROBOTS_GROUP,
+  SEO_VERIFICATION_GROUP,
+  "site",
+]);
 
 // The page segment is the sitemap's own pagination, not a slug, so the route
 // pattern spells that out — a path that is not a 1-based page number then goes
@@ -121,12 +139,15 @@ export function registerSeoRoutes(ctx: PluginSetupContext): void {
   // save has to retire the cached set. Both groups, because the toggle answers
   // from this plugin's own key falling back to the legacy `site` one.
   ctx.addAction("settings:group_changed", (changes) => {
-    if (changes.group !== SEO_SETTINGS_GROUP && changes.group !== "site")
-      return;
+    if (!SEO_SETTINGS_GROUPS.has(changes.group)) return;
     // A settings write always runs inside a request; a fire outside one has no
     // cache to purge through.
     const appCtx = tryGetContext();
-    if (appCtx !== null) enqueuePurgeTags(appCtx, [SITEMAP_TAG]);
+    if (appCtx === null) return;
+    enqueuePurgeTags(appCtx, [
+      SITEMAP_TAG,
+      ...[...ctx.plugins.entryTypes.keys()].map(typeTag),
+    ]);
   });
 }
 

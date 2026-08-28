@@ -2,24 +2,14 @@ import type { PageFacts } from "plumix";
 import type { Label } from "plumix/i18n";
 import type { MetaBoxFieldInput } from "plumix/plugin";
 
+import type { SeoMetaBag } from "./meta-keys.js";
 import type { SchemaType } from "./schema.js";
+import { SEO_META_KEYS } from "./meta-keys.js";
 import { SCHEMA_TYPES, toSchemaType } from "./schema.js";
 import { nonEmpty } from "./settings.js";
 
-/**
- * Meta-box ids are deduplicated by core, but meta keys are one flat namespace
- * shared by every box on an entity — so the prefix is a convention this plugin
- * has to hold for itself, and every key below spells it out.
- */
-export const SEO_META_KEYS = {
-  title: "seo_title",
-  description: "seo_description",
-  canonical: "seo_canonical",
-  ogImage: "seo_og_image",
-  noindex: "seo_noindex",
-  nofollow: "seo_nofollow",
-  schemaType: "seo_schema_type",
-} as const;
+export type { SeoMetaBag } from "./meta-keys.js";
+export { SEO_META_KEYS } from "./meta-keys.js";
 
 /** What an editor answered for one entry or term. Every arm optional. */
 export interface SeoOverrides {
@@ -173,15 +163,8 @@ export const SEO_BOX_LABELS = {
   description: D.boxDescription,
 } as const;
 
-// A bag as a read surface hands it back — the entry's resolved meta, or a
-// term's raw JSON column, which for these scalars is the same thing.
-//
-// Not JSON: a resolved bag hands a temporal field back as a `Date` and a
-// reference as its hydrated row, so every value is unproven until read.
-type MetaBag = Readonly<Record<string, unknown>> | null | undefined;
-
 /** Read one entity's SEO answers off its meta bag. */
-export function readSeoOverrides(meta: MetaBag): SeoOverrides {
+export function readSeoOverrides(meta: SeoMetaBag): SeoOverrides {
   const bag = meta ?? {};
   return {
     title: nonEmpty(bag[SEO_META_KEYS.title]),

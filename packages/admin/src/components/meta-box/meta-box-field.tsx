@@ -1,3 +1,4 @@
+import type { MetaBoxSiblingValues } from "@/lib/plugin-registry.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
@@ -47,6 +48,7 @@ import { MultiReferencePicker } from "./multi-reference-picker.js";
 import { PluginFieldErrorBoundary } from "./plugin-field-error-boundary.js";
 import { ReferencePicker } from "./reference-picker.js";
 import { RepeaterField } from "./repeater-field.js";
+import { useBagValues } from "./use-visible-fields.js";
 
 // The Tiptap editor is code-split: it pulls ProseMirror + the whole editor
 // chunk, so a form with no richtext field never pays for it. Loaded on first
@@ -263,6 +265,42 @@ function encodeOptionValue(value: string): string {
 }
 function decodeOptionValue(value: string): string {
   return value === EMPTY_OPTION_VALUE ? "" : value;
+}
+
+// The box's own bag, so a plugin control can read the fields beside it. A
+// component rather than a call in `renderNativeInput`, which is a plain
+// function: only the plugin branch subscribes, so a box of built-in inputs
+// keeps re-rendering one field per keystroke instead of all of them.
+function PluginFieldSlot({
+  Renderer,
+  field,
+  rhf,
+  disabled,
+  testId,
+}: {
+  readonly Renderer: NonNullable<ReturnType<typeof getPluginFieldType>>;
+  readonly field: MetaBoxFieldManifestEntry;
+  readonly rhf: ControllerRenderProps<FieldValues, string>;
+  readonly disabled: boolean;
+  readonly testId: string;
+}): ReactNode {
+  return (
+    <Renderer
+      field={field}
+      rhf={rhf}
+      disabled={disabled}
+      testId={testId}
+      siblings={useSiblingValues(rhf.name)}
+    />
+  );
+}
+
+// The bag one level above the field's own path — `meta` for `meta.seo_title`,
+// and the whole form for a box that sits at the root (the settings card),
+// which is the undefined name.
+function useSiblingValues(name: string): MetaBoxSiblingValues | undefined {
+  const dot = name.lastIndexOf(".");
+  return useBagValues({ name: dot === -1 ? undefined : name.slice(0, dot) });
 }
 
 // The shared inputs each native-field renderer needs. Every renderer must
@@ -850,7 +888,8 @@ function renderNativeInput(ctx: NativeInputContext): ReactNode {
         // snapshot (object) value shapes.
         resetKey={stringifyForResetKey(rhf.value)}
       >
-        <PluginRenderer
+        <PluginFieldSlot
+          Renderer={PluginRenderer}
           field={field}
           rhf={rhf}
           disabled={disabled}

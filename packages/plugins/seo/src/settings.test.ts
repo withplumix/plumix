@@ -100,3 +100,49 @@ describe("the settings the admin form loads", () => {
     });
   });
 });
+
+describe("the settings screen", () => {
+  function fieldKeys(h: DispatcherHarness, group: string): readonly string[] {
+    return (h.app.plugins.settingsGroups.get(group)?.fields ?? []).map(
+      (field) => field.key,
+    );
+  }
+
+  test("the SEO page carries every group the plugin registers", async () => {
+    const h = await createHarness();
+
+    expect(h.app.plugins.settingsPages.get("seo")?.groups).toEqual([
+      "seo",
+      "seo_verification",
+      "seo_robots",
+    ]);
+  });
+
+  test("a contributor cannot reach any of them", async () => {
+    const h = await createHarness();
+
+    for (const group of h.app.plugins.settingsPages.get("seo")?.groups ?? []) {
+      expect(h.app.plugins.settingsGroups.get(group)?.capability).toBe(
+        "settings:manage",
+      );
+    }
+  });
+
+  test("verification carries one field per engine", async () => {
+    const h = await createHarness();
+
+    expect(fieldKeys(h, "seo_verification")).toEqual([
+      "google",
+      "bing",
+      "yandex",
+      "baidu",
+      "pinterest",
+    ]);
+  });
+
+  test("robots.txt is editable from its own group", async () => {
+    const h = await createHarness();
+
+    expect(fieldKeys(h, "seo_robots")).toEqual(["robots_txt"]);
+  });
+});

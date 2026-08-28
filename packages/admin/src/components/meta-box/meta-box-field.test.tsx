@@ -946,6 +946,75 @@ describe("MetaBoxField dispatcher", () => {
     ).toHaveTextContent("plugin:custom-stub");
   });
 
+  test("plugin renderer: is handed the box's other field values, live", async () => {
+    registerPluginFieldType("sibling-reader", ({ siblings, testId }) => (
+      <span data-testid={`${testId}-siblings`}>
+        {typeof siblings?.other === "string" ? siblings.other : ""}
+      </span>
+    ));
+
+    function SiblingHarness(): ReactNode {
+      const form = useForm<{ meta: Record<string, unknown> }>({
+        defaultValues: { meta: { k: null, other: "before" } },
+      });
+      return (
+        <Form {...form}>
+          <MetaBoxField
+            field={field({ inputType: "sibling-reader" })}
+            name="meta.k"
+          />
+          <button
+            type="button"
+            data-testid="edit-sibling"
+            onClick={() => {
+              form.setValue("meta.other", "after");
+            }}
+          >
+            edit
+          </button>
+        </Form>
+      );
+    }
+
+    renderWithI18n(<SiblingHarness />);
+    expect(
+      screen.getByTestId("meta-box-field-k-input-siblings"),
+    ).toHaveTextContent("before");
+
+    await userEvent.click(screen.getByTestId("edit-sibling"));
+
+    expect(
+      screen.getByTestId("meta-box-field-k-input-siblings"),
+    ).toHaveTextContent("after");
+  });
+
+  test("plugin renderer: a box at the form root reads the whole form", () => {
+    registerPluginFieldType("root-sibling-reader", ({ siblings, testId }) => (
+      <span data-testid={`${testId}-siblings`}>
+        {typeof siblings?.other === "string" ? siblings.other : ""}
+      </span>
+    ));
+
+    function RootHarness(): ReactNode {
+      const form = useForm<Record<string, unknown>>({
+        defaultValues: { k: null, other: "sibling" },
+      });
+      return (
+        <Form {...form}>
+          <MetaBoxField
+            field={field({ inputType: "root-sibling-reader" })}
+            name="k"
+          />
+        </Form>
+      );
+    }
+
+    renderWithI18n(<RootHarness />);
+    expect(
+      screen.getByTestId("meta-box-field-k-input-siblings"),
+    ).toHaveTextContent("sibling");
+  });
+
   test("plugin renderer: a thrown render is caught by the error boundary, not the form", () => {
     // Suppress the React error logs the boundary's catch path produces;
     // the test asserts the visible fallback, not the console output.

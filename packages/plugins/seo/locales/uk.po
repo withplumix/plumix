@@ -192,3 +192,143 @@ msgstr "Дозволити пошуковим системам індексув�
 #: src/settings.ts
 msgid "plugin.seo.settings.taxonomy_indexable.description"
 msgstr "Дозволити пошуковим системам індексувати архіви цієї таксономії."
+
+#. js-lingui-explicit-id
+#: src/preview-box.ts
+msgid "plugin.seo.box.preview.label"
+msgstr "Попередній перегляд у пошуку"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.loading"
+msgstr "Завантаження…"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.failed"
+msgstr "Не вдалося завантажити попередній перегляд."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.unsaved"
+msgstr "Збережіть запис, щоб побачити, як він виглядатиме в результатах пошуку."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.refresh"
+msgstr "Оновити"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.title"
+msgstr "Заголовок"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.description"
+msgstr "Опис"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.ok"
+msgstr "Вміщається."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.over"
+msgstr "Задовге — пошукові системи його обріжуть."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.empty"
+msgstr "Порожньо."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.excluded"
+msgstr "Не пропонується пошуковим системам."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.site_private"
+msgstr "Весь сайт закрито від пошуку."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.entry_override"
+msgstr "Цей запис приховано від пошукових систем."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.type_default"
+msgstr "Цей тип вмісту закрито від пошуку в налаштуваннях."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.search_results"
+msgstr "Сторінки результатів пошуку закрито від пошуку в налаштуваннях."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.taxonomy_default"
+msgstr "Цю таксономію закрито від пошуку в налаштуваннях."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.paginated"
+msgstr "Другу й наступні сторінки закрито від пошуку в налаштуваннях."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.not_found"
+msgstr "Сторінки, яких не знайдено, закрито від пошуку в налаштуваннях."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.label"
+msgstr "Підтвердження сайту"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.description"
+msgstr "Токени, які кожна пошукова система видає для підтвердження права власності на сайт. Кожен заповнений потрапляє в head кожної сторінки."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.google"
+msgstr "Google"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.bing"
+msgstr "Bing"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.yandex"
+msgstr "Yandex"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.baidu"
+msgstr "Baidu"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.pinterest"
+msgstr "Pinterest"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.label"
+msgstr "robots.txt"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.description"
+msgstr "Замінює згенерований файл. Рядок із картою сайту зберігається незалежно від того, чи ви його написали."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.body"
+msgstr "Вміст robots.txt"

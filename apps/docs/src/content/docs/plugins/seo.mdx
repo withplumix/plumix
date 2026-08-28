@@ -129,6 +129,16 @@ The fields ride the entity's own Save — there is no second save action and no 
 
 A term's box is the same box: a category or tag archive is not a second-class page.
 
+### The search result preview
+
+Above the fields, on an entry, sits a live preview of the search result the entry will produce — the URL, the resolved title and the resolved description, through the same functions the head runs. It updates as the author types: the search title, the search description and the **Hide from search engines** toggle are read off the form, not off the saved row, so a change shows before a save. The entry's own title and excerpt are not — they sit outside the meta bag the control can see — so a preview falling back to either shows the last saved one until **Refresh**.
+
+Two length indicators sit under it, one per line, counting the _resolved_ text against 60 characters for the title and 155 for the description, and saying so when a line will be cut short.
+
+When the page is not offered to search engines the preview says so in words, naming the assertion that fired: the whole site, this entry, the content type, the taxonomy, a search-results page, page two of an archive, or a page that was not found. That is what the reason string on the predicate is for — an author can tell a deliberate choice from an inherited rule without reverse-engineering a toggle.
+
+A term's box has no preview: it is written from an entry's own permalink and excerpt, and a term archive has neither.
+
 ### Scope is derived, not configured
 
 Nothing lists which types get the box. A type or taxonomy registered with `isPublic: false` — a menu item, a menu group — never had a public page to write search copy for, so it is excluded for free. Everything else is in.
@@ -303,7 +313,7 @@ Ancestors are not walked: a hierarchical entry's parents and a nested term's par
 
 Installing the plugin puts four kinds of machine-readable document at the site root: `/robots.txt`, the sitemap, the stylesheet that renders it, and `/llms.txt`.
 
-`/robots.txt` allows all crawling while the indexing toggle is on, and disallows everything when it is off. The body goes through a `seo:robots-txt` filter, so a plugin can append `Sitemap:` lines, a crawl-delay or per-agent rules without owning the route:
+`/robots.txt` allows all crawling while the indexing toggle is on, and disallows everything when it is off. An indexable site's file ends with a `Sitemap:` line pointing at the index below, and the settings screen can replace the rules above it. The body goes through a `seo:robots-txt` filter, so a plugin can append `Sitemap:` lines, a crawl-delay or per-agent rules without owning the route:
 
 ```ts no-typecheck
 ctx.addFilter(
@@ -404,7 +414,9 @@ Removals are not notified. Trashing or unpublishing an entry drops it from the s
 
 ## Settings
 
-The plugin registers a **Search & social** settings group on a settings page of its own:
+The plugin owns one settings page, **SEO**, composed of three groups. Each is its own card with its own Save, and each is gated by `settings:manage` — a contributor never sees the page.
+
+**Search & social** holds everything the site answers about its own content:
 
 - **Allow search engines to index this site** — off puts `noindex,nofollow` on every page, disallows all crawling in `robots.txt`, empties the sitemap and withholds the `llms.txt` map.
 - **Default social image URL** — the last link of the chain above.
@@ -415,7 +427,21 @@ The plugin registers a **Search & social** settings group on a settings page of 
 - **IndexNow key** — turns on publish-time notification. Empty means none.
 - One **title pattern** and one **indexing toggle** per public entry type, and one **indexing toggle** per public taxonomy. Those fields are enumerated from what the site registered, so a type a plugin registers during its own `setup` gets its own. A type registered later — from a `theme:ready` handler in a plugin listed after this one — is too late to be enumerated, and a name that is not `[a-zA-Z0-9_-]+` cannot be a settings key, so it gets no per-type fields either.
 
-The first two lived on core's Site identity group before this plugin existed. A site upgrading from that keeps its answers with no migration step: the plugin reads its own group first and falls back to the old `site.public` and `site.default_og_image` rows, and the settings form is seeded from the same fallback, so the next save writes the values through under the new keys.
+**Site verification** holds the token each engine hands you to prove you own the site. Every one set reaches the head of every page, under the name that engine reads:
+
+| Field     | Meta name                  |
+| --------- | -------------------------- |
+| Google    | `google-site-verification` |
+| Bing      | `msvalidate.01`            |
+| Yandex    | `yandex-verification`      |
+| Baidu     | `baidu-site-verification`  |
+| Pinterest | `p:domain_verify`          |
+
+**robots.txt** holds hand-written content replacing the _generated rules_ — the `User-agent: *` group, not the two site-wide answers composed around them. A site with indexing turned off still disallows everything, whatever the box holds; the AI-crawler group is still added while that toggle is on; and the `Sitemap:` line is still appended unless the author wrote one of their own, so an edit cannot drop the reference by forgetting it. It can still point the line elsewhere or disallow the path — what is preserved is the declaration, not the crawl.
+
+Saving any of the three purges the cached sitemap set and the cached content pages of every registered entry type, since between them they rewrite a page's robots directive, title and verification tags.
+
+The first two fields lived on core's Site identity group before this plugin existed. A site upgrading from that keeps its answers with no migration step: the plugin reads its own group first and falls back to the old `site.public` and `site.default_og_image` rows, and the settings form is seeded from the same fallback, so the next save writes the values through under the new keys.
 
 ## Themes keep the last word
 
