@@ -24,16 +24,31 @@ function EmptyAnswer({ name }: { readonly name: string }): ReactNode {
 export function FormControl({
   field,
   id,
+  answer,
+  describedBy,
+  invalid,
 }: {
   readonly field: MetaBoxFieldManifestEntry;
   readonly id: string;
+  /**
+   * What the visitor already answered, when the form is being rendered
+   * back to them after a rejected submit. Absent on a form nobody has
+   * filled in, where the field's own default seeds the control instead.
+   */
+  readonly answer?: unknown;
+  /** Ids of the help text and error this control is described by. */
+  readonly describedBy?: string;
+  readonly invalid?: boolean;
 }): ReactNode {
+  const seed = answer === undefined ? field.default : answer;
   const common = {
     className: "plumix-form-control",
     "data-plumix-form-control": field.key,
     id,
     name: field.key,
     required: field.required,
+    "aria-describedby": describedBy,
+    "aria-invalid": invalid === true ? ("true" as const) : undefined,
   };
   const placeholder =
     field.placeholder === undefined
@@ -46,7 +61,7 @@ export function FormControl({
         {...common}
         placeholder={placeholder}
         maxLength={field.maxLength}
-        defaultValue={asPosted(field.default)[0]}
+        defaultValue={asPosted(seed)[0]}
       />
     );
   }
@@ -54,7 +69,7 @@ export function FormControl({
   if (field.inputType === "select") {
     // React reads a single select's default as a scalar and a multiple
     // one's as a list, and warns when handed the other.
-    const selected = asPosted(field.default);
+    const selected = asPosted(seed);
     return (
       <>
         {field.multiple ? <EmptyAnswer name={field.key} /> : null}
@@ -84,7 +99,7 @@ export function FormControl({
           {...common}
           type="checkbox"
           value={TOGGLE_ON}
-          defaultChecked={field.default === true}
+          defaultChecked={seed === true}
         />
       </>
     );
@@ -101,7 +116,7 @@ export function FormControl({
       min={field.min}
       max={field.max}
       step={field.step}
-      defaultValue={asPosted(field.default)[0]}
+      defaultValue={asPosted(seed)[0]}
     />
   );
 }

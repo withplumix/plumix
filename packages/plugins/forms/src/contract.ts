@@ -5,10 +5,29 @@
  */
 export const FORM_SLUG_FIELD = "__plumix_form";
 export const HONEYPOT_FIELD = "__plumix_hp";
+export const TOKEN_FIELD = "__plumix_token";
+/**
+ * The page the form was on, carried by the re-rendered form the
+ * no-JavaScript path answers a rejected submit with. The document URL is
+ * the endpoint by then, so the visitor's own `Referer` would send their
+ * retry back to the endpoint rather than to the page.
+ */
+export const RETURN_FIELD = "__plumix_return";
 
 /** Mounted by `registerRoute` at `/_plumix/<pluginId><path>`. */
 export const SUBMIT_ROUTE_PATH = "/submit";
 export const SUBMIT_PATH = `/_plumix/forms${SUBMIT_ROUTE_PATH}`;
+export const TOKEN_ROUTE_PATH = "/token";
+export const TOKEN_PATH = `/_plumix/forms${TOKEN_ROUTE_PATH}`;
+
+/**
+ * The header core's CSRF gate looks for, which a plain `<form>` submit
+ * cannot set — the reason the submit route is registered `formPost`. The
+ * island sets it, so a scripted submission goes through the ordinary gate
+ * rather than the exemption. Core does not publish the constant.
+ */
+export const CSRF_HEADER = "X-Plumix-Request";
+export const CSRF_HEADER_VALUE = "1";
 
 /** The block the editor places. */
 export const FORM_BLOCK_NAME = "forms/form";

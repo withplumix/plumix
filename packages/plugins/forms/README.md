@@ -9,11 +9,10 @@ code that renders it, diffs in review, and reverts with `git revert`, so local,
 staging and production cannot drift apart. There is no builder, no export
 format, and nothing to migrate between environments.
 
-> This release covers the v1 field roster and conditional visibility. A
-> submission is otherwise stored as it arrived — `required` renders as an HTML
-> attribute but is not yet enforced on the server, and neither is email format.
-> Validation callbacks, repeater and group fields, multi-step forms, the inbox
-> and export arrive next.
+> This release covers the v1 field roster, conditional visibility, and
+> validation on the server. Your own `validate` and `onSubmit` callbacks,
+> repeater and group fields, multi-step forms, and the inbox and export arrive
+> next.
 
 ## Install
 
@@ -116,6 +115,59 @@ The block server-renders static markup — the same bytes for every visitor, so
 the page carrying it stays edge-cacheable — and it submits as a plain HTML
 `POST` with no JavaScript on the page at all.
 
+## What JavaScript adds
+
+An island takes over that same markup — it renders the form the server already
+sent rather than standing in for one. With it running, submitting does not
+reload the page: the answers go over `fetch`, errors come back against the
+fields that produced them, and a confirmation replaces the form. The form
+carries `data-plumix-form-enhanced` once the island is driving it — the handle
+to style an upgraded form differently, and the one signal that tells the two
+apart.
+
+It also fetches a short-lived timing token from `/_plumix/forms/token`, an
+endpoint nothing caches. That token is the second half of the spam floor: a
+submission completed implausibly fast is held as `spam` the same way a filled
+honeypot is. It is fetched rather than rendered because the page carrying the
+form is edge-cached and can therefore carry nothing about the visitor reading
+it.
+
+Like the honeypot, it is a floor rather than a control, and the trade is worth
+knowing: a submission carrying no token is not timed — that is what every
+no-JavaScript submission is — so a bot skips the check by omitting the field,
+while a visitor whose token request was slow to arrive can be filed as `spam`.
+Both defences hold what they catch rather than discarding it, which is what
+makes a false positive recoverable.
+
+Switch JavaScript off and the same markup posts to the same endpoint. A
+submission the server rejects comes back as the form again, carrying what you
+answered and the errors against the fields that produced them; correcting it
+returns you to the page the form was on.
+
+## Validation
+
+Every answer is checked on the server, whichever way it arrived: a required
+field must be answered, an email field must look like an address, a `url` must
+be a web address, a `number` is held to its declared bounds, and a field
+declaring `maxLength` is held to that. A field its condition hides is never
+asked about, so a question the visitor was not shown cannot hold their
+submission up.
+
+The browser's own `required`, `type` and range checks still run on the plain
+form, so most mistakes are caught before a request is made; the server is what
+makes the rule true. Errors are returned as `{ field, message }` — the island
+renders them inline, and the no-JavaScript path renders the same pair
+server-side.
+
+## Accessibility
+
+This is a contract, not a review note. Every control has a label that points at
+it; help text and errors are wired to their control through `aria-describedby`;
+a control that failed carries `aria-invalid`; a failed submit renders a live
+`role="alert"` summary, takes focus to it, and links each message to the
+control that produced it. A required field is marked with a glyph as well as
+the `required` attribute, never by colour alone.
+
 ## Contributing a form from your own plugin
 
 A plugin can ship a form of its own:
@@ -142,15 +194,23 @@ The plugin ships no colour, type or borders — the form inherits your theme's
 input and button styling. Every part carries a stable class and a data
 attribute, both public API:
 
-| Part          | Class                 | Attribute                          |
-| ------------- | --------------------- | ---------------------------------- |
-| The form      | `plumix-form`         | `data-plumix-form="<slug>"`        |
-| Title         | `plumix-form-title`   | `data-plumix-form-title`           |
-| Field wrapper | `plumix-form-field`   | `data-plumix-form-field="<key>"`   |
-| Label         | `plumix-form-label`   | `data-plumix-form-label`           |
-| Control       | `plumix-form-control` | `data-plumix-form-control="<key>"` |
-| Actions       | `plumix-form-actions` | `data-plumix-form-actions`         |
-| Submit button | `plumix-form-submit`  | `data-plumix-form-submit`          |
+| Part          | Class                      | Attribute                          |
+| ------------- | -------------------------- | ---------------------------------- |
+| The form      | `plumix-form`              | `data-plumix-form="<slug>"`        |
+| Title         | `plumix-form-title`        | `data-plumix-form-title`           |
+| Field wrapper | `plumix-form-field`        | `data-plumix-form-field="<key>"`   |
+| Label         | `plumix-form-label`        | `data-plumix-form-label`           |
+| Control       | `plumix-form-control`      | `data-plumix-form-control="<key>"` |
+| Help text     | `plumix-form-help`         | `data-plumix-form-help`            |
+| Field error   | `plumix-form-error`        | `data-plumix-form-error="<key>"`   |
+| Required mark | `plumix-form-required`     | `data-plumix-form-required`        |
+| Error summary | `plumix-form-summary`      | `data-plumix-form-summary`         |
+| Actions       | `plumix-form-actions`      | `data-plumix-form-actions`         |
+| Submit button | `plumix-form-submit`       | `data-plumix-form-submit`          |
+| Confirmation  | `plumix-form-confirmation` | `data-plumix-form-confirmation`    |
+
+An enhanced form also carries `data-plumix-form-enhanced` on the `<form>`
+itself.
 
 The one exception is the honeypot, hidden inline: a trap the visitor can see is
 a trap they fill in.
@@ -167,8 +227,9 @@ The visitor's IP address is stored only as a salted SHA-256, against a
 per-install salt minted on the first submission. Cleartext addresses are never
 written.
 
-A submission that fills the honeypot is answered exactly like a real one and
-stored with `spam` status — held rather than discarded, so a false positive
+A submission that fills the honeypot, or that arrives implausibly fast after
+the timing token was issued, is answered exactly like a real one and stored
+with `spam` status — held rather than discarded, so a false positive
 stays recoverable. The trap's field name is the same on every Plumix site, so
 it stops undirected bots rather than one aimed at you; the request body is
 capped, and flood protection belongs at your edge (a Cloudflare WAF rule) where

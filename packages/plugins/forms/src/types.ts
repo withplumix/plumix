@@ -23,3 +23,22 @@ export type FormLabelSnapshot = Readonly<Record<string, FieldLabelSnapshot>>;
 
 /** The answers as given: one property per field the form declared. */
 export type FormAnswers = JsonObject;
+
+/**
+ * One validation failure, named against the field that produced it. The
+ * island renders it inline beside that control and lists it in the error
+ * summary; the no-JavaScript path renders the same pair server-side.
+ */
+export interface FormFieldError {
+  readonly field: string;
+  readonly message: string;
+}
+
+/**
+ * What the submit endpoint answers a caller that asked for JSON. Success
+ * carries the confirmation to show in place of the form; failure carries
+ * every field that failed, in the order the form declares them.
+ */
+export type FormSubmitResponse =
+  | { readonly ok: true; readonly message: string }
+  | { readonly ok: false; readonly errors: readonly FormFieldError[] };
