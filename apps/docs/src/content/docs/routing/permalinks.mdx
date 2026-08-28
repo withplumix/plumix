@@ -142,7 +142,7 @@ Templates get permalinks pre-resolved. Every `ResolvedEntry` carries `url`, ever
 
 `<Link>` from `plumix/blocks/renderer` handles both. Given `entry` or `term` it reads `url`, and when that is null it renders the children with no anchor, so a listing never emits a dead link. Given a raw `href` it prepends the base path to root-relative paths, adds `rel="noopener noreferrer"` to external ones, and refuses `javascript:`, `data:`, `vbscript:` and `blob:` targets.
 
-Six surfaces do pay for the ancestor walk and so escape the second case. The taxonomy resolver builds `data.term.url` for the term whose archive you are on with the async builder, and the sitemap composes every `<loc>` with it, so a nested entry has a sitemap URL even when its own `ResolvedEntry.url` is null. `@plumix/plugin-feeds`, the entry lookup and term lookup procedures behind the admin's reference fields and menu items, and the preview-link procedure call the async builders too. The walk is one recursive query, not one query per ancestor.
+Six surfaces do pay for the ancestor walk and so escape the second case. The taxonomy resolver builds `data.term.url` for the term whose archive you are on with the async builder, and `@plumix/plugin-seo` composes every sitemap `<loc>` with it, so a nested entry has a sitemap URL even when its own `ResolvedEntry.url` is null. `@plumix/plugin-feeds`, the entry lookup and term lookup procedures behind the admin's reference fields and menu items, and the preview-link procedure call the async builders too. The walk is one recursive query, not one query per ancestor.
 
 ## Canonical URLs
 
@@ -150,13 +150,13 @@ The canonical URL is the configured site origin plus the request path in one fix
 
 Three things read that one value. The `<link rel="canonical">` tag and `og:url` both call `canonicalUrl`, and the 301 normalizer builds its target from the same path-normalizing helper, so the three cannot disagree about the shape they point at.
 
-The sitemap is not one of the three. It builds every `<loc>` itself, from the site origin plus a freshly composed permalink, and never calls `canonicalUrl`. The two agree on ordinary entry and term pages because both compose the same registration and the same slug, not because one function produced both.
+The sitemap is not one of the three. `@plumix/plugin-seo` builds every `<loc>` itself, from the site origin plus a freshly composed permalink, and never calls `canonicalUrl`. The two agree on ordinary entry and term pages because both compose the same registration and the same slug, not because one function produced both.
 
 The origin comes from `auth.passkey.origin` in `plumix.config.ts` rather than from the inbound request. A worker serving the same site from another region therefore emits the same canonical URL.
 
 Two behaviours follow.
 
-**A non-canonical request gets a 301.** `/recipes/sicilian-caponata/` 301s to `/recipes/sicilian-caponata`, and `/recipes/page/1` 301s to `/recipes`. The query string rides along, and an already-canonical path returns no redirect, so the rule cannot loop. Five kinds of path are exempt: the site root, `/robots.txt`, anything under `/_plumix/`, any path a plugin registered as a public route, and any path whose last segment contains a dot. The fourth exempts the registered path itself, not a variant of it — so `/feed/` still 301s onto `/feed`, which is what gets an aggregator to the feed rather than to a 404.
+**A non-canonical request gets a 301.** `/recipes/sicilian-caponata/` 301s to `/recipes/sicilian-caponata`, and `/recipes/page/1` 301s to `/recipes`. The query string rides along, and an already-canonical path returns no redirect, so the rule cannot loop. Four kinds of path are exempt: the site root, anything under `/_plumix/`, any path a plugin registered as a public route, and any path whose last segment contains a dot. Core names no endpoint of its own in that list — `/robots.txt` and `sitemap-post-1.xml` are exempt as registered routes, and by the dot rule whether or not a plugin claimed them. The registered-route arm exempts the registered path itself, not a variant of it — so `/feed/` still 301s onto `/feed`, which is what gets an aggregator to the feed rather than to a 404.
 
 **The tag is a gap-filler.** Plumix emits `<link rel="canonical">` only when neither the template's document manifest nor a `render:document` subscriber already set one. A theme that wants to point a page elsewhere sets its own and wins.
 

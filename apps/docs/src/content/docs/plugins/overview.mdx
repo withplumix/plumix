@@ -49,7 +49,7 @@ Records an activity feed and adds an `audit` helper to the request context.
 
 ### `@plumix/plugin-seo`
 
-Writes the head meta a public page needs: a description, a robots directive, the Open Graph set with an entry's timestamps and byline, the Twitter card, and the resolved social image. Every tag is gap-filled, so a theme that sets one keeps it. It also owns the `og:image` resolution chain that `@plumix/plugin-og` contributes a card to.
+Writes the head meta a public page needs: a description, a robots directive, the Open Graph set with an entry's timestamps and byline, the Twitter card, and the resolved social image. Every tag is gap-filled, so a theme that sets one keeps it. It also serves `/robots.txt` and the paged sitemap, and owns the `og:image` resolution chain that `@plumix/plugin-og` contributes a card to.
 
 ### `@plumix/plugin-og`
 

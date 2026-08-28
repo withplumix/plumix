@@ -1,6 +1,6 @@
 # @plumix/plugin-seo
 
-This Plumix plugin writes the **head meta** a public page needs — a description, a robots directive, the Open Graph set, the Twitter card, and the resolved social image. Core emits a canonical URL and nothing else, so without this plugin a page carries none of them.
+This Plumix plugin writes what a site tells a search engine — the **head meta** a public page needs (a description, a robots directive, the Open Graph set, the Twitter card, and the resolved social image), plus **`/robots.txt`** and the **sitemap**. Core emits a canonical URL and nothing else, so without this plugin a page carries none of them and the site serves neither endpoint.
 
 ## Install
 
@@ -27,7 +27,9 @@ export default plumix({
 - **The Open Graph set** — `og:title`, `og:type`, `og:url`, `og:site_name`, `og:description`, `og:locale`, plus `article:published_time`, `article:modified_time` and `article:author` on a single entry.
 - **The Twitter card** — `summary_large_image` when a social image resolved, `summary` when none did.
 - **The `og:image` chain** — the entry's explicit `.ogImage()` choice, then whatever a `seo:og_image` subscriber supplies, then the entry's `.featured()` photo, then the site-wide default. The order is fixed, so a generated card never outranks a deliberate choice.
-- **A settings group** — the site-wide indexing toggle (which drives the robots directive on every page) and the default social image, on a settings page of its own.
+- **`/robots.txt`** — allow-all while indexing is on, disallow-all when it is off, adjustable through the `seo:robots-txt` filter.
+- **The sitemap** — `/sitemap.xml` indexing one `/sitemap-<scope>-<page>.xml` per public entry type, taxonomy and registered archive, paged at 1,000 URLs, published entries only, adjustable through the `seo:sitemap:urls` filter. Responses carry cache headers and per-scope purge tags, so publishing an entry retires that scope alone.
+- **A settings group** — the site-wide indexing toggle (which drives the robots directive on every page, `robots.txt` and the sitemap) and the default social image, on a settings page of its own.
 
 Every tag is gap-filled: it is appended only when nothing has already set that key. The contribution runs last on the `render:document` chain whatever order the `plugins` array is in, so a theme's own head tags keep winning — and so do another plugin's.
 

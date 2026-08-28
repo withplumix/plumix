@@ -30,12 +30,12 @@ export function canonicalUrl(ctx: AppContext): string {
 }
 
 /**
- * Paths the 301 normalizer must never touch: the root, the plumix surface,
- * a path a plugin registered as a public route, core's own `robots.txt`, and
- * asset/extension-like paths (a dot in the last segment — covers
- * `sitemap*.xml`, `favicon.ico`, etc.). Everything else is a public page route
- * whose shape we normalize. The feed literals left with the feeds themselves;
- * `robots.txt` follows once the SEO plugin registers it (#1998).
+ * Paths the 301 normalizer must never touch: the root, the plumix surface, a
+ * path a plugin registered as a public route, and asset/extension-like paths (a
+ * dot in the last segment — covers `favicon.ico`, and `robots.txt` and
+ * `sitemap*.xml` whether or not a plugin claimed them). Everything else is a
+ * public page route whose shape we normalize. Core spells no SEO literal here:
+ * the feeds and the robots/sitemap set are registered routes now.
  *
  * The registered-route arm restates the dispatcher's own check, which already
  * answered such a path before this ran — it is here so the exemption stays
@@ -46,7 +46,6 @@ export function isCanonicalExempt(
   publicRoutes: PublicRouteTable,
 ): boolean {
   if (pathname === "/") return true;
-  if (pathname === "/robots.txt") return true;
   if (pathname.startsWith("/_plumix/")) return true;
   // The literal shape, not the normalized one. Matching the normalized shape
   // exempted every trailing-slash variant of a registered endpoint — so

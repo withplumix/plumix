@@ -1,6 +1,6 @@
 ---
 title: SEO
-description: The seo plugin writes a page's head meta — description, robots directive, Open Graph, Twitter card — and owns the chain that resolves its social image.
+description: The seo plugin writes a page's head meta — description, robots directive, Open Graph, Twitter card — serves robots.txt and the sitemap, and owns the chain that resolves its social image.
 tier: P1
 sidebar:
   order: 70
@@ -8,7 +8,7 @@ sidebar:
 
 import { Aside, TabItem, Tabs } from "@astrojs/starlight/components";
 
-`@plumix/plugin-seo` writes what a public page tells a search engine and a social scraper. Core emits a canonical URL and nothing else, so without this plugin a page carries no description, no robots directive and no Open Graph tags at all.
+`@plumix/plugin-seo` writes what a site tells a search engine and a social scraper: a page's head meta, `/robots.txt`, and the sitemap. Core emits a canonical URL and nothing else, so without this plugin a page carries no description, no robots directive and no Open Graph tags, and the site serves neither `robots.txt` nor a sitemap.
 
 ## Overview
 
@@ -98,11 +98,65 @@ ctx.addFilter("seo:og_image", (image, data, appCtx, featured) => {
   them in a page's head. Install both.
 </Aside>
 
+## robots.txt and the sitemap
+
+Installing the plugin puts three kinds of machine-readable document at the site root.
+
+`/robots.txt` allows all crawling while the indexing toggle is on, and disallows everything when it is off. The body goes through a `seo:robots-txt` filter, so a plugin can append `Sitemap:` lines, a crawl-delay or per-agent rules without owning the route:
+
+```ts no-typecheck
+ctx.addFilter(
+  "seo:robots-txt",
+  (body) => `${body}Sitemap: https://example.com/sitemap.xml\n`,
+);
+```
+
+`/sitemap.xml` is an index, not a URL list. It names one sub-sitemap per **scope** — every public entry type, every public taxonomy, and every archive a plugin registered a `sitemap` for — paged at 1,000 URLs each. A scope with nothing published is left out.
+
+`/sitemap-<scope>-<page>.xml` is the URL list for one scope and page. Entry scopes list published entries with a `lastmod`; taxonomy scopes list term archives. Drafts, scheduled entries and non-public types never appear.
+
+Scopes are enumerated when the theme is ready, so the routes the plugin claims are exactly the scopes the site registered — `/sitemap-nope-1.xml` is a 404, not an empty document, and a page segment that is not a page number is a 404 too.
+
+A site with indexing turned off publishes an empty index and empty URL lists, so a crawler that already knows the URL learns nothing from it.
+
+### Adding URLs
+
+The `seo:sitemap:urls` filter adjusts one scope's page before it is serialized. It receives the scope name, the 1-based page and the request context, so a subscriber can query for rows to inject rather than only reshape what is there:
+
+```ts no-typecheck
+ctx.addFilter("seo:sitemap:urls", (urls, scope, page, appCtx) => {
+  if (scope !== "post" || page !== 1) return urls;
+  return [...urls, { loc: `${appCtx.origin}/handbook` }];
+});
+```
+
+An archive registered with `registerArchiveType` folds into the index by declaring a `sitemap`. `count` drives the index's pagination without a URL scan, `urls` answers one page, and `tags` names the cache tags its pages are stored under:
+
+```ts no-typecheck
+ctx.registerArchiveType("event-series", {
+  routes: ["/events/:series"],
+  resolve: (appCtx, params) => resolveSeries(appCtx, params),
+  sitemap: {
+    count: (appCtx) => countSeries(appCtx),
+    urls: (appCtx, page) => seriesUrls(appCtx, page),
+    tags: ["t:event"],
+  },
+});
+```
+
+### Caching
+
+Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the edge cache when one is configured. Each scope stores under its own tags — `t:<type>` for an entry type, the `t:<type>` tags of a taxonomy's entry types for a taxonomy — so publishing a post retires the post scope and leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all.
+
+A scope with no tags to contribute rides the one-hour window instead of a purge: a taxonomy registered with no `entryTypes` has none to name, and so does an archive whose `sitemap` omits `tags`. Declare `tags` on an archive whose content changes more often than that.
+
+With no edge cache configured, every sitemap is generated per request.
+
 ## Settings
 
 The plugin registers a **Search & social** settings group with two fields, on a settings page of its own:
 
-- **Allow search engines to index this site** — off puts `noindex,nofollow` on every page.
+- **Allow search engines to index this site** — off puts `noindex,nofollow` on every page, disallows all crawling in `robots.txt`, and empties the sitemap.
 - **Default social image URL** — the last link of the chain above.
 
 Both lived on core's Site identity group before this plugin existed. A site upgrading from that keeps its answers with no migration step: the plugin reads its own group first and falls back to the old `site.public` and `site.default_og_image` rows, and the settings form is seeded from the same fallback, so the next save writes the values through under the new keys.

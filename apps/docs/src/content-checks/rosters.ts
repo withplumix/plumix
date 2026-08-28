@@ -721,8 +721,6 @@ const FILTER_HOOKS = [
   "resolve:date:data",
   "resolve:front-page:data",
   "resolve:search:data",
-  "seo:robots-txt",
-  "seo:sitemap:urls",
   "theme:document",
   "rpc:entry.list:input",
   "rpc:entry.list:output",
