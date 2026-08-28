@@ -1139,3 +1139,30 @@ describe("registerShortcode", () => {
     );
   });
 });
+
+describe("ctx.plugins", () => {
+  test("reads what every plugin registered once theme:ready fires", async () => {
+    const hooks = new HookRegistry();
+    const blog = definePlugin("blog", (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        entryTypes: ["post"],
+      });
+    });
+    let seen: readonly string[] = [];
+    // Installed first, so what it reads at `theme:ready` can only come from
+    // the later plugin's registrations rather than from install order.
+    const feeds = definePlugin("feeds", (ctx) => {
+      ctx.addAction("theme:ready", () => {
+        seen = [...ctx.plugins.entryTypes.keys()].concat([
+          ...ctx.plugins.termTaxonomies.keys(),
+        ]);
+      });
+    });
+    await installPlugins({ hooks, plugins: [feeds, blog] });
+    await hooks.doAction("theme:ready", {} as never);
+
+    expect(seen).toEqual(["post", "category"]);
+  });
+});

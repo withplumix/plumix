@@ -320,6 +320,9 @@ importers:
       '@plumix/plugin-comments':
         specifier: workspace:*
         version: link:../../packages/plugins/comments
+      '@plumix/plugin-feeds':
+        specifier: workspace:*
+        version: link:../../packages/plugins/feeds
       '@plumix/plugin-media':
         specifier: workspace:*
         version: link:../../packages/plugins/media
@@ -1484,6 +1487,79 @@ importers:
       '@types/react':
         specifier: catalog:react
         version: 19.2.18
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      wrangler:
+        specifier: catalog:cloudflare
+        version: 4.125.0(@cloudflare/workers-types@5.20260823.1)
+
+  packages/plugins/feeds:
+    devDependencies:
+      '@arethetypeswrong/cli':
+        specifier: 'catalog:'
+        version: 0.18.5
+      '@plumix/eslint-config':
+        specifier: workspace:*
+        version: link:../../../tooling/eslint
+      '@plumix/prettier-config':
+        specifier: workspace:*
+        version: link:../../../tooling/prettier
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../../../tooling/typescript
+      '@plumix/vitest-config':
+        specifier: workspace:*
+        version: link:../../../tooling/vitest
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
+      '@vitest/coverage-v8':
+        specifier: catalog:vitest
+        version: 4.1.11(vitest@4.1.11)
+      eslint:
+        specifier: 'catalog:'
+        version: 10.9.0(jiti@2.7.0)
+      plumix:
+        specifier: workspace:*
+        version: link:../../plumix
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.6
+      publint:
+        specifier: 'catalog:'
+        version: 0.3.24
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: catalog:vitest
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+
+  packages/plugins/feeds/playground:
+    dependencies:
+      '@plumix/plugin-blog':
+        specifier: workspace:*
+        version: link:../../blog
+      '@plumix/plugin-feeds':
+        specifier: workspace:*
+        version: link:..
+      '@plumix/runtime-cloudflare':
+        specifier: workspace:*
+        version: link:../../../runtimes/cloudflare
+      plumix:
+        specifier: workspace:*
+        version: link:../../../plumix
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: catalog:cloudflare
+        version: 5.20260823.1
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../../../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

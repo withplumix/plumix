@@ -96,6 +96,9 @@ const config: KnipConfig = {
     "packages/plugins/pages/playground": {
       entry: ["plumix.config.ts"],
     },
+    "packages/plugins/feeds/playground": {
+      entry: ["plumix.config.ts"],
+    },
     // drizzle-kit is invoked by consumers as a CLI hint, not imported.
     "packages/plumix": {
       entry: [

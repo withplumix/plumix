@@ -139,12 +139,30 @@ export { entryRoleImage } from "./seo/entry-image.js";
 // The `site` settings bag, and the general reader behind it. Both memoize per
 // request alongside the template dep that reads the same rows — so a plugin
 // asking for a settings group joins that read instead of opening a second
-// query for a bag already in hand.
-export { loadSettingsGroups, loadSiteSettings } from "./seo/site-settings.js";
+// query for a bag already in hand. `nonEmpty` is the reader for one value: a
+// settings value is `unknown` until something narrows it, and every caller
+// wants the same "a string with something in it, or nothing" answer.
+export {
+  loadSettingsGroups,
+  loadSiteSettings,
+  nonEmpty,
+} from "./seo/site-settings.js";
 // XML element-text escaping, for a plugin serializing a feed or a sitemap.
 // Core's own serializers use it; exported so two plugins don't each ship the
 // same five-character table.
 export { xmlEscape } from "./seo/xml.js";
+// The reverse-routing vocabulary, for a plugin that answers at the site root
+// (`registerPublicRoute`) and has to address the same URL space the router
+// compiled — `findTermByPath` is the inbound half, the rest the outbound. A
+// feed or a sitemap that spelled any of these itself would drift from the
+// pages it points at the first time a rewrite option moved one.
+export { dateRange } from "./route/date-range.js";
+export { exposesHierarchicalUrls } from "./route/compile.js";
+export { findTermByPath } from "./route/path-chain.js";
+export {
+  buildEntryPermalink,
+  termTaxonomyBaseSlug,
+} from "./route/permalink.js";
 // The caller's pending autosave for an entry. A surface that renders what an
 // author is editing has to overlay it the way `entry.get`'s preview mode does;
 // reading the live row alone shows a published entry's pre-edit state.

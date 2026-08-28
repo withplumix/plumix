@@ -45,6 +45,7 @@ import type {
   LoginLinkOptions,
   MetaBoxFieldInput,
   MutablePluginRegistry,
+  PluginRegistry,
   PluginRouteAuth,
   PluginRouteMethod,
   PluginRpcRouter,
@@ -86,6 +87,20 @@ import {
 
 export interface PluginSetupContextBase {
   readonly id: string;
+
+  /**
+   * What every plugin has registered so far — the very object
+   * `AppContext.plugins` hands a request handler, read-only and live.
+   *
+   * During `setup` it holds only what the plugins ahead of this one put there,
+   * so read it from the `theme:ready` action instead: by then every entry type
+   * and taxonomy exists, which is what lets a plugin enumerate them and claim
+   * concrete paths through {@link registerPublicRoute} rather than match an
+   * ambiguous pattern per request. What a plugin registers from its *own*
+   * `theme:ready` handler is only there for a subscriber that runs after it,
+   * which is why registration belongs in `setup`.
+   */
+  readonly plugins: PluginRegistry;
 
   /** Subscribe to an existing (core or other-plugin) filter. */
   addFilter<TName extends FilterName>(
@@ -465,6 +480,8 @@ export function createPluginSetupContext({
 
   const ctx: PluginSetupContextBase = {
     id: pluginId,
+
+    plugins: registry,
 
     addFilter: (name, fn, options) => {
       hooks.addFilter(name, fn, { ...options, plugin: pluginId });

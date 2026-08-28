@@ -103,27 +103,29 @@ describe("canonicalRedirectTarget", () => {
     ["root", "https://cms.example/"],
     ["plumix surface", "https://cms.example/_plumix/admin/"],
     ["robots", "https://cms.example/robots.txt"],
-    ["feed", "https://cms.example/feed/"],
-    ["sub-feed", "https://cms.example/feed/atom/"],
     ["dotted asset", "https://cms.example/favicon.ico/"],
     ["sitemap xml", "https://cms.example/sitemap.xml/"],
   ])("exempt: %s is never redirected", (_label, url) => {
     expect(targetFor(url)).toBeNull();
   });
 
-  test("a variant of a registered public route is never redirected", () => {
-    // A dot-less registered path is exempt only through the route table — the
-    // extension rule below does not reach it — so this is the case that proves
-    // the derivation, and the one core's hardcoded `/feed` literal covers today.
+  test("a registered public route is exempt; a variant of one still normalizes onto it", () => {
+    // The exemption is the literal path, so a dot-less registered endpoint is
+    // never 301'd — and a trailing-slash variant of it is 301'd *at* it, which
+    // is what gets an aggregator to the feed rather than to the 404 the
+    // content router would answer with.
+    expect(
+      targetFor(
+        "https://cms.example/syndication",
+        publicRoutes("/syndication"),
+      ),
+    ).toBeNull();
     expect(
       targetFor(
         "https://cms.example/syndication/",
         publicRoutes("/syndication"),
       ),
-    ).toBeNull();
-    expect(targetFor("https://cms.example/syndication/")).toBe(
-      "https://cms.example/syndication",
-    );
+    ).toBe("https://cms.example/syndication");
   });
 
   test("a feed-prefixed real page is still canonicalized", () => {

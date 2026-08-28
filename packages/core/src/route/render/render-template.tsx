@@ -45,7 +45,6 @@ import { isTrustedDevRequest } from "../../dev/trust.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { escapeHtml } from "../../escape-html.js";
 import { applyCanonical } from "../../seo/canonical.js";
-import { applyFeedDiscovery } from "../../seo/feed.js";
 import { loadSiteSettings, nonEmpty } from "../../seo/site-settings.js";
 import {
   loadTemplateDeps,
@@ -159,18 +158,13 @@ async function renderThroughThemeInner({
     ctx,
     title,
   );
-  // Feed discovery reads site settings from the DB — worth its own row in the
-  // waterfall. The `render:document` subscribers above are already traced per
-  // handler as `hook:` spans.
+  // The `<title>` fallback reads site settings from the DB — worth its own row
+  // in the waterfall. The `render:document` subscribers above are already
+  // traced per handler as `hook:` spans.
   const site = await ctx.telemetry.span("render: head", () =>
     loadSiteSettings(ctx),
   );
-  const renderDocument = applyFeedDiscovery(
-    applyCanonical(filtered, ctx),
-    data,
-    ctx,
-    { siteIsPrivate: site.public === false },
-  );
+  const renderDocument = applyCanonical(filtered, ctx);
   const loaderData = await prefetchEntryLoaders(ctx, data, template);
   // The `<title>` falls back to the resolver title, then the site name — so an
   // untitled entry gets `<title>Site</title>`, not an empty one.

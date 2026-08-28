@@ -22,8 +22,8 @@ declare module "../template-registry.js" {
   }
 }
 
-// A test plugin registering a whole archive type end-to-end — pattern, resolver,
-// and feed — with no core changes.
+// A test plugin registering a whole archive type end-to-end — pattern,
+// resolver and sitemap — with no core changes.
 const eventsPlugin = definePlugin("events", (ctx) => {
   ctx.registerArchiveType("event-series", {
     routes: ["/events/:series", "/events/:series/page/:page(\\d+)"],
@@ -39,11 +39,6 @@ const eventsPlugin = definePlugin("events", (ctx) => {
         },
         title: `Series: ${params.series}`,
       };
-    },
-    feed: {
-      routes: ["/events/:series/feed"],
-      // Any published entry — enough to prove the feed path serves.
-      filter: () => null,
     },
     sitemap: {
       // > SITEMAP_PAGE_SIZE (1000) so the index paginates the scope into two.
@@ -89,9 +84,8 @@ describe("custom archive types (registerArchiveType)", () => {
   });
 
   test("a colliding data field name isn't mis-classified by the SEO helpers", async () => {
-    // The payload carries a `year` field; the head must not gain a malformed
-    // date feed-discovery link, and the page must not be `noindex`-ed as if it
-    // were a search page.
+    // The payload carries a `year` field; the page must not be `noindex`-ed as
+    // if it were a search page, nor pick up any other date-archive treatment.
     const h = await createDispatcherHarness({
       plugins: [eventsPlugin],
       theme: eventsTheme,
@@ -124,19 +118,6 @@ describe("custom archive types (registerArchiveType)", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("summer");
-  });
-
-  test("a registered archive feed is served (empty filter → 404)", async () => {
-    // The test plugin's feed filter returns null → 404, proving the feed route
-    // reaches the plugin's filter rather than falling through to the router.
-    const h = await createDispatcherHarness({
-      plugins: [eventsPlugin],
-      theme: eventsTheme,
-    });
-    const response = await h.dispatch(
-      new Request("https://cms.example/events/summer/feed"),
-    );
-    expect(response.status).toBe(404);
   });
 
   test("the sitemap index enumerates a custom archive's scope, paginated by its count", async () => {

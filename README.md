@@ -52,6 +52,8 @@ Add features by dropping official plugins into your config:
 - **[Comments](./packages/plugins/comments)** — threaded, moderated discussion.
 - **[Media](./packages/plugins/media)** — media library and uploads.
 - **[Audit log](./packages/plugins/audit-log)** — an activity feed of who did what.
+- **[OG cards](./packages/plugins/og)** — a generated social card per page.
+- **[Feeds](./packages/plugins/feeds)** — RSS and Atom for the site and every archive.
 
 ## Documentation
 

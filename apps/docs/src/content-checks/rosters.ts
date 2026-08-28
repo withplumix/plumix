@@ -721,7 +721,6 @@ const FILTER_HOOKS = [
   "resolve:date:data",
   "resolve:front-page:data",
   "resolve:search:data",
-  "seo:feed:items",
   "seo:robots-txt",
   "seo:sitemap:urls",
   "theme:document",
@@ -918,6 +917,7 @@ const PLUGIN_PACKAGES = [
   "@plumix/plugin-audit-log",
   "@plumix/plugin-og",
   "@plumix/plugin-seo",
+  "@plumix/plugin-feeds",
 ] as const;
 
 /**

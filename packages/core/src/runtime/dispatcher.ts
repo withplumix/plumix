@@ -40,18 +40,12 @@ import { collectDevErrorPanels } from "../dev/server/panels/collect.js";
 import { devErrorJson, renderDevErrorPage } from "../dev/server/render.js";
 import { isTrustedDevRequest } from "../dev/trust.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
-import { exposesHierarchicalUrls } from "../route/compile.js";
-import { extractParams, matchRoute } from "../route/match.js";
+import { matchRoute } from "../route/match.js";
 import { matchPublicRoute } from "../route/public-routes.js";
 import { matchRedirect } from "../route/redirects.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
 import { canonicalRedirectTarget } from "../seo/canonical.js";
-import {
-  handleFeed,
-  isPublicEntryType,
-  publicTaxonomyByBaseSlug,
-} from "../seo/feed.js";
 import { handleRobotsTxt } from "../seo/robots.js";
 import { handleSitemapIndex, handleSubSitemap } from "../seo/sitemap.js";
 import {
@@ -87,21 +81,6 @@ const SITEMAP_INDEX_PATH = "/sitemap.xml";
 // `/sitemap-<scope>-<page>.xml` — greedy scope so a hyphenated name keeps its
 // hyphens and only the trailing `-<digits>` is the page.
 const SUB_SITEMAP_PATTERN = /^\/sitemap-(.+)-(\d+)\.xml$/;
-// `/feed`, `/feed/atom`, `/<type>/feed`, `/<type>/feed/atom`. The optional
-// leading segment is the entry-type scope; `/feed*` reserves these paths the
-// way WordPress does, so a page slugged "feed" can't shadow them.
-const FEED_PATTERN = /^\/(?:([^/]+)\/)?feed(\/atom)?$/;
-// `/authors/<slug>/feed` (+ `/atom`) — the author-scoped feed. Checked before
-// the generic term-feed shape since `/authors/*` is a reserved framework space.
-const AUTHOR_FEED_PATTERN = /^\/authors\/([^/]+)\/feed(\/atom)?$/;
-// `/YYYY[/MM[/DD]]/feed` (+ `/atom`) — the date-scoped feed. Numeric-constrained
-// (like the date route rules) and checked before the generic term-feed shape.
-const DATE_FEED_PATTERN =
-  /^\/(\d{4})(?:\/(\d{2}))?(?:\/(\d{2}))?\/feed(\/atom)?$/;
-// `/<taxonomy>/<term-path>/feed` (+ `/atom`) — the term-scoped feed. The path
-// is one segment for a top-level term, `parent/child` for a nested one.
-const TERM_FEED_PATTERN = /^\/([^/]+)\/(.+)\/feed(\/atom)?$/;
-
 // Auth-flow handlers (passkey/oauth/magic-link/device/email-change) are
 // admin-login cold paths — never the public render path. Load them via one
 // memoized dynamic import on the first auth-flow request per isolate so their
@@ -429,10 +408,11 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
 
 // The public site: only GET/HEAD are meaningful past this point. A plugin's
 // registered public routes answer first, so a plugin can take `/robots.txt` or
-// `/feed` off core outright. Core's own SEO assets (robots, sitemaps, feeds)
-// come next, ahead of the public route map so a plugin rewrite rule can't
-// shadow them, then a non-canonical URL 301s to its slash-less form before the
-// route map runs, and anything left renders through the public router.
+// the sitemap off core outright — the feeds already left, to
+// `@plumix/plugin-feeds`. Core's own SEO assets come next, ahead of the public
+// route map so a plugin rewrite rule can't shadow them, then a non-canonical
+// URL 301s to its slash-less form before the route map runs, and anything left
+// renders through the public router.
 async function tryPublicRoutes(
   app: PlumixApp,
   ctx: AppContext,
@@ -456,78 +436,11 @@ async function tryPublicRoutes(
   if (subSitemap) {
     return handleSubSitemap(ctx, subSitemap[1] ?? "", Number(subSitemap[2]));
   }
-  const feed = FEED_PATTERN.exec(pathname);
-  if (feed) {
-    // A scoped `/<x>/feed` is a feed only when `<x>` is a public entry type;
-    // otherwise it's a real path (e.g. a page slugged "feed") — fall through.
-    const type = feed[1];
-    if (type === undefined) {
-      return handleFeed(ctx, { kind: "site" }, feed[2] ? "atom" : "rss2");
-    }
-    if (isPublicEntryType(ctx, type)) {
-      return handleFeed(ctx, { kind: "type", type }, feed[2] ? "atom" : "rss2");
-    }
-  }
-  const authorFeed = AUTHOR_FEED_PATTERN.exec(pathname);
-  if (authorFeed) {
-    // `collectFeedItems` 404s an unknown slug, so a bogus `/authors/x/feed`
-    // returns 404 rather than falling through to the public router.
-    return handleFeed(
-      ctx,
-      { kind: "author", slug: authorFeed[1] ?? "" },
-      authorFeed[2] ? "atom" : "rss2",
-    );
-  }
-  const dateFeed = DATE_FEED_PATTERN.exec(pathname);
-  if (dateFeed) {
-    // An impossible date (Feb 30) yields a null filter → 404 in `handleFeed`.
-    return handleFeed(
-      ctx,
-      {
-        kind: "date",
-        year: Number(dateFeed[1]),
-        month: dateFeed[2] === undefined ? null : Number(dateFeed[2]),
-        day: dateFeed[3] === undefined ? null : Number(dateFeed[3]),
-      },
-      dateFeed[4] ? "atom" : "rss2",
-    );
-  }
-  // Plugin-registered archive feeds (`registerArchiveType({ feed })`). Gated on
-  // the `/feed` suffix so the URLPattern match only runs for feed-shaped URLs,
-  // never the hot public-render path; checked before the generic term feed so a
-  // custom `/x/y/feed` isn't misread as a term feed.
-  if (pathname.endsWith("/feed") || pathname.endsWith("/feed/atom")) {
-    const archiveFeed = matchArchiveFeed(ctx, pathname);
-    if (archiveFeed) {
-      return handleFeed(
-        ctx,
-        { kind: "custom", name: archiveFeed.name, params: archiveFeed.params },
-        archiveFeed.atom ? "atom" : "rss2",
-      );
-    }
-  }
-  const termFeed = TERM_FEED_PATTERN.exec(pathname);
-  if (termFeed) {
-    // Only a public taxonomy's archive space owns `/<taxonomy>/<path>/feed`;
-    // anything else (e.g. a nested page) falls through to the public router.
-    const taxonomy = publicTaxonomyByBaseSlug(ctx, termFeed[1] ?? "");
-    const path = (termFeed[2] ?? "").split("/");
-    // A nested (multi-segment) path is only a term feed when the taxonomy
-    // exposes hierarchical URLs — mirrors the archive route, which only emits
-    // `:path+` for hierarchical taxonomies.
-    if (taxonomy && (path.length === 1 || exposesHierarchicalUrls(taxonomy))) {
-      return handleFeed(
-        ctx,
-        { kind: "term", taxonomy: taxonomy.name, path },
-        termFeed[3] ? "atom" : "rss2",
-      );
-    }
-  }
 
   // Plugin/site/theme-registered redirects (301/302/307/308) and 410s. Matched
   // ahead of both the asset-404 shortcut (so a moved image/css/js can redirect)
   // and the content route map (so a redirect shadows a would-be page). Reserved
-  // SEO assets above (robots.txt, sitemap*.xml, feeds) still win.
+  // SEO assets above (robots.txt, sitemap*.xml) still win.
   const redirect = matchRedirect(url, app.redirects);
   if (redirect !== null) return redirectResponse(redirect);
 
@@ -552,34 +465,6 @@ function redirectResponse(resolution: RedirectResolution): Response {
   return resolution.kind === "gone"
     ? gone("redirect-gone")
     : redirect(resolution.location, resolution.status);
-}
-
-// Match a `/…/feed[/atom]` request against every registered archive feed route.
-// The `/atom` variant of each route is matched too, so a plugin declares only
-// the base feed route to get both formats. Returns the archive name + captured
-// params, or null when no archive feed owns the path.
-function matchArchiveFeed(
-  ctx: AppContext,
-  pathname: string,
-): { name: string; params: Record<string, string>; atom: boolean } | null {
-  // The caller only enters on the `/feed[/atom]` suffix, and routes are declared
-  // base-only, so the format is fixed here — no need to try both variants.
-  const atom = pathname.endsWith("/atom");
-  for (const archive of ctx.plugins.archiveTypes.values()) {
-    if (!archive.feed) continue;
-    for (const route of archive.feed.routes) {
-      const result = new URLPattern({
-        pathname: atom ? `${route}/atom` : route,
-      }).exec({ pathname });
-      if (!result) continue;
-      return {
-        name: archive.name,
-        params: extractParams(result.pathname),
-        atom,
-      };
-    }
-  }
-  return null;
 }
 
 // The public route intent for a resolved match: an unmatched root is the front

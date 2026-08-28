@@ -7,7 +7,7 @@ import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
 // A plugin that owns a path at the site root, the way `@plumix/plugin-feeds`
-// and `@plumix/plugin-seo` will own `/feed`, `/robots.txt` and the sitemap.
+// owns `/feed` and `@plumix/plugin-seo` will own `/robots.txt` and the sitemap.
 function owner(path: string, body = "owned", pluginId = "feeds") {
   return definePlugin(pluginId, (ctx) => {
     ctx.registerPublicRoute({
@@ -44,8 +44,6 @@ describe("public route dispatch", () => {
     ["robots", "/robots.txt"],
     ["the sitemap index", "/sitemap.xml"],
     ["a sub-sitemap", "/sitemap-post-1.xml"],
-    ["the site feed", "/feed"],
-    ["a type feed", "/post/feed"],
   ])("shadows core's own %s branch", async (_name, path) => {
     const blog = definePlugin("blog", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });

@@ -31,11 +31,15 @@ export function canonicalUrl(ctx: AppContext): string {
 
 /**
  * Paths the 301 normalizer must never touch: the root, the plumix surface,
- * anything a plugin registered as a public route, the SEO machine endpoints
- * (robots, feeds), and asset/extension-like paths (a dot in the last segment —
- * covers `sitemap*.xml`, `favicon.ico`, etc.). Everything else is a public page
- * route whose shape we normalize. The registered-route arm is where the
- * endpoint literals go once the SEO plugins register them (#1998).
+ * a path a plugin registered as a public route, core's own `robots.txt`, and
+ * asset/extension-like paths (a dot in the last segment — covers
+ * `sitemap*.xml`, `favicon.ico`, etc.). Everything else is a public page route
+ * whose shape we normalize. The feed literals left with the feeds themselves;
+ * `robots.txt` follows once the SEO plugin registers it (#1998).
+ *
+ * The registered-route arm restates the dispatcher's own check, which already
+ * answered such a path before this ran — it is here so the exemption stays
+ * true if that ordering ever moves, not for a request it decides today.
  */
 export function isCanonicalExempt(
   pathname: string,
@@ -44,13 +48,13 @@ export function isCanonicalExempt(
   if (pathname === "/") return true;
   if (pathname === "/robots.txt") return true;
   if (pathname.startsWith("/_plumix/")) return true;
-  // Feed endpoints own their exact routing; `/feedback` only shares a prefix.
-  if (pathname === "/feed" || pathname.startsWith("/feed/")) return true;
-  // The normalized shape, not the literal one: the dispatcher already served
-  // the literal path if a route owned it, and normalization exists to
-  // consolidate *page* URL variants — a machine endpoint has none, so a shape
-  // that would normalize onto one is left alone rather than 301'd at it.
-  if (matchPublicRoute(publicRoutes, canonicalPath(pathname)) !== null) {
+  // The literal shape, not the normalized one. Matching the normalized shape
+  // exempted every trailing-slash variant of a registered endpoint — so
+  // `/post/feed/` stopped 301'ing onto the feed and 404'd through the content
+  // router instead, where core's own `/feed` literal only ever covered the
+  // site scope. A machine endpoint consolidates its URL variants exactly like
+  // a page: the 301 is what gets an aggregator to the feed.
+  if (matchPublicRoute(publicRoutes, pathname) !== null) {
     return true;
   }
   const trimmed = pathname.replace(/\/+$/, "");
