@@ -1,7 +1,8 @@
 // Build-time manifest projection — the build half of the plugin system. Reads a
 // `PluginRegistry` snapshot and projects it into the wire `PlumixManifest` the
 // admin bundle consumes: the manifest entry types, `buildManifest`, the
-// `to*Entry` projectors, the registration-time assertions, admin-slug
+// `to*Entry` projectors (the per-field one lives in
+// `fields/manifest-entry.ts`), the registration-time assertions, admin-slug
 // derivation, admin-nav assembly, and the HTML `<script>` transport. Its sole
 // build-time caller is the plumix Vite plugin. Re-exported unchanged from the
 // public `@plumix/core/manifest` barrel.
@@ -23,17 +24,8 @@ import type { ResolvedI18n, ResolvedLocale } from "../i18n/locale-registry.js";
 import type { NamedTemplateChoice } from "../route/render/template-builders.js";
 import type { ResolvedMeta } from "../rpc/meta/core.js";
 import type { PluginI18nSlot } from "./define.js";
-import type { MetaFieldCondition } from "./fields/condition.js";
-import type {
-  MetaBoxField,
-  MetaBoxFieldOption,
-  MetaBoxFieldSpan,
-  MetaScalarType,
-  ReferenceTarget,
-  RepeaterDialogSize,
-  RepeaterLayout,
-  SelectAppearance,
-} from "./fields/meta-box-field.js";
+import type { MetaBoxFieldManifestEntry } from "./fields/manifest-entry.js";
+import type { MetaBoxField } from "./fields/meta-box-field.js";
 import type {
   AdminNavGroupRef,
   EntryTypeAccess,
@@ -56,6 +48,7 @@ import type {
 } from "./registry.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
+import { toMetaBoxFieldEntry } from "./fields/manifest-entry.js";
 import {
   resolveEntryTypeVisibility,
   resolveTermTaxonomyVisibility,
@@ -249,97 +242,10 @@ export interface AccessPolicyChoice {
 }
 
 /**
- * Client-safe field descriptor inside a meta box. Mirrors `MetaBoxField`
- * minus the server-only `sanitize` callback and `default` value (the
- * admin receives the default server-side and injects it into the form).
- */
-export interface MetaBoxFieldManifestEntry {
-  readonly key: string;
-  readonly label: Label;
-  readonly type: MetaScalarType;
-  readonly inputType: string;
-  readonly description?: Label;
-  readonly required?: boolean;
-  /** Static input adornments — see `MetaBoxFieldBase.prepend` / `.append`. */
-  readonly prepend?: Label;
-  readonly append?: Label;
-  readonly placeholder?: Label;
-  readonly maxLength?: number;
-  /**
-   * Lower bound. `number` carries it as a number; `date` / `datetime`
-   * / `time` carry it as the matching ISO string. Renderers branch on
-   * `inputType` to pick the right interpretation.
-   */
-  readonly min?: number | string;
-  /** Upper bound — see `min`. */
-  readonly max?: number | string;
-  readonly step?: number;
-  readonly options?: readonly MetaBoxFieldOption[];
-  /** Choice-field cardinality — `select` fields store an array when set. */
-  readonly multiple?: boolean;
-  /** Choice-field control variant — see `SelectAppearance`. */
-  readonly appearance?: SelectAppearance;
-  /** Toggle switch state labels — see `ToggleMetaBoxField`. */
-  readonly onText?: Label;
-  readonly offText?: Label;
-  readonly default?: unknown;
-  readonly span?: MetaBoxFieldSpan;
-  /**
-   * Carried for reference field variants (`user`, `entry`, `term`,
-   * `media`, plugin-registered kinds). The admin's generic picker
-   * dispatches on `referenceTarget.kind` to call the matching
-   * lookup RPC; `scope` rides along untouched.
-   */
-  readonly referenceTarget?: ReferenceTarget;
-  /**
-   * Richtext field allowlists — wire projection of
-   * `RichtextMetaBoxField`'s `marks` / `nodes` / `blocks`. See that
-   * type for semantics.
-   */
-  readonly marks?: readonly string[];
-  readonly nodes?: readonly string[];
-  readonly blocks?: readonly string[];
-  /**
-   * Child-field manifest for the composite field types — repeater row
-   * schema and group members alike, keyed positionally, same shape as a
-   * top-level field. Children keep their `span`: the row-editor dialog and
-   * group grid lay them out on a 12-column grid that honours it. Sanitize
-   * callbacks are stripped from the wire shape; the admin recurses through
-   * this list when rendering each row / group. The renderer dispatches on
-   * `inputType` (`repeater` vs `group`) to interpret it.
-   */
-  readonly subFields?: readonly MetaBoxFieldManifestEntry[];
-  /** Repeater add-row button label — see {@link RepeaterMetaBoxField.addLabel}. */
-  readonly addLabel?: Label;
-  /** Repeater row layout — see {@link RepeaterLayout}. */
-  readonly layout?: RepeaterLayout;
-  /** Repeater collapsed-row summary sub-field key — see {@link RepeaterMetaBoxField.collapsed}. */
-  readonly collapsed?: string;
-  /** Repeater row-editor dialog width — see {@link RepeaterDialogSize}. */
-  readonly dialogSize?: RepeaterDialogSize;
-  /**
-   * Capability gate for the individual field. See `MetaBoxFieldBase.capability`.
-   */
-  readonly capability?: string;
-  /**
-   * Conditional visibility rules. See `MetaBoxFieldBase.visibleWhen`.
-   */
-  readonly visibleWhen?: MetaFieldCondition;
-}
-
-/**
  * Shared base for every "card of fields" serialised entry. Each
  * concrete projection extends with its identifier + any surface-
  * specific layout + scope fields.
  */
-export interface MetaBoxBaseManifestEntry {
-  readonly label: Label;
-  readonly description?: Label;
-  readonly priority?: number;
-  readonly capability?: string;
-  readonly fields: readonly MetaBoxFieldManifestEntry[];
-}
-
 /**
  * Entry-box wire field — drops `span` from the shared
  * `MetaBoxFieldManifestEntry`. The editor rail can't honor the hint
@@ -349,6 +255,14 @@ export type EntryMetaBoxFieldManifestEntry = Omit<
   MetaBoxFieldManifestEntry,
   "span"
 >;
+
+export interface MetaBoxBaseManifestEntry {
+  readonly label: Label;
+  readonly description?: Label;
+  readonly priority?: number;
+  readonly capability?: string;
+  readonly fields: readonly MetaBoxFieldManifestEntry[];
+}
 
 export interface EntryMetaBoxManifestEntry extends Omit<
   MetaBoxBaseManifestEntry,
@@ -1432,6 +1346,13 @@ function resolveTaxonomyMenuIcon(
   return isHierarchical === true ? "folder" : "tag";
 }
 
+function toEntryMetaBoxFieldEntry(
+  field: MetaBoxField,
+): EntryMetaBoxFieldManifestEntry {
+  const { span: _span, ...entry } = toMetaBoxFieldEntry(field);
+  return entry;
+}
+
 // Allowlist for entry meta box entries — same rationale as
 // `toEntryTypeManifest`. `registeredBy` is intentionally excluded
 // (server-only debug metadata). `sanitize` on each field is stripped
@@ -1614,91 +1535,6 @@ function toMarkEntry(mark: RegisteredMark): MarkManifestEntry {
     bubbleMenuIcon,
     adminSchema,
   };
-}
-
-// Per-variant options live on each narrowed variant of `MetaBoxField`.
-// Reading via this explicit projection lets the serializer stay
-// variant-agnostic — narrowed variants that don't carry a given
-// option read back `undefined`, and the wire shape stays uniform
-// regardless of which variant produced the field. `min` / `max` widen
-// to `number | string` because date / datetime / time variants store
-// ISO-string bounds while `number` stores numeric bounds; the wire
-// shape mirrors that union and renderers branch on `inputType`.
-interface MetaBoxFieldOptionView {
-  readonly placeholder?: Label;
-  readonly maxLength?: number;
-  readonly min?: number | string;
-  readonly max?: number | string;
-  readonly step?: number;
-  readonly options?: readonly MetaBoxFieldOption[];
-  readonly multiple?: boolean;
-  readonly appearance?: SelectAppearance;
-  readonly onText?: Label;
-  readonly offText?: Label;
-  readonly referenceTarget?: ReferenceTarget;
-  readonly marks?: readonly string[];
-  readonly nodes?: readonly string[];
-  readonly blocks?: readonly string[];
-  readonly subFields?: readonly MetaBoxField[];
-  /** Group member fields — projected into the wire `subFields` slot. */
-  readonly fields?: readonly MetaBoxField[];
-  readonly addLabel?: Label;
-  readonly layout?: RepeaterLayout;
-  readonly collapsed?: string;
-  readonly dialogSize?: RepeaterDialogSize;
-}
-
-function toEntryMetaBoxFieldEntry(
-  field: MetaBoxField,
-): EntryMetaBoxFieldManifestEntry {
-  const view = field as MetaBoxFieldOptionView;
-  return {
-    key: field.key,
-    label: field.label,
-    type: field.type,
-    inputType: field.inputType,
-    description: field.description,
-    required: field.required,
-    prepend: field.prepend,
-    append: field.append,
-    placeholder: view.placeholder,
-    maxLength: view.maxLength,
-    min: view.min,
-    max: view.max,
-    step: view.step,
-    options: view.options,
-    multiple: view.multiple,
-    appearance: view.appearance,
-    onText: view.onText,
-    offText: view.offText,
-    default: field.default,
-    referenceTarget: view.referenceTarget,
-    marks: view.marks,
-    nodes: view.nodes,
-    blocks: view.blocks,
-    capability: field.capability,
-    visibleWhen: field.visibleWhen,
-    addLabel: view.addLabel,
-    layout: view.layout,
-    collapsed: view.collapsed,
-    dialogSize: view.dialogSize,
-    // Repeater subfields and group members recurse through
-    // `toMetaBoxFieldEntry` into the uniform wire `subFields` slot — the same
-    // shape as a top-level field, keeping each child's `span` (the row-editor
-    // dialog / group grid honour it, unlike the entry rail that drops the
-    // top-level hint) and stripping sanitize callbacks (server-only). The
-    // renderer branches on `inputType` to read them as rows / members.
-    subFields: (view.subFields ?? view.fields)?.map((sf) =>
-      toMetaBoxFieldEntry(sf),
-    ),
-  };
-}
-
-// A subfield / member keeps its `span` (the entry projection drops it); the
-// composite editors lay children out on their own 12-column grid. Children
-// recurse via `toEntryMetaBoxFieldEntry`, which maps `subFields` back here.
-function toMetaBoxFieldEntry(field: MetaBoxField): MetaBoxFieldManifestEntry {
-  return { ...toEntryMetaBoxFieldEntry(field), span: field.span };
 }
 
 /**

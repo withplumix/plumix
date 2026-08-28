@@ -1,9 +1,12 @@
 // Public `@plumix/core/manifest` barrel. The plugin manifest was split along
 // its two timelines: the meta-box field vocabulary lives beside its builders in
-// `fields/meta-box-field.ts`, the runtime registry container in `registry.ts`,
+// `fields/meta-box-field.ts`, its per-field wire projection in
+// `fields/manifest-entry.ts`, the runtime registry container in `registry.ts`,
 // and the build-time projection in `manifest-projection.ts`. This module
-// re-exports all three so the public subpath surface stays byte-identical.
+// re-exports all four, so splitting the implementation never moves a public
+// name.
 
+export * from "./fields/manifest-entry.js";
 export * from "./fields/meta-box-field.js";
 export * from "./registry.js";
 export * from "./manifest-projection.js";

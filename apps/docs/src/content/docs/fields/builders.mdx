@@ -219,6 +219,30 @@ The declaration and the registration check each other. `registerEntryMetaBox` in
   at all when a theme reads the meta back.
 </Aside>
 
+## Compiling a fields array yourself
+
+Registration does three things to a `fields` array before the admin sees it. It compiles the builders down to definitions, it checks them, and it projects each definition to the wire shape the renderer reads. The first and the third are published, so a plugin that renders fields on a surface core does not — a front-end form, a panel of its own — runs the same pair instead of reimplementing it.
+
+```ts
+import { compileMetaBoxFields, text, toMetaBoxFieldEntry } from "plumix/fields";
+
+const fields = [text("name").required(), text("email")];
+
+const wire = compileMetaBoxFields(fields).map(toMetaBoxFieldEntry);
+```
+
+`compileMetaBoxFields` takes builders, plain definitions, or a mix of the two, and returns definitions. `toMetaBoxFieldEntry` takes one definition and returns the entry the admin receives. Repeater rows and group members recurse into `subFields`, and the callback options drop out, because `.sanitize()` and `.validate()` run on the server and nothing serialisable stands in for them.
+
+The middle step is the one you do not get. `registerEntryMetaBox` and its siblings reject a key the write path would refuse, a key under the reserved `__plumix_` prefix, a duplicate key within the box, more than 200 fields, and a `.visibleWhen()` rule naming a field the box does not declare. Project an array yourself and none of that runs. The last one is the one to watch, because the projection carries `visibleWhen` to the wire either way, and a renderer will evaluate a rule against a driver that was never declared. A repeater or a group is the exception: it checks its own children as `.fields()` is called, so a row's rules are held to their scope however the array reaches the wire.
+
+<Aside type="caution" title="Builders come from plumix/fields">
+  The builder functions are published at `plumix/fields` and nowhere else, and
+  both helpers above sit beside them. `@plumix/core/fields` resolves and carries
+  the same names, and it is one of the packages the façade covers, so it moves
+  without warning. The general rule is in [Import from plumix, never from
+  @plumix/core](/getting-started/project-structure/#import-from-plumix-never-from-plumixcore).
+</Aside>
+
 ## Related
 
 The builders here declare fields for boxes registered in [Meta Boxes](/fields/meta-boxes/), and [Field Types](/fields/field-types/) lists what each builder function produces. [Overview](/fields/overview/) covers what the compiled definition does at write time and read time. A theme consumes `MetaOf` through its template data, described in [Template Data](/themes/template-data/), and the entry type names it is keyed by come from [Entry Types](/content-modelling/entry-types/).

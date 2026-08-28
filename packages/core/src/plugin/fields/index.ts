@@ -12,6 +12,18 @@
 //
 // Re-exported as a public surface from `plumix/fields`.
 
+// The same compile + project pair every `register*MetaBox` surface runs
+// internally, published so a plugin rendering its own fields doesn't
+// reimplement it. Registration's validation is not part of the pair — see
+// `toMetaBoxFieldEntry`.
+export { compileMetaBoxFields } from "./meta-box-field.js";
+export type {
+  FieldBuilder,
+  MetaBoxField,
+  MetaBoxFieldInput,
+} from "./meta-box-field.js";
+export { toMetaBoxFieldEntry } from "./manifest-entry.js";
+export type { MetaBoxFieldManifestEntry } from "./manifest-entry.js";
 export {
   CANONICAL_INPUT_TYPES,
   CHOICE_INPUT_TYPES,
