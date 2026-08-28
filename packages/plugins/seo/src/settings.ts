@@ -35,6 +35,10 @@ const D = {
     id: "plugin.seo.settings.default_og_image",
     message: "Default social image URL",
   },
+  represents: {
+    id: "plugin.seo.settings.represents",
+    message: "This site represents",
+  },
   pageLabel: { id: "plugin.seo.settings.page.label", message: "SEO" },
   pageDescription: {
     id: "plugin.seo.settings.page.description",
@@ -42,12 +46,26 @@ const D = {
   },
 } as const satisfies Record<string, Label>;
 
+// The two answers and the schema.org type each names. One roster, so the
+// stored value is narrowed against the same list the form offers. The labels
+// are vocabulary terms rather than prose — the same word in every language —
+// so they are written here rather than sent through the catalogs.
+const REPRESENTS = [
+  { value: "organization", label: "Organization" },
+  { value: "person", label: "Person" },
+] as const;
+
+/** What the site says it is, in the one place structured data asks. */
+export type SiteRepresents = (typeof REPRESENTS)[number]["value"];
+
 /** The site-wide answers the head needs. */
 export interface SeoSettings {
   /** False holds the whole site out of the index. */
   readonly indexable: boolean;
   /** The last link of the `og:image` chain, or null. */
   readonly defaultOgImage: string | null;
+  /** Who the structured-data graph names as the site's publisher. */
+  readonly represents: SiteRepresents;
 }
 
 export function registerSeoSettings(ctx: PluginSetupContext): void {
@@ -68,6 +86,14 @@ export function registerSeoSettings(ctx: PluginSetupContext): void {
         inputType: "url",
         label: D.defaultOgImage,
         maxLength: 500,
+      },
+      {
+        key: "represents",
+        type: "string",
+        inputType: "select",
+        label: D.represents,
+        default: REPRESENTS[0].value,
+        options: REPRESENTS,
       },
     ],
   });
@@ -126,6 +152,9 @@ export async function loadSeoSettings(ctx: AppContext): Promise<SeoSettings> {
     defaultOgImage:
       nonEmpty(own.default_og_image) ??
       nonEmpty(legacy[LEGACY_KEYS.default_og_image]),
+    represents:
+      REPRESENTS.find((option) => option.value === own.represents)?.value ??
+      REPRESENTS[0].value,
   };
 }
 

@@ -2,15 +2,18 @@ import type {
   DocumentLink,
   DocumentManifest,
   DocumentMeta,
+  DocumentScript,
   OgImage,
   TemplateData,
 } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import { canonicalUrl, loadSiteSettings, pageFacts } from "plumix";
 
+import { breadcrumbTrail, siteRoot } from "./breadcrumbs.js";
 import { indexable } from "./indexable.js";
 import { resolveOgImage } from "./og-image.js";
 import { readPageOverrides } from "./overrides.js";
+import { DEFAULT_SCHEMA_TYPE, schemaGraph, schemaScript } from "./schema.js";
 import { loadSeoSettings, nonEmpty } from "./settings.js";
 
 // `max-image-preview` is an indexing hint, so it rides only on the arm that
@@ -148,10 +151,23 @@ function toOgLocale(localeCode: string): string {
   return localeCode.replace("-", "_");
 }
 
+// The graph goes with the tags rather than beside them: a theme that wrote its
+// own `ld+json` has said what the page is, and a second script would have the
+// page make two claims about itself.
+function hasJsonLd(scripts: readonly DocumentScript[] | undefined): boolean {
+  // Lowercased: an HTML `type` attribute is case-insensitive, so a theme that
+  // wrote `application/LD+JSON` has still claimed the page.
+  return (
+    scripts?.some(
+      (entry) => entry.type?.toLowerCase() === "application/ld+json",
+    ) ?? false
+  );
+}
+
 /**
  * Write this page's head. Reads the site settings and the subject's own SEO
  * answers, decides indexability once through {@link indexable}, then gap-fills
- * via {@link seoHeadMeta}.
+ * via {@link seoHeadMeta} and appends the structured-data graph.
  */
 export async function applySeoHead(
   manifest: DocumentManifest,
@@ -169,20 +185,26 @@ export async function applySeoHead(
   const isEntry = kind === "entry";
   const overrides = readPageOverrides(facts);
   const decision = indexable(facts, seoSettings);
-  return seoHeadMeta(manifest, {
-    canonical: overrides.canonical ?? canonicalUrl(ctx),
+  const canonical = overrides.canonical ?? canonicalUrl(ctx);
+  const tagline = nonEmpty(site.tagline);
+  const description =
+    overrides.description ?? nonEmpty(entry?.excerpt) ?? tagline;
+  // `pageFacts` also carries an author archive's author, which is not the
+  // byline of anything — only an entry has one.
+  const byline = isEntry && author ? author : null;
+  const ogImage = await resolveOgImage(ctx, data, {
+    override: overrides.ogImage,
+    siteDefault: seoSettings.defaultOgImage,
+  });
+  const siteName = nonEmpty(site.title);
+  const withMeta = seoHeadMeta(manifest, {
+    canonical,
     title: nonEmpty(title),
     searchTitle: overrides.title,
-    description:
-      overrides.description ??
-      nonEmpty(entry?.excerpt) ??
-      nonEmpty(site.tagline),
+    description,
     ogType: isEntry ? "article" : "website",
-    ogImage: await resolveOgImage(ctx, data, {
-      override: overrides.ogImage,
-      siteDefault: seoSettings.defaultOgImage,
-    }),
-    siteName: nonEmpty(site.title),
+    ogImage,
+    siteName,
     ogLocale: toOgLocale(ctx.locale.code),
     indexable: decision.indexable,
     // A site held out of the index is held out of search entirely, links
@@ -190,8 +212,40 @@ export async function applySeoHead(
     nofollow: !seoSettings.indexable || overrides.nofollow,
     published,
     modified,
-    // `pageFacts` also carries an author archive's author, which is not the
-    // byline of anything — only an entry has one.
-    author: isEntry && author ? (author.name ?? author.slug) : null,
+    author: byline ? (byline.name ?? byline.slug) : null,
   });
+
+  // A page asking not to be indexed has no rich result to be eligible for, so
+  // it offers no structured data — the alternative is a page whose graph and
+  // whose robots directive say different things about it.
+  if (!decision.indexable || hasJsonLd(manifest.script)) return withMeta;
+
+  const graph = await schemaGraph(ctx, facts, {
+    canonical,
+    home: siteRoot(ctx),
+    title: overrides.title ?? nonEmpty(title),
+    description,
+    siteName,
+    siteDescription: tagline,
+    locale: ctx.locale.code,
+    // The last link of the `og:image` chain is a sharing fallback, not a
+    // picture of this page. Passed on, every article on the site would claim
+    // the same bytes as its own `#primaryimage`, and `Article.image` is read
+    // as representative of the article it hangs off.
+    image: ogImage?.url === seoSettings.defaultOgImage ? null : ogImage,
+    published,
+    modified,
+    author: byline
+      ? { slug: byline.slug, name: byline.name ?? byline.slug }
+      : null,
+    articleType: isEntry ? (overrides.schemaType ?? DEFAULT_SCHEMA_TYPE) : null,
+    represents: seoSettings.represents,
+    breadcrumbs: breadcrumbTrail(ctx, data),
+  });
+  // A subscriber that emptied the graph asked for no script.
+  if (graph.length === 0) return withMeta;
+  return {
+    ...withMeta,
+    script: [...(withMeta.script ?? []), schemaScript(graph)],
+  };
 }

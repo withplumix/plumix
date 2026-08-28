@@ -30,6 +30,11 @@ msgstr "رابط الصورة الاجتماعية الافتراضية"
 
 #. js-lingui-explicit-id
 #: src/settings.ts
+msgid "plugin.seo.settings.represents"
+msgstr "يمثّل هذا الموقع"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
 msgid "plugin.seo.settings.page.label"
 msgstr "تحسين محركات البحث"
 
@@ -102,3 +107,13 @@ msgstr "يزيل هذا أيضًا من خريطة الموقع."
 #: src/overrides.ts
 msgid "plugin.seo.box.nofollow.label"
 msgstr "عدم تتبع الروابط في هذه الصفحة"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.label"
+msgstr "نوع المحتوى"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.description"
+msgstr "كيف تصنّف البيانات المنظَّمة هذا المُدخل. الافتراضي مقالة."

@@ -157,7 +157,10 @@ export { xmlEscape } from "./seo/xml.js";
 // feed or a sitemap that spelled any of these itself would drift from the
 // pages it points at the first time a rewrite option moved one.
 export { dateRange } from "./route/date-range.js";
-export { exposesHierarchicalUrls } from "./route/compile.js";
+export {
+  archiveSlugForEntryType,
+  exposesHierarchicalUrls,
+} from "./route/compile.js";
 export { findTermByPath } from "./route/path-chain.js";
 export {
   buildEntryPermalink,

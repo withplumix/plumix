@@ -14,6 +14,7 @@ import { registerSeoSettings } from "./settings.js";
 import "./archive.js"; // ArchiveTypeOptions.sitemap
 import "./og-image.js"; // seo:og_image
 import "./robots.js"; // seo:robots-txt
+import "./schema.js"; // seo:schema:needs, seo:schema:piece, seo:schema:graph
 import "./sitemap.js"; // seo:sitemap:urls
 
 // Well past the default of 100, so nothing a site writes lands after this.
@@ -38,6 +39,16 @@ export type { Indexability, IndexabilityReason } from "./indexable.js";
 export { indexable } from "./indexable.js";
 export { SEO_META_KEYS } from "./overrides.js";
 export type { SeoMetaBoxOptions } from "./meta-box.js";
+// The structured-data vocabulary, for a plugin describing its own content
+// through the three `seo:schema:*` tiers, and the serializer behind it for one
+// emitting a script of its own.
+export type { SchemaPiece, SchemaPieceName, SchemaType } from "./schema.js";
+export { DEFAULT_SCHEMA_TYPE, SCHEMA_TYPES } from "./schema.js";
+export { serializeJsonLd } from "./json-ld.js";
+// The trail, and the component that draws it. One source, so what the page
+// shows and what its `BreadcrumbList` claims cannot disagree.
+export type { BreadcrumbItem } from "./breadcrumbs.js";
+export { Breadcrumbs, breadcrumbTrail } from "./breadcrumbs.js";
 
 /** How the plugin is installed. Every field is optional. */
 export interface SeoOptions {
@@ -56,6 +67,12 @@ export interface SeoOptions {
  * override, a social image, and `noindex` / `nofollow` flags. The `noindex`
  * flag reaches the head and the sitemap through one predicate, so a page
  * cannot claim `noindex` while still being listed.
+ *
+ * Every indexable page also carries a cross-referenced structured-data graph —
+ * website, publisher, page, article, breadcrumbs, image and author, each
+ * addressable by URL fragment — which a plugin can narrow, reshape or replace
+ * through the three `seo:schema:*` filters. {@link Breadcrumbs} draws the same
+ * trail the graph publishes.
  *
  * Every tag is gap-filled — a theme or another plugin that set the same key
  * keeps it — so installing this adds what a page was missing and overrides

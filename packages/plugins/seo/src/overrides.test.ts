@@ -11,6 +11,7 @@ describe("readSeoOverrides", () => {
       ogImage: null,
       noindex: false,
       nofollow: false,
+      schemaType: null,
     });
   });
 
@@ -28,6 +29,7 @@ describe("readSeoOverrides", () => {
         [SEO_META_KEYS.ogImage]: "https://cms.example/share.png",
         [SEO_META_KEYS.noindex]: true,
         [SEO_META_KEYS.nofollow]: true,
+        [SEO_META_KEYS.schemaType]: "NewsArticle",
       }),
     ).toEqual({
       title: "Search title",
@@ -36,7 +38,14 @@ describe("readSeoOverrides", () => {
       ogImage: "https://cms.example/share.png",
       noindex: true,
       nofollow: true,
+      schemaType: "NewsArticle",
     });
+  });
+
+  test("a schema type nothing offered is not an answer", () => {
+    expect(
+      readSeoOverrides({ [SEO_META_KEYS.schemaType]: "Recipe" }).schemaType,
+    ).toBeNull();
   });
 
   test("an empty string is no answer at all", () => {

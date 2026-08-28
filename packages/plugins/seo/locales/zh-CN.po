@@ -30,6 +30,11 @@ msgstr "默认社交图片链接"
 
 #. js-lingui-explicit-id
 #: src/settings.ts
+msgid "plugin.seo.settings.represents"
+msgstr "本站代表"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
 msgid "plugin.seo.settings.page.label"
 msgstr "SEO"
 
@@ -102,3 +107,13 @@ msgstr "同时将其从站点地图中移除。"
 #: src/overrides.ts
 msgid "plugin.seo.box.nofollow.label"
 msgstr "不跟踪本页上的链接"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.label"
+msgstr "内容类型"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.description"
+msgstr "结构化数据如何归类此条目。默认为文章。"
