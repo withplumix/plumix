@@ -5,6 +5,7 @@ import type { RpcErrorsForMeta } from "../../meta/core.js";
 import type { MetaFieldError } from "../../meta/field-pipeline.js";
 import { and, eq, inArray } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
+import { isPrivateSettingsGroup } from "../../../db/settings-groups.js";
 import { isConditionHidden } from "../../../plugin/fields/condition.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
@@ -32,6 +33,9 @@ export const upsert = base
       "rpc:settings.upsert:input",
       input,
     );
+    if (isPrivateSettingsGroup(filtered.group)) {
+      throw errors.BAD_REQUEST({ data: { reason: "settings_group_private" } });
+    }
 
     // A registered field's declared type is what the column ends up
     // holding, so every value it owns goes through the same write

@@ -1197,3 +1197,18 @@ describe("ctx.plugins", () => {
     expect(seen).toEqual(["post", "category"]);
   });
 });
+
+describe("reserved settings group names", () => {
+  test("registerSettingsGroup rejects the `_internal` suffix at boot", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("rsv", (ctx) => {
+      ctx.registerSettingsGroup("rsv_internal", {
+        label: "Private",
+        fields: [],
+      });
+    });
+    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+      /reserved for server-only rows/,
+    );
+  });
+});

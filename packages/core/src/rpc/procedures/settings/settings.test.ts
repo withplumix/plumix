@@ -385,3 +385,45 @@ describe("settings.upsert (field pipeline)", () => {
     });
   });
 });
+
+// A group whose name ends in `_internal` is server-only storage — the
+// per-install visitor-IP salt behind `readVisitorMeta` is one. Keeping it
+// off a settings page never kept it out of the RPC, which takes any group
+// name it is handed.
+describe("settings private groups", () => {
+  test("get refuses a group the RPC does not serve", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    await h.factory.setting.create({
+      group: "forms_internal",
+      key: "ip_salt",
+      value: "8f14e45fceea167a5a36dedd4bea2543",
+    });
+
+    await expect(
+      h.client.settings.get({ group: "forms_internal" }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      data: { reason: "settings_group_private" },
+    });
+  });
+
+  test("upsert refuses to write one", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+
+    await expect(
+      h.client.settings.upsert({
+        group: "comments_internal",
+        values: { ip_salt: "0" },
+      }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      data: { reason: "settings_group_private" },
+    });
+    expect(
+      await h.db
+        .select()
+        .from(settings)
+        .where(eq(settings.group, "comments_internal")),
+    ).toEqual([]);
+  });
+});

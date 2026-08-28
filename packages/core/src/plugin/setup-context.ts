@@ -63,6 +63,7 @@ import {
   deriveEntryTypeCapabilities,
   deriveTermTaxonomyCapabilities,
 } from "../auth/rbac.js";
+import { isPrivateSettingsGroup } from "../db/settings-groups.js";
 import { CORE_MCP_TOOL_NAMES } from "../mcp/registry.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
@@ -615,6 +616,9 @@ export function createPluginSetupContext({
 
     registerSettingsGroup: (name, options) => {
       assertValidIdentifier("settings group", name);
+      if (isPrivateSettingsGroup(name)) {
+        throw PluginContextError.settingsGroupReserved({ pluginId, name });
+      }
       if (registry.settingsGroups.has(name)) {
         throw DuplicateRegistrationError.alreadyRegistered({
           kind: "settings group",
