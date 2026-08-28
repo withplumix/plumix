@@ -237,7 +237,7 @@ entry — content-editor material is out of scope for this site.
 | `plugins/descriptor`    | The Plugin Descriptor      | P2  | `id`, `version`, `setup` vs `provides`.                                                                      | descriptor surface         |
 | `plugins/config-schema` | Config Schema              | P2  | `schema` / `schemaModule` and validation.                                                                    | plugin config schema       |
 | `plugins/admin-entry`   | Admin Entry                | P2  | Shipping admin UI from a plugin.                                                                             | `adminEntry` and kin       |
-| `plugins/i18n`          | Translation Catalogs       | P2  | The `i18n` slot and catalog paths.                                                                           | plugin i18n                |
+| `plugins/i18n`          | Translation Catalogs       | P2  | **Roster page** for the `i18n` slot's keys. Catalog paths and the two locale lists that must agree.          | plugin i18n                |
 | `plugins/versioning`    | Versioning and Peer Ranges | P2  | Peer ranges against a pre-1.0 platform.                                                                      | peer versioning            |
 
 ### 15. Releases & Upgrades
@@ -345,13 +345,14 @@ Each item carries, in order:
 `textarea` against `text`, `userList` against `user` — which links to the sibling's example and
 states only what differs.
 
-### The 19 rosters
+### The 20 rosters
 
 `Field Types` · `Core Blocks` · `Marks` · `Shortcodes` · `Hook Reference` · `Capabilities` · `Roles` ·
 `Hydration Strategies` · `Configuration` · `Entry Type Reference` · `Statuses and Publishing` ·
 `Templates` · `Template Data` · `CLI Reference` · `MCP` · `Caching` (tag vocabulary) ·
 `Project Structure` (façade subpaths) · `Plugins` (the shipped `@plumix/plugin-*` packages) ·
-`Custom Rule Kinds` (the target constructors a plugin-authored rule kind selects with).
+`Custom Rule Kinds` (the target constructors a plugin-authored rule kind selects with) ·
+`Translation Catalogs` (the keys of a plugin descriptor's `i18n` slot).
 
 **`supports` is deliberately not a roster.** The code accepts any string, so no complete list exists
 to promise. Its page presents a **conventional, not closed** list and says so visibly — otherwise

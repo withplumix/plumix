@@ -97,6 +97,7 @@ import type {
   FilterName,
   FrontPageData,
   GenericTier,
+  PluginI18nSlot,
   PlumixConfigInput,
   SearchData,
   TargetMatcher,
@@ -919,6 +920,19 @@ const PLUGIN_PACKAGES = [
 ] as const;
 
 /**
+ * Every key of the `i18n` slot a plugin descriptor may declare. Source:
+ * `PluginI18nSlot` — membership only, since `Equals` compares a union.
+ *
+ * A fourth key arriving undocumented would leave the page making the same
+ * silent omission it warns about, which is why a set this small is bound.
+ */
+const PLUGIN_I18N_SLOT = ["sourceLocale", "locales", "catalogPath"] as const;
+
+type _PluginI18nSlotMatchesSource = Assert<
+  Equals<(typeof PLUGIN_I18N_SLOT)[number], keyof PluginI18nSlot>
+>;
+
+/**
  * How a roster's items reach the source they enumerate. Naming it per entry is
  * what makes losing a binding visible: deleting an `Assert` is a one-line diff
  * that changes no count, whereas demoting an entry to `"page-only"` shows up
@@ -979,4 +993,5 @@ export const ROSTERS: readonly RegisteredRoster[] = [
   { page: "going-further/caching.mdx", items: CACHE_TAGS, binding: "runtime" },
   { page: "deployment/cli.mdx", items: CLI_REFERENCE, binding: "page-only" },
   { page: "plugins/overview.mdx", items: PLUGIN_PACKAGES, binding: "runtime" },
+  { page: "plugins/i18n.mdx", items: PLUGIN_I18N_SLOT, binding: "type-level" },
 ];
