@@ -3,6 +3,7 @@ import { definePlugin } from "plumix/plugin";
 
 import type { SeoMetaBoxOptions } from "./meta-box.js";
 import { applySeoHead } from "./head.js";
+import { registerIndexNow } from "./indexnow.js";
 import { registerSeoMetaBoxes } from "./meta-box.js";
 import { registerSeoRoutes } from "./routes.js";
 import { registerSeoSettings } from "./settings.js";
@@ -12,6 +13,7 @@ import { registerSeoSettings } from "./settings.js";
 // happen to mention — drop the `og-image` line and `@plumix/plugin-og`'s
 // subscription stops compiling.
 import "./archive.js"; // ArchiveTypeOptions.sitemap
+import "./llms.js"; // seo:llms-txt
 import "./og-image.js"; // seo:og_image
 import "./robots.js"; // seo:robots-txt
 import "./schema.js"; // seo:schema:needs, seo:schema:piece, seo:schema:graph
@@ -95,6 +97,7 @@ export function seo(options: SeoOptions = {}): PluginDescriptor {
     setup: (ctx) => {
       registerSeoSettings(ctx);
       registerSeoRoutes(ctx);
+      registerIndexNow(ctx);
       registerSeoMetaBoxes(ctx, options.metaBox ?? {});
       // The assembled theme + template document arrives here, which is what
       // makes gap-filling possible: a theme's own tag is already in hand.

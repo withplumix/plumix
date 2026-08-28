@@ -35,6 +35,26 @@ msgstr "本站代表"
 
 #. js-lingui-explicit-id
 #: src/settings.ts
+msgid "plugin.seo.settings.block_ai_crawlers"
+msgstr "屏蔽 AI 爬虫"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.block_ai_crawlers.description"
+msgstr "告诉遵守 robots.txt 的助手和模型训练爬虫不要抓取本站。"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.indexnow_key"
+msgstr "IndexNow 密钥"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.indexnow_key.description"
+msgstr "填写后，发布几分钟内即可通知搜索引擎。留空则不发送通知。"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
 msgid "plugin.seo.settings.page.label"
 msgstr "SEO"
 

@@ -35,6 +35,26 @@ msgstr "يمثّل هذا الموقع"
 
 #. js-lingui-explicit-id
 #: src/settings.ts
+msgid "plugin.seo.settings.block_ai_crawlers"
+msgstr "حظر زواحف الذكاء الاصطناعي"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.block_ai_crawlers.description"
+msgstr "يطلب من المساعدات وبرامج تدريب النماذج التي تحترم robots.txt البقاء خارج الموقع."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.indexnow_key"
+msgstr "مفتاح IndexNow"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.indexnow_key.description"
+msgstr "حدِّد مفتاحًا لإبلاغ محركات البحث خلال دقائق من النشر. اتركه فارغًا لتعطيل الإشعار."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
 msgid "plugin.seo.settings.page.label"
 msgstr "تحسين محركات البحث"
 

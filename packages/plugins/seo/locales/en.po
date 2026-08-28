@@ -35,6 +35,26 @@ msgstr "This site represents"
 
 #. js-lingui-explicit-id
 #: src/settings.ts
+msgid "plugin.seo.settings.block_ai_crawlers"
+msgstr "Block AI crawlers"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.block_ai_crawlers.description"
+msgstr "Tells the assistants and model trainers that honour robots.txt to stay out."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.indexnow_key"
+msgstr "IndexNow key"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.indexnow_key.description"
+msgstr "Set one to tell search engines within minutes of a publish. Empty means no notification."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
 msgid "plugin.seo.settings.page.label"
 msgstr "SEO"
 

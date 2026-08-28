@@ -1,8 +1,9 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
-import { enqueuePurgeTags, tagCacheEntry } from "plumix";
+import { enqueuePurgeTags, tagCacheEntry, withBasePath } from "plumix";
 import { tryGetContext } from "plumix/plugin";
 
 import type { SitemapScope } from "./sitemap.js";
+import { handleLlmsTxt, LLMS_PATH } from "./llms.js";
 import { handleRobotsTxt } from "./robots.js";
 import { loadSeoSettings, SEO_SETTINGS_GROUP } from "./settings.js";
 import {
@@ -10,12 +11,13 @@ import {
   renderSitemapIndex,
   renderSubSitemap,
   scopeIsOffered,
+  SITEMAP_INDEX_PATH,
   sitemapIndexLocs,
   sitemapScopes,
 } from "./sitemap.js";
+import { SITEMAP_STYLESHEET, SITEMAP_STYLESHEET_PATH } from "./stylesheet.js";
 
 const ROBOTS_PATH = "/robots.txt";
-const SITEMAP_INDEX_PATH = "/sitemap.xml";
 
 // A crawler refetches a sitemap on its own schedule, so the window that matters
 // is the shared one: an hour at the edge, cut short by the purge a publish
@@ -33,6 +35,11 @@ export const SITEMAP_TAG = "seo:sitemap";
 // pattern spells that out — a path that is not a 1-based page number then goes
 // unclaimed and 404s through the content router, as it did before this plugin.
 const PAGE_SEGMENT = ":page([1-9]\\d*)";
+
+/** Where the stylesheet answers for this deployment. */
+function stylesheetHref(ctx: AppContext): string {
+  return withBasePath(SITEMAP_STYLESHEET_PATH, ctx.basePath);
+}
 
 function xmlResponse(body: string): Response {
   return new Response(body, {
@@ -53,7 +60,12 @@ async function handleSitemapIndex(
   // own default holds out: either way the scope simply leaves the set.
   const settings = await loadSeoSettings(ctx);
   const listed = scopes.filter((scope) => scopeIsOffered(scope, settings));
-  return xmlResponse(renderSitemapIndex(await sitemapIndexLocs(ctx, listed)));
+  return xmlResponse(
+    renderSitemapIndex(
+      await sitemapIndexLocs(ctx, listed),
+      stylesheetHref(ctx),
+    ),
+  );
 }
 
 async function handleSubSitemap(
@@ -66,7 +78,7 @@ async function handleSubSitemap(
   const urls = scopeIsOffered(scope, settings)
     ? await collectSitemapUrls(ctx, scope, page)
     : [];
-  return xmlResponse(renderSubSitemap(urls));
+  return xmlResponse(renderSubSitemap(urls, stylesheetHref(ctx)));
 }
 
 /**
@@ -81,6 +93,24 @@ export function registerSeoRoutes(ctx: PluginSetupContext): void {
   ctx.registerPublicRoute({
     path: ROBOTS_PATH,
     handler: (_request, appCtx) => handleRobotsTxt(appCtx),
+  });
+
+  ctx.registerPublicRoute({
+    path: LLMS_PATH,
+    handler: (_request, appCtx) => handleLlmsTxt(appCtx),
+  });
+
+  // Not `cacheable: true`: a constant document has no tag a purge would ever
+  // have to retire, so it rides its shared-cache header alone.
+  ctx.registerPublicRoute({
+    path: SITEMAP_STYLESHEET_PATH,
+    handler: () =>
+      new Response(SITEMAP_STYLESHEET, {
+        headers: {
+          "content-type": "text/xsl; charset=utf-8",
+          "cache-control": SITEMAP_CACHE_CONTROL,
+        },
+      }),
   });
 
   ctx.addAction("theme:ready", () => {

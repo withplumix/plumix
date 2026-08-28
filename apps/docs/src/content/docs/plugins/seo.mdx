@@ -301,7 +301,7 @@ Ancestors are not walked: a hierarchical entry's parents and a nested term's par
 
 ## robots.txt and the sitemap
 
-Installing the plugin puts three kinds of machine-readable document at the site root.
+Installing the plugin puts four kinds of machine-readable document at the site root: `/robots.txt`, the sitemap, the stylesheet that renders it, and `/llms.txt`.
 
 `/robots.txt` allows all crawling while the indexing toggle is on, and disallows everything when it is off. The body goes through a `seo:robots-txt` filter, so a plugin can append `Sitemap:` lines, a crawl-delay or per-agent rules without owning the route:
 
@@ -311,6 +311,8 @@ ctx.addFilter(
   (body) => `${body}Sitemap: https://example.com/sitemap.xml\n`,
 );
 ```
+
+Turning **Block AI crawlers** on adds one more group to the file, naming the crawlers that feed model training and assistant answers — `GPTBot`, `ClaudeBot`, `Google-Extended`, `PerplexityBot`, `Bytespider` and a couple of dozen others — and disallowing them everything. Ordinary search crawlers are untouched: holding _those_ out is what the indexing toggle does. A site already held out of the index says nothing extra, since its allow-none rule covers every agent. To block a name the list does not carry, or unblock one it does, append to the body through the same filter.
 
 `/sitemap.xml` is an index, not a URL list. It names one sub-sitemap per **scope** — every public entry type, every public taxonomy, and every archive a plugin registered a `sitemap` for — paged at 1,000 URLs each. A scope with nothing published is left out.
 
@@ -323,6 +325,16 @@ Two seams are worth knowing about. An archive registered with `registerArchiveTy
 Scopes are enumerated when the theme is ready, so the routes the plugin claims are exactly the scopes the site registered — `/sitemap-nope-1.xml` is a 404, not an empty document, and a page segment that is not a page number is a 404 too.
 
 A site with indexing turned off publishes an empty index and empty URL lists, so a crawler that already knows the URL learns nothing from it.
+
+Both documents name `/sitemap.xsl`, an XSLT stylesheet the plugin serves. A crawler ignores the instruction and parses the same XML; a browser renders a table of the URLs, their last-modified stamps and how many pictures each carries. The stylesheet is inline and static — nothing it renders depends on a second request. Browsers are phasing XSLT support out; where it has gone, the document falls back to the plain XML tree the browser would have shown anyway.
+
+### Images
+
+An entry's pictures ride its `<url>` as [sitemap image entries](https://developers.google.com/search/docs/crawling-indexing/sitemaps/image-sitemaps), so image search finds them without crawling the page for `<img>` tags. Those pictures are the media fields the entry type tagged `.featured()` or `.ogImage()` — the same declarations link 1 and link 4 of the chain above read — plus the social image URL an editor typed into the SEO box, which leads because it is the one they chose. One photo named by two fields is listed once.
+
+A whole page of entries resolves through one batched pass rather than a query each — chunked at 100 ids per query, as core's own read path chunks — and only for types that declare such a field. An entry with no picture serializes exactly as it did before, and a page with none declares no image namespace at all.
+
+Only pictures are listed, and at most ten per URL. A role-tagged field can be a `.multiple()` gallery, so the cap is what keeps a page of 1,000 entries from becoming tens of thousands of image entries; and because one batched call carries ids from fields that each declare their own `accept`, a non-image upload is filtered on its own MIME type rather than by the field's scope. Relative URLs — the worker-proxied path a private bucket resolves to — are made absolute, since `<image:loc>` has to be.
 
 ### Adding URLs
 
@@ -357,15 +369,50 @@ A scope with no tags to contribute rides the one-hour window instead of a purge:
 
 With no edge cache configured, every sitemap is generated per request.
 
+## llms.txt
+
+`/llms.txt` is the [llmstxt.org](https://llmstxt.org/) convention: a small Markdown file naming the site, its tagline and what is worth reading. The plugin serves the site title and tagline from the Site identity group — falling back to the host when no title is set — and links the sitemap index.
+
+The map is offered only to a site that wants to be read this way. One held out of the index has nothing to offer, and one that blocks AI crawlers has already said the opposite of what a map here would say, so both get the heading and a sentence instead of a list. The file is still served either way: a crawler that fetches it gets an answer rather than a 404 it would read as "not implemented yet".
+
+To list the pages that actually matter — a handbook, an API reference — rewrite the body:
+
+```ts no-typecheck
+ctx.addFilter(
+  "seo:llms-txt",
+  (body) => `${body}\n## Docs\n\n- [Handbook](https://example.com/handbook)\n`,
+);
+```
+
+## Instant indexing
+
+Setting an **IndexNow key** turns on notification. Publishing or updating an entry submits its URL to the shared IndexNow endpoint, which fans out to every participating engine, so a change is picked up in minutes rather than at the next crawl. The key is served at `/indexnow-key.txt`, which the submission names as its `keyLocation` — the ownership proof an engine fetches back.
+
+Every gate the head and the sitemap apply is applied here too. A draft, an entry an editor marked **Hide from search engines**, an entry of a non-public type and a site held out of the index are never submitted — a page nobody may index is a page nobody is told about.
+
+One publish is one submission: `entry.update` fires `entry:updated` and `entry:published` for a publish transition, and both reach this, so the submission is memoized per entry for the request — a duplicate is what an endpoint's abuse handling watches for.
+
+The submission is deferred, so it never joins the request the editor is waiting on, and every failure — an unreachable endpoint, a timeout, a refused key — becomes a log line. A missed notification is not a failed publish.
+
+Removals are not notified. Trashing or unpublishing an entry drops it from the sitemap and leaves the URL to the engine's own recrawl, which is what tells it the page is gone.
+
+<Aside type="note" title="Off until configured">
+  With no key set, nothing is submitted and `/indexnow-key.txt` is a 404. The
+  engines expect a hexadecimal string of 8 to 128 characters — generate one and
+  paste it into the settings screen.
+</Aside>
+
 ## Settings
 
 The plugin registers a **Search & social** settings group on a settings page of its own:
 
-- **Allow search engines to index this site** — off puts `noindex,nofollow` on every page, disallows all crawling in `robots.txt`, and empties the sitemap.
+- **Allow search engines to index this site** — off puts `noindex,nofollow` on every page, disallows all crawling in `robots.txt`, empties the sitemap and withholds the `llms.txt` map.
 - **Default social image URL** — the last link of the chain above.
 - **This site represents** — `Organization` or `Person`, which is what the graph's `publisher` piece is typed as.
 - **Title separator** and **Default title pattern** — the two title-pattern settings above.
 - **Index search-results pages**, **Index page 2 and beyond of an archive**, **Index pages that were not found** — the three arms of the chain that are off by default.
+- **Block AI crawlers** — adds the AI-crawler group to `robots.txt` and withholds the `llms.txt` map.
+- **IndexNow key** — turns on publish-time notification. Empty means none.
 - One **title pattern** and one **indexing toggle** per public entry type, and one **indexing toggle** per public taxonomy. Those fields are enumerated from what the site registered, so a type a plugin registers during its own `setup` gets its own. A type registered later — from a `theme:ready` handler in a plugin listed after this one — is too late to be enumerated, and a name that is not `[a-zA-Z0-9_-]+` cannot be a settings key, so it gets no per-type fields either.
 
 The first two lived on core's Site identity group before this plugin existed. A site upgrading from that keeps its answers with no migration step: the plugin reads its own group first and falls back to the old `site.public` and `site.default_og_image` rows, and the settings form is seeded from the same fallback, so the next save writes the values through under the new keys.

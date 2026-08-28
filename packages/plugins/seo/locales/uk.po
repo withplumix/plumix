@@ -35,6 +35,26 @@ msgstr "Цей сайт представляє"
 
 #. js-lingui-explicit-id
 #: src/settings.ts
+msgid "plugin.seo.settings.block_ai_crawlers"
+msgstr "Блокувати ШІ-краулери"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.block_ai_crawlers.description"
+msgstr "Повідомляє асистентам і тренувальним ботам, які поважають robots.txt, не заходити сюди."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.indexnow_key"
+msgstr "Ключ IndexNow"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.indexnow_key.description"
+msgstr "Задайте ключ, щоб повідомляти пошукові системи за кілька хвилин після публікації. Порожнє — без сповіщень."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
 msgid "plugin.seo.settings.page.label"
 msgstr "SEO"
 
