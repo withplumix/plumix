@@ -26,7 +26,6 @@ import type { McpTool } from "../mcp/tool.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RedirectRule } from "../route/redirects.js";
 import type { CustomArchiveData } from "../route/render/resolved-entry.js";
-import type { SitemapUrl } from "../seo/sitemap.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
 import type {
   MetaBoxField,
@@ -494,26 +493,10 @@ export interface CustomArchiveResolution {
 }
 
 /**
- * The sitemap URL space a `registerArchiveType` archive can own. The cached
- * output is retired by the same `entry:*` / `term:*` actions that bust the rest
- * of the sitemap; an archive drawn from other tables should keep those actions
- * as its own invalidation signal.
- */
-export interface ArchiveTypeSitemap {
-  /** Published URL count — drives index pagination without a full URL scan. */
-  readonly count: (ctx: AppContext) => Promise<number> | number;
-  /** URLs for one 1-based page, windowed to `SITEMAP_PAGE_SIZE` as core expects. */
-  readonly urls: (
-    ctx: AppContext,
-    page: number,
-  ) => Promise<readonly SitemapUrl[]> | readonly SitemapUrl[];
-}
-
-/**
- * `registerArchiveType` options — a URL pattern set + resolver (+ an optional
- * sitemap) that adds a whole archive type without patching core. The
- * resolver returns the render payload (`{ data, title }`) or `null` (404);
- * `data` extends {@link CustomArchiveData} and is typed via `ArchiveTypeRegistry`.
+ * `registerArchiveType` options — a URL pattern set + resolver that adds a
+ * whole archive type without patching core. The resolver returns the render
+ * payload (`{ data, title }`) or `null` (404); `data` extends
+ * {@link CustomArchiveData} and is typed via `ArchiveTypeRegistry`.
  */
 export interface ArchiveTypeOptions {
   /** URLPattern pathnames that dispatch to this archive (`/events/:series`). */
@@ -532,8 +515,6 @@ export interface ArchiveTypeOptions {
     ctx: AppContext,
     params: Record<string, string>,
   ) => Promise<CustomArchiveResolution | null> | CustomArchiveResolution | null;
-  /** Fold this archive into the native sitemap index (`/sitemap-<name>-<page>.xml`); absent otherwise. */
-  readonly sitemap?: ArchiveTypeSitemap;
   /**
    * Access-control policy gating this custom (route-level) archive. Absent ⇒
    * the global `anonymous` default. A policied archive renders live (it opts
@@ -669,7 +650,7 @@ export interface RegisteredRawRoute {
  * documents what owning one means.
  */
 export interface PublicRouteOptions {
-  /** An exact pathname, or a URLPattern pathname (`/sitemap-:scope-:page.xml`). */
+  /** An exact pathname, or a URLPattern pathname (`/sitemap-post-:page.xml`). */
   readonly path: string;
   /**
    * Whether the route opted into the edge cache — see `registerRoute`, which

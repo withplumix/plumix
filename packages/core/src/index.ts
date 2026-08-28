@@ -161,6 +161,7 @@ export { exposesHierarchicalUrls } from "./route/compile.js";
 export { findTermByPath } from "./route/path-chain.js";
 export {
   buildEntryPermalink,
+  buildTermArchiveUrl,
   termTaxonomyBaseSlug,
 } from "./route/permalink.js";
 // The caller's pending autosave for an entry. A surface that renders what an

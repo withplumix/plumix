@@ -1288,31 +1288,6 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
     expect(response.headers.get("cache-control")).toBeNull();
   });
 
-  test("the sitemap index lists base-prefixed sub-sitemap URLs", async () => {
-    const h = await createDispatcherHarness({
-      basePath: "/custom-directory",
-      plugins: [blog],
-    });
-    const author = await h.seedUser("admin");
-    await h.factory.entry.create({
-      type: "post",
-      slug: "hello-world",
-      title: "Hello World",
-      status: "published",
-      authorId: author.id,
-      publishedAt: new Date(),
-    });
-
-    const response = await h.dispatch(
-      new Request("https://cms.example/custom-directory/sitemap.xml"),
-    );
-    expect(response.status).toBe(200);
-    const body = await response.text();
-    expect(body).toContain(
-      "https://cms.example/custom-directory/sitemap-post-1.xml",
-    );
-  });
-
   test("admin/RPC surfaces stay reachable under the base prefix", async () => {
     const h = await createDispatcherHarness({ basePath: "/custom-directory" });
     const response = await h.dispatch(

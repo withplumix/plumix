@@ -37,12 +37,6 @@ into the plugin's own group. A site upgrading keeps both answers with no migrati
 reads its group first and falls back to the legacy `site.public` and `site.default_og_image` rows,
 and the settings form is seeded from the same fallback so the next save writes them through.
 
-The indexing toggle is split for one release train. Core still gates `/robots.txt`, the sitemap and
-the feeds on the legacy `site.public` row, which now has no writer in the admin — an existing
-private site stays private, but the new toggle only reaches the head until those surfaces move too.
-This ticket ships alongside the robots/sitemap and feeds moves on one integration branch, so the
-split never reaches a release; merging it to a release branch on its own would.
-
 Fixes a latent crash the move surfaced: `applyFilter` isolates each handler by structured-cloning
 the value, which throws outright on a payload carrying a function. A document manifest carries one
 whenever a theme writes `titleTemplate` as a callback, so any `render:document` subscriber took the

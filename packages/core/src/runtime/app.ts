@@ -61,7 +61,6 @@ import { assembleRedirects } from "../route/redirects.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
 import { registerCoreSearchHandlers } from "../search/register-core-handlers.js";
-import { registerCoreSitemapInvalidator } from "../seo/register-sitemap-invalidator.js";
 import { registerCoreSettings } from "../settings-core.js";
 import { registerCoreTemplateDeps } from "../template-deps-core.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
@@ -286,7 +285,6 @@ export async function buildApp(
     registerCoreErrorHints(hooks);
   }
   registerCoreSearchHandlers(hooks);
-  registerCoreSitemapInvalidator(hooks);
   // Only subscribe the edge-cache purge invalidator when a cache is configured;
   // without one every entry mutation would accumulate tags no flush consumes.
   if (config.cache !== undefined) registerCorePurgeInvalidator(hooks);

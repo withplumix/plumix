@@ -261,7 +261,9 @@ Bytes a route produces once and then serves from object storage — a generated 
 The single normalized source-of-truth URL driving `<link rel="canonical">`, the redirect normalizer, sitemap, and `og:url`.
 
 **Sitemap**:
-The generated XML URL set, paged into scoped sub-sitemaps per entry type, taxonomy, or custom archive.
+The generated XML URL set, paged into scoped sub-sitemaps per entry type,
+taxonomy, or custom archive. Served by `@plumix/plugin-seo` rather than by core,
+alongside `/robots.txt`.
 
 ## Syndication
 

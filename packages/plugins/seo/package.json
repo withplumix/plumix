@@ -2,7 +2,7 @@
   "name": "@plumix/plugin-seo",
   "version": "0.0.0",
   "type": "module",
-  "description": "SEO plugin for Plumix — head meta, Open Graph and the social-image chain",
+  "description": "SEO plugin for Plumix — head meta, Open Graph, robots.txt and the sitemap",
   "license": "MIT",
   "author": "Plumix Contributors",
   "homepage": "https://github.com/withplumix/plumix#readme",
@@ -19,7 +19,9 @@
     "plugin",
     "seo",
     "open-graph",
-    "meta-tags"
+    "meta-tags",
+    "sitemap",
+    "robots-txt"
   ],
   "sideEffects": false,
   "exports": {
@@ -78,7 +80,7 @@
       "kind": "plugin",
       "id": "seo",
       "label": "SEO",
-      "description": "Head meta, Open Graph and the social-image chain",
+      "description": "Head meta, Open Graph, robots.txt and the sitemap",
       "category": "content",
       "registration": "seo()",
       "imports": [

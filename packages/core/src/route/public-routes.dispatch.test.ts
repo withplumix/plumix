@@ -7,7 +7,7 @@ import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
 // A plugin that owns a path at the site root, the way `@plumix/plugin-feeds`
-// owns `/feed` and `@plumix/plugin-seo` will own `/robots.txt` and the sitemap.
+// owns `/feed` and `@plumix/plugin-seo` owns `/robots.txt` and the sitemap.
 function owner(path: string, body = "owned", pluginId = "feeds") {
   return definePlugin(pluginId, (ctx) => {
     ctx.registerPublicRoute({
@@ -131,7 +131,7 @@ describe("public route dispatch", () => {
 
   test("a site with no registered public route behaves as before", async () => {
     const harness = await createDispatcherHarness();
-    (await harness.fetch("/robots.txt")).assertStatus(200);
+    (await harness.fetch("/")).assertStatus(200);
     (await harness.fetch("/nothing-here")).assertStatus(404);
   });
 });

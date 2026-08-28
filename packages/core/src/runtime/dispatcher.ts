@@ -46,8 +46,6 @@ import { matchRedirect } from "../route/redirects.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
 import { canonicalRedirectTarget } from "../seo/canonical.js";
-import { handleRobotsTxt } from "../seo/robots.js";
-import { handleSitemapIndex, handleSubSitemap } from "../seo/sitemap.js";
 import {
   injectAdminBaseHref,
   rewriteAdminShellLangDir,
@@ -76,11 +74,6 @@ const API_PREFIX = "/_plumix/api";
 // build, so the branch and its import drop out). Keep in step with
 // `DEBUG_REQUESTS_PATH`.
 const DEBUG_REQUESTS_PREFIX = "/_plumix/debug/requests";
-const ROBOTS_PATH = "/robots.txt";
-const SITEMAP_INDEX_PATH = "/sitemap.xml";
-// `/sitemap-<scope>-<page>.xml` — greedy scope so a hyphenated name keeps its
-// hyphens and only the trailing `-<digits>` is the page.
-const SUB_SITEMAP_PATTERN = /^\/sitemap-(.+)-(\d+)\.xml$/;
 // Auth-flow handlers (passkey/oauth/magic-link/device/email-change) are
 // admin-login cold paths — never the public render path. Load them via one
 // memoized dynamic import on the first auth-flow request per isolate so their
@@ -407,12 +400,11 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
 }
 
 // The public site: only GET/HEAD are meaningful past this point. A plugin's
-// registered public routes answer first, so a plugin can take `/robots.txt` or
-// the sitemap off core outright — the feeds already left, to
-// `@plumix/plugin-feeds`. Core's own SEO assets come next, ahead of the public
-// route map so a plugin rewrite rule can't shadow them, then a non-canonical
-// URL 301s to its slash-less form before the route map runs, and anything left
-// renders through the public router.
+// registered public routes answer first — `/robots.txt`, the sitemap and the
+// feeds are all plugin-owned now, and each answers ahead of the redirect table
+// so no rewrite rule can shadow one. Then a non-canonical URL 301s to its
+// slash-less form before the route map runs, and anything left renders through
+// the public router.
 async function tryPublicRoutes(
   app: PlumixApp,
   ctx: AppContext,
@@ -426,21 +418,10 @@ async function tryPublicRoutes(
   const publicRoute = matchPublicRoute(app.publicRoutes, pathname);
   if (publicRoute !== null) return servePublicRoute(publicRoute, ctx);
 
-  if (pathname === ROBOTS_PATH) {
-    return handleRobotsTxt(ctx);
-  }
-  if (pathname === SITEMAP_INDEX_PATH) {
-    return handleSitemapIndex(ctx);
-  }
-  const subSitemap = SUB_SITEMAP_PATTERN.exec(pathname);
-  if (subSitemap) {
-    return handleSubSitemap(ctx, subSitemap[1] ?? "", Number(subSitemap[2]));
-  }
-
   // Plugin/site/theme-registered redirects (301/302/307/308) and 410s. Matched
   // ahead of both the asset-404 shortcut (so a moved image/css/js can redirect)
-  // and the content route map (so a redirect shadows a would-be page). Reserved
-  // SEO assets above (robots.txt, sitemap*.xml) still win.
+  // and the content route map (so a redirect shadows a would-be page). The
+  // registered public routes above still win.
   const redirect = matchRedirect(url, app.redirects);
   if (redirect !== null) return redirectResponse(redirect);
 
