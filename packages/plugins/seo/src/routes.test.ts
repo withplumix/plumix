@@ -1,4 +1,4 @@
-import type { AnyPluginDescriptor, ConnectedCache } from "plumix";
+import type { AnyPluginDescriptor, ConnectedCache, JsonValue } from "plumix";
 import type { DispatcherHarness } from "plumix/test";
 import { entryPurgeTags, typeTag } from "plumix";
 import { definePlugin } from "plumix/plugin";
@@ -82,6 +82,7 @@ async function seedPost(
   overrides: {
     readonly slug?: string;
     readonly status?: "published" | "draft";
+    readonly meta?: Record<string, JsonValue>;
   } = {},
 ): Promise<void> {
   const author = await h.seedUser("admin");
@@ -91,6 +92,7 @@ async function seedPost(
     title: "Hello",
     content: null,
     status: overrides.status ?? "published",
+    ...(overrides.meta === undefined ? {} : { meta: overrides.meta }),
     authorId: author.id,
     publishedAt: new Date(),
   });
@@ -454,5 +456,70 @@ describe("a sitemap at the edge", () => {
     expect(await res.text()).toContain(
       "<loc>https://cms.example/post/hello</loc>",
     );
+  });
+});
+
+describe("noindex keeps a page out of the sitemap", () => {
+  test("an entry marked noindex is not listed", async () => {
+    const h = await createHarness();
+    await seedPost(h, { slug: "listed" });
+    await seedPost(h, { slug: "hidden", meta: { seo_noindex: true } });
+
+    const body = await bodyOf(h, "/sitemap-post-1.xml");
+
+    expect(body).toContain("<loc>https://cms.example/post/listed</loc>");
+    expect(body).not.toContain("/post/hidden");
+  });
+
+  test("an entry that answered false stays listed", async () => {
+    const h = await createHarness();
+    await seedPost(h, { slug: "listed", meta: { seo_noindex: false } });
+
+    expect(await bodyOf(h, "/sitemap-post-1.xml")).toContain(
+      "<loc>https://cms.example/post/listed</loc>",
+    );
+  });
+
+  test("a bag holding something other than true stays listed", async () => {
+    const h = await createHarness();
+    // Everything the head's reader answers `false` to. The two have to agree,
+    // or a page is indexable in its head and missing from the sitemap — and
+    // `1` is the one a JSON extraction cannot tell from `true`.
+    await seedPost(h, { slug: "texty", meta: { seo_noindex: "yes" } });
+    await seedPost(h, { slug: "numeric", meta: { seo_noindex: 1 } });
+
+    const body = await bodyOf(h, "/sitemap-post-1.xml");
+
+    expect(body).toContain("<loc>https://cms.example/post/texty</loc>");
+    expect(body).toContain("<loc>https://cms.example/post/numeric</loc>");
+  });
+
+  test("a scope whose every entry is hidden drops out of the index", async () => {
+    const h = await createHarness();
+    await seedPost(h, { slug: "hidden", meta: { seo_noindex: true } });
+
+    const body = await bodyOf(h, "/sitemap.xml");
+
+    expect(body).not.toContain("sitemap-post-1.xml");
+  });
+
+  test("a term marked noindex is not listed", async () => {
+    const h = await createHarness([taxonomyPlugin]);
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+    });
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "Secret",
+      slug: "secret",
+      meta: { seo_noindex: true },
+    });
+
+    const body = await bodyOf(h, "/sitemap-category-1.xml");
+
+    expect(body).toContain("<loc>https://cms.example/category/news</loc>");
+    expect(body).not.toContain("/category/secret");
   });
 });

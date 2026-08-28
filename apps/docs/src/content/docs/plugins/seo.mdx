@@ -1,6 +1,6 @@
 ---
 title: SEO
-description: The seo plugin writes a page's head meta — description, robots directive, Open Graph, Twitter card — serves robots.txt and the sitemap, and owns the chain that resolves its social image.
+description: The seo plugin writes a page's head meta — description, robots directive, Open Graph, Twitter card — serves robots.txt and the sitemap, gives every entry and term its own search overrides, and owns the chain that resolves its social image.
 tier: P1
 sidebar:
   order: 70
@@ -8,11 +8,11 @@ sidebar:
 
 import { Aside, TabItem, Tabs } from "@astrojs/starlight/components";
 
-`@plumix/plugin-seo` writes what a site tells a search engine and a social scraper: a page's head meta, `/robots.txt`, and the sitemap. Core emits a canonical URL and nothing else, so without this plugin a page carries no description, no robots directive and no Open Graph tags, and the site serves neither `robots.txt` nor a sitemap.
+`@plumix/plugin-seo` writes what a site tells a search engine and a social scraper: a page's head meta, `/robots.txt`, and the sitemap, plus a per-entry and per-term box where an editor overrides any of it. Core emits a canonical URL and nothing else, so without this plugin a page carries no description, no robots directive and no Open Graph tags, and the site serves neither `robots.txt` nor a sitemap.
 
 ## Overview
 
-The plugin exports a factory named `seo`. It takes no options, adds no database tables, and registers one settings group, so installing it is a package install and one array entry.
+The plugin exports a factory named `seo`. It adds no database tables and takes one optional argument, so installing it is a package install and one array entry.
 
 Every tag is written as a **gap-filler**: it is appended only when nothing has already set that `name` or `property`. A theme that declares its own `og:site_name` keeps it, and so does another plugin's — the contribution runs last on the `render:document` chain whatever order the `plugins` array is in, so nothing a site writes is overridden or duplicated. Installing this plugin adds what a page was missing and nothing else.
 
@@ -61,7 +61,7 @@ export default plumix({
 Every public page gets:
 
 - `description` — the entry's excerpt, falling back to the site tagline.
-- `robots` — `index,follow,max-image-preview:large` normally, `noindex,follow` on a search-results page, and `noindex,nofollow` across the whole site when indexing is turned off.
+- `robots` — `index,follow,max-image-preview:large` normally, `noindex,follow` on a search-results page or an entry an editor hid, and `noindex,nofollow` across the whole site when indexing is turned off.
 - `og:title`, `og:type`, `og:url`, `og:site_name`, `og:description`, `og:locale`.
 - `twitter:card` — `summary_large_image` when a social image resolved, `summary` when none did.
 
@@ -73,12 +73,13 @@ When a social image resolves, `og:image` is emitted with `og:image:width`, `og:i
 
 ## The social image chain
 
-Four links resolve one `og:image`, in this order:
+Five links resolve one `og:image`, in this order:
 
 1. **The entry's explicit choice** — a media field the entry type tagged `.ogImage()`.
-2. **Whatever a `seo:og_image` subscriber returns** — where `@plumix/plugin-og` puts a generated card.
-3. **The entry's featured photo** — a media field tagged `.featured()`.
-4. **The site-wide default**, set on the SEO settings screen.
+2. **The social image URL** typed into the SEO box below.
+3. **Whatever a `seo:og_image` subscriber returns** — where `@plumix/plugin-og` puts a generated card.
+4. **The entry's featured photo** — a media field tagged `.featured()`.
+5. **The site-wide default**, set on the SEO settings screen.
 
 The order is fixed here, not by subscription order, so a generated card never outranks an author's deliberate choice however the `plugins` array happens to be written.
 
@@ -98,6 +99,59 @@ ctx.addFilter("seo:og_image", (image, data, appCtx, featured) => {
   them in a page's head. Install both.
 </Aside>
 
+## Per-entry and per-term overrides
+
+Every publicly-visible entry type and taxonomy gets a **Search & social** box, and it holds six fields:
+
+| Field                            | Meta key          | What it does                                                                               |
+| -------------------------------- | ----------------- | ------------------------------------------------------------------------------------------ |
+| Search title                     | `seo_title`       | Replaces `<title>` and `og:title` for this page.                                           |
+| Search description               | `seo_description` | Replaces the excerpt-then-tagline description.                                             |
+| Canonical URL                    | `seo_canonical`   | Replaces the canonical URL core derived from the request path, in the tag and in `og:url`. |
+| Social image URL                 | `seo_og_image`    | Link 2 of the chain above.                                                                 |
+| Hide from search engines         | `seo_noindex`     | `noindex` in the head **and** out of the sitemap.                                          |
+| Do not follow links on this page | `seo_nofollow`    | `nofollow` in the head.                                                                    |
+
+A search title is the page's title, so a theme's `titleTemplate` still composes it — `How to knead dough · Demo` under `"%s · Demo"`. A page with no override sets no title at all and keeps whatever core resolved.
+
+<Aside type="caution" title="A theme still keeps the last word">
+  These fields are gap-fillers like every other tag on this page. A theme or
+  template that sets `document.title` or its own `<link rel="canonical">` keeps
+  it, and the editor's search title or canonical override then reaches
+  `og:title` and `og:url` but not the tag the theme claimed.
+</Aside>
+
+The fields ride the entity's own Save — there is no second save action and no new table. Storage is the `meta` column entries and terms already have, under keys prefixed `seo_` because meta keys are one flat namespace shared by every box on an entity.
+
+A term's box is the same box: a category or tag archive is not a second-class page.
+
+### Scope is derived, not configured
+
+Nothing lists which types get the box. A type or taxonomy registered with `isPublic: false` — a menu item, a menu group — never had a public page to write search copy for, so it is excluded for free. Everything else is in.
+
+For the exception — a type that is public but that nobody writes search copy for — name it. Names are not checked against the registry, and entry types and taxonomies share one list, so a typo silently leaves the box in place and a name both a type and a taxonomy use excludes both:
+
+```ts no-typecheck title="plumix.config.ts"
+seo({ metaBox: { exclude: ["landing_page"] } });
+```
+
+### One predicate, several consumers
+
+Whether a page is offered to a search engine is decided once, by an ordered set of assertions that short-circuits on the first that fires:
+
+1. `site_private` — indexing is turned off site-wide.
+2. `entry_override` — the entry or term is marked **Hide from search engines**.
+3. `search_results` — the page is a search-results listing.
+4. `default` — nothing asserted; the page is indexable.
+
+The robots directive and sitemap membership both read that one answer, so a page cannot claim `noindex` in its head while still appearing in the sitemap. The reason travels with the decision rather than being thrown away, which is what lets an editor be told _why_ a page is excluded instead of being shown a bare toggle.
+
+<Aside type="note" title="A private site wins">
+  Turning site-wide indexing off outranks every per-entry answer. An entry that
+  explicitly asked to be indexed still gets `noindex,nofollow` while the site is
+  held out.
+</Aside>
+
 ## robots.txt and the sitemap
 
 Installing the plugin puts three kinds of machine-readable document at the site root.
@@ -113,7 +167,7 @@ ctx.addFilter(
 
 `/sitemap.xml` is an index, not a URL list. It names one sub-sitemap per **scope** — every public entry type, every public taxonomy, and every archive a plugin registered a `sitemap` for — paged at 1,000 URLs each. A scope with nothing published is left out.
 
-`/sitemap-<scope>-<page>.xml` is the URL list for one scope and page. Entry scopes list published entries with a `lastmod`; taxonomy scopes list term archives. Drafts, scheduled entries and non-public types never appear.
+`/sitemap-<scope>-<page>.xml` is the URL list for one scope and page. Entry scopes list published entries with a `lastmod`; taxonomy scopes list term archives. Drafts, scheduled entries, non-public types and anything marked **Hide from search engines** never appear — the exclusion is a `WHERE`, so the count driving the index's pagination and the page it pages agree.
 
 Scopes are enumerated when the theme is ready, so the routes the plugin claims are exactly the scopes the site registered — `/sitemap-nope-1.xml` is a 404, not an empty document, and a page segment that is not a page number is a 404 too.
 

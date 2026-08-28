@@ -14,6 +14,11 @@ const blogPlugin = definePlugin("blog", (ctx) => {
     hasArchive: true,
     supports: ["title", "editor", "excerpt"],
   });
+  ctx.registerTermTaxonomy("category", {
+    label: "Categories",
+    isHierarchical: false,
+    entryTypes: ["post"],
+  });
 });
 
 const theme = defineTheme({ templates: [fallback(() => null)] });
@@ -34,7 +39,11 @@ async function seedSettings(
 
 async function seedPost(
   h: DispatcherHarness,
-  overrides: { readonly slug?: string; readonly excerpt?: string } = {},
+  overrides: {
+    readonly slug?: string;
+    readonly excerpt?: string;
+    readonly meta?: Record<string, JsonValue>;
+  } = {},
 ): Promise<void> {
   const author = await h.seedUser("admin");
   await h.factory.entry.create({
@@ -42,6 +51,7 @@ async function seedPost(
     slug: overrides.slug ?? "hello",
     title: "Hello",
     ...(overrides.excerpt === undefined ? {} : { excerpt: overrides.excerpt }),
+    ...(overrides.meta === undefined ? {} : { meta: overrides.meta }),
     content: null,
     status: "published",
     authorId: author.id,
@@ -317,5 +327,167 @@ describe("legacy site settings", () => {
     expect(head).toContain(
       '<meta name="robots" content="index,follow,max-image-preview:large"/>',
     );
+  });
+});
+
+describe("per-entry overrides", () => {
+  test("a search title replaces the page title and og:title", async () => {
+    const h = await createHarness();
+    await seedPost(h, { meta: { seo_title: "How to knead dough" } });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain("<title>How to knead dough</title>");
+    expect(head).toContain(
+      '<meta property="og:title" content="How to knead dough"/>',
+    );
+  });
+
+  test("a search description replaces the excerpt", async () => {
+    const h = await createHarness();
+    await seedPost(h, {
+      excerpt: "My excerpt",
+      meta: { seo_description: "Written for the SERP" },
+    });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head.match(/name="description"/g)).toHaveLength(1);
+    expect(head).toContain(
+      '<meta name="description" content="Written for the SERP"/>',
+    );
+    expect(head).toContain(
+      '<meta property="og:description" content="Written for the SERP"/>',
+    );
+  });
+
+  test("a canonical override replaces the derived URL, tag and og:url", async () => {
+    const h = await createHarness();
+    await seedPost(h, {
+      meta: { seo_canonical: "https://syndicated.example/original" },
+    });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head.match(/rel="canonical"/g)).toHaveLength(1);
+    expect(head).toContain(
+      '<link rel="canonical" href="https://syndicated.example/original"/>',
+    );
+    expect(head).toContain(
+      '<meta property="og:url" content="https://syndicated.example/original"/>',
+    );
+  });
+
+  test("no override leaves core's own canonical in place", async () => {
+    const h = await createHarness();
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head.match(/rel="canonical"/g)).toHaveLength(1);
+    expect(head).toContain(
+      '<link rel="canonical" href="https://cms.example/post/hello"/>',
+    );
+  });
+
+  test("an entry marked noindex says so in the head", async () => {
+    const h = await createHarness();
+    await seedPost(h, { meta: { seo_noindex: true } });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain('<meta name="robots" content="noindex,follow"/>');
+  });
+
+  test("nofollow rides alongside, index or not", async () => {
+    const h = await createHarness();
+    await seedPost(h, { slug: "one", meta: { seo_nofollow: true } });
+    await seedPost(h, {
+      slug: "two",
+      meta: { seo_nofollow: true, seo_noindex: true },
+    });
+
+    expect(await dispatchHead(h, "https://cms.example/post/one")).toContain(
+      '<meta name="robots" content="index,nofollow,max-image-preview:large"/>',
+    );
+    expect(await dispatchHead(h, "https://cms.example/post/two")).toContain(
+      '<meta name="robots" content="noindex,nofollow"/>',
+    );
+  });
+
+  test("an entry social image outranks a generated card and the site default", async () => {
+    const card = definePlugin("og-card-test", (ctx) => {
+      ctx.addFilter("seo:og_image", () => ({
+        url: "https://cms.example/card.png",
+      }));
+    });
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, seo(), card],
+      theme,
+    });
+    await seedSettings(h, "seo", {
+      default_og_image: "https://cms.example/og.png",
+    });
+    await seedPost(h, {
+      meta: { seo_og_image: "https://cms.example/chosen.png" },
+    });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain(
+      '<meta property="og:image" content="https://cms.example/chosen.png"/>',
+    );
+    expect(head).toContain(
+      '<meta name="twitter:card" content="summary_large_image"/>',
+    );
+  });
+
+  test("a term carries the same fields as an entry", async () => {
+    const h = await createHarness();
+    await h.factory.term.create({
+      taxonomy: "category",
+      name: "News",
+      slug: "news",
+      meta: {
+        seo_title: "All the news",
+        seo_description: "Everything filed under news",
+        seo_noindex: true,
+      },
+    });
+
+    const head = await dispatchHead(h, "https://cms.example/category/news");
+
+    expect(head).toContain("<title>All the news</title>");
+    expect(head).toContain(
+      '<meta name="description" content="Everything filed under news"/>',
+    );
+    expect(head).toContain('<meta name="robots" content="noindex,follow"/>');
+  });
+
+  test("a search title goes through the theme's title template", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin, seo()],
+      theme: defineTheme({
+        templates: [fallback(() => null)],
+        document: { titleTemplate: "%s · Demo" },
+      }),
+    });
+    await seedPost(h, { meta: { seo_title: "How to knead dough" } });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    // The override is the page's title, so it composes like one. A page with
+    // no override sets no `title` at all and keeps core's own fallback.
+    expect(head).toContain("<title>How to knead dough · Demo</title>");
+  });
+
+  test("a private site outranks an entry that set nothing", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "seo", { indexable: false });
+    await seedPost(h, { meta: { seo_noindex: false } });
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain('<meta name="robots" content="noindex,nofollow"/>');
   });
 });

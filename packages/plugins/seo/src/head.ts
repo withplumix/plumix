@@ -1,4 +1,5 @@
 import type {
+  DocumentLink,
   DocumentManifest,
   DocumentMeta,
   OgImage,
@@ -7,34 +8,43 @@ import type {
 import type { AppContext } from "plumix/plugin";
 import { canonicalUrl, loadSiteSettings, pageFacts } from "plumix";
 
+import { indexable } from "./indexable.js";
 import { resolveOgImage } from "./og-image.js";
+import { readPageOverrides } from "./overrides.js";
 import { loadSeoSettings, nonEmpty } from "./settings.js";
 
-const ROBOTS_INDEX = "index,follow,max-image-preview:large";
-const ROBOTS_SEARCH = "noindex,follow";
-const ROBOTS_PRIVATE = "noindex,nofollow";
-
-// A private site is held out entirely; a thin search-results page is kept out
-// of the index but its links are still followed.
+// `max-image-preview` is an indexing hint, so it rides only on the arm that
+// asks to be indexed; `nofollow` is a separate answer from `noindex` and can
+// pair with either.
 function robotsDirective(page: {
-  readonly siteIsPrivate: boolean;
-  readonly noindex: boolean;
+  readonly indexable: boolean;
+  readonly nofollow: boolean;
 }): string {
-  if (page.siteIsPrivate) return ROBOTS_PRIVATE;
-  return page.noindex ? ROBOTS_SEARCH : ROBOTS_INDEX;
+  const follow = page.nofollow ? "nofollow" : "follow";
+  return page.indexable
+    ? `index,${follow},max-image-preview:large`
+    : `noindex,${follow}`;
 }
 
 /** Everything the tag set is written from, resolved. */
 export interface HeadInputs {
+  /** An editor's canonical override, else the one core derived. */
   readonly canonical: string;
+  /** The title core resolved for the page. */
   readonly title: string | null;
+  /**
+   * The editor's search title, which outranks {@link title} everywhere it is
+   * set. Only it reaches `<title>` — writing the resolved title there would
+   * put every page through a `titleTemplate` it does not go through today.
+   */
+  readonly searchTitle: string | null;
   readonly description: string | null;
   readonly ogType: "article" | "website";
   readonly ogImage: OgImage | null;
   readonly siteName: string | null;
   readonly ogLocale: string;
-  readonly noindex: boolean;
-  readonly siteIsPrivate: boolean;
+  readonly indexable: boolean;
+  readonly nofollow: boolean;
   /** Only ever emitted on an `article`, and only when set. */
   readonly published: Date | null;
   readonly modified: Date | null;
@@ -55,10 +65,15 @@ function hasProperty(
   return meta?.some((entry) => entry.property === property) ?? false;
 }
 
+function hasCanonical(link: readonly DocumentLink[] | undefined): boolean {
+  return link?.some((entry) => entry.rel === "canonical") ?? false;
+}
+
 /**
- * Pure gap-filler for the head meta set: appends a `<meta>` only when its
- * `name`/`property` key is absent, so a theme- or plugin-set value always wins
- * and nothing duplicates.
+ * Pure gap-filler for the head: appends a `<meta>` only when its
+ * `name`/`property` key is absent, a `<link rel=canonical>` only when nothing
+ * declared one, and a `<title>` only when an editor overrode it — so a theme-
+ * or plugin-set value always wins and nothing duplicates.
  */
 export function seoHeadMeta(
   manifest: DocumentManifest,
@@ -80,7 +95,7 @@ export function seoHeadMeta(
   // An image with no usable url is no image: every tag below hangs off it.
   const image = nonEmpty(inputs.ogImage?.url) ? inputs.ogImage : null;
   addName("twitter:card", image ? "summary_large_image" : "summary");
-  addProperty("og:title", inputs.title);
+  addProperty("og:title", inputs.searchTitle ?? inputs.title);
   addProperty("og:type", inputs.ogType);
   addProperty("og:url", inputs.canonical);
   addProperty("og:site_name", inputs.siteName);
@@ -108,8 +123,24 @@ export function seoHeadMeta(
     addName("twitter:image", image.url);
   }
 
-  if (additions.length === 0) return manifest;
-  return { ...manifest, meta: [...(existing ?? []), ...additions] };
+  // Written here rather than left to core's own gap-filler, which runs after
+  // this and would otherwise declare the derived URL an editor overrode. With
+  // no override the two agree, so core simply finds the tag already set.
+  const link = hasCanonical(manifest.link)
+    ? manifest.link
+    : [
+        ...(manifest.link ?? []),
+        { rel: "canonical", href: inputs.canonical } satisfies DocumentLink,
+      ];
+
+  return {
+    ...manifest,
+    // Only an override reaches `<title>`. A page with none goes on being
+    // titled the way core titles it.
+    title: manifest.title ?? inputs.searchTitle ?? undefined,
+    link,
+    meta: [...(existing ?? []), ...additions],
+  };
 }
 
 // `og:locale` wants `lang_TERRITORY`; the active locale code is `lang-TERRITORY`.
@@ -118,8 +149,9 @@ function toOgLocale(localeCode: string): string {
 }
 
 /**
- * Write this page's head meta. Reads the site settings for the values it can't
- * derive from the page, then gap-fills via {@link seoHeadMeta}.
+ * Write this page's head. Reads the site settings and the subject's own SEO
+ * answers, decides indexability once through {@link indexable}, then gap-fills
+ * via {@link seoHeadMeta}.
  */
 export async function applySeoHead(
   manifest: DocumentManifest,
@@ -132,19 +164,30 @@ export async function applySeoHead(
     loadSiteSettings(ctx),
     loadSeoSettings(ctx),
   ]);
-  const { kind, entry, published, modified, author } = pageFacts(data);
+  const facts = pageFacts(data);
+  const { kind, entry, published, modified, author } = facts;
   const isEntry = kind === "entry";
+  const overrides = readPageOverrides(facts);
+  const decision = indexable(facts, seoSettings);
   return seoHeadMeta(manifest, {
-    canonical: canonicalUrl(ctx),
+    canonical: overrides.canonical ?? canonicalUrl(ctx),
     title: nonEmpty(title),
-    description: nonEmpty(entry?.excerpt) ?? nonEmpty(site.tagline),
+    searchTitle: overrides.title,
+    description:
+      overrides.description ??
+      nonEmpty(entry?.excerpt) ??
+      nonEmpty(site.tagline),
     ogType: isEntry ? "article" : "website",
-    ogImage: await resolveOgImage(ctx, data, seoSettings.defaultOgImage),
+    ogImage: await resolveOgImage(ctx, data, {
+      override: overrides.ogImage,
+      siteDefault: seoSettings.defaultOgImage,
+    }),
     siteName: nonEmpty(site.title),
     ogLocale: toOgLocale(ctx.locale.code),
-    // Search-results pages are thin; keep them out of the index.
-    noindex: kind === "search",
-    siteIsPrivate: !seoSettings.indexable,
+    indexable: decision.indexable,
+    // A site held out of the index is held out of search entirely, links
+    // included; anywhere else `nofollow` is the editor's own separate answer.
+    nofollow: !seoSettings.indexable || overrides.nofollow,
     published,
     modified,
     // `pageFacts` also carries an author archive's author, which is not the

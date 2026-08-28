@@ -37,3 +37,68 @@ msgstr "SEO"
 #: src/settings.ts
 msgid "plugin.seo.settings.page.description"
 msgstr "Загальносайтові налаштування пошуку та соцмереж."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.label"
+msgstr "Пошук і соцмережі"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description"
+msgstr "Як це виглядає в результатах пошуку та коли ним діляться."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.title.label"
+msgstr "Заголовок для пошуку"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.title.description"
+msgstr "Показується в результатах пошуку замість заголовка вище."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description_field.label"
+msgstr "Опис для пошуку"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description_field.description"
+msgstr "Фрагмент під заголовком. За замовчуванням береться з уривка."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.canonical.label"
+msgstr "Канонічна URL-адреса"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.canonical.description"
+msgstr "Вкажіть пошуковим системам на оригінал, якщо це копія."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.og_image.label"
+msgstr "URL зображення для соцмереж"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.og_image.description"
+msgstr "Зображення, яке показується під час поширення."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.noindex.label"
+msgstr "Приховати від пошукових систем"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.noindex.description"
+msgstr "Також вилучає це з мапи сайту."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.nofollow.label"
+msgstr "Не переходити за посиланнями на цій сторінці"

@@ -54,7 +54,7 @@ describe("resolveOgImage", () => {
     const image = await resolveOgImage(
       ogContext(noFields, hooks),
       entryData("post", {}),
-      siteDefault,
+      { override: null, siteDefault },
     );
 
     expect(image).toEqual({
@@ -71,7 +71,7 @@ describe("resolveOgImage", () => {
     const image = await resolveOgImage(
       ogContext(noFields, hooks),
       entryData("post", {}),
-      siteDefault,
+      { override: null, siteDefault },
     );
 
     expect(image).toEqual({ url: siteDefault });
@@ -88,11 +88,10 @@ describe("resolveOgImage", () => {
       share: mediaRef("https://cdn/share.jpg"),
     });
 
-    const image = await resolveOgImage(
-      ogContext(withOverride, hooks),
-      data,
+    const image = await resolveOgImage(ogContext(withOverride, hooks), data, {
+      override: null,
       siteDefault,
-    );
+    });
 
     expect(image).toEqual({ url: "https://cdn/share.jpg" });
     expect(ran).toBe(false);
@@ -105,7 +104,7 @@ describe("resolveOgImage", () => {
     const image = await resolveOgImage(
       ogContext(registry, new HookRegistry()),
       data,
-      siteDefault,
+      { override: null, siteDefault },
     );
 
     // The role is read off the fields the entry's own type registered, so a
@@ -119,7 +118,7 @@ describe("resolveOgImage", () => {
     const image = await resolveOgImage(
       ogContext(withFeatured, new HookRegistry()),
       data,
-      siteDefault,
+      { override: null, siteDefault },
     );
 
     expect(image).toEqual({ url: "https://cdn/hero.jpg" });
@@ -130,11 +129,10 @@ describe("resolveOgImage", () => {
     hooks.addFilter("seo:og_image", (image) => image);
     const data = entryData("post", { hero: mediaRef("https://cdn/hero.jpg") });
 
-    const image = await resolveOgImage(
-      ogContext(withFeatured, hooks),
-      data,
+    const image = await resolveOgImage(ogContext(withFeatured, hooks), data, {
+      override: null,
       siteDefault,
-    );
+    });
 
     // The value handed in is null, so a subscriber that passes it through — or
     // returns null on a page it does not handle — costs the author nothing.
@@ -150,11 +148,10 @@ describe("resolveOgImage", () => {
     );
     const data = entryData("post", { hero: mediaRef("https://cdn/hero.jpg") });
 
-    const image = await resolveOgImage(
-      ogContext(withFeatured, hooks),
-      data,
+    const image = await resolveOgImage(ogContext(withFeatured, hooks), data, {
+      override: null,
       siteDefault,
-    );
+    });
 
     // Cropping the author's photo to a card's shape is the whole reason the
     // filter sees it — replacing it is not the only thing worth doing to it.
@@ -168,11 +165,10 @@ describe("resolveOgImage", () => {
     }));
     const data = entryData("post", { hero: mediaRef("https://cdn/hero.jpg") });
 
-    const image = await resolveOgImage(
-      ogContext(withFeatured, hooks),
-      data,
+    const image = await resolveOgImage(ogContext(withFeatured, hooks), data, {
+      override: null,
       siteDefault,
-    );
+    });
 
     expect(image).toEqual({ url: "https://cms.example/card.png" });
   });
@@ -186,7 +182,10 @@ describe("resolveOgImage", () => {
       return image;
     });
 
-    await resolveOgImage(ogContext(noFields, hooks), data, siteDefault);
+    await resolveOgImage(ogContext(noFields, hooks), data, {
+      override: null,
+      siteDefault,
+    });
 
     expect(seen).toEqual([data]);
   });
@@ -201,7 +200,7 @@ describe("resolveOgImage", () => {
     const image = await resolveOgImage(
       ogContext(withFeatured, hooks),
       archive,
-      siteDefault,
+      { override: null, siteDefault },
     );
 
     expect(image).toEqual({ url: "https://cms.example/archive.png" });
@@ -211,7 +210,7 @@ describe("resolveOgImage", () => {
     const image = await resolveOgImage(
       ogContext(noFields, new HookRegistry()),
       entryData("post", {}),
-      null,
+      { override: null, siteDefault: null },
     );
 
     expect(image).toBeNull();
