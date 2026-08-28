@@ -20,6 +20,15 @@ same plugin prefix.
 It is valid only on `auth: "public"`; taking it on an authenticated, capability-gated or dev-only
 route throws at registration. The reasoning is what the header gate defends: a cross-origin POST
 carrying ambient session authority. A public submission carries none, so an attacker forging one has
-merely submitted a form they could have submitted directly. That holds only while the handler never
-derives privilege from a session — it may record who was signed in, but must not act on their
-behalf.
+merely submitted a form they could have submitted directly.
+
+That holds only while the handler never derives privilege from a session, so the dispatcher takes
+the session away rather than trust the handler to ignore it: on the exempt POST `ctx.authenticator`
+resolves nobody — `getContext()` included, so a hook listener the handler fires sees the same
+anonymous request — while a header-carrying POST to the same route keeps its session. Only the
+authenticator is swapped; the session cookie is still on `ctx.request`.
+
+Also fixes a latent bug this uncovered: the edge-cache purge accumulator keyed its pending tags on
+the `AppContext` object, so tags enqueued against a derived context (basePath stripping, `withUser`)
+were dropped by the flush, which runs against the outermost one. It now keys on the request memo,
+which is what `tagCacheEntry` already did for the same reason.

@@ -16,8 +16,10 @@ import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { PlumixApp } from "./app.js";
 import type { ConnectedCache } from "./slots.js";
+import { requestHasSession } from "../auth/authenticator.js";
 import { tagCacheEntry } from "../cache/route-tags.js";
 import { entryPurgeTags } from "../cache/tags.js";
+import { getContext } from "../context/stores.js";
 import { debugHistory } from "../dev/debug-bar/history.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
@@ -1332,6 +1334,74 @@ describe("dispatcher — form-post routes (#2018)", () => {
     expect(response.status).toBe(403);
     const body = (await response.json()) as { reason?: string };
     expect(body.reason).toBe("csrf_header_missing");
+  });
+
+  // Both halves of the predicate are pinned: drop the swap entirely and the
+  // first fails; key it on `formPost` alone and only the second does, which is
+  // what holds the header in the condition.
+  const sessionEchoPlugin = definePlugin("forms", (ctx) => {
+    ctx.registerRoute({
+      method: "POST",
+      path: "/submit",
+      auth: "public",
+      formPost: true,
+      handler: async (request, appCtx) => {
+        // `getContext()` is what a hook listener fired by this handler reads,
+        // and it has to agree with the context the handler was handed.
+        const ambient = getContext();
+        return Response.json({
+          userId:
+            (await appCtx.authenticator.authenticate(request, appCtx.db))?.user
+              .id ?? null,
+          hasSession: requestHasSession(appCtx.authenticator, request),
+          ambientUserId:
+            (await ambient.authenticator.authenticate(request, ambient.db))
+              ?.user.id ?? null,
+        });
+      },
+    });
+  });
+
+  test("the exempt POST reaches the handler with no session to read", async () => {
+    const h = await createDispatcherHarness({ plugins: [sessionEchoPlugin] });
+    const user = await h.seedUser();
+
+    const response = await h.dispatch(
+      await h.authenticateRequest(
+        new Request("https://cms.example/_plumix/forms/submit", {
+          method: "POST",
+          headers: { origin: "https://cms.example" },
+        }),
+        user.id,
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      userId: null,
+      hasSession: false,
+      ambientUserId: null,
+    });
+  });
+
+  test("the same route keeps its session on a header-carrying POST", async () => {
+    const h = await createDispatcherHarness({ plugins: [sessionEchoPlugin] });
+    const user = await h.seedUser();
+
+    const response = await h.dispatch(
+      await h.authenticateRequest(
+        new Request("https://cms.example/_plumix/forms/submit", {
+          method: "POST",
+          headers: { origin: "https://cms.example", "x-plumix-request": "1" },
+        }),
+        user.id,
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      userId: user.id,
+      hasSession: true,
+      ambientUserId: user.id,
+    });
   });
 
   // The opt-out is per route: a sibling that did not take it is still gated,

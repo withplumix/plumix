@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppContext } from "../context/app.js";
 import type { PlumixApp } from "./app.js";
 import { registerCorePurgeInvalidator } from "../cache/purge.js";
+import { createRequestMemo } from "../context/memo.js";
 import { requestStore } from "../context/stores.js";
 import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { HookRegistry } from "../hooks/registry.js";
@@ -48,6 +49,7 @@ describe("scheduled publish purges the edge cache", () => {
       hooks,
       plugins: registry,
       cache: { match: vi.fn(), put: vi.fn(), purgeTags },
+      memo: createRequestMemo(),
       telemetry: NOOP_TELEMETRY,
       defer: (p: Promise<unknown>) => {
         void p;
