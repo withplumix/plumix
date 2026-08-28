@@ -1,0 +1,226 @@
+---
+title: Translation Catalogs
+description: The i18n slot on a plugin descriptor, the two locale lists that have to agree, and why a shipped translation nobody declares is unreachable.
+tier: P2
+roster: true
+sidebar:
+  order: 140
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+A plugin registers labels, and those labels render in the admin of every site that installs it — including sites whose language you do not speak. The `i18n` slot on the descriptor is the only thing that makes the catalogs you translated those labels into reachable from that admin.
+
+## Overview
+
+Translating a plugin takes two halves, and each has its own list of locales.
+
+The first half is the catalogs themselves. Every user-visible string a plugin registers is a descriptor — an `{ id, message }` pair — and each one needs a msgid in a `.po` per locale for a translator to fill in. `lingui compile` then turns each filled-in `.po` into a runtime `<locale>.mjs`. Both steps are driven by the plugin's own `lingui.config.ts`, and the `locales` array in that file is what decides which `.po` files exist.
+
+How a msgid gets into that `.po` depends on where the string lives. `lingui extract` collects what its Babel pass can see, which is the macros and `<Trans>` elements in the admin screens a plugin ships. It does not see a descriptor's labels: those are plain object literals in server-side code that never goes through the macro pipeline, which is why every first-party plugin's `en.po` is marked hand-authored. Both kinds land in the same catalog, so one slot covers both — and `plumix i18n verify` is what keeps source and catalog in step, because it scans for both shapes rather than relying on the extractor.
+
+The second half is the `i18n` slot. It sits on the object you pass to `definePlugin`, beside `setup`:
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const recipes = definePlugin("recipes", {
+  i18n: {
+    sourceLocale: "en",
+    locales: ["en", "uk", "ar"],
+    catalogPath: "./locales",
+  },
+  setup: () => {},
+});
+```
+
+At build time the site's manifest is projected from every installed descriptor. A plugin carrying an `i18n` slot gets an entry under `pluginI18n`, mapping each locale to a URL under `/_plumix/admin/plugins/<id>/locales/<locale>.mjs`, and `plumix build` copies the matching `.mjs` out of the installed package to sit behind it. The admin fetches those URLs at boot and merges the messages into its active Lingui instance. A plugin with no `i18n` slot gets no entry, so nothing is copied, nothing is served, and the admin renders every one of its strings in the source locale.
+
+<Aside type="caution" title="Two arrays named `locales`">
+  The array in `lingui.config.ts` decides which `.po` files exist and get
+  **compiled**. The array in the `i18n` slot decides what is **projected and
+  served**. Edit them in the same commit, every time.
+</Aside>
+
+## Quickstart
+
+Adding Ukrainian to a plugin whose strings are authored in English.
+
+<Steps>
+
+1. **Scaffold the tooling.** Run this from the plugin's package root. It writes a `lingui.config.ts` and a `scripts/i18n-compile-check.mjs`, adds `i18n:extract`, `i18n:compile` and `i18n:check` scripts, and adds the two `@lingui` packages as dev dependencies — each step skipped if it is already there. It does not touch your descriptor; the `i18n` slot is yours to write.
+
+   ```sh
+   pnpm plumix i18n init
+   ```
+
+2. **Add the locale to the lingui config**, so a `.po` exists for it and `lingui compile` produces its `.mjs`.
+
+   ```ts no-typecheck
+   import { defineConfig } from "@lingui/cli";
+   import { formatter } from "@lingui/format-po";
+
+   export default defineConfig({
+     sourceLocale: "en",
+     locales: ["en", "uk"],
+     catalogs: [{ path: "<rootDir>/locales/{locale}", include: ["src"] }],
+     format: formatter({ lineNumbers: false }),
+   });
+   ```
+
+3. **Get the msgids into `locales/uk.po`, and translate them.** Run the extractor for anything macro-visible; for a descriptor's labels, copy the msgids out of `en.po` — the extractor does not see them. Then check the two agree.
+
+   ```sh
+   pnpm i18n:extract
+   pnpm i18n:check
+   ```
+
+4. **Add the same locale to the `i18n` slot.** This is the step that is easy to skip and impossible to notice.
+
+   ```ts
+   import { definePlugin } from "plumix/plugin";
+
+   export const recipes = definePlugin("recipes", {
+     i18n: {
+       sourceLocale: "en",
+       locales: ["en", "uk"],
+       catalogPath: "./locales",
+     },
+     setup: () => {},
+   });
+   ```
+
+5. **Ship the compiled catalogs.** `files` decides what the npm tarball carries, and the directory has to be in it. Naming the compiled files rather than the directory keeps the `.po` sources out of the tarball, where nothing reads them.
+
+   ```json
+   {
+     "files": ["dist", "locales/*.mjs", "README.md", "LICENSE"],
+     "exports": {
+       ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+       "./package.json": "./package.json"
+     }
+   }
+   ```
+
+6. **Compile before you publish**, so the `.mjs` exist at pack time. `i18n:compile` is a build input, not something a consumer runs.
+
+   ```sh
+   pnpm i18n:compile
+   ```
+
+</Steps>
+
+Install the published package into a site with `uk` enabled, run `plumix build`, and the admin renders the plugin's labels in Ukrainian.
+
+## The slot
+
+Three keys, all required once the slot is present.
+
+### sourceLocale
+
+The locale every msgid is authored in. It mirrors `sourceLocale` in `lingui.config.ts`, and it lives on the manifest so the admin can resolve catalog paths without parsing a plugin's lingui config at run time.
+
+```ts
+import type { PluginI18nSlot } from "plumix";
+
+export const slot: PluginI18nSlot = {
+  sourceLocale: "en",
+  // Serves nothing. The only declared locale is the source locale, and
+  // the projection drops that one.
+  locales: ["en"],
+  catalogPath: "./locales",
+};
+```
+
+**The projection drops it.** When the active locale is the source locale, Lingui returns each descriptor's own `message`, so a catalog for it would be a round trip to fetch strings the code already carries. `sourceLocale` is therefore excluded from the URL map — and a slot whose `locales` names only the source locale projects an empty map, which the manifest omits entirely. That plugin is indistinguishable from one with no slot at all.
+
+List it in `locales` anyway: it keeps that array a faithful description of the `.po` files beside it.
+
+### locales
+
+Every locale the plugin ships a catalog for. Intersect this array with the site's enabled locales, drop the source locale, and what remains is the set of URLs the manifest emits.
+
+```ts
+import type { PluginI18nSlot } from "plumix";
+
+export const slot: PluginI18nSlot = {
+  sourceLocale: "en",
+  // Every locale with a compiled catalog beside it, not the subset a
+  // given site enables.
+  locales: ["en", "uk", "ar", "de", "zh-CN"],
+  catalogPath: "./locales",
+};
+```
+
+Both directions of disagreement with the files on disk are bugs, and they fail differently:
+
+| Situation                                    | What happens                                                              |
+| -------------------------------------------- | ------------------------------------------------------------------------- |
+| A `<locale>.mjs` exists, `locales` omits it  | Silent. The translation ships in the tarball and no site ever reaches it. |
+| `locales` names it, no `<locale>.mjs` exists | Loud. A consumer's `plumix build` throws `adminAssetNotFound`.            |
+
+The quiet one is the one that bites. Nothing at run time can tell an untranslated string from a translation that was never asked for, so declare every locale you ship — see [Site locales narrow it](#site-locales-narrow-it-nothing-widens-it) for why over-declaring is safe.
+
+### catalogPath
+
+The directory holding the compiled `<locale>.mjs` files, **relative to the plugin's own package root** — not to the site installing it. `"./locales"` is what every first-party plugin carrying a slot declares, and it lines up with the `<rootDir>/locales/{locale}` template `plumix i18n init` writes into the lingui config.
+
+```ts
+import type { PluginI18nSlot } from "plumix";
+
+export const slot: PluginI18nSlot = {
+  sourceLocale: "en",
+  locales: ["en", "uk"],
+  // Resolved inside the installed @plumix/plugin-recipes package,
+  // never inside the site that installs it.
+  catalogPath: "./locales",
+};
+```
+
+Finding that package root is a `require.resolve` of `"<package>/package.json"` from the site's own root, and the package name is derived from the descriptor id rather than declared. Two conventions are tried, in order: `@plumix/plugin-<id>`, then `plumix-plugin-<id>`. An id containing `_` also gets a hyphenated candidate for each, so a descriptor id of `audit_log` still resolves to `@plumix/plugin-audit-log`.
+
+Two consequences follow, and both are build failures rather than degraded output:
+
+- **The package name has to match the descriptor id under one of those conventions.** A plugin published as `recipes-for-plumix` with a descriptor id of `recipes` resolves to nothing.
+- **`package.json` has to be an export.** The lookup asks for that subpath by name, so an `exports` map without `"./package.json": "./package.json"` makes the package unresolvable even when the name is right.
+
+An absolute `catalogPath` is honoured verbatim, skipping resolution entirely. It is there for a plugin that is not installed as a package at all, and it is not portable — do not reach for it to work around a name that does not resolve.
+
+## Site locales narrow it, nothing widens it
+
+The projection intersects the plugin's `locales` with the locales the site has enabled in its own `i18n` config. Naming a locale the site has not enabled emits no URL, adds no weight to the manifest and does not put a language in the admin's dropdown.
+
+The two mistakes are not symmetrical: over-declaring costs nothing, under-declaring costs the translation. Declare everything you ship.
+
+A site that configures no `i18n` resolves to `["en"]` rather than to nothing, so the intersection leaves only the source locale, which is dropped in turn. Until a site enables a second locale, a plugin's catalogs go nowhere — which is the state most sites installing your plugin are in.
+
+## Workspace plugins bypass the declaration
+
+Inside the Plumix repository, the admin bundles first-party plugin catalogs through an `import.meta.glob` over `packages/plugins/*/locales/*.mjs`. The build detects those plugins and skips URL emission for them, so the admin does not load the same catalog twice.
+
+The catch is that the glob reads the filesystem, not the slot. A workspace plugin's translations render correctly in that repository whether or not `locales` names them — the declaration is bypassed. It is only a site installing the same plugin **from npm** that goes through the manifest, and only there that a short `locales` array turns into missing translations.
+
+This is not hypothetical: five first-party plugins shipped Arabic, German, Ukrainian and Simplified Chinese catalogs while four of their slots declared English alone and the fifth declared English and German. Everything looked right in the monorepo the whole time.
+
+<Aside type="tip" title="Test the install, not the workspace">
+  Verify a plugin's i18n by installing the built tarball into a site with a
+  second locale enabled and running `plumix build`.
+</Aside>
+
+## Keeping the two lists honest
+
+`plumix i18n verify` compares the descriptors in `src` against the msgids in `locales/*.po` and exits non-zero on drift in either direction, which catches a string added without an extract and a catalog entry left behind after a string was deleted. `plumix i18n init` wires it up as `i18n:check`; run it in CI.
+
+It does not compare the slot to the disk. A declared locale with no compiled catalog surfaces at `plumix build`; the reverse — a `.po` you translated and never declared — is visible to no tool at all, which is why the two `locales` arrays are a review habit rather than a check.
+
+## Related
+
+The slot sits on the descriptor object [Overview](/plugins/overview/) covers, and the strings it translates are the labels registered in [Content Modelling](/content-modelling/overview/) and [Entry Types](/content-modelling/entry-types/). The site-side half of the intersection — which locales a site enables, and the default one — is a slot in [Configuration](/getting-started/configuration/).
+
+`plumix build` is what stages a catalog and what fails on a missing one; [Dev Server](/going-further/dev-server/) covers the loop that build ends.
+
+## Next steps
+
+Every first-party plugin is a working reference for this. [Blog](/plugins/blog/) covers what one of them registers, and those labels are what its slot's five declared locales translate — four of them, once English drops out.
+
+Two unwritten pages bear on this one. Publishing a Plugin, in this section, covers taking a local plugin to npm, where the `files` and `exports` fields above are half the work. Internationalization, under Going Further, covers the site-side surface — `Label`, the formatters, and the locales a site enables.

@@ -44,12 +44,12 @@ function itemsOf(page: string): readonly string[] {
 }
 
 describe("the roster inventory", () => {
-  // The IA spec settles the site at nineteen rosters. Pinning the count is
-  // what stops a twentieth arriving without anyone deciding how it binds to
-  // its source — the page-side half comes free with registration, so an
-  // unbound roster looks guarded until it drifts.
+  // The IA spec settles the site at twenty rosters. Pinning the count is what
+  // stops a twenty-first arriving without anyone deciding how it binds to its
+  // source — the page-side half comes free with registration, so an unbound
+  // roster looks guarded until it drifts.
   it("covers every roster the site promises", () => {
-    expect(ROSTERS).toHaveLength(19);
+    expect(ROSTERS).toHaveLength(20);
   });
 
   // And the tally stops a roster losing the binding it already had. Deleting
