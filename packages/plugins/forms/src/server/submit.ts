@@ -1,15 +1,13 @@
 import type { AppContext } from "plumix/plugin";
 import { withBasePath } from "plumix";
+import { readVisitorMeta } from "plumix/db";
 
 import type { FormDefinition } from "../define-form.js";
 import type { FormRegistry } from "../registry.js";
 import type { FormAnswers, SubmissionStatus } from "../types.js";
 import { FORM_SLUG_FIELD, HONEYPOT_FIELD } from "../contract.js";
-import { getOrCreateIpSalt, hashIp } from "./ip-hash.js";
 import { buildLabelSnapshot } from "./labels.js";
 import { insertSubmission } from "./repository.js";
-
-const MAX_UA_LENGTH = 1024;
 
 // The route is public and unauthenticated, so a body arrives before
 // anything has decided whether it is welcome. Text and email answers do
@@ -44,21 +42,6 @@ async function readBoundedBody(
     text += decoder.decode(value, { stream: true });
   }
   return new URLSearchParams(text + decoder.decode());
-}
-
-// IP is trustworthy only when a trusted edge sets it — `cf-connecting-ip`
-// on Cloudflare. The `x-forwarded-for` fallback is client-spoofable off
-// CF; `"unknown"` covers a visitor with no resolvable address. Nothing
-// here grants or refuses anything on the strength of it: it is stored,
-// hashed, for whoever reads the inbox.
-function clientIp(request: Request): string {
-  const cfIp = request.headers.get("cf-connecting-ip");
-  if (cfIp) return cfIp;
-  const forwarded = request.headers
-    .get("x-forwarded-for")
-    ?.split(",")[0]
-    ?.trim();
-  return forwarded && forwarded.length > 0 ? forwarded : "unknown";
 }
 
 /**
@@ -113,14 +96,18 @@ export function createSubmitHandler(registry: FormRegistry) {
     const status: SubmissionStatus =
       (body.get(HONEYPOT_FIELD)?.trim().length ?? 0) > 0 ? "spam" : "new";
 
-    const userAgent = request.headers.get("user-agent");
+    // Nothing here grants or refuses anything on the strength of the
+    // visitor's address; it is stored, hashed, for whoever reads the inbox.
+    const { ipHash, userAgent } = await readVisitorMeta(ctx, request, {
+      namespace: "forms",
+    });
     await insertSubmission(ctx, {
       formSlug: form.slug,
       status,
       answers: readAnswers(form, body),
       labels: buildLabelSnapshot(form.fields),
-      ipHash: await hashIp(clientIp(request), await getOrCreateIpSalt(ctx)),
-      userAgent: userAgent ? userAgent.slice(0, MAX_UA_LENGTH) : null,
+      ipHash,
+      userAgent,
     });
 
     return backToForm(request, ctx);

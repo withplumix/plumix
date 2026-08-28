@@ -6,6 +6,7 @@ type PluginContextErrorCode =
   | "extend_context_duplicate"
   | "derived_capability_min_role_mismatch"
   | "settings_page_duplicate_group"
+  | "settings_group_reserved"
   | "plugin_id_collides_with_core_rpc_namespace"
   | "extension_shadows_builtin"
   | "invalid_component_ref"
@@ -233,6 +234,20 @@ export class PluginContextError extends Error {
       `Settings page "${ctx.name}" lists a group more than once; ` +
         `each group may appear at most once per page.`,
       { identifierName: ctx.name },
+    );
+  }
+
+  static settingsGroupReserved(ctx: {
+    pluginId: string;
+    name: string;
+  }): PluginContextError {
+    return new PluginContextError(
+      "settings_group_reserved",
+      `Plugin "${ctx.pluginId}" registered settings group "${ctx.name}" — ` +
+        `names ending in "_internal" are reserved for server-only rows, and ` +
+        `the settings RPC refuses to read or write them. A page pointing at ` +
+        `this group would fail on every load and every save.`,
+      { pluginId: ctx.pluginId, identifierName: ctx.name },
     );
   }
 

@@ -1,6 +1,7 @@
 import type { JsonValue } from "../../../json.js";
 import { eq } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
+import { isPrivateSettingsGroup } from "../../../db/settings-groups.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { settingsGetInputSchema } from "./schemas.js";
@@ -27,6 +28,9 @@ export const get = base
       "rpc:settings.get:input",
       input,
     );
+    if (isPrivateSettingsGroup(filtered.group)) {
+      throw errors.BAD_REQUEST({ data: { reason: "settings_group_private" } });
+    }
 
     const rows = await context.db
       .select({ key: settings.key, value: settings.value })

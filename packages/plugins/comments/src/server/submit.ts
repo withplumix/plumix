@@ -1,5 +1,6 @@
 import type { AppContext } from "plumix/plugin";
 import { eq } from "drizzle-orm";
+import { readVisitorMeta } from "plumix/db";
 import { jsonResponse } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import * as v from "valibot";
@@ -7,17 +8,13 @@ import * as v from "valibot";
 import type { ResolvedCommentsConfig } from "../config.js";
 import type { CommentModerationCandidate } from "./hooks.js";
 import { isCommentingEnabled } from "./enablement.js";
-import { hashIp } from "./ip-hash.js";
 import { applyModerationVerdict, decideBaselineStatus } from "./moderation.js";
 import {
   clampParent,
   countPriorApproved,
   insertComment,
 } from "./repository.js";
-import { getOrCreateIpSalt } from "./salt.js";
 import { checkRateLimit, isHoneypotTripped } from "./spam.js";
-
-const MAX_UA_LENGTH = 1024;
 
 const submitInputSchema = v.object({
   entryId: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -31,24 +28,6 @@ const submitInputSchema = v.object({
   // Honeypot — real users never fill it.
   website: v.optional(v.string(), ""),
 });
-
-// IP is trustworthy only when a trusted edge sets it: `cf-connecting-ip`
-// on Cloudflare. The `x-forwarded-for` fallback is client-spoofable off
-// CF, so the rate limiter is best-effort there; `"unknown"` is a shared
-// bucket for visitors with no resolvable IP. Edge/WAF rules are the
-// real flood defense.
-function extractRequestMeta(request: Request): {
-  readonly ip: string;
-  readonly userAgent: string | null;
-} {
-  const cfIp = request.headers.get("cf-connecting-ip");
-  const xff = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const ua = request.headers.get("user-agent");
-  return {
-    ip: cfIp ?? (xff && xff.length > 0 ? xff : "unknown"),
-    userAgent: ua ? ua.slice(0, MAX_UA_LENGTH) : null,
-  };
-}
 
 function isClosed(
   publishedAt: Date | null,
@@ -116,8 +95,12 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
       return jsonResponse({ error: "email_required" }, { status: 400 });
     }
 
-    const { ip, userAgent } = extractRequestMeta(request);
-    const ipHash = await hashIp(ip, await getOrCreateIpSalt(ctx));
+    // Off Cloudflare the address behind the hash is client-spoofable, so
+    // the rate limiter is best-effort there and edge/WAF rules are the
+    // real flood defence.
+    const { ipHash, userAgent } = await readVisitorMeta(ctx, request, {
+      namespace: "comments",
+    });
     if (await checkRateLimit(ctx, ipHash, config.rateLimit)) {
       return jsonResponse({ error: "rate_limited" }, { status: 429 });
     }

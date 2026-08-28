@@ -381,6 +381,8 @@ export const publicStatuses: readonly EntryStatus[] = ["published"];
 
 The direct-write toolkit. Drizzle's query operators, the schema tables, table introspection and the cache-tag vocabulary, all in one place so a plugin writing through `ctx.db` never takes its own `drizzle-orm` dependency.
 
+It also carries `readVisitorMeta`, which turns a request into a salted, per-install hash of the visitor's address and their user-agent — what a public submission handler needs to rate-limit or attribute without keeping the address itself.
+
 ```ts
 import { and, eq } from "plumix/db";
 import { entries } from "plumix/schema";

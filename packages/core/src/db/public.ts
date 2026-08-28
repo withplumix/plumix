@@ -21,3 +21,5 @@ export {
   typeTag,
 } from "../cache/tags.js";
 export { enqueuePurgeTags } from "../cache/purge.js";
+export { readVisitorMeta } from "./visitor-meta.js";
+export type { VisitorMeta, VisitorMetaOptions } from "./visitor-meta.js";
