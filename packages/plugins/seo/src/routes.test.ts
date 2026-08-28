@@ -194,7 +194,9 @@ describe("/robots.txt", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/plain");
-    expect(await res.text()).toBe("User-agent: *\nDisallow:\n");
+    expect(await res.text()).toBe(
+      "User-agent: *\nDisallow:\n\nSitemap: https://cms.example/sitemap.xml\n",
+    );
   });
 
   test("a site held out of the index disallows all crawling", async () => {
@@ -505,12 +507,17 @@ describe("a sitemap at the edge", () => {
     expect(match).toHaveBeenCalledTimes(2);
   });
 
+  // Every SEO group rewrites something a cached response already says, so a
+  // save retires the sitemap set and the content pages of every registered
+  // type — the latter by type tag, since the cache has no site-wide one.
   test.each([
     ["the plugin's own group", "seo", true],
+    ["the verification group", "seo_verification", true],
+    ["the robots.txt group", "seo_robots", true],
     ["the legacy site group", "site", true],
     ["an unrelated group", "mail", false],
   ])(
-    "a settings save on %s %s the whole set",
+    "a settings save on %s %s the cached set",
     async (_label, group, purged) => {
       const { cache, purgeTags } = edgeStub();
       const h = await createHarness([blogPlugin, settingsSaver(group)], {
@@ -521,7 +528,7 @@ describe("a sitemap at the edge", () => {
       await h.drainDeferred();
 
       expect(purgeTags.mock.calls.flatMap(([tags]) => [...tags])).toEqual(
-        purged ? [SITEMAP_TAG] : [],
+        purged ? [SITEMAP_TAG, typeTag("post")] : [],
       );
     },
   );
@@ -835,7 +842,9 @@ describe("AI-crawler rules", () => {
   test("are absent until a site asks for them", async () => {
     const h = await createHarness();
 
-    expect(await bodyOf(h, "/robots.txt")).toBe("User-agent: *\nDisallow:\n");
+    expect(await bodyOf(h, "/robots.txt")).toBe(
+      "User-agent: *\nDisallow:\n\nSitemap: https://cms.example/sitemap.xml\n",
+    );
   });
 
   test("disallow the named agents while everything else keeps crawling", async () => {
@@ -847,7 +856,8 @@ describe("AI-crawler rules", () => {
     expect(body).toContain("User-agent: *\nDisallow:\n");
     expect(body).toContain("User-agent: GPTBot\n");
     expect(body).toContain("User-agent: ClaudeBot\n");
-    expect(body.trimEnd().endsWith("Disallow: /")).toBe(true);
+    // One `Disallow` closing the whole group, whatever follows it.
+    expect(body).toContain("User-agent: YouBot\nDisallow: /\n");
   });
 
   test("say nothing extra on a private site, which already disallows every agent", async () => {
@@ -1180,5 +1190,70 @@ describe("IndexNow", () => {
     );
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe("the robots.txt editor", () => {
+  async function seedRobots(
+    h: DispatcherHarness,
+    value: string,
+  ): Promise<void> {
+    await h.factory.setting.create({
+      group: "seo_robots",
+      key: "robots_txt",
+      value,
+    });
+  }
+
+  test("edited content replaces the generated body", async () => {
+    const h = await createHarness();
+    await seedRobots(h, "User-agent: GPTBot\nDisallow: /\n");
+
+    expect(await bodyOf(h, "/robots.txt")).toContain("User-agent: GPTBot");
+  });
+
+  test("a sitemap reference survives editing", async () => {
+    const h = await createHarness();
+    await seedRobots(h, "User-agent: *\nDisallow: /private\n");
+
+    expect(await bodyOf(h, "/robots.txt")).toContain(
+      "Sitemap: https://cms.example/sitemap.xml",
+    );
+  });
+
+  test("a sitemap line the author wrote is not written twice", async () => {
+    const h = await createHarness();
+    await seedRobots(h, "Sitemap: https://cdn.example/sitemap.xml\n");
+
+    const body = await bodyOf(h, "/robots.txt");
+
+    expect(body.match(/Sitemap:/g)).toHaveLength(1);
+    expect(body).toContain("https://cdn.example/sitemap.xml");
+  });
+
+  test("the AI-crawler group is composed onto edited rules", async () => {
+    const h = await createHarness();
+    await setSettings(h, "seo", { block_ai_crawlers: true });
+    await seedRobots(h, "User-agent: *\nDisallow: /private\n");
+
+    const body = await bodyOf(h, "/robots.txt");
+
+    // Two site-wide answers with their own toggles, so an edit replaces the
+    // rules an author writes and neither of the answers around them.
+    expect(body).toContain("Disallow: /private");
+    expect(body).toContain("User-agent: GPTBot\n");
+    expect(body).toContain("Sitemap: https://cms.example/sitemap.xml");
+  });
+
+  test("a private site disallows all crawling whatever the editor holds", async () => {
+    const h = await createHarness();
+    await h.factory.setting.create({
+      group: "seo",
+      key: "indexable",
+      value: false,
+    });
+    await seedRobots(h, "User-agent: *\nAllow: /\n");
+
+    expect(await bodyOf(h, "/robots.txt")).toBe("User-agent: *\nDisallow: /\n");
   });
 });

@@ -192,3 +192,143 @@ msgstr "Allow search engines to index entries of this type."
 #: src/settings.ts
 msgid "plugin.seo.settings.taxonomy_indexable.description"
 msgstr "Allow search engines to index this taxonomy's archives."
+
+#. js-lingui-explicit-id
+#: src/preview-box.ts
+msgid "plugin.seo.box.preview.label"
+msgstr "Search result preview"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.loading"
+msgstr "Loading…"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.failed"
+msgstr "Could not load the preview."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.unsaved"
+msgstr "Save the entry to see how it will look in search results."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.refresh"
+msgstr "Refresh"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.title"
+msgstr "Title"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.description"
+msgstr "Description"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.ok"
+msgstr "Fits."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.over"
+msgstr "Too long — search engines will cut it short."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.empty"
+msgstr "Empty."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.excluded"
+msgstr "Not offered to search engines."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.site_private"
+msgstr "The whole site is held out of search."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.entry_override"
+msgstr "Hidden from search engines on this entry."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.type_default"
+msgstr "This content type is held out of search in settings."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.search_results"
+msgstr "Search-result pages are held out of search in settings."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.taxonomy_default"
+msgstr "This taxonomy is held out of search in settings."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.paginated"
+msgstr "Page two and beyond are held out of search in settings."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.not_found"
+msgstr "Pages that were not found are held out of search in settings."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.label"
+msgstr "Site verification"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.description"
+msgstr "Tokens each search engine hands you to prove you own this site. Every one set reaches the head of every page."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.google"
+msgstr "Google"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.bing"
+msgstr "Bing"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.yandex"
+msgstr "Yandex"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.baidu"
+msgstr "Baidu"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.pinterest"
+msgstr "Pinterest"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.label"
+msgstr "robots.txt"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.description"
+msgstr "Replaces the generated file. The sitemap line is kept whether or not you write one."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.body"
+msgstr "robots.txt content"

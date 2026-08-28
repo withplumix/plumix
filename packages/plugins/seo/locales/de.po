@@ -192,3 +192,143 @@ msgstr "Suchmaschinen das Indexieren von Einträgen dieses Typs erlauben."
 #: src/settings.ts
 msgid "plugin.seo.settings.taxonomy_indexable.description"
 msgstr "Suchmaschinen das Indexieren der Archive dieser Taxonomie erlauben."
+
+#. js-lingui-explicit-id
+#: src/preview-box.ts
+msgid "plugin.seo.box.preview.label"
+msgstr "Vorschau des Suchergebnisses"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.loading"
+msgstr "Wird geladen…"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.failed"
+msgstr "Vorschau konnte nicht geladen werden."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.unsaved"
+msgstr "Speichern Sie den Eintrag, um zu sehen, wie er in Suchergebnissen aussieht."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.refresh"
+msgstr "Aktualisieren"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.title"
+msgstr "Titel"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.description"
+msgstr "Beschreibung"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.ok"
+msgstr "Passt."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.over"
+msgstr "Zu lang — Suchmaschinen kürzen den Text."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.empty"
+msgstr "Leer."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.excluded"
+msgstr "Wird Suchmaschinen nicht angeboten."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.site_private"
+msgstr "Die gesamte Website ist von der Suche ausgenommen."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.entry_override"
+msgstr "Für diesen Eintrag vor Suchmaschinen verborgen."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.type_default"
+msgstr "Dieser Inhaltstyp ist in den Einstellungen von der Suche ausgenommen."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.search_results"
+msgstr "Suchergebnisseiten sind in den Einstellungen von der Suche ausgenommen."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.taxonomy_default"
+msgstr "Diese Taxonomie ist in den Einstellungen von der Suche ausgenommen."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.paginated"
+msgstr "Seite zwei und folgende sind in den Einstellungen von der Suche ausgenommen."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.not_found"
+msgstr "Nicht gefundene Seiten sind in den Einstellungen von der Suche ausgenommen."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.label"
+msgstr "Website-Verifizierung"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.description"
+msgstr "Tokens, die Ihnen jede Suchmaschine als Eigentumsnachweis für diese Website gibt. Jeder gesetzte Token landet im Head jeder Seite."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.google"
+msgstr "Google"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.bing"
+msgstr "Bing"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.yandex"
+msgstr "Yandex"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.baidu"
+msgstr "Baidu"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.pinterest"
+msgstr "Pinterest"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.label"
+msgstr "robots.txt"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.description"
+msgstr "Ersetzt die generierte Datei. Die Sitemap-Zeile bleibt erhalten, ob Sie eine schreiben oder nicht."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.body"
+msgstr "Inhalt der robots.txt"

@@ -6,6 +6,7 @@ import { describe, expect, test } from "vitest";
 import type { SeoOptions } from "./index.js";
 import { seo } from "./index.js";
 import { SEO_META_KEYS } from "./overrides.js";
+import { SERP_PREVIEW_FIELD_KEY } from "./preview-box.js";
 
 // One public entry type and one internal one, plus a public taxonomy and a
 // private one — the four cases scope derivation has to separate.
@@ -87,14 +88,28 @@ describe("SEO meta box scope", () => {
     expect(entryBoxScope(h)).toEqual(["post", "page"]);
   });
 
-  test("the box carries the whole prefixed field set", async () => {
+  test("the entry box leads with the preview, then the prefixed field set", async () => {
     const h = await createHarness();
 
     const box = [...h.app.plugins.entryMetaBoxes.values()].find(
       (candidate) => candidate.registeredBy === "seo",
     );
+    expect(box?.fields.map((field) => field.key)).toEqual([
+      SERP_PREVIEW_FIELD_KEY,
+      ...Object.values(SEO_META_KEYS),
+    ]);
+  });
+
+  test("the term box carries the field set without the preview", async () => {
+    const h = await createHarness();
+
+    const box = [...h.app.plugins.termMetaBoxes.values()].find(
+      (candidate) => candidate.registeredBy === "seo",
+    );
     expect(box?.fields.map((field) => field.key)).toEqual(
-      Object.values(SEO_META_KEYS),
+      Object.values(SEO_META_KEYS).filter(
+        (key) => key !== SEO_META_KEYS.schemaType,
+      ),
     );
   });
 });

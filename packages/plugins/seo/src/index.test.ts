@@ -764,3 +764,42 @@ describe("per-type and per-taxonomy robots defaults", () => {
     );
   });
 });
+
+describe("site verification", () => {
+  test("every configured engine reaches the head under its own meta name", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "seo_verification", {
+      google: "g-token",
+      bing: "b-token",
+      yandex: "y-token",
+      baidu: "bd-token",
+      pinterest: "p-token",
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain(
+      '<meta name="google-site-verification" content="g-token"/>',
+    );
+    expect(head).toContain('<meta name="msvalidate.01" content="b-token"/>');
+    expect(head).toContain(
+      '<meta name="yandex-verification" content="y-token"/>',
+    );
+    expect(head).toContain(
+      '<meta name="baidu-site-verification" content="bd-token"/>',
+    );
+    expect(head).toContain('<meta name="p:domain_verify" content="p-token"/>');
+  });
+
+  test("an engine nobody configured contributes no tag", async () => {
+    const h = await createHarness();
+    await seedSettings(h, "seo_verification", { google: "g-token" });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain('name="google-site-verification"');
+    expect(head).not.toContain("msvalidate.01");
+  });
+});

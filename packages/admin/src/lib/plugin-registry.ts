@@ -9,6 +9,16 @@ import { CANONICAL_INPUT_TYPES, LEGACY_INPUT_TYPES } from "@plumix/core/fields";
 import { AdminPluginRegistryError } from "./errors.js";
 
 /**
+ * One meta box's field values as react-hook-form holds them, keyed by field
+ * key.
+ *
+ * Not JSON: a resolved meta bag hands a temporal field back as a `Date` and a
+ * reference as its hydrated row, and a field the author has not touched yet
+ * holds whatever its renderer seeded — so every value is unproven until read.
+ */
+export type MetaBoxSiblingValues = Readonly<Record<string, unknown>>;
+
+/**
  * Contract for plugin-supplied field renderers. The admin's
  * `MetaBoxField` dispatcher resolves the renderer via
  * `getPluginFieldType(field.inputType)` and hands it the field
@@ -28,8 +38,14 @@ interface PluginFieldRendererProps {
   readonly testId: string;
   /** The active block's other attributes when rendered in the block inspector
    *  (a sibling-aware control like the focal-point picker reads the image url);
-   *  absent in the metabox context, where fields are independent. */
+   *  absent in the metabox context, which has `siblings` instead. */
   readonly attrs?: JsonObject;
+  /** The other values in the bag this field's box binds to, live — what a
+   *  preview control reads to update as the author types in the fields beside
+   *  it. On an entry that bag is the entity's whole `meta`, which every box on
+   *  it shares, so a renderer sees other plugins' keys too. Absent in the block
+   *  inspector, which has `attrs`. */
+  readonly siblings?: MetaBoxSiblingValues;
 }
 
 type PluginFieldComponent = ComponentType<PluginFieldRendererProps>;

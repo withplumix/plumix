@@ -11,8 +11,29 @@ import { tryGetContext } from "plumix/plugin";
 
 import { publicTargets } from "./scope.js";
 
-/** This plugin's settings group — the storage unit and the admin card. */
+/** This plugin's settings groups — each one a storage unit and an admin card. */
 export const SEO_SETTINGS_GROUP = "seo";
+export const SEO_VERIFICATION_GROUP = "seo_verification";
+export const SEO_ROBOTS_GROUP = "seo_robots";
+
+// Every group is site-wide configuration, so every one carries the gate the
+// settings RPC enforces. A contributor reaching the page sees nothing.
+const SETTINGS_CAPABILITY = "settings:manage";
+
+/** The meta name each engine reads its verification token from. */
+const VERIFICATION_TAGS = {
+  google: "google-site-verification",
+  bing: "msvalidate.01",
+  yandex: "yandex-verification",
+  baidu: "baidu-site-verification",
+  pinterest: "p:domain_verify",
+} as const;
+
+type VerificationEngine = keyof typeof VERIFICATION_TAGS;
+
+const VERIFICATION_ENGINES = Object.keys(
+  VERIFICATION_TAGS,
+) as readonly VerificationEngine[];
 
 /**
  * Where each key lived while core owned it. A site that had turned indexing
@@ -113,7 +134,40 @@ const D = {
     id: "plugin.seo.settings.taxonomy_indexable.description",
     message: "Allow search engines to index this taxonomy's archives.",
   },
+  verificationLabel: {
+    id: "plugin.seo.settings.verification.label",
+    message: "Site verification",
+  },
+  verificationDescription: {
+    id: "plugin.seo.settings.verification.description",
+    message:
+      "Tokens each search engine hands you to prove you own this site. Every one set reaches the head of every page.",
+  },
+  robotsLabel: {
+    id: "plugin.seo.settings.robots.label",
+    message: "robots.txt",
+  },
+  robotsDescription: {
+    id: "plugin.seo.settings.robots.description",
+    message:
+      "Replaces the generated file. The sitemap line is kept whether or not you write one.",
+  },
+  robotsField: {
+    id: "plugin.seo.settings.robots.body",
+    message: "robots.txt content",
+  },
 } as const satisfies Record<string, Label>;
+
+const VERIFICATION_LABELS = {
+  google: { id: "plugin.seo.settings.verification.google", message: "Google" },
+  bing: { id: "plugin.seo.settings.verification.bing", message: "Bing" },
+  yandex: { id: "plugin.seo.settings.verification.yandex", message: "Yandex" },
+  baidu: { id: "plugin.seo.settings.verification.baidu", message: "Baidu" },
+  pinterest: {
+    id: "plugin.seo.settings.verification.pinterest",
+    message: "Pinterest",
+  },
+} as const satisfies Record<VerificationEngine, Label>;
 
 // The two answers and the schema.org type each names. One roster, so the
 // stored value is narrowed against the same list the form offers. The labels
@@ -381,6 +435,11 @@ function scopeFields(ctx: PluginSetupContext): MetaBoxFieldInput[] {
   ];
 }
 
+// Long enough for a token and for a hand-written crawler policy; the caps are
+// against an adversarial payload, not an editorial rule.
+const TOKEN_MAX = 300;
+const ROBOTS_MAX = 8000;
+
 export function registerSeoSettings(ctx: PluginSetupContext): void {
   // Deferred to `theme:ready` for the same reason the meta box is: the
   // per-scope fields are read off the registry, which during `setup` holds
@@ -389,12 +448,42 @@ export function registerSeoSettings(ctx: PluginSetupContext): void {
     ctx.registerSettingsGroup(SEO_SETTINGS_GROUP, {
       label: D.groupLabel,
       description: D.groupDescription,
+      capability: SETTINGS_CAPABILITY,
       fields: [...SITE_WIDE_FIELDS, ...scopeFields(ctx)],
+    });
+    // Their own cards rather than more rows on the one above: an ownership
+    // proof and a crawler policy are each answered once and rarely, where
+    // everything in that card is answered while writing.
+    ctx.registerSettingsGroup(SEO_VERIFICATION_GROUP, {
+      label: D.verificationLabel,
+      description: D.verificationDescription,
+      capability: SETTINGS_CAPABILITY,
+      fields: VERIFICATION_ENGINES.map((engine) => ({
+        key: engine,
+        type: "string",
+        inputType: "text",
+        label: VERIFICATION_LABELS[engine],
+        maxLength: TOKEN_MAX,
+      })),
+    });
+    ctx.registerSettingsGroup(SEO_ROBOTS_GROUP, {
+      label: D.robotsLabel,
+      description: D.robotsDescription,
+      capability: SETTINGS_CAPABILITY,
+      fields: [
+        {
+          key: "robots_txt",
+          type: "string",
+          inputType: "textarea",
+          label: D.robotsField,
+          maxLength: ROBOTS_MAX,
+        },
+      ],
     });
     ctx.registerSettingsPage(SEO_SETTINGS_GROUP, {
       label: D.pageLabel,
       description: D.pageDescription,
-      groups: [SEO_SETTINGS_GROUP],
+      groups: [SEO_SETTINGS_GROUP, SEO_VERIFICATION_GROUP, SEO_ROBOTS_GROUP],
       priority: 20,
     });
   });
@@ -440,6 +529,36 @@ async function withLegacyDefaults(
 export async function loadSeoSettings(ctx: AppContext): Promise<SeoSettings> {
   const groups = await loadSettingsGroups(ctx, [SEO_SETTINGS_GROUP, "site"]);
   return readSeoSettings(groups[SEO_SETTINGS_GROUP] ?? {}, groups.site ?? {});
+}
+
+/** What one engine was handed to prove ownership. */
+export interface VerificationTag {
+  readonly name: string;
+  readonly content: string;
+}
+
+/**
+ * The ownership proofs the head carries, one per engine the owner configured.
+ * Its own read rather than a field on {@link SeoSettings}: nothing but the head
+ * asks, and the chain has no use for it.
+ */
+export async function loadVerificationTags(
+  ctx: AppContext,
+): Promise<readonly VerificationTag[]> {
+  const groups = await loadSettingsGroups(ctx, [SEO_VERIFICATION_GROUP]);
+  const bag = groups[SEO_VERIFICATION_GROUP] ?? {};
+  return VERIFICATION_ENGINES.flatMap((engine) => {
+    const content = nonEmpty(bag[engine]);
+    return content === null
+      ? []
+      : [{ name: VERIFICATION_TAGS[engine], content }];
+  });
+}
+
+/** A hand-written `/robots.txt`, replacing the generated one, or null. */
+export async function loadRobotsBody(ctx: AppContext): Promise<string | null> {
+  const groups = await loadSettingsGroups(ctx, [SEO_ROBOTS_GROUP]);
+  return nonEmpty(groups[SEO_ROBOTS_GROUP]?.robots_txt);
 }
 
 /** A value coerced to a non-empty string, or null. */

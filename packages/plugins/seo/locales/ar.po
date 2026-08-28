@@ -192,3 +192,143 @@ msgstr "السماح لمحركات البحث بفهرسة مدخلات هذا 
 #: src/settings.ts
 msgid "plugin.seo.settings.taxonomy_indexable.description"
 msgstr "السماح لمحركات البحث بفهرسة أرشيفات هذا التصنيف."
+
+#. js-lingui-explicit-id
+#: src/preview-box.ts
+msgid "plugin.seo.box.preview.label"
+msgstr "معاينة نتيجة البحث"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.loading"
+msgstr "جارٍ التحميل…"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.failed"
+msgstr "تعذّر تحميل المعاينة."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.unsaved"
+msgstr "احفظ المُدخل لترى كيف سيظهر في نتائج البحث."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.refresh"
+msgstr "تحديث"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.title"
+msgstr "العنوان"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.description"
+msgstr "الوصف"
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.ok"
+msgstr "يتّسع."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.over"
+msgstr "طويل جدًا — ستقتطعه محركات البحث."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.counter.empty"
+msgstr "فارغ."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.excluded"
+msgstr "غير معروض على محركات البحث."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.site_private"
+msgstr "الموقع بأكمله محجوب عن البحث."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.entry_override"
+msgstr "مخفي عن محركات البحث في هذا المُدخل."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.type_default"
+msgstr "نوع المحتوى هذا محجوب عن البحث في الإعدادات."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.search_results"
+msgstr "صفحات نتائج البحث محجوبة عن البحث في الإعدادات."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.taxonomy_default"
+msgstr "هذا التصنيف محجوب عن البحث في الإعدادات."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.paginated"
+msgstr "الصفحة الثانية وما بعدها محجوبة عن البحث في الإعدادات."
+
+#. js-lingui-explicit-id
+#: src/admin/messages.ts
+msgid "plugin.seo.preview.reason.not_found"
+msgstr "الصفحات غير الموجودة محجوبة عن البحث في الإعدادات."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.label"
+msgstr "التحقق من الموقع"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.description"
+msgstr "الرموز التي يمنحك إياها كل محرك بحث لإثبات ملكيتك للموقع. كل رمز مضبوط يصل إلى ترويسة كل صفحة."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.google"
+msgstr "Google"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.bing"
+msgstr "Bing"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.yandex"
+msgstr "Yandex"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.baidu"
+msgstr "Baidu"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.verification.pinterest"
+msgstr "Pinterest"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.label"
+msgstr "robots.txt"
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.description"
+msgstr "يحل محل الملف المُولَّد. يظل سطر خريطة الموقع موجودًا سواء كتبته أم لا."
+
+#. js-lingui-explicit-id
+#: src/settings.ts
+msgid "plugin.seo.settings.robots.body"
+msgstr "محتوى robots.txt"

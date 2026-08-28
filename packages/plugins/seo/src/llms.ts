@@ -1,8 +1,8 @@
 import type { AppContext } from "plumix/plugin";
-import { loadSiteSettings, withBasePath } from "plumix";
+import { loadSiteSettings } from "plumix";
 
 import { loadSeoSettings, nonEmpty } from "./settings.js";
-import { SITEMAP_INDEX_PATH } from "./sitemap.js";
+import { sitemapIndexUrl } from "./sitemap.js";
 
 /** Where the file answers, before any base prefix. */
 export const LLMS_PATH = "/llms.txt";
@@ -41,7 +41,7 @@ export async function handleLlmsTxt(ctx: AppContext): Promise<Response> {
   // stands in for a site that never filled its title in.
   const title = nonEmpty(site.title) ?? new URL(ctx.origin).host;
   const tagline = nonEmpty(site.tagline);
-  const sitemap = `${ctx.origin}${withBasePath(SITEMAP_INDEX_PATH, ctx.basePath)}`;
+  const sitemap = sitemapIndexUrl(ctx);
 
   const heading = `# ${title}\n`;
   const intro = tagline === null ? "" : `\n> ${tagline}\n`;
