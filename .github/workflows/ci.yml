@@ -254,8 +254,14 @@ jobs:
       # that runs exclusively when the suite has already failed, so a failing
       # e2e run looked like a hang and burned the job's timeout.
       #
-      # Staging under the original relative paths keeps the artifact's layout
-      # identical to what the glob produced.
+      # Staging under the original relative paths leaves the real entries where
+      # the glob put them; only its duplicates are gone. `-prune` on the match
+      # branch stops `find` descending into a report it has already claimed —
+      # otherwise a nested pair copies twice, since `cp -R` into an existing
+      # destination copies *into* it. A copy that fails annotates and the walk
+      # continues: aborting would leave a partial artifact that reads as "those
+      # workspaces produced nothing", which is the failure this step exists to
+      # prevent.
       - name: Collect Playwright reports
         if: failure()
         shell: bash
@@ -263,11 +269,11 @@ jobs:
           stage="${RUNNER_TEMP}/playwright-reports"
           mkdir -p "$stage"
           find . -type d \( -name node_modules -o -name .git -o -name .turbo \) -prune -o \
-                 -type d \( -name playwright-report -o -name test-results \) -print0 |
+                 -type d \( -name playwright-report -o -name test-results \) -prune -print0 |
             while IFS= read -r -d '' dir; do
               rel="${dir#./}"
-              mkdir -p "$stage/$(dirname "$rel")"
-              cp -R "$dir" "$stage/$rel"
+              mkdir -p "$stage/$(dirname "$rel")" && cp -R "$dir" "$stage/$rel" ||
+                echo "::warning::could not stage $rel"
             done
 
       - name: Upload Playwright reports + traces on failure
