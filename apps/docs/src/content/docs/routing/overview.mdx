@@ -92,12 +92,13 @@ A request reaches the public router only after several earlier steps decline it.
 
 1. **The dispatcher strips the base path.** With `basePath: "/kitchen"` in `plumix.config.ts`, it rewrites `/kitchen/recipes` to `/recipes` once, at the edge, so nothing downstream is base-path aware. A request that is not under the base gets a 404, because it is not part of the mounted site.
 2. **The platform's own endpoints answer.** Everything under `/_plumix/` belongs to the platform: the RPC endpoint, the sign-in flows, the admin app at `/_plumix/admin`, the MCP endpoint, the REST API at `/_plumix/api/v1`, and any raw route a plugin mounted at `/_plumix/<pluginId>`. A `/_plumix/` path that matches none of them returns 404 rather than falling through to your content.
-3. **The SEO endpoints answer.** `robots.txt`, `sitemap.xml` and its sub-sitemaps, and the feeds resolve here. These sit ahead of the route map on purpose, so no rewrite rule can shadow them.
-4. **Redirect rules run.** Plumix matches the rules from `plumix.config.ts`, from plugins and from the theme as one precedence-ordered set. A match ends the request with a 301, 302, 307, 308 or a 410.
-5. **Asset-shaped misses stop early.** A path ending in `.ico`, `.css`, `.js`, `.png`, `.woff2` or another asset extension returns a cacheable 404 without touching the database.
-6. **The canonical normalizer runs.** A non-canonical shape 301s to its canonical form before routing. See [Permalinks and Slugs](/routing/permalinks/) for what counts as canonical.
-7. **The route map runs.** First rule wins. An unmatched `/` is the front page; any other unmatched URL is a 404, and that 404 is never cached.
-8. **The intent resolves and renders.** The resolver loads the entries, the term or the author, then the theme's [template hierarchy](/themes/hierarchy/) turns the payload into HTML.
+3. **Registered public routes answer.** A plugin can own a path at the site root with `registerPublicRoute`, which is how a plugin serves `/robots.txt`, a sitemap or a feed. These match first, so a registered route shadows everything below it, including core's own endpoints. The handler always answers; there is no fall-through to the page that would otherwise own the path.
+4. **The SEO endpoints answer.** `robots.txt`, `sitemap.xml` and its sub-sitemaps, and the feeds resolve here. These sit ahead of the route map on purpose, so no rewrite rule can shadow them.
+5. **Redirect rules run.** Plumix matches the rules from `plumix.config.ts`, from plugins and from the theme as one precedence-ordered set. A match ends the request with a 301, 302, 307, 308 or a 410.
+6. **Asset-shaped misses stop early.** A path ending in `.ico`, `.css`, `.js`, `.png`, `.woff2` or another asset extension returns a cacheable 404 without touching the database.
+7. **The canonical normalizer runs.** A non-canonical shape 301s to its canonical form before routing. See [Permalinks and Slugs](/routing/permalinks/) for what counts as canonical.
+8. **The route map runs.** First rule wins. An unmatched `/` is the front page; any other unmatched URL is a 404, and that 404 is never cached.
+9. **The intent resolves and renders.** The resolver loads the entries, the term or the author, then the theme's [template hierarchy](/themes/hierarchy/) turns the payload into HTML.
 
 <Aside type="note" title="Where the access gate sits">
   Between the match and the render, Plumix loads the
@@ -130,7 +131,7 @@ The last priority band is how the pages plugin serves `/about/team`. Its `page` 
 
 ## Registering your own routes
 
-Two calls put URLs on the map that no entry-type registration would produce.
+Three calls put URLs on your site that no entry-type registration would produce.
 
 `registerRewriteRule(pattern, intent, options?)` maps a URLPattern pathname onto an existing intent. Use it to serve a type at a second URL, or to give an archive a shape the generated rules do not cover. The only option is `priority`, which defaults to 10.
 
@@ -148,6 +149,30 @@ export const recipes = definePlugin("recipes", {
 ```
 
 `registerArchiveType(name, options)` registers a whole archive, meaning its URL patterns, a resolver that returns the data or `null` for a 404, an optional feed, and an optional `priority`. It compiles to the `custom` intent, and the theme targets it by name. Reach for it when core has no concept of the archive at all, such as a printable weekly menu.
+
+`registerPublicRoute(options)` skips the route map entirely and answers a path at the site root itself, which is how a plugin owns a machine-readable endpoint like `/robots.txt`, a sitemap or a feed. `path` is an exact pathname or a URLPattern pathname whose captured groups reach the handler as its third argument, and `cacheable: true` opts the response into the edge cache on the same terms as a `/_plumix/` plugin route. Two plugins claiming one path throws at boot naming both owners; a path inside `/_plumix/` throws too, since core owns that prefix — mount those with `registerRoute`.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const feeds = definePlugin("feeds", {
+  setup: (ctx) => {
+    ctx.addAction("theme:ready", () => {
+      ctx.registerPublicRoute({
+        path: "/feed",
+        handler: () =>
+          new Response("<rss />", {
+            headers: { "content-type": "application/rss+xml" },
+          }),
+      });
+    });
+  },
+});
+```
+
+Register from the `theme:ready` action rather than from `setup`. By then every entry type and taxonomy is registered, so a plugin enumerates them and claims concrete paths instead of matching an ambiguous pattern per request — the reason there is no fall-through to worry about.
+
+The route answers `GET` and `HEAD`; a write method gets a 405 from the step above it. The handler runs ahead of the access gate and the principal loader, so `ctx.user` is null however the request was authenticated — a handler that lists content is listing it for an anonymous reader and has to leave out what an anonymous reader may not see. The request URL has had any `basePath` stripped, so build outbound URLs from `ctx.origin` and `ctx.basePath` rather than from `request.url`.
 
 <Aside type="caution" title="Asset extensions are unroutable">
   A rewrite pattern ending in `.js`, `.png`, `.woff2` or another asset extension

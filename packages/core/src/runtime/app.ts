@@ -32,6 +32,7 @@ import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { RestDispatch } from "../rest/build-handler.js";
 import type { RestRoute } from "../rest/rest-routes.js";
 import type { RouteRule } from "../route/intent.js";
+import type { PublicRouteTable } from "../route/public-routes.js";
 import type { CompiledRedirects } from "../route/redirects.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { RenderEnv } from "../route/render/render-env.js";
@@ -55,6 +56,7 @@ import {
 import { installPlugins } from "../plugin/register.js";
 import { CORE_REST_ROUTES, routesOverlap } from "../rest/rest-routes.js";
 import { compileRouteMap } from "../route/compile.js";
+import { compilePublicRoutes } from "../route/public-routes.js";
 import { assembleRedirects } from "../route/redirects.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
@@ -185,6 +187,11 @@ export interface PlumixApp {
   /** Compiled public-route redirects/410s, matched ahead of `routeMap`. */
   readonly redirects: CompiledRedirects;
   readonly rawRoutes: readonly RegisteredRawRoute[];
+  /**
+   * Plugin routes mounted at the site root, compiled at boot. Matched ahead of
+   * the redirect table and the content route map; see {@link compilePublicRoutes}.
+   */
+  readonly publicRoutes: PublicRouteTable;
   readonly capabilityResolver: CapabilityResolver;
   /**
    * Plugin-contributed AppContext entries from `extendAppContext`.
@@ -469,6 +476,7 @@ export async function buildApp(
       theme: config.theme.redirects,
     }),
     rawRoutes: registry.rawRoutes,
+    publicRoutes: compilePublicRoutes(registry.publicRoutes),
     capabilityResolver: getCapabilityResolver(registry),
     appContextExtensions,
     scheduledTasks: registry.scheduledTasks,

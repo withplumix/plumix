@@ -1,6 +1,8 @@
 import type { AppContext } from "../context/app.js";
+import type { PublicRouteTable } from "../route/public-routes.js";
 import type { DocumentManifest } from "../theme.js";
 import { withBasePath } from "../base-path.js";
+import { matchPublicRoute } from "../route/public-routes.js";
 
 /**
  * Normalize a pathname to its canonical, slash-less shape. `/page/1` is the
@@ -28,17 +30,29 @@ export function canonicalUrl(ctx: AppContext): string {
 }
 
 /**
- * Paths the 301 normalizer must never touch: the root, the plumix surface, the
- * SEO machine endpoints (robots, feeds), and asset/extension-like paths (a dot
- * in the last segment — covers `sitemap*.xml`, `favicon.ico`, etc.). Everything
- * else is a public page route whose shape we normalize.
+ * Paths the 301 normalizer must never touch: the root, the plumix surface,
+ * anything a plugin registered as a public route, the SEO machine endpoints
+ * (robots, feeds), and asset/extension-like paths (a dot in the last segment —
+ * covers `sitemap*.xml`, `favicon.ico`, etc.). Everything else is a public page
+ * route whose shape we normalize. The registered-route arm is where the
+ * endpoint literals go once the SEO plugins register them (#1998).
  */
-export function isCanonicalExempt(pathname: string): boolean {
+export function isCanonicalExempt(
+  pathname: string,
+  publicRoutes: PublicRouteTable,
+): boolean {
   if (pathname === "/") return true;
   if (pathname === "/robots.txt") return true;
   if (pathname.startsWith("/_plumix/")) return true;
   // Feed endpoints own their exact routing; `/feedback` only shares a prefix.
   if (pathname === "/feed" || pathname.startsWith("/feed/")) return true;
+  // The normalized shape, not the literal one: the dispatcher already served
+  // the literal path if a route owned it, and normalization exists to
+  // consolidate *page* URL variants — a machine endpoint has none, so a shape
+  // that would normalize onto one is left alone rather than 301'd at it.
+  if (matchPublicRoute(publicRoutes, canonicalPath(pathname)) !== null) {
+    return true;
+  }
   const trimmed = pathname.replace(/\/+$/, "");
   const lastSegment = trimmed.slice(trimmed.lastIndexOf("/") + 1);
   return lastSegment.includes(".");
@@ -50,13 +64,16 @@ export function isCanonicalExempt(pathname: string): boolean {
  * tag so the redirect target and the tag can never disagree; the query string
  * is preserved, and an already-canonical path returns null (loop-safe).
  */
-export function canonicalRedirectTarget(ctx: AppContext): string | null {
+export function canonicalRedirectTarget(
+  ctx: AppContext,
+  publicRoutes: PublicRouteTable,
+): string | null {
   // Request path is already root-relative (base stripped at the dispatcher
   // edge), so `/` — the base prefix's own front page — is exempt as usual.
   const url = new URL(ctx.request.url);
-  if (isCanonicalExempt(url.pathname)) return null;
   const target = canonicalPath(url.pathname);
   if (url.pathname === target) return null;
+  if (isCanonicalExempt(url.pathname, publicRoutes)) return null;
   return `${ctx.origin}${withBasePath(target, ctx.basePath)}${url.search}`;
 }
 

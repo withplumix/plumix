@@ -40,6 +40,15 @@ export function assertValidRestResourcePath(
   assertValidPathPrefix(pluginId, path, "REST resource");
 }
 
+export function assertValidPublicRoutePath(
+  pluginId: string,
+  path: string,
+): void {
+  // Every URLPattern operator is legal in a public route path, so only the
+  // shared `/`-anchored shape rules apply.
+  assertValidPathPrefix(pluginId, path, "public route");
+}
+
 export function assertValidPluginRoutePath(
   pluginId: string,
   path: string,

@@ -4,6 +4,7 @@ import type { AppContext } from "../context/app.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { RouteIntent } from "../route/intent.js";
 import type { RouteMatch } from "../route/match.js";
+import type { PublicRouteMatch } from "../route/public-routes.js";
 import type { RedirectResolution } from "../route/redirects.js";
 import type { PlumixApp } from "./app.js";
 import {
@@ -41,6 +42,7 @@ import { isTrustedDevRequest } from "../dev/trust.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { exposesHierarchicalUrls } from "../route/compile.js";
 import { extractParams, matchRoute } from "../route/match.js";
+import { matchPublicRoute } from "../route/public-routes.js";
 import { matchRedirect } from "../route/redirects.js";
 import { renderErrorThroughTheme } from "../route/render/render-template.js";
 import { resolvePublicRoute } from "../route/resolve.js";
@@ -425,11 +427,12 @@ async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
   return tryPublicRoutes(app, ctx, url);
 }
 
-// The public site: only GET/HEAD are meaningful past this point. Core SEO asset
-// routes (robots, sitemaps, feeds) resolve ahead of the public route map so a
-// plugin rewrite rule can't shadow them, then a non-canonical URL 301s to its
-// slash-less form before the route map runs, and anything left renders through
-// the public router.
+// The public site: only GET/HEAD are meaningful past this point. A plugin's
+// registered public routes answer first, so a plugin can take `/robots.txt` or
+// `/feed` off core outright. Core's own SEO assets (robots, sitemaps, feeds)
+// come next, ahead of the public route map so a plugin rewrite rule can't
+// shadow them, then a non-canonical URL 301s to its slash-less form before the
+// route map runs, and anything left renders through the public router.
 async function tryPublicRoutes(
   app: PlumixApp,
   ctx: AppContext,
@@ -439,6 +442,9 @@ async function tryPublicRoutes(
   if (ctx.request.method !== "GET" && ctx.request.method !== "HEAD") {
     return methodNotAllowed(["GET", "HEAD"]);
   }
+
+  const publicRoute = matchPublicRoute(app.publicRoutes, pathname);
+  if (publicRoute !== null) return servePublicRoute(publicRoute, ctx);
 
   if (pathname === ROBOTS_PATH) {
     return handleRobotsTxt(ctx);
@@ -534,7 +540,7 @@ async function tryPublicRoutes(
 
   // Normalize a public page URL to its canonical (slash-less) shape before
   // routing — the 301 target shares `canonicalUrl` with the rel=canonical tag.
-  const canonical = canonicalRedirectTarget(ctx);
+  const canonical = canonicalRedirectTarget(ctx, app.publicRoutes);
   if (canonical !== null) return permanentRedirect(canonical);
 
   return dispatchPublicRoute(app, ctx, url);
@@ -948,6 +954,27 @@ export function matchPluginRawRoute(
     if (localPath === route.path) return { route };
   }
   return null;
+}
+
+// A registered public route, on the same edge-cache terms as a raw route: the
+// `cacheable: true` opt-in, the handler's own tags, and a live run wherever the
+// deploy bound no cache. There is no auth gate — a route at the site root is
+// public by construction.
+function servePublicRoute(
+  match: PublicRouteMatch,
+  ctx: AppContext,
+): Promise<Response> {
+  const run = async () => match.route.handler(ctx.request, ctx, match.params);
+  const cache = ctx.cache;
+  if (match.route.cacheable !== true || cache === undefined) return run();
+  return readThroughRoute({
+    request: ctx.request,
+    cache,
+    defer: ctx.defer,
+    telemetry: ctx.telemetry,
+    render: run,
+    tags: () => cacheTagsFor(ctx),
+  });
 }
 
 // A raw route reaches the edge cache on its own `cacheable: true` opt-in, and
