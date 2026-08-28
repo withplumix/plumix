@@ -4,6 +4,7 @@ import type { MetaBoxFieldManifestEntry } from "@plumix/core/manifest";
 
 import { MetaBoxField } from "./meta-box-field.js";
 import { metaBoxFieldColSpanClass } from "./meta-box-grid.js";
+import { useVisibleFields } from "./use-visible-fields.js";
 
 // A group renders its members on a 12-column grid in a bordered card, each
 // wired to `${name}.${member.key}` so the nested object round-trips through
@@ -22,7 +23,9 @@ export function GroupField({
   readonly disabled: boolean;
   readonly testId: string;
 }): ReactNode {
-  const members = field.subFields ?? [];
+  // `{ name }` scopes the watch to the group's own bag, so a member's
+  // condition reads its siblings rather than the whole form.
+  const members = useVisibleFields(field.subFields ?? [], { name });
   return (
     <div
       data-testid={testId}

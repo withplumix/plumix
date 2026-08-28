@@ -1,5 +1,6 @@
 import type { SubFieldContainer } from "./errors.js";
 import type { MetaBoxField } from "./meta-box-field.js";
+import { findUnknownConditionDriver } from "./condition.js";
 import { FieldConfigError } from "./errors.js";
 
 // Mirrors `META_FIELD_KEY_RE` in plugin/validation/meta-box-fields.ts.
@@ -20,11 +21,10 @@ const FORBIDDEN_SUBFIELD_KEYS: ReadonlySet<string> = new Set([
 
 /**
  * Validate the child fields of a composite field (`repeater` / `group`)
- * at registration: key shape, prototype-pollution guard, uniqueness,
- * and the not-yet-implemented nested-condition rejection. Nested
- * repeaters and groups are permitted — each composite validates its own
- * immediate children, so arbitrarily deep nesting is covered as each
- * builder is constructed.
+ * at registration: key shape, prototype-pollution guard, uniqueness, and
+ * that every condition names a sibling. Nested repeaters and groups are
+ * permitted — each composite validates its own immediate children, so
+ * arbitrarily deep nesting is covered as each builder is constructed.
  */
 export function assertSubFields(
   container: SubFieldContainer,
@@ -55,16 +55,15 @@ export function assertSubFields(
         subFieldKey: sf.key,
       });
     }
-    // Nested conditions aren't wired: the admin evaluator and the write
-    // pipeline both read driver values from the top-level box scope, so
-    // a row/member `visibleWhen` would register a silent no-op.
-    if (sf.visibleWhen !== undefined) {
-      throw FieldConfigError.subFieldCondition({
-        container,
-        containerKey,
-        subFieldKey: sf.key,
-      });
-    }
     seen.add(sf.key);
+  }
+  const unknown = findUnknownConditionDriver(subFields, seen);
+  if (unknown !== undefined) {
+    throw FieldConfigError.subFieldConditionUnknownDriver({
+      container,
+      containerKey,
+      subFieldKey: unknown.fieldKey,
+      driverKey: unknown.driverKey,
+    });
   }
 }

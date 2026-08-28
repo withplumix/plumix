@@ -1117,6 +1117,20 @@ describe("MetaBoxField — repeater dispatch", () => {
     });
   }
 
+  // A row whose `kind` sub-field drives which sibling applies.
+  const conditionalRow = repeaterField({
+    subFields: [
+      { key: "kind", label: "Kind", type: "string", inputType: "text" },
+      {
+        key: "choices",
+        label: "Choices",
+        type: "string",
+        inputType: "text",
+        visibleWhen: [[{ key: "kind", op: "eq", value: "select" }]],
+      },
+    ],
+  });
+
   test("renders empty placeholder + Add row button when value is missing", () => {
     renderWithI18n(<Harness fieldDef={repeaterField()} initial={undefined} />);
     expect(
@@ -1264,6 +1278,21 @@ describe("MetaBoxField — repeater dispatch", () => {
     ).toBeInTheDocument();
   });
 
+  test("a condition-hidden cell never labels the summary row", () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={conditionalRow}
+        initial={[{ kind: "", choices: "left over from when it showed" }]}
+      />,
+    );
+    // `kind` is blank and `choices` is hidden, so nothing is summarisable —
+    // the row falls back to its number rather than advertising a value the
+    // author can no longer see.
+    expect(
+      screen.getByTestId("meta-box-field-links-input-row-0-summary"),
+    ).toHaveTextContent("Row 1");
+  });
+
   test("collapsed key overrides which subfield labels the summary row", () => {
     renderWithI18n(
       <Harness
@@ -1356,6 +1385,59 @@ describe("MetaBoxField — repeater dispatch", () => {
       await screen.findByTestId("meta-box-field-callouts-input-add"),
     ).toBeInTheDocument();
   });
+
+  test("a row's sub-fields show and hide live as its driver changes", async () => {
+    renderWithI18n(
+      <Harness fieldDef={conditionalRow} initial={[{ kind: "text" }]} />,
+    );
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-links-input-row-0-edit"),
+    );
+    const driver = await screen.findByTestId("meta-box-field-kind-input");
+    expect(
+      screen.queryByTestId("meta-box-field-choices-input"),
+    ).not.toBeInTheDocument();
+
+    await userEvent.clear(driver);
+    await userEvent.type(driver, "select");
+    expect(
+      await screen.findByTestId("meta-box-field-choices-input"),
+    ).toBeInTheDocument();
+
+    await userEvent.clear(driver);
+    await userEvent.type(driver, "text");
+    expect(
+      screen.queryByTestId("meta-box-field-choices-input"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("a row's conditions read its own siblings, not another row's", async () => {
+    renderWithI18n(
+      <Harness
+        fieldDef={conditionalRow}
+        initial={[{ kind: "text" }, { kind: "select" }]}
+      />,
+    );
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-links-input-row-0-edit"),
+    );
+    expect(
+      await screen.findByTestId("meta-box-field-kind-input"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("meta-box-field-choices-input"),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-links-input-dialog-done"),
+    );
+    await userEvent.click(
+      screen.getByTestId("meta-box-field-links-input-row-1-edit"),
+    );
+    expect(
+      await screen.findByTestId("meta-box-field-choices-input"),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("MetaBoxField — group dispatch", () => {
@@ -1379,6 +1461,49 @@ describe("MetaBoxField — group dispatch", () => {
       ...overrides,
     });
   }
+
+  // A member whose applicability rides on a sibling — the group-level
+  // counterpart of the repeater row's conditional sub-field.
+  const conditionalGroup = groupField({
+    subFields: [
+      { key: "kind", label: "Kind", type: "string", inputType: "text" },
+      {
+        key: "choices",
+        label: "Choices",
+        type: "string",
+        inputType: "text",
+        visibleWhen: [[{ key: "kind", op: "eq", value: "select" }]],
+      },
+    ],
+  });
+
+  test("a condition-hidden member does not render", () => {
+    renderWithI18n(
+      <Harness fieldDef={conditionalGroup} initial={{ kind: "text" }} />,
+    );
+    expect(screen.getByTestId("meta-box-field-kind-input")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("meta-box-field-choices-input"),
+    ).not.toBeInTheDocument();
+  });
+
+  test("members show and hide live as the driver changes", async () => {
+    renderWithI18n(
+      <Harness fieldDef={conditionalGroup} initial={{ kind: "text" }} />,
+    );
+    const driver = screen.getByTestId("meta-box-field-kind-input");
+    await userEvent.clear(driver);
+    await userEvent.type(driver, "select");
+    expect(
+      await screen.findByTestId("meta-box-field-choices-input"),
+    ).toBeInTheDocument();
+
+    await userEvent.clear(driver);
+    await userEvent.type(driver, "text");
+    expect(
+      screen.queryByTestId("meta-box-field-choices-input"),
+    ).not.toBeInTheDocument();
+  });
 
   test("renders each member through the dispatcher", () => {
     renderWithI18n(

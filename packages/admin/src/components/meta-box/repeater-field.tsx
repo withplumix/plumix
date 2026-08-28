@@ -19,12 +19,14 @@ import {
 } from "@plumix/admin-ui/dialog";
 import { Pencil, PlusIcon, TriangleAlert } from "@plumix/admin-ui/icons";
 import { SortableList } from "@plumix/admin-ui/sortable";
+import { isFieldVisible } from "@plumix/core/manifest";
 
 import { MetaBoxField } from "./meta-box-field.js";
 import {
   metaBoxFieldColSpanClass,
   repeaterDialogSizeClass,
 } from "./meta-box-grid.js";
+import { useVisibleFields } from "./use-visible-fields.js";
 
 // Row ids are index-derived. dnd-kit only needs stability within a single
 // drag; controlled subfields live at `${rowName}.${subKey}` in RHF state, so
@@ -249,23 +251,11 @@ export function RepeaterField({
             </DialogTitle>
           </DialogHeader>
           {editingRowName ? (
-            <div className="@container">
-              {/* `items-start` so a field showing a validation message grows
-                  its own cell only — without it the grid stretches every
-                  cell in the row to match, vertically centring the siblings'
-                  controls out of line with the errored field. */}
-              <div className="grid grid-cols-12 items-start gap-4">
-                {subFields.map((sf) => (
-                  <MetaBoxField
-                    key={sf.key}
-                    field={sf}
-                    name={`${editingRowName}.${sf.key}`}
-                    disabled={disabled}
-                    className={metaBoxFieldColSpanClass(sf.span)}
-                  />
-                ))}
-              </div>
-            </div>
+            <RepeaterRowFields
+              subFields={subFields}
+              rowName={editingRowName}
+              disabled={disabled}
+            />
           ) : null}
           <DialogFooter>
             <DialogClose asChild>
@@ -280,6 +270,41 @@ export function RepeaterField({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// A row's sub-fields, their conditions judged against that row's own sibling
+// values. Its own component because `useVisibleFields` can't be called from
+// `RepeaterField`: the row name is null while the dialog is closed, and the
+// hook has to run unconditionally.
+function RepeaterRowFields({
+  subFields,
+  rowName,
+  disabled,
+}: {
+  readonly subFields: readonly MetaBoxFieldManifestEntry[];
+  readonly rowName: string;
+  readonly disabled: boolean;
+}): ReactNode {
+  const visible = useVisibleFields(subFields, { name: rowName });
+  return (
+    <div className="@container">
+      {/* `items-start` so a field showing a validation message grows its own
+          cell only — without it the grid stretches every cell in the row to
+          match, vertically centring the siblings' controls out of line with
+          the errored field. */}
+      <div className="grid grid-cols-12 items-start gap-4">
+        {visible.map((sf) => (
+          <MetaBoxField
+            key={sf.key}
+            field={sf}
+            name={`${rowName}.${sf.key}`}
+            disabled={disabled}
+            className={metaBoxFieldColSpanClass(sf.span)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -406,11 +431,16 @@ function rowSummary(
   collapsedKey: string | undefined,
   renderLabel: ReturnType<typeof useLabel>,
 ): string | null {
+  // A hidden cell must not label the row: the author cannot open it to see
+  // where the summary came from.
+  const visible = subFields.filter((sf) => isFieldVisible(sf, row));
   if (collapsedKey !== undefined) {
-    const sf = subFields.find((f) => f.key === collapsedKey);
-    return cellSummary(row[collapsedKey], sf, renderLabel);
+    const sf = visible.find((f) => f.key === collapsedKey);
+    // Hidden in this row: fall through to the scan rather than leave the row
+    // unlabelled, since a visible sibling can still name it.
+    if (sf) return cellSummary(row[collapsedKey], sf, renderLabel);
   }
-  for (const sf of subFields) {
+  for (const sf of visible) {
     const summary = cellSummary(row[sf.key], sf, renderLabel);
     if (summary !== null) return summary;
   }

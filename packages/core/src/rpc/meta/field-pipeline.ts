@@ -14,6 +14,7 @@ import type {
 import type { ResolvedMeta } from "./core.js";
 import { isJsonArray, isJsonObject } from "../../json.js";
 import { HEX_COLOR } from "../../plugin/fields/color.js";
+import { isFieldVisible } from "../../plugin/fields/condition.js";
 import { parseLinkValue } from "../../plugin/fields/link.js";
 import {
   SAFE_HREF_RE,
@@ -227,7 +228,7 @@ async function runGroupPipeline(
       member,
       value[member.key],
       `${path}.${member.key}`,
-      mode,
+      cellMode(member, value, mode),
     );
     errors.push(...cell.errors);
     if (cell.errors.length === 0 && cell.value !== undefined) {
@@ -267,6 +268,28 @@ export function healReferenceValue(
     return value.map((item) => extractStringId(item) ?? item);
   }
   return extractStringId(value) ?? value;
+}
+
+/**
+ * The mode a cell of a row / group runs under: `draft` when the bag's own
+ * values hide it, so business rules can't fail on an input nobody can open —
+ * while coercion, `.sanitize()` and the safety gates still run, and the value
+ * is kept rather than dropped. Losing it would be worse than at box level,
+ * where a hidden key's stored value survives untouched: a row is rewritten
+ * whole on every save, so a dropped cell is gone for good.
+ *
+ * Visibility is `isFieldVisible`, not `isConditionHidden`: a row is always a
+ * complete object, so an absent driver key means unset, and the admin judges
+ * the same rows with the same function. `isConditionHidden`'s bail-out on a
+ * missing driver is for partial box-level patches, and here it would validate
+ * the very cells the admin hides.
+ */
+function cellMode(
+  field: MetaBoxField,
+  bag: ResolvedMeta,
+  mode: FieldPipelineMode,
+): FieldPipelineMode {
+  return isFieldVisible(field, bag) ? mode : "draft";
 }
 
 // A row every cell of which reads empty is an authoring affordance, not
@@ -315,7 +338,7 @@ async function runRepeaterPipeline(
         sf,
         rawRow[sf.key],
         `${path}.${String(idx)}.${sf.key}`,
-        mode,
+        cellMode(sf, rawRow, mode),
       );
       errors.push(...cell.errors);
       if (cell.errors.length === 0 && cell.value !== undefined) {

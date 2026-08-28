@@ -3,7 +3,7 @@ type FieldConfigErrorCode =
   | "sub_field_key_forbidden"
   | "sub_field_key_invalid"
   | "sub_field_duplicate"
-  | "sub_field_condition_not_supported"
+  | "sub_field_condition_unknown_driver"
   | "temporal_bound_invalid";
 
 /** The composite field types that own a list of sub-fields. */
@@ -14,6 +14,7 @@ interface FieldConfigErrorFields {
   container?: SubFieldContainer;
   containerKey?: string;
   subFieldKey?: string;
+  driverKey?: string;
   min?: number;
   max?: number;
   pattern?: string;
@@ -29,6 +30,7 @@ export class FieldConfigError extends Error {
   readonly container: SubFieldContainer | undefined;
   readonly containerKey: string | undefined;
   readonly subFieldKey: string | undefined;
+  readonly driverKey: string | undefined;
   readonly min: number | undefined;
   readonly max: number | undefined;
   readonly pattern: string | undefined;
@@ -44,6 +46,7 @@ export class FieldConfigError extends Error {
     this.container = fields.container;
     this.containerKey = fields.containerKey;
     this.subFieldKey = fields.subFieldKey;
+    this.driverKey = fields.driverKey;
     this.min = fields.min;
     this.max = fields.max;
     this.pattern = fields.pattern;
@@ -101,15 +104,18 @@ export class FieldConfigError extends Error {
     );
   }
 
-  static subFieldCondition(ctx: {
+  static subFieldConditionUnknownDriver(ctx: {
     container: SubFieldContainer;
     containerKey: string;
     subFieldKey: string;
+    driverKey: string;
   }): FieldConfigError {
+    const scope = ctx.container === "repeater" ? "row" : "group";
     return new FieldConfigError(
-      "sub_field_condition_not_supported",
-      `${ctx.container}("${ctx.containerKey}") field "${ctx.subFieldKey}" does not ` +
-        `support visibleWhen — nested conditions are not implemented.`,
+      "sub_field_condition_unknown_driver",
+      `${ctx.container}("${ctx.containerKey}") field "${ctx.subFieldKey}" condition ` +
+        `references "${ctx.driverKey}", which is not a field in the same ${scope} — ` +
+        `a ${scope}'s rules can only drive off its own fields, not the box's.`,
       ctx,
     );
   }

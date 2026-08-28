@@ -14,6 +14,7 @@ import {
   select,
   text,
   time,
+  toggle,
   url,
 } from "../../plugin/fields/index.js";
 import { META_FIELD_MESSAGES } from "./field-messages.js";
@@ -506,6 +507,118 @@ describe("repeater rows", () => {
       "sections.0.weight",
       "sections.1.heading",
     ]);
+  });
+});
+
+describe("condition-hidden cells", () => {
+  const kind = select("kind").options(["text", "select"]);
+  const sections = repeater("sections")
+    .fields([
+      text("title"),
+      kind,
+      text("choices").required().maxLength(3).visibleWhen(kind.is("select")),
+    ])
+    .label("Sections")
+    .build();
+
+  test("a hidden required cell doesn't block the row", async () => {
+    const result = await runFieldPipeline(
+      sections,
+      [{ title: "x", kind: "text", choices: "" }],
+      "sections",
+    );
+    expect(result.errors).toHaveLength(0);
+  });
+
+  test("a hidden cell keeps its value and skips business rules", async () => {
+    const result = await runFieldPipeline(
+      sections,
+      [{ title: "x", kind: "text", choices: "far too long for maxLength 3" }],
+      "sections",
+    );
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toEqual([
+      { title: "x", kind: "text", choices: "far too long for maxLength 3" },
+    ]);
+  });
+
+  test("a hidden cell still clears the structural gates", async () => {
+    const link = repeater("links")
+      .fields([kind, url("href").visibleWhen(kind.is("select"))])
+      .label("Links")
+      .build();
+    const result = await runFieldPipeline(
+      link,
+      [{ kind: "text", href: "javascript:alert(1)" }],
+      "links",
+    );
+    // Hidden means "no business rules", not "unchecked" — a script-bearing
+    // href is refused wherever it sits, exactly as in draft mode.
+    expect(result.errors).toEqual([
+      { path: "links.0.href", message: META_FIELD_MESSAGES.invalidUrl },
+    ]);
+  });
+
+  test("a visible cell is validated as usual", async () => {
+    const result = await runFieldPipeline(
+      sections,
+      [{ title: "x", kind: "select", choices: "" }],
+      "sections",
+    );
+    expect(result.errors).toEqual([
+      { path: "sections.0.choices", message: META_FIELD_MESSAGES.required },
+    ]);
+  });
+
+  test("a stored row missing its driver reads the condition as unmet", async () => {
+    // An unset driver cell leaves no key behind, so the stored row carries
+    // no `kind` at all. A row is always written whole, so that absence means
+    // "unset" — read as "unknown driver" it would validate a cell the admin
+    // hides and block the publish at a path with no input to open.
+    const result = await runFieldPipeline(
+      sections,
+      [{ title: "x" }],
+      "sections",
+    );
+    expect(result.errors).toHaveLength(0);
+  });
+
+  test("a hidden cell survives a publish that rewrites the stored row", async () => {
+    const stored = [{ title: "x", kind: "text", choices: "keep me" }];
+    const first = await runFieldPipeline(sections, stored, "sections");
+    const republished = await runFieldPipeline(
+      sections,
+      first.value,
+      "sections",
+    );
+    expect(republished.value).toEqual(stored);
+  });
+
+  test("a row is not blank while a hidden cell holds a value", async () => {
+    const result = await runFieldPipeline(
+      sections,
+      [{ title: "", kind: null, choices: "still mine" }],
+      "sections",
+    );
+    expect(result.value).toEqual([{ title: "", choices: "still mine" }]);
+  });
+
+  test("a group's hidden member keeps its value and never blocks the group", async () => {
+    const hasCta = toggle("hasCta");
+    const cta = group("cta")
+      .fields([hasCta, url("ctaUrl").required().visibleWhen(hasCta.isOn())])
+      .label("CTA")
+      .build();
+    const result = await runFieldPipeline(
+      cta,
+      { hasCta: false, ctaUrl: "https://example.com/old" },
+      "cta",
+    );
+    expect(result.errors).toHaveLength(0);
+    expect(result.value).toEqual({
+      hasCta: false,
+      ctaUrl: "https://example.com/old",
+    });
   });
 });
 

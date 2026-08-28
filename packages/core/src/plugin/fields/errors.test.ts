@@ -75,15 +75,27 @@ describe("FieldConfigError — sub-field factories", () => {
     );
   });
 
-  test("subFieldCondition", () => {
-    const err = FieldConfigError.subFieldCondition({
+  test("subFieldConditionUnknownDriver", () => {
+    const err = FieldConfigError.subFieldConditionUnknownDriver({
       container: "group",
       containerKey: "seo",
       subFieldKey: "title",
+      driverKey: "layout",
     });
-    expect(err.code).toBe("sub_field_condition_not_supported");
+    expect(err.code).toBe("sub_field_condition_unknown_driver");
     expect(err.message).toContain(
-      'group("seo") field "title" does not support visibleWhen',
+      'group("seo") field "title" condition references "layout", which is not ' +
+        "a field in the same group",
     );
+  });
+
+  test("subFieldConditionUnknownDriver names the row scope for a repeater", () => {
+    const err = FieldConfigError.subFieldConditionUnknownDriver({
+      container: "repeater",
+      containerKey: "items",
+      subFieldKey: "title",
+      driverKey: "layout",
+    });
+    expect(err.message).toContain("not a field in the same row");
   });
 });
