@@ -1,6 +1,6 @@
 {
   "name": "@plumix/plugin-feeds",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Feeds plugin for Plumix — RSS and Atom syndication for every public archive",
   "license": "MIT",

@@ -1,5 +1,14 @@
 # @plumix/admin-editor
 
+## 0.18.0
+
+### Patch Changes
+
+- Updated dependencies [[`fed1b0d`](https://github.com/withplumix/plumix/commit/fed1b0d8ae49cb66fdac268c29cb4067750acd66), [`f28dfe3`](https://github.com/withplumix/plumix/commit/f28dfe3fa0012e26ddb68a63405b3321bd7b85c9), [`0d81cce`](https://github.com/withplumix/plumix/commit/0d81ccefd10144ab09316386fa46cc114ec9a080), [`8e5776b`](https://github.com/withplumix/plumix/commit/8e5776b48f2b58152b0c668860258e20a51eeb9d), [`dc8bc1c`](https://github.com/withplumix/plumix/commit/dc8bc1ca95dccdc0ca1ab149fa8c1420ea1891d9), [`f50a4b9`](https://github.com/withplumix/plumix/commit/f50a4b9d210cf158f2eff6368696f614d27c9435), [`9967c91`](https://github.com/withplumix/plumix/commit/9967c91f3406290fe8ebab250fbd2cf3da008e1e), [`6e0f239`](https://github.com/withplumix/plumix/commit/6e0f2394a08dd7c961c0be6b3b593884aaedf624)]:
+  - @plumix/core@0.18.0
+  - @plumix/admin-ui@0.18.0
+  - @plumix/blocks@0.18.0
+
 ## 0.17.0
 
 ### Patch Changes

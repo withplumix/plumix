@@ -1,5 +1,229 @@
 # plumix
 
+## 0.18.0
+
+### Minor Changes
+
+- [#2050](https://github.com/withplumix/plumix/pull/2050) [`fed1b0d`](https://github.com/withplumix/plumix/commit/fed1b0d8ae49cb66fdac268c29cb4067750acd66) Thanks [@nasyrov](https://github.com/nasyrov)! - Runs the `render:document` filter chain on error pages, and tells a plugin which entry type an
+  archive lists.
+
+  A 404 or 500 rendered through the theme previously skipped `render:document` entirely, so a plugin
+  writing head tags reached every page except the ones it most needed to — a page that was not found
+  had no way to say `noindex`. The chain now runs there with the error payload, which `pageFacts`
+  already describes as `kind: "error"`.
+
+  `applyCanonical` deliberately still does not run on that path: a URL that resolved to nothing must
+  not declare itself the canonical address of anything. The filter is applied inside a `try` there,
+  unlike on the happy path — `applyFilter` does not isolate a throwing subscriber, and this render is
+  already the failure path, so letting one escalate would hide a clean 404 behind a themed 500.
+
+  A theme's string `titleTemplate` now substitutes `%s` through a function replacement, so `$&`,
+  `` $` ``, `$'` and `$$` in a page title are the characters an author typed rather than replacement
+  patterns. An entry titled `Q&A: $& explained` previously rendered as `Q&A: %s explained`.
+
+  `PageFacts` gains `contentType` — the entry type an entry-type archive lists, and null on every
+  other page kind, including a single entry whose own type is on `entry`. Without it a consumer
+  reasoning about "this whole type" had to re-derive the subject from the render payload, which is
+  the projection `pageFacts` exists to prevent.
+
+- [#2054](https://github.com/withplumix/plumix/pull/2054) [`f28dfe3`](https://github.com/withplumix/plumix/commit/f28dfe3fa0012e26ddb68a63405b3321bd7b85c9) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `previewableEntry`, so a plugin building an editor-side preview does not hand-roll its own
+  authorization gate. It loads an entry by id, rejects a type outside the calling procedure's
+  allowlist as `NOT_FOUND`, gates on `edit_any` or author-plus-`edit_own`, and overlays the caller's
+  pending autosave onto the row's content, excerpt and meta.
+
+  The gate is the editor's own rather than the read gate a published entry would pass for anyone,
+  because a preview carries the entry's title and excerpt and a draft's are not public yet. The
+  allowlist is load-bearing: unlike `entry.get`, the gate does not re-check `read` or reject reserved
+  types, so a caller must pass its own registered types rather than a wide or user-supplied list.
+
+  `@plumix/plugin-og` and `@plumix/plugin-seo` now share this one implementation instead of carrying
+  a copy each. Neither plugin's behaviour changes.
+
+- [#2046](https://github.com/withplumix/plumix/pull/2046) [`0d81cce`](https://github.com/withplumix/plumix/commit/0d81ccefd10144ab09316386fa46cc114ec9a080) Thanks [@nasyrov](https://github.com/nasyrov)! - Moves RSS and Atom out of core and into `@plumix/plugin-feeds`. Syndication is something a site
+  opts into: a crawler does not read a feed, a reader subscribes to one, and a site that wants
+  neither should not carry the largest module in core's SEO folder. Core's `feed.ts`, its five
+  dispatcher branches, its `seo:feed:items` filter and the archive-type `feed` field are gone.
+
+  **Breaking.** An existing site loses `/feed` until it installs the plugin. The migration is two
+  lines:
+
+  ```ts
+  import { feeds } from "@plumix/plugin-feeds";
+
+  plugins: [blog(), feeds()],
+  ```
+
+  All six scopes serve as they did — the site, an entry type, a taxonomy term, an author, a date
+  period and a `registerArchiveType` archive — in both formats, at the same paths, with the same
+  twenty-item window and the same `<link rel="alternate">` discovery tags. A private site still 404s
+  every feed. Two names moved with the code: the item filter is now `feed:items`, and the `feed`
+  field on `registerArchiveType` is now the plugin's own type augmentation rather than a core field,
+  so a plugin declaring one adds `@plumix/plugin-feeds` to its dependencies.
+
+  Routes are claimed during `theme:ready` through `registerPublicRoute`, which is what makes the
+  enumeration honest: the plugin registers a concrete path per registered entry type and per
+  taxonomy archive space rather than matching `/…/feed` shapes per request. Three consequences are
+  visible:
+
+  - A nested term under a hierarchical taxonomy now advertises its own nested feed, where core
+    advertised none for any nested term.
+  - A trailing-slash feed URL 301s onto the feed for every scope. Core only exempted `/feed*` from
+    the normalizer, so `/feed/` 404'd while `/post/feed/` redirected; the exemption added in [#2042](https://github.com/withplumix/plumix/issues/2042)
+    matched the _normalized_ path, which would have spread that 404 to every scope. It now matches
+    the literal path, so all of them redirect. This revises the exemption [#2042](https://github.com/withplumix/plumix/issues/2042) shipped — the case
+    it was preserving was a bug, not a behaviour.
+  - An archive's `feed.routes` entry must end in `/feed`. Core's dispatcher only ever consulted
+    archive feeds on that suffix, so anything else was dead; registering it verbatim would instead
+    shadow the archive's own page, because a public route answers ahead of the content router.
+    Non-conforming routes are ignored, as before.
+
+  Core gains the small surface a plugin at the site root needs, all of it code core already had:
+  `ctx.plugins` on the plugin setup context — the same read-only registry `AppContext.plugins`
+  carries at request time, complete by the time `theme:ready` fires — plus `buildEntryPermalink`,
+  `termTaxonomyBaseSlug`, `findTermByPath`, `dateRange`, `exposesHierarchicalUrls` and `nonEmpty`
+  on the barrel. A feed or a sitemap that spelled any of those itself would drift from the pages it
+  points at the first time a rewrite option moved one.
+
+- [#2042](https://github.com/withplumix/plumix/pull/2042) [`dc8bc1c`](https://github.com/withplumix/plumix/commit/dc8bc1ca95dccdc0ca1ab149fa8c1420ea1891d9) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `registerPublicRoute`, so a plugin can own a path at the site root instead of being confined
+  to the `/_plumix/<pluginId>/` prefix `registerRoute` mounts it under. `path` is an exact pathname
+  or a URLPattern pathname whose captured groups reach the handler as its third argument, and
+  `cacheable: true` opts the response into the edge cache on the same terms a plugin route already
+  gets — the URL is the whole key, freshness is the `cache-control` the handler set, and the entry
+  stores under whatever the handler named through `tagCacheEntry`.
+
+  Registered routes match ahead of core's own robots, sitemap and feed branches, ahead of the
+  redirect table and ahead of the content route map, so a plugin's route can shadow core's built-in
+  one outright. That is deliberate: it is what lets `/robots.txt`, the sitemap and the feeds move
+  into `@plumix/plugin-seo` and `@plumix/plugin-feeds` as additions rather than as simultaneous
+  add-and-delete releases. The handler always answers — there is no fall-through to the page that
+  would otherwise own the path — which is affordable because a plugin registers from the
+  `theme:ready` action, where every entry type and taxonomy is known, and so claims concrete paths
+  rather than guessing at request time. Two plugins claiming one path, or a path inside `/_plumix/`,
+  throws at boot naming both owners.
+
+  The canonical normalizer's exemption list now derives from that route table as well as its
+  hardcoded literals, so a URL that would normalize onto a registered endpoint is left alone rather
+  than 301'd at it — the behaviour core's hardcoded `/feed` literal gives today, kept once the
+  literals naming these paths are gone. The handler runs ahead of the access gate and the principal
+  loader, so `ctx.user` is null and a route that enumerates content is enumerating it for an
+  anonymous reader. Nothing changes for a site with no plugin registering a public route.
+
+- [#2049](https://github.com/withplumix/plumix/pull/2049) [`9967c91`](https://github.com/withplumix/plumix/commit/9967c91f3406290fe8ebab250fbd2cf3da008e1e) Thanks [@nasyrov](https://github.com/nasyrov)! - Emits a cross-referenced JSON-LD graph and breadcrumbs.
+
+  Every indexable page now carries one `<script type="application/ld+json">` holding a graph rather
+  than a flat object: `WebSite`, the `Organization` or `Person` the site represents, `WebPage`,
+  `Article`, `BreadcrumbList`, `ImageObject` and the author `Person`, each addressable by a URL
+  fragment and referencing the others by `@id` instead of repeating them. Identifiers derive from the
+  site root and the page's canonical URL, so two renders of one URL produce the same graph. A page
+  that is not an entry carries the site-level pieces without the article ones, and a piece with
+  nothing to say is absent rather than empty — a page with no social image has no `ImageObject` and
+  no `primaryImageOfPage` pointing at one.
+
+  **A page marked `noindex` emits no graph.** Structured data exists to make a page eligible for a
+  rich result and a page asking not to be indexed is not, so advertising one anyway would have the
+  page's graph and its robots directive say different things about it.
+
+  Three filters, matching the granularity the mature implementations settled on:
+
+  ```ts
+  ctx.addFilter("seo:schema:needs", (needed, piece) =>
+    piece === "breadcrumb" ? false : needed,
+  );
+  ctx.addFilter("seo:schema:piece", (piece, name) =>
+    name === "publisher" ? { ...piece, sameAs: ["…"] } : piece,
+  );
+  ctx.addFilter("seo:schema:graph", (graph) => [...graph, myProductNode]);
+  ```
+
+  **Breadcrumbs ship as data and as a component.** `Breadcrumbs` renders the trail a theme puts in
+  the page, and the `BreadcrumbList` in the graph is built from the same `breadcrumbTrail`, so what a
+  reader sees and what a search result claims cannot disagree. The trail is Home → the entry type's
+  archive, where it has one → the page itself, with the last step unlinked. Ancestors are not walked:
+  a hierarchical entry's parents and a nested term's parents would each cost a per-render round-trip.
+
+  **An editor can pick the type.** A new **Content type** field on the entry box retypes the article
+  piece — `Article`, `BlogPosting`, `NewsArticle` or `TechArticle` — keeping its `@id` and every
+  reference to it. A stored value outside the roster is not an answer. The field is on the entry box
+  only: a term page has no article piece for the choice to retype. A new **This site represents**
+  setting types the publisher piece as an `Organization` or a `Person`.
+
+  The plugin serializes the script itself. `<`, `>`, `&` and the U+2028 / U+2029 line separators
+  become `\uXXXX` escapes — the same string to a JSON reader, inert to an HTML tokenizer — so an
+  entry titled `</script><script>…` cannot close the element it sits in. This is deliberately not
+  core's job: core has no Content-Security-Policy, so there is no hash to register and no reason for
+  core to hold structured-data vocabulary. `serializeJsonLd` is exported for a plugin emitting a
+  script of its own. A theme that declared its own `application/ld+json` keeps it and this plugin
+  emits none.
+
+  The graph's `ImageObject` is the page's own image — an entry's explicit choice, a generated card or
+  its featured photo — and never the site-wide default. That last link of the `og:image` chain is a
+  sharing fallback, so passing it on would have every article claim the same bytes as its own
+  `#primaryimage`, and `Article.image` is read as representative of the article it hangs off. The
+  page is still shared with it; it is just not what the page is a picture of.
+
+  Core additionally exports `archiveSlugForEntryType`, joining the reverse-routing vocabulary
+  (`buildEntryPermalink`, `buildTermArchiveUrl`, `exposesHierarchicalUrls`) a plugin addressing the
+  URL space the router compiled already reads. It answers the second half of the router's own test —
+  the plugin asks the first half, whether the type is public, before calling it — so a breadcrumb
+  never links an archive that has no route.
+
+### Patch Changes
+
+- [#2053](https://github.com/withplumix/plumix/pull/2053) [`d3d550c`](https://github.com/withplumix/plumix/commit/d3d550c4b87405d1c26e8e78c4adbda229d2727c) Thanks [@nasyrov](https://github.com/nasyrov)! - Gives the SEO plugin the two surfaces a person actually touches: a live search-result preview in
+  the editor, and the rest of the settings screen.
+
+  **In the editor**, the **Search & social** box on an entry now leads with a preview of the search
+  result it will produce — the URL, the resolved title and the resolved description, each through the
+  function the head runs, so the preview cannot show what the page will not carry. It updates as the
+  author types, because the search title, the search description and the **Hide from search engines**
+  toggle are read off the live form rather than off the saved row. Two length indicators track the
+  resolved lines against 60 characters for the title and 155 for the description and say when one
+  will be cut short. When the page is not offered to search engines the preview names the assertion
+  that fired — the whole site, this entry, the content type, the taxonomy, a search-results page,
+  page two of an archive, a page that was not found — which is what the reason string on the
+  indexability predicate was built to carry. A term's box has no preview: it is written from an
+  entry's permalink and excerpt, and a term archive has neither.
+
+  The preview is a registered field type, so it reaches the editor through the plugin's own admin
+  chunk. That is also why it is the one part of the plugin with Playwright coverage: the dispatcher
+  harness cannot render a React control.
+
+  **In settings**, the **SEO** page now composes three groups rather than one, each with its own Save
+  and each gated by `settings:manage`:
+
+  - **Search & social** — everything the site answers about its own content, as before.
+  - **Site verification** — Google, Bing, Yandex, Baidu and Pinterest tokens, each reaching the head
+    of every page under the meta name that engine reads.
+  - **robots.txt** — hand-written content replacing the generated _rules_, so a rule can change
+    without a deploy. The two site-wide answers compose around it rather than being replaced by it: a
+    site with indexing turned off still disallows everything whatever the box holds, the AI-crawler
+    group is still added while that toggle is on, and the `Sitemap:` line is still appended unless the
+    author wrote one. The generated body carries that line too, which it did not before.
+
+  Saving any of the three now purges the cached sitemap set _and_ the cached content pages of every
+  registered entry type. Between them these groups rewrite a page's robots directive, title and
+  verification tags, and the shipped cache has no site-wide tag to retire them by.
+
+  `@plumix/admin` gains one thing on the plugin field-renderer contract: `siblings`, the other values
+  in the bag the field's box binds to, as react-hook-form holds them. A control that describes the
+  fields around it had no way to see them — `attrs` covers the block inspector only. Only the plugin
+  branch subscribes, so a box of built-in inputs still re-renders one field per keystroke; a plugin
+  control on an entry does re-render on any meta edit, since `meta` is one bag shared by every box on
+  the entity.
+
+  One bug fix comes with it. `plumix` builds the admin manifest at config time and never fired
+  `theme:ready`, so anything a plugin registers from that handover was in the running worker's
+  registry and missing from the admin's — which covered the SEO meta box and, since the settings
+  groups moved there too, the whole SEO settings page. The manifest build now makes the same handover
+  `buildApp` does.
+
+- Updated dependencies [[`fed1b0d`](https://github.com/withplumix/plumix/commit/fed1b0d8ae49cb66fdac268c29cb4067750acd66), [`f28dfe3`](https://github.com/withplumix/plumix/commit/f28dfe3fa0012e26ddb68a63405b3321bd7b85c9), [`0d81cce`](https://github.com/withplumix/plumix/commit/0d81ccefd10144ab09316386fa46cc114ec9a080), [`8e5776b`](https://github.com/withplumix/plumix/commit/8e5776b48f2b58152b0c668860258e20a51eeb9d), [`dc8bc1c`](https://github.com/withplumix/plumix/commit/dc8bc1ca95dccdc0ca1ab149fa8c1420ea1891d9), [`f50a4b9`](https://github.com/withplumix/plumix/commit/f50a4b9d210cf158f2eff6368696f614d27c9435), [`9967c91`](https://github.com/withplumix/plumix/commit/9967c91f3406290fe8ebab250fbd2cf3da008e1e), [`6e0f239`](https://github.com/withplumix/plumix/commit/6e0f2394a08dd7c961c0be6b3b593884aaedf624), [`d3d550c`](https://github.com/withplumix/plumix/commit/d3d550c4b87405d1c26e8e78c4adbda229d2727c)]:
+  - @plumix/core@0.18.0
+  - @plumix/admin@0.18.0
+  - @plumix/admin-editor@0.18.0
+  - @plumix/admin-ui@0.18.0
+  - @plumix/blocks@0.18.0
+
 ## 0.17.0
 
 ### Minor Changes

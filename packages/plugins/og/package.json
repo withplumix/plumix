@@ -1,6 +1,6 @@
 {
   "name": "@plumix/plugin-og",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "OG card plugin for Plumix — renders and serves social cards at the edge",
   "license": "MIT",
