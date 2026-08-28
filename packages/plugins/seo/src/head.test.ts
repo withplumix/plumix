@@ -12,8 +12,9 @@ const baseInputs: HeadInputs = {
   ogImage: null,
   siteName: "Demo",
   ogLocale: "en",
-  noindex: false,
-  siteIsPrivate: false,
+  searchTitle: null,
+  indexable: true,
+  nofollow: false,
   published: null,
   modified: null,
   author: null,
@@ -56,17 +57,23 @@ describe("seoHeadMeta", () => {
     expect(byProperty(out, "og:url")?.content).toBe(baseInputs.canonical);
   });
 
-  test("robots reflects index / search / private", () => {
+  test("robots pairs the index answer with the follow one", () => {
     expect(byName(seoHeadMeta({}, baseInputs), "robots")?.content).toBe(
       "index,follow,max-image-preview:large",
     );
     expect(
-      byName(seoHeadMeta({}, { ...baseInputs, noindex: true }), "robots")
+      byName(seoHeadMeta({}, { ...baseInputs, indexable: false }), "robots")
         ?.content,
     ).toBe("noindex,follow");
     expect(
-      byName(seoHeadMeta({}, { ...baseInputs, siteIsPrivate: true }), "robots")
+      byName(seoHeadMeta({}, { ...baseInputs, nofollow: true }), "robots")
         ?.content,
+    ).toBe("index,nofollow,max-image-preview:large");
+    expect(
+      byName(
+        seoHeadMeta({}, { ...baseInputs, indexable: false, nofollow: true }),
+        "robots",
+      )?.content,
     ).toBe("noindex,nofollow");
   });
 
@@ -208,5 +215,39 @@ describe("seoHeadMeta — article facts", () => {
       meta(out).filter((e) => e.property === "article:author"),
     ).toHaveLength(1);
     expect(byProperty(out, "article:author")?.content).toBe("From Theme");
+  });
+});
+
+describe("seoHeadMeta gap-fills the document, not just the meta", () => {
+  test("declares the canonical it was handed", () => {
+    const out = seoHeadMeta({}, baseInputs);
+    expect(out.link).toEqual([
+      { rel: "canonical", href: baseInputs.canonical },
+    ]);
+  });
+
+  test("a canonical already declared is left alone", () => {
+    const existing = { rel: "canonical", href: "https://theme.example/x" };
+    const out = seoHeadMeta({ link: [existing] }, baseInputs);
+    expect(out.link).toEqual([existing]);
+  });
+
+  test("a search title becomes the document title and og:title", () => {
+    const out = seoHeadMeta({}, { ...baseInputs, searchTitle: "For the SERP" });
+    expect(out.title).toBe("For the SERP");
+    expect(byProperty(out, "og:title")?.content).toBe("For the SERP");
+  });
+
+  test("no search title leaves the document title to core", () => {
+    expect(seoHeadMeta({}, baseInputs).title).toBeUndefined();
+  });
+
+  test("a title already set outranks the search title", () => {
+    expect(
+      seoHeadMeta(
+        { title: "From the template" },
+        { ...baseInputs, searchTitle: "For the SERP" },
+      ).title,
+    ).toBe("From the template");
   });
 });

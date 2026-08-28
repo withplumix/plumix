@@ -9,9 +9,25 @@ import {
 } from "plumix";
 import { and, entries, eq, sql, terms } from "plumix/db";
 
+import { SEO_META_KEYS } from "./overrides.js";
+
 // Well under the sitemaps.org 50k cap, and small enough to build + hold in
 // Worker memory per request.
 export const SITEMAP_PAGE_SIZE = 1000;
+
+// The entry-override arm of `indexable`, asked of the whole table at once —
+// membership has to be a `WHERE`, or the count driving index pagination and
+// the page it pages would disagree. Same meta key, so the head's directive and
+// this cannot say different things about one page.
+const NOINDEX_PATH = `$.${SEO_META_KEYS.noindex}`;
+
+// `json_type`, not `json_extract`: extraction collapses JSON `true` and JSON
+// `1` to the same integer, so a bag holding `1` would drop out of the sitemap
+// while the reader — which is `=== true` — left its page saying `index`. The
+// type is exactly what the reader tests, NULL arm included, so a bag that
+// never answered and one holding anything else both stay listed.
+const entryIsIndexable = sql`json_type(${entries.meta}, ${NOINDEX_PATH}) is not 'true'`;
+const termIsIndexable = sql`json_type(${terms.meta}, ${NOINDEX_PATH}) is not 'true'`;
 
 export interface SitemapUrl {
   readonly loc: string;
@@ -86,11 +102,23 @@ function offsetFor(page: number): number {
   return (page - 1) * SITEMAP_PAGE_SIZE;
 }
 
+function publishedEntriesOf(type: string) {
+  return and(
+    eq(entries.type, type),
+    eq(entries.status, "published"),
+    entryIsIndexable,
+  );
+}
+
+function listedTermsOf(taxonomy: string) {
+  return and(eq(terms.taxonomy, taxonomy), termIsIndexable);
+}
+
 async function entryCount(ctx: AppContext, type: string): Promise<number> {
   const [row] = await ctx.db
     .select({ n: sql<number>`count(*)` })
     .from(entries)
-    .where(and(eq(entries.type, type), eq(entries.status, "published")));
+    .where(publishedEntriesOf(type));
   return row?.n ?? 0;
 }
 
@@ -107,7 +135,7 @@ async function entryUrls(
       updatedAt: entries.updatedAt,
     })
     .from(entries)
-    .where(and(eq(entries.type, type), eq(entries.status, "published")))
+    .where(publishedEntriesOf(type))
     .orderBy(entries.id)
     .limit(SITEMAP_PAGE_SIZE)
     .offset(offsetFor(page));
@@ -128,7 +156,7 @@ async function termCount(ctx: AppContext, taxonomy: string): Promise<number> {
   const [row] = await ctx.db
     .select({ n: sql<number>`count(*)` })
     .from(terms)
-    .where(eq(terms.taxonomy, taxonomy));
+    .where(listedTermsOf(taxonomy));
   return row?.n ?? 0;
 }
 
@@ -144,7 +172,7 @@ async function termUrls(
       parentId: terms.parentId,
     })
     .from(terms)
-    .where(eq(terms.taxonomy, taxonomy))
+    .where(listedTermsOf(taxonomy))
     .orderBy(terms.id)
     .limit(SITEMAP_PAGE_SIZE)
     .offset(offsetFor(page));

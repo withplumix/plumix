@@ -1,7 +1,9 @@
 import type { PluginDescriptor } from "plumix/plugin";
 import { definePlugin } from "plumix/plugin";
 
+import type { SeoMetaBoxOptions } from "./meta-box.js";
 import { applySeoHead } from "./head.js";
+import { registerSeoMetaBoxes } from "./meta-box.js";
 import { registerSeoRoutes } from "./routes.js";
 import { registerSeoSettings } from "./settings.js";
 // Augmentation anchors. A `declare module "plumix"` block reaches a consumer
@@ -30,12 +32,30 @@ export { SITEMAP_TAG } from "./routes.js";
 // `og:image` chain the same way this one does.
 export type { SeoSettings } from "./settings.js";
 export { loadSeoSettings } from "./settings.js";
+// The one answer behind the robots directive and sitemap membership, and the
+// meta keys an editor's answers are stored under.
+export type { Indexability, IndexabilityReason } from "./indexable.js";
+export { indexable } from "./indexable.js";
+export { SEO_META_KEYS } from "./overrides.js";
+export type { SeoMetaBoxOptions } from "./meta-box.js";
+
+/** How the plugin is installed. Every field is optional. */
+export interface SeoOptions {
+  /** Which entry types and taxonomies carry the per-entry SEO box. */
+  readonly metaBox?: SeoMetaBoxOptions;
+}
 
 /**
  * Everything a public page tells a search engine: the head meta — a
  * description, a robots directive, the Open Graph set with an entry's
  * timestamps and byline, the Twitter card, and the resolved social image — plus
  * `/robots.txt` and the paged sitemap.
+ *
+ * On every publicly-visible entry type and taxonomy an editor also gets a
+ * **Search & social** box: a search title, a search description, a canonical
+ * override, a social image, and `noindex` / `nofollow` flags. The `noindex`
+ * flag reaches the head and the sitemap through one predicate, so a page
+ * cannot claim `noindex` while still being listed.
  *
  * Every tag is gap-filled — a theme or another plugin that set the same key
  * keeps it — so installing this adds what a page was missing and overrides
@@ -48,7 +68,7 @@ export { loadSeoSettings } from "./settings.js";
  * plumix({ plugins: [seo()] });
  * ```
  */
-export function seo(): PluginDescriptor {
+export function seo(options: SeoOptions = {}): PluginDescriptor {
   return definePlugin("seo", {
     i18n: {
       sourceLocale: "en",
@@ -58,6 +78,7 @@ export function seo(): PluginDescriptor {
     setup: (ctx) => {
       registerSeoSettings(ctx);
       registerSeoRoutes(ctx);
+      registerSeoMetaBoxes(ctx, options.metaBox ?? {});
       // The assembled theme + template document arrives here, which is what
       // makes gap-filling possible: a theme's own tag is already in hand.
       //

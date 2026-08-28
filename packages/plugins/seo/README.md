@@ -1,6 +1,6 @@
 # @plumix/plugin-seo
 
-This Plumix plugin writes what a site tells a search engine — the **head meta** a public page needs (a description, a robots directive, the Open Graph set, the Twitter card, and the resolved social image), plus **`/robots.txt`** and the **sitemap**. Core emits a canonical URL and nothing else, so without this plugin a page carries none of them and the site serves neither endpoint.
+This Plumix plugin writes what a site tells a search engine — the **head meta** a public page needs (a description, a robots directive, the Open Graph set, the Twitter card, and the resolved social image), plus **`/robots.txt`**, the **sitemap**, and a **per-entry and per-term box** where an editor overrides any of it. Core emits a canonical URL and nothing else, so without this plugin a page carries none of them and the site serves neither endpoint.
 
 ## Install
 
@@ -23,10 +23,12 @@ export default plumix({
 
 ## What you get
 
-- **A description and a robots directive** — the entry's excerpt falling back to the site tagline, and `index,follow,max-image-preview:large` unless the page is search results (`noindex,follow`) or the site is held out of the index entirely (`noindex,nofollow`).
+- **A description and a robots directive** — the entry's excerpt falling back to the site tagline, and `index,follow,max-image-preview:large` unless the page is search results or an entry an editor hid (`noindex,follow`), or the site is held out of the index entirely (`noindex,nofollow`).
 - **The Open Graph set** — `og:title`, `og:type`, `og:url`, `og:site_name`, `og:description`, `og:locale`, plus `article:published_time`, `article:modified_time` and `article:author` on a single entry.
 - **The Twitter card** — `summary_large_image` when a social image resolved, `summary` when none did.
-- **The `og:image` chain** — the entry's explicit `.ogImage()` choice, then whatever a `seo:og_image` subscriber supplies, then the entry's `.featured()` photo, then the site-wide default. The order is fixed, so a generated card never outranks a deliberate choice.
+- **The `og:image` chain** — the entry's explicit `.ogImage()` choice, then the SEO box's own social image URL, then whatever a `seo:og_image` subscriber supplies, then the entry's `.featured()` photo, then the site-wide default. The order is fixed, so a generated card never outranks a deliberate choice.
+- **A per-entry and per-term SEO box** on every publicly-visible entry type and taxonomy — a search title, a search description, a canonical override, a social image, and `noindex` / `nofollow` flags, stored under `seo_`-prefixed meta keys and saved with the entity's own Save. Exclude a type with `seo({ metaBox: { exclude: ["landing_page"] } })`.
+- **One indexability predicate** behind the robots directive, with the sitemap asking the same questions of whole tables as a `WHERE` over the same meta key — so a page marked `noindex` cannot still appear in the sitemap. It reports its reason — `site_private`, `entry_override`, `search_results` or `default` — rather than a bare boolean.
 - **`/robots.txt`** — allow-all while indexing is on, disallow-all when it is off, adjustable through the `seo:robots-txt` filter.
 - **The sitemap** — `/sitemap.xml` indexing one `/sitemap-<scope>-<page>.xml` per public entry type, taxonomy and registered archive, paged at 1,000 URLs, published entries only, adjustable through the `seo:sitemap:urls` filter. Responses carry cache headers and per-scope purge tags, so publishing an entry retires that scope alone.
 - **A settings group** — the site-wide indexing toggle (which drives the robots directive on every page, `robots.txt` and the sitemap) and the default social image, on a settings page of its own.

@@ -37,3 +37,68 @@ msgstr "SEO"
 #: src/settings.ts
 msgid "plugin.seo.settings.page.description"
 msgstr "Site-wide search and social defaults."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.label"
+msgstr "Search & social"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description"
+msgstr "How this appears in search results and when it is shared."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.title.label"
+msgstr "Search title"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.title.description"
+msgstr "Shown in search results instead of the title above."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description_field.label"
+msgstr "Search description"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description_field.description"
+msgstr "The snippet under the title. Falls back to the excerpt."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.canonical.label"
+msgstr "Canonical URL"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.canonical.description"
+msgstr "Point search engines at the original when this is a copy."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.og_image.label"
+msgstr "Social image URL"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.og_image.description"
+msgstr "The picture shown when this is shared."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.noindex.label"
+msgstr "Hide from search engines"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.noindex.description"
+msgstr "Also drops this from the sitemap."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.nofollow.label"
+msgstr "Do not follow links on this page"

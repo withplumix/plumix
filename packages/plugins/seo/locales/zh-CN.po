@@ -37,3 +37,68 @@ msgstr "SEO"
 #: src/settings.ts
 msgid "plugin.seo.settings.page.description"
 msgstr "全站搜索与社交默认设置。"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.label"
+msgstr "搜索与社交"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description"
+msgstr "本内容在搜索结果中以及被分享时的呈现方式。"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.title.label"
+msgstr "搜索标题"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.title.description"
+msgstr "在搜索结果中代替上方标题显示。"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description_field.label"
+msgstr "搜索描述"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description_field.description"
+msgstr "标题下方的摘要文字，默认取自摘录。"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.canonical.label"
+msgstr "规范链接"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.canonical.description"
+msgstr "当本内容是副本时，将搜索引擎指向原文。"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.og_image.label"
+msgstr "社交图片链接"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.og_image.description"
+msgstr "分享本内容时显示的图片。"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.noindex.label"
+msgstr "对搜索引擎隐藏"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.noindex.description"
+msgstr "同时将其从站点地图中移除。"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.nofollow.label"
+msgstr "不跟踪本页上的链接"

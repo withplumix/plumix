@@ -37,3 +37,68 @@ msgstr "تحسين محركات البحث"
 #: src/settings.ts
 msgid "plugin.seo.settings.page.description"
 msgstr "الإعدادات الافتراضية للبحث والتواصل الاجتماعي على مستوى الموقع."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.label"
+msgstr "البحث والتواصل الاجتماعي"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description"
+msgstr "كيف يظهر هذا في نتائج البحث وعند مشاركته."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.title.label"
+msgstr "عنوان البحث"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.title.description"
+msgstr "يظهر في نتائج البحث بدلاً من العنوان أعلاه."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description_field.label"
+msgstr "وصف البحث"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.description_field.description"
+msgstr "المقتطف أسفل العنوان. يعود افتراضيًا إلى الملخص."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.canonical.label"
+msgstr "الرابط الأساسي"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.canonical.description"
+msgstr "وجّه محركات البحث إلى الأصل عندما يكون هذا نسخة."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.og_image.label"
+msgstr "رابط الصورة الاجتماعية"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.og_image.description"
+msgstr "الصورة التي تظهر عند مشاركة هذا."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.noindex.label"
+msgstr "إخفاء عن محركات البحث"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.noindex.description"
+msgstr "يزيل هذا أيضًا من خريطة الموقع."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.nofollow.label"
+msgstr "عدم تتبع الروابط في هذه الصفحة"

@@ -28,10 +28,19 @@ declare module "plumix" {
   }
 }
 
+/** The two links of the chain that come from stored answers rather than code. */
+export interface OgImageChain {
+  /** The URL the editor typed into the SEO box for this entry or term. */
+  readonly override: string | null;
+  /** The last link: the site-wide default. */
+  readonly siteDefault: string | null;
+}
+
 /**
  * The `og:image` for a request, resolved down the chain: the author's explicit
- * choice, then whatever a subscriber supplies, then the entry's photo, then the
- * site default.
+ * choice — a `.ogImage()` role field, then the SEO box's own URL — followed by
+ * whatever a subscriber supplies, then the entry's photo, then the site
+ * default.
  *
  * The order is fixed here rather than by subscription order, so a generated
  * card never outranks a deliberate choice however the `plugins` array happens
@@ -40,10 +49,13 @@ declare module "plumix" {
 export async function resolveOgImage(
   ctx: AppContext,
   data: TemplateData,
-  siteDefault: string | null,
+  chain: OgImageChain,
 ): Promise<OgImage | null> {
   const explicit = entryRoleImage(ctx.plugins, data, "ogImage");
   if (explicit) return explicit;
+  // Above the filter for the same reason the role marker is: an editor who
+  // named a picture has answered, and a generated card must not overrule them.
+  if (chain.override) return { url: chain.override };
   const featured = entryRoleImage(ctx.plugins, data, "featured");
   const filtered = await ctx.hooks.applyFilter(
     "seo:og_image",
@@ -52,5 +64,9 @@ export async function resolveOgImage(
     ctx,
     featured,
   );
-  return filtered ?? featured ?? (siteDefault ? { url: siteDefault } : null);
+  return (
+    filtered ??
+    featured ??
+    (chain.siteDefault ? { url: chain.siteDefault } : null)
+  );
 }
