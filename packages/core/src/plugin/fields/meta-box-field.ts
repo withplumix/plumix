@@ -132,9 +132,15 @@ export interface MetaBoxFieldBase {
  * fluent builders exported from `plumix/fields` — they differ only in
  * their `inputType` literal. Downstream consumers rely on the narrowed
  * shape via the `inputType` discriminator.
+ *
+ * `I` is not bound to {@link StringInputType}: a plugin contributing a
+ * string-shaped input through `registerFieldType` (`tel`, say) reuses
+ * this shape and the builder over it rather than restating either. Such
+ * a field lands in the union as a {@link LegacyMetaBoxField}, which is
+ * what keeps the name out of the built-in roster.
  */
 export interface StringMetaBoxField<
-  I extends StringInputType = StringInputType,
+  I extends string = StringInputType,
 > extends MetaBoxFieldBase {
   readonly inputType: I;
   readonly type: "string";

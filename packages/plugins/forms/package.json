@@ -26,6 +26,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./fields": {
+      "types": "./dist/fields.d.ts",
+      "default": "./dist/fields.js"
+    },
     "./schema": {
       "types": "./dist/db/schema.d.ts",
       "default": "./dist/db/schema.js"
@@ -52,7 +56,8 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "drizzle-orm": "catalog:drizzle"
+    "drizzle-orm": "catalog:drizzle",
+    "valibot": "catalog:"
   },
   "peerDependencies": {
     "plumix": "workspace:>=0.1.0 <1.0.0",

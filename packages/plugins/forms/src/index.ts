@@ -5,12 +5,20 @@ import { definePlugin } from "plumix";
 
 import type { FormDefinition } from "./define-form.js";
 import { createFormBlock } from "./block/form-block.js";
-import { SUBMIT_ROUTE_PATH } from "./contract.js";
+import {
+  SUBMIT_ROUTE_PATH,
+  TEL_FIELD_COMPONENT,
+  TEL_INPUT_TYPE,
+} from "./contract.js";
 import * as schema from "./db/schema.js";
 import { createFormRegistry } from "./registry.js";
 import { createSubmitHandler } from "./server/submit.js";
 
-export type { FormDefinition, FormDefinitionInput } from "./define-form.js";
+export type {
+  FormAnswersOf,
+  FormDefinition,
+  FormDefinitionInput,
+} from "./define-form.js";
 export { defineForm } from "./define-form.js";
 export { FormsError } from "./errors.js";
 export type {
@@ -57,6 +65,9 @@ declare module "plumix" {
 export function forms(options: FormsConfig = {}) {
   const registry = createFormRegistry();
   return definePlugin("forms", {
+    // The chunk the `tel` field renderer is resolved from. Resolved
+    // against the consuming site, the way every plugin admin entry is.
+    adminEntry: "node_modules/@plumix/plugin-forms/dist/admin/index.js",
     schema,
     // Module specifier `plumix migrate generate` uses to fold this
     // plugin's table into the host's drizzle-kit codegen.
@@ -74,6 +85,14 @@ export function forms(options: FormsConfig = {}) {
     },
     setup: (ctx) => {
       for (const form of options.forms ?? []) registry.register(form, "config");
+      // `tel` is the plugin's own contribution to the field vocabulary,
+      // not a core built-in — a form may declare one, and so may any meta
+      // box on the site, because the admin resolves the renderer from
+      // this registration rather than from the plugin that asked.
+      ctx.registerFieldType({
+        type: TEL_INPUT_TYPE,
+        component: TEL_FIELD_COMPONENT,
+      });
       ctx.registerBlock(createFormBlock(registry));
       ctx.registerRoute({
         method: "POST",

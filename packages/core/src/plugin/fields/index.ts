@@ -12,11 +12,15 @@
 //
 // Re-exported as a public surface from `plumix/fields`.
 
-// The same compile + project pair every `register*MetaBox` surface runs
-// internally, published so a plugin rendering its own fields doesn't
-// reimplement it. Registration's validation is not part of the pair — see
-// `toMetaBoxFieldEntry`.
+// The same compile + check + project trio every `register*MetaBox` surface
+// runs internally, published so a plugin rendering its own fields doesn't
+// reimplement it. `assertMetaBoxFields` is the check `toMetaBoxFieldEntry`
+// documents as the caller's to own: key shape, the reserved `__plumix_`
+// prefix, duplicates, the field cap, and conditions naming a sibling that
+// exists. `kind` and `id` name the surface in the error, so a caller that
+// is not a meta box says what it is.
 export { compileMetaBoxFields } from "./meta-box-field.js";
+export { assertMetaBoxFields } from "../validation/meta-box-fields.js";
 export type {
   FieldBuilder,
   MetaBoxField,
@@ -39,6 +43,7 @@ export type {
   MetaFieldCondition,
   MetaFieldConditionOperator,
   MetaFieldConditionRule,
+  MetaFieldValues,
 } from "./condition.js";
 export {
   email,
