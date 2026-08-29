@@ -57,3 +57,26 @@ export function createFormRegistry(): FormRegistry {
     },
   };
 }
+
+/**
+ * The registry the theme surface reads. `PlumixForm` and `formWire` sit
+ * in a theme template, which has no plugin context to reach an install's
+ * own registry through — the same bind `@plumix/plugin-menu` solves with
+ * a module-scoped location registry.
+ *
+ * Module scope means one per process rather than one per app, so an
+ * install publishes its registry here and the most recent one wins. That
+ * is the right answer for a worker, which boots one app per isolate, and
+ * it is why only this surface reads it: the block and the submit handler
+ * are handed their install's own registry and keep the isolation they
+ * have always had.
+ */
+let published: FormRegistry = createFormRegistry();
+
+export function publishFormRegistry(registry: FormRegistry): void {
+  published = registry;
+}
+
+export function publishedFormRegistry(): FormRegistry {
+  return published;
+}

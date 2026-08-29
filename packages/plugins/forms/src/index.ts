@@ -17,7 +17,7 @@ import {
   TOKEN_ROUTE_PATH,
 } from "./contract.js";
 import * as schema from "./db/schema.js";
-import { createFormRegistry } from "./registry.js";
+import { createFormRegistry, publishFormRegistry } from "./registry.js";
 import { createSubmitHandler, tokenHandler } from "./server/submit.js";
 
 export type {
@@ -98,6 +98,10 @@ export function forms(options: FormsConfig = {}) {
       // and `buildStart`). This is the one point where the registry can be
       // emptied without dropping a form some other plugin's `setup` added.
       registry.reset();
+      // What the theme surface reads — see `publishFormRegistry`. Done
+      // here rather than in `setup` so a template resolves against the
+      // install that is booting even before its forms are in.
+      publishFormRegistry(registry);
       ctx.extendPluginContext("registerForm", function registerForm(form) {
         registry.register(form, this.id);
       });

@@ -10,8 +10,9 @@ staging and production cannot drift apart. There is no builder, no export
 format, and nothing to migrate between environments.
 
 > This release covers the v1 field roster, repeater and group fields,
-> conditional visibility, validation on the server, multi-step forms, and your
-> own `validate` and `onSubmit`. The inbox and export arrive next.
+> conditional visibility, validation on the server, multi-step forms, your own
+> `validate` and `onSubmit`, and the theme component and headless hook. The
+> inbox and export arrive next.
 
 ## Install
 
@@ -275,9 +276,12 @@ const enquiries = await ctx.db
 
 A bound form placed somewhere with no entry to bind carries no token and stores
 no entry — a front page, a footer, and also an archive or a synced pattern,
-where the block is rendered but the entry is not resolved for it. A form that
-declares no `bind` carries nothing either way. Read `entryId` as though it were
-optional wherever the same form appears in more than one place.
+where the block is rendered but the entry is not resolved for it. The same goes
+for the two surfaces below that are not the block: signing is asynchronous and a
+template's render is not, so the token comes from a block loader and only the
+block has one. A form that declares no `bind` carries nothing either way. Read
+`entryId` as though it were optional wherever the same form appears in more than
+one place.
 
 The token does not expire, because the page carrying it is edge-cached and an
 expiry would be about the visitor rather than the page. `entry_id` carries no
@@ -312,6 +316,150 @@ Switch JavaScript off and the same markup posts to the same endpoint. A
 submission the server rejects comes back as the form again, carrying what you
 answered and the errors against the fields that produced them; correcting it
 returns you to the page the form was on.
+
+## Rendering it yourself
+
+Three surfaces render one definition, and each gives up more of the
+plugin's rendering than the last.
+
+### From a theme template
+
+Drop a form straight into a template, with no block on the page:
+
+```tsx
+import { PlumixForm } from "@plumix/plugin-forms/theme";
+
+export const contactPage = defineTemplate({
+  render: () => (
+    <main>
+      <h1>Get in touch</h1>
+      <PlumixForm slug="contact" />
+    </main>
+  ),
+});
+```
+
+It renders exactly what the block renders — the same markup, the same
+island over it, the same no-JavaScript submit — so a form in a template
+and a form on a page are the same form. A slug nobody registered renders
+nothing, which keeps a template that outlives its form from taking the
+page down with it.
+
+Give it an `id` when one form appears twice on a page — including once
+from a template and once from a block, which default to the same ids
+when the block's node is unnamed. Control ids are built from it and a
+label points at its control by id, so without one the second form's
+labels address the first form's controls (and a form in steps shares the
+other's saved progress):
+
+```tsx
+<PlumixForm slug="contact" id="header" />
+<PlumixForm slug="contact" id="footer" />
+```
+
+### By replacing the block
+
+A theme registering a block of the plugin's own name replaces its render
+outright — theme blocks win over plugin blocks — so total control never
+means forking:
+
+```ts
+export const theme = defineTheme({
+  blocks: [defineBlock({ name: "forms/form", title: "Form", render: MyForm })],
+  templates: [...],
+});
+```
+
+The editor still inserts `forms/form` and still picks from the forms that
+exist. What changes is who renders it.
+
+### Headless, in your own React
+
+For a form that is mostly bespoke UI — a subscribe bar that is one input
+and a button, wrapped in a sticky reveal, a dismiss control and an
+analytics event — take the fields, a submit call and the errors, and
+write the rest yourself. Hand the form's shape to your island from the
+template:
+
+```tsx
+import { formWire } from "@plumix/plugin-forms/theme";
+
+const subscribe = formWire("subscribe");
+
+// `formWire` is undefined for a slug nobody registered, exactly as
+// `PlumixForm` renders nothing for one.
+{
+  subscribe ? <SubscribeBar client="load" form={subscribe} /> : null;
+}
+```
+
+and drive it there:
+
+```tsx
+"use client";
+
+import { usePlumixForm } from "@plumix/plugin-forms/headless";
+
+import type { subscribe } from "../forms.js";
+
+export function SubscribeBar({ form }: IslandProps<{ form: FormWire }>) {
+  const { submit, submitting, confirmation, errorFor } =
+    usePlumixForm<typeof subscribe>(form);
+  const [email, setEmail] = useState("");
+  if (confirmation) return <p>{confirmation}</p>;
+  return (
+    <>
+      <input value={email} onChange={(e) => setEmail(e.target.value)} />
+      <button disabled={submitting} onClick={() => void submit({ email })}>
+        Subscribe
+      </button>
+      {errorFor("email") ? <small>{errorFor("email")}</small> : null}
+    </>
+  );
+}
+```
+
+Nothing here is the plugin's: no markup, no class names, no stylesheet.
+The hook posts to the same endpoint the rendered form posts to, so the
+submission is validated, met by the spam floor and stored identically —
+`fields` is the form's questions in the order it asks them, `errors` is
+the same `{ field, message }` list every other surface gets, and
+`errorFor("")` is the one that names no field, which is what a submission
+that never reached the server produces.
+
+The type argument is the form itself, imported with `import type` so no
+server-only callback is dragged into the browser bundle. It is what makes
+`submit` take that form's answers: a renamed field breaks the build here
+too. Fields the form does not insist on may be left out, and each falls
+back to its declared default — what a visitor served the blank form and
+leaving that control alone would have posted.
+
+Half the spam floor is a field in markup this hook does not render, so
+what survives is the timing token, which the hook fetches on mount
+exactly as the plugin's own island does. A form that is mostly bespoke UI
+therefore has a honeypot's worth less defence than the rendered one.
+
+`submit` ignores a call made while one is still in flight, so a button
+pressed twice sends one enquiry whether or not you disable it on
+`submitting`.
+
+#### What the hook does not do for you
+
+`fields` is the form's questions **as declared**. Two things the rendered
+form derives from them are yours to handle here:
+
+- **`visibleWhen` is not applied.** The hook does not hold your answers,
+  so it cannot judge a condition. Render a conditional field and the
+  server will drop the answer — correctly, since it applies the rule
+  itself — leaving a question that appears to do nothing. Drive a form
+  with conditions through the block or `PlumixForm`, or evaluate the rule
+  yourself.
+- **A `pageBreak()` is not a step.** The hook exposes no wizard, so a form
+  broken into steps renders as one long list of questions. That still
+  submits correctly; it is just not a wizard.
+- **`bind: "entry"` carries no entry.** The signed token comes from a
+  block loader, so a bound form driven from here stores no `entryId` —
+  the same position as one on an archive. `PlumixForm` is in it too.
 
 ## Validation
 

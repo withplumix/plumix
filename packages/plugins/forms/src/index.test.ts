@@ -1,10 +1,16 @@
+import { createElement as h } from "react";
+import { defineBlock } from "plumix/blocks";
 import { email, text } from "plumix/fields";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import * as adminEntry from "./admin/index.js";
-import { TEL_FIELD_COMPONENT, TEL_INPUT_TYPE } from "./contract.js";
+import {
+  FORM_BLOCK_NAME,
+  TEL_FIELD_COMPONENT,
+  TEL_INPUT_TYPE,
+} from "./contract.js";
 import { defineForm } from "./define-form.js";
 import { forms } from "./index.js";
 import { createFormsHarness, seedPageWithForm } from "./test/harness.js";
@@ -133,5 +139,34 @@ describe("the tel field type", () => {
   // build time — nothing in `plumix dev` would say so.
   test("names a component the admin entry actually exports", () => {
     expect(adminEntry).toHaveProperty(TEL_FIELD_COMPONENT);
+  });
+});
+
+/**
+ * The escape hatch that keeps total control from meaning a fork: a theme
+ * registering a block of the plugin's own name replaces its render
+ * outright. Core merges theme blocks over plugin blocks last-wins, and
+ * this is the plugin holding that guarantee to its own block.
+ */
+describe("a theme block of the same name", () => {
+  const themeForm = defineBlock({
+    name: FORM_BLOCK_NAME,
+    title: "Form",
+    render: () => h("div", { "data-theme-form": "" }),
+  });
+
+  test("replaces the plugin's render", async () => {
+    const harness = await createFormsHarness(
+      [forms({ forms: [contact] })],
+      [themeForm],
+    );
+    await seedPageWithForm(harness, "contact");
+
+    const response = await harness.fetch("/posts/page-with-form");
+
+    response.assertStatus(200);
+    const body = await response.text();
+    expect(body).toContain("data-theme-form");
+    expect(body).not.toContain('data-plumix-form="contact"');
   });
 });

@@ -400,3 +400,72 @@ test.describe("without JavaScript", () => {
     await expect(page.locator(FORM)).toBeVisible();
   });
 });
+
+// The plugin's two theme-facing surfaces, both on the playground's own
+// theme: a form the template renders itself, and a subscribe bar that is
+// the theme's markup end to end. Between them they are the answer to
+// "the block is not what I want" that is not a fork.
+test.describe("a theme rendering the form itself", () => {
+  test("renders a form the page carries no block for", async ({ page }) => {
+    await page.goto("/templated");
+
+    // The seeded entry holds no blocks at all, so this form is on the
+    // page because the template asked for it by slug.
+    await expect(page.locator(ENHANCED)).toBeVisible();
+    await expect(
+      page.locator("[data-plumix-form-control='name']"),
+    ).toHaveAttribute("id", "plumix-form-templated-name");
+  });
+
+  test("submits it the way the block's own render does", async ({ page }) => {
+    await page.goto("/templated");
+    await expect(page.locator(ENHANCED)).toBeVisible();
+    await page.waitForTimeout(1200);
+
+    await page.fill(control("name"), "Ada Lovelace");
+    await page.fill(control("email"), "ada@example.test");
+    await page.click("[data-plumix-form-submit]");
+
+    await expect(page.locator(CONFIRMATION)).toBeVisible();
+  });
+});
+
+test.describe("a theme rendering its own controls", () => {
+  const BAR = "[data-testid='subscribe-bar']";
+  // The bar's server render is on the page before the island driving it
+  // has hydrated, so a click before this lands on nothing. It carries
+  // none of the plugin's markup, so the marker it is waited on by is the
+  // theme's own — see `playground/subscribe-bar.ts`.
+  const LIVE = "[data-testid='subscribe-bar'][data-live]";
+
+  test("submits through the headless hook, in the theme's own markup", async ({
+    page,
+  }) => {
+    await page.goto("/contact");
+    await expect(page.locator(LIVE)).toBeVisible();
+    // Nothing about the bar is the plugin's: no form element, no
+    // `plumix-form-*` handle, no stylesheet of ours behind it.
+    await expect(page.locator(`${BAR} [class*='plumix-form']`)).toHaveCount(0);
+    // Past the timing floor, which is where a real visitor is by the
+    // time they have typed an address.
+    await page.waitForTimeout(1200);
+
+    await page.fill("[data-testid='subscribe-email']", "ada@example.test");
+    await page.click("[data-testid='subscribe-send']");
+
+    await expect(page.locator("[data-testid='subscribed']")).toBeVisible();
+  });
+
+  test("renders the endpoint's refusal against the field that produced it", async ({
+    page,
+  }) => {
+    await page.goto("/contact");
+    await expect(page.locator(LIVE)).toBeVisible();
+
+    await page.fill("[data-testid='subscribe-email']", "not-an-address");
+    await page.click("[data-testid='subscribe-send']");
+
+    await expect(page.locator("[data-testid='subscribe-error']")).toBeVisible();
+    await expect(page.locator("[data-testid='subscribed']")).toHaveCount(0);
+  });
+});
