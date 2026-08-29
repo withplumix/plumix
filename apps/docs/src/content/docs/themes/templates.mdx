@@ -98,7 +98,7 @@ const single = defineTemplate<EntryData>({
 export const rules = [entry(single)];
 ```
 
-`data.entry` is a `ResolvedEntry`. That is the stored row with its meta decoded and its references hydrated, plus `terms`, `author`, `contentBlocks` and a pre-resolved `url`.
+`data.entry` is a `ResolvedEntry`. That is the stored row with its meta decoded and its references hydrated, plus `storedMeta` (the undecoded meta JSON, which is what `.whereMeta()` compares against), `terms`, `author`, `contentBlocks` and a pre-resolved `url`.
 
 ### `archive`
 
@@ -313,7 +313,7 @@ export const rules = [
 The bare `.template()` matches every entry of the type. Five selectors narrow it:
 
 - `.slug("sicilian-caponata")` and `.id(42)` match one entry.
-- `.whereMeta("difficulty", "hard")` matches on a stored meta value. The key and the value are typed against the type's folded stored meta, which is the shape sitting in the JSON column rather than the read-time resolved one.
+- `.whereMeta("difficulty", "hard")` matches on a stored meta value, read off `entry.storedMeta`. The key and the value are typed against the type's folded stored meta, which is that same shape.
 - `.where((data) => ...)` takes any predicate over the resolved data.
 - `.named("wide", "Wide layout")` registers an author-selectable template. The id and label reach the editor's template picker, and the choice is stored in the reserved `__plumix_template` meta key, which the matching predicate reads back.
 

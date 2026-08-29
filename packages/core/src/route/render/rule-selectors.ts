@@ -80,10 +80,9 @@ export function termTaxonomyMatch(
 }
 
 /**
- * A predicate matching when a content entry's meta value equals `value`, read
- * off the resolved bag — a `.returns("date")` field is a `Date` there and a
- * reference is whatever its lookup adapter hydrated, so `===` compares against
- * that rather than against what the meta JSON holds.
+ * A predicate matching when a content entry's stored meta value equals
+ * `value` — `entry.storedMeta`, the meta JSON as the row holds it, not the
+ * decoded `entry.meta` a template reads.
  *
  * The walk calls a predicate with whatever the resolved node carries, so this
  * one has to refuse a term rather than read a key off it.
@@ -92,15 +91,19 @@ export function metaEquals(
   key: string,
   value: unknown,
 ): (data: TemplateData) => boolean {
-  return (data) => "entry" in data && data.entry.meta[key] === value;
+  return (data) => "entry" in data && data.entry.storedMeta[key] === value;
 }
 
-/** A predicate matching when a resolved term's meta value equals `value`. */
+/**
+ * A predicate matching when a resolved term's stored meta value equals
+ * `value`. Term meta is not decoded today, so this is the same bag as
+ * `term.meta` — by the contract above, not by that coincidence.
+ */
 export function termMetaEquals(
   key: string,
   value: unknown,
 ): (data: TemplateData) => boolean {
-  return (data) => "term" in data && data.term.meta[key] === value;
+  return (data) => "term" in data && data.term.storedMeta[key] === value;
 }
 
 /** Narrowings an entry-type selector accepts, plus the type's archive. */
@@ -111,8 +114,7 @@ export interface EntryTypeTargets<K extends EntryTypeName, SEntry, SArchive> {
   id(id: number): SEntry;
   /**
    * Narrow by an entry-meta value, typed against the type's folded stored meta
-   * shape (what actually sits in the meta JSON — decode-time defaults and
-   * resolution don't apply here).
+   * shape and compared against `entry.storedMeta`, which is that same shape.
    */
   whereMeta<M extends keyof StoredMetaOf<K>>(
     key: M,

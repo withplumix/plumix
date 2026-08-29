@@ -23,7 +23,6 @@ them, and reaches everything on the matcher except `nodeKind` and `type`: mintin
 place is the job, so overriding them is now a compile error rather than a quiet way back to a
 hand-written matcher.
 
-[Custom Rule Kinds](https://plumix.dev/themes/rule-kinds/) documents the four, including the two
-traps: the predicates compare against the resolved bag, where a `.returns("date")` field is a `Date`
-and a reference is whatever its lookup adapter hydrated; and they test the data shape as well as the
-value, with nothing rejecting an entry predicate on a term matcher.
+[Custom Rule Kinds](https://plumix.dev/themes/rule-kinds/) documents the four, including the one
+trap that remains: a predicate tests the data shape as well as the value, and nothing rejects an
+entry predicate on a term matcher.
