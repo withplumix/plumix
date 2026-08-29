@@ -46,7 +46,7 @@ export function submissionsToCsv(rows: readonly SubmissionDTO[]): string {
     ...rows.map((row) => [
       row.createdAt,
       row.form,
-      String(row.serial),
+      String(row.id),
       row.status,
       ...columns.map((column) =>
         answerText(row.answers[column.key], row.labels[column.key], WORDS),

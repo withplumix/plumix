@@ -1,4 +1,4 @@
-import type { FormSubmission } from "../db/schema.js";
+import type { StoredSubmission } from "../db/schema.js";
 import type { FormFieldError, FormSubmissionCandidate } from "../types.js";
 
 declare module "plumix" {
@@ -26,7 +26,7 @@ declare module "plumix" {
      * out of storage.
      */
     "form:submitted": (
-      submission: FormSubmission | null,
+      submission: StoredSubmission | null,
       candidate: FormSubmissionCandidate,
     ) => void | Promise<void>;
   }

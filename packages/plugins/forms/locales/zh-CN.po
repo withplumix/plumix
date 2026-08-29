@@ -206,10 +206,10 @@ msgid "plugin.forms.inbox.noteLabel"
 msgstr "私密备注"
 
 #. js-lingui-explicit-id
-#. serial: the submission's per-form number
+#. id: the submission's number
 #: src/admin/SubmissionsShell.tsx
 msgid "plugin.forms.inbox.openLabel"
-msgstr "打开提交 {serial}"
+msgstr "打开提交 {id}"
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx

@@ -77,8 +77,8 @@ const M = {
   noteLabel: { id: "plugin.forms.inbox.noteLabel", message: "Private note" },
   openLabel: {
     id: "plugin.forms.inbox.openLabel",
-    message: "Open submission {serial}",
-    comment: "serial: the submission's per-form number",
+    message: "Open submission {id}",
+    comment: "id: the submission's number",
   },
   exportCsv: { id: "plugin.forms.inbox.exportCsv", message: "Export CSV" },
   exportJson: { id: "plugin.forms.inbox.exportJson", message: "Export JSON" },
@@ -291,7 +291,7 @@ export function SubmissionsShell(): ReactNode {
                     data-testid={`forms-open-${String(row.id)}`}
                     aria-label={i18n._(
                       M.openLabel.id,
-                      { serial: row.serial },
+                      { id: row.id },
                       { message: M.openLabel.message },
                     )}
                     onClick={() => {
@@ -425,7 +425,7 @@ function SubmissionDetail({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 data-testid="forms-detail-title" className="font-semibold">
-          {row.form} #{row.serial}
+          {row.form} #{row.id}
         </h2>
         <div className="flex items-center gap-1">
           {SUBMISSION_STATUSES.filter((status) => status !== row.status).map(

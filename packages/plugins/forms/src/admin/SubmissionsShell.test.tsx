@@ -31,7 +31,6 @@ let calls: CapturedCall[];
 const CONTACT_ROW = {
   id: 7,
   form: "contact",
-  serial: 2,
   status: "new",
   answers: { name: "Ada", email: "ada@example.test" },
   labels: { name: { label: "Your name" }, email: { label: "Email" } },
@@ -47,7 +46,6 @@ const RETIRED_ROW = {
   ...CONTACT_ROW,
   id: 8,
   form: "retired",
-  serial: 1,
   answers: { question: "Still readable" },
   labels: { question: { label: "What we used to ask" } },
   entryId: null,

@@ -1,52 +1,59 @@
 import { Factory } from "fishery";
 
 import type { FormSubmission, NewFormSubmission } from "../db/schema.js";
-import type { SubmissionStatus } from "../types.js";
+import type { FormLabelSnapshot, SubmissionStatus } from "../types.js";
 import type { FormsTestDb } from "./db.js";
 import { formSubmissions } from "../db/schema.js";
+import { storeLabelSnapshot } from "../server/repository.js";
 
 interface DbTransient {
   db: FormsTestDb;
 }
 
+/** What a seed hands in: the row, with the labels rather than their key. */
+type SubmissionSeed = Omit<NewFormSubmission, "labelsDigest"> & {
+  labels: FormLabelSnapshot;
+};
+
 /**
- * Seeds one `form_submissions` row. `formSlug` and `serial` are required
- * — a submission belongs to a form and carries the number a person can
- * quote — and everything else has a default. The submit handler
- * allocates serials from the rows already there, so a seeded row and a
- * real submission to the same form do not collide as long as the seed
- * takes the low numbers.
+ * Seeds one `form_submissions` row. `form` is required — a submission
+ * belongs to a form — and everything else has a default. `labels` is
+ * taken as the snapshot itself rather than as its digest: the row points
+ * at one, and the seed writes it the same way a submission does.
  */
 export const submissionFactory = Factory.define<
-  NewFormSubmission,
+  SubmissionSeed,
   DbTransient,
   FormSubmission,
   // Fourth parameter, as core's own factories declare it: without it
   // fishery deep-partials `params`, and the JSON columns stop matching
   // the types the table declares for them.
-  Partial<NewFormSubmission>
+  Partial<SubmissionSeed>
 >(({ sequence, transientParams, onCreate, params }) => {
-  onCreate(async (attrs) => {
+  onCreate(async ({ labels, ...attrs }) => {
     const db = transientParams.db;
     if (!db) {
       // eslint-disable-next-line no-restricted-syntax -- test-support guard
       throw new Error("submissionFactory requires a db via .transient({ db })");
     }
-    const [row] = await db.insert(formSubmissions).values(attrs).returning();
+    const labelsDigest = await storeLabelSnapshot(db, labels);
+    const [row] = await db
+      .insert(formSubmissions)
+      .values({ ...attrs, labelsDigest })
+      .returning();
     // eslint-disable-next-line no-restricted-syntax -- test-support guard
     if (!row) throw new Error("submissionFactory: insert returned no row");
     return row;
   });
 
-  const formSlug = params.formSlug;
-  if (formSlug === undefined) {
+  const form = params.form;
+  if (form === undefined) {
     // eslint-disable-next-line no-restricted-syntax -- test-support guard
-    throw new Error("submissionFactory: formSlug is required");
+    throw new Error("submissionFactory: form is required");
   }
 
   return {
-    formSlug,
-    serial: params.serial ?? sequence,
+    form,
     status: params.status ?? "new",
     answers: params.answers ?? { name: `Visitor ${String(sequence)}` },
     labels: params.labels ?? { name: { label: "Your name" } },
@@ -65,11 +72,11 @@ export const submissionFactory = Factory.define<
  */
 export function seedSubmissionOn(
   db: FormsTestDb,
-  formSlug: string,
+  form: string,
   day: string,
   status: SubmissionStatus = "new",
 ): Promise<FormSubmission> {
   return submissionFactory
     .transient({ db })
-    .create({ formSlug, status, createdAt: new Date(`${day}T12:00:00.000Z`) });
+    .create({ form, status, createdAt: new Date(`${day}T12:00:00.000Z`) });
 }

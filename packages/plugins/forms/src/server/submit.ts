@@ -3,7 +3,7 @@ import { resolveReturnUrl } from "plumix";
 import { readVisitorMeta } from "plumix/db";
 import { labelSourceText } from "plumix/i18n";
 
-import type { FormSubmission } from "../db/schema.js";
+import type { StoredSubmission } from "../db/schema.js";
 import type { FormDefinition } from "../define-form.js";
 import type { FormRegistry } from "../registry.js";
 import type {
@@ -132,8 +132,8 @@ async function runHandler(
   ctx: AppContext,
   form: FormDefinition,
   candidate: FormSubmissionCandidate,
-  stored: FormSubmission | null,
-): Promise<FormSubmission | null> {
+  stored: StoredSubmission | null,
+): Promise<StoredSubmission | null> {
   if (!form.onSubmit) return stored;
   try {
     await form.onSubmit({

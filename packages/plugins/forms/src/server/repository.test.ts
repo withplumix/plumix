@@ -1,10 +1,14 @@
 import type { AppContext } from "plumix/plugin";
-import { createTestContext } from "plumix/test";
+import type { TracedContext } from "plumix/test";
+import { createTestContext, createTracedContext } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
+import type { StoredSubmission } from "../db/schema.js";
 import type { FormsTestDb } from "../test/db.js";
-import { formSubmissions } from "../db/schema.js";
-import { createFormsTestDb } from "../test/db.js";
+import type { FormSubmissionCandidate } from "../types.js";
+import type { SubmissionRowPage } from "./repository.js";
+import { formLabelSnapshots, formSubmissions } from "../db/schema.js";
+import { applyFormsSchema, createFormsTestDb } from "../test/db.js";
 import { seedSubmissionOn } from "../test/factories.js";
 import {
   countSubmissionFacets,
@@ -20,25 +24,6 @@ import {
 
 const answers = { name: "Ada" };
 
-const SERIAL_CONFLICT =
-  "SQLITE_CONSTRAINT: UNIQUE constraint failed: " +
-  "form_submissions.form_slug, form_submissions.serial";
-
-// Drizzle wraps the driver error rather than re-messaging it, so the
-// constraint name is only reachable through `cause` — a flat Error would
-// let a message-only predicate pass this test.
-function serialConflict(): Error {
-  return new Error('Failed query: insert into "form_submissions"', {
-    cause: new Error(SERIAL_CONFLICT),
-  });
-}
-
-function refusingInsert() {
-  return {
-    values: () => ({ returning: () => Promise.reject(serialConflict()) }),
-  };
-}
-
 // The db comes back alongside the context because the date-range reads
 // seed through the factory, which takes the db rather than the context.
 async function contextWithSchema(): Promise<{
@@ -49,7 +34,11 @@ async function contextWithSchema(): Promise<{
   return { ctx: createTestContext({ db }), db };
 }
 
-function submit(ctx: AppContext, form: string) {
+function submit(
+  ctx: AppContext,
+  form: string,
+  overrides: Partial<FormSubmissionCandidate> = {},
+) {
   return insertSubmission(ctx, {
     form,
     status: "new",
@@ -58,83 +47,96 @@ function submit(ctx: AppContext, form: string) {
     entryId: null,
     ipHash: null,
     userAgent: null,
+    ...overrides,
   });
 }
 
 describe("insertSubmission", () => {
-  test("numbers the first submission of a form 1", async () => {
+  test("stores what the caller handed it, under the row's own id", async () => {
     const { ctx } = await contextWithSchema();
 
-    const row = await submit(ctx, "contact");
-
-    expect(row.serial).toBe(1);
-    expect(row.answers).toEqual(answers);
-  });
-
-  test("counts serials per form, not across them", async () => {
-    const { ctx } = await contextWithSchema();
-
-    await submit(ctx, "contact");
-    await submit(ctx, "contact");
-    const other = await submit(ctx, "newsletter");
-
-    expect(other.serial).toBe(1);
-  });
-
-  test("gives concurrent submissions to one form distinct serials", async () => {
-    const { ctx } = await contextWithSchema();
-
-    const rows = await Promise.all(
-      Array.from({ length: 8 }, () => submit(ctx, "contact")),
-    );
-
-    expect(new Set(rows.map((row) => row.serial)).size).toBe(8);
-  });
-
-  // The race the retry exists for is not reproducible against a single
-  // in-memory connection, so the conflict is injected: one rejected insert
-  // carrying the message SQLite raises, then the real path.
-  test("retries when the unique index rejects the serial it computed", async () => {
-    const { ctx } = await contextWithSchema();
-    const insert = ctx.db.insert.bind(ctx.db);
-    let refused = false;
-    ctx.db.insert = ((table: Parameters<typeof insert>[0]) => {
-      if (refused) return insert(table);
-      refused = true;
-      return refusingInsert() as unknown as ReturnType<typeof insert>;
-    }) as typeof insert;
-
-    const row = await submit(ctx, "contact");
-
-    expect(refused).toBe(true);
-    expect(row.serial).toBe(1);
-  });
-
-  test("gives up rather than looping when the conflict never clears", async () => {
-    const { ctx } = await contextWithSchema();
-    ctx.db.insert = (() => refusingInsert()) as unknown as typeof ctx.db.insert;
-
-    await expect(submit(ctx, "contact")).rejects.toThrow(/Failed query/);
-  });
-
-  test("stores what the caller handed it", async () => {
-    const { ctx } = await contextWithSchema();
-
-    await insertSubmission(ctx, {
-      form: "contact",
+    const row = await submit(ctx, "contact", {
       status: "spam",
-      answers,
-      labels: { name: { label: "Name" } },
-      entryId: null,
       ipHash: "deadbeef",
       userAgent: "curl/8",
     });
 
     const [stored] = await ctx.db.select().from(formSubmissions);
+    expect(stored?.id).toBe(row.id);
+    expect(stored?.form).toBe("contact");
     expect(stored?.status).toBe("spam");
     expect(stored?.ipHash).toBe("deadbeef");
     expect(stored?.userAgent).toBe("curl/8");
-    expect(stored?.labels).toEqual({ name: { label: "Name" } });
+    expect(stored?.answers).toEqual(answers);
+  });
+
+  test("keeps one snapshot row however many submissions share it", async () => {
+    const { ctx } = await contextWithSchema();
+
+    await submit(ctx, "contact");
+    await submit(ctx, "contact");
+
+    const snapshots = await ctx.db.select().from(formLabelSnapshots);
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]?.labels).toEqual({ name: { label: "Name" } });
+  });
+
+  test("shares one snapshot between two forms that ask the same questions", async () => {
+    const { ctx } = await contextWithSchema();
+
+    await submit(ctx, "contact");
+    await submit(ctx, "newsletter");
+
+    const snapshots = await ctx.db.select().from(formLabelSnapshots);
+    const stored = await ctx.db
+      .select({ digest: formSubmissions.labelsDigest })
+      .from(formSubmissions);
+    expect(snapshots).toHaveLength(1);
+    expect(new Set(stored.map((row) => row.digest)).size).toBe(1);
+  });
+
+  test("gives differently labelled forms snapshots of their own", async () => {
+    const { ctx } = await contextWithSchema();
+
+    await submit(ctx, "contact");
+    await submit(ctx, "newsletter", {
+      labels: { name: { label: "What we call you" } },
+    });
+
+    expect(await ctx.db.select().from(formLabelSnapshots)).toHaveLength(2);
+  });
+
+  // No foreign key holds the pointer, so a direct write can leave one
+  // dangling. Such a row still reaches the inbox — under its raw keys,
+  // which is what an empty snapshot renders as.
+  test("still reads a row whose snapshot is not there", async () => {
+    const { ctx, db } = await contextWithSchema();
+    const [row] = await db
+      .insert(formSubmissions)
+      .values({
+        form: "contact",
+        status: "new",
+        answers,
+        labelsDigest: "0".repeat(64),
+      })
+      .returning();
+
+    const stored = await getSubmission(ctx, row?.id ?? 0);
+
+    expect(stored?.answers).toEqual(answers);
+    expect(stored?.labels).toEqual({});
+  });
+
+  test("reads a submission back with its own labels after the form changed", async () => {
+    const { ctx } = await contextWithSchema();
+    const first = await submit(ctx, "contact");
+    // The same form, asking a renamed question: a later submission gets a
+    // snapshot of its own, and the earlier row keeps pointing at the old one.
+    await submit(ctx, "contact", { labels: { name: { label: "Full name" } } });
+
+    expect((await getSubmission(ctx, first.id))?.labels).toEqual({
+      name: { label: "Name" },
+    });
   });
 });
 
@@ -149,7 +151,6 @@ describe("recordHandlerFailure", () => {
     expect(stored?.handlerError).toBe("SMTP refused");
     expect(stored?.answers).toEqual(answers);
     expect(stored?.status).toBe("new");
-    expect(stored?.serial).toBe(row.serial);
   });
 });
 
@@ -161,42 +162,40 @@ describe("the inbox reads", () => {
 
     const page = await listSubmissions(ctx, { limit: 10 });
 
-    expect(page.submissions.map((row) => row.formSlug)).toEqual([
+    expect(page.submissions.map((row) => row.form)).toEqual([
       "newsletter",
       "contact",
     ]);
     expect(page.nextCursor).toBeNull();
   });
 
-  test("pages through with the cursor the previous page returned", async () => {
+  // Every one of these arrives inside the same second, so `created_at`
+  // ties across the page boundary and a cursor keyed on it would step over
+  // whatever shares the last row's timestamp. The cursor is the `id`.
+  test("pages through a burst of same-second arrivals, reaching every one", async () => {
     const { ctx } = await contextWithSchema();
-    for (let i = 0; i < 3; i++) await submit(ctx, "contact");
+    const stored: StoredSubmission[] = [];
+    for (let i = 0; i < 5; i++) stored.push(await submit(ctx, "contact"));
+    expect(new Set(stored.map((row) => row.createdAt.getTime())).size).toBe(1);
 
-    const first = await listSubmissions(ctx, { limit: 2 });
-    const second = await listSubmissions(ctx, {
-      limit: 2,
-      cursor: first.nextCursor,
-    });
+    const reached: number[] = [];
+    let cursor: string | null = null;
+    do {
+      const page: SubmissionRowPage = await listSubmissions(ctx, {
+        limit: 2,
+        cursor,
+      });
+      reached.push(...page.submissions.map((row) => row.id));
+      cursor = page.nextCursor;
+    } while (cursor);
 
-    expect(first.submissions).toHaveLength(2);
-    expect(first.nextCursor).not.toBeNull();
-    expect(second.submissions).toHaveLength(1);
-    expect(second.nextCursor).toBeNull();
-    expect(second.submissions[0]?.serial).toBe(1);
+    expect(reached).toEqual(stored.map((row) => row.id).reverse());
   });
 
   test("narrows to one form and to one status", async () => {
     const { ctx } = await contextWithSchema();
     await submit(ctx, "contact");
-    const spam = await insertSubmission(ctx, {
-      form: "contact",
-      status: "spam",
-      answers,
-      labels: {},
-      entryId: null,
-      ipHash: null,
-      userAgent: null,
-    });
+    const spam = await submit(ctx, "contact", { status: "spam" });
     await submit(ctx, "newsletter");
 
     const byForm = await listSubmissions(ctx, { limit: 10, form: "contact" });
@@ -209,15 +208,7 @@ describe("the inbox reads", () => {
   test("counts each status within the form filter, and each form within the status filter", async () => {
     const { ctx } = await contextWithSchema();
     await submit(ctx, "contact");
-    await insertSubmission(ctx, {
-      form: "contact",
-      status: "spam",
-      answers,
-      labels: {},
-      entryId: null,
-      ipHash: null,
-      userAgent: null,
-    });
+    await submit(ctx, "contact", { status: "spam" });
     await submit(ctx, "newsletter");
 
     const all = await countSubmissionFacets(ctx, {});
@@ -318,5 +309,74 @@ describe("the inbox writes", () => {
     expect(await deleteSubmission(ctx, row.id)).toBe(true);
     expect(await deleteSubmission(ctx, row.id)).toBe(false);
     expect(await getSubmission(ctx, row.id)).toBeNull();
+  });
+});
+
+/**
+ * How SQLite says it would answer the read `run` issues. Taken off the
+ * traced span rather than off SQL the test writes out, so the plan
+ * asserted below cannot drift from the query `listSubmissions` builds.
+ * Only the shape of a statement decides its plan, so the bound values go
+ * back purely to make the argument count up.
+ */
+async function planFor(
+  traced: TracedContext,
+  read: () => Promise<unknown>,
+): Promise<string> {
+  const before = traced.ctx.telemetry.getSpans().length;
+  await traced.run(async () => {
+    await read();
+  });
+  const [span] = traced.ctx.telemetry.getSpans().slice(before);
+  const sql = span?.attributes["db.sql"];
+  if (typeof sql !== "string") return "";
+  const params = span?.attributes["db.params"];
+  const explained = await traced.harness.db.$client.execute({
+    sql: `explain query plan ${sql}`,
+    args: Array.isArray(params) ? params.map(String) : [],
+  });
+  return explained.rows
+    .map((row) => row.detail)
+    .filter((detail) => typeof detail === "string")
+    .join(" | ");
+}
+
+describe("what the inbox's paging costs", () => {
+  test("walks an index already in page order, whichever facets are set", async () => {
+    const traced = await createTracedContext();
+    await applyFormsSchema(traced.harness.db);
+    const page = { limit: 25 } as const;
+
+    const everything = await planFor(traced, () =>
+      listSubmissions(traced.ctx, page),
+    );
+    const byForm = await planFor(traced, () =>
+      listSubmissions(traced.ctx, { ...page, form: "contact" }),
+    );
+    const byStatus = await planFor(traced, () =>
+      listSubmissions(traced.ctx, { ...page, status: "new" }),
+    );
+    const byBoth = await planFor(traced, () =>
+      listSubmissions(traced.ctx, { ...page, form: "contact", status: "new" }),
+    );
+    // The read every page after the first one issues, and the reason the
+    // cursor is the `id`: it narrows the same index walk rather than
+    // asking for a second column to break a tie.
+    const cursored = await planFor(traced, () =>
+      listSubmissions(traced.ctx, { ...page, form: "contact", cursor: "500" }),
+    );
+
+    // Newest-first is `id` descending and `id` is the rowid, so ordering
+    // is free on every one of these — no sort, no widening.
+    for (const plan of [everything, byForm, byStatus, byBoth, cursored]) {
+      expect(plan).not.toMatch(/TEMP B-TREE/);
+    }
+    // No facet to narrow by, so this one walks the rowid itself — which
+    // is already the order the page wants.
+    expect(everything).toContain("SCAN form_submissions");
+    expect(byForm).toContain("USING INDEX form_submissions_form_idx");
+    expect(byStatus).toContain("USING INDEX form_submissions_status_idx");
+    expect(byBoth).toContain("USING INDEX form_submissions_form_status_idx");
+    expect(cursored).toContain("form=? AND rowid<?");
   });
 });

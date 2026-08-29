@@ -1,4 +1,5 @@
 import type { PluginSetupContext } from "plumix/plugin";
+import { eq, getTableColumns } from "plumix/db";
 import {
   date,
   email,
@@ -26,7 +27,7 @@ import {
   TOKEN_FIELD,
   TURNSTILE_FIELD,
 } from "../contract.js";
-import { formSubmissions } from "../db/schema.js";
+import { formLabelSnapshots, formSubmissions } from "../db/schema.js";
 import { defineForm } from "../define-form.js";
 import { tel } from "../fields.js";
 import { forms } from "../index.js";
@@ -80,8 +81,19 @@ function submit(
   );
 }
 
+// The stored rows with the snapshot each points at resolved, so a test
+// can read what a submission's fields were called the way the inbox does.
 const rows = (harness: FormsHarness) =>
-  harness.db.select().from(formSubmissions);
+  harness.db
+    .select({
+      ...getTableColumns(formSubmissions),
+      labels: formLabelSnapshots.labels,
+    })
+    .from(formSubmissions)
+    .leftJoin(
+      formLabelSnapshots,
+      eq(formSubmissions.labelsDigest, formLabelSnapshots.digest),
+    );
 
 /** Post `answers` verbatim to `form` — nothing filled in for the caller. */
 async function submitTo(
@@ -111,27 +123,21 @@ describe("POST /_plumix/forms/submit", () => {
       "https://cms.example/posts/page-with-form",
     );
     const [stored] = await rows(harness);
-    expect(stored?.formSlug).toBe("contact");
+    expect(stored?.form).toBe("contact");
     expect(stored?.status).toBe("new");
     expect(stored?.answers).toEqual({ name: "Ada", email: "ada@example.test" });
   });
 
-  test("numbers each submission within its own form", async () => {
-    const harness = await harnessWithContact();
-
-    await submit(harness, {});
-    await submit(harness, { name: "Grace" });
-
-    expect((await rows(harness)).map((row) => row.serial)).toEqual([1, 2]);
-  });
-
-  test("gives concurrent submissions distinct serials", async () => {
+  // Six at once share one label snapshot, so this is also the write path's
+  // only contended row: the insert that stores it has to tolerate losing.
+  test("gives concurrent submissions rows of their own", async () => {
     const harness = await harnessWithContact();
 
     await Promise.all(Array.from({ length: 6 }, () => submit(harness, {})));
 
-    const serials = (await rows(harness)).map((row) => row.serial);
-    expect(new Set(serials).size).toBe(6);
+    const stored = await rows(harness);
+    expect(new Set(stored.map((row) => row.id)).size).toBe(6);
+    expect(new Set(stored.map((row) => row.labelsDigest)).size).toBe(1);
   });
 
   test("snapshots what each field was called", async () => {

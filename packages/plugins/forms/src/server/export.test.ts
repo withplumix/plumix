@@ -22,14 +22,9 @@ const contact = defineForm("contact", {
 async function seeded(): Promise<FormsHarness> {
   const harness = await createFormsHarness([forms({ forms: [contact] })]);
   const seed = submissionFactory.transient({ db: harness.db });
+  await seed.create({ form: "contact", answers: { name: "Ada" } });
   await seed.create({
-    formSlug: "contact",
-    serial: 1,
-    answers: { name: "Ada" },
-  });
-  await seed.create({
-    formSlug: "contact",
-    serial: 2,
+    form: "contact",
     status: "spam",
     answers: { name: "Mallory" },
   });
@@ -40,7 +35,6 @@ function submission(overrides: Partial<SubmissionDTO> = {}): SubmissionDTO {
   return {
     id: 1,
     form: "contact",
-    serial: 7,
     status: "new",
     answers: { name: "Ada" },
     labels: { name: { label: "Your name" } },
@@ -59,7 +53,7 @@ describe("submissionsToCsv", () => {
     const lines = submissionsToCsv([submission()]).split("\r\n");
 
     expect(lines[0]).toBe("\uFEFFReceived,Form,Number,Status,Your name,Note");
-    expect(lines[1]).toBe("2026-01-02T03:04:05.000Z,contact,7,new,Ada,");
+    expect(lines[1]).toBe("2026-01-02T03:04:05.000Z,contact,1,new,Ada,");
   });
 
   // The acceptance criterion is about the exported file, not about
@@ -79,7 +73,6 @@ describe("submissionsToCsv", () => {
       submission({
         id: 2,
         form: "retired",
-        serial: 1,
         answers: { budget: "-40" },
         labels: { budget: { label: "What we used to ask" } },
       }),
@@ -88,7 +81,7 @@ describe("submissionsToCsv", () => {
     expect(lines[0]).toBe(
       "\uFEFFReceived,Form,Number,Status,Your name,What we used to ask,Note",
     );
-    expect(lines[2]).toBe("2026-01-02T03:04:05.000Z,retired,1,new,,-40,");
+    expect(lines[2]).toBe("2026-01-02T03:04:05.000Z,retired,2,new,,-40,");
   });
 });
 
@@ -185,8 +178,8 @@ describe("the export route", () => {
   test("refuses an export past the ceiling rather than truncating it", async () => {
     const db = await createFormsTestDb();
     const seed = submissionFactory.transient({ db });
-    await seed.create({ formSlug: "contact", serial: 1 });
-    await seed.create({ formSlug: "contact", serial: 2 });
+    await seed.create({ form: "contact" });
+    await seed.create({ form: "contact" });
 
     const response = await createExportHandler(1)(
       new Request("https://cms.example/_plumix/forms/export"),

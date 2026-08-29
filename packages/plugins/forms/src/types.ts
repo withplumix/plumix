@@ -10,9 +10,10 @@ export type SubmissionStatus = (typeof SUBMISSION_STATUSES)[number];
 
 /**
  * What one field was called when the answer was given, and what its
- * options were called. Stored on the row so a submission still reads
- * correctly after the form is edited or deleted — without it a renamed
- * field renders as a raw key and a dropdown answer as its stored value.
+ * options were called. Kept beside the answers so a submission still
+ * reads correctly after the form is edited or deleted — without it a
+ * renamed field renders as a raw key and a dropdown answer as its stored
+ * value.
  */
 export interface FieldLabelSnapshot {
   readonly label: string;
@@ -70,10 +71,9 @@ export type FormSubmitResponse =
 export interface SubmissionDTO {
   readonly id: number;
   readonly form: string;
-  readonly serial: number;
   readonly status: SubmissionStatus;
   readonly answers: FormAnswers;
-  /** The row's own copy, never the live form's — see `buildLabelSnapshot`. */
+  /** The snapshot the row points at, never the live form's. */
   readonly labels: FormLabelSnapshot;
   readonly entryId: number | null;
   readonly ipHash: string | null;

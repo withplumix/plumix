@@ -126,8 +126,11 @@ describe("the submissions RPC", () => {
       cursor: first.nextCursor ?? undefined,
     });
 
-    expect(first.submissions[0]?.serial).toBe(2);
-    expect(second.submissions[0]?.serial).toBe(1);
+    expect(first.submissions).toHaveLength(1);
+    expect(second.submissions).toHaveLength(1);
+    const [newest] = first.submissions;
+    const [oldest] = second.submissions;
+    expect(newest?.id).toBeGreaterThan(oldest?.id ?? 0);
     expect(second.nextCursor).toBeNull();
   });
 
