@@ -92,6 +92,35 @@ describe("formatSubmission", () => {
     );
   });
 
+  // The shapes below are not what the form path produces — a repeater
+  // stores one object per row — but `formatSubmission` is public and reads
+  // whatever the answers column holds, so what it does with them is pinned
+  // rather than left to the next refactor to decide.
+  test("numbers a repeater row that is a bare value, like every other row", () => {
+    const text = formatSubmission({
+      answers: { references: [{ name: "Grace" }, "Alan"] },
+      labels: {
+        references: {
+          label: "References",
+          fields: { name: { label: "Name" } },
+        },
+      },
+    });
+
+    expect(text).toBe(
+      ["References:", "  1.", "    Name: Grace", "  2. Alan"].join("\n"),
+    );
+  });
+
+  test("leaves out the blanks in a list rather than the gaps they leave", () => {
+    const text = formatSubmission({
+      answers: { topics: ["news", "", null] },
+      labels: { topics: { label: "Topics", options: { news: "News" } } },
+    });
+
+    expect(text).toBe("Topics: News");
+  });
+
   test("renders a group's answers under the group", () => {
     const text = formatSubmission({
       answers: { address: { city: "London", postcode: "N1 1AA" } },

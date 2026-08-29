@@ -8,11 +8,13 @@ import { describe, expect, test } from "vitest";
 import * as adminEntry from "./admin/index.js";
 import {
   FORM_BLOCK_NAME,
+  SUBMISSIONS_PAGE_PATH,
+  SUBMISSIONS_SHELL_COMPONENT,
   TEL_FIELD_COMPONENT,
   TEL_INPUT_TYPE,
 } from "./contract.js";
 import { defineForm } from "./define-form.js";
-import { forms } from "./index.js";
+import { forms, SUBMISSION_MODERATE_CAPABILITY } from "./index.js";
 import { createFormsHarness, seedPageWithForm } from "./test/harness.js";
 
 const contact = defineForm("contact", {
@@ -168,5 +170,39 @@ describe("a theme block of the same name", () => {
     const body = await response.text();
     expect(body).toContain("data-theme-form");
     expect(body).not.toContain('data-plumix-form="contact"');
+  });
+});
+
+describe("the submissions inbox", () => {
+  test("is one admin page, reachable only with the capability", async () => {
+    const harness = await createFormsHarness([forms()]);
+
+    expect(
+      harness.app.plugins.adminPages.get(SUBMISSIONS_PAGE_PATH),
+    ).toMatchObject({
+      capability: SUBMISSION_MODERATE_CAPABILITY,
+      component: SUBMISSIONS_SHELL_COMPONENT,
+      registeredBy: "forms",
+    });
+  });
+
+  test("gates the inbox at editor, not at every signed-in visitor", async () => {
+    const harness = await createFormsHarness([forms()]);
+
+    expect(
+      harness.app.plugins.capabilities.get(SUBMISSION_MODERATE_CAPABILITY),
+    ).toMatchObject({ minRole: "editor" });
+  });
+
+  // Same drift the tel field guards against: the admin bundler resolves
+  // the page's `component` as a named export off this module.
+  test("names a component the admin entry actually exports", () => {
+    expect(adminEntry).toHaveProperty(SUBMISSIONS_SHELL_COMPONENT);
+  });
+
+  test("answers the inbox over the plugin's own RPC router", async () => {
+    const harness = await createFormsHarness([forms()]);
+
+    expect(harness.app.plugins.rpcRouters.get("forms")).toBeDefined();
   });
 });

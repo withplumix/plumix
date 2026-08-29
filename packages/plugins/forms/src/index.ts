@@ -1,6 +1,7 @@
 // Imported from the root `plumix` specifier (not the `plumix/plugin`
 // subpath) so the `declare module "plumix"` augmentation below has its
 // target loaded — every registry seam merges through that one specifier.
+import type { Label } from "plumix/i18n";
 import { definePlugin } from "plumix";
 
 // Side-effect import: the hook augmentations live beside the code that
@@ -11,6 +12,9 @@ import "./server/hooks.js";
 import type { FormDefinition } from "./define-form.js";
 import { createFormBlock } from "./block/form-block.js";
 import {
+  SUBMISSION_MODERATE_CAPABILITY,
+  SUBMISSIONS_PAGE_PATH,
+  SUBMISSIONS_SHELL_COMPONENT,
   SUBMIT_ROUTE_PATH,
   TEL_FIELD_COMPONENT,
   TEL_INPUT_TYPE,
@@ -18,6 +22,7 @@ import {
 } from "./contract.js";
 import * as schema from "./db/schema.js";
 import { createFormRegistry, publishFormRegistry } from "./registry.js";
+import { createSubmissionsRouter } from "./rpc.js";
 import { createSubmitHandler, tokenHandler } from "./server/submit.js";
 
 export type {
@@ -39,9 +44,18 @@ export { formatSubmission } from "./format.js";
 export { FormsError } from "./errors.js";
 export type { FormPageBreak, FormPageBreakEntry, FormStep } from "./steps.js";
 export { pageBreak } from "./steps.js";
+// Deliberately re-exported from `contract.ts`, not from the router it
+// guards: an oRPC router's inferred type names `@orpc/server` and core's
+// schema, and a consumer resolving this entry's `.d.ts` has neither.
+export { SUBMISSION_MODERATE_CAPABILITY } from "./contract.js";
 export type {
   FieldLabelSnapshot,
   FormAnswers,
+  FormSummary,
+  SubmissionCounts,
+  SubmissionDTO,
+  SubmissionFilter,
+  SubmissionsPage,
   FormFieldError,
   FormLabelSnapshot,
   FormSubmissionCandidate,
@@ -49,6 +63,13 @@ export type {
   SubmissionStatus,
 } from "./types.js";
 export { SUBMISSION_STATUSES } from "./types.js";
+
+// A plain descriptor literal — plugin source runs server-side without the
+// Babel macro pipeline, so the manifest payload is authored by hand.
+const SUBMISSIONS_TITLE: Label = {
+  id: "plugin.forms.adminPage.title",
+  message: "Form submissions",
+};
 
 export interface FormsConfig {
   /** The site's own forms. Contributed as `"config"` for slug collisions. */
@@ -119,6 +140,25 @@ export function forms(options: FormsConfig = {}) {
         component: TEL_FIELD_COMPONENT,
       });
       ctx.registerBlock(createFormBlock(registry));
+      ctx.registerCapability(SUBMISSION_MODERATE_CAPABILITY, "editor");
+      ctx.registerRpcRouter(createSubmissionsRouter(registry));
+      ctx.registerAdminPage({
+        path: SUBMISSIONS_PAGE_PATH,
+        title: SUBMISSIONS_TITLE,
+        capability: SUBMISSION_MODERATE_CAPABILITY,
+        nav: {
+          // Bare-string ref attaches to core's reserved "content" group.
+          group: "content",
+          label: SUBMISSIONS_TITLE,
+          order: 40,
+          keywords: [
+            { id: "plugin.forms.keyword.forms", message: "forms" },
+            { id: "plugin.forms.keyword.submissions", message: "submissions" },
+            { id: "plugin.forms.keyword.inbox", message: "inbox" },
+          ],
+        },
+        component: SUBMISSIONS_SHELL_COMPONENT,
+      });
       ctx.registerRoute({
         method: "POST",
         path: SUBMIT_ROUTE_PATH,

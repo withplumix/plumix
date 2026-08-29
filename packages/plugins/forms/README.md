@@ -754,6 +754,36 @@ itself.
 The one exception is the honeypot, hidden inline: a trap the visitor can see is
 a trap they fill in.
 
+## Reading what came in
+
+Submissions are read in the admin, under **Content → Form submissions** — an
+inbox rather than a notification email that may have bounced. It is behind the
+`form_submission:moderate` capability, which editors and above hold: what a
+visitor typed is nobody's business below the people who answer it.
+
+The list is newest first and pages as you ask for more. Filter it by form and
+by status, each carrying its own count. The columns are read from **each row's
+own label snapshot**, not from the live form — so a page mixing two generations
+of one form still names every column, and a submission whose form has since
+been deleted still reads under the questions it was actually asked. The form
+filter lists what the registry declares now, plus any slug that still has a
+backlog, which is how a retired form's submissions stay reachable.
+
+A submission whose `onSubmit` threw is marked as failed in the list, so the
+ones that owe someone something are findable without opening each in turn.
+Opening one shows every answer under its real label, the envelope it arrived in
+(when, which page's entry, the IP hash, the user agent), and the reason the
+handler did not finish. A submission can be marked read, archived or spam, and
+spam is a status rather than a discard, so moving one back is a click.
+Deleting is the only thing on the page that cannot be undone, and it is the
+only thing that asks first. A private note can be left on any submission for
+whoever picks it up next — it is never shown to the visitor and goes when the
+submission does.
+
+The inbox knows what forms exist by asking the plugin's own registry over RPC.
+There is no forms table to keep in step and nothing to register in the admin
+manifest: a form is a value in your repository, and the inbox reads it there.
+
 ## What gets stored
 
 Each submission is a row in `form_submissions`: the form's slug, a per-form
@@ -768,6 +798,10 @@ reading every submission for one entry is a query rather than a scan.
 A submission whose `onSubmit` threw carries the reason in `handler_error`. The
 answers are untouched — what failed is what the site meant to do next with
 them.
+
+An administrator's own note lives in `note`, beside the answers rather than in
+a table of its own: a note has no life once the submission it annotates is
+deleted.
 
 The visitor's IP address is stored only as a salted SHA-256, against a
 per-install salt minted on the first submission. Cleartext addresses are never

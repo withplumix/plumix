@@ -5,4 +5,5 @@
 // name is the whole job. Registering imperatively here would register a
 // second time.
 
+export { SubmissionsShell } from "./SubmissionsShell.js";
 export { TelField } from "./TelField.js";

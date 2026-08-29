@@ -12,6 +12,12 @@ export interface FormRegistry {
   register(form: FormDefinition, contributor: string): void;
   get(slug: string): FormDefinition | undefined;
   /**
+   * Every form registered, in registration order. The inbox's form
+   * filter reads this over the plugin's own RPC, so knowing what exists
+   * costs neither a table nor a manifest entry.
+   */
+  list(): readonly FormDefinition[];
+  /**
    * Empty the registry so one install's contributions do not compound on
    * the last. A plugin descriptor is a value the config loader caches and
    * hands to `installPlugins` more than once in a build — see the call in
@@ -51,6 +57,7 @@ export function createFormRegistry(): FormRegistry {
       options.push({ value: form.slug, label: form.title ?? form.slug });
     },
     get: (slug) => forms.get(slug)?.form,
+    list: () => [...forms.values()].map((registered) => registered.form),
     reset: () => {
       forms.clear();
       options.length = 0;

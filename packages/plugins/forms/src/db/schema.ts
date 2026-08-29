@@ -38,6 +38,13 @@ export const formSubmissions = sqliteTable(
     userAgent: t.text(),
     /** Why the form's own `onSubmit` did not finish — see `runHandler`. */
     handlerError: t.text(),
+    /**
+     * What one administrator wants the next one to know — never shown to
+     * the visitor, and kept beside the answers rather than in a table of
+     * its own: a note has no life once the submission it annotates is
+     * deleted.
+     */
+    note: t.text(),
     createdAt: t
       .integer({ mode: "timestamp" })
       .notNull()
@@ -55,11 +62,14 @@ export const formSubmissions = sqliteTable(
       table.formSlug,
       table.serial,
     ),
-    // The inbox's two reads: one form newest-first, and one form's status tab.
-    index("form_submissions_slug_created_idx").on(
-      table.formSlug,
-      table.createdAt,
-    ),
+    // The inbox's reads, and `id` rather than `created_at` because that is
+    // what orders the list and carries its cursor — a submission is never
+    // rewritten, so id order is arrival order with no same-second tie to
+    // break (see `listSubmissions`). Both filters are optional and either
+    // can stand alone, so each leads an index of its own.
+    index("form_submissions_slug_id_idx").on(table.formSlug, table.id),
+    index("form_submissions_status_id_idx").on(table.status, table.id),
+    // The counts beside each status, within one form.
     index("form_submissions_slug_status_idx").on(table.formSlug, table.status),
     // "Every submission for this entry", across whichever forms bound it.
     index("form_submissions_entry_idx").on(table.entryId),
