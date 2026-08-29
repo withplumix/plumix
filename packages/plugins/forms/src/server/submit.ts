@@ -237,10 +237,10 @@ export function createSubmitHandler(registry: FormRegistry) {
     // a bot which half caught it. The `form:validate` filter sits below
     // the floor instead, because it is given the floor's verdict to
     // judge, which is exactly what this cannot be.
-    const errors = validateAnswers(visible, values);
+    const errors = validateAnswers(form.fields, values);
     if (errors.length > 0) return reject(errors);
 
-    const answers = pickStoredAnswers(visible, values);
+    const answers = pickStoredAnswers(form.fields, values);
     const ownErrors = await form.validate?.({ answers, ctx });
     if (ownErrors?.length) return reject(ownErrors);
 

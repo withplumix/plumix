@@ -1,5 +1,13 @@
 import { auth, plumix } from "plumix";
-import { email, select, text, textarea } from "plumix/fields";
+import {
+  email,
+  group,
+  repeater,
+  select,
+  text,
+  textarea,
+  toggle,
+} from "plumix/fields";
 
 import { defineForm, forms, pageBreak } from "@plumix/plugin-forms";
 import { pages } from "@plumix/plugin-pages";
@@ -27,6 +35,8 @@ const deployOrigin = cloudflareDeployOrigin({
   localOrigin: "http://localhost:3100",
 });
 
+const vegetarian = toggle("vegetarian").label("Vegetarian");
+
 const contact = defineForm("contact", {
   title: "Get in touch",
   submitLabel: "Send enquiry",
@@ -37,6 +47,17 @@ const contact = defineForm("contact", {
       .description("However you would like to be addressed."),
     email("email").label("Email address").required(),
     text("subject").label("Subject").maxLength(80),
+    group("company")
+      .fields([text("name").label("Company"), text("vatNumber").label("VAT")])
+      .label("Your organisation"),
+    repeater("attendees")
+      .fields([
+        text("who").label("Name").required(),
+        vegetarian,
+        text("dietary").label("Dietary needs").visibleWhen(vegetarian.isOn()),
+      ])
+      .label("Attendees")
+      .max(3),
   ],
 });
 

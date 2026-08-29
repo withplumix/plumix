@@ -1,6 +1,8 @@
 import {
+  color,
   date,
   email,
+  group,
   number,
   repeater,
   select,
@@ -87,10 +89,59 @@ describe("defineForm", () => {
 
   test("refuses a field type this release cannot render or store", () => {
     expect(() =>
+      defineForm("application", { fields: [color("brand")] }),
+    ).toThrow(/color/);
+  });
+
+  test("refuses an unsupported type nested inside a repeater row", () => {
+    expect(() =>
       defineForm("application", {
-        fields: [repeater("referees").fields([text("name")])],
+        fields: [repeater("referees").fields([color("brand")])],
       }),
-    ).toThrow(/repeater/);
+    ).toThrow(/referees\[brand\]/);
+  });
+
+  test("refuses an unsupported type nested inside a group", () => {
+    expect(() =>
+      defineForm("application", {
+        fields: [group("about").fields([color("brand")])],
+      }),
+    ).toThrow(/about\[brand\]/);
+  });
+});
+
+describe("a form with rows and groups", () => {
+  const application = defineForm("application", {
+    fields: [
+      group("address").fields([text("city").required(), text("postcode")]),
+      repeater("referees")
+        .fields([text("name").required(), email("email")])
+        .min(1)
+        .max(3),
+    ],
+  });
+
+  test("keeps the row and member schemas on the wire projection", () => {
+    const [address, referees] = application.fields;
+
+    expect(address?.inputType).toBe("group");
+    expect(address?.subFields?.map((field) => field.key)).toEqual([
+      "city",
+      "postcode",
+    ]);
+    expect(referees).toMatchObject({ inputType: "repeater", min: 1, max: 3 });
+    expect(referees?.subFields?.map((field) => field.key)).toEqual([
+      "name",
+      "email",
+    ]);
+  });
+
+  test("reflects the rows and the group in the inferred payload type", () => {
+    expectTypeOf<FormAnswersOf<typeof application>>().toEqualTypeOf<{
+      address: { city: string; postcode: string | undefined } | undefined;
+      referees:
+        readonly { name: string; email: string | undefined }[] | undefined;
+    }>();
   });
 });
 

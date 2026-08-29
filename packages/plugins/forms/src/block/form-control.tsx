@@ -23,12 +23,16 @@ function EmptyAnswer({ name }: { readonly name: string }): ReactNode {
  */
 export function FormControl({
   field,
+  name,
   id,
   answer,
   describedBy,
   invalid,
+  optional,
 }: {
   readonly field: MetaBoxFieldManifestEntry;
+  /** What the answer posts under — the field's key, bracketed by its container. */
+  readonly name: string;
   readonly id: string;
   /**
    * What the visitor already answered, when the form is being rendered
@@ -39,14 +43,21 @@ export function FormControl({
   /** Ids of the help text and error this control is described by. */
   readonly describedBy?: string;
   readonly invalid?: boolean;
+  /**
+   * True inside a repeater row the form does not insist on. The browser's
+   * own `required` is dropped there: the server asks a blank row nothing,
+   * so leaving one alone has to be something the browser lets a visitor
+   * with no JavaScript actually do.
+   */
+  readonly optional?: boolean;
 }): ReactNode {
   const seed = answer === undefined ? field.default : answer;
   const common = {
     className: "plumix-form-control",
-    "data-plumix-form-control": field.key,
+    "data-plumix-form-control": name,
     id,
-    name: field.key,
-    required: field.required,
+    name,
+    required: optional === true ? undefined : field.required,
     "aria-describedby": describedBy,
     "aria-invalid": invalid === true ? ("true" as const) : undefined,
   };
@@ -72,7 +83,7 @@ export function FormControl({
     const selected = asPosted(seed);
     return (
       <>
-        {field.multiple ? <EmptyAnswer name={field.key} /> : null}
+        {field.multiple ? <EmptyAnswer name={name} /> : null}
         <select
           {...common}
           multiple={field.multiple}
@@ -94,7 +105,7 @@ export function FormControl({
   if (field.inputType === "toggle") {
     return (
       <>
-        <EmptyAnswer name={field.key} />
+        <EmptyAnswer name={name} />
         <input
           {...common}
           type="checkbox"

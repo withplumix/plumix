@@ -16,6 +16,7 @@ import type { FormPageBreak, FormPageBreakEntry } from "./steps.js";
 import type { FormFieldError, FormLabelSnapshot } from "./types.js";
 import { isSupportedInputType, SUPPORTED_INPUT_TYPES } from "./contract.js";
 import { FormsError } from "./errors.js";
+import { fieldName } from "./paths.js";
 import { isPageBreak } from "./steps.js";
 
 /**
@@ -178,6 +179,32 @@ export interface FormDefinition<
 export type FormAnswersOf<F extends FormDefinition> = F["_answers"];
 
 /**
+ * Every field a form declares is one this release can render and store —
+ * a group's members and a repeater's row schema included, since they
+ * reach a visitor as controls exactly as a top-level field does. Named by
+ * the wire name so the refusal points at the field inside the container
+ * rather than at a bare key two levels down.
+ */
+function assertSupportedFields(
+  slug: string,
+  fields: readonly MetaBoxFieldManifestEntry[],
+  parent: string | undefined,
+): void {
+  for (const field of fields) {
+    const name = fieldName(parent, field.key);
+    if (!isSupportedInputType(field.inputType)) {
+      throw FormsError.unsupportedFieldType({
+        slug,
+        key: name,
+        inputType: field.inputType,
+        supported: SUPPORTED_INPUT_TYPES,
+      });
+    }
+    assertSupportedFields(slug, field.subFields ?? [], name);
+  }
+}
+
+/**
  * Declare a form. The slug is its identity — submissions carry it and
  * nothing else links them back, so renaming one orphans its history.
  */
@@ -206,16 +233,7 @@ export function defineForm<const Fields extends readonly FormElementInput[]>(
   // hides its own field for good.
   assertMetaBoxFields("form", slug, compiled);
   const fields = compiled.map(toMetaBoxFieldEntry);
-  for (const field of fields) {
-    if (!isSupportedInputType(field.inputType)) {
-      throw FormsError.unsupportedFieldType({
-        slug,
-        key: field.key,
-        inputType: field.inputType,
-        supported: SUPPORTED_INPUT_TYPES,
-      });
-    }
-  }
+  assertSupportedFields(slug, fields, undefined);
   const store = input.store ?? true;
   if (!store && !input.onSubmit) throw FormsError.storesNothing({ slug });
   // `_answers` is type-level only, so the value is everything but it and

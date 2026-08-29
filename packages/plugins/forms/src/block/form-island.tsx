@@ -15,6 +15,7 @@ import * as v from "valibot";
 import type { FormWire } from "../define-form.js";
 import type { FormStep } from "../steps.js";
 import type { FormFieldError } from "../types.js";
+import type { FormRowState } from "./form-markup.js";
 import type { FormProgress } from "./form-progress.js";
 import { readSubmittedValues, visibleFields } from "../answers.js";
 import { CSRF_HEADER, CSRF_HEADER_VALUE } from "../contract.js";
@@ -76,11 +77,12 @@ const onServer = () => false;
 
 /**
  * The form, upgraded: a submit that does not leave the page, errors
- * rendered against the fields that produced them, a timing token fetched
- * once it mounts, and — where the form declares a page break — one step
- * at a time. It renders the same {@link FormMarkup} the server already
- * sent, so what a visitor without JavaScript keeps working with is the
- * thing this builds on rather than a placeholder it fills in.
+ * rendered against the fields that produced them, rows a visitor can add
+ * and remove, a timing token fetched once it mounts, and — where the form
+ * declares a page break — one step at a time. It renders the same
+ * {@link FormMarkup} the server already sent, so what a visitor without
+ * JavaScript keeps working with is the thing this builds on rather than a
+ * placeholder it fills in.
  */
 export function FormIsland({
   form: wire,
@@ -97,6 +99,9 @@ export function FormIsland({
   const [errors, setErrors] = useState<readonly FormFieldError[]>([]);
   const [token, setToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Which rows each repeater is showing. Empty until the visitor adds or
+  // removes one, so the first render is the markup the server sent.
+  const [rows, setRows] = useState<FormRowState>({});
   const [confirmation, setConfirmation] = useState<string | null>(null);
   // Null until the visitor touches the form — which is what keeps the
   // first client render identical to the one the server sent.
@@ -316,6 +321,14 @@ export function FormIsland({
       enhanced={live}
       step={live ? step : undefined}
       stepHeadingRef={heading}
+      rows={rows}
+      onRowsChange={
+        live
+          ? (statePath, ids) => {
+              setRows((current) => ({ ...current, [statePath]: ids }));
+            }
+          : undefined
+      }
       onChange={(event) => {
         setEntered({ step, body: folded(event.currentTarget) });
       }}

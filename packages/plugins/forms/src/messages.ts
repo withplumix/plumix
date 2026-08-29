@@ -71,3 +71,29 @@ export const outOfRangeMessage = (
 
 export const tooLongMessage = (label: string, maxLength: number): string =>
   `${label} must be ${String(maxLength)} characters or fewer.`;
+
+const entries = (count: number): string =>
+  count === 1 ? "1 entry" : `${String(count)} entries`;
+
+export const tooFewRowsMessage = (label: string, min: number): string =>
+  `${label} needs at least ${entries(min)}.`;
+
+export const tooManyRowsMessage = (label: string, max: number): string =>
+  `${label} takes at most ${entries(max)}.`;
+
+/** The heading over one repeater row, numbered as the visitor sees it. */
+export const rowLegend = (label: string, index: number): string =>
+  `${label} ${String(index + 1)}`;
+
+export const removeRowLabel = (label: string, index: number): string =>
+  `Remove ${rowLegend(label, index)}`;
+
+export const ADD_ROW: Label = {
+  id: "plugin.forms.repeater.add",
+  message: "Add another",
+};
+
+export const REMOVE_ROW: Label = {
+  id: "plugin.forms.repeater.remove",
+  message: "Remove",
+};
