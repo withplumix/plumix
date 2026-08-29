@@ -57,3 +57,24 @@ export interface CommentsConfig {
   /** Sliding-window rate limit. Defaults to `{ max: 5, windowMin: 10 }`. */
   readonly rateLimit?: RateLimitConfig;
 }
+
+/**
+ * One refusal, against the control that produced it. A `field` of `""` is
+ * about the submission rather than about an answer — the summary renders
+ * that one as text rather than as a link to a control.
+ *
+ * Here rather than beside the markup that renders it: the published
+ * `./hooks` and `./theme` declarations both name it, and a data shape a
+ * `.d.ts` reaches for should not sit inside a React component module.
+ */
+export interface CommentFormError {
+  readonly field: string;
+  readonly message: string;
+}
+
+/** What the visitor typed, put back when they are handed the form again. */
+export interface CommentFormValues {
+  readonly name?: string;
+  readonly email?: string;
+  readonly body?: string;
+}

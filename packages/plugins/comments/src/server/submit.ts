@@ -1,14 +1,23 @@
 import type { AppContext } from "plumix/plugin";
 import { eq } from "drizzle-orm";
+import { withBasePath } from "plumix";
 import { readVisitorMeta } from "plumix/db";
+import { labelSourceText } from "plumix/i18n";
 import { jsonResponse } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import * as v from "valibot";
 
 import type { ResolvedCommentsConfig } from "../config.js";
+import type { CommentRefusalCode } from "../refusals.js";
+import type { CommentStatus } from "../types.js";
 import type { CommentModerationCandidate } from "./hooks.js";
+import type { EchoedComment } from "./read-submission.js";
+import { RETURN_FIELD, SUBMIT_PATH } from "../contract.js";
+import { REFUSALS } from "../refusals.js";
 import { isCommentingEnabled } from "./enablement.js";
 import { applyModerationVerdict, decideBaselineStatus } from "./moderation.js";
+import { readSubmission } from "./read-submission.js";
+import { rejectPage } from "./reject-page.js";
 import {
   clampParent,
   countPriorApproved,
@@ -29,6 +38,64 @@ const submitInputSchema = v.object({
   website: v.optional(v.string(), ""),
 });
 
+/** The controls a schema refusal can be shown against. */
+const NAMEABLE = ["name", "email", "body"] as const;
+
+/**
+ * The control a schema refusal belongs to, where it belongs to one. A
+ * refusal about `entryId` or `parentId` has no control a visitor can
+ * correct, so it stays a refusal about the submission.
+ */
+function refusedField(issues: readonly v.BaseIssue<unknown>[]): string {
+  const key = issues[0]?.path?.[0]?.key;
+  return NAMEABLE.some((name) => name === key) ? String(key) : "";
+}
+
+/**
+ * Back to the post the comment was written on. Two candidates, in order:
+ * the hidden field the form carries — after a refusal the document is the
+ * endpoint, so the browser's own `Referer` would send the retry back here
+ * and a POST-only route answers a GET with 404 — then the `Referer`
+ * itself. Both are the visitor's to set, so both are held to an origin
+ * this site answers on and refused the endpoint's own path: the response
+ * can be turned into neither an open redirect nor a loop.
+ *
+ * Resolved against the request's own URL, so a relative `returnTo` — the
+ * natural thing for a template to pass — is a path on this site rather
+ * than a value `URL.parse` refuses outright. Both that origin and the
+ * configured one are allowed, which is the pair the dispatcher's own
+ * Origin check accepts: on a multi-host deploy every candidate would
+ * otherwise be rejected and every commenter sent to the site root.
+ */
+function returnUrl(
+  echoed: EchoedComment,
+  request: Request,
+  ctx: AppContext,
+): string {
+  const here = new URL(request.url);
+  const configured = URL.parse(ctx.origin)?.origin;
+  const submitPath = withBasePath(SUBMIT_PATH, ctx.basePath);
+  for (const candidate of [
+    echoed[RETURN_FIELD],
+    request.headers.get("referer"),
+  ]) {
+    const url = URL.parse(candidate ?? "", here);
+    if (url === null || url.pathname === submitPath) continue;
+    if (url.origin === here.origin || url.origin === configured)
+      return url.href;
+  }
+  return withBasePath("/", ctx.basePath);
+}
+
+// `no-store` on every answer: the page carrying the form is edge-cached,
+// and each of these is about one visitor's comment.
+function noStore(body: unknown, status: number): Response {
+  return jsonResponse(body, {
+    status,
+    headers: { "cache-control": "no-store" },
+  });
+}
+
 function isClosed(
   publishedAt: Date | null,
   closeAfterDays: number | null,
@@ -39,29 +106,74 @@ function isClosed(
 
 /**
  * The public comment-submission handler. Mounted at
- * `POST /_plumix/comments/submit` (`auth: "public"`); the dispatcher's
- * CSRF header + same-origin guard runs upstream. Pipeline: validate →
- * honeypot → resolve+gate the entry → identity (logged-in fast path) →
- * salted ip hash + rate limit → trust baseline + `comment:moderate`
- * chain → insert → fire `comment:created`.
+ * `POST /_plumix/comments/submit` as a `formPost` route, so a plain
+ * `<form method="post">` reaches it without the `X-Plumix-Request` header
+ * a browser cannot set on an ordinary submit; the dispatcher's Origin
+ * check is then the whole gate. Pipeline: validate → honeypot → resolve +
+ * gate the entry → identity (logged-in fast path) → salted ip hash + rate
+ * limit → trust baseline + `comment:moderate` chain → insert → fire
+ * `comment:created`.
+ *
+ * One endpoint, two answer shapes, negotiated on what was *sent* rather
+ * than on `Accept`: a JSON body is a scripted caller by construction, and
+ * `fetch` with no `Accept` header of its own is the ordinary way to make
+ * one — negotiating on `Accept` would have flipped every existing caller
+ * to the redirect. Every exit goes through `accepted` or `fail`, including
+ * the honeypot's fake success: answering a trapped submission differently
+ * from a real one is how a bot learns it was caught.
+ *
+ * The request that took the `formPost` exemption arrives with no session
+ * to read — core hands it an authenticator that resolves nobody — so a
+ * signed-in author posting without JavaScript is treated as the anonymous
+ * commenter they are indistinguishable from. Under the default
+ * `first_time` mode that costs them their first comment's fast path and
+ * its `authorUserId` link, and only their first: the prior-approved count
+ * carries them from the second on.
  */
 export function createSubmitHandler(config: ResolvedCommentsConfig) {
   return async (request: Request, ctx: AppContext): Promise<Response> => {
-    let raw: unknown;
-    try {
-      raw = await request.json();
-    } catch {
-      return jsonResponse({ error: "invalid_json" }, { status: 400 });
-    }
-    const parsed = v.safeParse(submitInputSchema, raw);
+    const { form, body, echoed } = await readSubmission(request);
+    const returnTo = returnUrl(echoed, request, ctx);
+
+    const fail = (
+      code: CommentRefusalCode,
+      // The table's own control by default; a schema refusal overrides it
+      // with whichever control the offending answer came from.
+      field: string = REFUSALS[code].field,
+    ): Response => {
+      const refusal = REFUSALS[code];
+      if (!form) return noStore({ error: code }, refusal.status);
+      return rejectPage(ctx, {
+        // A body carrying no readable entry comes back as a form pointing
+        // at no entry, which the retry is refused for. There is nothing
+        // better to put here: the alternative is a bare page, and that
+        // loses the visitor's words as well as the entry.
+        entryId: echoed.entryId ?? 0,
+        parentId: echoed.parentId ?? null,
+        returnTo,
+        values: echoed,
+        errors: [{ field, message: labelSourceText(refusal.message) }],
+        requireEmail: config.requireEmail,
+        status: refusal.status,
+      });
+    };
+    const accepted = (status: CommentStatus): Response =>
+      form
+        ? new Response(null, {
+            status: 303,
+            headers: { location: returnTo, "cache-control": "no-store" },
+          })
+        : noStore({ status }, 200);
+
+    if (body === null) return fail("invalid_json");
+    const parsed = v.safeParse(submitInputSchema, body.raw);
     if (!parsed.success) {
-      return jsonResponse({ error: "invalid_input" }, { status: 400 });
+      return fail("invalid_input", refusedField(parsed.issues));
     }
     const input = parsed.output;
 
     // Filled honeypot → fake success, never store, never reveal the trap.
-    if (isHoneypotTripped(input.website))
-      return jsonResponse({ status: "pending" });
+    if (isHoneypotTripped(input.website)) return accepted("pending");
 
     const [entry] = await ctx.db
       .select({
@@ -72,28 +184,27 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
       })
       .from(entries)
       .where(eq(entries.id, input.entryId));
-    if (entry?.status !== "published") {
-      return jsonResponse({ error: "entry_not_found" }, { status: 404 });
-    }
+    if (entry?.status !== "published") return fail("entry_not_found");
 
     const supports = ctx.plugins.entryTypes.get(entry.type)?.supports;
     if (!isCommentingEnabled(entry.type, supports, config)) {
-      return jsonResponse({ error: "comments_disabled" }, { status: 403 });
+      return fail("comments_disabled");
     }
     if (isClosed(entry.publishedAt, config.closeAfterDays)) {
-      return jsonResponse({ error: "comments_closed" }, { status: 403 });
+      return fail("comments_closed");
     }
 
     // Public route — the dispatcher doesn't authenticate it, so check for a
-    // session here to give logged-in commenters the trust fast path.
+    // session here to give logged-in commenters the trust fast path. On a
+    // request that took the `formPost` exemption this resolves nobody, by
+    // design; reading the session back another way would defeat the guard.
     const auth = await ctx.authenticator.authenticate(request, ctx.db);
     const authUser = auth?.user ?? null;
     const isAuthenticated = authUser !== null;
     // Lowercase so the trust lookup and Gravatar agree on one identity.
     const email = (authUser?.email ?? input.email).trim().toLowerCase();
-    if (config.requireEmail && email.length === 0) {
-      return jsonResponse({ error: "email_required" }, { status: 400 });
-    }
+    if (config.requireEmail && email.length === 0)
+      return fail("email_required");
 
     // Off Cloudflare the address behind the hash is client-spoofable, so
     // the rate limiter is best-effort there and edge/WAF rules are the
@@ -102,7 +213,7 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
       namespace: "comments",
     });
     if (await checkRateLimit(ctx, ipHash, config.rateLimit)) {
-      return jsonResponse({ error: "rate_limited" }, { status: 429 });
+      return fail("rate_limited");
     }
 
     const priorApprovedCount =
@@ -151,6 +262,6 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
 
     await ctx.hooks.doAction("comment:created", row);
 
-    return jsonResponse({ status });
+    return accepted(status);
   };
 }

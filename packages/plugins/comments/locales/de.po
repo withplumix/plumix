@@ -128,3 +128,83 @@ msgstr ""
 #: src/index.ts
 msgid "plugin.comments.keyword.spam"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.name"
+msgstr "Name"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.email"
+msgstr "E-Mail"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.body"
+msgstr "Kommentar"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.submit"
+msgstr "Kommentar absenden"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.summary"
+msgstr "Es gibt ein Problem"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.reject.title"
+msgstr "Kommentar nicht angenommen"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.posted"
+msgstr "Danke — Ihr Kommentar wurde veröffentlicht."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.held"
+msgstr "Danke — Ihr Kommentar wurde zur Prüfung eingereicht."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.error.unreachable"
+msgstr "Ihr Kommentar konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.invalid_json"
+msgstr "Dieser Kommentar konnte nicht gelesen werden."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.invalid_input"
+msgstr "Prüfen Sie die Felder Name und Kommentar und versuchen Sie es erneut."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.entry_not_found"
+msgstr "Dieser Beitrag wurde nicht gefunden."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.comments_disabled"
+msgstr "Kommentare sind hier nicht geöffnet."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.comments_closed"
+msgstr "Diese Diskussion ist geschlossen."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.email_required"
+msgstr "Eine E-Mail-Adresse ist erforderlich."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.rate_limited"
+msgstr "Zu viele Kommentare — versuchen Sie es in Kürze erneut."

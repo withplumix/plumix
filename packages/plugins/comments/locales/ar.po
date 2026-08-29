@@ -128,3 +128,83 @@ msgstr ""
 #: src/index.ts
 msgid "plugin.comments.keyword.spam"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.name"
+msgstr "الاسم"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.email"
+msgstr "البريد الإلكتروني"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.body"
+msgstr "التعليق"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.submit"
+msgstr "نشر التعليق"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.summary"
+msgstr "هناك مشكلة"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.reject.title"
+msgstr "لم يُقبل التعليق"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.posted"
+msgstr "شكرًا — تم نشر تعليقك."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.held"
+msgstr "شكرًا — تم إرسال تعليقك للمراجعة."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.error.unreachable"
+msgstr "تعذّر إرسال تعليقك. يرجى المحاولة مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.invalid_json"
+msgstr "تعذّرت قراءة هذا التعليق."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.invalid_input"
+msgstr "تحقّق من حقلي الاسم والتعليق ثم حاول مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.entry_not_found"
+msgstr "تعذّر العثور على هذه التدوينة."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.comments_disabled"
+msgstr "التعليقات غير مفتوحة هنا."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.comments_closed"
+msgstr "أُغلق هذا النقاش."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.email_required"
+msgstr "البريد الإلكتروني مطلوب."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.rate_limited"
+msgstr "تعليقات كثيرة جدًا — حاول مرة أخرى بعد قليل."

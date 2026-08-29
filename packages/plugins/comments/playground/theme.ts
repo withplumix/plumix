@@ -6,6 +6,10 @@ import { defineTemplate, defineTheme, entry, fallback } from "plumix";
 // Importing the result type also pulls the plugin's `TemplateDepRegistry`
 // augmentation, so `comments` is typed on the render args below.
 import type { ResolvedThread } from "@plumix/plugin-comments/server";
+// The plugin's own form, dogfooded: server-rendered markup that posts
+// without a line of JavaScript, upgraded in place by the island where
+// there is some. The `without JavaScript` e2e drives exactly this.
+import { PlumixCommentForm } from "@plumix/plugin-comments/theme";
 
 // Minimal single-post template that renders the approved comment thread
 // the `comments` template dep resolves for the current entry, recursing
@@ -130,6 +134,7 @@ const single = defineTemplate<EntryData>({
               dangerouslySetInnerHTML: { __html: LOAD_MORE_SCRIPT },
             })
           : null,
+        h(PlumixCommentForm, { entryId: data.entry.id }),
       ),
     );
   },

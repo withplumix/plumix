@@ -32,6 +32,7 @@ plumix migrate generate
 - **A `/comments` moderation page** (under Content) — approve, mark spam, or trash, gated behind a `comment:moderate` capability.
 - **Public endpoints** — `POST /_plumix/comments/submit` and `GET /_plumix/comments/list`, plus a `{type}/{id}/comments` REST resource.
 - **A `comments` template dependency** your theme renders for the current entry.
+- **A comment form** that posts as a plain `<form method="post">`, so it works with JavaScript switched off, and is upgraded in place where there is some.
 - **Moderation hooks** — `comment:moderate` (trust policy) and `comment:created` (notify).
 
 ## Configuration
@@ -60,6 +61,31 @@ import { loadThread } from "@plumix/plugin-comments/server";
 
 const thread = await loadThread(ctx, { type: "post", id });
 ```
+
+Drop the form into a template with the component from the `/theme` entry. It
+posts as a plain `<form method="post">`, so it works before any JavaScript
+loads:
+
+```tsx
+import { defineTemplate } from "plumix/theme";
+
+import { PlumixCommentForm } from "@plumix/plugin-comments/theme";
+
+export const post = defineTemplate({
+  single: {
+    comments: ["current"],
+    render: ({ data, comments }) => (
+      <article>
+        <Thread data={comments?.current} />
+        <PlumixCommentForm entryId={data.entry.id} />
+      </article>
+    ),
+  },
+});
+```
+
+A theme writing its own controls calls `usePlumixCommentForm` from
+`@plumix/plugin-comments/hooks` instead, and posts to the same endpoint.
 
 ## Support
 

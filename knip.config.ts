@@ -411,10 +411,15 @@ const config: KnipConfig = {
       playwright: false,
     },
     "packages/plugins/comments": {
+      // `./theme` and `./hooks` are consumer-facing subpaths — the
+      // component a theme puts in a template and the hook its own island
+      // calls — so their exports are public API rather than dead code.
       entry: [
         "src/index.ts",
         "src/admin/index.tsx",
         "src/server/index.ts",
+        "src/theme.tsx",
+        "src/hooks.ts",
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
         "lingui.config.ts",

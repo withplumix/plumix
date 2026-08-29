@@ -128,3 +128,83 @@ msgstr ""
 #: src/index.ts
 msgid "plugin.comments.keyword.spam"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.name"
+msgstr "Ім'я"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.email"
+msgstr "Електронна пошта"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.body"
+msgstr "Коментар"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.submit"
+msgstr "Опублікувати коментар"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.summary"
+msgstr "Виникла проблема"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.reject.title"
+msgstr "Коментар не прийнято"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.posted"
+msgstr "Дякуємо — ваш коментар опубліковано."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.held"
+msgstr "Дякуємо — ваш коментар надіслано на перевірку."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.error.unreachable"
+msgstr "Не вдалося надіслати ваш коментар. Спробуйте ще раз."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.invalid_json"
+msgstr "Не вдалося прочитати цей коментар."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.invalid_input"
+msgstr "Перевірте поля імені та коментаря й спробуйте ще раз."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.entry_not_found"
+msgstr "Цю публікацію не знайдено."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.comments_disabled"
+msgstr "Коментарі тут не відкриті."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.comments_closed"
+msgstr "Це обговорення закрито."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.email_required"
+msgstr "Потрібна електронна адреса."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.rate_limited"
+msgstr "Забагато коментарів — спробуйте трохи згодом."

@@ -3,7 +3,9 @@ import { definePlugin, tryGetContext } from "plumix/plugin";
 
 import type { CommentsConfig } from "./types.js";
 import { resolveConfig } from "./config.js";
+import { SUBMIT_ROUTE_PATH } from "./contract.js";
 import * as schema from "./db/schema.js";
+import { publishCommentsConfig } from "./registry.js";
 import { COMMENT_MODERATE_CAPABILITY, createCommentsRouter } from "./rpc.js";
 import { createListHandler } from "./server/list.js";
 import { notifyModeratorOfPending } from "./server/notify.js";
@@ -62,6 +64,9 @@ export function comments(options: CommentsConfig = {}) {
       catalogPath: "./locales",
     },
     setup: (ctx) => {
+      // Read by `PlumixCommentForm`, which renders inside a theme template
+      // and has no plugin context to reach this install's config through.
+      publishCommentsConfig(config);
       ctx.registerCapability(COMMENT_MODERATE_CAPABILITY, "editor");
       ctx.registerRpcRouter(createCommentsRouter());
       ctx.registerAdminPage({
@@ -89,8 +94,14 @@ export function comments(options: CommentsConfig = {}) {
       });
       ctx.registerRoute({
         method: "POST",
-        path: "/submit",
+        path: SUBMIT_ROUTE_PATH,
         auth: "public",
+        // A browser cannot set the `X-Plumix-Request` header on a plain
+        // form submit, so without this there is no commenting without
+        // JavaScript at all. The Origin check is then the whole gate, and
+        // the handler reads no session — see `createSubmitHandler` for
+        // what that costs a signed-in author.
+        formPost: true,
         handler: createSubmitHandler(config),
       });
       ctx.registerRoute({
