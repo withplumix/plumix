@@ -37,6 +37,28 @@ export const BACK_LABEL: Label = {
   message: "Back",
 };
 
+/**
+ * What a visitor is told when a captcha did not clear: they got it wrong,
+ * the challenge had already been spent, or the check could not be made at
+ * all. One message for all three — none of them is the visitor's to tell
+ * apart, and every one is answered by solving it again.
+ */
+export const CAPTCHA_FAILED: Label = {
+  id: "plugin.forms.error.captcha",
+  message: "We could not confirm you are not a robot. Please try again.",
+};
+
+/**
+ * The widget is drawn by a script, so a guarded form is the one place
+ * this plugin's no-JavaScript path stops. Say so where the challenge
+ * would have been, rather than leaving a visitor at a box that never
+ * fills in and a submit button that will always be refused.
+ */
+export const CAPTCHA_NEEDS_JS: Label = {
+  id: "plugin.forms.captcha.needs_js",
+  message: "This form needs JavaScript enabled to check you are not a robot.",
+};
+
 /** Shown when the submission never reached the server at all. */
 export const UNREACHABLE: Label = {
   id: "plugin.forms.error.unreachable",

@@ -1,4 +1,4 @@
-import type { AnyPluginDescriptor } from "plumix";
+import type { AnyPluginDescriptor, PlumixEnv } from "plumix";
 import type { BlockSpec } from "plumix/blocks";
 import { archive, defineTheme, entry, fallback } from "plumix";
 import { BlockRenderer } from "plumix/blocks/renderer";
@@ -47,10 +47,13 @@ export async function createFormsHarness(
   plugins: readonly AnyPluginDescriptor[],
   /** What the site's own theme contributes — see `defineTheme`'s `blocks`. */
   themeBlocks: readonly BlockSpec[] = [],
+  /** Runtime bindings, for a config slot that resolves a secret from them. */
+  env: PlumixEnv = {},
 ): Promise<FormsHarness> {
   const harness = await createDispatcherHarness({
     plugins: [blog, ...plugins],
     theme: themeWith(themeBlocks),
+    env,
   });
   await applyFormsSchema(harness.db);
   return harness;

@@ -31,6 +31,8 @@ export type {
   FormValidateEvent,
   FormValidator,
   FormWire,
+  TurnstileConfig,
+  TurnstileWire,
 } from "./define-form.js";
 export { defineForm } from "./define-form.js";
 export { formatSubmission } from "./format.js";

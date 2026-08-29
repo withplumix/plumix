@@ -36,6 +36,7 @@ export default async function globalSetup(): Promise<void> {
     ["contact", "Contact us"],
     ["survey", "Survey"],
     ["gated", "Pick a plan"],
+    ["guarded", "Ask us something"],
   ] as const) {
     await factories.entry.create({
       type: "page",

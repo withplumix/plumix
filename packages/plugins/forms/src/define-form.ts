@@ -1,4 +1,4 @@
-import type { InferStoredFields, JsonValue } from "plumix";
+import type { EnvInput, InferStoredFields, JsonValue } from "plumix";
 import type {
   MetaBoxFieldInput,
   MetaBoxFieldManifestEntry,
@@ -33,6 +33,37 @@ export type FormElementInput = MetaBoxFieldInput | FormPageBreak;
  * a union so a term or an author can join it without a breaking change.
  */
 export type FormBinding = "entry";
+
+/**
+ * The half of a Turnstile configuration a visitor's browser is given.
+ * The site key is public by design — the widget renders from it, and it
+ * identifies the site to Cloudflare rather than authenticating it.
+ *
+ * `secret?: never` is the guard, not decoration: without it a whole
+ * {@link TurnstileConfig} is structurally a `TurnstileWire`, and any
+ * caller handing a {@link FormDefinition} to a client boundary would
+ * serialize the secret into the page. With it, only what
+ * {@link toFormWire} built can go there, and the compiler says so.
+ */
+export interface TurnstileWire {
+  readonly siteKey: string;
+  readonly secret?: never;
+}
+
+/**
+ * Cloudflare Turnstile, opted into by one form — see the `turnstile`
+ * slot on {@link FormDefinitionInput}.
+ *
+ * `secret` takes core's environment-input union, so on Workers — where
+ * the config module is evaluated before any request and secrets arrive
+ * on the per-request `env` — it is written `(env) => env.MY_SECRET`.
+ * Resolution is memoized per isolate, so a rotated secret is picked up
+ * when the isolate recycles rather than on the next request.
+ */
+export interface TurnstileConfig {
+  readonly siteKey: string;
+  readonly secret: EnvInput<string>;
+}
 
 // The fields among a form's elements, at the type level — what the
 // answers shape is inferred from. A page break carries no answer and is
@@ -143,6 +174,19 @@ export interface FormDefinitionInput<
    * every submission it accepted.
    */
   readonly store?: boolean;
+  /**
+   * Put Cloudflare Turnstile in front of this form's submit button — for
+   * the one form actually being attacked, rather than for every form on
+   * the site. The honeypot and timing floor every form already meets are
+   * unaffected, and a form that declares nothing here loads nothing from
+   * Cloudflare. See {@link TurnstileConfig}.
+   *
+   * The widget needs JavaScript, so a form that declares one can only be
+   * completed with it enabled — the one place this plugin's no-script
+   * path stops, and the visitor is told so rather than left at a box
+   * that never fills in.
+   */
+  readonly turnstile?: TurnstileConfig;
 }
 
 /**
@@ -165,11 +209,13 @@ export interface FormWire {
    * every step as one form, and the island is what pages through them.
    */
   readonly pageBreaks: readonly FormPageBreakEntry[];
+  /** A guarded form's site key — see {@link TurnstileWire}. */
+  readonly turnstile: TurnstileWire | undefined;
 }
 
 export interface FormDefinition<
   Fields extends readonly FormElementInput[] = readonly FormElementInput[],
-> extends FormWire {
+> extends Omit<FormWire, "turnstile"> {
   /**
    * The callbacks are held against the widened answers rather than this
    * form's own, so a form is still a `FormDefinition` once the
@@ -181,6 +227,8 @@ export interface FormDefinition<
   readonly onSubmit: FormHandler | undefined;
   readonly store: boolean;
   readonly bind: FormBinding | undefined;
+  /** What the server holds, secret and all — see {@link TurnstileWire}. */
+  readonly turnstile: TurnstileConfig | undefined;
   /**
    * Phantom answers shape — type-level only, never assigned. Read it
    * through {@link FormAnswersOf} rather than off the value, which
@@ -276,6 +324,7 @@ export function defineForm<const Fields extends readonly FormElementInput[]>(
     onSubmit: input.onSubmit as FormHandler | undefined,
     store,
     bind: input.bind,
+    turnstile: input.turnstile,
   };
   return Object.freeze(definition) as FormDefinition<Fields>;
 }
@@ -288,5 +337,11 @@ export function toFormWire(form: FormDefinition): FormWire {
     submitLabel: form.submitLabel,
     fields: form.fields,
     pageBreaks: form.pageBreaks,
+    // Rebuilt rather than passed through, so a property added to the
+    // configuration later does not reach a browser by default.
+    turnstile:
+      form.turnstile === undefined
+        ? undefined
+        : { siteKey: form.turnstile.siteKey },
   };
 }

@@ -469,3 +469,74 @@ test.describe("a theme rendering its own controls", () => {
     await expect(page.locator("[data-testid='subscribed']")).toHaveCount(0);
   });
 });
+
+// The one thing no HTTP-level test can reach: whether a widget actually
+// ends up in the form the island took over. It is drawn explicitly for
+// exactly that reason — Cloudflare's own auto-scan runs once at script
+// load, and an island replaces the markup the server sent — so this is
+// the test that says the wiring holds.
+test.describe("a form guarded by Turnstile", () => {
+  const GUARDED = "[data-plumix-form='guarded'][data-plumix-form-enhanced]";
+  const CHALLENGE = "input[name='cf-turnstile-response']";
+
+  // A stand-in for Cloudflare's `api.js`. The real one is a network
+  // dependency this suite should not take, and what needs proving is
+  // this plugin's half: that the script is asked for at all, that the
+  // container it is handed is the one still on the page after the island
+  // mounted, and that the answer it writes posts under the name the
+  // submit handler reads.
+  async function stubWidget(page: Page): Promise<void> {
+    await page.route("**/turnstile/v0/api.js*", (route) =>
+      route.fulfill({
+        contentType: "text/javascript",
+        body: `window.turnstile = {
+          render: (container, options) => {
+            const answer = document.createElement("input");
+            answer.type = "hidden";
+            answer.name = options["response-field-name"];
+            answer.value = "stub-challenge";
+            container.append(answer);
+            return "widget-1";
+          },
+          reset: () => undefined,
+          remove: () => undefined,
+        };`,
+      }),
+    );
+  }
+
+  // Only the drawing: verifying a challenge is the server's half, and
+  // driving it from here would put a live call to Cloudflare in the
+  // suite for something the dispatcher tests already cover offline.
+  test("draws the challenge into the form the island took over", async ({
+    page,
+  }) => {
+    await stubWidget(page);
+
+    await page.goto("/guarded");
+
+    await expect(page.locator(GUARDED)).toBeVisible();
+    await expect(page.locator(`${GUARDED} ${CHALLENGE}`)).toHaveValue(
+      "stub-challenge",
+    );
+  });
+
+  // Turnstile is drawn by a script, so a guarded form is the one place
+  // the plugin's no-JavaScript path stops. Say so rather than leaving
+  // the visitor at an empty box.
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("says the form needs JavaScript, where the challenge would be", async ({
+      page,
+    }) => {
+      await page.goto("/guarded");
+
+      await expect(page.locator("[data-plumix-form-captcha]")).toBeVisible();
+      // Read off the document rather than through a locator: a
+      // `<noscript>` is parsed as text with scripting off, so there is
+      // no element inside it for one to resolve to.
+      expect(await page.content()).toContain("needs JavaScript enabled");
+    });
+  });
+});

@@ -1,3 +1,4 @@
+import type { PlumixEnv } from "plumix";
 import {
   color,
   date,
@@ -30,6 +31,11 @@ const enquiry = defineForm("enquiry", {
     toggle("newsletter"),
     textarea("message"),
   ],
+});
+
+const guarded = defineForm("guarded", {
+  fields: [text("name")],
+  turnstile: { siteKey: "0x4AAAsite", secret: "shhh" },
 });
 
 describe("defineForm", () => {
@@ -200,6 +206,40 @@ describe("toFormWire", () => {
       "slug",
       "submitLabel",
       "title",
+      // The site key is public and the widget cannot render without it;
+      // the secret beside it in the definition is what must not follow.
+      "turnstile",
     ]);
+  });
+
+  test("hands the browser the site key and not the secret", () => {
+    const wire = toFormWire(guarded);
+
+    expect(wire.turnstile).toEqual({ siteKey: "0x4AAAsite" });
+    expect(JSON.stringify(wire)).not.toContain("shhh");
+  });
+
+  test("carries no captcha for a form that declared none", () => {
+    expect(toFormWire(enquiry).turnstile).toBeUndefined();
+  });
+});
+
+describe("turnstile", () => {
+  test("keeps the secret on the definition, where the server reads it", () => {
+    expect(guarded.turnstile).toEqual({
+      siteKey: "0x4AAAsite",
+      secret: "shhh",
+    });
+  });
+
+  test("takes a resolver for a secret that only exists at request time", () => {
+    const resolver = (env: PlumixEnv) =>
+      String((env as { SECRET?: string }).SECRET);
+    const form = defineForm("resolved", {
+      fields: [text("name")],
+      turnstile: { siteKey: "0x4AAAsite", secret: resolver },
+    });
+
+    expect(form.turnstile?.secret).toBe(resolver);
   });
 });

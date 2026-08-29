@@ -109,6 +109,22 @@ const subscribe = defineForm("subscribe", {
   fields: [email("email").label("Email address").required()],
 });
 
+// A form behind a captcha. Cloudflare's own always-passes test keys, so
+// the playground needs no account and the e2e suite no secret: the site
+// key draws a widget that solves itself, and the secret verifies
+// anything. https://developers.cloudflare.com/turnstile/troubleshooting/testing/
+const guarded = defineForm("guarded", {
+  title: "Ask us something",
+  fields: [
+    text("name").label("Your name").required(),
+    email("email").label("Email address").required(),
+  ],
+  turnstile: {
+    siteKey: "1x00000000000000000000AA",
+    secret: "1x0000000000000000000000000000000AA",
+  },
+});
+
 export default plumix({
   runtime: cloudflare(),
   database: d1({ binding: "DB", session: "auto" }),
@@ -118,6 +134,9 @@ export default plumix({
       ...deployOrigin,
     },
   }),
-  plugins: [pages, forms({ forms: [contact, survey, gated, subscribe] })],
+  plugins: [
+    pages,
+    forms({ forms: [contact, survey, gated, subscribe, guarded] }),
+  ],
   theme,
 });
