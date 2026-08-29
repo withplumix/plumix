@@ -69,6 +69,63 @@ msgid "plugin.forms.error.unreachable"
 msgstr "您的提交未能发送。请重试。"
 
 #. js-lingui-explicit-id
+#. position/total: the 1-based step number and how many steps there are
+#: src/messages.ts
+msgid "plugin.forms.step.position"
+msgstr "第 {position} 步，共 {total} 步"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.required"
+msgstr "请填写{label}。"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.email"
+msgstr "{label}需要形如 name@example.com。"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.url"
+msgstr "{label}需要是以 http:// 或 https:// 开头的网址。"
+
+#. js-lingui-explicit-id
+#. bound: which of the field's limits are set — range, min or max
+#: src/messages.ts
+msgid "plugin.forms.error.range"
+msgstr "{label}必须{bound, select, range {在 {min} 到 {max} 之间} min {不小于 {min}} other {不大于 {max}}}。"
+
+#. js-lingui-explicit-id
+#. max: the field's maximum length in characters
+#: src/messages.ts
+msgid "plugin.forms.error.tooLong"
+msgstr "{label}最多 {max} 个字符。"
+
+#. js-lingui-explicit-id
+#. count: the fewest rows the repeater accepts
+#: src/messages.ts
+msgid "plugin.forms.error.tooFewRows"
+msgstr "{label}至少需要 {count, plural, other {# 项}}。"
+
+#. js-lingui-explicit-id
+#. count: the most rows the repeater accepts
+#: src/messages.ts
+msgid "plugin.forms.error.tooManyRows"
+msgstr "{label}最多接受 {count, plural, other {# 项}}。"
+
+#. js-lingui-explicit-id
+#. number: the row's 1-based position as the visitor sees it
+#: src/messages.ts
+msgid "plugin.forms.repeater.rowLegend"
+msgstr "{label} {number}"
+
+#. js-lingui-explicit-id
+#. number: the row's 1-based position as the visitor sees it
+#: src/messages.ts
+msgid "plugin.forms.repeater.removeRow"
+msgstr "移除{label} {number}"
+
+#. js-lingui-explicit-id
 #: src/messages.ts
 msgid "plugin.forms.repeater.add"
 msgstr "再添加一项"

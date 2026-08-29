@@ -69,6 +69,63 @@ msgid "plugin.forms.error.unreachable"
 msgstr "Ihre Einsendung konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
 
 #. js-lingui-explicit-id
+#. position/total: the 1-based step number and how many steps there are
+#: src/messages.ts
+msgid "plugin.forms.step.position"
+msgstr "Schritt {position} von {total}"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.required"
+msgstr "{label} ist erforderlich."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.email"
+msgstr "{label} muss wie name@example.com aussehen."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.url"
+msgstr "{label} muss eine Webadresse sein, die mit http:// oder https:// beginnt."
+
+#. js-lingui-explicit-id
+#. bound: which of the field's limits are set — range, min or max
+#: src/messages.ts
+msgid "plugin.forms.error.range"
+msgstr "{label} muss {bound, select, range {zwischen {min} und {max} liegen} min {{min} oder mehr betragen} other {{max} oder weniger betragen}}."
+
+#. js-lingui-explicit-id
+#. max: the field's maximum length in characters
+#: src/messages.ts
+msgid "plugin.forms.error.tooLong"
+msgstr "{label} darf höchstens {max} Zeichen lang sein."
+
+#. js-lingui-explicit-id
+#. count: the fewest rows the repeater accepts
+#: src/messages.ts
+msgid "plugin.forms.error.tooFewRows"
+msgstr "{label} braucht mindestens {count, plural, one {# Eintrag} other {# Einträge}}."
+
+#. js-lingui-explicit-id
+#. count: the most rows the repeater accepts
+#: src/messages.ts
+msgid "plugin.forms.error.tooManyRows"
+msgstr "{label} nimmt höchstens {count, plural, one {# Eintrag} other {# Einträge}}."
+
+#. js-lingui-explicit-id
+#. number: the row's 1-based position as the visitor sees it
+#: src/messages.ts
+msgid "plugin.forms.repeater.rowLegend"
+msgstr "{label} {number}"
+
+#. js-lingui-explicit-id
+#. number: the row's 1-based position as the visitor sees it
+#: src/messages.ts
+msgid "plugin.forms.repeater.removeRow"
+msgstr "{label} {number} entfernen"
+
+#. js-lingui-explicit-id
 #: src/messages.ts
 msgid "plugin.forms.repeater.add"
 msgstr "Weitere hinzufügen"
