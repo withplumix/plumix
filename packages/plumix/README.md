@@ -7,7 +7,7 @@
  |_|
 ```
 
-**A modern headless CMS, built for the edge.** Content modeling, a block editor, auth, and a full admin UI — with a pluggable runtime, so your CMS isn't welded to a single platform.
+**A modern CMS, built for the edge.** Content modeling, a block editor, auth, and a full admin UI — with a pluggable runtime, so your CMS isn't welded to a single platform.
 
 > [!WARNING]
 > **Pre-1.0 software.** Minor versions can contain breaking changes — pin your versions.
