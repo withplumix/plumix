@@ -542,6 +542,30 @@ type _EveryTargetedMatcherHasAConstructor = Assert<
 >;
 
 /**
+ * The pieces a rule kind mints a narrowing of *its own* out of, once the five
+ * constructors above have run out. Source: the `*Match` and `*Equals` exports
+ * of `rule-selectors.ts`, which `template-builders.ts` builds `named` from.
+ *
+ * A list rather than a map, because there is nothing in source to pair these
+ * against: a predicate constructor mints no `nodeKind` of its own, so a map
+ * would invent the second column. `satisfies` still pins each name to a façade
+ * export — the direction that matters here, since the page exists only because
+ * they are reachable at all.
+ *
+ * It admits a hole the two above do not: with no map there is nothing to
+ * assert exhaustiveness against, so a fifth constructor published without a
+ * `###` for it fails nothing. A convention-shaped assert (`${string}Match`)
+ * would bind the guard to a naming habit rather than to the source, which is
+ * the drift a roster exists to catch rather than a way of catching it.
+ */
+const MATCH_CONSTRUCTORS = [
+  "entryTypeMatch",
+  "termTaxonomyMatch",
+  "metaEquals",
+  "termMetaEquals",
+] as const satisfies readonly FacadeExport[];
+
+/**
  * Every shape a template can receive, named as a reader would import it.
  * Source: the `TemplateData` union.
  *
@@ -984,7 +1008,7 @@ export const ROSTERS: readonly RegisteredRoster[] = [
   },
   {
     page: "themes/rule-kinds.mdx",
-    items: Object.keys(TARGET_CONSTRUCTORS),
+    items: [...Object.keys(TARGET_CONSTRUCTORS), ...MATCH_CONSTRUCTORS],
     binding: "type-level",
   },
   { page: "access/roles.mdx", items: ROLES, binding: "type-level" },

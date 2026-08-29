@@ -24,7 +24,7 @@ Four pieces make a rule kind:
 - **A slot on `ThemeDescriptor`**, declared through `declare module "plumix"`, so swapping the theme swaps its rules with it.
 - **A snapshot at `theme:ready`**, because a rule set is boot-time state rather than request state.
 
-The selectors themselves you do not write. `entryTypeTargets` and its four siblings mint every matcher the framework knows how to compare, and they take your bind function so the chain ends in _your_ terminal — `.template(...)`, `.define(...)`, whatever you named it.
+The selectors themselves you do not write. `entryTypeTargets` and its four siblings mint every matcher the framework knows how to compare, and they take your bind function so the chain ends in _your_ terminal — `.template(...)`, `.define(...)`, whatever you named it. A narrowing none of them publishes is [yours to mint](#the-match-constructors), out of the same pieces `named` is made of.
 
 Every sample below assumes these registrations, the same ones the rest of this section uses:
 
@@ -264,6 +264,111 @@ export const matcher = archiveTypeTargets("seasonal", bind).selected;
 
 `name` is a plain `string` here, unlike the two above it. The constructor mints `{ nodeKind: "custom", type: "seasonal" }` and types nothing from it, so a rule kind that wants the name checked against `ArchiveTypeRegistry` adds that constraint on its own wrapper — which is also where it would type the payload against the archive's data shape. Without a rule at all these archives fall to `fallback`, since no generic tier claims them.
 
+## The match constructors
+
+The five above publish the narrowings core already knows how to mint. A rule kind wanting one of _its own_ — the way `named` is `templates`' own — needs the two pieces underneath them: the node prefix a narrowing hangs off, and the predicate that goes inside it. Four constructors, and they are the same four `templates` builds `named` out of.
+
+Reach for them only after the five above have run out. A narrowing they already publish is one you should be taking rather than re-minting: `.whereMeta("season", "winter")` is `entryTypeMatch` and `metaEquals` already composed, with the key and the value typed for you.
+
+Two prefixes, not five: an author, date or custom-archive matcher carries a fixed `type` and no name to check, so `authorTargets`, `dateTargets` and `archiveTypeTargets` are already the whole of theirs, and a narrowing of your own on one of those writes its `match` inline.
+
+Then hang the narrowing off your own builder exactly where `forEntryType` hangs `named` — beside the constructor's, not inside it:
+
+```ts
+import type { EntryTypeName, EntryTypeTargets, TierMatchRule } from "plumix";
+import { entryTypeMatch, entryTypeTargets, metaEquals } from "plumix";
+
+const bind = (selected: TierMatchRule) => ({ selected });
+type Selection = ReturnType<typeof bind>;
+
+interface DifficultyBuilder<K extends EntryTypeName>
+  extends Selection, EntryTypeTargets<K, Selection, Selection> {
+  /** Entries an author marked at this difficulty. */
+  difficulty(level: string): Selection;
+}
+
+export function forDifficulty<K extends EntryTypeName>(
+  name: K,
+): DifficultyBuilder<K> {
+  return {
+    ...entryTypeTargets(name, bind, bind),
+    difficulty: (level) =>
+      bind(
+        entryTypeMatch(name, { predicate: metaEquals("difficulty", level) }),
+      ),
+  };
+}
+```
+
+Pick a name no constructor claims. A `slug` of your own would sit after the spread and quietly replace the constructor's, and the interface accepts it because `EntryTypeTargets`' `slug` has the same signature — the mirror of [the bind function's rule](#what-a-bind-function-has-to-return) rather than the same one, since there the spread wins and here yours does. What the constructors do not decide is what your narrowing _means_: the meta key it reads, whether anything else writes that key, and who fills it in are yours, and `named` is what happens when the answer is "the editor's template picker" — see [Why `named` is template-only](#why-named-is-template-only).
+
+### `entryTypeMatch`
+
+The match every entry-type narrowing starts from: the node prefix, with anything you pass merged over it.
+
+```ts
+import type { TierMatchRule } from "plumix";
+import { entryTypeMatch } from "plumix";
+
+export const matchers: TierMatchRule[] = [
+  entryTypeMatch("recipe"),
+  entryTypeMatch("recipe", { slug: "sicilian-caponata" }),
+];
+```
+
+The bare call mints `{ nodeKind: "content", type: "recipe" }` — identical to `entryTypeTargets("recipe", bind, bind).selected`, because that is the call it makes. `name` is checked against `EntryTypeRegistry` here too, so a narrowing of your own rejects a typo that a hand-written object literal would not. The second argument reaches everything on the matcher except `nodeKind` and `type`: minting those from one place is the job, so overriding them is a compile error rather than a quiet way back to writing the matcher by hand.
+
+### `termTaxonomyMatch`
+
+The same, one node kind over: the prefix a taxonomy narrowing starts from.
+
+```ts
+import type { TierMatchRule } from "plumix";
+import { termTaxonomyMatch } from "plumix";
+
+export const matchers: TierMatchRule[] = [
+  termTaxonomyMatch("cuisine"),
+  termTaxonomyMatch("cuisine", { id: 9 }),
+];
+```
+
+`name` is checked against `TermTaxonomyRegistry`, and `extra` is confined the same way.
+
+### `metaEquals`
+
+The predicate half: matches when a content entry's meta value equals `value`.
+
+```ts
+import { entryTypeMatch, metaEquals } from "plumix";
+
+export const winter = entryTypeMatch("recipe", {
+  predicate: metaEquals("season", "winter"),
+});
+```
+
+The comparison is `===` against `data.entry.meta[key]` — the bag the resolved entry carries, which is decoded rather than raw: a `.returns("date")` field is a `Date` there, and a reference is whatever its lookup adapter hydrated rather than the id the JSON holds. Compare against those, not against what you would see in the meta column.
+
+The key is a plain `string`, so reach for this over `.whereMeta()` only when the key is your own rather than the entry type's — `.whereMeta()` is the same comparison with the key and the value typed from the registry.
+
+### `termMetaEquals`
+
+The same predicate for terms, read off the meta a resolved term carries.
+
+```ts
+import { metaEquals, termMetaEquals, termTaxonomyMatch } from "plumix";
+
+export const regional = termTaxonomyMatch("cuisine", {
+  predicate: termMetaEquals("scope", "regional"),
+});
+
+// Compiles, and never matches: the predicate tests for entry data on a term node.
+export const neverMatches = termTaxonomyMatch("cuisine", {
+  predicate: metaEquals("scope", "regional"),
+});
+```
+
+The two are not interchangeable, and nothing rejects the wrong one — `TargetMatcher["predicate"]` takes any `TemplateData` predicate, so that the walk can call every rule's uniformly. A narrowing that never fires on data you can see in the admin is usually this.
+
 ## What a bind function has to return
 
 A `BindRule<S>` has to return **a fresh object literal carrying nothing but its own terminal**. `entryTypeTargets`, `termTaxonomyTargets` and `authorTargets` spread what it returns and hang the narrowings off the result, so anything that is not an own, enumerable key is lost, and any own key named for a narrowing is overwritten by it. `dateTargets` and `archiveTypeTargets` have no narrowings to hang and return your selector untouched — but the contract is what all five hold you to, because one bind function normally serves the lot.
@@ -323,7 +428,7 @@ The five reserved names are `slug`, `id`, `where`, `whereMeta` and `archive`, re
 
 `.named("wide", "Wide layout")` is missing from the shared vocabulary, and deliberately. It is half a contract with the editor's template picker: the id it registers is what the picker writes into an entry's reserved `__plumix_template` meta key, and `collectNamedTemplates` reads the labels back out to populate that picker. A rule kind with no picker behind it holds up no end of that contract. The narrowing would still compile and still attach its predicate — and that predicate reads `__plumix_template`, so the rule would match whichever entries happen to carry the template picker's own value for that id. Silently borrowing another surface's meta key is a worse failure than doing nothing.
 
-It is therefore absent from every constructor above, and reaching for it is a compile error:
+It is therefore absent from every constructor above, and reaching for it is a compile error. The field itself is within reach of `entryTypeMatch`'s second argument, and setting it there registers nothing: `collectNamedTemplates` reads the theme's `templates` and only those, so a picker entry minted by another rule kind is one no picker ever shows.
 
 ```ts
 import type { TierMatchRule } from "plumix";
@@ -338,7 +443,7 @@ const recipes = entryTypeTargets("recipe", bind, bind);
 export const missing = recipes.named;
 ```
 
-If what you want is an author-selectable choice, the mechanism underneath `named` is available to you: add a field to a [meta box](/fields/meta-boxes/) and narrow on it with `.where()`. That gives you the same predicate against a key you own, and a place in the admin where the author actually sets it.
+If what you want is an author-selectable choice, the mechanism underneath `named` is available to you: add a field to a [meta box](/fields/meta-boxes/) and narrow on it with `.where()`. That gives you the same predicate against a key you own, and a place in the admin where the author actually sets it. To put your own name on it rather than reaching through `.where()` every time, mint it from [the match constructors](#the-match-constructors) — which is all `named` itself is, over a key the picker happens to write.
 
 ## The worked example
 
