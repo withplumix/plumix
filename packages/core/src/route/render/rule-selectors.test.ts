@@ -220,20 +220,27 @@ describe("the match constructors", () => {
   });
 });
 
-// Both read the meta the resolved data carries, so a fixture is that bag —
-// `entry.meta` decoded and reference-hydrated, `term.meta` as the term row
-// carries it.
+// Both read the stored bag. A fixture fills the decoded sibling to match, so
+// only the test below turns on the split; `build-resolved-entries.test.ts`
+// runs the same pair off a real row, where the two genuinely differ.
 const entryData = (meta: Record<string, unknown>) =>
-  ({ entry: { meta } }) as unknown as TemplateData;
+  ({ entry: { meta, storedMeta: meta } }) as unknown as TemplateData;
 const termData = (meta: Record<string, unknown>) =>
-  ({ term: { meta } }) as unknown as TemplateData;
+  ({ term: { meta, storedMeta: meta } }) as unknown as TemplateData;
 
 describe("metaEquals", () => {
   const winter = metaEquals("season", "winter");
 
-  test("matches only when the meta value is equal", () => {
+  test("matches only when the stored meta value is equal", () => {
     expect(winter(entryData({ season: "winter" }))).toBe(true);
     expect(winter(entryData({ season: "summer" }))).toBe(false);
+  });
+
+  test("reads the stored bag, not the decoded one a template gets", () => {
+    const decodedOnly = {
+      entry: { meta: { season: "winter" }, storedMeta: {} },
+    } as unknown as TemplateData;
+    expect(winter(decodedOnly)).toBe(false);
   });
 
   // The walk hands a predicate whatever the resolved node carries, so one
@@ -246,9 +253,18 @@ describe("metaEquals", () => {
 describe("termMetaEquals", () => {
   const regional = termMetaEquals("scope", "regional");
 
-  test("matches only when the term-meta value is equal", () => {
+  test("matches only when the stored term-meta value is equal", () => {
     expect(regional(termData({ scope: "regional" }))).toBe(true);
     expect(regional(termData({ scope: "national" }))).toBe(false);
+  });
+
+  // The two bags hold the same values for a term today, so this is the only
+  // guard against the predicate drifting back onto the decoded one.
+  test("reads the stored bag, not the decoded one a template gets", () => {
+    const decodedOnly = {
+      term: { meta: { scope: "regional" }, storedMeta: {} },
+    } as unknown as TemplateData;
+    expect(regional(decodedOnly)).toBe(false);
   });
 
   test("refuses data that is not a term", () => {

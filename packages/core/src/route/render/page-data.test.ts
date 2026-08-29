@@ -3,9 +3,24 @@ import { describe, expect, test } from "vitest";
 import type { AppContext } from "../../context/app.js";
 import type { DispatcherHarness } from "../../test/dispatcher.js";
 import { definePlugin } from "../../plugin/define.js";
+import { date } from "../../plugin/fields/temporal.js";
 import { createTestContext } from "../../test/context.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
 import { resolveListingPage } from "./page-data.js";
+import { forTermTaxonomy } from "./template-builders.js";
+import { resolveTemplate } from "./template-hierarchy.js";
+
+// Declared with `.returns("date")` so a decode pass, if terms had one, would
+// be visible in what the archive carries.
+const _categoryDateFields = [date("launchedOn").returns("date")];
+declare module "../../plugin/fields/contributions.js" {
+  interface TermMetaContributions {
+    categoryDates: {
+      termTaxonomies: "category";
+      fields: typeof _categoryDateFields;
+    };
+  }
+}
 
 const blog = definePlugin("blog", (ctx) => {
   ctx.registerEntryType("post", {
@@ -19,6 +34,11 @@ const blog = definePlugin("blog", (ctx) => {
   ctx.registerTermTaxonomy("category", {
     label: "Categories",
     entryTypes: ["post"],
+  });
+  ctx.registerTermMetaBox("categoryDates", {
+    label: "Dates",
+    termTaxonomies: ["category"],
+    fields: _categoryDateFields,
   });
   ctx.registerTermTaxonomy("mood", {
     label: "Moods",
@@ -128,6 +148,34 @@ describe("resolveListingPage", () => {
       databaseId: term.id,
     });
     expect(page?.data.pagination.total).toBe(1);
+  });
+
+  // Terms skip the decode pass entries get: `resolveEntriesMeta` runs on the
+  // entry rows only, and a term reaches a template as the row it was read as.
+  // `term.meta` is therefore the stored bag already — which is what makes
+  // `termMetaEquals` reading `storedMeta` a contract rather than a coincidence.
+  test("a term archive is not decoded today, and a whereMeta rule matches its stored meta", async () => {
+    const h = await harness();
+    const term = await h.factory.term.create({
+      taxonomy: "category",
+      name: "Design",
+      slug: "design",
+      meta: { launchedOn: "2026-01-01" },
+    });
+
+    const page = await resolveListingPage(contextFor(h), {
+      kind: "term",
+      id: term.id,
+    });
+    if (page?.data.kind !== "taxonomy") throw new Error("expected a term page");
+
+    expect(page.data.term.meta.launchedOn).toBe("2026-01-01");
+    expect(page.data.term.storedMeta).toEqual({ launchedOn: "2026-01-01" });
+
+    const launched = forTermTaxonomy("category")
+      .whereMeta("launchedOn", "2026-01-01")
+      .template(() => null);
+    expect(resolveTemplate([launched], page.node, page.data)).toBe(launched);
   });
 
   test("has no term page in a private taxonomy", async () => {

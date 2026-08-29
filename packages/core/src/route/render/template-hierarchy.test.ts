@@ -176,6 +176,19 @@ declare module "../../plugin/fields/contributions.js" {
   }
 }
 
+// Both bags, same values: the rules below turn on which key is read, not on
+// the stored/decoded split — `build-resolved-entries.test.ts` covers that.
+const entryData = (meta: Record<string, unknown>): TemplateData =>
+  ({
+    kind: "entry",
+    entry: { meta, storedMeta: meta },
+  }) as unknown as TemplateData;
+const termData = (meta: Record<string, unknown>): TemplateData =>
+  ({
+    kind: "taxonomy",
+    term: { meta, storedMeta: meta },
+  }) as unknown as TemplateData;
+
 describe("resolveTemplate — targeted rules (Zone 1)", () => {
   const postNode: ResolvedNode = {
     kind: "content",
@@ -361,9 +374,6 @@ describe("resolveTemplate — predicate rules (whereMeta / where / named)", () =
     slug: "hello",
     databaseId: 1,
   };
-  const entryData = (meta: Record<string, unknown>): TemplateData =>
-    ({ kind: "entry", entry: { meta } }) as unknown as TemplateData;
-
   test("whereMeta matches when the entry-meta value equals; else falls through", () => {
     const rules = [
       forEntryType("post")
@@ -433,9 +443,6 @@ describe("resolveTemplate — term predicate rules (whereMeta / where / named)",
     slug: "news",
     databaseId: 1,
   };
-  const termData = (meta: Record<string, unknown>): TemplateData =>
-    ({ kind: "taxonomy", term: { meta } }) as unknown as TemplateData;
-
   test("whereMeta matches when the term-meta value equals; else falls through", () => {
     const rules = [
       forTermTaxonomy("category")
@@ -661,9 +668,6 @@ describe("explainTemplateResolution", () => {
     slug: "hello",
     databaseId: 1,
   };
-  const entryData = (meta: Record<string, unknown>): TemplateData =>
-    ({ kind: "entry", entry: { meta } }) as unknown as TemplateData;
-
   test("a targeted rule wins; the generic tier and fallback are never evaluated", () => {
     const rules = [
       fallback(() => null),

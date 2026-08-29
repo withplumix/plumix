@@ -183,7 +183,11 @@ export async function termData(
     taxonomy: term.taxonomy,
     // Single archive term: the async builder walks ancestors for the full
     // nested URL (one call — no N+1).
-    term: { ...term, url: await buildTermArchiveUrl(ctx, term) },
+    term: {
+      ...term,
+      storedMeta: term.meta,
+      url: await buildTermArchiveUrl(ctx, term),
+    },
     ...listing,
   });
   return {

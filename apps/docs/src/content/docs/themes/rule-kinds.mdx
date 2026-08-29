@@ -336,7 +336,7 @@ export const matchers: TierMatchRule[] = [
 
 ### `metaEquals`
 
-The predicate half: matches when a content entry's meta value equals `value`.
+The predicate half: matches when a content entry's stored meta value equals `value`.
 
 ```ts
 import { entryTypeMatch, metaEquals } from "plumix";
@@ -346,13 +346,13 @@ export const winter = entryTypeMatch("recipe", {
 });
 ```
 
-The comparison is `===` against `data.entry.meta[key]` — the bag the resolved entry carries, which is decoded rather than raw: a `.returns("date")` field is a `Date` there, and a reference is whatever its lookup adapter hydrated rather than the id the JSON holds. Compare against those, not against what you would see in the meta column.
+The comparison is `===` against `data.entry.storedMeta[key]` — the meta JSON as the row holds it, not the decoded `meta` a template reads. So compare against what you would see in the meta column: the ISO string a `.returns("date")` field stores rather than the `Date` it reads as, and a reference's id rather than the summary its lookup adapter hydrates.
 
 The key is a plain `string`, so reach for this over `.whereMeta()` only when the key is your own rather than the entry type's — `.whereMeta()` is the same comparison with the key and the value typed from the registry.
 
 ### `termMetaEquals`
 
-The same predicate for terms, read off the meta a resolved term carries.
+The same predicate for terms, read off `data.term.storedMeta`.
 
 ```ts
 import { metaEquals, termMetaEquals, termTaxonomyMatch } from "plumix";

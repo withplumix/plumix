@@ -2,6 +2,7 @@ import type { EntryContent } from "@plumix/blocks";
 
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
+import type { JsonObject } from "../../json.js";
 import type { WithResolvedMeta } from "../../rpc/meta/core.js";
 
 /** Public-safe author projection — query select narrows away email + auth columns. */
@@ -17,6 +18,8 @@ export interface ResolvedAuthor {
 // `<Link term>` then degrades to its children. Mirrors `ResolvedEntry.url`.
 export interface ResolvedTerm extends WithResolvedMeta<Term> {
   readonly url: string | null;
+  /** The meta JSON column, as {@link ResolvedEntry.storedMeta}. */
+  readonly storedMeta: JsonObject;
 }
 
 // `content` stays loose so non-blocks serializers (TipTap, etc.) keep
@@ -26,6 +29,15 @@ export interface ResolvedTerm extends WithResolvedMeta<Term> {
 // `url` is null when an ancestor-chain DB walk is required — hierarchical
 // types with a non-null parentId await a follow-up batched resolver.
 export interface ResolvedEntry extends WithResolvedMeta<Entry> {
+  /**
+   * The meta JSON column as it sits in the row, beside the decoded and
+   * reference-hydrated `meta` a template reads. A rule predicate compares
+   * against this one: `whereMeta` is typed from the stored shape
+   * (`StoredMetaOf`), where a `.returns("date")` field is still its ISO string
+   * and a reference is still its id — the primitives `===` can land on, which
+   * a `Date` and a hydrated summary are not.
+   */
+  readonly storedMeta: JsonObject;
   readonly contentBlocks: EntryContent | null;
   readonly terms: readonly ResolvedTerm[];
   readonly author: ResolvedAuthor;

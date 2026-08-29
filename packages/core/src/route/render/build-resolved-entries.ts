@@ -91,10 +91,12 @@ export async function buildResolvedEntries(
     return {
       ...row,
       meta: metaBags[rowIdx] ?? {},
+      storedMeta: row.meta,
       contentBlocks: isEntryContent(row.content) ? row.content : null,
       // Sync term URLs — no per-term CTE (nested terms get null, like entries).
       terms: (termsByEntryId.get(row.id) ?? []).map((term) => ({
         ...term,
+        storedMeta: term.meta,
         url: buildTermArchiveUrlSync(ctx, term),
       })),
       author,
