@@ -10,8 +10,8 @@ staging and production cannot drift apart. There is no builder, no export
 format, and nothing to migrate between environments.
 
 > This release covers the v1 field roster, conditional visibility, validation
-> on the server, and your own `validate` and `onSubmit`. Repeater and group
-> fields, multi-step forms, and the inbox and export arrive next.
+> on the server, multi-step forms, and your own `validate` and `onSubmit`.
+> Repeater and group fields, and the inbox and export, arrive next.
 
 ## Install
 
@@ -101,6 +101,61 @@ form's own defaults hide, and the server drops one the submitted answers hide �
 so a hidden field never reaches the stored payload, and is never held to its
 own `required`, even if something posts a value for it anyway.
 
+## Forms in steps
+
+A long form becomes a wizard by putting a break in the field list:
+
+```ts
+import { pageBreak } from "@plumix/plugin-forms";
+
+const survey = defineForm("survey", {
+  fields: [
+    text("name").required(),
+    email("email").required(),
+    pageBreak("Your plan"),
+    plan,
+    pageBreak("Anything else"),
+    number("seats").visibleWhen(plan.is("pro")),
+    textarea("notes"),
+  ],
+});
+```
+
+The break is an element of the same flat list, not a level of nesting, so
+nothing else about the form changes: the answers type, a field's condition and
+the stored row are what they would be without it. A break's title, where you
+give one, names the step that follows it and is what the progress indicator
+shows; a step you leave untitled reads as "Step 2 of 3". A break at either end
+of the list, or two written in a row, come to nothing.
+
+With JavaScript the visitor fills one step at a time. Moving on checks only the
+fields that step actually shows — a question further on, or one this step's own
+answers hide, cannot hold them up — and takes focus to the new step's heading.
+
+How far they have got, and every answer behind them, is kept in session storage
+for the tab they are filling the form in, written whenever they move between
+steps and whenever a step is refused, so a reload puts them back where they were
+rather than at the start. It is cleared once the submission is made, and a
+browser that refuses site data costs them nothing but that.
+
+A field can name a driver on an earlier step, which is how a step gets skipped:
+
+```ts
+fields: [plan, pageBreak("Seats"), number("seats").visibleWhen(plan.is("pro"))];
+```
+
+A step whose every field is hidden is not shown at all — so with `basic` chosen
+the form above is one step and its button submits, and with `pro` it is two and
+the same button moves on. What the button says and what pressing it does are
+read from the same answers, so the two cannot come apart as the visitor types.
+As everywhere else, a hidden field is absent from the stored submission and is
+never held to its own `required`.
+
+Switch JavaScript off and the same form renders as one long form and submits in
+one go — the wizard is an enhancement, not a requirement, so a break can be
+added to a form that is already live without anyone losing the ability to send
+it.
+
 The slug is the form's identity. Submissions carry it and nothing else links
 them back, so renaming a form orphans its history. Two forms claiming one slug
 fail at boot, naming both contributors.
@@ -154,7 +209,9 @@ submission up.
 
 The browser's own `required`, `type` and range checks still run on the plain
 form, so most mistakes are caught before a request is made; the server is what
-makes the rule true. Errors are returned as `{ field, message }` — the island
+makes the rule true. A wizard applies the same rules, from the same code, when
+the visitor moves off a step — so what a step refuses is what the server would
+have refused. Errors are returned as `{ field, message }` — the island
 renders them inline, and the no-JavaScript path renders the same pair
 server-side.
 
@@ -297,7 +354,9 @@ it; help text and errors are wired to their control through `aria-describedby`;
 a control that failed carries `aria-invalid`; a failed submit renders a live
 `role="alert"` summary, takes focus to it, and links each message to the
 control that produced it. A required field is marked with a glyph as well as
-the `required` attribute, never by colour alone.
+the `required` attribute, never by colour alone. Every step change takes focus
+to the new step's heading, and the step being filled in is marked
+`aria-current="step"` in the progress indicator.
 
 ## Contributing a form from your own plugin
 
@@ -339,6 +398,18 @@ attribute, both public API:
 | Actions       | `plumix-form-actions`      | `data-plumix-form-actions`         |
 | Submit button | `plumix-form-submit`       | `data-plumix-form-submit`          |
 | Confirmation  | `plumix-form-confirmation` | `data-plumix-form-confirmation`    |
+
+A form broken into steps carries five more, none of which a plain form has:
+
+| Part               | Class                                   | Attribute                                         |
+| ------------------ | --------------------------------------- | ------------------------------------------------- |
+| Progress indicator | `plumix-form-steps`                     | `data-plumix-form-steps`                          |
+| One step's mark    | `plumix-form-step-marker`               | `data-plumix-form-step-marker="<n>"`              |
+| The step on screen | `plumix-form-step`                      | `data-plumix-form-step="<n>"`                     |
+| Step heading       | `plumix-form-step-title`                | `data-plumix-form-step-title`                     |
+| Back / Next        | `plumix-form-back` / `plumix-form-next` | `data-plumix-form-back` / `data-plumix-form-next` |
+
+The mark for the step being filled in carries `aria-current="step"`.
 
 An enhanced form also carries `data-plumix-form-enhanced` on the `<form>`
 itself.

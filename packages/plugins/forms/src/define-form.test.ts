@@ -143,6 +143,9 @@ describe("toFormWire", () => {
 
     expect(Object.keys(toFormWire(form)).sort()).toEqual([
       "fields",
+      // Where the wizard is derived from: the browser pages through the
+      // steps, so the breaks have to reach it.
+      "pageBreaks",
       "slug",
       "submitLabel",
       "title",

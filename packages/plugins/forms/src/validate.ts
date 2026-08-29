@@ -1,15 +1,15 @@
 import type { MetaBoxFieldManifestEntry } from "plumix/fields";
 import { labelSourceText } from "plumix/i18n";
 
-import type { SubmittedValues } from "../answers.js";
-import type { FormFieldError } from "../types.js";
+import type { SubmittedValues } from "./answers.js";
+import type { FormFieldError } from "./types.js";
 import {
   emailMessage,
   outOfRangeMessage,
   requiredMessage,
   tooLongMessage,
   urlMessage,
-} from "../messages.js";
+} from "./messages.js";
 
 // The pattern a browser applies to `<input type="email">`, from the HTML
 // standard's "valid e-mail address" definition. Deliberately the same one:
@@ -30,11 +30,17 @@ function isBlank(value: unknown): boolean {
   return Array.isArray(value) && value.length === 0;
 }
 
+// `new URL` in a `try` rather than `URL.parse`, which the island would
+// ship to a browser that may not have it — this module is the one the
+// server and the wizard share, and a throw here would leave a visitor at
+// a Next button that has already cancelled its own submit.
 function urlIsValid(answer: string): boolean {
-  const url = URL.parse(answer);
-  return (
-    url !== null && (url.protocol === "http:" || url.protocol === "https:")
-  );
+  try {
+    const { protocol } = new URL(answer);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function fieldError(

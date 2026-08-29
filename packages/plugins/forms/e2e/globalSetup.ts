@@ -20,18 +20,22 @@ export default async function globalSetup(): Promise<void> {
 
   const factories = factoriesFor(db);
   const author = await factories.user.create({});
-  await factories.entry.create({
-    type: "page",
-    slug: "contact",
-    title: "Contact us",
-    authorId: author.id,
-    status: "published",
-    publishedAt: new Date(),
-    content: {
-      version: "plumix.v2",
-      blocks: [
-        { id: "contact-form", name: "forms/form", attrs: { slug: "contact" } },
-      ],
-    },
-  });
+  for (const [slug, title] of [
+    ["contact", "Contact us"],
+    ["survey", "Survey"],
+    ["gated", "Pick a plan"],
+  ] as const) {
+    await factories.entry.create({
+      type: "page",
+      slug,
+      title,
+      authorId: author.id,
+      status: "published",
+      publishedAt: new Date(),
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: `${slug}-form`, name: "forms/form", attrs: { slug } }],
+      },
+    });
+  }
 }
