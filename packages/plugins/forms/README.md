@@ -11,7 +11,8 @@ format, and nothing to migrate between environments.
 
 > This release covers the v1 field roster, repeater and group fields,
 > conditional visibility, validation on the server, multi-step forms, your own
-> `validate` and `onSubmit`, the theme component and headless hook, an opt-in
+> `validate` and `onSubmit`, the `PlumixForm` component and the
+> `usePlumixForm` hook, an opt-in
 > Turnstile captcha, the submissions inbox, and export and retention.
 
 ## Install
@@ -398,7 +399,7 @@ and drive it there:
 ```tsx
 "use client";
 
-import { usePlumixForm } from "@plumix/plugin-forms/headless";
+import { usePlumixForm } from "@plumix/plugin-forms/hooks";
 
 import type { subscribe } from "../forms.js";
 
@@ -501,7 +502,7 @@ The widget renders once, above the submit button, and on a form broken into
 steps only on the step that submits — a challenge solved two steps early is a
 token that may have expired by the time it is posted. It is rendered by the
 block and by `PlumixForm`, and not by `usePlumixForm`, which renders no markup
-at all: a form driven from the headless hook should not declare one.
+at all, so a form driven from that hook should not declare one.
 
 **A guarded form needs JavaScript.** The widget is drawn by Cloudflare's
 script, so this is the one place this plugin's no-script path stops: a visitor

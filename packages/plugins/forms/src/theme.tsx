@@ -59,7 +59,7 @@ export function PlumixForm({
 /**
  * A form's shape, for a theme rendering its own controls rather than the
  * plugin's: hand it to a `"use client"` island as a prop and read it back
- * there with `usePlumixForm` from `@plumix/plugin-forms/headless`.
+ * there with `usePlumixForm` from `@plumix/plugin-forms/hooks`.
  *
  * Only the half that serializes — the callbacks a form declares stay on
  * the server, which is why this is not the definition itself. Undefined

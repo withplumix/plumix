@@ -17,7 +17,7 @@ import { SubscribeBar } from "./subscribe-bar.js";
 // It also carries the plugin's two theme-facing surfaces: a form dropped
 // straight into the template on the one page seeded without a block, and
 // the site-wide subscribe bar, which is the theme's own markup driven by
-// the headless hook.
+// `usePlumixForm`.
 const page = defineTemplate<EntryData>({
   render: ({ data }): ReactNode => {
     const subscribe = formWire("subscribe");

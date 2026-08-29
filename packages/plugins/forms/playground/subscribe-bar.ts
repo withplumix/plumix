@@ -4,10 +4,10 @@ import type { IslandProps } from "plumix/blocks";
 import type { ReactNode } from "react";
 import { createElement as h, useState, useSyncExternalStore } from "react";
 
-import type { FormWire } from "@plumix/plugin-forms/headless";
-import { usePlumixForm } from "@plumix/plugin-forms/headless";
+import type { FormWire } from "@plumix/plugin-forms/hooks";
+import { usePlumixForm } from "@plumix/plugin-forms/hooks";
 
-// A theme's own subscribe bar, and the reason the headless surface
+// A theme's own subscribe bar, and the reason `usePlumixForm`
 // exists: one input, one button, and markup that is entirely the
 // theme's — none of the plugin's classes, attributes or stylesheet. The
 // hook supplies the fields, the submit and the errors; everything else

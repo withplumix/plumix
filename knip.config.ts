@@ -391,13 +391,13 @@ const config: KnipConfig = {
     // playwright rig (globalSetup + spec) runs under plumix dev. None are
     // static imports knip can follow.
     "packages/plugins/forms": {
-      // `./theme` and `./headless` are consumer-facing subpaths — the
+      // `./theme` and `./hooks` are consumer-facing subpaths — the
       // component a theme puts in a template and the hook its own island
       // calls — so their exports are public API rather than dead code.
       entry: [
         "src/index.ts",
         "src/theme.tsx",
-        "src/headless.ts",
+        "src/hooks.ts",
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
       ],
