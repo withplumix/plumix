@@ -12,6 +12,7 @@ import "./server/hooks.js";
 import type { FormDefinition } from "./define-form.js";
 import { createFormBlock } from "./block/form-block.js";
 import {
+  EXPORT_ROUTE_PATH,
   SUBMISSION_MODERATE_CAPABILITY,
   SUBMISSIONS_PAGE_PATH,
   SUBMISSIONS_SHELL_COMPONENT,
@@ -23,6 +24,8 @@ import {
 import * as schema from "./db/schema.js";
 import { createFormRegistry, publishFormRegistry } from "./registry.js";
 import { createSubmissionsRouter } from "./rpc.js";
+import { createExportHandler } from "./server/export.js";
+import { purgeExpiredSubmissions, RETENTION_CRON } from "./server/retention.js";
 import { createSubmitHandler, tokenHandler } from "./server/submit.js";
 
 export type {
@@ -172,9 +175,34 @@ export function forms(options: FormsConfig = {}) {
       });
       ctx.registerRoute({
         method: "GET",
+        path: EXPORT_ROUTE_PATH,
+        auth: { capability: SUBMISSION_MODERATE_CAPABILITY },
+        handler: createExportHandler(),
+      });
+      ctx.registerRoute({
+        method: "GET",
         path: TOKEN_ROUTE_PATH,
         auth: "public",
         handler: tokenHandler,
+      });
+      // One task for the whole site, registered whether or not a form
+      // declares a period today: a plugin contributing a form runs its
+      // own `setup` after this one, and the registry is read when the
+      // task fires rather than now.
+      ctx.registerScheduledTask({
+        id: "retention-purge",
+        cron: RETENTION_CRON,
+        handler: async (appCtx) => {
+          const deleted = await purgeExpiredSubmissions(
+            appCtx,
+            registry.list(),
+          );
+          if (deleted > 0) {
+            appCtx.logger.info(
+              `[plumix/plugin-forms] retention purge deleted ${String(deleted)} submission${deleted === 1 ? "" : "s"}`,
+            );
+          }
+        },
       });
     },
   });

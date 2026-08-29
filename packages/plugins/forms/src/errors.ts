@@ -1,6 +1,7 @@
 type FormsErrorCode =
   | "duplicate_form_slug"
   | "insert_returned_no_row"
+  | "invalid_retention"
   | "stores_nothing"
   | "unsupported_field_type";
 
@@ -9,6 +10,7 @@ interface FormsErrorFields {
   contributor?: string;
   existingContributor?: string;
   key?: string;
+  retentionDays?: number;
   inputType?: string;
   supported?: readonly string[];
 }
@@ -23,6 +25,7 @@ export class FormsError extends Error {
   readonly contributor: string | undefined;
   readonly existingContributor: string | undefined;
   readonly key: string | undefined;
+  readonly retentionDays: number | undefined;
   readonly inputType: string | undefined;
   readonly supported: readonly string[] | undefined;
 
@@ -37,6 +40,7 @@ export class FormsError extends Error {
     this.contributor = fields.contributor;
     this.existingContributor = fields.existingContributor;
     this.key = fields.key;
+    this.retentionDays = fields.retentionDays;
     this.inputType = fields.inputType;
     this.supported = fields.supported;
   }
@@ -60,6 +64,21 @@ export class FormsError extends Error {
     return new FormsError(
       "insert_returned_no_row",
       `forms: storing a submission for "${ctx.slug}" returned no row.`,
+      ctx,
+    );
+  }
+
+  static invalidRetention(ctx: {
+    slug: string;
+    retentionDays: number;
+  }): FormsError {
+    return new FormsError(
+      "invalid_retention",
+      `forms: form "${ctx.slug}" declares retentionDays: ` +
+        `${String(ctx.retentionDays)}. It is a whole number of days, and a ` +
+        `negative one puts the cutoff in the future — the first nightly ` +
+        `purge would take every submission the form ever had. Use 0 to ` +
+        `keep them indefinitely.`,
       ctx,
     );
   }

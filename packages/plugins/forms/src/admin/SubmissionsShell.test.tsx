@@ -434,3 +434,27 @@ describe("SubmissionsShell", () => {
     });
   });
 });
+
+describe("exporting what the filters name", () => {
+  test("links to both formats, and carries the active filter", async () => {
+    const user = userEvent.setup();
+    stubInbox({ list: [{ submissions: [CONTACT_ROW], nextCursor: null }] });
+    renderShell();
+    await waitFor(() => {
+      expect(screen.getByTestId("forms-export-csv")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("forms-export-csv")).toHaveAttribute(
+      "href",
+      "/_plumix/forms/export?format=csv",
+    );
+    await user.click(screen.getByTestId("forms-status-tab-spam"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("forms-export-json")).toHaveAttribute(
+        "href",
+        "/_plumix/forms/export?format=json&status=spam",
+      );
+    });
+  });
+});
