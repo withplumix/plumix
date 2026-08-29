@@ -19,6 +19,8 @@ export {
   coreMarks,
   coreShortcodes,
   createBlockRegistry,
+  CSRF_HEADER_NAME,
+  CSRF_HEADER_VALUE,
   defineBlock,
   defineEntryContent,
   emitThemeTokenCss,

@@ -25,6 +25,10 @@ export { SignedIn, SignedOut } from "./auth.js";
 export { useAuth } from "./use-auth.js";
 export type { AuthUser, UseAuthResult } from "./use-auth.js";
 
+export { documentBasePath } from "./document-base-path.js";
+export { useIsLive } from "./use-is-live.js";
+export { VISUALLY_HIDDEN_STYLE } from "./visually-hidden.js";
+
 export { Link } from "./link.js";
 export type { LinkProps, LinkTarget } from "./link.js";
 export { Image } from "./image.js";

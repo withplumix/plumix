@@ -2,7 +2,8 @@
 
 import type { IslandProps } from "plumix/blocks";
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useIsLive } from "plumix/blocks/renderer";
 import { labelSourceText } from "plumix/i18n";
 
 import type {
@@ -22,15 +23,6 @@ interface CommentIslandProps {
   readonly idBase: string;
   readonly requireEmail: boolean;
 }
-
-// Nothing external to subscribe to: the store never changes, and the two
-// snapshots differ only in *where* they are read. It is how a component
-// tells "rendered on the server" from "running in a browser" without a
-// state update in an effect, which would cascade a second render on every
-// island on the page.
-const NEVER_CHANGES = () => () => undefined;
-const onClient = () => true;
-const onServer = () => false;
 
 // A held comment is not in the thread when the visitor looks for it, so
 // saying only "posted" would read as having lost it. `spam` and `trash`
@@ -70,11 +62,7 @@ export function CommentIsland({
   idBase,
   requireEmail,
 }: IslandProps<CommentIslandProps>): ReactNode {
-  // False through the server render and the first client render, true once
-  // the island is live — so what marks the form enhanced is JavaScript
-  // running, not markup that shipped with it. A visitor who never gets
-  // this far keeps the plain form and the browser's own checks.
-  const live = useSyncExternalStore(NEVER_CHANGES, onClient, onServer);
+  const live = useIsLive();
   const [errors, setErrors] = useState<readonly CommentFormError[]>([]);
   const [busy, setBusy] = useState(false);
   const [confirmation, setConfirmation] = useState<string | null>(null);

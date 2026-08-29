@@ -47,21 +47,6 @@ export function withoutNulls<T>(value: T): T {
 }
 
 /**
- * The subdirectory prefix this deployment is mounted under, empty at the
- * domain root. A hydrated island has no `PlumixProvider` context and a
- * public page carries no `<base href>`, so it is read from the marker the
- * islands bootstrap `<script>` injects — otherwise a subdirectory
- * deployment would post to the domain root and 404.
- */
-export function documentBasePath(): string {
-  if (typeof document === "undefined") return "";
-  return (
-    document.querySelector<HTMLScriptElement>("script[data-plumix-base-path]")
-      ?.dataset.plumixBasePath ?? ""
-  );
-}
-
-/**
  * What a submission that never reached the endpoint comes back as. It
  * names no field: the summary the plugin's own markup renders reads such
  * an error as text rather than a link to nowhere, and a theme reads it

@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "../csrf.js";
+import { documentBasePath } from "./document-base-path.js";
+
 // Mirrors core's `AuthSessionUser` (the `auth.session` output). `@plumix/core`
 // depends on `@plumix/blocks`, not the reverse, so we restate the shape here
 // rather than import it — the same reason `RendererUser` is mirrored in
@@ -36,26 +39,14 @@ interface SessionEnvelope {
   readonly json?: { readonly user?: AuthUser | null };
 }
 
-// A hydrated island has no `PlumixProvider` context and public pages carry no
-// `<base href>`, so the subdirectory prefix (empty at the domain root) is read
-// from the marker the islands bootstrap `<script>` injects — otherwise a
-// subdirectory deployment would POST to the domain root and 404.
-function sessionEndpoint(): string {
-  if (typeof document === "undefined") return SESSION_PATH;
-  const basePath =
-    document.querySelector<HTMLScriptElement>("script[data-plumix-base-path]")
-      ?.dataset.plumixBasePath ?? "";
-  return `${basePath}${SESSION_PATH}`;
-}
-
 async function fetchSessionUser(signal: AbortSignal): Promise<AuthUser | null> {
-  const response = await fetch(sessionEndpoint(), {
+  const response = await fetch(`${documentBasePath()}${SESSION_PATH}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      // The dispatcher rejects any /_plumix/* mutation missing this header —
-      // the custom header the admin client sends too.
-      "x-plumix-request": "1",
+      // The dispatcher rejects any /_plumix/* mutation missing this — the
+      // admin client sends it too.
+      [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
     },
     body: JSON.stringify({ json: {} }),
     signal,

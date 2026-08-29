@@ -31,7 +31,7 @@ const echoedSchema = v.object({
   [RETURN_FIELD]: optionalString,
 });
 
-export type EchoedComment = Partial<v.InferOutput<typeof echoedSchema>>;
+type EchoedComment = Partial<v.InferOutput<typeof echoedSchema>>;
 
 /** One submitted comment, decoded, before anything has judged it. */
 export interface Submission {

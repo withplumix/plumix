@@ -29,13 +29,3 @@ export const HONEYPOT_FIELD = "website";
  * nothing here for a reserved prefix to keep it apart from.
  */
 export const RETURN_FIELD = "returnTo";
-
-/**
- * The header core's CSRF gate looks for, which a plain `<form>` submit
- * cannot set — the reason the submit route is registered `formPost`. The
- * island sets it, so a scripted submission goes through the ordinary gate
- * and keeps the session the exemption would have taken away. Core does not
- * publish the constant.
- */
-export const CSRF_HEADER = "X-Plumix-Request";
-export const CSRF_HEADER_VALUE = "1";

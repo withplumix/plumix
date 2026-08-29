@@ -2,14 +2,9 @@
 
 import type { IslandProps } from "plumix/blocks";
 import type { ReactNode } from "react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "plumix/blocks";
+import { useIsLive } from "plumix/blocks/renderer";
 import * as v from "valibot";
 
 import type { FormWire } from "../define-form.js";
@@ -18,7 +13,6 @@ import type { FormFieldError } from "../types.js";
 import type { FormRowState } from "./form-markup.js";
 import type { FormProgress } from "./form-progress.js";
 import { readSubmittedValues, visibleFields } from "../answers.js";
-import { CSRF_HEADER, CSRF_HEADER_VALUE } from "../contract.js";
 import { visibleSteps } from "../steps.js";
 import { validateAnswers } from "../validate.js";
 import {
@@ -52,15 +46,6 @@ interface FormIslandProps {
   readonly bound: string | null;
 }
 
-// Nothing external to subscribe to: the store never changes, and the two
-// snapshots differ only in *where* they are read. It is how a component
-// tells "rendered on the server" from "running in a browser" without a
-// state update in an effect, which would cascade a second render on every
-// island on the page.
-const NEVER_CHANGES = () => () => undefined;
-const onClient = () => true;
-const onServer = () => false;
-
 /**
  * The form, upgraded: a submit that does not leave the page, errors
  * rendered against the fields that produced them, rows a visitor can add
@@ -78,11 +63,7 @@ export function FormIsland({
   bound,
 }: IslandProps<FormIslandProps>): ReactNode {
   const form = useMemo(() => withoutNulls(wire), [wire]);
-  // False through the server render and the first client render, true
-  // once the island is live — so what marks the form enhanced is
-  // JavaScript running, not markup that shipped with it. A visitor who
-  // never gets this far keeps the plain form and the browser's checks.
-  const live = useSyncExternalStore(NEVER_CHANGES, onClient, onServer);
+  const live = useIsLive();
   const [errors, setErrors] = useState<readonly FormFieldError[]>([]);
   const token = useTimingToken(tokenPath);
   const [busy, setBusy] = useState(false);
@@ -207,7 +188,7 @@ export function FormIsland({
           // The header a plain form cannot set. Sending it puts this
           // submission through the ordinary CSRF gate rather than the
           // `formPost` exemption the no-JavaScript path takes.
-          [CSRF_HEADER]: CSRF_HEADER_VALUE,
+          [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
         },
         // A `URLSearchParams` body is sent urlencoded, exactly as the
         // plain form posts it, and sets its own content type.
