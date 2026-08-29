@@ -2,7 +2,11 @@ import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { JsonValue } from "../../json.js";
 import type { LinkValue } from "./index.js";
-import { decodeMetaBag, sanitizeMetaInput } from "../../rpc/meta/core.js";
+import {
+  decodeMetaBag,
+  metaScope,
+  sanitizeMetaInput,
+} from "../../rpc/meta/core.js";
 import { link } from "./index.js";
 
 describe("link field builder", () => {
@@ -80,7 +84,9 @@ describe("link server validation and round-trip", () => {
     const value = { url: "https://example.com/x", label: "Go", newTab: true };
     const stored = await writeStored(value);
     expect(stored).toEqual(value);
-    expect(decodeMetaBag(findField, { cta: stored })).toEqual({ cta: value });
+    expect(decodeMetaBag(metaScope([field]), { cta: stored })).toEqual({
+      cta: value,
+    });
   });
 
   test("relative forms and safe non-http schemes are accepted", async () => {
@@ -199,7 +205,7 @@ describe("link phantom value typing", () => {
       LinkValue | undefined
     >();
 
-    // `.default()` prefills the admin form; nothing applies it on read.
+    // `.default()` applies on read, not on write — storage stays optional.
     const _defaulted = link("cta").default({ url: "/pricing" });
     expectTypeOf<(typeof _defaulted)["_stored"]>().toEqualTypeOf<
       LinkValue | undefined

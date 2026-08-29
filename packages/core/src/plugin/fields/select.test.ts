@@ -253,9 +253,9 @@ describe("select() phantom value typing — single value", () => {
 
   test("phantom key + stored shape feed the contribution fold", () => {
     // `_key` carries the literal; `_stored` mirrors the chassis rules —
-    // `.default()` prefills the admin form; nothing applies it on read (so
-    // storage can still lack the
-    // key), `.required()` is write-enforced so storage narrows too.
+    // `.default()` applies on read but nothing enforces it on write (so
+    // storage can still lack the key), `.required()` is write-enforced so
+    // storage narrows too.
     const _plain = select("size").options(["s", "m"]);
     expectTypeOf<(typeof _plain)["_key"]>().toEqualTypeOf<"size">();
     expectTypeOf<(typeof _plain)["_stored"]>().toEqualTypeOf<

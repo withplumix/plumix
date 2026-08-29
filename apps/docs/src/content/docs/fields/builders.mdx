@@ -73,7 +73,7 @@ Eleven methods appear on nearly every builder, and the type of the argument chan
 
 `.label()` and `.description()` set what the admin prints above and below the input. Both take a string or a `Label` descriptor for translation.
 
-`.default()` prefills the admin form when the stored key is absent, and that is the whole of its runtime effect. Nothing applies it on read. The decoder walks only the keys storage holds, so a key nobody has saved reads back as `undefined`. The default reaches storage the first time someone saves the form it prefilled.
+`.default()` stands in wherever the stored key is absent. The decoder fills it on every read, so a key nobody has saved still reads back the declared value — which is what lets the read type drop `undefined`. Storage is untouched: the default reaches the column the first time someone saves the form it prefilled, and until then `storedMeta` has no key at all.
 
 `.required()` marks the field required. The write pipeline enforces it in `strict` mode only, so a save landing on a draft status does not fail on it and the publish does.
 
@@ -151,12 +151,12 @@ The same inference gates `.appearance()`. A single-value field takes `select`, `
 <Aside type="tip" title="Two shapes, not one">
   `.required()` and `.default()` look alike and are not. `.required()` narrows
   both what you read and what is stored, and the server enforces the write to
-  match. `.default()` narrows only the read type, and nothing enforces that
-  narrowing, because the default is a form prefill rather than a read-path
-  fallback. A row saved before you added the field, or written straight through
-  the RPC, reads back as `undefined` against a type that says otherwise. That
-  split is why a builder tracks the two separately, and why a template reading a
-  defaulted key off old rows still wants its own fallback.
+  match. `.default()` narrows only the read type: the decoder supplies the
+  value, so a read never sees `undefined`, but nothing puts it in the column. A
+  row saved before you added the field reads the default and stores nothing.
+  That split is why a builder tracks the two separately, and why `.whereMeta()`
+  — which compares against the stored bag — will not match a defaulted key until
+  something saves it.
 </Aside>
 
 ## From a fields array to typed meta

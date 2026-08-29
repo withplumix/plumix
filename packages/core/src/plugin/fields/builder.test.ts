@@ -179,8 +179,8 @@ describe("phantom value typing", () => {
       string | undefined
     >();
 
-    // `.default()` prefills the admin form; nothing applies it on read,
-    // so the read type narrows but storage can still lack the key.
+    // `.default()` applies on read, so the read type narrows while the
+    // stored shape stays optional — nothing enforces it on write.
     const _defaulted = text("subtitle").default("none");
     expectTypeOf<(typeof _defaulted)["_value"]>().toEqualTypeOf<string>();
     expectTypeOf<(typeof _defaulted)["_stored"]>().toEqualTypeOf<

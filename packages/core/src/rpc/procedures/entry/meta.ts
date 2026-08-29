@@ -13,6 +13,8 @@ import {
   decodeMetaBag as decodeMetaBagCore,
   isEmptyMetaPatch,
   loadMeta,
+  metaScope,
+  metaScopeCache,
   metaValidationConflict,
   MetaValidationError,
   resolveMetaBags as resolveMetaBagsCore,
@@ -193,12 +195,17 @@ export async function resolveEntriesMeta(
     readonly meta: JsonObject | null | undefined;
   }[],
 ): Promise<ResolvedMeta[]> {
+  const scopeFor = metaScopeCache((type) =>
+    listEntryMetaFields(ctx.plugins, type),
+  );
   return resolveMetaBagsCore(
     ctx,
     rows.map((row) => {
-      const findField = (key: string) =>
-        findEntryMetaField(ctx.plugins, row.type, key);
-      return { findField, decoded: decodeMetaBagCore(findField, row.meta) };
+      const scope = scopeFor(row.type);
+      return {
+        findField: scope.findField,
+        decoded: decodeMetaBagCore(scope, row.meta),
+      };
     }),
   );
 }
@@ -207,14 +214,9 @@ export async function loadEntryMeta(
   ctx: AppContext,
   entry: { readonly id: number; readonly type: string },
 ): Promise<ResolvedMeta> {
-  const decoded = await loadMeta(ctx, entries, entries.id, entry.id, (key) =>
-    findEntryMetaField(ctx.plugins, entry.type, key),
-  );
-  return resolveMetaReferencesCore(
-    ctx,
-    (key) => findEntryMetaField(ctx.plugins, entry.type, key),
-    decoded,
-  );
+  const scope = metaScope(listEntryMetaFields(ctx.plugins, entry.type));
+  const decoded = await loadMeta(ctx, entries, entries.id, entry.id, scope);
+  return resolveMetaReferencesCore(ctx, scope.findField, decoded);
 }
 
 /**

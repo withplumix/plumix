@@ -273,9 +273,7 @@ describe("term meta on the render path", () => {
     });
   });
 
-  // Holds with or without the decode pass — it pins `.default()`'s documented
-  // behaviour, not this change. The two tests above are what guard the decode.
-  test("a `.default()` key absent from storage stays absent — defaults are a form prefill, not a decode step", async () => {
+  test("a `.default()` key absent from storage reads back the declared default", async () => {
     const { harness, ctx, run } = await createTracedContext({
       plugins: [dossierPlugin],
     });
@@ -298,8 +296,9 @@ describe("term meta on the render path", () => {
     const [resolved] = entry?.terms ?? [];
     if (!resolved) throw new Error("buildResolvedEntries returned no term");
 
-    expect(resolved.meta.termTone).toBeUndefined();
-    expect(resolved.meta).toEqual({});
+    expect(resolved.meta.termTone).toBe("warm");
+    // The column itself is untouched — a rule predicate still sees no key.
+    expect(resolved.storedMeta).toEqual({});
   });
 
   test("a term on two entries decodes per attachment, in one batched reference query", async () => {

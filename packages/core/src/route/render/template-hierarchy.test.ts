@@ -350,8 +350,8 @@ describe("targeted builders — name checking and data typing", () => {
     forEntryType("product")
       .whereMeta("tier", "gold")
       .template(() => null);
-    // Stored shape, not read shape: `.default()` prefills the admin form;
-    // nothing applies it on read, so storage can still lack the key.
+    // Stored shape, not read shape: `.default()` applies on read, so storage
+    // can still lack the key.
     forEntryType("product")
       .whereMeta("badge", undefined)
       .template(() => null);
@@ -382,8 +382,8 @@ describe("targeted builders — name checking and data typing", () => {
     forTermTaxonomy("brand")
       .whereMeta("brandBadge", "gold")
       .template(() => null);
-    // Stored shape, not read shape: `.default()` prefills the admin form;
-    // nothing applies it on read, so storage can still lack the key.
+    // Stored shape, not read shape: `.default()` applies on read, so storage
+    // can still lack the key.
     forTermTaxonomy("brand")
       .whereMeta("brandTone", undefined)
       .template(() => null);

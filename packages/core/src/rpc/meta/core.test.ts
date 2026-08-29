@@ -5,6 +5,7 @@ import {
   color,
   date,
   datetime,
+  group,
   number,
   repeater,
   select,
@@ -15,6 +16,7 @@ import {
 import {
   decodeMetaBag,
   MetaSanitizationError,
+  metaScope,
   MetaValidationError,
   sanitizeMetaInput,
   validateAndPromoteMetaBag,
@@ -259,34 +261,29 @@ describe("decodeMetaBag (legacy reference self-heal)", () => {
     inputType: "repeater",
     subFields: [heroField],
   } as MetaBoxField;
-  const fields = new Map<string, MetaBoxField>([
-    ["hero", heroField],
-    ["gallery", galleryField],
-    ["rows", rowsField],
-  ]);
-  const findField = (key: string): MetaBoxField | undefined => fields.get(key);
+  const fields = [heroField, galleryField, rowsField];
 
   test("yields the id for a legacy single { id, ... } value", () => {
-    const decoded = decodeMetaBag(findField, {
+    const decoded = decodeMetaBag(metaScope(fields), {
       hero: { id: "42", mime: "image/png", filename: "cat.png" },
     });
     expect(decoded.hero).toBe("42");
   });
 
   test("passes a plain id through untouched", () => {
-    const decoded = decodeMetaBag(findField, { hero: "42" });
+    const decoded = decodeMetaBag(metaScope(fields), { hero: "42" });
     expect(decoded.hero).toBe("42");
   });
 
   test("yields ids for legacy items in a multi array, keeping order", () => {
-    const decoded = decodeMetaBag(findField, {
+    const decoded = decodeMetaBag(metaScope(fields), {
       gallery: [{ id: "42", mime: "image/png" }, "43", { id: "44" }],
     });
     expect(decoded.gallery).toEqual(["42", "43", "44"]);
   });
 
   test("heals legacy objects inside repeater rows without touching siblings", () => {
-    const decoded = decodeMetaBag(findField, {
+    const decoded = decodeMetaBag(metaScope(fields), {
       rows: [
         { hero: { id: "7", mime: "image/png" }, caption: "a" },
         { hero: "8", caption: "b" },
@@ -299,7 +296,7 @@ describe("decodeMetaBag (legacy reference self-heal)", () => {
   });
 
   test("leaves garbage values without an id untouched", () => {
-    const decoded = decodeMetaBag(findField, {
+    const decoded = decodeMetaBag(metaScope(fields), {
       hero: { mime: "image/png" },
     });
     expect(decoded.hero).toEqual({ mime: "image/png" });
@@ -313,38 +310,42 @@ describe("decodeMetaBag (forgiving scalar coercion)", () => {
     type: "string",
     inputType: "text",
   } as MetaBoxField;
-  const findField = (key: string): MetaBoxField | undefined =>
-    key === "title" ? titleField : undefined;
+  const fields = [titleField];
 
   test("coerces a number stored under a string field", () => {
-    expect(decodeMetaBag(findField, { title: 42 }).title).toBe("42");
+    expect(decodeMetaBag(metaScope(fields), { title: 42 }).title).toBe("42");
   });
 
   // A container has no scalar form, so it reads as its JSON rather than as
   // `String()`'s "[object Object]" / "a,b".
   test("reads a container stored under a string field as its JSON", () => {
-    expect(decodeMetaBag(findField, { title: { a: 1 } }).title).toBe('{"a":1}');
-    expect(decodeMetaBag(findField, { title: ["a", "b"] }).title).toBe(
+    expect(decodeMetaBag(metaScope(fields), { title: { a: 1 } }).title).toBe(
+      '{"a":1}',
+    );
+    expect(decodeMetaBag(metaScope(fields), { title: ["a", "b"] }).title).toBe(
       '["a","b"]',
     );
   });
 
   test('reads a stored null under a string field as "null"', () => {
-    expect(decodeMetaBag(findField, { title: null }).title).toBe("null");
+    expect(decodeMetaBag(metaScope(fields), { title: null }).title).toBe(
+      "null",
+    );
   });
 });
 
 describe('decodeMetaBag (.returns("date") projection)', () => {
-  const fields = new Map<string, MetaBoxField>([
-    ["publishedOn", date("publishedOn").returns("date").build()],
-    ["startsAt", datetime("startsAt").returns("date").build()],
-    ["opensAt", time("opensAt").returns("date").build()],
-    ["plainDate", date("plainDate").build()],
-  ]);
-  const findField = (key: string): MetaBoxField | undefined => fields.get(key);
+  const fields = [
+    date("publishedOn").returns("date").build(),
+    datetime("startsAt").returns("date").build(),
+    time("opensAt").returns("date").build(),
+    date("plainDate").build(),
+  ];
 
   test("date projects the stored YYYY-MM-DD to a UTC-midnight Date", () => {
-    const decoded = decodeMetaBag(findField, { publishedOn: "2026-05-03" });
+    const decoded = decodeMetaBag(metaScope(fields), {
+      publishedOn: "2026-05-03",
+    });
     expect(decoded.publishedOn).toBeInstanceOf(Date);
     // UTC anchoring: components are timezone-invariant — the same
     // stored string projects to the same instant on every deployment.
@@ -352,26 +353,30 @@ describe('decodeMetaBag (.returns("date") projection)', () => {
   });
 
   test("datetime projects the stored naive string as UTC wall-clock", () => {
-    const decoded = decodeMetaBag(findField, { startsAt: "2026-05-03T09:30" });
+    const decoded = decodeMetaBag(metaScope(fields), {
+      startsAt: "2026-05-03T09:30",
+    });
     expect(decoded.startsAt).toEqual(new Date("2026-05-03T09:30Z"));
   });
 
   test("time anchors to 1970-01-01 UTC", () => {
-    const decoded = decodeMetaBag(findField, { opensAt: "09:30" });
+    const decoded = decodeMetaBag(metaScope(fields), { opensAt: "09:30" });
     expect(decoded.opensAt).toEqual(new Date("1970-01-01T09:30Z"));
   });
 
   test("default remains the ISO string without .returns('date')", () => {
-    const decoded = decodeMetaBag(findField, { plainDate: "2026-05-03" });
+    const decoded = decodeMetaBag(metaScope(fields), {
+      plainDate: "2026-05-03",
+    });
     expect(decoded.plainDate).toBe("2026-05-03");
   });
 
   test("unparseable stored values round to no value", () => {
     expect(
-      decodeMetaBag(findField, { publishedOn: "garbage" }).publishedOn,
+      decodeMetaBag(metaScope(fields), { publishedOn: "garbage" }).publishedOn,
     ).toBeUndefined();
     expect(
-      decodeMetaBag(findField, { opensAt: "25:99x" }).opensAt,
+      decodeMetaBag(metaScope(fields), { opensAt: "25:99x" }).opensAt,
     ).toBeUndefined();
   });
 });
@@ -422,12 +427,125 @@ describe("sanitizeMetaInput (Date acceptance on temporal fields)", () => {
   });
 
   test("decode → write round-trips the stored string exactly", async () => {
-    const projected = new Map<string, MetaBoxField>([
-      ["startsAt", datetime("startsAt").returns("date").build()],
-    ]);
-    const find = (key: string): MetaBoxField | undefined => projected.get(key);
-    const decoded = decodeMetaBag(find, { startsAt: "2026-05-03T09:30" });
-    const patch = await sanitizeMetaInput(find, { startsAt: decoded.startsAt });
+    const projected = [datetime("startsAt").returns("date").build()];
+    const scope = metaScope(projected);
+    const decoded = decodeMetaBag(scope, { startsAt: "2026-05-03T09:30" });
+    const patch = await sanitizeMetaInput(scope.findField, {
+      startsAt: decoded.startsAt,
+    });
     expect(patch?.upserts.get("startsAt")).toBe("2026-05-03T09:30");
+  });
+});
+
+// `.default()` narrows the read type (`_value`), so the decoder has to make
+// that true: a declared default stands in wherever the bag has no key.
+describe("decodeMetaBag (.default() application)", () => {
+  const fields = [
+    text("tone").default("warm").build(),
+    text("badge").build(),
+    number("rating").default(3).build(),
+    date("launchedOn").default("2026-01-01").returns("date").build(),
+  ];
+
+  test("a defaulted key absent from storage reads back the default", () => {
+    const decoded = decodeMetaBag(metaScope(fields), {});
+    expect(decoded.tone).toBe("warm");
+    expect(decoded.rating).toBe(3);
+  });
+
+  test("a stored value wins over the default", () => {
+    expect(decodeMetaBag(metaScope(fields), { tone: "cool" }).tone).toBe(
+      "cool",
+    );
+  });
+
+  // The never-saved row `loadMeta` reads when the meta column is NULL — the
+  // case the whole change exists for.
+  test("a row with no stored meta at all still gets its defaults", () => {
+    expect(decodeMetaBag(metaScope(fields), null).tone).toBe("warm");
+  });
+
+  test("a field with no default stays absent", () => {
+    const decoded = decodeMetaBag(metaScope(fields), {});
+    expect("badge" in decoded).toBe(false);
+  });
+
+  test("a stored null is a value, not an absence", () => {
+    expect(decodeMetaBag(metaScope(fields), { tone: null }).tone).toBe("null");
+  });
+
+  test("a default is decoded like a stored value", () => {
+    expect(decodeMetaBag(metaScope(fields), {}).launchedOn).toEqual(
+      new Date("2026-01-01T00:00:00.000Z"),
+    );
+  });
+});
+
+describe("decodeMetaBag (.default() inside containers)", () => {
+  const rowsField = repeater("rows")
+    .fields([text("label").default("untitled"), text("href")])
+    .build();
+
+  test("a row missing a defaulted subfield gets the default", () => {
+    const decoded = decodeMetaBag(metaScope([rowsField]), {
+      rows: [{ href: "/a" }, { label: "Set", href: "/b" }],
+    });
+    expect(decoded.rows).toEqual([
+      { label: "untitled", href: "/a" },
+      { label: "Set", href: "/b" },
+    ]);
+  });
+
+  // An absent repeater reads `undefined` — the read type says so, and there
+  // are no rows to carry subfield defaults.
+  test("an absent repeater is not synthesized from its subfield defaults", () => {
+    const decoded = decodeMetaBag(metaScope([rowsField]), {});
+    expect("rows" in decoded).toBe(false);
+  });
+
+  // A row is decoded, not just filled: the default takes the same
+  // `.returns("date")` projection a stored value in that slot would.
+  test("a defaulted subfield is decoded inside the row", () => {
+    const field = repeater("events")
+      .fields([text("name"), date("on").returns("date").default("2026-01-01")])
+      .build();
+    const decoded = decodeMetaBag(metaScope([field]), {
+      events: [{ name: "launch" }],
+    });
+    expect(decoded.events).toEqual([
+      { name: "launch", on: new Date("2026-01-01T00:00:00.000Z") },
+    ]);
+  });
+
+  const seoField = group("seo")
+    .fields([text("title"), text("robots").default("index")])
+    .build();
+
+  test("a group member missing a defaulted key gets the default", () => {
+    const decoded = decodeMetaBag(metaScope([seoField]), {
+      seo: { title: "Home" },
+    });
+    expect(decoded.seo).toEqual({ title: "Home", robots: "index" });
+  });
+
+  // Same rule as the top level — an absent group reads `undefined`.
+  test("an absent group is not synthesized from its member defaults", () => {
+    expect("seo" in decodeMetaBag(metaScope([seoField]), {})).toBe(false);
+  });
+
+  // Nesting is the case a one-level fill misses: both builders permit
+  // arbitrary depth and `InferFields` recurses, so the fill has to as well.
+  test("defaults fill at any depth", () => {
+    const nested = group("outer")
+      .fields([
+        group("inner").fields([text("tone").default("warm")]),
+        repeater("rows").fields([text("label").default("untitled")]),
+      ])
+      .build();
+    expect(
+      decodeMetaBag(metaScope([nested]), { outer: { inner: {}, rows: [{}] } }),
+    ).toEqual({
+      outer: { inner: { tone: "warm" }, rows: [{ label: "untitled" }] },
+    });
   });
 });

@@ -3,12 +3,16 @@ import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
 import type { MetaInput, MetaPatch, ResolvedMeta } from "../../meta/core.js";
 import { users } from "../../../db/schema/users.js";
-import { findUserMetaField } from "../../../plugin/manifest.js";
+import {
+  findUserMetaField,
+  listUserMetaFields,
+} from "../../../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
   isEmptyMetaPatch,
   loadMeta,
+  metaScope,
   resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
   validateMetaReferencesForRpc,
@@ -66,11 +70,11 @@ export async function resolveUserMeta(
   ctx: AppContext,
   raw: JsonObject | null | undefined,
 ): Promise<ResolvedMeta> {
-  const findField = (key: string) => findUserMetaField(ctx.plugins, key);
+  const scope = metaScope(listUserMetaFields(ctx.plugins));
   return resolveMetaReferencesCore(
     ctx,
-    findField,
-    decodeMetaBagCore(findField, raw),
+    scope.findField,
+    decodeMetaBagCore(scope, raw),
   );
 }
 
@@ -78,14 +82,9 @@ export async function loadUserMeta(
   ctx: AppContext,
   user: { readonly id: number },
 ): Promise<ResolvedMeta> {
-  const decoded = await loadMeta(ctx, users, users.id, user.id, (key) =>
-    findUserMetaField(ctx.plugins, key),
-  );
-  return resolveMetaReferencesCore(
-    ctx,
-    (key) => findUserMetaField(ctx.plugins, key),
-    decoded,
-  );
+  const scope = metaScope(listUserMetaFields(ctx.plugins));
+  const decoded = await loadMeta(ctx, users, users.id, user.id, scope);
+  return resolveMetaReferencesCore(ctx, scope.findField, decoded);
 }
 
 /**
