@@ -12,7 +12,8 @@ import {
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { FormAnswersOf } from "./define-form.js";
-import { defineForm } from "./define-form.js";
+import { defineForm, toFormWire } from "./define-form.js";
+import { FormsError } from "./errors.js";
 import { tel } from "./fields.js";
 
 const enquiry = defineForm("enquiry", {
@@ -106,5 +107,45 @@ describe("a form's answers type", () => {
       newsletter: boolean | undefined;
       message: string | undefined;
     }>();
+  });
+});
+
+describe("a form that stores nothing", () => {
+  test("is refused when nothing else would receive the submission", () => {
+    expect(() =>
+      defineForm("void", { fields: [text("name")], store: false }),
+    ).toThrow(FormsError);
+  });
+
+  test("is accepted when its own handler takes them", () => {
+    const form = defineForm("direct", {
+      fields: [text("name")],
+      store: false,
+      onSubmit: () => undefined,
+    });
+
+    expect(form.store).toBe(false);
+  });
+});
+
+describe("toFormWire", () => {
+  // The island's props cross the wire as JSON. What is not on this shape
+  // cannot leak to a browser, which is the point of projecting rather
+  // than passing the definition straight through.
+  test("carries what the markup renders from and nothing else", () => {
+    const form = defineForm("direct", {
+      title: "Get in touch",
+      fields: [text("name")],
+      store: false,
+      validate: () => undefined,
+      onSubmit: () => undefined,
+    });
+
+    expect(Object.keys(toFormWire(form)).sort()).toEqual([
+      "fields",
+      "slug",
+      "submitLabel",
+      "title",
+    ]);
   });
 });

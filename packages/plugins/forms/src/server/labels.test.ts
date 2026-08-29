@@ -1,5 +1,6 @@
 import {
   compileMetaBoxFields,
+  repeater,
   select,
   text,
   toMetaBoxFieldEntry,
@@ -40,6 +41,23 @@ describe("buildLabelSnapshot", () => {
       applicantType: {
         label: "Applying as",
         options: { business: "Business", individual: "Individual" },
+      },
+    });
+  });
+
+  test("records a composite field's own fields under it", () => {
+    const snapshot = buildLabelSnapshot(
+      project([
+        repeater("references")
+          .fields([text("name").label("Their name"), text("email")])
+          .label("References"),
+      ]),
+    );
+
+    expect(snapshot).toEqual({
+      references: {
+        label: "References",
+        fields: { name: { label: "Their name" }, email: { label: "Email" } },
       },
     });
   });

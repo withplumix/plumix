@@ -5,6 +5,7 @@ import { useBasePath } from "plumix/blocks/renderer";
 
 import type { FormRegistry } from "../registry.js";
 import { FORM_BLOCK_NAME, SUBMIT_PATH, TOKEN_PATH } from "../contract.js";
+import { toFormWire } from "../define-form.js";
 import { FormIsland } from "./form-island.js";
 import { FormMarkup } from "./form-markup.js";
 
@@ -49,7 +50,7 @@ export function createFormBlock(registry: FormRegistry): BlockSpec {
     return (
       <FormIsland
         client="load"
-        form={form}
+        form={toFormWire(form)}
         action={action}
         tokenPath={`${basePath}${TOKEN_PATH}`}
         idBase={idBase}

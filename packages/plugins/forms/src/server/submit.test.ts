@@ -1,3 +1,4 @@
+import type { PluginSetupContext } from "plumix/plugin";
 import {
   date,
   email,
@@ -8,10 +9,12 @@ import {
   toggle,
   url,
 } from "plumix/fields";
+import { definePlugin } from "plumix/plugin";
 import { describe, expect, test, vi } from "vitest";
 
-import type { FormDefinition } from "../define-form.js";
+import type { FormDefinition, FormHandler } from "../define-form.js";
 import type { FormsHarness } from "../test/harness.js";
+import type { FormSubmissionCandidate } from "../types.js";
 import {
   FORM_SLUG_FIELD,
   HONEYPOT_FIELD,
@@ -583,5 +586,356 @@ describe("the timing token", () => {
     await submitSignup(harness);
 
     expect((await rows(harness))[0]?.status).toBe("new");
+  });
+});
+
+/** One form, one harness — the shape every case below needs. */
+const harnessWith = (form: FormDefinition) =>
+  createFormsHarness([forms({ forms: [form] })]);
+
+/** Post `fields` to `form`, asking for the envelope the island reads. */
+const submitJson = (
+  harness: FormsHarness,
+  slug: string,
+  fields: Record<string, string> = {},
+) =>
+  post(harness, new URLSearchParams({ [FORM_SLUG_FIELD]: slug, ...fields }), {
+    accept: "application/json",
+  });
+
+describe("a form's own validate", () => {
+  const enquiry = defineForm("enquiry", {
+    fields: [text("name"), number("guests")],
+    validate: ({ answers }) =>
+      answers.guests !== undefined && answers.guests > 4
+        ? [{ field: "guests", message: "We seat four." }]
+        : undefined,
+  });
+
+  test("returns its errors against the fields they name, and stores nothing", async () => {
+    const harness = await harnessWith(enquiry);
+
+    const response = await submitJson(harness, "enquiry", { guests: "6" });
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [{ field: "guests", message: "We seat four." }],
+    });
+    expect(await rows(harness)).toHaveLength(0);
+  });
+
+  test("stores the submission when it returns nothing", async () => {
+    const harness = await harnessWith(enquiry);
+
+    const response = await submitJson(harness, "enquiry", {
+      name: "Ada",
+      guests: "2",
+    });
+
+    response.assertStatus(200);
+    expect(await storedAnswers(harness)).toEqual({ name: "Ada", guests: 2 });
+  });
+
+  test("renders its errors as the form again for a visitor with no JavaScript", async () => {
+    const harness = await harnessWith(enquiry);
+
+    const response = await post(
+      harness,
+      new URLSearchParams({ [FORM_SLUG_FIELD]: "enquiry", guests: "6" }),
+    );
+
+    response.assertStatus(422);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    expect(await response.text()).toContain("We seat four.");
+  });
+
+  test("may take its time and read the request context", async () => {
+    const seen: string[] = [];
+    const asyncCheck = defineForm("async_check", {
+      fields: [text("name")],
+      validate: async ({ ctx }) => {
+        await Promise.resolve();
+        seen.push(new URL(ctx.request.url).pathname);
+        return [{ field: "name", message: "Not today." }];
+      },
+    });
+    const harness = await harnessWith(asyncCheck);
+
+    const response = await submitJson(harness, "async_check", { name: "Ada" });
+
+    response.assertStatus(422);
+    expect(seen).toEqual(["/_plumix/forms/submit"]);
+  });
+
+  test("is never asked about answers the field rules already refused", async () => {
+    const validate = vi.fn(() => undefined);
+    const strict = defineForm("strict", {
+      fields: [text("name").required()],
+      validate,
+    });
+    const harness = await harnessWith(strict);
+
+    await submitJson(harness, "strict", { name: "" });
+
+    expect(validate).not.toHaveBeenCalled();
+  });
+});
+
+describe("a form's onSubmit", () => {
+  const throwing = defineForm("enquiry", {
+    fields: [text("name")],
+    onSubmit: () => {
+      throw new Error("SMTP refused");
+    },
+  });
+
+  const handledBy = (onSubmit: FormHandler) =>
+    defineForm("enquiry", { fields: [text("name")], onSubmit });
+
+  test("runs with the submission already stored, over the answers the row holds", async () => {
+    const seen: { id: number | null; answers: unknown }[] = [];
+    const harness = await harnessWith(
+      handledBy(({ submission, answers }) => {
+        seen.push({ id: submission?.id ?? null, answers });
+      }),
+    );
+
+    await submitJson(harness, "enquiry", { name: "Ada" });
+
+    const [stored] = await rows(harness);
+    expect(seen).toEqual([{ id: stored?.id, answers: { name: "Ada" } }]);
+  });
+
+  test("leaves the submission stored, answers success, and records why it did not finish", async () => {
+    const harness = await harnessWith(throwing);
+
+    const response = await submitJson(harness, "enquiry", { name: "Ada" });
+
+    response.assertStatus(200);
+    const body = await response.json<{ ok: boolean }>();
+    expect(body.ok).toBe(true);
+    const [stored] = await rows(harness);
+    expect(stored?.answers).toEqual({ name: "Ada" });
+    expect(stored?.handlerError).toBe("SMTP refused");
+  });
+
+  test("leaves the row unmarked when it finishes", async () => {
+    const harness = await harnessWith(handledBy(() => undefined));
+
+    await submitJson(harness, "enquiry", { name: "Ada" });
+
+    expect((await rows(harness))[0]?.handlerError).toBeNull();
+  });
+
+  test("is not run for a submission the spam floor caught", async () => {
+    const onSubmit = vi.fn(() => undefined);
+    const harness = await harnessWith(handledBy(onSubmit));
+
+    await submitJson(harness, "enquiry", {
+      name: "Ada",
+      [HONEYPOT_FIELD]: "buy now",
+    });
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect((await rows(harness))[0]?.status).toBe("spam");
+  });
+
+  test("is not run for a submission the form refused", async () => {
+    const onSubmit = vi.fn(() => undefined);
+    const refusing = defineForm("enquiry", {
+      fields: [text("name").required()],
+      onSubmit,
+    });
+    const harness = await harnessWith(refusing);
+
+    await submitJson(harness, "enquiry", { name: "" });
+
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
+describe("a form that opts out of storage", () => {
+  const direct = (onSubmit: FormHandler) =>
+    defineForm("direct", {
+      fields: [text("name").required()],
+      onSubmit,
+      store: false,
+    });
+
+  test("stores nothing and still runs its handler", async () => {
+    const seen: unknown[] = [];
+    const harness = await harnessWith(
+      direct(({ answers, submission }) => {
+        seen.push({ answers, submission });
+      }),
+    );
+
+    const response = await submitJson(harness, "direct", { name: "Ada" });
+
+    response.assertStatus(200);
+    expect(await rows(harness)).toHaveLength(0);
+    expect(seen).toEqual([{ answers: { name: "Ada" }, submission: null }]);
+  });
+
+  test("is still validated", async () => {
+    const harness = await harnessWith(direct(() => undefined));
+
+    const response = await submitJson(harness, "direct", { name: "" });
+
+    response.assertStatus(422);
+  });
+
+  test("answers success even when its handler throws", async () => {
+    const harness = await harnessWith(
+      direct(() => {
+        throw new Error("SMTP refused");
+      }),
+    );
+
+    const response = await submitJson(harness, "direct", { name: "Ada" });
+
+    response.assertStatus(200);
+    expect(await rows(harness)).toHaveLength(0);
+  });
+
+  test("drops a submission the spam floor caught, having nothing to hold it", async () => {
+    const onSubmit = vi.fn(() => undefined);
+    const harness = await harnessWith(direct(onSubmit));
+
+    const response = await submitJson(harness, "direct", {
+      name: "Ada",
+      [HONEYPOT_FIELD]: "buy now",
+    });
+
+    response.assertStatus(200);
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(await rows(harness)).toHaveLength(0);
+  });
+});
+
+describe("the cross-cutting hooks", () => {
+  const listener = (setup: (ctx: PluginSetupContext) => void) =>
+    definePlugin("forms_listener", setup);
+
+  const withListener = (
+    form: FormDefinition,
+    setup: (ctx: PluginSetupContext) => void,
+  ) => createFormsHarness([forms({ forms: [form] }), listener(setup)]);
+
+  test("form:validate rejects a submission with the errors it returns", async () => {
+    const harness = await withListener(signup, (ctx) => {
+      ctx.addFilter("form:validate", (errors) => [
+        ...errors,
+        { field: "email", message: "That address is blocked." },
+      ]);
+    });
+
+    const response = await submitAsIsland(harness);
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [{ field: "email", message: "That address is blocked." }],
+    });
+    expect(await rows(harness)).toHaveLength(0);
+  });
+
+  test("form:validate sees a submission every other check accepted", async () => {
+    const seen: FormSubmissionCandidate[] = [];
+    const harness = await withListener(signup, (ctx) => {
+      ctx.addFilter("form:validate", (errors, candidate) => {
+        seen.push(candidate);
+        return errors;
+      });
+    });
+
+    await submitAsIsland(harness, { [HONEYPOT_FIELD]: "buy now" });
+
+    const [candidate] = seen;
+    expect(candidate?.ipHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(seen.map((one) => ({ ...one, ipHash: null }))).toEqual([
+      {
+        form: "signup",
+        answers: { name: "Ada", email: "ada@example.test" },
+        labels: {
+          name: { label: "Your name" },
+          email: { label: "Email" },
+        },
+        status: "spam",
+        ipHash: null,
+        userAgent: null,
+      },
+    ]);
+  });
+
+  test("form:submitted fires with the stored row", async () => {
+    const seen: (number | null)[] = [];
+    const harness = await withListener(signup, (ctx) => {
+      ctx.addAction("form:submitted", (submission) => {
+        seen.push(submission?.id ?? null);
+      });
+    });
+
+    await submitAsIsland(harness);
+
+    const [stored] = await rows(harness);
+    expect(seen).toEqual([stored?.id]);
+  });
+
+  test("form:submitted fires after the handler, carrying its failure", async () => {
+    const order: string[] = [];
+    const failing = defineForm("failing", {
+      fields: [text("name")],
+      onSubmit: () => {
+        order.push("handler");
+        throw new Error("SMTP refused");
+      },
+    });
+    const harness = await withListener(failing, (ctx) => {
+      ctx.addAction("form:submitted", (submission) => {
+        order.push(`action:${submission?.handlerError ?? ""}`);
+      });
+    });
+
+    await post(
+      harness,
+      new URLSearchParams({ [FORM_SLUG_FIELD]: "failing", name: "Ada" }),
+    );
+
+    expect(order).toEqual(["handler", "action:SMTP refused"]);
+  });
+
+  test("form:submitted fires with no row for a form that stores nothing", async () => {
+    const seen: unknown[] = [];
+    const ephemeral = defineForm("ephemeral", {
+      fields: [text("name")],
+      store: false,
+      onSubmit: () => undefined,
+    });
+    const harness = await withListener(ephemeral, (ctx) => {
+      ctx.addAction("form:submitted", (submission, candidate) => {
+        seen.push({ submission, form: candidate.form });
+      });
+    });
+
+    await post(
+      harness,
+      new URLSearchParams({ [FORM_SLUG_FIELD]: "ephemeral", name: "Ada" }),
+    );
+
+    expect(seen).toEqual([{ submission: null, form: "ephemeral" }]);
+  });
+
+  test("form:submitted does not fire for a submission that was refused", async () => {
+    const fired = vi.fn();
+    const harness = await withListener(signup, (ctx) => {
+      ctx.addAction("form:submitted", fired);
+    });
+
+    const response = await submitAsIsland(harness, { name: "" });
+
+    response.assertStatus(422);
+    expect(fired).not.toHaveBeenCalled();
   });
 });

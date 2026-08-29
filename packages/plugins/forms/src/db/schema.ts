@@ -28,6 +28,8 @@ export const formSubmissions = sqliteTable(
       .default({}),
     ipHash: t.text(),
     userAgent: t.text(),
+    /** Why the form's own `onSubmit` did not finish — see `runHandler`. */
+    handlerError: t.text(),
     createdAt: t
       .integer({ mode: "timestamp" })
       .notNull()

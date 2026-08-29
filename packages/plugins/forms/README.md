@@ -9,10 +9,9 @@ code that renders it, diffs in review, and reverts with `git revert`, so local,
 staging and production cannot drift apart. There is no builder, no export
 format, and nothing to migrate between environments.
 
-> This release covers the v1 field roster, conditional visibility, and
-> validation on the server. Your own `validate` and `onSubmit` callbacks,
-> repeater and group fields, multi-step forms, and the inbox and export arrive
-> next.
+> This release covers the v1 field roster, conditional visibility, validation
+> on the server, and your own `validate` and `onSubmit`. Repeater and group
+> fields, multi-step forms, and the inbox and export arrive next.
 
 ## Install
 
@@ -159,6 +158,138 @@ makes the rule true. Errors are returned as `{ field, message }` — the island
 renders them inline, and the no-JavaScript path renders the same pair
 server-side.
 
+### Your own rules
+
+A form carries the checks its fields cannot express, beside the fields
+themselves. Return one error per field you are refusing, named against that
+field; return nothing to accept:
+
+```ts
+const enquiry = defineForm("enquiry", {
+  fields: [text("name").required(), number("guests")],
+  validate: ({ answers }) =>
+    answers.guests !== undefined && answers.guests > 4
+      ? [{ field: "guests", message: "We seat four." }]
+      : undefined,
+});
+```
+
+It runs on the server only, and only once every field-level rule has passed —
+so `answers` is already the shape the row stores, not whatever the body
+carried. It is `async` if you make it: `ctx` is the request context, so a
+check against the database is a query away.
+
+It runs _before_ the spam floor, so that a trapped bot is answered exactly as
+a person answering badly is. That means your `validate` runs for spam traffic
+too, on a route with no rate limit — keep what it does proportionate to that,
+and put anything expensive behind the `form:validate` filter below, which the
+floor's verdict reaches.
+
+`answers` is the object that goes on to be stored, not a copy — `readonly` is
+a compile-time promise. A `validate` that mutates it changes what is stored.
+
+## What happens next
+
+A form says what to do with a submission it has accepted:
+
+```ts
+import { defineForm, formatSubmission } from "@plumix/plugin-forms";
+
+const enquiry = defineForm("enquiry", {
+  fields: [text("name").required(), email("email").required()],
+  onSubmit: async ({ ctx, ...submission }) => {
+    await notify(ctx, formatSubmission(submission));
+  },
+});
+```
+
+The order is **validate, then store, then the handler**, and that order is the
+promise: the submission is on disk before your handler runs, so a handler that
+throws cannot lose it. When one does, the visitor is still told their enquiry
+was received — because it was — and the reason is recorded on the row for
+whoever reads the inbox. Nothing retries it: the row is the record that
+something is owed.
+
+The visitor waits for your handler, so a slow third party is a slow response.
+Keep it to what has to happen now, and hand anything else to a queue.
+
+A submission the spam floor caught does **not** reach `onSubmit`. Stopping the
+notification is the point of the floor — labelling the row is not enough if the
+email goes out anyway — and the row is still stored, so a false positive is
+still there to be found. Listen on `form:submitted` for the ones the floor
+caught.
+
+`onSubmit` is given the answers, the label snapshot, the stored row (`null`
+when the form stores nothing), and the request context.
+
+### Forms that own their destination
+
+A form whose handler writes somewhere else — your own table, a CRM — can opt
+out of storage entirely and keep everything else:
+
+```ts
+defineForm("signup", {
+  fields: [email("email").required()],
+  store: false,
+  onSubmit: ({ ctx, answers }) => subscribe(ctx, answers.email),
+});
+```
+
+It is still validated, still meets the spam floor, and still runs its handler,
+with nothing written to `form_submissions`. `store: false` without an
+`onSubmit` throws at boot: that form would accept submissions and discard
+them.
+
+This is where the spam floor costs something. A flagged submission reaches
+neither storage nor the handler, so for a form that stores nothing, a false
+positive is gone — which is the trade for opting out, and the reason storage
+is the default.
+
+### Formatting a submission
+
+`formatSubmission` renders one as readable text — every answer under what its
+field was called, in the order the form asked, choices as their option labels
+and repeater rows one at a time — so a notification email does not hand-roll
+formatting:
+
+```
+Your name: Ada
+Email: ada@example.test
+Plan: Pro
+Message:
+  Two lines,
+  as given.
+```
+
+It reads the submission's own label snapshot rather than the live form, so it
+still renders correctly after the form is renamed. A question left unanswered
+is left out. Pass it the stored row, or the `{ answers, labels }` your handler
+was given.
+
+## Hooking every form
+
+Two hooks cover what belongs across all forms rather than in one, so a plugin
+needs no per-form wiring:
+
+```ts
+ctx.addFilter("form:validate", (errors, candidate) =>
+  isSpam(candidate.answers)
+    ? [...errors, { field: "", message: "No." }]
+    : errors,
+);
+
+ctx.addAction("form:submitted", (submission, candidate) => {
+  if (submission) index(submission);
+});
+```
+
+`form:validate` is the last word before anything is written: it sees a
+submission every other check has accepted, and the errors it returns reject it
+exactly as a field rule's do. `form:submitted` fires once the row is stored and
+the form's own handler has run — the row it carries is `null` only for a form
+that opted out of storage, and one carrying `handlerError` is one whose handler
+threw.
+
 ## Accessibility
 
 This is a contract, not a review note. Every control has a label that points at
@@ -222,6 +353,10 @@ serial you can quote to whoever sent it, the answers, and a snapshot of what
 every field and option was called at the time. That snapshot is what keeps the
 row readable after the form changes — without it a renamed field reads as a raw
 key.
+
+A submission whose `onSubmit` threw carries the reason in `handler_error`. The
+answers are untouched — what failed is what the site meant to do next with
+them.
 
 The visitor's IP address is stored only as a salted SHA-256, against a
 per-install salt minted on the first submission. Cleartext addresses are never

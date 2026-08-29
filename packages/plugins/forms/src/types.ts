@@ -17,6 +17,8 @@ export type SubmissionStatus = (typeof SUBMISSION_STATUSES)[number];
 export interface FieldLabelSnapshot {
   readonly label: string;
   readonly options?: Readonly<Record<string, string>>;
+  /** A composite field's own fields — a repeater's row, a group's members. */
+  readonly fields?: FormLabelSnapshot;
 }
 
 export type FormLabelSnapshot = Readonly<Record<string, FieldLabelSnapshot>>;
@@ -32,6 +34,20 @@ export type FormAnswers = JsonObject;
 export interface FormFieldError {
   readonly field: string;
   readonly message: string;
+}
+
+/**
+ * A submission every check has accepted, as the pre-persist filter and
+ * the post-submit action see it. `form` is the slug — the row carries no
+ * foreign key to a form, because a form is a value in the repository.
+ */
+export interface FormSubmissionCandidate {
+  readonly form: string;
+  readonly answers: FormAnswers;
+  readonly labels: FormLabelSnapshot;
+  readonly status: SubmissionStatus;
+  readonly ipHash: string | null;
+  readonly userAgent: string | null;
 }
 
 /**

@@ -3,6 +3,11 @@
 // target loaded — every registry seam merges through that one specifier.
 import { definePlugin } from "plumix";
 
+// Side-effect import: the hook augmentations live beside the code that
+// fires them, and this is the edge tsc keeps so they reach a consumer's
+// registry (core's `hooks/public-hooks.ts` does the same for its own).
+import "./server/hooks.js";
+
 import type { FormDefinition } from "./define-form.js";
 import { createFormBlock } from "./block/form-block.js";
 import {
@@ -19,14 +24,21 @@ export type {
   FormAnswersOf,
   FormDefinition,
   FormDefinitionInput,
+  FormHandler,
+  FormSubmitEvent,
+  FormValidateEvent,
+  FormValidator,
+  FormWire,
 } from "./define-form.js";
 export { defineForm } from "./define-form.js";
+export { formatSubmission } from "./format.js";
 export { FormsError } from "./errors.js";
 export type {
   FieldLabelSnapshot,
   FormAnswers,
   FormFieldError,
   FormLabelSnapshot,
+  FormSubmissionCandidate,
   FormSubmitResponse,
   SubmissionStatus,
 } from "./types.js";

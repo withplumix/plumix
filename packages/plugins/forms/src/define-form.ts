@@ -1,17 +1,67 @@
-import type { InferStoredFields } from "plumix";
+import type { InferStoredFields, JsonValue } from "plumix";
 import type {
   MetaBoxFieldInput,
   MetaBoxFieldManifestEntry,
 } from "plumix/fields";
 import type { Label } from "plumix/i18n";
+import type { AppContext } from "plumix/plugin";
 import {
   assertMetaBoxFields,
   compileMetaBoxFields,
   toMetaBoxFieldEntry,
 } from "plumix/fields";
 
+import type { FormSubmission } from "./db/schema.js";
+import type { FormFieldError, FormLabelSnapshot } from "./types.js";
 import { isSupportedInputType, SUPPORTED_INPUT_TYPES } from "./contract.js";
 import { FormsError } from "./errors.js";
+
+/**
+ * The answers a callback written against no particular form sees, and
+ * what the two callback types default to. Values are optional because a
+ * form's own inferred answers are — which is what keeps the widening in
+ * `defineForm` a single assertion rather than one through `unknown`:
+ * `InferStoredFields` is assignable to this, and not to `FormAnswers`,
+ * whose values exclude `undefined`. The assertion is still an assertion:
+ * `strictFunctionTypes` checks a callback's parameter contravariantly,
+ * so it cannot be dropped.
+ */
+type AnyAnswers = Readonly<Record<string, JsonValue | undefined>>;
+
+/**
+ * What a form's own `validate` and `onSubmit` are handed. `answers` is
+ * the payload as it will be stored — the fields the submitted answers
+ * left visible, in the shape each field stores — so a callback reads the
+ * same values the row does rather than raw strings off the body. It is
+ * the object that goes on to be stored, not a copy: `readonly` is a
+ * compile-time promise, and a callback that mutates it changes the row.
+ */
+export interface FormValidateEvent<Answers> {
+  readonly answers: Answers;
+  readonly ctx: AppContext;
+}
+
+export interface FormSubmitEvent<Answers> extends FormValidateEvent<Answers> {
+  /** What each field and option was called, for {@link formatSubmission}. */
+  readonly labels: FormLabelSnapshot;
+  /** The row, already written — `null` when the form declared `store: false`. */
+  readonly submission: FormSubmission | null;
+}
+
+/**
+ * A form's own check, run once every field-level rule has passed. The
+ * errors it returns are answered exactly like the built-in ones, so name
+ * each against the field that produced it.
+ */
+export type FormValidator<Answers = AnyAnswers> = (
+  event: FormValidateEvent<Answers>,
+) =>
+  readonly FormFieldError[] | void | Promise<readonly FormFieldError[] | void>;
+
+/** What the form does with a submission it has accepted. */
+export type FormHandler<Answers = AnyAnswers> = (
+  event: FormSubmitEvent<Answers>,
+) => void | Promise<void>;
 
 export interface FormDefinitionInput<
   Fields extends readonly MetaBoxFieldInput[],
@@ -24,15 +74,60 @@ export interface FormDefinitionInput<
    * the submit handler and the label snapshot all read that one shape.
    */
   readonly fields: Fields;
+  /**
+   * The checks the field builders cannot express — a date that has to be
+   * in the future, an address already on the list. Runs on the server
+   * only, after every field-level rule has passed, so it reads answers
+   * that are already the right shape — but before the spam floor, so it
+   * runs for trapped submissions too.
+   */
+  readonly validate?: FormValidator<InferStoredFields<Fields>>;
+  /**
+   * What to do with an accepted submission: send the notification, call
+   * the CRM, write the developer's own row. Runs once the submission is
+   * stored — see `runHandler` for what a throw here costs, which is
+   * deliberately not the submission.
+   */
+  readonly onSubmit?: FormHandler<InferStoredFields<Fields>>;
+  /**
+   * Whether to store the submission. On by default: with no notification
+   * subsystem, the stored row is the reliability story. Turn it off for a
+   * form that owns its own destination — one whose `onSubmit` writes to
+   * your table — and it still validates, still meets the spam floor, and
+   * still runs its handler, with nothing left in `form_submissions`.
+   * Turning it off without an `onSubmit` throws: that form would discard
+   * every submission it accepted.
+   */
+  readonly store?: boolean;
 }
 
-export interface FormDefinition<
-  Fields extends readonly MetaBoxFieldInput[] = readonly MetaBoxFieldInput[],
-> {
+/**
+ * The half of a form the browser is given: what the markup renders from,
+ * and nothing else. The island's props cross the wire as JSON, which
+ * would drop a callback silently — so the callbacks are not on this
+ * shape at all, and no server-only closure is handed to a client
+ * boundary in the first place.
+ */
+export interface FormWire {
   readonly slug: string;
   readonly title: Label | undefined;
   readonly submitLabel: Label | undefined;
   readonly fields: readonly MetaBoxFieldManifestEntry[];
+}
+
+export interface FormDefinition<
+  Fields extends readonly MetaBoxFieldInput[] = readonly MetaBoxFieldInput[],
+> extends FormWire {
+  /**
+   * The callbacks are held against the widened answers rather than this
+   * form's own, so a form is still a `FormDefinition` once the
+   * registry has widened it away from its fields. The author writes them
+   * against the narrow shape — {@link FormDefinitionInput} is where the
+   * inference lives — and `defineForm` widens on the way in.
+   */
+  readonly validate: FormValidator | undefined;
+  readonly onSubmit: FormHandler | undefined;
+  readonly store: boolean;
   /**
    * Phantom answers shape — type-level only, never assigned. Read it
    * through {@link FormAnswersOf} rather than off the value, which
@@ -82,6 +177,8 @@ export function defineForm<const Fields extends readonly MetaBoxFieldInput[]>(
       });
     }
   }
+  const store = input.store ?? true;
+  if (!store && !input.onSubmit) throw FormsError.storesNothing({ slug });
   // `_answers` is type-level only, so the value is everything but it and
   // the cast is what carries the inferred shape onto a form nobody can
   // read that key off at runtime.
@@ -90,6 +187,21 @@ export function defineForm<const Fields extends readonly MetaBoxFieldInput[]>(
     title: input.title,
     submitLabel: input.submitLabel,
     fields,
+    // The widening the interface above describes: the author's callbacks
+    // are typed against this form's answers, the stored ones against any.
+    validate: input.validate as FormValidator | undefined,
+    onSubmit: input.onSubmit as FormHandler | undefined,
+    store,
   };
   return Object.freeze(definition) as FormDefinition<Fields>;
+}
+
+/** The form as the island receives it — see {@link FormWire}. */
+export function toFormWire(form: FormDefinition): FormWire {
+  return {
+    slug: form.slug,
+    title: form.title,
+    submitLabel: form.submitLabel,
+    fields: form.fields,
+  };
 }
