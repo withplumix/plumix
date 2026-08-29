@@ -60,3 +60,54 @@ export interface FormSubmissionCandidate {
 export type FormSubmitResponse =
   | { readonly ok: true; readonly message: string }
   | { readonly ok: false; readonly errors: readonly FormFieldError[] };
+
+/**
+ * One submission as the inbox reads it — the stored row with its date as
+ * an ISO string. Declared here rather than beside the router that
+ * returns it: the package entry exports it, and the entry may not reach
+ * `rpc.ts` (see {@link SUBMISSION_MODERATE_CAPABILITY}).
+ */
+export interface SubmissionDTO {
+  readonly id: number;
+  readonly form: string;
+  readonly serial: number;
+  readonly status: SubmissionStatus;
+  readonly answers: FormAnswers;
+  /** The row's own copy, never the live form's — see `buildLabelSnapshot`. */
+  readonly labels: FormLabelSnapshot;
+  readonly entryId: number | null;
+  readonly ipHash: string | null;
+  readonly userAgent: string | null;
+  readonly handlerError: string | null;
+  readonly note: string | null;
+  readonly createdAt: string;
+}
+
+export interface SubmissionsPage {
+  readonly submissions: readonly SubmissionDTO[];
+  /** Pass back as `cursor` for the next page; null at the end of the list. */
+  readonly nextCursor: string | null;
+}
+
+/** A form the inbox can filter by, read from the registry at request time. */
+export interface FormSummary {
+  readonly slug: string;
+  readonly title: string;
+}
+
+/** Which submissions the inbox is looking at: neither filter, or both. */
+export interface SubmissionFilter {
+  readonly form?: string;
+  readonly status?: SubmissionStatus;
+}
+
+export interface SubmissionCounts {
+  /** Every status, counted within the form filter but not the status one. */
+  readonly statuses: Readonly<Record<SubmissionStatus, number>>;
+  /**
+   * Each slug that has submissions, counted within the status filter but
+   * not the form one. Read off the rows rather than the registry, so a
+   * form nobody declares any more still appears with its backlog.
+   */
+  readonly forms: Readonly<Record<string, number>>;
+}

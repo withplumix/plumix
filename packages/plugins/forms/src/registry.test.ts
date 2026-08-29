@@ -18,6 +18,18 @@ describe("createFormRegistry", () => {
     expect(createFormRegistry().get("nope")).toBeUndefined();
   });
 
+  test("names every form it holds, in the order they were registered", () => {
+    const registry = createFormRegistry();
+    const newsletter = defineForm("newsletter", { fields: [text("email")] });
+    registry.register(contact, "config");
+    registry.register(newsletter, "newsletter");
+
+    expect(registry.list()).toEqual([contact, newsletter]);
+
+    registry.reset();
+    expect(registry.list()).toEqual([]);
+  });
+
   test("rejects a second form on the same slug, naming both contributors", () => {
     const registry = createFormRegistry();
     registry.register(contact, "config");

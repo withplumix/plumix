@@ -1,8 +1,22 @@
+import type { SQL } from "plumix/db";
 import type { AppContext } from "plumix/plugin";
-import { eq, isUniqueConstraintErrorOn, sql } from "plumix/db";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  isUniqueConstraintErrorOn,
+  lt,
+  sql,
+} from "plumix/db";
 
 import type { FormSubmission } from "../db/schema.js";
-import type { FormSubmissionCandidate } from "../types.js";
+import type {
+  FormSubmissionCandidate,
+  SubmissionCounts,
+  SubmissionFilter,
+  SubmissionStatus,
+} from "../types.js";
 import { formSubmissions } from "../db/schema.js";
 import { FormsError } from "../errors.js";
 
@@ -66,4 +80,143 @@ export async function recordHandlerFailure(
     .update(formSubmissions)
     .set({ handlerError: reason })
     .where(eq(formSubmissions.id, id));
+}
+
+export interface SubmissionRowPage {
+  readonly submissions: readonly FormSubmission[];
+  /** Pass back as `cursor` for the next page; null at the end of the list. */
+  readonly nextCursor: string | null;
+}
+
+function filterFor(filter: SubmissionFilter): SQL | undefined {
+  const conditions: SQL[] = [];
+  if (filter.form !== undefined) {
+    conditions.push(eq(formSubmissions.formSlug, filter.form));
+  }
+  if (filter.status !== undefined) {
+    conditions.push(eq(formSubmissions.status, filter.status));
+  }
+  return and(...conditions);
+}
+
+// `id` is autoincrement and a submission is never rewritten in place, so
+// id order is arrival order: one column orders the list and carries the
+// cursor, with no same-second tie for `createdAt` to break.
+function decodeCursor(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const id = Number.parseInt(raw, 10);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+/** One page of the inbox, newest first. */
+export async function listSubmissions(
+  ctx: AppContext,
+  input: SubmissionFilter & {
+    readonly limit: number;
+    readonly cursor?: string | null;
+  },
+): Promise<SubmissionRowPage> {
+  const cursor = decodeCursor(input.cursor);
+  const where = cursor
+    ? and(filterFor(input), lt(formSubmissions.id, cursor))
+    : filterFor(input);
+
+  const rows = await ctx.db
+    .select()
+    .from(formSubmissions)
+    .where(where)
+    .orderBy(desc(formSubmissions.id))
+    .limit(input.limit + 1);
+
+  const submissions = rows.slice(0, input.limit);
+  const last = submissions.at(-1);
+  return {
+    submissions,
+    nextCursor: rows.length > input.limit && last ? String(last.id) : null,
+  };
+}
+
+/**
+ * The numbers beside each filter. Each facet is counted with the *other*
+ * facet applied, so switching status keeps the form counts answering
+ * "how many of these are there", rather than restating the page you can
+ * already see.
+ */
+export async function countSubmissions(
+  ctx: AppContext,
+  filter: SubmissionFilter,
+): Promise<SubmissionCounts> {
+  const [byStatus, byForm] = await Promise.all([
+    ctx.db
+      .select({ status: formSubmissions.status, value: count() })
+      .from(formSubmissions)
+      .where(filterFor({ form: filter.form }))
+      .groupBy(formSubmissions.status),
+    ctx.db
+      .select({ form: formSubmissions.formSlug, value: count() })
+      .from(formSubmissions)
+      .where(filterFor({ status: filter.status }))
+      .groupBy(formSubmissions.formSlug),
+  ]);
+
+  const statuses: Record<SubmissionStatus, number> = {
+    new: 0,
+    read: 0,
+    archived: 0,
+    spam: 0,
+  };
+  for (const row of byStatus) statuses[row.status] = row.value;
+  return {
+    statuses,
+    forms: Object.fromEntries(byForm.map((row) => [row.form, row.value])),
+  };
+}
+
+export async function getSubmission(
+  ctx: AppContext,
+  id: number,
+): Promise<FormSubmission | null> {
+  const [row] = await ctx.db
+    .select()
+    .from(formSubmissions)
+    .where(eq(formSubmissions.id, id));
+  return row ?? null;
+}
+
+export async function setSubmissionStatus(
+  ctx: AppContext,
+  id: number,
+  status: SubmissionStatus,
+): Promise<FormSubmission | null> {
+  const [row] = await ctx.db
+    .update(formSubmissions)
+    .set({ status })
+    .where(eq(formSubmissions.id, id))
+    .returning();
+  return row ?? null;
+}
+
+/** `null` clears the note rather than storing an empty one. */
+export async function setSubmissionNote(
+  ctx: AppContext,
+  id: number,
+  note: string | null,
+): Promise<FormSubmission | null> {
+  const [row] = await ctx.db
+    .update(formSubmissions)
+    .set({ note })
+    .where(eq(formSubmissions.id, id))
+    .returning();
+  return row ?? null;
+}
+
+export async function deleteSubmission(
+  ctx: AppContext,
+  id: number,
+): Promise<boolean> {
+  const deleted = await ctx.db
+    .delete(formSubmissions)
+    .where(eq(formSubmissions.id, id))
+    .returning({ id: formSubmissions.id });
+  return deleted.length > 0;
 }

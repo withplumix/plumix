@@ -4,7 +4,16 @@ import { describe, expect, test } from "vitest";
 
 import { formSubmissions } from "../db/schema.js";
 import { createFormsTestDb } from "../test/db.js";
-import { insertSubmission, recordHandlerFailure } from "./repository.js";
+import {
+  countSubmissions,
+  deleteSubmission,
+  getSubmission,
+  insertSubmission,
+  listSubmissions,
+  recordHandlerFailure,
+  setSubmissionNote,
+  setSubmissionStatus,
+} from "./repository.js";
 
 const answers = { name: "Ada" };
 
@@ -132,5 +141,125 @@ describe("recordHandlerFailure", () => {
     expect(stored?.answers).toEqual(answers);
     expect(stored?.status).toBe("new");
     expect(stored?.serial).toBe(row.serial);
+  });
+});
+
+describe("the inbox reads", () => {
+  test("lists newest first, across every form", async () => {
+    const ctx = await contextWithSchema();
+    await submit(ctx, "contact");
+    await submit(ctx, "newsletter");
+
+    const page = await listSubmissions(ctx, { limit: 10 });
+
+    expect(page.submissions.map((row) => row.formSlug)).toEqual([
+      "newsletter",
+      "contact",
+    ]);
+    expect(page.nextCursor).toBeNull();
+  });
+
+  test("pages through with the cursor the previous page returned", async () => {
+    const ctx = await contextWithSchema();
+    for (let i = 0; i < 3; i++) await submit(ctx, "contact");
+
+    const first = await listSubmissions(ctx, { limit: 2 });
+    const second = await listSubmissions(ctx, {
+      limit: 2,
+      cursor: first.nextCursor,
+    });
+
+    expect(first.submissions).toHaveLength(2);
+    expect(first.nextCursor).not.toBeNull();
+    expect(second.submissions).toHaveLength(1);
+    expect(second.nextCursor).toBeNull();
+    expect(second.submissions[0]?.serial).toBe(1);
+  });
+
+  test("narrows to one form and to one status", async () => {
+    const ctx = await contextWithSchema();
+    await submit(ctx, "contact");
+    const spam = await insertSubmission(ctx, {
+      form: "contact",
+      status: "spam",
+      answers,
+      labels: {},
+      entryId: null,
+      ipHash: null,
+      userAgent: null,
+    });
+    await submit(ctx, "newsletter");
+
+    const byForm = await listSubmissions(ctx, { limit: 10, form: "contact" });
+    const byStatus = await listSubmissions(ctx, { limit: 10, status: "spam" });
+
+    expect(byForm.submissions).toHaveLength(2);
+    expect(byStatus.submissions.map((row) => row.id)).toEqual([spam.id]);
+  });
+
+  test("counts each status within the form filter, and each form within the status filter", async () => {
+    const ctx = await contextWithSchema();
+    await submit(ctx, "contact");
+    await insertSubmission(ctx, {
+      form: "contact",
+      status: "spam",
+      answers,
+      labels: {},
+      entryId: null,
+      ipHash: null,
+      userAgent: null,
+    });
+    await submit(ctx, "newsletter");
+
+    const all = await countSubmissions(ctx, {});
+    const contact = await countSubmissions(ctx, { form: "contact" });
+    const spam = await countSubmissions(ctx, { status: "spam" });
+
+    expect(all.statuses).toEqual({ new: 2, read: 0, archived: 0, spam: 1 });
+    expect(all.forms).toEqual({ contact: 2, newsletter: 1 });
+    expect(contact.statuses).toEqual({ new: 1, read: 0, archived: 0, spam: 1 });
+    expect(spam.forms).toEqual({ contact: 1 });
+  });
+});
+
+describe("the inbox writes", () => {
+  test("reads one submission back by id, and nothing for one that never was", async () => {
+    const ctx = await contextWithSchema();
+    const row = await submit(ctx, "contact");
+
+    expect((await getSubmission(ctx, row.id))?.answers).toEqual(answers);
+    expect(await getSubmission(ctx, row.id + 1)).toBeNull();
+  });
+
+  test("moves a submission to another status", async () => {
+    const ctx = await contextWithSchema();
+    const row = await submit(ctx, "contact");
+
+    const updated = await setSubmissionStatus(ctx, row.id, "archived");
+
+    expect(updated?.status).toBe("archived");
+    expect((await getSubmission(ctx, row.id))?.status).toBe("archived");
+  });
+
+  test("keeps a private note against a submission, and clears it", async () => {
+    const ctx = await contextWithSchema();
+    const row = await submit(ctx, "contact");
+
+    await setSubmissionNote(ctx, row.id, "Called back on Tuesday");
+    expect((await getSubmission(ctx, row.id))?.note).toBe(
+      "Called back on Tuesday",
+    );
+
+    await setSubmissionNote(ctx, row.id, null);
+    expect((await getSubmission(ctx, row.id))?.note).toBeNull();
+  });
+
+  test("deletes a submission, and says so when there was none to delete", async () => {
+    const ctx = await contextWithSchema();
+    const row = await submit(ctx, "contact");
+
+    expect(await deleteSubmission(ctx, row.id)).toBe(true);
+    expect(await deleteSubmission(ctx, row.id)).toBe(false);
+    expect(await getSubmission(ctx, row.id)).toBeNull();
   });
 });

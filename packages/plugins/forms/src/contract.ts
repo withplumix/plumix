@@ -52,6 +52,26 @@ export const CSRF_HEADER_VALUE = "1";
  */
 export const TURNSTILE_FIELD = "cf-turnstile-response";
 
+/**
+ * What the submissions inbox is gated on. Editor by default: reading
+ * submissions is reading what visitors typed, which is nobody's business
+ * below the people who answer them.
+ *
+ * Here rather than beside the router it guards, because the package
+ * entry re-exports it and nothing on that entry may reach `rpc.ts` — an
+ * oRPC router's inferred type names `@orpc/server` and core's schema, and
+ * a consumer resolving the published `.d.ts` has neither.
+ */
+export const SUBMISSION_MODERATE_CAPABILITY = "form_submission:moderate";
+
+/**
+ * The admin page the submissions inbox is mounted at, and the export
+ * name the plugin's admin chunk answers it with.
+ */
+export const SUBMISSIONS_PAGE_PATH = "/form-submissions";
+
+export const SUBMISSIONS_SHELL_COMPONENT = "SubmissionsShell";
+
 /** The block the editor places. */
 export const FORM_BLOCK_NAME = "forms/form";
 
