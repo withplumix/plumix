@@ -13,9 +13,13 @@ const CAPABILITY = "settings:manage";
 // left by uninstalled plugins while still bounding response size.
 const MAX_GROUP_ROWS_PER_READ = 500;
 
-// Returns the full key → value bag for one group. Missing keys aren't
-// represented — callers (admin form loaders, plugin code) fall back to
-// the registered field's `default` when they need a placeholder.
+// Returns the full key → value bag for one group, with each registered
+// field's `.default()` standing in where storage has no key — `SettingsOf`
+// narrows a defaulted read the same way the entity meta helpers do.
+//
+// Settings have no decode pass of their own, so unlike entity meta this is a
+// fill and nothing more: a `.returns("date")` settings field still reads back
+// its stored ISO string, and a reference its stored id.
 export const get = base
   .use(authenticated)
   .input(settingsGetInputSchema)
@@ -40,6 +44,12 @@ export const get = base
 
     const bag: Record<string, JsonValue> = {};
     for (const row of rows) bag[row.key] = row.value;
+    for (const field of context.plugins.settingsGroups.get(filtered.group)
+      ?.fields ?? []) {
+      if (field.default === undefined) continue;
+      if (Object.hasOwn(bag, field.key)) continue;
+      bag[field.key] = field.default as JsonValue;
+    }
 
     return context.hooks.applyFilter("rpc:settings.get:output", bag, {
       group: filtered.group,

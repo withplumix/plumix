@@ -13,7 +13,7 @@ const SUBFIELD_KEY_RE = /^[a-zA-Z0-9_:-]+$/;
 // `__proto__` / `constructor` / `prototype` match the key regex but
 // writing them into a fresh object literal mutates the prototype chain.
 // Reject at registration regardless of regex pass.
-const FORBIDDEN_SUBFIELD_KEYS: ReadonlySet<string> = new Set([
+export const FORBIDDEN_FIELD_KEYS: ReadonlySet<string> = new Set([
   "__proto__",
   "constructor",
   "prototype",
@@ -33,7 +33,7 @@ export function assertSubFields(
 ): void {
   const seen = new Set<string>();
   for (const sf of subFields) {
-    if (FORBIDDEN_SUBFIELD_KEYS.has(sf.key)) {
+    if (FORBIDDEN_FIELD_KEYS.has(sf.key)) {
       throw FieldConfigError.subFieldKeyForbidden({
         container,
         containerKey,

@@ -107,8 +107,8 @@ export class SelectFieldBuilder<
   /** Phantom read type of the field — type-level only, never assigned. */
   declare readonly _value: V;
   /** Phantom stored shape — `.required()` narrows it (write-enforced);
-   *  `.default()` does not — it prefills the admin form; nothing applies
-   *  it on read, so storage can still lack the key. */
+   *  `.default()` does not — it applies on read, but nothing enforces it
+   *  on write, so storage can still lack the key. */
   declare readonly _stored: S;
   /** Phantom cardinality/appearance markers backing the compile-time
    *  gating of `.multiple()`, `.max()`, and `.appearance()`. */

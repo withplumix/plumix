@@ -23,8 +23,9 @@ type LinkFieldState = Omit<StringFieldState, "default" | "maxLength"> & {
  * chassis conventions (immutability, phantom `K`/`V`/`S`, `build()`
  * seam). `V` is `LinkValue | undefined` unadorned, narrowed to
  * `LinkValue` by `.required()` / `.default()`; `S` is the stored shape,
- * narrowed by `.required()` only — `.default()` prefills the admin form;
- * nothing applies it on read, so storage can still lack the key.
+ * narrowed by `.required()` only — `.default()` applies on read, so a key
+ * storage lacks decodes to the declared default, but nothing enforces it
+ * on write.
  */
 export class LinkFieldBuilder<
   K extends string = string,

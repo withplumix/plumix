@@ -34,6 +34,7 @@ type PluginContextErrorCode =
   | "meta_box_too_many_fields"
   | "meta_box_field_invalid_key"
   | "meta_box_field_duplicate_key"
+  | "meta_box_field_forbidden_key"
   | "meta_box_field_reserved_key"
   | "meta_box_field_unknown_condition_driver"
   | "template_dep_kind_reserved"
@@ -621,6 +622,19 @@ export class PluginContextError extends Error {
       `${ctx.kind} "${ctx.id}" declares field "${ctx.fieldKey}" with the ` +
         `reserved \`__plumix_\` prefix. That namespace is owned by the core ` +
         `runtime (e.g. revision snapshot envelopes) — rename the field.`,
+      ctx,
+    );
+  }
+
+  static metaBoxFieldForbiddenKey(ctx: {
+    kind: string;
+    id: string;
+    fieldKey: string;
+  }): PluginContextError {
+    return new PluginContextError(
+      "meta_box_field_forbidden_key",
+      `${ctx.kind} "${ctx.id}" declares field "${ctx.fieldKey}", which is ` +
+        `forbidden (prototype-pollution risk) — rename the field.`,
       ctx,
     );
   }

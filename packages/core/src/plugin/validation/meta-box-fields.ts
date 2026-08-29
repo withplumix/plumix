@@ -1,6 +1,7 @@
 import type { MetaBoxField } from "../manifest.js";
 import { PluginContextError } from "../errors.js";
 import { findUnknownConditionDriver } from "../fields/condition.js";
+import { FORBIDDEN_FIELD_KEYS } from "../fields/sub-fields.js";
 
 // Must match the RPC input-schema regex for meta keys — any key that
 // doesn't match is dead code (the write path rejects it), so catch it
@@ -34,6 +35,16 @@ export function assertMetaBoxFields(
   }
   const seen = new Set<string>();
   for (const field of fields) {
+    // `__proto__` and friends pass the regex but mutate the prototype chain
+    // of any fresh object literal they are written into — the decoded meta
+    // bag being one. Same set the sub-field validator rejects.
+    if (FORBIDDEN_FIELD_KEYS.has(field.key)) {
+      throw PluginContextError.metaBoxFieldForbiddenKey({
+        kind,
+        id,
+        fieldKey: field.key,
+      });
+    }
     if (!META_FIELD_KEY_RE.test(field.key)) {
       throw PluginContextError.metaBoxFieldInvalidKey({
         kind,

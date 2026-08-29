@@ -956,6 +956,29 @@ export function findTermMetaField(
   return undefined;
 }
 
+export function listTermMetaFields(
+  registry: PluginRegistry,
+  termTaxonomy: string,
+): readonly MetaBoxField[] {
+  const fields: MetaBoxField[] = [];
+  for (const box of registry.termMetaBoxes.values()) {
+    if (!box.termTaxonomies.includes(termTaxonomy)) continue;
+    fields.push(...box.fields);
+  }
+  return fields;
+}
+
+/** Users share one flat keyspace, so there is no scope to pass. */
+export function listUserMetaFields(
+  registry: PluginRegistry,
+): readonly MetaBoxField[] {
+  const fields: MetaBoxField[] = [];
+  for (const box of registry.userMetaBoxes.values()) {
+    fields.push(...box.fields);
+  }
+  return fields;
+}
+
 /**
  * Like `findEntryMetaField`, but for user meta. Users have a flat
  * keyspace (no entry-type / termTaxonomy analogue), so no scope argument —

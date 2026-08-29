@@ -3,12 +3,17 @@ import type { JsonObject } from "../../../json.js";
 import type { PluginRegistry } from "../../../plugin/manifest.js";
 import type { MetaInput, MetaPatch, ResolvedMeta } from "../../meta/core.js";
 import { terms } from "../../../db/schema/terms.js";
-import { findTermMetaField } from "../../../plugin/manifest.js";
+import {
+  findTermMetaField,
+  listTermMetaFields,
+} from "../../../plugin/manifest.js";
 import {
   applyMetaPatch,
   decodeMetaBag as decodeMetaBagCore,
   isEmptyMetaPatch,
   loadMeta,
+  metaScope,
+  metaScopeCache,
   resolveMetaBags as resolveMetaBagsCore,
   resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
@@ -90,12 +95,17 @@ export async function resolveTermsMeta(
     readonly meta: JsonObject | null | undefined;
   }[],
 ): Promise<ResolvedMeta[]> {
+  const scopeFor = metaScopeCache((taxonomy) =>
+    listTermMetaFields(ctx.plugins, taxonomy),
+  );
   return resolveMetaBagsCore(
     ctx,
     rows.map((row) => {
-      const findField = (key: string) =>
-        findTermMetaField(ctx.plugins, row.taxonomy, key);
-      return { findField, decoded: decodeMetaBagCore(findField, row.meta) };
+      const scope = scopeFor(row.taxonomy);
+      return {
+        findField: scope.findField,
+        decoded: decodeMetaBagCore(scope, row.meta),
+      };
     }),
   );
 }
@@ -104,14 +114,9 @@ export async function loadTermMeta(
   ctx: AppContext,
   term: { readonly id: number; readonly taxonomy: string },
 ): Promise<ResolvedMeta> {
-  const decoded = await loadMeta(ctx, terms, terms.id, term.id, (key) =>
-    findTermMetaField(ctx.plugins, term.taxonomy, key),
-  );
-  return resolveMetaReferencesCore(
-    ctx,
-    (key) => findTermMetaField(ctx.plugins, term.taxonomy, key),
-    decoded,
-  );
+  const scope = metaScope(listTermMetaFields(ctx.plugins, term.taxonomy));
+  const decoded = await loadMeta(ctx, terms, terms.id, term.id, scope);
+  return resolveMetaReferencesCore(ctx, scope.findField, decoded);
 }
 
 /**

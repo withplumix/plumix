@@ -112,7 +112,7 @@ Reference fields resolve. A `user` field stores a user id, and a read hands you 
 
 Temporal fields keep their stored ISO string unless you asked otherwise. `.returns("date")` projects the stored string into a JS `Date` whose wall-clock components are anchored to UTC, and the write contract stays the ISO string either way.
 
-Defaults do not apply. The decoder walks the keys storage actually holds, so an absent key reads back as `undefined` whatever `.default("medium")` says. A default prefills the admin form instead, and it reaches storage the first time someone saves that form. A template that needs a fallback for a key nobody has saved yet supplies one at the read site.
+Defaults apply on read. The decoder fills any key storage lacks with the field's `.default("medium")` — at every depth, so a member of a group or a repeater row gets the same treatment — which is why the read type drops `undefined`. The column is untouched, so a rule predicate reading the stored bag still sees no key until someone saves the form. Settings groups fill their defaults too, though settings have no decode pass beyond that.
 
 Meta stays out of the public REST API, which is default-deny per field, and a field opts in with `.showInApi()`. The admin RPC is unaffected.
 

@@ -12,7 +12,6 @@ import type {
   MetaBoxField,
   MetaScalarType,
   ReferenceTarget,
-  RepeaterMetaBoxField,
   TemporalInputType,
   TemporalMetaBoxField,
 } from "../../plugin/manifest.js";
@@ -1143,37 +1142,128 @@ function referenceCandidateIds(
 }
 
 /**
+ * A scope's field list paired with a key lookup over it. Decode needs both —
+ * the lookup for the keys storage holds, the list for the `.default()`s it
+ * does not — and the reference pass needs the lookup, so the two travel
+ * together rather than each rebuilding its own.
+ */
+export interface MetaScope {
+  readonly fields: readonly MetaBoxField[];
+  readonly findField: (key: string) => MetaBoxField | undefined;
+}
+
+export function metaScope(fields: readonly MetaBoxField[]): MetaScope {
+  const byKey = new Map<string, MetaBoxField>();
+  // First declaration wins, matching the `find*MetaField` helpers this
+  // stands in for.
+  for (const field of fields) {
+    if (!byKey.has(field.key)) byKey.set(field.key, field);
+  }
+  return { fields, findField: (key) => byKey.get(key) };
+}
+
+/**
+ * `metaScope` memoized per scope key: an archive is a hundred rows over a
+ * handful of entry types, and each scope's field list costs a walk of every
+ * registered meta box.
+ */
+export function metaScopeCache(
+  listFields: (scopeKey: string) => readonly MetaBoxField[],
+): (scopeKey: string) => MetaScope {
+  const scopes = new Map<string, MetaScope>();
+  return (scopeKey) => {
+    let scope = scopes.get(scopeKey);
+    if (!scope) {
+      scope = metaScope(listFields(scopeKey));
+      scopes.set(scopeKey, scope);
+    }
+    return scope;
+  };
+}
+
+/**
  * Decode a raw meta bag (as returned by drizzle's JSON-mode column)
  * into the plugin-typed shape RPC consumers expect. Unregistered keys
  * pass through untouched — the row exists in the DB but the plugin
  * that wrote it is no longer installed; we don't pretend to know its
  * shape.
+ *
+ * Takes the scope's whole field list rather than a lookup because a
+ * `.default()` has to stand in where the bag has no key, which needs
+ * the fields storage never mentioned. That is also why a row with no
+ * saved meta at all still decodes to a bag rather than short-circuiting
+ * to `{}`.
  */
 export function decodeMetaBag(
-  findField: (key: string) => MetaBoxField | undefined,
+  scope: MetaScope,
   raw: JsonObject | null | undefined,
 ): ResolvedMeta {
-  if (!raw) return {};
+  return decodeBag(scope, raw ?? {});
+}
+
+/**
+ * Decode one bag against the schema that governs it. The top-level meta bag,
+ * a repeater row and a group value are the same thing at different depths —
+ * a set of declared members plus whatever keys nobody claims — so they share
+ * this, and nesting falls out of the recursion through `decodeFieldValue`.
+ */
+function decodeBag(scope: MetaScope, raw: JsonObject): ResolvedMeta {
   const out: ResolvedMeta = {};
   for (const [key, value] of Object.entries(raw)) {
-    const field = findField(key);
+    const field = scope.findField(key);
     out[key] = field ? decodeFieldValue(field, value) : value;
   }
+  applyDefaults(scope.fields, out);
   return out;
+}
+
+/**
+ * Absence is the only trigger: storage cannot hold `undefined`, so a stored
+ * `null` is a value someone chose and keeps its place. The default travels
+ * `decodeFieldValue` like a stored value would — it is declared in the
+ * stored shape, so `.returns("date")` must still hand back a `Date`.
+ */
+function applyDefaults(
+  fields: readonly MetaBoxField[],
+  bag: ResolvedMeta,
+): void {
+  for (const field of fields) {
+    if (field.default === undefined) continue;
+    if (Object.hasOwn(bag, field.key)) continue;
+    bag[field.key] = decodeFieldValue(field, field.default as JsonValue);
+  }
 }
 
 // Reference storage is plain ids, but bags written before the
 // write-time snapshot machinery was removed may hold `{ id, ... }`
 // objects. Reads yield the id; the next save persists the plain form
 // (`referenceItemId` accepts the legacy shape on write).
-function decodeFieldValue(
-  field: MetaBoxField,
-  value: JsonValue,
-): JsonValue | Date | undefined {
+/**
+ * One field's value after decode. Wider than the stored JSON because decoding
+ * is what moves a value away from it: `.returns("date")` yields a `Date`, and
+ * a repeater row or group yields a bag whose members had the same treatment.
+ * The field's own `_value` narrows this to the declared read type.
+ */
+type DecodedValue =
+  JsonValue | Date | DecodedRow | readonly DecodedRow[] | undefined;
+
+/** One repeater row, or a group's members: the sub-schema's read shape. */
+type DecodedRow = JsonValue | ResolvedMeta;
+
+function decodeFieldValue(field: MetaBoxField, value: JsonValue): DecodedValue {
   const target = referenceTargetOf(field);
   if (target) return healReferenceValue(target, value);
   if (isRepeaterField(field) && isJsonArray(value)) {
-    return value.map((row) => healRepeaterRow(field, row));
+    // Built once for the whole array, not once per row.
+    const rowScope = metaScope(field.subFields);
+    return value.map((row) =>
+      isJsonObject(row) ? decodeBag(rowScope, row) : row,
+    );
+  }
+  // Only when the container is present — an absent one reads `undefined`,
+  // which is what its own read type says, so there is nothing to fill.
+  if (isGroupField(field) && isJsonObject(value)) {
+    return decodeBag(metaScope(field.fields), value);
   }
   if (isTemporalField(field) && field.returns === "date") {
     return projectTemporalDate(field.inputType, value);
@@ -1205,26 +1295,6 @@ function projectTemporalDate(
   if (typeof value !== "string" || value === "") return undefined;
   const parsed = new Date(anchorTemporalUtc(inputType, value));
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-}
-
-function healRepeaterRow(
-  field: RepeaterMetaBoxField,
-  row: JsonValue,
-): JsonValue {
-  if (!isJsonObject(row)) return row;
-  let healed: Record<string, JsonValue> | null = null;
-  for (const subField of field.subFields) {
-    const target = referenceTargetOf(subField);
-    if (!target) continue;
-    const value = row[subField.key];
-    if (value === undefined) continue;
-    const next = healReferenceValue(target, value);
-    if (next !== value) {
-      healed ??= { ...row };
-      healed[subField.key] = next;
-    }
-  }
-  return healed ?? row;
 }
 
 export function isEmptyMetaPatch(patch: MetaPatch | null): boolean {
@@ -1275,21 +1345,22 @@ export async function applyMetaPatch(
 }
 
 /**
- * Load + decode the full meta bag for a single row. Returns empty
- * when the row is missing (deleted mid-flight) or has no saved meta.
+ * Load + decode the full meta bag for a single row. A missing row
+ * (deleted mid-flight) or one with no saved meta decodes from an empty
+ * bag, so the result still carries every declared default.
  */
 export async function loadMeta(
   ctx: AppContext,
   table: { meta: SQLiteColumn },
   idColumn: SQLiteColumn,
   id: number,
-  findField: (key: string) => MetaBoxField | undefined,
+  scope: MetaScope,
 ): Promise<ResolvedMeta> {
   const [row] = (await ctx.db
     .select({ meta: table.meta })
     .from(table as never)
     .where(eq(idColumn, id))) as { meta: unknown }[];
-  return decodeMetaBag(findField, row?.meta as JsonObject | undefined);
+  return decodeMetaBag(scope, row?.meta as JsonObject | undefined);
 }
 
 // --- internals below ---------------------------------------------------
