@@ -438,7 +438,7 @@ test.describe("a theme rendering its own controls", () => {
   // theme's own — see `playground/subscribe-bar.ts`.
   const LIVE = "[data-testid='subscribe-bar'][data-live]";
 
-  test("submits through the headless hook, in the theme's own markup", async ({
+  test("submits through usePlumixForm, in the theme's own markup", async ({
     page,
   }) => {
     await page.goto("/contact");

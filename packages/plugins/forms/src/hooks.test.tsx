@@ -13,7 +13,7 @@ import { email, text, toggle } from "plumix/fields";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { defineForm, toFormWire } from "./define-form.js";
-import { usePlumixForm } from "./headless.js";
+import { usePlumixForm } from "./hooks.js";
 
 const subscribe = defineForm("subscribe", {
   fields: [
@@ -28,7 +28,7 @@ const wire = toFormWire(subscribe);
 /**
  * A theme's own subscribe bar: its own markup, its own controls, none of
  * the plugin's. Everything it knows about the form comes back from the
- * hook, which is the whole claim the headless surface makes.
+ * hook, which is the whole claim `usePlumixForm` makes.
  */
 function SubscribeBar(): ReactNode {
   const form = usePlumixForm<typeof subscribe>(wire);

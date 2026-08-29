@@ -79,7 +79,8 @@ export function asGroup(value: SubmittedValue): SubmittedValues {
 /**
  * A repeater's rows, whatever a caller was holding at that key. Anything
  * in the list that is not a bag of answers is dropped rather than counted
- * — a headless caller manages their own rows, and `delete rows[i]` leaves
+ * — a theme rendering its own controls manages their own rows, and
+ * `delete rows[i]` leaves
  * a hole that reads back as `undefined`. Every other caller hands this a
  * list the read side built, where the question does not arise.
  */
@@ -360,7 +361,7 @@ function writeLevel(
 
 /**
  * A form's answers as the urlencoded body its markup would have posted —
- * what the headless surface submits, so a form filled in by a theme's own
+ * what `usePlumixForm` submits, so a form filled in by a theme's own
  * controls reaches the endpoint as the same request a rendered form makes
  * and is validated and stored identically. The inverse of
  * {@link readSubmittedValues}.

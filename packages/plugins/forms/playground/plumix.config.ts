@@ -103,7 +103,7 @@ const gated = defineForm("gated", {
 
 // The form behind the theme's own subscribe bar: one question, and no
 // block anywhere places it — the bar is the theme's markup driven by the
-// headless hook.
+// `usePlumixForm`.
 const subscribe = defineForm("subscribe", {
   title: "Subscribe",
   fields: [email("email").label("Email address").required()],

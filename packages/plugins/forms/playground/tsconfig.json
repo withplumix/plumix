@@ -17,7 +17,7 @@
       "plumix/fields": ["../../../plumix/src/fields/index.ts"],
       "@plumix/plugin-forms": ["../src/index.ts"],
       "@plumix/plugin-forms/theme": ["../src/theme.tsx"],
-      "@plumix/plugin-forms/headless": ["../src/headless.ts"],
+      "@plumix/plugin-forms/hooks": ["../src/hooks.ts"],
       "@plumix/plugin-pages": ["../../pages/src/index.ts"],
       "@plumix/runtime-cloudflare": [
         "../../../runtimes/cloudflare/src/index.ts"

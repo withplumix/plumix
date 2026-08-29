@@ -2,7 +2,7 @@
   "name": "@plumix/plugin-forms",
   "version": "0.0.0",
   "type": "module",
-  "description": "Forms plugin for Plumix — forms declared in config, rendered as a block, with stored submissions.",
+  "description": "Forms plugin for Plumix \u2014 forms declared in config, rendered as a block, with stored submissions.",
   "license": "MIT",
   "author": "Plumix Contributors",
   "homepage": "https://github.com/withplumix/plumix#readme",
@@ -30,9 +30,9 @@
       "types": "./dist/theme.d.ts",
       "default": "./dist/theme.js"
     },
-    "./headless": {
-      "types": "./dist/headless.d.ts",
-      "default": "./dist/headless.js"
+    "./hooks": {
+      "types": "./dist/hooks.d.ts",
+      "default": "./dist/hooks.js"
     },
     "./fields": {
       "types": "./dist/fields.d.ts",

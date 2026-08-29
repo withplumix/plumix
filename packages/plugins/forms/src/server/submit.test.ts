@@ -1213,12 +1213,12 @@ describe("rows and groups", () => {
 });
 
 /**
- * The headless surface's half of the submit contract: a theme rendering
+ * `usePlumixForm`'s half of the submit contract: a theme rendering
  * its own controls writes the answers out with `writeSubmittedValues` and
  * posts them itself, so what reaches the endpoint has to be the request a
  * rendered form makes — and be validated and stored identically.
  */
-describe("a submission made through the headless surface", () => {
+describe("a submission made through usePlumixForm", () => {
   const rsvp = defineForm("rsvp", {
     fields: [
       text("name").required(),
