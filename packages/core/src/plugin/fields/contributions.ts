@@ -361,19 +361,20 @@ export type SettingsGroupDrift<
 > = FieldsOnlyDrift<SettingsContributions, Name, O>;
 
 /**
- * The entry a targeted template receives: the registered projection
- * with `meta` replaced by the folded typed record. Replacement (not
- * intersection) is what makes a mistyped field name a compile error —
- * intersecting would keep the base open `Record<string, unknown>`
- * index and read typos as `unknown`.
+ * The entry a targeted template receives: the registered projection with
+ * both meta bags replaced by their folded typed records, so a `.where()`
+ * predicate reads either at the shape `whereMeta` is typed against.
+ * Replacement (not intersection) is what makes a mistyped field name a
+ * compile error — intersecting would keep the base open
+ * `Record<string, unknown>` index and read typos as `unknown`.
  */
 export type ResolvedEntryFor<K extends EntryTypeName> = Omit<
   EntryProjection<K>,
-  "meta"
-> & { readonly meta: MetaOf<K> };
+  "meta" | "storedMeta"
+> & { readonly meta: MetaOf<K>; readonly storedMeta: StoredMetaOf<K> };
 
-/** The term a targeted template receives — projection with folded typed meta. */
+/** The term a targeted template receives — projection with both bags folded. */
 export type ResolvedTermFor<K extends TermTaxonomyName> = Omit<
   TermProjection<K>,
-  "meta"
-> & { readonly meta: TermMetaOf<K> };
+  "meta" | "storedMeta"
+> & { readonly meta: TermMetaOf<K>; readonly storedMeta: StoredTermMetaOf<K> };

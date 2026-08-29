@@ -2,8 +2,7 @@ import type { EntryContent } from "@plumix/blocks";
 
 import type { Entry } from "../../db/schema/entries.js";
 import type { Term } from "../../db/schema/terms.js";
-import type { JsonObject } from "../../json.js";
-import type { WithResolvedMeta } from "../../rpc/meta/core.js";
+import type { StoredMeta, WithResolvedMeta } from "../../rpc/meta/core.js";
 
 /** Public-safe author projection — query select narrows away email + auth columns. */
 export interface ResolvedAuthor {
@@ -19,7 +18,7 @@ export interface ResolvedAuthor {
 export interface ResolvedTerm extends WithResolvedMeta<Term> {
   readonly url: string | null;
   /** The meta JSON column, as {@link ResolvedEntry.storedMeta}. */
-  readonly storedMeta: JsonObject;
+  readonly storedMeta: StoredMeta;
 }
 
 // `content` stays loose so non-blocks serializers (TipTap, etc.) keep
@@ -37,7 +36,7 @@ export interface ResolvedEntry extends WithResolvedMeta<Entry> {
    * and a reference is still its id — the primitives `===` can land on, which
    * a `Date` and a hydrated summary are not.
    */
-  readonly storedMeta: JsonObject;
+  readonly storedMeta: StoredMeta;
   readonly contentBlocks: EntryContent | null;
   readonly terms: readonly ResolvedTerm[];
   readonly author: ResolvedAuthor;

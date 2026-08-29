@@ -73,7 +73,11 @@ export type {
   ResolvedListingPage,
 } from "./route/render/page-data.js";
 export { resolveReferences } from "./rpc/meta/core.js";
-export type { ResolvedMeta, WithResolvedMeta } from "./rpc/meta/core.js";
+export type {
+  ResolvedMeta,
+  StoredMeta,
+  WithResolvedMeta,
+} from "./rpc/meta/core.js";
 export { readEntryType } from "./entries/read-service.js";
 export { memoBatch } from "./context/memo.js";
 export type { RequestMemo } from "./context/memo.js";

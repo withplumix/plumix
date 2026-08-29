@@ -134,6 +134,8 @@ export const rules = [
 
 A predicate reads resolved data, so it only matches where the resolver has data in hand. `.whereMeta("difficulty", "hard")` is the shorthand for an equality test against one stored meta key. Its key and value are typed against the folded stored meta shape for that entry type, and compared against `entry.storedMeta` — the JSON column, not the read-time resolved value a template gets as `entry.meta`.
 
+`.where()` reaches that same bag for a test `===` cannot express. On a targeted rule `entry.storedMeta` carries the folded stored shape, so `data.entry.storedMeta.testedOn` has its key checked and its value typed just as `.whereMeta()` would — including the `undefined` an unset key leaves, which a range comparison then has to handle. `entry.meta` sits beside it at the read shape, for a predicate that wants the decoded `Date`.
+
 `.named("wide", "Wide layout")` is the same mechanism pointed at an author's choice. The id and label go to the editor's template picker, the editor stores the choice under the reserved `__plumix_template` meta key, and the generated predicate compares that key back against the id.
 
 ## Declaration order, and what ignores it
