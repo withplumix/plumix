@@ -21,6 +21,9 @@ const ENHANCED = "[data-plumix-form='contact'][data-plumix-form-enhanced]";
 const SUMMARY = "[data-plumix-form-summary]";
 const CONFIRMATION = "[data-plumix-form-confirmation]";
 const control = (key: string) => `[data-plumix-form-control='${key}']`;
+const ROW = "[data-plumix-form-row]";
+const ADD_ROW = "[data-plumix-form-row-add='attendees']";
+const removeRow = (row: string) => `[data-plumix-form-row-remove='${row}']`;
 
 // The playground's second form: the same field list, broken into three
 // steps, with a question on the last one that a plan chosen on the one
@@ -77,6 +80,50 @@ test.describe("with JavaScript", () => {
     );
     // What the visitor typed survives the rejection.
     await expect(page.locator(control("name"))).toHaveValue("Ada Lovelace");
+  });
+
+  test("adds a row, and removing one leaves its neighbour's answer alone", async ({
+    page,
+  }) => {
+    await page.goto("/contact");
+    await expect(page.locator(ENHANCED)).toBeVisible();
+    await page.waitForTimeout(1200);
+
+    await page.fill(control("name"), "Ada Lovelace");
+    await page.fill(control("email"), "ada@example.test");
+
+    await page.fill(control("attendees[0][who]"), "Grace");
+    await page.click(ADD_ROW);
+    await expect(page.locator(ROW)).toHaveCount(2);
+    await page.fill(control("attendees[1][who]"), "Alan");
+
+    // The row that stays keeps its own answer as it is renumbered into
+    // the slot the removed one held — which is what the stable row key
+    // buys, and what an index-keyed row would get wrong.
+    await page.click(removeRow("attendees[0]"));
+    await expect(page.locator(ROW)).toHaveCount(1);
+    await expect(page.locator(control("attendees[0][who]"))).toHaveValue(
+      "Alan",
+    );
+    // The button that was clicked has gone with its row, so focus has to
+    // land somewhere a keyboard visitor can carry on from.
+    await expect(page.locator(ADD_ROW)).toBeFocused();
+
+    await page.click("[data-plumix-form-submit]");
+    await expect(page.locator(CONFIRMATION)).toBeVisible();
+  });
+
+  test("stops offering rows at the maximum the repeater takes", async ({
+    page,
+  }) => {
+    await page.goto("/contact");
+    await expect(page.locator(ENHANCED)).toBeVisible();
+
+    await page.click(ADD_ROW);
+    await page.click(ADD_ROW);
+
+    await expect(page.locator(ROW)).toHaveCount(3);
+    await expect(page.locator(ADD_ROW)).toHaveCount(0);
   });
 
   test("reports no accessibility violations, before or after a failed submit", async ({
@@ -316,6 +363,16 @@ test.describe("without JavaScript", () => {
     ]);
 
     await expect(page.locator("[data-plumix-form='survey']")).toBeVisible();
+  });
+
+  test("offers no row to add or remove, since there is nothing behind either", async ({
+    page,
+  }) => {
+    await page.goto("/contact");
+
+    await expect(page.locator(ROW)).toHaveCount(1);
+    await expect(page.locator(ADD_ROW)).toHaveCount(0);
+    await expect(page.locator("[data-plumix-form-row-remove]")).toHaveCount(0);
   });
 
   test("still submits, and the page it came from carries nothing per-visitor", async ({

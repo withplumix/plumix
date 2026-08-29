@@ -2,7 +2,9 @@ import type { PluginSetupContext } from "plumix/plugin";
 import {
   date,
   email,
+  group,
   number,
+  repeater,
   select,
   text,
   textarea,
@@ -980,5 +982,228 @@ describe("the cross-cutting hooks", () => {
 
     response.assertStatus(422);
     expect(fired).not.toHaveBeenCalled();
+  });
+});
+
+describe("rows and groups", () => {
+  const vegetarian = toggle("vegetarian").label("Vegetarian");
+  const attendees = repeater("attendees")
+    .fields([
+      text("who").label("Name").required(),
+      vegetarian,
+      text("dietary").label("Dietary needs").visibleWhen(vegetarian.isOn()),
+    ])
+    .label("Attendees");
+
+  const party = defineForm("party", {
+    fields: [
+      group("host").fields([text("name").label("Host"), email("email")]),
+      attendees.min(1).max(2),
+    ],
+  });
+
+  /** One `party` submission, its rows spelled the way the markup posts them. */
+  function partyBody(
+    host: Record<string, string>,
+    rows: readonly Record<string, string>[],
+  ): [string, string][] {
+    return [
+      ...Object.entries(host).map(([key, value]): [string, string] => [
+        `host[${key}]`,
+        value,
+      ]),
+      ...rows.flatMap((row, index): [string, string][] => [
+        ["attendees[]", ""],
+        ...Object.entries(row).map(([key, value]): [string, string] => [
+          `attendees[${String(index)}][${key}]`,
+          value,
+        ]),
+      ]),
+    ];
+  }
+
+  const postParty = (
+    harness: FormsHarness,
+    host: Record<string, string>,
+    rows: readonly Record<string, string>[],
+  ) =>
+    post(
+      harness,
+      new URLSearchParams([
+        [FORM_SLUG_FIELD, "party"],
+        ...partyBody(host, rows),
+      ]),
+      { accept: "application/json" },
+    );
+
+  const partyHarness = () => createFormsHarness([forms({ forms: [party] })]);
+
+  test("stores a group under its own key and the rows as an array", async () => {
+    const harness = await partyHarness();
+
+    const response = await postParty(harness, { name: "Ada" }, [
+      { who: "Grace" },
+      { who: "Alan", vegetarian: "on" },
+    ]);
+
+    response.assertStatus(200);
+    expect(await storedAnswers(harness)).toEqual({
+      host: { name: "Ada" },
+      attendees: [
+        { who: "Grace", vegetarian: false },
+        { who: "Alan", vegetarian: true },
+      ],
+    });
+  });
+
+  test("keeps a sub-field its own row hid out of that row's stored values", async () => {
+    const harness = await partyHarness();
+
+    const response = await postParty(harness, {}, [
+      { who: "Grace", dietary: "smuggled in" },
+      { who: "Alan", vegetarian: "on", dietary: "no nuts" },
+    ]);
+
+    response.assertStatus(200);
+    expect(await storedAnswers(harness)).toEqual({
+      attendees: [
+        { who: "Grace", vegetarian: false },
+        { who: "Alan", vegetarian: true, dietary: "no nuts" },
+      ],
+    });
+  });
+
+  test("names the sub-field inside the row that failed", async () => {
+    const harness = await partyHarness();
+
+    const response = await postParty(harness, {}, [
+      { who: "Grace" },
+      { vegetarian: "on" },
+    ]);
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [{ field: "attendees[1][who]", message: "Name is required." }],
+    });
+  });
+
+  test("asks a row nobody filled in for nothing at all", async () => {
+    const harness = await partyHarness();
+
+    const response = await postParty(harness, {}, [{ who: "Grace" }, {}]);
+
+    response.assertStatus(200);
+    expect(await storedAnswers(harness)).toEqual({
+      attendees: [{ who: "Grace", vegetarian: false }],
+    });
+  });
+
+  test("refuses fewer rows than the repeater takes", async () => {
+    const harness = await partyHarness();
+
+    const response = await postParty(harness, {}, [{}]);
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [
+        { field: "attendees", message: "Attendees needs at least 1 entry." },
+      ],
+    });
+    expect(await rows(harness)).toHaveLength(0);
+  });
+
+  test("refuses more rows than it takes, however many the body carries", async () => {
+    const harness = await partyHarness();
+
+    const response = await postParty(harness, {}, [
+      { who: "Grace" },
+      { who: "Alan" },
+      { who: "Ada" },
+    ]);
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [
+        { field: "attendees", message: "Attendees takes at most 2 entries." },
+      ],
+    });
+  });
+
+  // The markup never renders more rows than the maximum, so a body
+  // carrying more is refused whether or not the excess is blank —
+  // otherwise a body could park its answers past the cap and be read as
+  // a handful of empty rows.
+  test("refuses more rows than it takes even when the excess is blank", async () => {
+    const harness = await partyHarness();
+
+    const response = await post(
+      harness,
+      new URLSearchParams([
+        [FORM_SLUG_FIELD, "party"],
+        ["attendees[]", ""],
+        ["attendees[]", ""],
+        ["attendees[]", ""],
+        ["attendees[]", ""],
+        ["attendees[3][who]", "Ada"],
+      ]),
+      { accept: "application/json" },
+    );
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [
+        { field: "attendees", message: "Attendees takes at most 2 entries." },
+      ],
+    });
+  });
+
+  test("asks a required group for an answer, not merely for a shape", async () => {
+    const withHost = defineForm("gathering", {
+      fields: [
+        group("host")
+          .fields([text("name").label("Host"), toggle("first")])
+          .label("Host")
+          .required(),
+      ],
+    });
+    const harness = await createFormsHarness([forms({ forms: [withHost] })]);
+
+    const response = await post(
+      harness,
+      new URLSearchParams([[FORM_SLUG_FIELD, "gathering"]]),
+      { accept: "application/json" },
+    );
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [{ field: "host", message: "Host is required." }],
+    });
+  });
+
+  test("snapshots what the fields inside a row and a group were called", async () => {
+    const harness = await partyHarness();
+
+    await postParty(harness, { name: "Ada" }, [{ who: "Grace" }]);
+
+    const [stored] = await rows(harness);
+    expect(stored?.labels).toMatchObject({
+      host: {
+        label: "Host",
+        fields: { name: { label: "Host" }, email: { label: "Email" } },
+      },
+      attendees: {
+        label: "Attendees",
+        fields: {
+          who: { label: "Name" },
+          vegetarian: { label: "Vegetarian" },
+          dietary: { label: "Dietary needs" },
+        },
+      },
+    });
   });
 });

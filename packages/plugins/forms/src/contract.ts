@@ -53,9 +53,10 @@ export const TEL_INPUT_TYPE = "tel";
 export const TEL_FIELD_COMPONENT = "TelField";
 
 /**
- * The field input types a form may declare. A form declaring anything
- * else fails at definition rather than rendering a control that cannot
- * carry the answer — repeater and group land in a later release.
+ * The field input types a form may declare, at the top level and inside
+ * a group or a repeater row alike. A form declaring anything else fails
+ * at definition rather than rendering a control that cannot carry the
+ * answer.
  */
 export const SUPPORTED_INPUT_TYPES = [
   "text",
@@ -67,6 +68,8 @@ export const SUPPORTED_INPUT_TYPES = [
   "date",
   "select",
   "toggle",
+  "group",
+  "repeater",
 ] as const;
 
 export type SupportedInputType = (typeof SUPPORTED_INPUT_TYPES)[number];
@@ -76,3 +79,11 @@ export function isSupportedInputType(
 ): inputType is SupportedInputType {
   return (SUPPORTED_INPUT_TYPES as readonly string[]).includes(inputType);
 }
+
+/**
+ * How many rows a repeater accepts when it declares no `.max()`. A body
+ * is the visitor's to write, so a repeater is bounded either way — a
+ * ceiling nobody asked for is still a ceiling, and it is stated in the
+ * refusal rather than silently truncating the rows past it.
+ */
+export const MAX_REPEATER_ROWS = 100;

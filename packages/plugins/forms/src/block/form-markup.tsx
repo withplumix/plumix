@@ -1,13 +1,21 @@
 import type { MetaBoxFieldManifestEntry } from "plumix/fields";
 import type { Label } from "plumix/i18n";
 import type { ComponentProps, CSSProperties, ReactNode, Ref } from "react";
+import { useEffect, useRef } from "react";
 import { labelSourceText } from "plumix/i18n";
 
-import type { SubmittedValues } from "../answers.js";
+import type { SubmittedValue, SubmittedValues } from "../answers.js";
 import type { FormWire } from "../define-form.js";
 import type { FormStep } from "../steps.js";
 import type { FormFieldError } from "../types.js";
-import { defaultAnswers } from "../answers.js";
+import {
+  asGroup,
+  asRows,
+  defaultAnswers,
+  maxRows,
+  minRows,
+  visibleFields,
+} from "../answers.js";
 import {
   FORM_SLUG_FIELD,
   HONEYPOT_FIELD,
@@ -15,12 +23,17 @@ import {
   TOKEN_FIELD,
 } from "../contract.js";
 import {
+  ADD_ROW,
   BACK_LABEL,
   NEXT_LABEL,
+  REMOVE_ROW,
+  removeRowLabel,
+  rowLegend,
   stepPositionMessage,
   SUBMIT_LABEL,
   SUMMARY_TITLE,
 } from "../messages.js";
+import { elementId, fieldName, rowMarkerName, rowName } from "../paths.js";
 import { visibleSteps } from "../steps.js";
 import { FormControl } from "./form-control.js";
 
@@ -42,68 +55,369 @@ const HONEYPOT_STYLE: CSSProperties = {
   whiteSpace: "nowrap",
 };
 
-function FormField({
+/**
+ * Which rows of which repeater are on the page, keyed by the repeater's
+ * place in the form and valued by one stable id per row. Ids rather than
+ * a count because they are what React keys a row's controls by: removing
+ * the row in the middle has to take that row's answers with it and leave
+ * its neighbours' where they are, and only a key that survives the
+ * renumbering can do that.
+ *
+ * Absent for a form nobody is driving, where every repeater falls back to
+ * the rows the server rendered.
+ */
+export type FormRowState = Readonly<Record<string, readonly string[]>>;
+
+/** What the island calls when a visitor adds or removes a row. */
+type FormRowsChange = (statePath: string, ids: readonly string[]) => void;
+
+/** Everything below one field, invariant across the whole form. */
+interface FormChrome {
+  readonly idBase: string;
+  readonly messages: ReadonlyMap<string, string>;
+  readonly rows: FormRowState | undefined;
+  readonly onRowsChange: FormRowsChange | undefined;
+}
+
+const serverRowIds = (count: number): readonly string[] =>
+  Array.from({ length: count }, (_, index) => String(index));
+
+// Ids are numeric strings, so one past the highest is one nothing holds —
+// including a row that was removed, whose id must never come back and
+// take a still-mounted row's controls with it.
+const withNewRow = (ids: readonly string[]): readonly string[] => [
+  ...ids,
+  String(ids.reduce((highest, id) => Math.max(highest, Number(id)), -1) + 1),
+];
+
+const statePathOf = (parent: string | undefined, key: string): string =>
+  parent === undefined ? key : `${parent}.${key}`;
+
+/**
+ * The visual half of "required". The control's `required` attribute is
+ * the half assistive technology reads, so the marker is hidden from it
+ * rather than announced twice — and being a glyph rather than a tint, it
+ * survives a visitor who cannot tell the label's colour from any other.
+ */
+function RequiredMark({
   field,
-  idBase,
-  error,
-  answer,
 }: {
   readonly field: MetaBoxFieldManifestEntry;
-  readonly idBase: string;
-  readonly error: string | undefined;
-  readonly answer: unknown;
 }): ReactNode {
-  const id = `${idBase}-${field.key}`;
+  if (field.required !== true) return null;
+  return (
+    <span
+      className="plumix-form-required"
+      data-plumix-form-required=""
+      aria-hidden="true"
+    >
+      {" *"}
+    </span>
+  );
+}
+
+/**
+ * The help text and the error that describe one field, and the ids that
+ * wire them to it. Shared by every field shape: a control points at them
+ * with `aria-describedby`, and so does the `<fieldset>` a group or a
+ * repeater renders, which carries the same implicit grouping role.
+ */
+function describe(
+  field: MetaBoxFieldManifestEntry,
+  name: string,
+  chrome: FormChrome,
+): {
+  readonly id: string;
+  readonly error: string | undefined;
+  readonly describedBy: string | undefined;
+  readonly nodes: ReactNode;
+} {
+  const id = elementId(chrome.idBase, name);
+  const error = chrome.messages.get(name);
   const help = optionalText(field.description);
   const helpId = help === undefined ? undefined : `${id}-help`;
   const errorId = error === undefined ? undefined : `${id}-error`;
-  const describedBy = [helpId, errorId].filter((part) => part !== undefined);
+  const parts = [helpId, errorId].filter((part) => part !== undefined);
+  return {
+    id,
+    error,
+    describedBy: parts.length > 0 ? parts.join(" ") : undefined,
+    nodes: (
+      <>
+        {helpId === undefined ? null : (
+          <p className="plumix-form-help" data-plumix-form-help="" id={helpId}>
+            {help}
+          </p>
+        )}
+        {errorId === undefined ? null : (
+          <p
+            className="plumix-form-error"
+            data-plumix-form-error={name}
+            id={errorId}
+          >
+            {error}
+          </p>
+        )}
+      </>
+    ),
+  };
+}
+
+function FormField({
+  field,
+  name,
+  answer,
+  optional,
+  chrome,
+}: {
+  readonly field: MetaBoxFieldManifestEntry;
+  readonly name: string;
+  readonly answer: SubmittedValue;
+  readonly optional: boolean;
+  readonly chrome: FormChrome;
+}): ReactNode {
+  const { id, error, describedBy, nodes } = describe(field, name, chrome);
   return (
-    <div className="plumix-form-field" data-plumix-form-field={field.key}>
+    <div className="plumix-form-field" data-plumix-form-field={name}>
       <label
         className="plumix-form-label"
         data-plumix-form-label=""
         htmlFor={id}
       >
         {labelSourceText(field.label)}
-        {field.required === true ? (
-          // The visual half of "required". The control's `required`
-          // attribute is the half assistive technology reads, so the
-          // marker is hidden from it rather than announced twice — and
-          // being a glyph rather than a tint, it survives a visitor who
-          // cannot tell the label's colour from any other.
-          <span
-            className="plumix-form-required"
-            data-plumix-form-required=""
-            aria-hidden="true"
-          >
-            {" *"}
-          </span>
-        ) : null}
+        <RequiredMark field={field} />
       </label>
-      {helpId === undefined ? null : (
-        <p className="plumix-form-help" data-plumix-form-help="" id={helpId}>
-          {help}
-        </p>
-      )}
-      {errorId === undefined ? null : (
-        <p
-          className="plumix-form-error"
-          data-plumix-form-error={field.key}
-          id={errorId}
-        >
-          {error}
-        </p>
-      )}
+      {nodes}
       <FormControl
         field={field}
+        name={name}
         id={id}
         answer={answer}
-        describedBy={describedBy.length > 0 ? describedBy.join(" ") : undefined}
+        describedBy={describedBy}
         invalid={error !== undefined}
+        optional={optional}
       />
     </div>
   );
+}
+
+/**
+ * The shell a group and a repeater share: a `<fieldset>` naming itself in
+ * its `<legend>`, carrying the id the error summary links to and the help
+ * and error text that belong to the container rather than to anything
+ * inside it — a row count the visitor missed is the repeater's error, not
+ * any one row's.
+ */
+function FormFieldset({
+  field,
+  name,
+  kind,
+  chrome,
+  children,
+}: {
+  readonly field: MetaBoxFieldManifestEntry;
+  readonly name: string;
+  readonly kind: "group" | "repeater";
+  readonly chrome: FormChrome;
+  readonly children: ReactNode;
+}): ReactNode {
+  const { id, error, describedBy, nodes } = describe(field, name, chrome);
+  return (
+    <fieldset
+      className={`plumix-form-${kind}`}
+      {...{ [`data-plumix-form-${kind}`]: name }}
+      id={id}
+      aria-describedby={describedBy}
+      aria-invalid={error === undefined ? undefined : ("true" as const)}
+    >
+      <legend className="plumix-form-legend" data-plumix-form-legend="">
+        {labelSourceText(field.label)}
+        <RequiredMark field={field} />
+      </legend>
+      {nodes}
+      {children}
+    </fieldset>
+  );
+}
+
+/**
+ * A repeater: as many rows as the visitor has things to say. Each row is
+ * its own `<fieldset>` carrying one hidden marker, and the markers are
+ * how the handler counts the rows that came back — a repeater posts no
+ * value of its own, so nothing else can claim that name.
+ *
+ * Add and remove appear only once the island is driving the form. Without
+ * JavaScript there is nothing behind them: adding a row means asking the
+ * server for one, and the plugin's endpoint answers submissions rather
+ * than serving forms. The form is served with the fewest rows it accepts,
+ * and never fewer than one.
+ */
+function FormRepeater({
+  field,
+  value,
+  name,
+  statePath,
+  optional,
+  chrome,
+}: {
+  readonly field: MetaBoxFieldManifestEntry;
+  readonly value: SubmittedValue;
+  readonly name: string;
+  readonly statePath: string;
+  readonly optional: boolean;
+  readonly chrome: FormChrome;
+}): ReactNode {
+  const subFields = field.subFields ?? [];
+  const rows = asRows(value);
+  const ids = chrome.rows?.[statePath] ?? serverRowIds(rows.length);
+  const label = labelSourceText(field.label);
+  const change = chrome.onRowsChange;
+  const floor = Math.max(minRows(field), 1);
+  const addId = `${elementId(chrome.idBase, name)}-add`;
+  // The remove button unmounts itself, so without this a keyboard visitor
+  // is left on `<body>` with no announcement and nothing to carry on from.
+  // Removing always leaves room for another row, so the add button is
+  // always there to take the focus.
+  const removed = useRef(false);
+  useEffect(() => {
+    if (!removed.current) return;
+    removed.current = false;
+    document.getElementById(addId)?.focus();
+  });
+  return (
+    <FormFieldset field={field} name={name} kind="repeater" chrome={chrome}>
+      {ids.map((id, index) => {
+        const rowPath = rowName(name, index);
+        return (
+          <fieldset
+            key={id}
+            className="plumix-form-row"
+            data-plumix-form-row={rowPath}
+          >
+            <legend className="plumix-form-legend" data-plumix-form-legend="">
+              {rowLegend(label, index)}
+            </legend>
+            <input type="hidden" name={rowMarkerName(name)} value="" readOnly />
+            <FormFields
+              fields={subFields}
+              // A row the island added is past what the server rendered,
+              // and it has to be judged by the same defaults its controls
+              // are seeded from — an empty bag would hide a sub-field
+              // whose driver's default makes it visible, leaving an answer
+              // the server then asks for and nothing on the page to give.
+              values={rows[index] ?? defaultAnswers(subFields)}
+              name={rowPath}
+              statePath={statePathOf(statePath, id)}
+              optional={optional || index >= minRows(field)}
+              chrome={chrome}
+            />
+            {change === undefined || ids.length <= floor ? null : (
+              <button
+                className="plumix-form-row-remove"
+                data-plumix-form-row-remove={rowPath}
+                type="button"
+                aria-label={removeRowLabel(label, index)}
+                onClick={() => {
+                  removed.current = true;
+                  change(
+                    statePath,
+                    ids.filter((candidate) => candidate !== id),
+                  );
+                }}
+              >
+                {labelSourceText(REMOVE_ROW)}
+              </button>
+            )}
+          </fieldset>
+        );
+      })}
+      {change === undefined || ids.length >= maxRows(field) ? null : (
+        <button
+          className="plumix-form-row-add"
+          data-plumix-form-row-add={name}
+          id={addId}
+          type="button"
+          onClick={() => {
+            change(statePath, withNewRow(ids));
+          }}
+        >
+          {labelSourceText(field.addLabel ?? ADD_ROW)}
+        </button>
+      )}
+    </FormFieldset>
+  );
+}
+
+/**
+ * One level of a form's questions, in the order it declares them. A group
+ * and a repeater row recurse through here with their own values, so a
+ * condition inside one is judged against that scope's answers and nothing
+ * else's — which is the same call the submit handler makes over the
+ * answers that come back.
+ */
+function FormFields({
+  fields,
+  values,
+  name,
+  statePath,
+  optional = false,
+  chrome,
+}: {
+  readonly fields: readonly MetaBoxFieldManifestEntry[];
+  readonly values: SubmittedValues;
+  readonly name: string | undefined;
+  readonly statePath: string | undefined;
+  /** True in a scope the visitor may leave blank — see `FormControl`. */
+  readonly optional?: boolean;
+  readonly chrome: FormChrome;
+}): ReactNode {
+  return visibleFields(fields, values).map((field) => {
+    const fieldPath = fieldName(name, field.key);
+    const value = values[field.key];
+    if (field.inputType === "group") {
+      return (
+        <FormFieldset
+          key={field.key}
+          field={field}
+          name={fieldPath}
+          kind="group"
+          chrome={chrome}
+        >
+          <FormFields
+            fields={field.subFields ?? []}
+            values={asGroup(value)}
+            name={fieldPath}
+            statePath={statePathOf(statePath, field.key)}
+            optional={optional}
+            chrome={chrome}
+          />
+        </FormFieldset>
+      );
+    }
+    if (field.inputType === "repeater") {
+      return (
+        <FormRepeater
+          key={field.key}
+          field={field}
+          value={value}
+          name={fieldPath}
+          statePath={statePathOf(statePath, field.key)}
+          optional={optional}
+          chrome={chrome}
+        />
+      );
+    }
+    return (
+      <FormField
+        key={field.key}
+        field={field}
+        name={fieldPath}
+        answer={value}
+        optional={optional}
+        chrome={chrome}
+      />
+    );
+  });
 }
 
 /**
@@ -143,7 +457,7 @@ function ErrorSummary({
             {error.field === "" ? (
               error.message
             ) : (
-              <a href={`#${idBase}-${error.field}`}>{error.message}</a>
+              <a href={`#${elementId(idBase, error.field)}`}>{error.message}</a>
             )}
           </li>
         ))}
@@ -228,6 +542,13 @@ export interface FormMarkupProps {
   readonly step?: number;
   readonly onBack?: ComponentProps<"button">["onClick"];
   readonly stepHeadingRef?: Ref<HTMLHeadingElement>;
+  /** The island's rows — see {@link FormRowState}. */
+  readonly rows?: FormRowState;
+  /**
+   * Supplied only by a live island, and what puts the add and remove
+   * buttons on the page: without it there is nothing behind them.
+   */
+  readonly onRowsChange?: FormRowsChange;
 }
 
 /**
@@ -263,6 +584,8 @@ export function FormMarkup({
   onBack,
   stepHeadingRef,
   onChange,
+  rows,
+  onRowsChange,
 }: FormMarkupProps): ReactNode {
   const honeypotId = `${idBase}-${HONEYPOT_FIELD}`;
   const title = optionalText(form.title);
@@ -277,17 +600,22 @@ export function FormMarkup({
   const stepped = index >= 0 && steps.length > 1;
   const shown = stepped ? steps[index] : undefined;
   const fields = shown?.fields ?? steps.flatMap((one) => one.fields);
-  const messages = new Map(errors.map((error) => [error.field, error.message]));
+  const chrome: FormChrome = {
+    idBase,
+    messages: new Map(errors.map((error) => [error.field, error.message])),
+    rows,
+    onRowsChange,
+  };
   const StepHeading = title === undefined ? "h2" : "h3";
-  const controls = fields.map((field) => (
-    <FormField
-      key={field.key}
-      field={field}
-      idBase={idBase}
-      error={messages.get(field.key)}
-      answer={answers?.[field.key]}
+  const controls = (
+    <FormFields
+      fields={fields}
+      values={values}
+      name={undefined}
+      statePath={undefined}
+      chrome={chrome}
     />
-  ));
+  );
   return (
     <form
       className="plumix-form"

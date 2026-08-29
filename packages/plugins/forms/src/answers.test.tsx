@@ -1,7 +1,7 @@
 import type { EntryContent } from "plumix/blocks";
 import { createBlockRegistry } from "plumix/blocks";
 import { BlockRenderer, PlumixProvider } from "plumix/blocks/renderer";
-import { select, text, toggle } from "plumix/fields";
+import { group, repeater, select, text, toggle } from "plumix/fields";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
@@ -120,9 +120,7 @@ describe("a form nobody has touched", () => {
     const form = defineForm("survey", { fields: [text("why")] });
     const values = readSubmittedValues(form.fields, new URLSearchParams());
 
-    expect(
-      pickStoredAnswers(visibleFields(form.fields, values), values),
-    ).toEqual({});
+    expect(pickStoredAnswers(form.fields, values)).toEqual({});
   });
 });
 
@@ -141,5 +139,125 @@ describe("visibleFields", () => {
     expect(
       visibleFields(fields, { plan: "pro" }).map((field) => field.key),
     ).toEqual(["plan", "seats"]);
+  });
+});
+
+describe("a group", () => {
+  const form = defineForm("profile", {
+    fields: [
+      text("name"),
+      group("address").fields([text("city"), text("postcode")]),
+    ],
+  });
+
+  test("posts its members under the group's own name", () => {
+    const values = readSubmittedValues(
+      form.fields,
+      new URLSearchParams([
+        ["name", "Ada"],
+        ["address[city]", "London"],
+      ]),
+    );
+
+    expect(values).toEqual({
+      name: "Ada",
+      address: { city: "London", postcode: undefined },
+    });
+  });
+
+  test("stores its answers under its own key", () => {
+    const values = readSubmittedValues(
+      form.fields,
+      new URLSearchParams([["address[postcode]", "SW1"]]),
+    );
+
+    expect(pickStoredAnswers(form.fields, values)).toEqual({
+      address: { postcode: "SW1" },
+    });
+  });
+
+  test("is absent when nobody answered anything inside it", () => {
+    const values = readSubmittedValues(form.fields, new URLSearchParams());
+
+    expect(pickStoredAnswers(form.fields, values)).toEqual({});
+  });
+});
+
+describe("a repeater", () => {
+  const vegetarian = toggle("vegetarian");
+  const attendees = repeater("attendees").fields([
+    text("who"),
+    vegetarian,
+    text("dietary").visibleWhen(vegetarian.isOn()),
+  ]);
+  const form = defineForm("party", { fields: [attendees] });
+
+  /** What a browser posts for `rows` rendered rows of `attendees`. */
+  function body(rows: readonly Record<string, string>[]): URLSearchParams {
+    return new URLSearchParams(
+      rows.flatMap((row, index) => [
+        ["attendees[]", ""] as [string, string],
+        ...Object.entries(row).map(([key, value]): [string, string] => [
+          `attendees[${String(index)}][${key}]`,
+          value,
+        ]),
+      ]),
+    );
+  }
+
+  test("stores one row object per row the visitor filled in", () => {
+    const values = readSubmittedValues(
+      form.fields,
+      body([{ who: "Ada" }, { who: "Grace" }]),
+    );
+
+    expect(pickStoredAnswers(form.fields, values)).toEqual({
+      attendees: [
+        { who: "Ada", vegetarian: false },
+        { who: "Grace", vegetarian: false },
+      ],
+    });
+  });
+
+  test("drops a row nobody filled in, and the repeater once every row is blank", () => {
+    const values = readSubmittedValues(
+      form.fields,
+      body([{ who: "Ada" }, {}, {}]),
+    );
+
+    expect(pickStoredAnswers(form.fields, values)).toEqual({
+      attendees: [{ who: "Ada", vegetarian: false }],
+    });
+    expect(
+      pickStoredAnswers(
+        form.fields,
+        readSubmittedValues(form.fields, body([{}])),
+      ),
+    ).toEqual({});
+  });
+
+  // The row is the scope: one row's answer decides that row's fields and
+  // nothing about its neighbour's.
+  test("judges a row-scoped condition against that row's own answers", () => {
+    const values = readSubmittedValues(
+      form.fields,
+      body([
+        { who: "Ada", vegetarian: "on", dietary: "no nuts" },
+        { who: "Grace", dietary: "smuggled in" },
+      ]),
+    );
+
+    expect(pickStoredAnswers(form.fields, values)).toEqual({
+      attendees: [
+        { who: "Ada", vegetarian: true, dietary: "no nuts" },
+        { who: "Grace", vegetarian: false },
+      ],
+    });
+  });
+
+  test("reads no rows at all from a body carrying no markers", () => {
+    const values = readSubmittedValues(form.fields, new URLSearchParams());
+
+    expect(values).toEqual({ attendees: [] });
   });
 });

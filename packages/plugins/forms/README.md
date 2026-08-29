@@ -9,9 +9,9 @@ code that renders it, diffs in review, and reverts with `git revert`, so local,
 staging and production cannot drift apart. There is no builder, no export
 format, and nothing to migrate between environments.
 
-> This release covers the v1 field roster, conditional visibility, validation
-> on the server, multi-step forms, and your own `validate` and `onSubmit`.
-> Repeater and group fields, and the inbox and export, arrive next.
+> This release covers the v1 field roster, repeater and group fields,
+> conditional visibility, validation on the server, multi-step forms, and your
+> own `validate` and `onSubmit`. The inbox and export arrive next.
 
 ## Install
 
@@ -64,6 +64,8 @@ submission payload types itself:
 | `date`              | date input           | ISO `string`            |
 | `select`            | dropdown             | option value, or values |
 | `toggle`            | checkbox             | `boolean`               |
+| `group`             | fieldset of fields   | object under its key    |
+| `repeater`          | rows of fields       | array of row objects    |
 
 Everything but `tel` comes from `plumix/fields`. `tel` is this plugin's own
 contribution to the field vocabulary — core has no built-in for it — so it
@@ -83,6 +85,65 @@ empty. The exceptions are the two controls that always answer: an unticked
 checkbox reads `false`, and a multiple choice with nothing picked reads an
 empty list. A field its condition hid is absent too, `.required()` or not — so
 read a conditional field's answer as optional whatever its type says.
+
+## Rows and groups
+
+A `group` puts related questions in a fieldset and stores them under one key. A
+`repeater` gives the visitor as many rows as they have things to say — referees,
+attendees, statements — and stores them as an array of row objects:
+
+```ts
+import { group, repeater, text, toggle } from "plumix/fields";
+
+const vegetarian = toggle("vegetarian");
+
+const rsvp = defineForm("rsvp", {
+  fields: [
+    group("contact").fields([text("name").required(), tel("phone")]),
+    repeater("attendees")
+      .fields([
+        text("who").label("Name").required(),
+        vegetarian,
+        text("dietary").visibleWhen(vegetarian.isOn()),
+      ])
+      .max(6),
+  ],
+});
+```
+
+One submission of that stores
+`{ contact: { name: "Ada" }, attendees: [{ who: "Grace", vegetarian: false }] }`,
+and `FormAnswersOf<typeof rsvp>` says so.
+
+`.fields()` comes first in both chains — it is the call that infers the row
+shape, so `repeater("attendees").label("Attendees")` will not compile.
+
+Rows carry their own conditions. A rule inside a row is judged against **that
+row's** answers and nothing else's, so one attendee's dietary note appears
+because that attendee is vegetarian, not because their neighbour is. The server
+applies the same rule row by row, which is what keeps a hidden sub-field out of
+that row's stored values.
+
+A row nobody filled in is not an answer: it is dropped rather than stored blank,
+and nothing inside it is validated — including a `.required()` sub-field. So
+`.min()` and `.required()` count the rows the visitor actually used, while
+`.max()` counts the rows that came back at all, since the form never renders
+more than it takes. Both are enforced on the server whatever the browser did,
+and a repeater that declares no `.max()` still has one — 100 rows, because the
+request body is the visitor's to write.
+
+With JavaScript on, the visitor adds and removes rows on the page, and focus
+moves to the add button when a row goes rather than being dropped with it. With
+it off they get the fewest rows the repeater accepts — and never fewer than one
+— since adding a row means asking the server for one and this plugin's endpoint
+answers submissions rather than serving forms. For the same reason a row past
+that floor carries no browser-side `required`: the server asks a blank row
+nothing, and a browser refusing to submit over a row nobody has to fill would
+strand a visitor who has no other way through.
+
+Nested fields post under a bracketed name — `contact[name]`,
+`attendees[0][who]` — which is also what an error names and what the styling
+attributes below carry.
 
 ## Fields that only sometimes apply
 
@@ -384,20 +445,30 @@ The plugin ships no colour, type or borders — the form inherits your theme's
 input and button styling. Every part carries a stable class and a data
 attribute, both public API:
 
-| Part          | Class                      | Attribute                          |
-| ------------- | -------------------------- | ---------------------------------- |
-| The form      | `plumix-form`              | `data-plumix-form="<slug>"`        |
-| Title         | `plumix-form-title`        | `data-plumix-form-title`           |
-| Field wrapper | `plumix-form-field`        | `data-plumix-form-field="<key>"`   |
-| Label         | `plumix-form-label`        | `data-plumix-form-label`           |
-| Control       | `plumix-form-control`      | `data-plumix-form-control="<key>"` |
-| Help text     | `plumix-form-help`         | `data-plumix-form-help`            |
-| Field error   | `plumix-form-error`        | `data-plumix-form-error="<key>"`   |
-| Required mark | `plumix-form-required`     | `data-plumix-form-required`        |
-| Error summary | `plumix-form-summary`      | `data-plumix-form-summary`         |
-| Actions       | `plumix-form-actions`      | `data-plumix-form-actions`         |
-| Submit button | `plumix-form-submit`       | `data-plumix-form-submit`          |
-| Confirmation  | `plumix-form-confirmation` | `data-plumix-form-confirmation`    |
+| Part          | Class                      | Attribute                              |
+| ------------- | -------------------------- | -------------------------------------- |
+| The form      | `plumix-form`              | `data-plumix-form="<slug>"`            |
+| Title         | `plumix-form-title`        | `data-plumix-form-title`               |
+| Field wrapper | `plumix-form-field`        | `data-plumix-form-field="<name>"`      |
+| Label         | `plumix-form-label`        | `data-plumix-form-label`               |
+| Control       | `plumix-form-control`      | `data-plumix-form-control="<name>"`    |
+| Help text     | `plumix-form-help`         | `data-plumix-form-help`                |
+| Field error   | `plumix-form-error`        | `data-plumix-form-error="<name>"`      |
+| Required mark | `plumix-form-required`     | `data-plumix-form-required`            |
+| Group         | `plumix-form-group`        | `data-plumix-form-group="<name>"`      |
+| Repeater      | `plumix-form-repeater`     | `data-plumix-form-repeater="<name>"`   |
+| Repeater row  | `plumix-form-row`          | `data-plumix-form-row="<name>"`        |
+| Fieldset name | `plumix-form-legend`       | `data-plumix-form-legend`              |
+| Add a row     | `plumix-form-row-add`      | `data-plumix-form-row-add="<name>"`    |
+| Remove a row  | `plumix-form-row-remove`   | `data-plumix-form-row-remove="<name>"` |
+| Error summary | `plumix-form-summary`      | `data-plumix-form-summary`             |
+| Actions       | `plumix-form-actions`      | `data-plumix-form-actions`             |
+| Submit button | `plumix-form-submit`       | `data-plumix-form-submit`              |
+| Confirmation  | `plumix-form-confirmation` | `data-plumix-form-confirmation`        |
+
+`<name>` is the field's key at the top of the form and its bracketed path below
+that. The add and remove buttons are on the page only while the island is
+driving the form.
 
 A form broken into steps carries five more, none of which a plain form has:
 
