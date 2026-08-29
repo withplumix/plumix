@@ -33,8 +33,10 @@ import type { AnswerWords } from "../answer-lines.js";
 import type { SubmissionStatus } from "../types.js";
 import type { SubmissionFilter } from "./rpc.js";
 import { answerLines, answerText } from "../answer-lines.js";
+import { submissionColumns } from "../columns.js";
 import { SUBMISSION_STATUSES } from "../types.js";
 import {
+  submissionsExportHref,
   useDeleteSubmission,
   useFormDefinitions,
   useSetSubmissionNote,
@@ -43,7 +45,7 @@ import {
   useSubmissionCounts,
   useSubmissions,
 } from "./rpc.js";
-import { formFilterOptions, submissionColumns } from "./table.js";
+import { formFilterOptions } from "./table.js";
 
 // Radix Select forbids an empty-string item value, so "every form"
 // carries a sentinel that maps back to no filter at all.
@@ -78,11 +80,18 @@ const M = {
     message: "Open submission {serial}",
     comment: "serial: the submission's per-form number",
   },
+  exportCsv: { id: "plugin.forms.inbox.exportCsv", message: "Export CSV" },
+  exportJson: { id: "plugin.forms.inbox.exportJson", message: "Export JSON" },
   yes: { id: "plugin.forms.answer.yes", message: "Yes" },
   no: { id: "plugin.forms.answer.no", message: "No" },
 } satisfies Record<string, MessageDescriptor>;
 
 const NONE = "—";
+
+const EXPORT_FORMATS = [
+  { format: "csv", label: M.exportCsv },
+  { format: "json", label: M.exportJson },
+] as const;
 
 // The counts come back as parsed JSON, and a form may legitimately be
 // called `constructor` or `toString`. A bare index would then hand back
@@ -201,6 +210,23 @@ export function SubmissionsShell(): ReactNode {
               >
                 {countFor(counts.data?.statuses, status)}
               </span>
+            </Button>
+          ))}
+        </div>
+
+        {/* Plain links, so the browser downloads with the session it
+            already has. `download` is advisory: the route sends its own
+            `Content-Disposition`, which is what names the file. */}
+        <div className="ms-auto flex items-center gap-1">
+          {EXPORT_FORMATS.map(({ format, label }) => (
+            <Button key={format} asChild variant="outline" size="sm">
+              <a
+                href={submissionsExportHref(filter, format)}
+                download
+                data-testid={`forms-export-${format}`}
+              >
+                {i18n._(label)}
+              </a>
             </Button>
           ))}
         </div>

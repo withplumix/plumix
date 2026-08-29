@@ -137,6 +137,27 @@ export async function listSubmissions(
 }
 
 /**
+ * Every submission a filter names, newest first — what an export writes.
+ * Unpaged, because the columns of a CSV come from the label snapshots of
+ * the rows it holds and there is no header to write before the last row
+ * has been read. `limit` is therefore a ceiling rather than a page: the
+ * caller reads one past what it can serve so that too many to hold is
+ * something it can say — see `createExportHandler`.
+ */
+export async function listAllSubmissions(
+  ctx: AppContext,
+  filter: SubmissionFilter,
+  limit: number,
+): Promise<readonly FormSubmission[]> {
+  return ctx.db
+    .select()
+    .from(formSubmissions)
+    .where(filterFor(filter))
+    .orderBy(desc(formSubmissions.id))
+    .limit(limit);
+}
+
+/**
  * The numbers beside each filter. Each facet is counted with the *other*
  * facet applied, so switching status keeps the form counts answering
  * "how many of these are there", rather than restating the page you can

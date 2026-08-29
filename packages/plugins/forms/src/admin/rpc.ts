@@ -19,6 +19,7 @@ import type {
   SubmissionsPage,
   SubmissionStatus,
 } from "../types.js";
+import { EXPORT_PATH } from "../contract.js";
 
 // The shapes the handlers return, read from where they are declared
 // rather than declared a second time here — a second copy is a copy that
@@ -31,17 +32,37 @@ const SUBMISSIONS_KEY = ["forms", "submissions"] as const;
 // submission can change what forms exist.
 const DEFINITIONS_KEY = ["forms", "definitions"] as const;
 
+// The subdirectory the host is mounted under, which every worker-routed
+// URL the admin builds has to carry.
+function pluginBasePath(): string {
+  return (
+    (globalThis as { plumix?: { basePath?: string } }).plumix?.basePath ?? ""
+  );
+}
+
+/** Where the export links point, under whatever the inbox is showing. */
+export function submissionsExportHref(
+  filter: SubmissionFilter,
+  format: "csv" | "json",
+): string {
+  const query = new URLSearchParams({ format });
+  if (filter.form !== undefined) query.set("form", filter.form);
+  if (filter.status !== undefined) query.set("status", filter.status);
+  return `${pluginBasePath()}${EXPORT_PATH}?${query.toString()}`;
+}
+
 async function rpcCall<TOutput>(
   procedure: string,
   input: unknown = {},
 ): Promise<TOutput> {
-  const base =
-    (globalThis as { plumix?: { basePath?: string } }).plumix?.basePath ?? "";
-  const res = await fetch(`${base}/_plumix/rpc/forms/${procedure}`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-plumix-request": "1" },
-    body: JSON.stringify({ json: input, meta: [] }),
-  });
+  const res = await fetch(
+    `${pluginBasePath()}/_plumix/rpc/forms/${procedure}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-plumix-request": "1" },
+      body: JSON.stringify({ json: input, meta: [] }),
+    },
+  );
   const envelope = (await res.json().catch(() => null)) as {
     json?: unknown;
   } | null;

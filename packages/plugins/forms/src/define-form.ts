@@ -175,6 +175,18 @@ export interface FormDefinitionInput<
    */
   readonly store?: boolean;
   /**
+   * How many days this form's submissions are kept before the nightly
+   * task deletes them, whatever status they are under. Zero — what a
+   * form declaring nothing takes — keeps them indefinitely, which is the
+   * only default that cannot lose an enquiry nobody asked to lose.
+   *
+   * It is the answer to holding personal data forever because nobody
+   * chose a number: a form asking for a phone number and an address
+   * declares how long the site is entitled to them, beside the fields
+   * that collect them, in the repository that deploys them.
+   */
+  readonly retentionDays?: number;
+  /**
    * Put Cloudflare Turnstile in front of this form's submit button — for
    * the one form actually being attacked, rather than for every form on
    * the site. The honeypot and timing floor every form already meets are
@@ -227,6 +239,8 @@ export interface FormDefinition<
   readonly onSubmit: FormHandler | undefined;
   readonly store: boolean;
   readonly bind: FormBinding | undefined;
+  /** Days before a submission is purged; `0` keeps it indefinitely. */
+  readonly retentionDays: number;
   /** What the server holds, secret and all — see {@link TurnstileWire}. */
   readonly turnstile: TurnstileConfig | undefined;
   /**
@@ -309,6 +323,10 @@ export function defineForm<const Fields extends readonly FormElementInput[]>(
   assertSupportedFields(slug, fields, undefined);
   const store = input.store ?? true;
   if (!store && !input.onSubmit) throw FormsError.storesNothing({ slug });
+  const retentionDays = input.retentionDays ?? 0;
+  if (!Number.isInteger(retentionDays) || retentionDays < 0) {
+    throw FormsError.invalidRetention({ slug, retentionDays });
+  }
   // `_answers` is type-level only, so the value is everything but it and
   // the cast is what carries the inferred shape onto a form nobody can
   // read that key off at runtime.
@@ -324,6 +342,7 @@ export function defineForm<const Fields extends readonly FormElementInput[]>(
     onSubmit: input.onSubmit as FormHandler | undefined,
     store,
     bind: input.bind,
+    retentionDays,
     turnstile: input.turnstile,
   };
   return Object.freeze(definition) as FormDefinition<Fields>;

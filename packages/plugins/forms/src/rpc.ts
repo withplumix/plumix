@@ -3,7 +3,6 @@ import { labelSourceText } from "plumix/i18n";
 import { authenticated, base } from "plumix/plugin";
 import * as v from "valibot";
 
-import type { FormSubmission } from "./db/schema.js";
 import type { FormRegistry } from "./registry.js";
 import type {
   FormSummary,
@@ -13,6 +12,7 @@ import type {
   SubmissionStatus,
 } from "./types.js";
 import { SUBMISSION_MODERATE_CAPABILITY } from "./contract.js";
+import { toSubmissionDto } from "./server/dto.js";
 import {
   countSubmissions,
   deleteSubmission,
@@ -25,23 +25,6 @@ import { SUBMISSION_STATUSES } from "./types.js";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
-
-function toDto(row: FormSubmission): SubmissionDTO {
-  return {
-    id: row.id,
-    form: row.formSlug,
-    serial: row.serial,
-    status: row.status,
-    answers: row.answers,
-    labels: row.labels,
-    entryId: row.entryId,
-    ipHash: row.ipHash,
-    userAgent: row.userAgent,
-    handlerError: row.handlerError,
-    note: row.note,
-    createdAt: row.createdAt.toISOString(),
-  };
-}
 
 interface ForbiddenErrors {
   readonly FORBIDDEN: (opts: { data: { capability: string } }) => Error;
@@ -104,7 +87,7 @@ export function createSubmissionsRouter(registry: FormRegistry) {
         cursor: input.cursor,
       });
       return {
-        submissions: page.submissions.map(toDto),
+        submissions: page.submissions.map(toSubmissionDto),
         nextCursor: page.nextCursor,
       };
     });
@@ -128,7 +111,7 @@ export function createSubmissionsRouter(registry: FormRegistry) {
           data: { kind: "form_submission", id: input.id },
         });
       }
-      return toDto(row);
+      return toSubmissionDto(row);
     });
 
   const setStatus = base

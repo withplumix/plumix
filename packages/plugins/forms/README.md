@@ -6,13 +6,13 @@ can read back.
 
 A form is a value in your code, not a row in a database. It deploys with the
 code that renders it, diffs in review, and reverts with `git revert`, so local,
-staging and production cannot drift apart. There is no builder, no export
+staging and production cannot drift apart. There is no builder, no form export
 format, and nothing to migrate between environments.
 
 > This release covers the v1 field roster, repeater and group fields,
 > conditional visibility, validation on the server, multi-step forms, your own
-> `validate` and `onSubmit`, the theme component and headless hook, and an
-> opt-in Turnstile captcha. The inbox and export arrive next.
+> `validate` and `onSubmit`, the theme component and headless hook, an opt-in
+> Turnstile captcha, the submissions inbox, and export and retention.
 
 ## Install
 
@@ -783,6 +783,78 @@ submission does.
 The inbox knows what forms exist by asking the plugin's own registry over RPC.
 There is no forms table to keep in step and nothing to register in the admin
 manifest: a form is a value in your repository, and the inbox reads it there.
+
+## Taking the submissions elsewhere
+
+Both export buttons sit beside the inbox's filters, and each writes exactly
+what is in view — the form and the status you are filtering by, and every
+submission under them rather than the page you can see.
+
+**CSV** is the one to open in a spreadsheet. The envelope leads (received,
+form, number, status), then a column per question, then your own note. The
+columns come from the rows' own label snapshots, so an export spanning two
+generations of a form names every column and a submission whose form has since
+been deleted still exports under the questions it was actually asked.
+
+An answer opening with `=`, `+`, `-`, `@` or a tab is prefixed with an
+apostrophe, so the spreadsheet shows what the visitor typed rather than running
+it. It is the injection several larger products still get wrong: a visitor who
+writes `=WEBSERVICE("https://…")` into a name field is otherwise writing a
+formula that runs on the machine of whoever opens the file. A number below zero
+is left alone — it is a number, and no spreadsheet evaluates one.
+
+**JSON** is the one to feed another program: the whole row per submission,
+answers nested as they were stored, with the envelope the CSV leaves out — the
+entry the form was bound to, the hashed address, the user agent, and whatever
+the form's own handler failed at.
+
+Both come from `GET /_plumix/forms/export`, behind the same
+`form_submission:moderate` capability the inbox is: the answers leaving the
+site are the answers on the page.
+
+The envelope columns, the note column and the status values are written in
+English rather than in your locale — the answer columns between them are named
+by the form's own snapshot, in whatever language that form was written, and an
+export is read by another program as often as by a person. A stable column name
+is what a script keys on.
+
+Because the columns come from the rows, nothing can be written until the last
+row is read, so an export is held whole in memory. Past 20,000 submissions it
+is refused rather than truncated, with a message asking you to narrow it — a
+file that looks complete and is not would be the worse answer.
+
+## Keeping submissions only as long as you need them
+
+A form says how long its submissions are kept, beside the fields that collect
+them:
+
+```ts
+const contact = defineForm("contact", {
+  fields: [text("name").required(), email("email").required()],
+  // Delete them after three months.
+  retentionDays: 90,
+});
+```
+
+One nightly scheduled task purges every form on the site — there is no
+schedule per form, because a retention period is a number of days and no site
+needs two of them purged at different hours. It runs on `0 3 * * *`, which
+must be declared in your `wrangler.jsonc` for the task to fire at all:
+
+```jsonc
+{
+  "triggers": {
+    "crons": ["0 3 * * *"],
+  },
+}
+```
+
+`retentionDays: 0`, which is what a form declaring nothing takes, keeps its
+submissions indefinitely — the only default that cannot lose an enquiry nobody
+asked to lose. Past the period, a submission goes whatever status it is under:
+an archived enquiry is still someone's address. A slug nobody declares any more
+is left alone, since the retention period is the form's and there is no longer
+a form to read one from.
 
 ## What gets stored
 

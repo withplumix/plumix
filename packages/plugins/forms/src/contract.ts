@@ -34,6 +34,12 @@ export const SUBMIT_ROUTE_PATH = "/submit";
 export const SUBMIT_PATH = `/_plumix/forms${SUBMIT_ROUTE_PATH}`;
 export const TOKEN_ROUTE_PATH = "/token";
 export const TOKEN_PATH = `/_plumix/forms${TOKEN_ROUTE_PATH}`;
+/**
+ * Where the inbox's export links point. A GET carrying the inbox's own
+ * filters, so a plain link downloads the file — see `exportHandler`.
+ */
+export const EXPORT_ROUTE_PATH = "/export";
+export const EXPORT_PATH = `/_plumix/forms${EXPORT_ROUTE_PATH}`;
 
 /**
  * The header core's CSRF gate looks for, which a plain `<form>` submit

@@ -1,29 +1,4 @@
-import type { FormLabelSnapshot, FormSummary } from "../types.js";
-
-/** One column of the inbox table. */
-export interface SubmissionColumn {
-  readonly key: string;
-  readonly label: string;
-}
-
-/**
- * The columns a page of submissions is shown under, read from each row's
- * own label snapshot rather than from the live form — so a page mixing
- * two generations of one form still names every column, and a submission
- * whose form is gone is not a table of empty cells.
- */
-export function submissionColumns(
-  rows: readonly { readonly labels: FormLabelSnapshot }[],
-  limit: number,
-): readonly SubmissionColumn[] {
-  const columns = new Map<string, string>();
-  for (const row of rows) {
-    for (const [key, field] of Object.entries(row.labels)) {
-      if (!columns.has(key)) columns.set(key, field.label);
-    }
-  }
-  return [...columns].slice(0, limit).map(([key, label]) => ({ key, label }));
-}
+import type { FormSummary } from "../types.js";
 
 /**
  * What the form filter offers: every form the registry declares now,

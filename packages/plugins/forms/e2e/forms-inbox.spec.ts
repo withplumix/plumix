@@ -72,3 +72,26 @@ test("an administrator archives a submission and notes what they did", async ({
     "Rang back Tuesday",
   );
 });
+
+test("an administrator exports what the filters name", async ({ page }) => {
+  await page.goto(INBOX);
+  await page.getByTestId("forms-form-filter").click();
+  await page.getByTestId("forms-form-filter-retired").click();
+  await expect(
+    page.getByTestId(`forms-submission-row-${String(fixtures.retiredId)}`),
+  ).toBeVisible();
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("forms-export-csv").click(),
+  ]);
+
+  expect(download.suggestedFilename()).toBe("submissions-retired.csv");
+  const file = await download.createReadStream();
+  const body = (await file.toArray()).join("");
+  // The retired form's own question heads the column, and the answer is
+  // under it — the export reads the row's snapshot, not the registry.
+  expect(body).toContain("What we used to ask");
+  expect(body).toContain("Still readable");
+  expect(body).not.toContain("Ada Lovelace");
+});

@@ -185,6 +185,34 @@ describe("a form that stores nothing", () => {
   });
 });
 
+describe("a form's retention period", () => {
+  test("is how many days its submissions are kept", () => {
+    const form = defineForm("contact", {
+      fields: [text("name")],
+      retentionDays: 90,
+    });
+
+    expect(form.retentionDays).toBe(90);
+  });
+
+  test("is forever for a form that declares none", () => {
+    expect(
+      defineForm("contact", { fields: [text("name")] }).retentionDays,
+    ).toBe(0);
+  });
+
+  // A negative period puts the cutoff in the future, so the first night
+  // takes every submission the form ever had.
+  test("is refused when it is not a whole number of days at or above zero", () => {
+    expect(() =>
+      defineForm("contact", { fields: [text("name")], retentionDays: -1 }),
+    ).toThrow(FormsError);
+    expect(() =>
+      defineForm("contact", { fields: [text("name")], retentionDays: 1.5 }),
+    ).toThrow(FormsError);
+  });
+});
+
 describe("toFormWire", () => {
   // The island's props cross the wire as JSON. What is not on this shape
   // cannot leak to a browser, which is the point of projecting rather
