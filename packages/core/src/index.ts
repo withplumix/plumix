@@ -200,12 +200,18 @@ export type { NamedTemplateChoice } from "./route/render/template-builders.js";
 // The selection half of the hierarchy, public for the same reason `TierMatchRule`
 // and `TargetMatcher` are: a plugin declaring its own rule kind against the node
 // hierarchy (the OG plugin's `ogCards`) builds its selectors out of these rather
-// than restating core's matchers.
+// than restating core's matchers. The `*Match` and `*Equals` constructors are
+// the same vocabulary one level down, for the narrowing a rule kind adds of its
+// own — `named` is what core builds out of them.
 export {
   archiveTypeTargets,
   authorTargets,
   dateTargets,
+  entryTypeMatch,
   entryTypeTargets,
+  metaEquals,
+  termMetaEquals,
+  termTaxonomyMatch,
   termTaxonomyTargets,
 } from "./route/render/rule-selectors.js";
 export type {
@@ -213,6 +219,7 @@ export type {
   BindRule,
   DateTargets,
   EntryTypeTargets,
+  MatchNarrowing,
   TermTaxonomyTargets,
 } from "./route/render/rule-selectors.js";
 export type {

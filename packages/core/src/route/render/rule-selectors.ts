@@ -17,10 +17,13 @@
  * template picker writes and `collectNamedTemplates` reads back — belongs to
  * the rule kind that holds up the other half, not to this layer.
  *
- * The `*Match` constructors are module-exported so `template-builders.ts`
- * mints the node prefix from one place while building `named`. They are *not*
- * on the `plumix` façade, so a third-party rule kind cannot yet build a
- * narrowing of its own the same way — see #2033.
+ * The `*Match` and `*Equals` constructors are on the `plumix` façade for that
+ * case. What a rule kind needs to mint a narrowing of its own is the node
+ * prefix and the predicate, not a sixth `*Targets` constructor:
+ * `template-builders.ts` builds `named` out of them, and a third-party rule
+ * kind builds its equivalent the same way rather than restating the prefix —
+ * the coupling this module exists to remove, which does not stop being one a
+ * level down.
  */
 
 import type {
@@ -52,23 +55,39 @@ import type { EntryData, TaxonomyData } from "./resolved-entry.js";
  */
 export type BindRule<S> = (where: TierMatchRule) => S;
 
-/** The match an entry-type selector narrows from. */
+/** What a `*Match` constructor accepts on top of the prefix it mints. */
+export type MatchNarrowing = Omit<Partial<TargetMatcher>, "nodeKind" | "type">;
+
+/**
+ * The match an entry-type selector narrows from, and the prefix a rule kind's
+ * own narrowing hangs off. `extra` cannot reach `nodeKind` or `type`: minting
+ * those from one place is the whole job, so a caller overriding them would be
+ * back to writing the matcher by hand.
+ */
 export function entryTypeMatch(
-  name: string,
-  extra?: Partial<TargetMatcher>,
+  name: EntryTypeName,
+  extra?: MatchNarrowing,
 ): TierMatchRule {
   return { match: { nodeKind: "content", type: name, ...extra } };
 }
 
 /** The match a taxonomy selector narrows from. */
 export function termTaxonomyMatch(
-  name: string,
-  extra?: Partial<TargetMatcher>,
+  name: TermTaxonomyName,
+  extra?: MatchNarrowing,
 ): TierMatchRule {
   return { match: { nodeKind: "term", type: name, ...extra } };
 }
 
-/** A predicate matching when a content entry's meta value equals `value`. */
+/**
+ * A predicate matching when a content entry's meta value equals `value`, read
+ * off the resolved bag — a `.returns("date")` field is a `Date` there and a
+ * reference is whatever its lookup adapter hydrated, so `===` compares against
+ * that rather than against what the meta JSON holds.
+ *
+ * The walk calls a predicate with whatever the resolved node carries, so this
+ * one has to refuse a term rather than read a key off it.
+ */
 export function metaEquals(
   key: string,
   value: unknown,
@@ -153,7 +172,7 @@ export function entryTypeTargets<
   bindEntry: BindRule<SEntry>,
   bindArchive: BindRule<SArchive>,
 ): SEntry & EntryTypeTargets<K, SEntry, SArchive> {
-  const content = (extra?: Partial<TargetMatcher>): SEntry =>
+  const content = (extra?: MatchNarrowing): SEntry =>
     bindEntry(entryTypeMatch(name, extra));
   return {
     ...content(),
@@ -179,7 +198,7 @@ export function termTaxonomyTargets<
   K extends TermTaxonomyName,
   STerm extends object,
 >(name: K, bindTerm: BindRule<STerm>): STerm & TermTaxonomyTargets<K, STerm> {
-  const term = (extra?: Partial<TargetMatcher>): STerm =>
+  const term = (extra?: MatchNarrowing): STerm =>
     bindTerm(termTaxonomyMatch(name, extra));
   return {
     ...term(),
@@ -201,7 +220,7 @@ export function termTaxonomyTargets<
 export function authorTargets<S extends object>(
   bind: BindRule<S>,
 ): S & AuthorTargets<S> {
-  const authorNode = (extra?: Partial<TargetMatcher>): S =>
+  const authorNode = (extra?: MatchNarrowing): S =>
     bind({ match: { nodeKind: "author", type: "author", ...extra } });
   return {
     ...authorNode(),

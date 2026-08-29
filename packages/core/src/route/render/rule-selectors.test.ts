@@ -1,13 +1,17 @@
 import { describe, expect, test } from "vitest";
 
-import type { TierMatchRule } from "../../theme.js";
+import type { TemplateData, TierMatchRule } from "../../theme.js";
 import type { ResolvedEntry, ResolvedTerm } from "./resolved-entry.js";
 import { text } from "../../plugin/fields/builder.js";
 import {
   archiveTypeTargets,
   authorTargets,
   dateTargets,
+  entryTypeMatch,
   entryTypeTargets,
+  metaEquals,
+  termMetaEquals,
+  termTaxonomyMatch,
   termTaxonomyTargets,
 } from "./rule-selectors.js";
 
@@ -179,5 +183,75 @@ describe("archiveTypeTargets", () => {
     expect(archiveTypeTargets("lookbook", probe).selected).toEqual({
       match: { nodeKind: "custom", type: "lookbook" },
     });
+  });
+});
+
+// The pieces a rule kind mints a narrowing of its own from, once the five
+// constructors above have run out. They are public for that, so what they mint
+// is a contract rather than an implementation detail of `named`.
+describe("the match constructors", () => {
+  test("entryTypeMatch is the prefix a bare entry-type selector carries", () => {
+    expect(entryTypeMatch("widget")).toEqual(
+      entryTypeTargets("widget", probe, probe).selected,
+    );
+    expect(entryTypeMatch("widget", { slug: "a" }).match).toMatchObject({
+      slug: "a",
+    });
+  });
+
+  test("termTaxonomyMatch is the prefix a bare taxonomy selector carries", () => {
+    expect(termTaxonomyMatch("colour")).toEqual(
+      termTaxonomyTargets("colour", probe).selected,
+    );
+    expect(termTaxonomyMatch("colour", { id: 9 }).match).toMatchObject({
+      id: 9,
+    });
+  });
+
+  test("what they refuse to compile", () => {
+    // @ts-expect-error - an unregistered name, which would mint a rule that
+    // never matches.
+    entryTypeMatch("nope");
+    // @ts-expect-error - same, one node kind over.
+    termTaxonomyMatch("nope");
+    // @ts-expect-error - the prefix is the whole point; overriding it is
+    // writing the matcher by hand.
+    entryTypeMatch("widget", { nodeKind: "term" });
+  });
+});
+
+// Both read the meta the resolved data carries, so a fixture is that bag —
+// `entry.meta` decoded and reference-hydrated, `term.meta` as the term row
+// carries it.
+const entryData = (meta: Record<string, unknown>) =>
+  ({ entry: { meta } }) as unknown as TemplateData;
+const termData = (meta: Record<string, unknown>) =>
+  ({ term: { meta } }) as unknown as TemplateData;
+
+describe("metaEquals", () => {
+  const winter = metaEquals("season", "winter");
+
+  test("matches only when the meta value is equal", () => {
+    expect(winter(entryData({ season: "winter" }))).toBe(true);
+    expect(winter(entryData({ season: "summer" }))).toBe(false);
+  });
+
+  // The walk hands a predicate whatever the resolved node carries, so one
+  // written for entries has to refuse a term rather than read a key off it.
+  test("refuses data that is not an entry", () => {
+    expect(winter(termData({ season: "winter" }))).toBe(false);
+  });
+});
+
+describe("termMetaEquals", () => {
+  const regional = termMetaEquals("scope", "regional");
+
+  test("matches only when the term-meta value is equal", () => {
+    expect(regional(termData({ scope: "regional" }))).toBe(true);
+    expect(regional(termData({ scope: "national" }))).toBe(false);
+  });
+
+  test("refuses data that is not a term", () => {
+    expect(regional(entryData({ scope: "regional" }))).toBe(false);
   });
 });
