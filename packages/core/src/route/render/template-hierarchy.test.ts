@@ -344,6 +344,21 @@ describe("targeted builders — name checking and data typing", () => {
     forEntryType("product").whereMeta("badge", 5);
   });
 
+  test("where reads storedMeta at the stored meta shape", () => {
+    forEntryType("product")
+      .where((data) => {
+        // Stored, not read: `.default()` narrows the decoded value only.
+        expectTypeOf(data.entry.storedMeta.badge).toEqualTypeOf<
+          string | undefined
+        >();
+        expectTypeOf(data.entry.meta.badge).toEqualTypeOf<string>();
+        // @ts-expect-error - "nope" is not a declared meta field of product
+        void data.entry.storedMeta.nope;
+        return data.entry.storedMeta.tier === "gold";
+      })
+      .template(() => null);
+  });
+
   test("forTermTaxonomy.whereMeta types keys and values against the stored meta shapes", () => {
     forTermTaxonomy("brand")
       .whereMeta("brandBadge", "gold")
@@ -361,6 +376,11 @@ describe("targeted builders — name checking and data typing", () => {
         expectTypeOf(data.term.meta.brandBadge).toEqualTypeOf<
           string | undefined
         >();
+        expectTypeOf(data.term.storedMeta.brandBadge).toEqualTypeOf<
+          string | undefined
+        >();
+        // @ts-expect-error - "nope" is not a declared meta field of brand
+        void data.term.storedMeta.nope;
         return data.term.logoUrl !== null;
       })
       .template(() => null);

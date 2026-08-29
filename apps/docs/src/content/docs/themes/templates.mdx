@@ -314,7 +314,7 @@ The bare `.template()` matches every entry of the type. Five selectors narrow it
 
 - `.slug("sicilian-caponata")` and `.id(42)` match one entry.
 - `.whereMeta("difficulty", "hard")` matches on a stored meta value, read off `entry.storedMeta`. The key and the value are typed against the type's folded stored meta, which is that same shape.
-- `.where((data) => ...)` takes any predicate over the resolved data.
+- `.where((data) => ...)` takes any predicate over the resolved data. `entry.storedMeta` carries the same folded stored shape `.whereMeta()` is typed against, and `entry.meta` the decoded read shape, so a comparison `.whereMeta()` cannot express still has its key checked.
 - `.named("wide", "Wide layout")` registers an author-selectable template. The id and label reach the editor's template picker, and the choice is stored in the reserved `__plumix_template` meta key, which the matching predicate reads back.
 
 `.archive.template()` is the sibling that targets the type's archive listing rather than its entries, so one file can style `recipe` and its `/recipes` index.
