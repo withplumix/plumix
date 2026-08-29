@@ -37,6 +37,13 @@ interface FormIslandProps {
   readonly action: string;
   readonly tokenPath: string;
   readonly idBase: string;
+  /**
+   * The signed entry the server resolved for a bound form. It crosses the
+   * wire with the rest of the props and is posted back untouched — the
+   * island never reads what is inside it, and could not forge one if it
+   * did.
+   */
+  readonly bound: string | null;
 }
 
 // It names no field, so the summary reads it as text rather than
@@ -89,6 +96,7 @@ export function FormIsland({
   action,
   tokenPath,
   idBase,
+  bound,
 }: IslandProps<FormIslandProps>): ReactNode {
   const form = useMemo(() => withoutNulls(wire), [wire]);
   // False through the server render and the first client render, true
@@ -316,6 +324,7 @@ export function FormIsland({
       errors={errors}
       answers={progress === null ? undefined : values}
       token={token}
+      bound={bound}
       busy={busy}
       summaryRef={summary}
       enhanced={live}

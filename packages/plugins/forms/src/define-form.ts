@@ -26,6 +26,14 @@ import { isPageBreak } from "./steps.js";
  */
 export type FormElementInput = MetaBoxFieldInput | FormPageBreak;
 
+/**
+ * What a form carries from the page it is placed on. `"entry"` binds the
+ * entry whose page is being rendered — a subscribe form on a school's
+ * page knows which school — and nothing else today, though the shape is
+ * a union so a term or an author can join it without a breaking change.
+ */
+export type FormBinding = "entry";
+
 // The fields among a form's elements, at the type level — what the
 // answers shape is inferred from. A page break carries no answer and is
 // not a `MetaBoxFieldInput`, so `Extract` drops it.
@@ -56,6 +64,14 @@ type AnyAnswers = Readonly<Record<string, JsonValue | undefined>>;
  */
 export interface FormValidateEvent<Answers> {
   readonly answers: Answers;
+  /**
+   * The entry the form was placed on, for a form that declared
+   * `bind: "entry"` and was rendered on one — the whole point of binding
+   * is that a handler can act on it. `null` for a form that binds
+   * nothing, and for one that binds but was rendered somewhere with no
+   * entry to bind.
+   */
+  readonly entryId: number | null;
   readonly ctx: AppContext;
 }
 
@@ -94,6 +110,14 @@ export interface FormDefinitionInput<
    * a visitor whose browser runs the island.
    */
   readonly fields: Fields;
+  /**
+   * What this form carries from the page it is placed on. Declared here;
+   * resolved for you at render, so nothing has to thread an entry id
+   * through the block, the template or the theme. The resolved value is
+   * signed and stored in its own column, and a page the binding does not
+   * apply to — a front page, an archive — simply carries nothing.
+   */
+  readonly bind?: FormBinding;
   /**
    * The checks the field builders cannot express — a date that has to be
    * in the future, an address already on the list. Runs on the server
@@ -156,6 +180,7 @@ export interface FormDefinition<
   readonly validate: FormValidator | undefined;
   readonly onSubmit: FormHandler | undefined;
   readonly store: boolean;
+  readonly bind: FormBinding | undefined;
   /**
    * Phantom answers shape — type-level only, never assigned. Read it
    * through {@link FormAnswersOf} rather than off the value, which
@@ -250,6 +275,7 @@ export function defineForm<const Fields extends readonly FormElementInput[]>(
     validate: input.validate as FormValidator | undefined,
     onSubmit: input.onSubmit as FormHandler | undefined,
     store,
+    bind: input.bind,
   };
   return Object.freeze(definition) as FormDefinition<Fields>;
 }

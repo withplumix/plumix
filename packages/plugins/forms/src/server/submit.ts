@@ -18,6 +18,7 @@ import {
   visibleFields,
 } from "../answers.js";
 import {
+  BOUND_FIELD,
   FORM_SLUG_FIELD,
   HONEYPOT_FIELD,
   RETURN_FIELD,
@@ -26,6 +27,7 @@ import {
 } from "../contract.js";
 import { CONFIRMATION } from "../messages.js";
 import { validateAnswers } from "../validate.js";
+import { verifyBoundEntry } from "./binding.js";
 import { buildLabelSnapshot } from "./labels.js";
 import { rejectPage } from "./reject-page.js";
 import { insertSubmission, recordHandlerFailure } from "./repository.js";
@@ -163,6 +165,7 @@ async function runHandler(
     await form.onSubmit({
       answers: candidate.answers,
       labels: candidate.labels,
+      entryId: candidate.entryId,
       submission: stored,
       ctx,
     });
@@ -220,13 +223,33 @@ export function createSubmitHandler(registry: FormRegistry) {
     const form = slug === null ? undefined : registry.get(slug);
     if (!form) return refusal("Not Found", 404);
 
+    // Read before anything else looks at the answers: a token this
+    // install did not sign is not a submission with a bad field, it is a
+    // submission claiming an entry nobody bound it to, so it is refused
+    // outright rather than answered like a mistyped address. Only a form
+    // that binds even looks — otherwise removing a `bind` would start
+    // refusing every visitor still holding a cached page that has one.
+    const bound = form.bind === "entry" ? body.get(BOUND_FIELD) : null;
+    const entryId =
+      bound === null ? null : await verifyBoundEntry(ctx, form.slug, bound);
+    if (bound !== null && entryId === null) return refusal("Forbidden", 403);
+
     const values = readSubmittedValues(form.fields, body);
     const visible = visibleFields(form.fields, values);
     // A rejected submission, answered in the shape the caller asked for.
     const reject = (errors: readonly FormFieldError[]): Response =>
       wantsJson(request)
         ? jsonResponse({ ok: false, errors }, 422)
-        : rejectPage(ctx, form, values, errors, returnUrl(body, request, ctx));
+        : rejectPage(ctx, form, {
+            values,
+            errors,
+            returnTo: returnUrl(body, request, ctx),
+            // Carried through untouched, so a visitor who is handed the
+            // form back does not lose the entry it was bound to. It is
+            // the same signed token that just verified — re-emitting one
+            // grants nothing that posting it again would not.
+            bound,
+          });
 
     // Validation comes before the spam floor, and that is what keeps a
     // trapped submission indistinguishable from a real one: a bot that
@@ -241,7 +264,7 @@ export function createSubmitHandler(registry: FormRegistry) {
     if (errors.length > 0) return reject(errors);
 
     const answers = pickStoredAnswers(form.fields, values);
-    const ownErrors = await form.validate?.({ answers, ctx });
+    const ownErrors = await form.validate?.({ answers, entryId, ctx });
     if (ownErrors?.length) return reject(ownErrors);
 
     // The two halves of the spam floor, and they answer the sender the
@@ -261,6 +284,7 @@ export function createSubmitHandler(registry: FormRegistry) {
       answers,
       labels: buildLabelSnapshot(visible),
       status,
+      entryId,
       ipHash,
       userAgent,
     };

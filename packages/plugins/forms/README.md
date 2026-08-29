@@ -230,6 +230,60 @@ The block server-renders static markup — the same bytes for every visitor, so
 the page carrying it stays edge-cacheable — and it submits as a plain HTML
 `POST` with no JavaScript on the page at all.
 
+## Carrying the page's entry
+
+A form placed on an entry's page can carry that entry, so a subscribe form on
+a school's page knows which school without you wiring one through the block,
+the template or the theme. Declare what it binds:
+
+```ts
+const subscribe = defineForm("subscribe", {
+  bind: "entry",
+  fields: [email("email").required()],
+  onSubmit: ({ entryId, answers }) => enrol(entryId, answers.email),
+});
+```
+
+The value is resolved on the server at render — from the entry the URL
+already matched, so it costs no second lookup — and travels as a token signed
+with a per-install secret. The secret is generated the first time one is
+needed and kept in the settings table, so there is no environment variable and
+no binding to configure.
+
+Nothing carries the bound value in the clear, which is the point. Every other
+form system puts it in a plain hidden input, one devtools edit away from
+submitting against a different entry; here the value and its signature travel
+together and the server reads the value back only out of a token it signed.
+Edit either half and the submission is refused with a `403`, as is a token
+minted for one form and replayed against another — the form's slug is inside
+what was signed.
+
+`entryId` reaches `validate` and `onSubmit`, and is stored in its own indexed
+`entry_id` column rather than among the answers, so _every submission for this
+entry_ is a query:
+
+```ts
+import { eq } from "plumix/db";
+
+import { formSubmissions } from "@plumix/plugin-forms/schema";
+
+const enquiries = await ctx.db
+  .select()
+  .from(formSubmissions)
+  .where(eq(formSubmissions.entryId, school.id));
+```
+
+A bound form placed somewhere with no entry to bind carries no token and stores
+no entry — a front page, a footer, and also an archive or a synced pattern,
+where the block is rendered but the entry is not resolved for it. A form that
+declares no `bind` carries nothing either way. Read `entryId` as though it were
+optional wherever the same form appears in more than one place.
+
+The token does not expire, because the page carrying it is edge-cached and an
+expiry would be about the visitor rather than the page. `entry_id` carries no
+foreign key for the same reason `form_slug` does not: a submission is a record
+of what someone sent, and deleting the entry should not delete it.
+
 ## What JavaScript adds
 
 An island takes over that same markup — it renders the form the server already
@@ -495,6 +549,9 @@ serial you can quote to whoever sent it, the answers, and a snapshot of what
 every field and option was called at the time. That snapshot is what keeps the
 row readable after the form changes — without it a renamed field reads as a raw
 key.
+
+A form that binds the page's entry stores it in `entry_id`, indexed so that
+reading every submission for one entry is a query rather than a scan.
 
 A submission whose `onSubmit` threw carries the reason in `handler_error`. The
 answers are untouched — what failed is what the site meant to do next with

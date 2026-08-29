@@ -10,6 +10,13 @@ import { FormMarkup } from "../block/form-markup.js";
 import { SUBMIT_PATH } from "../contract.js";
 import { SUMMARY_TITLE } from "../messages.js";
 
+interface RejectedSubmission {
+  readonly values: SubmittedValues;
+  readonly errors: readonly FormFieldError[];
+  readonly returnTo: string | undefined;
+  readonly bound: string | null;
+}
+
 /**
  * What a visitor with no JavaScript gets when the server will not accept
  * their answers: the same form back, carrying what they typed and the
@@ -25,9 +32,7 @@ import { SUMMARY_TITLE } from "../messages.js";
 export function rejectPage(
   ctx: AppContext,
   form: FormDefinition,
-  values: SubmittedValues,
-  errors: readonly FormFieldError[],
-  returnTo: string | undefined,
+  rejected: RejectedSubmission,
 ): Response {
   const body = renderToStaticMarkup(
     <html lang={ctx.locale.code} dir={ctx.locale.direction}>
@@ -43,9 +48,10 @@ export function rejectPage(
             form={form}
             action={withBasePath(SUBMIT_PATH, ctx.basePath)}
             idBase={`plumix-form-${form.slug}`}
-            errors={errors}
-            answers={values}
-            returnTo={returnTo}
+            errors={rejected.errors}
+            answers={rejected.values}
+            bound={rejected.bound}
+            returnTo={rejected.returnTo}
           />
         </main>
       </body>

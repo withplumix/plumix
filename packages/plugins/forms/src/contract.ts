@@ -7,6 +7,12 @@ export const FORM_SLUG_FIELD = "__plumix_form";
 export const HONEYPOT_FIELD = "__plumix_hp";
 export const TOKEN_FIELD = "__plumix_token";
 /**
+ * The entry a bound form was rendered on, signed — see `signBoundEntry`.
+ * It is the only carrier: the bound value never appears in the markup on
+ * its own, so editing it in devtools produces a token nothing signed.
+ */
+export const BOUND_FIELD = "__plumix_bound";
+/**
  * The page the form was on, carried by the re-rendered form the
  * no-JavaScript path answers a rejected submit with. The document URL is
  * the endpoint by then, so the visitor's own `Referer` would send their
