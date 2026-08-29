@@ -91,6 +91,7 @@ export function comments(options: CommentsConfig = {}) {
         method: "POST",
         path: "/submit",
         auth: "public",
+        formPost: true,
         handler: createSubmitHandler(config),
       });
       ctx.registerRoute({

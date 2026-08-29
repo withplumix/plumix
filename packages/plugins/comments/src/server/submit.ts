@@ -7,6 +7,7 @@ import * as v from "valibot";
 
 import type { ResolvedCommentsConfig } from "../config.js";
 import type { CommentModerationCandidate } from "./hooks.js";
+import { commentRejectPage } from "./comment-reject-page.js";
 import { isCommentingEnabled } from "./enablement.js";
 import { applyModerationVerdict, decideBaselineStatus } from "./moderation.js";
 import {
@@ -15,6 +16,74 @@ import {
   insertComment,
 } from "./repository.js";
 import { checkRateLimit, isHoneypotTripped } from "./spam.js";
+
+// SPIKE P2 — the no-JS half of the endpoint. The island keeps asking for
+// JSON and keeps getting it; a browser posting a plain form asks for HTML
+// and is sent back where it came from.
+const RETURN_FIELD = "returnTo";
+
+// SPIKE FINDING — negotiating on `Accept` broke every existing JS caller:
+// `fetch(url, {method:"POST", body: JSON.stringify(...)})` sends no Accept
+// header at all, so five of the eleven shipped tests flipped from 200 JSON
+// to 303. Negotiating on what was *sent* instead is non-breaking: a JSON
+// body is a scripted caller by construction, and urlencoded is the form.
+function wantsJson(request: Request): boolean {
+  return !isFormEncoded(request);
+}
+
+/**
+ * Back to the page the form was on. The hidden field first, then the
+ * `Referer`; both are the visitor's to set, so both are held to this
+ * site's origin and refused the endpoint itself — the response can be
+ * turned into neither an open redirect nor a loop.
+ */
+function returnUrl(raw: unknown, request: Request, ctx: AppContext): string {
+  const origin = URL.parse(ctx.origin)?.origin;
+  const submitPath = `${ctx.basePath}/_plumix/comments/submit`;
+  const field =
+    typeof raw === "object" && raw !== null && RETURN_FIELD in raw
+      ? String((raw as Record<string, unknown>)[RETURN_FIELD])
+      : null;
+  for (const candidate of [field, request.headers.get("referer")]) {
+    const url = URL.parse(candidate ?? "");
+    if (url !== null && url.origin === origin && url.pathname !== submitPath) {
+      return url.href;
+    }
+  }
+  return ctx.basePath === "" ? "/" : ctx.basePath;
+}
+
+function seeOther(location: string): Response {
+  return new Response(null, {
+    status: 303,
+    headers: { location, "cache-control": "no-store" },
+  });
+}
+
+// SPIKE P1 — a form sends every field as a string, so the numeric ones need
+// coercing before the schema the JSON path uses can see them. Kept separate
+// from that schema rather than loosening it: `entryId: "12abc"` must stay a
+// 400 on both paths.
+type FormBody = Readonly<Record<string, string | number>>;
+
+function isFormEncoded(request: Request): boolean {
+  return (request.headers.get("content-type") ?? "").includes(
+    "application/x-www-form-urlencoded",
+  );
+}
+
+async function readFormBody(request: Request): Promise<FormBody> {
+  const body = new URLSearchParams(await request.text());
+  const out: Record<string, string | number> = {};
+  for (const [key, value] of body) out[key] = value;
+  for (const key of ["entryId", "parentId"]) {
+    const value = body.get(key);
+    if (value === null || value === "") continue;
+    const n = Number(value);
+    out[key] = Number.isFinite(n) ? n : value;
+  }
+  return out;
+}
 
 const submitInputSchema = v.object({
   entryId: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -48,20 +117,58 @@ function isClosed(
 export function createSubmitHandler(config: ResolvedCommentsConfig) {
   return async (request: Request, ctx: AppContext): Promise<Response> => {
     let raw: unknown;
-    try {
-      raw = await request.json();
-    } catch {
-      return jsonResponse({ error: "invalid_json" }, { status: 400 });
+    if (isFormEncoded(request)) {
+      raw = await readFormBody(request);
+    } else {
+      try {
+        raw = await request.json();
+      } catch {
+        return jsonResponse({ error: "invalid_json" }, { status: 400 });
+      }
     }
+    // SPIKE P2 — one endpoint, two answer shapes. Chosen once, up here, so
+    // every branch below negotiates the same way.
+    const html = !wantsJson(request);
+    const back = returnUrl(raw, request, ctx);
+    const values: Record<string, string> =
+      typeof raw === "object" && raw !== null
+        ? Object.fromEntries(
+            Object.entries(raw as Record<string, unknown>)
+              .filter(([key]) => key !== "website")
+              .map(([key, value]) => [key, String(value)]),
+          )
+        : {};
+    // SPIKE P3 — the same refusal, answered with the form back instead of
+    // a dead end, because the plugin now owns the markup.
+    const fail = (
+      error: string,
+      status: number,
+      message: string,
+      field = "",
+    ): Response =>
+      html
+        ? commentRejectPage(ctx, {
+            action: `${ctx.basePath}/_plumix/comments/submit`,
+            entryId: Number(values.entryId ?? 0),
+            parentId:
+              values.parentId === undefined ? null : Number(values.parentId),
+            returnTo: back,
+            values,
+            errors: [{ field, message }],
+            status,
+          })
+        : jsonResponse({ error }, { status });
+    const accepted = (status: string): Response =>
+      html ? seeOther(back) : jsonResponse({ status });
+
     const parsed = v.safeParse(submitInputSchema, raw);
     if (!parsed.success) {
-      return jsonResponse({ error: "invalid_input" }, { status: 400 });
+      return fail("invalid_input", 400, "That comment could not be read.");
     }
     const input = parsed.output;
 
     // Filled honeypot → fake success, never store, never reveal the trap.
-    if (isHoneypotTripped(input.website))
-      return jsonResponse({ status: "pending" });
+    if (isHoneypotTripped(input.website)) return accepted("pending");
 
     const [entry] = await ctx.db
       .select({
@@ -73,15 +180,15 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
       .from(entries)
       .where(eq(entries.id, input.entryId));
     if (entry?.status !== "published") {
-      return jsonResponse({ error: "entry_not_found" }, { status: 404 });
+      return fail("entry_not_found", 404, "That post could not be found.");
     }
 
     const supports = ctx.plugins.entryTypes.get(entry.type)?.supports;
     if (!isCommentingEnabled(entry.type, supports, config)) {
-      return jsonResponse({ error: "comments_disabled" }, { status: 403 });
+      return fail("comments_disabled", 403, "Comments are closed here.");
     }
     if (isClosed(entry.publishedAt, config.closeAfterDays)) {
-      return jsonResponse({ error: "comments_closed" }, { status: 403 });
+      return fail("comments_closed", 403, "This discussion has closed.");
     }
 
     // Public route — the dispatcher doesn't authenticate it, so check for a
@@ -92,7 +199,7 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
     // Lowercase so the trust lookup and Gravatar agree on one identity.
     const email = (authUser?.email ?? input.email).trim().toLowerCase();
     if (config.requireEmail && email.length === 0) {
-      return jsonResponse({ error: "email_required" }, { status: 400 });
+      return fail("email_required", 400, "An email address is required.");
     }
 
     // Off Cloudflare the address behind the hash is client-spoofable, so
@@ -102,7 +209,7 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
       namespace: "comments",
     });
     if (await checkRateLimit(ctx, ipHash, config.rateLimit)) {
-      return jsonResponse({ error: "rate_limited" }, { status: 429 });
+      return fail("rate_limited", 429, "Too many comments — try again later.");
     }
 
     const priorApprovedCount =
@@ -151,6 +258,6 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
 
     await ctx.hooks.doAction("comment:created", row);
 
-    return jsonResponse({ status });
+    return accepted(status);
   };
 }
