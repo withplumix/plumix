@@ -42,11 +42,16 @@
       "types": "./dist/db/schema.d.ts",
       "default": "./dist/db/schema.js"
     },
+    "./locales/*": {
+      "types": "./locales/*.d.mts",
+      "default": "./locales/*.mjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "locales/*.mjs",
+    "locales/*.d.mts",
     "README.md",
     "LICENSE"
   ],
@@ -60,7 +65,7 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules playwright-report test-results",
     "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path .prettierignore",
     "i18n:extract": "lingui extract",
-    "i18n:compile": "plumix-compile-catalogs",
+    "i18n:compile": "plumix-compile-catalogs --dts",
     "i18n:check": "plumix i18n verify",
     "lint": "eslint",
     "publint": "publint",
@@ -69,6 +74,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@lingui/core": "catalog:lingui",
     "drizzle-orm": "catalog:drizzle",
     "valibot": "catalog:"
   },

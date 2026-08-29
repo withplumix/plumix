@@ -13,6 +13,7 @@ import type { FormDefinition } from "./define-form.js";
 import { createFormBlock } from "./block/form-block.js";
 import {
   EXPORT_ROUTE_PATH,
+  SOURCE_LOCALE,
   SUBMISSION_MODERATE_CAPABILITY,
   SUBMISSIONS_PAGE_PATH,
   SUBMISSIONS_SHELL_COMPONENT,
@@ -119,7 +120,7 @@ export function forms(options: FormsConfig = {}) {
     // plugin's table into the host's drizzle-kit codegen.
     schemaModule: "@plumix/plugin-forms/schema",
     i18n: {
-      sourceLocale: "en",
+      sourceLocale: SOURCE_LOCALE,
       locales: ["en", "uk", "ar", "de", "zh-CN"],
       catalogPath: "./locales",
     },

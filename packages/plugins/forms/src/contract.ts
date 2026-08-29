@@ -127,3 +127,10 @@ export function isSupportedInputType(
  * refusal rather than silently truncating the rows past it.
  */
 export const MAX_REPEATER_ROWS = 100;
+
+/**
+ * The locale every message in this plugin is authored in. Shared so the
+ * plugin's `i18n` slot and the formatter that renders an ICU source
+ * message cannot disagree about which language's plural rules apply.
+ */
+export const SOURCE_LOCALE = "en";

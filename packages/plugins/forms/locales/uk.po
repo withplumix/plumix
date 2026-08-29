@@ -69,6 +69,63 @@ msgid "plugin.forms.error.unreachable"
 msgstr "Не вдалося надіслати форму. Спробуйте ще раз."
 
 #. js-lingui-explicit-id
+#. position/total: the 1-based step number and how many steps there are
+#: src/messages.ts
+msgid "plugin.forms.step.position"
+msgstr "Крок {position} з {total}"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.required"
+msgstr "{label} — обов’язкове поле."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.email"
+msgstr "{label} має мати вигляд name@example.com."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.url"
+msgstr "{label} має бути веб-адресою, що починається з http:// або https://."
+
+#. js-lingui-explicit-id
+#. bound: which of the field's limits are set — range, min or max
+#: src/messages.ts
+msgid "plugin.forms.error.range"
+msgstr "{label} має бути {bound, select, range {від {min} до {max}} min {{min} або більше} other {{max} або менше}}."
+
+#. js-lingui-explicit-id
+#. max: the field's maximum length in characters
+#: src/messages.ts
+msgid "plugin.forms.error.tooLong"
+msgstr "{label} має містити щонайбільше {max} символів."
+
+#. js-lingui-explicit-id
+#. count: the fewest rows the repeater accepts
+#: src/messages.ts
+msgid "plugin.forms.error.tooFewRows"
+msgstr "{label}: потрібно щонайменше {count, plural, one {# запис} few {# записи} many {# записів} other {# запису}}."
+
+#. js-lingui-explicit-id
+#. count: the most rows the repeater accepts
+#: src/messages.ts
+msgid "plugin.forms.error.tooManyRows"
+msgstr "{label}: дозволено щонайбільше {count, plural, one {# запис} few {# записи} many {# записів} other {# запису}}."
+
+#. js-lingui-explicit-id
+#. number: the row's 1-based position as the visitor sees it
+#: src/messages.ts
+msgid "plugin.forms.repeater.rowLegend"
+msgstr "{label} {number}"
+
+#. js-lingui-explicit-id
+#. number: the row's 1-based position as the visitor sees it
+#: src/messages.ts
+msgid "plugin.forms.repeater.removeRow"
+msgstr "Вилучити {label} {number}"
+
+#. js-lingui-explicit-id
 #: src/messages.ts
 msgid "plugin.forms.repeater.add"
 msgstr "Додати ще"
