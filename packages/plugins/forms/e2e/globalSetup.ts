@@ -57,8 +57,7 @@ export default async function globalSetup(): Promise<void> {
 
   const seed = submissionFactory.transient({ db });
   const answered = await seed.create({
-    formSlug: "contact",
-    serial: 1,
+    form: "contact",
     answers: { name: "Ada Lovelace", email: "ada@example.test" },
     labels: {
       name: { label: "Your name" },
@@ -69,8 +68,7 @@ export default async function globalSetup(): Promise<void> {
   // A form the config no longer declares: the inbox reads its columns
   // off this row's own snapshot, so it stays readable regardless.
   const retired = await seed.create({
-    formSlug: "retired",
-    serial: 1,
+    form: "retired",
     answers: { question: "Still readable" },
     labels: { question: { label: "What we used to ask" } },
     handlerError: "SMTP refused",

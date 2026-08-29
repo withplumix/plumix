@@ -22,17 +22,13 @@ function daysAgo(days: number): Date {
 // factory seeds through the same handle the purge then reads.
 async function context(): Promise<{
   readonly ctx: AppContext;
-  readonly seed: (formSlug: string, createdAt: Date) => Promise<unknown>;
+  readonly seed: (form: string, createdAt: Date) => Promise<unknown>;
 }> {
   const db = await createFormsTestDb();
   return {
     ctx: createTestContext({ db }),
-    seed: (formSlug, createdAt) =>
-      submissionFactory.transient({ db }).create({
-        formSlug,
-        createdAt,
-        serial: Math.round(createdAt.getTime()),
-      }),
+    seed: (form, createdAt) =>
+      submissionFactory.transient({ db }).create({ form, createdAt }),
   };
 }
 

@@ -1,4 +1,4 @@
-import type { FormSubmission } from "../db/schema.js";
+import type { StoredSubmission } from "../db/schema.js";
 import type { SubmissionDTO } from "../types.js";
 
 /**
@@ -6,11 +6,10 @@ import type { SubmissionDTO } from "../types.js";
  * over RPC and the export route alike, so the shape an administrator
  * sees on the page is the shape they get in a file.
  */
-export function toSubmissionDto(row: FormSubmission): SubmissionDTO {
+export function toSubmissionDto(row: StoredSubmission): SubmissionDTO {
   return {
     id: row.id,
-    form: row.formSlug,
-    serial: row.serial,
+    form: row.form,
     status: row.status,
     answers: row.answers,
     labels: row.labels,

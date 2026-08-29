@@ -39,7 +39,7 @@ export async function purgeExpiredSubmissions(
     if (form.retentionDays <= 0) continue;
     const cutoff = new Date(now.getTime() - form.retentionDays * MS_PER_DAY);
     const condition = and(
-      eq(formSubmissions.formSlug, form.slug),
+      eq(formSubmissions.form, form.slug),
       lt(formSubmissions.createdAt, cutoff),
     );
     if (condition) expired.push(condition);

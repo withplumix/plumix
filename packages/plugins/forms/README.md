@@ -286,7 +286,7 @@ one place.
 
 The token does not expire, because the page carrying it is edge-cached and an
 expiry would be about the visitor rather than the page. `entry_id` carries no
-foreign key for the same reason `form_slug` does not: a submission is a record
+foreign key for the same reason `form` does not: a submission is a record
 of what someone sent, and deleting the entry should not delete it.
 
 ## What JavaScript adds
@@ -859,11 +859,19 @@ a form to read one from.
 
 ## What gets stored
 
-Each submission is a row in `form_submissions`: the form's slug, a per-form
-serial you can quote to whoever sent it, the answers, and a snapshot of what
-every field and option was called at the time. That snapshot is what keeps the
-row readable after the form changes — without it a renamed field reads as a raw
-key.
+Each submission is a row in `form_submissions`: the form it answered, the
+answers themselves, and a pointer to a snapshot of what every field and option
+was called at the time. That snapshot is what keeps the row readable after the
+form changes — without it a renamed field reads as a raw key. It lives in
+`form_label_snapshots`, keyed by the digest of its own content, so the
+submissions that were given the same labels share one row and none of them can
+rewrite another's history.
+
+The row's `id` is its reference — what the inbox shows and what an export
+writes. There is no per-form serial: retention deletes rows, and any number
+counted over the rows that remain would be handed to a later submission once a
+sweep emptied a form, so a reference somebody had quoted would silently
+rebind.
 
 A form that binds the page's entry stores it in `entry_id`, indexed so that
 reading every submission for one entry is a query rather than a scan.

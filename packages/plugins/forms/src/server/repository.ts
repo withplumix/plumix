@@ -1,71 +1,55 @@
 import type { SQL } from "plumix/db";
 import type { AppContext } from "plumix/plugin";
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gte,
-  isUniqueConstraintErrorOn,
-  lt,
-  lte,
-  sql,
-} from "plumix/db";
+import { and, count, desc, eq, getTableColumns, gte, lt, lte } from "plumix/db";
 
-import type { FormSubmission } from "../db/schema.js";
+import type { FormSubmission, StoredSubmission } from "../db/schema.js";
 import type {
+  FormLabelSnapshot,
   FormSubmissionCandidate,
   SubmissionCounts,
   SubmissionFilter,
   SubmissionStatus,
 } from "../types.js";
-import { formSubmissions } from "../db/schema.js";
+import { formLabelSnapshots, formSubmissions } from "../db/schema.js";
 import { FormsError } from "../errors.js";
-
-// Two writers can read the same maximum before either commits, so the
-// loser hits the unique index and takes the next number. A handful of
-// attempts covers far more contention than a form receives; past that the
-// conflict is a bug rather than a race, and failing says so.
-const SERIAL_ATTEMPTS = 5;
+import { labelSnapshotDigest } from "./labels.js";
 
 /**
- * Persist one submission, numbering it within its own form. There is no
- * counter to increment — the serial is computed inside the insert from
- * the rows already there, with the `(form_slug, serial)` unique index as
- * the guard and a bounded retry on conflict.
+ * Put one label snapshot where submissions can point at it, and answer
+ * with the key they point with. Content-addressed, so this is an insert
+ * that is usually ignored rather than a lookup followed by an insert —
+ * and no submission ever has to wonder whether the snapshot it needs is
+ * already there.
  */
+export async function storeLabelSnapshot(
+  db: AppContext["db"],
+  labels: FormLabelSnapshot,
+): Promise<string> {
+  const digest = await labelSnapshotDigest(labels);
+  await db
+    .insert(formLabelSnapshots)
+    .values({ digest, labels })
+    .onConflictDoNothing({ target: formLabelSnapshots.digest });
+  return digest;
+}
+
+/** Persist one submission, with its labels beside it rather than on it. */
 export async function insertSubmission(
   ctx: AppContext,
   candidate: FormSubmissionCandidate,
-): Promise<FormSubmission> {
-  const { form, ...rest } = candidate;
-  const nextSerial = sql<number>`(
-    select coalesce(max(${formSubmissions.serial}), 0) + 1
-    from ${formSubmissions}
-    where ${eq(formSubmissions.formSlug, form)}
-  )`;
+): Promise<StoredSubmission> {
+  const { labels, ...rest } = candidate;
+  const labelsDigest = await storeLabelSnapshot(ctx.db, labels);
 
-  for (let attempt = 1; ; attempt++) {
-    let row: FormSubmission | undefined;
-    try {
-      [row] = await ctx.db
-        .insert(formSubmissions)
-        .values({ ...rest, formSlug: form, serial: nextSerial })
-        .returning();
-    } catch (error) {
-      if (
-        attempt < SERIAL_ATTEMPTS &&
-        isUniqueConstraintErrorOn(error, "form_submissions.form_slug")
-      ) {
-        continue;
-      }
-      throw error;
-    }
-    if (!row) {
-      throw FormsError.insertReturnedNoRow({ slug: form });
-    }
-    return row;
+  const [row] = await ctx.db
+    .insert(formSubmissions)
+    .values({ ...rest, labelsDigest })
+    .returning();
+  if (!row) {
+    throw FormsError.insertReturnedNoRow({ slug: candidate.form });
   }
+  const { labelsDigest: _stored, ...submission } = row;
+  return { ...submission, labels };
 }
 
 /**
@@ -88,7 +72,7 @@ export const SUBMISSION_PAGE_DEFAULT = 25;
 export const SUBMISSION_PAGE_MAX = 100;
 
 export interface SubmissionRowPage {
-  readonly submissions: readonly FormSubmission[];
+  readonly submissions: readonly StoredSubmission[];
   /** Pass back as `cursor` for the next page; null at the end of the list. */
   readonly nextCursor: string | null;
 }
@@ -96,7 +80,7 @@ export interface SubmissionRowPage {
 function filterFor(filter: SubmissionFilter): SQL | undefined {
   const conditions: SQL[] = [];
   if (filter.form !== undefined) {
-    conditions.push(eq(formSubmissions.formSlug, filter.form));
+    conditions.push(eq(formSubmissions.form, filter.form));
   }
   if (filter.status !== undefined) {
     conditions.push(eq(formSubmissions.status, filter.status));
@@ -108,6 +92,31 @@ function filterFor(filter: SubmissionFilter): SQL | undefined {
     conditions.push(lte(formSubmissions.createdAt, filter.until));
   }
   return and(...conditions);
+}
+
+// Left rather than inner. Nothing deletes a snapshot, but no foreign key
+// says so either — a direct write or a partial restore can leave a row
+// pointing at one that is not there. Such a row reads under its raw keys
+// rather than its labels; an inner join would drop it from the inbox
+// altogether, which is the worse answer to the same accident.
+function selectSubmissions(ctx: AppContext) {
+  return ctx.db
+    .select({
+      ...getTableColumns(formSubmissions),
+      labels: formLabelSnapshots.labels,
+    })
+    .from(formSubmissions)
+    .leftJoin(
+      formLabelSnapshots,
+      eq(formSubmissions.labelsDigest, formLabelSnapshots.digest),
+    );
+}
+
+function withLabels({
+  labelsDigest: _digest,
+  ...row
+}: FormSubmission & { labels: FormLabelSnapshot | null }): StoredSubmission {
+  return { ...row, labels: row.labels ?? {} };
 }
 
 // `id` is autoincrement and a submission is never rewritten in place, so
@@ -132,14 +141,12 @@ export async function listSubmissions(
     ? and(filterFor(input), lt(formSubmissions.id, cursor))
     : filterFor(input);
 
-  const rows = await ctx.db
-    .select()
-    .from(formSubmissions)
+  const rows = await selectSubmissions(ctx)
     .where(where)
     .orderBy(desc(formSubmissions.id))
     .limit(input.limit + 1);
 
-  const submissions = rows.slice(0, input.limit);
+  const submissions = rows.slice(0, input.limit).map(withLabels);
   const last = submissions.at(-1);
   return {
     submissions,
@@ -159,13 +166,12 @@ export async function listAllSubmissions(
   ctx: AppContext,
   filter: SubmissionFilter,
   limit: number,
-): Promise<readonly FormSubmission[]> {
-  return ctx.db
-    .select()
-    .from(formSubmissions)
+): Promise<readonly StoredSubmission[]> {
+  const rows = await selectSubmissions(ctx)
     .where(filterFor(filter))
     .orderBy(desc(formSubmissions.id))
     .limit(limit);
+  return rows.map(withLabels);
 }
 
 /**
@@ -187,10 +193,10 @@ export async function countSubmissionFacets(
       .where(filterFor({ ...filter, status: undefined }))
       .groupBy(formSubmissions.status),
     ctx.db
-      .select({ form: formSubmissions.formSlug, value: count() })
+      .select({ form: formSubmissions.form, value: count() })
       .from(formSubmissions)
       .where(filterFor({ ...filter, form: undefined }))
-      .groupBy(formSubmissions.formSlug),
+      .groupBy(formSubmissions.form),
   ]);
 
   const statuses: Record<SubmissionStatus, number> = {
@@ -220,12 +226,9 @@ export async function countSubmissions(
 export async function getSubmission(
   ctx: AppContext,
   id: number,
-): Promise<FormSubmission | null> {
-  const [row] = await ctx.db
-    .select()
-    .from(formSubmissions)
-    .where(eq(formSubmissions.id, id));
-  return row ?? null;
+): Promise<StoredSubmission | null> {
+  const [row] = await selectSubmissions(ctx).where(eq(formSubmissions.id, id));
+  return row ? withLabels(row) : null;
 }
 
 export async function setSubmissionStatus(

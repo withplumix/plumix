@@ -11,7 +11,7 @@ import {
   toMetaBoxFieldEntry,
 } from "plumix/fields";
 
-import type { FormSubmission } from "./db/schema.js";
+import type { StoredSubmission } from "./db/schema.js";
 import type { FormPageBreak, FormPageBreakEntry } from "./steps.js";
 import type { FormFieldError, FormLabelSnapshot } from "./types.js";
 import { isSupportedInputType, SUPPORTED_INPUT_TYPES } from "./contract.js";
@@ -110,7 +110,7 @@ export interface FormSubmitEvent<Answers> extends FormValidateEvent<Answers> {
   /** What each field and option was called, for {@link formatSubmission}. */
   readonly labels: FormLabelSnapshot;
   /** The row, already written — `null` when the form declared `store: false`. */
-  readonly submission: FormSubmission | null;
+  readonly submission: StoredSubmission | null;
 }
 
 /**
