@@ -12,7 +12,7 @@ import {
 import { labelSourceText } from "plumix/i18n";
 import * as v from "valibot";
 
-import type { FormDefinition } from "../define-form.js";
+import type { FormWire } from "../define-form.js";
 import type { FormFieldError } from "../types.js";
 import { CSRF_HEADER, CSRF_HEADER_VALUE } from "../contract.js";
 import { UNREACHABLE } from "../messages.js";
@@ -20,7 +20,7 @@ import { FormMarkup } from "./form-markup.js";
 import { SubmitResponse, TokenResponse } from "./schemas.js";
 
 interface FormIslandProps {
-  readonly form: FormDefinition;
+  readonly form: FormWire;
   readonly action: string;
   readonly tokenPath: string;
   readonly idBase: string;

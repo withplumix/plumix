@@ -11,6 +11,10 @@ import type { FieldLabelSnapshot, FormLabelSnapshot } from "../types.js";
  * Descriptors flatten to their source message rather than the visitor's
  * locale: the snapshot exists for whoever reads the inbox, and the inbox
  * is one place while visitors are many.
+ *
+ * A composite field — a repeater's row, a group's members — carries its
+ * own fields under `fields`, so a stored row nests exactly as the form
+ * asked and {@link formatSubmission} can name every answer inside one.
  */
 export function buildLabelSnapshot(
   fields: readonly MetaBoxFieldManifestEntry[],
@@ -18,17 +22,18 @@ export function buildLabelSnapshot(
   const snapshot: Record<string, FieldLabelSnapshot> = {};
   for (const field of fields) {
     const label = labelSourceText(field.label);
-    snapshot[field.key] = field.options
-      ? {
-          label,
-          options: Object.fromEntries(
-            field.options.map((option) => [
-              option.value,
-              labelSourceText(option.label),
-            ]),
-          ),
-        }
-      : { label };
+    const options = field.options && {
+      options: Object.fromEntries(
+        field.options.map((option) => [
+          option.value,
+          labelSourceText(option.label),
+        ]),
+      ),
+    };
+    const subFields = field.subFields && {
+      fields: buildLabelSnapshot(field.subFields),
+    };
+    snapshot[field.key] = { label, ...options, ...subFields };
   }
   return snapshot;
 }

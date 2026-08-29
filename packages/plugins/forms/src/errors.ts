@@ -1,5 +1,8 @@
 type FormsErrorCode =
-  "duplicate_form_slug" | "insert_returned_no_row" | "unsupported_field_type";
+  | "duplicate_form_slug"
+  | "insert_returned_no_row"
+  | "stores_nothing"
+  | "unsupported_field_type";
 
 interface FormsErrorFields {
   slug?: string;
@@ -57,6 +60,16 @@ export class FormsError extends Error {
     return new FormsError(
       "insert_returned_no_row",
       `forms: storing a submission for "${ctx.slug}" returned no row.`,
+      ctx,
+    );
+  }
+
+  static storesNothing(ctx: { slug: string }): FormsError {
+    return new FormsError(
+      "stores_nothing",
+      `forms: form "${ctx.slug}" declares store: false and no onSubmit, so ` +
+        `every submission it accepts would be discarded. Give it an ` +
+        `onSubmit to receive them, or let it store them.`,
       ctx,
     );
   }

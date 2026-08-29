@@ -4,7 +4,7 @@ import type { ComponentProps, CSSProperties, ReactNode, Ref } from "react";
 import { labelSourceText } from "plumix/i18n";
 
 import type { SubmittedValues } from "../answers.js";
-import type { FormDefinition } from "../define-form.js";
+import type { FormWire } from "../define-form.js";
 import type { FormFieldError } from "../types.js";
 import { defaultAnswers, visibleFields } from "../answers.js";
 import {
@@ -145,7 +145,7 @@ function ErrorSummary({
 }
 
 export interface FormMarkupProps {
-  readonly form: FormDefinition;
+  readonly form: FormWire;
   readonly action: string;
   readonly idBase: string;
   /** Rendered inline against their fields and listed in the summary. */

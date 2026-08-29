@@ -2,22 +2,9 @@ import type { AppContext } from "plumix/plugin";
 import { eq, isUniqueConstraintErrorOn, sql } from "plumix/db";
 
 import type { FormSubmission } from "../db/schema.js";
-import type {
-  FormAnswers,
-  FormLabelSnapshot,
-  SubmissionStatus,
-} from "../types.js";
+import type { FormSubmissionCandidate } from "../types.js";
 import { formSubmissions } from "../db/schema.js";
 import { FormsError } from "../errors.js";
-
-export interface SubmissionInput {
-  readonly formSlug: string;
-  readonly status: SubmissionStatus;
-  readonly answers: FormAnswers;
-  readonly labels: FormLabelSnapshot;
-  readonly ipHash: string | null;
-  readonly userAgent: string | null;
-}
 
 // Two writers can read the same maximum before either commits, so the
 // loser hits the unique index and takes the next number. A handful of
@@ -33,12 +20,13 @@ const SERIAL_ATTEMPTS = 5;
  */
 export async function insertSubmission(
   ctx: AppContext,
-  input: SubmissionInput,
+  candidate: FormSubmissionCandidate,
 ): Promise<FormSubmission> {
+  const { form, ...rest } = candidate;
   const nextSerial = sql<number>`(
     select coalesce(max(${formSubmissions.serial}), 0) + 1
     from ${formSubmissions}
-    where ${eq(formSubmissions.formSlug, input.formSlug)}
+    where ${eq(formSubmissions.formSlug, form)}
   )`;
 
   for (let attempt = 1; ; attempt++) {
@@ -46,7 +34,7 @@ export async function insertSubmission(
     try {
       [row] = await ctx.db
         .insert(formSubmissions)
-        .values({ ...input, serial: nextSerial })
+        .values({ ...rest, formSlug: form, serial: nextSerial })
         .returning();
     } catch (error) {
       if (
@@ -58,8 +46,24 @@ export async function insertSubmission(
       throw error;
     }
     if (!row) {
-      throw FormsError.insertReturnedNoRow({ slug: input.formSlug });
+      throw FormsError.insertReturnedNoRow({ slug: form });
     }
     return row;
   }
+}
+
+/**
+ * Record on the row that the form's own handler threw. The submission
+ * itself is untouched — it was received, and what failed was what the
+ * site meant to do next with it.
+ */
+export async function recordHandlerFailure(
+  ctx: AppContext,
+  id: number,
+  reason: string,
+): Promise<void> {
+  await ctx.db
+    .update(formSubmissions)
+    .set({ handlerError: reason })
+    .where(eq(formSubmissions.id, id));
 }

@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 
 import { formSubmissions } from "../db/schema.js";
 import { createFormsTestDb } from "../test/db.js";
-import { insertSubmission } from "./repository.js";
+import { insertSubmission, recordHandlerFailure } from "./repository.js";
 
 const answers = { name: "Ada" };
 
@@ -31,9 +31,9 @@ async function contextWithSchema(): Promise<AppContext> {
   return createTestContext({ db: await createFormsTestDb() });
 }
 
-function submit(ctx: AppContext, formSlug: string) {
+function submit(ctx: AppContext, form: string) {
   return insertSubmission(ctx, {
-    formSlug,
+    form,
     status: "new",
     answers,
     labels: { name: { label: "Name" } },
@@ -102,7 +102,7 @@ describe("insertSubmission", () => {
     const ctx = await contextWithSchema();
 
     await insertSubmission(ctx, {
-      formSlug: "contact",
+      form: "contact",
       status: "spam",
       answers,
       labels: { name: { label: "Name" } },
@@ -115,5 +115,20 @@ describe("insertSubmission", () => {
     expect(stored?.ipHash).toBe("deadbeef");
     expect(stored?.userAgent).toBe("curl/8");
     expect(stored?.labels).toEqual({ name: { label: "Name" } });
+  });
+});
+
+describe("recordHandlerFailure", () => {
+  test("records why the handler did not finish, leaving the submission as it was", async () => {
+    const ctx = await contextWithSchema();
+    const row = await submit(ctx, "contact");
+
+    await recordHandlerFailure(ctx, row.id, "SMTP refused");
+
+    const [stored] = await ctx.db.select().from(formSubmissions);
+    expect(stored?.handlerError).toBe("SMTP refused");
+    expect(stored?.answers).toEqual(answers);
+    expect(stored?.status).toBe("new");
+    expect(stored?.serial).toBe(row.serial);
   });
 });
