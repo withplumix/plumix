@@ -95,10 +95,14 @@ export interface FormSummary {
   readonly title: string;
 }
 
-/** Which submissions the inbox is looking at: neither filter, or both. */
+/** Which submissions a read is looking at. Every facet is optional. */
 export interface SubmissionFilter {
   readonly form?: string;
   readonly status?: SubmissionStatus;
+  /** Inclusive lower bound on arrival; omit for no floor. */
+  readonly since?: Date;
+  /** Inclusive upper bound on arrival; omit for no ceiling. */
+  readonly until?: Date;
 }
 
 export interface SubmissionCounts {

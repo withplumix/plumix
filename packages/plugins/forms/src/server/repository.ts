@@ -5,8 +5,10 @@ import {
   count,
   desc,
   eq,
+  gte,
   isUniqueConstraintErrorOn,
   lt,
+  lte,
   sql,
 } from "plumix/db";
 
@@ -82,6 +84,9 @@ export async function recordHandlerFailure(
     .where(eq(formSubmissions.id, id));
 }
 
+export const SUBMISSION_PAGE_DEFAULT = 25;
+export const SUBMISSION_PAGE_MAX = 100;
+
 export interface SubmissionRowPage {
   readonly submissions: readonly FormSubmission[];
   /** Pass back as `cursor` for the next page; null at the end of the list. */
@@ -95,6 +100,12 @@ function filterFor(filter: SubmissionFilter): SQL | undefined {
   }
   if (filter.status !== undefined) {
     conditions.push(eq(formSubmissions.status, filter.status));
+  }
+  if (filter.since !== undefined) {
+    conditions.push(gte(formSubmissions.createdAt, filter.since));
+  }
+  if (filter.until !== undefined) {
+    conditions.push(lte(formSubmissions.createdAt, filter.until));
   }
   return and(...conditions);
 }
@@ -163,20 +174,22 @@ export async function listAllSubmissions(
  * "how many of these are there", rather than restating the page you can
  * already see.
  */
-export async function countSubmissions(
+export async function countSubmissionFacets(
   ctx: AppContext,
   filter: SubmissionFilter,
 ): Promise<SubmissionCounts> {
+  // Only the facet being grouped is dropped. The date range narrows what
+  // is counted rather than being one of the answers, so it rides both.
   const [byStatus, byForm] = await Promise.all([
     ctx.db
       .select({ status: formSubmissions.status, value: count() })
       .from(formSubmissions)
-      .where(filterFor({ form: filter.form }))
+      .where(filterFor({ ...filter, status: undefined }))
       .groupBy(formSubmissions.status),
     ctx.db
       .select({ form: formSubmissions.formSlug, value: count() })
       .from(formSubmissions)
-      .where(filterFor({ status: filter.status }))
+      .where(filterFor({ ...filter, form: undefined }))
       .groupBy(formSubmissions.formSlug),
   ]);
 
@@ -191,6 +204,17 @@ export async function countSubmissions(
     statuses,
     forms: Object.fromEntries(byForm.map((row) => [row.form, row.value])),
   };
+}
+
+export async function countSubmissions(
+  ctx: AppContext,
+  filter: SubmissionFilter,
+): Promise<number> {
+  const [row] = await ctx.db
+    .select({ value: count() })
+    .from(formSubmissions)
+    .where(filterFor(filter));
+  return row?.value ?? 0;
 }
 
 export async function getSubmission(

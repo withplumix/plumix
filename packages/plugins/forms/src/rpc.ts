@@ -1,5 +1,4 @@
 import type { AppContext } from "plumix/plugin";
-import { labelSourceText } from "plumix/i18n";
 import { authenticated, base } from "plumix/plugin";
 import * as v from "valibot";
 
@@ -13,18 +12,18 @@ import type {
 } from "./types.js";
 import { SUBMISSION_MODERATE_CAPABILITY } from "./contract.js";
 import { toSubmissionDto } from "./server/dto.js";
+import { formSummaries } from "./server/form-shape.js";
 import {
-  countSubmissions,
+  countSubmissionFacets,
   deleteSubmission,
   getSubmission,
   listSubmissions,
   setSubmissionNote,
   setSubmissionStatus,
+  SUBMISSION_PAGE_DEFAULT,
+  SUBMISSION_PAGE_MAX,
 } from "./server/repository.js";
 import { SUBMISSION_STATUSES } from "./types.js";
-
-const DEFAULT_LIMIT = 25;
-const MAX_LIMIT = 100;
 
 interface ForbiddenErrors {
   readonly FORBIDDEN: (opts: { data: { capability: string } }) => Error;
@@ -65,14 +64,7 @@ export function createSubmissionsRouter(registry: FormRegistry) {
     .use(authenticated)
     .handler(({ context, errors }): readonly FormSummary[] => {
       requireInboxAccess(context, errors);
-      // The registry is the whole answer: a form is a value in the
-      // repository, so there is no table to read and no manifest entry
-      // to keep in step with one.
-      return registry.list().map((form) => ({
-        slug: form.slug,
-        title:
-          form.title === undefined ? form.slug : labelSourceText(form.title),
-      }));
+      return formSummaries(registry);
     });
 
   const list = base
@@ -83,7 +75,10 @@ export function createSubmissionsRouter(registry: FormRegistry) {
       const page = await listSubmissions(context, {
         form: input.form,
         status: input.status,
-        limit: Math.min(input.limit ?? DEFAULT_LIMIT, MAX_LIMIT),
+        limit: Math.min(
+          input.limit ?? SUBMISSION_PAGE_DEFAULT,
+          SUBMISSION_PAGE_MAX,
+        ),
         cursor: input.cursor,
       });
       return {
@@ -97,7 +92,7 @@ export function createSubmissionsRouter(registry: FormRegistry) {
     .input(filterInput)
     .handler(({ input, context, errors }): Promise<SubmissionCounts> => {
       requireInboxAccess(context, errors);
-      return countSubmissions(context, input);
+      return countSubmissionFacets(context, input);
     });
 
   const get = base

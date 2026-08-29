@@ -25,6 +25,7 @@ import * as schema from "./db/schema.js";
 import { createFormRegistry, publishFormRegistry } from "./registry.js";
 import { createSubmissionsRouter } from "./rpc.js";
 import { createExportHandler } from "./server/export.js";
+import { createFormMcpTools } from "./server/mcp-tools.js";
 import { purgeExpiredSubmissions, RETENTION_CRON } from "./server/retention.js";
 import { createSubmitHandler, tokenHandler } from "./server/submit.js";
 
@@ -145,6 +146,9 @@ export function forms(options: FormsConfig = {}) {
       ctx.registerBlock(createFormBlock(registry));
       ctx.registerCapability(SUBMISSION_MODERATE_CAPABILITY, "editor");
       ctx.registerRpcRouter(createSubmissionsRouter(registry));
+      for (const tool of createFormMcpTools(registry)) {
+        ctx.registerMcpTool(tool);
+      }
       ctx.registerAdminPage({
         path: SUBMISSIONS_PAGE_PATH,
         title: SUBMISSIONS_TITLE,
