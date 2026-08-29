@@ -1,0 +1,270 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-08-29\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.adminPage.title"
+msgstr "Form submissions"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.forms"
+msgstr "forms"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.submissions"
+msgstr "submissions"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.inbox"
+msgstr "inbox"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.submit"
+msgstr "Submit"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.summary.title"
+msgstr "There is a problem"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.confirmation"
+msgstr "Thanks — your submission has been received."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.next"
+msgstr "Next"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.back"
+msgstr "Back"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.captcha"
+msgstr "We could not confirm you are not a robot. Please try again."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.captcha.needs_js"
+msgstr "This form needs JavaScript enabled to check you are not a robot."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.unreachable"
+msgstr "Your submission could not be sent. Please try again."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.repeater.add"
+msgstr "Add another"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.repeater.remove"
+msgstr "Remove"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.title"
+msgstr "Form"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.description"
+msgstr "One of the forms this site declares, rendered for a visitor."
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.form"
+msgstr "form"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.contact"
+msgstr "contact"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.enquiry"
+msgstr "enquiry"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.input.slug.label"
+msgstr "Form"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.new"
+msgstr "New"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.read"
+msgstr "Read"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.archived"
+msgstr "Archived"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.spam"
+msgstr "Spam"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.allForms"
+msgstr "All forms"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.allStatuses"
+msgstr "All"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.notePlaceholder"
+msgstr "A note for whoever picks this up next…"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.noteLabel"
+msgstr "Private note"
+
+#. js-lingui-explicit-id
+#. serial: the submission's per-form number
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.openLabel"
+msgstr "Open submission {serial}"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.exportCsv"
+msgstr "Export CSV"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.exportJson"
+msgstr "Export JSON"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.answer.yes"
+msgstr "Yes"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.answer.no"
+msgstr "No"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.error"
+msgstr "Failed to load submissions"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.empty"
+msgstr "Nothing has come in yet."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.column.received"
+msgstr "Received"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.column.status"
+msgstr "Status"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.failedBadge"
+msgstr "Failed"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.loadMore"
+msgstr "Load more"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.gone"
+msgstr "That submission is no longer there."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.close"
+msgstr "Close"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.delete"
+msgstr "Delete"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.deleteTitle"
+msgstr "Delete this submission?"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.deleteDescription"
+msgstr "The answers, the note and everything else on it go for good. Archive it instead to keep it out of the way."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.writeError"
+msgstr "That did not go through:"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.handlerError"
+msgstr "What the site meant to do next did not finish:"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.received"
+msgstr "Received"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.entry"
+msgstr "Page entry"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.ipHash"
+msgstr "IP hash"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.userAgent"
+msgstr "User agent"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.saveNote"
+msgstr "Save note"

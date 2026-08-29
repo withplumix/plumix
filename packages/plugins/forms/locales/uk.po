@@ -1,0 +1,270 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-08-29\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: uk\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14) ? 2 : 3);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.adminPage.title"
+msgstr "Надсилання форм"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.forms"
+msgstr "форми"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.submissions"
+msgstr "надсилання"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.inbox"
+msgstr "вхідні"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.submit"
+msgstr "Надіслати"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.summary.title"
+msgstr "Виникла проблема"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.confirmation"
+msgstr "Дякуємо — ми отримали ваше надсилання."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.next"
+msgstr "Далі"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.back"
+msgstr "Назад"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.captcha"
+msgstr "Не вдалося підтвердити, що ви не робот. Спробуйте ще раз."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.captcha.needs_js"
+msgstr "Щоб перевірити, що ви не робот, у цій формі потрібно ввімкнути JavaScript."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.unreachable"
+msgstr "Не вдалося надіслати форму. Спробуйте ще раз."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.repeater.add"
+msgstr "Додати ще"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.repeater.remove"
+msgstr "Вилучити"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.title"
+msgstr "Форма"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.description"
+msgstr "Одна з форм, які оголошує цей сайт, показана відвідувачу."
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.form"
+msgstr "форма"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.contact"
+msgstr "контакт"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.enquiry"
+msgstr "запит"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.input.slug.label"
+msgstr "Форма"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.new"
+msgstr "Нове"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.read"
+msgstr "Прочитане"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.archived"
+msgstr "Архівоване"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.spam"
+msgstr "Спам"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.allForms"
+msgstr "Усі форми"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.allStatuses"
+msgstr "Усі"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.notePlaceholder"
+msgstr "Нотатка для того, хто візьметься за це наступним…"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.noteLabel"
+msgstr "Приватна нотатка"
+
+#. js-lingui-explicit-id
+#. serial: the submission's per-form number
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.openLabel"
+msgstr "Відкрити надсилання {serial}"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.exportCsv"
+msgstr "Експортувати CSV"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.exportJson"
+msgstr "Експортувати JSON"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.answer.yes"
+msgstr "Так"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.answer.no"
+msgstr "Ні"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.error"
+msgstr "Не вдалося завантажити надсилання"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.empty"
+msgstr "Поки що нічого не надійшло."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.column.received"
+msgstr "Отримано"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.column.status"
+msgstr "Статус"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.failedBadge"
+msgstr "Помилка"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.loadMore"
+msgstr "Завантажити ще"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.gone"
+msgstr "Цього надсилання більше немає."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.close"
+msgstr "Закрити"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.delete"
+msgstr "Видалити"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.deleteTitle"
+msgstr "Видалити це надсилання?"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.deleteDescription"
+msgstr "Відповіді, нотатка й усе інше зникнуть назавжди. Щоб просто прибрати їх з очей, надішліть надсилання до архіву."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.cancel"
+msgstr "Скасувати"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.writeError"
+msgstr "Не вдалося виконати:"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.handlerError"
+msgstr "Те, що сайт мав зробити далі, не завершилося:"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.received"
+msgstr "Отримано"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.entry"
+msgstr "Запис сторінки"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.ipHash"
+msgstr "Хеш IP"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.userAgent"
+msgstr "Агент користувача"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.saveNote"
+msgstr "Зберегти нотатку"
