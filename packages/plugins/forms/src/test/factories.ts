@@ -1,6 +1,7 @@
 import { Factory } from "fishery";
 
 import type { FormSubmission, NewFormSubmission } from "../db/schema.js";
+import type { SubmissionStatus } from "../types.js";
 import type { FormsTestDb } from "./db.js";
 import { formSubmissions } from "../db/schema.js";
 
@@ -56,3 +57,19 @@ export const submissionFactory = Factory.define<
     note: params.note ?? null,
   };
 });
+
+/**
+ * One submission dated to a named day, for the reads that filter on when
+ * it arrived — `insertSubmission` stamps its own date, so only a seeded
+ * row can sit anywhere but now.
+ */
+export function seedSubmissionOn(
+  db: FormsTestDb,
+  formSlug: string,
+  day: string,
+  status: SubmissionStatus = "new",
+): Promise<FormSubmission> {
+  return submissionFactory
+    .transient({ db })
+    .create({ formSlug, status, createdAt: new Date(`${day}T12:00:00.000Z`) });
+}

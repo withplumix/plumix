@@ -60,9 +60,28 @@ export interface FormStep {
   readonly fields: readonly MetaBoxFieldManifestEntry[];
 }
 
+/** Every step the form declares, before any condition narrows one. */
+export function declaredSteps(form: SteppedForm): readonly FormStep[] {
+  // The breaks with the implicit first step in front of them: each entry
+  // says where a step starts and carries the title of the step it opens,
+  // and the next entry — or the end of the field list — says where that
+  // step stops.
+  const opens: readonly FormPageBreakEntry[] = [
+    { startIndex: 0, title: undefined },
+    ...form.pageBreaks,
+  ];
+  return opens.map((entry, position) => ({
+    title: entry.title,
+    fields: form.fields.slice(
+      entry.startIndex,
+      opens[position + 1]?.startIndex ?? form.fields.length,
+    ),
+  }));
+}
+
 /**
- * The steps a form shows for one set of answers — the field list split
- * on its breaks, each step holding what {@link isFieldVisible} admits.
+ * The steps a form shows for one set of answers — {@link declaredSteps}
+ * with each step holding only what {@link isFieldVisible} admits.
  *
  * A step with nothing left to show is dropped rather than presented as
  * a page the visitor pages past: that is how a break placed at either
@@ -75,22 +94,9 @@ export function visibleSteps(
   form: SteppedForm,
   values: MetaFieldValues,
 ): readonly FormStep[] {
-  // The breaks with the implicit first step in front of them: each entry
-  // says where a step starts and carries the title of the step it opens,
-  // and the next entry — or the end of the field list — says where that
-  // step stops.
-  const opens: readonly FormPageBreakEntry[] = [
-    { startIndex: 0, title: undefined },
-    ...form.pageBreaks,
-  ];
-  const steps = opens.map((entry, position) => ({
-    title: entry.title,
-    fields: form.fields
-      .slice(
-        entry.startIndex,
-        opens[position + 1]?.startIndex ?? form.fields.length,
-      )
-      .filter((field) => isFieldVisible(field, values)),
+  const steps = declaredSteps(form).map((step) => ({
+    title: step.title,
+    fields: step.fields.filter((field) => isFieldVisible(field, values)),
   }));
   const shown = steps.filter((step) => step.fields.length > 0);
   return shown.length > 0 ? shown : steps.slice(0, 1);

@@ -2,9 +2,12 @@ import type { AppContext } from "plumix/plugin";
 import { createTestContext } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
+import type { FormsTestDb } from "../test/db.js";
 import { formSubmissions } from "../db/schema.js";
 import { createFormsTestDb } from "../test/db.js";
+import { seedSubmissionOn } from "../test/factories.js";
 import {
+  countSubmissionFacets,
   countSubmissions,
   deleteSubmission,
   getSubmission,
@@ -36,8 +39,14 @@ function refusingInsert() {
   };
 }
 
-async function contextWithSchema(): Promise<AppContext> {
-  return createTestContext({ db: await createFormsTestDb() });
+// The db comes back alongside the context because the date-range reads
+// seed through the factory, which takes the db rather than the context.
+async function contextWithSchema(): Promise<{
+  ctx: AppContext;
+  db: FormsTestDb;
+}> {
+  const db = await createFormsTestDb();
+  return { ctx: createTestContext({ db }), db };
 }
 
 function submit(ctx: AppContext, form: string) {
@@ -54,7 +63,7 @@ function submit(ctx: AppContext, form: string) {
 
 describe("insertSubmission", () => {
   test("numbers the first submission of a form 1", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
 
     const row = await submit(ctx, "contact");
 
@@ -63,7 +72,7 @@ describe("insertSubmission", () => {
   });
 
   test("counts serials per form, not across them", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
 
     await submit(ctx, "contact");
     await submit(ctx, "contact");
@@ -73,7 +82,7 @@ describe("insertSubmission", () => {
   });
 
   test("gives concurrent submissions to one form distinct serials", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
 
     const rows = await Promise.all(
       Array.from({ length: 8 }, () => submit(ctx, "contact")),
@@ -86,7 +95,7 @@ describe("insertSubmission", () => {
   // in-memory connection, so the conflict is injected: one rejected insert
   // carrying the message SQLite raises, then the real path.
   test("retries when the unique index rejects the serial it computed", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
     const insert = ctx.db.insert.bind(ctx.db);
     let refused = false;
     ctx.db.insert = ((table: Parameters<typeof insert>[0]) => {
@@ -102,14 +111,14 @@ describe("insertSubmission", () => {
   });
 
   test("gives up rather than looping when the conflict never clears", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
     ctx.db.insert = (() => refusingInsert()) as unknown as typeof ctx.db.insert;
 
     await expect(submit(ctx, "contact")).rejects.toThrow(/Failed query/);
   });
 
   test("stores what the caller handed it", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
 
     await insertSubmission(ctx, {
       form: "contact",
@@ -131,7 +140,7 @@ describe("insertSubmission", () => {
 
 describe("recordHandlerFailure", () => {
   test("records why the handler did not finish, leaving the submission as it was", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
     const row = await submit(ctx, "contact");
 
     await recordHandlerFailure(ctx, row.id, "SMTP refused");
@@ -146,7 +155,7 @@ describe("recordHandlerFailure", () => {
 
 describe("the inbox reads", () => {
   test("lists newest first, across every form", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
     await submit(ctx, "contact");
     await submit(ctx, "newsletter");
 
@@ -160,7 +169,7 @@ describe("the inbox reads", () => {
   });
 
   test("pages through with the cursor the previous page returned", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
     for (let i = 0; i < 3; i++) await submit(ctx, "contact");
 
     const first = await listSubmissions(ctx, { limit: 2 });
@@ -177,7 +186,7 @@ describe("the inbox reads", () => {
   });
 
   test("narrows to one form and to one status", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
     await submit(ctx, "contact");
     const spam = await insertSubmission(ctx, {
       form: "contact",
@@ -198,7 +207,7 @@ describe("the inbox reads", () => {
   });
 
   test("counts each status within the form filter, and each form within the status filter", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
     await submit(ctx, "contact");
     await insertSubmission(ctx, {
       form: "contact",
@@ -211,20 +220,68 @@ describe("the inbox reads", () => {
     });
     await submit(ctx, "newsletter");
 
-    const all = await countSubmissions(ctx, {});
-    const contact = await countSubmissions(ctx, { form: "contact" });
-    const spam = await countSubmissions(ctx, { status: "spam" });
+    const all = await countSubmissionFacets(ctx, {});
+    const contact = await countSubmissionFacets(ctx, { form: "contact" });
+    const spam = await countSubmissionFacets(ctx, { status: "spam" });
 
     expect(all.statuses).toEqual({ new: 2, read: 0, archived: 0, spam: 1 });
     expect(all.forms).toEqual({ contact: 2, newsletter: 1 });
     expect(contact.statuses).toEqual({ new: 1, read: 0, archived: 0, spam: 1 });
     expect(spam.forms).toEqual({ contact: 1 });
   });
+
+  test("narrows to a date range, including both of the days it names", async () => {
+    const { ctx, db } = await contextWithSchema();
+    await seedSubmissionOn(db, "contact", "2026-08-22");
+    const monday = await seedSubmissionOn(db, "contact", "2026-08-24");
+    const sunday = await seedSubmissionOn(db, "contact", "2026-08-30");
+    await seedSubmissionOn(db, "contact", "2026-08-31");
+
+    const page = await listSubmissions(ctx, {
+      limit: 10,
+      since: new Date("2026-08-24T00:00:00.000Z"),
+      until: new Date("2026-08-30T23:59:59.999Z"),
+    });
+
+    expect(page.submissions.map((row) => row.id)).toEqual([
+      sunday.id,
+      monday.id,
+    ]);
+  });
+
+  test("counts how many match every filter at once", async () => {
+    const { ctx, db } = await contextWithSchema();
+    await seedSubmissionOn(db, "contact", "2026-08-22");
+    await seedSubmissionOn(db, "contact", "2026-08-24");
+    await seedSubmissionOn(db, "contact", "2026-08-25");
+    await seedSubmissionOn(db, "newsletter", "2026-08-25");
+
+    const total = await countSubmissions(ctx, {
+      form: "contact",
+      since: new Date("2026-08-24T00:00:00.000Z"),
+    });
+
+    expect(total).toBe(2);
+  });
+
+  test("keeps the date range on both facets of the inbox counts", async () => {
+    const { ctx, db } = await contextWithSchema();
+    await seedSubmissionOn(db, "contact", "2026-08-22");
+    await seedSubmissionOn(db, "contact", "2026-08-25");
+    await seedSubmissionOn(db, "newsletter", "2026-08-25");
+
+    const counts = await countSubmissionFacets(ctx, {
+      since: new Date("2026-08-24T00:00:00.000Z"),
+    });
+
+    expect(counts.statuses.new).toBe(2);
+    expect(counts.forms).toEqual({ contact: 1, newsletter: 1 });
+  });
 });
 
 describe("the inbox writes", () => {
   test("reads one submission back by id, and nothing for one that never was", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
     const row = await submit(ctx, "contact");
 
     expect((await getSubmission(ctx, row.id))?.answers).toEqual(answers);
@@ -232,7 +289,7 @@ describe("the inbox writes", () => {
   });
 
   test("moves a submission to another status", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
     const row = await submit(ctx, "contact");
 
     const updated = await setSubmissionStatus(ctx, row.id, "archived");
@@ -242,7 +299,7 @@ describe("the inbox writes", () => {
   });
 
   test("keeps a private note against a submission, and clears it", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
     const row = await submit(ctx, "contact");
 
     await setSubmissionNote(ctx, row.id, "Called back on Tuesday");
@@ -255,7 +312,7 @@ describe("the inbox writes", () => {
   });
 
   test("deletes a submission, and says so when there was none to delete", async () => {
-    const ctx = await contextWithSchema();
+    const { ctx } = await contextWithSchema();
     const row = await submit(ctx, "contact");
 
     expect(await deleteSubmission(ctx, row.id)).toBe(true);
