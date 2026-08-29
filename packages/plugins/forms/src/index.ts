@@ -24,6 +24,7 @@ export type {
   FormAnswersOf,
   FormDefinition,
   FormDefinitionInput,
+  FormElementInput,
   FormHandler,
   FormSubmitEvent,
   FormValidateEvent,
@@ -33,6 +34,8 @@ export type {
 export { defineForm } from "./define-form.js";
 export { formatSubmission } from "./format.js";
 export { FormsError } from "./errors.js";
+export type { FormPageBreak, FormPageBreakEntry, FormStep } from "./steps.js";
+export { pageBreak } from "./steps.js";
 export type {
   FieldLabelSnapshot,
   FormAnswers,

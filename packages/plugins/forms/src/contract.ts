@@ -14,6 +14,15 @@ export const TOKEN_FIELD = "__plumix_token";
  */
 export const RETURN_FIELD = "__plumix_return";
 
+/**
+ * Where a wizard keeps how far the visitor has got, under the block
+ * node's own id so two forms on one page cannot read each other's. In
+ * session storage: it is the visitor's own half-finished answers, and it
+ * belongs to the tab they are filling the form in rather than to the
+ * browser.
+ */
+export const PROGRESS_KEY_PREFIX = "plumix-form:";
+
 /** Mounted by `registerRoute` at `/_plumix/<pluginId><path>`. */
 export const SUBMIT_ROUTE_PATH = "/submit";
 export const SUBMIT_PATH = `/_plumix/forms${SUBMIT_ROUTE_PATH}`;

@@ -25,11 +25,11 @@ import {
   TOKEN_FIELD,
 } from "../contract.js";
 import { CONFIRMATION } from "../messages.js";
+import { validateAnswers } from "../validate.js";
 import { buildLabelSnapshot } from "./labels.js";
 import { rejectPage } from "./reject-page.js";
 import { insertSubmission, recordHandlerFailure } from "./repository.js";
 import { isImplausiblyFast, issueTimingToken } from "./timing.js";
-import { validateAnswers } from "./validate.js";
 
 // A handler failure is third-party text — an SMTP reply, an upstream
 // error page, a URL carrying a token — and it is stored on a row the

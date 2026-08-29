@@ -1,7 +1,7 @@
 import { auth, plumix } from "plumix";
-import { email, text } from "plumix/fields";
+import { email, select, text, textarea } from "plumix/fields";
 
-import { defineForm, forms } from "@plumix/plugin-forms";
+import { defineForm, forms, pageBreak } from "@plumix/plugin-forms";
 import { pages } from "@plumix/plugin-pages";
 import {
   cloudflare,
@@ -40,6 +40,46 @@ const contact = defineForm("contact", {
   ],
 });
 
+// A wizard: page breaks in the same flat field list, and a question on
+// the last step that only a plan chosen on the step before it reveals.
+const plan = select("plan").options([
+  { value: "basic", label: "Basic" },
+  { value: "pro", label: "Pro" },
+]);
+
+const survey = defineForm("survey", {
+  title: "Tell us about your project",
+  submitLabel: "Send survey",
+  fields: [
+    pageBreak("About you"),
+    text("name").label("Your name").required(),
+    email("email").label("Email address").required(),
+    pageBreak("Your plan"),
+    plan.label("Which plan?"),
+    pageBreak(),
+    text("seats").label("How many seats?").visibleWhen(plan.is("pro")),
+    textarea("notes").label("Anything else?"),
+  ],
+});
+
+// A whole step behind a condition: with `basic` chosen there is one
+// step and the button submits; with `pro` there are two and it moves on.
+// What the button says and what it does are read from the same answers,
+// and this is the form that proves it.
+const seatsPlan = select("plan").options([
+  { value: "basic", label: "Basic" },
+  { value: "pro", label: "Pro" },
+]);
+
+const gated = defineForm("gated", {
+  title: "Pick a plan",
+  fields: [
+    seatsPlan.label("Which plan?"),
+    pageBreak("Seats"),
+    text("seats").label("How many seats?").visibleWhen(seatsPlan.is("pro")),
+  ],
+});
+
 export default plumix({
   runtime: cloudflare(),
   database: d1({ binding: "DB", session: "auto" }),
@@ -49,6 +89,6 @@ export default plumix({
       ...deployOrigin,
     },
   }),
-  plugins: [pages, forms({ forms: [contact] })],
+  plugins: [pages, forms({ forms: [contact, survey, gated] })],
   theme,
 });

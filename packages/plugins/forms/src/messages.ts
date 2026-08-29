@@ -26,11 +26,26 @@ export const CONFIRMATION: Label = {
   message: "Thanks — your submission has been received.",
 };
 
+/** Moves a wizard on; only the last step carries the submit button. */
+export const NEXT_LABEL: Label = {
+  id: "plugin.forms.next",
+  message: "Next",
+};
+
+export const BACK_LABEL: Label = {
+  id: "plugin.forms.back",
+  message: "Back",
+};
+
 /** Shown when the submission never reached the server at all. */
 export const UNREACHABLE: Label = {
   id: "plugin.forms.error.unreachable",
   message: "Your submission could not be sent. Please try again.",
 };
+
+/** What a step nobody titled is called, in the indicator and its heading. */
+export const stepPositionMessage = (position: number, total: number): string =>
+  `Step ${String(position)} of ${String(total)}`;
 
 export const requiredMessage = (label: string): string =>
   `${label} is required.`;

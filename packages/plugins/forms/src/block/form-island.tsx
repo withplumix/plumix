@@ -13,10 +13,22 @@ import { labelSourceText } from "plumix/i18n";
 import * as v from "valibot";
 
 import type { FormWire } from "../define-form.js";
+import type { FormStep } from "../steps.js";
 import type { FormFieldError } from "../types.js";
+import type { FormProgress } from "./form-progress.js";
+import { readSubmittedValues, visibleFields } from "../answers.js";
 import { CSRF_HEADER, CSRF_HEADER_VALUE } from "../contract.js";
 import { UNREACHABLE } from "../messages.js";
+import { visibleSteps } from "../steps.js";
+import { validateAnswers } from "../validate.js";
 import { FormMarkup } from "./form-markup.js";
+import {
+  clearProgress,
+  foldStepAnswers,
+  progressKey,
+  readProgress,
+  writeProgress,
+} from "./form-progress.js";
 import { SubmitResponse, TokenResponse } from "./schemas.js";
 
 interface FormIslandProps {
@@ -64,10 +76,11 @@ const onServer = () => false;
 
 /**
  * The form, upgraded: a submit that does not leave the page, errors
- * rendered against the fields that produced them, and a timing token
- * fetched once it mounts. It renders the same {@link FormMarkup} the
- * server already sent, so what a visitor without JavaScript keeps working
- * with is the thing this builds on rather than a placeholder it fills in.
+ * rendered against the fields that produced them, a timing token fetched
+ * once it mounts, and — where the form declares a page break — one step
+ * at a time. It renders the same {@link FormMarkup} the server already
+ * sent, so what a visitor without JavaScript keeps working with is the
+ * thing this builds on rather than a placeholder it fills in.
  */
 export function FormIsland({
   form: wire,
@@ -85,8 +98,33 @@ export function FormIsland({
   const [token, setToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+  // Null until the visitor touches the form — which is what keeps the
+  // first client render identical to the one the server sent.
+  const [entered, setEntered] = useState<FormProgress | null>(null);
+  const [moves, setMoves] = useState(0);
   const summary = useRef<HTMLDivElement>(null);
   const confirmed = useRef<HTMLDivElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  const key = progressKey(form.slug, idBase);
+  // Read once the island is live rather than in an effect: an effect
+  // that restored by setting state would render the blank form, then
+  // cascade a second render over it. `live` is false through hydration,
+  // so the first client render still matches the server's byte for byte.
+  const saved = useMemo(() => (live ? readProgress(key) : null), [live, key]);
+  const progress = entered ?? saved;
+  const body = progress?.body ?? "";
+  const values = useMemo(
+    () => readSubmittedValues(form.fields, new URLSearchParams(body)),
+    [form, body],
+  );
+  // Everything about the wizard's shape comes from here, and every
+  // decision below is taken against this same list — the button's label
+  // and what pressing it does are one reading of one set of answers, not
+  // two readings that can disagree.
+  const steps = useMemo(() => visibleSteps(form, values), [form, values]);
+  const step = Math.min(progress?.step ?? 0, steps.length - 1);
+  const last = steps.length - 1;
 
   useEffect(() => {
     const aborter = new AbortController();
@@ -119,13 +157,36 @@ export function FormIsland({
   useEffect(() => {
     if (confirmation !== null) confirmed.current?.focus();
   }, [confirmation]);
+  // Counted rather than watched on the step itself: a visitor who goes
+  // back and forward between two steps arrives at one they have already
+  // been on, and the announcement is owed to them every time. The count
+  // rises only on a step the visitor asked for — never on the one a
+  // reload restores, which would take focus off whatever they came back
+  // to the page for.
+  useEffect(() => {
+    if (moves > 0) heading.current?.focus();
+  }, [moves]);
 
-  async function submit(element: HTMLFormElement): Promise<void> {
-    const body = new URLSearchParams();
-    for (const [name, value] of new FormData(element)) {
-      if (typeof value === "string") body.append(name, value);
-    }
+  // What the visitor has said, kept where a reload can find it. Called
+  // on every step change and on every refusal, so the answers behind a
+  // visitor who reloads on seeing an error are the ones they just gave.
+  function keep(next: FormProgress): void {
+    setEntered(next);
+    writeProgress(key, next);
+  }
 
+  // A step the visitor asked to be on, whose heading is announced to
+  // them. `keep` on its own is for a step they arrive at some other way
+  // — see `submit`, which relocates them to a refused answer.
+  function move(next: FormProgress): void {
+    keep(next);
+    setMoves((count) => count + 1);
+  }
+
+  async function submit(
+    posted: string,
+    posture: readonly FormStep[],
+  ): Promise<void> {
     setBusy(true);
     try {
       const response = await fetch(action, {
@@ -139,7 +200,7 @@ export function FormIsland({
         },
         // A `URLSearchParams` body is sent urlencoded, exactly as the
         // plain form posts it, and sets its own content type.
-        body,
+        body: new URLSearchParams(posted),
       });
       const payload = v.safeParse(SubmitResponse, await response.json());
       if (!payload.success) {
@@ -147,15 +208,80 @@ export function FormIsland({
         return;
       }
       if (payload.output.ok) {
+        clearProgress(key);
         setConfirmation(payload.output.message);
         return;
       }
-      setErrors(payload.output.errors);
+      const failed = payload.output.errors;
+      setErrors(failed);
+      // An answer the server refused may be on a step behind this one —
+      // its own step passed, and a later answer revealed the problem.
+      // The summary links to controls, so the step holding the first of
+      // them has to be the one on screen. Judged against the steps the
+      // submission was made from rather than whatever is on screen when
+      // it lands. Focus still goes to the summary: the step changed
+      // because of the failure, not because the visitor asked to move.
+      const at = posture.findIndex((one) =>
+        one.fields.some((field) =>
+          failed.some((error) => error.field === field.key),
+        ),
+      );
+      keep({ step: at >= 0 ? at : step, body: posted });
     } catch {
       setErrors(unreachable);
     } finally {
       setBusy(false);
     }
+  }
+
+  // The answers so far with the step on screen folded in — what every
+  // handler below reasons about, and what a reload is given back.
+  function folded(element: HTMLFormElement): string {
+    return foldStepAnswers(body, new FormData(element));
+  }
+
+  /**
+   * Forward, from the button that moves the wizard on and from Enter
+   * pressed in a field — which is the same button, so the two cannot
+   * mean different things. Whether that is a step or a submit is read
+   * from `steps`, the list the button's own label came from.
+   *
+   * The step on screen is checked before the visitor leaves it, against
+   * the same rules the server will apply, and only over the fields it
+   * actually shows: a question on a later step, or one this step's own
+   * answers hide, cannot hold them up here. The final step is left to
+   * the server, which judges every step at once.
+   */
+  function forward(element: HTMLFormElement): void {
+    const posted = folded(element);
+    // `!live` is the flat form the server sent, whose one button
+    // submits — the handler is attached from the first client render,
+    // which is a frame before the island is driving anything.
+    if (!live || step >= last) {
+      void submit(posted, steps);
+      return;
+    }
+    const answers = readSubmittedValues(
+      form.fields,
+      new URLSearchParams(posted),
+    );
+    const failures = validateAnswers(
+      visibleFields(steps[step]?.fields ?? [], answers),
+      answers,
+    );
+    if (failures.length > 0) {
+      setErrors(failures);
+      keep({ step, body: posted });
+      return;
+    }
+    setErrors([]);
+    move({ step: step + 1, body: posted });
+  }
+
+  function back(element: HTMLFormElement | null): void {
+    if (element === null) return;
+    setErrors([]);
+    move({ step: Math.max(0, step - 1), body: folded(element) });
   }
 
   if (confirmation !== null) {
@@ -174,17 +300,31 @@ export function FormIsland({
 
   return (
     <FormMarkup
+      // Remounts the markup the once, when a reload has answers to put
+      // back: the controls are uncontrolled, so `defaultValue` is read
+      // at mount and a re-render alone would leave the restored answers
+      // out of the document.
+      key={saved === null ? "blank" : "restored"}
       form={form}
       action={action}
       idBase={idBase}
       errors={errors}
+      answers={progress === null ? undefined : values}
       token={token}
       busy={busy}
       summaryRef={summary}
       enhanced={live}
+      step={live ? step : undefined}
+      stepHeadingRef={heading}
+      onChange={(event) => {
+        setEntered({ step, body: folded(event.currentTarget) });
+      }}
+      onBack={(event) => {
+        back(event.currentTarget.form);
+      }}
       onSubmit={(event) => {
         event.preventDefault();
-        void submit(event.currentTarget);
+        forward(event.currentTarget);
       }}
     />
   );

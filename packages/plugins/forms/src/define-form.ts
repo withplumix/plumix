@@ -12,9 +12,26 @@ import {
 } from "plumix/fields";
 
 import type { FormSubmission } from "./db/schema.js";
+import type { FormPageBreak, FormPageBreakEntry } from "./steps.js";
 import type { FormFieldError, FormLabelSnapshot } from "./types.js";
 import { isSupportedInputType, SUPPORTED_INPUT_TYPES } from "./contract.js";
 import { FormsError } from "./errors.js";
+import { isPageBreak } from "./steps.js";
+
+/**
+ * What may be written in a form's field list: a field, or a
+ * {@link FormPageBreak} separating the step before it from the step
+ * after.
+ */
+export type FormElementInput = MetaBoxFieldInput | FormPageBreak;
+
+// The fields among a form's elements, at the type level — what the
+// answers shape is inferred from. A page break carries no answer and is
+// not a `MetaBoxFieldInput`, so `Extract` drops it.
+type FormFieldInputs<Elements extends readonly FormElementInput[]> = Extract<
+  Elements[number],
+  MetaBoxFieldInput
+>[];
 
 /**
  * The answers a callback written against no particular form sees, and
@@ -64,7 +81,7 @@ export type FormHandler<Answers = AnyAnswers> = (
 ) => void | Promise<void>;
 
 export interface FormDefinitionInput<
-  Fields extends readonly MetaBoxFieldInput[],
+  Fields extends readonly FormElementInput[],
 > {
   readonly title?: Label;
   readonly submitLabel?: Label;
@@ -72,6 +89,8 @@ export interface FormDefinitionInput<
    * The form's questions, written with the same field builders meta boxes
    * use. Folded to the wire projection at definition time — the renderer,
    * the submit handler and the label snapshot all read that one shape.
+   * A `pageBreak()` written among them turns the form into a wizard for
+   * a visitor whose browser runs the island.
    */
   readonly fields: Fields;
   /**
@@ -81,14 +100,14 @@ export interface FormDefinitionInput<
    * that are already the right shape — but before the spam floor, so it
    * runs for trapped submissions too.
    */
-  readonly validate?: FormValidator<InferStoredFields<Fields>>;
+  readonly validate?: FormValidator<InferStoredFields<FormFieldInputs<Fields>>>;
   /**
    * What to do with an accepted submission: send the notification, call
    * the CRM, write the developer's own row. Runs once the submission is
    * stored — see `runHandler` for what a throw here costs, which is
    * deliberately not the submission.
    */
-  readonly onSubmit?: FormHandler<InferStoredFields<Fields>>;
+  readonly onSubmit?: FormHandler<InferStoredFields<FormFieldInputs<Fields>>>;
   /**
    * Whether to store the submission. On by default: with no notification
    * subsystem, the stored row is the reliability story. Turn it off for a
@@ -113,10 +132,18 @@ export interface FormWire {
   readonly title: Label | undefined;
   readonly submitLabel: Label | undefined;
   readonly fields: readonly MetaBoxFieldManifestEntry[];
+  /**
+   * Where the field list was broken into steps. Empty for a form
+   * declaring no page break — which is every form until one does, and
+   * why nothing downstream branches on whether a form is a wizard. It is
+   * on the wire because the wizard is the browser's: the server renders
+   * every step as one form, and the island is what pages through them.
+   */
+  readonly pageBreaks: readonly FormPageBreakEntry[];
 }
 
 export interface FormDefinition<
-  Fields extends readonly MetaBoxFieldInput[] = readonly MetaBoxFieldInput[],
+  Fields extends readonly FormElementInput[] = readonly FormElementInput[],
 > extends FormWire {
   /**
    * The callbacks are held against the widened answers rather than this
@@ -133,7 +160,7 @@ export interface FormDefinition<
    * through {@link FormAnswersOf} rather than off the value, which
    * carries nothing at this key.
    */
-  readonly _answers: InferStoredFields<Fields>;
+  readonly _answers: InferStoredFields<FormFieldInputs<Fields>>;
 }
 
 /**
@@ -154,11 +181,23 @@ export type FormAnswersOf<F extends FormDefinition> = F["_answers"];
  * Declare a form. The slug is its identity — submissions carry it and
  * nothing else links them back, so renaming one orphans its history.
  */
-export function defineForm<const Fields extends readonly MetaBoxFieldInput[]>(
+export function defineForm<const Fields extends readonly FormElementInput[]>(
   slug: string,
   input: FormDefinitionInput<Fields>,
 ): FormDefinition<Fields> {
-  const compiled = compileMetaBoxFields(input.fields);
+  // The one pass that flattens the authored list: fields keep their
+  // order, and each break records how many of them precede it — which is
+  // the index the step after it starts at.
+  const declared: MetaBoxFieldInput[] = [];
+  const pageBreaks: FormPageBreakEntry[] = [];
+  for (const element of input.fields) {
+    if (isPageBreak(element)) {
+      pageBreaks.push({ startIndex: declared.length, title: element.title });
+    } else {
+      declared.push(element);
+    }
+  }
+  const compiled = compileMetaBoxFields(declared);
   // The checks a `register*MetaBox` call would have run. A form is not
   // registered, so nothing else runs them — and each one it skipped fails
   // silently at submit: a field keyed `__plumix_hp` shadows the honeypot
@@ -187,6 +226,7 @@ export function defineForm<const Fields extends readonly MetaBoxFieldInput[]>(
     title: input.title,
     submitLabel: input.submitLabel,
     fields,
+    pageBreaks,
     // The widening the interface above describes: the author's callbacks
     // are typed against this form's answers, the stored ones against any.
     validate: input.validate as FormValidator | undefined,
@@ -203,5 +243,6 @@ export function toFormWire(form: FormDefinition): FormWire {
     title: form.title,
     submitLabel: form.submitLabel,
     fields: form.fields,
+    pageBreaks: form.pageBreaks,
   };
 }

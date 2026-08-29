@@ -25,6 +25,7 @@ import { formSubmissions } from "../db/schema.js";
 import { defineForm } from "../define-form.js";
 import { tel } from "../fields.js";
 import { forms } from "../index.js";
+import { pageBreak } from "../steps.js";
 import { createFormsHarness } from "../test/harness.js";
 
 const contact = defineForm("contact", {
@@ -325,6 +326,48 @@ describe("a field its condition hid", () => {
 
     expect((await rows(harness))[0]?.labels).toEqual({
       plan: { label: "Plan", options: { basic: "Basic", pro: "Pro" } },
+    });
+  });
+});
+
+describe("a form broken into steps", () => {
+  // The wizard is a rendering of this list, not a change to it: one
+  // submission arrives carrying every step's answers, and the handler
+  // never learns the visitor answered them a page at a time.
+  const plan = select("plan").options(["basic", "pro"]);
+  const wizard = defineForm("wizard", {
+    fields: [
+      text("name").required(),
+      pageBreak("Your plan"),
+      plan,
+      text("seats").visibleWhen(plan.is("pro")),
+    ],
+  });
+
+  test("stores what every step gathered as one submission", async () => {
+    const harness = await submitTo(wizard, [
+      ["name", "Ada"],
+      ["plan", "pro"],
+      ["seats", "12"],
+    ]);
+
+    expect(await storedAnswers(harness)).toEqual({
+      name: "Ada",
+      plan: "pro",
+      seats: "12",
+    });
+  });
+
+  test("drops an answer a driver on an earlier step hides", async () => {
+    const harness = await submitTo(wizard, [
+      ["name", "Ada"],
+      ["plan", "basic"],
+      ["seats", "12"],
+    ]);
+
+    expect(await storedAnswers(harness)).toEqual({
+      name: "Ada",
+      plan: "basic",
     });
   });
 });

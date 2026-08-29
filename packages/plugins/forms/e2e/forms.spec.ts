@@ -8,6 +8,7 @@
 // plugin documents as public API — the markup's stable handles, and what
 // a site styling the form already selects on.
 
+import type { Page } from "@playwright/test";
 import { expect, test } from "plumix/test/playwright";
 
 import { expectFormHasNoAxeViolations } from "./support/axe.js";
@@ -20,6 +21,14 @@ const ENHANCED = "[data-plumix-form='contact'][data-plumix-form-enhanced]";
 const SUMMARY = "[data-plumix-form-summary]";
 const CONFIRMATION = "[data-plumix-form-confirmation]";
 const control = (key: string) => `[data-plumix-form-control='${key}']`;
+
+// The playground's second form: the same field list, broken into three
+// steps, with a question on the last one that a plan chosen on the one
+// before it reveals.
+const SURVEY_ENHANCED =
+  "[data-plumix-form='survey'][data-plumix-form-enhanced]";
+const STEP_TITLE = "[data-plumix-form-step-title]";
+const NEXT = "[data-plumix-form-next]";
 
 // A visitor is not signed in. The seeded admin session would personalize
 // the render and put the site's dev chrome on the page, which is neither
@@ -98,6 +107,165 @@ test.describe("with JavaScript", () => {
   });
 });
 
+test.describe("a form broken into steps, with JavaScript", () => {
+  // Waiting on the enhanced marker is what keeps a spec from racing
+  // hydration and clicking a button the browser would still submit the
+  // plain way.
+  async function openSurvey(page: Page): Promise<void> {
+    await page.goto("/survey");
+    await expect(page.locator(SURVEY_ENHANCED)).toBeVisible();
+  }
+
+  // Fills the first step and moves on. The wizard is the same markup
+  // the plain form is, so everything here is addressed the same way.
+  async function reachThePlanStep(page: Page): Promise<void> {
+    await openSurvey(page);
+    await page.fill(control("name"), "Ada Lovelace");
+    await page.fill(control("email"), "ada@example.test");
+    await page.click(NEXT);
+  }
+
+  test("shows one step at a time, and takes focus to each new heading", async ({
+    page,
+  }) => {
+    await openSurvey(page);
+
+    await expect(page.locator(STEP_TITLE)).toHaveText("About you");
+    await expect(page.locator(control("plan"))).toHaveCount(0);
+
+    await reachThePlanStep(page);
+
+    await expect(page.locator(STEP_TITLE)).toHaveText("Your plan");
+    await expect(page.locator(STEP_TITLE)).toBeFocused();
+    await expect(page.locator(control("name"))).toHaveCount(0);
+    // The title a page break gave its step, in the progress indicator,
+    // with the step on screen marked.
+    await expect(
+      page.locator("[data-plumix-form-step-marker='1'][aria-current='step']"),
+    ).toHaveText("Your plan");
+  });
+
+  test("reports no accessibility violations on a step of its own", async ({
+    page,
+  }) => {
+    await reachThePlanStep(page);
+
+    await expectFormHasNoAxeViolations(page);
+  });
+
+  test("keeps the visitor on a step it cannot accept the answers to", async ({
+    page,
+  }) => {
+    await openSurvey(page);
+
+    await page.fill(control("name"), "Ada Lovelace");
+    await page.fill(control("email"), "not-an-address");
+    await page.click(NEXT);
+
+    await expect(page.locator(SUMMARY)).toBeVisible();
+    await expect(
+      page.locator("[data-plumix-form-error='email']"),
+    ).toBeVisible();
+    await expect(page.locator(STEP_TITLE)).toHaveText("About you");
+  });
+
+  test("comes back to the step it was on, with the answers behind it", async ({
+    page,
+  }) => {
+    await reachThePlanStep(page);
+    await page.reload();
+
+    await expect(page.locator(SURVEY_ENHANCED)).toBeVisible();
+    await expect(page.locator(STEP_TITLE)).toHaveText("Your plan");
+
+    await page.click("[data-plumix-form-back]");
+    await expect(page.locator(control("name"))).toHaveValue("Ada Lovelace");
+  });
+
+  test("asks a question the plan chosen a step earlier calls for, and stores the lot", async ({
+    page,
+  }) => {
+    await reachThePlanStep(page);
+    // Past the timing floor, so the submission is not filed as spam.
+    await page.waitForTimeout(1200);
+
+    await page.selectOption(control("plan"), "pro");
+    await page.click(NEXT);
+
+    // Declared on the last step, conditioned on a driver two steps back.
+    await expect(page.locator(control("seats"))).toBeVisible();
+    await page.fill(control("seats"), "12");
+    await page.click("[data-plumix-form-submit]");
+
+    await expect(page.locator(CONFIRMATION)).toBeVisible();
+  });
+
+  test("leaves out a question the plan chosen a step earlier does not call for", async ({
+    page,
+  }) => {
+    await reachThePlanStep(page);
+
+    await page.selectOption(control("plan"), "basic");
+    await page.click(NEXT);
+
+    await expect(page.locator(control("notes"))).toBeVisible();
+    await expect(page.locator(control("seats"))).toHaveCount(0);
+  });
+});
+
+test.describe("a step that only some answers call for", () => {
+  const GATED = "[data-plumix-form='gated'][data-plumix-form-enhanced]";
+  const SUBMIT = "[data-plumix-form-submit]";
+
+  // The form is one step until `pro` is chosen and two once it is, so
+  // the button on the first step changes what it is as the visitor
+  // answers. It has to say which of the two it is at every moment: a
+  // "Next" that posted the form, or a "Submit" that paged on instead,
+  // would both be the button lying about what pressing it does.
+  test("keeps the button honest as the answer that shapes the wizard changes", async ({
+    page,
+  }) => {
+    await page.goto("/gated");
+    await expect(page.locator(GATED)).toBeVisible();
+
+    // Nothing chosen: the second step holds nothing, so this is a
+    // one-step form and the only button submits it.
+    await expect(page.locator(SUBMIT)).toBeVisible();
+    await expect(page.locator("[data-plumix-form-steps]")).toHaveCount(0);
+
+    await page.selectOption(control("plan"), "pro");
+
+    // A second step exists now, so the same button moves on to it.
+    await expect(page.locator(NEXT)).toBeVisible();
+    await expect(page.locator(SUBMIT)).toHaveCount(0);
+    await page.click(NEXT);
+    await expect(page.locator(control("seats"))).toBeVisible();
+
+    // And back the other way: the step goes, and so does the Next.
+    await page.click("[data-plumix-form-back]");
+    await page.selectOption(control("plan"), "basic");
+    await expect(page.locator(SUBMIT)).toBeVisible();
+    await expect(page.locator(NEXT)).toHaveCount(0);
+  });
+
+  test("keeps what a refused step was answered with", async ({ page }) => {
+    await page.goto("/survey");
+    await expect(page.locator(SURVEY_ENHANCED)).toBeVisible();
+
+    // `name` is required, so this step is refused — and the answer that
+    // was given has to survive the reload the visitor may well make.
+    await page.fill(control("email"), "ada@example.test");
+    await page.click(NEXT);
+    await expect(page.locator(SUMMARY)).toBeVisible();
+
+    await page.reload();
+    await expect(page.locator(SURVEY_ENHANCED)).toBeVisible();
+    await expect(page.locator(control("email"))).toHaveValue(
+      "ada@example.test",
+    );
+  });
+});
+
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
@@ -125,6 +293,29 @@ test.describe("without JavaScript", () => {
       page.click("[data-plumix-form-submit]"),
     ]);
     await expect(page.locator(FORM)).toBeVisible();
+  });
+
+  test("renders a form broken into steps as one form, and submits it in one go", async ({
+    page,
+  }) => {
+    await page.goto("/survey");
+
+    // No stepper, no way to page: every step's fields at once, which is
+    // what makes the wizard an enhancement rather than a requirement.
+    await expect(page.locator("[data-plumix-form-steps]")).toHaveCount(0);
+    await expect(page.locator(NEXT)).toHaveCount(0);
+    await expect(page.locator(control("name"))).toBeVisible();
+    await expect(page.locator(control("plan"))).toBeVisible();
+    await expect(page.locator(control("notes"))).toBeVisible();
+
+    await page.fill(control("name"), "Grace Hopper");
+    await page.fill(control("email"), "grace@example.test");
+    await Promise.all([
+      page.waitForURL("**/survey"),
+      page.click("[data-plumix-form-submit]"),
+    ]);
+
+    await expect(page.locator("[data-plumix-form='survey']")).toBeVisible();
   });
 
   test("still submits, and the page it came from carries nothing per-visitor", async ({

@@ -5,15 +5,23 @@ import { labelSourceText } from "plumix/i18n";
 
 import type { SubmittedValues } from "../answers.js";
 import type { FormWire } from "../define-form.js";
+import type { FormStep } from "../steps.js";
 import type { FormFieldError } from "../types.js";
-import { defaultAnswers, visibleFields } from "../answers.js";
+import { defaultAnswers } from "../answers.js";
 import {
   FORM_SLUG_FIELD,
   HONEYPOT_FIELD,
   RETURN_FIELD,
   TOKEN_FIELD,
 } from "../contract.js";
-import { SUBMIT_LABEL, SUMMARY_TITLE } from "../messages.js";
+import {
+  BACK_LABEL,
+  NEXT_LABEL,
+  stepPositionMessage,
+  SUBMIT_LABEL,
+  SUMMARY_TITLE,
+} from "../messages.js";
+import { visibleSteps } from "../steps.js";
 import { FormControl } from "./form-control.js";
 
 const optionalText = (label: Label | undefined): string | undefined =>
@@ -144,6 +152,39 @@ function ErrorSummary({
   );
 }
 
+const stepName = (step: FormStep, index: number, total: number): string =>
+  step.title === undefined
+    ? stepPositionMessage(index + 1, total)
+    : labelSourceText(step.title);
+
+/**
+ * Where the visitor is, and how far there is to go. Rendered only where
+ * a wizard is: a form nobody broke into steps has one step, which is a
+ * progress indicator with nothing to indicate.
+ */
+function StepProgress({
+  steps,
+  index,
+}: {
+  readonly steps: readonly FormStep[];
+  readonly index: number;
+}): ReactNode {
+  return (
+    <ol className="plumix-form-steps" data-plumix-form-steps="">
+      {steps.map((step, position) => (
+        <li
+          key={position}
+          className="plumix-form-step-marker"
+          data-plumix-form-step-marker={position}
+          aria-current={position === index ? "step" : undefined}
+        >
+          {stepName(step, position, steps.length)}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export interface FormMarkupProps {
   readonly form: FormWire;
   readonly action: string;
@@ -169,7 +210,24 @@ export interface FormMarkupProps {
   readonly enhanced?: boolean;
   readonly busy?: boolean;
   readonly onSubmit?: ComponentProps<"form">["onSubmit"];
+  /**
+   * Every edit, so that what a wizard shows keeps up with what the
+   * visitor has said. Which fields a step holds, how many steps there
+   * are, and whether the button on this one moves on or submits are all
+   * read from `answers` — so an edit nobody folded back into them leaves
+   * the form deciding against what the visitor said a keystroke ago.
+   */
+  readonly onChange?: ComponentProps<"form">["onChange"];
   readonly summaryRef?: Ref<HTMLDivElement>;
+  /**
+   * Which of the form's steps to show. Absent — the server render, the
+   * editor, the page a rejected submit is answered with — renders every
+   * field as one form, which is what a visitor with no JavaScript
+   * submits. Only the island passes it, and only once it is live.
+   */
+  readonly step?: number;
+  readonly onBack?: ComponentProps<"button">["onClick"];
+  readonly stepHeadingRef?: Ref<HTMLHeadingElement>;
 }
 
 /**
@@ -201,12 +259,35 @@ export function FormMarkup({
   busy,
   onSubmit,
   summaryRef,
+  step,
+  onBack,
+  stepHeadingRef,
+  onChange,
 }: FormMarkupProps): ReactNode {
   const honeypotId = `${idBase}-${HONEYPOT_FIELD}`;
   const title = optionalText(form.title);
   const values = answers ?? defaultAnswers(form.fields);
-  const fields = visibleFields(form.fields, values);
+  const steps = visibleSteps(form, values);
+  // No caller asked for a step: -1, which matches no real one, so every
+  // test below reads as "not a wizard".
+  const index = step === undefined ? -1 : Math.min(step, steps.length - 1);
+  // A wizard needs both a caller asking for a step and more than one step
+  // to move between — so a form the answers collapse to a single step
+  // sheds its stepper rather than showing a bar with one mark on it.
+  const stepped = index >= 0 && steps.length > 1;
+  const shown = stepped ? steps[index] : undefined;
+  const fields = shown?.fields ?? steps.flatMap((one) => one.fields);
   const messages = new Map(errors.map((error) => [error.field, error.message]));
+  const StepHeading = title === undefined ? "h2" : "h3";
+  const controls = fields.map((field) => (
+    <FormField
+      key={field.key}
+      field={field}
+      idBase={idBase}
+      error={messages.get(field.key)}
+      answer={answers?.[field.key]}
+    />
+  ));
   return (
     <form
       className="plumix-form"
@@ -216,6 +297,7 @@ export function FormMarkup({
       data-plumix-form-enhanced={enhanced === true ? "" : undefined}
       noValidate={enhanced === true}
       onSubmit={onSubmit}
+      onChange={onChange}
     >
       {title === undefined ? null : (
         <h2 className="plumix-form-title" data-plumix-form-title="">
@@ -232,15 +314,28 @@ export function FormMarkup({
       {returnTo === undefined ? null : (
         <input type="hidden" name={RETURN_FIELD} value={returnTo} readOnly />
       )}
-      {fields.map((field) => (
-        <FormField
-          key={field.key}
-          field={field}
-          idBase={idBase}
-          error={messages.get(field.key)}
-          answer={answers?.[field.key]}
-        />
-      ))}
+      {stepped ? <StepProgress steps={steps} index={index} /> : null}
+      {shown === undefined ? (
+        controls
+      ) : (
+        <div className="plumix-form-step" data-plumix-form-step={index}>
+          {/* Where focus lands on every step change, so a visitor who
+              cannot see the page is told which step they are now on
+              rather than left where the button they pressed used to be.
+              It sits under the form's own title where there is one, and
+              stands in for it where there is not — a fixed level would
+              skip from the page's `h1` to an `h3` on an untitled form. */}
+          <StepHeading
+            className="plumix-form-step-title"
+            data-plumix-form-step-title=""
+            tabIndex={-1}
+            ref={stepHeadingRef}
+          >
+            {stepName(shown, index, steps.length)}
+          </StepHeading>
+          {controls}
+        </div>
+      )}
       <div
         className="plumix-form-honeypot"
         data-plumix-form-honeypot=""
@@ -256,14 +351,40 @@ export function FormMarkup({
         />
       </div>
       <div className="plumix-form-actions" data-plumix-form-actions="">
-        <button
-          className="plumix-form-submit"
-          data-plumix-form-submit=""
-          type="submit"
-          disabled={busy}
-        >
-          {labelSourceText(form.submitLabel ?? SUBMIT_LABEL)}
-        </button>
+        {index > 0 ? (
+          <button
+            className="plumix-form-back"
+            data-plumix-form-back=""
+            type="button"
+            disabled={busy}
+            onClick={onBack}
+          >
+            {labelSourceText(BACK_LABEL)}
+          </button>
+        ) : null}
+        {/* "Next" submits too. A step whose only button was a plain one
+            would leave the browser to guess what Enter in a text field
+            means, and a submit button held back for the last step would
+            make that guess "post the half-filled form". */}
+        {stepped && index < steps.length - 1 ? (
+          <button
+            className="plumix-form-next"
+            data-plumix-form-next=""
+            type="submit"
+            disabled={busy}
+          >
+            {labelSourceText(NEXT_LABEL)}
+          </button>
+        ) : (
+          <button
+            className="plumix-form-submit"
+            data-plumix-form-submit=""
+            type="submit"
+            disabled={busy}
+          >
+            {labelSourceText(form.submitLabel ?? SUBMIT_LABEL)}
+          </button>
+        )}
       </div>
     </form>
   );
