@@ -38,8 +38,10 @@ describe("the settings the admin form loads", () => {
     });
 
     // Seeded rather than defaulted, so the next save writes them through under
-    // the new keys instead of turning indexing back on.
-    expect(await loadGroup(h)).toEqual({
+    // the new keys instead of turning indexing back on. `toMatchObject` because
+    // the group also carries the registered defaults of every key the site has
+    // no answer for, legacy or otherwise.
+    expect(await loadGroup(h)).toMatchObject({
       indexable: false,
       default_og_image: "https://cms.example/legacy.png",
     });
@@ -71,13 +73,16 @@ describe("the settings the admin form loads", () => {
       value: "no",
     });
 
-    expect(await loadGroup(h)).toEqual({ indexable: true });
+    expect(await loadGroup(h)).toMatchObject({ indexable: true });
   });
 
-  test("a site with no legacy rows loads an empty bag", async () => {
+  test("a site with no legacy rows is seeded nothing", async () => {
     const h = await createHarness();
 
-    expect(await loadGroup(h)).toEqual({});
+    // `default_og_image` registers no default, so its absence is what says the
+    // seeding did not run — `indexable` cannot say it, since the value a seed
+    // would write here and the registered default are both `true`.
+    expect(await loadGroup(h)).not.toHaveProperty("default_og_image");
   });
 
   test("another group is untouched", async () => {
