@@ -11,8 +11,8 @@ format, and nothing to migrate between environments.
 
 > This release covers the v1 field roster, repeater and group fields,
 > conditional visibility, validation on the server, multi-step forms, your own
-> `validate` and `onSubmit`, and the theme component and headless hook. The
-> inbox and export arrive next.
+> `validate` and `onSubmit`, the theme component and headless hook, and an
+> opt-in Turnstile captcha. The inbox and export arrive next.
 
 ## Install
 
@@ -439,6 +439,10 @@ what survives is the timing token, which the hook fetches on mount
 exactly as the plugin's own island does. A form that is mostly bespoke UI
 therefore has a honeypot's worth less defence than the rendered one.
 
+For the same reason, do not give a form you drive from here a
+`turnstile`: the widget is markup this hook does not render, so every
+submission would arrive with no challenge and be refused.
+
 `submit` ignores a call made while one is still in flight, so a button
 pressed twice sends one enquiry whether or not you disable it on
 `submitting`.
@@ -460,6 +464,65 @@ form derives from them are yours to handle here:
 - **`bind: "entry"` carries no entry.** The signed token comes from a
   block loader, so a bound form driven from here stores no `entryId` —
   the same position as one on an archive. `PlumixForm` is in it too.
+
+## A captcha, where one is needed
+
+Every form already meets a spam floor it cannot turn off: a honeypot and the
+timing check above. Turnstile is the third defence, and it is opt-in — a
+captcha belongs on the form that is actually being attacked, not on the
+enquiry form nobody has ever spammed.
+
+Give the form a site key and a secret from your Cloudflare dashboard:
+
+```ts
+const contact = defineForm("contact", {
+  fields: [text("name").required(), email("email").required()],
+  turnstile: {
+    siteKey: "0x4AAAAAAA…",
+    secret: (env) => env.TURNSTILE_SECRET,
+  },
+});
+```
+
+The site key is public — it is what the widget renders from. The secret takes
+core's environment-input union, so writing it as `(env) => env.MY_SECRET` reads
+it from the per-request bindings on Cloudflare Workers, where the config module
+is evaluated long before any request and secrets never appear in `process.env`.
+A literal string works for a runtime where one is available at config time.
+Resolution is memoized per isolate, the same as every other secret-bearing
+config slot, so a rotated secret is picked up when the isolate recycles rather
+than on the next request.
+
+The secret cannot reach a browser: `FormWire` — the shape every renderer and
+the island take — declares `secret?: never`, so handing a form definition
+straight to one is a compile error and only what `toFormWire` built can cross.
+
+The widget renders once, above the submit button, and on a form broken into
+steps only on the step that submits — a challenge solved two steps early is a
+token that may have expired by the time it is posted. It is rendered by the
+block and by `PlumixForm`, and not by `usePlumixForm`, which renders no markup
+at all: a form driven from the headless hook should not declare one.
+
+**A guarded form needs JavaScript.** The widget is drawn by Cloudflare's
+script, so this is the one place this plugin's no-script path stops: a visitor
+with JavaScript off is told so where the challenge would have been, rather than
+being left at an empty box and a submit button that will always be refused.
+Every other form still submits without it.
+
+On submit, the challenge is checked with Cloudflare after the field-level rules
+and your own `validate` have passed, and before the spam floor. A submission
+that does not clear it is refused with a message the visitor can act on, and
+the island draws a fresh challenge so their retry has one to send — a Turnstile
+token is spent the moment it is verified. Because the check sits below
+`validate`, your own rules still run for traffic that has not solved anything;
+keep them cheap, or move the expensive part into `onSubmit`.
+
+The check fails closed: a Cloudflare outage, a secret nobody configured and an
+answer that did not decode all refuse the submission rather than waving it
+through. Which of them happened is in your logs.
+
+Rate limiting is deliberately not here. On Cloudflare that is a WAF rule, which
+is both cheaper and better placed than counting rows in your database.
 
 ## Validation
 
@@ -664,6 +727,7 @@ attribute, both public API:
 | Add a row     | `plumix-form-row-add`      | `data-plumix-form-row-add="<name>"`    |
 | Remove a row  | `plumix-form-row-remove`   | `data-plumix-form-row-remove="<name>"` |
 | Error summary | `plumix-form-summary`      | `data-plumix-form-summary`             |
+| Captcha       | `plumix-form-captcha`      | `data-plumix-form-captcha`             |
 | Actions       | `plumix-form-actions`      | `data-plumix-form-actions`             |
 | Submit button | `plumix-form-submit`       | `data-plumix-form-submit`              |
 | Confirmation  | `plumix-form-confirmation` | `data-plumix-form-confirmation`        |

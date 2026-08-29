@@ -8,6 +8,7 @@ import type { FormDefinition } from "../define-form.js";
 import type { FormFieldError } from "../types.js";
 import { FormMarkup } from "../block/form-markup.js";
 import { SUBMIT_PATH } from "../contract.js";
+import { toFormWire } from "../define-form.js";
 import { SUMMARY_TITLE } from "../messages.js";
 
 interface RejectedSubmission {
@@ -45,7 +46,9 @@ export function rejectPage(
       <body>
         <main>
           <FormMarkup
-            form={form}
+            // Projected, not passed: `FormWire` is what a renderer takes,
+            // and it is the shape the secret cannot travel on.
+            form={toFormWire(form)}
             action={withBasePath(SUBMIT_PATH, ctx.basePath)}
             idBase={`plumix-form-${form.slug}`}
             errors={rejected.errors}

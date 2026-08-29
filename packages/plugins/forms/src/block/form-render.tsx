@@ -45,7 +45,14 @@ export function FormRender({
   const action = `${basePath}${SUBMIT_PATH}`;
   if (editing) {
     return (
-      <FormMarkup form={form} action={action} idBase={idBase} bound={bound} />
+      <FormMarkup
+        // Projected, not passed: `FormWire` is what a renderer takes, and
+        // it is the shape a form's Turnstile secret cannot travel on.
+        form={toFormWire(form)}
+        action={action}
+        idBase={idBase}
+        bound={bound}
+      />
     );
   }
   // `client="load"` because a form is often the reason the visitor is on

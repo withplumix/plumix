@@ -3,6 +3,7 @@
 import type { IslandProps } from "plumix/blocks";
 import type { ReactNode } from "react";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -26,12 +27,14 @@ import {
   useTimingToken,
   withoutNulls,
 } from "../wire.js";
+import { drawCaptcha, removeCaptcha, resetCaptcha } from "./form-captcha.js";
 import { FormMarkup } from "./form-markup.js";
 import {
   clearProgress,
   foldStepAnswers,
   progressKey,
   readProgress,
+  withoutCaptcha,
   writeProgress,
 } from "./form-progress.js";
 
@@ -91,10 +94,21 @@ export function FormIsland({
   // first client render identical to the one the server sent.
   const [entered, setEntered] = useState<FormProgress | null>(null);
   const [moves, setMoves] = useState(0);
+  // Counted for the same reason `moves` is: two refusals in a row are
+  // two spent challenges, and the second owes the visitor a fresh one
+  // just as much as the first did.
+  const [refusals, setRefusals] = useState(0);
+  // The challenge Cloudflare drew, held against the container that holds
+  // it. Undefined on a form with no captcha and on one whose widget
+  // script never arrived — both leave every call below a no-op.
+  const widget = useRef<string | undefined>(undefined);
   const summary = useRef<HTMLDivElement>(null);
   const confirmed = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
 
+  // "" for a form with no captcha, whose container is never rendered and
+  // whose ref below is therefore never called.
+  const siteKey = form.turnstile?.siteKey ?? "";
   const key = progressKey(form.slug, idBase);
   // Read once the island is live rather than in an effect: an effect
   // that restored by setting state would render the blank form, then
@@ -134,13 +148,42 @@ export function FormIsland({
   useEffect(() => {
     if (moves > 0) heading.current?.focus();
   }, [moves]);
+  // Out here rather than in `submit`, so a challenge that will not reset
+  // cannot be caught as "the submission never reached the server".
+  useEffect(() => {
+    if (refusals > 0) resetCaptcha(widget.current);
+  }, [refusals]);
+
+  /**
+   * Draw the challenge where the markup left room for it, and let go of
+   * it when that room goes. A callback ref rather than an effect because
+   * the container comes and goes on its own — it exists only on the step
+   * that submits, and the markup remounts when a reload restores
+   * answers — and only the ref is told each time.
+   */
+  const captcha = useCallback(
+    (container: HTMLDivElement) => {
+      let mounted = true;
+      void drawCaptcha(container, siteKey).then((drawn) => {
+        if (mounted) widget.current = drawn;
+        else removeCaptcha(drawn);
+      });
+      return () => {
+        mounted = false;
+        removeCaptcha(widget.current);
+        widget.current = undefined;
+      };
+    },
+    [siteKey],
+  );
 
   // What the visitor has said, kept where a reload can find it. Called
   // on every step change and on every refusal, so the answers behind a
   // visitor who reloads on seeing an error are the ones they just gave.
   function keep(next: FormProgress): void {
-    setEntered(next);
-    writeProgress(key, next);
+    const kept = { ...next, body: withoutCaptcha(next.body) };
+    setEntered(kept);
+    writeProgress(key, kept);
   }
 
   // A step the visitor asked to be on, whose heading is announced to
@@ -182,6 +225,9 @@ export function FormIsland({
       }
       const failed = payload.output.errors;
       setErrors(failed);
+      // The server answered, so the challenge it was sent is spent
+      // whether or not it was what the answer objected to.
+      setRefusals((count) => count + 1);
       // An answer the server refused may be on a step behind this one —
       // its own step passed, and a later answer revealed the problem.
       // The summary links to controls, so the step holding the first of
@@ -282,6 +328,7 @@ export function FormIsland({
       bound={bound}
       busy={busy}
       summaryRef={summary}
+      captchaRef={captcha}
       enhanced={live}
       step={live ? step : undefined}
       stepHeadingRef={heading}

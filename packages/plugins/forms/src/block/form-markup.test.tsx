@@ -6,8 +6,8 @@ import type { SubmittedValues } from "../answers.js";
 import type { FormDefinition } from "../define-form.js";
 import type { FormFieldError } from "../types.js";
 import type { FormMarkupProps } from "./form-markup.js";
-import { FORM_SLUG_FIELD, TOKEN_FIELD } from "../contract.js";
-import { defineForm } from "../define-form.js";
+import { FORM_SLUG_FIELD, TOKEN_FIELD, TURNSTILE_FIELD } from "../contract.js";
+import { defineForm, toFormWire } from "../define-form.js";
 import { pageBreak } from "../steps.js";
 import { FormMarkup } from "./form-markup.js";
 
@@ -26,7 +26,7 @@ function render(props: {
 }): string {
   return renderToStaticMarkup(
     <FormMarkup
-      form={contact}
+      form={toFormWire(contact)}
       action="/_plumix/forms/submit"
       idBase="f"
       {...props}
@@ -123,7 +123,7 @@ describe("what the markup carries", () => {
     });
 
     const html = renderToStaticMarkup(
-      <FormMarkup form={capped} action="/submit" idBase="f" />,
+      <FormMarkup form={toFormWire(capped)} action="/submit" idBase="f" />,
     );
 
     expect(html).toMatch(
@@ -156,7 +156,12 @@ describe("an error that belongs to no field", () => {
 describe("the enhanced form", () => {
   test("says so in the markup, and leaves validation to the server", () => {
     const html = renderToStaticMarkup(
-      <FormMarkup form={contact} action="/submit" idBase="f" enhanced />,
+      <FormMarkup
+        form={toFormWire(contact)}
+        action="/submit"
+        idBase="f"
+        enhanced
+      />,
     );
 
     expect(html).toContain("data-plumix-form-enhanced");
@@ -184,7 +189,12 @@ const survey = defineForm("survey", {
 
 const renderStep = (step: number | undefined): string =>
   renderToStaticMarkup(
-    <FormMarkup form={survey} action="/submit" idBase="f" step={step} />,
+    <FormMarkup
+      form={toFormWire(survey)}
+      action="/submit"
+      idBase="f"
+      step={step}
+    />,
   );
 
 describe("a form broken into steps", () => {
@@ -215,7 +225,12 @@ describe("a form broken into steps", () => {
     const stepped = { fields: [text("name"), pageBreak("Later"), text("b")] };
     const head = (form: FormDefinition) =>
       renderToStaticMarkup(
-        <FormMarkup form={form} action="/submit" idBase="f" step={0} />,
+        <FormMarkup
+          form={toFormWire(form)}
+          action="/submit"
+          idBase="f"
+          step={0}
+        />,
       );
 
     // Under the form's own title where there is one; standing in for it
@@ -275,7 +290,12 @@ describe("a form broken into steps", () => {
     });
 
     const html = renderToStaticMarkup(
-      <FormMarkup form={gated} action="/submit" idBase="f" step={0} />,
+      <FormMarkup
+        form={toFormWire(gated)}
+        action="/submit"
+        idBase="f"
+        step={0}
+      />,
     );
 
     expect(html).toContain('data-plumix-form-control="plan"');
@@ -294,7 +314,7 @@ describe("a group", () => {
   });
 
   const html = renderToStaticMarkup(
-    <FormMarkup form={profile} action="/submit" idBase="f" />,
+    <FormMarkup form={toFormWire(profile)} action="/submit" idBase="f" />,
   );
 
   test("groups its members in a fieldset that names itself", () => {
@@ -330,7 +350,12 @@ describe("a repeater", () => {
 
   const render = (props: Partial<FormMarkupProps> = {}): string =>
     renderToStaticMarkup(
-      <FormMarkup form={party} action="/submit" idBase="f" {...props} />,
+      <FormMarkup
+        form={toFormWire(party)}
+        action="/submit"
+        idBase="f"
+        {...props}
+      />,
     );
 
   test("serves the fewest rows it accepts, each carrying one marker", () => {
@@ -401,7 +426,11 @@ describe("a repeater", () => {
     });
 
     const html = renderToStaticMarkup(
-      <FormMarkup form={optionalRows} action="/submit" idBase="f" />,
+      <FormMarkup
+        form={toFormWire(optionalRows)}
+        action="/submit"
+        idBase="f"
+      />,
     );
 
     expect(html).toContain('data-plumix-form-control="guests[0][who]"');
@@ -422,7 +451,7 @@ describe("a repeater", () => {
     });
 
     const html = renderToStaticMarkup(
-      <FormMarkup form={insists} action="/submit" idBase="f" />,
+      <FormMarkup form={toFormWire(insists)} action="/submit" idBase="f" />,
     );
 
     expect(html).toMatch(
@@ -473,7 +502,7 @@ describe("a repeater inside a repeater row", () => {
 
   test("inherits the outer row's licence to be left blank", () => {
     const html = renderToStaticMarkup(
-      <FormMarkup form={nested} action="/submit" idBase="f" />,
+      <FormMarkup form={toFormWire(nested)} action="/submit" idBase="f" />,
     );
 
     expect(html).toContain(
@@ -505,7 +534,7 @@ describe("a row the island added", () => {
   test("shows the same fields as the row the server served", () => {
     const html = renderToStaticMarkup(
       <FormMarkup
-        form={entries}
+        form={toFormWire(entries)}
         action="/submit"
         idBase="f"
         rows={{ items: ["0", "1"] }}
@@ -515,5 +544,91 @@ describe("a row the island added", () => {
 
     expect(html).toContain('data-plumix-form-control="items[0][source]"');
     expect(html).toContain('data-plumix-form-control="items[1][source]"');
+  });
+});
+
+describe("a form that opted into a captcha", () => {
+  const guarded = defineForm("guarded", {
+    fields: [text("name").label("Your name")],
+    turnstile: { siteKey: "0x4AAAsite", secret: "shhh" },
+  });
+
+  const guardedHtml = (props: Partial<FormMarkupProps> = {}): string =>
+    renderToStaticMarkup(
+      <FormMarkup
+        form={toFormWire(guarded)}
+        action="/submit"
+        idBase="f"
+        {...props}
+      />,
+    );
+
+  // The container and nothing in it: the widget is the island's to draw
+  // — see `drawCaptcha` — so this is the room left for it.
+  test("leaves the widget somewhere to be drawn, named by the site key", () => {
+    expect(guardedHtml()).toContain('data-plumix-form-captcha="0x4AAAsite"');
+  });
+
+  // Turnstile is drawn by a script, so this is the one place the plugin's
+  // no-JavaScript path stops — said out loud rather than left as a box
+  // that never fills in.
+  test("tells a visitor with no JavaScript why", () => {
+    expect(guardedHtml()).toContain(
+      "This form needs JavaScript enabled to check you are not a robot.",
+    );
+  });
+
+  test("never renders the secret", () => {
+    expect(guardedHtml()).not.toContain("shhh");
+  });
+
+  test("renders a refusal against the widget and links the summary to it", () => {
+    const html = guardedHtml({
+      errors: [{ field: TURNSTILE_FIELD, message: "Please try again." }],
+    });
+
+    expect(html).toContain(`href="#f-${TURNSTILE_FIELD}"`);
+    expect(html).toContain(`data-plumix-form-error="${TURNSTILE_FIELD}"`);
+    expect(html).toMatch(
+      new RegExp(`id="f-${TURNSTILE_FIELD}"[^>]*aria-describedby`),
+    );
+  });
+
+  test("leaves a form that declared none untouched", () => {
+    expect(render({})).not.toContain("plumix-form-captcha");
+  });
+});
+
+// A widget on a step the visitor pages away from is a token issued for a
+// submission that has not happened yet, and a challenge solved twice.
+describe("a captcha on a wizard", () => {
+  const wizard = defineForm("wizard", {
+    fields: [
+      text("name").label("Your name"),
+      pageBreak(),
+      text("message").label("Message"),
+    ],
+    turnstile: { siteKey: "0x4AAAsite", secret: "shhh" },
+  });
+
+  const step = (index: number | undefined): string =>
+    renderToStaticMarkup(
+      <FormMarkup
+        form={toFormWire(wizard)}
+        action="/submit"
+        idBase="f"
+        step={index}
+      />,
+    );
+
+  test("is held back until the step that submits", () => {
+    expect(step(0)).not.toContain("plumix-form-captcha");
+    expect(step(1)).toContain("plumix-form-captcha");
+  });
+
+  // What a visitor with no JavaScript posts: every step at once, so the
+  // one submit button they get has to carry the widget.
+  test("is on the flat form nobody is stepping through", () => {
+    expect(step(undefined)).toContain("plumix-form-captcha");
   });
 });

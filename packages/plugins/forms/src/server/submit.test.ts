@@ -12,7 +12,7 @@ import {
   url,
 } from "plumix/fields";
 import { definePlugin } from "plumix/plugin";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { SubmittedValues } from "../answers.js";
 import type { FormDefinition, FormHandler } from "../define-form.js";
@@ -24,13 +24,14 @@ import {
   HONEYPOT_FIELD,
   RETURN_FIELD,
   TOKEN_FIELD,
+  TURNSTILE_FIELD,
 } from "../contract.js";
 import { formSubmissions } from "../db/schema.js";
 import { defineForm } from "../define-form.js";
 import { tel } from "../fields.js";
 import { forms } from "../index.js";
 import { pageBreak } from "../steps.js";
-import { createFormsHarness } from "../test/harness.js";
+import { createFormsHarness, seedPageWithForm } from "../test/harness.js";
 
 const contact = defineForm("contact", {
   fields: [text("name").label("Your name"), email("email")],
@@ -1292,5 +1293,245 @@ describe("a submission made through the headless surface", () => {
     expect(body.ok).toBe(false);
     expect(body.errors.map((error) => error.field)).toEqual(["email"]);
     expect(await rows(harness)).toHaveLength(0);
+  });
+});
+
+describe("a form guarded by Turnstile", () => {
+  const guarded = defineForm("guarded", {
+    fields: [text("name").label("Your name")],
+    turnstile: { siteKey: "0x4AAAsite", secret: "shhh" },
+  });
+
+  const CAPTCHA_ERROR = {
+    field: TURNSTILE_FIELD,
+    message: "We could not confirm you are not a robot. Please try again.",
+  };
+
+  /** The urlencoded body of a call captured on the siteverify spy. */
+  const sentBody = (init: RequestInit | undefined): URLSearchParams =>
+    new URLSearchParams(typeof init?.body === "string" ? init.body : "");
+
+  /** Cloudflare's answer, and a spy on the calls made to get it. */
+  function stubSiteverify(answer: unknown = { success: true }) {
+    return vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(Response.json(answer));
+  }
+
+  /** The guarded form, with the answers and the challenge filled in. */
+  const solve = (harness: FormsHarness, fields: Record<string, string> = {}) =>
+    submitJson(harness, "guarded", {
+      name: "Ada",
+      [TURNSTILE_FIELD]: "solved-challenge",
+      ...fields,
+    });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // The page render, not the markup in isolation: the island's props are
+  // serialized into it as JSON, which is the edge a secret would cross.
+  test("renders the widget on the page, carrying the site key alone", async () => {
+    const harness = await harnessWith(guarded);
+    await seedPageWithForm(harness, "guarded");
+
+    const response = await harness.fetch("/posts/page-with-form");
+
+    response.assertStatus(200);
+    const html = await response.text();
+    expect(html).toContain('data-plumix-form-captcha="0x4AAAsite"');
+    expect(html).not.toContain("shhh");
+  });
+
+  test("stores a submission Cloudflare vouches for", async () => {
+    const siteverify = stubSiteverify();
+    const harness = await harnessWith(guarded);
+
+    const response = await solve(harness);
+
+    response.assertStatus(200);
+    expect(siteverify).toHaveBeenCalledOnce();
+    expect((await rows(harness))[0]?.answers).toEqual({ name: "Ada" });
+  });
+
+  test("hands Cloudflare the secret and the challenge the visitor solved", async () => {
+    const siteverify = stubSiteverify();
+    const harness = await harnessWith(guarded);
+
+    await solve(harness);
+
+    const [url, init] = siteverify.mock.calls[0] ?? [];
+    expect(url).toBe(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+    );
+    expect(sentBody(init)).toEqual(
+      new URLSearchParams({ secret: "shhh", response: "solved-challenge" }),
+    );
+  });
+
+  test("reads a secret that only exists at request time", async () => {
+    const siteverify = stubSiteverify();
+    const fromEnv = defineForm("from-env", {
+      fields: [text("name")],
+      turnstile: {
+        siteKey: "0x4AAAsite",
+        secret: (env) => String((env as { SECRET?: string }).SECRET),
+      },
+    });
+    // No theme blocks; the third argument is the runtime bindings the
+    // form's own secret resolver reads.
+    const harness = await createFormsHarness(
+      [forms({ forms: [fromEnv] })],
+      [],
+      { SECRET: "from-the-binding" },
+    );
+
+    const response = await submitJson(harness, "from-env", {
+      name: "Ada",
+      [TURNSTILE_FIELD]: "solved-challenge",
+    });
+
+    response.assertStatus(200);
+    const [, init] = siteverify.mock.calls[0] ?? [];
+    expect(sentBody(init).get("secret")).toBe("from-the-binding");
+  });
+
+  test("refuses a submission carrying no challenge, without asking Cloudflare", async () => {
+    const siteverify = stubSiteverify();
+    const harness = await harnessWith(guarded);
+
+    const response = await solve(harness, { [TURNSTILE_FIELD]: "" });
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [CAPTCHA_ERROR],
+    });
+    expect(siteverify).not.toHaveBeenCalled();
+    expect(await rows(harness)).toHaveLength(0);
+  });
+
+  test("refuses one Cloudflare will not vouch for", async () => {
+    stubSiteverify({
+      success: false,
+      "error-codes": ["timeout-or-duplicate"],
+    });
+    const harness = await harnessWith(guarded);
+
+    const response = await solve(harness);
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [CAPTCHA_ERROR],
+    });
+    expect(await rows(harness)).toHaveLength(0);
+  });
+
+  // Fail closed: a captcha is on this form because it is being attacked,
+  // and a check nobody could make is not a check that passed.
+  test("refuses one it could not check at all", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
+    const harness = await harnessWith(guarded);
+
+    const response = await solve(harness);
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [CAPTCHA_ERROR],
+    });
+    expect(await rows(harness)).toHaveLength(0);
+  });
+
+  test("refuses one Cloudflare answered with something else entirely", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<html>captive portal</html>", { status: 200 }),
+    );
+    const harness = await harnessWith(guarded);
+
+    const response = await solve(harness);
+
+    response.assertStatus(422);
+    expect(await rows(harness)).toHaveLength(0);
+  });
+
+  // The field-level rules run first, so a visitor fixes their answers and
+  // their challenge in one pass rather than one refusal at a time.
+  test("asks the fields first, and Cloudflare only once they pass", async () => {
+    const siteverify = stubSiteverify();
+    const required = defineForm("required", {
+      fields: [text("name").label("Your name").required()],
+      turnstile: { siteKey: "0x4AAAsite", secret: "shhh" },
+    });
+    const harness = await harnessWith(required);
+
+    const response = await submitJson(harness, "required", { name: "" });
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [{ field: "name", message: "Your name is required." }],
+    });
+    expect(siteverify).not.toHaveBeenCalled();
+  });
+
+  // The no-JavaScript path: the form comes back with the widget on it,
+  // so the visitor has something to solve on their retry.
+  test("hands a visitor with no JavaScript the form and the widget back", async () => {
+    stubSiteverify({ success: false });
+    const harness = await harnessWith(guarded);
+
+    const response = await post(
+      harness,
+      new URLSearchParams({
+        [FORM_SLUG_FIELD]: "guarded",
+        name: "Ada",
+        [TURNSTILE_FIELD]: "solved-challenge",
+      }),
+    );
+
+    response.assertStatus(422);
+    const html = await response.text();
+    expect(html).toContain('data-plumix-form-captcha="0x4AAAsite"');
+    expect(html).toContain(CAPTCHA_ERROR.message);
+    expect(html).not.toContain("shhh");
+  });
+
+  // A secret declared in `wrangler.jsonc` and never actually set types as
+  // a string and arrives undefined. Fail closed, not 500.
+  test("refuses when the secret was never actually set", async () => {
+    const siteverify = stubSiteverify();
+    const unset = defineForm("unset", {
+      fields: [text("name")],
+      turnstile: {
+        siteKey: "0x4AAAsite",
+        secret: (env) => (env as { MISSING: string }).MISSING,
+      },
+    });
+    const harness = await harnessWith(unset);
+
+    const response = await submitJson(harness, "unset", {
+      name: "Ada",
+      [TURNSTILE_FIELD]: "solved-challenge",
+    });
+
+    response.assertStatus(422);
+    expect(await response.json()).toEqual({
+      ok: false,
+      errors: [CAPTCHA_ERROR],
+    });
+    expect(siteverify).not.toHaveBeenCalled();
+  });
+
+  test("leaves a form that declared no captcha alone", async () => {
+    const siteverify = stubSiteverify();
+    const harness = await harnessWithContact();
+
+    const response = await submit(harness, {});
+
+    response.assertStatus(303);
+    expect(siteverify).not.toHaveBeenCalled();
   });
 });

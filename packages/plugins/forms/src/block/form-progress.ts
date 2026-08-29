@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { PROGRESS_KEY_PREFIX } from "../contract.js";
+import { PROGRESS_KEY_PREFIX, TURNSTILE_FIELD } from "../contract.js";
 
 /**
  * How far through a wizard a visitor has got: which step they are on,
@@ -97,4 +97,18 @@ export function foldStepAnswers(saved: string, entered: FormData): string {
   for (const name of shown.keys()) carried.delete(name);
   for (const [name, value] of shown) carried.append(name, value);
   return carried.toString();
+}
+
+/**
+ * The answers with the challenge taken out, for storing rather than for
+ * posting. A Turnstile token is spent the moment the server verifies it,
+ * and a visitor who reloads would otherwise have the used one folded
+ * back into their next submission — where Cloudflare refuses it as a
+ * duplicate, and the refusal reads as a captcha they failed rather than
+ * one they never re-solved.
+ */
+export function withoutCaptcha(body: string): string {
+  const answers = new URLSearchParams(body);
+  answers.delete(TURNSTILE_FIELD);
+  return answers.toString();
 }

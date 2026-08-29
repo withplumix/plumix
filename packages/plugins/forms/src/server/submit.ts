@@ -24,14 +24,16 @@ import {
   RETURN_FIELD,
   SUBMIT_PATH,
   TOKEN_FIELD,
+  TURNSTILE_FIELD,
 } from "../contract.js";
-import { CONFIRMATION } from "../messages.js";
+import { CAPTCHA_FAILED, CONFIRMATION } from "../messages.js";
 import { validateAnswers } from "../validate.js";
 import { verifyBoundEntry } from "./binding.js";
 import { buildLabelSnapshot } from "./labels.js";
 import { rejectPage } from "./reject-page.js";
 import { insertSubmission, recordHandlerFailure } from "./repository.js";
 import { isImplausiblyFast, issueTimingToken } from "./timing.js";
+import { verifyTurnstile } from "./turnstile.js";
 
 // A handler failure is third-party text — an SMTP reply, an upstream
 // error page, a URL carrying a token — and it is stored on a row the
@@ -266,6 +268,21 @@ export function createSubmitHandler(registry: FormRegistry) {
     const answers = pickStoredAnswers(form.fields, values);
     const ownErrors = await form.validate?.({ answers, entryId, ctx });
     if (ownErrors?.length) return reject(ownErrors);
+
+    // Below the field rules so a visitor meets every mistake they can fix
+    // in one pass — and so a submission that was never going to be stored
+    // costs no subrequest. Above the spam floor because this half of the
+    // defence is one the visitor can see and is told about: the honeypot
+    // works by staying quiet, and a challenge nobody was asked to solve
+    // would too.
+    if (
+      form.turnstile !== undefined &&
+      !(await verifyTurnstile(ctx, form.turnstile, body.get(TURNSTILE_FIELD)))
+    ) {
+      return reject([
+        { field: TURNSTILE_FIELD, message: labelSourceText(CAPTCHA_FAILED) },
+      ]);
+    }
 
     // The two halves of the spam floor, and they answer the sender the
     // same way a real submission is answered: telling a bot it was caught

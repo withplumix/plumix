@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { TURNSTILE_FIELD } from "../contract.js";
 import {
   clearProgress,
   foldStepAnswers,
   progressKey,
   readProgress,
+  withoutCaptcha,
   writeProgress,
 } from "./form-progress.js";
 
@@ -124,5 +126,25 @@ describe("progress across a reload", () => {
       writeProgress("k", { step: 1, body: "" });
     }).not.toThrow();
     expect(readProgress("k")).toBeNull();
+  });
+});
+
+// A Turnstile token is spent the moment the server verifies it, so
+// carrying one into the next submission gets it refused as a duplicate —
+// which reads as a captcha the visitor failed rather than one they never
+// re-solved.
+describe("withoutCaptcha", () => {
+  test("drops the spent challenge and keeps every answer", () => {
+    const kept = withoutCaptcha(
+      `name=Ada&${TURNSTILE_FIELD}=spent&email=ada%40example.test`,
+    );
+
+    expect(new URLSearchParams(kept)).toEqual(
+      new URLSearchParams({ name: "Ada", email: "ada@example.test" }),
+    );
+  });
+
+  test("leaves a form that never carried one alone", () => {
+    expect(withoutCaptcha("name=Ada")).toBe("name=Ada");
   });
 });

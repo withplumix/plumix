@@ -22,10 +22,12 @@ import {
   HONEYPOT_FIELD,
   RETURN_FIELD,
   TOKEN_FIELD,
+  TURNSTILE_FIELD,
 } from "../contract.js";
 import {
   ADD_ROW,
   BACK_LABEL,
+  CAPTCHA_NEEDS_JS,
   NEXT_LABEL,
   REMOVE_ROW,
   removeRowLabel,
@@ -117,6 +119,23 @@ function RequiredMark({
   );
 }
 
+/** One refusal, under the control that produced it. */
+function FieldError({
+  name,
+  id,
+  message,
+}: {
+  readonly name: string;
+  readonly id: string;
+  readonly message: string;
+}): ReactNode {
+  return (
+    <p className="plumix-form-error" data-plumix-form-error={name} id={id}>
+      {message}
+    </p>
+  );
+}
+
 /**
  * The help text and the error that describe one field, and the ids that
  * wire them to it. Shared by every field shape: a control points at them
@@ -150,14 +169,8 @@ function describe(
             {help}
           </p>
         )}
-        {errorId === undefined ? null : (
-          <p
-            className="plumix-form-error"
-            data-plumix-form-error={name}
-            id={errorId}
-          >
-            {error}
-          </p>
+        {errorId === undefined || error === undefined ? null : (
+          <FieldError name={name} id={errorId} message={error} />
         )}
       </>
     ),
@@ -422,6 +435,49 @@ function FormFields({
 }
 
 /**
+ * Where the challenge goes. The widget itself is drawn into this
+ * container by the island — see `drawCaptcha` for why it cannot be left
+ * to Cloudflare's own auto-scan — so what the server renders is the
+ * container, the id the error summary links to, and, for a visitor whose
+ * browser will never draw one, an explanation instead of an empty box.
+ *
+ * It renders once, above the submit button, and on a wizard only on the
+ * step that submits: a challenge solved two steps early is a token that
+ * may have expired by the time it is posted.
+ */
+function FormCaptcha({
+  siteKey,
+  idBase,
+  error,
+  ref,
+}: {
+  readonly siteKey: string;
+  readonly idBase: string;
+  readonly error: string | undefined;
+  readonly ref?: Ref<HTMLDivElement>;
+}): ReactNode {
+  const id = elementId(idBase, TURNSTILE_FIELD);
+  const errorId = error === undefined ? undefined : `${id}-error`;
+  return (
+    <div
+      className="plumix-form-captcha"
+      data-plumix-form-captcha={siteKey}
+      id={id}
+      // The summary links here, and there is no control of its own to
+      // land on until the island has drawn one.
+      tabIndex={-1}
+      aria-describedby={errorId}
+    >
+      <div ref={ref} />
+      <noscript>{labelSourceText(CAPTCHA_NEEDS_JS)}</noscript>
+      {errorId === undefined || error === undefined ? null : (
+        <FieldError name={TURNSTILE_FIELD} id={errorId} message={error} />
+      )}
+    </div>
+  );
+}
+
+/**
  * What went wrong, once, at the top of the form. `role="alert"` is what
  * announces it to a screen reader the moment the island renders it;
  * `tabIndex={-1}` is what lets the island move focus here, so a visitor
@@ -540,6 +596,8 @@ export interface FormMarkupProps {
    */
   readonly onChange?: ComponentProps<"form">["onChange"];
   readonly summaryRef?: Ref<HTMLDivElement>;
+  /** Where the island draws the challenge — see `drawCaptcha`. */
+  readonly captchaRef?: Ref<HTMLDivElement>;
   /**
    * Which of the form's steps to show. Absent — the server render, the
    * editor, the page a rejected submit is answered with — renders every
@@ -588,6 +646,7 @@ export function FormMarkup({
   busy,
   onSubmit,
   summaryRef,
+  captchaRef,
   step,
   onBack,
   stepHeadingRef,
@@ -606,6 +665,9 @@ export function FormMarkup({
   // to move between — so a form the answers collapse to a single step
   // sheds its stepper rather than showing a bar with one mark on it.
   const stepped = index >= 0 && steps.length > 1;
+  // The step carrying the submit button — which is every step of a form
+  // nobody is paging through, and the last of one they are.
+  const submits = !stepped || index === steps.length - 1;
   const shown = stepped ? steps[index] : undefined;
   const fields = shown?.fields ?? steps.flatMap((one) => one.fields);
   const chrome: FormChrome = {
@@ -689,6 +751,14 @@ export function FormMarkup({
           autoComplete="off"
         />
       </div>
+      {submits && form.turnstile !== undefined ? (
+        <FormCaptcha
+          siteKey={form.turnstile.siteKey}
+          idBase={idBase}
+          error={chrome.messages.get(TURNSTILE_FIELD)}
+          ref={captchaRef}
+        />
+      ) : null}
       <div className="plumix-form-actions" data-plumix-form-actions="">
         {index > 0 ? (
           <button
@@ -701,20 +771,7 @@ export function FormMarkup({
             {labelSourceText(BACK_LABEL)}
           </button>
         ) : null}
-        {/* "Next" submits too. A step whose only button was a plain one
-            would leave the browser to guess what Enter in a text field
-            means, and a submit button held back for the last step would
-            make that guess "post the half-filled form". */}
-        {stepped && index < steps.length - 1 ? (
-          <button
-            className="plumix-form-next"
-            data-plumix-form-next=""
-            type="submit"
-            disabled={busy}
-          >
-            {labelSourceText(NEXT_LABEL)}
-          </button>
-        ) : (
+        {submits ? (
           <button
             className="plumix-form-submit"
             data-plumix-form-submit=""
@@ -722,6 +779,19 @@ export function FormMarkup({
             disabled={busy}
           >
             {labelSourceText(form.submitLabel ?? SUBMIT_LABEL)}
+          </button>
+        ) : (
+          // "Next" submits too. A step whose only button was a plain one
+          // would leave the browser to guess what Enter in a text field
+          // means, and a submit button held back for the last step would
+          // make that guess "post the half-filled form".
+          <button
+            className="plumix-form-next"
+            data-plumix-form-next=""
+            type="submit"
+            disabled={busy}
+          >
+            {labelSourceText(NEXT_LABEL)}
           </button>
         )}
       </div>

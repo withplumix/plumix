@@ -44,6 +44,14 @@ export const TOKEN_PATH = `/_plumix/forms${TOKEN_ROUTE_PATH}`;
 export const CSRF_HEADER = "X-Plumix-Request";
 export const CSRF_HEADER_VALUE = "1";
 
+/**
+ * What Cloudflare's widget posts the solved challenge under, and what
+ * the markup asks it to. It is outside the `__plumix_` reserved space
+ * because Cloudflare chose the name; setting `data-response-field-name`
+ * explicitly is what keeps the renderer and the handler on one spelling.
+ */
+export const TURNSTILE_FIELD = "cf-turnstile-response";
+
 /** The block the editor places. */
 export const FORM_BLOCK_NAME = "forms/form";
 
