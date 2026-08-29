@@ -1948,7 +1948,7 @@ importers:
   packages/plugins/og:
     dependencies:
       '@takumi-rs/wasm':
-        specifier: ^2.12.0
+        specifier: 2.12.0
         version: 2.12.0(csstype@3.2.3)(react@19.2.8)
       valibot:
         specifier: 'catalog:'

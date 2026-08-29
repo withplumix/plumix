@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { ThemeTokens } from "plumix/blocks";
 import { memoryStorage } from "plumix";
 import { emitThemeTokenCss } from "plumix/blocks";
@@ -195,5 +197,26 @@ describe("the bundled engine", () => {
     // all this needs: that the engine rasterized rather than emitting the SVG
     // a card would be advertised with nowhere.
     expect(await response.text()).toContain("PNG");
+  });
+});
+
+// The lockfile governs this repo only; a consumer's install follows the spec,
+// so the spec has to name the version the suite above rasterized with. Read by
+// path because the engine's `exports` map has no `./package.json`.
+describe("the declared engine version", () => {
+  test("is the one these tests rasterized with", () => {
+    const readJson = <T>(path: string): T =>
+      JSON.parse(
+        readFileSync(resolve(import.meta.dirname, "..", path), "utf8"),
+      ) as T;
+
+    const declared = readJson<{ dependencies: Record<string, string> }>(
+      "package.json",
+    ).dependencies["@takumi-rs/wasm"];
+    const installed = readJson<{ version: string }>(
+      "node_modules/@takumi-rs/wasm/package.json",
+    ).version;
+
+    expect(declared).toBe(installed);
   });
 });
