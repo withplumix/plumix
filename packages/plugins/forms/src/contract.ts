@@ -42,15 +42,6 @@ export const EXPORT_ROUTE_PATH = "/export";
 export const EXPORT_PATH = `/_plumix/forms${EXPORT_ROUTE_PATH}`;
 
 /**
- * The header core's CSRF gate looks for, which a plain `<form>` submit
- * cannot set — the reason the submit route is registered `formPost`. The
- * island sets it, so a scripted submission goes through the ordinary gate
- * rather than the exemption. Core does not publish the constant.
- */
-export const CSRF_HEADER = "X-Plumix-Request";
-export const CSRF_HEADER_VALUE = "1";
-
-/**
  * What Cloudflare's widget posts the solved challenge under, and what
  * the markup asks it to. It is outside the `__plumix_` reserved space
  * because Cloudflare chose the name; setting `data-response-field-name`

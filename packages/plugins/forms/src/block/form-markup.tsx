@@ -1,7 +1,8 @@
 import type { MetaBoxFieldManifestEntry } from "plumix/fields";
 import type { Label } from "plumix/i18n";
-import type { ComponentProps, CSSProperties, ReactNode, Ref } from "react";
+import type { ComponentProps, ReactNode, Ref } from "react";
 import { useEffect, useRef } from "react";
+import { VISUALLY_HIDDEN_STYLE } from "plumix/blocks/renderer";
 import { labelSourceText } from "plumix/i18n";
 
 import type { SubmittedValue, SubmittedValues } from "../answers.js";
@@ -42,21 +43,6 @@ import { FormControl } from "./form-control.js";
 
 const optionalText = (label: Label | undefined): string | undefined =>
   label === undefined ? undefined : labelSourceText(label);
-
-// The one piece of styling the plugin cannot leave to the theme: a trap
-// the visitor can see is a trap they fill in. Inline rather than in a
-// stylesheet so hiding it never depends on a file the page didn't load.
-// `aria-hidden` on the wrapper is the other half — this is the `.sr-only`
-// recipe, which keeps content in the accessibility tree by design, and a
-// screen-reader user who filled the trap would be silently filed as spam.
-const HONEYPOT_STYLE: CSSProperties = {
-  position: "absolute",
-  width: "1px",
-  height: "1px",
-  overflow: "hidden",
-  clipPath: "inset(50%)",
-  whiteSpace: "nowrap",
-};
 
 /**
  * Which rows of which repeater are on the page, keyed by the repeater's
@@ -737,10 +723,14 @@ export function FormMarkup({
           {controls}
         </div>
       )}
+      {/* Out of sight because a trap the visitor can see is a trap they fill
+          in. `aria-hidden` is the other half of the recipe, which keeps
+          content announced by design — a screen-reader user who filled the
+          trap would be silently filed as spam. */}
       <div
         className="plumix-form-honeypot"
         data-plumix-form-honeypot=""
-        style={HONEYPOT_STYLE}
+        style={VISUALLY_HIDDEN_STYLE}
         aria-hidden="true"
       >
         <input

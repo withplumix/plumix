@@ -1,9 +1,11 @@
 import type { JsonObject } from "plumix";
+import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "plumix/blocks";
+import { documentBasePath } from "plumix/blocks/renderer";
 import { labelSourceText } from "plumix/i18n";
 import * as v from "valibot";
 
 import type { CommentFormError, CommentStatus } from "./types.js";
-import { CSRF_HEADER, CSRF_HEADER_VALUE, SUBMIT_PATH } from "./contract.js";
+import { SUBMIT_PATH } from "./contract.js";
 import { UNREACHABLE } from "./messages.js";
 import { isRefusalCode, REFUSALS } from "./refusals.js";
 import { COMMENT_STATUSES } from "./types.js";
@@ -40,21 +42,6 @@ function refusalErrors(code: string): readonly CommentFormError[] {
   return [{ field: refusal.field, message: labelSourceText(refusal.message) }];
 }
 
-/**
- * The subdirectory prefix this deployment is mounted under, empty at the
- * domain root. A hydrated island has no `PlumixProvider` context and a
- * public page carries no `<base href>`, so it is read from the marker the
- * islands bootstrap `<script>` injects — otherwise a subdirectory
- * deployment would post to the domain root and 404.
- */
-function documentBasePath(): string {
-  if (typeof document === "undefined") return "";
-  return (
-    document.querySelector<HTMLScriptElement>("script[data-plumix-base-path]")
-      ?.dataset.plumixBasePath ?? ""
-  );
-}
-
 /** How the last submission was answered. */
 export type CommentAnswer =
   | { readonly ok: true; readonly status: CommentStatus }
@@ -79,7 +66,9 @@ export async function postComment(
       headers: {
         "content-type": "application/json",
         accept: "application/json",
-        [CSRF_HEADER]: CSRF_HEADER_VALUE,
+        // Sent so a scripted post goes through the ordinary CSRF gate rather
+        // than the `formPost` exemption, which would take the session away.
+        [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
       },
       body: JSON.stringify(fields),
     });

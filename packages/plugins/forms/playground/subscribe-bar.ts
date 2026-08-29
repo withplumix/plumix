@@ -2,7 +2,8 @@
 
 import type { IslandProps } from "plumix/blocks";
 import type { ReactNode } from "react";
-import { createElement as h, useState, useSyncExternalStore } from "react";
+import { createElement as h, useState } from "react";
+import { useIsLive } from "plumix/blocks/renderer";
 
 import type { FormWire } from "@plumix/plugin-forms/hooks";
 import { usePlumixForm } from "@plumix/plugin-forms/hooks";
@@ -16,10 +17,6 @@ import { usePlumixForm } from "@plumix/plugin-forms/hooks";
 // Authored with `createElement` rather than JSX, like the theme beside
 // it, so the playground stays transform-agnostic across the jiti config
 // load and the vite worker bundle.
-const NEVER_CHANGES = () => () => undefined;
-const onClient = () => true;
-const onServer = () => false;
-
 export function SubscribeBar({
   form,
 }: IslandProps<{ readonly form: FormWire }>): ReactNode {
@@ -30,11 +27,8 @@ export function SubscribeBar({
   // without a marker of its own there is nothing to tell a visitor — or
   // the e2e suite — that the button is live yet. A theme wanting that
   // signal writes it, since none of the plugin's markup is here to carry
-  // it. The store never changes: the two snapshots differ only in where
-  // they are read, which is how a component tells "rendered on the
-  // server" from "running in a browser" without a state update in an
-  // effect.
-  const live = useSyncExternalStore(NEVER_CHANGES, onClient, onServer);
+  // it.
+  const live = useIsLive();
 
   if (subscribe.confirmation !== null) {
     return h("p", { "data-testid": "subscribed" }, subscribe.confirmation);

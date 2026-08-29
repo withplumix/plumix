@@ -32,6 +32,8 @@ export type { JsonObject, JsonValue } from "./json.js";
 export { isJsonArray, isJsonObject } from "./json.js";
 export * from "./mcp/index.js";
 export * from "./plugin/index.js";
+export { resolveReturnUrl } from "./return-url.js";
+export type { ResolveReturnUrlOptions } from "./return-url.js";
 export { isCurrentSource } from "./route/current.js";
 export type { CurrentSource, ResolvedEntity } from "./route/current.js";
 export type { RouteIntent, RouteRule } from "./route/intent.js";

@@ -1,5 +1,5 @@
 import type { AppContext } from "plumix/plugin";
-import { withBasePath } from "plumix";
+import { resolveReturnUrl } from "plumix";
 import { readVisitorMeta } from "plumix/db";
 import { labelSourceText } from "plumix/i18n";
 
@@ -74,34 +74,6 @@ async function readBoundedBody(
     text += decoder.decode(value, { stream: true });
   }
   return new URLSearchParams(text + decoder.decode());
-}
-
-/**
- * Back to the page the form was on. Two candidates, in order: the field
- * the re-rendered form carries — after a rejected submit the document is
- * the endpoint, so the browser's own `Referer` would send the retry back
- * here and a POST-only route answers a GET with 404 — then the `Referer`
- * itself. Both are the visitor's to set, so both are held to this site's
- * origin and refused the endpoint: the response can be turned into
- * neither an open redirect nor a loop.
- */
-function returnUrl(
-  body: URLSearchParams,
-  request: Request,
-  ctx: AppContext,
-): string {
-  const origin = URL.parse(ctx.origin)?.origin;
-  const submitPath = withBasePath(SUBMIT_PATH, ctx.basePath);
-  for (const candidate of [
-    body.get(RETURN_FIELD),
-    request.headers.get("referer"),
-  ]) {
-    const url = URL.parse(candidate ?? "");
-    if (url !== null && url.origin === origin && url.pathname !== submitPath) {
-      return url.href;
-    }
-  }
-  return withBasePath("/", ctx.basePath);
 }
 
 // The island asks for JSON; a browser posting the form asks for HTML and
@@ -238,6 +210,11 @@ export function createSubmitHandler(registry: FormRegistry) {
 
     const values = readSubmittedValues(form.fields, body);
     const visible = visibleFields(form.fields, values);
+    const returnTo = resolveReturnUrl(request, ctx, {
+      returnTo: body.get(RETURN_FIELD),
+      endpoint: SUBMIT_PATH,
+    });
+
     // A rejected submission, answered in the shape the caller asked for.
     const reject = (errors: readonly FormFieldError[]): Response =>
       wantsJson(request)
@@ -245,7 +222,7 @@ export function createSubmitHandler(registry: FormRegistry) {
         : rejectPage(ctx, form, {
             values,
             errors,
-            returnTo: returnUrl(body, request, ctx),
+            returnTo,
             // Carried through untouched, so a visitor who is handed the
             // form back does not lose the entry it was bound to. It is
             // the same signed token that just verified — re-emitting one
@@ -330,7 +307,7 @@ export function createSubmitHandler(registry: FormRegistry) {
       : new Response(null, {
           status: 303,
           headers: {
-            location: returnUrl(body, request, ctx),
+            location: returnTo,
             "cache-control": "no-store",
           },
         });

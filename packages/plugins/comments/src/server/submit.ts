@@ -1,6 +1,6 @@
 import type { AppContext } from "plumix/plugin";
 import { eq } from "drizzle-orm";
-import { withBasePath } from "plumix";
+import { resolveReturnUrl } from "plumix";
 import { readVisitorMeta } from "plumix/db";
 import { labelSourceText } from "plumix/i18n";
 import { jsonResponse } from "plumix/plugin";
@@ -11,7 +11,6 @@ import type { ResolvedCommentsConfig } from "../config.js";
 import type { CommentRefusalCode } from "../refusals.js";
 import type { CommentStatus } from "../types.js";
 import type { CommentModerationCandidate } from "./hooks.js";
-import type { EchoedComment } from "./read-submission.js";
 import { RETURN_FIELD, SUBMIT_PATH } from "../contract.js";
 import { REFUSALS } from "../refusals.js";
 import { isCommentingEnabled } from "./enablement.js";
@@ -49,42 +48,6 @@ const NAMEABLE = ["name", "email", "body"] as const;
 function refusedField(issues: readonly v.BaseIssue<unknown>[]): string {
   const key = issues[0]?.path?.[0]?.key;
   return NAMEABLE.some((name) => name === key) ? String(key) : "";
-}
-
-/**
- * Back to the post the comment was written on. Two candidates, in order:
- * the hidden field the form carries — after a refusal the document is the
- * endpoint, so the browser's own `Referer` would send the retry back here
- * and a POST-only route answers a GET with 404 — then the `Referer`
- * itself. Both are the visitor's to set, so both are held to an origin
- * this site answers on and refused the endpoint's own path: the response
- * can be turned into neither an open redirect nor a loop.
- *
- * Resolved against the request's own URL, so a relative `returnTo` — the
- * natural thing for a template to pass — is a path on this site rather
- * than a value `URL.parse` refuses outright. Both that origin and the
- * configured one are allowed, which is the pair the dispatcher's own
- * Origin check accepts: on a multi-host deploy every candidate would
- * otherwise be rejected and every commenter sent to the site root.
- */
-function returnUrl(
-  echoed: EchoedComment,
-  request: Request,
-  ctx: AppContext,
-): string {
-  const here = new URL(request.url);
-  const configured = URL.parse(ctx.origin)?.origin;
-  const submitPath = withBasePath(SUBMIT_PATH, ctx.basePath);
-  for (const candidate of [
-    echoed[RETURN_FIELD],
-    request.headers.get("referer"),
-  ]) {
-    const url = URL.parse(candidate ?? "", here);
-    if (url === null || url.pathname === submitPath) continue;
-    if (url.origin === here.origin || url.origin === configured)
-      return url.href;
-  }
-  return withBasePath("/", ctx.basePath);
 }
 
 // `no-store` on every answer: the page carrying the form is edge-cached,
@@ -133,7 +96,10 @@ function isClosed(
 export function createSubmitHandler(config: ResolvedCommentsConfig) {
   return async (request: Request, ctx: AppContext): Promise<Response> => {
     const { form, body, echoed } = await readSubmission(request);
-    const returnTo = returnUrl(echoed, request, ctx);
+    const returnTo = resolveReturnUrl(request, ctx, {
+      returnTo: echoed[RETURN_FIELD],
+      endpoint: SUBMIT_PATH,
+    });
 
     const fail = (
       code: CommentRefusalCode,

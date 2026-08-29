@@ -14,8 +14,12 @@
  * browsers; Origin/Referer check covers older clients without SameSite support.
  */
 
-export const CSRF_HEADER_NAME = "X-Plumix-Request";
-export const CSRF_HEADER_VALUE = "1";
+// Defined in `@plumix/blocks` rather than here, so the islands that send the
+// header can name it without pulling core into a browser bundle. Re-exported
+// so this module stays the one place server code reads it from.
+import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "@plumix/blocks";
+
+export { CSRF_HEADER_NAME, CSRF_HEADER_VALUE };
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 

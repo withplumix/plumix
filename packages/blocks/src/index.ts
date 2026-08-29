@@ -50,6 +50,9 @@ export type {
   RenderBlockTreeOptions,
 } from "./render-block-tree.js";
 
+// ─── Request-gate constants ─────────────────────────────────────────────────
+export { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "./csrf.js";
+
 // ─── Entry-content envelope ─────────────────────────────────────────────────
 export { defineEntryContent, isEntryContent } from "./entry-content.js";
 export type { EntryContent } from "./entry-content.js";
