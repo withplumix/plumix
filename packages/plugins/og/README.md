@@ -329,6 +329,12 @@ Rendering one costs CPU, and the Workers **free plan allows 10 ms of it per invo
 
 A free-plan site is not left without share images. The featured-image path above never reaches the renderer: an entry's own photo is cropped to the card's shape by URL math through your `imageDelivery:` slot, so a site whose entries carry photos unfurls correctly with nothing rendered at all. Declare a card rule anyway — it is what says which shape to crop to.
 
+## Which engine version you get
+
+`@takumi-rs/wasm` is declared at an exact version rather than a range, so the copy rendering your cards is the copy this package's own tests rasterize with. It is the only thing that turns a card into bytes, and a break in it does not throw — you find out when a link unfurls wrong weeks later. Pinning it pins the whole engine, because it declares its own `@takumi-rs/helpers` at an exact version too, so no part of the rasterizer floats behind it.
+
+Adopting a newer one is a deliberate release, gated on the suite that loads the real wasm and checks a card comes back as encoded pixels — so an engine that stopped rendering fails there rather than on your site. For a version this package has not adopted, your package manager's overrides are the lever, and the render is then yours to verify.
+
 ## Support
 
 Have a question? Start a [discussion](https://github.com/withplumix/plumix/discussions). Found a bug? [Open an issue](https://github.com/withplumix/plumix/issues).

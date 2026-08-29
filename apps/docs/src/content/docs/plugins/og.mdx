@@ -297,6 +297,10 @@ og({ renderer: takumi({ format: "jpeg" }) });
 
 `svgOnly()` gives no bytes back: it runs through the same engine and loads the same wasm, around 2.3 MB against a Worker size ceiling of 10 MB gzipped on the paid plan and 3 MB on the free one. `remote({ url })` is the only implementation that leaves the engine unexecuted, and the dependency stays installed either way, because the default renderer is resolved inside the package.
 
+### A newer engine does not arrive on its own
+
+The engine is declared at an exact version rather than a range, so the copy rendering your cards is the copy this plugin's tests rasterize with — and an upstream release does not reach you by installing again. That is deliberate: the engine is the only thing that turns a card into bytes, and a break in it does not throw, it unfurls wrong weeks later. Adopting a newer one is a plugin release, and the suite that rasterizes with the real engine is what gates it. Until then your package manager's overrides are the lever, and the render is yours to verify.
+
 ### A card cannot fetch an external image
 
 No image a card names is ever fetched. The plugin resolves every `image` node before the render and hands the renderer bytes, so three sources work and nothing else does: anything published in your media library, anything else in your storage bucket addressed by the URL the bucket mints for it, and a `data:` URI, which carries its own bytes and is the escape hatch for a small inline asset such as a logo. An `https://` URL pointing anywhere else is dropped, and the card renders without it.

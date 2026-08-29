@@ -124,6 +124,18 @@ Two things make this cheaper than it sounds:
 [`packages/admin/README.md`](packages/admin/README.md) has the rest — what a
 subject is, how to add one, and why the container is pinned the way it is.
 
+### The pinned OG card renderer
+
+`@plumix/plugin-og` declares its card engine at an exact version, because the
+lockfile governs this repo only and a range would let a site install a release
+the raster suite never rendered with. `src/takumi.test.ts` holds that shut: the
+declared spec must equal the installed engine version, so the pin cannot
+quietly become a range again.
+
+Bumping it is a deliberate edit. The raster suite is what decides: it loads the
+real wasm, so a release that breaks the narrow surface `takumi.ts` uses fails
+here rather than on a site.
+
 ## Link validation
 
 Links mean two different things in this repo, so two gates check them; every
