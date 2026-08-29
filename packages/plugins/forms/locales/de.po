@@ -1,0 +1,270 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-08-29\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.adminPage.title"
+msgstr "Formulareinsendungen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.forms"
+msgstr "Formulare"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.submissions"
+msgstr "Einsendungen"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.inbox"
+msgstr "Posteingang"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.submit"
+msgstr "Absenden"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.summary.title"
+msgstr "Es gibt ein Problem"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.confirmation"
+msgstr "Danke — Ihre Einsendung ist eingegangen."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.next"
+msgstr "Weiter"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.back"
+msgstr "Zurück"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.captcha"
+msgstr "Wir konnten nicht bestätigen, dass Sie kein Roboter sind. Bitte versuchen Sie es erneut."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.captcha.needs_js"
+msgstr "Dieses Formular benötigt aktiviertes JavaScript, um zu prüfen, dass Sie kein Roboter sind."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.unreachable"
+msgstr "Ihre Einsendung konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.repeater.add"
+msgstr "Weitere hinzufügen"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.repeater.remove"
+msgstr "Entfernen"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.title"
+msgstr "Formular"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.description"
+msgstr "Eines der Formulare, die diese Website deklariert, für Besucher dargestellt."
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.form"
+msgstr "Formular"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.contact"
+msgstr "Kontakt"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.enquiry"
+msgstr "Anfrage"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.input.slug.label"
+msgstr "Formular"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.new"
+msgstr "Neu"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.read"
+msgstr "Gelesen"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.archived"
+msgstr "Archiviert"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.spam"
+msgstr "Spam"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.allForms"
+msgstr "Alle Formulare"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.allStatuses"
+msgstr "Alle"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.notePlaceholder"
+msgstr "Eine Notiz für die Person, die das als Nächstes übernimmt…"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.noteLabel"
+msgstr "Private Notiz"
+
+#. js-lingui-explicit-id
+#. serial: the submission's per-form number
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.openLabel"
+msgstr "Einsendung {serial} öffnen"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.exportCsv"
+msgstr "CSV exportieren"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.exportJson"
+msgstr "JSON exportieren"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.answer.yes"
+msgstr "Ja"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.answer.no"
+msgstr "Nein"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.error"
+msgstr "Einsendungen konnten nicht geladen werden"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.empty"
+msgstr "Bisher ist nichts eingegangen."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.column.received"
+msgstr "Eingegangen"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.column.status"
+msgstr "Status"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.failedBadge"
+msgstr "Fehlgeschlagen"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.loadMore"
+msgstr "Mehr laden"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.gone"
+msgstr "Diese Einsendung gibt es nicht mehr."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.close"
+msgstr "Schließen"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.delete"
+msgstr "Löschen"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.deleteTitle"
+msgstr "Diese Einsendung löschen?"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.deleteDescription"
+msgstr "Die Antworten, die Notiz und alles Weitere sind endgültig weg. Archivieren Sie die Einsendung stattdessen, um sie aus dem Weg zu räumen."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.cancel"
+msgstr "Abbrechen"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.writeError"
+msgstr "Das hat nicht geklappt:"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.handlerError"
+msgstr "Was die Website als Nächstes tun wollte, wurde nicht abgeschlossen:"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.received"
+msgstr "Eingegangen"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.entry"
+msgstr "Seiteneintrag"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.ipHash"
+msgstr "IP-Hash"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.userAgent"
+msgstr "User-Agent"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.saveNote"
+msgstr "Notiz speichern"

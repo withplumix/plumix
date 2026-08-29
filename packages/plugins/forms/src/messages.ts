@@ -3,13 +3,12 @@ import type { Label } from "plumix/i18n";
 /**
  * Every string this plugin shows a visitor, in one place.
  *
- * They are authored English rather than translated: a plugin has no
+ * They render as authored English whatever the locale: a plugin has no
  * catalog at render time, so the public render path flattens a `Label` to
- * its source message (see `labelSourceText`). Collecting them here is
- * what makes the plugin's own catalog, when it lands, one file's work
- * rather than a hunt — which is also why the two that interpolate are
- * functions with named arguments and not concatenation spread across
- * call sites.
+ * its source message (see `labelSourceText`). The functions below are the
+ * ones no catalog can hold yet — each needs an ICU message first, which is
+ * also why they interpolate through parameters rather than concatenating
+ * across call sites (#2083).
  */
 export const SUBMIT_LABEL: Label = {
   id: "plugin.forms.submit",

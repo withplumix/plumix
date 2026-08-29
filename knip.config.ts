@@ -396,10 +396,13 @@ const config: KnipConfig = {
       // calls — so their exports are public API rather than dead code.
       entry: [
         "src/index.ts",
+        "src/admin/index.tsx",
         "src/theme.tsx",
         "src/headless.ts",
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
+        "lingui.config.ts",
+        "locales/*.mjs",
       ],
       // Playground-only devDeps; see packages/plugins/media above. Pages
       // is here because the playground composes it for the `page` entry

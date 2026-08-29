@@ -1,0 +1,270 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-08-29\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: hand-authored (plugin definition is server-side, no Babel pass)\n"
+"Language: ar\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.adminPage.title"
+msgstr "إرسالات النماذج"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.forms"
+msgstr "نماذج"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.submissions"
+msgstr "إرسالات"
+
+#. js-lingui-explicit-id
+#: src/index.ts
+msgid "plugin.forms.keyword.inbox"
+msgstr "الوارد"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.submit"
+msgstr "إرسال"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.summary.title"
+msgstr "هناك مشكلة"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.confirmation"
+msgstr "شكرًا — لقد استلمنا إرسالك."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.next"
+msgstr "التالي"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.back"
+msgstr "رجوع"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.captcha"
+msgstr "تعذّر علينا التأكد من أنك لست روبوتًا. يُرجى المحاولة مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.captcha.needs_js"
+msgstr "يحتاج هذا النموذج إلى تفعيل JavaScript للتحقق من أنك لست روبوتًا."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.error.unreachable"
+msgstr "تعذّر إرسال النموذج. يُرجى المحاولة مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.repeater.add"
+msgstr "إضافة أخرى"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.forms.repeater.remove"
+msgstr "إزالة"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.title"
+msgstr "نموذج"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.description"
+msgstr "أحد النماذج التي يعلنها هذا الموقع، معروضًا للزائر."
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.form"
+msgstr "نموذج"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.contact"
+msgstr "اتصال"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.keyword.enquiry"
+msgstr "استفسار"
+
+#. js-lingui-explicit-id
+#: src/block/form-block.tsx
+msgid "block.forms.form.input.slug.label"
+msgstr "نموذج"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.new"
+msgstr "جديد"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.read"
+msgstr "مقروء"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.archived"
+msgstr "مؤرشف"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.status.spam"
+msgstr "بريد مزعج"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.allForms"
+msgstr "كل النماذج"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.allStatuses"
+msgstr "الكل"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.notePlaceholder"
+msgstr "ملاحظة لمن يتابع هذا لاحقًا…"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.noteLabel"
+msgstr "ملاحظة خاصة"
+
+#. js-lingui-explicit-id
+#. serial: the submission's per-form number
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.openLabel"
+msgstr "فتح الإرسال {serial}"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.exportCsv"
+msgstr "تصدير CSV"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.exportJson"
+msgstr "تصدير JSON"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.answer.yes"
+msgstr "نعم"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.answer.no"
+msgstr "لا"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.error"
+msgstr "تعذّر تحميل الإرسالات"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.empty"
+msgstr "لم يصل أي شيء بعد."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.column.received"
+msgstr "تاريخ الاستلام"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.column.status"
+msgstr "الحالة"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.failedBadge"
+msgstr "فشل"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.loadMore"
+msgstr "تحميل المزيد"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.gone"
+msgstr "لم يعد هذا الإرسال موجودًا."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.close"
+msgstr "إغلاق"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.delete"
+msgstr "حذف"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.deleteTitle"
+msgstr "حذف هذا الإرسال؟"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.deleteDescription"
+msgstr "ستختفي الإجابات والملاحظة وكل ما عليه نهائيًا. أرشفه بدلًا من ذلك لإبعاده عن الطريق."
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.cancel"
+msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.writeError"
+msgstr "لم يتم ذلك:"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.handlerError"
+msgstr "لم يكتمل ما كان الموقع سيفعله بعد ذلك:"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.received"
+msgstr "تاريخ الاستلام"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.entry"
+msgstr "مُدخل الصفحة"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.ipHash"
+msgstr "تجزئة IP"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.userAgent"
+msgstr "وكيل المستخدم"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.saveNote"
+msgstr "حفظ الملاحظة"

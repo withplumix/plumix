@@ -1588,6 +1588,9 @@ importers:
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.17.4
+      '@lingui/cli':
+        specifier: catalog:lingui
+        version: 6.6.0(esbuild@0.28.2)(rolldown@1.2.5)
       '@orpc/server':
         specifier: catalog:orpc
         version: 1.15.0(crossws@0.3.5)(ws@8.21.3)
@@ -1597,6 +1600,9 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
+      '@plumix/lingui-config':
+        specifier: workspace:*
+        version: link:../../../tooling/lingui
       '@plumix/plugin-pages':
         specifier: workspace:*
         version: link:../pages

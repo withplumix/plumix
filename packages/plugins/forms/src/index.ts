@@ -118,6 +118,11 @@ export function forms(options: FormsConfig = {}) {
     // Module specifier `plumix migrate generate` uses to fold this
     // plugin's table into the host's drizzle-kit codegen.
     schemaModule: "@plumix/plugin-forms/schema",
+    i18n: {
+      sourceLocale: "en",
+      locales: ["en", "uk", "ar", "de", "zh-CN"],
+      catalogPath: "./locales",
+    },
     provides: (ctx) => {
       // Core runs every `provides` before any `setup`, and a descriptor is
       // installed more than once per build (the config loader caches it;
