@@ -2,6 +2,8 @@ import { lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { extname, join } from "node:path";
 import ts from "typescript";
 
+import { VitePluginError } from "./errors.js";
+
 // Prototype-pollution defense. The client-side runtime does
 // `mod[exportName]` to look up the component; a malicious or
 // accidentally-named `__proto__` / `constructor` / `prototype` export
@@ -14,6 +16,10 @@ const FORBIDDEN_EXPORT_KEYS: ReadonlySet<string> = new Set([
   "constructor",
   "prototype",
 ]);
+
+// Hook naming convention. A shim replaces the export with a component, so a
+// hook in an island module returns a React element instead of running.
+const HOOK_EXPORT = /^use[A-Z]/;
 
 interface UseClientFinding {
   readonly exportName: string;
@@ -136,6 +142,19 @@ export function transformUseClientModule(
 ): TransformUseClientResult | null {
   const findings = findUseClientIslands(source);
   if (findings.length === 0) return null;
+  // First-party source only. A published package is entitled to export a
+  // client-only hook beside its components (`@lingui/react` and half of Radix
+  // do), and its shimmed hook is a pre-existing hazard the site author cannot
+  // fix by editing the file we would name.
+  if (!filePath.includes("/node_modules/")) {
+    const hook = findings.find((f) => HOOK_EXPORT.test(f.exportName));
+    if (hook) {
+      throw VitePluginError.islandExportIsHook({
+        module: filePath,
+        exportName: hook.exportName,
+      });
+    }
+  }
 
   const origUrl = JSON.stringify(filePath + ORIG_QUERY);
   const chunkUrl = JSON.stringify(options.chunkUrl);

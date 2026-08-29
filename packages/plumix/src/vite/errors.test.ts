@@ -78,3 +78,20 @@ describe("VitePluginError.adminEntryNotFound", () => {
     );
   });
 });
+
+describe("VitePluginError.islandExportIsHook", () => {
+  test("class identity, code, exposed fields, and message", () => {
+    const err = VitePluginError.islandExportIsHook({
+      module: "/abs/src/use-session.ts",
+      exportName: "useSession",
+    });
+    expect(err).toBeInstanceOf(VitePluginError);
+    expect(err.code).toBe("island_export_is_hook");
+    expect(err.module).toBe("/abs/src/use-session.ts");
+    expect(err.exportName).toBe("useSession");
+    expect(err.message).toContain(
+      '[plumix] /abs/src/use-session.ts has a "use client" directive',
+    );
+    expect(err.message).toContain("the hook `useSession`");
+  });
+});
