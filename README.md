@@ -9,7 +9,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-**A modern headless CMS, built for the edge** — content modeling, a block editor, passkey auth, and a full admin UI, with a pluggable runtime so you're never locked to one platform.
+**A modern CMS, built for the edge** — content modeling, a block editor, passkey auth, and a full admin UI, with a pluggable runtime so you're never locked to one platform.
 
 > [!WARNING]
 > **Pre-1.0 software.** Minor versions can contain breaking changes — pin your versions.

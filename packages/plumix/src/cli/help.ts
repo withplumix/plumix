@@ -7,7 +7,7 @@ export interface CommandGroup {
 
 export function formatHelp(groups: readonly CommandGroup[]): string {
   const lines = [
-    "plumix — headless CMS for the edge",
+    "plumix — a CMS for the edge",
     "",
     "Usage:",
     "  plumix <command> [options]",

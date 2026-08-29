@@ -2,7 +2,7 @@
   "name": "plumix",
   "version": "0.18.0",
   "type": "module",
-  "description": "A headless CMS for the edge, built on Cloudflare Workers",
+  "description": "A CMS for the edge, built on Cloudflare Workers",
   "license": "MIT",
   "author": "Plumix Contributors",
   "homepage": "https://github.com/withplumix/plumix#readme",
@@ -18,8 +18,7 @@
     "cms",
     "cloudflare-workers",
     "edge",
-    "typescript",
-    "headless-cms"
+    "typescript"
   ],
   "sideEffects": [
     "./dist/blocks/island-runtime.js"

@@ -14,8 +14,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Plumix",
-      description:
-        "Documentation for Plumix, a modern headless CMS built for the edge.",
+      description: "Documentation for Plumix, a modern CMS built for the edge.",
       // English-only content, but declaring the locale keeps the tree shaped
       // for translation.
       locales: {
