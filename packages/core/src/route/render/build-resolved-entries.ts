@@ -4,13 +4,17 @@ import { isEntryContent } from "@plumix/blocks";
 
 import type { AppContext } from "../../context/app.js";
 import type { Entry } from "../../db/schema/entries.js";
-import type { Term } from "../../db/schema/terms.js";
-import type { ResolvedAuthor, ResolvedEntry } from "./resolved-entry.js";
+import type {
+  ResolvedAuthor,
+  ResolvedEntry,
+  ResolvedTerm,
+} from "./resolved-entry.js";
 import { memoBatch } from "../../context/memo.js";
 import { entryTerm } from "../../db/schema/entry_term.js";
 import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
 import { resolveEntriesMeta } from "../../rpc/procedures/entry/meta.js";
+import { resolveTermsMeta } from "../../rpc/procedures/term/meta.js";
 import {
   buildEntryPermalinkSync,
   buildTermArchiveUrlSync,
@@ -70,14 +74,23 @@ export async function buildResolvedEntries(
     // shape — one level deep; a summary carries no meta of its own.
     resolveEntriesMeta(ctx, rows),
   ]);
+  // Not inside the Promise.all: the bags key off the join rows. A term
+  // set with no reference fields costs no extra query.
+  const termMetaBags = await resolveTermsMeta(ctx, joinRows);
   const authorById = new Map(
     authorRows.filter((a) => a !== null).map((a) => [a.id, a]),
   );
-  const termsByEntryId = new Map<number, Term[]>();
-  for (const row of joinRows) {
+  const termsByEntryId = new Map<number, ResolvedTerm[]>();
+  for (const [termIdx, row] of joinRows.entries()) {
     const { entryId, ...term } = row;
     const bucket = termsByEntryId.get(entryId) ?? [];
-    bucket.push(term);
+    // Sync term URLs — no per-term CTE (nested terms get null, like entries).
+    bucket.push({
+      ...term,
+      meta: termMetaBags[termIdx] ?? {},
+      storedMeta: term.meta,
+      url: buildTermArchiveUrlSync(ctx, term),
+    });
     termsByEntryId.set(entryId, bucket);
   }
   return rows.map((row, rowIdx) => {
@@ -93,12 +106,7 @@ export async function buildResolvedEntries(
       meta: metaBags[rowIdx] ?? {},
       storedMeta: row.meta,
       contentBlocks: isEntryContent(row.content) ? row.content : null,
-      // Sync term URLs — no per-term CTE (nested terms get null, like entries).
-      terms: (termsByEntryId.get(row.id) ?? []).map((term) => ({
-        ...term,
-        storedMeta: term.meta,
-        url: buildTermArchiveUrlSync(ctx, term),
-      })),
+      terms: termsByEntryId.get(row.id) ?? [],
       author,
       url: buildEntryPermalinkSync(ctx, row),
     };

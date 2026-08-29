@@ -9,6 +9,7 @@ import {
   decodeMetaBag as decodeMetaBagCore,
   isEmptyMetaPatch,
   loadMeta,
+  resolveMetaBags as resolveMetaBagsCore,
   resolveMetaReferences as resolveMetaReferencesCore,
   sanitizeMetaForRpc as sanitizeMetaForRpcCore,
   validateMetaReferencesForRpc,
@@ -63,18 +64,39 @@ export function assertTermMetaCapabilities(
   );
 }
 
-/** Decode + resolve one term's meta bag for a read response. */
+/**
+ * Decode + resolve one term's meta bag for a read response. Use
+ * {@link resolveTermsMeta} for multi-term responses so ids aggregate
+ * into one in-query per `(kind, scope)` group.
+ */
 export async function resolveTermMeta(
   ctx: AppContext,
   taxonomy: string,
   raw: JsonObject | null | undefined,
 ): Promise<ResolvedMeta> {
-  const findField = (key: string) =>
-    findTermMetaField(ctx.plugins, taxonomy, key);
-  return resolveMetaReferencesCore(
+  const [bag] = await resolveTermsMeta(ctx, [{ taxonomy, meta: raw }]);
+  return bag ?? {};
+}
+
+/**
+ * Decode + resolve meta bags for a whole set of terms, one result per
+ * row (index-aligned). All reference ids across all rows resolve
+ * through the shared batched pipeline.
+ */
+export async function resolveTermsMeta(
+  ctx: AppContext,
+  rows: readonly {
+    readonly taxonomy: string;
+    readonly meta: JsonObject | null | undefined;
+  }[],
+): Promise<ResolvedMeta[]> {
+  return resolveMetaBagsCore(
     ctx,
-    findField,
-    decodeMetaBagCore(findField, raw),
+    rows.map((row) => {
+      const findField = (key: string) =>
+        findTermMetaField(ctx.plugins, row.taxonomy, key);
+      return { findField, decoded: decodeMetaBagCore(findField, row.meta) };
+    }),
   );
 }
 
