@@ -8,11 +8,29 @@ import { settings } from "plumix/schema";
 // The same group core's `readVisitorMeta` puts this plugin's IP salt in.
 const GROUP = "forms_internal";
 
-function toHex(bytes: Uint8Array): string {
+/**
+ * The secrets this plugin keeps. A closed union because a typo would
+ * otherwise mint a silent third key rather than failing — and the two
+ * that exist are deliberately separate, so a token signed under one can
+ * never be presented as the other.
+ */
+export type SecretName = "timing_secret" | "bind_secret";
+
+/** Also how `signing.ts` renders a signature — one spelling, one place. */
+export function toHex(bytes: Uint8Array): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-async function read(ctx: AppContext, key: string): Promise<string | null> {
+/**
+ * The secret as it stands, without minting one. What verification reads:
+ * a caller presenting a token before this install ever signed one is not
+ * a reason to write a row on an unauthenticated public route, and a
+ * freshly minted secret could not have signed their token anyway.
+ */
+export async function getSecret(
+  ctx: AppContext,
+  key: SecretName,
+): Promise<string | null> {
   const [row] = await ctx.db
     .select({ value: settings.value })
     .from(settings)
@@ -28,10 +46,10 @@ async function read(ctx: AppContext, key: string): Promise<string | null> {
  */
 export function getOrCreateSecret(
   ctx: AppContext,
-  key: string,
+  key: SecretName,
 ): Promise<string> {
   return ctx.memo(`${GROUP}:${key}`, async () => {
-    const existing = await read(ctx, key);
+    const existing = await getSecret(ctx, key);
     if (existing !== null) return existing;
 
     const bytes = new Uint8Array(16);
@@ -41,6 +59,6 @@ export function getOrCreateSecret(
       .insert(settings)
       .values({ group: GROUP, key, value: secret })
       .onConflictDoNothing();
-    return (await read(ctx, key)) ?? secret;
+    return (await getSecret(ctx, key)) ?? secret;
   });
 }

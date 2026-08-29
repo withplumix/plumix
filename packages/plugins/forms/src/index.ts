@@ -22,6 +22,7 @@ import { createSubmitHandler, tokenHandler } from "./server/submit.js";
 
 export type {
   FormAnswersOf,
+  FormBinding,
   FormDefinition,
   FormDefinitionInput,
   FormElementInput,

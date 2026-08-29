@@ -17,6 +17,7 @@ import {
   visibleFields,
 } from "../answers.js";
 import {
+  BOUND_FIELD,
   FORM_SLUG_FIELD,
   HONEYPOT_FIELD,
   RETURN_FIELD,
@@ -513,6 +514,12 @@ export interface FormMarkupProps {
   readonly answers?: SubmittedValues;
   /** Client-side only — see `issueTimingToken`. */
   readonly token?: string | null;
+  /**
+   * The signed entry a bound form was rendered on — see `signBoundEntry`.
+   * Unlike `token` it belongs in the server render: it is about the page,
+   * not the visitor, so it costs the page nothing at the edge.
+   */
+  readonly bound?: string | null;
   /** Where a submit should return to — see {@link RETURN_FIELD}. */
   readonly returnTo?: string;
   /**
@@ -575,6 +582,7 @@ export function FormMarkup({
   errors = [],
   answers,
   token,
+  bound,
   returnTo,
   enhanced,
   busy,
@@ -638,6 +646,9 @@ export function FormMarkup({
       <input type="hidden" name={FORM_SLUG_FIELD} value={form.slug} readOnly />
       {typeof token === "string" ? (
         <input type="hidden" name={TOKEN_FIELD} value={token} readOnly />
+      ) : null}
+      {typeof bound === "string" ? (
+        <input type="hidden" name={BOUND_FIELD} value={bound} readOnly />
       ) : null}
       {returnTo === undefined ? null : (
         <input type="hidden" name={RETURN_FIELD} value={returnTo} readOnly />

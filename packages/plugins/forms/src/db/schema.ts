@@ -26,6 +26,14 @@ export const formSubmissions = sqliteTable(
       .$type<FormLabelSnapshot>()
       .notNull()
       .default({}),
+    /**
+     * The entry the form was bound to — a real column rather than a key
+     * buried in `answers`, so "every submission for this entry" is a
+     * query on an index rather than a scan that has to parse JSON. Null
+     * for a form that binds nothing, and for a bound form rendered
+     * somewhere with no entry to bind.
+     */
+    entryId: t.integer(),
     ipHash: t.text(),
     userAgent: t.text(),
     /** Why the form's own `onSubmit` did not finish — see `runHandler`. */
@@ -53,6 +61,8 @@ export const formSubmissions = sqliteTable(
       table.createdAt,
     ),
     index("form_submissions_slug_status_idx").on(table.formSlug, table.status),
+    // "Every submission for this entry", across whichever forms bound it.
+    index("form_submissions_entry_idx").on(table.entryId),
   ],
 );
 

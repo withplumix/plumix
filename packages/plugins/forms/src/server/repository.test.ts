@@ -37,6 +37,7 @@ function submit(ctx: AppContext, form: string) {
     status: "new",
     answers,
     labels: { name: { label: "Name" } },
+    entryId: null,
     ipHash: null,
     userAgent: null,
   });
@@ -106,6 +107,7 @@ describe("insertSubmission", () => {
       status: "spam",
       answers,
       labels: { name: { label: "Name" } },
+      entryId: null,
       ipHash: "deadbeef",
       userAgent: "curl/8",
     });

@@ -46,6 +46,8 @@ export interface FormSubmissionCandidate {
   readonly answers: FormAnswers;
   readonly labels: FormLabelSnapshot;
   readonly status: SubmissionStatus;
+  /** The entry the form bound, verified off its signed token. */
+  readonly entryId: number | null;
   readonly ipHash: string | null;
   readonly userAgent: string | null;
 }

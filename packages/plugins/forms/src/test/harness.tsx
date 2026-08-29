@@ -1,5 +1,5 @@
 import type { AnyPluginDescriptor } from "plumix";
-import { defineTheme, entry, fallback } from "plumix";
+import { archive, defineTheme, entry, fallback } from "plumix";
 import { BlockRenderer } from "plumix/blocks/renderer";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
@@ -12,6 +12,7 @@ const blog = definePlugin("test_blog", (ctx) => {
   ctx.registerEntryType("post", {
     label: "Posts",
     isPublic: true,
+    hasArchive: true,
     rewrite: { slug: "posts" },
   });
 });
@@ -25,6 +26,16 @@ const theme = defineTheme({
       data.entry.contentBlocks ? (
         <BlockRenderer content={data.entry.contentBlocks} />
       ) : null,
+    ),
+    // The same blocks on a page that is not one entry's — what a listing
+    // rendering an excerpt does, and the only way to reach the form block
+    // where there is no entry to bind.
+    archive(({ data }) =>
+      data.entries.map((one) =>
+        one.contentBlocks ? (
+          <BlockRenderer key={one.id} content={one.contentBlocks} />
+        ) : null,
+      ),
     ),
   ],
 });
@@ -40,13 +51,14 @@ export async function createFormsHarness(
   return harness;
 }
 
+/** The seeded entry, so a caller can name the id its form binds. */
 export async function seedPageWithForm(
   harness: FormsHarness,
   slug: string,
   path = "page-with-form",
-): Promise<void> {
+): Promise<{ readonly id: number }> {
   const author = await harness.seedUser("admin");
-  await harness.factory.entry.create({
+  return harness.factory.entry.create({
     type: "post",
     slug: path,
     title: "Get in touch",
