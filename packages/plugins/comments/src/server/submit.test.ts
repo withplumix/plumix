@@ -1,42 +1,7 @@
-import { definePlugin } from "plumix/plugin";
-import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
-import type { CommentsConfig } from "../types.js";
-import { comments as commentsTable } from "../db/schema.js";
-import { comments } from "../index.js";
-import { applyCommentsSchema } from "../test/db.js";
-
-const testBlog = definePlugin("test_blog", {
-  setup: (ctx) => {
-    ctx.registerEntryType("post", {
-      label: "Posts",
-      isPublic: true,
-      rewrite: { slug: "posts" },
-    });
-  },
-});
-
-type Harness = Awaited<ReturnType<typeof createDispatcherHarness>>;
-
-async function harnessWith(config: CommentsConfig): Promise<Harness> {
-  const harness = await createDispatcherHarness({
-    plugins: [testBlog, comments(config)],
-  });
-  await applyCommentsSchema(harness.db);
-  return harness;
-}
-
-async function seedPost(harness: Harness, overrides = {}) {
-  const user = await harness.factory.user.create({});
-  return harness.factory.entry.create({
-    type: "post",
-    title: "Post",
-    authorId: user.id,
-    status: "published",
-    ...overrides,
-  });
-}
+import type { Harness } from "../test/harness.js";
+import { harnessWith, rows, seedPost } from "../test/harness.js";
 
 function submit(
   harness: Harness,
@@ -53,10 +18,6 @@ function submit(
       ...body,
     },
   });
-}
-
-async function rows(harness: Harness) {
-  return harness.db.select().from(commentsTable);
 }
 
 describe("POST /_plumix/comments/submit", () => {

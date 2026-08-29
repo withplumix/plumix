@@ -143,3 +143,83 @@ msgstr "replies"
 #: src/index.ts
 msgid "plugin.comments.keyword.spam"
 msgstr "spam"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.name"
+msgstr "Name"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.email"
+msgstr "Email"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.body"
+msgstr "Comment"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.submit"
+msgstr "Post comment"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.summary"
+msgstr "There is a problem"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.reject.title"
+msgstr "Comment not accepted"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.posted"
+msgstr "Thanks — your comment has been posted."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.held"
+msgstr "Thanks — your comment has been sent for review."
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.error.unreachable"
+msgstr "Your comment could not be sent. Please try again."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.invalid_json"
+msgstr "That comment could not be read."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.invalid_input"
+msgstr "Check the name and comment fields, then try again."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.entry_not_found"
+msgstr "That post could not be found."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.comments_disabled"
+msgstr "Comments are not open here."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.comments_closed"
+msgstr "This discussion has closed."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.email_required"
+msgstr "An email address is required."
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.rate_limited"
+msgstr "Too many comments — try again in a little while."

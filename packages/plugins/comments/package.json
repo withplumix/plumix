@@ -31,6 +31,14 @@
       "types": "./dist/server/index.d.ts",
       "default": "./dist/server/index.js"
     },
+    "./theme": {
+      "types": "./dist/theme.d.ts",
+      "default": "./dist/theme.js"
+    },
+    "./hooks": {
+      "types": "./dist/hooks.d.ts",
+      "default": "./dist/hooks.js"
+    },
     "./schema": {
       "types": "./dist/db/schema.d.ts",
       "default": "./dist/db/schema.js"
@@ -69,7 +77,8 @@
   "peerDependencies": {
     "@tanstack/react-query": "catalog:tanstack",
     "plumix": "workspace:>=0.1.0 <1.0.0",
-    "react": "catalog:react"
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",

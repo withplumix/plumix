@@ -1,0 +1,221 @@
+---
+title: Comments
+description: The comments plugin adds threaded, moderated discussion to the entry types you nominate, with a form that works before any JavaScript loads.
+tier: P1
+sidebar:
+  order: 60
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+`@plumix/plugin-comments` is discussion on your content: a thread a theme renders, a form a visitor writes into, a trust policy that decides what appears at once, and a moderation queue in the admin for everything else. The form posts as a plain `<form method="post">`, so it works with JavaScript switched off and is upgraded in place where there is some.
+
+## Overview
+
+The plugin exports a factory named `comments`, so you call it. It owns a database table, which makes installing it a package install, one array entry and a migration.
+
+Commenting is off for every entry type until one opts in. A type opts in either by being named in `comments({ entryTypes })` — the way to enable a type whose registration you do not own — or by self-declaring `supports: ["comments"]` in its own registration. Neither is special: `entryTypes` is the `add_post_type_support` shape, and a type that declares its own support needs nothing here at all.
+
+What it registers:
+
+- A `comments` template dep, so a theme can declare `comments: ["current"]` on a template and render the approved thread for the entry it is displaying.
+- `POST /_plumix/comments/submit`, the public endpoint every comment arrives at.
+- `GET /_plumix/comments/list`, which pages older roots for a thread that has more than `rootsPerPage` of them.
+- A REST resource at `/{type}/{id}/comments`, behind the site's `api.enabled` switch.
+- A moderation queue in the admin, gated on the `comment:moderate` capability the plugin mints for the editor role.
+- A `comment:moderate` filter and a `comment:created` action, which is where a spam or notification plugin attaches.
+
+Two surfaces render the form. `PlumixCommentForm` from `@plumix/plugin-comments/theme` is the plugin's own markup, and `usePlumixCommentForm` from `@plumix/plugin-comments/hooks` is the same submission with none of the markup, for a theme writing its own controls.
+
+## Quickstart
+
+Adding comments to a recipe site whose `recipe` type does not declare support for them.
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-comments
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-comments
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-comments
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun add @plumix/plugin-comments
+```
+
+  </TabItem>
+</Tabs>
+
+<Steps>
+
+1. **Put it in the `plugins` array**, naming the types it applies to.
+
+   ```ts no-typecheck
+   import { comments } from "@plumix/plugin-comments";
+
+   export default plumix({
+     // …
+     plugins: [recipes, comments({ entryTypes: ["recipe"] })],
+     theme,
+   });
+   ```
+
+2. **Generate and apply the migration.** `plumix migrate generate` rewrites `.plumix/schema.ts` from the resolved config, so it picks the table up only once the descriptor is in the array.
+
+   ```sh
+   pnpm plumix migrate generate
+   pnpm plumix migrate apply --local
+   ```
+
+3. **Render the thread and the form** on the template that displays a recipe.
+
+   ```tsx no-typecheck
+   import { defineTemplate } from "plumix/theme";
+
+   import { PlumixCommentForm } from "@plumix/plugin-comments/theme";
+
+   export const recipe = defineTemplate({
+     single: {
+       comments: ["current"],
+       render: ({ entry, comments }) => (
+         <article>
+           <h1>{entry.title}</h1>
+           <Thread data={comments?.current} />
+           <PlumixCommentForm entryId={entry.id} />
+         </article>
+       ),
+     },
+   });
+   ```
+
+4. **Restart the dev server.**
+
+   ```sh
+   pnpm dev
+   ```
+
+   Recipes now take comments, and the queue is in the admin under Entries.
+
+</Steps>
+
+## The form works before any JavaScript does
+
+`PlumixCommentForm` renders a real `<form method="post">` pointed at the submit endpoint. Nothing about it needs a script: a visitor with JavaScript switched off, on a connection that dropped the bundle, or reading through a browser that never ran one, writes a comment and it is stored.
+
+That is possible because the submit route is registered `formPost`. A browser cannot set a custom header on an ordinary form submit, so core's CSRF gate — which looks for `X-Plumix-Request` — would refuse the post before the handler ever ran. `formPost` drops that requirement for the POST, and the `Origin` check becomes the whole control: an exempt request has to carry an `Origin` or `Referer` matching the site, where an ordinary one is only refused for contradicting one. A cross-origin form post is still refused.
+
+The endpoint reads a urlencoded body, which is what a `<form>` with no `enctype` sends and the plugin's own markup never sets one of. A hand-written form that sets `enctype="multipart/form-data"` is not read as a form post — multipart would mean file uploads, which this plugin deliberately does not accept.
+
+An accepted comment is answered with a 303 back to the page the form was on, resolved from the form's own hidden `returnTo` field first and the request's `Referer` second. A relative `returnTo` resolves against the request's own URL, so `/posts/hello#comments` is a path on your site rather than a value that gets dropped. Both candidates are the visitor's to set, so both are held to an origin the site answers on and refused the endpoint's own path: the response can be turned into neither an open redirect nor a loop.
+
+A refused comment is answered with the form back — the same component, carrying what the visitor typed and the refusal against the field that produced it. That is the whole reason the plugin renders markup at all. A plugin that owned no form could only redirect or serve a bare page, and either way a rate-limited commenter loses what they wrote.
+
+Where JavaScript does run, an island upgrades that same markup in place: it posts as JSON with the CSRF header, renders refusals without leaving the page, and can say a comment was held for review — which the redirect cannot. Putting the outcome in the URL instead would fork the page's edge-cache entry once per outcome.
+
+<Aside type="caution" title="A signed-in author is anonymous on the no-JavaScript path">
+  A request admitted by the `formPost` exemption is handed an authenticator that resolves nobody. That is structural, not an oversight: the exemption's whole safety argument is that a public submission carries no ambient authority, so core closes the last door rather than trusting each handler to.
+
+The cost lands here. The same signed-in author, with the same cookie on the wire, gets `approved` and a set `authorUserId` when the island posts, and `pending` with a null `authorUserId` when the plain form does. Under the default `first_time` mode it costs them their first comment only — the prior-approved count for their email carries them from the second on. Reading the session back inside the handler would defeat the guard on purpose, so the plugin does not.
+
+</Aside>
+
+## A theme that writes its own controls
+
+`loadThread` and a hand-written form stay fully supported, and nothing about this slice changes them. Where the theme wants its own controls but not its own submission logic, `usePlumixCommentForm` hands back everything the form needs and nothing about how it looks.
+
+```tsx no-typecheck
+"use client";
+
+import { usePlumixCommentForm } from "@plumix/plugin-comments/hooks";
+
+export function ReplyBox({ entryId }: { entryId: number }) {
+  const form = usePlumixCommentForm({ entryId });
+  if (form.status !== null) {
+    return <p>{form.status === "approved" ? "Posted." : "Sent for review."}</p>;
+  }
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        void form.submit({
+          name: String(data.get("name")),
+          email: String(data.get("email")),
+          body: String(data.get("body")),
+        });
+      }}
+    >
+      <input name="name" required />
+      <input name="email" type="email" required />
+      {form.errorFor("email") ? <p>{form.errorFor("email")}</p> : null}
+      <textarea name="body" required />
+      <button type="submit" disabled={form.submitting}>
+        Post comment
+      </button>
+    </form>
+  );
+}
+```
+
+It posts to the same endpoint the rendered form posts to, so a comment sent from a theme's own controls meets the rate limit, the trust policy and the `comment:moderate` chain exactly as one sent from the plugin's markup does. The honeypot is the one thing it does not meet — the trap is a field in markup this hook does not render, which is the trade of writing the markup yourself.
+
+`"use client"` belongs on the theme's own component, which is the thing that hydrates. It must never go on a module that re-exports the hook: the directive marks an island, every export of a module carrying one is replaced by a server shim, and a hook shimmed into a component returns a React element rather than the state the caller asked for.
+
+## What decides whether a comment appears
+
+`mode` is the trust policy, and it decides the baseline before any filter runs.
+
+| `mode`         | A comment is                                                                                           |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| `"first_time"` | Held the first time an email comments; approved once that email has one approved comment. The default. |
+| `"all"`        | Always held for review.                                                                                |
+| `"none"`       | Always approved.                                                                                       |
+
+A comment from a signed-in author takes a fast path to `approved` whatever the mode — subject to the divergence above, which is the one place that fast path is not taken.
+
+The `comment:moderate` filter runs on that baseline and may only push a comment toward the restrictive end, so two detectors compose without caring which ran first. A filter returning anything that is not a known status is ignored rather than persisted.
+
+Two spam defences sit below it. The honeypot is a field a person never sees and a bot fills; a comment that trips it is answered exactly as a real one is — telling a bot it was caught only teaches it to stop filling the trap — and no row is written. The rate limit is a sliding window over a salted hash of the visitor's address. Off Cloudflare that address is client-spoofable, so the limiter is best-effort there and edge or WAF rules are the real flood defence.
+
+## Options
+
+Every option has a default, and `comments()` on its own is a complete registration that enables nothing.
+
+| Option           | Default                     | What it does                                                             |
+| ---------------- | --------------------------- | ------------------------------------------------------------------------ |
+| `entryTypes`     | `[]`                        | Types to enable commenting on, beyond those declaring their own support. |
+| `mode`           | `"first_time"`              | The trust policy above.                                                  |
+| `maxDepth`       | `3`                         | Reply nesting depth. A deeper reply is clamped rather than refused.      |
+| `rootsPerPage`   | `20`                        | Root comments per page; older roots page in over `/list`.                |
+| `requireEmail`   | `true`                      | Whether an author email is required.                                     |
+| `closeAfterDays` | `null`                      | Refuse comments on entries published longer ago than this.               |
+| `rateLimit`      | `{ max: 5, windowMin: 10 }` | The sliding window, per hashed source.                                   |
+| `notifyEmail`    | `null`                      | Email a moderator when a comment is held. Needs a configured mailer.     |
+
+## Related
+
+- [Plugins overview](/plugins/overview/) — installing a published plugin, and the version tracks that decide which number you pin.
+- [Templates](/themes/templates/) — where the `comments` template dep is declared, and where the form component goes.
+- [Template data](/themes/template-data/) — the shape a `comments` dep hands the template it is declared on.
+
+## Next steps
+
+- Declare the `comments` template dep on every template that should show a thread — [Templates](/themes/templates/).
+- Attach a spam detector to `comment:moderate`, which sees every comment the other checks accepted.
+- Set `notifyEmail` once a mailer is configured, so a held comment reaches a person rather than only the queue.

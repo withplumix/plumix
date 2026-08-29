@@ -128,3 +128,83 @@ msgstr ""
 #: src/index.ts
 msgid "plugin.comments.keyword.spam"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.name"
+msgstr "姓名"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.email"
+msgstr "电子邮箱"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.body"
+msgstr "评论"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.submit"
+msgstr "发表评论"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.form.summary"
+msgstr "出现了问题"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.reject.title"
+msgstr "评论未被接受"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.posted"
+msgstr "谢谢 — 你的评论已发布。"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.held"
+msgstr "谢谢 — 你的评论已提交审核。"
+
+#. js-lingui-explicit-id
+#: src/messages.ts
+msgid "plugin.comments.error.unreachable"
+msgstr "无法发送你的评论，请重试。"
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.invalid_json"
+msgstr "无法读取该评论。"
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.invalid_input"
+msgstr "请检查姓名和评论字段，然后重试。"
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.entry_not_found"
+msgstr "未找到该文章。"
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.comments_disabled"
+msgstr "此处未开放评论。"
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.comments_closed"
+msgstr "该讨论已关闭。"
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.email_required"
+msgstr "需要填写电子邮箱地址。"
+
+#. js-lingui-explicit-id
+#: src/refusals.ts
+msgid "plugin.comments.error.rate_limited"
+msgstr "评论过于频繁 — 请稍后再试。"
