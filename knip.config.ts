@@ -391,7 +391,16 @@ const config: KnipConfig = {
     // playwright rig (globalSetup + spec) runs under plumix dev. None are
     // static imports knip can follow.
     "packages/plugins/forms": {
-      entry: ["src/index.ts", "e2e/globalSetup.ts", "e2e/*.spec.ts"],
+      // `./theme` and `./headless` are consumer-facing subpaths — the
+      // component a theme puts in a template and the hook its own island
+      // calls — so their exports are public API rather than dead code.
+      entry: [
+        "src/index.ts",
+        "src/theme.tsx",
+        "src/headless.ts",
+        "e2e/globalSetup.ts",
+        "e2e/*.spec.ts",
+      ],
       // Playground-only devDeps; see packages/plugins/media above. Pages
       // is here because the playground composes it for the `page` entry
       // type the seeded form lives on (#1883).

@@ -9,7 +9,6 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { labelSourceText } from "plumix/i18n";
 import * as v from "valibot";
 
 import type { FormWire } from "../define-form.js";
@@ -19,9 +18,14 @@ import type { FormRowState } from "./form-markup.js";
 import type { FormProgress } from "./form-progress.js";
 import { readSubmittedValues, visibleFields } from "../answers.js";
 import { CSRF_HEADER, CSRF_HEADER_VALUE } from "../contract.js";
-import { UNREACHABLE } from "../messages.js";
 import { visibleSteps } from "../steps.js";
 import { validateAnswers } from "../validate.js";
+import {
+  SubmitResponse,
+  unreachable,
+  useTimingToken,
+  withoutNulls,
+} from "../wire.js";
 import { FormMarkup } from "./form-markup.js";
 import {
   clearProgress,
@@ -30,7 +34,6 @@ import {
   readProgress,
   writeProgress,
 } from "./form-progress.js";
-import { SubmitResponse, TokenResponse } from "./schemas.js";
 
 interface FormIslandProps {
   readonly form: FormWire;
@@ -44,33 +47,6 @@ interface FormIslandProps {
    * did.
    */
   readonly bound: string | null;
-}
-
-// It names no field, so the summary reads it as text rather than
-// linking nowhere.
-const unreachable: readonly FormFieldError[] = [
-  { field: "", message: labelSourceText(UNREACHABLE) },
-];
-
-/**
- * The definition as it left the server, with the holes JSON punched in it
- * filled back in. Island props cross the wire as JSON, which has no
- * `undefined`: every absent property — a field's `description`, its
- * `visibleWhen`, the form's `title` — arrives as `null`. One pass here is
- * what lets the markup and core's own visibility evaluation read the
- * definition exactly as the server did, rather than every reader down the
- * line learning to spell absence twice.
- */
-function withoutNulls<T>(value: T): T {
-  if (Array.isArray(value)) {
-    return value.map((item: unknown) => withoutNulls(item)) as T;
-  }
-  if (value === null || typeof value !== "object") return value;
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter(([, item]) => item !== null)
-      .map(([key, item]) => [key, withoutNulls(item)]),
-  ) as T;
 }
 
 // Nothing external to subscribe to: the store never changes, and the two
@@ -105,7 +81,7 @@ export function FormIsland({
   // never gets this far keeps the plain form and the browser's checks.
   const live = useSyncExternalStore(NEVER_CHANGES, onClient, onServer);
   const [errors, setErrors] = useState<readonly FormFieldError[]>([]);
-  const [token, setToken] = useState<string | null>(null);
+  const token = useTimingToken(tokenPath);
   const [busy, setBusy] = useState(false);
   // Which rows each repeater is showing. Empty until the visitor adds or
   // removes one, so the first render is the markup the server sent.
@@ -138,27 +114,6 @@ export function FormIsland({
   const steps = useMemo(() => visibleSteps(form, values), [form, values]);
   const step = Math.min(progress?.step ?? 0, steps.length - 1);
   const last = steps.length - 1;
-
-  useEffect(() => {
-    const aborter = new AbortController();
-    void (async () => {
-      try {
-        const response = await fetch(tokenPath, {
-          headers: { accept: "application/json" },
-          signal: aborter.signal,
-        });
-        const payload = v.safeParse(TokenResponse, await response.json());
-        if (payload.success) setToken(payload.output.token);
-      } catch {
-        // A form that could not get a token still submits: the server
-        // treats a submission carrying none as one it cannot time, which
-        // is exactly how it treats every no-JavaScript submission.
-      }
-    })();
-    return () => {
-      aborter.abort();
-    };
-  }, [tokenPath]);
 
   // Focus follows the outcome, so a visitor who cannot see the page is
   // told what happened instead of being left at a button that appeared to

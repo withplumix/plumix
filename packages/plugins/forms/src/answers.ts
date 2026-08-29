@@ -76,9 +76,15 @@ export function asGroup(value: SubmittedValue): SubmittedValues {
   return isBag(value) ? value : {};
 }
 
-/** A repeater's rows, whatever a caller was holding at that key. */
+/**
+ * A repeater's rows, whatever a caller was holding at that key. Anything
+ * in the list that is not a bag of answers is dropped rather than counted
+ * — a headless caller manages their own rows, and `delete rows[i]` leaves
+ * a hole that reads back as `undefined`. Every other caller hands this a
+ * list the read side built, where the question does not arise.
+ */
 export function asRows(value: SubmittedValue): readonly SubmittedValues[] {
-  return isRowList(value) ? value : [];
+  return isRowList(value) ? value.filter(isBag) : [];
 }
 
 /**
@@ -295,4 +301,83 @@ export function pickStoredAnswers(
       return value === undefined ? [] : [[field.key, value] as const];
     }),
   );
+}
+
+/**
+ * One level of a form's answers, written back out as the body a filled-in
+ * form would have posted. The mirror of {@link readLevel}, and it sits
+ * beside it for that reason: the two spellings of one field's name have to
+ * stay one.
+ */
+function writeLevel(
+  fields: readonly MetaBoxFieldManifestEntry[],
+  values: SubmittedValues,
+  body: URLSearchParams,
+  parent: string | undefined,
+): void {
+  for (const field of fields) {
+    const value = values[field.key];
+    if (value === undefined) continue;
+    const name = fieldName(parent, field.key);
+    const children = field.subFields ?? [];
+    if (field.inputType === "group") {
+      writeLevel(children, asGroup(value), body, name);
+      continue;
+    }
+    if (field.inputType === "repeater") {
+      // Numbered by where the row is written rather than by where the
+      // caller held it: the read side counts the markers and then reads
+      // indices from zero, so a caller's array with a hole in it would
+      // otherwise put an answer under a name nothing looks for.
+      let position = 0;
+      for (const row of asRows(value)) {
+        // The marker the read side counts rows by — one per row, exactly
+        // as the rendered markup emits it.
+        body.append(rowMarkerName(name), "");
+        writeLevel(children, row, body, rowName(name, position));
+        position += 1;
+      }
+      continue;
+    }
+    if (field.inputType === "toggle") {
+      // The pair a checkbox posts: the empty answer that says the field
+      // was on the form at all, and the `on` a ticked box adds. Without
+      // the first, switching a toggle off would read as "was never shown
+      // this field" and fall back to a default that is on.
+      body.append(name, "");
+      if (value === true) body.append(name, TOGGLE_ON);
+      continue;
+    }
+    // A multiple choice posts the same empty answer beside itself, for
+    // the same reason: emptied has to read as emptied rather than as a
+    // field the visitor was never shown.
+    if (field.inputType === "select" && field.multiple === true) {
+      body.append(name, "");
+    }
+    for (const posted of asPosted(value)) body.append(name, posted);
+  }
+}
+
+/**
+ * A form's answers as the urlencoded body its markup would have posted —
+ * what the headless surface submits, so a form filled in by a theme's own
+ * controls reaches the endpoint as the same request a rendered form makes
+ * and is validated and stored identically. The inverse of
+ * {@link readSubmittedValues}.
+ *
+ * Only fields the form declares are written, so an extra key a caller put
+ * in the bag has nowhere to land — the same rule {@link pickStoredAnswers}
+ * applies to an input a visitor added to the payload. A field the bag says
+ * nothing about is left out entirely rather than written blank, which is
+ * what makes an omitted answer read back as the field's declared default:
+ * what a visitor served the blank form and leaving it alone would have
+ * posted.
+ */
+export function writeSubmittedValues(
+  fields: readonly MetaBoxFieldManifestEntry[],
+  values: SubmittedValues,
+): URLSearchParams {
+  const body = new URLSearchParams();
+  writeLevel(fields, values, body, undefined);
+  return body;
 }

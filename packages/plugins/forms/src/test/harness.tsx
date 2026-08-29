@@ -1,4 +1,5 @@
 import type { AnyPluginDescriptor } from "plumix";
+import type { BlockSpec } from "plumix/blocks";
 import { archive, defineTheme, entry, fallback } from "plumix";
 import { BlockRenderer } from "plumix/blocks/renderer";
 import { definePlugin } from "plumix/plugin";
@@ -19,33 +20,37 @@ const blog = definePlugin("test_blog", (ctx) => {
 
 // A theme that puts the entry's blocks on the page — the only way the
 // form block's own markup reaches a visitor.
-const theme = defineTheme({
-  templates: [
-    fallback(() => null),
-    entry(({ data }) =>
-      data.entry.contentBlocks ? (
-        <BlockRenderer content={data.entry.contentBlocks} />
-      ) : null,
-    ),
-    // The same blocks on a page that is not one entry's — what a listing
-    // rendering an excerpt does, and the only way to reach the form block
-    // where there is no entry to bind.
-    archive(({ data }) =>
-      data.entries.map((one) =>
-        one.contentBlocks ? (
-          <BlockRenderer key={one.id} content={one.contentBlocks} />
+const themeWith = (blocks: readonly BlockSpec[]) =>
+  defineTheme({
+    blocks,
+    templates: [
+      fallback(() => null),
+      entry(({ data }) =>
+        data.entry.contentBlocks ? (
+          <BlockRenderer content={data.entry.contentBlocks} />
         ) : null,
       ),
-    ),
-  ],
-});
+      // The same blocks on a page that is not one entry's — what a listing
+      // rendering an excerpt does, and the only way to reach the form block
+      // where there is no entry to bind.
+      archive(({ data }) =>
+        data.entries.map((one) =>
+          one.contentBlocks ? (
+            <BlockRenderer key={one.id} content={one.contentBlocks} />
+          ) : null,
+        ),
+      ),
+    ],
+  });
 
 export async function createFormsHarness(
   plugins: readonly AnyPluginDescriptor[],
+  /** What the site's own theme contributes — see `defineTheme`'s `blocks`. */
+  themeBlocks: readonly BlockSpec[] = [],
 ): Promise<FormsHarness> {
   const harness = await createDispatcherHarness({
     plugins: [blog, ...plugins],
-    theme,
+    theme: themeWith(themeBlocks),
   });
   await applyFormsSchema(harness.db);
   return harness;

@@ -10,11 +10,9 @@ import { defineBlock } from "plumix/blocks";
 import { useBasePath } from "plumix/blocks/renderer";
 
 import type { FormRegistry } from "../registry.js";
-import { FORM_BLOCK_NAME, SUBMIT_PATH, TOKEN_PATH } from "../contract.js";
-import { toFormWire } from "../define-form.js";
+import { FORM_BLOCK_NAME } from "../contract.js";
 import { signBoundEntry } from "../server/binding.js";
-import { FormIsland } from "./form-island.js";
-import { FormMarkup } from "./form-markup.js";
+import { FormRender } from "./form-render.js";
 
 /**
  * The block a content editor places on a page. It resolves its slug
@@ -73,28 +71,12 @@ export function createFormBlock(registry: FormRegistry): BlockSpec {
         </p>
       );
     }
-    const action = `${basePath}${SUBMIT_PATH}`;
-    const idBase = `plumix-form-${nodeId ?? form.slug}`;
-    // In the editor the form is a thing being arranged, not filled in, so
-    // it stays as the markup — the same rule the islands runtime applies
-    // to an island on a page it is editing. The canvas renders block
-    // components directly rather than through the island element, so
-    // without this the island would run there: fetching a timing token
-    // for a visitor who does not exist, and taking over a submit nobody
-    // meant to make.
-    if (context.editing) {
-      return <FormMarkup form={form} action={action} idBase={idBase} />;
-    }
-    // `client="load"` because a form is often the reason the visitor is on
-    // the page: it upgrades as soon as the chunk lands, rather than when
-    // they scroll to it or first touch it.
     return (
-      <FormIsland
-        client="load"
-        form={toFormWire(form)}
-        action={action}
-        tokenPath={`${basePath}${TOKEN_PATH}`}
-        idBase={idBase}
+      <FormRender
+        form={form}
+        basePath={basePath}
+        idBase={`plumix-form-${nodeId ?? form.slug}`}
+        editing={context.editing}
         // A render nobody prefetched loaders for is handed an empty bag,
         // which `ResolvedLoaders` does not say.
         bound={resolved.bound ?? null}

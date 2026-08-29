@@ -12,14 +12,17 @@
     // packages/plugins/media/playground/tsconfig.json for the rationale.
     "paths": {
       "plumix": ["../../../plumix/src/index.ts"],
+      "plumix/blocks": ["../../../plumix/src/blocks/index.ts"],
       "plumix/blocks/renderer": ["../../../plumix/src/blocks/renderer.ts"],
       "plumix/fields": ["../../../plumix/src/fields/index.ts"],
       "@plumix/plugin-forms": ["../src/index.ts"],
+      "@plumix/plugin-forms/theme": ["../src/theme.tsx"],
+      "@plumix/plugin-forms/headless": ["../src/headless.ts"],
       "@plumix/plugin-pages": ["../../pages/src/index.ts"],
       "@plumix/runtime-cloudflare": [
         "../../../runtimes/cloudflare/src/index.ts"
       ]
     }
   },
-  "include": ["plumix.config.ts", "theme.ts", ".plumix"]
+  "include": ["plumix.config.ts", "theme.ts", "subscribe-bar.ts", ".plumix"]
 }

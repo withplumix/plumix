@@ -14,9 +14,11 @@ import {
 import { definePlugin } from "plumix/plugin";
 import { describe, expect, test, vi } from "vitest";
 
+import type { SubmittedValues } from "../answers.js";
 import type { FormDefinition, FormHandler } from "../define-form.js";
 import type { FormsHarness } from "../test/harness.js";
 import type { FormSubmissionCandidate } from "../types.js";
+import { writeSubmittedValues } from "../answers.js";
 import {
   FORM_SLUG_FIELD,
   HONEYPOT_FIELD,
@@ -1206,5 +1208,89 @@ describe("rows and groups", () => {
         },
       },
     });
+  });
+});
+
+/**
+ * The headless surface's half of the submit contract: a theme rendering
+ * its own controls writes the answers out with `writeSubmittedValues` and
+ * posts them itself, so what reaches the endpoint has to be the request a
+ * rendered form makes — and be validated and stored identically.
+ */
+describe("a submission made through the headless surface", () => {
+  const rsvp = defineForm("rsvp", {
+    fields: [
+      text("name").required(),
+      email("email").required(),
+      toggle("newsletter").default(true),
+      group("company").fields([text("name")]),
+      repeater("attendees").fields([text("who").required()]),
+    ],
+  });
+
+  /** What the hook posts: the header a script can set, and JSON back. */
+  function postHeadless(harness: FormsHarness, body: URLSearchParams) {
+    return harness.fetch("/_plumix/forms/submit", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/x-www-form-urlencoded",
+        origin: "https://cms.example",
+      },
+      body: body.toString(),
+    });
+  }
+
+  function bodyFor(answers: SubmittedValues): URLSearchParams {
+    const body = writeSubmittedValues(rsvp.fields, answers);
+    body.set(FORM_SLUG_FIELD, rsvp.slug);
+    return body;
+  }
+
+  test("stores the answers exactly as the rendered form's post does", async () => {
+    const harness = await createFormsHarness([forms({ forms: [rsvp] })]);
+
+    const response = await postHeadless(
+      harness,
+      bodyFor({
+        name: "Ada",
+        email: "ada@example.test",
+        newsletter: false,
+        company: { name: "Acme" },
+        attendees: [{ who: "Grace" }],
+      }),
+    );
+
+    response.assertStatus(200);
+    const body = await response.json<{ ok: boolean; message: string }>();
+    expect(body.ok).toBe(true);
+    expect(body.message).not.toBe("");
+    const stored = await rows(harness);
+    expect(stored).toHaveLength(1);
+    expect(stored[0]?.answers).toEqual({
+      name: "Ada",
+      email: "ada@example.test",
+      newsletter: false,
+      company: { name: "Acme" },
+      attendees: [{ who: "Grace" }],
+    });
+  });
+
+  test("is refused by the same rules, naming the fields that failed", async () => {
+    const harness = await createFormsHarness([forms({ forms: [rsvp] })]);
+
+    const response = await postHeadless(
+      harness,
+      bodyFor({ name: "Ada", email: "not-an-address" }),
+    );
+
+    response.assertStatus(422);
+    const body = await response.json<{
+      ok: boolean;
+      errors: { field: string; message: string }[];
+    }>();
+    expect(body.ok).toBe(false);
+    expect(body.errors.map((error) => error.field)).toEqual(["email"]);
+    expect(await rows(harness)).toHaveLength(0);
   });
 });

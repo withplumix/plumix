@@ -20,6 +20,18 @@ export default async function globalSetup(): Promise<void> {
 
   const factories = factoriesFor(db);
   const author = await factories.user.create({});
+  // `templated` carries no block: the theme's template renders the same
+  // contact form itself, which is the only way to tell the two surfaces
+  // apart in the browser.
+  await factories.entry.create({
+    type: "page",
+    slug: "templated",
+    title: "Contact us",
+    authorId: author.id,
+    status: "published",
+    publishedAt: new Date(),
+    content: { version: "plumix.v2", blocks: [] },
+  });
   for (const [slug, title] of [
     ["contact", "Contact us"],
     ["survey", "Survey"],
