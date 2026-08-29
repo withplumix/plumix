@@ -6,7 +6,7 @@ import type {
   PluginSetupContext,
 } from "plumix/plugin";
 import type { SettingsBag } from "plumix/schema";
-import { loadSettingsGroups, loadSiteSettings } from "plumix";
+import { loadSettingsGroups } from "plumix";
 import { tryGetContext } from "plumix/plugin";
 
 import { publicTargets } from "./scope.js";
@@ -504,18 +504,20 @@ async function withLegacyDefaults(
   bag: SettingsBag,
   ctx: AppContext,
 ): Promise<SettingsBag> {
-  // Presence off the legacy bag, value off the head's own read — so a site
+  // Presence off what storage holds, value off the head's own read — so a site
   // that answered nothing is seeded nothing, and one that did is handed a
-  // boolean and a string whatever the untyped row holds.
-  const [legacy, resolved] = await Promise.all([
-    loadSiteSettings(ctx),
-    loadSeoSettings(ctx),
-  ]);
+  // boolean and a string whatever the untyped row holds. The bag cannot answer
+  // presence: `settings.get` fills a registered default into it, which reads
+  // as an answer the site never gave and would suppress the seed.
+  const groups = await loadSettingsGroups(ctx, [SEO_SETTINGS_GROUP, "site"]);
+  const stored = groups[SEO_SETTINGS_GROUP] ?? {};
+  const legacy = groups.site ?? {};
+  const resolved = readSeoSettings(stored, legacy);
   const seeded: Record<string, JsonValue> = { ...bag };
-  if (!("indexable" in seeded) && LEGACY_KEYS.indexable in legacy) {
+  if (!("indexable" in stored) && LEGACY_KEYS.indexable in legacy) {
     seeded.indexable = resolved.indexable;
   }
-  if (!("default_og_image" in seeded) && resolved.defaultOgImage !== null) {
+  if (!("default_og_image" in stored) && resolved.defaultOgImage !== null) {
     seeded.default_og_image = resolved.defaultOgImage;
   }
   return seeded;
