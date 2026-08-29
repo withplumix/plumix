@@ -199,7 +199,7 @@ describe("link phantom value typing", () => {
       LinkValue | undefined
     >();
 
-    // Storage can still lack the key — defaults apply at decode time.
+    // `.default()` prefills the admin form; nothing applies it on read.
     const _defaulted = link("cta").default({ url: "/pricing" });
     expectTypeOf<(typeof _defaulted)["_stored"]>().toEqualTypeOf<
       LinkValue | undefined

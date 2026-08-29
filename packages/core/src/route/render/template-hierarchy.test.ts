@@ -13,6 +13,7 @@ import type {
 } from "./resolved-entry.js";
 import type { ResolvedNode } from "./template-hierarchy.js";
 import { text } from "../../plugin/fields/builder.js";
+import { date as dateField } from "../../plugin/fields/temporal.js";
 import {
   archive,
   author,
@@ -159,7 +160,15 @@ declare module "../../template-registry.js" {
 // registries, folded per target by `MetaOf` / `TermMetaOf`.
 const _productFields = [text("badge").default("none"), text("tier").required()];
 const _editorialFields = [text("featured"), text("premium")];
-const _brandFields = [text("brandBadge")];
+// `brandTone` and `launchedOn` are the fixture's canaries for the term
+// read shape. `.default()` narrows the read type while storage may lack
+// the key — repo-wide, entries included — and `.returns("date")` reads
+// back as a `Date` only because the render path now decodes term meta.
+const _brandFields = [
+  text("brandBadge"),
+  text("brandTone").default("warm"),
+  dateField("launchedOn").returns("date"),
+];
 const _categoryFields = [text("featured"), text("pinned")];
 
 declare module "../../plugin/fields/contributions.js" {
@@ -314,6 +323,16 @@ describe("targeted builders — name checking and data typing", () => {
         expectTypeOf(data.term.meta.brandBadge).toEqualTypeOf<
           string | undefined
         >();
+        // The render path decodes term meta, so `.returns("date")` reads
+        // back the `Date` the read shape promises.
+        expectTypeOf(data.term.meta.launchedOn).toEqualTypeOf<
+          Date | undefined
+        >();
+        // `.default()` narrows the read shape and nothing applies it on
+        // read, so this one key is typed above what storage guarantees —
+        // the same on a term as on an entry, and the reason `.whereMeta()`
+        // below still accepts `undefined` for it.
+        expectTypeOf(data.term.meta.brandTone).toEqualTypeOf<string>();
         // @ts-expect-error - "nope" is not a declared meta field of brand
         void data.term.meta.nope;
         return null;
@@ -331,8 +350,8 @@ describe("targeted builders — name checking and data typing", () => {
     forEntryType("product")
       .whereMeta("tier", "gold")
       .template(() => null);
-    // Stored shape, not read shape: .default() applies at decode time,
-    // so storage can still lack the key.
+    // Stored shape, not read shape: `.default()` prefills the admin form;
+    // nothing applies it on read, so storage can still lack the key.
     forEntryType("product")
       .whereMeta("badge", undefined)
       .template(() => null);
@@ -363,6 +382,18 @@ describe("targeted builders — name checking and data typing", () => {
     forTermTaxonomy("brand")
       .whereMeta("brandBadge", "gold")
       .template(() => null);
+    // Stored shape, not read shape: `.default()` prefills the admin form;
+    // nothing applies it on read, so storage can still lack the key.
+    forTermTaxonomy("brand")
+      .whereMeta("brandTone", undefined)
+      .template(() => null);
+    // A `.returns("date")` field stores its ISO string — the primitive a
+    // rule literal can match, which the decoded `Date` is not.
+    forTermTaxonomy("brand")
+      .whereMeta("launchedOn", "2026-01-01")
+      .template(() => null);
+    // @ts-expect-error - launchedOn stores an ISO string, not the decoded Date
+    forTermTaxonomy("brand").whereMeta("launchedOn", new Date("2026-01-01"));
     // @ts-expect-error - "nope" is not a meta key of brand
     forTermTaxonomy("brand").whereMeta("nope", "x");
     // @ts-expect-error - brandBadge stores a string, not a number

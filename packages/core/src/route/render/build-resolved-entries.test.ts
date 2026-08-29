@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { TemplateData } from "../../theme.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import { definePlugin } from "../../plugin/define.js";
+import { text } from "../../plugin/fields/builder.js";
 import { entry as entryRef } from "../../plugin/fields/entry.js";
 import { date } from "../../plugin/fields/temporal.js";
 import { createTracedContext } from "../../test/traced-context.js";
@@ -17,9 +18,22 @@ const _dossierFields = [
   date("filedOn").returns("date"),
   entryRef("subject", ["post"]),
 ];
+// The same two decode moves, on a term. Before the render path decoded
+// term meta these read back as the raw ISO string and the raw id.
+const _termDossierFields = [
+  date("taggedOn").returns("date"),
+  entryRef("curator", ["post"]),
+  text("termTone").default("warm"),
+];
 declare module "../../plugin/fields/contributions.js" {
   interface EntryMetaContributions {
     dossier: { entryTypes: "post"; fields: typeof _dossierFields };
+  }
+  interface TermMetaContributions {
+    termDossier: {
+      termTaxonomies: "dossierTopic";
+      fields: typeof _termDossierFields;
+    };
   }
 }
 
@@ -28,6 +42,15 @@ const dossierPlugin = definePlugin("test-dossier", (ctx) => {
     label: "Dossier",
     entryTypes: ["post"],
     fields: _dossierFields,
+  });
+  ctx.registerTermTaxonomy("dossierTopic", {
+    label: "Dossier Topics",
+    entryTypes: ["post"],
+  });
+  ctx.registerTermMetaBox("termDossier", {
+    label: "Term Dossier",
+    termTaxonomies: ["dossierTopic"],
+    fields: _termDossierFields,
   });
 });
 
@@ -202,5 +225,139 @@ describe("whereMeta against a real row", () => {
     // Both values are what `whereMeta` types against, so both have to fire.
     expect(resolveTemplate([filed], node, data)).toBe(filed);
     expect(resolveTemplate([referenced], node, data)).toBe(referenced);
+  });
+});
+
+describe("term meta on the render path", () => {
+  test("a term's meta is decoded and reference-hydrated, beside the raw storedMeta", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      plugins: [dossierPlugin],
+    });
+    const author = await harness.factory.user.create({});
+    const curator = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "published",
+      title: "Curator",
+    });
+    const row = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "published",
+    });
+    const term = await harness.factory.term.create({
+      taxonomy: "dossierTopic",
+      meta: { taggedOn: "2026-02-03", curator: String(curator.id) },
+    });
+    await harness.factory.entryTerm.create({
+      entryId: row.id,
+      termId: term.id,
+    });
+
+    const [entry] = await run(() => buildResolvedEntries(ctx, [row]));
+    const [resolved] = entry?.terms ?? [];
+    if (!resolved) throw new Error("buildResolvedEntries returned no term");
+
+    // What a template reads off `data.entry.terms[n].meta`.
+    expect(resolved.meta.taggedOn).toEqual(
+      new Date("2026-02-03T00:00:00.000Z"),
+    );
+    expect(resolved.meta.curator).toMatchObject({
+      id: String(curator.id),
+      title: "Curator",
+    });
+    // What a term rule predicate reads: the JSON column, untouched.
+    expect(resolved.storedMeta).toEqual({
+      taggedOn: "2026-02-03",
+      curator: String(curator.id),
+    });
+  });
+
+  // Holds with or without the decode pass — it pins `.default()`'s documented
+  // behaviour, not this change. The two tests above are what guard the decode.
+  test("a `.default()` key absent from storage stays absent — defaults are a form prefill, not a decode step", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      plugins: [dossierPlugin],
+    });
+    const author = await harness.factory.user.create({});
+    const row = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "published",
+    });
+    const term = await harness.factory.term.create({
+      taxonomy: "dossierTopic",
+      meta: {},
+    });
+    await harness.factory.entryTerm.create({
+      entryId: row.id,
+      termId: term.id,
+    });
+
+    const [entry] = await run(() => buildResolvedEntries(ctx, [row]));
+    const [resolved] = entry?.terms ?? [];
+    if (!resolved) throw new Error("buildResolvedEntries returned no term");
+
+    expect(resolved.meta.termTone).toBeUndefined();
+    expect(resolved.meta).toEqual({});
+  });
+
+  test("a term on two entries decodes per attachment, in one batched reference query", async () => {
+    const { harness, ctx, run, dbQueryCount } = await createTracedContext({
+      plugins: [dossierPlugin],
+    });
+    const author = await harness.factory.user.create({});
+    const curator = await harness.factory.entry.create({
+      authorId: author.id,
+      type: "post",
+      status: "published",
+      title: "Curator",
+    });
+    const [first, second] = await Promise.all([
+      harness.factory.entry.create({ authorId: author.id, type: "post" }),
+      harness.factory.entry.create({ authorId: author.id, type: "post" }),
+    ]);
+    // `shared` sits on both entries and `solo` on the second only, so a
+    // dedupe-by-term-id that forgot to remap indices would misalign here.
+    const shared = await harness.factory.term.create({
+      taxonomy: "dossierTopic",
+      meta: { taggedOn: "2026-02-03", curator: String(curator.id) },
+    });
+    const solo = await harness.factory.term.create({
+      taxonomy: "dossierTopic",
+      meta: { taggedOn: "2026-04-05", curator: String(curator.id) },
+    });
+    await Promise.all([
+      harness.factory.entryTerm.create({
+        entryId: first.id,
+        termId: shared.id,
+      }),
+      harness.factory.entryTerm.create({
+        entryId: second.id,
+        termId: shared.id,
+      }),
+      harness.factory.entryTerm.create({ entryId: second.id, termId: solo.id }),
+    ]);
+
+    const entries = await run(() => buildResolvedEntries(ctx, [first, second]));
+    const byId = new Map(entries.map((e) => [e.id, e]));
+    const onFirst = byId.get(first.id)?.terms ?? [];
+    const onSecond = byId.get(second.id)?.terms ?? [];
+
+    expect(onFirst.map((t) => t.id)).toEqual([shared.id]);
+    expect(onSecond.map((t) => t.id).sort()).toEqual(
+      [shared.id, solo.id].sort(),
+    );
+    // Every attachment carries the bag its own term stored — not a
+    // neighbour's, which is what an index slip would produce.
+    for (const term of [...onFirst, ...onSecond]) {
+      const expected = term.id === shared.id ? "2026-02-03" : "2026-04-05";
+      expect(term.meta.taggedOn).toEqual(new Date(`${expected}T00:00:00.000Z`));
+      expect(term.storedMeta.taggedOn).toBe(expected);
+      expect(term.meta.curator).toMatchObject({ title: "Curator" });
+    }
+    // Authors, the entry_term join, and one `IN(...)` for the curator ids
+    // shared across all three attachments — no per-term fan-out.
+    expect(dbQueryCount()).toBe(3);
   });
 });

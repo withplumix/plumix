@@ -21,6 +21,7 @@ import { entryTerm } from "../../db/schema/entry_term.js";
 import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
 import { labelSourceText } from "../../i18n/label.js";
+import { resolveTermMeta } from "../../rpc/procedures/term/meta.js";
 import { archiveSlugForEntryType } from "../compile.js";
 import { dateRange } from "../date-range.js";
 import { paginate } from "../paginate.js";
@@ -178,16 +179,17 @@ export async function termData(
   );
   if (listing === null) return null;
 
+  // Independent reads — the ancestor walk does not depend on the meta bag.
+  const [meta, url] = await Promise.all([
+    resolveTermMeta(ctx, term.taxonomy, term.meta),
+    // Single archive term: the async builder walks ancestors for the full
+    // nested URL (one call — no N+1).
+    buildTermArchiveUrl(ctx, term),
+  ]);
   const data = await ctx.hooks.applyFilter("resolve:term:data", {
     kind: "taxonomy",
     taxonomy: term.taxonomy,
-    // Single archive term: the async builder walks ancestors for the full
-    // nested URL (one call — no N+1).
-    term: {
-      ...term,
-      storedMeta: term.meta,
-      url: await buildTermArchiveUrl(ctx, term),
-    },
+    term: { ...term, meta, storedMeta: term.meta, url },
     ...listing,
   });
   return {

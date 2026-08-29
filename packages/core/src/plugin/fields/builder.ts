@@ -53,7 +53,8 @@ export interface StringFieldState {
  * field reads as: `string | undefined` unadorned, narrowed to `string`
  * by `.required()` / `.default()`; `S` is the phantom stored shape —
  * `.required()` narrows it (write-enforced) but `.default()` does not
- * (defaults apply at decode time; storage can still lack the key).
+ * (`.default()` prefills the admin form; nothing applies it on read, so
+ * storage can still lack the key).
  * Purely type-level — nothing at runtime carries them.
  */
 export class StringFieldBuilder<

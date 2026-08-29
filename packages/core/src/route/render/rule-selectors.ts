@@ -96,8 +96,9 @@ export function metaEquals(
 
 /**
  * A predicate matching when a resolved term's stored meta value equals
- * `value`. Term meta is not decoded today, so this is the same bag as
- * `term.meta` — by the contract above, not by that coincidence.
+ * `value`. Reads `storedMeta` because the decoded `term.meta` holds
+ * `Date`s and hydrated references, which are not the primitives `===`
+ * can land on.
  */
 export function termMetaEquals(
   key: string,

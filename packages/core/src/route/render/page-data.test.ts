@@ -10,8 +10,8 @@ import { resolveListingPage } from "./page-data.js";
 import { forTermTaxonomy } from "./template-builders.js";
 import { resolveTemplate } from "./template-hierarchy.js";
 
-// Declared with `.returns("date")` so a decode pass, if terms had one, would
-// be visible in what the archive carries.
+// Declared with `.returns("date")` so the term decode pass is visible in what
+// the archive carries: `meta` holds the `Date`, `storedMeta` the ISO string.
 const _categoryDateFields = [date("launchedOn").returns("date")];
 declare module "../../plugin/fields/contributions.js" {
   interface TermMetaContributions {
@@ -150,11 +150,10 @@ describe("resolveListingPage", () => {
     expect(page?.data.pagination.total).toBe(1);
   });
 
-  // Terms skip the decode pass entries get: `resolveEntriesMeta` runs on the
-  // entry rows only, and a term reaches a template as the row it was read as.
-  // `term.meta` is therefore the stored bag already — which is what makes
-  // `termMetaEquals` reading `storedMeta` a contract rather than a coincidence.
-  test("a term archive is not decoded today, and a whereMeta rule matches its stored meta", async () => {
+  // A term archive gets the same decode pass an entry does, so `term.meta`
+  // and `term.storedMeta` diverge here — which is why `termMetaEquals` reads
+  // `storedMeta`: a `Date` is not a value `===` can match a rule literal on.
+  test("a term archive is decoded, and a whereMeta rule still matches its stored meta", async () => {
     const h = await harness();
     const term = await h.factory.term.create({
       taxonomy: "category",
@@ -169,7 +168,9 @@ describe("resolveListingPage", () => {
     });
     if (page?.data.kind !== "taxonomy") throw new Error("expected a term page");
 
-    expect(page.data.term.meta.launchedOn).toBe("2026-01-01");
+    expect(page.data.term.meta.launchedOn).toEqual(
+      new Date("2026-01-01T00:00:00.000Z"),
+    );
     expect(page.data.term.storedMeta).toEqual({ launchedOn: "2026-01-01" });
 
     const launched = forTermTaxonomy("category")
