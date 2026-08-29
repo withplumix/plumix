@@ -173,7 +173,7 @@ policy of its own.
 ## What CI re-runs
 
 Turborepo skips a task when nothing it reads has changed, so most pull
-requests execute a small fraction of the pipeline. Two rules decide what you
+requests execute a small fraction of the pipeline. Three rules decide what you
 will see:
 
 - **Test files are not build inputs.** `turbo.json` excludes `*.test.ts`,
@@ -181,6 +181,12 @@ will see:
   because every `tsconfig.build.json` already excludes them. Editing a test in
   `@plumix/core` therefore re-runs that package's own lint, typecheck and unit
   tests — not every dependent's.
+- **Editing upstream source does re-run dependents' unit tests.** The suites
+  resolve workspace imports to source, so `@plumix/core`'s source is part of
+  what a plugin's tests execute — `test:unit` depends on `^topo` to say so.
+  Expect a core source change to re-run around fifteen of the twenty suites.
+  Without that edge a package's hash covered only its own files, and turbo
+  served a cached pass for the very change that broke the test (#2093).
 - **Everything is cached, including e2e.** A suite is skipped when the packages
   it exercises are untouched. A change to `@plumix/core` still runs all nine
   e2e suites, because everything depends on it.
