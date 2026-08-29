@@ -1,5 +1,7 @@
-"use client";
-
+// No client directive here: the island transform shims every export of a
+// directive-carrying module into a component, so a hook would stop running.
+// The directive belongs on the theme component that calls this — see
+// VitePluginError.islandExportIsHook.
 import { useEffect, useState } from "react";
 
 // Mirrors core's `AuthSessionUser` (the `auth.session` output). `@plumix/core`

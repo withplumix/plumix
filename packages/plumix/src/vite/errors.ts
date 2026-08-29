@@ -3,7 +3,8 @@ type VitePluginErrorCode =
   | "admin_entry_and_chunk_both_set"
   | "admin_entry_outside_project_root"
   | "admin_entry_not_found"
-  | "block_module_unresolvable";
+  | "block_module_unresolvable"
+  | "island_export_is_hook";
 
 interface VitePluginErrorFields {
   pluginId?: string;
@@ -12,6 +13,7 @@ interface VitePluginErrorFields {
   resolved?: string;
   adminEntry?: string;
   module?: string;
+  exportName?: string;
 }
 
 export class VitePluginError extends Error {
@@ -26,6 +28,7 @@ export class VitePluginError extends Error {
   readonly resolved: string | undefined;
   readonly adminEntry: string | undefined;
   readonly module: string | undefined;
+  readonly exportName: string | undefined;
 
   private constructor(
     code: VitePluginErrorCode,
@@ -40,6 +43,7 @@ export class VitePluginError extends Error {
     this.resolved = fields.resolved;
     this.adminEntry = fields.adminEntry;
     this.module = fields.module;
+    this.exportName = fields.exportName;
   }
 
   static adminAssetNotFound(ctx: {
@@ -102,6 +106,20 @@ export class VitePluginError extends Error {
       "admin_entry_not_found",
       `[plumix] plugin "${ctx.pluginId}" declares adminEntry ` +
         `"${ctx.adminEntry}" but the file was not found at ${ctx.resolved}.`,
+      ctx,
+    );
+  }
+
+  static islandExportIsHook(ctx: {
+    module: string;
+    exportName: string;
+  }): VitePluginError {
+    return new VitePluginError(
+      "island_export_is_hook",
+      `[plumix] ${ctx.module} has a "use client" directive and exports the hook ` +
+        `\`${ctx.exportName}\`. The directive shims every export into an island ` +
+        `component, so the hook would never run. Put the directive on the ` +
+        `component that calls it and leave the hook in a module without one.`,
       ctx,
     );
   }

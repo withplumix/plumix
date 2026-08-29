@@ -242,6 +242,50 @@ describe("transformUseClientModule", () => {
     });
     expect(result).toBeNull();
   });
+
+  test("rejects a `use client` module whose export is a hook", () => {
+    const source = `
+      "use client";
+      export function useSession() { return null; }
+    `;
+    // A shim would make the hook return a React element instead of running,
+    // so every field a caller destructures reads `undefined` during SSR.
+    expect(() =>
+      transformUseClientModule(source, "/abs/path/use-session.ts", {
+        chunkUrl: "/src/use-session.ts",
+      }),
+    ).toThrow(
+      expect.objectContaining({ code: "island_export_is_hook" }) as Error,
+    );
+  });
+
+  test("shims an export whose name merely begins with the letters `use`", () => {
+    const source = `
+      "use client";
+      export const used = () => null;
+      export const useless = () => null;
+      export const user = () => null;
+    `;
+    const result = transformUseClientModule(source, "/abs/path/u.tsx", {
+      chunkUrl: "/src/u.tsx",
+    });
+    // The convention is `use` + an uppercase letter; lowercase continuations
+    // are ordinary exports.
+    expect(result?.code).toContain(`exportName: "useless"`);
+  });
+
+  test("leaves a dependency's hook export to the shim it already had", () => {
+    const source = `
+      "use client";
+      export function useLingui() { return null; }
+    `;
+    // A published package may ship a client-only hook beside its components.
+    // Failing the build names a file the site author cannot edit.
+    const filePath = "/site/node_modules/@lingui/react/dist/index.js";
+    expect(() =>
+      transformUseClientModule(source, filePath, { chunkUrl: "/x.js" }),
+    ).not.toThrow();
+  });
 });
 
 describe("scanUserSources", () => {

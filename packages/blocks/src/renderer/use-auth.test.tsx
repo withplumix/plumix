@@ -1,4 +1,9 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import type { ReactNode } from "react";
 import { renderHook, waitFor } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { useAuth } from "./use-auth.js";
@@ -105,5 +110,34 @@ describe("useAuth", () => {
     const { result } = renderHook(() => useAuth());
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.user).toBeNull();
+  });
+});
+
+describe("useAuth on the server", () => {
+  test("does not probe the session during a server render", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    function Greeting(): ReactNode {
+      const { user, loading } = useAuth();
+      return <span>{loading ? "loading" : (user?.email ?? "signed out")}</span>;
+    }
+
+    // The server render is cache-shared and anonymous: it renders the loading
+    // branch and the probe waits for hydration.
+    expect(renderToStaticMarkup(<Greeting />)).toBe("<span>loading</span>");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("the module carries no `use client` directive", () => {
+    // A directive here would make the Vite island transform replace `useAuth`
+    // with a component shim, so the hook would return a React element during
+    // SSR and every destructured field would read `undefined`. The transform
+    // accepts a directive below leading comments, so strip those first rather
+    // than anchoring at byte zero.
+    const here = dirname(fileURLToPath(import.meta.url));
+    const source = readFileSync(join(here, "use-auth.ts"), "utf8");
+    const body = source.replace(/^(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*/, "");
+    expect(body).not.toMatch(/^["']use client["']/);
   });
 });
