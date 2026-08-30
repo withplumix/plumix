@@ -25,25 +25,21 @@ SOFTWARE.
 THIRD-PARTY CODE AND ASSETS
 ================================================================================
 
-Plumix ships third-party material that keeps its own license. It reaches you
-in three forms, handled three ways:
+Plumix ships third-party material that keeps its own license, in three forms:
 
-  1. Source copied into this repository. Listed below, because no tool can
-     detect copied source — it is recorded by hand and reviewed like any
-     other change.
+  1. Source copied into this repository, listed below.
 
   2. Libraries bundled into the published `@plumix/admin` package. That
-     package is the only one published as a bundle, so notices must travel
-     with the artifact rather than with an installed dependency. They are
-     generated at build time into `dist/THIRD-PARTY-NOTICES.txt` inside that
-     package, not duplicated here, because the set is large and tracks the
-     dependency graph.
+     package is the only one published as a bundle, so its notices travel
+     with the artifact: they are generated at build time into
+     `dist/THIRD-PARTY-NOTICES.txt` inside that package.
 
-  3. Fonts shipped with that same package, as `dist/LICENSE-geist.txt` and
-     `dist/LICENSE-geist-mono.txt`.
+  3. Fonts and CSS inlined into that same package, each as its own
+     `dist/LICENSE-*.txt`. They arrive as assets rather than JS modules, so
+     the generated notices cannot see them.
 
-Every entry is permissively licensed. The admin build fails on any bundled
-dependency that is not, so this stays true without anyone having to check.
+Every entry is permissively licensed. The admin build refuses any bundled
+dependency that is not.
 
 
 --------------------------------------------------------------------------------
@@ -75,7 +71,7 @@ The island runtime is derived from Astro's:
   src/static-html.tsx                 port of `StaticHtml`
   src/island-strategies/visible.ts    adapted from `client:visible`
 
-Plumix diverges from all four; the files describe where and why.
+Plumix diverges from all four.
 
 
 --------------------------------------------------------------------------------
@@ -85,10 +81,8 @@ Prior art
 Comments across the codebase name projects that informed a design without
 contributing code — WordPress, Nuxt, emdash, Puck, Builder.io, and others.
 Copyright covers expression, not ideas, so those references carry no license
-obligation and none is claimed here. They are engineering context, and the
-WordPress ones in particular must never be read as code derivation: WordPress
-is GPL, and recording it as such would invent a copyleft obligation that does
-not exist.
+obligation and none is claimed here. Naming WordPress in particular is not a
+claim of derivation from GPL code.
 
 
 The MIT License text reproduced at the top of this file applies to each

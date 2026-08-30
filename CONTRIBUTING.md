@@ -223,16 +223,18 @@ By contributing, you agree that your contributions will be licensed under the [M
 
 ### Adding a dependency
 
-Nothing to do. The admin build generates notices for everything it bundles, and
-fails if a dependency is not permissively licensed. If it fails, pick a
-different package — do not widen the allowlist in `packages/admin/vite.config.ts`
-without saying why in the PR.
+The admin build generates notices for what it bundles and fails if a dependency
+is not permissively licensed. If it fails on a license that is permissive but
+unlisted, add its SPDX id to the allowlist in `packages/admin/vite.config.ts`.
+If it fails on a copyleft one, pick a different package.
+
+A dependency whose code reaches `dist` as CSS or a font is invisible to that
+generator and needs adding to `shipAssetLicenses` in the same file.
 
 ### Copying third-party source
 
-Copyright covers expression, not ideas. Reimplementing an approach you read
-about owes nothing, and naming the project that informed it is a courtesy — put
-it in a comment where it helps the next reader.
+Reimplementing an approach you read about owes nothing — name the project in a
+comment where it helps the next reader (see "Prior art" in `LICENSE`).
 
 Copying code is different. If the upstream file was open while you wrote it,
 add an entry to the "Third-party code and assets" section of [`LICENSE`](LICENSE)

@@ -41,46 +41,30 @@ function shipThemeTokens(): Plugin {
   };
 }
 
-// This package is the only one published as a bundle: `dist` carries ~170
-// third-party libraries as minified code, so MIT/BSD/ISC notices have to
-// travel with the artifact rather than with an installed package. The
-// generated file ships via `files: ["dist"]`.
-//
-// `allow` is the policy that keeps it shippable. A copyleft dependency in a
-// bundle we publish as MIT is a licensing conflict, not a paperwork gap, so
-// it fails the build rather than landing a notice nobody reads. Source-copied
-// code (shadcn/ui, Astro) is a separate obligation the bundler cannot see —
-// that lives in the root LICENSE.
-const THIRD_PARTY_LICENSES = {
-  allow: {
-    test: "MIT OR ISC OR Apache-2.0 OR BSD-2-Clause OR BSD-3-Clause OR 0BSD OR CC0-1.0 OR Unlicense",
-    failOnViolation: true,
-    failOnUnlicensed: true,
-  },
-  output: { file: "dist/THIRD-PARTY-NOTICES.txt" },
-} as const;
-
-// The Geist faces are SIL OFL-1.1, which requires its notice to travel with
-// the font files. They reach `dist` as .woff2 assets via a CSS `@import`, so
-// the JS module graph never sees them and the generated THIRD-PARTY-NOTICES
-// cannot cover them. Copy the upstream license verbatim instead of restating
-// it, so it stays correct when the fonts are upgraded.
-function shipFontLicenses(): Plugin {
-  const packages = ["geist", "geist-mono"] as const;
+// Tailwind, tw-animate-css and the Geist faces reach `dist` as CSS and font
+// files rather than JS modules, so the notice generator — which walks the JS
+// graph — never attributes them. Geist is SIL OFL-1.1, whose notice must
+// travel with the font files; the other two are MIT. All four are direct
+// dependencies, so pnpm links them into this package's own node_modules.
+function shipAssetLicenses(): Plugin {
+  const packages = [
+    "tailwindcss",
+    "tw-animate-css",
+    "@fontsource-variable/geist",
+    "@fontsource-variable/geist-mono",
+  ];
   return {
-    name: "plumix:ship-font-licenses",
+    name: "plumix:ship-asset-licenses",
     apply: "build",
     async generateBundle() {
-      for (const name of packages) {
+      for (const pkg of packages) {
+        const src = fileURLToPath(
+          new URL(`./node_modules/${pkg}/LICENSE`, import.meta.url),
+        );
         this.emitFile({
           type: "asset",
-          fileName: `LICENSE-${name}.txt`,
-          source: await readFile(
-            fileURLToPath(
-              import.meta.resolve(`@fontsource-variable/${name}/LICENSE`),
-            ),
-            "utf8",
-          ),
+          fileName: `LICENSE-${pkg.split("/").pop()}.txt`,
+          source: await readFile(src, "utf8"),
         });
       }
     },
@@ -109,8 +93,20 @@ export default defineConfig(({ command }) => ({
       presets: [linguiTransformerBabelPreset(undefined, { cwd: PACKAGE_DIR })],
     }),
     shipThemeTokens(),
-    shipFontLicenses(),
-    license({ thirdParty: THIRD_PARTY_LICENSES }),
+    shipAssetLicenses(),
+    // Copyleft in a bundle we publish as MIT is a licensing conflict, not a
+    // paperwork gap, so it fails the build. Source-copied code is invisible to
+    // the bundler and lives in the root LICENSE instead.
+    license({
+      thirdParty: {
+        allow: {
+          test: "MIT OR MIT-0 OR ISC OR Apache-2.0 OR BSD-2-Clause OR BSD-3-Clause OR 0BSD OR CC0-1.0 OR Unlicense OR BlueOak-1.0.0 OR Zlib OR Python-2.0",
+          failOnViolation: true,
+          failOnUnlicensed: true,
+        },
+        output: "dist/THIRD-PARTY-NOTICES.txt",
+      },
+    }),
   ],
   server: {
     port: ADMIN_DEV_PORT,
