@@ -1,4 +1,11 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -11,7 +18,7 @@ import type {
 
 import { migrateCommand, migrateGenerateDeps } from "./migrate.js";
 
-function fakeApp(): PlumixApp {
+function fakeApp(plugins: readonly unknown[] = []): PlumixApp {
   return {
     config: {
       runtime: { name: "test", buildFetchHandler: () => () => new Response() },
@@ -20,7 +27,7 @@ function fakeApp(): PlumixApp {
         kind: "plumix",
         passkey: { rpName: "x", rpId: "localhost", origin: "http://x" },
       },
-      plugins: [],
+      plugins,
     },
   } as unknown as PlumixApp;
 }
@@ -210,5 +217,123 @@ describe("resolveDrizzleKitBin", () => {
     } finally {
       rmSync(empty, { recursive: true, force: true });
     }
+  });
+});
+
+describe("migrate generate with plugin-contributed raw SQL", () => {
+  let dir: string;
+
+  const FTS_SQL = "CREATE VIRTUAL TABLE entry_fts USING fts5(body)";
+
+  const SEARCH_PLUGIN = {
+    id: "search",
+    setup: () => undefined,
+    sqlMigrations: [{ name: "fts_index", statements: [FTS_SQL] }],
+  };
+
+  function seedDrizzleJournal(): void {
+    mkdirSync(join(dir, "drizzle/meta"), { recursive: true });
+    writeFileSync(
+      join(dir, "drizzle/meta/_journal.json"),
+      JSON.stringify({
+        version: "7",
+        dialect: "sqlite",
+        entries: [
+          {
+            idx: 0,
+            version: "6",
+            when: 1,
+            tag: "0000_plain_phil_sheldon",
+            breakpoints: true,
+          },
+        ],
+      }),
+      "utf8",
+    );
+  }
+
+  function readJournalTags(): readonly string[] {
+    const journal = JSON.parse(
+      readFileSync(join(dir, "drizzle/meta/_journal.json"), "utf8"),
+    ) as { entries: { tag: string }[] };
+    return journal.entries.map((entry) => entry.tag);
+  }
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "plumix-migrate-raw-"));
+    vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
+      "/fake/drizzle-kit/bin.cjs",
+    );
+    vi.spyOn(migrateGenerateDeps, "spawnCapturingStderr").mockResolvedValue("");
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  test("emits the migration after the schema diff and journals it", async () => {
+    seedDrizzleJournal();
+
+    await migrateCommand.run(
+      ctx({ cwd: dir, argv: ["generate"], app: fakeApp([SEARCH_PLUGIN]) }),
+    );
+
+    expect(
+      readFileSync(
+        join(dir, "drizzle/0001_plumix_search_fts_index.sql"),
+        "utf8",
+      ),
+    ).toBe(`${FTS_SQL};\n`);
+    expect(readJournalTags()).toEqual([
+      "0000_plain_phil_sheldon",
+      "0001_plumix_search_fts_index",
+    ]);
+  });
+
+  test("a second generate does not re-emit what the journal carries", async () => {
+    seedDrizzleJournal();
+    const run = () =>
+      migrateCommand.run(
+        ctx({ cwd: dir, argv: ["generate"], app: fakeApp([SEARCH_PLUGIN]) }),
+      );
+
+    await run();
+    await run();
+
+    expect(readJournalTags()).toEqual([
+      "0000_plain_phil_sheldon",
+      "0001_plumix_search_fts_index",
+    ]);
+  });
+
+  test("a config with no raw migrations leaves the journal untouched", async () => {
+    seedDrizzleJournal();
+    const before = readFileSync(
+      join(dir, "drizzle/meta/_journal.json"),
+      "utf8",
+    );
+
+    await migrateCommand.run(ctx({ cwd: dir, argv: ["generate"] }));
+
+    expect(readFileSync(join(dir, "drizzle/meta/_journal.json"), "utf8")).toBe(
+      before,
+    );
+    expect(readdirSync(join(dir, "drizzle"))).toEqual(["meta"]);
+  });
+
+  test("surfaces a structured error when the journal is unreadable", async () => {
+    mkdirSync(join(dir, "drizzle/meta"), { recursive: true });
+    writeFileSync(
+      join(dir, "drizzle/meta/_journal.json"),
+      "{ not json",
+      "utf8",
+    );
+
+    await expect(
+      migrateCommand.run(
+        ctx({ cwd: dir, argv: ["generate"], app: fakeApp([SEARCH_PLUGIN]) }),
+      ),
+    ).rejects.toMatchObject({ code: "migrate_generate_journal_unreadable" });
   });
 });

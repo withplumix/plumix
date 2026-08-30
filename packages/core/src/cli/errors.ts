@@ -7,6 +7,9 @@ type CliErrorCode =
   | "runtime_commands_load_failed"
   | "migrate_generate_no_drizzle_kit"
   | "migrate_generate_failed"
+  | "migrate_generate_journal_unreadable"
+  | "raw_sql_migration_invalid_name"
+  | "raw_sql_migration_duplicate"
   | "migrate_apply_missing_db"
   | "migrate_apply_no_d1"
   | "migrate_apply_ambiguous_db"
@@ -129,6 +132,40 @@ export class CliError extends Error {
       "migrate_generate_failed",
       "drizzle-kit generate failed — migrations were not updated",
       "Its output is above. A prompt that needs a TTY means drizzle-kit is diffing against stale migrations and wants a column rename resolved: delete the `drizzle/` directory to regenerate from scratch, or rerun in an interactive terminal to answer it.",
+      undefined,
+    );
+  }
+
+  static migrateGenerateJournalUnreadable(ctx: {
+    journalPath: string;
+    cause: unknown;
+  }): CliError {
+    return new CliError(
+      "migrate_generate_journal_unreadable",
+      `Could not read the migration journal at ${ctx.journalPath}`,
+      "A plugin contributes raw SQL migrations, which are numbered from this file. Delete the `drizzle/` directory to regenerate from scratch.",
+      ctx.cause,
+    );
+  }
+
+  static rawSqlMigrationInvalidName(ctx: {
+    pluginId: string;
+    name: string;
+    pattern: string;
+  }): CliError {
+    return new CliError(
+      "raw_sql_migration_invalid_name",
+      `Plugin "${ctx.pluginId}" declares a raw SQL migration named "${ctx.name}"`,
+      `A migration name becomes part of its filename, so it must match ${ctx.pattern}.`,
+      undefined,
+    );
+  }
+
+  static rawSqlMigrationDuplicate(ctx: { identity: string }): CliError {
+    return new CliError(
+      "raw_sql_migration_duplicate",
+      `Two raw SQL migrations share the identity "${ctx.identity}"`,
+      "An identity is a plugin id and a migration name joined — it is how the journal tells an already-emitted migration from a new one. Rename one of them.",
       undefined,
     );
   }

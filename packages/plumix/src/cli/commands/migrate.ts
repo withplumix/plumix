@@ -1,12 +1,18 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { CommandContext, CommandDefinition } from "@plumix/core";
+import type {
+  AnyPluginDescriptor,
+  CommandContext,
+  CommandDefinition,
+} from "@plumix/core";
 import {
   CliError,
+  collectRawSqlMigrations,
   generateSchemaSource,
+  planRawSqlMigrations,
   spawnCapturingStderr,
 } from "@plumix/core";
 
@@ -79,6 +85,46 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
   // writes nothing here, so anything at all means it bailed.
   if (stderr.trim() !== "") throw CliError.migrateGenerateFailed();
   report.success(`Migrations emitted in ${MIGRATIONS_OUT}/`);
+
+  for (const tag of emitRawSqlMigrations(cwd, app.config.plugins)) {
+    report.success(`Raw SQL migration emitted: ${MIGRATIONS_OUT}/${tag}.sql`);
+  }
+}
+
+/** Runs after the diff so the DDL lands behind the tables it touches. */
+export function emitRawSqlMigrations(
+  cwd: string,
+  plugins: readonly AnyPluginDescriptor[],
+): readonly string[] {
+  const declared = collectRawSqlMigrations(plugins);
+  if (declared.length === 0) return [];
+
+  const outDir = resolve(cwd, MIGRATIONS_OUT);
+  const journalPath = join(outDir, "meta", "_journal.json");
+  const plan = planRawSqlMigrations(
+    declared,
+    readJournal(journalPath),
+    Date.now(),
+  );
+  if (plan.emit.length === 0) return [];
+
+  for (const migration of plan.emit) {
+    writeFileSync(join(outDir, `${migration.tag}.sql`), migration.sql, "utf8");
+  }
+  writeFileSync(journalPath, JSON.stringify(plan.journal, null, 2), "utf8");
+  return plan.emit.map((migration) => migration.tag);
+}
+
+// drizzle-kit's on-disk journal shape, borrowed rather than re-declared so
+// it stays off `@plumix/core`'s published surface.
+type MigrationJournal = Parameters<typeof planRawSqlMigrations>[1];
+
+function readJournal(journalPath: string): MigrationJournal {
+  try {
+    return JSON.parse(readFileSync(journalPath, "utf8")) as MigrationJournal;
+  } catch (cause) {
+    throw CliError.migrateGenerateJournalUnreadable({ journalPath, cause });
+  }
 }
 
 function writeSchema(
