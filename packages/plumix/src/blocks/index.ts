@@ -15,6 +15,8 @@
 
 export {
   BlockContentValidationError,
+  blockTextRoster,
+  blockTextVersion,
   coreBlocks,
   coreMarks,
   coreShortcodes,
@@ -31,6 +33,7 @@ export {
   richTextBlock,
   resolveBlockTransforms,
   expandBlockVariations,
+  extractBlockText,
   validateEntryContent,
   // Re-exported for the SSR shim the Vite plugin generates for
   // `"use client"` modules. Not intended for direct consumption.
@@ -53,6 +56,8 @@ export type {
   BlockRegistry,
   BlockRenderHooks,
   BlockSpec,
+  BlockTextInput,
+  BlockTextRoster,
   BlockTransformFrom,
   BlockTransformTo,
   BlockTransforms,

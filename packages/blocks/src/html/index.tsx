@@ -34,6 +34,8 @@ export const htmlBlock = defineBlock({
       label: { id: "block.core.html.input.html.label", message: "HTML" },
     },
   ],
+  // A raw-HTML block may hold a widget rather than writing.
+  text: [{ name: "html", html: true, prose: false }],
   defaults: { html: "<p>Custom HTML</p>" },
   render: HtmlBlockRender,
 });

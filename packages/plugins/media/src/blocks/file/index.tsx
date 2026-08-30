@@ -87,6 +87,7 @@ export const fileBlock = defineBlock({
       },
     },
   ],
+  text: [{ name: "filename", prose: false }],
   defaults: { media: null, href: "", filename: "", size: 0, mime: "" },
   render: ({ attrs, context }): ReactElement | null => {
     // A picked asset's url wins over the raw href escape hatch.

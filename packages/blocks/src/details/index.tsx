@@ -35,6 +35,7 @@ export const detailsBlock = defineBlock({
       },
     },
   ],
+  text: [{ name: "summary" }],
   defaults: { summary: "", open: false },
   render: ({ attrs }): ReactNode => {
     const summaryRaw = attrs.summary as string | undefined;

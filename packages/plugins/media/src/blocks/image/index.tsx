@@ -101,6 +101,10 @@ export const imageBlock = defineBlock({
       },
     },
   ],
+  text: [
+    { name: "alt", prose: false },
+    { name: "caption", prose: false },
+  ],
   defaults: {
     media: null,
     src: "",

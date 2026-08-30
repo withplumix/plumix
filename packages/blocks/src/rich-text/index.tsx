@@ -51,6 +51,7 @@ export const richTextBlock = defineBlock({
       label: { id: "block.core.rich-text.input.body.label", message: "Body" },
     },
   ],
+  text: [{ name: "body", html: true }],
   defaults: { body: "<p>Enter text here…</p>" },
   render: RichTextBlockRender,
 });
