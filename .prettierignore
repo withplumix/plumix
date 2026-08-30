@@ -9,3 +9,6 @@ packages/admin/src/routeTree.gen.ts
 # there. Prettier would rewrite its `__PROJECT_NAME__` tokens.
 packages/create-plumix-app/base
 
+# pnpm owns this file's formatting; a `prettier --write` would fight the
+# next `pnpm install`.
+pnpm-lock.yaml

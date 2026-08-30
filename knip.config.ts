@@ -407,7 +407,10 @@ const config: KnipConfig = {
       // Playground-only devDeps; see packages/plugins/media above. Pages
       // is here because the playground composes it for the `page` entry
       // type the seeded form lives on (#1883).
-      ignoreDependencies: ["@plumix/runtime-cloudflare", "@plumix/plugin-pages"],
+      ignoreDependencies: [
+        "@plumix/runtime-cloudflare",
+        "@plumix/plugin-pages",
+      ],
       playwright: false,
     },
     "packages/plugins/comments": {

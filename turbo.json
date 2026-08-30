@@ -67,6 +67,24 @@
       "outputs": [".cache/.prettiercache"],
       "outputLogs": "new-only"
     },
+    // Root-level files sit in no workspace, so the per-package `format` tasks
+    // never saw them. Globs are extension-explicit on purpose: `.github/` holds
+    // CODEOWNERS, and the root holds LICENSE and `*.toml`, none of which
+    // Prettier can parse.
+    "//#format:root": {
+      "inputs": [
+        "*.{json,md,ts,yaml,yml}",
+        ".changeset/**",
+        ".github/**",
+        ".vscode/**",
+        "docs/**",
+        ".gitignore",
+        ".prettierignore",
+        "tooling/prettier/index.js"
+      ],
+      "outputs": [".cache/.prettiercache"],
+      "outputLogs": "new-only"
+    },
     "lint": {
       "dependsOn": ["^topo", "^build", "i18n:compile"],
       "outputs": [".cache/.eslintcache"]

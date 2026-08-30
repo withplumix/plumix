@@ -8,28 +8,28 @@ after the response is produced.
 
 ## Span vocabulary
 
-| Span                          | Where                                                                                         | Attributes                                                     |
-| ----------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `dispatch`                    | `runtime/dispatcher.ts` — the whole request                                                   | `http.response.status_code`                                    |
-| `auth`                        | `auth/authenticator.ts`                                                                       | `auth.authenticated`, `auth.user.id`                           |
-| `resolve`                     | `runtime/dispatcher.ts` — route → entity → template                                           | `route.intent`, `resolve.entity`, `template.matched`           |
-| `render`                      | `route/render/render-template.tsx` — themed render, error pages included                      | `render.node`                                                  |
-| `template`                    | child of `render` — template-hierarchy resolution walk                                        | `resolution` (the full explain)                                |
-| `render: deps`                | child of `render` — declared template-dep loaders, in parallel                                | `deps.kinds`                                                   |
-| `render: head`                | child of `render` — core's head gap-fillers (canonical + feed discovery)                      | —                                                              |
-| `render: loaders`             | child of `render` — block loader prefetch fan-out                                             | `loaders.blocks`                                               |
-| `render: react`               | child of `render` — the `renderToString` SSR pass                                             | —                                                              |
-| `db: <kind>`                  | `db/trace.ts` — one span per query, all drivers (libsql, D1, transactions)                    | `db.sql`, `db.params`, `db.rows`, `db.batch`                   |
-| `fetch: <METHOD> <host>`      | `context/traced-fetch.ts` — `ctx.fetch`                                                       | `http.request.method`, `url.full`, `http.response.status_code` |
-| `cache: match` / `cache: put` | `context/traced-slots.ts` — edge-cache lookup/store                                           | `cache.hit` / `cache.tags`                                     |
-| `assets: fetch`               | `context/traced-slots.ts` — `ctx.assets` (admin shell, static assets)                         | `url.full`, `http.response.status_code`                        |
-| `storage: <op>`               | `context/traced-slots.ts` — `ctx.storage` object I/O (`put`/`get`/`head`/`delete`/`list`)     | `storage.key` (`storage.prefix` for `list`)                    |
-| `mailer: send`                | `context/traced-slots.ts` — `ctx.mailer`                                                      | `mail.to`, `mail.subject`                                      |
-| `hook: <name>`                | `hooks/registry.ts` — one span per async filter handler                                       | `hook.name`, `hook.plugin`                                     |
-| `rpc: <procedure>`            | `rpc/build-handler.ts`                                                                        | —                                                              |
-| `rest: <procedure>`           | `rest/build-handler.ts`                                                                       | —                                                              |
-| `mcp: <tool>`                 | `mcp/server.ts` — `tools/call`                                                                | —                                                              |
-| `cron: <task.id>`             | `runtime/scheduled.ts`                                                                        | —                                                              |
+| Span                          | Where                                                                                     | Attributes                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `dispatch`                    | `runtime/dispatcher.ts` — the whole request                                               | `http.response.status_code`                                    |
+| `auth`                        | `auth/authenticator.ts`                                                                   | `auth.authenticated`, `auth.user.id`                           |
+| `resolve`                     | `runtime/dispatcher.ts` — route → entity → template                                       | `route.intent`, `resolve.entity`, `template.matched`           |
+| `render`                      | `route/render/render-template.tsx` — themed render, error pages included                  | `render.node`                                                  |
+| `template`                    | child of `render` — template-hierarchy resolution walk                                    | `resolution` (the full explain)                                |
+| `render: deps`                | child of `render` — declared template-dep loaders, in parallel                            | `deps.kinds`                                                   |
+| `render: head`                | child of `render` — core's head gap-fillers (canonical + feed discovery)                  | —                                                              |
+| `render: loaders`             | child of `render` — block loader prefetch fan-out                                         | `loaders.blocks`                                               |
+| `render: react`               | child of `render` — the `renderToString` SSR pass                                         | —                                                              |
+| `db: <kind>`                  | `db/trace.ts` — one span per query, all drivers (libsql, D1, transactions)                | `db.sql`, `db.params`, `db.rows`, `db.batch`                   |
+| `fetch: <METHOD> <host>`      | `context/traced-fetch.ts` — `ctx.fetch`                                                   | `http.request.method`, `url.full`, `http.response.status_code` |
+| `cache: match` / `cache: put` | `context/traced-slots.ts` — edge-cache lookup/store                                       | `cache.hit` / `cache.tags`                                     |
+| `assets: fetch`               | `context/traced-slots.ts` — `ctx.assets` (admin shell, static assets)                     | `url.full`, `http.response.status_code`                        |
+| `storage: <op>`               | `context/traced-slots.ts` — `ctx.storage` object I/O (`put`/`get`/`head`/`delete`/`list`) | `storage.key` (`storage.prefix` for `list`)                    |
+| `mailer: send`                | `context/traced-slots.ts` — `ctx.mailer`                                                  | `mail.to`, `mail.subject`                                      |
+| `hook: <name>`                | `hooks/registry.ts` — one span per async filter handler                                   | `hook.name`, `hook.plugin`                                     |
+| `rpc: <procedure>`            | `rpc/build-handler.ts`                                                                    | —                                                              |
+| `rest: <procedure>`           | `rest/build-handler.ts`                                                                   | —                                                              |
+| `mcp: <tool>`                 | `mcp/server.ts` — `tools/call`                                                            | —                                                              |
+| `cron: <task.id>`             | `runtime/scheduled.ts`                                                                    | —                                                              |
 
 The wrap-once pattern: each I/O slot is wrapped a single time at context
 assembly (`createAppContext`), so spans appear for every consumer — core,
