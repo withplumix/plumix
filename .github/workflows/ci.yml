@@ -59,14 +59,25 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # `fail-on-scopes` defaults to runtime only, so dev tooling — which never
-      # reaches a published artifact — is already out of scope. Vulnerabilities
-      # are Dependabot's job; this job is only about license policy.
+      # A denylist, where the admin build uses an allowlist. GitHub reads scopes
+      # from the lockfile and pnpm does not mark transitive dev dependencies, so
+      # an allowlist here fails on build tooling that never ships — CC-BY-3.0
+      # SPDX metadata, say. Naming the licenses that would actually contaminate
+      # a published package keeps the check quiet enough to stay trusted. The
+      # strict list still guards the one artifact we publish as a bundle.
+      #
+      # LGPL is deliberately absent: it covers native libraries we link rather
+      # than copy, which carries no obligation we are failing to meet.
+      # Vulnerabilities are Dependabot's job.
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
-          allow-licenses: 0BSD, Apache-2.0, BSD-2-Clause, BSD-3-Clause, CC0-1.0, ISC, MIT, Unlicense
+          deny-licenses: >-
+            AGPL-1.0-only, AGPL-1.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later,
+            GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later,
+            SSPL-1.0, BUSL-1.1, CPAL-1.0, EUPL-1.2, OSL-3.0
           license-check: true
           vulnerability-check: false
+          show-openssf-scorecard: false
 
   lint:
     name: Lint
