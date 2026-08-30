@@ -151,9 +151,9 @@ export const MANIFEST_WITH_POST: PlumixManifest = {
 
 // Full editor fixture: an autosave-capable post type plus two registered
 // patterns — one copy-mode (also starter-eligible via `target`), one
-// reference-mode. Drives the patterns section, slash-menu cards, starter
-// modal, and the pattern-ref / detach surfaces, none of which render
-// without manifest patterns.
+// reference-mode. Drives the patterns section, starter modal, and the
+// pattern-ref / detach surfaces, none of which render without manifest
+// patterns.
 export const MANIFEST_WITH_EDITOR_PATTERNS: PlumixManifest = {
   ...emptyManifest(),
   entryTypes: [

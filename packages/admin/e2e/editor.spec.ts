@@ -1,8 +1,8 @@
 // The visual editor now owns the `/edit` route (Puck is gone).
-// Editor *behavior* (block insertion, slash menu,
-// selection/actions, field/rich-text editing, patterns) lives in the
-// @plumix/admin-editor playground e2e + unit tests; this suite is INTEGRATION
-// only — the route wiring and the orpc glue the route owns.
+// Editor *behavior* (block insertion, selection/actions, field/rich-text
+// editing, patterns) lives in the @plumix/admin-editor playground e2e + unit
+// tests; this suite is INTEGRATION only — the route wiring and the orpc glue
+// the route owns.
 //
 // The mock harness can't run the real public route the canvas iframe loads, so
 // canvas-render assertions aren't possible here. The specs assert the client
