@@ -33,6 +33,19 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
+// PLUMIX DIVERGENCE from upstream shadcn: Cmd/Ctrl+B is also the editor's
+// rich-text bold mark, so upstream's unguarded listener collapsed the panels out
+// from under an author bolding a word in one. Duplicated rather than imported
+// from `@plumix/admin-editor/src/shortcuts.ts`: this package can't depend on the
+// editor, and the editor's copy ships inside the canvas iframe bundle.
+function isTypingTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable ||
+      /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+  );
+}
+
 interface SidebarContextProps {
   state: "expanded" | "collapsed";
   open: boolean;
@@ -99,7 +112,8 @@ function SidebarProvider({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-        (event.metaKey || event.ctrlKey)
+        (event.metaKey || event.ctrlKey) &&
+        !isTypingTarget(event.target)
       ) {
         event.preventDefault();
         toggleSidebar();

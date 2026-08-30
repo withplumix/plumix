@@ -78,7 +78,8 @@ const ROSTER = [
     forwarded: true,
   },
   // The only binding this roster describes without owning: Cmd+B is the
-  // vendored shadcn sidebar's own listener, which we don't edit.
+  // vendored shadcn sidebar's own listener. It shares the chord with the bold
+  // mark and breaks the tie by standing aside while the author is typing.
   { id: "panels.toggle", group: "general", chords: [{ mod: true, key: "b" }] },
   {
     id: "selection.additive",

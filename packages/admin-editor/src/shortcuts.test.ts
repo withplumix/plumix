@@ -68,8 +68,9 @@ describe("the roster", () => {
   });
 
   // The bindings the roster describes but does not own — see EDITOR_SHORTCUTS.
-  // Cmd+B is the vendored sidebar's, and it collides with the bold mark; the
-  // cheatsheet lists both spellings because both really do fire.
+  // Cmd+B is the vendored sidebar's and collides with the bold mark: only the
+  // typing target tells them apart, which a chord can't express, so the roster
+  // still reads it as a collision and the cheatsheet lists both spellings.
   const KNOWN_COLLISIONS: readonly EditorShortcutId[] = ["panels.toggle"];
 
   test("no two bindings answer the same keypress", () => {

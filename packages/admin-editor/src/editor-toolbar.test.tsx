@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { BlockNode } from "@plumix/blocks";
-import { SidebarProvider } from "@plumix/admin-ui/sidebar";
+import { SidebarProvider, useSidebar } from "@plumix/admin-ui/sidebar";
 
 import { EditorHeader } from "./editor-header.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
@@ -182,5 +182,53 @@ describe("EditorShortcuts", () => {
     // The edit survives — the shortcut deferred to the field's native undo.
     expect(storeApi?.getState().tree).toHaveLength(1);
     input.remove();
+  });
+});
+
+describe("rails toggle", () => {
+  // The chord belongs to the vendored SidebarProvider, so it is exercised
+  // against the real primitive; `useSidebar` reads the state at its source.
+  let sidebar: ReturnType<typeof useSidebar> | undefined;
+  function CaptureSidebar(): null {
+    const api = useSidebar();
+    useEffect(() => {
+      sidebar = api;
+    }, [api]);
+    return null;
+  }
+
+  const renderRails = (): ReturnType<typeof render> =>
+    render(
+      <SidebarProvider>
+        <CaptureSidebar />
+      </SidebarProvider>,
+    );
+
+  test("Ctrl/Cmd+B collapses the rails", () => {
+    renderRails();
+    expect(sidebar?.state).toBe("expanded");
+
+    fireEvent.keyDown(document.body, { key: "b", ctrlKey: true });
+    expect(sidebar?.state).toBe("collapsed");
+  });
+
+  test("Ctrl/Cmd+B leaves the rails alone while typing", () => {
+    renderRails();
+
+    // Cmd+B is also the rich-text bold mark, so the chord must not collapse
+    // the panel the author is typing into.
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    fireEvent.keyDown(input, { key: "b", ctrlKey: true });
+    expect(sidebar?.state).toBe("expanded");
+    input.remove();
+
+    const editable = document.createElement("div");
+    // jsdom never derives isContentEditable from the attribute.
+    Object.defineProperty(editable, "isContentEditable", { value: true });
+    document.body.appendChild(editable);
+    fireEvent.keyDown(editable, { key: "b", ctrlKey: true });
+    expect(sidebar?.state).toBe("expanded");
+    editable.remove();
   });
 });
