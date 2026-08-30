@@ -179,10 +179,6 @@ export { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
 export { HEADING_LEVELS, HEADING_TAGS } from "./headings.js";
 export type { HeadingLevel } from "./headings.js";
 
-// ─── Heading audit ──────────────────────────────────────────────────────────
-export { analyzeHeadingStructure } from "./heading-audit.js";
-export type { HeadingAuditViolation } from "./heading-audit.js";
-
 // ─── Unknown-node Tiptap fallback ──────────────────────────────────────────
 export { unknownBlockSchema } from "./unknown-node.js";
 
