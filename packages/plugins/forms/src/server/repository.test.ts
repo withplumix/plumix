@@ -3,7 +3,7 @@ import type { TracedContext } from "plumix/test";
 import { createTestContext, createTracedContext } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
-import type { StoredSubmission } from "../db/schema.js";
+import type { FormSubmission } from "../db/schema.js";
 import type { FormsTestDb } from "../test/db.js";
 import type { FormSubmissionCandidate } from "../types.js";
 import type { SubmissionRowPage } from "./repository.js";
@@ -169,14 +169,16 @@ describe("the inbox reads", () => {
     expect(page.nextCursor).toBeNull();
   });
 
-  // Every one of these arrives inside the same second, so `created_at`
-  // ties across the page boundary and a cursor keyed on it would step over
-  // whatever shares the last row's timestamp. The cursor is the `id`.
+  // Every one of these carries the same `created_at`, so it ties across
+  // the page boundary and a cursor keyed on it would step over whatever
+  // shares the last row's timestamp. The cursor is the `id`. Seeded to
+  // one instant rather than submitted: `unixepoch()` stamps whole
+  // seconds, so a real burst ties only while it misses a tick.
   test("pages through a burst of same-second arrivals, reaching every one", async () => {
-    const { ctx } = await contextWithSchema();
-    const stored: StoredSubmission[] = [];
-    for (let i = 0; i < 5; i++) stored.push(await submit(ctx, "contact"));
-    expect(new Set(stored.map((row) => row.createdAt.getTime())).size).toBe(1);
+    const { ctx, db } = await contextWithSchema();
+    const stored: FormSubmission[] = [];
+    for (let i = 0; i < 5; i++)
+      stored.push(await seedSubmissionOn(db, "contact", "2026-08-24"));
 
     const reached: number[] = [];
     let cursor: string | null = null;
