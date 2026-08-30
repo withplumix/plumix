@@ -54,6 +54,16 @@
       "persistent": true
     },
     "format": {
+      // The ignore paths and the shared config every `format` script reads
+      // live at the repo root, outside `$TURBO_DEFAULT$`. Without these,
+      // dropping an entry from `.prettierignore` — or changing `importOrder` —
+      // serves 26 cached passes for the one edit that moves the verdict.
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.gitignore",
+        "$TURBO_ROOT$/.prettierignore",
+        "$TURBO_ROOT$/tooling/prettier/index.js"
+      ],
       "outputs": [".cache/.prettiercache"],
       "outputLogs": "new-only"
     },

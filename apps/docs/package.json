@@ -10,7 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "clean": "git clean -xdf .astro dist node_modules",
-    "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .gitignore",
+    "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
     "lint": "astro sync && eslint",
     "test:unit": "vitest run",
     "test:build": "vitest run --config vitest.build.config.ts",

@@ -9,7 +9,7 @@
     "build": "plumix migrate generate && plumix build",
     "clean": "git clean -xdf .plumix .wrangler dist drizzle node_modules",
     "dev": "plumix migrate generate && plumix dev",
-    "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path .gitignore",
+    "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
     "lint": "eslint",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "typecheck": "tsc --noEmit"
