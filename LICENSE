@@ -19,3 +19,77 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+================================================================================
+THIRD-PARTY CODE AND ASSETS
+================================================================================
+
+Plumix ships third-party material that keeps its own license. It reaches you
+in three forms, handled three ways:
+
+  1. Source copied into this repository. Listed below, because no tool can
+     detect copied source — it is recorded by hand and reviewed like any
+     other change.
+
+  2. Libraries bundled into the published `@plumix/admin` package. That
+     package is the only one published as a bundle, so notices must travel
+     with the artifact rather than with an installed dependency. They are
+     generated at build time into `dist/THIRD-PARTY-NOTICES.txt` inside that
+     package, not duplicated here, because the set is large and tracks the
+     dependency graph.
+
+  3. Fonts shipped with that same package, as `dist/LICENSE-geist.txt` and
+     `dist/LICENSE-geist-mono.txt`.
+
+Every entry is permissively licensed. The admin build fails on any bundled
+dependency that is not, so this stays true without anyone having to check.
+
+
+--------------------------------------------------------------------------------
+shadcn/ui — packages/admin-ui/src
+--------------------------------------------------------------------------------
+
+Copyright (c) 2023 shadcn
+MIT License — https://github.com/shadcn-ui/ui
+
+Most components under `packages/admin-ui/src` come from shadcn/ui, kept close
+to upstream so `shadcn diff` keeps applying changes. One notice covers the
+directory rather than per-file headers, which would break that workflow.
+
+
+--------------------------------------------------------------------------------
+Astro — packages/blocks
+--------------------------------------------------------------------------------
+
+Copyright (c) 2021 Fred K. Schott
+MIT License — https://github.com/withastro/astro
+
+The island runtime is derived from Astro's:
+
+  src/serialize.ts                    port of Astro's prop serializer; the
+                                      PROP_TYPE codes and payload shape match
+                                      byte-for-byte so the SSR/client wire
+                                      format stays compatible
+  src/island-element.ts               port of `astro-island.ts`
+  src/static-html.tsx                 port of `StaticHtml`
+  src/island-strategies/visible.ts    adapted from `client:visible`
+
+Plumix diverges from all four; the files describe where and why.
+
+
+--------------------------------------------------------------------------------
+Prior art
+--------------------------------------------------------------------------------
+
+Comments across the codebase name projects that informed a design without
+contributing code — WordPress, Nuxt, emdash, Puck, Builder.io, and others.
+Copyright covers expression, not ideas, so those references carry no license
+obligation and none is claimed here. They are engineering context, and the
+WordPress ones in particular must never be read as code derivation: WordPress
+is GPL, and recording it as such would invent a copyleft obligation that does
+not exist.
+
+
+The MIT License text reproduced at the top of this file applies to each
+MIT-licensed entry above.

@@ -47,6 +47,27 @@ jobs:
       - name: Block >= 1.0.0 while in 0.x
         run: pnpm check-no-major
 
+  dependency-review:
+    name: Dependency review
+    # The admin build already refuses a copyleft dependency, but only for what
+    # it bundles. This covers every other package, where a dependency reaches
+    # consumers through their own build instead of ours.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # `fail-on-scopes` defaults to runtime only, so dev tooling — which never
+      # reaches a published artifact — is already out of scope. Vulnerabilities
+      # are Dependabot's job; this job is only about license policy.
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          allow-licenses: 0BSD, Apache-2.0, BSD-2-Clause, BSD-3-Clause, CC0-1.0, ISC, MIT, Unlicense
+          license-check: true
+          vulnerability-check: false
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

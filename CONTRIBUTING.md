@@ -220,3 +220,23 @@ Scopes are validated against workspace package names. Run `pnpm ls -r --depth -1
 ## License
 
 By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+
+### Adding a dependency
+
+Nothing to do. The admin build generates notices for everything it bundles, and
+fails if a dependency is not permissively licensed. If it fails, pick a
+different package — do not widen the allowlist in `packages/admin/vite.config.ts`
+without saying why in the PR.
+
+### Copying third-party source
+
+Copyright covers expression, not ideas. Reimplementing an approach you read
+about owes nothing, and naming the project that informed it is a courtesy — put
+it in a comment where it helps the next reader.
+
+Copying code is different. If the upstream file was open while you wrote it,
+add an entry to the "Third-party code and assets" section of [`LICENSE`](LICENSE)
+with the copyright line and license read from the upstream's own repository —
+never from memory, and never restated in the source file. A wrong license in a
+comment is worse than none, which is how three island files spent a year
+claiming Astro was Apache-2.0.
