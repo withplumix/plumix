@@ -12,7 +12,7 @@ import {
 import { resolveLabel } from "@plumix/core/i18n";
 
 import type { InserterPattern } from "./block-catalog.js";
-import { expandPattern } from "./block-catalog.js";
+import { expandPatternCopy } from "./block-catalog.js";
 import { useEditorStore } from "./provider.js";
 
 interface StarterModalProps {
@@ -37,7 +37,7 @@ export function StarterModal({
 
   const dismiss = (): void => setStarterOpen(false);
   const select = (pattern: InserterPattern): void => {
-    insertBlocks(expandPattern(pattern), 0);
+    insertBlocks(expandPatternCopy(pattern), 0);
     setStarterOpen(false);
   };
 

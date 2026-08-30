@@ -185,15 +185,24 @@ function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
   };
 }
 
-/** The concrete block(s) a pattern inserts: a deep-cloned, id-rewritten copy of
- *  its composition, or a single `core/pattern-ref` node for reference patterns
- *  (the walker resolves the reference at render). */
+/** The concrete block(s) a pattern inserts: a single `core/pattern-ref` node
+ *  for reference patterns (the walker resolves it at render), otherwise an
+ *  independent copy. */
 export function expandPattern(pattern: InserterPattern): readonly BlockNode[] {
   if (pattern.insert === "reference") {
     return rewriteBlockNodeIds([
       { id: "seed", name: PATTERN_REF_BLOCK, attrs: { slug: pattern.name } },
     ]);
   }
+  return expandPatternCopy(pattern);
+}
+
+/** A pattern's body as an independent copy, whatever `insert` declares: the
+ *  starter path seeds a new entry, so honouring `reference` there would leave
+ *  every entry created from that starter a live pointer at the pattern. */
+export function expandPatternCopy(
+  pattern: InserterPattern,
+): readonly BlockNode[] {
   return rewriteBlockNodeIds(pattern.content);
 }
 
