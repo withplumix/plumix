@@ -40,15 +40,22 @@ async function compileSchemaSql(schemaModule: SchemaModule): Promise<string[]> {
  * Create the tables a drizzle schema module declares on `db`. A plugin suite
  * layers its schema onto a core test db when its FKs reference `entries` /
  * `users`, or onto a bare `:memory:` db when it owns every table it touches.
+ *
+ * `rawStatements` run after the compiled schema and carry the DDL drizzle
+ * cannot express — triggers, virtual tables. One statement per entry: libsql
+ * prepares the first and discards the rest without erroring, so two statements
+ * in one string half-apply the schema and still leave the test green.
  */
 export async function applyTestSchema(
   db: SqlRunner,
   schemaModule: SchemaModule,
+  rawStatements: readonly string[] = [],
 ): Promise<void> {
   const statements =
     compiled.get(schemaModule) ?? compileSchemaSql(schemaModule);
   compiled.set(schemaModule, statements);
   for (const statement of await statements) await db.run(sql.raw(statement));
+  for (const statement of rawStatements) await db.run(sql.raw(statement));
 }
 
 /**
