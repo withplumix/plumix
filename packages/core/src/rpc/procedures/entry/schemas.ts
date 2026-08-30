@@ -187,10 +187,11 @@ export const entryListInputSchema = v.object({
    */
   parentId: v.optional(v.nullable(idParam)),
   /**
-   * Free-text search across `title`, `content`, and `excerpt`. Whitespace
-   * separates terms (all AND-ed), `"quoted phrases"` stay whole, and a
-   * leading `-` on a bare term excludes matches (WordPress semantics).
-   * Capped at 200 chars to bound the LIKE workload per row.
+   * Free-text search across `title` and `excerpt` — not `content`, whose
+   * block envelope reads as prose to a substring match. Whitespace separates
+   * terms (all AND-ed), `"quoted phrases"` stay whole, and a leading `-` on a
+   * bare term excludes matches (WordPress semantics). Capped at 200 chars to
+   * bound the LIKE workload per row.
    */
   search: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200))),
   /**

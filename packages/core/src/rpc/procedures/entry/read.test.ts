@@ -124,23 +124,19 @@ describe("entry.list", () => {
     expect(rows.map((r) => r.slug)).toEqual(["hello"]);
   });
 
-  test("search also matches on content and excerpt (OR across columns)", async () => {
+  test("search matches on excerpt but never on the content envelope", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     await h.factory.published.create({
       authorId: h.user.id,
       title: "Generic",
       slug: "in-body",
       content: {
-        type: "doc",
-        content: [
+        version: "plumix.v2",
+        blocks: [
           {
-            type: "paragraph",
-            content: [
-              {
-                type: "text",
-                text: "A paragraph mentioning giraffes in passing.",
-              },
-            ],
+            id: "p1",
+            name: "core/rich-text",
+            attrs: { body: "<p>A paragraph mentioning giraffes.</p>" },
           },
         ],
       },
@@ -153,7 +149,7 @@ describe("entry.list", () => {
     });
 
     const rows = await h.client.entry.list({ search: "giraffes" });
-    expect(rows.map((r) => r.slug).sort()).toEqual(["in-body", "in-excerpt"]);
+    expect(rows.map((r) => r.slug)).toEqual(["in-excerpt"]);
   });
 
   test("multi-term search AND-combines (each term must hit some column)", async () => {
@@ -201,15 +197,7 @@ describe("entry.list", () => {
       authorId: h.user.id,
       title: "Pillow for sale",
       slug: "pillow-sofa",
-      content: {
-        type: "doc",
-        content: [
-          {
-            type: "paragraph",
-            content: [{ type: "text", text: "Comes with a sofa" }],
-          },
-        ],
-      },
+      excerpt: "Comes with a sofa",
     });
     await h.factory.published.create({
       authorId: h.user.id,

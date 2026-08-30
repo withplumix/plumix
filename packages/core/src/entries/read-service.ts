@@ -9,8 +9,7 @@ import type {
   EntryListInput,
   EntryListOrderColumn,
 } from "../rpc/procedures/entry/schemas.js";
-import type { SearchTerm } from "../rpc/procedures/entry/search-terms.js";
-import { and, asc, desc, eq, inArray, isNull, not, sql } from "../db/index.js";
+import { and, asc, desc, eq, inArray, isNull, not } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
@@ -20,11 +19,9 @@ import {
   resolveEntriesMeta,
   resolveEntryMeta,
 } from "../rpc/procedures/entry/meta.js";
-import {
-  escapeLikePattern,
-  tokenizeSearchQuery,
-} from "../rpc/procedures/entry/search-terms.js";
+import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
 import { loadEntryTerms } from "../rpc/procedures/entry/terms.js";
+import { entrySearchCondition } from "../search/conditions.js";
 import { EntryReadError } from "./errors.js";
 
 const PUBLIC_STATUS: EntryStatus = "published";
@@ -85,7 +82,7 @@ export async function listEntries(
   }
   if (input.search) {
     for (const term of tokenizeSearchQuery(input.search)) {
-      conditions.push(searchTermCondition(term));
+      conditions.push(entrySearchCondition(term));
     }
   }
   if (input.termTaxonomies) {
@@ -206,18 +203,4 @@ function normalizeStatusInput(
     ? input.filter((s): s is EntryStatus => s !== undefined)
     : [input as EntryStatus];
   return list.length === 0 ? undefined : list;
-}
-
-// One search term → `(title LIKE ? OR content LIKE ? OR excerpt LIKE ?)`
-// against an explicit ESCAPE char so literal `%` / `_` in user input don't
-// match-all. Excluded (`-term`) wraps the OR in `NOT (…)`. COALESCE handles
-// nullable columns so null behaves as empty text across both clause polarities.
-function searchTermCondition(term: SearchTerm): SQL {
-  const pattern = `%${escapeLikePattern(term.value)}%`;
-  const match = sql`(
-    COALESCE(${entries.title}, '') LIKE ${pattern} ESCAPE '\\'
-    OR COALESCE(${entries.content}, '') LIKE ${pattern} ESCAPE '\\'
-    OR COALESCE(${entries.excerpt}, '') LIKE ${pattern} ESCAPE '\\'
-  )`;
-  return term.exclude ? not(match) : match;
 }

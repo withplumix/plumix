@@ -25,6 +25,52 @@ const listInput = (partial: Record<string, unknown> = {}) =>
 const getInput = (partial: Record<string, unknown>) =>
   v.parse(entryGetInputSchema, partial);
 
+// A realistic stored envelope: every key, block name and attribute below is
+// structure, not prose. #2117 measured each of ENVELOPE_TERMS returning half
+// the table or more while the entries-list clause matched this column, so the
+// roster is the issue's own and stays whole.
+const ENVELOPE_CONTENT = {
+  version: "plumix.v2",
+  blocks: [
+    {
+      id: "p1",
+      name: "core/rich-text",
+      attrs: {
+        body: '<p><strong>Prose</strong> with a <a href="/about">link</a>.</p>',
+      },
+    },
+    {
+      id: "i1",
+      name: "core/image",
+      attrs: { src: "/uploads/photo.jpg", alt: "A photo" },
+    },
+    {
+      id: "c1",
+      name: "core/code",
+      attrs: { language: "ts", body: "const answer = 42;" },
+    },
+  ],
+};
+
+const ENVELOPE_TERMS = [
+  "text",
+  "core",
+  "body",
+  "id",
+  "version",
+  "blocks",
+  "attrs",
+  "href",
+  "strong",
+  "alt",
+  "image",
+  "code",
+  "src",
+  "uploads",
+  "jpg",
+  "language",
+];
+
 describe("listEntries", () => {
   test("clamps a subscriber to published entries by default", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });
@@ -94,6 +140,29 @@ describe("listEntries", () => {
     );
 
     expect(rows.map((r) => r.slug)).toEqual(["a"]);
+  });
+
+  test("free-text search ignores the stored content envelope", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "a",
+      title: "Hello world",
+      content: ENVELOPE_CONTENT,
+    });
+
+    const hits: Record<string, string[]> = {};
+    for (const term of ["Hello", ...ENVELOPE_TERMS]) {
+      const rows = await listEntries(authedCtx(h), listInput({ search: term }));
+      hits[term] = rows.map((r) => r.slug);
+    }
+
+    // The title match is the control: without it a search that found nothing
+    // at all would satisfy every other assertion here.
+    expect(hits).toEqual({
+      Hello: ["a"],
+      ...Object.fromEntries(ENVELOPE_TERMS.map((term) => [term, []])),
+    });
   });
 
   test("paginates with limit + offset on a stable order", async () => {
