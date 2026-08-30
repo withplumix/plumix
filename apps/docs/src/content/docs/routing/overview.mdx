@@ -31,7 +31,7 @@ The intent carries only the route shape. The slug, term path and page number rid
 
 `front-page` is the intent whose listing core defines outright rather than deriving from a registration, so its rule lives here. It selects published entries from every public non-hierarchical entry type, orders them newest publish time first, and pages them twenty at a time. That page size is a core constant, so `archivePerPage` does not move it the way it moves an entry-type or taxonomy archive. Hierarchical types are excluded on purpose, which is why the pages plugin's `page` entries never appear in the front feed.
 
-`search` is the one intent that rewrites its own URL. A plain HTML form submitting `GET /search?q=caponata` 301s to `/search/caponata`, so the result page is shareable rather than query-string bound. It borrows the same twenty-per-page listing and matches on entry title only.
+`search` is the one intent that rewrites its own URL. A plain HTML form submitting `GET /search?q=caponata` 301s to `/search/caponata`, so the result page is shareable rather than query-string bound. It borrows the same twenty-per-page listing and matches on entry title or excerpt.
 
 Only `GET` and `HEAD` reach the public site. Any other method on a public URL returns 405 with an `Allow: GET, HEAD` header, before any lookup runs.
 

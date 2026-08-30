@@ -3382,6 +3382,21 @@ describe("resolvePublicRoute — front-page through theme", () => {
   });
 });
 
+const searchHitListTheme = defineTheme({
+  templates: [
+    fallback(() => null),
+    search(({ data }) => (
+      <ul>
+        {data.entries.map((entry: ResolvedEntry) => (
+          <li key={entry.id} data-testid={`hit-${entry.slug}`}>
+            {entry.title}
+          </li>
+        ))}
+      </ul>
+    )),
+  ],
+});
+
 describe("resolvePublicRoute — search through theme", () => {
   test("/search/<query> renders the `search` template with the query in scope", async () => {
     const theme = defineTheme({
@@ -3404,22 +3419,10 @@ describe("resolvePublicRoute — search through theme", () => {
   });
 
   test("search results filter entries whose title matches the query", async () => {
-    const theme = defineTheme({
-      templates: [
-        fallback(() => null),
-        search(({ data }) => (
-          <ul>
-            {data.entries.map((entry: ResolvedEntry) => (
-              <li key={entry.id} data-testid={`hit-${entry.slug}`}>
-                {entry.title}
-              </li>
-            ))}
-          </ul>
-        )),
-      ],
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: searchHitListTheme,
     });
-
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -3533,6 +3536,78 @@ describe("resolvePublicRoute — search through theme", () => {
     expect(body).not.toContain('data-testid="search"');
   });
 
+  test("search results match a phrase in the entry excerpt", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: searchHitListTheme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "excerpt-match",
+      title: "Unrelated title",
+      excerpt: "An opening paragraph about hello world.",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "no-match",
+      title: "Nothing here",
+      excerpt: "Nothing here either.",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/search/hello"),
+    );
+    const body = await response.text();
+    expect(body).toContain('data-testid="hit-excerpt-match"');
+    expect(body).not.toContain('data-testid="hit-no-match"');
+  });
+
+  // The excerpt clause is an OR, so it has to stay inside the published-only
+  // filter rather than reassociating past it.
+  test("an excerpt match on an unpublished entry stays out of the results", async () => {
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: searchHitListTheme,
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "draft-excerpt",
+      title: "Draft",
+      excerpt: "A hello world draft.",
+      content: null,
+      status: "draft",
+      authorId: author.id,
+    });
+    await h.factory.entry.create({
+      type: "post",
+      slug: "published-excerpt",
+      title: "Published",
+      excerpt: "A hello world post.",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/search/hello"),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(body).toContain('data-testid="hit-published-excerpt"');
+    expect(body).not.toContain('data-testid="hit-draft-excerpt"');
+  });
+
   test("entry types flagged excludeFromSearch don't appear in search hits", async () => {
     const mediaPlugin = definePlugin("media", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
@@ -3542,22 +3617,10 @@ describe("resolvePublicRoute — search through theme", () => {
         excludeFromSearch: true,
       });
     });
-    const theme = defineTheme({
-      templates: [
-        fallback(() => null),
-        search(({ data }) => (
-          <ul>
-            {data.entries.map((entry: ResolvedEntry) => (
-              <li key={entry.id} data-testid={`hit-${entry.slug}`}>
-                {entry.title}
-              </li>
-            ))}
-          </ul>
-        )),
-      ],
+    const h = await createDispatcherHarness({
+      plugins: [mediaPlugin],
+      theme: searchHitListTheme,
     });
-
-    const h = await createDispatcherHarness({ plugins: [mediaPlugin], theme });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -3618,22 +3681,10 @@ describe("resolvePublicRoute — search through theme", () => {
   test("`_` in the query matches the literal character, not any-single-char", async () => {
     // Without escaping, SQLite LIKE treats `_` as a wildcard — a query of
     // `_` would match every entry. The framework escapes user wildcards.
-    const theme = defineTheme({
-      templates: [
-        fallback(() => null),
-        search(({ data }) => (
-          <ul>
-            {data.entries.map((entry: ResolvedEntry) => (
-              <li key={entry.id} data-testid={`hit-${entry.slug}`}>
-                {entry.title}
-              </li>
-            ))}
-          </ul>
-        )),
-      ],
+    const h = await createDispatcherHarness({
+      plugins: [blogPlugin],
+      theme: searchHitListTheme,
     });
-
-    const h = await createDispatcherHarness({ plugins: [blogPlugin], theme });
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
@@ -3646,8 +3697,19 @@ describe("resolvePublicRoute — search through theme", () => {
     });
     await h.factory.entry.create({
       type: "post",
+      slug: "underscore-excerpt",
+      title: "Plain title",
+      excerpt: "About snake_case naming",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+    await h.factory.entry.create({
+      type: "post",
       slug: "plain",
       title: "Plain title",
+      excerpt: "No wildcards here",
       content: null,
       status: "published",
       authorId: author.id,
@@ -3659,6 +3721,7 @@ describe("resolvePublicRoute — search through theme", () => {
     );
     const body = await response.text();
     expect(body).toContain('data-testid="hit-literal-underscore"');
+    expect(body).toContain('data-testid="hit-underscore-excerpt"');
     expect(body).not.toContain('data-testid="hit-plain"');
   });
 
