@@ -867,12 +867,34 @@ must be declared in your `wrangler.jsonc` for the task to fire at all:
 }
 ```
 
-`retentionDays: 0`, which is what a form declaring nothing takes, keeps its
-submissions indefinitely — the only default that cannot lose an enquiry nobody
-asked to lose. Past the period, a submission goes whatever status it is under:
-an archived enquiry is still someone's address. A slug nobody declares any more
-is left alone, since the retention period is the form's and there is no longer
-a form to read one from.
+Set the period once for the whole site, and a form only says something when it
+differs:
+
+```ts
+forms({
+  // Every form keeps its submissions three months, unless it says otherwise.
+  retentionDays: 90,
+  forms: [contact, newsletter],
+});
+```
+
+`retentionDays: 0` keeps submissions indefinitely, and it is what both the site
+and a form take when neither declares a period — the only default that cannot
+lose an enquiry nobody asked to lose. On a form it is a declaration rather than
+an absence, so it is also how one form opts out of a period the site set for
+the rest.
+
+Past the period, a submission goes whatever status it is under: an archived
+enquiry is still someone's address. A slug nobody declares any more is left
+alone, since the retention period is the form's and there is no longer a form
+to read one from.
+
+The sweep bounds itself by `id` as well as by date, so it reads the rows it is
+about to delete rather than the whole backlog — around 1,400 rows to delete 700
+on a three-form site, and three rows on a night with nothing to purge. Ids are
+arrival order for every row this plugin writes. A row backdated by a direct
+write to `form_submissions` or by an import sits outside that order: it is kept
+rather than deleted, and goes once the rows stored before it have expired too.
 
 ## What gets stored
 

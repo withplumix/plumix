@@ -1,6 +1,7 @@
 type FormsErrorCode =
   | "duplicate_form_slug"
   | "insert_returned_no_row"
+  | "invalid_default_retention"
   | "invalid_retention"
   | "stores_nothing"
   | "unsupported_field_type";
@@ -79,6 +80,18 @@ export class FormsError extends Error {
         `negative one puts the cutoff in the future — the first nightly ` +
         `purge would take every submission the form ever had. Use 0 to ` +
         `keep them indefinitely.`,
+      ctx,
+    );
+  }
+
+  static invalidDefaultRetention(ctx: { retentionDays: number }): FormsError {
+    return new FormsError(
+      "invalid_default_retention",
+      `forms: the site declares retentionDays: ${String(ctx.retentionDays)}. ` +
+        `It is a whole number of days, and a negative one puts the cutoff ` +
+        `in the future — the first nightly purge would take every ` +
+        `submission every form ever had. Use 0, or leave it out, to keep ` +
+        `them indefinitely.`,
       ctx,
     );
   }

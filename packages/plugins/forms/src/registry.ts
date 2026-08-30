@@ -32,6 +32,17 @@ export interface FormRegistry {
    * appending to, not a copy taken when the block was defined.
    */
   readonly options: readonly BlockInputOption[];
+  /**
+   * How long one form's submissions are kept: its own period, or the
+   * site's for a form that declares none.
+   *
+   * The two are separate so that a site can set a period once instead of
+   * repeating it on every form, and one form can still keep its own — a
+   * newsletter signup outliving an enquiry that carried a home address.
+   * `retentionDays: 0` is a declaration, so it wins over a site default
+   * rather than reading as the absence of one.
+   */
+  retentionDaysFor(form: FormDefinition): number;
 }
 
 interface RegisteredForm {
@@ -39,11 +50,12 @@ interface RegisteredForm {
   readonly contributor: string;
 }
 
-export function createFormRegistry(): FormRegistry {
+export function createFormRegistry(defaultRetentionDays = 0): FormRegistry {
   const forms = new Map<string, RegisteredForm>();
   const options: BlockInputOption[] = [];
   return {
     options,
+    retentionDaysFor: (form) => form.retentionDays ?? defaultRetentionDays,
     register: (form, contributor) => {
       const existing = forms.get(form.slug);
       if (existing) {

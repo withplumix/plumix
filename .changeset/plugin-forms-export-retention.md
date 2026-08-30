@@ -17,4 +17,4 @@ defineForm("contact", {
 });
 ```
 
-One nightly scheduled task purges every form on the site, on `0 3 * * *` — declare that cron in your `wrangler.jsonc` for it to fire. `retentionDays: 0`, which is what a form declaring nothing takes, keeps submissions indefinitely; past the period a submission goes whatever status it is under, since an archived enquiry is still someone's address. A slug nobody declares any more is left alone.
+One nightly scheduled task purges every form on the site, on `0 3 * * *` — declare that cron in your `wrangler.jsonc` for it to fire. `retentionDays: 0` keeps submissions indefinitely; past the period a submission goes whatever status it is under, since an archived enquiry is still someone's address. A slug nobody declares any more is left alone.
