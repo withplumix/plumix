@@ -183,6 +183,28 @@ export function reconcileView(
     : null;
 }
 
+/** Bring a block into view at the current zoom: panned so its rect sits in the
+ *  middle of the viewport. `rect` is in the frame's unscaled coordinate space.
+ *  Unlike {@link frameSelection} this never changes the zoom, so jumping to a
+ *  small block doesn't slam the camera into a close-up. */
+export function centerOnRect(
+  rect: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  },
+  view: View,
+  vw: number,
+  vh: number,
+): View {
+  return {
+    zoom: view.zoom,
+    panX: vw / 2 - (rect.x + rect.width / 2) * view.zoom,
+    panY: vh / 2 - (rect.y + rect.height / 2) * view.zoom,
+  };
+}
+
 /** Frame a block: the largest zoom that fits its rect (with padding) inside the
  *  viewport, panned so the block is centered. `rect` is in the frame's unscaled
  *  coordinate space. */

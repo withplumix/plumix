@@ -101,6 +101,16 @@ export function groupInsertables(
   return [...buckets].map(([category, entries]) => ({ category, entries }));
 }
 
+/**
+ * A stable, collision-free identity for an inserter entry. Variation slugs are
+ * only unique per parent block (two blocks can both declare `default`), so a
+ * variation is qualified by its parent name; a bare block (slug === name) keeps
+ * its name as-is.
+ */
+export function entryKey(entry: InsertableBlockEntry): string {
+  return entry.slug === entry.name ? entry.slug : `${entry.name}/${entry.slug}`;
+}
+
 /** Patterns matching the query (name / title / keywords); all when blank. */
 export function filterPatterns(
   patterns: readonly InserterPattern[],

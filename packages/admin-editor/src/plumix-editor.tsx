@@ -31,6 +31,7 @@ import type { RightPanel } from "./store.js";
 import { BlockCatalog } from "./block-catalog-tab.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
+import { EditorCommandPalette } from "./editor-command-palette.js";
 import { EditorConfigProvider } from "./editor-config-context.js";
 import { EditorHeader } from "./editor-header.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
@@ -100,6 +101,9 @@ interface PlumixEditorProps {
    *  revision-history sheet. Kept as a slot so the orpc-backed sheet lives in
    *  the app; absent when the entry type doesn't support revisions. */
   readonly revisionsTrigger?: ReactNode;
+  /** Opens that same sheet from the command palette. Absent when the entry
+   *  type has no revisions, and the palette then offers no such command. */
+  readonly onOpenRevisions?: () => void;
   /** Host-rendered overlay (e.g. the stale-draft resolution dialog). */
   readonly overlay?: ReactNode;
   /** Re-run the active block's loader(s) server-side (host orpc call). When set,
@@ -145,6 +149,7 @@ export function PlumixEditor({
   documentPanel,
   publish,
   revisionsTrigger,
+  onOpenRevisions,
   overlay,
   onRefreshBlockLoader,
   previewRefreshToken,
@@ -263,6 +268,10 @@ export function PlumixEditor({
           </div>
         </SidebarProvider>
         <EditorShortcuts />
+        <EditorCommandPalette
+          entryType={entryType}
+          onOpenRevisions={onOpenRevisions}
+        />
         <JsonSourceDialog />
         <ShortcutsDialog />
         <StarterModal candidates={starterCandidates} />

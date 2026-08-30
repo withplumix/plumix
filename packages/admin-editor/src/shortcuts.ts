@@ -77,6 +77,12 @@ const ROSTER = [
     ],
     forwarded: true,
   },
+  {
+    id: "palette.open",
+    group: "general",
+    chords: [{ mod: true, shift: false, key: "k", code: "KeyK" }],
+    forwarded: true,
+  },
   // The only binding this roster describes without owning: Cmd+B is the
   // vendored shadcn sidebar's own listener, which we don't edit.
   { id: "panels.toggle", group: "general", chords: [{ mod: true, key: "b" }] },

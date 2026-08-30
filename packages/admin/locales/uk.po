@@ -1592,6 +1592,11 @@ msgid "terms.create.description.flat"
 msgstr "Згрупуйте вміст, додавши новий термін."
 
 #. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.group"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.hideComparison"
 msgstr "Сховати порівняння"
@@ -2222,6 +2227,11 @@ msgstr ""
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.newTab"
 msgstr "Відкривати в новій вкладці"
+
+#. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.revisions"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -3046,6 +3056,21 @@ msgid "userRole.long.subscriber"
 msgstr "Передплатник — лише читання"
 
 #. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.device.desktop"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.device.mobile"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.device.tablet"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.synced"
 msgstr "Синхронізовано"
@@ -3413,6 +3438,11 @@ msgstr "Назва"
 msgid "editor.document.title"
 msgstr ""
 
+#. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.xray"
+msgstr ""
+
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -3455,6 +3485,11 @@ msgstr "Переміщення в кошик…"
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/create.tsx
 msgid "editor.entry.create.retry"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.ungroup"
 msgstr ""
 
 #. js-lingui-explicit-id

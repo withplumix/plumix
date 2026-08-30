@@ -37,6 +37,12 @@ const SHORTCUT_LABELS: Record<EditorShortcutId, ReactNode> = {
   "help.open": (
     <Trans id="editor.shortcut.help.open" message="Show keyboard shortcuts" />
   ),
+  "palette.open": (
+    <Trans
+      id="editor.shortcut.palette.open"
+      message="Open the command palette"
+    />
+  ),
   "panels.toggle": (
     <Trans
       id="editor.shortcut.panels.toggle"

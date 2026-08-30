@@ -10,6 +10,7 @@ export {
 } from "./editor-config-context.js";
 export type { EditorConfig } from "./editor-config-context.js";
 export { PlumixEditor } from "./plumix-editor.js";
+export { EDITOR_COMMAND_DESCRIPTORS } from "./editor-commands.js";
 export type {
   PluginFieldControl,
   PluginFieldControlProps,

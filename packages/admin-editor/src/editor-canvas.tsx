@@ -179,8 +179,13 @@ export function EditorCanvas({
       if (e.repeat || isTypingTarget(e.target)) return;
       const claimed = forwardedShortcut(e);
       if (!claimed) return;
-      // Space would scroll the iframe document; Cmd+/ is quick-find in Firefox.
-      if (claimed.id === "canvas.pan" || claimed.id === "help.open") {
+      // Space would scroll the iframe document; Cmd+/ is quick-find in Firefox
+      // and Cmd+K jumps to the browser's own search bar.
+      if (
+        claimed.id === "canvas.pan" ||
+        claimed.id === "help.open" ||
+        claimed.id === "palette.open"
+      ) {
         e.preventDefault();
       }
       connectionRef.current?.reportKey(true, claimed.code, e.shiftKey);

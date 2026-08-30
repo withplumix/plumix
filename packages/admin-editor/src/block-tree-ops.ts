@@ -286,6 +286,18 @@ function soleSlotChildren(node: BlockNode): readonly BlockNode[] | null {
 
 /** Whether {@link ungroupBlock} can unwrap this block — a single-slot container
  *  with children. The toolbar gates the Ungroup button on this. */
+/** Whether `groupBlocks` would do anything: the selection's roots must all
+ *  share one parent, since a group can't span containers. */
+export function canGroupSelection(
+  tree: readonly BlockNode[],
+  selectedIds: ReadonlySet<string>,
+): boolean {
+  const roots = selectionRoots(tree, selectedIds);
+  if (roots.length === 0) return false;
+  const parent = findParentId(tree, roots[0] ?? "");
+  return roots.every((id) => findParentId(tree, id) === parent);
+}
+
 export function canUngroupBlock(
   tree: readonly BlockNode[],
   id: string,

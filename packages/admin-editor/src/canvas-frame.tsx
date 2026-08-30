@@ -91,6 +91,7 @@ export function CanvasFrame({
     [store, registry],
   );
   const loaderPushRef = useLoaderPushRef();
+  const frameRequest = useEditorStore((s) => s.frameRequest);
   const device = useEditorStore((s) => s.device);
   const zoom = useCameraStore((s) => s.zoom);
   const panX = useCameraStore((s) => s.panX);
@@ -117,6 +118,7 @@ export function CanvasFrame({
     onHandlePointerDown,
     handleWheel,
     zoomToSelection,
+    centerSelection,
   } = usePanZoom({ iframeRef, containerRef, geometryRef });
   const { panReady, keyHandlerRef } = useCanvasKeys({
     panByClientDelta,
@@ -171,6 +173,14 @@ export function CanvasFrame({
     addBlockLabel,
     clipboard,
   ]);
+
+  // Bring the selection into view whenever the store asks (a palette go-to or
+  // insert). Panning, not framing: a jump shouldn't also change the zoom. The
+  // seed value never fires — only a bump does.
+  useEffect(() => {
+    if (frameRequest === 0) return;
+    centerSelection();
+  }, [frameRequest, centerSelection]);
 
   // Reloading is safe (see the prop for why a reload is the mechanism): the
   // iframe's WindowProxy survives the same-origin reload, so the bridge
