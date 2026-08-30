@@ -51,32 +51,41 @@ export default defineConfig({
           // generated files name the software, and the site may rename itself.
           projectName: "Plumix",
           // Starlight gives every heading an anchor link carrying a screen
-          // reader's "Section titled …". Converted back to markdown it lands
-          // beside each heading as a link to the heading itself, which is noise
-          // in every generated file.
+          // reader's "Section titled …", which lands beside every heading once
+          // converted back to markdown.
           customSelectors: { all: ["a.sl-anchor-link"] },
           // The custom-set route asks for minified output and offers no way to
-          // say otherwise, and minification collapses whitespace — which folds
-          // every heading into the paragraph before it, costing an agent the
-          // structure it navigates by. Switched off here, where it is
-          // configurable, so a set reads like the page it came from.
+          // decline, and collapsing whitespace folds every heading into the
+          // paragraph before it, costing an agent the structure it navigates
+          // by. Off here, where it is configurable, so a set reads like the
+          // page it came from.
           //
-          // This makes `llms-small.txt` a copy of `llms-full.txt`. It was
-          // within 3% of one already, and the plugin injects its route
-          // unconditionally, so there is nothing to switch off.
-          minify: {
-            whitespace: false,
-            note: false,
-            tip: false,
-            caution: false,
-            danger: false,
-            details: false,
-          },
+          // `caution` and `danger` already default to `false`. They are pinned
+          // rather than restated: the tree carries 33 cautions and 3 dangers,
+          // among them the pre-1.0 warning most pages embed, and an upstream
+          // flip of either default would drop those from every agent-facing
+          // file without a word.
+          minify: { whitespace: false, caution: false, danger: false },
+          // Sorted by id otherwise, which opens Getting Started on
+          // Configuration and reaches Introduction fourth — the reverse of
+          // what its own description promises. Setting this replaces the
+          // plugin's default rather than extending it, so `index*` stays.
+          promote: ["**/introduction", "**/overview", "index*"],
+          // `llms.txt` calls this file abridged, in a string the plugin
+          // hardcodes. That has to be earned: these are the exhaustive
+          // reference rosters, which is what an agent short of context can
+          // most afford to fetch separately. Applies to `llms-small.txt`
+          // alone.
+          exclude: [
+            "fields/field-types",
+            "blocks/core-blocks",
+            "themes/rule-kinds",
+            "plugins/seo",
+            "plugins/og",
+          ],
           // Without these, `llms.txt` is an index of nothing: it lists the two
           // whole-corpus dumps and no page, leaving an agent to read the entire
-          // documentation to answer a question about one area. Each set below
-          // gets a link in that index and a file of its own, which is the
-          // retrieval surface between "one page" and "all of it".
+          // documentation to answer a question about one area.
           //
           // One set per sidebar section, in the order the sections carry in
           // their `_meta.yml`. A section with no pages yet is absent rather
