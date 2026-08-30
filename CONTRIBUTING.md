@@ -237,6 +237,6 @@ it in a comment where it helps the next reader.
 Copying code is different. If the upstream file was open while you wrote it,
 add an entry to the "Third-party code and assets" section of [`LICENSE`](LICENSE)
 with the copyright line and license read from the upstream's own repository —
-never from memory, and never restated in the source file. A wrong license in a
-comment is worse than none, which is how three island files spent a year
-claiming Astro was Apache-2.0.
+never from memory. Name the upstream in the source file, but leave the license
+to `LICENSE` — a license string duplicated into a comment is one nobody
+corrects.
