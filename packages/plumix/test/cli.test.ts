@@ -62,8 +62,8 @@ describe("plumix CLI dispatch", () => {
       "/fake/drizzle-kit/bin.cjs",
     );
     const spawn = vi
-      .spyOn(migrateGenerateDeps, "spawnInherit")
-      .mockResolvedValue();
+      .spyOn(migrateGenerateDeps, "spawnCapturingStderr")
+      .mockResolvedValue("");
 
     await run(["--cwd", dir, "migrate", "generate"]);
 

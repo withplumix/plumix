@@ -6,6 +6,7 @@ type CliErrorCode =
   | "runtime_commands_not_found"
   | "runtime_commands_load_failed"
   | "migrate_generate_no_drizzle_kit"
+  | "migrate_generate_failed"
   | "migrate_apply_missing_db"
   | "migrate_apply_no_d1"
   | "migrate_apply_ambiguous_db"
@@ -119,6 +120,15 @@ export class CliError extends Error {
       "migrate_generate_no_drizzle_kit",
       "drizzle-kit could not be resolved",
       "drizzle-kit ships with plumix; rerun `pnpm install` to restore node_modules, or pin a specific version as a devDependency to override.",
+      undefined,
+    );
+  }
+
+  static migrateGenerateFailed(): CliError {
+    return new CliError(
+      "migrate_generate_failed",
+      "drizzle-kit generate failed — migrations were not updated",
+      "Its output is above. A prompt that needs a TTY means drizzle-kit is diffing against stale migrations and wants a column rename resolved: delete the `drizzle/` directory to regenerate from scratch, or rerun in an interactive terminal to answer it.",
       undefined,
     );
   }

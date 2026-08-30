@@ -132,7 +132,13 @@ function bakePlaygroundCommand(
 ): string {
   const steps = [
     `cd ${playground}`,
-    "rm -rf .wrangler/state",
+    // `drizzle/` is gitignored and regenerated each run; one left from an
+    // older schema makes drizzle-kit ask how to resolve a rename — a
+    // prompt it cannot issue on a pipe — and keep the stale migrations.
+    // Safe only because the generate below refills it: apps/demo globs
+    // `./drizzle/*.sql` for its per-session schema, so these two steps
+    // cannot be separated.
+    "rm -rf .wrangler/state drizzle",
     "pnpm exec plumix migrate generate",
   ];
   if (applyMigrations) {
