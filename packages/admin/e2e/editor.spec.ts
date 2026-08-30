@@ -20,13 +20,17 @@ import { emptyManifest } from "@plumix/core/manifest";
 
 import { expectNoAxeViolations } from "./support/axe.js";
 import {
+  dismissStarterModal,
   editorEntry,
+  installEditorMocks,
+  lastUpdate,
   publishedEntry,
   publishedEntryRpcBody,
   T0,
 } from "./support/editor.js";
 import {
   AUTHED_ADMIN,
+  MANIFEST_WITH_EDITOR_PATTERNS,
   MANIFEST_WITH_POST,
   mockManifest,
   mockRpc,
@@ -1364,5 +1368,96 @@ test.describe("editor create failure", () => {
     // The editor mounted: its host-side canvas frame is present (the inner
     // `plumix-editor-canvas` lives inside the iframe the mock can't serve).
     await expect(page.getByTestId("plumix-canvas-frame")).toBeVisible();
+  });
+});
+
+// The starter modal (#2103). Picking a starting pattern is editor behavior,
+// unit-tested in @plumix/admin-editor; what admin owns — and what these pin —
+// is the glue: the manifest's starter fields survive the wire and reach the
+// picker, and whichever branch the author takes leaves a working editor whose
+// autosave envelope matches what they chose.
+test.describe("editor starter modal", () => {
+  test("creating an entry of a type with starter patterns opens the modal", async ({
+    page,
+  }) => {
+    await mockManifest(page, MANIFEST_WITH_EDITOR_PATTERNS);
+    await installEditorMocks(page, {
+      handlers: {
+        "/entry/create": editorEntry(),
+        "/entry/createPreviewLink": PREVIEW_LINK,
+      },
+    });
+
+    await page.goto("entries/posts");
+    await page.getByTestId("content-list-new-button").click();
+    await page.waitForURL(/\/entries\/posts\/\d+\/edit/);
+
+    await expect(page.getByTestId("plumix-starter-modal")).toBeVisible();
+    // `target` and `entryTypes` survive the manifest projection: `e2e/hero`
+    // carries both, `e2e/promo` carries neither and must not be offered.
+    await expect(
+      page.getByTestId("plumix-starter-modal-card-e2e/hero"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("plumix-starter-modal-card-e2e/promo"),
+    ).toHaveCount(0);
+  });
+
+  test("Start from blank dismisses the modal and leaves the draft empty", async ({
+    page,
+  }) => {
+    await mockManifest(page, MANIFEST_WITH_EDITOR_PATTERNS);
+    const captures = await installEditorMocks(page, {
+      handlers: { "/entry/createPreviewLink": PREVIEW_LINK },
+    });
+
+    await page.goto("entries/posts/1/edit");
+    await dismissStarterModal(page);
+
+    // The escape lands on a working editor, not a blocked screen.
+    await expect(page.getByTestId("plumix-canvas-frame")).toBeVisible();
+    // Editing the title forces an autosave, so the envelope proves the blank
+    // start seeded nothing rather than merely proving nothing saved *yet*.
+    // Autosave ships only dirtied fields, so an absent `content` is the proof:
+    // choosing a starter instead puts the seeded blocks on this same envelope.
+    await page.getByTestId("plumix-editor-title-input").fill("Blank start");
+    await expect
+      .poll(() => lastUpdate(captures)?.title ?? null)
+      .toBe("Blank start");
+    expect(lastUpdate(captures)?.content).toBeUndefined();
+  });
+
+  test("choosing a starter autosaves the pattern's blocks into the draft", async ({
+    page,
+  }) => {
+    await mockManifest(page, MANIFEST_WITH_EDITOR_PATTERNS);
+    const captures = await installEditorMocks(page, {
+      handlers: { "/entry/createPreviewLink": PREVIEW_LINK },
+    });
+
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-starter-modal-card-e2e/hero").click();
+    await expect(page.getByTestId("plumix-starter-modal")).toBeHidden();
+
+    await expect
+      .poll(() =>
+        (lastUpdate(captures)?.content?.blocks ?? []).map(
+          (block) => block.name,
+        ),
+      )
+      .toEqual(["core/rich-text", "core/rich-text"]);
+  });
+
+  // Inherits the file-level MANIFEST_WITH_POST, which registers no patterns.
+  test("an entry type with no starter patterns skips the modal", async ({
+    page,
+  }) => {
+    await installEditorMocks(page, {
+      handlers: { "/entry/createPreviewLink": PREVIEW_LINK },
+    });
+
+    await page.goto("entries/posts/1/edit");
+    await expect(page.getByTestId("plumix-canvas-frame")).toBeVisible();
+    await expect(page.getByTestId("plumix-starter-modal")).toHaveCount(0);
   });
 });

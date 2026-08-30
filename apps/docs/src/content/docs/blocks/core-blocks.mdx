@@ -469,7 +469,7 @@ export const chefBio: BlockNode = {
 };
 ```
 
-One input, `slug`. No category, and hidden from the inserter. An author writes a node of this shape by inserting a pattern that registered itself with `insert: "reference"`. The default is the other mode, which splices a copy of the pattern's body into the entry.
+One input, `slug`. No category, and hidden from the inserter. An author writes a node of this shape by inserting a pattern that registered itself with `insert: "reference"`. The default is the other mode, which splices a copy of the pattern's body into the entry. The starter picker a new entry opens is always the copying mode, whatever `insert` says: a starter seeds an entry the author then owns, so a reference there would leave every entry made from it a live pointer at the pattern.
 
 The walker handles this name before it consults the registry. It looks the slug up in the pattern registry handed to `renderBlockTree` as its `patterns` option and renders that pattern's blocks in place, which is what would make editing the pattern change every entry referencing it.
 
