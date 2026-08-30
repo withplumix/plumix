@@ -1,13 +1,9 @@
 import type { AppContext } from "../context/app.js";
-import type { SQL } from "../db/index.js";
-import type { SearchTerm } from "../rpc/procedures/entry/search-terms.js";
 import type { AdminSearchInput, SearchGroup } from "./admin-search.js";
-import { and, asc, not, sql } from "../db/index.js";
+import { and, asc } from "../db/index.js";
 import { users } from "../db/schema/users.js";
-import {
-  escapeLikePattern,
-  tokenizeSearchQuery,
-} from "../rpc/procedures/entry/search-terms.js";
+import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
+import { userSearchCondition } from "./conditions.js";
 
 // Group priority base, after entries (10..) and terms (100..).
 const PRIORITY_BASE = 200;
@@ -32,7 +28,7 @@ export async function usersSearchHandler(
   const rows = await ctx.db
     .select({ id: users.id, name: users.name, email: users.email })
     .from(users)
-    .where(and(...tokens.map(nameEmailCondition)))
+    .where(and(...tokens.map(userSearchCondition)))
     .orderBy(asc(users.email))
     .limit(input.limit);
   if (rows.length === 0) return [];
@@ -49,13 +45,4 @@ export async function usersSearchHandler(
       })),
     },
   ];
-}
-
-function nameEmailCondition(term: SearchTerm): SQL {
-  const pattern = `%${escapeLikePattern(term.value)}%`;
-  const match = sql`(
-    COALESCE(${users.name}, '') LIKE ${pattern} ESCAPE '\\'
-    OR ${users.email} LIKE ${pattern} ESCAPE '\\'
-  )`;
-  return term.exclude ? not(match) : match;
 }

@@ -1,18 +1,14 @@
 import type { AppContext } from "../context/app.js";
-import type { SQL } from "../db/index.js";
-import type { SearchTerm } from "../rpc/procedures/entry/search-terms.js";
 import type {
   AdminSearchInput,
   SearchGroup,
   SearchResultItem,
 } from "./admin-search.js";
-import { and, desc, eq, not, or, sql } from "../db/index.js";
+import { and, desc, eq, not, or } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
-import {
-  escapeLikePattern,
-  tokenizeSearchQuery,
-} from "../rpc/procedures/entry/search-terms.js";
+import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
+import { entrySearchCondition } from "./conditions.js";
 
 // Max rows scanned across all types for one query. Title+excerpt LIKE has
 // no relevance ranking, so we take the most recently updated matches and
@@ -63,7 +59,7 @@ export async function entriesSearchHandler(
   const rows = await ctx.db
     .select({ id: entries.id, type: entries.type, title: entries.title })
     .from(entries)
-    .where(and(or(...typeClauses), ...tokens.map(titleExcerptCondition)))
+    .where(and(or(...typeClauses), ...tokens.map(entrySearchCondition)))
     .orderBy(desc(entries.updatedAt))
     .limit(SCAN_LIMIT);
 
@@ -88,13 +84,4 @@ export async function entriesSearchHandler(
     });
   }
   return groups;
-}
-
-function titleExcerptCondition(term: SearchTerm): SQL {
-  const pattern = `%${escapeLikePattern(term.value)}%`;
-  const match = sql`(
-    COALESCE(${entries.title}, '') LIKE ${pattern} ESCAPE '\\'
-    OR COALESCE(${entries.excerpt}, '') LIKE ${pattern} ESCAPE '\\'
-  )`;
-  return term.exclude ? not(match) : match;
 }

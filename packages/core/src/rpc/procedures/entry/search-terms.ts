@@ -13,8 +13,8 @@
  *   they're English-biased and can be added later via a search plugin.
  *
  * The handler side joins terms with AND and joins column matches for each
- * term with OR (`title OR content OR excerpt`). This module owns the
- * parsing and escaping only; it doesn't construct SQL.
+ * term with OR (`title OR excerpt`). This module owns the parsing and
+ * escaping only; it doesn't construct SQL.
  */
 
 // Unicode-aware: matches NBSP, em-space, etc. Shared between the outer

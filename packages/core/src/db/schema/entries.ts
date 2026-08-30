@@ -16,7 +16,8 @@ export const ENTRY_STATUSES = [
 export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 
 /**
- * ProseMirror / Tiptap document persisted in `entries.content`. Intentionally
+ * The block envelope persisted in `entries.content` — `plumix.v2` today, a
+ * pre-cutover Tiptap document on rows nobody has re-saved. Intentionally
  * loose — the editor owns the outgoing block vocabulary and the public
  * renderer's walker allowlists on the way out, so the column only needs
  * to agree that content is a JSON object.

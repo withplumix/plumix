@@ -1,18 +1,14 @@
 import type { AppContext } from "../context/app.js";
-import type { SQL } from "../db/index.js";
-import type { SearchTerm } from "../rpc/procedures/entry/search-terms.js";
 import type {
   AdminSearchInput,
   SearchGroup,
   SearchResultItem,
 } from "./admin-search.js";
-import { and, asc, inArray, not, sql } from "../db/index.js";
+import { and, asc, inArray } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
-import {
-  escapeLikePattern,
-  tokenizeSearchQuery,
-} from "../rpc/procedures/entry/search-terms.js";
+import { tokenizeSearchQuery } from "../rpc/procedures/entry/search-terms.js";
 import { taxonomyCapability } from "../rpc/procedures/term/helpers.js";
+import { termSearchCondition } from "./conditions.js";
 
 // Max rows scanned across all taxonomies for one query; bucketed per
 // group afterward. Terms carry no draft/trash status — visibility is
@@ -48,7 +44,7 @@ export async function termsSearchHandler(
           terms.taxonomy,
           readable.map(([name]) => name),
         ),
-        ...tokens.map(nameSlugCondition),
+        ...tokens.map(termSearchCondition),
       ),
     )
     .orderBy(asc(terms.name))
@@ -75,13 +71,4 @@ export async function termsSearchHandler(
     });
   }
   return groups;
-}
-
-function nameSlugCondition(term: SearchTerm): SQL {
-  const pattern = `%${escapeLikePattern(term.value)}%`;
-  const match = sql`(
-    ${terms.name} LIKE ${pattern} ESCAPE '\\'
-    OR ${terms.slug} LIKE ${pattern} ESCAPE '\\'
-  )`;
-  return term.exclude ? not(match) : match;
 }
