@@ -557,7 +557,7 @@ export interface FormMarkupProps {
   /** Client-side only — see `issueTimingToken`. */
   readonly token?: string | null;
   /**
-   * The signed entry a bound form was rendered on — see `signBoundEntry`.
+   * The signed row a bound form was rendered on — see `signBound`.
    * Unlike `token` it belongs in the server render: it is about the page,
    * not the visitor, so it costs the page nothing at the edge.
    */

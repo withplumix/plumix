@@ -308,8 +308,13 @@ msgstr "تاريخ الاستلام"
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx
-msgid "plugin.forms.inbox.detail.entry"
-msgstr "مُدخل الصفحة"
+msgid "plugin.forms.inbox.detail.bound"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.boundValue"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx

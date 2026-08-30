@@ -11,7 +11,7 @@ import { useBasePath } from "plumix/blocks/renderer";
 
 import type { FormRegistry } from "../registry.js";
 import { FORM_BLOCK_NAME } from "../contract.js";
-import { signBoundEntry } from "../server/binding.js";
+import { signBound } from "../server/binding.js";
 import { FormRender } from "./form-render.js";
 
 /**
@@ -27,7 +27,7 @@ export function createFormBlock(registry: FormRegistry): BlockSpec {
     typeof attrs.slug === "string" ? attrs.slug : "";
 
   /**
-   * Where a bound form's entry comes from. It is a loader rather than
+   * Where a bound form's row comes from. It is a loader rather than
    * part of the render because signing is asynchronous and the render is
    * not — core resolves every block's loaders before it renders the tree,
    * which is the one point in the render path that can await.
@@ -41,16 +41,20 @@ export function createFormBlock(registry: FormRegistry): BlockSpec {
   const loaders = {
     bound: async ({ ctx, attrs }: BlockLoaderArgs): Promise<string | null> => {
       const form = registry.get(slugOf(attrs));
-      if (form?.bind !== "entry") return null;
+      if (form?.bind === undefined) return null;
       // Safety: core hands every block loader the request's `AppContext`;
       // `@plumix/blocks` types it `unknown` only because it sits below
       // core in the import graph and cannot name the type.
       const app = ctx as AppContext;
       const resolved = app.resolvedEntity;
-      // Nothing to bind on an archive, a term page or the front page —
-      // the same form in a footer carries no token and stores no entry.
-      if (resolved?.kind !== "entry") return null;
-      return signBoundEntry(app, form.slug, resolved.id);
+      // An archive has no row id to sign; any other kind is simply not
+      // the one this form asked for.
+      if (resolved === null || resolved.kind === "archive") return null;
+      if (resolved.kind !== form.bind) return null;
+      return signBound(app, form.slug, {
+        type: resolved.kind,
+        id: resolved.id,
+      });
     },
   };
 

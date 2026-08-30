@@ -97,7 +97,7 @@ async function harness(role: UserRole = "editor") {
       status: "new",
       answers: { name: "Ada" },
       labels: { name: { label: "Your name" } },
-      entryId: null,
+      bound: null,
       ipHash: null,
       userAgent: null,
       ...overrides,

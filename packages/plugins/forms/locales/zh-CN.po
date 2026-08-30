@@ -308,8 +308,13 @@ msgstr "收到时间"
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx
-msgid "plugin.forms.inbox.detail.entry"
-msgstr "页面条目"
+msgid "plugin.forms.inbox.detail.bound"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.boundValue"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx

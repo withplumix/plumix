@@ -28,7 +28,7 @@ import {
 } from "../contract.js";
 import { CAPTCHA_FAILED, CONFIRMATION } from "../messages.js";
 import { validateAnswers } from "../validate.js";
-import { verifyBoundEntry } from "./binding.js";
+import { verifyBound } from "./binding.js";
 import { buildLabelSnapshot } from "./labels.js";
 import { rejectPage } from "./reject-page.js";
 import { insertSubmission, recordHandlerFailure } from "./repository.js";
@@ -139,7 +139,7 @@ async function runHandler(
     await form.onSubmit({
       answers: candidate.answers,
       labels: candidate.labels,
-      entryId: candidate.entryId,
+      bound: candidate.bound,
       submission: stored,
       ctx,
     });
@@ -199,14 +199,22 @@ export function createSubmitHandler(registry: FormRegistry) {
 
     // Read before anything else looks at the answers: a token this
     // install did not sign is not a submission with a bad field, it is a
-    // submission claiming an entry nobody bound it to, so it is refused
+    // submission claiming a row nobody bound it to, so it is refused
     // outright rather than answered like a mistyped address. Only a form
     // that binds even looks — otherwise removing a `bind` would start
     // refusing every visitor still holding a cached page that has one.
-    const bound = form.bind === "entry" ? body.get(BOUND_FIELD) : null;
-    const entryId =
-      bound === null ? null : await verifyBoundEntry(ctx, form.slug, bound);
-    if (bound !== null && entryId === null) return refusal("Forbidden", 403);
+    const bind = form.bind;
+    const token = bind === undefined ? null : body.get(BOUND_FIELD);
+    const signed =
+      token === null ? null : await verifyBound(ctx, form.slug, token);
+    if (token !== null && signed === null) return refusal("Forbidden", 403);
+    // Signed by this install, but naming a kind the form no longer binds
+    // — its `bind` changed while edge-cached pages went on carrying the
+    // old tokens. Stored as nothing rather than refused, for the reason
+    // above: the edit was the site's, and storing it would hand a handler
+    // written for terms an entry id, which declaring a kind is meant to
+    // prevent.
+    const bound = signed?.type === bind ? signed : null;
 
     const values = readSubmittedValues(form.fields, body);
     const visible = visibleFields(form.fields, values);
@@ -224,10 +232,10 @@ export function createSubmitHandler(registry: FormRegistry) {
             errors,
             returnTo,
             // Carried through untouched, so a visitor who is handed the
-            // form back does not lose the entry it was bound to. It is
-            // the same signed token that just verified — re-emitting one
+            // form back does not lose what it was bound to. It is the
+            // same signed token that just verified — re-emitting one
             // grants nothing that posting it again would not.
-            bound,
+            bound: token,
           });
 
     // Validation comes before the spam floor, and that is what keeps a
@@ -243,7 +251,7 @@ export function createSubmitHandler(registry: FormRegistry) {
     if (errors.length > 0) return reject(errors);
 
     const answers = pickStoredAnswers(form.fields, values);
-    const ownErrors = await form.validate?.({ answers, entryId, ctx });
+    const ownErrors = await form.validate?.({ answers, bound, ctx });
     if (ownErrors?.length) return reject(ownErrors);
 
     // Below the field rules so a visitor meets every mistake they can fix
@@ -278,7 +286,7 @@ export function createSubmitHandler(registry: FormRegistry) {
       answers,
       labels: buildLabelSnapshot(visible),
       status,
-      entryId,
+      bound,
       ipHash,
       userAgent,
     };

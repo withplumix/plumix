@@ -1,4 +1,4 @@
-import type { JsonObject } from "plumix";
+import type { JsonObject, ResolvedEntity } from "plumix";
 
 /**
  * A submission's place in the inbox. `new` on arrival; `spam` is a status
@@ -7,6 +7,27 @@ import type { JsonObject } from "plumix";
 export const SUBMISSION_STATUSES = ["new", "read", "archived", "spam"] as const;
 
 export type SubmissionStatus = (typeof SUBMISSION_STATUSES)[number];
+
+/**
+ * The kinds of thing a form can be bound to: the arms of core's
+ * `ResolvedEntity` that name a row. An archive names an entry *type*
+ * rather than a record, so there is nothing to point at and it is not
+ * one of these.
+ */
+export const BOUND_TYPES = [
+  "entry",
+  "term",
+  "author",
+] as const satisfies readonly ResolvedEntity["kind"][];
+
+export type BoundType = (typeof BOUND_TYPES)[number];
+
+/** What a submission was bound to. Two columns in the table and one
+ *  value everywhere above it. */
+export interface FormBound {
+  readonly type: BoundType;
+  readonly id: number;
+}
 
 /**
  * What one field was called when the answer was given, and what its
@@ -47,8 +68,8 @@ export interface FormSubmissionCandidate {
   readonly answers: FormAnswers;
   readonly labels: FormLabelSnapshot;
   readonly status: SubmissionStatus;
-  /** The entry the form bound, verified off its signed token. */
-  readonly entryId: number | null;
+  /** What the form bound, verified off its signed token. */
+  readonly bound: FormBound | null;
   readonly ipHash: string | null;
   readonly userAgent: string | null;
 }
@@ -75,7 +96,8 @@ export interface SubmissionDTO {
   readonly answers: FormAnswers;
   /** The snapshot the row points at, never the live form's. */
   readonly labels: FormLabelSnapshot;
-  readonly entryId: number | null;
+  /** What the form was bound to, or `null` for one that bound nothing. */
+  readonly bound: FormBound | null;
   readonly ipHash: string | null;
   readonly userAgent: string | null;
   readonly handlerError: string | null;

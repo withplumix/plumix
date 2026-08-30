@@ -565,9 +565,19 @@ function SubmissionDetail({
           })}
         </dd>
         <dt>
-          <Trans id="plugin.forms.inbox.detail.entry" message="Page entry" />
+          <Trans id="plugin.forms.inbox.detail.bound" message="Bound to" />
         </dt>
-        <dd data-testid="forms-detail-entry">{row.entryId ?? NONE}</dd>
+        <dd data-testid="forms-detail-bound">
+          {row.bound ? (
+            <Trans
+              id="plugin.forms.inbox.detail.boundValue"
+              message="{type, select, term {Term} author {Author} other {Entry}} #{id}"
+              values={{ type: row.bound.type, id: row.bound.id }}
+            />
+          ) : (
+            NONE
+          )}
+        </dd>
         <dt>
           <Trans id="plugin.forms.inbox.detail.ipHash" message="IP hash" />
         </dt>

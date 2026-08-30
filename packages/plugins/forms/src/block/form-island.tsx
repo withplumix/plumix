@@ -38,7 +38,7 @@ interface FormIslandProps {
   readonly tokenPath: string;
   readonly idBase: string;
   /**
-   * The signed entry the server resolved for a bound form. It crosses the
+   * The signed row the server resolved for a bound form. It crosses the
    * wire with the rest of the props and is posted back untouched — the
    * island never reads what is inside it, and could not forge one if it
    * did.

@@ -25,6 +25,11 @@ const contact = defineForm("contact", {
   fields: [text("name"), email("email")],
 });
 
+const termBound = defineForm("term-bound", {
+  bind: "term",
+  fields: [email("email")],
+});
+
 async function renderPage(
   harness: FormsHarness,
   path = "page-with-form",
@@ -42,14 +47,15 @@ function boundToken(html: string): string | null {
   return match?.[1] ?? null;
 }
 
-describe("a form that binds the entry it is placed on", () => {
+describe("a form that binds the page it is placed on", () => {
   test("carries a token for that entry without the page wiring one", async () => {
     const harness = await createFormsHarness([forms({ forms: [subscribe] })]);
     const entry = await seedPageWithForm(harness, "subscribe");
 
-    const token = boundToken(await renderPage(harness));
+    const token = await mintParts(harness);
 
-    expect(token?.split(".")[0]).toBe(String(entry.id));
+    expect(token.type).toBe("entry");
+    expect(token.id).toBe(String(entry.id));
   });
 
   test("carries the entry nowhere in the markup unsigned", async () => {
@@ -79,6 +85,15 @@ describe("a form that binds the entry it is placed on", () => {
     const harness = await createFormsHarness([forms({ forms: [contact] })]);
     await seedPageWithForm(harness, "contact");
 
+    expect(boundToken(await renderPage(harness))).toBeNull();
+  });
+
+  test("carries nothing when the page is not the kind it asked for", async () => {
+    const harness = await createFormsHarness([forms({ forms: [termBound] })]);
+    await seedPageWithForm(harness, "term-bound");
+
+    // The same answer an archive gets, rather than the entry's id under
+    // a term's name.
     expect(boundToken(await renderPage(harness))).toBeNull();
   });
 });
@@ -113,18 +128,40 @@ async function mint(
   return token;
 }
 
+interface TokenParts {
+  readonly type: string;
+  readonly id: string;
+  readonly signature: string;
+}
+
+/** A minted token, split into the three parts it is spelled from. */
+async function mintParts(
+  harness: FormsHarness,
+  path = "page-with-form",
+): Promise<TokenParts> {
+  const [type = "", id = "", signature = ""] = (
+    await mint(harness, path)
+  ).split(".");
+  return { type, id, signature };
+}
+
+const spell = ({ type, id, signature }: TokenParts): string =>
+  `${type}.${id}.${signature}`;
+
 const rows = (harness: FormsHarness) =>
   harness.db.select().from(formSubmissions);
 
 describe("a submission carrying a bound entry", () => {
-  test("stores the entry in its own column", async () => {
+  test("stores what it was bound to in its own columns", async () => {
     const harness = await createFormsHarness([forms({ forms: [subscribe] })]);
     const entry = await seedPageWithForm(harness, "subscribe");
 
     const response = await post(harness, await mint(harness));
 
     response.assertStatus(303);
-    expect((await rows(harness))[0]?.entryId).toBe(entry.id);
+    const [row] = await rows(harness);
+    expect(row?.boundType).toBe("entry");
+    expect(row?.boundId).toBe(entry.id);
   });
 
   test("stores no entry for a form that binds nothing", async () => {
@@ -134,10 +171,12 @@ describe("a submission carrying a bound entry", () => {
     const response = await post(harness, null, "contact");
 
     response.assertStatus(303);
-    expect((await rows(harness))[0]?.entryId).toBeNull();
+    const [row] = await rows(harness);
+    expect(row?.boundType).toBeNull();
+    expect(row?.boundId).toBeNull();
   });
 
-  test("answers every submission for one entry as a query, not a scan", async () => {
+  test("answers every submission for one bound row as a query, not a scan", async () => {
     const harness = await createFormsHarness([forms({ forms: [subscribe] })]);
     const school = await seedPageWithForm(harness, "subscribe");
     await seedPageWithForm(harness, "subscribe", "other-school");
@@ -148,7 +187,12 @@ describe("a submission carrying a bound entry", () => {
     const forSchool = await harness.db
       .select()
       .from(formSubmissions)
-      .where(eq(formSubmissions.entryId, school.id));
+      .where(
+        and(
+          eq(formSubmissions.boundType, "entry"),
+          eq(formSubmissions.boundId, school.id),
+        ),
+      );
 
     expect(forSchool).toHaveLength(2);
   });
@@ -161,8 +205,8 @@ describe("a submission carrying a bound entry", () => {
           defineForm("bound", {
             bind: "entry",
             fields: [email("email")],
-            validate: ({ entryId }) => {
-              seen.push(entryId);
+            validate: ({ bound }) => {
+              seen.push(bound?.id ?? null);
             },
           }),
         ],
@@ -192,7 +236,10 @@ describe("a submission carrying a bound entry", () => {
 
     await post(harness, await mint(harness), "bound");
 
-    expect(onSubmit.mock.calls[0]?.[0].entryId).toBe(entry.id);
+    expect(onSubmit.mock.calls[0]?.[0].bound).toEqual({
+      type: "entry",
+      id: entry.id,
+    });
   });
 });
 
@@ -200,9 +247,9 @@ describe("a bound token this install did not sign", () => {
   test("is refused when its entry has been edited", async () => {
     const harness = await createFormsHarness([forms({ forms: [subscribe] })]);
     await seedPageWithForm(harness, "subscribe");
-    const [, signature] = (await mint(harness)).split(".");
+    const token = await mintParts(harness);
 
-    const response = await post(harness, `999.${String(signature)}`);
+    const response = await post(harness, spell({ ...token, id: "999" }));
 
     response.assertStatus(403);
     expect(await rows(harness)).toHaveLength(0);
@@ -223,12 +270,16 @@ describe("a bound token this install did not sign", () => {
   test("is refused when a byte of its signature is flipped", async () => {
     const harness = await createFormsHarness([forms({ forms: [subscribe] })]);
     await seedPageWithForm(harness, "subscribe");
-    const [id, signature = ""] = (await mint(harness)).split(".");
+    const token = await mintParts(harness);
+    const { signature } = token;
     const flipped = signature.startsWith("0")
       ? `1${signature.slice(1)}`
       : `0${signature.slice(1)}`;
 
-    const response = await post(harness, `${String(id)}.${flipped}`);
+    const response = await post(
+      harness,
+      spell({ ...token, signature: flipped }),
+    );
 
     response.assertStatus(403);
     expect(await rows(harness)).toHaveLength(0);
@@ -237,13 +288,10 @@ describe("a bound token this install did not sign", () => {
   test("is refused when its entry is spelled another way", async () => {
     const harness = await createFormsHarness([forms({ forms: [subscribe] })]);
     await seedPageWithForm(harness, "subscribe");
-    const [id, signature] = (await mint(harness)).split(".");
+    const token = await mintParts(harness);
 
-    const padded = await post(harness, `0${String(id)}.${String(signature)}`);
-    const trailing = await post(
-      harness,
-      `${String(id)}.${String(signature)}.junk`,
-    );
+    const padded = await post(harness, spell({ ...token, id: `0${token.id}` }));
+    const trailing = await post(harness, `${spell(token)}.junk`);
 
     padded.assertStatus(403);
     trailing.assertStatus(403);
@@ -264,14 +312,86 @@ describe("a bound token this install did not sign", () => {
     expect(await rows(harness)).toHaveLength(0);
   });
 
-  test("is refused when it is a bare entry id with no signature", async () => {
+  test("is refused when its kind has been rewritten", async () => {
     const harness = await createFormsHarness([forms({ forms: [subscribe] })]);
-    const entry = await seedPageWithForm(harness, "subscribe");
+    await seedPageWithForm(harness, "subscribe");
+    const token = await mintParts(harness);
 
-    const response = await post(harness, String(entry.id));
+    // The signature covers the kind as well as the id, which is what
+    // stops entry 7's token from being posted as term 7.
+    const response = await post(harness, spell({ ...token, type: "term" }));
 
     response.assertStatus(403);
     expect(await rows(harness)).toHaveLength(0);
+  });
+
+  test("is refused when its kind is not one a form can bind", async () => {
+    const harness = await createFormsHarness([forms({ forms: [subscribe] })]);
+    await seedPageWithForm(harness, "subscribe");
+    const token = await mintParts(harness);
+
+    const response = await post(harness, spell({ ...token, type: "archive" }));
+
+    response.assertStatus(403);
+    expect(await rows(harness)).toHaveLength(0);
+  });
+
+  test("is refused when it is a bare id with no signature", async () => {
+    const harness = await createFormsHarness([forms({ forms: [subscribe] })]);
+    const entry = await seedPageWithForm(harness, "subscribe");
+
+    const response = await post(harness, `entry.${String(entry.id)}`);
+
+    response.assertStatus(403);
+    expect(await rows(harness)).toHaveLength(0);
+  });
+});
+
+describe("a form whose bind changed under a cached page", () => {
+  /**
+   * What makes two harnesses one install: the bind secret. Copied from
+   * the one that minted the token to the one that receives it, so the
+   * token verifies and the only difference left is the kind the form now
+   * declares — which is the state a site is in after editing `bind`
+   * while the edge still serves pages rendered before the edit.
+   */
+  async function shareSecret(
+    from: FormsHarness,
+    to: FormsHarness,
+  ): Promise<void> {
+    const where = and(
+      eq(settings.group, "forms_internal"),
+      eq(settings.key, "bind_secret"),
+    );
+    const [row] = await from.db.select().from(settings).where(where);
+    if (!row) throw new Error("the minting harness kept no bind secret");
+    await to.db.insert(settings).values(row);
+  }
+
+  test("stores nothing for a token naming the kind it used to bind", async () => {
+    const wasEntry = await createFormsHarness([forms({ forms: [subscribe] })]);
+    await seedPageWithForm(wasEntry, "subscribe");
+    const cached = await mint(wasEntry);
+
+    const nowTerm = await createFormsHarness([
+      forms({
+        forms: [
+          defineForm("subscribe", { bind: "term", fields: [email("email")] }),
+        ],
+      }),
+    ]);
+    await seedPageWithForm(nowTerm, "subscribe");
+    await shareSecret(wasEntry, nowTerm);
+    const response = await post(nowTerm, cached);
+
+    // Accepted, not refused: the visitor is holding a page this site
+    // served them, and the edit was the site's. Stored as nothing,
+    // because storing it would hand a handler written for terms an
+    // entry id.
+    response.assertStatus(303);
+    const [row] = await rows(nowTerm);
+    expect(row?.boundType).toBeNull();
+    expect(row?.boundId).toBeNull();
   });
 });
 

@@ -54,8 +54,10 @@ export { pageBreak } from "./steps.js";
 // schema, and a consumer resolving this entry's `.d.ts` has neither.
 export { SUBMISSION_MODERATE_CAPABILITY } from "./contract.js";
 export type {
+  BoundType,
   FieldLabelSnapshot,
   FormAnswers,
+  FormBound,
   FormSummary,
   SubmissionCounts,
   SubmissionDTO,
@@ -67,7 +69,7 @@ export type {
   FormSubmitResponse,
   SubmissionStatus,
 } from "./types.js";
-export { SUBMISSION_STATUSES } from "./types.js";
+export { BOUND_TYPES, SUBMISSION_STATUSES } from "./types.js";
 
 // A plain descriptor literal — plugin source runs server-side without the
 // Babel macro pipeline, so the manifest payload is authored by hand.
