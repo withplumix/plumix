@@ -20,6 +20,7 @@ import {
   useEditorStore,
   useEditorStoreApi,
 } from "./provider.js";
+import { matchesShortcut } from "./shortcuts.js";
 
 /** The in-canvas "Add a block" popover target: a slot carries both ids; the
  *  root document carries neither (every block offered). */
@@ -233,7 +234,7 @@ export function useCanvasDrag({
     // and the iframe permanently non-interactive (pointerEvents: none).
     const onCancel = (): void => endDrag();
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") endDrag();
+      if (matchesShortcut("canvas.cancelDrag", e)) endDrag();
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);

@@ -29,6 +29,7 @@ import type { RuntimeConnection } from "./connect-runtime.js";
 import { clipboardOpFromEvent } from "./clipboard-ops.js";
 import { connectRuntime } from "./connect-runtime.js";
 import { mergeLoaderData } from "./merge-loader-data.js";
+import { forwardedShortcut, isTypingTarget } from "./shortcuts.js";
 
 interface EditorCanvasProps {
   /** Block registry for the site (core + plugin blocks). */
@@ -168,30 +169,25 @@ export function EditorCanvas({
     return () => window.removeEventListener("wheel", onWheel);
   }, []);
 
-  // Forward the canvas-view keys (space to pan, shift+digit to zoom) so those
-  // shortcuts work while focus is inside the iframe. Only these keys — typing
-  // in the canvas is otherwise untouched. Space is prevented so it doesn't
-  // scroll the iframe document.
+  // Forward the host-claimed keys (space to pan, shift+digit to zoom, ? for the
+  // cheatsheet) so those shortcuts work while focus is inside the iframe. Only
+  // these — typing in the canvas is otherwise untouched.
   useEffect(() => {
-    const isTyping = (t: EventTarget | null): boolean =>
-      t instanceof HTMLElement &&
-      (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
-    const isViewKey = (e: KeyboardEvent): boolean =>
-      e.code === "Space" ||
-      (e.shiftKey &&
-        (e.code === "Digit0" ||
-          e.code === "Digit1" ||
-          e.code === "Digit2" ||
-          e.code === "KeyX"));
     const onKeyDown = (e: KeyboardEvent): void => {
       // Skip auto-repeat (a held key must not re-fire the toggle) and typing in
       // a field, so a view shortcut never fires while the author edits content.
-      if (e.repeat || isTyping(e.target) || !isViewKey(e)) return;
-      if (e.code === "Space") e.preventDefault();
-      connectionRef.current?.reportKey(true, e.code, e.shiftKey);
+      if (e.repeat || isTypingTarget(e.target)) return;
+      const claimed = forwardedShortcut(e);
+      if (!claimed) return;
+      // Space would scroll the iframe document; Cmd+/ is quick-find in Firefox.
+      if (claimed.id === "canvas.pan" || claimed.id === "help.open") {
+        e.preventDefault();
+      }
+      connectionRef.current?.reportKey(true, claimed.code, e.shiftKey);
     };
     const onKeyUp = (e: KeyboardEvent): void => {
-      if (e.code !== "Space") return;
+      // Only the held binding has a release worth forwarding.
+      if (forwardedShortcut(e)?.id !== "canvas.pan") return;
       connectionRef.current?.reportKey(false, e.code, e.shiftKey);
     };
     window.addEventListener("keydown", onKeyDown);

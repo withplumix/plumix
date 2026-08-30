@@ -102,6 +102,9 @@ export interface EditorState {
   /** Whether the starter-pattern picker is open. Seeded true for a blank entry
    *  that has eligible starters; re-openable from the toolbar while empty. */
   readonly starterOpen: boolean;
+  /** Whether the keyboard-shortcut cheatsheet is open (`?`, Cmd+/, or the
+   *  toolbar's help button). */
+  readonly shortcutsOpen: boolean;
 }
 
 export interface EditorActions {
@@ -199,6 +202,7 @@ export interface EditorActions {
   setRightPanel: (panel: RightPanel) => void;
   setJsonOpen: (open: boolean) => void;
   setStarterOpen: (open: boolean) => void;
+  setShortcutsOpen: (open: boolean) => void;
   /** Set (or clear, with an empty string) a block's Layers-tree instance name. */
   setBlockLabel: (id: string, label: string) => void;
   startBlockDrag: (entry: InsertableBlockEntry) => void;
@@ -394,6 +398,7 @@ export function createEditorStore(
     rightPanel: "block",
     jsonOpen: false,
     starterOpen: initial?.starterOpen ?? false,
+    shortcutsOpen: false,
 
     // Raw seed/programmatic setter — intentionally does not record history
     // (user edits go through insert/move/updateBlockAttrs).
@@ -646,6 +651,7 @@ export function createEditorStore(
     setRightPanel: (rightPanel) => set({ rightPanel }),
     setJsonOpen: (jsonOpen) => set({ jsonOpen }),
     setStarterOpen: (starterOpen) => set({ starterOpen }),
+    setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
     startBlockDrag: (dragSpec) => set({ dragSpec }),
     endBlockDrag: () => set({ dragSpec: null }),
     startMove: (movingId) => set({ movingId }),

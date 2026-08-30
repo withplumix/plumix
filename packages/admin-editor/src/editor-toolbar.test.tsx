@@ -53,6 +53,13 @@ function renderToolbar(options?: {
 }
 
 describe("EditorToolbar", () => {
+  test("the help button opens the shortcut cheatsheet", () => {
+    const { getByTestId } = renderToolbar();
+    expect(storeApi?.getState().shortcutsOpen).toBe(false);
+    fireEvent.click(getByTestId("plumix-shortcuts-trigger"));
+    expect(storeApi?.getState().shortcutsOpen).toBe(true);
+  });
+
   test("device switch + zoom controls drive the store", () => {
     const { getByTestId } = renderToolbar();
 

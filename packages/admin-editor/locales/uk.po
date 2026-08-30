@@ -94,6 +94,11 @@ msgid "editor.canvas.addBlock"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.selection.additive"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/html-attributes.tsx
 msgid "editor.htmlAttrs.add"
 msgstr ""
@@ -189,6 +194,11 @@ msgid "block.core.table-body-row.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.mark.bold"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.bold"
 msgstr ""
@@ -206,6 +216,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.button.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.cancelDrag"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.canvas"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -234,8 +254,18 @@ msgid "block.core.table.input.align.option.center"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.gesture.click"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.video.keyword.clip"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.clipboard"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -294,6 +324,11 @@ msgid "editor.layers.copy"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.clipboard.copy"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/html-attributes.tsx
 msgid "editor.htmlAttrs.add.create"
 msgstr ""
@@ -319,6 +354,11 @@ msgid "editor.styles.customCss"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.clipboard.cut"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.htmlAttrs.tagName.default"
 msgstr ""
@@ -331,6 +371,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
 msgid "editor.selection.delete"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.selection.delete"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -356,6 +401,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.toolbar.discarding"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.gesture.drag"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -399,8 +449,18 @@ msgid "block.core.html.keyword.embed-code"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.fillImage"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.fit"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -409,8 +469,18 @@ msgid "editor.toolbar.fitWidth"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.formatting"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/rich-text-field.tsx
 msgid "editor.richtext.hint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.general"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -444,6 +514,11 @@ msgid "editor.styles.visibility.tablet"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.history"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.button.input.href.label"
 msgstr ""
@@ -474,8 +549,28 @@ msgid "block.core.embed.keyword.iframe"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.mark.code"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.mark.italic"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.italic"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.shortcuts"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -629,6 +724,11 @@ msgid "block.core.button.input.openInNewTab.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.or"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.padding"
 msgstr ""
@@ -644,6 +744,11 @@ msgid "editor.tab.page"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.pan"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.rich-text.keyword.paragraph"
 msgstr ""
@@ -651,6 +756,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/layers-tab.tsx
 msgid "editor.layers.paste"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.clipboard.paste"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -709,6 +819,11 @@ msgid "block.core.html.description"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.history.redo"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.toolbar.redo"
 msgstr ""
@@ -756,6 +871,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.table.input.rows.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.gesture.scroll"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -809,6 +929,11 @@ msgid "editor.combobox.placeholder"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.selection"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.separator.title"
 msgstr ""
@@ -821,6 +946,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.video.input.controls.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.help.open"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.panels.toggle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -861,6 +996,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/starter-modal.tsx
 msgid "starterModal.startBlank"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.mark.strike"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -954,8 +1094,18 @@ msgid "editor.styles.typography"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.mark.underline"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.underline"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.history.undo"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1034,6 +1184,11 @@ msgid "block.core.column.input.width.label"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.xray"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.xray"
 msgstr ""
@@ -1051,4 +1206,19 @@ msgstr ""
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.zoomOut"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.zoom"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.actualSize"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.frameSelection"
 msgstr ""

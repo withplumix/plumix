@@ -5,6 +5,7 @@ import { Trans, useLingui } from "@lingui/react";
 
 import { Button } from "@plumix/admin-ui/button";
 import {
+  Keyboard,
   LayoutTemplate,
   Monitor,
   Smartphone,
@@ -29,6 +30,7 @@ import {
   useEditorStore,
   useEditorStoreApi,
 } from "./provider.js";
+import { isTypingTarget, matchesShortcut } from "./shortcuts.js";
 
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
@@ -114,9 +116,42 @@ export function EditorToolbar({
         {hasStarters ? <PickStarterButton /> : null}
       </div>
       <DeviceZoomControls />
-      {/* Empty flex-1 mirror so the device/zoom cluster stays centered. */}
-      <div className="flex-1" aria-hidden />
+      {/* Mirrors the left cluster's flex-1 so the device/zoom controls stay
+          centered. */}
+      <div className="flex flex-1 justify-end">
+        <ShortcutsButton />
+      </div>
     </header>
+  );
+}
+
+/** Opens the keyboard cheatsheet. Without a visible affordance the bindings are
+ *  only findable by already knowing the one that lists them. */
+function ShortcutsButton(): ReactElement {
+  const { i18n } = useLingui();
+  const setShortcutsOpen = useEditorStore((s) => s.setShortcutsOpen);
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          data-testid="plumix-shortcuts-trigger"
+          onClick={() => setShortcutsOpen(true)}
+          aria-label={i18n._({
+            id: "editor.toolbar.shortcuts",
+            message: "Keyboard shortcuts",
+          })}
+        >
+          <Keyboard />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <Trans id="editor.toolbar.shortcuts" message="Keyboard shortcuts" />{" "}
+        <Kbd className="ms-1">?</Kbd>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -270,21 +305,12 @@ export function EditorShortcuts(): null {
   const store = useEditorStoreApi();
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      if (!(event.metaKey || event.ctrlKey)) return;
-      if (event.key.toLowerCase() !== "z") return;
       // A held chord auto-repeats keydown; one press should be one step.
-      if (event.repeat) return;
-      const target = event.target as HTMLElement | null;
-      if (
-        target?.isContentEditable ||
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.tagName === "SELECT"
-      ) {
-        return;
-      }
+      if (event.repeat || isTypingTarget(event.target)) return;
+      const redo = matchesShortcut("history.redo", event);
+      if (!redo && !matchesShortcut("history.undo", event)) return;
       event.preventDefault();
-      if (event.shiftKey) store.getState().redo();
+      if (redo) store.getState().redo();
       else store.getState().undo();
     };
     window.addEventListener("keydown", onKey);
