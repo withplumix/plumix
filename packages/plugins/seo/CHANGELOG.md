@@ -1,5 +1,15 @@
 # @plumix/plugin-seo
 
+## 0.1.1
+
+### Patch Changes
+
+- [#2090](https://github.com/withplumix/plumix/pull/2090) [`1b2a831`](https://github.com/withplumix/plumix/commit/1b2a8310b3c7820ca22c0d34f4c4a933391d0bd0) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a site that had turned off indexing under the old `site.public` key reading back as indexable
+  in the SEO settings form — and being saved that way, turning search indexing back on. The migration
+  that seeds a legacy answer into the new `seo` group skipped whenever the key was already present,
+  and `settings.get` now fills a registered default into the bag before the filter sees it, so
+  `indexable` always looked answered. Presence is read off what storage holds instead.
+
 ## 0.1.0
 
 ### Minor Changes

@@ -1,5 +1,16 @@
 # @plumix/admin-ui
 
+## 0.19.0
+
+### Patch Changes
+
+- [#2112](https://github.com/withplumix/plumix/pull/2112) [`286d0fd`](https://github.com/withplumix/plumix/commit/286d0fd1466a39504452df07008bffc16b2333ef) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes Cmd/Ctrl+B collapsing the sidebar while the author is typing. The shortcut now stands aside
+  whenever the caret is in a text field or rich-text block, so it no longer fires out from under a
+  keystroke that belongs to whatever has focus.
+
+  This is a deliberate divergence from the vendored shadcn component, which binds the shortcut on
+  `window` with no such guard. It is marked `PLUMIX DIVERGENCE` at the edit.
+
 ## 0.18.0
 
 ## 0.17.0

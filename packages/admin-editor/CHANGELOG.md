@@ -1,5 +1,69 @@
 # @plumix/admin-editor
 
+## 0.19.0
+
+### Minor Changes
+
+- [#2109](https://github.com/withplumix/plumix/pull/2109) [`dc901b1`](https://github.com/withplumix/plumix/commit/dc901b1ea30330cbdcca63f8a00e5e40f0f54e1b) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a keyboard-shortcut cheatsheet to the editor, opened with `?`, Cmd/Ctrl+/, or the new keyboard
+  button in the canvas toolbar. It lists every binding the editor claims — selection, clipboard,
+  canvas, inline formatting, history — with the modifier glyphs the viewer's platform actually uses
+  (⌘/⇧ on Apple, Ctrl/Shift elsewhere). `?` opens it with focus on the shell or inside the canvas
+  iframe, and stands aside while the author is typing into a field or a rich-text block.
+
+  The list is not a hand-written copy of the handlers. Bindings are declared once in a shortcut
+  roster, and the key handlers — clipboard, undo/redo, the canvas view keys, the Layers delete, the
+  drag cancel — now match against that roster instead of spelling their own key tests. Inline
+  formatting comes from the marks' own `keyboardShortcut` metadata. A binding without a cheatsheet
+  description is a type error, so the list can't quietly fall behind what the editor does. Three
+  entries are described but not owned: the two pointer gestures, which no key matcher can fire, and
+  Cmd/Ctrl+B for the panels, which belongs to the sidebar.
+
+  Declaring the bindings in one place surfaced two chords that fired more than the cheatsheet would
+  have printed, and both are now pinned to what they say. Cmd+Shift+X toggled x-ray as well as
+  striking text through, and Cmd+Shift+C/X/V ran the block clipboard as if Shift weren't held — a
+  modifier the editor doesn't name in a binding no longer silently falls through to it.
+
+- [#2114](https://github.com/withplumix/plumix/pull/2114) [`1bd1d33`](https://github.com/withplumix/plumix/commit/1bd1d33be5585e6c935b31a390b5917528f7e455) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a command palette scoped to editor actions, opened with Cmd/Ctrl+K inside the editor. It
+  offers the actions the toolbars already carry — group, ungroup, x-ray, the three device switches —
+  plus two the editor had no keyboard route to at all: inserting any block from the catalog, and
+  jumping to a block by name. Escape closes it, the chord toggles it, and both work with focus on the
+  shell or inside the canvas iframe.
+
+  This is the editor's own palette, not the admin shell's. The shell's registered commands are handed
+  a router and nothing else, so one could never reach the selection, the store, or the canvas camera;
+  widening that context would have coupled the shell's registry to editor internals and made every
+  existing command's `run` partial. The two never compete for the chord: the editor routes are a
+  sibling layout of the admin shell's, so the shell palette is not mounted while the editor is.
+
+  Jumping to a block selects it and brings the canvas to it, panning at whatever zoom the author was
+  working at rather than framing the block — a jump to a button or a spacer should not turn into a
+  close-up. Inserting from the palette appends at the top level and reveals the new block the same
+  way, since an insert with no drop position can otherwise land off-screen. Group and ungroup are
+  left out of the list when the selection cannot take them, rather than offered and then doing
+  nothing.
+
+  Unlike the cheatsheet's `?`, Cmd+K carries no typing guard: it types nothing, so it still opens the
+  palette from the title field or a rich-text body. `@plumix/admin` gains the matching wiring — the
+  revisions sheet is now controlled, so the palette can open it without its header trigger being
+  clicked, and the command is offered only for an entry type that keeps revisions.
+
+### Patch Changes
+
+- [#2108](https://github.com/withplumix/plumix/pull/2108) [`1b8185e`](https://github.com/withplumix/plumix/commit/1b8185e6e289eb2f52e8abd01ac85594b765d719) Thanks [@nasyrov](https://github.com/nasyrov)! - Seeds a new entry from a starter pattern as an independent copy, whatever the pattern's `insert`
+  mode says.
+
+  The starter picker shared the inserter's `expandPattern`, which honours `insert: "reference"` by
+  splicing a single `core/pattern-ref`. A starter-eligible pattern that also declared reference-mode
+  therefore left every entry created from it a live pointer at the pattern: editing the pattern
+  rewrote published entries, and the author had nothing to edit on the canvas. The starter path now
+  expands the body directly with fresh ids; the inserter keeps honouring `reference`, which is where
+  that mode is meant to apply.
+
+- Updated dependencies [[`286d0fd`](https://github.com/withplumix/plumix/commit/286d0fd1466a39504452df07008bffc16b2333ef), [`286d0fd`](https://github.com/withplumix/plumix/commit/286d0fd1466a39504452df07008bffc16b2333ef), [`de0f56f`](https://github.com/withplumix/plumix/commit/de0f56ff7a5e96b896c9e4c81ac2f277e873cd9f), [`a74cf73`](https://github.com/withplumix/plumix/commit/a74cf731f9dd5809f12961bc1ed9a989ab1f9a08), [`b88e2f3`](https://github.com/withplumix/plumix/commit/b88e2f39608fd6b7f68d40ef989bd9d55f655a73), [`8aa171f`](https://github.com/withplumix/plumix/commit/8aa171f34e562f3a0176e802abaf63f5639002cc), [`ad062d7`](https://github.com/withplumix/plumix/commit/ad062d71bce7201f4b9bef038f1d2837e4157ae2), [`d79b4b5`](https://github.com/withplumix/plumix/commit/d79b4b597a26dd073cc32a3e89a232c58173aab0), [`3290448`](https://github.com/withplumix/plumix/commit/3290448915db0b8ee89528962a407c518c7bc29e), [`6825fbf`](https://github.com/withplumix/plumix/commit/6825fbfbbd2431e662a79af09165f323e9a8718f), [`421e39a`](https://github.com/withplumix/plumix/commit/421e39a62cd62a565e8424bb06d9d0289d69764c), [`7b36faf`](https://github.com/withplumix/plumix/commit/7b36faf5b7a0a0bcc9f5db8a244464975a5ecd42), [`022401e`](https://github.com/withplumix/plumix/commit/022401e1b77978bfe0d97cde5213609823f67329), [`fa1a0d7`](https://github.com/withplumix/plumix/commit/fa1a0d7657060e61a3f17df133f6e5e38cbccad7), [`18140f3`](https://github.com/withplumix/plumix/commit/18140f33c37fb346dc297179fe01f2792d41a350), [`8bdb8a3`](https://github.com/withplumix/plumix/commit/8bdb8a34dd366975b3e3bf967e0a3fbf63249381), [`9ebc490`](https://github.com/withplumix/plumix/commit/9ebc4901f8ad99101904901a2543ce3c32a3f695), [`4d09ee2`](https://github.com/withplumix/plumix/commit/4d09ee28b8f2f8a7dd6bcd320baf8171cf6b1df0)]:
+  - @plumix/admin-ui@0.19.0
+  - @plumix/blocks@0.19.0
+  - @plumix/core@0.19.0
+
 ## 0.18.0
 
 ### Patch Changes

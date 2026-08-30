@@ -1,5 +1,17 @@
 # @plumix/plugin-og
 
+## 0.2.1
+
+### Patch Changes
+
+- [#2089](https://github.com/withplumix/plumix/pull/2089) [`33af961`](https://github.com/withplumix/plumix/commit/33af9610dd56eaf962abb18c8a767348a5b2bee9) Thanks [@nasyrov](https://github.com/nasyrov)! - Pins the card renderer to an exact `@takumi-rs/wasm` version instead of a caret range. A range let a
+  site install a release this package's raster tests had never rendered with — a break that surfaces
+  as a wrong unfurl weeks later rather than as an error. Nobody moves version: the pin names what the
+  caret already resolved to, so an existing install is byte-identical.
+
+- [#2076](https://github.com/withplumix/plumix/pull/2076) [`022401e`](https://github.com/withplumix/plumix/commit/022401e1b77978bfe0d97cde5213609823f67329) Thanks [@nasyrov](https://github.com/nasyrov)! - Carries `storedMeta` on the dev-preview sample entry and term, following the field core's
+  `ResolvedEntry` / `ResolvedTerm` gained so `.whereMeta()` compares against the stored meta bag.
+
 ## 0.2.0
 
 ### Minor Changes
