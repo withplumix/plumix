@@ -2,7 +2,13 @@ import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import type { View } from "./canvas-view.js";
+import type { EditorShortcutId } from "./shortcuts.js";
 import { useCameraStoreApi, useEditorStoreApi } from "./provider.js";
+import {
+  forwardedShortcut,
+  forwardedShortcutId,
+  isTypingTarget,
+} from "./shortcuts.js";
 
 type CanvasKeyHandler = (
   down: boolean,
@@ -20,31 +26,14 @@ export interface CanvasKeys {
   readonly keyHandlerRef: RefObject<CanvasKeyHandler | null>;
 }
 
-/** The keys this canvas claims: Space (pan) and Shift+0/1/2/X (view shortcuts).
- *  Everything else falls through to the page. */
-export function isViewShortcut(code: string, shiftKey: boolean): boolean {
-  if (code === "Space") return true;
-  return (
-    shiftKey &&
-    (code === "Digit0" ||
-      code === "Digit1" ||
-      code === "Digit2" ||
-      code === "KeyX")
-  );
-}
-
-function isTyping(t: EventTarget | null): boolean {
-  return (
-    t instanceof HTMLElement &&
-    (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
-  );
-}
-
 /**
  * Space-to-pan + view shortcuts (fit / frame-selection / reset / x-ray). Keys
  * arrive natively (shell focus) and forwarded from the iframe (canvas focus) —
  * both routed through one handler exposed via `keyHandlerRef` for the bridge.
  * The pan drag reads pan/zoom's live view and commits through its handlers.
+ *
+ * The cheatsheet rides the same seam: a canvas with focus is the common case
+ * for wanting it, and the bridge is the only way that keypress reaches the host.
  */
 export function useCanvasKeys({
   panByClientDelta,
@@ -82,40 +71,41 @@ export function useCanvasKeys({
       dragging = false;
       setPanReady(false);
     };
+    const run = (id: EditorShortcutId | null, down: boolean): void => {
+      if (id !== "canvas.pan") {
+        if (!down) return;
+        if (id === "canvas.fit") camera.getState().enableFit();
+        else if (id === "canvas.frameSelection") zoomToSelection();
+        else if (id === "canvas.actualSize") camera.getState().zoomToCenter(1);
+        else if (id === "canvas.xray") store.getState().toggleXray();
+        else if (id === "help.open") store.getState().setShortcutsOpen(true);
+        return;
+      }
+      if (!down) exitPan();
+      else if (!spaceHeld) {
+        spaceHeld = true;
+        setPanReady(true);
+      }
+    };
+    // The bridge speaks codes, so this end is the one place that decodes one.
     const handleKey: CanvasKeyHandler = (down, code, shiftKey): void => {
-      if (!down) {
-        if (code === "Space") exitPan();
-        return;
-      }
-      if (code === "Space") {
-        if (!spaceHeld) {
-          spaceHeld = true;
-          setPanReady(true);
-        }
-        return;
-      }
-      if (!shiftKey) return;
-      if (code === "Digit1") camera.getState().enableFit();
-      else if (code === "Digit2") zoomToSelection();
-      else if (code === "Digit0") camera.getState().zoomToCenter(1);
-      else if (code === "KeyX") store.getState().toggleXray();
+      run(forwardedShortcutId(code, shiftKey), down);
     };
     keyHandlerRef.current = handleKey;
 
     const onKeyDown = (e: KeyboardEvent): void => {
       // Skip auto-repeat: a held key must not re-fire the x-ray toggle.
-      if (
-        e.repeat ||
-        isTyping(e.target) ||
-        !isViewShortcut(e.code, e.shiftKey)
-      ) {
-        return;
-      }
-      if (e.code === "Space") e.preventDefault();
-      handleKey(true, e.code, e.shiftKey);
+      if (e.repeat || isTypingTarget(e.target)) return;
+      const claimed = forwardedShortcut(e);
+      // The cheatsheet listens for its own chord next to the dialog it opens;
+      // here it only arrives forwarded, from a canvas that holds focus.
+      if (!claimed || claimed.id === "help.open") return;
+      if (claimed.id === "canvas.pan") e.preventDefault();
+      run(claimed.id, true);
     };
     const onKeyUp = (e: KeyboardEvent): void => {
-      if (e.code === "Space") handleKey(false, e.code, false);
+      // Only the held binding has a release worth acting on.
+      run(forwardedShortcutId(e.code, e.shiftKey), false);
     };
     const onPointerDown = (e: PointerEvent): void => {
       if (!spaceHeld) return;

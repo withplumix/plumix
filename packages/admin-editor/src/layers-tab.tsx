@@ -39,6 +39,7 @@ import { flattenTree, projectMove } from "./block-tree-ops.js";
 import { createClipboardOps, pasteableAtRoot } from "./clipboard-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
+import { matchesShortcut } from "./shortcuts.js";
 
 const INDENT_WIDTH = 16;
 
@@ -200,7 +201,7 @@ function LayerRow({
   // Delete/Backspace removes the focused row, matching the canvas. The handler
   // sits after the drag listeners spread so it owns these keys.
   const onRowKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
-    if (event.key === "Delete" || event.key === "Backspace") {
+    if (matchesShortcut("selection.delete", event)) {
       event.preventDefault();
       onAction("delete");
     }

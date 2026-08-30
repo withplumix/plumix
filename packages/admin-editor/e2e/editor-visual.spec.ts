@@ -743,4 +743,50 @@ test.describe("editor playground", () => {
     await expect(page.getByTestId("layer-group-1")).toBeVisible();
     await expect(page.getByTestId("layer-group-heading")).toBeVisible();
   });
+
+  // The cheatsheet's own chord is the one binding a jsdom test can only fake:
+  // "?" is a shifted key whose `key` value the browser derives from the layout.
+  test("? opens the shortcut cheatsheet, Escape closes it", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await page.keyboard.press("Shift+Slash");
+    await expect(page.getByTestId("plumix-shortcuts-dialog")).toBeVisible();
+    await expect(page.getByTestId("plumix-shortcut-canvas.xray")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("plumix-shortcuts-dialog")).toBeHidden();
+  });
+
+  test("? works with focus inside the canvas iframe (forwarded)", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    // Without this the host's own listener could be the one answering, and the
+    // assertion below would pass without the bridge doing anything.
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.tagName))
+      .toBe("IFRAME");
+
+    await page.keyboard.press("Shift+Slash");
+    await expect(page.getByTestId("plumix-shortcuts-dialog")).toBeVisible();
+  });
+
+  test("? stays out of the way while the author is typing", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await page.getByTestId("plumix-tab-blocks").click();
+    const search = page.getByTestId("block-catalog-search");
+    await search.click();
+    await page.keyboard.press("Shift+Slash");
+
+    await expect(search).toHaveValue("?");
+    await expect(page.getByTestId("plumix-shortcuts-dialog")).toBeHidden();
+  });
 });

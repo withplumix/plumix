@@ -42,6 +42,7 @@ import {
   useEditorStoreApi,
 } from "./provider.js";
 import { selectStarterPatterns } from "./select-starter-patterns.js";
+import { ShortcutsDialog } from "./shortcuts-dialog.js";
 import { StarterModal } from "./starter-modal.js";
 import { StylesTab } from "./styles-tab.js";
 
@@ -263,6 +264,7 @@ export function PlumixEditor({
         </SidebarProvider>
         <EditorShortcuts />
         <JsonSourceDialog />
+        <ShortcutsDialog />
         <StarterModal candidates={starterCandidates} />
         {overlay}
         {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}

@@ -3,6 +3,7 @@ import type { BlockNode, BlockRegistry } from "@plumix/blocks";
 import type { EditorStoreApi } from "./store.js";
 import { collectBlocks } from "./block-tree-ops.js";
 import { parseClipboardBlocks, serializeBlocks } from "./clipboard.js";
+import { isTypingTarget, matchesShortcut } from "./shortcuts.js";
 
 /**
  * Paste lands at the top level, so a `requiresParent` block (which can't live
@@ -30,9 +31,11 @@ export interface ClipboardOps {
   readonly run: (op: ClipboardOp) => Promise<void>;
 }
 
-/** Lowercased shortcut key → clipboard op (Cmd/Ctrl + c/x/v). */
-export const CLIPBOARD_KEYS: Readonly<Record<string, ClipboardOp | undefined>> =
-  { c: "copy", x: "cut", v: "paste" };
+const CLIPBOARD_OPS = [
+  "copy",
+  "cut",
+  "paste",
+] as const satisfies readonly ClipboardOp[];
 
 /**
  * Resolve a keydown to a block clipboard op, or `null` when it isn't one. Bails
@@ -42,16 +45,11 @@ export const CLIPBOARD_KEYS: Readonly<Record<string, ClipboardOp | undefined>> =
  * host and the iframe both use, reading each context's own `window`.
  */
 export function clipboardOpFromEvent(e: KeyboardEvent): ClipboardOp | null {
-  if (!(e.metaKey || e.ctrlKey)) return null;
-  const op = CLIPBOARD_KEYS[e.key.toLowerCase()];
+  if (isTypingTarget(e.target)) return null;
+  const op = CLIPBOARD_OPS.find((candidate) =>
+    matchesShortcut(`clipboard.${candidate}`, e),
+  );
   if (!op) return null;
-  const target = e.target as HTMLElement | null;
-  if (
-    target?.isContentEditable ||
-    /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? "")
-  ) {
-    return null;
-  }
   if (op !== "paste" && !(window.getSelection()?.isCollapsed ?? true)) {
     return null;
   }

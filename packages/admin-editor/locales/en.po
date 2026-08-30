@@ -94,6 +94,11 @@ msgid "editor.canvas.addBlock"
 msgstr "Add a block"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.selection.additive"
+msgstr "Add a block to the selection"
+
+#. js-lingui-explicit-id
 #: src/html-attributes.tsx
 msgid "editor.htmlAttrs.add"
 msgstr "Add attribute"
@@ -189,6 +194,11 @@ msgid "block.core.table-body-row.title"
 msgstr "Body Row"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.mark.bold"
+msgstr "Bold"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.bold"
 msgstr "Bold"
@@ -207,6 +217,16 @@ msgstr "Box"
 #: src/block-i18n.ts
 msgid "block.core.button.title"
 msgstr "Button"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.cancelDrag"
+msgstr "Cancel a drag"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.canvas"
+msgstr "Canvas"
 
 #. js-lingui-explicit-id
 #: src/block-i18n.ts
@@ -234,9 +254,19 @@ msgid "block.core.table.input.align.option.center"
 msgstr "Center"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.gesture.click"
+msgstr "Click"
+
+#. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.video.keyword.clip"
 msgstr "clip"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.clipboard"
+msgstr "Clipboard"
 
 #. js-lingui-explicit-id
 #: src/block-i18n.ts
@@ -294,6 +324,11 @@ msgid "editor.layers.copy"
 msgstr "Copy"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.clipboard.copy"
+msgstr "Copy the selection"
+
+#. js-lingui-explicit-id
 #: src/html-attributes.tsx
 msgid "editor.htmlAttrs.add.create"
 msgstr "Create"
@@ -319,6 +354,11 @@ msgid "editor.styles.customCss"
 msgstr "Custom CSS"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.clipboard.cut"
+msgstr "Cut the selection"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.htmlAttrs.tagName.default"
 msgstr "Default"
@@ -332,6 +372,11 @@ msgstr "Delete"
 #: src/selection-toolbar.tsx
 msgid "editor.selection.delete"
 msgstr "Delete"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.selection.delete"
+msgstr "Delete the focused layer"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
@@ -357,6 +402,11 @@ msgstr "Discard"
 #: src/editor-header.tsx
 msgid "editor.toolbar.discarding"
 msgstr "Discarding…"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.gesture.drag"
+msgstr "Drag"
 
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
@@ -399,9 +449,19 @@ msgid "block.core.html.keyword.embed-code"
 msgstr "embed code"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.description"
+msgstr "Every binding the editor claims."
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.fillImage"
 msgstr "Fill image"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.fit"
+msgstr "Fit to width"
 
 #. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
@@ -409,9 +469,19 @@ msgid "editor.toolbar.fitWidth"
 msgstr "Fit to width"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.formatting"
+msgstr "Formatting"
+
+#. js-lingui-explicit-id
 #: src/rich-text-field.tsx
 msgid "editor.richtext.hint"
 msgstr "Formatting applies to the selected text."
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.general"
+msgstr "General"
 
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
@@ -444,6 +514,11 @@ msgid "editor.styles.visibility.tablet"
 msgstr "Hide on tablet"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.history"
+msgstr "History"
+
+#. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.button.input.href.label"
 msgstr "Href"
@@ -474,9 +549,29 @@ msgid "block.core.embed.keyword.iframe"
 msgstr "iframe"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.mark.code"
+msgstr "Inline code"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.mark.italic"
+msgstr "Italic"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.italic"
 msgstr "Italic"
+
+#. js-lingui-explicit-id
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.shortcuts"
+msgstr "Keyboard shortcuts"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.title"
+msgstr "Keyboard shortcuts"
 
 #. js-lingui-explicit-id
 #: src/block-i18n.ts
@@ -629,6 +724,11 @@ msgid "block.core.button.input.openInNewTab.label"
 msgstr "Open in new tab"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.or"
+msgstr "or"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.padding"
 msgstr "Padding"
@@ -644,6 +744,11 @@ msgid "editor.tab.page"
 msgstr "Page"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.pan"
+msgstr "Pan the canvas"
+
+#. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.rich-text.keyword.paragraph"
 msgstr "paragraph"
@@ -652,6 +757,11 @@ msgstr "paragraph"
 #: src/layers-tab.tsx
 msgid "editor.layers.paste"
 msgstr "Paste"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.clipboard.paste"
+msgstr "Paste blocks"
 
 #. js-lingui-explicit-id
 #: src/block-i18n.ts
@@ -709,6 +819,11 @@ msgid "block.core.html.description"
 msgstr "Raw markup, sanitized against the allowlist before it renders."
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.history.redo"
+msgstr "Redo"
+
+#. js-lingui-explicit-id
 #: src/editor-header.tsx
 msgid "editor.toolbar.redo"
 msgstr "Redo"
@@ -757,6 +872,11 @@ msgstr "Right"
 #: src/block-i18n.ts
 msgid "block.core.table.input.rows.label"
 msgstr "Rows"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.gesture.scroll"
+msgstr "Scroll"
 
 #. js-lingui-explicit-id
 #: src/html-attributes.tsx
@@ -809,6 +929,11 @@ msgid "editor.combobox.placeholder"
 msgstr "Select…"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcuts.group.selection"
+msgstr "Selection"
+
+#. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.separator.title"
 msgstr "Separator"
@@ -822,6 +947,16 @@ msgstr "Shadows & Effects"
 #: src/block-i18n.ts
 msgid "block.core.video.input.controls.label"
 msgstr "Show controls"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.help.open"
+msgstr "Show keyboard shortcuts"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.panels.toggle"
+msgstr "Show or hide the panels"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -862,6 +997,11 @@ msgstr "Start from a pattern"
 #: src/starter-modal.tsx
 msgid "starterModal.startBlank"
 msgstr "Start from blank"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.mark.strike"
+msgstr "Strikethrough"
 
 #. js-lingui-explicit-id
 #: src/styles-tab.tsx
@@ -954,9 +1094,19 @@ msgid "editor.styles.typography"
 msgstr "Typography"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.mark.underline"
+msgstr "Underline"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.mark.underline"
 msgstr "Underline"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.history.undo"
+msgstr "Undo"
 
 #. js-lingui-explicit-id
 #: src/editor-header.tsx
@@ -1034,6 +1184,11 @@ msgid "block.core.column.input.width.label"
 msgstr "Width"
 
 #. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.xray"
+msgstr "X-ray: outline all blocks"
+
+#. js-lingui-explicit-id
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.xray"
 msgstr "X-ray: outline all blocks"
@@ -1052,3 +1207,18 @@ msgstr "Zoom in"
 #: src/editor-toolbar.tsx
 msgid "editor.toolbar.zoomOut"
 msgstr "Zoom out"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.zoom"
+msgstr "Zoom the canvas"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.actualSize"
+msgstr "Zoom to 100%"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.frameSelection"
+msgstr "Zoom to the selection"

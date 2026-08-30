@@ -75,6 +75,7 @@ export {
   Image,
   Italic,
   Key,
+  Keyboard,
   Layout,
   LayoutDashboard,
   LayoutTemplate,
