@@ -21,9 +21,9 @@ import {
 
 import type { OverlayBox } from "./overlay.js";
 import {
+  canGroupSelection,
   canUngroupBlock,
   findParentId,
-  selectionRoots,
 } from "./block-tree-ops.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
 
@@ -48,14 +48,9 @@ export function SelectionToolbar({
   const hasParent = useEditorStore((s) =>
     s.activeId ? findParentId(s.tree, s.activeId) !== null : false,
   );
-  // Group needs the selected roots to share a parent (a group can't span
-  // containers); ungroup needs the active block to actually hold children.
-  const canGroup = useEditorStore((s) => {
-    const roots = selectionRoots(s.tree, s.selectedIds);
-    if (roots.length === 0) return false;
-    const parent = findParentId(s.tree, roots[0] ?? "");
-    return roots.every((id) => findParentId(s.tree, id) === parent);
-  });
+  const canGroup = useEditorStore((s) =>
+    canGroupSelection(s.tree, s.selectedIds),
+  );
   const canUngroup = useEditorStore((s) =>
     s.activeId ? canUngroupBlock(s.tree, s.activeId) : false,
   );

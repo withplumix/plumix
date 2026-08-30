@@ -679,7 +679,7 @@ function EntryEditor({
     },
     [navigate],
   );
-  const revisionsTrigger = useRevisionsTrigger({
+  const { trigger: revisionsTrigger, openRevisions } = useRevisionsTrigger({
     entryId: id,
     enabled: supportsRevisions(entryType),
     onPreview: handleRevisionPreview,
@@ -1059,6 +1059,7 @@ function EntryEditor({
       documentPanel={documentPanel}
       publish={publishActions}
       revisionsTrigger={revisionsTrigger}
+      onOpenRevisions={openRevisions}
       overlay={overlay}
       onRefreshBlockLoader={(blockId) =>
         orpc.entry.refreshBlockLoader.call({ id, blockId }).then((r) => r.data)

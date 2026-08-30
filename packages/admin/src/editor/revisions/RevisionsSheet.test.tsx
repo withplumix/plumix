@@ -1,3 +1,5 @@
+import type { ComponentProps, ReactElement } from "react";
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -27,11 +29,21 @@ function wrap(child: React.ReactNode) {
   return <QueryClientProvider client={qc}>{child}</QueryClientProvider>;
 }
 
+// The sheet is controlled — `useRevisionsTrigger` owns its open state in the
+// app. These cases exercise it through its trigger, so they stand in for that
+// owner.
+function TriggerDriven(
+  props: Omit<ComponentProps<typeof RevisionsSheet>, "open" | "onOpenChange">,
+): ReactElement {
+  const [open, setOpen] = useState(false);
+  return <RevisionsSheet {...props} open={open} onOpenChange={setOpen} />;
+}
+
 describe("RevisionsSheet — trigger variants", () => {
   function renderTrigger(triggerVariant?: "text" | "icon") {
     return renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={1}
           triggerVariant={triggerVariant}
           fetchPage={() => Promise.resolve({ revisions: [], nextCursor: null })}
@@ -67,11 +79,49 @@ describe("RevisionsSheet — trigger variants", () => {
   });
 });
 
+describe("RevisionsSheet — opened from outside its trigger", () => {
+  function renderControlled(open: boolean, onOpenChange = vi.fn()) {
+    return renderWithI18n(
+      wrap(
+        <RevisionsSheet
+          entryId={1}
+          open={open}
+          onOpenChange={onOpenChange}
+          fetchPage={() => Promise.resolve({ revisions: [], nextCursor: null })}
+          relativeTime={() => "now"}
+          fetchRevision={vi.fn()}
+          fetchCurrent={vi.fn()}
+          onPreview={vi.fn()}
+          onSaveMessage={vi.fn()}
+        />,
+      ),
+    );
+  }
+
+  // The editor command palette opens the sheet without anyone clicking the
+  // header trigger.
+  test("an `open` prop shows the sheet with no click", async () => {
+    renderControlled(true);
+    await waitFor(() => {
+      expect(screen.getByTestId("revisions-tab-all")).toBeInTheDocument();
+    });
+  });
+
+  test("stays shut while `open` is false, and reports the trigger's intent", () => {
+    const onOpenChange = vi.fn();
+    renderControlled(false, onOpenChange);
+    expect(screen.queryByTestId("revisions-tab-all")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("revisions-sheet-trigger"));
+    expect(onOpenChange).toHaveBeenCalledWith(true);
+  });
+});
+
 describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
   test("renders three tabs (All / Publishes / Autosaves) when open", async () => {
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={1}
           fetchPage={() => Promise.resolve({ revisions: [], nextCursor: null })}
           relativeTime={() => "now"}
@@ -93,7 +143,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
   test("switching to the Autosaves tab shows the empty-state stub, not the row list", async () => {
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={1}
           fetchPage={() =>
             Promise.resolve({
@@ -143,7 +193,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
     const fetchCurrent = vi.fn();
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={1}
           fetchPage={() =>
             Promise.resolve({
@@ -180,7 +230,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
   test("closing the sheet also closes an open diff modal", async () => {
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={1}
           fetchPage={() =>
             Promise.resolve({
@@ -241,7 +291,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
   test("modal surfaces an error state when snapshot fetch fails", async () => {
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={1}
           fetchPage={() =>
             Promise.resolve({
@@ -294,7 +344,7 @@ describe("RevisionsSheet — Builder-style tabs (#289 slice 1)", () => {
     };
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={1}
           fetchPage={() =>
             Promise.resolve({
@@ -342,7 +392,7 @@ describe("RevisionsSheet", () => {
   test("renders nothing in the DOM tree before the trigger opens it", () => {
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={1}
           fetchPage={vi.fn()}
           relativeTime={(d) => d.toISOString()}
@@ -388,7 +438,7 @@ describe("RevisionsSheet", () => {
     );
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "just now"}
@@ -449,7 +499,7 @@ describe("RevisionsSheet", () => {
       });
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}
@@ -493,7 +543,7 @@ describe("RevisionsSheet", () => {
     const onPreview = vi.fn();
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}
@@ -534,7 +584,7 @@ describe("RevisionsSheet", () => {
     );
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}
@@ -577,7 +627,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
     );
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}
@@ -614,7 +664,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
     );
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}
@@ -654,7 +704,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
     const onSaveMessage = vi.fn(() => Promise.resolve());
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}
@@ -699,7 +749,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
     const onSaveMessage = vi.fn(() => Promise.resolve());
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}
@@ -744,7 +794,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
     const onSaveMessage = vi.fn();
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}
@@ -790,7 +840,7 @@ describe("RevisionsSheet — comment editing (#289 slice 3)", () => {
     const onSaveMessage = vi.fn();
     renderWithI18n(
       wrap(
-        <RevisionsSheet
+        <TriggerDriven
           entryId={42}
           fetchPage={fetchPage}
           relativeTime={() => "now"}

@@ -9,7 +9,12 @@ import {
 
 import type { Geometry } from "./canvas-geometry.js";
 import type { View } from "./canvas-view.js";
-import { clampPanToFrame, frameSelection, wheelToView } from "./canvas-view.js";
+import {
+  centerOnRect,
+  clampPanToFrame,
+  frameSelection,
+  wheelToView,
+} from "./canvas-view.js";
 import {
   useCameraStore,
   useCameraStoreApi,
@@ -44,6 +49,8 @@ export interface PanZoom {
   ) => void;
   /** Frame the active block in the viewport (Shift+2). */
   readonly zoomToSelection: () => void;
+  /** Pan the active block into the middle of the viewport, keeping the zoom. */
+  readonly centerSelection: () => void;
 }
 
 /**
@@ -228,6 +235,17 @@ export function usePanZoom({
     camera.getState().applyView(frameSelection(rect, box.width, box.height));
   }, [editor, camera, geometryRef]);
 
+  const centerSelection = useCallback((): void => {
+    const { activeId } = editor.getState();
+    const box = geometryRef.current.container;
+    const rect = activeId ? geometryRef.current.rects.get(activeId) : undefined;
+    if (!box || !rect) return;
+    const view = camera.getState();
+    camera
+      .getState()
+      .applyView(centerOnRect(rect, view, box.width, box.height));
+  }, [editor, camera, geometryRef]);
+
   // Host-side wheel: pan/zoom when the cursor is over the margin around the
   // frame. Over the iframe the gesture is forwarded via the bridge. Native +
   // non-passive so we can preventDefault the page scroll.
@@ -258,5 +276,6 @@ export function usePanZoom({
     onHandlePointerDown,
     handleWheel,
     zoomToSelection,
+    centerSelection,
   };
 }

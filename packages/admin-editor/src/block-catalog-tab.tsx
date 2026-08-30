@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
 import { useLingui } from "@lingui/react";
 
-import type { BlockNode, InsertableBlockEntry } from "@plumix/blocks";
+import type { BlockNode } from "@plumix/blocks";
 import { Search } from "@plumix/admin-ui/icons";
 import { Input } from "@plumix/admin-ui/input";
 import { resolveLabel } from "@plumix/core/i18n";
@@ -10,6 +10,7 @@ import { resolveLabel } from "@plumix/core/i18n";
 import type { InserterPattern } from "./block-catalog.js";
 import {
   createNodeFromEntry,
+  entryKey,
   expandPattern,
   filterPatterns,
   groupInsertables,
@@ -212,12 +213,4 @@ function CatalogCard({
       </span>
     </button>
   );
-}
-
-// A stable, collision-free identity for an inserter entry. Variation slugs are
-// only unique per parent block (two blocks can both declare `default`), so a
-// variation is qualified by its parent name; a bare block (slug === name) keeps
-// its name as-is.
-function entryKey(entry: InsertableBlockEntry): string {
-  return entry.slug === entry.name ? entry.slug : `${entry.name}/${entry.slug}`;
 }

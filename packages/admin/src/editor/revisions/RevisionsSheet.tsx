@@ -126,6 +126,10 @@ interface RevisionsSheetProps {
     readonly revisionId: number;
     readonly message: string | null;
   }) => Promise<void>;
+  // Controlled: `useRevisionsTrigger` owns the open state so the editor
+  // command palette can raise the sheet without its trigger being clicked.
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
 }
 
 export function RevisionsSheet({
@@ -137,9 +141,10 @@ export function RevisionsSheet({
   fetchCurrent,
   onPreview,
   onSaveMessage,
+  open,
+  onOpenChange,
 }: RevisionsSheetProps): ReactElement {
   const renderLabel = useLabel();
-  const [open, setOpen] = useState(false);
   const query = useInfiniteQuery({
     queryKey: ["entry.revisions", entryId],
     enabled: open,
@@ -156,14 +161,14 @@ export function RevisionsSheet({
 
   function handlePreview(revisionId: number): void {
     onPreview(revisionId);
-    setOpen(false);
+    onOpenChange(false);
   }
 
   return (
     <Sheet
       open={open}
       onOpenChange={(o) => {
-        setOpen(o);
+        onOpenChange(o);
         if (!o) setDiffModalRevisionId(null);
       }}
     >

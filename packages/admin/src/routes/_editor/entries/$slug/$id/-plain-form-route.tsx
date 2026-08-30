@@ -130,7 +130,7 @@ export function PlainFormRouteInner({
     },
     [navigate],
   );
-  const revisionsTrigger = useRevisionsTrigger({
+  const { trigger: revisionsTrigger } = useRevisionsTrigger({
     entryId: id,
     enabled: supportsRevisions,
     onPreview: handlePreview,

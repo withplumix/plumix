@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { RevisionsSheet } from "@/editor/revisions/RevisionsSheet.js";
 import { orpc } from "@/lib/orpc.js";
 import { useFormatters } from "@/lib/use-formatters.js";
@@ -18,23 +18,38 @@ interface UseRevisionsTriggerInput {
   readonly onPreview: (revisionId: number) => void;
 }
 
+export interface RevisionsTrigger {
+  // The header affordance; null when the entry type has no revisions, so
+  // callers can drop it straight into the layout's slot.
+  readonly trigger: ReactNode;
+  // Opens the same sheet without its trigger being clicked (the editor
+  // command palette). Undefined when the entry type has no revisions.
+  readonly openRevisions?: () => void;
+}
+
 // Single chokepoint for the `<RevisionsSheet />` adapter both v1 and
-// v2 edit routes mount. Returns null when `enabled` is false so
-// callers can drop the trigger straight into the layout's slot.
+// v2 edit routes mount. The open state lives here rather than in the
+// sheet so the command palette can raise it too.
 export function useRevisionsTrigger({
   entryId,
   enabled,
   onPreview,
   triggerVariant,
-}: UseRevisionsTriggerInput): ReactNode {
+}: UseRevisionsTriggerInput): RevisionsTrigger {
   const queryClient = useQueryClient();
   const { formatRelative } = useFormatters();
-  return useMemo<ReactNode>(() => {
+  const [open, setOpen] = useState(false);
+  const openRevisions = useCallback(() => {
+    setOpen(true);
+  }, []);
+  const trigger = useMemo<ReactNode>(() => {
     if (!enabled) return null;
     return (
       <RevisionsSheet
         entryId={entryId}
         triggerVariant={triggerVariant}
+        open={open}
+        onOpenChange={setOpen}
         relativeTime={formatRelative}
         fetchPage={({ entryId, cursor }) =>
           orpc.entry.revisions.list.call({ entryId, cursor })
@@ -79,5 +94,7 @@ export function useRevisionsTrigger({
     triggerVariant,
     queryClient,
     formatRelative,
+    open,
   ]);
+  return { trigger, openRevisions: enabled ? openRevisions : undefined };
 }

@@ -1592,6 +1592,11 @@ msgid "terms.create.description.flat"
 msgstr "Group content by adding a new term."
 
 #. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.group"
+msgstr "Group the selection"
+
+#. js-lingui-explicit-id
 #: src/editor/StaleDraftDialog.tsx
 msgid "editor.staleDraft.hideComparison"
 msgstr "Hide comparison"
@@ -2222,6 +2227,11 @@ msgstr "Open a preview in a new tab"
 #: src/components/meta-box/link-field.tsx
 msgid "metaBox.link.newTab"
 msgstr "Open in new tab"
+
+#. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.revisions"
+msgstr "Open revisions"
 
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
@@ -3046,6 +3056,21 @@ msgid "userRole.long.subscriber"
 msgstr "Subscriber — read only"
 
 #. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.device.desktop"
+msgstr "Switch to desktop"
+
+#. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.device.mobile"
+msgstr "Switch to mobile"
+
+#. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.device.tablet"
+msgstr "Switch to tablet"
+
+#. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
 msgid "profile.passkeys.synced"
 msgstr "Synced"
@@ -3413,6 +3438,11 @@ msgstr "Title"
 msgid "editor.document.title"
 msgstr "Title"
 
+#. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.xray"
+msgstr "Toggle X-ray outlines"
+
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -3456,6 +3486,11 @@ msgstr "Trashing…"
 #: src/routes/_editor/entries/$slug/create.tsx
 msgid "editor.entry.create.retry"
 msgstr "Try again"
+
+#. js-lingui-explicit-id
+#: src/lib/editor-command-i18n.ts
+msgid "editor.command.ungroup"
+msgstr "Ungroup the selected block"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx

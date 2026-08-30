@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  centerOnRect,
   clampPan,
   clampPanToFrame,
   clampZoom,
@@ -80,6 +81,28 @@ describe("zoomToCursor", () => {
     expect(zoomToCursor({ zoom: 1, panX: 0, panY: 0 }, 99, 0, 0).zoom).toBe(
       MAX_ZOOM,
     );
+  });
+});
+
+describe("centerOnRect", () => {
+  test("centers the block on the viewport at the current zoom", () => {
+    const v = centerOnRect(
+      { x: 300, y: 400, width: 200, height: 100 },
+      { zoom: 0.5, panX: 0, panY: 0 },
+      1000,
+      800,
+    );
+    expect(v.zoom).toBe(0.5);
+    // Block center (400,450) lands at the viewport center (500,400).
+    expect(v.panX + 400 * v.zoom).toBe(500);
+    expect(v.panY + 450 * v.zoom).toBe(400);
+  });
+
+  test("leaves a small block alone rather than zooming into it", () => {
+    const rect = { x: 0, y: 2000, width: 24, height: 24 };
+    const view = { zoom: 0.75, panX: 0, panY: 0 };
+    expect(centerOnRect(rect, view, 1000, 800).zoom).toBe(0.75);
+    expect(frameSelection(rect, 1000, 800).zoom).toBe(MAX_ZOOM);
   });
 });
 

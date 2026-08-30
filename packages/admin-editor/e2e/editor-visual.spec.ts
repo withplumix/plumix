@@ -797,4 +797,58 @@ test.describe("editor playground", () => {
     await expect(search).toHaveValue("?");
     await expect(page.getByTestId("plumix-shortcuts-dialog")).toBeHidden();
   });
+
+  test("Cmd/Ctrl+K opens the editor command palette, Escape closes it", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    // See the x-ray test above: pressing before mount races the listener.
+    await expect(
+      page.frameLocator(CANVAS_FRAME).locator('[data-plumix-id="heading-1"]'),
+    ).toBeVisible();
+
+    await page.keyboard.press("ControlOrMeta+KeyK");
+    await expect(page.getByTestId("plumix-command-palette")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("plumix-command-palette")).toBeHidden();
+  });
+
+  test("a palette command runs end to end from canvas focus", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const root = canvas.locator('[data-testid="plumix-editor-canvas"]');
+
+    // Click a block so focus lands in the iframe: the palette then only opens
+    // if Cmd+K rode the canvas:key forward path.
+    await canvas.locator('[data-plumix-id="heading-1"]').click();
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.tagName))
+      .toBe("IFRAME");
+
+    await page.keyboard.press("ControlOrMeta+KeyK");
+    const palette = page.getByTestId("plumix-command-palette");
+    await expect(palette).toBeVisible();
+
+    // Typing filters the roster; Enter runs the highlighted command.
+    await page.getByTestId("plumix-command-palette-input").fill("x-ray");
+    await expect(page.getByTestId("plumix-command-canvas.xray")).toBeVisible();
+    await page.keyboard.press("Enter");
+
+    await expect(root).toHaveAttribute("data-plumix-xray", "");
+    await expect(palette).toBeHidden();
+  });
+
+  test("the palette jumps to a block, selecting it", async ({ page }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    await expect(canvas.locator('[data-plumix-id="heading-1"]')).toBeVisible();
+
+    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.getByTestId("plumix-command-goto:heading-1").click();
+
+    await expect(page.getByTestId("plumix-overlay-selected")).toBeVisible();
+  });
 });

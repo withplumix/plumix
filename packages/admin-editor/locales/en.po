@@ -89,6 +89,11 @@ msgid "block.core.embed.input.title.label"
 msgstr "Accessible title"
 
 #. js-lingui-explicit-id
+#: src/editor-command-palette.tsx
+msgid "editor.palette.group.actions"
+msgstr "Actions"
+
+#. js-lingui-explicit-id
 #: src/canvas-frame.tsx
 msgid "editor.canvas.addBlock"
 msgstr "Add a block"
@@ -434,6 +439,11 @@ msgid "editor.styles.scope"
 msgstr "Editing"
 
 #. js-lingui-explicit-id
+#: src/editor-command-palette.tsx
+msgid "editor.palette.title"
+msgstr "Editor commands"
+
+#. js-lingui-explicit-id
 #: src/block-i18n.ts
 msgid "block.core.embed.title"
 msgstr "Embed"
@@ -459,13 +469,13 @@ msgid "editor.styles.fillImage"
 msgstr "Fill image"
 
 #. js-lingui-explicit-id
-#: src/shortcuts-dialog.tsx
-msgid "editor.shortcut.canvas.fit"
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.fitWidth"
 msgstr "Fit to width"
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
-msgid "editor.toolbar.fitWidth"
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.fit"
 msgstr "Fit to width"
 
 #. js-lingui-explicit-id
@@ -482,6 +492,11 @@ msgstr "Formatting applies to the selected text."
 #: src/shortcuts-dialog.tsx
 msgid "editor.shortcuts.group.general"
 msgstr "General"
+
+#. js-lingui-explicit-id
+#: src/editor-command-palette.tsx
+msgid "editor.palette.group.goto"
+msgstr "Go to a block"
 
 #. js-lingui-explicit-id
 #: src/selection-toolbar.tsx
@@ -552,6 +567,11 @@ msgstr "iframe"
 #: src/shortcuts-dialog.tsx
 msgid "editor.shortcut.mark.code"
 msgstr "Inline code"
+
+#. js-lingui-explicit-id
+#: src/editor-command-palette.tsx
+msgid "editor.palette.group.insert"
+msgstr "Insert a block"
 
 #. js-lingui-explicit-id
 #: src/shortcuts-dialog.tsx
@@ -689,6 +709,11 @@ msgid "editor.layers.empty"
 msgstr "No blocks yet."
 
 #. js-lingui-explicit-id
+#: src/editor-command-palette.tsx
+msgid "editor.palette.empty"
+msgstr "No commands found."
+
+#. js-lingui-explicit-id
 #: src/plumix-editor.tsx
 msgid "editor.page.empty"
 msgstr "No document settings."
@@ -722,6 +747,11 @@ msgstr "Open by default"
 #: src/block-i18n.ts
 msgid "block.core.button.input.openInNewTab.label"
 msgstr "Open in new tab"
+
+#. js-lingui-explicit-id
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.palette.open"
+msgstr "Open the command palette"
 
 #. js-lingui-explicit-id
 #: src/shortcuts-dialog.tsx
@@ -819,13 +849,13 @@ msgid "block.core.html.description"
 msgstr "Raw markup, sanitized against the allowlist before it renders."
 
 #. js-lingui-explicit-id
-#: src/shortcuts-dialog.tsx
-msgid "editor.shortcut.history.redo"
+#: src/editor-header.tsx
+msgid "editor.toolbar.redo"
 msgstr "Redo"
 
 #. js-lingui-explicit-id
-#: src/editor-header.tsx
-msgid "editor.toolbar.redo"
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.history.redo"
 msgstr "Redo"
 
 #. js-lingui-explicit-id
@@ -892,6 +922,11 @@ msgstr "Search blocks"
 #: src/style-declarations.tsx
 msgid "editor.styles.add.search"
 msgstr "Search property…"
+
+#. js-lingui-explicit-id
+#: src/editor-command-palette.tsx
+msgid "editor.palette.description"
+msgstr "Search the editor's actions and blocks."
 
 #. js-lingui-explicit-id
 #: src/block-input-control.tsx
@@ -1089,6 +1124,11 @@ msgid "editor.styles.mode.token"
 msgstr "Token"
 
 #. js-lingui-explicit-id
+#: src/editor-command-palette.tsx
+msgid "editor.palette.placeholder"
+msgstr "Type a command…"
+
+#. js-lingui-explicit-id
 #: src/styles-tab.tsx
 msgid "editor.styles.typography"
 msgstr "Typography"
@@ -1104,13 +1144,13 @@ msgid "editor.styles.mark.underline"
 msgstr "Underline"
 
 #. js-lingui-explicit-id
-#: src/shortcuts-dialog.tsx
-msgid "editor.shortcut.history.undo"
+#: src/editor-header.tsx
+msgid "editor.toolbar.undo"
 msgstr "Undo"
 
 #. js-lingui-explicit-id
-#: src/editor-header.tsx
-msgid "editor.toolbar.undo"
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.history.undo"
 msgstr "Undo"
 
 #. js-lingui-explicit-id
@@ -1184,13 +1224,13 @@ msgid "block.core.column.input.width.label"
 msgstr "Width"
 
 #. js-lingui-explicit-id
-#: src/shortcuts-dialog.tsx
-msgid "editor.shortcut.canvas.xray"
+#: src/editor-toolbar.tsx
+msgid "editor.toolbar.xray"
 msgstr "X-ray: outline all blocks"
 
 #. js-lingui-explicit-id
-#: src/editor-toolbar.tsx
-msgid "editor.toolbar.xray"
+#: src/shortcuts-dialog.tsx
+msgid "editor.shortcut.canvas.xray"
 msgstr "X-ray: outline all blocks"
 
 #. js-lingui-explicit-id

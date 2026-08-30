@@ -197,6 +197,42 @@ describe("CanvasFrame", () => {
     expect(queryByTestId("plumix-selection-toolbar")).not.toBeNull();
   });
 
+  test("a reveal request pans the block into view without changing the zoom", () => {
+    let cameraApi: ReturnType<typeof useCameraStoreApi> | undefined;
+    let editorApi: ReturnType<typeof useEditorStoreApi> | undefined;
+    function Capture(): null {
+      const camera = useCameraStoreApi();
+      const editor = useEditorStoreApi();
+      useEffect(() => {
+        cameraApi = camera;
+        editorApi = editor;
+      }, [camera, editor]);
+      return null;
+    }
+    render(
+      <Wrapper>
+        <CanvasFrame previewUrl="about:blank" origin={ORIGIN} />
+        <Capture />
+      </Wrapper>,
+    );
+    // A geometry report populates the container box and the block's rect.
+    fromCanvas({
+      type: "canvas:geometry",
+      rects: [{ id: "h1", x: 0, y: 4000, width: 100, height: 40 }],
+    });
+    const zoom = cameraApi?.getState().zoom ?? 0;
+
+    // What a palette go-to command does.
+    act(() => {
+      editorApi?.getState().revealBlock("h1");
+    });
+
+    // The block's center (y = 4020) is pulled to the middle of the viewport,
+    // which jsdom measures as zero-sized; the zoom is left alone.
+    expect(cameraApi?.getState().panY).toBe(-4020 * zoom);
+    expect(cameraApi?.getState().zoom).toBe(zoom);
+  });
+
   test("a wheel burst pans live without a render or store commit per event", () => {
     vi.useFakeTimers();
     try {

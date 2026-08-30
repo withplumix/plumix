@@ -79,6 +79,7 @@ export function useCanvasKeys({
         else if (id === "canvas.actualSize") camera.getState().zoomToCenter(1);
         else if (id === "canvas.xray") store.getState().toggleXray();
         else if (id === "help.open") store.getState().setShortcutsOpen(true);
+        else if (id === "palette.open") store.getState().setPaletteOpen(true);
         return;
       }
       if (!down) exitPan();
@@ -97,9 +98,15 @@ export function useCanvasKeys({
       // Skip auto-repeat: a held key must not re-fire the x-ray toggle.
       if (e.repeat || isTypingTarget(e.target)) return;
       const claimed = forwardedShortcut(e);
-      // The cheatsheet listens for its own chord next to the dialog it opens;
-      // here it only arrives forwarded, from a canvas that holds focus.
-      if (!claimed || claimed.id === "help.open") return;
+      // The cheatsheet and the palette each listen beside the dialog they open,
+      // so here those only arrive forwarded, from a canvas that holds focus.
+      if (
+        !claimed ||
+        claimed.id === "help.open" ||
+        claimed.id === "palette.open"
+      ) {
+        return;
+      }
       if (claimed.id === "canvas.pan") e.preventDefault();
       run(claimed.id, true);
     };

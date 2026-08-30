@@ -105,6 +105,12 @@ export interface EditorState {
   /** Whether the keyboard-shortcut cheatsheet is open (`?`, Cmd+/, or the
    *  toolbar's help button). */
   readonly shortcutsOpen: boolean;
+  /** Whether the editor command palette is open (Cmd/Ctrl+K). */
+  readonly paletteOpen: boolean;
+  /** Bumped whenever something asks the canvas to bring the active block into
+   *  view. The canvas watches it and frames the selection — the same one-way
+   *  notification shape as the device switch re-entering fit mode. */
+  readonly frameRequest: number;
 }
 
 export interface EditorActions {
@@ -189,6 +195,9 @@ export interface EditorActions {
   /** Replace the active block with its children (ungroup) and select them.
    *  No-op when the active block has no children. */
   ungroupSelected: () => void;
+  /** Select a block and ask the canvas to frame it (the palette's go-to
+   *  commands). Selecting alone leaves an off-screen block off-screen. */
+  revealBlock: (id: string) => void;
   /** Select the active block's container, walking one level up. */
   selectParent: () => void;
   /** Move the active block by `delta` positions among its siblings. */
@@ -203,6 +212,7 @@ export interface EditorActions {
   setJsonOpen: (open: boolean) => void;
   setStarterOpen: (open: boolean) => void;
   setShortcutsOpen: (open: boolean) => void;
+  setPaletteOpen: (open: boolean) => void;
   /** Set (or clear, with an empty string) a block's Layers-tree instance name. */
   setBlockLabel: (id: string, label: string) => void;
   startBlockDrag: (entry: InsertableBlockEntry) => void;
@@ -399,6 +409,8 @@ export function createEditorStore(
     jsonOpen: false,
     starterOpen: initial?.starterOpen ?? false,
     shortcutsOpen: false,
+    paletteOpen: false,
+    frameRequest: 0,
 
     // Raw seed/programmatic setter — intentionally does not record history
     // (user edits go through insert/move/updateBlockAttrs).
@@ -630,6 +642,12 @@ export function createEditorStore(
           activeId: result.childIds.at(-1) ?? null,
         });
       }),
+    revealBlock: (id) =>
+      set((state) => ({
+        selectedIds: new Set([id]),
+        activeId: id,
+        frameRequest: state.frameRequest + 1,
+      })),
     selectParent: () =>
       set((state) => {
         if (!state.activeId) return {};
@@ -652,6 +670,7 @@ export function createEditorStore(
     setJsonOpen: (jsonOpen) => set({ jsonOpen }),
     setStarterOpen: (starterOpen) => set({ starterOpen }),
     setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
+    setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
     startBlockDrag: (dragSpec) => set({ dragSpec }),
     endBlockDrag: () => set({ dragSpec: null }),
     startMove: (movingId) => set({ movingId }),

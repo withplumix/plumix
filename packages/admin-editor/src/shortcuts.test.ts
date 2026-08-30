@@ -120,6 +120,13 @@ describe("matchesShortcut", () => {
     expect(matchesShortcut("help.open", key({ key: "/" }))).toBe(false);
   });
 
+  test("the palette chord is mod+k", () => {
+    expect(
+      matchesShortcut("palette.open", key({ key: "k", metaKey: true })),
+    ).toBe(true);
+    expect(matchesShortcut("palette.open", key({ key: "k" }))).toBe(false);
+  });
+
   test("a gesture-only chord never matches a key event", () => {
     expect(
       matchesShortcut("canvas.zoom", key({ key: "z", metaKey: true })),
@@ -163,6 +170,10 @@ describe("forwardedShortcutId", () => {
     expect(forwardedShortcutId("KeyA", true)).toBeNull();
     expect(forwardedShortcutId("Digit3", true)).toBeNull();
     expect(forwardedShortcutId("Enter", false)).toBeNull();
+  });
+
+  test("the palette chord rides the bridge as KeyK", () => {
+    expect(forwardedShortcutId("KeyK", false)).toBe("palette.open");
   });
 
   test("the help chords ride the bridge as Slash", () => {
