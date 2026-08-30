@@ -184,9 +184,12 @@ export interface FormDefinitionInput<
   readonly store?: boolean;
   /**
    * How many days this form's submissions are kept before the nightly
-   * task deletes them, whatever status they are under. Zero — what a
-   * form declaring nothing takes — keeps them indefinitely, which is the
-   * only default that cannot lose an enquiry nobody asked to lose.
+   * task deletes them, whatever status they are under. Declaring none
+   * leaves the answer to the site's own `retentionDays`, which is itself
+   * nothing by default — and keeping them indefinitely is the only
+   * default that cannot lose an enquiry nobody asked to lose. Zero is a
+   * declaration rather than an absence: it is how one form keeps its
+   * submissions forever under a site that set a period for the rest.
    *
    * It is the answer to holding personal data forever because nobody
    * chose a number: a form asking for a phone number and an address
@@ -247,8 +250,12 @@ export interface FormDefinition<
   readonly onSubmit: FormHandler | undefined;
   readonly store: boolean;
   readonly bind: FormBinding | undefined;
-  /** Days before a submission is purged; `0` keeps it indefinitely. */
-  readonly retentionDays: number;
+  /**
+   * Days before a submission is purged; `0` keeps it indefinitely, and
+   * `undefined` leaves the period for the site to answer — read it
+   * through the registry's `retentionDaysFor` rather than off the form.
+   */
+  readonly retentionDays: number | undefined;
   /** What the server holds, secret and all — see {@link TurnstileWire}. */
   readonly turnstile: TurnstileConfig | undefined;
   /**
@@ -303,6 +310,15 @@ function assertSupportedFields(
  * Declare a form. The slug is its identity — submissions carry it and
  * nothing else links them back, so renaming one orphans its history.
  */
+/**
+ * Whether a number is a retention period at all. A form and the site
+ * declare one the same way and refuse a bad one differently, so the rule
+ * lives here once and each site of the check names its own author.
+ */
+export function isRetentionPeriod(days: number): boolean {
+  return Number.isInteger(days) && days >= 0;
+}
+
 export function defineForm<const Fields extends readonly FormElementInput[]>(
   slug: string,
   input: FormDefinitionInput<Fields>,
@@ -331,8 +347,8 @@ export function defineForm<const Fields extends readonly FormElementInput[]>(
   assertSupportedFields(slug, fields, undefined);
   const store = input.store ?? true;
   if (!store && !input.onSubmit) throw FormsError.storesNothing({ slug });
-  const retentionDays = input.retentionDays ?? 0;
-  if (!Number.isInteger(retentionDays) || retentionDays < 0) {
+  const retentionDays = input.retentionDays;
+  if (retentionDays !== undefined && !isRetentionPeriod(retentionDays)) {
     throw FormsError.invalidRetention({ slug, retentionDays });
   }
   // `_answers` is type-level only, so the value is everything but it and

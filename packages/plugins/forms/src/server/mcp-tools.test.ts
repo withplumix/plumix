@@ -2,6 +2,7 @@ import { email, group, select, text, textarea } from "plumix/fields";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
+import type { FormsConfig } from "../index.js";
 import type { SubmissionDTO } from "../types.js";
 import { defineForm } from "../define-form.js";
 import { forms } from "../index.js";
@@ -42,9 +43,11 @@ const newsletter = defineForm("newsletter", {
   ],
 });
 
-async function setup(): Promise<Harness> {
+async function setup(
+  config: Omit<FormsConfig, "forms"> = {},
+): Promise<Harness> {
   const harness = await createDispatcherHarness({
-    plugins: [forms({ forms: [contact, newsletter] })],
+    plugins: [forms({ ...config, forms: [contact, newsletter] })],
     mcp: { enabled: true },
   });
   await applyFormsSchema(harness.db);
@@ -125,6 +128,25 @@ describe("@plumix/plugin-forms — MCP tools", () => {
       { slug: "contact", title: "Contact us" },
       { slug: "newsletter", title: "Newsletter" },
     ]);
+  });
+
+  test("form_describe reports the period a form is actually kept for", async () => {
+    const harness = await setup({ retentionDays: 30 });
+    const secret = await mintPat(harness);
+
+    const inherited = await callTool(harness, secret, "form_describe", {
+      slug: "contact",
+    });
+    const declared = await callTool(harness, secret, "form_describe", {
+      slug: "newsletter",
+    });
+
+    expect(
+      payloadOf<{ retentionDays: number }>(inherited.result),
+    ).toMatchObject({ retentionDays: 30 });
+    expect(payloadOf<{ retentionDays: number }>(declared.result)).toMatchObject(
+      { retentionDays: 90 },
+    );
   });
 
   test("form_describe reports a form's fields, options and steps", async () => {

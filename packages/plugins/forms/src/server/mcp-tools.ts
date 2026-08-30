@@ -150,7 +150,7 @@ export function createFormMcpTools(registry: FormRegistry): readonly McpTool[] {
       if (form === undefined) {
         throw McpToolError.notFound(`unknown form: "${input.slug}"`);
       }
-      return formShape(form);
+      return formShape(form, registry);
     },
   };
 

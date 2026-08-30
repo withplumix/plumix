@@ -96,3 +96,31 @@ export function isUniqueConstraintErrorOn(
   }
   return false;
 }
+
+type DbErrorCode = "no_row_count";
+
+/**
+ * A database driver did not answer the way `plumix/db` needs it to.
+ * Named-error convention (#232).
+ */
+export class DbError extends Error {
+  static {
+    DbError.prototype.name = "DbError";
+  }
+
+  readonly code: DbErrorCode;
+
+  private constructor(code: DbErrorCode, message: string) {
+    super(message);
+    this.code = code;
+  }
+
+  static noRowCount(fields: readonly string[]): DbError {
+    return new DbError(
+      "no_row_count",
+      `This driver's write result carries no row count — expected ` +
+        `${fields.map((field) => `"${field}"`).join(", ")}. A driver that ` +
+        `reports none cannot use rowsAffected(); read the rows back instead.`,
+    );
+  }
+}

@@ -23,6 +23,8 @@ import {
   TOKEN_ROUTE_PATH,
 } from "./contract.js";
 import * as schema from "./db/schema.js";
+import { isRetentionPeriod } from "./define-form.js";
+import { FormsError } from "./errors.js";
 import { createFormRegistry, publishFormRegistry } from "./registry.js";
 import { createSubmissionsRouter } from "./rpc.js";
 import { createExportHandler } from "./server/export.js";
@@ -71,6 +73,16 @@ export type {
 } from "./types.js";
 export { BOUND_TYPES, SUBMISSION_STATUSES } from "./types.js";
 
+// Checked here rather than in the registry: the message has to name the
+// site that wrote the number.
+function retentionDefault(days: number | undefined): number {
+  if (days === undefined) return 0;
+  if (!isRetentionPeriod(days)) {
+    throw FormsError.invalidDefaultRetention({ retentionDays: days });
+  }
+  return days;
+}
+
 // A plain descriptor literal — plugin source runs server-side without the
 // Babel macro pipeline, so the manifest payload is authored by hand.
 const SUBMISSIONS_TITLE: Label = {
@@ -81,6 +93,19 @@ const SUBMISSIONS_TITLE: Label = {
 export interface FormsConfig {
   /** The site's own forms. Contributed as `"config"` for slug collisions. */
   readonly forms?: readonly FormDefinition[];
+  /**
+   * How many days a form that declares no `retentionDays` of its own
+   * keeps its submissions for. Nothing by default — indefinitely, the
+   * only answer that cannot lose an enquiry nobody asked to lose.
+   *
+   * It is the one place a site says how long it is entitled to what its
+   * forms collect, so a form has to opt out of it rather than into it. A
+   * form declaring its own period keeps that one, `0` included. It
+   * reaches every registered form, including one another plugin
+   * contributed through `registerForm` — a site's retention policy is
+   * the site's, not each contributor's.
+   */
+  readonly retentionDays?: number;
 }
 
 declare module "plumix" {
@@ -112,7 +137,7 @@ declare module "plumix" {
  * snapshot of what every field was called at the time.
  */
 export function forms(options: FormsConfig = {}) {
-  const registry = createFormRegistry();
+  const registry = createFormRegistry(retentionDefault(options.retentionDays));
   return definePlugin("forms", {
     // The chunk the `tel` field renderer is resolved from. Resolved
     // against the consuming site, the way every plugin admin entry is.
@@ -205,10 +230,7 @@ export function forms(options: FormsConfig = {}) {
         id: "retention-purge",
         cron: RETENTION_CRON,
         handler: async (appCtx) => {
-          const deleted = await purgeExpiredSubmissions(
-            appCtx,
-            registry.list(),
-          );
+          const deleted = await purgeExpiredSubmissions(appCtx, registry);
           if (deleted > 0) {
             appCtx.logger.info(
               `[plumix/plugin-forms] retention purge deleted ${String(deleted)} submission${deleted === 1 ? "" : "s"}`,

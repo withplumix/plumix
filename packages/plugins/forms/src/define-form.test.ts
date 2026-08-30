@@ -195,9 +195,16 @@ describe("a form's retention period", () => {
     expect(form.retentionDays).toBe(90);
   });
 
-  test("is forever for a form that declares none", () => {
+  test("is left for the site to answer when the form declares none", () => {
     expect(
       defineForm("contact", { fields: [text("name")] }).retentionDays,
+    ).toBeUndefined();
+  });
+
+  test("is forever for a form that declares zero", () => {
+    expect(
+      defineForm("contact", { fields: [text("name")], retentionDays: 0 })
+        .retentionDays,
     ).toBe(0);
   });
 

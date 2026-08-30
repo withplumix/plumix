@@ -68,7 +68,9 @@ export interface FormShape {
    * How long a submission is kept before the nightly purge takes it, or
    * null when they are kept indefinitely. The definition spells that as
    * `retentionDays: 0`, which reads as "deleted immediately" to anyone
-   * who has not read the docs for it.
+   * who has not read the docs for it. The site's own period is already
+   * folded in, so this is what the form is actually kept for rather than
+   * what it declared.
    */
   readonly retentionDays: number | null;
   /** Whether the form is behind Turnstile. Never the site key, never the secret. */
@@ -119,14 +121,18 @@ function stepShapes(form: FormDefinition): readonly FormStepShape[] {
   }));
 }
 
-export function formShape(form: FormDefinition): FormShape {
+export function formShape(
+  form: FormDefinition,
+  registry: FormRegistry,
+): FormShape {
+  const retentionDays = registry.retentionDaysFor(form);
   return {
     slug: form.slug,
     title: form.title === undefined ? form.slug : labelSourceText(form.title),
     submitLabel: labelTextOrNull(form.submitLabel),
     stores: form.store,
     binds: form.bind ?? null,
-    retentionDays: form.retentionDays === 0 ? null : form.retentionDays,
+    retentionDays: retentionDays === 0 ? null : retentionDays,
     captcha: form.turnstile !== undefined,
     fields: form.fields.map(fieldShape),
     steps: stepShapes(form),

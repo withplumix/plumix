@@ -10,3 +10,4 @@ export {
   isUniqueConstraintError,
   isUniqueConstraintErrorOn,
 } from "./errors.js";
+export { rowsAffected } from "./rows-affected.js";
