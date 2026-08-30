@@ -45,6 +45,10 @@ export const embedBlock = defineBlock({
       },
     },
   ],
+  text: [
+    { name: "title", prose: false },
+    { name: "caption", prose: false },
+  ],
   defaults: { url: "", title: "", caption: "" },
   render: ({ attrs, context }): ReactElement | null => {
     const url = typeof attrs.url === "string" ? attrs.url : "";

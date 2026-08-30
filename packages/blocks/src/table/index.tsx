@@ -220,6 +220,7 @@ export const tableHeaderCellBlock = defineBlock({
     },
     ALIGN_INPUT,
   ],
+  text: [{ name: "text" }],
   defaults: { text: "" },
   render: ({ attrs, blockProps }): ReactNode => {
     const { text = "" } = attrs as { readonly text?: string };
@@ -247,6 +248,7 @@ export const tableCellBlock = defineBlock({
     },
     ALIGN_INPUT,
   ],
+  text: [{ name: "text" }],
   defaults: { text: "" },
   render: ({ attrs, blockProps }): ReactNode => {
     const { text = "" } = attrs as { readonly text?: string };

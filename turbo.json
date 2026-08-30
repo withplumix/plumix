@@ -123,6 +123,15 @@
       "dependsOn": ["^topo"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/**/playwright.config.ts"]
     },
+    "@plumix/blocks#test:unit": {
+      // The block-text corpus test asserts against the demo site's seeded
+      // content, which lives downstream of this package — `^topo` never reaches
+      // it, so without the input turbo replays a green for the seed edit that
+      // breaks the test. Same `pkg#task` caveat as above: the entry replaces
+      // the base definition, so `^topo` is repeated.
+      "dependsOn": ["^topo"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/demo/seed.sql"]
+    },
     "test:build": {
       // Tests that need the build graph (`*.build.test.ts`): plumix inspects
       // the artifacts of a real Vite build, and the docs content checks compile

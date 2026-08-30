@@ -1,6 +1,11 @@
 import type { JsonObject } from "plumix";
 import type { ImageResolver } from "plumix/blocks/renderer";
-import { createBlockRegistry, renderBlockTree } from "plumix/blocks";
+import {
+  blockTextRoster,
+  createBlockRegistry,
+  extractBlockText,
+  renderBlockTree,
+} from "plumix/blocks";
 import { PlumixProvider } from "plumix/blocks/renderer";
 import { renderBlockSpecToHtml } from "plumix/blocks/test";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -176,5 +181,34 @@ describe("media/image v2", () => {
     expect(html).toContain('src="/p.jpg"');
     expect(html).toContain('width="800"');
     expect(html.toLowerCase()).not.toContain("srcset=");
+  });
+});
+
+describe("media/image text declaration", () => {
+  const roster = blockTextRoster([imageBlock]);
+
+  test("indexes alt text and the caption", () => {
+    const text = extractBlockText(
+      [
+        {
+          id: "i1",
+          name: "media/image",
+          attrs: {
+            src: "/uploads/pier.jpg",
+            alt: "A wooden pier at dawn",
+            caption: "Brighton, February",
+          },
+        },
+      ],
+      roster,
+    );
+    expect(text).toBe("A wooden pier at dawn\nBrighton, February");
+  });
+
+  test("keeps both out of reading-length counts", () => {
+    expect(imageBlock.text).toEqual([
+      { name: "alt", prose: false },
+      { name: "caption", prose: false },
+    ]);
   });
 });

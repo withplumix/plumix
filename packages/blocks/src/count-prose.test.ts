@@ -1,7 +1,13 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "./render-block-tree.js";
+import { blockTextRoster } from "./block-text.js";
+import { coreBlocks } from "./core-blocks.js";
 import { countProse } from "./count-prose.js";
+
+// The reading-length count reads the same declarations the extractor does.
+const roster = blockTextRoster(coreBlocks);
+const count = (blocks: readonly BlockNode[]) => countProse(blocks, roster);
 
 describe("countProse", () => {
   test("counts words and characters in a rich-text body, ignoring HTML tags", () => {
@@ -13,7 +19,7 @@ describe("countProse", () => {
       },
     ];
     // "Hello world" after tag-strip: 2 words, 11 chars (space counted).
-    expect(countProse(blocks)).toEqual({ words: 2, characters: 11 });
+    expect(count(blocks)).toEqual({ words: 2, characters: 11 });
   });
 
   test("counts headings and quotes inside rich-text bodies, summing across blocks", () => {
@@ -35,7 +41,7 @@ describe("countProse", () => {
       },
     ];
     // "Big Title" (2) + "one two three" (3) + "a quote" (2) = 7 words.
-    expect(countProse(blocks).words).toBe(7);
+    expect(count(blocks).words).toBe(7);
   });
 
   test("counts CJK ideographs individually since they have no inter-word spaces", () => {
@@ -47,7 +53,7 @@ describe("countProse", () => {
       },
     ];
     // 4 ideographs → 4 words (whitespace split would wrongly give 1).
-    expect(countProse(blocks)).toEqual({ words: 4, characters: 4 });
+    expect(count(blocks)).toEqual({ words: 4, characters: 4 });
   });
 
   test("counts details summaries and table cell text", () => {
@@ -56,7 +62,7 @@ describe("countProse", () => {
       { id: "tc", name: "core/table-cell", attrs: { text: "cell value" } },
     ];
     // "click to expand" (3) + "cell value" (2) = 5 words.
-    expect(countProse(blocks).words).toBe(5);
+    expect(count(blocks).words).toBe(5);
   });
 
   test("excludes non-prose blocks like code", () => {
@@ -67,7 +73,7 @@ describe("countProse", () => {
         attrs: { text: "const x = 1;", language: "ts" },
       },
     ];
-    expect(countProse(blocks)).toEqual({ words: 0, characters: 0 });
+    expect(count(blocks)).toEqual({ words: 0, characters: 0 });
   });
 
   test("recurses into nested container blocks", () => {
@@ -92,7 +98,7 @@ describe("countProse", () => {
       },
     ];
     // "Nested heading" (2) + "deep body" (2) = 4 words.
-    expect(countProse(blocks).words).toBe(4);
+    expect(count(blocks).words).toBe(4);
   });
 
   test("handles a long run of stray '<' in linear time (no ReDoS)", () => {
@@ -101,7 +107,7 @@ describe("countProse", () => {
       { id: "r1", name: "core/rich-text", attrs: { body } },
     ];
     const start = performance.now();
-    const result = countProse(blocks);
+    const result = count(blocks);
     // Linear strip finishes near-instantly; quadratic backtracking would
     // not. Generous ceiling to stay non-flaky on slow CI.
     expect(performance.now() - start).toBeLessThan(1000);
@@ -110,11 +116,9 @@ describe("countProse", () => {
   });
 
   test("empty content counts as zero", () => {
-    expect(countProse([])).toEqual({ words: 0, characters: 0 });
+    expect(count([])).toEqual({ words: 0, characters: 0 });
     expect(
-      countProse([
-        { id: "r1", name: "core/rich-text", attrs: { body: "<p></p>" } },
-      ]),
+      count([{ id: "r1", name: "core/rich-text", attrs: { body: "<p></p>" } }]),
     ).toEqual({ words: 0, characters: 0 });
   });
 });

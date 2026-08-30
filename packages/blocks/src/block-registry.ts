@@ -61,6 +61,24 @@ export interface BlockInput {
   readonly accept?: string | readonly string[];
 }
 
+/**
+ * An input whose stored value carries text worth reading back out of the
+ * content — the unit of a block's text declaration.
+ */
+export interface BlockTextInput {
+  /** The input's `name`, as declared in the block's `inputs`. */
+  readonly name: string;
+  /** The value is an HTML fragment: tags are stripped and entities decoded. */
+  readonly html?: boolean;
+  /**
+   * The value is body copy — running text a reader reads straight through, so
+   * reading-length counts include it. Defaults to `true`. Set `false` for text
+   * that is findable but not read at prose speed: a code listing, an image's
+   * alt attribute, a control's label, a caption, a file name.
+   */
+  readonly prose?: boolean;
+}
+
 export type BlockVariationScope = "inserter" | "block" | "transform";
 
 export interface BlockVariationExample {
@@ -140,6 +158,14 @@ export interface BlockSpec<
   readonly category?: string;
   readonly inserter?: boolean;
   readonly inputs?: readonly BlockInput[];
+  /**
+   * Which of the block's inputs carry text, and how each is encoded. Data
+   * rather than a function, so the merged roster over every registered block
+   * hashes to an extractor version — a block that adds or changes a declaration
+   * invalidates whatever was derived from the old one, with no version integer
+   * for an author to keep true.
+   */
+  readonly text?: readonly BlockTextInput[];
   readonly render: BlockNodeComponent<Attrs, Loaders>;
   readonly loaders?: Loaders;
   // Renders in place of `render` when a loader rejects. Without one,

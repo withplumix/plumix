@@ -40,6 +40,7 @@ export const buttonBlock = defineBlock({
       },
     },
   ],
+  text: [{ name: "label", prose: false }],
   defaults: { label: "Click" },
   // Neutral, theme-overridable defaults, seeded as editable Styles values. The
   // `var(--plumix-button-*, fallback)` form renders a button out of the box and

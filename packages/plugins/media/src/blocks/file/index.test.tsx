@@ -1,3 +1,4 @@
+import { blockTextRoster, extractBlockText } from "plumix/blocks";
 import { renderBlockSpecToHtml } from "plumix/blocks/test";
 import { describe, expect, test } from "vitest";
 
@@ -84,5 +85,22 @@ describe("media/file v2", () => {
       { editing: true },
     );
     expect(editing).toContain("data-plumix-file-placeholder");
+  });
+});
+
+describe("media/file text declaration", () => {
+  test("indexes the filename without counting it as reading", () => {
+    const text = extractBlockText(
+      [
+        {
+          id: "f1",
+          name: "media/file",
+          attrs: { href: "/uploads/rate-card.pdf", filename: "Rate card.pdf" },
+        },
+      ],
+      blockTextRoster([fileBlock]),
+    );
+    expect(text).toBe("Rate card.pdf");
+    expect(fileBlock.text).toEqual([{ name: "filename", prose: false }]);
   });
 });

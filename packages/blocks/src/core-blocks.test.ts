@@ -117,4 +117,34 @@ describe("coreBlocks", () => {
     expect(ref?.inserter).toBe(false);
     expect(ref?.inputs?.map((i) => i.name)).toEqual(["slug"]);
   });
+
+  // The reading-length counter's roster is now the blocks' own declarations, so
+  // what it reads is no longer visible at its call site. Anything else a core
+  // block declares is searchable text the reading estimate must not absorb.
+  test("declares exactly four inputs as body copy", () => {
+    const bodyCopy = coreBlocks.flatMap((spec) =>
+      (spec.text ?? [])
+        .filter((input) => input.prose !== false)
+        .map((input) => `${spec.name}.${input.name}`),
+    );
+    expect(bodyCopy.sort()).toEqual([
+      "core/details.summary",
+      "core/rich-text.body",
+      "core/table-cell.text",
+      "core/table-header-cell.text",
+    ]);
+  });
+
+  // A declaration naming an input the block does not have yields no text
+  // forever, while still moving the extractor version.
+  test("every declared text input names an input the block has", () => {
+    for (const spec of coreBlocks) {
+      const inputs = new Set((spec.inputs ?? []).map((input) => input.name));
+      for (const declared of spec.text ?? []) {
+        expect(inputs, `${spec.name}.${declared.name}`).toContain(
+          declared.name,
+        );
+      }
+    }
+  });
 });
