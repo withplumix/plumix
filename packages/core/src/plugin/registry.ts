@@ -58,7 +58,7 @@ export interface EntryTypeLabels {
   // Create / read / update / delete actions
   /** "Add New" — short-form CTA for the admin bar quick-create overflow. */
   readonly addNew?: Label;
-  /** "Add Post" — primary create CTA on list pages and slash menu. */
+  /** "Add Post" — primary create CTA on list and create pages. */
   readonly addNewItem?: Label;
   /** "Edit Post" — list-table row action and editor heading. */
   readonly editItem?: Label;

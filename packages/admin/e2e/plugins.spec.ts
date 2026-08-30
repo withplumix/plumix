@@ -222,13 +222,12 @@ test.describe("plugin block registered via window.plumix bridge", () => {
 
   // Guardrail proving a plugin block registered via
   // `window.plumix.registerPluginBlock(spec)` at chunk-evaluation time
-  // reaches the editor's runtime registry and surfaces in the inserter
-  // + slash menu. Simulates the plugin-chunk side effect without
-  // needing a multi-plugin playground: an `addInitScript` traps the
-  // first assignment to `window.plumix` (by `bootPlumixGlobals`) and
-  // immediately registers a stub block against the just-installed
-  // bridge.
-  test("a block registered at chunk-eval time surfaces in the inserter + slash menu", async ({
+  // reaches the editor's runtime registry and surfaces in the inserter.
+  // Simulates the plugin-chunk side effect without needing a multi-plugin
+  // playground: an `addInitScript` traps the first assignment to
+  // `window.plumix` (by `bootPlumixGlobals`) and immediately registers a stub
+  // block against the just-installed bridge.
+  test("a block registered at chunk-eval time surfaces in the inserter", async ({
     page,
   }) => {
     await mockManifest(page, MANIFEST_WITH_POST);
@@ -275,9 +274,7 @@ test.describe("plugin block registered via window.plumix bridge", () => {
     // The runtime registry feeds the editor's block catalog (the inserter):
     // a block registered at chunk-eval time surfaces there and is searchable,
     // proving the bridge reaches the same registry the hardcoded `coreBlocks`
-    // import used to. The slash menu lives inside the canvas iframe (which the
-    // mock harness can't serve), so the catalog is the host-side assertion;
-    // slash-menu surfacing is covered by the @plumix/admin-editor package.
+    // import used to.
     await expect(
       page.getByTestId("block-catalog-item-test/fake"),
     ).toBeVisible();

@@ -1144,7 +1144,7 @@ describe("buildManifest", () => {
     expect(cards[0]?.title).toBe("Theme");
   });
 
-  test("block entries carry slash-menu metadata (description, keywords, inserter)", async () => {
+  test("block entries carry inserter metadata (description, keywords, inserter)", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("acme", (ctx) => {
       ctx.registerBlock(
@@ -1167,7 +1167,7 @@ describe("buildManifest", () => {
     });
   });
 
-  test("block entries carry variations for slash-menu inserter items", async () => {
+  test("block entries carry variations for inserter items", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("acme", (ctx) => {
       ctx.registerBlock(

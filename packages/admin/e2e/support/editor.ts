@@ -158,13 +158,6 @@ export async function dismissStarterModal(page: Page): Promise<void> {
   await expect(modal).toBeHidden();
 }
 
-/** Opens the slash menu on the canvas and clicks the given item. */
-export async function insertViaSlash(page: Page, slug: string): Promise<void> {
-  await page.getByTestId("plumix-editor-canvas").focus();
-  await page.keyboard.press("/");
-  await page.getByTestId(`slash-menu-item-${slug}`).click();
-}
-
 type BoundingBox = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
 
 /** Resolves both drag endpoints' boxes, throwing if either is off-screen. */
