@@ -2,5 +2,15 @@
   "name": "@plumix/typescript-config",
   "version": "0.0.0",
   "private": true,
-  "files": ["*.json"]
+  "files": [
+    "*.json"
+  ],
+  "scripts": {
+    "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore"
+  },
+  "devDependencies": {
+    "@plumix/prettier-config": "workspace:*",
+    "prettier": "catalog:"
+  },
+  "prettier": "@plumix/prettier-config"
 }

@@ -1,3 +1,0 @@
-# Baked at `prepack` by `scripts/build-snapshot.mjs`; the workspace
-# scaffolder scans the live monorepo instead. Ships in the tarball only.
-/registry.json

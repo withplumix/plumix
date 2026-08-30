@@ -2597,7 +2597,14 @@ importers:
         specifier: 'catalog:'
         version: 3.9.6
 
-  tooling/typescript: {}
+  tooling/typescript:
+    devDependencies:
+      '@plumix/prettier-config':
+        specifier: workspace:*
+        version: link:../prettier
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.6
 
   tooling/vitest:
     devDependencies:

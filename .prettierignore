@@ -1,0 +1,14 @@
+# Tracked files only. Generated output is already excluded by the root
+# `.gitignore`, which every `format` script passes alongside this file.
+
+# TanStack Router rewrites this on every dev / build run with its own
+# formatter, so a `prettier --write` is clobbered on the next generation.
+packages/admin/src/routeTree.gen.ts
+
+# Template payload, copied verbatim into scaffolded projects and formatted
+# there. Prettier would rewrite its `__PROJECT_NAME__` tokens.
+packages/create-plumix-app/base
+
+# pnpm owns this file's formatting; a `prettier --write` would fight the
+# next `pnpm install`.
+pnpm-lock.yaml

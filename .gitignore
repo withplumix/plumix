@@ -33,6 +33,9 @@ yarn-error.log*
 # caches (tsbuildinfo, eslint, prettier)
 .cache
 
+# astro
+.astro/
+
 # cloudflare
 .wrangler/
 
@@ -71,6 +74,11 @@ packages/*/locales/*.mjs
 packages/*/locales/*.d.mts
 packages/plugins/*/locales/*.mjs
 packages/plugins/*/locales/*.d.mts
+
+# Scaffold registry snapshot, written at `prepack` by
+# `scripts/build-snapshot.mjs`. Ships in the tarball (it is in `files`),
+# never committed.
+packages/create-plumix-app/registry.json
 
 # Cloudflare local secrets
 .dev.vars
