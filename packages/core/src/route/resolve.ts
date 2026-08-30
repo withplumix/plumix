@@ -13,7 +13,7 @@ import { ACCESS_POLICY_META_KEY } from "../access/meta-key.js";
 import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
 import { accumulateEmbeddedTags } from "../cache/embedded-tags.js";
-import { and, eq, inArray, isNotNull, sql } from "../db/index.js";
+import { and, eq, inArray, isNotNull } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
@@ -21,6 +21,7 @@ import { getAutosave } from "../revisions/repository.js";
 import { stripReservedMeta } from "../revisions/snapshot-envelope.js";
 import { entryCapability } from "../rpc/procedures/entry/lifecycle.js";
 import { notFound, permanentRedirect } from "../runtime/http.js";
+import { entrySearchCondition } from "../search/conditions.js";
 import { resolveEditMode } from "./edit-mode.js";
 import { findTermByPath } from "./path-chain.js";
 import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
@@ -136,9 +137,6 @@ async function resolveSearch(
       ([, spec]) => spec.isPublic !== false && spec.excludeFromSearch !== true,
     )
     .map(([key]) => key);
-  // Escape SQL LIKE wildcards in the user query so `_` and `%` match
-  // literal characters instead of any-char / any-string.
-  const escaped = query.replace(/[\\%_]/g, "\\$&");
   const where =
     searchableTypes.length === 0 || query === ""
       ? null
@@ -146,7 +144,7 @@ async function resolveSearch(
           eq(entries.status, "published"),
           isNotNull(entries.publishedAt),
           inArray(entries.type, searchableTypes),
-          sql`${entries.title} LIKE ${`%${escaped}%`} ESCAPE '\\'`,
+          entrySearchCondition({ value: query, exclude: false }),
         );
   const result = await paginatedEntries(
     ctx,
