@@ -3,6 +3,7 @@ import { eq, lt } from "drizzle-orm";
 import type { Db } from "../context/app.js";
 import type { Session } from "../db/schema/sessions.js";
 import type { User } from "../db/schema/users.js";
+import { rowsAffected } from "../db/rows-affected.js";
 import { sessions } from "../db/schema/sessions.js";
 import { users } from "../db/schema/users.js";
 import { generateToken, hashToken } from "./tokens.js";
@@ -203,13 +204,13 @@ export async function invalidateAllSessionsForUser(
 
 /**
  * Bulk-delete expired rows, returning how many were reaped. Caller decides
- * cadence (cron / on-demand). `returning()` gives a driver-portable count
- * (SQLite `DELETE ... RETURNING` on both libsql and D1).
+ * cadence (cron / on-demand). Counting off the driver rather than reading
+ * every deleted id back trades portability for heap: a driver that reports
+ * no count throws here, where `returning()` would have answered. The demo
+ * runtime's `sqlite-proxy` is the only such driver, and it runs no cron.
  */
 export async function pruneExpiredSessions(db: Db): Promise<number> {
-  const deleted = await db
-    .delete(sessions)
-    .where(lt(sessions.expiresAt, new Date()))
-    .returning({ id: sessions.id });
-  return deleted.length;
+  return rowsAffected(
+    await db.delete(sessions).where(lt(sessions.expiresAt, new Date())),
+  );
 }
