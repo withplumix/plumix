@@ -4,6 +4,8 @@ import { and, count, desc, eq, getTableColumns, gte, lt, lte } from "plumix/db";
 
 import type { FormSubmission, StoredSubmission } from "../db/schema.js";
 import type {
+  BoundType,
+  FormBound,
   FormLabelSnapshot,
   FormSubmissionCandidate,
   SubmissionCounts,
@@ -38,18 +40,50 @@ export async function insertSubmission(
   ctx: AppContext,
   candidate: FormSubmissionCandidate,
 ): Promise<StoredSubmission> {
-  const { labels, ...rest } = candidate;
+  const { labels, bound, ...rest } = candidate;
   const labelsDigest = await storeLabelSnapshot(ctx.db, labels);
 
   const [row] = await ctx.db
     .insert(formSubmissions)
-    .values({ ...rest, labelsDigest })
+    .values({ ...rest, labelsDigest, ...boundColumns(bound) })
     .returning();
   if (!row) {
     throw FormsError.insertReturnedNoRow({ slug: candidate.form });
   }
-  const { labelsDigest: _stored, ...submission } = row;
-  return { ...submission, labels };
+  return toStored(row, labels);
+}
+
+/**
+ * The pair as two columns. Exported so that everything writing a row
+ * writes them through here — which is what makes "set and cleared
+ * together" a property of the code rather than a rule to remember.
+ */
+export function boundColumns(bound: FormBound | null): {
+  boundType: BoundType | null;
+  boundId: number | null;
+} {
+  return { boundType: bound?.type ?? null, boundId: bound?.id ?? null };
+}
+
+/**
+ * One row as every reader wants it: the digest dropped, since it is how
+ * a snapshot is found and of no use to anything already holding one, and
+ * the bound pair folded back into the value it stands for. A half-set
+ * pair can only come from a direct write, and reads as nothing bound
+ * rather than as half a reference.
+ */
+function toStored(
+  { labelsDigest: _digest, boundType, boundId, ...rest }: FormSubmission,
+  labels: FormLabelSnapshot,
+): StoredSubmission {
+  return {
+    ...rest,
+    labels,
+    bound:
+      boundType !== null && boundId !== null
+        ? { type: boundType, id: boundId }
+        : null,
+  };
 }
 
 /**
@@ -112,11 +146,10 @@ function selectSubmissions(ctx: AppContext) {
     );
 }
 
-function withLabels({
-  labelsDigest: _digest,
-  ...row
-}: FormSubmission & { labels: FormLabelSnapshot | null }): StoredSubmission {
-  return { ...row, labels: row.labels ?? {} };
+function withLabels(
+  row: FormSubmission & { labels: FormLabelSnapshot | null },
+): StoredSubmission {
+  return toStored(row, row.labels ?? {});
 }
 
 // `id` is autoincrement and a submission is never rewritten in place, so

@@ -38,7 +38,7 @@ function submission(overrides: Partial<SubmissionDTO> = {}): SubmissionDTO {
     status: "new",
     answers: { name: "Ada" },
     labels: { name: { label: "Your name" } },
-    entryId: null,
+    bound: null,
     ipHash: null,
     userAgent: null,
     handlerError: null,

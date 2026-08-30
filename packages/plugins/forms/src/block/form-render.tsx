@@ -34,8 +34,8 @@ export function FormRender({
    */
   readonly editing: boolean;
   /**
-   * The signed entry a `bind: "entry"` form was rendered on — see
-   * `signBoundEntry`. Only the block can mint one: signing is
+   * The signed row a form with a `bind` was rendered on — see
+   * `signBound`. Only the block can mint one: signing is
    * asynchronous and a render is not, so it comes from a block loader,
    * and a surface with no loader to run passes `null` exactly as a form
    * on an archive does.

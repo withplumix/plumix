@@ -58,8 +58,8 @@ export function submissionsToCsv(rows: readonly SubmissionDTO[]): string {
 
 /**
  * Submissions as another program reads them: the whole row, answers
- * nested as they were stored and the envelope the CSV leaves out — the
- * entry the form was bound to, the hashed address, the agent, whatever
+ * nested as they were stored and the envelope the CSV leaves out — what
+ * the form was bound to, the hashed address, the agent, whatever
  * the form's own handler failed at. Indented, because the first thing
  * done with an export is to look at it.
  */

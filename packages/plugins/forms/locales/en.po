@@ -308,8 +308,13 @@ msgstr "Received"
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx
-msgid "plugin.forms.inbox.detail.entry"
-msgstr "Page entry"
+msgid "plugin.forms.inbox.detail.bound"
+msgstr "Bound to"
+
+#. js-lingui-explicit-id
+#: src/admin/SubmissionsShell.tsx
+msgid "plugin.forms.inbox.detail.boundValue"
+msgstr "{type, select, term {Term} author {Author} other {Entry}} #{id}"
 
 #. js-lingui-explicit-id
 #: src/admin/SubmissionsShell.tsx

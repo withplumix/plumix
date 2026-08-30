@@ -34,7 +34,7 @@ const CONTACT_ROW = {
   status: "new",
   answers: { name: "Ada", email: "ada@example.test" },
   labels: { name: { label: "Your name" }, email: { label: "Email" } },
-  entryId: 42,
+  bound: { type: "entry", id: 42 },
   ipHash: "deadbeef",
   userAgent: "curl/8",
   handlerError: null,
@@ -48,7 +48,7 @@ const RETIRED_ROW = {
   form: "retired",
   answers: { question: "Still readable" },
   labels: { question: { label: "What we used to ask" } },
-  entryId: null,
+  bound: null,
   handlerError: "SMTP refused",
 };
 
@@ -313,6 +313,20 @@ describe("SubmissionsShell", () => {
     );
     expect(screen.getByTestId("forms-detail-handler-error")).toHaveTextContent(
       "SMTP refused",
+    );
+  });
+
+  test("names the row a submission was bound to", async () => {
+    stubInbox({
+      list: [{ submissions: [CONTACT_ROW], nextCursor: null }],
+      get: CONTACT_ROW,
+    });
+
+    await openDetail(7);
+
+    // The kind as well as the id: "42" alone does not say what it names.
+    expect(screen.getByTestId("forms-detail-bound")).toHaveTextContent(
+      "Entry #42",
     );
   });
 

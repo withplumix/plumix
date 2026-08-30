@@ -44,7 +44,7 @@ function submit(
     status: "new",
     answers,
     labels: { name: { label: "Name" } },
-    entryId: null,
+    bound: null,
     ipHash: null,
     userAgent: null,
     ...overrides,

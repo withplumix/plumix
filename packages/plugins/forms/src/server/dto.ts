@@ -13,7 +13,7 @@ export function toSubmissionDto(row: StoredSubmission): SubmissionDTO {
     status: row.status,
     answers: row.answers,
     labels: row.labels,
-    entryId: row.entryId,
+    bound: row.bound,
     ipHash: row.ipHash,
     userAgent: row.userAgent,
     handlerError: row.handlerError,

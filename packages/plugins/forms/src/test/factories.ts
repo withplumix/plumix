@@ -1,18 +1,27 @@
 import { Factory } from "fishery";
 
 import type { FormSubmission, NewFormSubmission } from "../db/schema.js";
-import type { FormLabelSnapshot, SubmissionStatus } from "../types.js";
+import type {
+  FormBound,
+  FormLabelSnapshot,
+  SubmissionStatus,
+} from "../types.js";
 import type { FormsTestDb } from "./db.js";
 import { formSubmissions } from "../db/schema.js";
-import { storeLabelSnapshot } from "../server/repository.js";
+import { boundColumns, storeLabelSnapshot } from "../server/repository.js";
 
 interface DbTransient {
   db: FormsTestDb;
 }
 
-/** What a seed hands in: the row, with the labels rather than their key. */
-type SubmissionSeed = Omit<NewFormSubmission, "labelsDigest"> & {
+/** What a seed hands in: the row, with the labels and the bound pair as
+ *  the values they stand for rather than as the columns they are. */
+type SubmissionSeed = Omit<
+  NewFormSubmission,
+  "labelsDigest" | "boundType" | "boundId"
+> & {
   labels: FormLabelSnapshot;
+  bound: FormBound | null;
 };
 
 /**
@@ -30,7 +39,7 @@ export const submissionFactory = Factory.define<
   // the types the table declares for them.
   Partial<SubmissionSeed>
 >(({ sequence, transientParams, onCreate, params }) => {
-  onCreate(async ({ labels, ...attrs }) => {
+  onCreate(async ({ labels, bound, ...attrs }) => {
     const db = transientParams.db;
     if (!db) {
       // eslint-disable-next-line no-restricted-syntax -- test-support guard
@@ -39,7 +48,7 @@ export const submissionFactory = Factory.define<
     const labelsDigest = await storeLabelSnapshot(db, labels);
     const [row] = await db
       .insert(formSubmissions)
-      .values({ ...attrs, labelsDigest })
+      .values({ ...attrs, labelsDigest, ...boundColumns(bound) })
       .returning();
     // eslint-disable-next-line no-restricted-syntax -- test-support guard
     if (!row) throw new Error("submissionFactory: insert returned no row");
@@ -57,7 +66,7 @@ export const submissionFactory = Factory.define<
     status: params.status ?? "new",
     answers: params.answers ?? { name: `Visitor ${String(sequence)}` },
     labels: params.labels ?? { name: { label: "Your name" } },
-    entryId: params.entryId ?? null,
+    bound: params.bound ?? null,
     ipHash: params.ipHash ?? null,
     userAgent: params.userAgent ?? null,
     handlerError: params.handlerError ?? null,

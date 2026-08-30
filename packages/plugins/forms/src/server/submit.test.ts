@@ -917,7 +917,7 @@ describe("the cross-cutting hooks", () => {
           email: { label: "Email" },
         },
         status: "spam",
-        entryId: null,
+        bound: null,
         ipHash: null,
         userAgent: null,
       },

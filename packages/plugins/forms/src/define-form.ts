@@ -13,7 +13,12 @@ import {
 
 import type { StoredSubmission } from "./db/schema.js";
 import type { FormPageBreak, FormPageBreakEntry } from "./steps.js";
-import type { FormFieldError, FormLabelSnapshot } from "./types.js";
+import type {
+  BoundType,
+  FormBound,
+  FormFieldError,
+  FormLabelSnapshot,
+} from "./types.js";
 import { isSupportedInputType, SUPPORTED_INPUT_TYPES } from "./contract.js";
 import { FormsError } from "./errors.js";
 import { fieldName } from "./paths.js";
@@ -27,12 +32,15 @@ import { isPageBreak } from "./steps.js";
 export type FormElementInput = MetaBoxFieldInput | FormPageBreak;
 
 /**
- * What a form carries from the page it is placed on. `"entry"` binds the
- * entry whose page is being rendered — a subscribe form on a school's
- * page knows which school — and nothing else today, though the shape is
- * a union so a term or an author can join it without a breaking change.
+ * What a form carries from the page it is placed on, and nothing when
+ * the page is anything else. One kind rather than a list, and never
+ * "whatever this page is": an author writing `"entry"` means the entry,
+ * and a term id would be a value their handler reads as an entry.
+ *
+ * Spelled here as well as in {@link BoundType} because this is the name
+ * a form author writes.
  */
-export type FormBinding = "entry";
+export type FormBinding = BoundType;
 
 /**
  * The half of a Turnstile configuration a visitor's browser is given.
@@ -96,13 +104,13 @@ type AnyAnswers = Readonly<Record<string, JsonValue | undefined>>;
 export interface FormValidateEvent<Answers> {
   readonly answers: Answers;
   /**
-   * The entry the form was placed on, for a form that declared
-   * `bind: "entry"` and was rendered on one — the whole point of binding
-   * is that a handler can act on it. `null` for a form that binds
-   * nothing, and for one that binds but was rendered somewhere with no
-   * entry to bind.
+   * What the form was placed on, for a form that declared a `bind` and
+   * was rendered on that kind of page — the whole point of binding is
+   * that a handler can act on it. `null` for a form that binds nothing,
+   * and for one that binds but was rendered somewhere with nothing to
+   * bind.
    */
-  readonly entryId: number | null;
+  readonly bound: FormBound | null;
   readonly ctx: AppContext;
 }
 
@@ -143,10 +151,10 @@ export interface FormDefinitionInput<
   readonly fields: Fields;
   /**
    * What this form carries from the page it is placed on. Declared here;
-   * resolved for you at render, so nothing has to thread an entry id
-   * through the block, the template or the theme. The resolved value is
-   * signed and stored in its own column, and a page the binding does not
-   * apply to — a front page, an archive — simply carries nothing.
+   * resolved for you at render, so nothing has to thread an id through
+   * the block, the template or the theme. The resolved value is signed
+   * and stored in its own columns, and a page the binding does not apply
+   * to — a front page, an archive — simply carries nothing.
    */
   readonly bind?: FormBinding;
   /**

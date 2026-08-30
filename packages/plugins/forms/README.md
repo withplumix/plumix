@@ -232,17 +232,18 @@ The block server-renders static markup — the same bytes for every visitor, so
 the page carrying it stays edge-cacheable — and it submits as a plain HTML
 `POST` with no JavaScript on the page at all.
 
-## Carrying the page's entry
+## Carrying the page's row
 
-A form placed on an entry's page can carry that entry, so a subscribe form on
-a school's page knows which school without you wiring one through the block,
-the template or the theme. Declare what it binds:
+A form placed on a page can carry the row that page resolves to, so a
+subscribe form on a school's page knows which school without you wiring one
+through the block, the template or the theme. Declare what it binds — an
+`entry`, a `term` or an `author`:
 
 ```ts
 const subscribe = defineForm("subscribe", {
   bind: "entry",
   fields: [email("email").required()],
-  onSubmit: ({ entryId, answers }) => enrol(entryId, answers.email),
+  onSubmit: ({ bound, answers }) => enrol(bound?.id ?? null, answers.email),
 });
 ```
 
@@ -258,36 +259,52 @@ submitting against a different entry; here the value and its signature travel
 together and the server reads the value back only out of a token it signed.
 Edit either half and the submission is refused with a `403`, as is a token
 minted for one form and replayed against another — the form's slug is inside
-what was signed.
+what was signed, and so is the kind, so entry 7's token cannot be posted as
+term 7.
 
-`entryId` reaches `validate` and `onSubmit`, and is stored in its own indexed
-`entry_id` column rather than among the answers, so _every submission for this
-entry_ is a query:
+`bound` reaches `validate` and `onSubmit` as `{ type, id }`, and is stored in
+its own indexed `bound_type` / `bound_id` columns rather than among the
+answers, so _every submission for this row_ is a query:
 
 ```ts
-import { eq } from "plumix/db";
+import { and, eq } from "plumix/db";
 
 import { formSubmissions } from "@plumix/plugin-forms/schema";
 
 const enquiries = await ctx.db
   .select()
   .from(formSubmissions)
-  .where(eq(formSubmissions.entryId, school.id));
+  .where(
+    and(
+      eq(formSubmissions.boundType, "entry"),
+      eq(formSubmissions.boundId, school.id),
+    ),
+  );
 ```
 
-A bound form placed somewhere with no entry to bind carries no token and stores
-no entry — a front page, a footer, and also an archive or a synced pattern,
-where the block is rendered but the entry is not resolved for it. The same goes
-for the two surfaces below that are not the block: signing is asynchronous and a
+Both columns are asked for together. Ids are unique only within their own
+table, so `bound_id` alone does not say what it names — and the index is
+partial and leads with the kind, so a query on `bound_type` alone, or on
+`bound_id` alone, falls back to a full scan.
+
+A bound form placed on a page of any other kind carries no token and stores
+nothing — a front page, a footer, an archive or a synced pattern, and equally
+a term page under a form that asked for an entry. Changing a form's `bind`
+does the same to pages the edge is still serving from before the change: the
+old token still verifies, but it names a kind the form no longer asks for, so
+the submission is accepted and stores nothing rather than handing a handler
+the wrong kind of id. The same goes for the two surfaces below that are not
+the block: signing is asynchronous and a
 template's render is not, so the token comes from a block loader and only the
 block has one. A form that declares no `bind` carries nothing either way. Read
-`entryId` as though it were optional wherever the same form appears in more than
+`bound` as though it were optional wherever the same form appears in more than
 one place.
 
 The token does not expire, because the page carrying it is edge-cached and an
-expiry would be about the visitor rather than the page. `entry_id` carries no
-foreign key for the same reason `form` does not: a submission is a record
-of what someone sent, and deleting the entry should not delete it.
+expiry would be about the visitor rather than the page. `bound_id` carries no
+foreign key — a polymorphic pair cannot — and would not want one anyway, for
+the same reason `form` does not: a submission is a record of what someone
+sent, and deleting the row it was about should not delete it.
 
 ## What JavaScript adds
 
@@ -463,7 +480,7 @@ form derives from them are yours to handle here:
   broken into steps renders as one long list of questions. That still
   submits correctly; it is just not a wizard.
 - **`bind: "entry"` carries no entry.** The signed token comes from a
-  block loader, so a bound form driven from here stores no `entryId` —
+  block loader, so a bound form driven from here stores no `bound` —
   the same position as one on an archive. `PlumixForm` is in it too.
 
 ## A captcha, where one is needed
@@ -873,8 +890,10 @@ counted over the rows that remain would be handed to a later submission once a
 sweep emptied a form, so a reference somebody had quoted would silently
 rebind.
 
-A form that binds the page's entry stores it in `entry_id`, indexed so that
-reading every submission for one entry is a query rather than a scan.
+A form that binds the page's row stores it in `bound_type` and `bound_id`,
+indexed together so that reading every submission for one row is a query
+rather than a scan. The index is partial — a submission that bound nothing is
+not one anybody looks up.
 
 A submission whose `onSubmit` threw carries the reason in `handler_error`. The
 answers are untouched — what failed is what the site meant to do next with
