@@ -1,5 +1,97 @@
 # @plumix/plugin-comments
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2091](https://github.com/withplumix/plumix/pull/2091) [`d01e082`](https://github.com/withplumix/plumix/commit/d01e082f096665ff3327206e25ac046db9de2b32) Thanks [@nasyrov](https://github.com/nasyrov)! - Accepts a comment posted as a plain HTML form, and ships the markup that makes that worth having.
+
+  `POST /_plumix/comments/submit` is now a `formPost` route, so a `<form method="post">` reaches it
+  without the `X-Plumix-Request` header a browser cannot set on an ordinary submit. It reads
+  urlencoded bodies as well as JSON, coercing `entryId` and `parentId` before validation while
+  keeping the schema strict on both paths, and chooses the answer's shape from the request's
+  content-type rather than from `Accept` — a `fetch` sends no `Accept` header of its own, so
+  negotiating on it would have turned every existing scripted caller's 200 into a redirect. An
+  accepted comment answers 303 back to the page the form was on, resolved from a hidden `returnTo`
+  field first and the `Referer` second, both held to the site's own origin and refused the endpoint's
+  own path. Every answer is `no-store`.
+
+  Two new subpaths render the form. `PlumixCommentForm` from `@plumix/plugin-comments/theme` is the
+  plugin's own markup — labelled controls, an error summary, the honeypot — dropped into a template,
+  upgraded in place by an island where JavaScript runs. `usePlumixCommentForm` from
+  `@plumix/plugin-comments/hooks` is the same submission with none of the markup, for a theme writing
+  its own controls. `loadThread` and a hand-written form are unaffected.
+
+  Owning the markup is what lets a refused comment be answered with the form back, carrying what the
+  visitor typed and the refusal against the field that produced it. Every exit of the handler now
+  goes through one negotiated `accepted` or `fail`, the honeypot's fake success included — answering
+  a trapped submission differently from a real one is how a bot learns it was caught.
+
+  One behaviour to know about: a request admitted by the `formPost` exemption is handed an
+  authenticator that resolves nobody, so a signed-in author posting without JavaScript is filed as
+  the anonymous commenter they cannot be told apart from. Under the default `first_time` mode that
+  costs them their first comment's fast path and its `authorUserId` link, and only their first. The
+  plugin's new documentation page says so.
+
+### Patch Changes
+
+- [#2062](https://github.com/withplumix/plumix/pull/2062) [`7b36faf`](https://github.com/withplumix/plumix/commit/7b36faf5b7a0a0bcc9f5db8a244464975a5ecd42) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `readVisitorMeta` to `plumix/db`: a request in, a salted per-install hash of the visitor's
+  address and their truncated user-agent out. It is what a public submission handler needs to
+  rate-limit or attribute without keeping the address itself, and `@plumix/plugin-comments` and
+  `@plumix/plugin-forms` had each grown their own copy of it — the same hex encoder, the same lazily
+  minted settings-row salt, the same `cf-connecting-ip` → `x-forwarded-for` → `"unknown"` ladder.
+
+  The salt is minted on first use and persisted in the settings table, so an install needs no env var
+  or KV binding to store hashed addresses; concurrent first-writes converge on one salt through
+  `onConflictDoNothing` and a re-read. It takes the caller's namespace and keeps that namespace's salt
+  in its own group, so no two callers share one — either's hashes would otherwise be matchable against
+  the other's.
+
+  To be clear about what the salt buys: it defeats a precomputed table of the IPv4 space and nothing
+  more. It lives in the same database as the hashes, so it is no defence against someone who has
+  already read that database.
+
+  Also closes the hole that made keeping the salt off a settings _page_ meaningless. `settings.get`
+  took any group name it was handed, so both plugins' salts were readable by anyone holding
+  `settings:manage` — which is admin-wide, and mintable as a narrow API-token scope that has no
+  business seeing them. A settings group whose name ends in `_internal` now means server-only rows:
+  `settings.get` and `settings.upsert` refuse it, and `registerSettingsGroup` rejects the name at boot
+  rather than letting a plugin build a settings page that fails on every load. Server-side readers are
+  unchanged — this defends against a `settings:manage` holder, not against code running in the worker.
+
+- [#2095](https://github.com/withplumix/plumix/pull/2095) [`8bdb8a3`](https://github.com/withplumix/plumix/commit/8bdb8a34dd366975b3e3bf967e0a3fbf63249381) Thanks [@nasyrov](https://github.com/nasyrov)! - Publishes the five helpers the forms and comments plugins had each written for themselves, and
+  fixes a return-URL bug in `@plumix/plugin-forms` on the way.
+
+  Each of the five was a fact about core's own wire format — the header its CSRF gate reads, the
+  marker its islands bootstrap writes, the origin rule its dispatcher enforces — that a plugin had to
+  rediscover. Core is now the one that says them.
+
+  `resolveReturnUrl` on `plumix` resolves where to send a visitor after a form post the browser
+  submitted, holding every candidate to an origin the site answers on and refusing the endpoint's own
+  path, so the answer can be turned into neither an open redirect nor a loop.
+
+  `useIsLive`, `documentBasePath` and `VISUALLY_HIDDEN_STYLE` join `plumix/blocks/renderer`.
+  `useIsLive` is false through the server render and the first client render and true once a
+  component is live, which is how progressive enhancement tells markup that shipped from JavaScript
+  that ran. `documentBasePath` reads the subdirectory prefix off the islands bootstrap marker, for
+  the callers `useBasePath` cannot serve because a hydrated island has no `PlumixProvider` context.
+  `VISUALLY_HIDDEN_STYLE` is the `.sr-only` recipe inline, so hiding never depends on a stylesheet
+  the page did not load.
+
+  `CSRF_HEADER_NAME` and `CSRF_HEADER_VALUE` are now on `plumix/blocks`, alongside the existing
+  export from `plumix`. They are defined in `@plumix/blocks` and re-exported by core rather than the
+  reverse: the senders are islands, and a `"use client"` module reaching for `plumix` to name the
+  header would pull the database, the authenticator and the dispatcher into a browser bundle.
+
+  The forms fix: its own copy of the return-URL resolver parsed each candidate with no base and
+  accepted only the configured origin. A relative `returnTo` — the natural thing for a template to
+  pass — was refused outright rather than read as a path on the site, and on a multi-host deploy
+  every candidate failed the origin test, so every submitter was sent to the site root. The shared
+  resolver accepts both the request's origin and the configured one, which is the pair the
+  dispatcher's own Origin check accepts.
+
+  No public API was removed from either plugin; the copies were internal.
+
 ## 0.1.5
 
 ### Patch Changes

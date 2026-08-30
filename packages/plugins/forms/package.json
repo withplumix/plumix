@@ -1,6 +1,6 @@
 {
   "name": "@plumix/plugin-forms",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Forms plugin for Plumix \u2014 forms declared in config, rendered as a block, with stored submissions.",
   "license": "MIT",

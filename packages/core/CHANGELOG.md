@@ -1,5 +1,348 @@
 # @plumix/core
 
+## 0.19.0
+
+### Minor Changes
+
+- [#2113](https://github.com/withplumix/plumix/pull/2113) [`b88e2f3`](https://github.com/withplumix/plumix/commit/b88e2f39608fd6b7f68d40ef989bd9d55f655a73) Thanks [@nasyrov](https://github.com/nasyrov)! - Stops `plumix migrate generate` reporting success over migrations it never wrote, and wipes the
+  generated `drizzle/` before an e2e run regenerates it.
+
+  drizzle-kit catches its own generate errors, prints them, and exits 0. The CLI already refused a
+  non-zero exit, but that code never came, so a failed generate still printed `✓ Migrations emitted`
+  and left the previous run's SQL in place. The command now reads what drizzle-kit put on stderr —
+  empty on success, including a generate that finds nothing to do — and fails with
+  `migrate_generate_failed` when there is any. Because stderr is now the signal, drizzle-kit runs
+  under `--no-warnings`, so Node's own deprecation notices cannot be mistaken for one.
+  `spawnCapturingStderr` is the new `@plumix/core` seam behind it: `spawnInherit` with stderr teed
+  rather than inherited, so the child's output still reaches the terminal as it arrives.
+
+  The failure it was hiding: the worker-driven e2e command baked by `definePlumixE2EConfig` wiped
+  `.wrangler/state` but not `drizzle/`. That directory is gitignored and regenerated from the current
+  schema every run, so one left over from an earlier run is output from an older schema — which
+  drizzle-kit will not replace without being told how to resolve the rename. `wrangler d1 migrations
+apply` then builds a database missing whatever the schema added since, and the suite fails much
+  later on the missing table. CI never saw it: a fresh checkout has no `drizzle/`, so there is nothing
+  to diff against. The baked command now wipes it alongside the state it belongs to, which is what
+  makes a repeat local run match the fresh checkout CI always gets.
+
+- [#2086](https://github.com/withplumix/plumix/pull/2086) [`8aa171f`](https://github.com/withplumix/plumix/commit/8aa171f34e562f3a0176e802abaf63f5639002cc) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `.default()`, which narrowed the read type to a non-optional value while nothing supplied
+  that value on read. `decodeMetaBag` walked only the keys storage held, so a declared default
+  existed as a type and an admin form prefill and nowhere else — `text("tone").default("warm")` typed
+  as `string` and read back `undefined` on any row saved before the field was added, or written
+  through the RPC.
+
+  The decoder now fills a declared default wherever the bag has no key. A repeater row and a group
+  value are bags in their own right, and both builders permit arbitrary nesting, so decoding recurses
+  and the fill reaches every depth `InferFields` claims. The value travels the same decode path a
+  stored one does, so a `.returns("date")` default reads back a `Date`. Absence is the only trigger —
+  storage cannot hold `undefined`, so a stored `null` is a value someone chose and keeps its place.
+  An absent container stays absent rather than being synthesized from its members' defaults, which is
+  what its own read type says.
+
+  Making container decode recursive also fixes two adjacent gaps in the same read shape: a
+  `.returns("date")` field nested in a group or a repeater row is now projected to a `Date` rather
+  than left as its stored string, and a legacy reference value nested more than one level deep is now
+  healed.
+
+  `storedMeta` is untouched, which is the split that matters: `.whereMeta()` and the rule predicates
+  compare against the stored bag, so a defaulted key still does not match until something saves it.
+  A default is now visible on every read surface — templates, the admin RPC, and the REST API for a
+  field that opted in with `.showInApi()`.
+
+  `settings.get` fills its group's defaults too. Settings have no decode pass of their own, so that
+  one is a fill and nothing more: a `.returns("date")` settings field still reads back its stored ISO
+  string.
+
+  A field key of `__proto__`, `constructor` or `prototype` is now rejected at registration for
+  top-level meta fields, as it already was for repeater and group members. Such a key passed the key
+  regex and then swapped the prototype of the decoded bag instead of storing a value.
+
+  Internals: `decodeMetaBag` and `loadMeta` take a `MetaScope` — a field list paired with a lookup
+  over it — since filling a default needs the fields storage never mentions. `metaScope(fields)`
+  builds one and `metaScopeCache(listFields)` memoizes per scope key, so an archive resolves each
+  entry type's field list once rather than once per row. `listTermMetaFields` and `listUserMetaFields`
+  join the existing `listEntryMetaFields`.
+
+- [#2057](https://github.com/withplumix/plumix/pull/2057) [`ad062d7`](https://github.com/withplumix/plumix/commit/ad062d71bce7201f4b9bef038f1d2837e4157ae2) Thanks [@nasyrov](https://github.com/nasyrov)! - Publishes `toMetaBoxFieldEntry`, and puts it on `plumix/fields` beside `compileMetaBoxFields` and
+  the builders the pair operates on. Together they are the transform a `fields` array already goes
+  through on its way to the admin, so a plugin that renders fields on a surface core does not runs
+  them instead of reimplementing the projection.
+
+  `compileMetaBoxFields` folds an array of fluent builders, plain definitions, or a mix of the two
+  down to definitions — it was already on the root barrel and is now reachable from `plumix/fields`
+  too. `toMetaBoxFieldEntry` is new: it projects one definition into the wire-shaped entry the
+  renderer reads, recursing into repeater rows and group members, and dropping the `sanitize` and
+  `validate` callbacks, which run on the server and have no serialisable stand-in. The types a
+  renderer needs to name what it is handed — `FieldBuilder`, `MetaBoxField`, `MetaBoxFieldInput` and
+  `MetaBoxFieldManifestEntry` — are published on `plumix/fields` alongside them.
+
+  The pair is the transform only. Registration also validates: key shape, the reserved `__plumix_`
+  prefix, duplicate keys, the per-box field cap, and `.visibleWhen()` rules naming a field the box
+  declares. A caller projecting an array itself owns those checks.
+
+  The per-field projection moves out of the build-time manifest projection into
+  `plugin/fields/manifest-entry.ts`, so reaching for it no longer drags the block and registry graph
+  behind it. Existing `@plumix/core/manifest` consumers are unaffected.
+
+- [#2059](https://github.com/withplumix/plumix/pull/2059) [`d79b4b5`](https://github.com/withplumix/plumix/commit/d79b4b597a26dd073cc32a3e89a232c58173aab0) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `formPost: true` to `registerRoute`, so a public plugin route can accept a submission from a
+  plain HTML form. Every path under `/_plumix/` sits behind a CSRF gate requiring the
+  `X-Plumix-Request` header, and a browser cannot set a custom header on an ordinary form POST — so
+  until now no plugin route could serve a no-JavaScript submit at all.
+
+  The opt-in drops the header requirement and leaves the Origin check as the whole control: an exempt
+  request has to carry an Origin (or Referer) matching the site, where an ordinary one is only
+  rejected for contradicting it. It exempts the POST and nothing else — a route registered as
+  `method: "*"` still gates every other write method — and never a path core answers itself, so a
+  plugin id that happens to name one of core's own prefixes cannot drop the gate in front of a route
+  it never serves. The same-origin and dev-loopback allowances are unchanged, and a
+  route that did not take the opt-in is gated exactly as before — including a sibling route on the
+  same plugin prefix.
+
+  It is valid only on `auth: "public"`; taking it on an authenticated, capability-gated or dev-only
+  route throws at registration. The reasoning is what the header gate defends: a cross-origin POST
+  carrying ambient session authority. A public submission carries none, so an attacker forging one has
+  merely submitted a form they could have submitted directly.
+
+  That holds only while the handler never derives privilege from a session, so the dispatcher takes
+  the session away rather than trust the handler to ignore it: on the exempt POST `ctx.authenticator`
+  resolves nobody — `getContext()` included, so a hook listener the handler fires sees the same
+  anonymous request — while a header-carrying POST to the same route keeps its session. Only the
+  authenticator is swapped; the session cookie is still on `ctx.request`.
+
+  Also fixes a latent bug this uncovered: the edge-cache purge accumulator keyed its pending tags on
+  the `AppContext` object, so tags enqueued against a derived context (basePath stripping, `withUser`)
+  were dropped by the flush, which runs against the outermost one. It now keys on the request memo,
+  which is what `tagCacheEntry` already did for the same reason.
+
+- [#2074](https://github.com/withplumix/plumix/pull/2074) [`3290448`](https://github.com/withplumix/plumix/commit/3290448915db0b8ee89528962a407c518c7bc29e) Thanks [@nasyrov](https://github.com/nasyrov)! - Publishes `entryTypeMatch`, `termTaxonomyMatch`, `metaEquals` and `termMetaEquals`, so a
+  plugin-authored rule kind can mint a narrowing of its own the way core mints `named`.
+
+  The five `*Targets` constructors publish the narrowings core already knows how to compare — `slug`,
+  `id`, `where`, `whereMeta`, `archive`. A rule kind wanting one they do not publish, the way `named`
+  is `templates`' own, needs the two pieces underneath them: the node prefix the narrowing hangs off
+  and the predicate that goes inside it. Both were module-private, so core built `named` from one
+  place while a third-party rule kind had to restate the matcher — the coupling the shared vocabulary
+  exists to remove, which does not stop being one a level down.
+
+  `entryTypeMatch` and `termTaxonomyMatch` now take a registered name rather than a `string`, so a
+  narrowing of your own rejects a typo where a hand-written object literal would compile into a rule
+  that never matches. Both are what the `*Targets` constructors already call, so what they mint is
+  unchanged.
+
+  `MatchNarrowing` — what a `*Match` constructor accepts on top of the prefix — is published with
+  them, and reaches everything on the matcher except `nodeKind` and `type`: minting those from one
+  place is the job, so overriding them is now a compile error rather than a quiet way back to a
+  hand-written matcher.
+
+  [Custom Rule Kinds](https://plumix.dev/themes/rule-kinds/) documents the four, including the one
+  trap that remains: a predicate tests the data shape as well as the value, and nothing rejects an
+  entry predicate on a term matcher.
+
+- [#2081](https://github.com/withplumix/plumix/pull/2081) [`6825fbf`](https://github.com/withplumix/plumix/commit/6825fbfbbd2431e662a79af09165f323e9a8718f) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `ResolvedTerm.meta` on the public render path, which handed a template the raw meta JSON
+  column while `ResolvedTermFor<K>` typed it as the decoded read shape `TermMetaOf<K>` describes. A
+  `.returns("date")` term field typed as `Date` and arrived as the stored ISO string; a reference
+  field typed as its hydrated summary and arrived as the stored id.
+
+  Term meta now gets the same treatment entry meta does. `buildResolvedEntries` decodes and
+  reference-hydrates the terms it attaches to each entry — batched, so the terms across a whole
+  archive cost one in-query per `(kind, scope)` group rather than one per term — and a term archive
+  resolved through `termData` does the same. `storedMeta` still carries the JSON column untouched, so `.whereMeta()`
+  and `termMetaEquals` keep matching stored values; `meta` and `storedMeta` now differ on a term
+  exactly as they already did on an entry.
+
+  The types are unchanged — `ResolvedTerm.meta` was already `ResolvedMeta` and `ResolvedTermFor<K>`
+  already folded to `TermMetaOf<K>`; only the runtime was behind. A theme that read `data.term.meta`
+  expecting the raw column should read `data.term.storedMeta` instead.
+
+  Note that `.default()` is unaffected on terms as on entries: it prefills the admin form and
+  nothing applies it on read, so a defaulted key absent from storage still reads back `undefined`.
+
+- [#2078](https://github.com/withplumix/plumix/pull/2078) [`421e39a`](https://github.com/withplumix/plumix/commit/421e39a62cd62a565e8424bb06d9d0289d69764c) Thanks [@nasyrov](https://github.com/nasyrov)! - Types `storedMeta` on a targeted rule's entry and term, so `.where()` reads the stored meta bag at
+  the same shape `.whereMeta()` is checked against.
+
+  `ResolvedEntryFor<K>` and `ResolvedTermFor<K>` — the projections behind `forEntryType(...).where()`
+  and `forTermTaxonomy(...).where()` — folded `meta` to `MetaOf<K>` / `TermMetaOf<K>` and left
+  `storedMeta` as the base bag. So the documented escape hatch — the comparison `.whereMeta()`'s `===`
+  cannot express — handed back untyped values: `data.entry.storedMeta.filedOn` had no autocompletion
+  and no error on a typo'd key, on the one bag whose shape the registry already knew. Both projections
+  now fold it to `StoredMetaOf<K>` / `StoredTermMetaOf<K>`.
+
+  `ResolvedEntry.storedMeta` and `ResolvedTerm.storedMeta` widen from `JsonObject` to the new
+  `StoredMeta` (`Record<string, unknown>`), mirroring how `meta` is the open `ResolvedMeta` — a
+  projection can only replace a base property with a narrower one if the base is open, and the folded
+  stored shape is not `JsonObject`: a field left unmarked by `.required()` folds to `T | undefined`,
+  and a `json()` or `richtext()` field to `unknown`. Where the fold is out of reach the values now
+  read as `unknown` rather than `JsonValue`: an untargeted `ResolvedEntry`, and `data.entries[n]` in
+  an archive or taxonomy rule, where a taxonomy spans entry types and there is no single shape to
+  fold. `data.entry` and `data.term` on a targeted rule — where the fold is available — gain the
+  field's real stored type.
+
+- [#2062](https://github.com/withplumix/plumix/pull/2062) [`7b36faf`](https://github.com/withplumix/plumix/commit/7b36faf5b7a0a0bcc9f5db8a244464975a5ecd42) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `readVisitorMeta` to `plumix/db`: a request in, a salted per-install hash of the visitor's
+  address and their truncated user-agent out. It is what a public submission handler needs to
+  rate-limit or attribute without keeping the address itself, and `@plumix/plugin-comments` and
+  `@plumix/plugin-forms` had each grown their own copy of it — the same hex encoder, the same lazily
+  minted settings-row salt, the same `cf-connecting-ip` → `x-forwarded-for` → `"unknown"` ladder.
+
+  The salt is minted on first use and persisted in the settings table, so an install needs no env var
+  or KV binding to store hashed addresses; concurrent first-writes converge on one salt through
+  `onConflictDoNothing` and a re-read. It takes the caller's namespace and keeps that namespace's salt
+  in its own group, so no two callers share one — either's hashes would otherwise be matchable against
+  the other's.
+
+  To be clear about what the salt buys: it defeats a precomputed table of the IPv4 space and nothing
+  more. It lives in the same database as the hashes, so it is no defence against someone who has
+  already read that database.
+
+  Also closes the hole that made keeping the salt off a settings _page_ meaningless. `settings.get`
+  took any group name it was handed, so both plugins' salts were readable by anyone holding
+  `settings:manage` — which is admin-wide, and mintable as a narrow API-token scope that has no
+  business seeing them. A settings group whose name ends in `_internal` now means server-only rows:
+  `settings.get` and `settings.upsert` refuse it, and `registerSettingsGroup` rejects the name at boot
+  rather than letting a plugin build a settings page that fails on every load. Server-side readers are
+  unchanged — this defends against a `settings:manage` holder, not against code running in the worker.
+
+- [#2076](https://github.com/withplumix/plumix/pull/2076) [`022401e`](https://github.com/withplumix/plumix/commit/022401e1b77978bfe0d97cde5213609823f67329) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `.whereMeta()` on the template and rule-kind selectors, which typed its value against the
+  stored meta shape and then compared it against the decoded one — so a narrowing on a
+  `.returns("date")` field or a reference type-checked and never fired.
+
+  `ResolvedEntry` and `ResolvedTerm` now carry `storedMeta` beside `meta`: the meta JSON as the row
+  holds it, next to the decoded and reference-hydrated bag a template reads. `metaEquals` and
+  `termMetaEquals` — and so `.whereMeta()` and `.named()`, which are built from them — compare
+  against `storedMeta`. `.whereMeta("filedOn", "2026-01-01")` now matches the stored ISO string a
+  `.returns("date")` field reads back as a `Date`, and `.whereMeta("subject", "42")` matches the
+  stored id a reference reads back as a summary object.
+
+  The types are unchanged: `StoredMetaOf<K>` / `StoredTermMetaOf<K>` were always what `whereMeta`
+  addressed, and `===` has a primitive to land on there — a `Date` and a hydrated summary have no
+  literal a caller could write down. A theme that worked around the old behaviour with `.where()`
+  reading `data.entry.meta` still does; a hand-built `ResolvedEntry` (a preview fixture, a test
+  double) has to add `storedMeta`.
+
+- [#2063](https://github.com/withplumix/plumix/pull/2063) [`fa1a0d7`](https://github.com/withplumix/plumix/commit/fa1a0d7657060e61a3f17df133f6e5e38cbccad7) Thanks [@nasyrov](https://github.com/nasyrov)! - Widens a form's field roster to the v1 set and teaches it fields that only sometimes apply.
+
+  Alongside `text` and `email`, a form now takes `textarea`, `url`, `number`, `date`, `select` and
+  `toggle` from `plumix/fields`, plus `tel` from `@plumix/plugin-forms/fields`. Each renders the
+  control its answer needs and stores that answer in the shape the field declares — a `number` as a
+  number, a `toggle` as a boolean, a `select` as one of the options the form offered. An answer the
+  visitor never gave is absent rather than empty — except from the two controls that always answer,
+  where an unticked checkbox is `false` and an unmade multiple choice is an empty list. So
+  `FormAnswersOf<typeof yourForm>` is what a submission actually holds, and renaming a field breaks
+  the build at its readers rather than in production.
+
+  `tel` is the plugin's own contribution to the field vocabulary rather than a core built-in: it
+  registers through `registerFieldType` and ships the admin renderer for it, so a `tel` field works
+  anywhere a field does, meta boxes included. Making that possible without restating core's whole
+  string chain is the one change in core — `StringMetaBoxField` and `StringFieldBuilder` are no
+  longer bound to the five built-in string inputs, so a plugin contributing a string-shaped input
+  reuses both. The built-in roster is unchanged, and such a field lands in the union exactly where a
+  plugin-registered type already did.
+
+  A field can now name a condition on a sibling, exactly as it would in a meta box:
+
+  ```ts
+  const plan = select("plan").options(["basic", "pro"]);
+  const signup = defineForm("signup", {
+    fields: [plan, number("seats").visibleWhen(plan.is("pro"))],
+  });
+  ```
+
+  Core's own `isFieldVisible` judges it on both sides, and both judge a bag built the same way, so an
+  untouched form is read exactly as it was served: the markup leaves out a field the form's defaults
+  hide, and the submit handler drops one the submitted answers hide. A hidden field therefore never
+  reaches the stored payload — nor the label snapshot — and is never held to its own `required`,
+  even when something posts a value for it anyway. What the answers _reveal_ is kept, which is what
+  will let a visitor whose script showed them a further question have its answer stored.
+
+  `defineForm` now also runs the field checks a `register*MetaBox` call runs, published from core as
+  `assertMetaBoxFields` beside the compile and projection pair it completes. A form is not
+  registered, so nothing else was running them, and each one it skipped failed silently at submit
+  instead: a field keyed `__plumix_hp` shadowed the honeypot and filed every answer as spam, two
+  fields claiming one key dropped one of the two answers, and a condition naming a field the form
+  does not declare hid its own field for good.
+
+- [#2107](https://github.com/withplumix/plumix/pull/2107) [`18140f3`](https://github.com/withplumix/plumix/commit/18140f33c37fb346dc297179fe01f2792d41a350) Thanks [@nasyrov](https://github.com/nasyrov)! - Sets a retention period once for the whole site, and stops the nightly purge reading the whole table to find the tail it deletes.
+
+  `forms({ retentionDays: 90 })` is now the period every form keeps its submissions for, so a site says once how long it is entitled to what its forms collect instead of repeating the number on each of them. A form declaring its own period still keeps that one, `0` included — on a form that is a declaration rather than an absence, and so the way one form opts out of a period the site set for the rest. Both default to keeping submissions indefinitely, which is the only default that cannot lose an enquiry nobody asked to lose.
+
+  The nightly sweep now bounds each form by `id` as well as by date. `created_at` is in no index, so the old condition read the whole table — one form's arm walking that form's entire backlog, and several arms OR'd together dropping to a plain scan. Measured on 200,000 rows across three forms, it read all 200,000 to delete 703, and read all 200,000 again on a night with nothing to purge at all. It now reads 1,409 and 3. No index was added — a `(form, created_at)` one would have cost a b-tree insert on every submission and made the inbox's date-range filter 65× to 2,633× more expensive, for a further 2×.
+
+  Ids are arrival order for every row the plugin writes, since a submission takes the column's `unixepoch()` default. A row backdated by a direct write to `form_submissions` or by an import sits outside that order: it is kept rather than deleted, and goes once the rows stored before it have expired too.
+
+  The sweep also counts what it deleted off the driver rather than asking for every deleted id back. The first sweep after a site sets a period is unbounded, and 200,000 ids cost around 106 MB of heap to measure a number the driver was already holding — against a Worker's 128 MB limit. `plumix/db` exports the `rowsAffected` helper this needs, which reads the count off libsql's `rowsAffected`, D1's `meta.changes`, or a top-level `changes` for better-sqlite3, node:sqlite and bun:sqlite. It throws for a driver that reports no count at all rather than logging a zero it cannot stand behind — the demo runtime's `sqlite-proxy` adapter is one, though it registers no scheduled tasks for the purge to run under.
+
+  `FormDefinition.retentionDays` is now `number | undefined` rather than `number`, since a form that declares no period is no longer the same thing as one that declared zero. Code reading the period off a definition should read it off the registry's `retentionDaysFor` instead, which folds in the site's own.
+
+- [#2095](https://github.com/withplumix/plumix/pull/2095) [`8bdb8a3`](https://github.com/withplumix/plumix/commit/8bdb8a34dd366975b3e3bf967e0a3fbf63249381) Thanks [@nasyrov](https://github.com/nasyrov)! - Publishes the five helpers the forms and comments plugins had each written for themselves, and
+  fixes a return-URL bug in `@plumix/plugin-forms` on the way.
+
+  Each of the five was a fact about core's own wire format — the header its CSRF gate reads, the
+  marker its islands bootstrap writes, the origin rule its dispatcher enforces — that a plugin had to
+  rediscover. Core is now the one that says them.
+
+  `resolveReturnUrl` on `plumix` resolves where to send a visitor after a form post the browser
+  submitted, holding every candidate to an origin the site answers on and refusing the endpoint's own
+  path, so the answer can be turned into neither an open redirect nor a loop.
+
+  `useIsLive`, `documentBasePath` and `VISUALLY_HIDDEN_STYLE` join `plumix/blocks/renderer`.
+  `useIsLive` is false through the server render and the first client render and true once a
+  component is live, which is how progressive enhancement tells markup that shipped from JavaScript
+  that ran. `documentBasePath` reads the subdirectory prefix off the islands bootstrap marker, for
+  the callers `useBasePath` cannot serve because a hydrated island has no `PlumixProvider` context.
+  `VISUALLY_HIDDEN_STYLE` is the `.sr-only` recipe inline, so hiding never depends on a stylesheet
+  the page did not load.
+
+  `CSRF_HEADER_NAME` and `CSRF_HEADER_VALUE` are now on `plumix/blocks`, alongside the existing
+  export from `plumix`. They are defined in `@plumix/blocks` and re-exported by core rather than the
+  reverse: the senders are islands, and a `"use client"` module reaching for `plumix` to name the
+  header would pull the database, the authenticator and the dispatcher into a browser bundle.
+
+  The forms fix: its own copy of the return-URL resolver parsed each candidate with no base and
+  accepted only the configured origin. A relative `returnTo` — the natural thing for a template to
+  pass — was refused outright rather than read as a path on the site, and on a multi-host deploy
+  every candidate failed the origin test, so every submitter was sent to the site root. The shared
+  resolver accepts both the request's origin and the configured one, which is the pair the
+  dispatcher's own Origin check accepts.
+
+  No public API was removed from either plugin; the copies were internal.
+
+- [#2056](https://github.com/withplumix/plumix/pull/2056) [`9ebc490`](https://github.com/withplumix/plumix/commit/9ebc4901f8ad99101904901a2543ce3c32a3f695) Thanks [@nasyrov](https://github.com/nasyrov)! - Lets a condition apply inside a repeater row or a group, judged against that row's or group's own
+  values.
+
+  `.visibleWhen()` was refused on a sub-field at registration, because nothing evaluated it one scope
+  down: the admin rendered every sub-field regardless, and the write pipeline validated every cell. A
+  row whose `kind` decides which siblings apply had to show all of them at once — a row of kind
+  "Text" offering the "Choices" list that belongs to "Dropdown".
+
+  Both evaluators now read the row's or group's own bag, so `repeater("fields").fields([kind,
+text("choices").visibleWhen(kind.is("select"))])` registers and behaves the way the same chain does
+  on a box's fields: the admin shows and hides sub-fields live as the author changes the driver, and
+  sibling rows never speak for each other. Registration still refuses a rule that names anything
+  other than a sibling — a row cannot read a box-level key, so such a rule could never pass — and
+  `sub_field_condition_unknown_driver` reports that mistake in place of the removed
+  `sub_field_condition_not_supported`.
+
+  On save a hidden cell runs under the same rules a draft does. Business constraints cannot fail on
+  it, so a `.required()` sub-field behind a false condition can no longer block a publish with an
+  error pointing at an input nobody can open; coercion, `.sanitize()` and the safety gates still run,
+  and the value itself is kept. Keeping it matters more here than at box level, where a hidden key's
+  stored value is simply left alone: a row is rewritten whole on every save, so a cell dropped once
+  would be gone for good — including on a publish that re-runs rows the author never touched.
+
+  Visibility inside a row reads an absent driver key as unset rather than unknown, which is what the
+  admin does when it renders the same row. The box-level rule differs on purpose: a patch there may
+  legitimately omit a driver, while a row is always written complete.
+
+### Patch Changes
+
+- [#2110](https://github.com/withplumix/plumix/pull/2110) [`4d09ee2`](https://github.com/withplumix/plumix/commit/4d09ee28b8f2f8a7dd6bcd320baf8171cf6b1df0) Thanks [@nasyrov](https://github.com/nasyrov)! - Counts the sessions the nightly cleanup reaped off the driver instead of reading every deleted row back.
+
+  `pruneExpiredSessions` asked SQLite for the id of each row it deleted purely to take `.length` of the result. On a site whose sessions have been accumulating — the cleanup only runs where the deploy declares the matching `triggers.crons` entry, so a deploy that adds one later reaps the whole backlog on its first night — that is a row of heap per expired session to measure a number the driver was already holding. It now reads the count off `rowsAffected`.
+
+  That trades portability for the heap: `returning()` answered on every driver, and `rowsAffected` throws on one that reports no count. The demo runtime's `sqlite-proxy` adapter is the only such driver in the box, and it registers no scheduled tasks, so nothing in a Plumix deploy reaches the throw. A third-party runtime on an exotic driver would, and should read the rows back itself.
+
+- Updated dependencies [[`286d0fd`](https://github.com/withplumix/plumix/commit/286d0fd1466a39504452df07008bffc16b2333ef), [`de0f56f`](https://github.com/withplumix/plumix/commit/de0f56ff7a5e96b896c9e4c81ac2f277e873cd9f), [`a74cf73`](https://github.com/withplumix/plumix/commit/a74cf731f9dd5809f12961bc1ed9a989ab1f9a08)]:
+  - @plumix/blocks@0.19.0
+
 ## 0.18.0
 
 ### Minor Changes

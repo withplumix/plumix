@@ -1,5 +1,34 @@
 # @plumix/blocks
 
+## 0.19.0
+
+### Minor Changes
+
+- [#2106](https://github.com/withplumix/plumix/pull/2106) [`de0f56f`](https://github.com/withplumix/plumix/commit/de0f56ff7a5e96b896c9e4c81ac2f277e873cd9f) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes `analyzeHeadingStructure` and `HeadingAuditViolation` (breaking, pre-1.0).
+
+  The audit outlived its only consumer. It backed `HeadingAuditPanel` in the Puck-era editor, which
+  went when that editor did ([#1143](https://github.com/withplumix/plumix/issues/1143)); four days later [#1226](https://github.com/withplumix/plumix/issues/1226) taught it to read headings out of the
+  unified rich-text block — keeping working code that no longer had a caller. Nothing has imported it
+  since. It was never re-exported from the curated `plumix/blocks` façade either, so reaching it meant
+  depending on `@plumix/blocks` directly.
+
+### Patch Changes
+
+- [#2112](https://github.com/withplumix/plumix/pull/2112) [`286d0fd`](https://github.com/withplumix/plumix/commit/286d0fd1466a39504452df07008bffc16b2333ef) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the inline formatting shortcuts never firing. Bold, italic, strikethrough, inline code and
+  underline each declared a chord in their mark metadata — and the editor's cheatsheet has been
+  listing all five since it shipped — but nothing bound them to the editor, so pressing Cmd/Ctrl+B
+  did nothing to the text. The chord a mark advertises is now what the editor binds.
+
+- [#2097](https://github.com/withplumix/plumix/pull/2097) [`a74cf73`](https://github.com/withplumix/plumix/commit/a74cf731f9dd5809f12961bc1ed9a989ab1f9a08) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `useAuth` returning a React element instead of running during the server render. The module
+  carried a `"use client"` directive, and the directive marks an _island_ — the SSR pass replaces
+  every export of a module carrying one with a shim component — so a theme doing
+  `const { user, loading } = useAuth()` read `undefined` for both on the server and rendered its
+  signed-out branch with no loading state. The hook now runs on the server, settling to
+  `{ user: null, loading: true }` until the client probe resolves, which is what a cache-shared
+  anonymous render should say. The build now refuses a first-party `"use client"` module that
+  exports a hook-shaped name rather than shimming it; a dependency's own hook exports are left
+  alone.
+
 ## 0.18.0
 
 ## 0.17.0
