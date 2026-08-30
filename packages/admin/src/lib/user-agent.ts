@@ -46,7 +46,7 @@ export function parseUserAgent(ua: string | null): ParsedUserAgent {
 // one of `mobile` / `tablet` / `console` / `smarttv` / `wearable` /
 // `embedded` / `xr` for everything else. We collapse the rare ones
 // into the closest visual category so the icon set stays small.
-function pickIcon(deviceType: string | undefined): LucideIcon {
+export function pickIcon(deviceType: string | undefined): LucideIcon {
   if (deviceType === "mobile") return Smartphone;
   if (deviceType === "tablet") return Tablet;
   if (deviceType === "wearable") return Watch;

@@ -19,3 +19,71 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+================================================================================
+THIRD-PARTY CODE AND ASSETS
+================================================================================
+
+Plumix ships third-party material that keeps its own license, in three forms:
+
+  1. Source copied into this repository, listed below.
+
+  2. Libraries bundled into the published `@plumix/admin` package. That
+     package is the only one published as a bundle, so its notices travel
+     with the artifact: they are generated at build time into
+     `dist/THIRD-PARTY-NOTICES.txt` inside that package.
+
+  3. Fonts and CSS inlined into that same package, each as its own
+     `dist/LICENSE-*.txt`. They arrive as assets rather than JS modules, so
+     the generated notices cannot see them.
+
+Every entry is permissively licensed. The admin build refuses any bundled
+dependency that is not.
+
+
+--------------------------------------------------------------------------------
+shadcn/ui — packages/admin-ui/src
+--------------------------------------------------------------------------------
+
+Copyright (c) 2023 shadcn
+MIT License — https://github.com/shadcn-ui/ui
+
+Most components under `packages/admin-ui/src` come from shadcn/ui, kept close
+to upstream so `shadcn diff` keeps applying changes. One notice covers the
+directory rather than per-file headers, which would break that workflow.
+
+
+--------------------------------------------------------------------------------
+Astro — packages/blocks
+--------------------------------------------------------------------------------
+
+Copyright (c) 2021 Fred K. Schott
+MIT License — https://github.com/withastro/astro
+
+The island runtime is derived from Astro's:
+
+  src/serialize.ts                    port of Astro's prop serializer; the
+                                      PROP_TYPE codes and payload shape match
+                                      byte-for-byte so the SSR/client wire
+                                      format stays compatible
+  src/island-element.ts               port of `astro-island.ts`
+  src/static-html.tsx                 port of `StaticHtml`
+  src/island-strategies/visible.ts    adapted from `client:visible`
+
+Plumix diverges from all four.
+
+
+--------------------------------------------------------------------------------
+Prior art
+--------------------------------------------------------------------------------
+
+Comments across the codebase name projects that informed a design without
+contributing code — WordPress, Nuxt, emdash, Puck, Builder.io, and others.
+Copyright covers expression, not ideas, so those references carry no license
+obligation and none is claimed here. Naming WordPress in particular is not a
+claim of derivation from GPL code.
+
+
+The MIT License text reproduced at the top of this file applies to each
+MIT-licensed entry above.

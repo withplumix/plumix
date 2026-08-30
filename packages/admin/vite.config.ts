@@ -6,6 +6,7 @@ import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
+import license from "rollup-plugin-license";
 import { defineConfig } from "vite";
 
 import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
@@ -40,6 +41,36 @@ function shipThemeTokens(): Plugin {
   };
 }
 
+// Tailwind, tw-animate-css and the Geist faces reach `dist` as CSS and font
+// files rather than JS modules, so the notice generator — which walks the JS
+// graph — never attributes them. Geist is SIL OFL-1.1, whose notice must
+// travel with the font files; the other two are MIT. All four are direct
+// dependencies, so pnpm links them into this package's own node_modules.
+function shipAssetLicenses(): Plugin {
+  const packages = [
+    "tailwindcss",
+    "tw-animate-css",
+    "@fontsource-variable/geist",
+    "@fontsource-variable/geist-mono",
+  ];
+  return {
+    name: "plumix:ship-asset-licenses",
+    apply: "build",
+    async generateBundle() {
+      for (const pkg of packages) {
+        const src = fileURLToPath(
+          new URL(`./node_modules/${pkg}/LICENSE`, import.meta.url),
+        );
+        this.emitFile({
+          type: "asset",
+          fileName: `LICENSE-${pkg.split("/").pop()}.txt`,
+          source: await readFile(src, "utf8"),
+        });
+      }
+    },
+  };
+}
+
 export default defineConfig(({ command }) => ({
   // A relative base makes the built bundle relocatable: the worker injects a
   // `<base href>` into the shell, so the same precompiled admin resolves its
@@ -62,6 +93,20 @@ export default defineConfig(({ command }) => ({
       presets: [linguiTransformerBabelPreset(undefined, { cwd: PACKAGE_DIR })],
     }),
     shipThemeTokens(),
+    shipAssetLicenses(),
+    // Copyleft in a bundle we publish as MIT is a licensing conflict, not a
+    // paperwork gap, so it fails the build. Source-copied code is invisible to
+    // the bundler and lives in the root LICENSE instead.
+    license({
+      thirdParty: {
+        allow: {
+          test: "MIT OR MIT-0 OR ISC OR Apache-2.0 OR BSD-2-Clause OR BSD-3-Clause OR 0BSD OR CC0-1.0 OR Unlicense OR BlueOak-1.0.0 OR Zlib OR Python-2.0",
+          failOnViolation: true,
+          failOnUnlicensed: true,
+        },
+        output: "dist/THIRD-PARTY-NOTICES.txt",
+      },
+    }),
   ],
   server: {
     port: ADMIN_DEV_PORT,

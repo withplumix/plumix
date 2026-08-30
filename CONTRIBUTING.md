@@ -220,3 +220,25 @@ Scopes are validated against workspace package names. Run `pnpm ls -r --depth -1
 ## License
 
 By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+
+### Adding a dependency
+
+The admin build generates notices for what it bundles and fails if a dependency
+is not permissively licensed. If it fails on a license that is permissive but
+unlisted, add its SPDX id to the allowlist in `packages/admin/vite.config.ts`.
+If it fails on a copyleft one, pick a different package.
+
+A dependency whose code reaches `dist` as CSS or a font is invisible to that
+generator and needs adding to `shipAssetLicenses` in the same file.
+
+### Copying third-party source
+
+Reimplementing an approach you read about owes nothing — name the project in a
+comment where it helps the next reader (see "Prior art" in `LICENSE`).
+
+Copying code is different. If the upstream file was open while you wrote it,
+add an entry to the "Third-party code and assets" section of [`LICENSE`](LICENSE)
+with the copyright line and license read from the upstream's own repository —
+never from memory. Name the upstream in the source file, but leave the license
+to `LICENSE` — a license string duplicated into a comment is one nobody
+corrects.

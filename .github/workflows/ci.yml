@@ -47,6 +47,33 @@ jobs:
       - name: Block >= 1.0.0 while in 0.x
         run: pnpm check-no-major
 
+  # The admin build already refuses a copyleft dependency, but only for what it
+  # bundles. This catches one arriving anywhere else, where it would reach
+  # consumers through their build instead of ours. It sees the dependencies a
+  # PR changes, not the installed tree, so it guards drift rather than auditing.
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # GitHub reads scopes from the lockfile and pnpm does not mark transitive
+      # dev dependencies, so an allowlist here fails on build tooling that never
+      # ships — CC-BY-3.0 SPDX metadata, say. LGPL is deliberately absent: it
+      # covers native libraries we link rather than copy. Vulnerabilities are
+      # Dependabot's job.
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          deny-licenses: >-
+            AGPL-1.0-only, AGPL-1.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later,
+            GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later,
+            SSPL-1.0, BUSL-1.1, CPAL-1.0, EUPL-1.2, OSL-3.0
+          vulnerability-check: false
+          show-openssf-scorecard: false
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
