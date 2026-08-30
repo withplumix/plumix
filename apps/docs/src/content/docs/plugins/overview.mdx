@@ -219,6 +219,32 @@ The rest add no tables of their own. `@plumix/plugin-feeds` reads the shared `en
 
 [Cloudflare Workers](/deployment/cloudflare/) covers applying a migration to a deployed D1 database rather than the local one.
 
+## Schema drizzle cannot express
+
+drizzle-kit models tables, columns and indexes. A plugin needing DDL outside that — a full-text virtual table, a trigger — declares it as `sqlMigrations` instead: a name, and the statements to run.
+
+```ts
+import { definePlugin } from "plumix/plugin";
+
+export const search = definePlugin("search", {
+  setup: () => {},
+  sqlMigrations: [
+    {
+      name: "fts_index",
+      statements: [
+        "CREATE VIRTUAL TABLE `entry_fts` USING fts5(body, content='entry_search', content_rowid='id')",
+      ],
+    },
+  ],
+});
+```
+
+`plumix migrate generate` emits each one as its own migration after the schema diff, so the DDL lands behind the tables it references, and records it in drizzle's journal. `wrangler d1 migrations apply` orders by the number a filename starts with, and drizzle-kit numbers its next migration from the journal's last entry — so a hand-written file dropped into `drizzle/` gets the same number as the next generated one, and which of the two runs first is down to the rest of the filename.
+
+One rule about the SQL itself: wrangler decides where a `BEGIN … END` block ends by looking for whitespace before the `END`, and appends its own bookkeeping statement to the file it runs. A trigger whose `END` sits directly on the previous statement's semicolon would leave the block open and take that statement into the trigger body, so generation moves a trailing `END` onto its own line.
+
+A name is the migration's identity within its plugin, and a migration already in the journal is never emitted twice. Renaming one emits it again rather than editing what already shipped — the same rule that applies to any migration that has reached a database.
+
 ## Plugins that ship admin UI
 
 Media has the library, menu has the menu builder, comments has the moderation queue, and audit-log has the activity feed. The rest — blog, pages, og and feeds — ship none. Each declares a path to an admin entry module, and the Vite plugin compiles every declared entry into one bundle for your site during `plumix build` and `plumix dev`.

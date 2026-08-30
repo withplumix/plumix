@@ -67,7 +67,7 @@ Every example in this documentation models the same recipe site: a `recipe` entr
 
 `setup` receives the registration context and may be async. Beyond the content registrations below, that context carries [`registerBlock`](/blocks/overview/), `registerRoute`, `registerRestResource`, `registerSettingsGroup`, `registerScheduledTask`, `addFilter` and `addAction`, among others. One plugin can contribute to any part of the site, which is why a site's own plugin is a reasonable place to put a route or a hook that has nowhere else to go.
 
-The descriptor has optional slots that other sections of this documentation own: `version`, `schema` and `schemaModule` for a plugin carrying its own database tables, `adminEntry` for admin UI, `i18n` for translation catalogs, and `provides` for helpers other plugins consume. `provides` runs for every plugin before any `setup` runs, so a plugin that consumes another's helper does not have to be ordered after it.
+The descriptor has optional slots that other sections of this documentation own: `version`, `schema` and `schemaModule` for a plugin carrying its own database tables, `sqlMigrations` for DDL drizzle cannot express, `adminEntry` for admin UI, `i18n` for translation catalogs, and `provides` for helpers other plugins consume. `provides` runs for every plugin before any `setup` runs, so a plugin that consumes another's helper does not have to be ordered after it.
 
 ## Entries and entry types
 
