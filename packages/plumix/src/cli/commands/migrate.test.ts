@@ -109,8 +109,8 @@ describe("migrate generate", () => {
       "/fake/drizzle-kit/bin.cjs",
     );
     const spawn = vi
-      .spyOn(migrateGenerateDeps, "spawnInherit")
-      .mockResolvedValue();
+      .spyOn(migrateGenerateDeps, "spawnCapturingStderr")
+      .mockResolvedValue("");
 
     await migrateCommand.run(ctx({ cwd: dir, argv: ["generate"] }));
 
@@ -121,6 +121,7 @@ describe("migrate generate", () => {
     const [command, args, options] = spawn.mock.calls[0] ?? [];
     expect(command).toBe(process.execPath);
     expect(args).toEqual([
+      "--no-warnings",
       "/fake/drizzle-kit/bin.cjs",
       "generate",
       "--schema",
@@ -132,7 +133,12 @@ describe("migrate generate", () => {
       "--casing",
       "snake_case",
     ]);
-    expect(options).toEqual({ cwd: dir });
+    // NODE_OPTIONS / NODE_DEBUG are stripped so nothing inherited writes
+    // to the stderr this command reads failure from.
+    expect(options).toEqual({
+      cwd: dir,
+      env: { NODE_OPTIONS: undefined, NODE_DEBUG: undefined },
+    });
   });
 
   test("defaulting to the generate subcommand (no argv) behaves the same", async () => {
@@ -140,8 +146,8 @@ describe("migrate generate", () => {
       "/fake/drizzle-kit/bin.cjs",
     );
     const spawn = vi
-      .spyOn(migrateGenerateDeps, "spawnInherit")
-      .mockResolvedValue();
+      .spyOn(migrateGenerateDeps, "spawnCapturingStderr")
+      .mockResolvedValue("");
 
     await migrateCommand.run(ctx({ cwd: dir, argv: [] }));
     expect(spawn).toHaveBeenCalledOnce();
@@ -150,8 +156,8 @@ describe("migrate generate", () => {
   test("throws a structured CliError when drizzle-kit is not installed", async () => {
     vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(null);
     const spawn = vi
-      .spyOn(migrateGenerateDeps, "spawnInherit")
-      .mockResolvedValue();
+      .spyOn(migrateGenerateDeps, "spawnCapturingStderr")
+      .mockResolvedValue("");
 
     await expect(
       migrateCommand.run(ctx({ cwd: dir, argv: ["generate"] })),
@@ -162,11 +168,27 @@ describe("migrate generate", () => {
     expect(spawn).not.toHaveBeenCalled();
   });
 
+  test("fails when drizzle-kit reports an error but exits zero", async () => {
+    vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
+      "/fake/drizzle-kit/bin.cjs",
+    );
+    vi.spyOn(migrateGenerateDeps, "spawnCapturingStderr").mockResolvedValue(
+      "Error: Interactive prompts require a TTY terminal\n",
+    );
+
+    await expect(
+      migrateCommand.run(ctx({ cwd: dir, argv: ["generate"] })),
+    ).rejects.toMatchObject({
+      code: "migrate_generate_failed",
+      hint: expect.stringContaining("`drizzle/`") as unknown,
+    });
+  });
+
   test("propagates a non-zero exit from drizzle-kit", async () => {
     vi.spyOn(migrateGenerateDeps, "resolveDrizzleKitBin").mockReturnValue(
       "/fake/drizzle-kit/bin.cjs",
     );
-    vi.spyOn(migrateGenerateDeps, "spawnInherit").mockRejectedValue(
+    vi.spyOn(migrateGenerateDeps, "spawnCapturingStderr").mockRejectedValue(
       Object.assign(new Error("drizzle-kit exited with code 1"), {
         code: "spawn_nonzero_exit",
       }),

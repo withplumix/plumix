@@ -69,7 +69,7 @@ describe("definePlumixE2EConfig", () => {
         ? config.webServer.command
         : undefined;
     expect(cmd).toContain("cd ../playground");
-    expect(cmd).toContain("rm -rf .wrangler/state");
+    expect(cmd).toContain("rm -rf .wrangler/state drizzle");
     expect(cmd).toContain("plumix migrate generate");
     expect(cmd).toContain("wrangler d1 migrations apply DB --local");
     expect(cmd).toContain("plumix dev --port 3040");

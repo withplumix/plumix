@@ -4,7 +4,11 @@ import { dirname, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { CommandContext, CommandDefinition } from "@plumix/core";
-import { CliError, generateSchemaSource, spawnInherit } from "@plumix/core";
+import {
+  CliError,
+  generateSchemaSource,
+  spawnCapturingStderr,
+} from "@plumix/core";
 
 import { report } from "../report.js";
 
@@ -44,9 +48,12 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
   }
 
   report.info("Running drizzle-kit generate…");
-  await migrateGenerateDeps.spawnInherit(
+  const stderr = await migrateGenerateDeps.spawnCapturingStderr(
     process.execPath,
     [
+      // Same reason as the env below; drizzle-kit's own `console.error`
+      // still comes through.
+      "--no-warnings",
       bin,
       "generate",
       "--schema",
@@ -62,8 +69,15 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
       "--casing",
       "snake_case",
     ],
-    { cwd },
+    // Failure is read off this child's stderr, so nothing inherited may
+    // write there: `NODE_OPTIONS=--inspect` prints a debugger banner and
+    // `NODE_DEBUG` a running log, either of which would read as a failed
+    // generate.
+    { cwd, env: { NODE_OPTIONS: undefined, NODE_DEBUG: undefined } },
   );
+  // A successful generate — including one that finds nothing to do —
+  // writes nothing here, so anything at all means it bailed.
+  if (stderr.trim() !== "") throw CliError.migrateGenerateFailed();
   report.success(`Migrations emitted in ${MIGRATIONS_OUT}/`);
 }
 
@@ -104,5 +118,5 @@ function resolveDrizzleKitBin(cwd: string): string | null {
 // Mutable seam for tests — substitute the collaborator, not the module path.
 export const migrateGenerateDeps = {
   resolveDrizzleKitBin,
-  spawnInherit,
+  spawnCapturingStderr,
 };
