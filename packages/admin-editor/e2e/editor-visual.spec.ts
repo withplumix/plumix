@@ -669,6 +669,9 @@ test.describe("editor playground", () => {
     const root = page
       .frameLocator(CANVAS_FRAME)
       .locator('[data-testid="plumix-editor-canvas"]');
+    // `goto` resolves on load, before React mounts the window key listeners.
+    // Waiting on canvas content proves the host mounted and the bridge is up.
+    await expect(root).toBeVisible();
 
     await page.keyboard.press("Shift+KeyX");
     await expect(root).toHaveAttribute("data-plumix-xray", "");
@@ -750,6 +753,10 @@ test.describe("editor playground", () => {
     page,
   }) => {
     await page.goto("/");
+    // See the x-ray test above: pressing before mount races the listener.
+    await expect(
+      page.frameLocator(CANVAS_FRAME).locator('[data-plumix-id="heading-1"]'),
+    ).toBeVisible();
 
     await page.keyboard.press("Shift+Slash");
     await expect(page.getByTestId("plumix-shortcuts-dialog")).toBeVisible();
@@ -784,6 +791,7 @@ test.describe("editor playground", () => {
     await page.getByTestId("plumix-tab-blocks").click();
     const search = page.getByTestId("block-catalog-search");
     await search.click();
+    await expect(search).toBeFocused();
     await page.keyboard.press("Shift+Slash");
 
     await expect(search).toHaveValue("?");
