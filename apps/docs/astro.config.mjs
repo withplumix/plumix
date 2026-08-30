@@ -46,9 +46,106 @@ export default defineConfig({
           failOnError: true,
           sameSitePolicy: "error",
         }),
-        // Set even though it currently defaults to the same string: the
-        // generated files name the software, and the site may rename itself.
-        starlightLlmsTxt({ projectName: "Plumix" }),
+        starlightLlmsTxt({
+          // Set even though it currently defaults to the same string: the
+          // generated files name the software, and the site may rename itself.
+          projectName: "Plumix",
+          // Starlight gives every heading an anchor link carrying a screen
+          // reader's "Section titled …". Converted back to markdown it lands
+          // beside each heading as a link to the heading itself, which is noise
+          // in every generated file.
+          customSelectors: { all: ["a.sl-anchor-link"] },
+          // The custom-set route asks for minified output and offers no way to
+          // say otherwise, and minification collapses whitespace — which folds
+          // every heading into the paragraph before it, costing an agent the
+          // structure it navigates by. Switched off here, where it is
+          // configurable, so a set reads like the page it came from.
+          //
+          // This makes `llms-small.txt` a copy of `llms-full.txt`. It was
+          // within 3% of one already, and the plugin injects its route
+          // unconditionally, so there is nothing to switch off.
+          minify: {
+            whitespace: false,
+            note: false,
+            tip: false,
+            caution: false,
+            danger: false,
+            details: false,
+          },
+          // Without these, `llms.txt` is an index of nothing: it lists the two
+          // whole-corpus dumps and no page, leaving an agent to read the entire
+          // documentation to answer a question about one area. Each set below
+          // gets a link in that index and a file of its own, which is the
+          // retrieval surface between "one page" and "all of it".
+          //
+          // One set per sidebar section, in the order the sections carry in
+          // their `_meta.yml`. A section with no pages yet is absent rather
+          // than linked to an empty file — add it here with its first page.
+          customSets: [
+            {
+              label: "Getting Started",
+              paths: ["getting-started/**"],
+              description:
+                "installing Plumix, the config file, what the scaffolder writes, and a first deploy",
+            },
+            {
+              label: "Content Modelling",
+              paths: ["content-modelling/**"],
+              description:
+                "entry types, taxonomies and the four statuses an entry moves between",
+            },
+            {
+              label: "Fields",
+              paths: ["fields/**"],
+              description:
+                "meta boxes and the fluent builders that declare a field and its storage contract",
+            },
+            {
+              label: "Blocks",
+              paths: ["blocks/**"],
+              description:
+                "the block tree an entry's content is stored as, and every block Plumix registers",
+            },
+            {
+              label: "Themes",
+              paths: ["themes/**"],
+              description:
+                "theme descriptors, the template hierarchy, and the data a template receives",
+            },
+            {
+              label: "Routing",
+              paths: ["routing/**"],
+              description:
+                "how a URL resolves to a rendered page, and how a permalink is composed",
+            },
+            {
+              // "and", not "&": the set's URL is slugged from this label, and an
+              // ampersand slugs to a double dash.
+              label: "Access and Identity",
+              paths: ["access/**"],
+              description:
+                "how a request resolves to a principal, and passkey sign-in",
+            },
+            {
+              label: "Going Further",
+              paths: ["going-further/**"],
+              description:
+                "the dev-server surfaces a deployed site does not expose",
+            },
+            {
+              label: "Deployment",
+              paths: ["deployment/**"],
+              description:
+                "the Cloudflare adapter, bindings, secrets, and the deploy sequence",
+            },
+            {
+              label: "Plugins",
+              paths: ["plugins/**"],
+              description:
+                "installing a published plugin, and a reference for each plugin Plumix ships",
+            },
+          ],
+        }),
       ],
     }),
   ],
