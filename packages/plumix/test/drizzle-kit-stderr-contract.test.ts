@@ -58,13 +58,26 @@ describe("drizzle-kit's stderr contract", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("a generate that writes a migration says nothing on stderr", async () => {
-    await expect(generate()).resolves.toBe("");
-  });
+  // Each `generate` spawns drizzle-kit, which bundles the schema with
+  // esbuild before it can diff — past vitest's 5s default on a cold
+  // runner, so both carry their own budget.
+  const SPAWNS_DRIZZLE_KIT = 60_000;
 
-  test("a generate with nothing to do says nothing on stderr", async () => {
-    await generate();
+  test(
+    "a generate that writes a migration says nothing on stderr",
+    async () => {
+      await expect(generate()).resolves.toBe("");
+    },
+    SPAWNS_DRIZZLE_KIT,
+  );
 
-    await expect(generate()).resolves.toBe("");
-  });
+  test(
+    "a generate with nothing to do says nothing on stderr",
+    async () => {
+      await generate();
+
+      await expect(generate()).resolves.toBe("");
+    },
+    SPAWNS_DRIZZLE_KIT,
+  );
 });
