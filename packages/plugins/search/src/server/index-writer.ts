@@ -2,11 +2,15 @@ import type { BlockRegistry, BlockTextRoster } from "plumix/blocks";
 import type { AppContext } from "plumix/plugin";
 import { blockTextRoster, blockTextVersion } from "plumix/blocks";
 import { and, eq, inArray, sql } from "plumix/db";
-import { entries } from "plumix/schema";
+import { entries, terms } from "plumix/schema";
 
-import type { NewSearchDocument } from "../db/schema.js";
+import type { NewSearchDocument, SearchSourceType } from "../db/schema.js";
 import { searchDocuments } from "../db/schema.js";
-import { entryDocumentBody, isSearchableEntryType } from "./document.js";
+import {
+  entryDocumentBody,
+  isSearchableEntryType,
+  isSearchableTaxonomy,
+} from "./document.js";
 
 // D1 caps bound parameters at 100 per statement, and libsql — every test here
 // — enforces no cap at all, so the ceiling is invisible until production. Kept
@@ -14,6 +18,11 @@ import { entryDocumentBody, isSearchableEntryType } from "./document.js";
 // `source_type` the delete adds (91), and a document binds its five columns
 // (90). A sixth column or a second predicate then has room to be wrong.
 const IDS_PER_STATEMENT = 90;
+
+// A term has no blocks, so the block roster says nothing about how its text
+// was projected. Stamping the roster hash on it would mark every term stale
+// whenever any block changed a declaration a term cannot be affected by.
+const TERM_EXTRACTOR_VERSION = "term/1";
 const DOCUMENTS_PER_STATEMENT = 18;
 
 interface Extractor {
@@ -51,11 +60,8 @@ export async function indexEntries(
   ctx: AppContext,
   entryIds: Iterable<number>,
 ): Promise<void> {
-  const ids = [...new Set(entryIds)];
   const extractor = extractorFor(ctx.blocks);
-
-  for (let i = 0; i < ids.length; i += IDS_PER_STATEMENT) {
-    const chunk = ids.slice(i, i + IDS_PER_STATEMENT);
+  await project(ctx, "entry", entryIds, async (chunk) => {
     const rows = await ctx.db
       .select({
         id: entries.id,
@@ -66,23 +72,77 @@ export async function indexEntries(
       })
       .from(entries)
       .where(inArray(entries.id, chunk));
-
-    const documents: NewSearchDocument[] = [];
-    const removed = new Set(chunk);
-    for (const row of rows) {
-      if (!isSearchableEntryType(ctx.plugins, row.type)) continue;
-      removed.delete(row.id);
-      documents.push({
-        sourceType: "entry",
+    return rows
+      .filter((row) => isSearchableEntryType(ctx.plugins, row.type))
+      .map((row) => ({
+        sourceType: "entry" as const,
         sourceId: row.id,
         title: row.title,
         body: entryDocumentBody(row, extractor.roster),
         extractorVersion: extractor.version,
-      });
-    }
+      }));
+  });
+}
 
+/**
+ * Bring the projection up to date with what the database says about these
+ * terms. A term carries far less than an entry: its name, and the description
+ * its archive shows.
+ */
+export async function indexTerms(
+  ctx: AppContext,
+  termIds: Iterable<number>,
+): Promise<void> {
+  await project(ctx, "term", termIds, async (chunk) => {
+    const rows = await ctx.db
+      .select({
+        id: terms.id,
+        taxonomy: terms.taxonomy,
+        name: terms.name,
+        description: terms.description,
+      })
+      .from(terms)
+      .where(inArray(terms.id, chunk));
+    return rows
+      .filter((row) => isSearchableTaxonomy(ctx.plugins, row.taxonomy))
+      .map((row) => ({
+        sourceType: "term" as const,
+        sourceId: row.id,
+        title: row.name,
+        body: row.description ?? "",
+        extractorVersion: TERM_EXTRACTOR_VERSION,
+      }));
+  });
+}
+
+/**
+ * Walk the ids in statement-sized chunks, write what `documentsFor` produced,
+ * and drop whatever it did not.
+ *
+ * The reconciliation is the load-bearing half, and it is shared rather than
+ * written per kind so the two cannot drift: an id the read did not return —
+ * because the row is gone, or because its type or taxonomy is no longer
+ * searchable — is the same instruction either way, drop what the projection
+ * holds for it. That is what makes an exclusion take effect on the next write
+ * rather than needing a sweep of its own.
+ */
+async function project(
+  ctx: AppContext,
+  sourceType: SearchSourceType,
+  sourceIds: Iterable<number>,
+  documentsFor: (chunk: readonly number[]) => Promise<NewSearchDocument[]>,
+): Promise<void> {
+  const ids = [...new Set(sourceIds)];
+  for (let i = 0; i < ids.length; i += IDS_PER_STATEMENT) {
+    const chunk = ids.slice(i, i + IDS_PER_STATEMENT);
+    const documents = await documentsFor(chunk);
     await writeDocuments(ctx, documents);
-    await dropEntryDocuments(ctx, [...removed]);
+    const kept = new Set(documents.map((document) => document.sourceId));
+    await dropDocuments(
+      ctx,
+      sourceType,
+      chunk.filter((id) => !kept.has(id)),
+    );
   }
 }
 
@@ -119,17 +179,18 @@ async function writeDocuments(
   }
 }
 
-async function dropEntryDocuments(
+async function dropDocuments(
   ctx: AppContext,
-  entryIds: readonly number[],
+  sourceType: SearchSourceType,
+  sourceIds: readonly number[],
 ): Promise<void> {
-  if (entryIds.length === 0) return;
+  if (sourceIds.length === 0) return;
   await ctx.db
     .delete(searchDocuments)
     .where(
       and(
-        eq(searchDocuments.sourceType, "entry"),
-        inArray(searchDocuments.sourceId, entryIds),
+        eq(searchDocuments.sourceType, sourceType),
+        inArray(searchDocuments.sourceId, sourceIds),
       ),
     );
 }

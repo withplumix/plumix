@@ -5,8 +5,8 @@ import type { RankingAlgorithm } from "./ranking.js";
 import { registerSearchArchive } from "./archive.js";
 import { SEARCH_INDEX_DDL } from "./db/ddl.js";
 import * as schema from "./db/schema.js";
-import { drainEntryChanges } from "./server/drain.js";
-import { registerEntryIndexInvalidator } from "./server/queue.js";
+import { backfillTerms, drainEntryChanges } from "./server/drain.js";
+import { registerIndexInvalidator } from "./server/queue.js";
 
 export type { SearchArchiveData } from "./archive.js";
 export type { SearchResult } from "./server/query.js";
@@ -33,12 +33,16 @@ export interface SearchConfig {
  * site publishes.
  *
  * Installing it materializes a plain-text projection of every searchable
- * entry and an SQLite FTS5 index over that projection. Both boundaries where
- * the index could drift from the content are closed by triggers in the
- * database — core's change feed on one side, the projection's own triggers on
- * the other — so a seed, a migration or a bulk import cannot leave a site
- * with an index that quietly disagrees with its content. Only the middle hop
- * is JavaScript, because stripping HTML out of block content needs it.
+ * entry and term, and an SQLite FTS5 index over that projection. For entries,
+ * both boundaries where the index could drift from the content are closed by
+ * triggers in the database — core's change feed on one side, the projection's
+ * own triggers on the other — so a seed, a migration or a bulk import cannot
+ * leave a site with an index that quietly disagrees with its content. Only the
+ * middle hop is JavaScript, because stripping HTML out of block content needs
+ * it.
+ *
+ * A term has no such feed: it is indexed through the lifecycle actions, and a
+ * term the projection has never held is swept up by the scheduled run.
  *
  * An entry saved through the application is indexed after the response, so a
  * visitor never waits for it; anything the fast path misses is caught when
@@ -55,7 +59,7 @@ export function search(options: SearchConfig = {}): PluginDescriptor {
     // table they shadow.
     sqlMigrations: [{ name: "index", statements: SEARCH_INDEX_DDL }],
     setup: (ctx) => {
-      registerEntryIndexInvalidator(ctx);
+      registerIndexInvalidator(ctx);
       registerSearchArchive(ctx, options);
       // No `cron`: a task that declares one runs only on an invocation whose
       // schedule matches it byte for byte, and how often a site's worker
@@ -70,6 +74,14 @@ export function search(options: SearchConfig = {}): PluginDescriptor {
               `[plumix/plugin-search] indexed ${String(handled)} change${
                 handled === 1 ? "" : "s"
               } from the entry feed`,
+            );
+          }
+          const terms = await backfillTerms(appCtx);
+          if (terms > 0) {
+            appCtx.logger.info(
+              `[plumix/plugin-search] indexed ${String(terms)} term${
+                terms === 1 ? "" : "s"
+              } the projection had never held`,
             );
           }
         },

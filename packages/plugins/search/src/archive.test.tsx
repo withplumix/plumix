@@ -5,6 +5,7 @@ import { fallback, forArchiveType } from "plumix/plugin";
 import { defineTheme } from "plumix/theme";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import type { SearchHarness } from "./test/db.js";
 import { search } from "./index.js";
 import { contentPlugin, createSearchHarness, paragraph } from "./test/db.js";
 
@@ -19,7 +20,11 @@ const theme = defineTheme({
         <p data-testid="next">{data.nextUrl ?? "none"}</p>
         <ol>
           {data.results.map((result) => (
-            <li key={result.id} data-testid="result">
+            <li
+              key={`${result.kind}:${String(result.id)}`}
+              data-testid="result"
+            >
+              <span data-testid="kind">{result.kind}</span>
               <a data-testid="url" href={result.url}>
                 {result.title}
               </a>
@@ -39,11 +44,13 @@ const theme = defineTheme({
 let h: DispatcherHarness;
 let admin: User;
 let index: () => Promise<void>;
+let rpc: SearchHarness["rpc"];
 
 async function harness(withPlugin: boolean): Promise<void> {
   ({
     h,
     admin,
+    rpc,
     runSchedule: index,
   } = await createSearchHarness({
     plugins: withPlugin ? [contentPlugin, search()] : [contentPlugin],
@@ -138,6 +145,29 @@ describe("the search page", () => {
 
     // Past the end of the results, the same 404 core's own search page gives.
     (await h.fetch("/search/hydroponics/page/2")).assertStatus(404);
+  });
+
+  test("a topic's own page is a result, beside the articles about it", async () => {
+    // Created through the application, because that is the only path that
+    // indexes a term: core's change feed records entries, so a term written
+    // straight to the database waits for a reindex sweep.
+    await rpc("term/create", {
+      taxonomy: "category",
+      name: "Hydroponics",
+      slug: "hydroponics",
+    });
+    await h.drainDeferred();
+    await publish({
+      title: "An article mentioning hydroponics once among many other words",
+      slug: "article",
+    });
+    await index();
+
+    const body = await (await h.fetch("/search/hydroponics")).text();
+
+    expect(body).toContain('data-testid="kind">term<');
+    expect(body).toContain('data-testid="kind">entry<');
+    expect(body).toContain("/category/hydroponics");
   });
 
   test("an unpublished entry never reaches the page", async () => {

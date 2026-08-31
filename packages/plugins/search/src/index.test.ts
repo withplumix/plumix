@@ -4,6 +4,7 @@ import { eq, sql } from "plumix/db";
 import { entries } from "plumix/schema";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import type { SearchHarness } from "./test/db.js";
 import { search } from "./index.js";
 import {
   assertIndexIntact,
@@ -16,25 +17,13 @@ import {
 let h: DispatcherHarness;
 let admin: User;
 let runSchedule: () => Promise<void>;
+let rpc: SearchHarness["rpc"];
 
 beforeEach(async () => {
-  ({ h, admin, runSchedule } = await createSearchHarness({
+  ({ h, admin, rpc, runSchedule } = await createSearchHarness({
     plugins: [contentPlugin, search()],
   }));
 });
-
-/** Post an oRPC procedure the way the admin's client does. */
-async function rpc(
-  procedure: string,
-  input: Record<string, unknown>,
-): Promise<void> {
-  const response = await h.fetch(`/_plumix/rpc/${procedure}`, {
-    method: "POST",
-    json: { json: input },
-    as: admin,
-  });
-  response.assertStatus(200);
-}
 
 const matches = (term: string) => indexedSourceIds(h.db, term);
 
@@ -65,6 +54,35 @@ describe("search()", () => {
     await h.drainDeferred();
 
     expect(await h.db.all(sql`SELECT id FROM entry_changes`)).toHaveLength(1);
+  });
+
+  test("a term that predates the plugin is indexed on a scheduled run", async () => {
+    // Terms have no change feed, so nothing would ever reach one a site
+    // already had — the lifecycle actions only fire for a term somebody
+    // touches.
+    const term = await h.factory.term.create({
+      taxonomy: "category",
+      name: "Hydroponics",
+      slug: "hydroponics",
+    });
+
+    expect(await matches("hydroponics")).toEqual([]);
+
+    await runSchedule();
+
+    expect(await matches("hydroponics")).toEqual([term.id]);
+  });
+
+  test("a term of a taxonomy hidden from the site is never backfilled", async () => {
+    await h.factory.term.create({
+      taxonomy: "nav-menu",
+      name: "Hydroponics menu",
+      slug: "hydroponics-menu",
+    });
+
+    await runSchedule();
+
+    expect(await matches("hydroponics")).toEqual([]);
   });
 
   test("an entry written straight to the database is indexed once the feed drains", async () => {

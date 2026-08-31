@@ -1,10 +1,10 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
-import type { Entry } from "plumix/schema";
+import type { Entry, Term } from "plumix/schema";
 import { eq } from "plumix/db";
 import { ackEntryChanges, tryGetContext } from "plumix/plugin";
 import { entryChanges } from "plumix/schema";
 
-import { indexEntries } from "./index-writer.js";
+import { indexEntries, indexTerms } from "./index-writer.js";
 
 /**
  * The entries this request has already handed to the deferred queue, held per
@@ -19,15 +19,15 @@ import { indexEntries } from "./index-writer.js";
  */
 const scheduled = new WeakMap<AppContext["memo"], Set<number>>();
 
-// The lifecycle actions that can change what the index should say about an
-// entry. `entry:meta_changed` is deliberately absent: meta is not indexed, so
-// a metadata-only save has nothing to re-tokenize — the change feed's own
-// guard says the same thing about a direct write.
 // One entry saved over and over between drains leaves a row per save. The
 // read is bounded so a hot entry cannot return an unbounded set; what is left
 // over is drained like any other backlog.
 const CHANGES_PER_ENTRY = 100;
 
+// The lifecycle actions that can change what the index should say about an
+// entry. `entry:meta_changed` is deliberately absent: meta is not indexed, so
+// a metadata-only save has nothing to re-tokenize — the change feed's own
+// guard says the same thing about a direct write.
 const ENTRY_ACTIONS = [
   "entry:published",
   "entry:updated",
@@ -35,6 +35,11 @@ const ENTRY_ACTIONS = [
   "entry:restored",
   "entry:deleted",
 ] as const;
+
+// A term's name and the description its archive carries are all that is
+// indexed, and both move on these. `term:meta_changed` is absent for the
+// reason its entry counterpart is.
+const TERM_ACTIONS = ["term:created", "term:updated", "term:deleted"] as const;
 
 /**
  * Index this entry after the response, and clear the feed rows it left.
@@ -53,14 +58,34 @@ const ENTRY_ACTIONS = [
  * holds it, so this costs freshness, not correctness.
  */
 function enqueueEntryIndex(ctx: AppContext, entryId: number): void {
+  if (!claim(ctx, entryId)) return;
+  ctx.defer(indexAndAck(ctx, entryId));
+}
+
+/**
+ * The same fast path for a term, minus the feed — and minus the deduplication
+ * that goes with it.
+ *
+ * An entry's repeat write can be dropped here because the feed still holds it
+ * and the drain will catch it: that costs freshness, not correctness. Nothing
+ * holds a term, so dropping one would lose it until somebody edited that term
+ * again. Re-indexing is idempotent and a term fires one action per mutation,
+ * so there is nothing to save by claiming it.
+ */
+function enqueueTermIndex(ctx: AppContext, termId: number): void {
+  ctx.defer(indexTerms(ctx, [termId]));
+}
+
+/** Whether this request still owes the index work for this entry. */
+function claim(ctx: AppContext, entryId: number): boolean {
   let ids = scheduled.get(ctx.memo);
   if (ids === undefined) {
     ids = new Set();
     scheduled.set(ctx.memo, ids);
   }
-  if (ids.has(entryId)) return;
+  if (ids.has(entryId)) return false;
   ids.add(entryId);
-  ctx.defer(indexAndAck(ctx, entryId));
+  return true;
 }
 
 async function indexAndAck(ctx: AppContext, entryId: number): Promise<void> {
@@ -88,10 +113,10 @@ async function indexAndAck(ctx: AppContext, entryId: number): Promise<void> {
 }
 
 /**
- * Subscribe the fast path to the entry lifecycle, so an entry saved through
- * the application is findable without waiting for a scheduled run.
+ * Subscribe the fast path to the lifecycle, so what is saved through the
+ * application is findable without waiting for a scheduled run.
  */
-export function registerEntryIndexInvalidator(ctx: PluginSetupContext): void {
+export function registerIndexInvalidator(ctx: PluginSetupContext): void {
   const onEntry = (entry: Entry): void => {
     // A lifecycle action always fires inside a request; one fired outside has
     // no queue to defer through, and the feed catches it either way.
@@ -100,4 +125,16 @@ export function registerEntryIndexInvalidator(ctx: PluginSetupContext): void {
     enqueueEntryIndex(appCtx, entry.id);
   };
   for (const action of ENTRY_ACTIONS) ctx.addAction(action as never, onEntry);
+
+  const onTerm = (term: Term): void => {
+    const appCtx = tryGetContext();
+    if (appCtx === null) return;
+    enqueueTermIndex(appCtx, term.id);
+  };
+  // The handler is cast as well as the name, the way core's own purge
+  // invalidator casts its term half: the action names are a const roster, so
+  // the payload TypeScript picks for the union is whichever arm it saw first.
+  for (const action of TERM_ACTIONS) {
+    ctx.addAction(action as never, onTerm as never);
+  }
 }

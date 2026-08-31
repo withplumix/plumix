@@ -6,7 +6,7 @@ import {
 } from "plumix/blocks";
 import { eq } from "plumix/db";
 import { createPluginRegistry } from "plumix/plugin";
-import { entries } from "plumix/schema";
+import { entries, terms } from "plumix/schema";
 import { createTestContext, factoriesFor } from "plumix/test";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -18,7 +18,7 @@ import {
   paragraph,
   watchRewrites,
 } from "../test/db.js";
-import { indexEntries } from "./index-writer.js";
+import { indexEntries, indexTerms } from "./index-writer.js";
 
 let db: SearchTestDb;
 let ctx: AppContext;
@@ -36,6 +36,11 @@ beforeEach(async () => {
   db = await createSearchTestDb();
   plugins = createPluginRegistry();
   plugins.entryTypes.set("post", postType());
+  plugins.termTaxonomies.set("category", {
+    name: "category",
+    registeredBy: "test",
+    label: "Categories",
+  });
   ctx = createTestContext({
     db,
     plugins,
@@ -129,6 +134,55 @@ describe("indexEntries", () => {
 
     expect(await matches("hydroponics")).toEqual([]);
     expect(await matches("aquaponics")).toEqual([entry.id]);
+  });
+
+  test("never indexes a taxonomy excluded from search", async () => {
+    plugins.termTaxonomies.set("nav-menu", {
+      name: "nav-menu",
+      registeredBy: "test",
+      label: "Menus",
+      isPublic: false,
+    });
+    const term = await factoriesFor(db).term.create({
+      taxonomy: "nav-menu",
+      name: "Hydroponics menu",
+    });
+
+    await indexTerms(ctx, [term.id]);
+
+    expect(await matches("hydroponics")).toEqual([]);
+  });
+
+  test("drops a term whose taxonomy stopped being searchable", async () => {
+    const term = await factoriesFor(db).term.create({
+      taxonomy: "category",
+      name: "Hydroponics",
+    });
+    await indexTerms(ctx, [term.id]);
+    expect(await matches("hydroponics")).toEqual([term.id]);
+
+    plugins.termTaxonomies.set("category", {
+      name: "category",
+      registeredBy: "test",
+      label: "Categories",
+      excludeFromSearch: true,
+    });
+    await indexTerms(ctx, [term.id]);
+
+    expect(await matches("hydroponics")).toEqual([]);
+  });
+
+  test("drops a term that has gone from the database", async () => {
+    const term = await factoriesFor(db).term.create({
+      taxonomy: "category",
+      name: "Hydroponics",
+    });
+    await indexTerms(ctx, [term.id]);
+
+    await db.delete(terms).where(eq(terms.id, term.id));
+    await indexTerms(ctx, [term.id]);
+
+    expect(await matches("hydroponics")).toEqual([]);
   });
 
   test("leaves the index intact after a run of updates and deletes", async () => {

@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchTestDb } from "../test/db.js";
 import { createSearchTestDb, paragraph } from "../test/db.js";
-import { indexEntries } from "./index-writer.js";
+import { indexEntries, indexTerms } from "./index-writer.js";
 import { runSearch } from "./query.js";
 
 let db: SearchTestDb;
@@ -25,6 +25,11 @@ beforeEach(async () => {
     name: "post",
     registeredBy: "test",
     label: "Posts",
+  });
+  plugins.termTaxonomies.set("category", {
+    name: "category",
+    registeredBy: "test",
+    label: "Categories",
   });
   ctx = createTestContext({
     db,
@@ -123,6 +128,83 @@ describe("runSearch", () => {
       url: "/post/winter-hydroponics",
     });
     expect(result?.snippet).toContain("<mark>");
+  });
+
+  test("a topic says what it is, what it is called and where it lives", async () => {
+    const term = await factoriesFor(db).term.create({
+      taxonomy: "category",
+      name: "Hydroponics",
+      slug: "hydroponics",
+    });
+    await indexTerms(ctx, [term.id]);
+
+    const [result] = (await search("hydroponics")).results;
+
+    expect(result).toMatchObject({
+      kind: "term",
+      id: term.id,
+      title: "Hydroponics",
+      url: "/category/hydroponics",
+    });
+  });
+
+  test("a topic is found by the description its archive carries", async () => {
+    const term = await factoriesFor(db).term.create({
+      taxonomy: "category",
+      name: "Growing",
+      slug: "growing",
+      description: "Everything about hydroponics indoors",
+    });
+    await indexTerms(ctx, [term.id]);
+
+    expect((await search("hydroponics")).results).toMatchObject([
+      { kind: "term", id: term.id },
+    ]);
+  });
+
+  test("entries and terms come back in one ranked list", async () => {
+    // The term's name is the whole of its text, so bm25 puts it above an
+    // article that mentions the word once — which only means anything if the
+    // two were ranked against each other rather than merged after the fact.
+    const entry = await publish({
+      title: "An article mentioning hydroponics once, among many other words",
+      slug: "article",
+    });
+    const term = await factoriesFor(db).term.create({
+      taxonomy: "category",
+      name: "Hydroponics",
+      slug: "hydroponics",
+    });
+    await indexTerms(ctx, [term.id]);
+
+    const { results } = await search("hydroponics");
+
+    expect(results.map((result) => [result.kind, result.id])).toEqual([
+      ["term", term.id],
+      ["entry", entry.id],
+    ]);
+    // One list, one scale: every result was scored by the same query.
+    expect(results.every((result) => result.score !== null)).toBe(true);
+  });
+
+  test("a term of an excluded taxonomy is clamped out at read time", async () => {
+    const term = await factoriesFor(db).term.create({
+      taxonomy: "category",
+      name: "Hydroponics",
+      slug: "hydroponics",
+    });
+    await indexTerms(ctx, [term.id]);
+
+    plugins.termTaxonomies.set("category", {
+      name: "category",
+      registeredBy: "test",
+      label: "Categories",
+      excludeFromSearch: true,
+    });
+
+    // Still in the projection, because nothing has touched it — and still
+    // absent from results. This is the read clamp, not the write one.
+    expect((await search("hydroponics")).results).toEqual([]);
   });
 
   test("never surfaces a draft, a scheduled entry or a trashed one", async () => {

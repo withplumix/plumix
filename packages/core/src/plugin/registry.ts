@@ -281,6 +281,11 @@ export interface TermTaxonomyOptions {
   readonly showUI?: boolean;
   readonly showInSidebar?: boolean;
   readonly excludeFromGenericRpc?: boolean;
+  /** Keep this taxonomy's terms out of public search results. Defaults from
+   *  `isPublic`, so a navigation-menu taxonomy is excluded without a second
+   *  declaration. The admin command palette ignores it — an editor searches
+   *  what they can read, not what a visitor can. */
+  readonly excludeFromSearch?: boolean;
   readonly isInQuickEdit?: boolean;
   readonly hasAdminColumn?: boolean;
   readonly rewrite?: {
@@ -318,6 +323,7 @@ export function resolveTermTaxonomyVisibility(options: TermTaxonomyOptions): {
   readonly showUI: boolean;
   readonly showInSidebar: boolean;
   readonly excludeFromGenericRpc: boolean;
+  readonly excludeFromSearch: boolean;
 } {
   const isPublic = options.isPublic ?? true;
   const showUI = options.showUI ?? isPublic;
@@ -326,6 +332,7 @@ export function resolveTermTaxonomyVisibility(options: TermTaxonomyOptions): {
     showUI,
     showInSidebar: options.showInSidebar ?? showUI,
     excludeFromGenericRpc: options.excludeFromGenericRpc ?? !isPublic,
+    excludeFromSearch: options.excludeFromSearch ?? !isPublic,
   };
 }
 

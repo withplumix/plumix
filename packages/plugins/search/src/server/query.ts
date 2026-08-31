@@ -1,12 +1,12 @@
 import type { AppContext } from "plumix/plugin";
-import { buildEntryPermalink } from "plumix";
+import { buildEntryPermalink, buildTermArchiveUrl } from "plumix";
 import { inArray, sql } from "plumix/db";
-import { entries } from "plumix/schema";
+import { entries, terms } from "plumix/schema";
 
 import type { SearchSourceType } from "../db/schema.js";
 import type { RankingAlgorithm, RankingWeights } from "../ranking.js";
 import { DEFAULT_RANKING_ALGORITHM, rankingWeights } from "../ranking.js";
-import { searchableEntryTypes } from "./document.js";
+import { searchableEntryTypes, searchableTaxonomies } from "./document.js";
 import { DEFAULT_COMMON_TERM_THRESHOLD, planForQuery } from "./query-plan.js";
 import {
   highlightSnippet,
@@ -74,8 +74,10 @@ function isAskablePage(page: number): boolean {
 }
 
 interface MatchedRow {
+  readonly kind: SearchSourceType;
   readonly id: number;
-  readonly type: string;
+  /** The entry's type, or the term's taxonomy — whichever names its URL. */
+  readonly scope: string;
   readonly slug: string;
   readonly parentId: number | null;
   readonly title: string;
@@ -110,7 +112,8 @@ export async function runSearch(
   // leave every entry already indexed live in results until something touched
   // each one. Clamping here makes the exclusion take effect at once.
   const types = searchableEntryTypes(ctx.plugins);
-  if (types.length === 0) return EMPTY;
+  const taxonomies = searchableTaxonomies(ctx.plugins);
+  if (types.length === 0 && taxonomies.length === 0) return EMPTY;
   const weights = rankingWeights(options.ranking ?? DEFAULT_RANKING_ALGORITHM);
   const limit = perPage + 1;
   const offset = (page - 1) * perPage;
@@ -121,7 +124,14 @@ export async function runSearch(
     threshold: options.commonTermThreshold ?? DEFAULT_COMMON_TERM_THRESHOLD,
   });
   const read = plan === "ranked" ? rankedRows : recentRows;
-  const rows = await read(ctx, { match, types, weights, limit, offset });
+  const rows = await read(ctx, {
+    match,
+    types,
+    taxonomies,
+    weights,
+    limit,
+    offset,
+  });
 
   const results = await Promise.all(
     rows.slice(0, perPage).map((row) => toResult(ctx, row)),
@@ -140,6 +150,7 @@ export async function runSearch(
 interface ReadArgs {
   readonly match: string;
   readonly types: readonly string[];
+  readonly taxonomies: readonly string[];
   readonly weights: RankingWeights;
   readonly limit: number;
   readonly offset: number;
@@ -160,25 +171,41 @@ const SNIPPET = sql`
  */
 async function rankedRows(
   ctx: AppContext,
-  { match, types, weights, limit, offset }: ReadArgs,
+  { match, types, taxonomies, weights, limit, offset }: ReadArgs,
 ): Promise<MatchedRow[]> {
+  // Entries and terms are read together rather than queried apart, because
+  // bm25 is not comparable across queries: merging two ranked lists would put
+  // numbers side by side that were computed against different corpora, and it
+  // forces offset pagination on the merge. Both subjects resolve by primary
+  // key, so a page costs two lookups per row.
+  //
+  // The tiebreak is the document's own id: `source_id` stopped being unique
+  // the moment two kinds shared the table.
   return await ctx.db.all<MatchedRow>(sql`
-    SELECT documents.source_id AS id,
-           entries.type AS type,
-           entries.slug AS slug,
-           entries.parent_id AS parentId,
-           entries.title AS title,
+    SELECT documents.source_type AS kind,
+           documents.source_id AS id,
+           coalesce(entries.type, terms.taxonomy) AS scope,
+           coalesce(entries.slug, terms.slug) AS slug,
+           coalesce(entries.parent_id, terms.parent_id) AS parentId,
+           coalesce(entries.title, terms.name) AS title,
            bm25(search_index, ${weights.title}, ${weights.body}) AS score,
            ${SNIPPET} AS snippet
       FROM search_index
       JOIN search_documents AS documents ON documents.id = search_index.rowid
-      JOIN entries ON entries.id = documents.source_id
+      LEFT JOIN entries
+        ON documents.source_type = 'entry' AND entries.id = documents.source_id
+      LEFT JOIN terms
+        ON documents.source_type = 'term' AND terms.id = documents.source_id
      WHERE search_index MATCH ${match}
-       AND documents.source_type = 'entry'
-       AND entries.status = 'published'
-       AND entries.published_at IS NOT NULL
-       AND ${inArray(entries.type, types)}
-     ORDER BY score, documents.source_id
+       AND (
+         (documents.source_type = 'entry'
+          AND entries.status = 'published'
+          AND entries.published_at IS NOT NULL
+          AND ${inArray(entries.type, types)})
+         OR (documents.source_type = 'term'
+          AND ${inArray(terms.taxonomy, taxonomies)})
+       )
+     ORDER BY score, documents.id
      LIMIT ${limit} OFFSET ${offset}
   `);
 }
@@ -198,6 +225,11 @@ async function rankedRows(
  * subquery above has no way to hand back, so the snippets are fetched for the
  * page that survived — bounded to it, and constrained by rowid, which FTS5
  * answers without scanning the match set again.
+ *
+ * Entries only. A term has no publication date to be ordered by, and this
+ * plan is a walk down that date order — so a word common enough to reach it
+ * is answered with articles. The ranked plan, which is what a topic name
+ * takes, spans both.
  */
 async function recentRows(
   ctx: AppContext,
@@ -208,8 +240,9 @@ async function recentRows(
       readonly documentId: number;
     }
   >(sql`
-    SELECT entries.id AS id,
-           entries.type AS type,
+    SELECT 'entry' AS kind,
+           entries.id AS id,
+           entries.type AS scope,
            entries.slug AS slug,
            entries.parent_id AS parentId,
            entries.title AS title,
@@ -253,14 +286,18 @@ async function toResult(
   ctx: AppContext,
   row: MatchedRow,
 ): Promise<SearchResult | null> {
-  // Short-circuits to pure substitution for a flat entry type, so a page of
-  // results costs no extra query. A hierarchical type pays one ancestor walk
-  // per nested result — the price of a result a visitor can actually click,
-  // where core's own listings settle for a null URL.
-  const url = await buildEntryPermalink(ctx, row);
+  // Both short-circuit to pure substitution for a flat type, so a page of
+  // results costs no extra query. A hierarchical one pays an ancestor walk per
+  // nested result — the price of a result a visitor can actually click, where
+  // core's own listings settle for a null URL.
+  const { slug, parentId } = row;
+  const url =
+    row.kind === "entry"
+      ? await buildEntryPermalink(ctx, { type: row.scope, slug, parentId })
+      : await buildTermArchiveUrl(ctx, { taxonomy: row.scope, slug, parentId });
   if (url === null) return null;
   return {
-    kind: "entry",
+    kind: row.kind,
     id: row.id,
     title: row.title,
     url,

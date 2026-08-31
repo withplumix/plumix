@@ -1,13 +1,12 @@
 import { sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 /**
- * What a document's text was extracted from. Only entries are projected
- * today; terms join the same table rather than a second one, so one ranked
- * list can span both without the cross-table bm25 comparison that makes
- * merged rankings meaningless. Adding an arm is a change to this union, not a
- * migration.
+ * What a document's text was extracted from. Entries and terms share one
+ * table rather than having one each, so a query produces one ranked list —
+ * bm25 scores are not comparable across tables, and merging per-source
+ * results would force offset pagination on top.
  */
-const SEARCH_SOURCE_TYPES = ["entry"] as const;
+const SEARCH_SOURCE_TYPES = ["entry", "term"] as const;
 
 /** What a search result is — the discriminator a theme renders on. */
 export type SearchSourceType = (typeof SEARCH_SOURCE_TYPES)[number];
