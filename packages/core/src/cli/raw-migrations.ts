@@ -1,4 +1,5 @@
 import type { AnyPluginDescriptor } from "../config.js";
+import { ENTRY_CHANGE_FEED_DDL } from "../entries/change-feed.js";
 import { CliError } from "./errors.js";
 
 // A name is spliced into a filename and into the journal tag that
@@ -12,6 +13,20 @@ export interface PluginRawSqlMigration {
   readonly statements: readonly string[];
 }
 
+/**
+ * Core's own non-drizzle DDL, emitted ahead of every plugin's because the
+ * objects it creates sit on core's tables. `core` is not a plugin id, and a
+ * plugin claiming it collides on identity rather than silently displacing
+ * this.
+ */
+export const CORE_SQL_MIGRATIONS: readonly PluginRawSqlMigration[] = [
+  {
+    pluginId: "core",
+    name: "entry_change_feed",
+    statements: ENTRY_CHANGE_FEED_DDL,
+  },
+];
+
 function rawSqlMigrationIdentity(migration: PluginRawSqlMigration): string {
   return `${migration.pluginId}_${migration.name}`;
 }
@@ -19,8 +34,8 @@ function rawSqlMigrationIdentity(migration: PluginRawSqlMigration): string {
 export function collectRawSqlMigrations(
   plugins: readonly AnyPluginDescriptor[],
 ): readonly PluginRawSqlMigration[] {
-  const declared: PluginRawSqlMigration[] = [];
-  const identities = new Set<string>();
+  const declared: PluginRawSqlMigration[] = [...CORE_SQL_MIGRATIONS];
+  const identities = new Set(declared.map(rawSqlMigrationIdentity));
   for (const plugin of plugins) {
     for (const migration of plugin.sqlMigrations ?? []) {
       if (!MIGRATION_NAME_RE.test(migration.name)) {

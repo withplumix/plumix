@@ -52,6 +52,67 @@ describe("splitStatements", () => {
     const script = `-- a; comment\nSELECT 1;`;
     expect(splitStatements(script)).toEqual(["-- a; comment\nSELECT 1"]);
   });
+
+  test("keeps a trigger body whole", () => {
+    const trigger = [
+      "CREATE TRIGGER t AFTER INSERT ON a",
+      "  BEGIN",
+      "    INSERT INTO b (id) VALUES (new.id);",
+      "  END",
+    ].join("\n");
+
+    expect(splitStatements(`${trigger};\nSELECT 1;`)).toEqual([
+      trigger,
+      "SELECT 1",
+    ]);
+  });
+
+  test("does not end a trigger body at an identifier ending in `end`", () => {
+    const trigger = [
+      "CREATE TRIGGER t AFTER INSERT ON a",
+      "  BEGIN",
+      "    INSERT INTO b (x2end) VALUES (1);",
+      "    INSERT INTO c (id) VALUES (new.id);",
+      "  END",
+    ].join("\n");
+
+    expect(splitStatements(`${trigger};`)).toEqual([trigger]);
+  });
+
+  test("does not treat a quoted identifier as a block keyword", () => {
+    const trigger = [
+      "CREATE TRIGGER t AFTER INSERT ON a",
+      "  BEGIN",
+      '    INSERT INTO b ("end") VALUES (1);',
+      "    INSERT INTO c (id) VALUES (new.id);",
+      "  END",
+    ].join("\n");
+
+    expect(splitStatements(`${trigger};`)).toEqual([trigger]);
+  });
+
+  test("still splits a script wrapped in a transaction", () => {
+    const script =
+      "BEGIN TRANSACTION;\nINSERT INTO a (id) VALUES (1);\nCOMMIT;";
+
+    expect(splitStatements(script)).toEqual([
+      "BEGIN TRANSACTION",
+      "INSERT INTO a (id) VALUES (1)",
+      "COMMIT",
+    ]);
+  });
+
+  test("does not end a trigger body at a CASE expression's END", () => {
+    const trigger = [
+      "CREATE TRIGGER t AFTER UPDATE ON a",
+      "  BEGIN",
+      "    INSERT INTO b (id) VALUES (CASE WHEN new.id THEN 1 ELSE 2 END);",
+      "    INSERT INTO c (id) VALUES (new.id);",
+      "  END",
+    ].join("\n");
+
+    expect(splitStatements(`${trigger};`)).toEqual([trigger]);
+  });
 });
 
 describe("initializeDemoStorage", () => {
@@ -61,6 +122,26 @@ describe("initializeDemoStorage", () => {
     const rows = await sql.query("SELECT label FROM widget");
     expect(rows).toHaveLength(1);
     expect(rows[0]?.label).toBe("demo");
+  });
+
+  test("applies a trigger and it fires on a later write", async () => {
+    const sql = memoryExecutor();
+    await initializeDemoStorage(
+      sql,
+      [
+        SCHEMA,
+        "CREATE TABLE widget_change (id INTEGER PRIMARY KEY, widget_id INTEGER);",
+        "CREATE TRIGGER widget_ai AFTER INSERT ON widget",
+        "  BEGIN",
+        "    INSERT INTO widget_change (widget_id) VALUES (new.id);",
+        "  END;",
+        SEED,
+      ].join("\n"),
+    );
+
+    expect(await sql.query("SELECT widget_id FROM widget_change")).toHaveLength(
+      1,
+    );
   });
 
   test("is idempotent: re-initializing with the same SQL is a no-op", async () => {

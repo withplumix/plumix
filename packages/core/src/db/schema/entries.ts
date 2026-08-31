@@ -31,6 +31,13 @@ export type EntryStatus = (typeof ENTRY_STATUSES)[number];
  */
 export type EntryContent = Record<string, unknown>;
 
+/**
+ * Carries the change-feed triggers in `entries/change-feed.ts`. drizzle emits
+ * a table rebuild for some schema changes — adding a `NOT NULL` to an existing
+ * column, for one — and every trigger on the table dies at the `DROP TABLE`
+ * inside it. A migration that rebuilds this table has to re-create them under
+ * a new `sqlMigrations` name.
+ */
 export const entries = sqliteTable(
   "entries",
   (t) => ({

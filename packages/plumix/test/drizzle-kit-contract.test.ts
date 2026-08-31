@@ -36,21 +36,21 @@ const SCHEMA_WITH_SECOND_TABLE = `${SCHEMA}
   }));
 `;
 
-const SEARCH_PLUGIN = {
-  id: "search",
-  setup: () => undefined,
-  sqlMigrations: [
-    {
-      name: "widget_fts",
-      statements: [
-        "CREATE VIRTUAL TABLE `widget_fts` USING fts5(name, content='widgets', content_rowid='id')",
-        "CREATE TRIGGER `widget_fts_ai` AFTER INSERT ON `widgets` BEGIN\n" +
-          "  INSERT INTO `widget_fts`(rowid, name) VALUES (new.id, new.name);\n" +
-          "END",
-      ],
-    },
-  ],
-};
+// Declared directly rather than collected off a plugin descriptor: this
+// suite diffs a toy schema, and core's own DDL would reference tables it
+// does not have.
+const SEARCH_MIGRATIONS = [
+  {
+    pluginId: "search",
+    name: "widget_fts",
+    statements: [
+      "CREATE VIRTUAL TABLE `widget_fts` USING fts5(name, content='widgets', content_rowid='id')",
+      "CREATE TRIGGER `widget_fts_ai` AFTER INSERT ON `widgets` BEGIN\n" +
+        "  INSERT INTO `widget_fts`(rowid, name) VALUES (new.id, new.name);\n" +
+        "END",
+    ],
+  },
+];
 
 function generate(): Promise<string> {
   const bin = migrateGenerateDeps.resolveDrizzleKitBin(dir);
@@ -131,12 +131,12 @@ describe("drizzle-kit's stderr contract", () => {
   );
 });
 
-describe("plugin-contributed raw SQL", () => {
+describe("raw SQL migrations", () => {
   test(
     "a later schema change is numbered past the raw migration",
     async () => {
       await generateOrThrow();
-      emitRawSqlMigrations(dir, [SEARCH_PLUGIN]);
+      emitRawSqlMigrations(dir, SEARCH_MIGRATIONS);
 
       writeFileSync(join(dir, "schema.ts"), SCHEMA_WITH_SECOND_TABLE, "utf8");
       await generateOrThrow();
@@ -154,7 +154,7 @@ describe("plugin-contributed raw SQL", () => {
     "applying the generated set creates the virtual table and its trigger",
     async () => {
       await generateOrThrow();
-      emitRawSqlMigrations(dir, [SEARCH_PLUGIN]);
+      emitRawSqlMigrations(dir, SEARCH_MIGRATIONS);
       writeFileSync(join(dir, "schema.ts"), SCHEMA_WITH_SECOND_TABLE, "utf8");
       await generateOrThrow();
 

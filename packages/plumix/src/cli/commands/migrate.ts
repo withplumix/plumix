@@ -3,11 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type {
-  AnyPluginDescriptor,
-  CommandContext,
-  CommandDefinition,
-} from "@plumix/core";
+import type { CommandContext, CommandDefinition } from "@plumix/core";
 import {
   CliError,
   collectRawSqlMigrations,
@@ -86,7 +82,10 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
   if (stderr.trim() !== "") throw CliError.migrateGenerateFailed();
   report.success(`Migrations emitted in ${MIGRATIONS_OUT}/`);
 
-  for (const tag of emitRawSqlMigrations(cwd, app.config.plugins)) {
+  for (const tag of emitRawSqlMigrations(
+    cwd,
+    collectRawSqlMigrations(app.config.plugins),
+  )) {
     report.success(`Raw SQL migration emitted: ${MIGRATIONS_OUT}/${tag}.sql`);
   }
 }
@@ -94,9 +93,8 @@ async function migrateGenerate(ctx: CommandContext): Promise<void> {
 /** Runs after the diff so the DDL lands behind the tables it touches. */
 export function emitRawSqlMigrations(
   cwd: string,
-  plugins: readonly AnyPluginDescriptor[],
+  declared: RawSqlMigrations,
 ): readonly string[] {
-  const declared = collectRawSqlMigrations(plugins);
   if (declared.length === 0) return [];
 
   const outDir = resolve(cwd, MIGRATIONS_OUT);
@@ -115,10 +113,15 @@ export function emitRawSqlMigrations(
   return plan.emit.map((migration) => migration.tag);
 }
 
-// drizzle-kit's on-disk journal shape, borrowed rather than re-declared so
-// it stays off `@plumix/core`'s published surface.
+// The collected declarations and drizzle-kit's on-disk journal shape,
+// borrowed rather than re-declared so they stay off `@plumix/core`'s
+// published surface.
+type RawSqlMigrations = Parameters<typeof planRawSqlMigrations>[0];
 type MigrationJournal = Parameters<typeof planRawSqlMigrations>[1];
 
+// A successful generate always leaves a journal, so a missing one means
+// drizzle-kit wrote nothing — and numbering core's DDL from zero would put
+// the triggers ahead of the `CREATE TABLE` they reference.
 function readJournal(journalPath: string): MigrationJournal {
   try {
     return JSON.parse(readFileSync(journalPath, "utf8")) as MigrationJournal;
