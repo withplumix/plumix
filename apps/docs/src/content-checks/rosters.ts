@@ -942,6 +942,7 @@ const PLUGIN_PACKAGES = [
   "@plumix/plugin-og",
   "@plumix/plugin-seo",
   "@plumix/plugin-feeds",
+  "@plumix/plugin-search",
 ] as const;
 
 /**

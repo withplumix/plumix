@@ -63,6 +63,10 @@ Renders a social card per page — an entry, a term or content-type archive, an 
 
 Serves RSS 2.0 and Atom for the site, each entry type, each taxonomy term, each author and each date period, and advertises the matching one in every page's head. Nothing serves `/feed` without it.
 
+### `@plumix/plugin-search`
+
+Keeps a full-text index of everything the site publishes. Installing it materializes a plain-text projection of every searchable entry and an SQLite FTS5 index over it. Triggers in the database close both boundaries where the index could drift from the content, so a seed, a migration or a bulk import cannot leave a site searching stale text. An entry saved through the editor is indexed after the response, so nobody waits for it.
+
 ## Quickstart
 
 Adding comments to the recipe site. `comments` owns a database table, which makes this the longest install path any of them takes.
@@ -213,7 +217,7 @@ Public URLs do not depend on array order either. The router compiles taxonomy ru
 
 ## Plugins that own tables
 
-`@plumix/plugin-comments` and `@plumix/plugin-audit-log` each store rows in a table of their own, and both declare a `schemaModule` naming where that table's definition lives. `plumix migrate generate` reads the resolved config, writes `.plumix/schema.ts` re-exporting core's schema plus every declared plugin schema, and hands the file to drizzle-kit. Skip the generate step and the emitted migration contains core's tables only, so the plugin's first query fails on a missing table.
+`@plumix/plugin-comments`, `@plumix/plugin-audit-log` and `@plumix/plugin-search` each store rows in a table of their own, and each declares a `schemaModule` naming where that table's definition lives. `plumix migrate generate` reads the resolved config, writes `.plumix/schema.ts` re-exporting core's schema plus every declared plugin schema, and hands the file to drizzle-kit. Skip the generate step and the emitted migration contains core's tables only, so the plugin's first query fails on a missing table.
 
 The rest add no tables of their own. `@plumix/plugin-feeds` reads the shared `entries` table and writes nothing at all. `@plumix/plugin-blog` and `@plumix/plugin-pages` register entry types, and every entry of every type is a row in the shared `entries` table. `@plumix/plugin-menu` goes further and reuses the same tables for its own model: a menu is a row in `terms`, a menu item is a row in `entries`, and membership is a row in `entry_term`. `@plumix/plugin-media` stores an asset as an entry and the bytes in object storage, and `@plumix/plugin-og` stores a rendered card in the same bucket, keyed by its content.
 
@@ -226,7 +230,7 @@ drizzle-kit models tables, columns and indexes. A plugin needing DDL outside tha
 ```ts
 import { definePlugin } from "plumix/plugin";
 
-export const search = definePlugin("search", {
+export const archive = definePlugin("archive", {
   setup: () => {},
   sqlMigrations: [
     {
@@ -247,7 +251,7 @@ A name is the migration's identity within its plugin, and a migration already in
 
 ## Plugins that ship admin UI
 
-Media has the library, menu has the menu builder, comments has the moderation queue, and audit-log has the activity feed. The rest — blog, pages, og and feeds — ship none. Each declares a path to an admin entry module, and the Vite plugin compiles every declared entry into one bundle for your site during `plumix build` and `plumix dev`.
+Media has the library, menu has the menu builder, comments has the moderation queue, and audit-log has the activity feed. The rest — blog, pages, og, feeds and search — ship none. Each declares a path to an admin entry module, and the Vite plugin compiles every declared entry into one bundle for your site during `plumix build` and `plumix dev`.
 
 The consequence is that a newly installed admin-facing plugin appears after a build, not after a config reload. If the admin looks unchanged once the package is in the array, stop the dev server and start it again.
 
@@ -255,7 +259,7 @@ The consequence is that a newly installed admin-facing plugin appears after a bu
 
 The platform releases in lockstep. `plumix` and the five packages behind it, `@plumix/core`, `@plumix/blocks`, `@plumix/admin`, `@plumix/admin-editor` and `@plumix/admin-ui`, share one version number and go out together. You depend on `plumix` and get the rest transitively, so there is one platform number to pin. Your runtime adapter, `@plumix/runtime-cloudflare`, sits outside that group and carries its own number.
 
-The eight plugins each release on their own number, and those numbers have already diverged from each other and from the platform. One plugin sitting several minor versions ahead of another says nothing about either one's compatibility with the platform or with each other.
+The eleven plugins each release on their own number, and those numbers have already diverged from each other and from the platform. One plugin sitting several minor versions ahead of another says nothing about either one's compatibility with the platform or with each other.
 
 Compatibility is carried by a peer dependency instead. Each plugin declares `plumix` as a peer with the range `>=0.1.0 <1.0.0`, so any pre-1.0 platform release satisfies every plugin, and upgrading `plumix` does not oblige you to upgrade the plugins beside it. A plugin republishes when its own code changes, not because the platform moved.
 
