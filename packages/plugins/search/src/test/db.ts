@@ -7,6 +7,7 @@ import {
   createDispatcherHarness,
   createTestContext,
   createTestDb,
+  factoriesFor,
 } from "plumix/test";
 
 import { ensureSearchIndex } from "../db/ddl.js";
@@ -132,4 +133,40 @@ export async function createSearchHarness(
         }),
       ),
   };
+}
+
+/**
+ * Publish `count` entries carrying `words` and put each in the index, oldest
+ * first. Writes the projection directly rather than running the extractor —
+ * a suite asking what the index knows does not care how the text got there.
+ */
+export async function indexWords(
+  db: SearchTestDb,
+  count: number,
+  ...words: readonly string[]
+): Promise<readonly number[]> {
+  const author = await factoriesFor(db).admin.create();
+  const [last] = await db.all<{ id: number }>(
+    sql`SELECT coalesce(max(id), 0) AS id FROM entries`,
+  );
+  const ids: number[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const id = (last?.id ?? 0) + i + 1;
+    const entry = await factoriesFor(db).entry.create({
+      authorId: author.id,
+      status: "published",
+      title: `Entry ${String(id)}`,
+      slug: `entry-${String(id)}`,
+      publishedAt: new Date(2000, 0, 1 + id),
+    });
+    await db.insert(schema.searchDocuments).values({
+      sourceType: "entry",
+      sourceId: entry.id,
+      title: "",
+      body: words.join(" "),
+      extractorVersion: "v1",
+    });
+    ids.push(entry.id);
+  }
+  return ids;
 }

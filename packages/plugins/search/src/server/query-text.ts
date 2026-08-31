@@ -43,6 +43,15 @@ export function highlightSnippet(raw: string): string {
 // a search rather than a syntax error.
 const TOKEN = /"([^"]*)"?|(\S+)/g;
 
+function tokensOf(query: string): readonly string[] {
+  const tokens: string[] = [];
+  for (const [, quoted, bare] of query.matchAll(TOKEN)) {
+    const token = (quoted ?? bare ?? "").trim();
+    if (token !== "") tokens.push(token);
+  }
+  return tokens;
+}
+
 /**
  * Turn what a visitor typed into an FTS5 match expression, or `null` when
  * there is nothing to look for.
@@ -55,13 +64,10 @@ const TOKEN = /"([^"]*)"?|(\S+)/g;
  * an error page, without a `try`/`catch` standing in for a guarantee.
  */
 export function toMatchExpression(query: string): string | null {
-  const phrases: string[] = [];
-  for (const [, quoted, bare] of query.matchAll(TOKEN)) {
-    const token = (quoted ?? bare ?? "").trim();
-    // A phrase FTS5 would tokenize to nothing matches nothing, so an empty one
-    // would silently turn "a" AND "" into a search for "a" alone.
-    if (token === "") continue;
-    phrases.push(`"${token.replaceAll('"', '""')}"`);
-  }
+  // A phrase FTS5 would tokenize to nothing matches nothing, which is why
+  // `tokensOf` drops the empty ones rather than turning `a ""` into `a`.
+  const phrases = tokensOf(query).map(
+    (token) => `"${token.replaceAll('"', '""')}"`,
+  );
   return phrases.length === 0 ? null : phrases.join(" ");
 }

@@ -5,8 +5,7 @@ import {
   withBasePath,
 } from "plumix";
 
-import type { RankingAlgorithm } from "./ranking.js";
-import type { SearchResult } from "./server/query.js";
+import type { SearchOptions, SearchResult } from "./server/query.js";
 import { runSearch } from "./server/query.js";
 
 const SEARCH_ARCHIVE_NAME = "search";
@@ -70,7 +69,7 @@ function decodeQuery(raw: string | undefined): string {
  */
 export function registerSearchArchive(
   ctx: PluginSetupContext,
-  ranking: RankingAlgorithm | undefined,
+  options: Pick<SearchOptions, "ranking" | "commonTermThreshold">,
 ): void {
   ctx.registerArchiveType(SEARCH_ARCHIVE_NAME, {
     routes: [
@@ -87,7 +86,7 @@ export function registerSearchArchive(
       const { results, hasMore, outOfRange } = await runSearch(appCtx, {
         query,
         page,
-        ranking,
+        ...options,
       });
       // Core 404s a search page past the end of its results, and an infinite
       // tail of empty pages is worth no less here.

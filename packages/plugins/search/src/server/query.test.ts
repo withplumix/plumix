@@ -51,6 +51,27 @@ async function publish(
 const search = (query: string, page = 1) =>
   runSearch(ctx, { query, page, perPage: 2 });
 
+// A small page, so the planner's "can the walk reach a full page" question
+// has an answer a handful of seeded entries can give.
+const searchAt = (query: string, commonTermThreshold: number) =>
+  runSearch(ctx, { query, page: 1, perPage: 2, commonTermThreshold });
+
+/** Ordered oldest first, so recency and relevance disagree by construction. */
+async function publishSeries(
+  titles: readonly string[],
+): Promise<readonly number[]> {
+  const ids: number[] = [];
+  for (const [index, title] of titles.entries()) {
+    const entry = await publish({
+      title,
+      slug: `s${String(index)}`,
+      publishedAt: new Date(2020 + index, 0, 1),
+    });
+    ids.push(entry.id);
+  }
+  return ids;
+}
+
 describe("runSearch", () => {
   test("finds an article by a word from the middle of its body", async () => {
     const entry = await publish({
@@ -154,6 +175,38 @@ describe("runSearch", () => {
     expect(last.results).toHaveLength(1);
     expect(last.hasMore).toBe(false);
     expect(last.outOfRange).toBe(false);
+  });
+
+  test("a word in nearly every document is answered newest first", async () => {
+    // bm25 over a word almost everything holds cannot tell one document from
+    // another, so recency is the better answer — and the one that does not
+    // cost a score per match.
+    const ids = await publishSeries([
+      "common one",
+      "common two",
+      "common three",
+      "common four",
+    ]);
+
+    const { results } = await searchAt("common", 2);
+
+    // The two newest, newest first — not the two bm25 liked best.
+    expect(results.map((result) => result.id)).toEqual([ids[3], ids[2]]);
+    expect(results.every((result) => result.score === null)).toBe(true);
+  });
+
+  test("a selective term is still answered by relevance", async () => {
+    const ids = await publishSeries([
+      "hydroponics in the title",
+      "an unrelated piece",
+      "a passing mention of hydroponics among many other words entirely",
+    ]);
+
+    const { results } = await searchAt("hydroponics", 2);
+
+    // Oldest first: the title match wins on relevance despite being oldest.
+    expect(results.map((result) => result.id)).toEqual([ids[0], ids[2]]);
+    expect(results.every((result) => result.score !== null)).toBe(true);
   });
 
   test("a page past the end is out of range, not an empty page", async () => {

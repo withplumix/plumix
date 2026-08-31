@@ -19,6 +19,13 @@ export interface SearchConfig {
    * silently reordering the results a site already has.
    */
   readonly ranking?: RankingAlgorithm;
+  /**
+   * How many documents a word has to appear in before results for it are
+   * ordered by recency rather than relevance. Defaults to where the two plans
+   * were measured to cross; a site with a much smaller or much larger corpus
+   * can move it.
+   */
+  readonly commonTermThreshold?: number;
 }
 
 /**
@@ -49,7 +56,7 @@ export function search(options: SearchConfig = {}): PluginDescriptor {
     sqlMigrations: [{ name: "index", statements: SEARCH_INDEX_DDL }],
     setup: (ctx) => {
       registerEntryIndexInvalidator(ctx);
-      registerSearchArchive(ctx, options.ranking);
+      registerSearchArchive(ctx, options);
       // No `cron`: a task that declares one runs only on an invocation whose
       // schedule matches it byte for byte, and how often a site's worker
       // wakes is the site's decision. Draining costs nothing when the feed is

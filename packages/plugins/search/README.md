@@ -67,6 +67,32 @@ search({ ranking: "bm25-v1" });
 
 Weighted bm25, with a title match counting for ten times a body match. The weights are hardcoded, but the algorithm is **named** — a site that has named the one it is on keeps its result order when a better algorithm ships. That is the whole reason the option exists; there is no weighting dashboard, and tuning weights without a real corpus is guesswork.
 
+### A very common word is answered by recency instead
+
+FTS5 scores every matching document before applying a limit, so a word in nearly every document costs time proportional to the corpus. It is also the case where bm25 has the least to say: a word almost everything holds can hardly tell one document from another. Recency is the better answer there, not a degraded one.
+
+So the plugin asks two questions before it gives up relevance ordering, cheapest first.
+
+**Is ranking expensive?** It counts how much of the corpus the query matches, stopping as soon as the count passes the threshold. **Is recency actually cheap?** Nothing about the match set answers that — a word in a quarter of the corpus is common by any count, and if every one of those entries is old, ordering by date still steps over everything newer before it finds a page. So the walk itself is measured, capped at the newest few hundred entries: a full page found inside the cap is proof the reader will stop there too. A deep page simply needs more of them, and stops qualifying.
+
+Measured at 50 000 entries:
+
+|                       | word in every document | word in 1/50 | word only in the oldest quarter |
+| --------------------- | ---------------------- | ------------ | ------------------------------- |
+| ranked by relevance   | 32.6 ms                | 0.2 ms       | 7.6 ms                          |
+| ordered by recency    | 0.6 ms                 | —            | 761 ms                          |
+| what the plugin picks | recency                | ranked       | ranked                          |
+
+The last column is why the walk is measured rather than inferred. A result ordered by recency carries `score: null`, since there is no meaningful relevance number to report.
+
+```ts
+search({ commonTermThreshold: 12_000 });
+```
+
+Counting the match set rather than looking a word up in the index's vocabulary is deliberate. The vocabulary stores what the tokenizer produced — porter files "running" under "run" — and a word's term cannot be recovered from the word: "theory" is filed under "theori", so the nearest thing a prefix search finds is "the", whose frequency belongs to a different word entirely. A wrong number is worse than none.
+
+The count is also exact where a per-word frequency is a guess. A query is an implicit AND, so a common word paired with a rare one matches only what the pair does, and a quoted phrase matches only where its words are adjacent. Both measure as the selective queries they are and keep their ranking.
+
 ## How it stays current
 
 ```
