@@ -251,7 +251,9 @@ A name is the migration's identity within its plugin, and a migration already in
 
 ## Plugins that ship admin UI
 
-Media has the library, menu has the menu builder, comments has the moderation queue, and audit-log has the activity feed. The rest — blog, pages, og, feeds and search — ship none. Each declares a path to an admin entry module, and the Vite plugin compiles every declared entry into one bundle for your site during `plumix build` and `plumix dev`.
+Five add a page of their own: media has the library at `/media`, menu has the menu builder at `/menus`, comments has the moderation queue at `/comments`, audit-log has the activity feed at `/audit-log`, and forms has the submissions inbox at `/form-submissions`. Two add a surface without adding a page — seo contributes a page under Settings and a preview of how an entry will read in search results to the editor sidebar, and og contributes a preview of its social card to the same sidebar, but only when `og({ preview })` asks for the box, since rendering it is the only reason that chunk exists. Blog, pages, feeds and search ship no admin UI at all.
+
+Each of the seven declares a path to an admin entry module, and the Vite plugin compiles every declared entry into one bundle for your site during `plumix build` and `plumix dev`.
 
 The consequence is that a newly installed admin-facing plugin appears after a build, not after a config reload. If the admin looks unchanged once the package is in the array, stop the dev server and start it again.
 
