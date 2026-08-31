@@ -1,5 +1,8 @@
 import type { AnyPluginDescriptor } from "../config.js";
-import { ENTRY_CHANGE_FEED_DDL } from "../entries/change-feed.js";
+import {
+  ENTRY_CHANGE_FEED_DDL,
+  ENTRY_CHANGE_FEED_RESET_DDL,
+} from "../entries/change-feed.js";
 import { CliError } from "./errors.js";
 
 // A name is spliced into a filename and into the journal tag that
@@ -24,6 +27,14 @@ export const CORE_SQL_MIGRATIONS: readonly PluginRawSqlMigration[] = [
     pluginId: "core",
     name: "entry_change_feed",
     statements: ENTRY_CHANGE_FEED_DDL,
+  },
+  // A migration the journal carries is never re-emitted, so the reserved-type
+  // guard reaches an existing install as its own entry rather than as an edit
+  // to the one above.
+  {
+    pluginId: "core",
+    name: "entry_change_feed_types",
+    statements: ENTRY_CHANGE_FEED_RESET_DDL,
   },
 ];
 

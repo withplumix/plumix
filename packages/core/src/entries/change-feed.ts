@@ -2,16 +2,30 @@ import type { Db } from "../context/app.js";
 import type { EntryChangeKind } from "../db/schema/entry_changes.js";
 import { asc, inArray } from "../db/index.js";
 import { entryChanges } from "../db/schema/entry_changes.js";
+import { AUTOSAVE_TYPE, REVISION_TYPE } from "../revisions/slug-codec.js";
 
 // Not `updated_at`: drizzle bumps it on every save, so watching it would put
 // every metadata-only write on the feed.
 const WATCHED_COLUMNS = ["title", "content", "excerpt", "status"] as const;
 
-const GUARD = WATCHED_COLUMNS.map(
+const CHANGED = WATCHED_COLUMNS.map(
   // `IS NOT` rather than `<>`: SQLite's null-propagating comparison would make
   // clearing an excerpt, or setting one for the first time, read as unchanged.
   (column) => `old.${column} IS NOT new.${column}`,
-).join("\n    OR ");
+).join("\n      OR ");
+
+// A revision and an autosave are rows in `entries` too. Their ids are not a
+// document's, so a consumer resolving one gets a snapshot rather than the
+// entry — and an autosave rewrites on every debounced save in the editor.
+// Filtered here rather than downstream because a tombstone carries only an
+// id: once the row is gone, no consumer can tell a pruned revision from a
+// deleted entry.
+function contentRow(row: "new" | "old"): string {
+  const reserved = [REVISION_TYPE, AUTOSAVE_TYPE]
+    .map((type) => `'${type}'`)
+    .join(", ");
+  return `${row}.type NOT IN (${reserved})`;
+}
 
 /**
  * The DDL drizzle cannot express, shipped as a core raw SQL migration and
@@ -27,18 +41,35 @@ const GUARD = WATCHED_COLUMNS.map(
  */
 export const ENTRY_CHANGE_FEED_DDL: readonly string[] = [
   `CREATE TRIGGER entries_change_feed_insert AFTER INSERT ON entries
+  WHEN ${contentRow("new")}
   BEGIN
     INSERT INTO entry_changes (entry_id, kind) VALUES (new.id, 'upsert');
   END`,
   `CREATE TRIGGER entries_change_feed_update AFTER UPDATE ON entries
-  WHEN ${GUARD}
+  WHEN ${contentRow("new")}
+    AND (${CHANGED})
   BEGIN
     INSERT INTO entry_changes (entry_id, kind) VALUES (new.id, 'upsert');
   END`,
   `CREATE TRIGGER entries_change_feed_delete AFTER DELETE ON entries
+  WHEN ${contentRow("old")}
   BEGIN
     INSERT INTO entry_changes (entry_id, kind) VALUES (old.id, 'delete');
   END`,
+];
+
+/**
+ * Replaces triggers an install already has. The first migration shipped
+ * without the reserved-type guard, and a migration in the journal is never
+ * re-emitted, so correcting it takes a second one. Idempotent by
+ * construction: an install generating both for the first time creates the
+ * current triggers, drops them, and creates them again.
+ */
+export const ENTRY_CHANGE_FEED_RESET_DDL: readonly string[] = [
+  "DROP TRIGGER IF EXISTS entries_change_feed_insert",
+  "DROP TRIGGER IF EXISTS entries_change_feed_update",
+  "DROP TRIGGER IF EXISTS entries_change_feed_delete",
+  ...ENTRY_CHANGE_FEED_DDL,
 ];
 
 export interface EntryChange {

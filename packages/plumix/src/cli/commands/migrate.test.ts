@@ -285,14 +285,15 @@ describe("migrate generate with raw SQL migrations", () => {
 
     expect(
       readFileSync(
-        join(dir, "drizzle/0002_plumix_search_fts_index.sql"),
+        join(dir, "drizzle/0003_plumix_search_fts_index.sql"),
         "utf8",
       ),
     ).toBe(`${FTS_SQL};\n`);
     expect(readJournalTags()).toEqual([
       "0000_plain_phil_sheldon",
       "0001_plumix_core_entry_change_feed",
-      "0002_plumix_search_fts_index",
+      "0002_plumix_core_entry_change_feed_types",
+      "0003_plumix_search_fts_index",
     ]);
   });
 
@@ -309,7 +310,8 @@ describe("migrate generate with raw SQL migrations", () => {
     expect(readJournalTags()).toEqual([
       "0000_plain_phil_sheldon",
       "0001_plumix_core_entry_change_feed",
-      "0002_plumix_search_fts_index",
+      "0002_plumix_core_entry_change_feed_types",
+      "0003_plumix_search_fts_index",
     ]);
   });
 
@@ -320,11 +322,13 @@ describe("migrate generate with raw SQL migrations", () => {
 
     expect(readdirSync(join(dir, "drizzle")).sort()).toEqual([
       "0001_plumix_core_entry_change_feed.sql",
+      "0002_plumix_core_entry_change_feed_types.sql",
       "meta",
     ]);
     expect(readJournalTags()).toEqual([
       "0000_plain_phil_sheldon",
       "0001_plumix_core_entry_change_feed",
+      "0002_plumix_core_entry_change_feed_types",
     ]);
   });
 

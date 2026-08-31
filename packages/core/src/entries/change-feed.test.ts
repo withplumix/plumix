@@ -4,6 +4,7 @@ import type { Db } from "../context/app.js";
 import { asc, eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryChanges } from "../db/schema/entry_changes.js";
+import { snapshotAsRevision, upsertAutosave } from "../revisions/repository.js";
 import { adminUser, entryFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { createRpcHarness } from "../test/rpc.js";
@@ -66,6 +67,48 @@ describe("entry change feed", () => {
     await db.update(entries).set(patch).where(eq(entries.id, entry.id));
 
     expect(await feed()).toEqual([{ entryId: entry.id, kind: "upsert" }]);
+  });
+
+  // Revisions and autosaves are rows in `entries` too — reserved types the
+  // editor owns. A consumer resolving their id would get a snapshot rather
+  // than the document, and an autosave churns on every debounced save.
+  test("records nothing for a revision snapshot", async () => {
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+    await clearFeed();
+
+    await snapshotAsRevision(db, { entry, authorId });
+
+    expect(await feed()).toEqual([]);
+  });
+
+  test("records nothing for an autosave, or for re-saving one", async () => {
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+    await clearFeed();
+    const patch = {
+      title: "Draft",
+      content: {},
+      excerpt: null,
+      meta: {},
+    };
+
+    await upsertAutosave(db, { entry, authorId, patch });
+    await upsertAutosave(db, {
+      entry,
+      authorId,
+      patch: { ...patch, title: "Draft 2" },
+    });
+
+    expect(await feed()).toEqual([]);
+  });
+
+  test("records no tombstone when a pruned revision is deleted", async () => {
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+    const revision = await snapshotAsRevision(db, { entry, authorId });
+    await clearFeed();
+
+    await db.delete(entries).where(eq(entries.id, revision.id));
+
+    expect(await feed()).toEqual([]);
   });
 
   test("records nothing when an update touches only metadata", async () => {

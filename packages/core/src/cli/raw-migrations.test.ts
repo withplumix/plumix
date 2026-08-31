@@ -77,6 +77,7 @@ describe("collectRawSqlMigrations", () => {
 
     expect(declared.map((m) => `${m.pluginId}_${m.name}`)).toEqual([
       "core_entry_change_feed",
+      "core_entry_change_feed_types",
       "search_fts_index",
     ]);
   });
