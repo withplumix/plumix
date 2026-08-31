@@ -1477,16 +1477,20 @@ describe("resolveEntryTypeVisibility", () => {
 });
 
 describe("resolveTermTaxonomyVisibility", () => {
-  test("default cascade mirrors entry types (sans excludeFromSearch)", () => {
+  test("default cascade mirrors entry types", () => {
     expect(resolveTermTaxonomyVisibility({ label: "Categories" })).toEqual({
       isPublic: true,
       showUI: true,
       showInSidebar: true,
       excludeFromGenericRpc: false,
+      excludeFromSearch: false,
     });
   });
 
-  test("isPublic=false hides nav-menu taxonomy from admin + RPC", () => {
+  test("isPublic=false hides nav-menu taxonomy from admin, RPC and search", () => {
+    // The whole reason the switch defaults from `isPublic`: a menu taxonomy
+    // is not public, so its terms stay out of results without a second
+    // declaration anyone could forget.
     expect(
       resolveTermTaxonomyVisibility({ label: "Nav menus", isPublic: false }),
     ).toEqual({
@@ -1494,7 +1498,28 @@ describe("resolveTermTaxonomyVisibility", () => {
       showUI: false,
       showInSidebar: false,
       excludeFromGenericRpc: true,
+      excludeFromSearch: true,
     });
+  });
+
+  test("a public taxonomy can still opt its terms out of search", () => {
+    const v = resolveTermTaxonomyVisibility({
+      label: "Internal",
+      excludeFromSearch: true,
+    });
+
+    expect(v.isPublic).toBe(true);
+    expect(v.excludeFromSearch).toBe(true);
+  });
+
+  test("a non-public taxonomy can opt its terms back in", () => {
+    const v = resolveTermTaxonomyVisibility({
+      label: "Hidden",
+      isPublic: false,
+      excludeFromSearch: false,
+    });
+
+    expect(v.excludeFromSearch).toBe(false);
   });
 });
 

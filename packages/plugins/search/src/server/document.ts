@@ -1,7 +1,10 @@
 import type { BlockTextRoster } from "plumix/blocks";
 import type { PluginRegistry } from "plumix/plugin";
 import { extractBlockText, isEntryContent } from "plumix/blocks";
-import { resolveEntryTypeVisibility } from "plumix/plugin";
+import {
+  resolveEntryTypeVisibility,
+  resolveTermTaxonomyVisibility,
+} from "plumix/plugin";
 
 /**
  * The text an entry contributes beside its title: the excerpt a site wrote by
@@ -54,5 +57,31 @@ export function searchableEntryTypes(
 ): readonly string[] {
   return [...plugins.entryTypes.keys()].filter((type) =>
     isSearchableEntryType(plugins, type),
+  );
+}
+
+/**
+ * Whether terms of this taxonomy belong in the index.
+ *
+ * Defaults from the taxonomy's public flag exactly as the entry-type rule
+ * does, so a navigation-menu taxonomy — which is not public — stays out of
+ * results without anyone declaring a second thing. The admin command palette
+ * asks a different question entirely: an editor searches what they can read.
+ */
+export function isSearchableTaxonomy(
+  plugins: PluginRegistry,
+  taxonomy: string,
+): boolean {
+  const spec = plugins.termTaxonomies.get(taxonomy);
+  if (spec === undefined) return false;
+  return !resolveTermTaxonomyVisibility(spec).excludeFromSearch;
+}
+
+/** Every taxonomy whose terms may appear in results, for the read-side clamp. */
+export function searchableTaxonomies(
+  plugins: PluginRegistry,
+): readonly string[] {
+  return [...plugins.termTaxonomies.keys()].filter((taxonomy) =>
+    isSearchableTaxonomy(plugins, taxonomy),
   );
 }

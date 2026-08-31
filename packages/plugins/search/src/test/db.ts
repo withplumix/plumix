@@ -102,6 +102,16 @@ export const contentPlugin = definePlugin("content", {
       label: "Ledger",
       excludeFromSearch: true,
     });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      entryTypes: ["post"],
+    });
+    // Not public, so its terms stay out of results with nothing else said —
+    // the case the taxonomy switch exists for.
+    ctx.registerTermTaxonomy("nav-menu", {
+      label: "Menus",
+      isPublic: false,
+    });
   },
 });
 
@@ -110,6 +120,11 @@ export interface SearchHarness {
   readonly admin: User;
   /** Run the scheduled trigger, so the index catches up with the feed. */
   readonly runSchedule: () => Promise<void>;
+  /** Call an oRPC procedure as the admin, the way the editor's client does. */
+  readonly rpc: (
+    procedure: string,
+    input: Record<string, unknown>,
+  ) => Promise<void>;
 }
 
 /** A dispatcher harness with the plugin's schema and index already applied. */
@@ -122,6 +137,14 @@ export async function createSearchHarness(
   return {
     h,
     admin,
+    rpc: async (procedure, input) => {
+      const response = await h.fetch(`/_plumix/rpc/${procedure}`, {
+        method: "POST",
+        json: { json: input },
+        as: admin,
+      });
+      response.assertStatus(200);
+    },
     runSchedule: () =>
       runScheduledTasks(
         h.app,

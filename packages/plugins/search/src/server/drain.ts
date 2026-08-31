@@ -1,8 +1,11 @@
 import type { AppContext } from "plumix/plugin";
+import { inArray, sql } from "plumix/db";
 import { ackEntryChanges, readEntryChanges } from "plumix/plugin";
+import { terms } from "plumix/schema";
 
 import { ensureSearchIndex } from "../db/ddl.js";
-import { indexEntries } from "./index-writer.js";
+import { searchableTaxonomies } from "./document.js";
+import { indexEntries, indexTerms } from "./index-writer.js";
 
 // Matches the cap D1 puts on bound parameters, which is what the feed's own
 // acknowledgement chunks at.
@@ -44,4 +47,46 @@ export async function drainEntryChanges(ctx: AppContext): Promise<number> {
     handled += changes.length;
   }
   return handled;
+}
+
+// Bounded the way the drain is, and for the same reason: a site installing the
+// plugin with thousands of terms already in place should converge over a few
+// invocations rather than do it all inside one.
+const TERMS_PER_RUN = 100;
+
+/**
+ * Index terms the projection has never held, and answer with how many.
+ *
+ * Terms have no change feed — core's records entries — so the lifecycle
+ * actions are the only thing that indexes one, and they only ever fire for a
+ * term somebody touches. Without this, installing the plugin on a site that
+ * already has categories would leave every one of them unfindable until it
+ * was next edited.
+ *
+ * Only searchable taxonomies are considered, so a term that is never going to
+ * be projected is not selected again on every run. What remains converges to
+ * nothing, which is why this can be unconditional rather than a job somebody
+ * starts.
+ */
+export async function backfillTerms(ctx: AppContext): Promise<number> {
+  const taxonomies = searchableTaxonomies(ctx.plugins);
+  if (taxonomies.length === 0) return 0;
+
+  const missing = await ctx.db.all<{ id: number }>(sql`
+    SELECT terms.id AS id
+      FROM terms
+     WHERE ${inArray(terms.taxonomy, taxonomies)}
+       AND NOT EXISTS (
+         SELECT 1 FROM search_documents
+          WHERE search_documents.source_type = 'term'
+            AND search_documents.source_id = terms.id
+       )
+     LIMIT ${TERMS_PER_RUN}
+  `);
+  if (missing.length === 0) return 0;
+  await indexTerms(
+    ctx,
+    missing.map((row) => row.id),
+  );
+  return missing.length;
 }

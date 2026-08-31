@@ -40,7 +40,8 @@ Bare `/search` stays core's. A plain HTML form submits `GET /search?q=…` and c
 forArchiveType("search").template(({ data }) => (
   <ol>
     {data.results.map((result) => (
-      <li key={result.id}>
+      // An entry and a term can share an id, so the kind is part of the key.
+      <li key={`${result.kind}:${result.id}`}>
         <a href={result.url}>{result.title}</a>
         <p dangerouslySetInnerHTML={{ __html: result.snippet }} />
       </li>
@@ -49,7 +50,7 @@ forArchiveType("search").template(({ data }) => (
 ));
 ```
 
-A result carries `kind`, `id`, `title`, `url`, `snippet` and `score`, and the payload carries `nextUrl` — where the next page of results lives, or `null` at the end. It is opaque on purpose: a theme renders it and never builds it, so what paginating means can change without the payload changing shape. Asking for a page past the end is a 404, as it is on core's own search page. The snippet is **already escaped** — FTS5 splices its highlight markers into indexed content without escaping anything around them, so it arrives with everything but `<mark>` turned into entities. That makes it safe as element content, which is where a snippet goes. It is not safe in an attribute: quotes pass through.
+A result carries `kind`, `id` (unique only within that kind — an entry and a term can share one), `title`, `url`, `snippet` and `score`, and the payload carries `nextUrl` — where the next page of results lives, or `null` at the end. It is opaque on purpose: a theme renders it and never builds it, so what paginating means can change without the payload changing shape. Asking for a page past the end is a 404, as it is on core's own search page. The snippet is **already escaped** — FTS5 splices its highlight markers into indexed content without escaping anything around them, so it arrives with everything but `<mark>` turned into entities. That makes it safe as element content, which is where a snippet goes. It is not safe in an attribute: quotes pass through.
 
 Only published entries appear. Drafts, scheduled and trashed entries are in the index so an author can find their own work in the admin, and the page's query clamps them out.
 
@@ -58,6 +59,39 @@ Only published entries appear. Drafts, scheduled and trashed entries are in the 
 The search page is not edge-cached, for the reason core gives for leaving its own out: the query space is unbounded, so every distinct string a crawler tried would mint a cache entry.
 
 A query is whatever a visitor typed, treated as words to look for: adding a word narrows the results, a quoted phrase matches exactly, and FTS5's own operators are inert. Any string compiles to a valid search, so an unbalanced quote returns nothing rather than an error page.
+
+### Topics are results too
+
+A visitor searching a topic's name reaches the topic, not only the articles about it. Terms are indexed beside entries in the same index and come back in the same ranked list — not two queries merged, which would be putting bm25 scores side by side that were computed against different corpora.
+
+```tsx
+forArchiveType("search").template(({ data }) => (
+  <ol>
+    {data.results.map((result) => (
+      <li key={`${result.kind}:${result.id}`}>
+        {result.kind === "term" ? (
+          <Topic {...result} />
+        ) : (
+          <Article {...result} />
+        )}
+      </li>
+    ))}
+  </ol>
+));
+```
+
+A term contributes its name and the description its archive carries. Which taxonomies take part follows the same rule entry types follow:
+
+```ts
+ctx.registerTermTaxonomy("internal", {
+  label: "Internal",
+  excludeFromSearch: true,
+});
+```
+
+A taxonomy that is not public is excluded already, so a navigation-menu taxonomy stays out of results without a second declaration. The admin command palette is unaffected — an editor searches what they can read, not what a visitor can.
+
+Two things are worth knowing. A term is indexed when it is created, renamed or deleted through the application, and a term the projection has never held is picked up by the scheduled run — core's change feed records entries only, so that sweep is what reaches the categories a site already had. A term written straight to the database after that waits for the same sweep rather than appearing at once. And the recency plan below is entries-only, because a term has no publication date to be ordered by, so a word common enough to reach that plan is answered with articles.
 
 ## Ranking
 
