@@ -47,9 +47,11 @@ describe("island renderer mount()", () => {
       },
     );
 
-    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    // A component may render more than once; waiting for an exact render
+    // count only passes when the poll samples at that instant. `seen[0]` is
+    // fixed once written, so polling it is stable.
     // Scalar prop passes through untouched.
-    expect(seen[0]?.label).toBe("x");
+    await vi.waitFor(() => expect(seen[0]?.label).toBe("x"));
     // The slot prop is now a React element (the StaticHtml bridge).
     const children = seen[0]?.children as { $$typeof?: symbol } | undefined;
     expect(typeof children?.$$typeof).toBe("symbol");
@@ -83,7 +85,11 @@ describe("island renderer mount()", () => {
     active = mount(el);
     active.render(Boom, {}, {});
 
-    await vi.waitFor(() => expect(events).toHaveLength(1));
+    // `events` is one entry per failed hydration, so an exact-length wait was
+    // never the race `seen` had — but polling for `length === 1` reports a
+    // duplicate as a timeout, where asserting after the wait reports the count.
+    await vi.waitFor(() => expect(events.length).toBeGreaterThan(0));
+    expect(events).toHaveLength(1);
     const detail = events[0]?.detail as {
       error?: unknown;
       componentStack?: string;
@@ -205,7 +211,8 @@ describe("island renderer mount()", () => {
     active = mount(el, { hydrate: true });
     active.render(Component, {}, {});
 
-    await vi.waitFor(() => expect(events).toHaveLength(1));
+    await vi.waitFor(() => expect(events.length).toBeGreaterThan(0));
+    expect(events).toHaveLength(1);
     const detail = events[0]?.detail as {
       element?: HTMLElement;
       componentStack?: string;
@@ -379,7 +386,8 @@ describe("island renderer mount()", () => {
     active = mount(el, { hydrate: true });
     active.render(Wrapper, { label: "CLIENT" }, { children: childMarkup });
 
-    await vi.waitFor(() => expect(events).toHaveLength(1));
+    await vi.waitFor(() => expect(events.length).toBeGreaterThan(0));
+    expect(events).toHaveLength(1);
     const detail = events[0]?.detail as { server?: string; client?: string };
     // The single mismatch is the parent's text; the nested island markup rode
     // through untouched on both sides of the captured diff.

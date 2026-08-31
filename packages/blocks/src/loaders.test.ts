@@ -92,32 +92,39 @@ describe("resolveBlockLoaders", () => {
     });
   });
 
-  test("fires every loader on the tree in parallel, not serially", async () => {
-    const sleep = (ms: number) =>
-      new Promise<number>((r) => setTimeout(() => r(ms), ms));
-    const registry = createBlockRegistry([
-      {
-        name: "acme/slow-a",
-        render: () => null,
-        loaders: { v: () => sleep(40) },
-      },
-      {
-        name: "acme/slow-b",
-        render: () => null,
-        loaders: { v: () => sleep(40) },
-      },
-    ]);
-    const tree: readonly BlockNode[] = [
-      { id: "a", name: "acme/slow-a", attrs: {} },
-      { id: "b", name: "acme/slow-b", attrs: {} },
-    ];
+  test(
+    "fires every loader on the tree in parallel, not serially",
+    { timeout: 1000 },
+    async () => {
+      // Each loader blocks until both have entered, so this settles only if
+      // they overlap — a serial implementation hangs rather than merely
+      // running slow.
+      let started = 0;
+      let releaseBoth!: () => void;
+      const bothStarted = new Promise<void>((r) => (releaseBoth = r));
+      const gate = (value: number) => async () => {
+        started += 1;
+        if (started === 2) releaseBoth();
+        await bothStarted;
+        return value;
+      };
+      const registry = createBlockRegistry([
+        { name: "acme/slow-a", render: () => null, loaders: { v: gate(1) } },
+        { name: "acme/slow-b", render: () => null, loaders: { v: gate(2) } },
+      ]);
+      const tree: readonly BlockNode[] = [
+        { id: "a", name: "acme/slow-a", attrs: {} },
+        { id: "b", name: "acme/slow-b", attrs: {} },
+      ];
 
-    const startedAt = Date.now();
-    await resolveBlockLoaders(tree, registry, {});
-    const elapsed = Date.now() - startedAt;
+      const resolved = await resolveBlockLoaders(tree, registry, {});
 
-    expect(elapsed).toBeLessThan(80);
-  });
+      // Not implied by the gate: one loader invoked twice releases it alone.
+      expect(started).toBe(2);
+      expect(resolved.get("a")).toEqual({ loaders: { v: 1 }, error: null });
+      expect(resolved.get("b")).toEqual({ loaders: { v: 2 }, error: null });
+    },
+  );
 
   test("isolates a synchronously-thrown loader from sibling blocks", async () => {
     const registry = createBlockRegistry([

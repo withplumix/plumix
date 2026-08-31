@@ -351,14 +351,14 @@ describe("PlumixIslandElement lifecycle", () => {
       props: serializeProps({ title: "first" }),
     });
     document.body.appendChild(el);
-    // React 19 concurrent commits don't land in a single setTimeout(0)
-    // tick — poll until the first render lands.
-    await vi.waitFor(() => expect(seen).toHaveLength(1));
-    expect(seen[0]).toEqual({ title: "first" });
+    // A component may render more than once, so polling for an exact render
+    // count is a race by construction — poll for the props themselves.
+    await vi.waitFor(() => expect(seen[0]).toEqual({ title: "first" }));
 
     el.setAttribute("props", serializeProps({ title: "second" }));
-    await vi.waitFor(() => expect(seen).toHaveLength(2));
-    expect(seen[1]).toEqual({ title: "second" });
+    // Order-independent: the update is somewhere in the log, whatever else
+    // React rendered around it.
+    await vi.waitFor(() => expect(seen).toContainEqual({ title: "second" }));
   });
 
   test("retries the renderer chunk import with a cache-bust after one failure", async () => {
@@ -429,12 +429,11 @@ describe("PlumixIslandElement lifecycle", () => {
     el.innerHTML =
       '<plumix-static-slot data-plumix-slot="children"><strong>child-text</strong></plumix-static-slot>';
     document.body.appendChild(el);
-    await vi.waitFor(() => expect(seen).toHaveLength(1));
-    expect(seen[0]?.label).toBe("x");
+    await vi.waitFor(() => expect(seen[0]?.label).toBe("x"));
     // The slot value should now be a React element (the StaticHtml bridge)
     // — the simplest observable is `$$typeof === Symbol`.
-    const childrenProp = seen[0]?.children as { $$typeof?: symbol } | undefined;
-    expect(typeof childrenProp?.$$typeof).toBe("symbol");
+    const children = seen[0]?.children as { $$typeof?: symbol } | undefined;
+    expect(typeof children?.$$typeof).toBe("symbol");
   });
 
   test("nested-island slot is NOT claimed by the parent island", async () => {
@@ -465,7 +464,8 @@ describe("PlumixIslandElement lifecycle", () => {
       </plumix-island>
     `;
     document.body.appendChild(parent);
-    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    // Wait for a render first: `seen[0]?.children` is vacuously undefined on [].
+    await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
     // Parent's children slot has no direct descendant <plumix-static-slot>
     // it can claim (the only one belongs to the nested child), so its
     // `children` prop is absent.
@@ -490,8 +490,7 @@ describe("PlumixIslandElement lifecycle", () => {
       props: serializeProps({ title: "hello", n: 42 }),
     });
     document.body.appendChild(el);
-    await vi.waitFor(() => expect(seen).toHaveLength(1));
-    expect(seen[0]).toEqual({ title: "hello", n: 42 });
+    await vi.waitFor(() => expect(seen[0]).toEqual({ title: "hello", n: 42 }));
   });
 });
 

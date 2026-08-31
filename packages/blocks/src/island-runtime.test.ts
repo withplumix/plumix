@@ -2,6 +2,15 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { ISLAND_TAG, setDynamicImport } from "./island-element.js";
 
+import "./island-runtime.js";
+
+// The module bootstraps itself on import and the registry caches it, so the
+// import-time side effect is observable exactly once. Read during module
+// evaluation, before any hook runs — the `beforeEach` below clears
+// `window.Plumix`, and the element registration cannot be undone.
+const loadAtImport = (window as { Plumix?: Record<string, unknown> }).Plumix
+  ?.load;
+
 describe("bootstrapIslandRuntime", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
@@ -14,12 +23,9 @@ describe("bootstrapIslandRuntime", () => {
     delete (window as { Plumix?: unknown }).Plumix;
   });
 
-  test("registers the custom element + the load strategy at import time", async () => {
-    await import("./island-runtime.js");
+  test("registers the custom element + the load strategy at import time", () => {
     expect(customElements.get(ISLAND_TAG)).toBeDefined();
-    expect(
-      typeof (window as { Plumix?: Record<string, unknown> }).Plumix?.load,
-    ).toBe("function");
+    expect(typeof loadAtImport).toBe("function");
   });
 
   test("registers all five hydration strategies on window.Plumix", async () => {
