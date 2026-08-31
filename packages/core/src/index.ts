@@ -162,6 +162,11 @@ export {
 // Core's own serializers use it; exported so two plugins don't each ship the
 // same five-character table.
 export { xmlEscape } from "./seo/xml.js";
+// HTML element-content escaping, for a plugin putting text it did not author
+// into a page — a search snippet, most of all, since FTS5 splices highlight
+// markers into indexed content without escaping anything around them. Safe for
+// element children, NOT for an attribute value: it leaves quotes alone.
+export { escapeHtml } from "./escape-html.js";
 // The reverse-routing vocabulary, for a plugin that answers at the site root
 // (`registerPublicRoute`) and has to address the same URL space the router
 // compiled — `findTermByPath` is the inbound half, the rest the outbound. A
@@ -171,6 +176,11 @@ export { dateRange } from "./route/date-range.js";
 export {
   archiveSlugForEntryType,
   exposesHierarchicalUrls,
+  // What it takes to replace the search page: the patterns core compiled, so a
+  // plugin claims the same URL space rather than a near-miss of it that drifts
+  // the moment core paginates or renames a capture.
+  FRAMEWORK_SEARCH_PAGINATED_PATTERN,
+  FRAMEWORK_SEARCH_QUERY_PATTERN,
 } from "./route/compile.js";
 export { findTermByPath } from "./route/path-chain.js";
 export {

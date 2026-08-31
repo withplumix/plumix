@@ -5,5 +5,5 @@
     "stripInternal": true,
     "tsBuildInfoFile": "${configDir}/.cache/build.tsbuildinfo"
   },
-  "exclude": ["src/**/*.test.ts", "src/test/**"]
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test/**"]
 }

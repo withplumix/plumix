@@ -330,17 +330,32 @@ function archiveSlugFor(
   return baseSlug;
 }
 
+/**
+ * One pattern, one owner — except that a plugin may deliberately shadow a
+ * *framework* route by claiming its pattern at a priority that actually beats
+ * it. ADR 0002 makes that a supported move and the priority table documents
+ * it, but the collision fired before priority was ever consulted, so the two
+ * could never be spelled together.
+ *
+ * The shadowing rule takes ownership, so a second plugin claiming the pattern
+ * collides with the shadow rather than slipping past core. Runs before the
+ * sort, so the framework rule is always the one already seen.
+ */
 function assertUniquePatterns(rules: readonly CompiledRule[]): void {
-  const first = new Map<string, string | null>();
+  const owner = new Map<string, CompiledRule>();
   for (const rule of rules) {
-    const existing = first.get(rule.rawPattern);
+    const existing = owner.get(rule.rawPattern);
     if (existing !== undefined) {
-      throw RouteCompileError.duplicateRewriteRule({
-        rawPattern: rule.rawPattern,
-        firstOwner: existing,
-        secondOwner: rule.registeredBy,
-      });
+      const shadowsFramework =
+        existing.registeredBy === null && rule.priority < existing.priority;
+      if (!shadowsFramework) {
+        throw RouteCompileError.duplicateRewriteRule({
+          rawPattern: rule.rawPattern,
+          firstOwner: existing.registeredBy,
+          secondOwner: rule.registeredBy,
+        });
+      }
     }
-    first.set(rule.rawPattern, rule.registeredBy);
+    owner.set(rule.rawPattern, rule);
   }
 }

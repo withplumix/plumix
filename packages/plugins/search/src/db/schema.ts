@@ -9,6 +9,9 @@ import { sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
  */
 const SEARCH_SOURCE_TYPES = ["entry"] as const;
 
+/** What a search result is — the discriminator a theme renders on. */
+export type SearchSourceType = (typeof SEARCH_SOURCE_TYPES)[number];
+
 /**
  * The plain text of one searchable thing, materialized from whatever holds
  * the real content. Entry content is a block tree whose rich-text inputs

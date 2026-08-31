@@ -120,6 +120,8 @@ Every compiled rule carries a numeric priority, and lower wins. Rules at equal p
 
 Only the 10 is a default. `registerRewriteRule` takes a third argument `{ priority }`, and `registerArchiveType` takes a `priority` in its options, both of which replace it outright. A rule numbered below 5 therefore lands ahead of the framework routes, and one numbered above 60 lands behind the root catch-all. The other three rows are fixed by the compiler.
 
+One pattern normally has one owner, and two rules claiming the same one throw at boot naming both. Numbering below 5 is the exception: a rule may claim a framework pattern outright when its priority actually beats the framework's, which is how `@plumix/plugin-search` replaces the search page with a ranked one. Core's rule stays compiled behind it, so uninstalling the plugin restores the built-in page with nothing to undo. Claim a framework pattern at a priority that cannot win and it still throws — a rule that silently never matches is the mistake the check exists to catch.
+
 Two consequences are worth knowing before you name anything.
 
 Date archives are framework routes, so `/2026` is the year archive and a recipe slugged `2026` is unreachable at the root of a type mounted there. The compiler emits taxonomy rules ahead of entry-type rules, so a taxonomy named `cuisine` and an entry type with `rewrite: { slug: "cuisine" }` resolve taxonomy-first instead of racing on registration order.

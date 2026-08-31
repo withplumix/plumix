@@ -29,13 +29,30 @@ export function entryDocumentBody(
  * An unregistered type is not searchable, which is what keeps a revision and
  * an autosave out: they are rows in `entries` under types no plugin
  * registers, so their draft text can never reach a public result.
+ *
+ * Nor is a type under an access policy. A snippet is 24 tokens of body text
+ * around a word the visitor chose, so an indexed members-only article would
+ * hand an anonymous reader its prose a query at a time — an escalation on
+ * core's own search, which reached no further than the excerpt. Keeping the
+ * type out of the projection is what makes that impossible rather than
+ * merely predicated, and the check is total at the type level: `policyForMatch`
+ * reads the type's `access` first and treats an entry's own stored policy as
+ * inert without it, so no entry of an unpolicied type can be gated.
  */
 export function isSearchableEntryType(
   plugins: PluginRegistry,
   type: string,
 ): boolean {
   const spec = plugins.entryTypes.get(type);
-  return (
-    spec !== undefined && !resolveEntryTypeVisibility(spec).excludeFromSearch
+  if (spec === undefined || spec.access !== undefined) return false;
+  return !resolveEntryTypeVisibility(spec).excludeFromSearch;
+}
+
+/** Every type whose entries may appear in results, for the read-side clamp. */
+export function searchableEntryTypes(
+  plugins: PluginRegistry,
+): readonly string[] {
+  return [...plugins.entryTypes.keys()].filter((type) =>
+    isSearchableEntryType(plugins, type),
   );
 }
