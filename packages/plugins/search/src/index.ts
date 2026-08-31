@@ -3,10 +3,15 @@ import { definePlugin } from "plumix";
 
 import type { RankingAlgorithm } from "./ranking.js";
 import { registerSearchArchive } from "./archive.js";
-import { SEARCH_INDEX_DDL } from "./db/ddl.js";
+import { REINDEX_CAPABILITY, REINDEX_ROUTE_PATH } from "./contract.js";
+import { SEARCH_INDEX_DDL, SEARCH_INDEX_TRIGGER_RESET_DDL } from "./db/ddl.js";
 import * as schema from "./db/schema.js";
-import { backfillTerms, drainEntryChanges } from "./server/drain.js";
+import { runSearchMaintenance } from "./server/drain.js";
 import { registerIndexInvalidator } from "./server/queue.js";
+import {
+  handleReindexStart,
+  handleReindexStatus,
+} from "./server/reindex-route.js";
 
 export type { SearchArchiveData } from "./archive.js";
 export type { SearchResult } from "./server/query.js";
@@ -57,9 +62,30 @@ export function search(options: SearchConfig = {}): PluginDescriptor {
     // The FTS5 virtual table and its triggers, which drizzle-kit models
     // nothing of. Emitted after the schema diff, so they land behind the
     // table they shadow.
-    sqlMigrations: [{ name: "index", statements: SEARCH_INDEX_DDL }],
+    sqlMigrations: [
+      { name: "index", statements: SEARCH_INDEX_DDL },
+      {
+        name: "index_triggers",
+        statements: SEARCH_INDEX_TRIGGER_RESET_DDL,
+      },
+    ],
     setup: (ctx) => {
       registerIndexInvalidator(ctx);
+      ctx.registerCapability(REINDEX_CAPABILITY, "admin");
+      // Routes rather than an RPC router: the plugin's own id is one of core's
+      // reserved RPC namespaces, so `registerRpcRouter` is closed to it.
+      ctx.registerRoute({
+        method: "POST",
+        path: REINDEX_ROUTE_PATH,
+        auth: { capability: REINDEX_CAPABILITY },
+        handler: (_request, appCtx) => handleReindexStart(appCtx),
+      });
+      ctx.registerRoute({
+        method: "GET",
+        path: REINDEX_ROUTE_PATH,
+        auth: { capability: REINDEX_CAPABILITY },
+        handler: (_request, appCtx) => handleReindexStatus(appCtx),
+      });
       registerSearchArchive(ctx, options);
       // No `cron`: a task that declares one runs only on an invocation whose
       // schedule matches it byte for byte, and how often a site's worker
@@ -67,24 +93,7 @@ export function search(options: SearchConfig = {}): PluginDescriptor {
       // empty, so the right cadence is whatever cadence the site already has.
       ctx.registerScheduledTask({
         id: "index-drain",
-        handler: async (appCtx) => {
-          const handled = await drainEntryChanges(appCtx);
-          if (handled > 0) {
-            appCtx.logger.info(
-              `[plumix/plugin-search] indexed ${String(handled)} change${
-                handled === 1 ? "" : "s"
-              } from the entry feed`,
-            );
-          }
-          const terms = await backfillTerms(appCtx);
-          if (terms > 0) {
-            appCtx.logger.info(
-              `[plumix/plugin-search] indexed ${String(terms)} term${
-                terms === 1 ? "" : "s"
-              } the projection had never held`,
-            );
-          }
-        },
+        handler: runSearchMaintenance,
       });
     },
   });

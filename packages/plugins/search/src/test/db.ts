@@ -1,7 +1,13 @@
+import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
+import { coreBlocks, createBlockRegistry } from "plumix/blocks";
 import { sql } from "plumix/db";
-import { definePlugin, runScheduledTasks } from "plumix/plugin";
+import {
+  createPluginRegistry,
+  definePlugin,
+  runScheduledTasks,
+} from "plumix/plugin";
 import {
   applyTestSchema,
   createDispatcherHarness,
@@ -60,17 +66,20 @@ export async function assertIndexIntact(db: SearchTestDb): Promise<void> {
 }
 
 /**
- * Start recording every rewrite of a document, and answer with a reader for
- * what has been recorded. An `AFTER UPDATE` on the projection is exactly what
- * re-tokenizes a document, so counting them counts the work the write guard
- * exists to avoid.
+ * Start recording every re-tokenization, and answer with a reader for what has
+ * been recorded.
+ *
+ * Scoped to `title` and `body` exactly as the index's own update trigger is,
+ * so it counts the work that actually reaches FTS5. An unscoped spy would also
+ * catch a document being stamped with a new extractor version, which is a
+ * write to the projection and deliberately not a write to the index.
  */
 export async function watchRewrites(
   db: SearchTestDb,
 ): Promise<() => Promise<number[]>> {
   await db.run(sql`CREATE TABLE rewrites (source_id INTEGER)`);
   await db.run(sql`
-    CREATE TRIGGER rewrite_spy AFTER UPDATE ON search_documents
+    CREATE TRIGGER rewrite_spy AFTER UPDATE OF title, body ON search_documents
     BEGIN INSERT INTO rewrites VALUES (new.source_id); END
   `);
   return async () => {
@@ -192,4 +201,39 @@ export async function indexWords(
     ids.push(entry.id);
   }
   return ids;
+}
+
+interface SearchContext {
+  readonly db: SearchTestDb;
+  readonly ctx: AppContext;
+  /** Mutable, so a suite can retype or exclude what it registered. */
+  readonly plugins: MutablePluginRegistry;
+  readonly authorId: number;
+}
+
+/**
+ * A real `AppContext` over a search test db, with one entry type and one
+ * taxonomy registered and an author to hang entries on — what every suite
+ * that calls a server function directly opens with.
+ */
+export async function createSearchContext(): Promise<SearchContext> {
+  const db = await createSearchTestDb();
+  const plugins = createPluginRegistry();
+  plugins.entryTypes.set("post", {
+    name: "post",
+    registeredBy: "test",
+    label: "Posts",
+  });
+  plugins.termTaxonomies.set("category", {
+    name: "category",
+    registeredBy: "test",
+    label: "Categories",
+  });
+  const ctx = createTestContext({
+    db,
+    plugins,
+    blocks: createBlockRegistry([...coreBlocks]),
+  });
+  const author = await factoriesFor(db).admin.create();
+  return { db, ctx, plugins, authorId: author.id };
 }

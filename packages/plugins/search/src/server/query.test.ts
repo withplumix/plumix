@@ -1,15 +1,10 @@
 import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
-import {
-  coreBlocks,
-  createBlockRegistry,
-  defineEntryContent,
-} from "plumix/blocks";
-import { createPluginRegistry } from "plumix/plugin";
-import { createTestContext, factoriesFor } from "plumix/test";
+import { defineEntryContent } from "plumix/blocks";
+import { factoriesFor } from "plumix/test";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchTestDb } from "../test/db.js";
-import { createSearchTestDb, paragraph } from "../test/db.js";
+import { createSearchContext, paragraph } from "../test/db.js";
 import { indexEntries, indexTerms } from "./index-writer.js";
 import { runSearch } from "./query.js";
 
@@ -19,24 +14,7 @@ let plugins: MutablePluginRegistry;
 let authorId: number;
 
 beforeEach(async () => {
-  db = await createSearchTestDb();
-  plugins = createPluginRegistry();
-  plugins.entryTypes.set("post", {
-    name: "post",
-    registeredBy: "test",
-    label: "Posts",
-  });
-  plugins.termTaxonomies.set("category", {
-    name: "category",
-    registeredBy: "test",
-    label: "Categories",
-  });
-  ctx = createTestContext({
-    db,
-    plugins,
-    blocks: createBlockRegistry([...coreBlocks]),
-  });
-  authorId = (await factoriesFor(db).admin.create()).id;
+  ({ db, ctx, plugins, authorId } = await createSearchContext());
 });
 
 /** Seed one published entry and put it in the index. */

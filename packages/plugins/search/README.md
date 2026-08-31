@@ -159,6 +159,29 @@ Users and form submissions are never indexed. They are personal data, and a pred
 
 Status is not filtered here. Drafts and trashed entries are in the projection so an author can find their own unpublished work in the admin; keeping them out of public results is the query surface's job.
 
+## Rebuilding the index
+
+A full rebuild is far too much work for one invocation — projection runs at roughly 1 300 sources a second, so a large site is minutes of it. So a rebuild is a **run**: a walk over every searchable entry and term, chunked across scheduled invocations, with its position stored as a row rather than held in memory. An isolate that dies mid-chunk loses the chunk, not the run.
+
+```bash
+curl -X POST https://example.com/_plumix/search/reindex   # start, or report the one already going
+curl https://example.com/_plumix/search/reindex           # how the last one went
+```
+
+Both need the `search:reindex` capability, which is registered at `admin`. Starting is idempotent: a second request while a rebuild is under way reports that one rather than beginning a rival walk. There is no cancel, because there is nothing to undo — each source is re-projected in place and the index is never emptied, so **search keeps answering throughout** and a stopped run is indistinguishable from one that has not reached the rest of the corpus yet.
+
+A run reports `processed`, `failed` and a final status. `succeeded` and `completed_with_errors` are separate answers on purpose: the second walked the whole corpus and could not project some of it, which is a different thing to be told than that the rebuild stopped.
+
+A rebuild steps over any entry the change feed still owes. Those have been written since the walk started and the drain holds the fresher text, so letting the rebuild project them could put the older version back.
+
+### Block declarations repair themselves
+
+The extractor version is a hash of every block's text declaration, so changing one makes every existing document stale. The scheduled run re-extracts them a bounded slice at a time, and the work is proportional to what actually changed rather than to the corpus: a document whose extracted text is identical is stamped with the new version and never reaches FTS5, because the index's update trigger is scoped to the two columns it shadows. Only the entries a declaration really moved are re-tokenized.
+
+That scoping arrives as a migration, so **run `plumix migrate generate` and apply it after upgrading**. Until you do, a roster change re-tokenizes the whole corpus — correct, just far more work than it needs to be. The runtime repair path recognises the older trigger and replaces it too, so a site that never generates migrations converges on the next scheduled run.
+
+One thing a rebuild does not do: remove a document whose source is gone or has stopped being searchable. Those are dropped when the source is next written, and the read path filters them out meanwhile, so they cost storage rather than correctness.
+
 ## Storage
 
 Search roughly doubles the size of the database. On Cloudflare D1, whose per-database limit is 10 GB, that puts the ceiling around 480 000 entries with search enabled and nothing else in the database. Beyond that is a second database, not a tuning problem.

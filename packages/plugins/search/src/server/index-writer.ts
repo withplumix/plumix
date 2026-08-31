@@ -1,7 +1,7 @@
 import type { BlockRegistry, BlockTextRoster } from "plumix/blocks";
 import type { AppContext } from "plumix/plugin";
 import { blockTextRoster, blockTextVersion } from "plumix/blocks";
-import { and, eq, inArray, sql } from "plumix/db";
+import { and, eq, inArray, ne, sql } from "plumix/db";
 import { entries, terms } from "plumix/schema";
 
 import type { NewSearchDocument, SearchSourceType } from "../db/schema.js";
@@ -42,6 +42,11 @@ function extractorFor(blocks: BlockRegistry): Extractor {
   const extractor: Extractor = { roster, version: blockTextVersion(roster) };
   extractors.set(blocks, extractor);
   return extractor;
+}
+
+/** The tag the current block roster produces — what a stale document lacks. */
+export function currentExtractorVersion(ctx: AppContext): string {
+  return extractorFor(ctx.blocks).version;
 }
 
 /**
@@ -137,6 +142,7 @@ async function project(
     const chunk = ids.slice(i, i + IDS_PER_STATEMENT);
     const documents = await documentsFor(chunk);
     await writeDocuments(ctx, documents);
+    await stampVersion(ctx, sourceType, documents);
     const kept = new Set(documents.map((document) => document.sourceId));
     await dropDocuments(
       ctx,
@@ -170,12 +176,50 @@ async function writeDocuments(
           body: sql`excluded.body`,
           extractorVersion: sql`excluded.extractor_version`,
         },
+        // Text only. A document whose extractor version moved but whose text
+        // did not is stamped below instead, which the column-scoped update
+        // trigger ignores — so a block changing its declaration re-tokenizes
+        // the entries it actually changed rather than the whole corpus.
         setWhere: sql`
           ${searchDocuments.title} IS NOT excluded.title
           OR ${searchDocuments.body} IS NOT excluded.body
-          OR ${searchDocuments.extractorVersion} IS NOT excluded.extractor_version
         `,
       });
+  }
+}
+
+/**
+ * Bring every document in this batch up to the version that produced it.
+ *
+ * A separate statement because it must not look like a change to the text:
+ * the update trigger is scoped to `title` and `body`, so this moves a stale
+ * document off the repair list without re-tokenizing it. Rows the upsert
+ * above already rewrote are matched too and cost nothing — they carry the
+ * version by then, and SQLite skips a write that changes nothing.
+ */
+async function stampVersion(
+  ctx: AppContext,
+  sourceType: SearchSourceType,
+  documents: readonly NewSearchDocument[],
+): Promise<void> {
+  const [version] = new Set(documents.map((doc) => doc.extractorVersion));
+  if (version === undefined) return;
+  for (let i = 0; i < documents.length; i += IDS_PER_STATEMENT) {
+    await ctx.db
+      .update(searchDocuments)
+      .set({ extractorVersion: version })
+      .where(
+        and(
+          eq(searchDocuments.sourceType, sourceType),
+          inArray(
+            searchDocuments.sourceId,
+            documents
+              .slice(i, i + IDS_PER_STATEMENT)
+              .map((doc) => doc.sourceId),
+          ),
+          ne(searchDocuments.extractorVersion, version),
+        ),
+      );
   }
 }
 

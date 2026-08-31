@@ -5,7 +5,12 @@ import { terms } from "plumix/schema";
 
 import { ensureSearchIndex } from "../db/ddl.js";
 import { searchableTaxonomies } from "./document.js";
-import { indexEntries, indexTerms } from "./index-writer.js";
+import {
+  currentExtractorVersion,
+  indexEntries,
+  indexTerms,
+} from "./index-writer.js";
+import { advanceReindex, SOURCES_PER_INVOCATION } from "./reindex.js";
 
 // Matches the cap D1 puts on bound parameters, which is what the feed's own
 // acknowledgement chunks at.
@@ -89,4 +94,76 @@ export async function backfillTerms(ctx: AppContext): Promise<number> {
     missing.map((row) => row.id),
   );
   return missing.length;
+}
+
+/**
+ * Re-project the entries an older extractor left behind, and answer with how
+ * many. Bounded, and self-draining: a document this rewrites carries the
+ * current version afterwards, so it is not a candidate again.
+ *
+ * Only entries. The extractor version is a hash of the block roster, and a
+ * term has no blocks — its documents carry a version of their own that the
+ * roster cannot move.
+ */
+export async function repairStaleEntries(
+  ctx: AppContext,
+  version: string,
+  limit: number,
+): Promise<number> {
+  const stale = await ctx.db.all<{ id: number }>(sql`
+    SELECT source_id AS id FROM search_documents
+     WHERE source_type = 'entry' AND extractor_version <> ${version}
+     LIMIT ${limit}
+  `);
+  if (stale.length === 0) return 0;
+  await indexEntries(
+    ctx,
+    stale.map((row) => row.id),
+  );
+  return stale.length;
+}
+
+const say = (ctx: AppContext, line: string): void => {
+  ctx.logger.info(`[plumix/plugin-search] ${line}`);
+};
+
+const count = (n: number, noun: string): string =>
+  `${String(n)} ${noun}${n === 1 ? "" : "s"}`;
+
+/**
+ * Everything the scheduled trigger owes the index, in the order it owes it.
+ *
+ * Draining comes first because it repairs the index itself when a migration
+ * has not reached it, and the three sweeps behind it all write through the
+ * same triggers. Each is bounded and converges: a site with nothing outstanding
+ * pays four cheap reads and says nothing.
+ */
+export async function runSearchMaintenance(ctx: AppContext): Promise<void> {
+  const drained = await drainEntryChanges(ctx);
+  if (drained > 0) {
+    say(ctx, `indexed ${count(drained, "change")} from the entry feed`);
+  }
+
+  const rebuilt = await advanceReindex(ctx);
+  if (rebuilt > 0) say(ctx, `rebuilt ${count(rebuilt, "source")}`);
+
+  const repaired = await repairStaleEntries(
+    ctx,
+    currentExtractorVersion(ctx),
+    SOURCES_PER_INVOCATION,
+  );
+  if (repaired > 0) {
+    say(
+      ctx,
+      `re-extracted ${count(repaired, "document")} an older block roster had produced`,
+    );
+  }
+
+  const backfilled = await backfillTerms(ctx);
+  if (backfilled > 0) {
+    say(
+      ctx,
+      `indexed ${count(backfilled, "term")} the projection had never held`,
+    );
+  }
 }

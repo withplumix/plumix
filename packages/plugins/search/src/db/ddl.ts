@@ -40,13 +40,34 @@ export const SEARCH_INDEX_DDL: readonly string[] = [
     INSERT INTO search_index (search_index, rowid, title, body)
     VALUES ('delete', old.id, old.title, old.body);
   END`,
-  `CREATE TRIGGER IF NOT EXISTS search_documents_au AFTER UPDATE ON search_documents
+  // Scoped to the two columns the index shadows. Stamping a document with a
+  // new extractor version is not a change to its text, and firing here would
+  // re-tokenize the whole corpus every time a block moved its declaration.
+  `CREATE TRIGGER IF NOT EXISTS search_documents_au
+   AFTER UPDATE OF title, body ON search_documents
   BEGIN
     INSERT INTO search_index (search_index, rowid, title, body)
     VALUES ('delete', old.id, old.title, old.body);
     INSERT INTO search_index (rowid, title, body)
     VALUES (new.id, new.title, new.body);
   END`,
+];
+
+/**
+ * Replaces the triggers an install already has.
+ *
+ * A migration the journal carries is never emitted again, so correcting one
+ * takes a second migration rather than an edit to the first. Shares its DDL
+ * with the list above, so an install generating both for the first time
+ * converges on the same triggers either way.
+ */
+export const SEARCH_INDEX_TRIGGER_RESET_DDL: readonly string[] = [
+  "DROP TRIGGER IF EXISTS search_documents_ai",
+  "DROP TRIGGER IF EXISTS search_documents_ad",
+  "DROP TRIGGER IF EXISTS search_documents_au",
+  ...SEARCH_INDEX_DDL.filter((statement) =>
+    statement.includes("CREATE TRIGGER"),
+  ),
 ];
 
 /** Narrow enough that any drizzle db satisfies it, however a site has widened
@@ -82,11 +103,28 @@ const INDEX_OBJECT_LIST = INDEX_OBJECTS.map((name) => `'${name}'`).join(", ");
  * because D1 has none and two isolates can arrive together.
  */
 export async function ensureSearchIndex(db: SqlRunner): Promise<void> {
-  const present = await db.all<{ name: string }>(
+  const present = await db.all<{ name: string; sql: string | null }>(
     sql.raw(
-      `SELECT name FROM sqlite_master WHERE name IN (${INDEX_OBJECT_LIST})`,
+      `SELECT name, sql FROM sqlite_master WHERE name IN (${INDEX_OBJECT_LIST})`,
     ),
   );
+  // An install carrying the first version of the update trigger has all four
+  // objects and the wrong one of them: `CREATE TRIGGER IF NOT EXISTS` would
+  // leave it in place, so this repair would fix a missing index and walk past
+  // a trigger that re-tokenizes the whole corpus on every roster change. Two
+  // repair paths disagreeing about the right trigger is worse than either, so
+  // this asks what is actually installed rather than only what is present.
+  const stale = present.some(
+    (row) =>
+      row.name === "search_documents_au" &&
+      row.sql !== null &&
+      !row.sql.includes("UPDATE OF"),
+  );
+  if (stale) {
+    for (const statement of SEARCH_INDEX_TRIGGER_RESET_DDL) {
+      await db.run(sql.raw(statement));
+    }
+  }
   if (present.length === INDEX_OBJECTS.length) return;
   for (const statement of SEARCH_INDEX_DDL) await db.run(sql.raw(statement));
   await db.run(sql`INSERT INTO search_index(search_index) VALUES('rebuild')`);
