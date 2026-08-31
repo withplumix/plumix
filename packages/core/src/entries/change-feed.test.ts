@@ -1,0 +1,147 @@
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
+import type { Db } from "../context/app.js";
+import { asc, eq } from "../db/index.js";
+import { entries } from "../db/schema/entries.js";
+import { entryChanges } from "../db/schema/entry_changes.js";
+import { adminUser, entryFactory } from "../test/factories.js";
+import { createTestDb } from "../test/harness.js";
+import { createRpcHarness } from "../test/rpc.js";
+import { ackEntryChanges, readEntryChanges } from "./change-feed.js";
+
+let db: Db;
+let authorId: number;
+
+async function feed(): Promise<readonly { entryId: number; kind: string }[]> {
+  return db
+    .select({ entryId: entryChanges.entryId, kind: entryChanges.kind })
+    .from(entryChanges)
+    .orderBy(asc(entryChanges.id));
+}
+
+async function clearFeed(): Promise<void> {
+  await db.delete(entryChanges);
+}
+
+beforeEach(async () => {
+  db = await createTestDb();
+  const author = await adminUser.transient({ db }).create();
+  authorId = author.id;
+});
+
+describe("entry change feed", () => {
+  test("records an upsert for an entry written straight to the database", async () => {
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+
+    expect(await feed()).toEqual([{ entryId: entry.id, kind: "upsert" }]);
+  });
+
+  test("records a create and an update made through the RPC surface", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const created = await h.client.entry.create({
+      title: "Hello",
+      slug: "hello",
+    });
+    await h.client.entry.update({ id: created.id, title: "Hello again" });
+
+    const changes = await readEntryChanges(h.db, 10);
+
+    expect(changes.map((change) => [change.entryId, change.kind])).toEqual([
+      [created.id, "upsert"],
+      [created.id, "upsert"],
+    ]);
+  });
+
+  test.each([
+    ["title", { title: "Renamed" }],
+    ["content", { content: { type: "plumix.v2", blocks: [] } }],
+    ["excerpt", { excerpt: "A summary" }],
+    ["status", { status: "published" as const }],
+  ])("records an upsert when %s changes", async (_column, patch) => {
+    const entry = await entryFactory
+      .transient({ db })
+      .create({ authorId, excerpt: null, status: "draft" });
+    await clearFeed();
+
+    await db.update(entries).set(patch).where(eq(entries.id, entry.id));
+
+    expect(await feed()).toEqual([{ entryId: entry.id, kind: "upsert" }]);
+  });
+
+  test("records nothing when an update touches only metadata", async () => {
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+    await clearFeed();
+
+    await db
+      .update(entries)
+      .set({ meta: { views: 12 }, sortOrder: 3 })
+      .where(eq(entries.id, entry.id));
+
+    expect(await feed()).toEqual([]);
+  });
+
+  test("records a tombstone distinguishable from an upsert when an entry is deleted", async () => {
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+    await clearFeed();
+
+    await db.delete(entries).where(eq(entries.id, entry.id));
+
+    expect(await feed()).toEqual([{ entryId: entry.id, kind: "delete" }]);
+  });
+});
+
+describe("draining the entry change feed", () => {
+  test("reads the oldest changes first, bounded by the limit", async () => {
+    const created = [];
+    for (let i = 0; i < 5; i += 1) {
+      created.push(await entryFactory.transient({ db }).create({ authorId }));
+    }
+
+    const batch = await readEntryChanges(db, 3);
+
+    expect(batch.map((change) => change.entryId)).toEqual(
+      created.slice(0, 3).map((entry) => entry.id),
+    );
+  });
+
+  test("leaves the feed empty once every change has been acknowledged", async () => {
+    await entryFactory.transient({ db }).create({ authorId });
+    await entryFactory.transient({ db }).create({ authorId });
+
+    await ackEntryChanges(db, await readEntryChanges(db, 10));
+
+    expect(await feed()).toEqual([]);
+  });
+
+  test("leaves a change enqueued since the read for the next drain", async () => {
+    await entryFactory.transient({ db }).create({ authorId });
+    const batch = await readEntryChanges(db, 10);
+    const second = await entryFactory.transient({ db }).create({ authorId });
+
+    await ackEntryChanges(db, batch);
+
+    expect(await feed()).toEqual([{ entryId: second.id, kind: "upsert" }]);
+  });
+
+  test("splits an acknowledgement D1 could not bind in one statement", async () => {
+    const changes = Array.from({ length: 250 }, (_, i) => ({
+      id: i + 1,
+      entryId: i + 1,
+      kind: "upsert" as const,
+    }));
+    const del = vi.spyOn(db, "delete");
+
+    await ackEntryChanges(db, changes);
+
+    // 250 ids at D1's 100-bound-parameter ceiling is three statements.
+    expect(del).toHaveBeenCalledTimes(3);
+  });
+
+  test("acknowledges an empty batch without touching the feed", async () => {
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+
+    await ackEntryChanges(db, []);
+
+    expect(await feed()).toEqual([{ entryId: entry.id, kind: "upsert" }]);
+  });
+});

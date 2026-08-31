@@ -81,6 +81,11 @@ export type {
   WithResolvedMeta,
 } from "./rpc/meta/core.js";
 export { readEntryType } from "./entries/read-service.js";
+// The entry change feed (#2121): read a bounded batch, do the work, then
+// acknowledge it.
+export { ackEntryChanges, readEntryChanges } from "./entries/change-feed.js";
+export type { EntryChange } from "./entries/change-feed.js";
+export type { EntryChangeKind } from "./db/schema/entry_changes.js";
 export { memoBatch } from "./context/memo.js";
 export type { RequestMemo } from "./context/memo.js";
 // Edge-cache tag vocabulary (PRD #1080). Exposed so a plugin that writes

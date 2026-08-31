@@ -8,6 +8,7 @@ import type {
 import { definePlugin } from "../plugin/define.js";
 import {
   collectRawSqlMigrations,
+  CORE_SQL_MIGRATIONS,
   planRawSqlMigrations,
 } from "./raw-migrations.js";
 
@@ -31,6 +32,7 @@ describe("collectRawSqlMigrations", () => {
     ]);
 
     expect([...declared]).toEqual([
+      ...CORE_SQL_MIGRATIONS,
       {
         pluginId: "search",
         name: "fts_index",
@@ -59,7 +61,24 @@ describe("collectRawSqlMigrations", () => {
       }),
     ]);
 
-    expect(declared.map((m) => m.name)).toEqual(["fts_index"]);
+    expect(declared.at(-1)).toEqual({
+      pluginId: "search",
+      name: "fts_index",
+      statements: ["CREATE VIRTUAL TABLE a"],
+    });
+  });
+
+  test("carries core's own DDL ahead of every plugin's", () => {
+    const declared = collectRawSqlMigrations([
+      pluginWith("search", [
+        { name: "fts_index", statements: ["CREATE VIRTUAL TABLE a"] },
+      ]),
+    ]);
+
+    expect(declared.map((m) => `${m.pluginId}_${m.name}`)).toEqual([
+      "core_entry_change_feed",
+      "search_fts_index",
+    ]);
   });
 
   test("rejects a name that cannot be part of a migration filename", () => {

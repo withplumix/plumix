@@ -8,6 +8,7 @@ import { drizzle } from "drizzle-orm/libsql";
 
 import * as schema from "../db/schema/index.js";
 import { traceSqlClient } from "../db/trace-libsql.js";
+import { ENTRY_CHANGE_FEED_DDL } from "../entries/change-feed.js";
 
 type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 
@@ -59,13 +60,15 @@ export async function applyTestSchema(
 }
 
 /**
- * Per-test in-memory libsql database with the full core schema applied.
+ * Per-test in-memory libsql database with the full core schema applied,
+ * including core's own non-drizzle DDL — without the change-feed triggers a
+ * test would see an entry save behave differently from production.
  * Pure JS — works on Node, Bun, Deno, CI without native deps.
  */
 export async function createTestDb(): Promise<TestDb> {
   // Mirror the real adapter: unconditional per-query span tracing.
   const client = traceSqlClient(createClient({ url: ":memory:" }));
   const db = drizzle(client, { schema, casing: "snake_case" });
-  await applyTestSchema(db, schema);
+  await applyTestSchema(db, schema, ENTRY_CHANGE_FEED_DDL);
   return db;
 }

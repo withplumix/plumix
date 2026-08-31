@@ -39,40 +39,71 @@ export interface DemoSqlExecutor {
   query(sql: string): Promise<readonly DemoSqlRow[]>;
 }
 
+// `end` is only the keyword when it stands alone: an identifier like `x2end`
+// must not read as one, so a digit keeps the word going.
+const WORD_CHAR = /[A-Za-z0-9_]/;
+
+// Quoted spans, whichever delimiter drizzle or a plugin reached for. A `;`
+// inside one doesn't split, and a word inside one is never a keyword.
+const QUOTES = new Set(["'", '"', "`"]);
+
 /**
  * Split a multi-statement SQL script into individual statements. Durable
  * Object `SqlStorage.exec` only runs the first statement of a script, so
  * bootstrap SQL (drizzle migrations + seed) must be applied one statement at
- * a time. Respects single-quoted string literals and `--` line comments so a
- * `;` inside either doesn't split a statement, and drops drizzle's
- * `--> statement-breakpoint` markers.
+ * a time. Respects quoted spans and `--` line comments so a `;` inside either
+ * doesn't split a statement, and drops drizzle's `--> statement-breakpoint`
+ * markers.
+ *
+ * A trigger body — core's change feed puts three in every migration set —
+ * holds its own semicolons between `BEGIN` and `END`. Only a trigger opens a
+ * block: `BEGIN TRANSACTION` around a whole script must still split, and
+ * outside a trigger no `;` is protected. `CASE` nests inside a body, so its
+ * `END` closes itself rather than the body around it.
  */
 export function splitStatements(script: string): string[] {
   const statements: string[] = [];
   let current = "";
-  let inString = false;
+  let quote: string | null = null;
   let inComment = false;
+  let word = "";
+  let isTrigger = false;
+  let blockDepth = 0;
+
+  function endWord(): void {
+    const keyword = word.toUpperCase();
+    word = "";
+    if (keyword === "TRIGGER") isTrigger = true;
+    else if (isTrigger && (keyword === "BEGIN" || keyword === "CASE")) {
+      blockDepth += 1;
+    } else if (keyword === "END" && blockDepth > 0) blockDepth -= 1;
+  }
+
   for (let i = 0; i < script.length; i += 1) {
-    const ch = script[i];
+    const ch = script.charAt(i);
     if (inComment) {
       if (ch === "\n") inComment = false;
       current += ch;
       continue;
     }
-    if (ch === "'") {
-      inString = !inString;
+    if (quote === null && WORD_CHAR.test(ch)) {
+      word += ch;
       current += ch;
       continue;
     }
-    if (!inString && ch === "-" && script[i + 1] === "-") {
+    // Everything below is a word boundary by definition.
+    endWord();
+    if (quote !== null) {
+      if (ch === quote) quote = null;
+    } else if (QUOTES.has(ch)) {
+      quote = ch;
+    } else if (ch === "-" && script[i + 1] === "-") {
       inComment = true;
-      current += ch;
-      continue;
-    }
-    if (!inString && ch === ";") {
+    } else if (ch === ";" && blockDepth === 0) {
       const statement = stripStatement(current);
       if (statement) statements.push(statement);
       current = "";
+      isTrigger = false;
       continue;
     }
     current += ch;

@@ -43,6 +43,30 @@ function ctx(overrides: Partial<CommandContext>): CommandContext {
   };
 }
 
+// What a successful drizzle-kit generate leaves behind. Every generate test
+// mocks the binary away, so the journal the raw-SQL step reads is stood in
+// for — without it the run fails the way a generate that wrote nothing does.
+function seedDrizzleJournal(dir: string): void {
+  mkdirSync(join(dir, "drizzle/meta"), { recursive: true });
+  writeFileSync(
+    join(dir, "drizzle/meta/_journal.json"),
+    JSON.stringify({
+      version: "7",
+      dialect: "sqlite",
+      entries: [
+        {
+          idx: 0,
+          version: "6",
+          when: 1,
+          tag: "0000_plain_phil_sheldon",
+          breakpoints: true,
+        },
+      ],
+    }),
+    "utf8",
+  );
+}
+
 describe("migrate dispatch", () => {
   let dir: string;
 
@@ -104,6 +128,7 @@ describe("migrate generate", () => {
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "plumix-migrate-gen-"));
+    seedDrizzleJournal(dir);
   });
 
   afterEach(() => {
@@ -220,7 +245,7 @@ describe("resolveDrizzleKitBin", () => {
   });
 });
 
-describe("migrate generate with plugin-contributed raw SQL", () => {
+describe("migrate generate with raw SQL migrations", () => {
   let dir: string;
 
   const FTS_SQL = "CREATE VIRTUAL TABLE entry_fts USING fts5(body)";
@@ -230,27 +255,6 @@ describe("migrate generate with plugin-contributed raw SQL", () => {
     setup: () => undefined,
     sqlMigrations: [{ name: "fts_index", statements: [FTS_SQL] }],
   };
-
-  function seedDrizzleJournal(): void {
-    mkdirSync(join(dir, "drizzle/meta"), { recursive: true });
-    writeFileSync(
-      join(dir, "drizzle/meta/_journal.json"),
-      JSON.stringify({
-        version: "7",
-        dialect: "sqlite",
-        entries: [
-          {
-            idx: 0,
-            version: "6",
-            when: 1,
-            tag: "0000_plain_phil_sheldon",
-            breakpoints: true,
-          },
-        ],
-      }),
-      "utf8",
-    );
-  }
 
   function readJournalTags(): readonly string[] {
     const journal = JSON.parse(
@@ -273,7 +277,7 @@ describe("migrate generate with plugin-contributed raw SQL", () => {
   });
 
   test("emits the migration after the schema diff and journals it", async () => {
-    seedDrizzleJournal();
+    seedDrizzleJournal(dir);
 
     await migrateCommand.run(
       ctx({ cwd: dir, argv: ["generate"], app: fakeApp([SEARCH_PLUGIN]) }),
@@ -281,18 +285,19 @@ describe("migrate generate with plugin-contributed raw SQL", () => {
 
     expect(
       readFileSync(
-        join(dir, "drizzle/0001_plumix_search_fts_index.sql"),
+        join(dir, "drizzle/0002_plumix_search_fts_index.sql"),
         "utf8",
       ),
     ).toBe(`${FTS_SQL};\n`);
     expect(readJournalTags()).toEqual([
       "0000_plain_phil_sheldon",
-      "0001_plumix_search_fts_index",
+      "0001_plumix_core_entry_change_feed",
+      "0002_plumix_search_fts_index",
     ]);
   });
 
   test("a second generate does not re-emit what the journal carries", async () => {
-    seedDrizzleJournal();
+    seedDrizzleJournal(dir);
     const run = () =>
       migrateCommand.run(
         ctx({ cwd: dir, argv: ["generate"], app: fakeApp([SEARCH_PLUGIN]) }),
@@ -303,23 +308,24 @@ describe("migrate generate with plugin-contributed raw SQL", () => {
 
     expect(readJournalTags()).toEqual([
       "0000_plain_phil_sheldon",
-      "0001_plumix_search_fts_index",
+      "0001_plumix_core_entry_change_feed",
+      "0002_plumix_search_fts_index",
     ]);
   });
 
-  test("a config with no raw migrations leaves the journal untouched", async () => {
-    seedDrizzleJournal();
-    const before = readFileSync(
-      join(dir, "drizzle/meta/_journal.json"),
-      "utf8",
-    );
+  test("emits core's own DDL for a config carrying no plugins", async () => {
+    seedDrizzleJournal(dir);
 
     await migrateCommand.run(ctx({ cwd: dir, argv: ["generate"] }));
 
-    expect(readFileSync(join(dir, "drizzle/meta/_journal.json"), "utf8")).toBe(
-      before,
-    );
-    expect(readdirSync(join(dir, "drizzle"))).toEqual(["meta"]);
+    expect(readdirSync(join(dir, "drizzle")).sort()).toEqual([
+      "0001_plumix_core_entry_change_feed.sql",
+      "meta",
+    ]);
+    expect(readJournalTags()).toEqual([
+      "0000_plain_phil_sheldon",
+      "0001_plumix_core_entry_change_feed",
+    ]);
   });
 
   test("surfaces a structured error when the journal is unreadable", async () => {
