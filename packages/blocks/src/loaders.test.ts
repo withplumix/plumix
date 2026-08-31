@@ -126,6 +126,42 @@ describe("resolveBlockLoaders", () => {
     },
   );
 
+  test(
+    "fires one block's own loaders in parallel, not serially",
+    { timeout: 1000 },
+    async () => {
+      // Same claim one level down: a block's own loaders fan out through a
+      // second Promise.all, which the tree-level test above never reaches.
+      let started = 0;
+      let releaseBoth!: () => void;
+      const bothStarted = new Promise<void>((r) => (releaseBoth = r));
+      const gate = (value: number) => async () => {
+        started += 1;
+        if (started === 2) releaseBoth();
+        await bothStarted;
+        return value;
+      };
+      const registry = createBlockRegistry([
+        {
+          name: "acme/slow-pair",
+          render: () => null,
+          loaders: { one: gate(1), two: gate(2) },
+        },
+      ]);
+      const tree: readonly BlockNode[] = [
+        { id: "n1", name: "acme/slow-pair", attrs: {} },
+      ];
+
+      const resolved = await resolveBlockLoaders(tree, registry, {});
+
+      expect(started).toBe(2);
+      expect(resolved.get("n1")).toEqual({
+        loaders: { one: 1, two: 2 },
+        error: null,
+      });
+    },
+  );
+
   test("isolates a synchronously-thrown loader from sibling blocks", async () => {
     const registry = createBlockRegistry([
       {
