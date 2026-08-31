@@ -22,18 +22,15 @@ export interface PluginRawSqlMigration {
  * plugin claiming it collides on identity rather than silently displacing
  * this.
  */
-export const CORE_SQL_MIGRATIONS: readonly PluginRawSqlMigration[] = [
+const CORE_SQL_MIGRATIONS: readonly PluginRawSqlMigration[] = [
   {
     pluginId: "core",
     name: "entry_change_feed",
     statements: ENTRY_CHANGE_FEED_DDL,
   },
-  // A migration the journal carries is never re-emitted, so the reserved-type
-  // guard reaches an existing install as its own entry rather than as an edit
-  // to the one above.
   {
     pluginId: "core",
-    name: "entry_change_feed_types",
+    name: "entry_change_feed_guards",
     statements: ENTRY_CHANGE_FEED_RESET_DDL,
   },
 ];

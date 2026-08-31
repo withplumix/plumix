@@ -8,7 +8,6 @@ import type {
 import { definePlugin } from "../plugin/define.js";
 import {
   collectRawSqlMigrations,
-  CORE_SQL_MIGRATIONS,
   planRawSqlMigrations,
 } from "./raw-migrations.js";
 
@@ -31,8 +30,7 @@ describe("collectRawSqlMigrations", () => {
       ]),
     ]);
 
-    expect([...declared]).toEqual([
-      ...CORE_SQL_MIGRATIONS,
+    expect(declared.filter((m) => m.pluginId !== "core")).toEqual([
       {
         pluginId: "search",
         name: "fts_index",
@@ -61,11 +59,13 @@ describe("collectRawSqlMigrations", () => {
       }),
     ]);
 
-    expect(declared.at(-1)).toEqual({
-      pluginId: "search",
-      name: "fts_index",
-      statements: ["CREATE VIRTUAL TABLE a"],
-    });
+    expect(declared.filter((m) => m.pluginId !== "core")).toEqual([
+      {
+        pluginId: "search",
+        name: "fts_index",
+        statements: ["CREATE VIRTUAL TABLE a"],
+      },
+    ]);
   });
 
   test("carries core's own DDL ahead of every plugin's", () => {
@@ -77,7 +77,7 @@ describe("collectRawSqlMigrations", () => {
 
     expect(declared.map((m) => `${m.pluginId}_${m.name}`)).toEqual([
       "core_entry_change_feed",
-      "core_entry_change_feed_types",
+      "core_entry_change_feed_guards",
       "search_fts_index",
     ]);
   });
