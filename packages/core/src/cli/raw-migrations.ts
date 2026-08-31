@@ -1,5 +1,8 @@
 import type { AnyPluginDescriptor } from "../config.js";
-import { ENTRY_CHANGE_FEED_DDL } from "../entries/change-feed.js";
+import {
+  ENTRY_CHANGE_FEED_DDL,
+  ENTRY_CHANGE_FEED_RESET_DDL,
+} from "../entries/change-feed.js";
 import { CliError } from "./errors.js";
 
 // A name is spliced into a filename and into the journal tag that
@@ -19,11 +22,16 @@ export interface PluginRawSqlMigration {
  * plugin claiming it collides on identity rather than silently displacing
  * this.
  */
-export const CORE_SQL_MIGRATIONS: readonly PluginRawSqlMigration[] = [
+const CORE_SQL_MIGRATIONS: readonly PluginRawSqlMigration[] = [
   {
     pluginId: "core",
     name: "entry_change_feed",
     statements: ENTRY_CHANGE_FEED_DDL,
+  },
+  {
+    pluginId: "core",
+    name: "entry_change_feed_guards",
+    statements: ENTRY_CHANGE_FEED_RESET_DDL,
   },
 ];
 

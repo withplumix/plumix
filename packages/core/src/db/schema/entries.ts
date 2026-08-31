@@ -36,7 +36,12 @@ export type EntryContent = Record<string, unknown>;
  * a table rebuild for some schema changes — adding a `NOT NULL` to an existing
  * column, for one — and every trigger on the table dies at the `DROP TABLE`
  * inside it. A migration that rebuilds this table has to re-create them under
- * a new `sqlMigrations` name.
+ * a new `sqlMigrations` name — `ENTRY_CHANGE_FEED_RESET_DDL` is the statement
+ * list to point it at.
+ *
+ * A new column that changes what a consumer's projection of an entry says —
+ * its text, its visibility, its URL — belongs in that module's
+ * `WATCHED_COLUMNS`, and reaches installs only through a further migration.
  */
 export const entries = sqliteTable(
   "entries",

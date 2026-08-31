@@ -1,13 +1,22 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Db } from "../context/app.js";
-import { asc, eq } from "../db/index.js";
+import { asc, eq, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entryChanges } from "../db/schema/entry_changes.js";
+import {
+  pruneOldRevisions,
+  snapshotAsRevision,
+  upsertAutosave,
+} from "../revisions/repository.js";
 import { adminUser, entryFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { createRpcHarness } from "../test/rpc.js";
-import { ackEntryChanges, readEntryChanges } from "./change-feed.js";
+import {
+  ackEntryChanges,
+  ENTRY_CHANGE_FEED_RESET_DDL,
+  readEntryChanges,
+} from "./change-feed.js";
 
 let db: Db;
 let authorId: number;
@@ -57,6 +66,8 @@ describe("entry change feed", () => {
     ["content", { content: { type: "plumix.v2", blocks: [] } }],
     ["excerpt", { excerpt: "A summary" }],
     ["status", { status: "published" as const }],
+    ["type", { type: "page" }],
+    ["slug", { slug: "renamed" }],
   ])("records an upsert when %s changes", async (_column, patch) => {
     const entry = await entryFactory
       .transient({ db })
@@ -66,6 +77,103 @@ describe("entry change feed", () => {
     await db.update(entries).set(patch).where(eq(entries.id, entry.id));
 
     expect(await feed()).toEqual([{ entryId: entry.id, kind: "upsert" }]);
+  });
+
+  // Revisions and autosaves are rows in `entries` too, under types the editor
+  // owns.
+  test("records nothing for a revision snapshot", async () => {
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+    await clearFeed();
+
+    await snapshotAsRevision(db, { entry, authorId });
+
+    expect(await feed()).toEqual([]);
+  });
+
+  test("records nothing for an autosave, or for re-saving one", async () => {
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+    await clearFeed();
+    const patch = {
+      title: "Draft",
+      content: {},
+      excerpt: null,
+      meta: {},
+    };
+
+    await upsertAutosave(db, { entry, authorId, patch });
+    await upsertAutosave(db, {
+      entry,
+      authorId,
+      patch: { ...patch, title: "Draft 2" },
+    });
+
+    expect(await feed()).toEqual([]);
+  });
+
+  test("records no tombstone when a revision is pruned past the cap", async () => {
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+    await snapshotAsRevision(db, { entry, authorId });
+    await snapshotAsRevision(db, { entry, authorId });
+    await clearFeed();
+
+    await pruneOldRevisions(db, { entryId: entry.id, maxRevisions: 1 });
+
+    expect(await feed()).toEqual([]);
+  });
+
+  // The path no other test reaches: a test database is always a fresh install,
+  // but the second migration exists for the ones that already ran the first.
+  test("replaces the unguarded triggers an existing install carries", async () => {
+    await db.run(sql.raw("DROP TRIGGER entries_change_feed_insert"));
+    await db.run(
+      sql.raw(`CREATE TRIGGER entries_change_feed_insert AFTER INSERT ON entries
+      BEGIN
+        INSERT INTO entry_changes (entry_id, kind) VALUES (new.id, 'upsert');
+      END`),
+    );
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+    await clearFeed();
+    await snapshotAsRevision(db, { entry, authorId });
+    // The defect the migration corrects, reproduced.
+    expect(await feed()).toHaveLength(1);
+
+    for (const statement of ENTRY_CHANGE_FEED_RESET_DDL) {
+      await db.run(sql.raw(statement));
+    }
+    await clearFeed();
+    await snapshotAsRevision(db, { entry, authorId });
+
+    expect(await feed()).toEqual([]);
+  });
+
+  test("records an upsert when an entry is re-parented", async () => {
+    const parent = await entryFactory.transient({ db }).create({ authorId });
+    const child = await entryFactory.transient({ db }).create({ authorId });
+    await clearFeed();
+
+    await db
+      .update(entries)
+      .set({ parentId: parent.id })
+      .where(eq(entries.id, child.id));
+
+    expect(await feed()).toEqual([{ entryId: child.id, kind: "upsert" }]);
+  });
+
+  // `parentId` is `onDelete: "set null"`, so removing a parent re-roots its
+  // children — a URL change for each, and one the application never writes.
+  test("records the children a deleted parent re-roots", async () => {
+    const parent = await entryFactory.transient({ db }).create({ authorId });
+    const child = await entryFactory
+      .transient({ db })
+      .create({ authorId, parentId: parent.id });
+    await clearFeed();
+
+    await db.delete(entries).where(eq(entries.id, parent.id));
+
+    expect(await feed()).toEqual([
+      { entryId: child.id, kind: "upsert" },
+      { entryId: parent.id, kind: "delete" },
+    ]);
   });
 
   test("records nothing when an update touches only metadata", async () => {

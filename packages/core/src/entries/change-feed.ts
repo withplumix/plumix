@@ -2,16 +2,47 @@ import type { Db } from "../context/app.js";
 import type { EntryChangeKind } from "../db/schema/entry_changes.js";
 import { asc, inArray } from "../db/index.js";
 import { entryChanges } from "../db/schema/entry_changes.js";
+import { RESERVED_TYPES } from "../revisions/slug-codec.js";
 
+// The columns that change what a consumer's projection of an entry says: its
+// text, whether it is public, and its identity — `type`, `slug` and
+// `parent_id` between them decide the permalink, the template, and whether
+// search indexes it at all.
+//
 // Not `updated_at`: drizzle bumps it on every save, so watching it would put
 // every metadata-only write on the feed.
-const WATCHED_COLUMNS = ["title", "content", "excerpt", "status"] as const;
+const WATCHED_COLUMNS = [
+  "title",
+  "content",
+  "excerpt",
+  "status",
+  "type",
+  "slug",
+  "parent_id",
+] as const;
 
-const GUARD = WATCHED_COLUMNS.map(
+const CHANGED = WATCHED_COLUMNS.map(
   // `IS NOT` rather than `<>`: SQLite's null-propagating comparison would make
   // clearing an excerpt, or setting one for the first time, read as unchanged.
   (column) => `old.${column} IS NOT new.${column}`,
-).join("\n    OR ");
+).join("\n      OR ");
+
+// Cloudflare D1 caps bound parameters at 100 per statement and `inArray`
+// binds one per id, so a whole drain in one statement works on local SQLite
+// and dies in production.
+const ACK_IDS_PER_STATEMENT = 100;
+
+const RESERVED = RESERVED_TYPES.map((type) => `'${type}'`).join(", ");
+
+// A revision and an autosave are rows in `entries` too. Their ids are not a
+// document's, so a consumer resolving one gets a snapshot rather than the
+// entry — and an autosave rewrites on every debounced save in the editor.
+// Filtered here rather than downstream because a tombstone carries only an
+// id: once the row is gone, no consumer can tell a pruned revision from a
+// deleted entry.
+function isContentRow(row: "new" | "old"): string {
+  return `${row}.type NOT IN (${RESERVED})`;
+}
 
 /**
  * The DDL drizzle cannot express, shipped as a core raw SQL migration and
@@ -27,18 +58,34 @@ const GUARD = WATCHED_COLUMNS.map(
  */
 export const ENTRY_CHANGE_FEED_DDL: readonly string[] = [
   `CREATE TRIGGER entries_change_feed_insert AFTER INSERT ON entries
+  WHEN ${isContentRow("new")}
   BEGIN
     INSERT INTO entry_changes (entry_id, kind) VALUES (new.id, 'upsert');
   END`,
   `CREATE TRIGGER entries_change_feed_update AFTER UPDATE ON entries
-  WHEN ${GUARD}
+  WHEN ${isContentRow("new")}
+    AND (${CHANGED})
   BEGIN
     INSERT INTO entry_changes (entry_id, kind) VALUES (new.id, 'upsert');
   END`,
   `CREATE TRIGGER entries_change_feed_delete AFTER DELETE ON entries
+  WHEN ${isContentRow("old")}
   BEGIN
     INSERT INTO entry_changes (entry_id, kind) VALUES (old.id, 'delete');
   END`,
+];
+
+/**
+ * Replaces triggers an install already has. The first migration shipped
+ * without the reserved-type guard, and a migration in the journal is never
+ * re-emitted, so correcting it takes a second one — an install generating
+ * both for the first time converges on the same triggers.
+ */
+export const ENTRY_CHANGE_FEED_RESET_DDL: readonly string[] = [
+  "DROP TRIGGER IF EXISTS entries_change_feed_insert",
+  "DROP TRIGGER IF EXISTS entries_change_feed_update",
+  "DROP TRIGGER IF EXISTS entries_change_feed_delete",
+  ...ENTRY_CHANGE_FEED_DDL,
 ];
 
 export interface EntryChange {
@@ -59,10 +106,14 @@ type ChangeFeedDb = Pick<Db, "select" | "delete">;
  * order off a limited scan, so a feed holding a full reindex drains at the
  * same rate as one holding a handful.
  *
- * An entry saved several times between drains appears once per save, and an
- * `INSERT OR REPLACE` puts a `delete` ahead of the `upsert` for one entry. A
- * consumer collapsing the batch by `entryId` therefore has to keep the
- * highest `id` per entry, not the first row it meets.
+ * An entry saved several times between drains appears once per save, so a
+ * consumer collapsing the batch by `entryId` has to keep the highest `id` per
+ * entry, not the first row it meets.
+ *
+ * `INSERT OR REPLACE` is the one write the feed cannot describe. With
+ * `recursive_triggers` off — the default on D1 and libsql — the displaced row
+ * fires no delete trigger, so the new row gets an `upsert` and the id it
+ * replaced gets no tombstone. A consumer's projection of that id is stranded.
  */
 export function readEntryChanges(
   db: ChangeFeedDb,
@@ -96,8 +147,3 @@ export async function ackEntryChanges(
       .where(inArray(entryChanges.id, ids.slice(i, i + ACK_IDS_PER_STATEMENT)));
   }
 }
-
-// Cloudflare D1 caps bound parameters at 100 per statement and `inArray`
-// binds one per id, so a whole drain in one statement works on local SQLite
-// and dies in production.
-const ACK_IDS_PER_STATEMENT = 100;

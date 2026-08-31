@@ -72,6 +72,11 @@ export function isAutosaveType(type: unknown): type is typeof AUTOSAVE_TYPE {
 // callers — they're written by framework code only. Use this at every
 // write surface (`entry.create`, `entry.update`) to reject the type
 // before it can land in the database.
+/** The types the editor owns inside `entries`. The change-feed triggers
+ *  inline these values, so a type added here without a matching migration
+ *  would land on the feed as content. */
+export const RESERVED_TYPES = [REVISION_TYPE, AUTOSAVE_TYPE] as const;
+
 export function isReservedType(type: unknown): boolean {
-  return isRevisionType(type) || isAutosaveType(type);
+  return RESERVED_TYPES.some((reserved) => reserved === type);
 }
