@@ -50,6 +50,13 @@ The public canonical URL of an entry or term archive.
 **Supports**:
 The feature list an entry type opts into (`title`, `editor`, `excerpt`, `slug`, `revisions`, `autosave`).
 
+**Entry change feed**:
+Core's durable record of which entries changed, appended by triggers on the
+`entries` table rather than by application code, so a seed, a migration or a
+direct write cannot bypass it. A consumer drains it and acknowledges what it
+handled. Core's, not a plugin's, because drizzle rebuilds the table for ordinary
+schema changes and every trigger on it dies at the `DROP`.
+
 ## Fields & settings
 
 **Meta box**:
@@ -121,6 +128,13 @@ Attaching client React to an island's server markup.
 
 **Hydration strategy**:
 When an island hydrates: `load`, `idle`, `visible`, `interaction`, or `only`.
+
+**Extractor version**:
+A tag derived by hashing the merged roster of every block's text declaration,
+plus the extraction algorithm. It changes when any declaration does, so a
+document stamped by an older roster is distinguishable from a current one — no
+version integer for a block author to keep true. Telling them apart is not yet
+acting on them: sweeping the stale ones lands with the index rebuild.
 
 ## Themes & templates
 
@@ -271,6 +285,20 @@ alongside `/robots.txt`.
 The recent-items syndication output (RSS/Atom). Not an SEO surface — a reader
 subscribes to it, a crawler does not read it — and served by
 `@plumix/plugin-feeds` rather than by core.
+
+## Search
+
+**Search document**:
+One searchable thing as the index sees it — a title, the plain text beside it,
+and what it is a projection of. An entry today; a term later, in the same table
+so one ranked list can span both.
+
+**Search projection**:
+The materialized table of search documents, from which the FTS5 index is built.
+Entry content is a block tree of HTML strings and SQLite has no regular
+expressions, so the plain text has to be extracted in JavaScript once and stored
+— which also makes rebuilding the index one SQL statement rather than a re-run
+of the extractor over every block tree. Owned by `@plumix/plugin-search`.
 
 ## Disambiguation — one word, several meanings
 
