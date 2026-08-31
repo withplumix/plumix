@@ -1,38 +1,26 @@
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
 import { eq, sql } from "plumix/db";
-import { definePlugin, runScheduledTasks } from "plumix/plugin";
 import { entries } from "plumix/schema";
-import { createDispatcherHarness, createTestContext } from "plumix/test";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { search } from "./index.js";
 import {
-  applySearchSchema,
   assertIndexIntact,
+  contentPlugin,
+  createSearchHarness,
   indexedSourceIds,
   watchRewrites,
 } from "./test/db.js";
 
-// The entry type the site under test publishes. Registered by a plugin
-// because that is the only way a type exists — core registers none.
-const content = definePlugin("content", {
-  setup: (ctx) => {
-    ctx.registerEntryType("post", { label: "Posts" });
-    ctx.registerEntryType("ledger", {
-      label: "Ledger",
-      excludeFromSearch: true,
-    });
-  },
-});
-
 let h: DispatcherHarness;
 let admin: User;
+let runSchedule: () => Promise<void>;
 
 beforeEach(async () => {
-  h = await createDispatcherHarness({ plugins: [content, search()] });
-  await applySearchSchema(h.db);
-  admin = await h.seedUser("admin");
+  ({ h, admin, runSchedule } = await createSearchHarness({
+    plugins: [contentPlugin, search()],
+  }));
 });
 
 /** Post an oRPC procedure the way the admin's client does. */
@@ -49,19 +37,6 @@ async function rpc(
 }
 
 const matches = (term: string) => indexedSourceIds(h.db, term);
-
-/** Everything the scheduled trigger runs, against this harness's database. */
-async function runSchedule(): Promise<void> {
-  await runScheduledTasks(
-    h.app,
-    createTestContext({
-      db: h.db,
-      plugins: h.app.plugins,
-      blocks: h.app.blocks,
-      hooks: h.app.hooks,
-    }),
-  );
-}
 
 describe("search()", () => {
   test("an entry saved through the application is indexed with no scheduled run", async () => {

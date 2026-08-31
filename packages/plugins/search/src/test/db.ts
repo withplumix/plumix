@@ -1,5 +1,13 @@
+import type { User } from "plumix/schema";
+import type { DispatcherHarness } from "plumix/test";
 import { sql } from "plumix/db";
-import { applyTestSchema, createTestDb } from "plumix/test";
+import { definePlugin, runScheduledTasks } from "plumix/plugin";
+import {
+  applyTestSchema,
+  createDispatcherHarness,
+  createTestContext,
+  createTestDb,
+} from "plumix/test";
 
 import { ensureSearchIndex } from "../db/ddl.js";
 import * as schema from "../db/schema.js";
@@ -79,4 +87,49 @@ export function paragraph(html: string): {
   readonly attrs: { readonly body: string };
 } {
   return { id: "a", name: "core/rich-text", attrs: { body: html } };
+}
+
+/**
+ * The entry types a site under test publishes — core registers none, so a
+ * suite that wants a searchable entry has to bring a plugin that does. The
+ * `ledger` type is the one opted out, for asserting what never gets indexed.
+ */
+export const contentPlugin = definePlugin("content", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts" });
+    ctx.registerEntryType("ledger", {
+      label: "Ledger",
+      excludeFromSearch: true,
+    });
+  },
+});
+
+export interface SearchHarness {
+  readonly h: DispatcherHarness;
+  readonly admin: User;
+  /** Run the scheduled trigger, so the index catches up with the feed. */
+  readonly runSchedule: () => Promise<void>;
+}
+
+/** A dispatcher harness with the plugin's schema and index already applied. */
+export async function createSearchHarness(
+  options: Parameters<typeof createDispatcherHarness>[0] = {},
+): Promise<SearchHarness> {
+  const h = await createDispatcherHarness(options);
+  await applySearchSchema(h.db);
+  const admin = await h.seedUser("admin");
+  return {
+    h,
+    admin,
+    runSchedule: () =>
+      runScheduledTasks(
+        h.app,
+        createTestContext({
+          db: h.db,
+          plugins: h.app.plugins,
+          blocks: h.app.blocks,
+          hooks: h.app.hooks,
+        }),
+      ),
+  };
 }

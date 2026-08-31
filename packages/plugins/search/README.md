@@ -2,7 +2,7 @@
 
 This Plumix plugin keeps a **full-text index** of everything a site publishes, so a visitor can find a word from the middle of an article rather than only from its title.
 
-This release stands the index up and keeps it current. The query surface — the public results page, ranking and snippets — lands next; until then nothing reads the index, so installing this early buys the backfill rather than the feature.
+It replaces the search page core ships with one that reads that index: results ranked by relevance, each carrying a snippet with the matching phrase highlighted.
 
 ## Install
 
@@ -29,6 +29,43 @@ The plugin owns a table and DDL that drizzle cannot express, so generate and app
 ```bash
 plumix migrate generate
 ```
+
+## The search page
+
+The plugin claims `/search/<query>` and its paginated variant, at a priority that sorts ahead of core's own rules. Core's rules stay compiled behind them, so uninstalling the plugin restores the built-in page with nothing to undo.
+
+Bare `/search` stays core's. A plain HTML form submits `GET /search?q=…` and core answers it with a redirect to the canonical `/search/<q>`, which lands back here — so search works with JavaScript disabled. One consequence is worth knowing: a theme that renders both the empty search page and the results page needs two templates, `search` for core's and `forArchiveType("search")` for this one.
+
+```tsx
+forArchiveType("search").template(({ data }) => (
+  <ol>
+    {data.results.map((result) => (
+      <li key={result.id}>
+        <a href={result.url}>{result.title}</a>
+        <p dangerouslySetInnerHTML={{ __html: result.snippet }} />
+      </li>
+    ))}
+  </ol>
+));
+```
+
+A result carries `kind`, `id`, `title`, `url`, `snippet` and `score`, and the payload carries `nextUrl` — where the next page of results lives, or `null` at the end. It is opaque on purpose: a theme renders it and never builds it, so what paginating means can change without the payload changing shape. Asking for a page past the end is a 404, as it is on core's own search page. The snippet is **already escaped** — FTS5 splices its highlight markers into indexed content without escaping anything around them, so it arrives with everything but `<mark>` turned into entities. That makes it safe as element content, which is where a snippet goes. It is not safe in an attribute: quotes pass through.
+
+Only published entries appear. Drafts, scheduled and trashed entries are in the index so an author can find their own work in the admin, and the page's query clamps them out.
+
+**An entry type under an access policy is never indexed at all.** A snippet is body text around a word the visitor chose, so indexing a members-only type would hand an anonymous reader its prose a query at a time. Keeping it out of the projection is what makes that impossible rather than dependent on a predicate; the cost is that a gated type is unsearchable for everyone, members included.
+
+The search page is not edge-cached, for the reason core gives for leaving its own out: the query space is unbounded, so every distinct string a crawler tried would mint a cache entry.
+
+A query is whatever a visitor typed, treated as words to look for: adding a word narrows the results, a quoted phrase matches exactly, and FTS5's own operators are inert. Any string compiles to a valid search, so an unbalanced quote returns nothing rather than an error page.
+
+## Ranking
+
+```ts
+search({ ranking: "bm25-v1" });
+```
+
+Weighted bm25, with a title match counting for ten times a body match. The weights are hardcoded, but the algorithm is **named** — a site that has named the one it is on keeps its result order when a better algorithm ships. That is the whole reason the option exists; there is no weighting dashboard, and tuning weights without a real corpus is guesswork.
 
 ## How it stays current
 

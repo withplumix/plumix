@@ -344,6 +344,43 @@ describe("compileRouteMap", () => {
     );
   });
 
+  test("a plugin claiming a framework pattern below its priority shadows it", async () => {
+    const registry = await buildRegistry([
+      definePlugin("search", (ctx) => {
+        ctx.registerArchiveType("search", {
+          routes: [FRAMEWORK_SEARCH_QUERY_PATTERN],
+          priority: 1,
+          resolve: () => null,
+        });
+      }),
+    ]);
+    const map = compileRouteMap(registry);
+    const matching = map.filter(
+      (rule) => rule.rawPattern === FRAMEWORK_SEARCH_QUERY_PATTERN,
+    );
+    // Core's rule stays compiled — it is what answers once the plugin is
+    // uninstalled — but the plugin's sorts ahead of it, so it wins the match.
+    expect(matching).toHaveLength(2);
+    expect(matching[0]?.intent).toEqual({ kind: "custom", name: "search" });
+    expect(matching[1]?.intent).toEqual({ kind: "search" });
+  });
+
+  test("a plugin claiming a framework pattern it cannot win still throws", async () => {
+    const registry = await buildRegistry([
+      definePlugin("careless", (ctx) => {
+        ctx.registerRewriteRule(FRAMEWORK_SEARCH_QUERY_PATTERN, {
+          kind: "single",
+          entryType: "x",
+        });
+      }),
+    ]);
+    // Default priority 10 loses to the framework's 5, so the rule would never
+    // match — silently. That is the collision the guard exists to name.
+    expect(() => compileRouteMap(registry)).toThrow(
+      /registered twice.*core.*"careless"/,
+    );
+  });
+
   test("cross-plugin collisions name both plugin ids", async () => {
     const registry = await buildRegistry([
       definePlugin("plugin-a", (ctx) => {
