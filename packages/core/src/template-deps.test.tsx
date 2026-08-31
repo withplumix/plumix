@@ -161,35 +161,40 @@ function makeRegistry(
 }
 
 describe("loadTemplateDeps", () => {
-  test("invokes every declared kind in parallel via Promise.all", async () => {
-    // Two loaders each sleep 50ms — serial would take 100ms, parallel
-    // ~50ms. The threshold sits below the serial floor so a regression
-    // to sequential `await`s fails the test, but stays far enough
-    // above the parallel floor to absorb CI scheduler jitter (saw 61ms
-    // for 30ms+5ms-slack tuning).
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const registry = makeRegistry({
-      "test-thing": async () => {
-        await sleep(50);
-        return { a: { value: "thing-a" } };
-      },
-      "test-other": async () => {
-        await sleep(50);
-        return { b: 7 };
-      },
-    });
-    const template = { "test-thing": ["a"], "test-other": ["b"] };
-    const ctx = captureLogger();
-    const start = Date.now();
-    const deps = await loadTemplateDeps(template, registry, {
-      logger: ctx.logger,
-      telemetry: NOOP_TELEMETRY,
-    } as unknown as Parameters<typeof loadTemplateDeps>[2]);
-    const elapsed = Date.now() - start;
-    expect(deps["test-thing"]).toEqual({ a: { value: "thing-a" } });
-    expect(deps["test-other"]).toEqual({ b: 7 });
-    expect(elapsed).toBeLessThan(90);
-  });
+  test(
+    "invokes every declared kind in parallel via Promise.all",
+    { timeout: 1000 },
+    async () => {
+      // Each loader blocks until both have entered, so this settles only if
+      // they overlap — a serial implementation hangs rather than merely
+      // running slow.
+      let started = 0;
+      let releaseBoth!: () => void;
+      const bothStarted = new Promise<void>((r) => (releaseBoth = r));
+      const gate = (result: Record<string, unknown>) => async () => {
+        started += 1;
+        if (started === 2) releaseBoth();
+        await bothStarted;
+        return result;
+      };
+      const registry = makeRegistry({
+        "test-thing": gate({ a: { value: "thing-a" } }),
+        "test-other": gate({ b: 7 }),
+      });
+      const template = { "test-thing": ["a"], "test-other": ["b"] };
+      const ctx = captureLogger();
+
+      const deps = await loadTemplateDeps(template, registry, {
+        logger: ctx.logger,
+        telemetry: NOOP_TELEMETRY,
+      } as unknown as Parameters<typeof loadTemplateDeps>[2]);
+
+      // Not implied by the gate: one loader invoked twice releases it alone.
+      expect(started).toBe(2);
+      expect(deps["test-thing"]).toEqual({ a: { value: "thing-a" } });
+      expect(deps["test-other"]).toEqual({ b: 7 });
+    },
+  );
 
   test("a slug missing from the loader result fills with null", async () => {
     const registry = makeRegistry({
