@@ -1,19 +1,14 @@
 import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
-import {
-  coreBlocks,
-  createBlockRegistry,
-  defineEntryContent,
-} from "plumix/blocks";
+import { defineEntryContent } from "plumix/blocks";
 import { eq } from "plumix/db";
-import { createPluginRegistry } from "plumix/plugin";
 import { entries, terms } from "plumix/schema";
-import { createTestContext, factoriesFor } from "plumix/test";
+import { factoriesFor } from "plumix/test";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchTestDb } from "../test/db.js";
 import {
   assertIndexIntact,
-  createSearchTestDb,
+  createSearchContext,
   indexedSourceIds,
   paragraph,
   watchRewrites,
@@ -33,21 +28,9 @@ const postType = (overrides: Record<string, unknown> = {}) => ({
 });
 
 beforeEach(async () => {
-  db = await createSearchTestDb();
-  plugins = createPluginRegistry();
+  ({ db, ctx, plugins, authorId } = await createSearchContext());
+  // Re-registered through the local builder, so a test can retype it.
   plugins.entryTypes.set("post", postType());
-  plugins.termTaxonomies.set("category", {
-    name: "category",
-    registeredBy: "test",
-    label: "Categories",
-  });
-  ctx = createTestContext({
-    db,
-    plugins,
-    blocks: createBlockRegistry([...coreBlocks]),
-  });
-  const author = await factoriesFor(db).admin.create();
-  authorId = author.id;
 });
 
 function seed(

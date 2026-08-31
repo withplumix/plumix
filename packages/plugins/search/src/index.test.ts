@@ -5,6 +5,7 @@ import { entries } from "plumix/schema";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchHarness } from "./test/db.js";
+import { REINDEX_URL } from "./contract.js";
 import { search } from "./index.js";
 import {
   assertIndexIntact,
@@ -54,6 +55,49 @@ describe("search()", () => {
     await h.drainDeferred();
 
     expect(await h.db.all(sql`SELECT id FROM entry_changes`)).toHaveLength(1);
+  });
+
+  test("a rebuild an operator starts finishes over scheduled runs", async () => {
+    for (let i = 0; i < 3; i += 1) {
+      await h.factory.entry.create({
+        authorId: admin.id,
+        status: "published",
+        publishedAt: new Date(),
+        title: `Hydroponics ${String(i)}`,
+        slug: `s${String(i)}`,
+      });
+    }
+    // Straight to the database, so nothing has indexed them.
+    expect(await matches("hydroponics")).toEqual([]);
+
+    const started = await h.fetch(REINDEX_URL, {
+      method: "POST",
+      as: admin,
+    });
+    started.assertStatus(200);
+    expect(await started.json()).toMatchObject({
+      status: "running",
+      processed: 0,
+    });
+
+    await runSchedule();
+
+    const finished = await h.fetch(REINDEX_URL, { as: admin });
+    expect(await finished.json()).toMatchObject({
+      status: "succeeded",
+      processed: 3,
+      failed: 0,
+    });
+    expect(await matches("hydroponics")).toHaveLength(3);
+  });
+
+  test("only an operator may start or read a rebuild", async () => {
+    const author = await h.seedUser("author");
+
+    (await h.fetch(REINDEX_URL, { method: "POST", as: author })).assertStatus(
+      403,
+    );
+    (await h.fetch(REINDEX_URL, { as: null })).assertStatus(401);
   });
 
   test("a term that predates the plugin is indexed on a scheduled run", async () => {

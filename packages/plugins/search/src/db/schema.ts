@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 /**
@@ -69,3 +70,60 @@ export const searchDocuments = sqliteTable(
 );
 
 export type NewSearchDocument = typeof searchDocuments.$inferInsert;
+
+/**
+ * Where a reindex run ended up. `running` is the only one that is not final,
+ * and there is at most one of it at a time.
+ *
+ * `completed_with_errors` is separate from `failed` because they call for
+ * different things: the first walked the whole corpus and could not project
+ * some of it, the second stopped early. An operator who cannot tell them
+ * apart cannot tell "mostly fine" from "start again".
+ */
+export const REINDEX_STATUSES = [
+  "running",
+  "succeeded",
+  "completed_with_errors",
+  "failed",
+] as const;
+
+export type ReindexStatus = (typeof REINDEX_STATUSES)[number];
+
+/**
+ * One rebuild of the index from its sources, and how far it got.
+ *
+ * A full reindex is far too much work for one invocation — measured backfill
+ * runs at about 1 300 entries a second, so a large site is minutes of it — so
+ * the walk is chunked across scheduled runs and its position is a row rather
+ * than a variable. Everything a resumed run needs is here: an isolate that
+ * dies mid-chunk loses the chunk, not the run.
+ *
+ * Rows are kept after they finish. The last one is what an operator reads to
+ * find out whether the rebuild they started actually worked.
+ */
+export const searchReindexRuns = sqliteTable("search_reindex_runs", (t) => ({
+  id: t.integer().primaryKey({ autoIncrement: true }),
+  status: t.text({ enum: REINDEX_STATUSES }).notNull(),
+  /**
+   * Where the walk resumes. The kinds are taken in turn, so the pair is a
+   * position in one ordering rather than two independent counters: everything
+   * of `cursor_type` up to and including `cursor_id` is done.
+   */
+  cursorType: t.text({ enum: SEARCH_SOURCE_TYPES }).notNull(),
+  cursorId: t.integer().notNull().default(0),
+  /** Sources projected, and sources this run could not project. */
+  processed: t.integer().notNull().default(0),
+  failed: t.integer().notNull().default(0),
+  startedAt: t
+    .integer({ mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: t
+    .integer({ mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`)
+    .$onUpdate(() => sql`(unixepoch())`),
+  finishedAt: t.integer({ mode: "timestamp" }),
+}));
+
+export type SearchReindexRun = typeof searchReindexRuns.$inferSelect;
