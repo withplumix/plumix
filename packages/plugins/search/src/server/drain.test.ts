@@ -1,5 +1,6 @@
-import type { AppContext } from "plumix/plugin";
+import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
 import { eq, sql } from "plumix/db";
+import { text } from "plumix/fields";
 import { entries } from "plumix/schema";
 import { factoriesFor } from "plumix/test";
 import { beforeEach, describe, expect, test } from "vitest";
@@ -16,10 +17,11 @@ import { advanceReindex, startReindex } from "./reindex.js";
 
 let db: SearchTestDb;
 let ctx: AppContext;
+let plugins: MutablePluginRegistry;
 let authorId: number;
 
 beforeEach(async () => {
-  ({ db, ctx, authorId } = await createSearchContext());
+  ({ db, ctx, plugins, authorId } = await createSearchContext());
 });
 
 /**
@@ -73,6 +75,33 @@ describe("repairStaleEntries", () => {
 
     expect(repaired).toBe(1);
     expect(await indexedSourceIds(db, "hydroponics")).toEqual([id]);
+  });
+
+  test("marking a field searchable re-indexes the entries it affects", async () => {
+    const entry = await factoriesFor(db).entry.create({
+      authorId,
+      status: "published",
+      publishedAt: new Date(),
+      title: "Winter growing",
+      slug: "winter-growing",
+      meta: { subtitle: "Aquaponics without a greenhouse" },
+    });
+    await db.run(sql`DELETE FROM entry_changes`);
+    await advanceOnce();
+    expect(await indexedSourceIds(db, "aquaponics")).toEqual([]);
+
+    // What a site does when it wants an existing field indexed. Nothing else
+    // changes: no version is bumped by hand, and no entry is re-saved.
+    plugins.entryMetaBoxes.set("extras", {
+      id: "extras",
+      registeredBy: "test",
+      label: "Extras",
+      entryTypes: ["post"],
+      fields: [text("subtitle").searchable().build()],
+    });
+    await repairStaleEntries(ctx, currentExtractorVersion(ctx), 10);
+
+    expect(await indexedSourceIds(db, "aquaponics")).toEqual([entry.id]);
   });
 
   test("stops offering a document it has already brought up to date", async () => {

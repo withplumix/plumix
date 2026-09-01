@@ -77,7 +77,7 @@ Eleven methods appear on nearly every builder, and the type of the argument chan
 
 `.required()` marks the field required. The write pipeline enforces it in `strict` mode only, so a save landing on a draft status does not fail on it and the publish does.
 
-`.span()` sets the field's width in the meta box's 12-column grid. `.capability()` gates the field on a capability string, which the server enforces on write. `.showInApi()` opts the value into public REST responses, which are default-deny per field.
+`.span()` sets the field's width in the meta box's 12-column grid. `.capability()` gates the field on a capability string, which the server enforces on write. `.showInApi()` opts the value into public REST responses, which are default-deny per field. `.searchable()` does the same for the site's full-text index. It is honored on the text-shaped inputs — `text`, `textarea`, `email`, `url` and `richtext` — and ignored elsewhere, including on a `password` field and on a repeater row or group member, whose nested values are not walked.
 
 `.sanitize()` normalizes a value after coercion and before persistence, and its return value replaces the caller's input. `.validate()` runs last and returns `true` or a failure message, sync or async. Both are typed against the field's own value type, so a `number` field's validator receives a `number`.
 

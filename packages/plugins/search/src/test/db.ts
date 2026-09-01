@@ -3,6 +3,7 @@ import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
 import { coreBlocks, createBlockRegistry } from "plumix/blocks";
 import { sql } from "plumix/db";
+import { text, textarea } from "plumix/fields";
 import {
   createPluginRegistry,
   definePlugin,
@@ -121,10 +122,23 @@ export function paragraph(html: string): {
  * The entry types a site under test publishes — core registers none, so a
  * suite that wants a searchable entry has to bring a plugin that does. The
  * `ledger` type is the one opted out, for asserting what never gets indexed.
+ *
+ * Its meta box carries one field of each kind the index cares about: opted
+ * in, silent, and opted in behind a capability — which is the field that must
+ * never reach a snippet.
  */
 export const contentPlugin = definePlugin("content", {
   setup: (ctx) => {
     ctx.registerEntryType("post", { label: "Posts" });
+    ctx.registerEntryMetaBox("extras", {
+      label: "Extras",
+      entryTypes: ["post"],
+      fields: [
+        text("subtitle").searchable(),
+        text("internalRef"),
+        textarea("editorialNote").capability("editorial:manage").searchable(),
+      ],
+    });
     ctx.registerEntryType("ledger", {
       label: "Ledger",
       excludeFromSearch: true,

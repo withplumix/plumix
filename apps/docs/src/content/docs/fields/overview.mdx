@@ -116,6 +116,8 @@ Defaults apply on read. The decoder fills any key storage lacks with the field's
 
 Meta stays out of the public REST API, which is default-deny per field, and a field opts in with `.showInApi()`. The admin RPC is unaffected.
 
+Meta stays out of the site's full-text index on the same terms: a field opts in with `.searchable()`, and a capability-gated one never joins whatever it declared, because a search snippet is served to whoever asked for it.
+
 ## Related
 
 Meta-box fields are one half of what an entry holds. [Blocks](/blocks/overview/) are the other half, the tree that entry content is stored as. Fields belong to a plugin descriptor like every other registration, and [Content Modelling](/content-modelling/overview/) is the page that explains why. [Entry Types](/content-modelling/entry-types/) covers the `entryTypes` scope a meta box is pinned to. A theme reads the values back through its templates, and [Template Data](/themes/template-data/) names the shapes they arrive in.

@@ -1,5 +1,5 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
-import type { Entry, Term } from "plumix/schema";
+import type { Term } from "plumix/schema";
 import { eq } from "plumix/db";
 import { ackEntryChanges, tryGetContext } from "plumix/plugin";
 import { entryChanges } from "plumix/schema";
@@ -25,20 +25,30 @@ const scheduled = new WeakMap<AppContext["memo"], Set<number>>();
 const CHANGES_PER_ENTRY = 100;
 
 // The lifecycle actions that can change what the index should say about an
-// entry. `entry:meta_changed` is deliberately absent: meta is not indexed, so
-// a metadata-only save has nothing to re-tokenize — the change feed's own
-// guard says the same thing about a direct write.
+// entry. `entry:meta_changed` is one of them because a field can declare
+// itself searchable: a save that only wrote meta still moves the document.
+// Whether it moved anything the index holds is the feed's question, not this
+// roster's — see `indexAndAck`.
+//
+// Two consequences of it firing before `entry:updated` does, both freshness
+// rather than correctness. A save writing columns and meta claims the entry
+// at the earlier point, so a plugin that mutates the row from its own
+// `entry:updated` handler lands after this read the feed — its change stays
+// enqueued and the next drain carries it. And that save leaves two feed rows
+// where it used to leave one: the same document either way, but twice the
+// drain budget, which is counted in rows.
 const ENTRY_ACTIONS = [
   "entry:published",
   "entry:updated",
   "entry:trashed",
   "entry:restored",
   "entry:deleted",
+  "entry:meta_changed",
 ] as const;
 
 // A term's name and the description its archive carries are all that is
-// indexed, and both move on these. `term:meta_changed` is absent for the
-// reason its entry counterpart is.
+// indexed, and both move on these. `term:meta_changed` is absent because term
+// meta is not indexed: a taxonomy has no searchable-field declaration.
 const TERM_ACTIONS = ["term:created", "term:updated", "term:deleted"] as const;
 
 /**
@@ -103,7 +113,7 @@ async function indexAndAck(ctx: AppContext, entryId: number): Promise<void> {
     .where(eq(entryChanges.entryId, entryId))
     .limit(CHANGES_PER_ENTRY);
   // An empty feed is proof there is nothing to index: the trigger watches
-  // title, content, excerpt, status, type, slug and parent_id, a strict
+  // title, content, excerpt, status, type, slug, parent_id and meta, a strict
   // superset of what a document is built from. `entry:updated` fires on any
   // column write, a `sortOrder` save included, so without this the cheap
   // half of a bulk edit would still read every block tree and walk it.
@@ -117,7 +127,9 @@ async function indexAndAck(ctx: AppContext, entryId: number): Promise<void> {
  * application is findable without waiting for a scheduled run.
  */
 export function registerIndexInvalidator(ctx: PluginSetupContext): void {
-  const onEntry = (entry: Entry): void => {
+  // Widened past `Entry` because `entry:meta_changed` carries `{ id, type }`
+  // rather than the row — the id is all the fast path reads.
+  const onEntry = (entry: { readonly id: number }): void => {
     // A lifecycle action always fires inside a request; one fired outside has
     // no queue to defer through, and the feed catches it either way.
     const appCtx = tryGetContext();

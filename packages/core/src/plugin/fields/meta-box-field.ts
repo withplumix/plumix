@@ -111,6 +111,15 @@ export interface MetaBoxFieldBase {
    */
   readonly showInApi?: boolean;
   /**
+   * Opt this field's value into the site's full-text index. Default-deny, the
+   * way `showInApi` is: meta holds plugin bookkeeping and internal keys as
+   * often as it holds prose, and indexing all of it is the mistake
+   * ElasticPress spent a decade on before reversing it. Server-only —
+   * omitted from the wire manifest, and inert without a search plugin
+   * installed to read it.
+   */
+  readonly searchable?: boolean;
+  /**
    * Conditional visibility — OR-of-AND rule groups addressing sibling
    * driver fields by key, authored via the builders'
    * `.visibleWhen()` / `.orVisibleWhen()` chains. Semantics live in

@@ -20,6 +20,7 @@ interface RichtextFieldState {
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
   readonly showInApi?: true;
+  readonly searchable?: true;
   readonly marks?: readonly string[];
   readonly nodes?: readonly string[];
   readonly blocks?: readonly string[];
@@ -96,6 +97,11 @@ export class RichtextFieldBuilder<
   /** Opt this field's value into public REST responses (default-deny). */
   showInApi(): RichtextFieldBuilder<K> {
     return this.#fork({ showInApi: true });
+  }
+
+  /** Opt this field's value into the site's full-text index (default-deny). */
+  searchable(): RichtextFieldBuilder<K> {
+    return this.#fork({ searchable: true });
   }
 
   /** Rule factory: this field's value equals `value` — pass the rule

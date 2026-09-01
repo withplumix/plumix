@@ -6,22 +6,34 @@ import {
   resolveTermTaxonomyVisibility,
 } from "plumix/plugin";
 
+import type { SearchableMetaField } from "./meta-text.js";
+import { extractMetaText } from "./meta-text.js";
+
 /**
  * The text an entry contributes beside its title: the excerpt a site wrote by
  * hand, then whatever its blocks declare as text — tags stripped, entities
- * decoded, nested slots walked.
+ * decoded, nested slots walked — and last the meta fields that opted in.
  *
- * Newline-joined so the last word of the excerpt and the first of the body
- * stay two tokens. Content that is not the block envelope — a row nobody has
+ * Newline-joined so the last word of one part and the first of the next stay
+ * two tokens. Content that is not the block envelope — a row nobody has
  * re-saved since the editor cutover — contributes nothing rather than
  * throwing: it is unreadable to the extractor, not to the site.
  */
 export function entryDocumentBody(
-  entry: { readonly excerpt: string | null; readonly content: unknown },
+  entry: {
+    readonly excerpt: string | null;
+    readonly content: unknown;
+    readonly meta: unknown;
+  },
   roster: BlockTextRoster,
+  metaFields: readonly SearchableMetaField[],
 ): string {
   const blocks = isEntryContent(entry.content) ? entry.content.blocks : [];
-  return [(entry.excerpt ?? "").trim(), extractBlockText(blocks, roster)]
+  return [
+    (entry.excerpt ?? "").trim(),
+    extractBlockText(blocks, roster),
+    extractMetaText(entry.meta, metaFields),
+  ]
     .filter((part) => part !== "")
     .join("\n");
 }

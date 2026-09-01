@@ -176,16 +176,28 @@ describe("entry change feed", () => {
     ]);
   });
 
-  test("records nothing when an update touches only metadata", async () => {
+  test("records nothing when an update touches only unwatched columns", async () => {
     const entry = await entryFactory.transient({ db }).create({ authorId });
     await clearFeed();
 
     await db
       .update(entries)
-      .set({ meta: { views: 12 }, sortOrder: 3 })
+      .set({ sortOrder: 3 })
       .where(eq(entries.id, entry.id));
 
     expect(await feed()).toEqual([]);
+  });
+
+  test("records an upsert when a meta write lands, since a field may be indexed", async () => {
+    const entry = await entryFactory.transient({ db }).create({ authorId });
+    await clearFeed();
+
+    await db
+      .update(entries)
+      .set({ meta: { subtitle: "A quieter second line" } })
+      .where(eq(entries.id, entry.id));
+
+    expect(await feed()).toEqual([{ entryId: entry.id, kind: "upsert" }]);
   });
 
   test("records a tombstone distinguishable from an upsert when an entry is deleted", async () => {

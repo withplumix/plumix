@@ -38,6 +38,7 @@ export interface StringFieldState {
   readonly span?: MetaBoxFieldSpan;
   readonly capability?: string;
   readonly showInApi?: true;
+  readonly searchable?: true;
   readonly maxLength?: number;
   readonly sanitize?: (value: unknown) => JsonValue;
   readonly validate?: MetaBoxFieldValidate;
@@ -145,6 +146,11 @@ export class StringFieldBuilder<
   /** Opt this field's value into public REST responses (default-deny). */
   showInApi(): StringFieldBuilder<Input, K, V, S> {
     return this.#fork({ showInApi: true });
+  }
+
+  /** Opt this field's value into the site's full-text index (default-deny). */
+  searchable(): StringFieldBuilder<Input, K, V, S> {
+    return this.#fork({ searchable: true });
   }
 
   /** Rule factory: this field's value equals `value` — pass the rule

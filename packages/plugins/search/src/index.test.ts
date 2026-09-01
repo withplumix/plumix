@@ -225,4 +225,89 @@ describe("search()", () => {
     expect(await matches("hydroponics")).toEqual([]);
     await assertIndexIntact(h.db);
   });
+
+  test("a value in a searchable meta field is findable", async () => {
+    const entry = await h.factory.entry.create({
+      authorId: admin.id,
+      title: "Winter growing",
+      slug: "winter-growing",
+    });
+    await runSchedule();
+
+    await rpc("entry/update", {
+      id: entry.id,
+      meta: { subtitle: "Hydroponics without a greenhouse" },
+    });
+    await h.drainDeferred();
+
+    expect(await matches("hydroponics")).toEqual([entry.id]);
+    await assertIndexIntact(h.db);
+  });
+
+  test("meta no field opted in never reaches the index", async () => {
+    const entry = await h.factory.entry.create({
+      authorId: admin.id,
+      title: "Winter growing",
+      slug: "winter-growing",
+    });
+
+    await rpc("entry/update", {
+      id: entry.id,
+      meta: { internalRef: "hydroponics-42" },
+    });
+    await h.drainDeferred();
+    await runSchedule();
+
+    expect(await matches("hydroponics")).toEqual([]);
+  });
+
+  test("a capability-gated field is not indexed, however it was declared", async () => {
+    // Written past the RPC surface on purpose: that surface rejects the key
+    // outright without the capability, so going through it would prove the
+    // write gate rather than the index's own exclusion. A snippet is served
+    // to whoever asks, so the value has to stay out once it is stored too.
+    await h.factory.entry.create({
+      authorId: admin.id,
+      title: "Winter growing",
+      slug: "winter-growing",
+      meta: { editorialNote: "Hydroponics claim unverified" },
+    });
+
+    await runSchedule();
+
+    expect(await matches("hydroponics")).toEqual([]);
+  });
+
+  test("a meta value written straight to the database is indexed once the feed drains", async () => {
+    const entry = await h.factory.entry.create({
+      authorId: admin.id,
+      title: "Winter growing",
+      slug: "winter-growing",
+    });
+    await runSchedule();
+
+    await h.db
+      .update(entries)
+      .set({ meta: { subtitle: "Hydroponics without a greenhouse" } })
+      .where(eq(entries.id, entry.id));
+    await runSchedule();
+
+    expect(await matches("hydroponics")).toEqual([entry.id]);
+  });
+
+  test("clearing a searchable field takes its words back out", async () => {
+    const entry = await h.factory.entry.create({
+      authorId: admin.id,
+      title: "Winter growing",
+      slug: "winter-growing",
+      meta: { subtitle: "Hydroponics without a greenhouse" },
+    });
+    await runSchedule();
+
+    await rpc("entry/update", { id: entry.id, meta: { subtitle: null } });
+    await h.drainDeferred();
+
+    expect(await matches("hydroponics")).toEqual([]);
+    await assertIndexIntact(h.db);
+  });
 });

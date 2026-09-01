@@ -147,7 +147,7 @@ A migration that was never applied, a restored dump, an install before its first
 
 What is worse in the meantime is worth knowing: a word only the body holds is not found, no snippet is highlighted, results carry no score, and topics are missing entirely, since core's page has never returned them. Repairing is idempotent, so two requests arriving on the same missing index converge on one index rather than racing — D1 has no migration lock, and neither does this. They converge on the outcome, not on the work: each one rebuilds, so a burst of searches into a missing index is a burst of rebuilds.
 
-A save that leaves the text where it was writes nothing: the change feed's own guard ignores it, and the projection's upsert is a no-op when the extracted text has not moved. Bulk status changes stay cheap.
+A save that leaves the text where it was writes nothing: the change feed's own guard ignores it, and the projection's upsert is a no-op when the extracted text has not moved. Bulk status changes stay cheap. A meta write is on the feed whether or not the site has a searchable field — the feed's triggers are core's, and cannot ask what this plugin's roster says today — but a bag nothing is projected from produces the same text as before, so it stops at the projection.
 
 ## What is indexed
 
@@ -159,7 +159,32 @@ ctx.registerEntryType("ledger", { label: "Ledger", excludeFromSearch: true });
 
 A non-public type (`isPublic: false`) is excluded already, so internal types need no second switch.
 
-Each entry contributes its title, its excerpt, and the text its blocks declare — including table cells, button labels, list items, image alt text and code listings. A block says which of its inputs carry text; a block that declares nothing contributes nothing. The declaration is data, so an extractor version can be derived by hashing the whole roster rather than maintained by hand, and every document is stamped with the version that produced it. Re-indexing the documents an older version left behind is the rebuild slice's job — until it lands, a block that changes its declaration reaches an entry the next time that entry is saved.
+Each entry contributes its title, its excerpt, the text its blocks declare — including table cells, button labels, list items, image alt text and code listings — and whatever meta fields opted in below. A block says which of its inputs carry text; a block that declares nothing contributes nothing. The declaration is data, so an extractor version can be derived by hashing the roster rather than maintained by hand, and every document is stamped with the version that produced it — which is what lets a declaration change repair itself, below.
+
+### Meta, when a field asks for it
+
+Structured data in an entry's meta bag is invisible to search until a field says otherwise:
+
+```ts
+ctx.registerEntryMetaBox("extras", {
+  label: "Extras",
+  entryTypes: ["post"],
+  fields: [
+    text("subtitle").searchable(),
+    text("internalRef"), // bookkeeping — stays out
+  ],
+});
+```
+
+Default-deny, the way `.showInApi()` is. Meta holds plugin bookkeeping and internal keys at least as often as it holds prose, and indexing all of it is the mistake ElasticPress spent a decade on before reversing it in 5.0 — the same failure this plugin already avoids for entry content.
+
+`.searchable()` is honored on the text-shaped inputs — `text`, `textarea`, `email`, `url`, and `richtext`, whose stored document is flattened to its prose. The chain compiles on a `password` field and on a repeater row or group member, and is ignored on all three: nothing else carries text a visitor would search for. A field's `.default()` is not indexed either, since the default is not in the bag — it would put the same string in every document.
+
+**A capability-gated field is never indexed, whatever it declared.** A snippet is body text around a word the visitor chose, so a value only some editors may read cannot be in the document at all — the same reasoning that keeps an access-gated entry type out. A `password` field is excluded for the same reason. Both are silent: the declaration is honored where it can be, and dropped where honoring it would leak.
+
+Marking an existing field searchable needs nothing else. The extractor version hashes the field roster beside the block roster, so every affected document is stale from that moment and the scheduled run re-projects them — no version to bump, no entry to re-save. Term meta is not indexed: a taxonomy has no such declaration.
+
+**Taking a field back out converges rather than taking effect at once.** Un-marking one, or putting a capability on it, is the same stale-document sweep read backwards — the text is already baked into the index rows, and unlike an entry type there is nothing a query-time clamp could filter on. A large corpus takes many scheduled runs to finish retracting; [start a rebuild](#rebuilding-the-index) to force it. That asymmetry is worth knowing before a field that turned out to be sensitive is the one being retracted.
 
 Users and form submissions are never indexed. They are personal data, and a predicate a public query forgets cannot leak what the table never held.
 
@@ -180,11 +205,11 @@ A run reports `processed`, `failed` and a final status. `succeeded` and `complet
 
 A rebuild steps over any entry the change feed still owes. Those have been written since the walk started and the drain holds the fresher text, so letting the rebuild project them could put the older version back.
 
-### Block declarations repair themselves
+### Declarations repair themselves
 
-The extractor version is a hash of every block's text declaration, so changing one makes every existing document stale. The scheduled run re-extracts them a bounded slice at a time, and the work is proportional to what actually changed rather than to the corpus: a document whose extracted text is identical is stamped with the new version and never reaches FTS5, because the index's update trigger is scoped to the two columns it shadows. Only the entries a declaration really moved are re-tokenized.
+The extractor version is a hash of every block's text declaration and every searchable meta field, so changing one makes every existing document stale. The scheduled run re-extracts them a bounded slice at a time, and the work is proportional to what actually changed rather than to the corpus: a document whose extracted text is identical is stamped with the new version and never reaches FTS5, because the index's update trigger is scoped to the two columns it shadows. Only the entries a declaration really moved are re-tokenized.
 
-That scoping arrives as a migration, so **run `plumix migrate generate` and apply it after upgrading**. Until you do, a roster change re-tokenizes the whole corpus — correct, just far more work than it needs to be. The runtime repair path recognises the older trigger and replaces it too, so a site that never generates migrations converges on the next scheduled run.
+That scoping arrives as a migration, and so does `meta` joining the change feed's watched columns, so **run `plumix migrate generate` and apply it after upgrading**. Until you do, a roster change re-tokenizes the whole corpus — correct, just far more work than it needs to be — and a meta-only save reaches the index on the next rebuild, or on the next save that also moves the entry's text, rather than at once. The runtime repair path recognises the older index trigger and replaces it too, so a site that never generates migrations converges on the next scheduled run; the change feed's triggers are core's, and only a migration moves those.
 
 One thing a rebuild does not do: remove a document whose source is gone or has stopped being searchable. Those are dropped when the source is next written, and the read path filters them out meanwhile, so they cost storage rather than correctness.
 

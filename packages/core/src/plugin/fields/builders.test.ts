@@ -621,6 +621,11 @@ describe("richtext() builder", () => {
     expect(field.blocks).toEqual(["my-callout"]);
   });
 
+  test("opts into the full-text index only when asked", () => {
+    expect(richtext("body").build().searchable).toBeUndefined();
+    expect(richtext("body").searchable().build().searchable).toBe(true);
+  });
+
   test("supports omitted allowlists (strict — denies everything except the implicit doc/paragraph/text)", () => {
     const field = richtext("body").build();
     expect(field.marks).toBeUndefined();

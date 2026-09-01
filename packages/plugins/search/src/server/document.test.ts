@@ -12,11 +12,13 @@ describe("entryDocumentBody", () => {
     const body = entryDocumentBody(
       {
         excerpt: null,
+        meta: {},
         content: defineEntryContent([
           paragraph("<p>The <strong>quick</strong> brown fox</p>"),
         ]),
       },
       ROSTER,
+      [],
     );
 
     expect(body).toBe("The quick brown fox");
@@ -24,8 +26,9 @@ describe("entryDocumentBody", () => {
 
   test("carries the excerpt, so a phrase only the summary uses is findable", () => {
     const body = entryDocumentBody(
-      { excerpt: "A short summary", content: null },
+      { excerpt: "A short summary", content: null, meta: {} },
       ROSTER,
+      [],
     );
 
     expect(body).toBe("A short summary");
@@ -35,9 +38,11 @@ describe("entryDocumentBody", () => {
     const body = entryDocumentBody(
       {
         excerpt: "Summary",
+        meta: {},
         content: defineEntryContent([paragraph("<p>Body</p>")]),
       },
       ROSTER,
+      [],
     );
 
     expect(body).toBe("Summary\nBody");
@@ -45,8 +50,36 @@ describe("entryDocumentBody", () => {
 
   test("is empty for content the block envelope does not describe", () => {
     expect(
-      entryDocumentBody({ excerpt: null, content: { blocks: "nope" } }, ROSTER),
+      entryDocumentBody(
+        { excerpt: null, content: { blocks: "nope" }, meta: {} },
+        ROSTER,
+        [],
+      ),
     ).toBe("");
+  });
+
+  test("carries a searchable meta field, after the block text", () => {
+    const body = entryDocumentBody(
+      {
+        excerpt: null,
+        content: defineEntryContent([paragraph("<p>Body</p>")]),
+        meta: { subtitle: "A quieter second line" },
+      },
+      ROSTER,
+      [{ key: "subtitle", kind: "string" }],
+    );
+
+    expect(body).toBe("Body\nA quieter second line");
+  });
+
+  test("leaves out the meta no field declared searchable", () => {
+    const body = entryDocumentBody(
+      { excerpt: null, content: null, meta: { internalRef: "PLX-42" } },
+      ROSTER,
+      [],
+    );
+
+    expect(body).toBe("");
   });
 });
 

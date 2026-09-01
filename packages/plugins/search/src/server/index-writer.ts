@@ -5,12 +5,15 @@ import { and, eq, inArray, ne, sql } from "plumix/db";
 import { entries, terms } from "plumix/schema";
 
 import type { NewSearchDocument, SearchSourceType } from "../db/schema.js";
+import type { SearchableMetaRoster } from "./meta-text.js";
 import { searchDocuments } from "../db/schema.js";
 import {
   entryDocumentBody,
   isSearchableEntryType,
   isSearchableTaxonomy,
+  searchableEntryTypes,
 } from "./document.js";
+import { metaTextVersion, searchableMetaRoster } from "./meta-text.js";
 
 // D1 caps bound parameters at 100 per statement, and libsql — every test here
 // — enforces no cap at all, so the ceiling is invisible until production. Kept
@@ -19,34 +22,67 @@ import {
 // (90). A sixth column or a second predicate then has room to be wrong.
 const IDS_PER_STATEMENT = 90;
 
-// A term has no blocks, so the block roster says nothing about how its text
-// was projected. Stamping the roster hash on it would mark every term stale
-// whenever any block changed a declaration a term cannot be affected by.
+// A term has no blocks and no searchable meta, so neither roster says anything
+// about how its text was projected. Stamping their hash on it would mark every
+// term stale whenever any block or field changed a declaration a term cannot
+// be affected by.
 const TERM_EXTRACTOR_VERSION = "term/1";
 const DOCUMENTS_PER_STATEMENT = 18;
 
-interface Extractor {
+interface BlockExtractor {
   readonly roster: BlockTextRoster;
+  readonly version: string;
+}
+
+interface Extractor {
+  readonly blocks: BlockTextRoster;
+  readonly meta: SearchableMetaRoster;
   readonly version: string;
 }
 
 // Merging the roster and hashing it walks every registered block, so it is
 // done once per registry rather than once per entry. Keyed on the registry,
 // which is built at boot and never mutated, and collected with the app.
-const extractors = new WeakMap<BlockRegistry, Extractor>();
+const blockExtractors = new WeakMap<BlockRegistry, BlockExtractor>();
 
-function extractorFor(blocks: BlockRegistry): Extractor {
-  const cached = extractors.get(blocks);
+function blockExtractorFor(blocks: BlockRegistry): BlockExtractor {
+  const cached = blockExtractors.get(blocks);
   if (cached !== undefined) return cached;
   const roster = blockTextRoster(blocks);
-  const extractor: Extractor = { roster, version: blockTextVersion(roster) };
-  extractors.set(blocks, extractor);
+  const extractor: BlockExtractor = {
+    roster,
+    version: blockTextVersion(roster),
+  };
+  blockExtractors.set(blocks, extractor);
   return extractor;
 }
 
-/** The tag the current block roster produces — what a stale document lacks. */
+/**
+ * Everything an entry's document is derived from, and one tag naming the pair.
+ *
+ * The meta half is read fresh rather than cached beside the block half: it
+ * walks the registered meta boxes, which is a much smaller thing than every
+ * block's slot tree, and a mutable registry — which is what a test has — would
+ * otherwise answer with a roster it no longer holds.
+ */
+function extractorFor(ctx: AppContext): Extractor {
+  const { roster, version } = blockExtractorFor(ctx.blocks);
+  const meta = searchableMetaRoster(
+    ctx.plugins,
+    searchableEntryTypes(ctx.plugins),
+  );
+  return {
+    blocks: roster,
+    meta,
+    // Composite, so either half moving marks the documents both produced
+    // stale. Legible on sight, which a combined hash would not be.
+    version: `${version}.${metaTextVersion(meta)}`,
+  };
+}
+
+/** The tag the current rosters produce — what a stale document lacks. */
 export function currentExtractorVersion(ctx: AppContext): string {
-  return extractorFor(ctx.blocks).version;
+  return extractorFor(ctx).version;
 }
 
 /**
@@ -65,7 +101,7 @@ export async function indexEntries(
   ctx: AppContext,
   entryIds: Iterable<number>,
 ): Promise<void> {
-  const extractor = extractorFor(ctx.blocks);
+  const extractor = extractorFor(ctx);
   await project(ctx, "entry", entryIds, async (chunk) => {
     const rows = await ctx.db
       .select({
@@ -74,6 +110,7 @@ export async function indexEntries(
         title: entries.title,
         excerpt: entries.excerpt,
         content: entries.content,
+        meta: entries.meta,
       })
       .from(entries)
       .where(inArray(entries.id, chunk));
@@ -83,7 +120,11 @@ export async function indexEntries(
         sourceType: "entry" as const,
         sourceId: row.id,
         title: row.title,
-        body: entryDocumentBody(row, extractor.roster),
+        body: entryDocumentBody(
+          row,
+          extractor.blocks,
+          extractor.meta.get(row.type) ?? [],
+        ),
         extractorVersion: extractor.version,
       }));
   });
@@ -156,7 +197,8 @@ async function project(
  * `DO UPDATE … WHERE` rather than an unconditional one: a save that left the
  * text where it was leaves the row untouched, no `AFTER UPDATE` fires, and
  * the document is not tokenized again. That is what keeps a bulk status
- * change, or a save that only moved metadata, off the index's write path.
+ * change, or a save that only moved meta nothing indexes, off the index's
+ * write path.
  *
  * `IS NOT` rather than `<>`, so clearing an excerpt — or writing one for the
  * first time — reads as the change it is instead of as SQL's null.

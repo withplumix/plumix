@@ -25,10 +25,11 @@ export type SearchSourceType = (typeof SEARCH_SOURCE_TYPES)[number];
  * self-contained index would mean re-running the extractor over every
  * stored block tree.
  *
- * `extractor_version` is the tag the block roster hashes to. It is stored
- * per row so a row extracted by an older roster is distinguishable from a
- * current one, and so a roster change is a real difference to the write
- * guard rather than a no-op.
+ * `extractor_version` is the tag the declarations an entry is extracted
+ * from hash to — the block roster and the searchable meta fields. It is
+ * stored per row so a row extracted by an older set is distinguishable from
+ * a current one, and so a declaration change is a real difference to the
+ * write guard rather than a no-op.
  *
  * Users and form submissions are deliberately absent. They are personal
  * data, and a predicate a public query forgets cannot leak what the table
