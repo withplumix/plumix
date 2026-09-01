@@ -199,10 +199,12 @@ An entry's own **Search title** outranks both. A pattern that resolves to nothin
 | `%%term%%`         | The term's name, on a term archive.                                                                |
 | `%%author%%`       | The author's display name (or slug), on an entry or an author archive.                             |
 | `%%date%%`         | An entry's publication date, or the period a date archive covers, at that archive's own precision. |
-| `%%searchphrase%%` | The query, on a search-results page.                                                               |
-| `%%count%%`        | How many entries the listing matched.                                                              |
+| `%%searchphrase%%` | The query, on a search-results page — core's own, or a plugin archive that states one.             |
+| `%%count%%`        | How many entries the listing matched, on an archive core paginates.                                |
 
 A variable the page has nothing for resolves to the empty string, and a separator left holding nothing together is trimmed away — so `%%term%% %%sep%% %%sitename%%` ships as `Demo`, not `· Demo`, on a page with no term. A name that is not a variable is dropped rather than emitted: shipping `%%titel%%` into a search result is worse than shipping a shorter title.
+
+`%%count%%` is the one a plugin archive never fills. Core counts what it paginates, and a plugin archive's listing is its own: `@plumix/plugin-search` probes for a next page rather than totalling its matches, so it has no number to state and pays no query to find one.
 
 ```
 %%title%% %%sep%% %%sitename%%     → Kneading, explained · Demo

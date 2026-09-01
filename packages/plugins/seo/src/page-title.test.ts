@@ -163,11 +163,22 @@ describe("titleVariables", () => {
         entries: [],
         pagination: pagination(12),
       },
-      {},
+      { query: "dough" },
     );
 
     expect(vars.searchphrase).toBe("dough");
     expect(vars.count).toBe("12");
+  });
+
+  test("a plugin archive answering a query carries the phrase too", () => {
+    // The search page a site gets from `@plumix/plugin-search` renders as a
+    // plugin archive, so the variable reads the fact rather than the payload.
+    const vars = read(
+      { kind: "custom", name: "search" },
+      { query: "hydroponics" },
+    );
+
+    expect(vars.searchphrase).toBe("hydroponics");
   });
 
   test("a page that lists nothing has no count", () => {

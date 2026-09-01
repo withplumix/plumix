@@ -93,7 +93,7 @@ export function titleVariables(input: TitleVariableInput): TitleVariables {
       facts.published === null
         ? periodOf(data, localeCode)
         : formatUtc(facts.published, localeCode, { dateStyle: "long" }),
-    searchphrase: data.kind === "search" ? data.query : "",
+    searchphrase: facts.query ?? "",
     count: resultCount(data),
   };
 }
