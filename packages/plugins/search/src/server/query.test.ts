@@ -173,6 +173,22 @@ describe("runSearch", () => {
     expect(results.every((result) => result.score !== null)).toBe(true);
   });
 
+  test("an entry of an excluded type is clamped out at read time", async () => {
+    await publish({ title: "Hydroponics ledger", slug: "ledger" });
+
+    plugins.entryTypes.set("post", {
+      name: "post",
+      registeredBy: "test",
+      label: "Posts",
+      excludeFromSearch: true,
+    });
+
+    // Still in the projection — an editor searches it in the admin palette —
+    // and the exclusion is what a visitor gets. This clamp is the only thing
+    // standing between the two.
+    expect((await search("hydroponics")).results).toEqual([]);
+  });
+
   test("a term of an excluded taxonomy is clamped out at read time", async () => {
     const term = await factoriesFor(db).term.create({
       taxonomy: "category",

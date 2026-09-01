@@ -188,6 +188,23 @@ export {
   buildTermArchiveUrl,
   termTaxonomyBaseSlug,
 } from "./route/permalink.js";
+// What it takes to replace an admin command palette domain: which groups a
+// caller may be shown, the clause bounding which rows of them they may see,
+// and the bucketing that turns matched rows into those groups. A plugin
+// ranking entries registers its `admin:search:results` handler ahead of
+// core's and supplies a query and nothing else, so "who may see which draft"
+// and "what a group is called" each have one definition.
+export { adminEntryScope, entryGroups } from "./search/admin-entry-scope.js";
+export type {
+  AdminEntryGroup,
+  AdminEntryScope,
+  MatchedEntry,
+} from "./search/admin-entry-scope.js";
+export type {
+  AdminSearchInput,
+  SearchGroup,
+  SearchResultItem,
+} from "./search/admin-search.js";
 // The caller's pending autosave for an entry. A surface that renders what an
 // author is editing has to overlay it the way `entry.get`'s preview mode does;
 // reading the live row alone shows a published entry's pre-edit state.

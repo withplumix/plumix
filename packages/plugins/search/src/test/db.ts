@@ -1,4 +1,8 @@
-import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
+import type {
+  AppContext,
+  MutablePluginRegistry,
+  SearchGroup,
+} from "plumix/plugin";
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
 import { coreBlocks, createBlockRegistry } from "plumix/blocks";
@@ -165,8 +169,16 @@ export interface SearchHarness {
   readonly rpc: (
     procedure: string,
     input: Record<string, unknown>,
-  ) => Promise<void>;
+  ) => Promise<unknown>;
+  /** What the admin command palette shows `as` — the admin by default. */
+  readonly palette: (
+    query: string,
+    as?: User,
+  ) => Promise<readonly PaletteGroup[]>;
 }
+
+/** A palette group over the wire, narrowed to what a suite asserts on. */
+export type PaletteGroup = Pick<SearchGroup, "key" | "items">;
 
 /** A dispatcher harness with the plugin's schema and index already applied. */
 export async function createSearchHarness(
@@ -175,17 +187,27 @@ export async function createSearchHarness(
   const h = await createDispatcherHarness(options);
   await applySearchSchema(h.db);
   const admin = await h.seedUser("admin");
+  const call = async <T>(
+    procedure: string,
+    input: Record<string, unknown>,
+    as: User,
+  ): Promise<T> => {
+    const response = await h.fetch(`/_plumix/rpc/${procedure}`, {
+      method: "POST",
+      json: { json: input },
+      as,
+    });
+    response.assertStatus(200);
+    // oRPC answers in its own envelope; every caller here wants the payload.
+    const body = await response.json<{ json: T }>();
+    return body.json;
+  };
   return {
     h,
     admin,
-    rpc: async (procedure, input) => {
-      const response = await h.fetch(`/_plumix/rpc/${procedure}`, {
-        method: "POST",
-        json: { json: input },
-        as: admin,
-      });
-      response.assertStatus(200);
-    },
+    rpc: (procedure, input) => call(procedure, input, admin),
+    palette: (query, as = admin) =>
+      call<readonly PaletteGroup[]>("search/query", { query }, as),
     runSchedule: () =>
       runScheduledTasks(
         h.app,

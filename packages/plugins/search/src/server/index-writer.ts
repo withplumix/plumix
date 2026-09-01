@@ -9,9 +9,9 @@ import type { SearchableMetaRoster } from "./meta-text.js";
 import { searchDocuments } from "../db/schema.js";
 import {
   entryDocumentBody,
-  isSearchableEntryType,
+  indexableEntryTypes,
+  isIndexableEntryType,
   isSearchableTaxonomy,
-  searchableEntryTypes,
 } from "./document.js";
 import { metaTextVersion, searchableMetaRoster } from "./meta-text.js";
 
@@ -69,7 +69,7 @@ function extractorFor(ctx: AppContext): Extractor {
   const { roster, version } = blockExtractorFor(ctx.blocks);
   const meta = searchableMetaRoster(
     ctx.plugins,
-    searchableEntryTypes(ctx.plugins),
+    indexableEntryTypes(ctx.plugins),
   );
   return {
     blocks: roster,
@@ -93,9 +93,9 @@ export function currentExtractorVersion(ctx: AppContext): string {
  * that call this need not agree on anything but a list of ids: a lifecycle
  * action knows an entry changed, a drained feed row knows only its id, and
  * a tombstone's entry is already gone. An id whose row has vanished, and an
- * id whose type is not searchable, are the same instruction — drop whatever
- * the projection holds for it — which is what makes excluding an entry type
- * take effect on the next write rather than needing a sweep of its own.
+ * id whose type is no longer indexable, are the same instruction — drop
+ * whatever the projection holds for it — which is what makes gating an entry
+ * type take effect on the next write rather than needing a sweep of its own.
  */
 export async function indexEntries(
   ctx: AppContext,
@@ -115,7 +115,7 @@ export async function indexEntries(
       .from(entries)
       .where(inArray(entries.id, chunk));
     return rows
-      .filter((row) => isSearchableEntryType(ctx.plugins, row.type))
+      .filter((row) => isIndexableEntryType(ctx.plugins, row.type))
       .map((row) => ({
         sourceType: "entry" as const,
         sourceId: row.id,
@@ -167,10 +167,10 @@ export async function indexTerms(
  *
  * The reconciliation is the load-bearing half, and it is shared rather than
  * written per kind so the two cannot drift: an id the read did not return —
- * because the row is gone, or because its type or taxonomy is no longer
- * searchable — is the same instruction either way, drop what the projection
- * holds for it. That is what makes an exclusion take effect on the next write
- * rather than needing a sweep of its own.
+ * because the row is gone, or because its type or taxonomy no longer belongs
+ * in the projection — is the same instruction either way, drop what the
+ * projection holds for it. That is what makes gating a type take effect on
+ * the next write rather than needing a sweep of its own.
  */
 async function project(
   ctx: AppContext,

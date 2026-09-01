@@ -109,6 +109,23 @@ describe("the search page", () => {
     expect(body).not.toContain("<script>alert(1)</script>");
   });
 
+  test("an entry type hidden from search never reaches the page", async () => {
+    // Its document is in the index — the admin palette ranks out of the same
+    // one — so the read clamp is the only thing keeping it off this page.
+    await publish({
+      type: "ledger",
+      title: "Ledger",
+      slug: "ledger",
+      content: defineEntryContent([paragraph("<p>hydroponics</p>")]),
+    });
+    await index();
+
+    const body = await (await h.fetch("/search/hydroponics")).text();
+
+    expect(body).toContain('data-testid="count">0<');
+    expect(body).not.toContain("Ledger");
+  });
+
   test("a plain form's `?q=` lands on the canonical path", async () => {
     // Core keeps the bare `/search`, so the no-JavaScript form still redirects
     // to the URL this archive owns.

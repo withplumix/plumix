@@ -7,6 +7,7 @@ import { REINDEX_CAPABILITY, REINDEX_ROUTE_PATH } from "./contract.js";
 import { SEARCH_INDEX_DDL, SEARCH_INDEX_TRIGGER_RESET_DDL } from "./db/ddl.js";
 import * as schema from "./db/schema.js";
 import { runSearchMaintenance } from "./server/drain.js";
+import { registerAdminSearch } from "./server/palette.js";
 import { registerIndexInvalidator } from "./server/queue.js";
 import {
   handleReindexStart,
@@ -87,6 +88,7 @@ export function search(options: SearchConfig = {}): PluginDescriptor {
         handler: (_request, appCtx) => handleReindexStatus(appCtx),
       });
       registerSearchArchive(ctx, options);
+      registerAdminSearch(ctx, options);
       // No `cron`: a task that declares one runs only on an invocation whose
       // schedule matches it byte for byte, and how often a site's worker
       // wakes is the site's decision. Draining costs nothing when the feed is

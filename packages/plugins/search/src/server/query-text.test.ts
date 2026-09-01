@@ -32,9 +32,31 @@ describe("toMatchExpression", () => {
     for (const operator of ["AND", "OR", "NOT", "NEAR"]) {
       expect(toMatchExpression(operator), operator).toBe(`"${operator}"`);
     }
-    expect(toMatchExpression("cats * dogs ^ -x")).toBe(
-      '"cats" "*" "dogs" "^" "-x"',
+    expect(toMatchExpression("cats * dogs ^")).toBe('"cats" "*" "dogs" "^"');
+  });
+
+  test("a leading hyphen excludes the word", () => {
+    // Quoting it would leave the hyphen inside the phrase, where FTS5's
+    // tokenizer drops it — asking for the very word the reader ruled out.
+    expect(toMatchExpression("hydroponics -lettuce")).toBe(
+      '"hydroponics" NOT ("lettuce")',
     );
+  });
+
+  test("excludes every ruled-out word at once", () => {
+    expect(toMatchExpression("hydroponics -lettuce -basil")).toBe(
+      '"hydroponics" NOT ("lettuce" OR "basil")',
+    );
+  });
+
+  test("a hyphen inside a quoted phrase is part of the phrase", () => {
+    expect(toMatchExpression('"cold-frame"')).toBe('"cold-frame"');
+  });
+
+  test("has nothing to search for in a query of only exclusions", () => {
+    // FTS5 cannot spell "every document except these", and answering with the
+    // whole corpus is not what anyone typing this meant.
+    expect(toMatchExpression("-lettuce")).toBeNull();
   });
 
   test("escapes a quote inside a word by doubling it", () => {
