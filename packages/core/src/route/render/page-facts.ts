@@ -17,14 +17,7 @@ import type {
  */
 export interface PageFacts {
   readonly kind: TemplateData["kind"];
-  /**
-   * 1-based pagination index; 1 on a page that does not paginate.
-   *
-   * A plugin archive (`CustomArchiveData`) always reports 1, even when it
-   * paginates: core does not define that payload's shape, and reading a `page`
-   * field off it would be the field-presence guess this record exists to
-   * avoid. A plugin that owns such an archive knows its own pagination.
-   */
+  /** 1-based pagination index; 1 on a page that does not paginate. */
   readonly page: number;
   /** Null on an entry that has never been published, and on every non-entry. */
   readonly published: Date | null;
@@ -40,6 +33,13 @@ export interface PageFacts {
    * is its own, so neither names one.
    */
   readonly contentType: string | null;
+  /**
+   * What the visitor typed, on a page that answers a query they supplied —
+   * core's search page, and a plugin archive that states one. Null on a page
+   * that answers none, which is not the same as the empty string a search
+   * submitted with nothing in the box carries.
+   */
+  readonly query: string | null;
 }
 
 const NO_SUBJECT = {
@@ -49,6 +49,7 @@ const NO_SUBJECT = {
   term: null,
   entry: null,
   contentType: null,
+  query: null,
 } as const;
 
 /**
@@ -56,7 +57,8 @@ const NO_SUBJECT = {
  *
  * Discriminates on `kind` rather than field presence: a plugin archive's
  * payload is arbitrary, so an `"entry" in data` check would read one plugin's
- * field as core's subject.
+ * field as core's subject. The two fields it does read off such a payload are
+ * core's own — `CustomArchiveData` declares them for an archive to state.
  */
 export function pageFacts(data: TemplateData): PageFacts {
   switch (data.kind) {
@@ -93,9 +95,21 @@ export function pageFacts(data: TemplateData): PageFacts {
       };
     case "date":
     case "frontPage":
-    case "search":
       return { ...NO_SUBJECT, kind: data.kind, page: data.pagination.page };
+    case "search":
+      return {
+        ...NO_SUBJECT,
+        kind: data.kind,
+        page: data.pagination.page,
+        query: data.query,
+      };
     case "custom":
+      return {
+        ...NO_SUBJECT,
+        kind: data.kind,
+        page: data.page ?? 1,
+        query: data.query ?? null,
+      };
     case "error":
       return { ...NO_SUBJECT, kind: data.kind, page: 1 };
   }

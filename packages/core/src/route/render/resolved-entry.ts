@@ -128,6 +128,18 @@ export interface CustomArchiveData {
   readonly kind: "custom";
   /** The registered archive-type name (`registerArchiveType(name, …)`). */
   readonly name: string;
+  /**
+   * The two facts core cannot derive from the rest of the payload, which an
+   * archive that has them states here: the 1-based pagination index, and the
+   * query a visitor typed for an archive that answers one, the way core's own
+   * `/search` page does. `PageFacts` reports both, so a consumer classifies
+   * this archive by the same record it classifies every other page by.
+   *
+   * Facts, not directives — what follows from either is the consumer's to
+   * decide.
+   */
+  readonly page?: number;
+  readonly query?: string;
 }
 
 /**

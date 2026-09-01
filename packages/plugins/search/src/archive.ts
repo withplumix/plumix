@@ -19,7 +19,13 @@ const SHADOW_PRIORITY = 1;
 export interface SearchArchiveData extends CustomArchiveData {
   readonly kind: "custom";
   readonly name: "search";
-  /** What the visitor typed, decoded — for the heading and the input. */
+  /**
+   * Core's two archive facts, required here where the base leaves them
+   * optional so a theme reading either never handles `undefined`: which page
+   * of results this is, and what the visitor typed — decoded, for the heading
+   * and the input.
+   */
+  readonly page: number;
   readonly query: string;
   readonly results: readonly SearchResult[];
   /**
@@ -95,6 +101,7 @@ export function registerSearchArchive(
         data: {
           kind: "custom",
           name: SEARCH_ARCHIVE_NAME,
+          page,
           query,
           results,
           nextUrl: hasMore ? pageUrl(appCtx, query, page + 1) : null,

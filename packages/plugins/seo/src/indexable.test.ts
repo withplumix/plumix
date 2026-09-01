@@ -20,6 +20,7 @@ const facts = (overrides: Partial<PageFacts> = {}): PageFacts => ({
   term: null,
   entry: entryOf("post"),
   contentType: null,
+  query: null,
   ...overrides,
 });
 
@@ -96,7 +97,7 @@ describe("the assertion chain, arm by arm", () => {
   });
 
   test("search_results — thin by default, indexable on request", () => {
-    const search = facts({ kind: "search", entry: null });
+    const search = facts({ kind: "search", entry: null, query: "hello" });
     expect(indexable(search, settings())).toEqual({
       indexable: false,
       reason: "search_results",
@@ -104,6 +105,23 @@ describe("the assertion chain, arm by arm", () => {
     expect(indexable(search, settings({ indexSearch: true })).reason).toBe(
       "default",
     );
+  });
+
+  test("search_results — a plugin archive answering a query is one too", () => {
+    const archive = facts({ kind: "custom", entry: null, query: "hello" });
+    expect(indexable(archive, settings())).toEqual({
+      indexable: false,
+      reason: "search_results",
+    });
+    expect(indexable(archive, settings({ indexSearch: true })).reason).toBe(
+      "default",
+    );
+  });
+
+  test("search_results — a plugin archive that answers none is untouched", () => {
+    expect(
+      indexable(facts({ kind: "custom", entry: null }), settings()).reason,
+    ).toBe("default");
   });
 
   test("paginated — page two and beyond, by default", () => {
@@ -149,6 +167,7 @@ describe("the chain short-circuits in its documented order", () => {
   });
   const loaded = facts({
     kind: "search",
+    query: "hello",
     page: 3,
     entry: entryOf("post", { [SEO_META_KEYS.noindex]: true }),
     term: termOf("category"),
@@ -203,6 +222,7 @@ describe("the chain short-circuits in its documented order", () => {
         {
           ...loaded,
           kind: "error",
+          query: null,
           entry: null,
           term: null,
           contentType: null,

@@ -11,6 +11,7 @@ import type {
   ResolvedAuthor,
   ResolvedEntry,
   ResolvedTerm,
+  SearchData,
   TaxonomyData,
 } from "./resolved-entry.js";
 import { pageFacts } from "./page-facts.js";
@@ -72,6 +73,7 @@ describe("pageFacts", () => {
       term: null,
       entry,
       contentType: null,
+      query: null,
     });
   });
 
@@ -144,17 +146,19 @@ describe("pageFacts", () => {
       term: null,
       entry: null,
       contentType: null,
+      query: null,
     });
   });
 
   test("a custom archive's arbitrary payload is never read as another kind", () => {
+    // `pagination` among them: the page an archive is on is the `page` fact it
+    // states, never a listing object core would have to know the shape of.
     const data = {
       kind: "custom",
       name: "shop",
       entry,
       term,
       author,
-      query: "hello",
       pagination: pagination(5),
     } as unknown as CustomArchiveData;
     expect(pageFacts(data)).toEqual({
@@ -166,6 +170,30 @@ describe("pageFacts", () => {
       term: null,
       entry: null,
       contentType: null,
+      query: null,
     });
+  });
+
+  test("a plugin archive states the page it is on and the query it answers", () => {
+    const data: CustomArchiveData = {
+      kind: "custom",
+      name: "search",
+      page: 4,
+      query: "hello",
+    };
+    const facts = pageFacts(data);
+    expect(facts.page).toBe(4);
+    expect(facts.query).toBe("hello");
+  });
+
+  test("core's search page carries its query, empty search included", () => {
+    const searched = (query: string): SearchData => ({
+      kind: "search",
+      query,
+      entries: [],
+      pagination: pagination(1),
+    });
+    expect(pageFacts(searched("hello")).query).toBe("hello");
+    expect(pageFacts(searched("")).query).toBe("");
   });
 });

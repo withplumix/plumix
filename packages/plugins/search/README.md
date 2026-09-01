@@ -54,6 +54,8 @@ A result carries `kind`, `id` (unique only within that kind — an entry and a t
 
 Only published entries appear. Drafts, scheduled and trashed entries are in the index so an author can find their own work in the admin, and the page's query clamps them out.
 
+The payload states two facts core surfaces on `PageFacts` beside the results themselves: `page`, which page of them this is, and `query`, what the visitor typed. `@plumix/plugin-seo` reads both, so a site running it keeps search results out of the index exactly as it did with the built-in page.
+
 **An entry type under an access policy is never indexed at all.** A snippet is body text around a word the visitor chose, so indexing a members-only type would hand an anonymous reader its prose a query at a time. Keeping it out of the projection is what makes that impossible rather than dependent on a predicate; the cost is that a gated type is ranked nowhere, and in the admin palette falls back to core's title-and-excerpt match.
 
 The search page is not edge-cached, for the reason core gives for leaving its own out: the query space is unbounded, so every distinct string a crawler tried would mint a cache entry.

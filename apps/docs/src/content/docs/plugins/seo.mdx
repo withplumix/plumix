@@ -168,7 +168,7 @@ The order is the design. A site held out of the index cannot be put back in by o
 
 The directive it produces pairs that answer with the follow one: `index,follow,max-image-preview:large` when the page is offered, `noindex,follow` when it is not, and `nofollow` in place of `follow` when the site is private or the editor asked for it.
 
-A plugin archive registered with `registerArchiveType` always reports page 1 — core does not define that payload's pagination — so the `paginated` arm never fires on one. A plugin that paginates its own archive and wants page 2 held out can say so through `render:document`.
+A plugin archive registered with `registerArchiveType` states the facts these arms read. Core cannot derive them from a payload it does not define, so the archive puts them on it: `page` is the 1-based index the `paginated` arm asks for, and `query` is what the visitor typed, which is what puts the archive under `search_results` beside core's own `/search`. `@plumix/plugin-search` states both, so replacing the built-in search page does not change what the site offers a crawler. An archive that states neither is an ordinary page, and nothing here fires on it.
 
 The robots directive and sitemap membership both read that one answer, so a page cannot claim `noindex` in its head while still appearing in the sitemap. The reason travels with the decision rather than being thrown away, which is what lets an editor be told _why_ a page is excluded instead of being shown a bare toggle.
 
@@ -247,7 +247,7 @@ Three filters, from the coarsest to the finest. Each is a place a plugin can des
 
 ```ts no-typecheck
 ctx.addFilter("seo:schema:needs", (needed, piece, facts) =>
-  piece === "breadcrumb" && facts.kind === "search" ? false : needed,
+  piece === "breadcrumb" && facts.query !== null ? false : needed,
 );
 ```
 
