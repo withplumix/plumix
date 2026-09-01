@@ -101,9 +101,9 @@ export async function backfillTerms(ctx: AppContext): Promise<number> {
  * many. Bounded, and self-draining: a document this rewrites carries the
  * current version afterwards, so it is not a candidate again.
  *
- * Only entries. The extractor version is a hash of the block roster, and a
- * term has no blocks — its documents carry a version of their own that the
- * roster cannot move.
+ * Only entries. The extractor version hashes the block roster and the
+ * searchable meta fields, and a term has neither — its documents carry a
+ * version of their own that those rosters cannot move.
  */
 export async function repairStaleEntries(
   ctx: AppContext,
@@ -155,7 +155,7 @@ export async function runSearchMaintenance(ctx: AppContext): Promise<void> {
   if (repaired > 0) {
     say(
       ctx,
-      `re-extracted ${count(repaired, "document")} an older block roster had produced`,
+      `re-extracted ${count(repaired, "document")} an older declaration had produced`,
     );
   }
 

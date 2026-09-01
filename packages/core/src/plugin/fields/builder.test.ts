@@ -46,6 +46,7 @@ describe("string field builder chassis", () => {
       .span(6)
       .capability("seo:manage")
       .showInApi()
+      .searchable()
       .maxLength(120)
       .sanitize(sanitize)
       .validate(validate)
@@ -65,6 +66,7 @@ describe("string field builder chassis", () => {
       span: 6,
       capability: "seo:manage",
       showInApi: true,
+      searchable: true,
       maxLength: 120,
     });
     expect(field.sanitize).toBe(sanitize);

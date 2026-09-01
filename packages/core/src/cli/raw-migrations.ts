@@ -33,6 +33,14 @@ const CORE_SQL_MIGRATIONS: readonly PluginRawSqlMigration[] = [
     name: "entry_change_feed_guards",
     statements: ENTRY_CHANGE_FEED_RESET_DDL,
   },
+  // `meta` joined the watched columns once a field could declare itself
+  // searchable. The same reset statements under a new name — an install that
+  // already ran the two above needs the update trigger redefined.
+  {
+    pluginId: "core",
+    name: "entry_change_feed_meta",
+    statements: ENTRY_CHANGE_FEED_RESET_DDL,
+  },
 ];
 
 function rawSqlMigrationIdentity(migration: PluginRawSqlMigration): string {

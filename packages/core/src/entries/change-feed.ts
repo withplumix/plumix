@@ -9,8 +9,14 @@ import { RESERVED_TYPES } from "../revisions/slug-codec.js";
 // `parent_id` between them decide the permalink, the template, and whether
 // search indexes it at all.
 //
+// `meta` is here because a field can declare itself searchable, so the bag is
+// projected text like any other. It is watched whether or not a site has such
+// a field: the trigger is one definition on core's table and cannot ask what
+// some plugin's roster says today, and a consumer reading a bag it projects
+// nothing from writes nothing.
+//
 // Not `updated_at`: drizzle bumps it on every save, so watching it would put
-// every metadata-only write on the feed.
+// every write on the feed, metadata-only ones included.
 const WATCHED_COLUMNS = [
   "title",
   "content",
@@ -19,6 +25,7 @@ const WATCHED_COLUMNS = [
   "type",
   "slug",
   "parent_id",
+  "meta",
 ] as const;
 
 const CHANGED = WATCHED_COLUMNS.map(
@@ -76,10 +83,12 @@ export const ENTRY_CHANGE_FEED_DDL: readonly string[] = [
 ];
 
 /**
- * Replaces triggers an install already has. The first migration shipped
- * without the reserved-type guard, and a migration in the journal is never
- * re-emitted, so correcting it takes a second one — an install generating
- * both for the first time converges on the same triggers.
+ * Replaces triggers an install already has, and is emitted again under a new
+ * name whenever their definition moves. A migration already in the journal is
+ * never re-emitted, so a correction — the reserved-type guard, then `meta`
+ * joining the watched columns — takes another entry in
+ * `cli/raw-migrations.ts`. An install generating them all for the first time
+ * converges on the same three triggers.
  */
 export const ENTRY_CHANGE_FEED_RESET_DDL: readonly string[] = [
   "DROP TRIGGER IF EXISTS entries_change_feed_insert",
