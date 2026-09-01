@@ -1,0 +1,325 @@
+---
+title: Search
+description: The search plugin keeps a full-text index of everything a site publishes, replaces the built-in search page with ranked results and highlighted snippets, and ranks the admin command palette out of the same index.
+tier: P1
+sidebar:
+  order: 100
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+`@plumix/plugin-search` finds a word from the middle of an article. Core's own search page matches a title and an excerpt, which is enough to find something a visitor can already half-name and no help at all to one searching for a phrase in the body. Installing this plugin builds a plain-text projection of everything the site publishes and an SQLite FTS5 index over it, then replaces that page with one that reads it.
+
+## Overview
+
+The plugin exports a factory named `search`. It owns one database table, so installing it needs a migration, and it takes two options — `ranking` and `commonTermThreshold` — each with a default most sites never change.
+
+Three surfaces read the one index. The **search page** at `/search/<query>` replaces core's, claiming the same routes at a priority ahead of them. The **admin command palette** ranks its Content results out of the index rather than by recency. A **reindex route** at `/_plumix/search/reindex` rebuilds the corpus as a resumable job.
+
+Keeping the index current takes no configuration — [How it stays current](#how-it-stays-current) is the mechanism, and there is no switch on any of it.
+
+## Quickstart
+
+Install the package with whichever package manager the project uses:
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/plugin-search
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/plugin-search
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/plugin-search
+```
+
+  </TabItem>
+  <TabItem label="bun">
+
+```sh
+bun add @plumix/plugin-search
+```
+
+  </TabItem>
+</Tabs>
+
+Then:
+
+<Steps>
+
+1. **Add the descriptor to the `plugins` array** in `plumix.config.ts`.
+
+   ```ts no-typecheck
+   import { plumix } from "plumix";
+
+   import { blog } from "@plumix/plugin-blog";
+   import { search } from "@plumix/plugin-search";
+
+   export default plumix({
+     // …your runtime, database and auth
+     plugins: [blog(), search()],
+   });
+   ```
+
+2. **Generate and apply the migration.** It creates the projection table, the FTS5 index and the triggers over both. The index and the triggers are DDL drizzle cannot express, so they ship as raw SQL rather than as a schema diff.
+
+   ```sh
+   pnpm plumix migrate generate
+   pnpm plumix migrate apply --local
+   ```
+
+3. **Render the results.** The plugin's page is a `registerArchiveType` archive, so a theme targets it by name rather than through the `search` tier.
+
+   ```tsx no-typecheck
+   forArchiveType("search").template(({ data }) => (
+     <ol>
+       {data.results.map((result) => (
+         // An entry and a term can share an id, so the kind is part of the key.
+         <li key={`${result.kind}:${result.id}`}>
+           <a href={result.url}>{result.title}</a>
+           <p dangerouslySetInnerHTML={{ __html: result.snippet }} />
+         </li>
+       ))}
+     </ol>
+   ));
+   ```
+
+4. **Rebuild once, if the site already had content.** Terms are backfilled by the scheduled run on their own, but entries are not: an entry reaches the index by being written, so everything published before the plugin was installed stays unfindable until a rebuild walks it.
+
+   ```sh
+   curl -X POST -H "X-Plumix-Request: 1" \
+     https://example.com/_plumix/search/reindex
+   ```
+
+   The route needs a signed-in session holding `search:reindex`, so send it the session cookie an admin holds. [Rebuilding the index](#rebuilding-the-index) covers what a run reports and why starting a second one is harmless.
+
+</Steps>
+
+## The search page
+
+The plugin claims `/search/<query>` and its paginated variant at a priority that sorts ahead of core's rules. Core's stay compiled behind them, so uninstalling the plugin restores the built-in page with nothing to undo.
+
+Bare `/search` stays core's, deliberately. A plain HTML form submits `GET /search?q=…` and core answers it with a redirect to the canonical `/search/<q>`, which lands back on the plugin's page — so search works with JavaScript switched off. The consequence for a theme is that rendering both the empty search page and the results page takes two templates: the `search` tier for core's, and `forArchiveType("search")` for this one.
+
+A result carries `kind`, `id`, `title`, `url`, `snippet` and `score`. The id is unique only within its kind, which is why the sample above keys on both. The payload carries `nextUrl` — where the next page of results lives, or `null` at the end — and it is opaque on purpose: a theme renders it and never builds it, so what paginating means can change without the payload changing shape. A page past the end is a 404, as it is on core's page.
+
+<Aside type="danger" title="The snippet is already escaped">
+  FTS5 splices its highlight markers into indexed content without escaping
+  anything around them, so a snippet arrives with everything but `<mark>` turned
+  into entities. That makes it safe as element content, which is where a snippet
+  goes. It is **not** safe in an attribute — quotes pass through.
+</Aside>
+
+The page states two facts about itself that core surfaces on `PageFacts`: `page`, which page of results this is, and `query`, what the visitor typed. That is how a consumer classifies it without knowing which plugin rendered it — [SEO](/plugins/seo/) reads both, so a site running it keeps search results out of the index exactly as it did with the built-in page.
+
+The page is not edge-cached, for the reason core leaves its own out: the query space is unbounded, so every distinct string a crawler tried would mint a cache entry.
+
+### What a query means
+
+A query is whatever a visitor typed, treated as words to look for. Adding a word narrows the results, a quoted phrase matches exactly, `-word` rules a word out, and FTS5's own operators are inert. Any string compiles to a valid search, so an unbalanced quote returns nothing rather than an error page.
+
+A query of nothing but exclusions returns nothing. FTS5 cannot spell "every document except these", and the whole corpus is not what someone typing `-draft` meant.
+
+### Topics are results too
+
+A visitor searching a topic's name reaches the topic, not only the articles about it. Terms are indexed beside entries in the same index and come back in one ranked list — not two queries merged, which would put bm25 scores side by side that were computed against different corpora.
+
+```tsx no-typecheck
+forArchiveType("search").template(({ data }) => (
+  <ol>
+    {data.results.map((result) => (
+      <li key={`${result.kind}:${result.id}`}>
+        {result.kind === "term" ? (
+          <Topic {...result} />
+        ) : (
+          <Article {...result} />
+        )}
+      </li>
+    ))}
+  </ol>
+));
+```
+
+A term contributes its name and the description its archive carries. A taxonomy opts out the way an entry type does, with one field:
+
+```ts no-typecheck
+ctx.registerTermTaxonomy("internal", {
+  label: "Internal",
+  excludeFromSearch: true,
+});
+```
+
+A taxonomy that is not public is excluded already, so a navigation-menu taxonomy stays out of results without a second declaration.
+
+A term is indexed when it is created, renamed or deleted through the application, and a term the projection has never held is picked up by the scheduled run — core's change feed records entries only, so that sweep is what reaches the categories a site already had. The recency plan below is entries-only, because a term has no publication date to order by, so a word common enough to reach that plan is answered with articles.
+
+## What is indexed
+
+Every entry of a type that is searchable, which is every public type with no extra declaration. A type opts out with one field:
+
+```ts no-typecheck
+ctx.registerEntryType("ledger", { label: "Ledger", excludeFromSearch: true });
+```
+
+A non-public type (`isPublic: false`) is excluded already, so internal types need no second switch. The exclusion bounds a visitor rather than an editor: an excluded type is still projected and still ranked in the palette, and the search page's own query is what keeps it out of a visitor's results. Status works the same way — drafts, scheduled and trashed entries are in the index so an author can find their own work in the admin, and the query clamps them out.
+
+Each entry contributes its title, its excerpt, the text its blocks declare — table cells, button labels, list items, image alt text and code listings among them — and whatever meta fields opted in below. A block says which of its inputs carry text, and a block that declares nothing contributes nothing. The declaration is data, so the **extractor version** — the stamp recording which declaration produced a document — is a hash of the roster.
+
+### Meta, when a field asks for it
+
+Structured data in an entry's meta bag is invisible to search until a field says otherwise:
+
+```ts no-typecheck
+ctx.registerEntryMetaBox("extras", {
+  label: "Extras",
+  entryTypes: ["post"],
+  fields: [
+    text("subtitle").searchable(),
+    text("internalRef"), // bookkeeping — stays out
+  ],
+});
+```
+
+Default-deny, the way [`.showInApi()`](/fields/builders/) is. Meta holds plugin bookkeeping and internal keys at least as often as it holds prose, and indexing all of it is the mistake ElasticPress spent a decade on before reversing it in 5.0 — the same failure this plugin already avoids for entry content.
+
+`.searchable()` is honored on the text-shaped inputs: `text`, `textarea`, `email` and `url`, plus `richtext`, whose stored document is flattened to its prose. The chain compiles on a `password` field and on a repeater row or group member and is ignored on all three — nothing else carries text a visitor would search for. A field's `.default()` is not indexed either, since the default is not in the bag and would put the same string in every document.
+
+Marking an existing field searchable needs nothing else. The extractor version hashes the field roster beside the block roster, so every affected document is stale from that moment and the scheduled run re-projects it — no version to bump and no entry to re-save.
+
+<Aside
+  type="caution"
+  title="Taking a field back out converges rather than taking effect"
+>
+  Un-marking a field, or putting a capability on it, is the same stale-document
+  sweep read backwards: the text is already in the index rows, and unlike an
+  entry type there is nothing a query-time clamp could filter on. A large corpus
+  takes many scheduled runs to finish retracting, and [starting a
+  rebuild](#rebuilding-the-index) roughly doubles the rate rather than forcing
+  it — both walks are bounded at 200 sources an invocation. That asymmetry is
+  worth knowing before the field being retracted is one that turned out to be
+  sensitive.
+</Aside>
+
+### What is never indexed
+
+Three exclusions are not settings, because a setting is something a site can get wrong.
+
+**An entry type under an access policy** is kept out of the projection entirely. A snippet is body text around a word the visitor chose, so indexing a members-only type would hand an anonymous reader its prose a query at a time. Keeping it out of the table is what makes that impossible rather than dependent on a predicate; the cost is that a gated type is ranked nowhere.
+
+**A capability-gated meta field**, whatever it declared, and a `password` field with it. A value only some editors may read cannot be in a document a visitor searches. Both are silent: the declaration is honored where it can be and dropped where honoring it would leak.
+
+**Users and form submissions**, which are personal data. A predicate a public query forgets cannot leak what the table never held.
+
+Term meta is not indexed either — a taxonomy has no such declaration.
+
+## The admin command palette
+
+The palette's Content results are ranked out of the same index, so the entry an editor wants is near the top rather than merely the one edited most recently, and a word from the middle of a body finds it.
+
+Nothing is configured. Core's handler stays registered underneath, and handlers sharing a group fill it between them: the ranked matches lead and core's title-and-excerpt matches fill whatever is left. That is the whole of the degrading story — no switch and no health check. Whatever the index cannot answer, core still does: a type under an access policy, an entry not yet projected, every type before the index exists, and a half-typed word, since the index matches whole terms and an editor mid-word has not typed one. The cost is that both queries run on every keystroke.
+
+Who may see what stays core's decision. Both handlers build on the same clause, so an author sees their own drafts and nobody else's, and a trashed entry appears in neither. The ranked half asks for one thing more — the caller must be able to **edit** the type, not merely read it. A ranked result is a body-text match, so answering one says a word appears somewhere inside an entry, and `entry:<type>:read` bottoms out at the subscriber tier: on a site with open signup, every reader holds it for every registered type.
+
+## Ranking
+
+```ts no-typecheck
+search({ ranking: "bm25-v1" }); // the default
+```
+
+Weighted bm25, with a title match counting for ten times a body match. The weights are hardcoded but the algorithm is **named**, so a site that has named the one it is on keeps its result order when a better algorithm ships. That is the whole reason the option exists; tuning weights without a real corpus is guesswork.
+
+### A very common word is answered by recency
+
+FTS5 scores every matching document before applying a limit, so a word in nearly every document costs time proportional to the corpus. It is also where bm25 has least to say: a word almost everything holds can hardly tell one document from another.
+
+So the plugin asks two questions before giving up relevance ordering, cheapest first. **Is ranking expensive?** It counts how much of the corpus the query matches, stopping as soon as the count passes the threshold. **Is recency actually cheap?** Nothing about the match set answers that — a word in a quarter of the corpus is common by any count, and if every one of those entries is old, ordering by date still steps over everything newer before it finds a page. So the walk is measured, capped at the newest few hundred entries: a full page found inside the cap is proof the reader will stop there too.
+
+Measured at 50 000 entries:
+
+|                       | word in every document | word in 1/50 | word only in the oldest quarter |
+| --------------------- | ---------------------- | ------------ | ------------------------------- |
+| ranked by relevance   | 32.6 ms                | 0.2 ms       | 7.6 ms                          |
+| ordered by recency    | 0.6 ms                 | —            | 761 ms                          |
+| what the plugin picks | recency                | ranked       | ranked                          |
+
+The last column is why the walk is measured rather than inferred. A result ordered by recency carries `score: null`, since there is no meaningful relevance number to report.
+
+```ts no-typecheck
+search({ commonTermThreshold: 12_000 }); // the default
+```
+
+Counting the match set rather than looking a word up in the index's vocabulary is deliberate. The vocabulary stores what the tokenizer produced — porter files "running" under "run" — and a word's term cannot be recovered from the word: "theory" is filed under "theori", so the nearest thing a prefix search finds is "the", whose frequency belongs to a different word entirely. A wrong number is worse than none.
+
+## How it stays current
+
+```
+entries ──[trigger: enqueue on a real change]──▶ entry change feed
+change feed ──[extract prose]──▶ search_documents
+search_documents ──[trigger]──▶ FTS5 index
+```
+
+Both boundaries where the index could drift from the content are closed in the database, so a seed, a migration, a bulk import or a direct write cannot leave a site searching stale text. Only the middle hop runs in JavaScript, because stripping HTML out of block content needs a language SQLite does not have.
+
+Saving an entry through the editor indexes it after the response is sent, so nobody waits for it. Anything that path misses — a row written straight to the database, an isolate that died mid-request — is caught the next time the feed is drained on the site's scheduled trigger. The drain is bounded per invocation, so a backlog spreads over several rather than running one past the platform's limits.
+
+A save that leaves the text where it was writes nothing: the change feed's guard ignores it, and the projection's upsert is a no-op when the extracted text has not moved. Bulk status changes stay cheap.
+
+### A missing index degrades the page rather than breaking it
+
+A migration that was never applied, a restored dump, an install before its first scheduled run: the index can genuinely be absent, and a visitor should not meet that as an error page. A search that finds no index answers from core's vocabulary instead — each word matched as a substring of an entry's title or excerpt — and creates the index behind the response, so the search after it is a real one.
+
+In the meantime: a word only the body holds is not found, no snippet is highlighted, results carry no score, and topics are missing entirely, since core's page has never returned them. Repairing is idempotent, so two requests arriving on the same missing index converge on one index rather than racing — D1 has no migration lock, and neither does this. They converge on the outcome, not on the work: each one rebuilds, so a burst of searches into a missing index is a burst of rebuilds.
+
+## Rebuilding the index
+
+Projection runs at roughly 1 300 sources a second, so a full rebuild of a large site is minutes of work and far too much for one invocation. A rebuild is therefore a **run**: a walk over every searchable entry and term, chunked across scheduled invocations, with its position stored as a row rather than held in memory. An isolate that dies mid-chunk loses the chunk, not the run.
+
+```sh
+# start, or report the one already going
+curl -X POST https://example.com/_plumix/search/reindex
+
+# how the last one went
+curl https://example.com/_plumix/search/reindex
+```
+
+Both need the `search:reindex` capability, registered at `admin`. Starting is idempotent: a second request while a rebuild is under way reports that one rather than beginning a rival walk. There is no cancel, because there is nothing to undo — each source is re-projected in place and the index is never emptied, so **search keeps answering throughout**, and a stopped run is indistinguishable from one that has not reached the rest of the corpus yet.
+
+A run reports `processed`, `failed` and a final status. `succeeded` and `completed_with_errors` are separate answers on purpose: the second walked the whole corpus and could not project some of it, which is a different thing to be told than that the rebuild stopped.
+
+A rebuild steps over any entry the change feed still owes. Those have been written since the walk started and the drain holds the fresher text, so letting the rebuild project them could put the older version back.
+
+One thing a rebuild does not do is remove a document whose source is gone or has stopped being searchable. Those are dropped when the source is next written, and the read path filters them out meanwhile, so they cost storage rather than correctness.
+
+### Declarations repair themselves
+
+The extractor version is a hash of every block's text declaration and every searchable meta field, so changing one makes every existing document stale. The scheduled run re-extracts them a bounded slice at a time, and the work is proportional to what actually changed rather than to the corpus: a document whose extracted text is identical is stamped with the new version and never reaches FTS5, because the index's update trigger is scoped to the two columns it shadows.
+
+That scoping arrives as a migration, and so does `meta` joining the change feed's watched columns — so run `plumix migrate generate` and apply it after upgrading. Until you do, a roster change re-tokenizes the whole corpus, which is correct and far more work than it needs to be.
+
+## Storage
+
+Search roughly doubles the size of the database. On Cloudflare D1, whose per-database limit is 10 GB, that puts the ceiling around 480 000 entries with search enabled and nothing else in the database. Beyond that is a second database, not a tuning problem.
+
+## Related
+
+[Overview](/plugins/overview/) covers installing a plugin and the version track this one is on, and [Deployment](/deployment/overview/) the `plumix migrate generate` step this plugin cannot skip.
+
+What gets indexed is decided where content is declared: [Entry Types](/content-modelling/entry-types/) carries `excludeFromSearch` and `isPublic`, [Taxonomies](/content-modelling/taxonomies/) the same two for terms, and [Meta Boxes](/fields/meta-boxes/) the fields `.searchable()` is chained onto. [Blocks](/blocks/overview/) covers the text declaration a block makes, and [Access & Identity](/access/overview/) the policy that keeps a gated type out of the projection altogether.
+
+The results page is a plugin archive: [Templates](/themes/templates/) covers `forArchiveType`, [Template Data](/themes/template-data/) the payload it receives, and [Routing](/routing/overview/) the priority that lets it claim a route core already had.
+
+## Next steps
+
+Read [Blog](/plugins/blog/) if the site has no entry type yet — an index of nothing is quick to build and quiet to search.
+
+[SEO](/plugins/seo/) is the plugin that decides what a search engine does with the results page, and it reads the two facts this one states about it.
