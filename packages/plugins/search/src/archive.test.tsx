@@ -1,5 +1,6 @@
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
+import { pageFacts } from "plumix";
 import { defineEntryContent } from "plumix/blocks";
 import { fallback, forArchiveType } from "plumix/plugin";
 import { defineTheme } from "plumix/theme";
@@ -18,6 +19,8 @@ const theme = defineTheme({
         <p data-testid="query">{data.query}</p>
         <p data-testid="count">{data.results.length}</p>
         <p data-testid="next">{data.nextUrl ?? "none"}</p>
+        <p data-testid="page">{pageFacts(data).page}</p>
+        <p data-testid="query-fact">{pageFacts(data).query ?? "none"}</p>
         <ol>
           {data.results.map((result) => (
             <li
@@ -162,6 +165,27 @@ describe("the search page", () => {
 
     // Past the end of the results, the same 404 core's own search page gives.
     (await h.fetch("/search/hydroponics/page/2")).assertStatus(404);
+  });
+
+  test("the page states the query it answers and which page of it this is", async () => {
+    // What a consumer classifies the page by: `@plumix/plugin-seo` reads these
+    // facts to hold search results out of the index the way it holds core's.
+    // Both pages are asserted — each is a URL the built-in page held out.
+    for (let i = 0; i < 21; i += 1) {
+      await publish({
+        title: `Hydroponics ${String(i)}`,
+        slug: `a${String(i)}`,
+      });
+    }
+    await index();
+
+    const first = await (await h.fetch("/search/hydroponics")).text();
+    expect(first).toContain('data-testid="page">1<');
+    expect(first).toContain('data-testid="query-fact">hydroponics<');
+
+    const second = await (await h.fetch("/search/hydroponics/page/2")).text();
+    expect(second).toContain('data-testid="page">2<');
+    expect(second).toContain('data-testid="query-fact">hydroponics<');
   });
 
   test("a topic's own page is a result, beside the articles about it", async () => {

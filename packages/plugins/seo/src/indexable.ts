@@ -59,12 +59,13 @@ export function indexable(
   if (taxonomy !== undefined && settings.noindexTaxonomies.has(taxonomy)) {
     return out("taxonomy_default");
   }
-  if (facts.kind === "search" && !settings.indexSearch) {
+  // A page that answers a visitor's query, whichever payload rendered it: core's
+  // search page states the query, and so does a plugin archive that replaces it.
+  if (facts.query !== null && !settings.indexSearch) {
     return out("search_results");
   }
   // Page two of an archive duplicates its first page's purpose without adding
-  // a subject of its own. A plugin archive always reports page 1, since core
-  // does not define that payload's pagination.
+  // a subject of its own.
   if (facts.page > 1 && !settings.indexPaginated) return out("paginated");
   if (facts.kind === "error" && !settings.indexNotFound) {
     return out("not_found");

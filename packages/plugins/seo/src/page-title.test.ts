@@ -44,6 +44,7 @@ const facts = (overrides: Partial<PageFacts>): PageFacts => ({
   term: null,
   entry: null,
   contentType: null,
+  query: null,
   ...overrides,
 });
 

@@ -186,7 +186,7 @@ export const pluginArchive = defineTemplate({
 });
 ```
 
-Core only ever sees the base shape, which is `kind` and `name`. The [plugin](/plugins/overview/) that called `registerArchiveType` extends it with whatever its archive lists and declares the extended type in `ArchiveTypeRegistry`, so `forArchiveType("seasonal")` types `data` as the plugin's shape rather than this one. Reached through `fallback` instead, it stays the base, and the guard is how you find out which archive you are on.
+Core only ever sees the base shape: `kind`, `name`, and two optional facts an archive states about itself — `page`, the 1-based pagination index, and `query`, what the visitor typed on an archive that answers a search. Both are what a consumer such as `@plumix/plugin-seo` classifies the page by; core cannot derive either from the rest of the payload. The [plugin](/plugins/overview/) that called `registerArchiveType` extends it with whatever its archive lists and declares the extended type in `ArchiveTypeRegistry`, so `forArchiveType("seasonal")` types `data` as the plugin's shape rather than this one. Reached through `fallback` instead, it stays the base, and the guard is how you find out which archive you are on.
 
 ### `FrontPageData`
 

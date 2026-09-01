@@ -75,9 +75,9 @@ function archiveStep(ctx: AppContext, type: string): BreadcrumbItem | null {
  * Everything below Home, or null on a page that has no trail worth drawing:
  * the front page (Home is already where you are) and an error page.
  *
- * A plugin archive is null for the reason `pageFacts` reports its pagination
- * as 1 — core does not define that payload, so its hierarchy is the owning
- * plugin's to describe through `seo:schema:piece`.
+ * A plugin archive is null: core does not define that payload past the facts
+ * it declares, so the archive's hierarchy is the owning plugin's to describe
+ * through `seo:schema:piece`.
  *
  * Ancestors of a hierarchical entry or a nested term are not walked: both
  * would be a per-render DB round-trip, and both types already carry their own
