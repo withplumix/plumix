@@ -6,17 +6,17 @@ import { listEntryMetaFields } from "plumix/plugin";
 // nothing else would tell text derived by an older extractor from current.
 const META_EXTRACTOR_ALGORITHM = "1";
 
-/**
- * How a searchable field's stored value has to be read to get text out of it.
- * `string` is the value itself; `richtext` is the nested document the field
- * stores, which carries its prose in leaves rather than in one string.
- */
-export type SearchableMetaKind = "string" | "richtext";
-
 export interface SearchableMetaField {
   readonly key: string;
-  readonly kind: SearchableMetaKind;
+  /**
+   * How the stored value has to be read to get text out of it. `string` is
+   * the value itself; `richtext` is the nested document the field stores,
+   * which carries its prose in leaves rather than in one string.
+   */
+  readonly kind: "string" | "richtext";
 }
+
+type SearchableMetaKind = SearchableMetaField["kind"];
 
 /** `entry type → the meta fields its documents are built from`. */
 export type SearchableMetaRoster = ReadonlyMap<
