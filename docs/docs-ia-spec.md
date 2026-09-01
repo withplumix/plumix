@@ -25,7 +25,7 @@ the tier came up. What stays absent is what is unwritten.
 
 Flatness is not an independent rule — it falls out of the roster policy. Sites that put each roster
 item on its own page run 240–450 pages and three or four levels; folding rosters into indexed pages
-is what keeps 106 pages flat. Section size is the lever, and the largest section here is 14.
+is what keeps 106 pages flat. Section size is the lever, and the largest section here is 16.
 
 ---
 
@@ -202,10 +202,8 @@ entry — content-editor material is out of scope for this site.
 | ------------------------------- | -------------------- | --- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
 | `going-further/overview`        | Overview             | P1  | Section landing page; names what this section covers.                                                                         | —                       |
 | `going-further/caching`         | Caching              | P1  | **Roster page** for the tag vocabulary. Edge cache, tags, purge.                                                              | cache tags, purge       |
-| `going-further/seo`             | SEO                  | P1  | Canonicals, sitemap, feeds, robots, meta and OG.                                                                              | SEO surfaces            |
 | `going-further/testing`         | Testing              | P1  | `plumix/test`, the context factory, Playwright helpers. **Promotion candidate** — becomes a section if it outgrows two pages. | 3 test subpaths         |
 | `going-further/dev-tools`       | Dev Tools            | P1  | Dev error pages, the client overlay, the debug bar, errors to terminal.                                                       | dev surfaces            |
-| `going-further/search`          | Search               | P2  | Entry and term search; the admin search filter.                                                                               | search surface          |
 | `going-further/i18n`            | Internationalization | P2  | Locales, `Label`, formatters, catalogs.                                                                                       | i18n surface, 5 locales |
 | `going-further/scheduled-tasks` | Scheduled Tasks      | P2  | Cron registration and the core tasks.                                                                                         | `scheduledTasks`        |
 | `going-further/telemetry`       | Telemetry            | P2  | Consumers, spans, `traceDbQuery`.                                                                                             | telemetry surface       |
@@ -232,7 +230,9 @@ entry — content-editor material is out of scope for this site.
 | `plugins/comments`      | Comments                   | P1  | Threaded, moderated discussion.                                                                              | `@plumix/plugin-comments`  |
 | `plugins/media`         | Media                      | P1  | Media library, uploads, the `media` field types.                                                             | `@plumix/plugin-media`     |
 | `plugins/audit-log`     | Audit Log                  | P2  | Activity feed.                                                                                               | `@plumix/plugin-audit-log` |
+| `plugins/seo`           | SEO                        | P1  | Head meta, JSON-LD, `robots.txt`, the sitemap and the per-entry overrides.                                   | `@plumix/plugin-seo`       |
 | `plugins/og`            | OG Cards                   | P1  | Generated social cards, the `og:image` chain, and the renderer's limits.                                     | `@plumix/plugin-og`        |
+| `plugins/search`        | Search                     | P1  | The FTS5 projection, the results page, palette ranking and the reindex run.                                  | `@plumix/plugin-search`    |
 | `plugins/publishing`    | Publishing a Plugin        | P2  | Taking a local plugin to npm.                                                                                | distribution               |
 | `plugins/descriptor`    | The Plugin Descriptor      | P2  | `id`, `version`, `setup` vs `provides`.                                                                      | descriptor surface         |
 | `plugins/config-schema` | Config Schema              | P2  | `schema` / `schemaModule` and validation.                                                                    | plugin config schema       |
@@ -467,9 +467,9 @@ Every area of the public surface has a home. Mapping from the inventory:
 | RPC · REST · 9 MCP tools · raw routes · db toolkit · request context                            | APIs                                                                  |
 | 105 hooks · type augmentation                                                                   | Hooks                                                                 |
 | admin pages · widgets · login links · plugin chunk · shims · CSS                                | Extending the Admin                                                   |
-| caching · SEO · search · i18n · cron · telemetry · testing · dev tools                          | Going Further                                                         |
+| caching · i18n · cron · telemetry · testing · dev tools                                         | Going Further                                                         |
 | runtime adapter · bindings · secrets · CLI                                                      | Deployment                                                            |
-| 7 official plugins · descriptor · packaging                                                     | Plugins                                                               |
+| 9 official plugins · descriptor · packaging                                                     | Plugins                                                               |
 
 **Deliberately undocumented:** the contribution guide and all core-contributor material; all
 content-editor material; the editor bridge (`EDITOR_BRIDGE_CHANNEL` and kin, editor-internal); the
