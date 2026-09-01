@@ -53,6 +53,14 @@ export const SEARCH_INDEX_DDL: readonly string[] = [
   END`,
 ];
 
+/** The triggers by name, for anything taking them away before putting them
+ *  back — or, in a test, for leaving the projection without an index. */
+export const SEARCH_INDEX_TRIGGER_DROP_DDL: readonly string[] = [
+  "DROP TRIGGER IF EXISTS search_documents_ai",
+  "DROP TRIGGER IF EXISTS search_documents_ad",
+  "DROP TRIGGER IF EXISTS search_documents_au",
+];
+
 /**
  * Replaces the triggers an install already has.
  *
@@ -62,9 +70,7 @@ export const SEARCH_INDEX_DDL: readonly string[] = [
  * converges on the same triggers either way.
  */
 export const SEARCH_INDEX_TRIGGER_RESET_DDL: readonly string[] = [
-  "DROP TRIGGER IF EXISTS search_documents_ai",
-  "DROP TRIGGER IF EXISTS search_documents_ad",
-  "DROP TRIGGER IF EXISTS search_documents_au",
+  ...SEARCH_INDEX_TRIGGER_DROP_DDL,
   ...SEARCH_INDEX_DDL.filter((statement) =>
     statement.includes("CREATE TRIGGER"),
   ),
@@ -97,10 +103,11 @@ const INDEX_OBJECT_LIST = INDEX_OBJECTS.map((name) => `'${name}'`).join(", ");
  * that are not there. So a repair ends with `'rebuild'`, which repopulates
  * the index from the projection in one statement.
  *
- * That rebuild is O(corpus), which is why the whole thing is behind one
- * `sqlite_master` read: the case this exists for is rare, and the case that
- * is not rare has to cost a single cheap query. Idempotent without a lock,
- * because D1 has none and two isolates can arrive together.
+ * That rebuild is O(corpus), which is why it is behind two cheap reads —
+ * `sqlite_master` for the objects, then one existence pair for whether the
+ * index actually holds anything. The case this exists for is rare, and the
+ * case that is not rare has to stay cheap. Idempotent without a lock, because
+ * D1 has none and two isolates can arrive together.
  */
 export async function ensureSearchIndex(db: SqlRunner): Promise<void> {
   const present = await db.all<{ name: string; sql: string | null }>(
@@ -125,7 +132,77 @@ export async function ensureSearchIndex(db: SqlRunner): Promise<void> {
       await db.run(sql.raw(statement));
     }
   }
-  if (present.length === INDEX_OBJECTS.length) return;
-  for (const statement of SEARCH_INDEX_DDL) await db.run(sql.raw(statement));
-  await db.run(sql`INSERT INTO search_index(search_index) VALUES('rebuild')`);
+  const missing = present.length !== INDEX_OBJECTS.length;
+  if (missing) {
+    for (const statement of SEARCH_INDEX_DDL) await db.run(sql.raw(statement));
+  }
+  if (missing || (await isIndexEmptyOverAProjection(db))) {
+    await db.run(sql`INSERT INTO search_index(search_index) VALUES('rebuild')`);
+  }
+}
+
+/**
+ * Whether the index holds nothing while the projection holds something — the
+ * state a repair that created the objects and then died leaves behind.
+ *
+ * Presence alone cannot see it: all four objects are there, so a check on
+ * `sqlite_master` returns early and the index stays empty for good. That is
+ * not a quietly worse search, it is the corrupting state described above —
+ * the first update to a row the index never held tells FTS5 to unindex terms
+ * that are not there. The window is real because creating the table and
+ * rebuilding it are two statements, and the second is the expensive one.
+ *
+ * Read off `search_index_docsize`, FTS5's own per-document table, because the
+ * index cannot be asked directly: an external-content table with no `MATCH`
+ * reads its rows straight out of the projection, so it would report the
+ * documents it is missing as its own. Both halves stop at the first row.
+ */
+async function isIndexEmptyOverAProjection(db: SqlRunner): Promise<boolean> {
+  const [state] = await db.all<{ indexed: number; projected: number }>(sql`
+    SELECT EXISTS(SELECT 1 FROM search_index_docsize) AS indexed,
+           EXISTS(SELECT 1 FROM search_documents) AS projected
+  `);
+  return state?.indexed === 0 && state.projected === 1;
+}
+
+// SQLite's own sentence for the fault, `main.`-qualified or not. Anchored on
+// the table rather than looked for loosely, because the strings this is read
+// out of carry more than the fault — see below.
+const MISSING_INDEX = /no such table:\s*(?:main\.)?search_index\b/;
+
+// How deep a driver may nest its causes before this stops looking. A `cause`
+// that points at itself would otherwise be an infinite loop in a request.
+const MAX_CAUSE_DEPTH = 8;
+
+/**
+ * Whether `error` is the database saying the index is not there.
+ *
+ * Read off the message, because that is all a driver gives: libsql raises
+ * `SQLITE_ERROR: no such table: search_index` and D1 wraps the same sentence
+ * as `D1_ERROR: no such table: search_index: SQLITE_ERROR`, both re-thrown by
+ * drizzle with the original as `cause` — hence the walk.
+ *
+ * Drizzle's own wrapper is skipped rather than read, and that is the whole
+ * subtlety here. Its message is the failing SQL followed by the bound
+ * parameters: every query in this module names `search_index`, and the
+ * parameters are whatever the visitor typed. Reading it would let a visitor
+ * searching for the words "no such table" have any broken schema answered as
+ * a degraded page — and start a rebuild per request while they did it.
+ */
+export function isMissingSearchIndex(error: unknown): boolean {
+  let cause: unknown = error;
+  for (
+    let depth = 0;
+    cause instanceof Error && depth < MAX_CAUSE_DEPTH;
+    depth += 1
+  ) {
+    if (
+      !cause.message.startsWith("Failed query:") &&
+      MISSING_INDEX.test(cause.message)
+    ) {
+      return true;
+    }
+    cause = cause.cause;
+  }
+  return false;
 }

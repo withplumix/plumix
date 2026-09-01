@@ -141,6 +141,12 @@ Saving an entry through the editor indexes it after the response is sent, so nob
 
 The FTS5 index and its triggers are DDL that drizzle cannot express, so they ship as a raw SQL migration — and the drain re-creates them if they are missing, which turns a migration that never ran into a delay rather than an outage.
 
+### A missing index degrades the page, it does not break it
+
+A migration that was never applied, a restored dump, an install before its first scheduled run: the index can genuinely be absent, and a visitor should not meet that as an error page. A search that finds no index to read answers from core's own vocabulary instead — each word of the query matched as a substring of the entry's title or excerpt — and creates the index behind the response, so the search after it is a real one again.
+
+What is worse in the meantime is worth knowing: a word only the body holds is not found, no snippet is highlighted, results carry no score, and topics are missing entirely, since core's page has never returned them. Repairing is idempotent, so two requests arriving on the same missing index converge on one index rather than racing — D1 has no migration lock, and neither does this. They converge on the outcome, not on the work: each one rebuilds, so a burst of searches into a missing index is a burst of rebuilds.
+
 A save that leaves the text where it was writes nothing: the change feed's own guard ignores it, and the projection's upsert is a no-op when the extracted text has not moved. Bulk status changes stay cheap.
 
 ## What is indexed

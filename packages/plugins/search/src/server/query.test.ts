@@ -1,10 +1,17 @@
 import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
 import { defineEntryContent } from "plumix/blocks";
+import { sql } from "plumix/db";
 import { factoriesFor } from "plumix/test";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchTestDb } from "../test/db.js";
-import { createSearchContext, paragraph } from "../test/db.js";
+import {
+  assertIndexIntact,
+  createSearchContext,
+  dropSearchIndex,
+  indexedSourceIds,
+  paragraph,
+} from "../test/db.js";
 import { indexEntries, indexTerms } from "./index-writer.js";
 import { runSearch } from "./query.js";
 
@@ -12,9 +19,10 @@ let db: SearchTestDb;
 let ctx: AppContext;
 let plugins: MutablePluginRegistry;
 let authorId: number;
+let drainDeferred: () => Promise<void>;
 
 beforeEach(async () => {
-  ({ db, ctx, plugins, authorId } = await createSearchContext());
+  ({ db, ctx, plugins, authorId, drainDeferred } = await createSearchContext());
 });
 
 /** Seed one published entry and put it in the index. */
@@ -313,5 +321,123 @@ describe("runSearch", () => {
     await indexEntries(ctx, [entry.id]);
 
     expect((await search("hydroponics")).results).toEqual([]);
+  });
+});
+
+describe("runSearch without an index", () => {
+  /** One entry whose title and excerpt carry a word its body does not. */
+  async function publishArticle(): Promise<{ id: number }> {
+    return await publish({
+      title: "Winter hydroponics",
+      slug: "winter",
+      excerpt: "Growing lettuce with hydroponics indoors",
+      content: defineEntryContent([
+        paragraph("<p>a passing mention of rockwool</p>"),
+      ]),
+    });
+  }
+
+  test("answers from titles and excerpts rather than erroring", async () => {
+    // A partially applied migration, a botched import, a fresh install before
+    // the first drain: search gets worse, and the page still renders.
+    const entry = await publishArticle();
+    await dropSearchIndex(db);
+
+    const { results } = await search("hydroponics");
+
+    expect(results.map((result) => result.id)).toEqual([entry.id]);
+  });
+
+  test("a degraded result carries no snippet highlight and no score", async () => {
+    await publishArticle();
+    await dropSearchIndex(db);
+
+    const [result] = (await search("hydroponics")).results;
+
+    expect(result).toMatchObject({
+      kind: "entry",
+      title: "Winter hydroponics",
+      url: "/post/winter",
+      score: null,
+    });
+    expect(result?.snippet).not.toContain("<mark>");
+  });
+
+  test("clamps to what a visitor may see, as the indexed page does", async () => {
+    await publish({ title: "Hydroponics draft", slug: "d", status: "draft" });
+    const published = await publishArticle();
+    await dropSearchIndex(db);
+
+    const { results } = await search("hydroponics");
+
+    expect(results.map((result) => result.id)).toEqual([published.id]);
+  });
+
+  test("pages the degraded results the way the indexed ones page", async () => {
+    for (let i = 0; i < 3; i += 1) {
+      await publish({
+        title: `Hydroponics ${String(i)}`,
+        slug: `a${String(i)}`,
+      });
+    }
+    await dropSearchIndex(db);
+
+    const first = await search("hydroponics");
+    expect(first.results).toHaveLength(2);
+    expect(first.hasMore).toBe(true);
+    expect(await search("hydroponics", 3)).toMatchObject({ outOfRange: true });
+  });
+
+  test("takes each word in turn, so two words are not one substring", async () => {
+    // The ordinary visitor query. Core's own public route matches the whole
+    // string, which would find this only if the title read "winter
+    // hydroponics" in that order.
+    const entry = await publishArticle();
+
+    await dropSearchIndex(db);
+
+    const { results } = await search("hydroponics winter");
+    expect(results.map((result) => result.id)).toEqual([entry.id]);
+  });
+
+  test("creates the index it found missing, so the next search uses it", async () => {
+    const entry = await publishArticle();
+    await dropSearchIndex(db);
+
+    // A word only the body holds, which title-and-excerpt cannot reach.
+    expect((await search("rockwool")).results).toEqual([]);
+    await drainDeferred();
+
+    const { results } = await search("rockwool");
+    expect(results.map((result) => result.id)).toEqual([entry.id]);
+    await assertIndexIntact(db);
+  });
+
+  test("a different missing table is still an error, not a degraded page", async () => {
+    // The recognition names the index. A schema broken some other way is a
+    // fault to be reported, not a page quietly answered from half a query.
+    await publishArticle();
+    await db.run(sql`DROP TABLE search_documents`);
+
+    // The words themselves, because they reach the error: drizzle's wrapper
+    // reports the bound parameters beside the SQL it failed on.
+    await expect(search("no such table: search_index")).rejects.toThrow();
+  });
+
+  test("two searches finding it missing converge on one index", async () => {
+    const entry = await publishArticle();
+    await dropSearchIndex(db);
+
+    const pages = await Promise.all([
+      search("hydroponics"),
+      search("hydroponics"),
+    ]);
+    await drainDeferred();
+
+    expect(
+      pages.map((page) => page.results.map((result) => result.id)),
+    ).toEqual([[entry.id], [entry.id]]);
+    expect(await indexedSourceIds(db, "rockwool")).toEqual([entry.id]);
+    await assertIndexIntact(db);
   });
 });

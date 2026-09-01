@@ -10,13 +10,14 @@ import {
 } from "plumix/plugin";
 import {
   applyTestSchema,
+  createDeferQueue,
   createDispatcherHarness,
   createTestContext,
   createTestDb,
   factoriesFor,
 } from "plumix/test";
 
-import { ensureSearchIndex } from "../db/ddl.js";
+import { ensureSearchIndex, SEARCH_INDEX_TRIGGER_DROP_DDL } from "../db/ddl.js";
 import * as schema from "../db/schema.js";
 
 export type SearchTestDb = Awaited<ReturnType<typeof createTestDb>>;
@@ -32,6 +33,23 @@ export type SearchTestDb = Awaited<ReturnType<typeof createTestDb>>;
 export async function applySearchSchema(db: SearchTestDb): Promise<void> {
   await applyTestSchema(db, schema);
   await ensureSearchIndex(db);
+}
+
+/**
+ * Take the index and its triggers away, leaving the projection behind — the
+ * shape an install has when the plugin's raw SQL migration never ran.
+ *
+ * The triggers go with the table because they write to it: leaving one behind
+ * would make every projection write fail, which is a different fault from the
+ * one the repair path exists for.
+ */
+export async function dropSearchIndex(db: SearchTestDb): Promise<void> {
+  for (const statement of [
+    ...SEARCH_INDEX_TRIGGER_DROP_DDL,
+    "DROP TABLE IF EXISTS search_index",
+  ]) {
+    await db.run(sql.raw(statement));
+  }
 }
 
 export async function createSearchTestDb(): Promise<SearchTestDb> {
@@ -209,6 +227,8 @@ interface SearchContext {
   /** Mutable, so a suite can retype or exclude what it registered. */
   readonly plugins: MutablePluginRegistry;
   readonly authorId: number;
+  /** Settle the work the context deferred, so a suite can assert on it. */
+  readonly drainDeferred: () => Promise<void>;
 }
 
 /**
@@ -229,11 +249,13 @@ export async function createSearchContext(): Promise<SearchContext> {
     registeredBy: "test",
     label: "Categories",
   });
+  const { defer, drainDeferred } = createDeferQueue();
   const ctx = createTestContext({
     db,
     plugins,
     blocks: createBlockRegistry([...coreBlocks]),
+    defer,
   });
   const author = await factoriesFor(db).admin.create();
-  return { db, ctx, plugins, authorId: author.id };
+  return { db, ctx, plugins, authorId: author.id, drainDeferred };
 }
