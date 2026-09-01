@@ -5,9 +5,14 @@ import type { SearchTestDb } from "../test/db.js";
 import {
   assertIndexIntact,
   createSearchTestDb,
+  dropSearchIndex,
   indexedSourceIds,
 } from "../test/db.js";
-import { ensureSearchIndex } from "./ddl.js";
+import {
+  ensureSearchIndex,
+  isMissingSearchIndex,
+  SEARCH_INDEX_DDL,
+} from "./ddl.js";
 import { searchDocuments } from "./schema.js";
 
 const document = (sourceId: number, title: string) => ({
@@ -90,5 +95,81 @@ describe("ensureSearchIndex", () => {
       .where(eq(searchDocuments.sourceId, 1));
     expect(await indexedSourceIds(db, "aquaponics")).toEqual([1]);
     await assertIndexIntact(db);
+  });
+});
+
+describe("a repair that did not finish", () => {
+  test("rebuilds an index whose objects exist but hold nothing", async () => {
+    // Creating the table and filling it are two statements, and the second is
+    // the expensive one — so an isolate can die between them. All four objects
+    // are then present, which is what a check on `sqlite_master` alone asks,
+    // and the index stays empty for good: search answers nothing and the next
+    // update to a row it never held raises SQLITE_CORRUPT.
+    const db = await createSearchTestDb();
+    await dropSearchIndex(db);
+    await db.insert(searchDocuments).values(document(1, "Hydroponics"));
+    for (const statement of SEARCH_INDEX_DDL) await db.run(sql.raw(statement));
+
+    await ensureSearchIndex(db);
+
+    expect(await indexedSourceIds(db, "hydroponics")).toEqual([1]);
+    await assertIndexIntact(db);
+  });
+
+  test("leaves a populated index alone", async () => {
+    // The other half of the same question: an index that legitimately holds
+    // nothing because the projection does must not rebuild on every call.
+    const db = await createSearchTestDb();
+    await db.insert(searchDocuments).values(document(1, "Hydroponics"));
+
+    await ensureSearchIndex(db);
+    await ensureSearchIndex(db);
+
+    expect(await indexedSourceIds(db, "hydroponics")).toEqual([1]);
+    await assertIndexIntact(db);
+  });
+});
+
+describe("isMissingSearchIndex", () => {
+  /** What drizzle wraps a failed statement in: the SQL, then the parameters. */
+  const asDrizzleWould = (cause: Error, params: string) =>
+    new Error(
+      `Failed query: SELECT 1 FROM search_index WHERE search_index MATCH ?\nparams: ${params}`,
+      { cause },
+    );
+
+  test("recognises the fault however the driver phrases it", () => {
+    for (const message of [
+      "SQLITE_ERROR: no such table: search_index",
+      "D1_ERROR: no such table: search_index: SQLITE_ERROR",
+      "no such table: main.search_index",
+    ]) {
+      expect(
+        isMissingSearchIndex(asDrizzleWould(new Error(message), '"x"')),
+        message,
+      ).toBe(true);
+    }
+  });
+
+  test("a visitor cannot type their way to a missing index", () => {
+    // Drizzle's wrapper repeats the failing SQL — which names `search_index`
+    // in every query here — and then the bound parameters, which are the
+    // visitor's own words. Reading it would let anyone searching for this
+    // phrase have a differently broken schema answered as a degraded page,
+    // and start a rebuild per request while they did it.
+    const other = new Error("SQLITE_ERROR: no such table: search_documents");
+
+    expect(
+      isMissingSearchIndex(
+        asDrizzleWould(other, '"no such table: search_index"'),
+      ),
+    ).toBe(false);
+  });
+
+  test("gives up rather than following a cause back to itself", () => {
+    const looping: Error & { cause?: unknown } = new Error("boom");
+    looping.cause = looping;
+
+    expect(isMissingSearchIndex(looping)).toBe(false);
   });
 });

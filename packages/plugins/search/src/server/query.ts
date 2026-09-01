@@ -5,8 +5,11 @@ import { entries, terms } from "plumix/schema";
 
 import type { SearchSourceType } from "../db/schema.js";
 import type { RankingAlgorithm, RankingWeights } from "../ranking.js";
+import type { MatchedRow } from "./query-row.js";
+import { ensureSearchIndex, isMissingSearchIndex } from "../db/ddl.js";
 import { DEFAULT_RANKING_ALGORITHM, rankingWeights } from "../ranking.js";
 import { searchableEntryTypes, searchableTaxonomies } from "./document.js";
+import { degradedRows } from "./query-degraded.js";
 import { DEFAULT_COMMON_TERM_THRESHOLD, planForQuery } from "./query-plan.js";
 import {
   highlightSnippet,
@@ -25,12 +28,17 @@ export interface SearchResult {
    * Escaped, with `<mark>` around what matched — safe as element content, the
    * context a snippet is rendered in. Not safe in an attribute: quotes pass
    * through, the same caveat core's own `escapeHtml` carries.
+   *
+   * Two dozen tokens of the text around the match, except on a page answered
+   * without an index: that one carries the entry's whole excerpt, unmarked and
+   * uncapped, because `LIKE` reports that a row matched and not where.
    */
   readonly snippet: string;
   /**
    * bm25, ascending: a smaller number is a better match. Null when the page
    * was ordered by recency, because a word in nearly every document has no
-   * meaningful bm25 to report.
+   * meaningful bm25 to report — and null on a page answered without an index,
+   * which has no relevance to report at all.
    */
   readonly score: number | null;
 }
@@ -73,18 +81,6 @@ function isAskablePage(page: number): boolean {
   return Number.isSafeInteger(page) && page >= 1;
 }
 
-interface MatchedRow {
-  readonly kind: SearchSourceType;
-  readonly id: number;
-  /** The entry's type, or the term's taxonomy — whichever names its URL. */
-  readonly scope: string;
-  readonly slug: string;
-  readonly parentId: number | null;
-  readonly title: string;
-  readonly score: number | null;
-  readonly snippet: string;
-}
-
 /**
  * Answer a visitor's search, ranked, clamped to what an anonymous reader may
  * see, and one page at a time.
@@ -117,20 +113,15 @@ export async function runSearch(
   const weights = rankingWeights(options.ranking ?? DEFAULT_RANKING_ALGORITHM);
   const limit = perPage + 1;
   const offset = (page - 1) * perPage;
-  const plan = await planForQuery(ctx, {
-    match,
-    types,
-    needed: offset + limit,
-    threshold: options.commonTermThreshold ?? DEFAULT_COMMON_TERM_THRESHOLD,
-  });
-  const read = plan === "ranked" ? rankedRows : recentRows;
-  const rows = await read(ctx, {
+  const rows = await matchedRows(ctx, {
+    query: options.query,
     match,
     types,
     taxonomies,
     weights,
     limit,
     offset,
+    threshold: options.commonTermThreshold ?? DEFAULT_COMMON_TERM_THRESHOLD,
   });
 
   const results = await Promise.all(
@@ -154,6 +145,58 @@ interface ReadArgs {
   readonly weights: RankingWeights;
   readonly limit: number;
   readonly offset: number;
+}
+
+/** What the stage around the readers needs on top of what they read with. */
+interface PageArgs extends ReadArgs {
+  /** What the visitor typed, for the reader that has no index to ask. */
+  readonly query: string;
+  readonly threshold: number;
+}
+
+/**
+ * A page of matches, from the index when there is one and from title and
+ * excerpt when there is not.
+ *
+ * A missing index is a real state — a raw migration that never ran, a restored
+ * dump, a fresh install before the first drain — and it is not a state a
+ * visitor should meet as an error page. So it is recognised rather than
+ * guarded against: asking `sqlite_master` first would put a query on every
+ * search to answer a question that is almost always the same, where letting
+ * the read fail costs nothing until the day it does.
+ *
+ * The repair is handed to `defer` after the degraded read, not before it. A
+ * deferred promise starts running where it is created, and a repair ends in a
+ * rebuild that is O(corpus) — created first, it would queue that work on the
+ * connection ahead of the visitor's own query.
+ */
+async function matchedRows(
+  ctx: AppContext,
+  args: PageArgs,
+): Promise<MatchedRow[]> {
+  const { match, types, limit, offset, threshold } = args;
+  try {
+    const plan = await planForQuery(ctx, {
+      match,
+      types,
+      needed: offset + limit,
+      threshold,
+    });
+    return await (plan === "ranked" ? rankedRows : recentRows)(ctx, args);
+  } catch (error) {
+    if (!isMissingSearchIndex(error)) throw error;
+    // Said out loud, because the page itself cannot say it: a visitor sees
+    // thinner results and an operator would otherwise have no way to learn
+    // that the site has been searching without an index since a migration
+    // they never applied.
+    ctx.logger.warn(
+      "search: no index to query, answering from title and excerpt",
+      { query: args.query },
+    );
+    const rows = await degradedRows(ctx, args);
+    ctx.defer(ensureSearchIndex(ctx.db));
+    return rows;
+  }
 }
 
 const SNIPPET = sql`
