@@ -54,11 +54,11 @@ A result carries `kind`, `id` (unique only within that kind — an entry and a t
 
 Only published entries appear. Drafts, scheduled and trashed entries are in the index so an author can find their own work in the admin, and the page's query clamps them out.
 
-**An entry type under an access policy is never indexed at all.** A snippet is body text around a word the visitor chose, so indexing a members-only type would hand an anonymous reader its prose a query at a time. Keeping it out of the projection is what makes that impossible rather than dependent on a predicate; the cost is that a gated type is unsearchable for everyone, members included.
+**An entry type under an access policy is never indexed at all.** A snippet is body text around a word the visitor chose, so indexing a members-only type would hand an anonymous reader its prose a query at a time. Keeping it out of the projection is what makes that impossible rather than dependent on a predicate; the cost is that a gated type is ranked nowhere, and in the admin palette falls back to core's title-and-excerpt match.
 
 The search page is not edge-cached, for the reason core gives for leaving its own out: the query space is unbounded, so every distinct string a crawler tried would mint a cache entry.
 
-A query is whatever a visitor typed, treated as words to look for: adding a word narrows the results, a quoted phrase matches exactly, and FTS5's own operators are inert. Any string compiles to a valid search, so an unbalanced quote returns nothing rather than an error page.
+A query is whatever a visitor typed, treated as words to look for: adding a word narrows the results, a quoted phrase matches exactly, `-word` rules a word out, and FTS5's own operators are inert. Any string compiles to a valid search, so an unbalanced quote returns nothing rather than an error page. A query of nothing but exclusions returns nothing: FTS5 cannot spell "every document except these", and the whole corpus is not what someone typing `-draft` meant.
 
 ### Topics are results too
 
@@ -92,6 +92,16 @@ ctx.registerTermTaxonomy("internal", {
 A taxonomy that is not public is excluded already, so a navigation-menu taxonomy stays out of results without a second declaration. The admin command palette is unaffected — an editor searches what they can read, not what a visitor can.
 
 Two things are worth knowing. A term is indexed when it is created, renamed or deleted through the application, and a term the projection has never held is picked up by the scheduled run — core's change feed records entries only, so that sweep is what reaches the categories a site already had. A term written straight to the database after that waits for the same sweep rather than appearing at once. And the recency plan below is entries-only, because a term has no publication date to be ordered by, so a word common enough to reach that plan is answered with articles.
+
+## The admin command palette
+
+The palette's Content results are ranked out of the same index, so the entry an editor wants is near the top rather than merely the one edited most recently — and a word from the middle of an entry's body finds it, which a palette matching titles and excerpts could not do.
+
+Nothing is configured. Core's own handler stays registered underneath, and handlers sharing a group fill it between them: the ranked matches lead, and core's title-and-excerpt matches fill whatever is left. That is the whole of the degrading story — no switch, no health check. Whatever the index cannot answer, core still does: a type under an access policy, which is never indexed; an entry not yet projected, on a site that has installed the plugin but not rebuilt; every type at all before the index exists; and a half-typed word, since the index matches whole terms and an editor mid-word has not typed one yet. The cost is that both queries run on every keystroke, which is what buys the seamlessness.
+
+Who may see what is core's decision, not the plugin's: both handlers build their query on the same clause, so an author sees their own drafts here and nobody else's, and a trashed entry appears in neither. The ranked half asks for one thing more — the caller must be able to **edit** the type, not merely read it. A ranked result is a body-text match, so answering one says a word appears somewhere inside an entry, and `entry:<type>:read` bottoms out at the subscriber tier: on a site with open signup every reader holds it for every registered type. Core's title match still answers those types.
+
+`-word` excludes here too, the same as it does in the entries list.
 
 ## Ranking
 
@@ -158,6 +168,8 @@ ctx.registerEntryType("ledger", { label: "Ledger", excludeFromSearch: true });
 ```
 
 A non-public type (`isPublic: false`) is excluded already, so internal types need no second switch.
+
+**The exclusion bounds a visitor, not an editor.** An excluded type is still projected and still ranked in the admin command palette, and the search page's own query is what keeps it out of a visitor's results — so a navigation-menu entry stays findable where an editor has to find it. The one type that is kept out of the projection altogether is a type under an access policy, above.
 
 Each entry contributes its title, its excerpt, the text its blocks declare — including table cells, button labels, list items, image alt text and code listings — and whatever meta fields opted in below. A block says which of its inputs carry text; a block that declares nothing contributes nothing. The declaration is data, so an extractor version can be derived by hashing the roster rather than maintained by hand, and every document is stamped with the version that produced it — which is what lets a declaration change repair itself, below.
 

@@ -158,8 +158,11 @@ describe("search()", () => {
     await assertIndexIntact(h.db);
   });
 
-  test("an entry type excluded from search never reaches the index", async () => {
-    await h.factory.entry.create({
+  test("an entry type excluded from search still reaches the index", async () => {
+    // The admin palette ranks out of the same index, and an editor's reach is
+    // not bounded by a front-end setting. What keeps this off the search page
+    // is the read clamp, asserted where the page is actually rendered.
+    const entry = await h.factory.entry.create({
       authorId: admin.id,
       type: "ledger",
       title: "Hydroponics ledger",
@@ -167,7 +170,7 @@ describe("search()", () => {
 
     await runSchedule();
 
-    expect(await matches("hydroponics")).toEqual([]);
+    expect(await matches("hydroponics")).toEqual([entry.id]);
   });
 
   test("a save that leaves the text alone does not re-tokenize the entry", async () => {

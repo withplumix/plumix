@@ -1,5 +1,5 @@
 import type { BlockTextRoster } from "plumix/blocks";
-import type { PluginRegistry } from "plumix/plugin";
+import type { PluginRegistry, RegisteredEntryType } from "plumix/plugin";
 import { extractBlockText, isEntryContent } from "plumix/blocks";
 import {
   resolveEntryTypeVisibility,
@@ -41,9 +41,9 @@ export function entryDocumentBody(
 /**
  * Whether entries of this type belong in the index at all.
  *
- * An unregistered type is not searchable, which is what keeps a revision and
+ * An unregistered type is not indexable, which is what keeps a revision and
  * an autosave out: they are rows in `entries` under types no plugin
- * registers, so their draft text can never reach a public result.
+ * registers, so their draft text can never reach any result.
  *
  * Nor is a type under an access policy. A snippet is 24 tokens of body text
  * around a word the visitor chose, so an indexed members-only article would
@@ -53,13 +53,46 @@ export function entryDocumentBody(
  * merely predicated, and the check is total at the type level: `policyForMatch`
  * reads the type's `access` first and treats an entry's own stored policy as
  * inert without it, so no entry of an unpolicied type can be gated.
+ *
+ * `excludeFromSearch` deliberately does *not* reach this far. It bounds what a
+ * visitor's search page shows, and the admin command palette ranks out of the
+ * same index for an editor, whose reach a front-end setting does not bound — a
+ * navigation-menu entry has to be findable there. What keeps such a type off
+ * the public page is {@link searchableEntryTypes}, applied at read time.
+ */
+export function isIndexableEntryType(
+  plugins: PluginRegistry,
+  type: string,
+): boolean {
+  return isIndexableSpec(plugins.entryTypes.get(type));
+}
+
+function isIndexableSpec(
+  spec: RegisteredEntryType | undefined,
+): spec is RegisteredEntryType {
+  return spec !== undefined && spec.access === undefined;
+}
+
+/** Every type whose entries the projection holds, for the write side. */
+export function indexableEntryTypes(
+  plugins: PluginRegistry,
+): readonly string[] {
+  return [...plugins.entryTypes.keys()].filter((type) =>
+    isIndexableEntryType(plugins, type),
+  );
+}
+
+/**
+ * Whether entries of this type may appear in a *visitor's* results — every
+ * rule {@link isIndexableEntryType} applies, and the site's own exclusion on
+ * top of it.
  */
 export function isSearchableEntryType(
   plugins: PluginRegistry,
   type: string,
 ): boolean {
   const spec = plugins.entryTypes.get(type);
-  if (spec === undefined || spec.access !== undefined) return false;
+  if (!isIndexableSpec(spec)) return false;
   return !resolveEntryTypeVisibility(spec).excludeFromSearch;
 }
 

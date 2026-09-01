@@ -40,8 +40,19 @@ declare module "../hooks/types.js" {
 /**
  * Run every `admin:search:results` handler concurrently and merge their
  * groups. Each handler is isolated: a throwing or rejecting one degrades
- * to no contribution instead of breaking the palette. Empty groups are
- * dropped; the rest are ordered by `priority`.
+ * to no contribution instead of breaking the palette.
+ *
+ * Handlers sharing a group key fill one group between them: items arrive in
+ * registration priority order, deduplicated by id and capped at `limit`, and
+ * the earliest handler names and places the group. That is how a plugin takes
+ * a core domain over — registering ahead of core puts its results first —
+ * without core's having to stand down, which is what makes degrading free.
+ * A plugin whose index is missing, has not been rebuilt yet, or cannot rank
+ * one type contributes less, or nothing, and core's own matches fill the rest
+ * of the group. Nobody probes for any of it.
+ *
+ * `priority` then orders the groups, so a plugin can lead a domain without
+ * moving where the palette shows it.
  */
 export async function runAdminSearch(
   hooks: Pick<HookExecutor, "getFilterHandlers">,
@@ -63,8 +74,20 @@ export async function runAdminSearch(
         }
       }),
   );
-  return produced
-    .flat()
-    .filter((group) => group.items.length > 0)
-    .sort((a, b) => a.priority - b.priority);
+  const merged = new Map<string, SearchGroup>();
+  for (const group of produced.flat()) {
+    const held = merged.get(group.key);
+    if (held === undefined) {
+      if (group.items.length > 0) merged.set(group.key, group);
+      continue;
+    }
+    const seen = new Set(held.items.map((item) => item.id));
+    const extra = group.items.filter((item) => !seen.has(item.id));
+    if (extra.length === 0) continue;
+    merged.set(group.key, {
+      ...held,
+      items: [...held.items, ...extra].slice(0, input.limit),
+    });
+  }
+  return [...merged.values()].sort((a, b) => a.priority - b.priority);
 }

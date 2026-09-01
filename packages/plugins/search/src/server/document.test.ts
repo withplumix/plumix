@@ -3,7 +3,11 @@ import { createPluginRegistry } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
 import { paragraph } from "../test/db.js";
-import { entryDocumentBody, isSearchableEntryType } from "./document.js";
+import {
+  entryDocumentBody,
+  isIndexableEntryType,
+  isSearchableEntryType,
+} from "./document.js";
 
 const ROSTER = blockTextRoster(coreBlocks);
 
@@ -83,18 +87,27 @@ describe("entryDocumentBody", () => {
   });
 });
 
-describe("isSearchableEntryType", () => {
-  const registryWith = (name: string, options: Record<string, unknown>) => {
-    const plugins = createPluginRegistry();
-    plugins.entryTypes.set(name, {
-      name,
-      registeredBy: "test",
-      label: name,
-      ...options,
-    });
-    return plugins;
-  };
+const registryWith = (name: string, options: Record<string, unknown>) => {
+  const plugins = createPluginRegistry();
+  plugins.entryTypes.set(name, {
+    name,
+    registeredBy: "test",
+    label: name,
+    ...options,
+  });
+  return plugins;
+};
 
+const GATED = {
+  access: {
+    default: {
+      segments: [],
+      resolve: () => ({ type: "challenge" as const, kind: "paywall" }),
+    },
+  },
+};
+
+describe("isSearchableEntryType", () => {
   test("a public type is searchable with no extra declaration", () => {
     expect(isSearchableEntryType(registryWith("post", {}), "post")).toBe(true);
   });
@@ -117,8 +130,43 @@ describe("isSearchableEntryType", () => {
     ).toBe(false);
   });
 
+  test("a type under an access policy is not, on any surface", () => {
+    expect(
+      isSearchableEntryType(registryWith("members", GATED), "members"),
+    ).toBe(false);
+  });
+
   test("an unregistered type — a revision, an autosave — is not", () => {
     expect(isSearchableEntryType(createPluginRegistry(), "revision")).toBe(
+      false,
+    );
+  });
+});
+
+describe("isIndexableEntryType", () => {
+  test("a type hidden from public search is still indexed", () => {
+    expect(
+      isIndexableEntryType(
+        registryWith("ledger", { excludeFromSearch: true }),
+        "ledger",
+      ),
+    ).toBe(true);
+  });
+
+  test("a non-public type is too, for the same reason", () => {
+    expect(
+      isIndexableEntryType(registryWith("menu", { isPublic: false }), "menu"),
+    ).toBe(true);
+  });
+
+  test("a type under an access policy is not", () => {
+    expect(
+      isIndexableEntryType(registryWith("members", GATED), "members"),
+    ).toBe(false);
+  });
+
+  test("an unregistered type — a revision, an autosave — is not", () => {
+    expect(isIndexableEntryType(createPluginRegistry(), "revision")).toBe(
       false,
     );
   });

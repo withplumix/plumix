@@ -20,6 +20,17 @@ let ctx: AppContext;
 let plugins: MutablePluginRegistry;
 let authorId: number;
 
+// An entry type nothing may index: `policyForMatch` reads the type's own
+// policy first, so gating is total at the type level.
+const GATED = {
+  access: {
+    default: {
+      segments: [],
+      resolve: () => ({ type: "challenge" as const, kind: "paywall" }),
+    },
+  },
+};
+
 const postType = (overrides: Record<string, unknown> = {}) => ({
   name: "post",
   registeredBy: "test",
@@ -62,13 +73,26 @@ describe("indexEntries", () => {
     expect(await matches("run")).toEqual([entry.id]);
   });
 
-  test("never indexes an entry type excluded from search", async () => {
+  test("indexes an entry type hidden from public search, for the palette", async () => {
     plugins.entryTypes.set("ledger", {
       ...postType({ excludeFromSearch: true }),
       name: "ledger",
       label: "Ledger",
     });
     const entry = await seed({ type: "ledger", title: "Hydroponics ledger" });
+
+    await indexEntries(ctx, [entry.id]);
+
+    expect(await matches("hydroponics")).toEqual([entry.id]);
+  });
+
+  test("never indexes an entry type under an access policy", async () => {
+    plugins.entryTypes.set("members", {
+      ...postType(GATED),
+      name: "members",
+      label: "Members",
+    });
+    const entry = await seed({ type: "members", title: "Hydroponics inside" });
 
     await indexEntries(ctx, [entry.id]);
 
@@ -85,11 +109,11 @@ describe("indexEntries", () => {
     expect(await matches("hydroponics")).toEqual([]);
   });
 
-  test("drops an entry whose type stopped being searchable", async () => {
+  test("drops an entry whose type came under an access policy", async () => {
     const entry = await seed({ title: "Hydroponics" });
     await indexEntries(ctx, [entry.id]);
 
-    plugins.entryTypes.set("post", postType({ excludeFromSearch: true }));
+    plugins.entryTypes.set("post", postType(GATED));
     await indexEntries(ctx, [entry.id]);
 
     expect(await matches("hydroponics")).toEqual([]);

@@ -5,7 +5,7 @@ import { entries, entryChanges, terms } from "plumix/schema";
 import type { SearchReindexRun, SearchSourceType } from "../db/schema.js";
 import { searchReindexRuns } from "../db/schema.js";
 import { SearchError } from "../errors.js";
-import { searchableEntryTypes, searchableTaxonomies } from "./document.js";
+import { indexableEntryTypes, searchableTaxonomies } from "./document.js";
 import { indexEntries, indexTerms } from "./index-writer.js";
 
 /**
@@ -192,7 +192,7 @@ async function nextSources(
   limit: number,
 ): Promise<readonly number[]> {
   if (kind === "entry") {
-    const types = searchableEntryTypes(ctx.plugins);
+    const types = indexableEntryTypes(ctx.plugins);
     if (types.length === 0) return [];
     const rows = await ctx.db
       .select({ id: entries.id })
