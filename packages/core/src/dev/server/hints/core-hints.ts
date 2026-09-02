@@ -54,14 +54,6 @@ const UNTYPED_MATCHERS: readonly Matcher[] = [
       "A required secret isn't set. Add it to `.dev.vars` in your project root " +
       "(one `KEY=value` per line), then restart `plumix dev`.",
   }),
-  // A binding referenced in code isn't declared for the worker.
-  signature(/missing (?:required )?binding|no binding named/i, {
-    title: "Declare the binding",
-    body:
-      "Your code used a binding that isn't declared. Add it to `wrangler.jsonc` " +
-      "(the `d1_databases`, `kv_namespaces`, `r2_buckets`, … block that fits), " +
-      "then restart the dev server.",
-  }),
 ];
 
 /**

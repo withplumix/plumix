@@ -9,9 +9,8 @@ export interface AuditLogRetentionPolicy {
    * Cron expression metadata for the registered scheduled task.
    * Informational in v1 — runtime dispatch fires every registered
    * task on each scheduled invocation regardless of this value (see
-   * `registerScheduledTask` docs). Operators set the actual cadence
-   * via `wrangler.toml [triggers] crons`. Defaults to `"0 3 * * *"`
-   * (daily at 03:00 UTC).
+   * `registerScheduledTask` docs). The runtime is responsible for
+   * firing this schedule. Defaults to `"0 3 * * *"` (daily at 03:00 UTC).
    */
   readonly purgeAt?: string;
 }

@@ -45,12 +45,6 @@ describe("registerCoreErrorHints", () => {
     expect(hints[0]).toMatch(/secret/i);
   });
 
-  test("matches a missing-binding error with a wrangler hint", () => {
-    const hints = hintsFor(new Error("Missing binding: DB"));
-    expect(hints).toHaveLength(1);
-    expect(hints[0]).toMatch(/binding/i);
-  });
-
   test("the dev-vars hint mentions .dev.vars so the fix is concrete", () => {
     const hooks = new HookRegistry();
     registerCoreErrorHints(hooks);

@@ -4,10 +4,10 @@
 //
 // Hand-rolled rather than going through Lingui's server-side `setupI18n`
 // — emails are a small, slow-moving surface; the operator cost of
-// maintaining a separate server catalog (loaded via `load-catalog.ts`,
-// merged into a per-locale `i18n` instance, accessed via `_()`) wasn't
-// worth it for ~10 strings. Promote to Lingui when a fifth or sixth
-// transactional email lands and the table starts duplicating chrome.
+// maintaining a separate server catalog (loaded from disk, merged into a
+// per-locale `i18n` instance, accessed via `_()`) wasn't worth it for ~10
+// strings. Promote to Lingui when a fifth or sixth transactional email
+// lands and the table starts duplicating chrome.
 
 interface MagicLinkMessages {
   readonly subject: (siteName: string) => string;

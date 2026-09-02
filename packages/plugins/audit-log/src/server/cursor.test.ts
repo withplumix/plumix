@@ -14,6 +14,17 @@ describe("encodeCursor / decodeCursor", () => {
     expect(encoded).not.toMatch(/[+/=]/);
   });
 
+  test("decodes a cursor minted by the pre-#2166 Buffer-based codec", () => {
+    // Captured from the old `Buffer.from(raw, "utf8").toString("base64")`
+    // implementation for `{ occurredAt: 1_715_000_000, id: 42 }`. The wire
+    // format is unchanged (base64url, no padding), so this must keep decoding.
+    const legacyEncoded = "MTcxNTAwMDAwMC40Mg";
+    expect(decodeCursor(legacyEncoded)).toEqual({
+      occurredAt: 1_715_000_000,
+      id: 42,
+    });
+  });
+
   test("tampering with the body throws CursorError", () => {
     const valid = encodeCursor({ occurredAt: 1, id: 1 });
     // Flip the last char to corrupt the payload.

@@ -10,9 +10,7 @@ import { formSubmissions } from "../db/schema.js";
  * rather than a schedule per form: a form's retention is a number of
  * days, and no site needs two of them purged at different hours.
  *
- * It must byte-match a `wrangler` `triggers.crons` entry to fire at all,
- * so it is the same nightly string the scaffolded worker already
- * declares.
+ * The runtime is responsible for firing this schedule.
  */
 export const RETENTION_CRON = "0 3 * * *";
 

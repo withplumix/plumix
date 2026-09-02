@@ -758,14 +758,14 @@ export interface RegisteredLoginLink extends LoginLinkOptions {
  * `defer` as a normal request, but `user` is `null` and `request` is
  * an internal marker.
  *
- * A task with a `cron` runs only on the invocation whose fired schedule
- * (`event.cron`) byte-matches it; a task without one runs on every
- * invocation. The operator must declare a matching `wrangler` `triggers.crons`
- * entry for a `cron`-tagged task to ever fire — the strings must be identical.
+ * `cron` is the task's declared schedule; the runtime is responsible for
+ * firing it. A task with a `cron` runs only on the invocation whose fired
+ * schedule (`event.cron`) byte-matches it; a task without one runs on every
+ * invocation.
  */
 export interface ScheduledTask {
   readonly id: string;
-  /** Cron expression; must byte-match a `wrangler` `triggers.crons` entry. */
+  /** The task's declared cron schedule; the runtime is responsible for firing it. */
   readonly cron?: string;
   readonly handler: (ctx: AppContext) => void | Promise<void>;
 }
