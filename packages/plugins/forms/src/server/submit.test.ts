@@ -164,9 +164,11 @@ describe("POST /_plumix/forms/submit", () => {
   });
 
   test("stores the visitor's address only as a salted hash", async () => {
-    const harness = await harnessWithContact();
+    const harness = await createFormsHarness([forms({ forms: [contact] })], {
+      clientAddress: "203.0.113.7",
+    });
 
-    await submit(harness, {}, { "cf-connecting-ip": "203.0.113.7" });
+    await submit(harness, {});
 
     const [stored] = await rows(harness);
     expect(stored?.ipHash).toMatch(/^[0-9a-f]{64}$/);
@@ -1385,13 +1387,9 @@ describe("a form guarded by Turnstile", () => {
         secret: (env) => String((env as { SECRET?: string }).SECRET),
       },
     });
-    // No theme blocks; the third argument is the runtime bindings the
-    // form's own secret resolver reads.
-    const harness = await createFormsHarness(
-      [forms({ forms: [fromEnv] })],
-      [],
-      { SECRET: "from-the-binding" },
-    );
+    const harness = await createFormsHarness([forms({ forms: [fromEnv] })], {
+      env: { SECRET: "from-the-binding" },
+    });
 
     const response = await submitJson(harness, "from-env", {
       name: "Ada",

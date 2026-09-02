@@ -176,11 +176,12 @@ function buildAppContext({
   db,
   slots,
 }: AppContextArgs): AppContext {
-  const { env, waitUntil } = invocation;
+  const { env, waitUntil, clientAddress } = invocation;
   return createAppContext({
     db: db as Db,
     env,
     request,
+    clientAddress,
     hooks: app.hooks,
     plugins: app.plugins,
     blocks: app.blocks,

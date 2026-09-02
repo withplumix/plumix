@@ -2,7 +2,7 @@ import type { AppContext } from "../context/app.js";
 import type { PlumixApp } from "../runtime/app.js";
 import { withBasePath } from "../base-path.js";
 import { buildSessionCookie, isSecureRequest } from "./cookies.js";
-import { createSession, readRequestMeta } from "./sessions.js";
+import { createSession, readClientMeta } from "./sessions.js";
 
 interface MintedSession {
   /** Raw session token — same value the cookie carries. */
@@ -28,7 +28,7 @@ export async function mintSessionAndCookie(
 ): Promise<MintedSession> {
   const { token } = await createSession(
     ctx.db,
-    { userId, ...readRequestMeta(ctx.request) },
+    { userId, ...readClientMeta(ctx) },
     app.sessionPolicy,
   );
   const cookieHeader = buildSessionCookie(token, {

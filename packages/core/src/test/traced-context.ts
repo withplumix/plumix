@@ -24,6 +24,7 @@ export async function createTracedContext(
   const ctx = createTestContext({
     db: harness.db,
     env: harness.env,
+    clientAddress: options.clientAddress,
     hooks: harness.app.hooks,
     plugins: harness.app.plugins,
     telemetry: {

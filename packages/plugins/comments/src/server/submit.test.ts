@@ -115,23 +115,17 @@ describe("POST /_plumix/comments/submit", () => {
   });
 
   test("stores a salted ip hash, never the cleartext ip", async () => {
-    const harness = await harnessWith({ entryTypes: ["post"], mode: "none" });
+    const harness = await harnessWith(
+      { entryTypes: ["post"], mode: "none" },
+      { clientAddress: "203.0.113.7" },
+    );
     const entry = await seedPost(harness);
 
-    await harness.fetch("/_plumix/comments/submit", {
-      method: "POST",
-      headers: { "cf-connecting-ip": "203.0.113.7" },
-      json: {
-        entryId: entry.id,
-        name: "Ada",
-        email: "ada@example.test",
-        body: "hi",
-      },
-    });
+    await submit(harness, entry.id);
 
     const stored = await rows(harness);
     expect(stored[0]?.ipHash).toMatch(/^[0-9a-f]{64}$/);
-    expect(stored[0]?.ipHash).not.toContain("203.0.113.7");
+    expect(JSON.stringify(stored[0])).not.toContain("203.0.113.7");
   });
 
   test("stores a reply under its parent", async () => {

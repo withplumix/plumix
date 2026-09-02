@@ -72,5 +72,23 @@ function createHandler(app: PlumixApp): PlumixHandler {
     registerCloudflareErrorHints(app.hooks);
   }
 
-  return createPlumixHandler(app, { assets: readAssetsBinding });
+  const handler = createPlumixHandler(app, { assets: readAssetsBinding });
+  return {
+    ...handler,
+    fetch: (request, invocation) =>
+      handler.fetch(request, {
+        ...invocation,
+        clientAddress: readClientAddress(request),
+      }),
+  };
+}
+
+/**
+ * The client address Cloudflare's edge puts on every request it forwards. It is
+ * the one forwarding header a Worker may trust: the edge overwrites it, so a
+ * visitor who sets their own is not believed. `x-forwarded-for` gets no such
+ * treatment and is never read.
+ */
+function readClientAddress(request: Request): string | undefined {
+  return request.headers.get("cf-connecting-ip") ?? undefined;
 }

@@ -272,6 +272,56 @@ describe("magic-link verify route", () => {
     expect(sessionRows[0]?.userId).toBe(user.id);
   });
 
+  test("records the address the runtime supplied, clipped to the column's cap", async () => {
+    const { mailer } = captureMailer();
+    const overLong = `2001:db8:${"a".repeat(200)}`;
+    const h = await createDispatcherHarness({
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+      clientAddress: overLong,
+    });
+    const user = await h.factory.user.create({ email: "alice@example.com" });
+    const { token } = await h.factory.authToken.create({
+      userId: user.id,
+      email: "alice@example.com",
+    });
+
+    await h.dispatch(
+      getRequest(`/_plumix/auth/magic-link/verify?token=${token}`),
+    );
+
+    const [session] = await h.db.select().from(sessions);
+    expect(session?.ipAddress).toBe(overLong.slice(0, 64));
+  });
+
+  test("records no address when the runtime supplied none, whatever the request forwards", async () => {
+    const { mailer } = captureMailer();
+    const h = await createDispatcherHarness({
+      magicLink: { siteName: "Plumix Test" },
+      mailer,
+    });
+    const user = await h.factory.user.create({ email: "alice@example.com" });
+    const { token } = await h.factory.authToken.create({
+      userId: user.id,
+      email: "alice@example.com",
+    });
+
+    await h.dispatch(
+      new Request(
+        `https://cms.example/_plumix/auth/magic-link/verify?token=${token}`,
+        {
+          headers: {
+            "cf-connecting-ip": "203.0.113.7",
+            "x-forwarded-for": "198.51.100.9",
+          },
+        },
+      ),
+    );
+
+    const [session] = await h.db.select().from(sessions);
+    expect(session?.ipAddress).toBeNull();
+  });
+
   test("under a basePath the post-verify redirect and cookie are base-scoped", async () => {
     const { mailer } = captureMailer();
     const h = await createDispatcherHarness({

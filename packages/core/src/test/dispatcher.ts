@@ -78,6 +78,13 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly env?: PlumixEnv;
   /**
+   * The client address the runtime reports, as a real adapter hands core
+   * through `invocation.clientAddress`. Set it in tests of session metadata or
+   * visitor-meta hashing; leaving it unset is the runtime that could resolve
+   * none, whatever forwarding header the request carries.
+   */
+  readonly clientAddress?: string;
+  /**
    * Platform asset layer (e.g. Cloudflare's env.ASSETS). Provide a mock
    * when exercising the dispatcher's /_plumix/admin/* SPA fallback.
    */
@@ -237,50 +244,52 @@ export interface DispatcherHarness {
   readonly drainDeferred: () => Promise<void>;
 }
 
-function withRequest(
-  app: PlumixApp,
-  logger: Logger,
-  db: TestDb,
-  env: PlumixEnv,
-  assets: AssetsBinding | undefined,
-  storage: ConnectedObjectStorage | undefined,
-  cache: ConnectedCache | undefined,
-  defer: DeferFn,
-  request: Request,
-  user: User | null,
-): AppContext {
-  return createAppContext({
-    defer,
-    db,
-    env,
-    request,
-    hooks: app.hooks,
-    plugins: app.plugins,
-    appContextExtensions: app.appContextExtensions,
-    blocks: app.blocks,
-    marks: app.marks,
-    shortcodes: app.shortcodes,
-    logger,
-    user: user
-      ? { id: user.id, email: user.email, role: user.role, meta: user.meta }
-      : undefined,
-    assets,
-    storage,
-    cache,
-    imageDelivery: app.config.imageDelivery,
-    imageRemotePatterns: app.config.images?.remotePatterns,
-    mailer: app.config.mailer,
-    i18n: app.config.i18n,
-    oauthProviders: app.oauthProviders,
-    authMethods: app.authMethods,
-    authenticator: app.authenticator,
-    bootstrapAllowed: app.bootstrapAllowed,
-    origin: app.origin,
-    basePath: app.basePath,
-    siteName: app.config.auth.magicLink?.siteName,
-    debugBar: app.config.debugBar,
-    telemetry: app.config.telemetry,
-  });
+/**
+ * Bind everything a harness fixes for its lifetime — the app, the slots, the
+ * defer queue — so each dispatch supplies only what a request varies.
+ */
+function contextFactory(args: {
+  readonly app: PlumixApp;
+  readonly options: CreateDispatcherHarnessOptions;
+  readonly db: TestDb;
+  readonly env: PlumixEnv;
+  readonly defer: DeferFn;
+}): (request: Request, user: User | null) => AppContext {
+  const { app, options, db, env, defer } = args;
+  return (request, user) =>
+    createAppContext({
+      defer,
+      db,
+      env,
+      request,
+      clientAddress: options.clientAddress,
+      hooks: app.hooks,
+      plugins: app.plugins,
+      appContextExtensions: app.appContextExtensions,
+      blocks: app.blocks,
+      marks: app.marks,
+      shortcodes: app.shortcodes,
+      logger: options.logger ?? silentLogger,
+      user: user
+        ? { id: user.id, email: user.email, role: user.role, meta: user.meta }
+        : undefined,
+      assets: options.assets,
+      storage: options.storage,
+      cache: options.cache,
+      imageDelivery: app.config.imageDelivery,
+      imageRemotePatterns: app.config.images?.remotePatterns,
+      mailer: app.config.mailer,
+      i18n: app.config.i18n,
+      oauthProviders: app.oauthProviders,
+      authMethods: app.authMethods,
+      authenticator: app.authenticator,
+      bootstrapAllowed: app.bootstrapAllowed,
+      origin: app.origin,
+      basePath: app.basePath,
+      siteName: app.config.auth.magicLink?.siteName,
+      debugBar: app.config.debugBar,
+      telemetry: app.config.telemetry,
+    });
 }
 
 export async function createDispatcherHarness(
@@ -323,26 +332,15 @@ export async function createDispatcherHarness(
   });
   const app: PlumixApp = { ...built, ...options.coldInterfaces };
   const dispatcher = createPlumixDispatcher(app);
-  const { assets, storage, cache } = options;
   const { defer, drainDeferred } = createDeferQueue();
+  const withRequest = contextFactory({ app, options, db, env, defer });
 
   const harness: DispatcherHarness = {
     db,
     app,
     env,
     dispatch: async (request, user = null) => {
-      const ctx = withRequest(
-        app,
-        options.logger ?? silentLogger,
-        db,
-        env,
-        assets,
-        storage,
-        cache,
-        defer,
-        request,
-        user,
-      );
+      const ctx = withRequest(request, user);
       // Mirror the runtime adapter, which runs dispatch inside the request
       // store so `tryGetContext()`-based features (DB logging, debug spans,
       // audit-log) see the context.
@@ -350,18 +348,7 @@ export async function createDispatcherHarness(
     },
     fetch: async (path, fetchOptions = {}) => {
       const request = await buildRequest(db, path, fetchOptions);
-      const ctx = withRequest(
-        app,
-        options.logger ?? silentLogger,
-        db,
-        env,
-        assets,
-        storage,
-        cache,
-        defer,
-        request,
-        fetchOptions.as ?? null,
-      );
+      const ctx = withRequest(request, fetchOptions.as ?? null);
       const response = await requestStore.run(ctx, () => dispatcher(ctx));
       return new TestResponse(response);
     },

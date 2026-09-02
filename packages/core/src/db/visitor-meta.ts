@@ -11,6 +11,8 @@ const SALT_BYTES = 16;
 // while bounding row width on hostile input.
 const MAX_UA_LENGTH = 1024;
 const ENCODER = new TextEncoder();
+/** The bucket every visitor whose address the runtime could not resolve shares. */
+const UNKNOWN_ADDRESS = "unknown";
 
 export interface VisitorMeta {
   /** Lowercase-hex SHA-256 of the salted address. */
@@ -62,22 +64,6 @@ function getOrCreateIpSalt(ctx: AppContext, group: string): Promise<string> {
   });
 }
 
-// An address is trustworthy only where a trusted edge sets it —
-// `cf-connecting-ip` on Cloudflare. The `x-forwarded-for` fallback is
-// client-spoofable off CF, so anything built on it is best-effort;
-// `"unknown"` is the shared bucket for a visitor with no resolvable address.
-function readIp(request: Request): string {
-  const cfIp = request.headers.get("cf-connecting-ip");
-  if (cfIp) return cfIp;
-  // Comma-separated once several proxies have appended to it; the leftmost
-  // entry is the original client.
-  const forwarded = request.headers
-    .get("x-forwarded-for")
-    ?.split(",")[0]
-    ?.trim();
-  return forwarded && forwarded.length > 0 ? forwarded : "unknown";
-}
-
 async function hashIp(ip: string, salt: string): Promise<string> {
   const digest = await crypto.subtle.digest(
     "SHA-256",
@@ -92,6 +78,12 @@ async function hashIp(ip: string, salt: string): Promise<string> {
  * addresses are never stored, so a hash is all a rate limiter or an inbox has
  * to compare.
  *
+ * The address is the one the runtime's trusted proxy reported, on
+ * `ctx.clientAddress`; a forwarding header the visitor set themselves is not
+ * read, so nobody buys a fresh bucket by adding one. A runtime that resolved
+ * no address puts every such visitor in one shared bucket rather than
+ * failing the submission.
+ *
  * The salt defeats a precomputed table of the IPv4 space and nothing more: it
  * lives in the same database as the hashes, so it is no defence against
  * someone who has already read that database.
@@ -104,7 +96,7 @@ export async function readVisitorMeta(
   const userAgent = request.headers.get("user-agent");
   return {
     ipHash: await hashIp(
-      readIp(request),
+      ctx.clientAddress ?? UNKNOWN_ADDRESS,
       await getOrCreateIpSalt(ctx, privateSettingsGroup(options.namespace)),
     ),
     userAgent: userAgent ? userAgent.slice(0, MAX_UA_LENGTH) : null,

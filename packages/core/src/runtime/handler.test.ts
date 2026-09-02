@@ -103,6 +103,65 @@ describe("createPlumixHandler — fetch", () => {
     expect(response.headers.get("x-commit-ran")).toBe("1");
   });
 
+  test("the invocation's client address reaches a handler as ctx.clientAddress", async () => {
+    const plugin = definePlugin("echo", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/whoami",
+        handler: (_request, appCtx) =>
+          new Response(appCtx.clientAddress ?? "none"),
+      });
+    });
+    const handler = await handlerFor({ plugins: [plugin] });
+
+    const response = await handler.fetch(
+      new Request("https://cms.example/whoami"),
+      { env: {}, clientAddress: "203.0.113.7" },
+    );
+
+    expect(await response.text()).toBe("203.0.113.7");
+  });
+
+  test("an invocation with no client address leaves ctx.clientAddress undefined, whatever the request forwards", async () => {
+    const plugin = definePlugin("echo", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/whoami",
+        handler: (_request, appCtx) =>
+          new Response(appCtx.clientAddress ?? "none"),
+      });
+    });
+    const handler = await handlerFor({ plugins: [plugin] });
+
+    const response = await handler.fetch(
+      new Request("https://cms.example/whoami", {
+        headers: {
+          "cf-connecting-ip": "203.0.113.7",
+          "x-forwarded-for": "198.51.100.9",
+        },
+      }),
+      { env: {} },
+    );
+
+    expect(await response.text()).toBe("none");
+  });
+
+  test("an empty client address is an absent one, not a bucket of its own", async () => {
+    const plugin = definePlugin("echo", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/whoami",
+        handler: (_request, appCtx) =>
+          new Response(appCtx.clientAddress ?? "none"),
+      });
+    });
+    const handler = await handlerFor({ plugins: [plugin] });
+
+    const response = await handler.fetch(
+      new Request("https://cms.example/whoami"),
+      { env: {}, clientAddress: "  " },
+    );
+
+    expect(await response.text()).toBe("none");
+  });
+
   test("deferred work rides waitUntil when the invocation supplies one", async () => {
     const snapshots: TelemetrySnapshot[] = [];
     const handler = await handlerFor({

@@ -164,6 +164,18 @@ export interface AppContextBase<
    * narrowing.
    */
   readonly tokenScopes: readonly string[] | null;
+  /**
+   * The client address the runtime's trusted proxy reported, as
+   * `invocation.clientAddress` supplied it; `undefined` when the runtime could
+   * not resolve one, an empty value included — a proxy that sets its header
+   * blank has reported no address, not an address that is the empty string. Core never derives it from a forwarding header — only the
+   * adapter knows which proxy in front of it is trusted — so a plugin reads
+   * this one field for a rate limiter or a spam floor whatever it deploys on.
+   *
+   * Advisory, like the session row it lands in: an address is a fact about the
+   * network path, not a principal. Policy still flows through the session id.
+   */
+  readonly clientAddress?: string;
   readonly hooks: HookExecutor;
   readonly plugins: PluginRegistry;
   /**
@@ -380,6 +392,8 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly db: Db<TSchema>;
   readonly env: PlumixEnv;
   readonly request: Request;
+  /** See {@link AppContextBase.clientAddress}; the runtime supplies it. */
+  readonly clientAddress?: string;
   readonly hooks: HookExecutor;
   readonly plugins: PluginRegistry;
   /**
@@ -425,6 +439,14 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
     string,
     { readonly value: unknown }
   >;
+}
+
+// A proxy that sets its header blank has reported no address, not an address
+// that is the empty string — the two would otherwise hash to separate buckets.
+function normalizeClientAddress(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (trimmed === undefined || trimmed.length === 0) return undefined;
+  return trimmed;
 }
 
 function logRejection(logger: Logger, error: unknown): void {
@@ -498,6 +520,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     db: args.db,
     env: args.env,
     request: args.request,
+    clientAddress: normalizeClientAddress(args.clientAddress),
     user,
     tokenScopes,
     hooks: args.hooks,
