@@ -13,12 +13,12 @@ import type {
   UrlOptions,
 } from "plumix";
 import { resolveEnvInput } from "plumix";
+import { DEFAULT_PRESIGN_TTL_SECONDS, presignPutUrl } from "plumix/storage/s3";
 
 import type { WorkerEnv } from "./read-env.js";
 import { bucketNameKey, publicUrlBaseKey } from "./env-keys.js";
 import { R2Error } from "./errors.js";
 import { readEnvString } from "./read-env.js";
-import { presignPutUrl } from "./sigv4.js";
 
 /**
  * S3-compatible credentials for R2 — required only when the application
@@ -141,11 +141,6 @@ function readR2Binding(env: unknown, bindingName: string): R2Bucket {
   return bucket as unknown as R2Bucket;
 }
 
-// Tight default — same-page XHR PUTs land in seconds; a longer window
-// is a replay surface (logs, browser history). Callers can extend via
-// `expiresIn` when they actually need it (e.g. resumable uploads).
-const DEFAULT_PRESIGN_TTL_SECONDS = 60;
-
 export function r2(config: R2Config): R2ObjectStorage {
   return {
     kind: "r2",
@@ -257,6 +252,8 @@ export function r2(config: R2Config): R2ObjectStorage {
             credentials: {
               accessKeyId: resolvedS3.accessKeyId,
               secretAccessKey: resolvedS3.secretAccessKey,
+              // The only region R2's S3 API signs for.
+              region: "auto",
             },
           });
         };

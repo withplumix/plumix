@@ -3,12 +3,12 @@ import type {
   GetResult,
   ListOptions,
   ListResult,
-  ObjectBody,
   ObjectStorage,
   PresignedPutResult,
   PresignPutOptions,
   UrlOptions,
 } from "./slots.js";
+import { bodyToBytes, toFreshArrayBuffer } from "../storage/body.js";
 
 interface MemoryEntry {
   readonly bytes: Uint8Array;
@@ -137,50 +137,6 @@ export function memoryStorage(config: MemoryStorageConfig = {}): ObjectStorage {
     kind: "memory",
     connect: () => connected,
   };
-}
-
-async function bodyToBytes(body: ObjectBody): Promise<Uint8Array> {
-  if (body === null) return new Uint8Array(0);
-  if (typeof body === "string") return new TextEncoder().encode(body);
-  if (body instanceof Uint8Array) return body.slice();
-  if (body instanceof ArrayBuffer) {
-    const out = new Uint8Array(body.byteLength);
-    out.set(new Uint8Array(body));
-    return out;
-  }
-  if (ArrayBuffer.isView(body)) {
-    const src = new Uint8Array(body.buffer, body.byteOffset, body.byteLength);
-    const out = new Uint8Array(src.byteLength);
-    out.set(src);
-    return out;
-  }
-  if (body instanceof Blob) {
-    return new Uint8Array(await body.arrayBuffer());
-  }
-  // ReadableStream<Uint8Array>
-  const reader = body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    total += value.byteLength;
-  }
-  const joined = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    joined.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return joined;
-}
-
-// Avoids the `SharedArrayBuffer` union that `.slice()` introduces.
-function toFreshArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const out = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(out).set(bytes);
-  return out;
 }
 
 function streamFromBytes(bytes: Uint8Array): ReadableStream<Uint8Array> {

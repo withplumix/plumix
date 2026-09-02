@@ -413,6 +413,32 @@ declare module "plumix" {
 }
 ```
 
+### plumix/storage/s3
+
+The S3 object-storage slot and the SigV4 signer behind it, on their own subpath for the reason `plumix/db/libsql` is: a deploy that binds a native bucket never carries the signer. `s3()` talks to any S3-compatible endpoint over `fetch`, so AWS S3, R2 through its S3 API, MinIO, DigitalOcean Spaces and GCS interop all go through one slot, and it always offers `presignPut`. The signer's two forms, `presignPutUrl` and `signRequest`, are exported for a runtime adapter that needs them on their own.
+
+```ts
+import { s3 } from "plumix/storage/s3";
+
+export const storage = s3({
+  bucket: "media",
+  region: "us-east-1",
+  endpoint: "https://s3.us-east-1.amazonaws.com",
+  credentials: (env) => ({
+    accessKeyId: env.S3_ACCESS_KEY_ID,
+    secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+  }),
+  publicUrlBase: "https://cdn.example.com",
+});
+
+declare module "plumix" {
+  interface PlumixEnv {
+    readonly S3_ACCESS_KEY_ID: string;
+    readonly S3_SECRET_ACCESS_KEY: string;
+  }
+}
+```
+
 ### plumix/fields
 
 The meta-box field builders. Every builder is fluent and typed so that a chain which does not apply is a compile error. The reference factories are builders too, not options objects. `user(key)`, `entry(key, entryTypes)` and `term(key, taxonomies)` each return a reference builder whose chain is gated by kind, so `.roles()` and `.includeDisabled()` compile only on a `user` reference and `.status()` and `.includeTrashed()` only on an `entry` one, while `.multiple()`, `.max()` and `.returns()` apply to all three.

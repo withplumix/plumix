@@ -158,6 +158,9 @@ const config: KnipConfig = {
         // subpath; not reachable from `src/index.ts` (kept off the root
         // barrel so the driver stays out of unrelated bundles).
         "src/db/libsql.ts",
+        // `plumix/storage/s3` re-exports the core S3 slot + SigV4 signer on
+        // its own subpath for the same reason.
+        "src/storage/s3.ts",
         "src/fields/index.ts",
         "src/i18n/index.ts",
         "src/schema/index.ts",

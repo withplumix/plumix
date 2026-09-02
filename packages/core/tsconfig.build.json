@@ -4,5 +4,9 @@
     "stripInternal": true,
     "tsBuildInfoFile": "${configDir}/.cache/build.tsbuildinfo"
   },
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/storage/s3/fake-s3.ts"
+  ]
 }

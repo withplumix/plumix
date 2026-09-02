@@ -45,6 +45,10 @@
       "types": "./dist/db/libsql.d.ts",
       "default": "./dist/db/libsql.js"
     },
+    "./storage/s3": {
+      "types": "./dist/storage/s3/index.d.ts",
+      "default": "./dist/storage/s3/index.js"
+    },
     "./dev-client": {
       "types": "./dist/dev-client/index.d.ts",
       "default": "./dist/dev-client/index.js"

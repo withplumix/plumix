@@ -128,33 +128,6 @@ export class CfAccessError extends Error {
   }
 }
 
-export class SigV4Error extends Error {
-  static {
-    SigV4Error.prototype.name = "SigV4Error";
-  }
-
-  readonly code: "expires_in_out_of_range";
-  readonly expiresIn: number;
-
-  private constructor(
-    code: "expires_in_out_of_range",
-    message: string,
-    expiresIn: number,
-  ) {
-    super(message);
-    this.code = code;
-    this.expiresIn = expiresIn;
-  }
-
-  static expiresInOutOfRange(ctx: { expiresIn: number }): SigV4Error {
-    return new SigV4Error(
-      "expires_in_out_of_range",
-      `presignPutUrl: expiresIn must be in [1..604800] seconds, got ${String(ctx.expiresIn)}`,
-      ctx.expiresIn,
-    );
-  }
-}
-
 export class PlumixRuntimeConfigError extends Error {
   static {
     PlumixRuntimeConfigError.prototype.name = "PlumixRuntimeConfigError";
