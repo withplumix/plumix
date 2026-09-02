@@ -1,51 +1,21 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type {
-  AppContext,
   AssetsBinding,
-  Db,
-  FetchHandler,
   PlumixApp,
   PlumixEnv,
+  PlumixHandler,
   RuntimeAdapter,
-  ScheduledHandler,
 } from "plumix";
-import {
-  createAppContext,
-  createPlumixDispatcher,
-  jsonResponse,
-  readSessionCookie,
-  requestStore,
-  resolveEnvInput,
-  runScheduledTasks,
-} from "plumix";
+import { createPlumixHandler } from "plumix";
 
-import type { WorkerEnv } from "./read-env.js";
 import { PlumixRuntimeConfigError } from "./errors.js";
-
-const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
-
-/**
- * Structural check for the Worker ExecutionContext — we only use
- * `waitUntil`, so that's the only shape we verify. Prefer this to a
- * `as ExecutionContext | undefined` cast: casts silently accept anything,
- * the guard narrows safely and documents intent.
- */
-function isExecutionContext(value: unknown): value is ExecutionContext {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "waitUntil" in value &&
-    typeof value.waitUntil === "function"
-  );
-}
 
 // Cloudflare Workers Assets exposes a Fetcher on env.ASSETS when the
 // wrangler config declares `assets.binding: "ASSETS"`. Consumers using a
 // different binding name here get no admin serving — the core dispatcher
 // falls back to `admin-not-available` for /_plumix/admin/*. Convention
 // over config; `ASSETS` is what `apps/demo/wrangler.jsonc` ships.
-function readAssetsBinding(env: unknown): AssetsBinding | undefined {
-  if (typeof env !== "object" || env === null) return undefined;
+function readAssetsBinding(env: PlumixEnv): AssetsBinding | undefined {
   const candidate = (env as { readonly ASSETS?: unknown }).ASSETS;
   if (
     typeof candidate === "object" &&
@@ -56,104 +26,6 @@ function readAssetsBinding(env: unknown): AssetsBinding | undefined {
     return candidate as AssetsBinding;
   }
   return undefined;
-}
-
-// `connect` owns its result, including `undefined` for "no delivery" — so it
-// must not `?? slot` back to the bare (identity-transform) object.
-function connectImageDelivery(
-  app: PlumixApp,
-  env: unknown,
-): PlumixApp["config"]["imageDelivery"] {
-  const slot = app.config.imageDelivery;
-  if (!slot) return undefined;
-  return slot.connect ? slot.connect(env) : slot;
-}
-
-// Both the fetch and scheduled handlers assemble an identical AppContext; only
-// the request, its db handle, and the deferred-work sink differ, so those come
-// in as args while everything derived from `app`/`env` is built once here — a
-// new context field is wired in one place, not two drifting call sites.
-function buildAppContext(
-  app: PlumixApp,
-  args: {
-    readonly db: unknown;
-    readonly env: unknown;
-    readonly request: Request;
-    readonly defer: ((promise: Promise<unknown>) => void) | undefined;
-  },
-): AppContext {
-  const { db, env, request, defer } = args;
-  // Per-request I/O slots. `storage`/`kv` bindings are stateless; `cache`
-  // connects to null (→ undefined) when the deploy lacks the zone credentials
-  // to purge, so caching is off and pages render live. Purge tags accrue on
-  // both the request path and scheduled publishes, so cache is wired for both.
-  const storage = app.config.storage?.connect(env);
-  const cache = app.config.cache?.connect(env) ?? undefined;
-  const kv = app.config.kv?.connect(env);
-  return createAppContext({
-    db: db as Db,
-    env: env as PlumixEnv,
-    request,
-    hooks: app.hooks,
-    plugins: app.plugins,
-    blocks: app.blocks,
-    marks: app.marks,
-    shortcodes: app.shortcodes,
-    defer,
-    assets: readAssetsBinding(env),
-    storage,
-    cache,
-    kv,
-    imageDelivery: connectImageDelivery(app, env),
-    imageRemotePatterns: app.config.images?.remotePatterns,
-    debugBar: app.config.debugBar,
-    // Registered consumers head-sample at context creation; snapshot delivery
-    // then rides `defer` → `waitUntil`, off the response / cron path.
-    telemetry: app.config.telemetry,
-    mailer: app.config.mailer,
-    i18n: app.config.i18n,
-    oauthProviders: app.oauthProviders,
-    authMethods: app.authMethods,
-    authenticator: app.authenticator,
-    bootstrapAllowed: app.bootstrapAllowed,
-    origin: app.origin,
-    basePath: app.basePath,
-    siteName: app.config.auth.magicLink?.siteName,
-    appContextExtensions: app.appContextExtensions,
-  });
-}
-
-/**
- * Walk the configured slot adapters for their declared `requiredBindings` and
- * assert every key is present on `env`. Called once per Worker isolate — the
- * result is memoised — so the check is effectively free after the first request.
- *
- * Produces a single error listing every missing binding, which is far more
- * actionable than a 500 surfacing from the first query several hops deeper.
- */
-function validateBindings(app: PlumixApp, env: unknown): void {
-  const { database, storage, kv } = app.config;
-  const required: string[] = [];
-  for (const slot of [database, storage, kv]) {
-    if (slot?.requiredBindings) required.push(...slot.requiredBindings);
-  }
-
-  if (required.length === 0) return;
-  // Defensive: if env isn't an object, every binding is "missing". This
-  // only hits with malformed test inputs — the real CF runtime always
-  // hands us a plain object — but produces a useful error instead of a
-  // TypeError from property access on undefined.
-  if (env == null || typeof env !== "object") {
-    throw PlumixRuntimeConfigError.bindingsMissing({ missing: required });
-  }
-  const envRecord = env as WorkerEnv;
-  // `== null` catches both undefined and null — a binding explicitly set
-  // to null (rare, but possible with a misconfigured wrangler.toml) is
-  // just as broken as an unset one.
-  const missing = required.filter((name) => envRecord[name] == null);
-  if (missing.length > 0) {
-    throw PlumixRuntimeConfigError.bindingsMissing({ missing });
-  }
 }
 
 /**
@@ -174,13 +46,14 @@ function validateBindings(app: PlumixApp, env: unknown): void {
 export function cloudflare(): RuntimeAdapter {
   return {
     name: "cloudflare",
-    buildFetchHandler: buildFetch,
-    buildScheduledHandler: buildScheduled,
+    createHandler,
     commandsModule: "@plumix/runtime-cloudflare/commands",
   };
 }
 
-function buildFetch(app: PlumixApp): FetchHandler {
+// The default handler is the whole adapter; Cloudflare adds only the read its
+// platform can answer.
+function createHandler(app: PlumixApp): PlumixHandler {
   // Defense in depth: the `node:async_hooks` import above already fails at
   // module-load time without `nodejs_compat`, but if the runtime ships a
   // stubbed symbol (some edge-runtime shims do) the cryptic error bubbles up
@@ -188,149 +61,5 @@ function buildFetch(app: PlumixApp): FetchHandler {
   if (typeof AsyncLocalStorage !== "function") {
     throw PlumixRuntimeConfigError.asyncLocalStorageMissing();
   }
-
-  const dispatcher = createPlumixDispatcher(app);
-  let bindingsValidated = false;
-
-  return async (request, env, executionCtx): Promise<Response> => {
-    try {
-      // Memoised binding check — runs once per Worker isolate. Surfaces
-      // misconfigured deploys as a readable error instead of an opaque 500
-      // from the first query N frames deeper.
-      //
-      // Safe to memo on first env: on CF Workers env is immutable per
-      // isolate (bindings are set at deploy time, not per-request), so the
-      // flag can never be stale for a changed env. Tests that want to re-
-      // validate after a simulated env change should construct a fresh
-      // fetch handler per scenario — which is what `invoke()` does.
-      if (!bindingsValidated) {
-        validateBindings(app, env);
-        bindingsValidated = true;
-      }
-
-      const workerCtx = isExecutionContext(executionCtx)
-        ? executionCtx
-        : undefined;
-      // Route fire-and-forget work through `waitUntil` so the isolate
-      // stays alive past the response. `createAppContext` wraps this
-      // with a `.catch` that logs through the configured logger, so
-      // a rejected deferred promise can't surface as an
-      // `unhandledRejection` (which the platform would otherwise mark
-      // as a failed request in the dashboard).
-      const defer = workerCtx
-        ? (promise: Promise<unknown>): void => workerCtx.waitUntil(promise)
-        : undefined;
-
-      const { database } = app.config;
-      const scoped = database.connectRequest?.({
-        env,
-        request,
-        schema: app.schema,
-        isAuthenticated: readSessionCookie(request) !== null,
-        isWrite: !SAFE_METHODS.has(request.method.toUpperCase()),
-      });
-      const db = scoped
-        ? scoped.db
-        : database.connect(env, request, app.schema).db;
-      // Unify the post-dispatch path so both scoped and non-scoped configs
-      // run the same finalize step. Keeps future response-shaping logic
-      // (e.g. request-id headers, timing) in one place.
-      const finalize = scoped
-        ? (response: Response) => scoped.commit(response)
-        : (response: Response) => response;
-
-      const appCtx = buildAppContext(app, { db, env, request, defer });
-      const response = await requestStore.run(appCtx, () => dispatcher(appCtx));
-      return finalize(response);
-    } catch (error) {
-      return handleAdapterFailure(error);
-    }
-  };
-}
-
-function buildScheduled(app: PlumixApp): ScheduledHandler {
-  if (typeof AsyncLocalStorage !== "function") {
-    throw PlumixRuntimeConfigError.asyncLocalStorageMissing();
-  }
-
-  let bindingsValidated = false;
-
-  return async (event, env, executionCtx): Promise<void> => {
-    if (!bindingsValidated) {
-      validateBindings(app, env);
-      bindingsValidated = true;
-    }
-
-    const workerCtx = isExecutionContext(executionCtx)
-      ? executionCtx
-      : undefined;
-    const defer = workerCtx
-      ? (promise: Promise<unknown>): void => workerCtx.waitUntil(promise)
-      : undefined;
-
-    // Synthetic request representing the cron invocation. Anything that
-    // reads `ctx.request.url` from a scheduled task sees an internal
-    // marker rather than a real inbound request. `app.origin` may be an
-    // `(env) => …` resolver — resolve it against the scheduled env.
-    const origin = resolveEnvInput(app.origin, env as PlumixEnv);
-    const syntheticRequest = new Request(
-      `${origin}/_plumix/internal/scheduled?cron=${encodeURIComponent(event.cron)}`,
-      { method: "POST" },
-    );
-
-    const { database } = app.config;
-    // Scheduled invocations are always treated as writes (purges
-    // mutate state); pass through `database.connectRequest` so deploys
-    // that route writes to a primary D1 do so for scheduled work too.
-    const scoped = database.connectRequest?.({
-      env,
-      request: syntheticRequest,
-      schema: app.schema,
-      isAuthenticated: false,
-      isWrite: true,
-    });
-    const db = scoped
-      ? scoped.db
-      : database.connect(env, syntheticRequest, app.schema).db;
-
-    const appCtx = buildAppContext(app, {
-      db,
-      env,
-      request: syntheticRequest,
-      defer,
-    });
-
-    try {
-      await requestStore.run(appCtx, () =>
-        runScheduledTasks(app, appCtx, event.cron),
-      );
-      // `commit` finalizes the scoped write (e.g. flushing the D1 batch).
-      // Synchronous return — same shape as buildFetch's `finalize`.
-      if (scoped) scoped.commit(new Response(null));
-    } catch (error) {
-      if (typeof console !== "undefined") {
-        console.error("[plumix/runtime-cloudflare] scheduled_failure", error);
-      }
-    }
-  };
-}
-
-function handleAdapterFailure(error: unknown): Response {
-  if (typeof console !== "undefined") {
-    console.error("[plumix/runtime-cloudflare] adapter_failure", error);
-  }
-  // Config errors (missing bindings) are deploy metadata, not user input —
-  // surface them in the response body so an operator without wrangler tail
-  // can diagnose the misconfiguration from HTTP alone.
-  if (error instanceof PlumixRuntimeConfigError) {
-    return jsonResponse(
-      {
-        error: error.code,
-        message: error.message,
-        missing: error.missing,
-      },
-      { status: 500 },
-    );
-  }
-  return jsonResponse({ error: "internal_error" }, { status: 500 });
+  return createPlumixHandler(app, { assets: readAssetsBinding });
 }

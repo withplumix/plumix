@@ -22,7 +22,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
     writeFileSync(
       configPath,
       `export default {
-        runtime: { name: 'x', buildFetchHandler: () => () => new Response('ok') },
+        runtime: { name: 'x', createHandler: () => ({ fetch: () => new Response('ok') }) },
         database: { kind: 'x' },
         auth: { passkey: {} },
         vite: { plugins: [{ name: 'tailwindcss-probe' }] },
@@ -42,7 +42,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
     writeFileSync(
       configPath,
       `export default {
-        runtime: { name: 'x', buildFetchHandler: () => () => new Response('ok') },
+        runtime: { name: 'x', createHandler: () => ({ fetch: () => new Response('ok') }) },
         database: { kind: 'x' },
         auth: { passkey: {} },
       };`,
@@ -62,7 +62,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
     writeFileSync(
       configPath,
       `export default {
-        runtime: { name: 'x', buildFetchHandler: () => () => new Response('ok') },
+        runtime: { name: 'x', createHandler: () => ({ fetch: () => new Response('ok') }) },
         database: { kind: 'x' },
         auth: { passkey: {} },
         vite: { server: { hmr: { overlay: true } } },
@@ -83,7 +83,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
     writeFileSync(
       configPath,
       `export default {
-        runtime: { name: 'x', buildFetchHandler: () => () => new Response('ok') },
+        runtime: { name: 'x', createHandler: () => ({ fetch: () => new Response('ok') }) },
         database: { kind: 'x' },
         auth: { passkey: {} },
       };`,

@@ -57,6 +57,8 @@ export { createPlumixDispatcher } from "./runtime/dispatcher.js";
 export type { PlumixDispatcher } from "./runtime/dispatcher.js";
 export type { EnvInput } from "./runtime/env-input.js";
 export { resolveEnvInput } from "./runtime/env-input.js";
+export { createPlumixHandler } from "./runtime/handler.js";
+export type { PlumixHandlerOptions } from "./runtime/handler.js";
 export { forbidden, jsonResponse, methodNotAllowed } from "./runtime/http.js";
 export { memoryKv } from "./runtime/memory-kv.js";
 export type { MemoryKvConfig } from "./runtime/memory-kv.js";

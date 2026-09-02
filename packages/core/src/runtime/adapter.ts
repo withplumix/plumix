@@ -1,26 +1,49 @@
 import type { PlumixApp } from "./app.js";
+import type { PlumixEnv } from "./bindings.js";
 
-// env/ctx are runtime-specific; `any` keeps adapter-returned handlers
-// bivariantly assignable to this core-level contract without losing
-// Request/Response typing at the boundary.
-/* eslint-disable @typescript-eslint/no-explicit-any */
-export type FetchHandler = (
-  request: Request,
-  env: any,
-  ctx: any,
-) => Response | Promise<Response>;
+/**
+ * What the runtime knows about one call into the handler. An adapter builds
+ * it from its platform's serve API — the Worker's positional `(env, ctx)`,
+ * a `Bun.serve` request, a Lambda event — so core never sees the platform
+ * shape.
+ */
+export interface Invocation {
+  /** The runtime's configuration bag: bindings, secrets and plain vars. */
+  readonly env: PlumixEnv;
+  /**
+   * Keep the runtime alive until the promise settles. Deferred work (telemetry
+   * delivery, cache purges) routes through it when supplied; without it the
+   * work is fire-and-forget.
+   */
+  readonly waitUntil?: (promise: Promise<unknown>) => void;
+  /**
+   * The client address as the runtime's trusted proxy reports it. Carried on
+   * the contract so the adapter that knows its proxy supplies the value and
+   * core never parses a forwarding header (#2171).
+   */
+  readonly clientAddress?: string;
+}
 
 export interface ScheduledEvent {
   readonly scheduledTime: number;
   readonly cron: string;
 }
 
-export type ScheduledHandler = (
-  event: ScheduledEvent,
-  env: any,
-  ctx: any,
-) => void | Promise<void>;
-/* eslint-enable @typescript-eslint/no-explicit-any */
+/**
+ * The one object a runtime adapter produces; the entry hands it every call.
+ * Property functions rather than methods, so an adapter cannot narrow the
+ * invocation it accepts and still conform.
+ */
+export interface PlumixHandler {
+  readonly fetch: (
+    request: Request,
+    invocation: Invocation,
+  ) => Response | Promise<Response>;
+  readonly scheduled?: (
+    event: ScheduledEvent,
+    invocation: Invocation,
+  ) => void | Promise<void>;
+}
 
 export interface CommandContext {
   readonly app: PlumixApp;
@@ -57,8 +80,12 @@ export type CommandRegistry = Readonly<Record<string, CommandDefinition>>;
 
 export interface RuntimeAdapter {
   readonly name: string;
-  buildFetchHandler(app: PlumixApp): FetchHandler;
-  buildScheduledHandler?(app: PlumixApp): ScheduledHandler;
+  /**
+   * Produce the handler the entry calls. Most adapters return
+   * `createPlumixHandler(app, …)` from core and add only what their platform
+   * knows: the Cloudflare adapter contributes the `ASSETS` binding read.
+   */
+  createHandler(app: PlumixApp): PlumixHandler;
   /**
    * Module specifiers whose named exports must be re-exported from the
    * generated Worker entry. Cloudflare requires a Durable Object class to

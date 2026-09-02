@@ -122,3 +122,34 @@ export class AppBootError extends Error {
     );
   }
 }
+
+export class RuntimeConfigError extends Error {
+  static {
+    RuntimeConfigError.prototype.name = "RuntimeConfigError";
+  }
+
+  readonly code: "bindings_missing";
+  readonly missing: readonly string[];
+
+  private constructor(
+    code: "bindings_missing",
+    message: string,
+    missing: readonly string[],
+  ) {
+    super(message);
+    this.code = code;
+    this.missing = missing;
+  }
+
+  static bindingsMissing(ctx: {
+    missing: readonly string[];
+  }): RuntimeConfigError {
+    return new RuntimeConfigError(
+      "bindings_missing",
+      `[plumix] missing required env bindings: ${ctx.missing.join(", ")}. ` +
+        "Declare them in the runtime's configuration and ensure the names " +
+        "match the slot config.",
+      ctx.missing,
+    );
+  }
+}

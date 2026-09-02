@@ -200,9 +200,8 @@ export interface PlumixApp {
   readonly appContextExtensions: ReadonlyMap<string, ContextExtensionEntry>;
   /**
    * Plugin-contributed scheduled tasks from `registerScheduledTask`.
-   * Runtime adapters' `buildScheduledHandler` iterates this list on
-   * every scheduled invocation; `runScheduledTasks(app, ctx)` is the
-   * shared dispatch helper.
+   * The handler's `scheduled` path iterates this list on every scheduled
+   * invocation; `runScheduledTasks(app, ctx)` is the shared dispatch helper.
    */
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
   /**

@@ -20,7 +20,7 @@ function testConfig(): PlumixConfig {
   return plumix({
     runtime: {
       name: "test",
-      buildFetchHandler: () => () => new Response("", { status: 500 }),
+      createHandler: () => ({ fetch: () => new Response("", { status: 500 }) }),
     },
     database: { kind: "test", connect: () => ({ db: {} }) },
     auth: auth({

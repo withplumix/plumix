@@ -21,7 +21,10 @@ import { migrateCommand, migrateGenerateDeps } from "./migrate.js";
 function fakeApp(plugins: readonly unknown[] = []): PlumixApp {
   return {
     config: {
-      runtime: { name: "test", buildFetchHandler: () => () => new Response() },
+      runtime: {
+        name: "test",
+        createHandler: () => ({ fetch: () => new Response() }),
+      },
       database: { kind: "test", connect: () => ({ db: {} }) },
       auth: {
         kind: "plumix",

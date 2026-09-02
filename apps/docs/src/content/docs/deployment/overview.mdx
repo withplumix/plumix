@@ -127,7 +127,7 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
 
 `plumix build` regenerates the `.plumix/` directory before Vite starts. Nothing in it is yours to edit, and every file carries a header saying so.
 
-`.plumix/worker.ts` is the Worker entry, and `wrangler.jsonc` points its `main` at it. The file imports your config, calls `buildApp` once per isolate, and hands each request to `config.runtime.buildFetchHandler(app)`. Regenerating it on every build is what keeps the entry in step with the config.
+`.plumix/worker.ts` is the Worker entry, and `wrangler.jsonc` points its `main` at it. The file imports your config, calls `buildApp` once per isolate, asks the runtime adapter for its handler with `config.runtime.createHandler(app)`, and hands each request to that handler along with an invocation built from the Worker's `env` and `waitUntil`. Regenerating it on every build is what keeps the entry in step with the config.
 
 `.plumix/schema.ts` is the Drizzle schema assembled from core's tables plus every table a plugin contributes. `plumix migrate generate` reads it.
 

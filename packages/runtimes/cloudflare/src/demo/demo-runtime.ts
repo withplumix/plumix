@@ -44,96 +44,101 @@ export function demoRuntime(
     name: `${inner.name}+demo`,
     commandsModule: inner.commandsModule,
     workerExports: [...(inner.workerExports ?? []), DEMO_EXPORTS_MODULE],
-    buildFetchHandler(app) {
-      const handle = inner.buildFetchHandler(app);
+    createHandler(app) {
+      const handler = inner.createHandler(app);
       // Seed the shared showcase DO once per isolate, lazily on first
       // cookieless request that needs it.
       let showcaseReady = false;
-      return async (request, env, ctx) => {
-        const { pathname } = new URL(request.url);
-        const typedEnv = env as PlumixEnv;
+      // `scheduled` is intentionally omitted: demo mode has no shared
+      // database, so scheduled tasks (session cleanup, publish-scheduled) have
+      // nothing to act on. Omitting it makes the worker's scheduled() a no-op.
+      return {
+        fetch: async (request, invocation) => {
+          const { pathname } = new URL(request.url);
+          const { env } = invocation;
 
-        if (pathname === "/demo") {
-          const token = readDemoToken(request) ?? crypto.randomUUID();
-          // Empty or absent site key → no widget (see renderDemoLoadingPage).
-          const siteKey = activeTurnstile(turnstile, typedEnv)?.siteKey;
-          const headers = new Headers({
-            "content-type": "text/html; charset=utf-8",
-          });
-          headers.append("set-cookie", demoSessionCookie(token, request));
-          headers.append("set-cookie", demoExpiresCookie(request));
-          return new Response(renderDemoLoadingPage(siteKey), {
-            status: 200,
-            headers,
-          });
-        }
-
-        if (pathname === "/_demo/reset") {
-          const headers = new Headers({
-            location: new URL("/demo", request.url).toString(),
-          });
-          for (const cookie of clearDemoCookies()) {
-            headers.append("set-cookie", cookie);
+          if (pathname === "/demo") {
+            const token = readDemoToken(request) ?? crypto.randomUUID();
+            // Empty or absent site key → no widget (see renderDemoLoadingPage).
+            const siteKey = activeTurnstile(turnstile, env)?.siteKey;
+            const headers = new Headers({
+              "content-type": "text/html; charset=utf-8",
+            });
+            headers.append("set-cookie", demoSessionCookie(token, request));
+            headers.append("set-cookie", demoExpiresCookie(request));
+            return new Response(renderDemoLoadingPage(siteKey), {
+              status: 200,
+              headers,
+            });
           }
-          return new Response(null, { status: 302, headers });
-        }
 
-        if (pathname === "/_demo/init" && request.method === "POST") {
-          const token = readDemoToken(request);
-          if (!token) {
-            return Response.json({ error: "no demo session" }, { status: 400 });
+          if (pathname === "/_demo/reset") {
+            const headers = new Headers({
+              location: new URL("/demo", request.url).toString(),
+            });
+            for (const cookie of clearDemoCookies()) {
+              headers.append("set-cookie", cookie);
+            }
+            return new Response(null, { status: 302, headers });
           }
-          const active = activeTurnstile(turnstile, typedEnv);
-          if (active) {
-            const challenge = request.headers.get("cf-turnstile-token") ?? "";
-            if (!(await verifyTurnstile(active.secretKey, challenge))) {
+
+          if (pathname === "/_demo/init" && request.method === "POST") {
+            const token = readDemoToken(request);
+            if (!token) {
               return Response.json(
-                { error: "challenge failed" },
-                { status: 403 },
+                { error: "no demo session" },
+                { status: 400 },
               );
             }
+            const active = activeTurnstile(turnstile, env);
+            if (active) {
+              const challenge = request.headers.get("cf-turnstile-token") ?? "";
+              if (!(await verifyTurnstile(active.secretKey, challenge))) {
+                return Response.json(
+                  { error: "challenge failed" },
+                  { status: 403 },
+                );
+              }
+            }
+            const stub = demoStub(env, binding, token);
+            await stub.initialize(await loadSql());
+            await stub.setTtlAlarm(DEMO_TTL_SECONDS);
+            return Response.json({ ok: true });
           }
-          const stub = demoStub(env, binding, token);
-          await stub.initialize(await loadSql());
-          await stub.setTtlAlarm(DEMO_TTL_SECONDS);
-          return Response.json({ ok: true });
-        }
 
-        if (isBlockedInDemo(pathname)) {
-          return Response.json(
-            { error: "Not available in the demo" },
-            { status: 403 },
-          );
-        }
-
-        const hasSession = readDemoToken(request) !== null;
-        if (!hasSession) {
-          // The admin needs a session — route newcomers through /demo. Public
-          // pages (and media) render from the shared read-only showcase, which
-          // we seed once per isolate.
-          if (pathname.startsWith("/_plumix/admin")) {
-            return Response.redirect(
-              new URL("/demo", request.url).toString(),
-              302,
+          if (isBlockedInDemo(pathname)) {
+            return Response.json(
+              { error: "Not available in the demo" },
+              { status: 403 },
             );
           }
-          if (!showcaseReady) {
-            await demoStub(env, binding, DEMO_SHOWCASE_NAME).initialize(
-              await loadSql(),
-            );
-            showcaseReady = true;
-          }
-        }
 
-        const response = await handle(request, env, ctx);
-        return shouldInjectDemoToolbar(request)
-          ? injectToolbar(response, hasSession)
-          : response;
+          const hasSession = readDemoToken(request) !== null;
+          if (!hasSession) {
+            // The admin needs a session — route newcomers through /demo. Public
+            // pages (and media) render from the shared read-only showcase, which
+            // we seed once per isolate.
+            if (pathname.startsWith("/_plumix/admin")) {
+              return Response.redirect(
+                new URL("/demo", request.url).toString(),
+                302,
+              );
+            }
+            if (!showcaseReady) {
+              await demoStub(env, binding, DEMO_SHOWCASE_NAME).initialize(
+                await loadSql(),
+              );
+              showcaseReady = true;
+            }
+          }
+
+          const response = await handler.fetch(request, invocation);
+          return shouldInjectDemoToolbar(request)
+            ? injectToolbar(response, hasSession)
+            : response;
+        },
       };
     },
-    // buildScheduledHandler is intentionally omitted: demo mode has no shared
-    // database, so scheduled tasks (session cleanup, publish-scheduled) have
-    // nothing to act on. Omitting it makes the worker's scheduled() a no-op.
   };
 }
 
