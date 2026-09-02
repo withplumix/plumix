@@ -1,6 +1,6 @@
 {
   "name": "@plumix/plugin-seo",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "SEO plugin for Plumix — head meta, Open Graph, structured data, robots.txt and the sitemap",
   "license": "MIT",

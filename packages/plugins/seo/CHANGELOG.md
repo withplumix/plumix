@@ -1,5 +1,42 @@
 # @plumix/plugin-seo
 
+## 0.1.2
+
+### Patch Changes
+
+- [#2156](https://github.com/withplumix/plumix/pull/2156) [`ef34a26`](https://github.com/withplumix/plumix/commit/ef34a26b1ae0e6892cdd694bc9507f63f5a2f3d6) Thanks [@nasyrov](https://github.com/nasyrov)! - Lets a plugin-registered archive state which page of results it is, and which query it answers.
+
+  Installing `@plumix/plugin-search` offered every search-results page to crawlers on a site that had
+  never asked for that. The plugin replaces core's `/search` with its own archive, which renders as
+  `kind: "custom"`, and two of `@plumix/plugin-seo`'s assertions keyed on facts core's payload carried
+  and a plugin's could not: `search_results` fired on `kind === "search"`, and `paginated` read a page
+  index a plugin archive always reported as 1. Both arms went quiet, and the pages came out indexable.
+
+  `CustomArchiveData` now carries two optional facts an archive states about itself — `page`, the
+  1-based pagination index, and `query`, what the visitor typed on an archive that answers a search.
+  `PageFacts` reports both, so seo keeps making the decision and core keeps stating facts, the split
+  ADR 0002 drew. The `paginated` arm now works for every plugin archive that paginates rather than for
+  none of them, and an archive that states neither fact is untouched.
+
+  The alternative was for seo to recognise the archive by name. That would have put one plugin's
+  identity inside another plugin's conditional, and it would have fixed `search_results` while leaving
+  `paginated` broken for every plugin archive rather than just this one.
+
+  Nothing changes for a site running one plugin or the other alone, and turning **Index search-results
+  pages** on offers the plugin's page exactly as it offers core's.
+
+- [#2157](https://github.com/withplumix/plumix/pull/2157) [`27bebec`](https://github.com/withplumix/plumix/commit/27bebec9405eda3c1d8e6f2f55523c41b35a58f7) Thanks [@nasyrov](https://github.com/nasyrov)! - Fills `%%searchphrase%%` on a search page a plugin renders.
+
+  Companion to the archive facts: `@plumix/plugin-search` replaces core's `/search` with an archive of
+  its own, and the title variable read the query off core's payload, so a site with a search title
+  pattern shipped `Results for  · Demo` once the plugin was installed. It reads `PageFacts.query` now,
+  which core's search page and a plugin archive that states a query both carry.
+
+  `%%count%%` stays empty on a plugin archive, and the docs now say so. Core counts what it paginates;
+  a plugin archive's listing is its own, and the search plugin probes for a next page rather than
+  totalling its matches — so filling the variable would mean a `COUNT` over the index on every search
+  render, for a variable a pattern can simply leave out.
+
 ## 0.1.1
 
 ### Patch Changes

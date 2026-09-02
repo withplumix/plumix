@@ -1,6 +1,6 @@
 {
   "name": "@plumix/plugin-search",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Search plugin for Plumix — a maintained full-text index over every searchable entry.",
   "license": "MIT",
