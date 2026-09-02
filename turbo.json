@@ -108,6 +108,27 @@
       // `topo` rather than `^build` keeps the intent above: it is the synthetic
       // ordering node, so nothing is built. Its inputs already exclude
       // `*.test.ts`, so editing an upstream test still does not cascade.
+      //
+      // The root `test:unit` script runs this task set under `--concurrency=2`.
+      // Each of the 21 vitest packages sizes its own worker pool to the machine
+      // (`maxWorkers` defaults to cores - 1), so turbo's concurrency *is* the
+      // oversubscription factor, on any runner: at the default 10 the pools
+      // hold ten times the cores' worth of workers, and a test's wall clock
+      // becomes its CPU time times that. Vitest's 5s default is wall clock, so
+      // the bar for a timeout was ~140ms of CPU — which is what failed the
+      // required Test check on release PR #2132 and forced #2162.
+      //
+      // A cap and not narrower inputs: a version bump busts every hash through
+      // `^topo`, but so does a one-line edit to core (29 of these 38 tasks,
+      // against a release PR's 31), so a cold graph is the normal case and the
+      // cap is what makes it survivable. Excluding `package.json` would fix the
+      // hashing and reinstate #2093 — verified: with it excluded, editing a
+      // package's own `test:unit` command moves no hash at all.
+      //
+      // 2 and not 1: two pools of `cores - 1` still saturate the runner, so the
+      // cap costs no wall clock there, while 1 leaves it idle. Measured cold on
+      // a 10-core box, slowest single test: 6607ms at 10, 2287ms at 2, 1237ms
+      // at 1.
       "dependsOn": ["^topo"]
     },
     "@plumix/e2e-ports#test:unit": {

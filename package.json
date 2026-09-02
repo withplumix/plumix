@@ -29,7 +29,7 @@
     "release": "pnpm run build && changeset publish",
     "smoke": "node .github/scripts/smoke.mjs",
     "test": "turbo run test:unit test:build",
-    "test:unit": "turbo run test:unit",
+    "test:unit": "turbo run test:unit --concurrency=2",
     "test:build": "turbo run test:build",
     "test:e2e": "turbo run test:e2e",
     "typecheck": "turbo run typecheck",
