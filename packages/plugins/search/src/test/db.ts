@@ -13,6 +13,7 @@ import {
   definePlugin,
   runScheduledTasks,
 } from "plumix/plugin";
+import { entries } from "plumix/schema";
 import {
   applyTestSchema,
   createDeferQueue,
@@ -225,36 +226,49 @@ export async function createSearchHarness(
  * Publish `count` entries carrying `words` and put each in the index, oldest
  * first. Writes the projection directly rather than running the extractor —
  * a suite asking what the index knows does not care how the text got there.
+ *
+ * The plan suite seeds a corpus deeper than `HEAD_WALK_CAP` so the recency
+ * walk has something to run out of, and at a round trip per entry that alone
+ * cost the test 5.2s against vitest's 5s default once CI contention slowed it
+ * (#2132) — hence one statement per table. Drizzle binds 11 parameters per
+ * entry, so that holds until roughly 2900 of them.
  */
 export async function indexWords(
   db: SearchTestDb,
   count: number,
   ...words: readonly string[]
-): Promise<readonly number[]> {
-  const author = await factoriesFor(db).admin.create();
+): Promise<void> {
+  const factories = factoriesFor(db);
+  const author = await factories.admin.create();
   const [last] = await db.all<{ id: number }>(
     sql`SELECT coalesce(max(id), 0) AS id FROM entries`,
   );
-  const ids: number[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const id = (last?.id ?? 0) + i + 1;
-    const entry = await factoriesFor(db).entry.create({
-      authorId: author.id,
-      status: "published",
-      title: `Entry ${String(id)}`,
-      slug: `entry-${String(id)}`,
-      publishedAt: new Date(2000, 0, 1 + id),
-    });
-    await db.insert(schema.searchDocuments).values({
-      sourceType: "entry",
+  const first = (last?.id ?? 0) + 1;
+  const created = await db
+    .insert(entries)
+    .values(
+      Array.from({ length: count }, (_, i) => {
+        const id = first + i;
+        return factories.entry.build({
+          authorId: author.id,
+          status: "published",
+          title: `Entry ${String(id)}`,
+          slug: `entry-${String(id)}`,
+          publishedAt: new Date(2000, 0, 1 + id),
+        });
+      }),
+    )
+    .returning();
+  const body = words.join(" ");
+  await db.insert(schema.searchDocuments).values(
+    created.map((entry) => ({
+      sourceType: "entry" as const,
       sourceId: entry.id,
       title: "",
-      body: words.join(" "),
+      body,
       extractorVersion: "v1",
-    });
-    ids.push(entry.id);
-  }
-  return ids;
+    })),
+  );
 }
 
 interface SearchContext {
