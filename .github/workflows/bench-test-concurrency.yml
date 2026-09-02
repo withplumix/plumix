@@ -1,0 +1,76 @@
+# Throwaway: measures `test:unit` wall clock and per-test tail on a cold graph
+# at turbo concurrency 2 (main) against the old default of 10. Never merge.
+name: Bench
+
+on:
+  pull_request:
+    branches: ["*"]
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    name: Bench (test:unit concurrency)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      FORCE_COLOR: 0
+      # Local cache only: `--force` skips reads anyway, and this keeps the
+      # remote's 429s out of the wall-clock numbers.
+      TURBO_TOKEN: ""
+      TURBO_TEAM: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+
+      - name: Benchmark
+        shell: bash
+        run: |
+          echo "runner cores: $(nproc)"
+          : > results.tsv
+
+          run_one() {
+            label="$1"; shift
+            start=$(date +%s)
+            if pnpm exec turbo run test:unit --force "$@" > "bench-$label.log" 2>&1; then
+              verdict=pass
+            else
+              verdict=FAIL
+            fi
+            end=$(date +%s)
+            slowest=$(perl -ne '
+              if (/^(\S+):test:unit:\s+(\s+)\S+ (.+?)\s+(\d+)ms\s*$/) {
+                my ($n, $ms) = ($3, $4);
+                next if $n =~ /\(\d+ tests?\)$/;
+                print "$ms\n";
+              }' "bench-$label.log" | sort -rn | head -1)
+            over5s=$(perl -ne '
+              if (/^(\S+):test:unit:\s+(\s+)\S+ (.+?)\s+(\d+)ms\s*$/) {
+                my ($n, $ms) = ($3, $4);
+                next if $n =~ /\(\d+ tests?\)$/;
+                print "$ms\n" if $ms > 5000;
+              }' "bench-$label.log" | wc -l)
+            printf '%s\t%ss\t%s\t%sms\t%s\n' \
+              "$label" "$((end - start))" "$verdict" "${slowest:-0}" "$over5s" >> results.tsv
+          }
+
+          # Alternating order so warm page cache does not favour one setting.
+          run_one c2-first  --concurrency=2
+          run_one c10-first
+          run_one c10-second
+          run_one c2-second --concurrency=2
+
+          echo
+          printf 'label\twall\tverdict\tslowest-test\ttests>5s\n'
+          cat results.tsv
+
+      - name: Upload run logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bench-logs
+          path: bench-*.log
+          retention-days: 3
