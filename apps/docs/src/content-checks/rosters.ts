@@ -151,6 +151,7 @@ const FACADE_SUBPATHS = [
   "plumix/schema",
   "plumix/db",
   "plumix/db/libsql",
+  "plumix/storage/s3",
   "plumix/fields",
   "plumix/i18n",
   "plumix/test",

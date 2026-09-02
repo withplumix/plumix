@@ -4,7 +4,6 @@ import {
   CfAccessError,
   D1Error,
   R2Error,
-  SigV4Error,
   WranglerConfigError,
 } from "./errors.js";
 
@@ -84,28 +83,6 @@ describe("CfAccessError.audienceEmpty", () => {
     expect(CfAccessError.audienceEmpty().message).toContain(
       "audience must be non-empty",
     );
-  });
-});
-
-describe("SigV4Error.expiresInOutOfRange", () => {
-  test("class identity, code, and exposed expiresIn", () => {
-    const err = SigV4Error.expiresInOutOfRange({ expiresIn: 0 });
-    expect(err).toBeInstanceOf(SigV4Error);
-    expect(err.name).toBe("SigV4Error");
-    expect(err.code).toBe("expires_in_out_of_range");
-    expect(err.expiresIn).toBe(0);
-  });
-
-  test("message bakes in the [1..604800] range and includes the bad value", () => {
-    const err = SigV4Error.expiresInOutOfRange({ expiresIn: 604_801 });
-    expect(err.message).toContain("expiresIn must be in [1..604800]");
-    expect(err.message).toContain("604801");
-  });
-
-  test("NaN is stringified into the message", () => {
-    expect(
-      SigV4Error.expiresInOutOfRange({ expiresIn: Number.NaN }).message,
-    ).toContain("NaN");
   });
 });
 

@@ -157,7 +157,7 @@ The passkey block appears in two shapes across this site, and they are the same 
 
 ### storage
 
-Object storage for uploads. `r2` binds a bucket; the media plugin requires this slot and `imageDelivery` alongside it.
+Object storage for uploads. `r2` binds a bucket; the media plugin requires this slot and `imageDelivery` alongside it. The alternative shipped today is `s3` from `plumix/storage/s3`, which talks to any S3-compatible bucket over `fetch` and needs no runtime binding.
 
 ```ts no-typecheck
 import { r2 } from "@plumix/runtime-cloudflare";

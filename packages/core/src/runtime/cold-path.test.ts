@@ -143,17 +143,20 @@ const DEFERRED_FILES = ENTRY_FILES.flatMap((entry) =>
   }),
 );
 
-// The chain that put `file` on the cold path, entry first — or undefined when
+// The chain that put `file` in the closure, entry first — or undefined when
 // nothing static reaches it, which is the passing case. Returning the chain as
 // the asserted value rather than a boolean means the failure names the import
 // to go delete, which is otherwise a hand search across 200-odd files.
-function staticImportChain(file: string): string | undefined {
-  if (!COLD_PATH.has(file)) return undefined;
+function staticImportChain(
+  closure: ReadonlyMap<string, string | undefined>,
+  file: string,
+): string | undefined {
+  if (!closure.has(file)) return undefined;
   const chain: string[] = [];
   let step: string | undefined = file;
   while (step !== undefined) {
     chain.unshift(path.relative(SRC, step));
-    step = COLD_PATH.get(step);
+    step = closure.get(step);
   }
   return chain.join(" → ");
 }
@@ -173,7 +176,29 @@ describe("the cold-start path defers its heavy graphs", () => {
   test.each(DEFERRED_FILES)(
     "$specifier is absent from the static closure",
     ({ file }) => {
-      expect(staticImportChain(file)).toBeUndefined();
+      expect(staticImportChain(COLD_PATH, file)).toBeUndefined();
+    },
+  );
+});
+
+// Modules published only behind a subpath — the libSQL driver, the S3 slot and
+// its SigV4 signer — so a bundle that never imports the subpath never carries
+// them. The root barrel is the entry here, not the cold path: the property is
+// that no public export reaches them, whatever a bundler later shakes.
+const SUBPATH_ONLY = [
+  "db/libsql.ts",
+  "storage/s3/index.ts",
+  "storage/s3/sigv4.ts",
+] as const;
+const BARREL = staticClosureOf([path.join(SRC, "index.ts")]);
+
+describe("subpath-only modules stay off the root barrel", () => {
+  test.each(SUBPATH_ONLY)(
+    "%s is absent from the barrel's static closure",
+    (file) => {
+      // A renamed module would pass for the wrong reason; pin that it exists.
+      expect(fs.existsSync(path.join(SRC, file))).toBe(true);
+      expect(staticImportChain(BARREL, path.join(SRC, file))).toBeUndefined();
     },
   );
 });
