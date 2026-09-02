@@ -13,7 +13,7 @@ const FIXTURE = `
 (globalThis as unknown as Record<string, number>).__plumixEvalCount =
   ((globalThis as unknown as Record<string, number>).__plumixEvalCount ?? 0) + 1;
 export default {
-  runtime: { name: "test", createHandler: () => ({ fetch: () => new Response() }) },
+  runtime: { name: "test", createHandler: () => ({ fetch: () => new Response() }), generateEntry: () => "" },
   database: { kind: "d1" },
   auth: { passkey: {} },
 };
@@ -73,13 +73,18 @@ describe("loadConfig", () => {
          database: { kind: "d1" }, auth: { passkey: {} } }`,
     ],
     [
+      "runtime.generateEntry not callable",
+      `{ runtime: { name: "test", createHandler: () => ({ fetch: () => new Response() }), generateEntry: "no" },
+         database: { kind: "d1" }, auth: { passkey: {} } }`,
+    ],
+    [
       "database.kind missing",
-      `{ runtime: { name: "test", createHandler: () => ({ fetch: () => new Response() }) },
+      `{ runtime: { name: "test", createHandler: () => ({ fetch: () => new Response() }), generateEntry: () => "" },
          database: {}, auth: { passkey: {} } }`,
     ],
     [
       "auth.passkey falsy",
-      `{ runtime: { name: "test", createHandler: () => ({ fetch: () => new Response() }) },
+      `{ runtime: { name: "test", createHandler: () => ({ fetch: () => new Response() }), generateEntry: () => "" },
          database: { kind: "d1" }, auth: { passkey: null } }`,
     ],
     ["not an object at all", `"plumix"`],

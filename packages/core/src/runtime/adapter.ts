@@ -78,6 +78,16 @@ export interface CommandDefinition {
 
 export type CommandRegistry = Readonly<Record<string, CommandDefinition>>;
 
+/** What the build tells an adapter about the site it is generating an entry for. */
+export interface EntrySourceOptions {
+  /**
+   * Specifier the entry imports the user's `plumix.config.ts` from, relative
+   * to the emitted module. Interpolate it through `JSON.stringify` — a project
+   * path can carry spaces or quotes.
+   */
+  readonly configModule: string;
+}
+
 export interface RuntimeAdapter {
   readonly name: string;
   /**
@@ -87,11 +97,25 @@ export interface RuntimeAdapter {
    */
   createHandler(app: PlumixApp): PlumixHandler;
   /**
+   * Source of the entry module the build serves — the few lines that adapt the
+   * platform's serve API to {@link PlumixHandler}: a Workers default export,
+   * `Bun.serve`, a `node:http` bridge, a Lambda handler. The plumix Vite
+   * plugin pre-emits it, so the entry may import `virtual:plumix/*` modules
+   * the plugin resolves.
+   *
+   * Unlike {@link RuntimeAdapter.commandsModule}, this is a live function on
+   * the adapter the config constructs, so it is reachable from the serving
+   * bundle and everything it imports is bundled with it. Build the source from
+   * literals; a `node:*` import at module scope here is a load-time failure on
+   * a runtime that has no Node built-ins.
+   */
+  generateEntry(options: EntrySourceOptions): string;
+  /**
    * Module specifiers whose named exports must be re-exported from the
    * generated Worker entry. Cloudflare requires a Durable Object class to
-   * be a named export of the entry module, but that entry is codegen'd from
-   * a fixed template — so a DO-backed feature contributes its class module
-   * here, and the plumix Vite plugin surfaces it through the
+   * be a named export of the entry module, but that entry is codegen'd by
+   * {@link RuntimeAdapter.generateEntry} — so a DO-backed feature contributes
+   * its class module here, and the plumix Vite plugin surfaces it through the
    * `virtual:plumix/worker-exports` module. Omit when the runtime
    * contributes no worker-level exports (the common case).
    */

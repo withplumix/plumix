@@ -37,7 +37,7 @@ async function bundleWithPlumixDefine(): Promise<
   writeFileSync(
     configFile,
     `export default {
-      runtime: { name: 'x', createHandler: () => ({ fetch: () => new Response('ok') }) },
+      runtime: { name: 'x', createHandler: () => ({ fetch: () => new Response('ok') }), generateEntry: () => '' },
       database: { kind: 'x' },
       auth: { passkey: {} },
     };`,

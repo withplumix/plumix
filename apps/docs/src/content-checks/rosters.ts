@@ -427,7 +427,7 @@ const HYDRATION: readonly string[] = [
  * **Deliberately not an exhaustive key set documentation has to cover.** The
  * façade publishes 285 value exports against a planned 105 pages, and much of
  * the difference is plumbing no page will ever name: `entryRouter`,
- * `hookStore`, `txStore`, `generateWorkerSource`. Binding export to page
+ * `hookStore`, `txStore`, `generateSchemaSource`. Binding export to page
  * forces one of two things — a heading per export, which is the generated API
  * appendix the IA spec rejects outright, or a hand-kept allowlist of the
  * exports that need no page, which is a second unbound list drifting exactly

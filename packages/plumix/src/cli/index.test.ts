@@ -21,6 +21,7 @@ function testConfig(): PlumixConfig {
     runtime: {
       name: "test",
       createHandler: () => ({ fetch: () => new Response("", { status: 500 }) }),
+      generateEntry: () => "",
     },
     database: { kind: "test", connect: () => ({ db: {} }) },
     auth: auth({

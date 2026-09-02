@@ -9,6 +9,7 @@ import type {
 import { createPlumixHandler } from "plumix";
 
 import { registerCloudflareErrorHints } from "./dev-hints.js";
+import { generateEntry } from "./entry-codegen.js";
 import { PlumixRuntimeConfigError } from "./errors.js";
 
 // Cloudflare Workers Assets exposes a Fetcher on env.ASSETS when the
@@ -48,6 +49,7 @@ export function cloudflare(): RuntimeAdapter {
   return {
     name: "cloudflare",
     createHandler,
+    generateEntry,
     commandsModule: "@plumix/runtime-cloudflare/commands",
   };
 }

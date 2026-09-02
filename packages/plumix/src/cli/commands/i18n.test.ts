@@ -26,6 +26,7 @@ function fakeApp(): PlumixApp {
       runtime: {
         name: "test",
         createHandler: () => ({ fetch: () => new Response() }),
+        generateEntry: () => "",
       },
       database: { kind: "test", connect: () => ({ db: {} }) },
       plugins: [],
