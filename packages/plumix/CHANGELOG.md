@@ -1,5 +1,206 @@
 # plumix
 
+## 0.20.0
+
+### Minor Changes
+
+- [#2137](https://github.com/withplumix/plumix/pull/2137) [`15b7cc9`](https://github.com/withplumix/plumix/commit/15b7cc993bb94b9e4ee9c7eb1223efa049225f29) Thanks [@nasyrov](https://github.com/nasyrov)! - Blocks now declare which of their inputs carry text and whether each holds HTML, and one walk extracts an entry's plain text from that roster — nested slots included, tags stripped, entities decoded. `extractBlockText` returns the text; `blockTextVersion` hashes the merged roster, so a block that adds or changes a declaration invalidates whatever was derived from the old one without an author maintaining a version number.
+
+  `countProse` is now a filter over the same walk and takes the roster as a second argument: `countProse(blocks, blockTextRoster(coreBlocks))`. It keeps reading only the inputs declared as body copy, so reading-length estimates are unchanged — a code listing, a control's label, an image's alt text and a caption are findable but are not read at prose speed.
+
+- [#2139](https://github.com/withplumix/plumix/pull/2139) [`f8f2d9d`](https://github.com/withplumix/plumix/commit/f8f2d9d128da81db7383e15b550232196a4bcc95) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds an entry change feed — a durable record of which entries changed.
+
+  Nothing recorded which entries had changed. A consumer that needs to know could only subscribe to
+  the `entry:*` lifecycle actions, which miss every write that bypasses the application: seeds,
+  migrations, direct-write tooling, bulk imports. An `entry_changes` table now carries one row per
+  change, appended by triggers on `entries` so no writer can bypass it. Only a change to title,
+  content, excerpt or status enqueues, so a metadata-only save records nothing; a deletion enqueues a
+  tombstone, because the entry it names is gone by the time a consumer reads it.
+
+  `readEntryChanges(db, limit)` returns the oldest pending changes and `ackEntryChanges(db, changes)`
+  drops the ones a consumer has finished with. Both accesses are primary-key ordered, so draining
+  tracks the batch rather than the corpus, and acknowledging after the work rather than before leaves
+  an isolate that dies mid-drain its batch for the next one. Nothing in core drains the feed yet —
+  the first consumer is the search plugin.
+
+  `plumix migrate generate` emits core's DDL ahead of every plugin's, since the objects it creates sit
+  on core's own tables. The demo sandbox's statement splitter now keeps a trigger body whole: it split
+  on every semicolon outside a quoted span, which would have cut the first trigger to reach it into
+  fragments.
+
+- [#2156](https://github.com/withplumix/plumix/pull/2156) [`ef34a26`](https://github.com/withplumix/plumix/commit/ef34a26b1ae0e6892cdd694bc9507f63f5a2f3d6) Thanks [@nasyrov](https://github.com/nasyrov)! - Lets a plugin-registered archive state which page of results it is, and which query it answers.
+
+  Installing `@plumix/plugin-search` offered every search-results page to crawlers on a site that had
+  never asked for that. The plugin replaces core's `/search` with its own archive, which renders as
+  `kind: "custom"`, and two of `@plumix/plugin-seo`'s assertions keyed on facts core's payload carried
+  and a plugin's could not: `search_results` fired on `kind === "search"`, and `paginated` read a page
+  index a plugin archive always reported as 1. Both arms went quiet, and the pages came out indexable.
+
+  `CustomArchiveData` now carries two optional facts an archive states about itself — `page`, the
+  1-based pagination index, and `query`, what the visitor typed on an archive that answers a search.
+  `PageFacts` reports both, so seo keeps making the decision and core keeps stating facts, the split
+  ADR 0002 drew. The `paginated` arm now works for every plugin archive that paginates rather than for
+  none of them, and an archive that states neither fact is untouched.
+
+  The alternative was for seo to recognise the archive by name. That would have put one plugin's
+  identity inside another plugin's conditional, and it would have fixed `search_results` while leaving
+  `paginated` broken for every plugin archive rather than just this one.
+
+  Nothing changes for a site running one plugin or the other alone, and turning **Index search-results
+  pages** on offers the plugin's page exactly as it offers core's.
+
+- [#2138](https://github.com/withplumix/plumix/pull/2138) [`ea3064e`](https://github.com/withplumix/plumix/commit/ea3064e633da292ea74b0f384e2373775852b255) Thanks [@nasyrov](https://github.com/nasyrov)! - Lets a plugin contribute raw SQL migrations that drizzle-kit cannot express.
+
+  `plumix migrate generate` shells out to drizzle-kit, which models tables, columns and indexes and
+  nothing else. A virtual table or a trigger had no route into the generated set: a hand-written file
+  dropped into `drizzle/` is invisible to drizzle's journal, so the next generate reuses the same
+  index and which of the two `wrangler d1 migrations apply` runs first becomes filename luck.
+
+  A plugin descriptor now takes `sqlMigrations` — a name and the statements to run. Generation emits
+  each one as its own file after the schema diff, so the DDL lands behind the tables it references,
+  and appends a journal entry so drizzle-kit numbers its next migration past it. That entry carries
+  no snapshot of its own, which drizzle-kit tolerates: it skips the index and diffs against the
+  previous snapshot, correct here because raw DDL touches only objects drizzle does not model. A name
+  is the migration's identity, so one already in the journal is never emitted twice — renaming it
+  emits it again rather than editing what has already reached a database.
+
+- [#2154](https://github.com/withplumix/plumix/pull/2154) [`9bb2509`](https://github.com/withplumix/plumix/commit/9bb250923e5b65f77a03986e65451aab497baa64) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `.searchable()` to the meta-field builders, so structured data an entry stores in its meta bag
+  can be found from the site's search page.
+
+  Default-deny, the way `.showInApi()` is. Meta holds plugin bookkeeping and internal keys at least as
+  often as it holds prose, and indexing all of it is the mistake ElasticPress spent a decade on before
+  reversing it — the same failure this epic already fixed for entry content. Nothing about an existing
+  site's index changes until a field asks.
+
+  The chain is offered on the text-shaped builders — `text`, `textarea`, `email`, `url` and `richtext`,
+  whose stored document is flattened to its prose. A capability-gated field is never indexed whatever
+  it declared, and neither is a `password` field: a snippet is body text around a word the visitor
+  chose, so a value not everyone may read cannot be in the document at all. That is the same rule that
+  keeps an access-gated entry type out of the projection entirely.
+
+  Marking an existing field searchable needs nothing else. The extractor version now hashes the field
+  roster beside the block roster, so every affected document is stale from that moment and the
+  scheduled run re-projects them — no version to bump, no entry to re-save.
+
+  **Core.** `entries.meta` joins the change feed's watched columns, so a meta write reaches a consumer's
+  projection the way a title edit does — including one made by a seed, a migration or a direct write.
+  That arrives as a raw SQL migration: run `plumix migrate generate` and apply it after upgrading.
+
+- [#2155](https://github.com/withplumix/plumix/pull/2155) [`446a735`](https://github.com/withplumix/plumix/commit/446a7353edce4ec0f4576c0401a3f548623142c7) Thanks [@nasyrov](https://github.com/nasyrov)! - Ranks the admin command palette's Content results out of the search index, so the entry an editor
+  wants is near the top rather than merely the one edited most recently — and a word from the middle of
+  an entry's body finds it, which a palette matching titles and excerpts could not do.
+
+  Nothing is configured, and nothing switches over. Core's handler stays registered, and two handlers
+  sharing a group now fill it between them: the ranked matches lead and core's title-and-excerpt matches
+  fill whatever is left. That is the whole of the degrading story. Whatever the index cannot answer,
+  core still does — a type under an access policy, which is never indexed; an entry not yet projected on
+  a site that has installed the plugin but not rebuilt; every type at all before the index exists; and a
+  half-typed word, since the index matches whole terms. A missing index degrades quietly here rather
+  than saying so the way the search page does — a palette that logged would log once per keystroke, and
+  both the page and the scheduled run already tell an operator. The cost is that both queries run on
+  every keystroke, which is what buys the seamlessness.
+
+  Excluding an entry type from search now bounds a visitor rather than an editor. Such a type is
+  projected and ranked in the palette, and the search page's own clamp is what keeps it out of results,
+  so a navigation-menu entry stays findable where an editor has to find it. A type under an access
+  policy is still kept out of the projection altogether. A site with one of these types sees it in the
+  palette once the entry is next saved, or after a rebuild.
+
+  The ranked half of the palette answers only for entry types the caller can **edit**. A ranked result
+  is a body-text match, so answering one says a word appears somewhere inside an entry — and
+  `entry:<type>:read` bottoms out at the subscriber tier, which on a site with open signup every reader
+  holds for every registered type. Core's title-and-excerpt handler still answers those.
+
+  `-word` now excludes rather than being swallowed, on the search page as well as in the palette. Quoting
+  every token left the hyphen inside the phrase, where FTS5's tokenizer drops it — so `report -draft`
+  asked for exactly the drafts it ruled out. A query of nothing but exclusions returns nothing: FTS5
+  cannot spell "every document except these", and the whole corpus is not what anyone meant. A hyphen
+  inside a quoted phrase is still part of the phrase.
+
+  **Core.** `adminEntryScope` is now exported: which palette group a caller may be shown per entry type,
+  the clause bounding which of their rows they may see, and the bucketing that turns matched rows into
+  groups. Both handlers build on it, so "who may see which draft" and "what a group is called" each have
+  one definition, and an author still sees their own drafts and nobody else's. It takes a reach — `read`
+  for a surface showing titles, `edit` for one showing more than that. The `admin:search:results` types
+  are exported with it.
+
+- [#2145](https://github.com/withplumix/plumix/pull/2145) [`3ce10d1`](https://github.com/withplumix/plumix/commit/3ce10d14664e1c6a2e5e8ae7490cb3c3947463c4) Thanks [@nasyrov](https://github.com/nasyrov)! - Gives the search index a query surface: `/search/<query>` now returns ranked results with highlighted
+  snippets.
+
+  `@plumix/plugin-search` claims core's search patterns at a priority that sorts ahead of them, so
+  installing it upgrades the existing search page in place and uninstalling it restores core's with
+  nothing to undo. Results are ordered by weighted bm25 — a title match counts for ten times a body
+  match — and each carries `kind`, `id`, `title`, `url`, `snippet` and `score`, templated through
+  `forArchiveType("search")`.
+
+  A snippet arrives escaped. FTS5 splices its highlight markers into indexed content without escaping
+  anything around them, so a snippet rendered as HTML would run whatever script an author had written
+  as text; everything but the `<mark>` is turned into entities first.
+
+  A query is treated as words to look for rather than as an expression: adding a word narrows the
+  results, a quoted phrase matches exactly, and every FTS5 operator is inert. Any string a visitor can
+  type compiles to a valid search, so an unbalanced quote returns an empty page rather than an error.
+
+  Only published entries appear, and an entry type under an access policy is never indexed at all — a
+  snippet is body text around a word the visitor chose, so indexing a gated type would hand an
+  anonymous reader its prose a query at a time. Keeping it out of the projection is what makes that
+  impossible rather than dependent on a predicate. The page is not edge-cached, for the reason core
+  gives for leaving its own out: an unbounded query space would mint a cache entry per distinct
+  string.
+
+  The ranking algorithm is named in configuration — `search({ ranking: "bm25-v1" })` — even though its
+  weights are hardcoded. A site that has named the algorithm it is on keeps its result order when a
+  better one ships; retrofitting a name onto implicit behaviour is what cannot be done afterwards.
+
+  **Core.** Two rules could never claim one route pattern, which made the documented "a rule numbered
+  below 5 lands ahead of the framework routes" impossible to use on a framework route: the collision
+  fired before priority was consulted. A rule may now claim a framework pattern when its priority
+  actually beats the framework's. Everything the check was built to catch still throws — two plugins
+  colliding, and a rule claiming a framework pattern at a priority that cannot win, which would
+  otherwise never match and say nothing about it. `escapeHtml` and the framework search patterns are
+  now exported, so a plugin replacing the search page addresses the URL space core compiled rather than
+  a near-miss of it.
+
+- [#2150](https://github.com/withplumix/plumix/pull/2150) [`5d53a81`](https://github.com/withplumix/plumix/commit/5d53a81b2e33f9e29c11459012c1d11b5c738a5e) Thanks [@nasyrov](https://github.com/nasyrov)! - Indexes terms beside entries, so a visitor searching a topic's name reaches the topic rather than
+  only the articles about it.
+
+  Both go in the same index behind the source discriminator and come back in one ranked list. Two
+  queries merged would be putting bm25 scores side by side that were computed against different
+  corpora, and it forces offset pagination on the merge. A result says which it is, so a theme can
+  render a topic and an article differently.
+
+  A term contributes its name and the description its archive carries. A result carries the archive URL,
+  built through the same reverse routing core uses, so a hierarchical taxonomy resolves its ancestors.
+
+  Terms have no change feed — core's records entries — so they are indexed through the lifecycle
+  actions, and a term the projection has never held is swept up by the scheduled run, bounded per
+  invocation. That sweep is what reaches the categories a site already had; without it, installing the
+  plugin on an existing site would leave every one of them unfindable until it was next edited. A term
+  written straight to the database after that waits for the same sweep rather than appearing at once.
+
+  One limit is by design: the recency plan is entries-only, because a term has no publication date to be
+  ordered by — so a word common enough to reach that plan is answered with articles.
+
+  `SearchResult.id` is unique only within a `kind`. A theme keying a list on it alone will collide once
+  a page holds both an entry and a term with the same id.
+
+  **Core.** A term taxonomy can now be excluded from public search, `excludeFromSearch`, defaulting from
+  its public flag exactly as the entry-type equivalent does. A navigation-menu taxonomy is not public,
+  so its terms stay out of results with nothing else declared — which had to land before terms became
+  searchable at all. The admin command palette ignores the switch: an editor searches what they can
+  read, not what a visitor can.
+
+- [#2134](https://github.com/withplumix/plumix/pull/2134) [`511aa60`](https://github.com/withplumix/plumix/commit/511aa60bbc207c864093df16a518ba7b97eb2712) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a third argument to `applyTestSchema` from `plumix/test` for raw SQL statements that run after the compiled drizzle schema, so a suite can set up the triggers and virtual tables drizzle cannot express and test against the schema production actually has. Pass one statement per array entry.
+
+### Patch Changes
+
+- Updated dependencies [[`15b7cc9`](https://github.com/withplumix/plumix/commit/15b7cc993bb94b9e4ee9c7eb1223efa049225f29), [`6848efd`](https://github.com/withplumix/plumix/commit/6848efd2ebdcffa771ffad4238e46d869dd55664), [`155123e`](https://github.com/withplumix/plumix/commit/155123eddb77981d3391f60957d312950515f5af), [`f8f2d9d`](https://github.com/withplumix/plumix/commit/f8f2d9d128da81db7383e15b550232196a4bcc95), [`36723db`](https://github.com/withplumix/plumix/commit/36723db2903a0156a12b598a62755d2d5cf25e41), [`ef34a26`](https://github.com/withplumix/plumix/commit/ef34a26b1ae0e6892cdd694bc9507f63f5a2f3d6), [`ea3064e`](https://github.com/withplumix/plumix/commit/ea3064e633da292ea74b0f384e2373775852b255), [`823aab7`](https://github.com/withplumix/plumix/commit/823aab7e431fffa67001e7e4b8cbb2f32683e9f3), [`ee5d2b7`](https://github.com/withplumix/plumix/commit/ee5d2b74765a7d2b0931aecbc5805cbe6ef58ff4), [`9bb2509`](https://github.com/withplumix/plumix/commit/9bb250923e5b65f77a03986e65451aab497baa64), [`446a735`](https://github.com/withplumix/plumix/commit/446a7353edce4ec0f4576c0401a3f548623142c7), [`3ce10d1`](https://github.com/withplumix/plumix/commit/3ce10d14664e1c6a2e5e8ae7490cb3c3947463c4), [`5d53a81`](https://github.com/withplumix/plumix/commit/5d53a81b2e33f9e29c11459012c1d11b5c738a5e), [`511aa60`](https://github.com/withplumix/plumix/commit/511aa60bbc207c864093df16a518ba7b97eb2712)]:
+  - @plumix/blocks@0.20.0
+  - @plumix/core@0.20.0
+  - @plumix/admin@0.20.0
+  - @plumix/admin-ui@0.20.0
+  - @plumix/admin-editor@0.20.0
+
 ## 0.19.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @plumix/admin-ui
 
+## 0.20.0
+
+### Patch Changes
+
+- [#2131](https://github.com/withplumix/plumix/pull/2131) [`36723db`](https://github.com/withplumix/plumix/commit/36723db2903a0156a12b598a62755d2d5cf25e41) Thanks [@nasyrov](https://github.com/nasyrov)! - Ships third-party license notices with the prebuilt admin. `dist` now carries `THIRD-PARTY-NOTICES.txt` for every bundled library plus the licenses for the fonts and CSS it inlines, and the build fails if a dependency is not permissively licensed. Replaces `ua-parser-js` 2.x, which relicensed to AGPL-3.0, with the MIT-licensed 1.x line — session rows now read "Mac OS" where they read "macOS".
+
 ## 0.19.0
 
 ### Patch Changes
