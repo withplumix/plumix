@@ -141,6 +141,11 @@ export interface GetOptions {
    * exclusive end (matches the `[offset, offset+length)` half-open
    * convention). Useful for magic-byte sniffing or partial-content
    * preview without fetching the whole body.
+   *
+   * The body is the window; `size` on the result is deliberately left
+   * unspecified for a ranged read, because backends disagree — R2 reports the
+   * whole object, the in-memory adapter the slice — and no caller reads it.
+   * Take the length from the bytes.
    */
   readonly range?: { readonly offset: number; readonly length: number };
 }

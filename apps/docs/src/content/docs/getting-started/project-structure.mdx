@@ -469,6 +469,17 @@ import { definePlumixE2EConfig } from "plumix/test/playwright";
 export default definePlumixE2EConfig({ testDir: "./e2e" });
 ```
 
+### plumix/test/conformance
+
+The slot conformance suites, aimed at an author implementing a runtime slot: one parameterised `describe` per port — `describeKvContract`, `describeObjectStorageContract`, `describeCacheContract` and `describeAssetsContract` — each taking a factory that binds a fresh instance. A factory declares what its backend cannot do rather than the suite guessing: a store that rejects sub-minute TTLs names its floor and is never asked to beat it. These run under vitest, so the consumer installs it.
+
+```ts
+import { memoryKv } from "plumix";
+import { describeKvContract } from "plumix/test/conformance";
+
+describeKvContract({ connect: () => memoryKv().connect({}) });
+```
+
 ## Related
 
 [Configuration](/getting-started/configuration/) is the reference for the config file described above. [Themes](/themes/overview/) covers what goes in `theme/index.tsx` and how a request resolves to a template. [Plugins](/plugins/overview/) covers installing published plugins and what a plugin may contribute. [Bindings and Environment](/deployment/bindings/) covers the `wrangler.jsonc` side of the runtime slots. [Blocks](/blocks/overview/) covers the block tree the editor entry mounts against.

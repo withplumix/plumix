@@ -1,99 +1,200 @@
+import type { ConnectedObjectStorage } from "plumix";
+import { describeObjectStorageContract } from "plumix/test/conformance";
 import { describe, expect, test } from "vitest";
 
+import type { R2Config } from "./r2.js";
 import { r2 } from "./r2.js";
 
-// Minimal in-memory fake of the CF R2 binding shape — enough surface for
-// the adapter's method calls to exercise end-to-end. R2Bucket at runtime
-// is richer (conditionals, HEAD, multipart) but those are out of the
-// ObjectStorage contract today.
+interface FakeEntry {
+  readonly bytes: Uint8Array;
+  readonly httpMetadata?: { contentType?: string; cacheControl?: string };
+  readonly customMetadata?: Record<string, string>;
+  readonly uploaded: Date;
+}
+
+interface FakeBinding {
+  put(key: string, body: unknown, options?: unknown): Promise<unknown>;
+  get(key: string, options?: unknown): Promise<unknown>;
+  head(key: string): Promise<unknown>;
+  delete(key: string): Promise<void>;
+  list(options?: unknown): Promise<unknown>;
+}
+
+// In-memory stand-in for the CF R2 binding: content-derived etags, ranged
+// reads, custom metadata and a numeric-offset cursor — the behaviours the
+// adapter maps onto the `storage:` port. R2 at runtime is richer
+// (conditionals, multipart), and none of that is in the port today.
 function fakeR2Binding(): {
-  binding: {
-    put: (k: string, b: unknown, o?: unknown) => Promise<unknown>;
-    get: (k: string) => Promise<unknown>;
-    head: (k: string) => Promise<unknown>;
-    delete: (k: string) => Promise<void>;
-    list: (o?: unknown) => Promise<unknown>;
-  };
-  store: Map<string, { bytes: Uint8Array; httpMetadata?: unknown }>;
+  binding: FakeBinding;
+  store: Map<string, FakeEntry>;
 } {
-  const store = new Map<
-    string,
-    { bytes: Uint8Array; httpMetadata?: unknown }
-  >();
+  const store = new Map<string, FakeEntry>();
+
+  const asObject = (key: string, entry: FakeEntry, bytes: Uint8Array) => ({
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    }),
+    key,
+    // The object's size, not the slice's — what R2 reports on a ranged read.
+    size: entry.bytes.byteLength,
+    ...etagPair(entry.bytes),
+    httpMetadata: entry.httpMetadata,
+    customMetadata: entry.customMetadata,
+    uploaded: entry.uploaded,
+    arrayBuffer: () => {
+      const buffer = new ArrayBuffer(bytes.byteLength);
+      new Uint8Array(buffer).set(bytes);
+      return Promise.resolve(buffer);
+    },
+  });
+
   return {
     store,
     binding: {
-      // eslint-disable-next-line @typescript-eslint/require-await
       async put(key, body, options) {
-        const payload =
-          typeof body === "string"
-            ? new TextEncoder().encode(body)
-            : body instanceof Uint8Array
-              ? body.slice()
-              : new Uint8Array(0);
+        const opts = options as
+          | {
+              httpMetadata?: { contentType?: string; cacheControl?: string };
+              customMetadata?: Record<string, string>;
+            }
+          | undefined;
         store.set(key, {
-          bytes: payload,
-          httpMetadata: (options as { httpMetadata?: unknown } | undefined)
-            ?.httpMetadata,
+          bytes: await toBytes(body),
+          httpMetadata: opts?.httpMetadata,
+          customMetadata: opts?.customMetadata,
+          uploaded: new Date(0),
         });
         return {};
       },
-      // eslint-disable-next-line @typescript-eslint/require-await
-      async get(key) {
+      get(key, options) {
         const entry = store.get(key);
-        if (!entry) return null;
-        return {
-          body: new ReadableStream<Uint8Array>({
-            start(c) {
-              c.enqueue(entry.bytes);
-              c.close();
-            },
-          }),
-          size: entry.bytes.byteLength,
-          etag: "fake-etag",
-          httpEtag: '"fake-etag"',
-          httpMetadata: entry.httpMetadata,
-          uploaded: new Date(0),
-          arrayBuffer: () => {
-            const ab = new ArrayBuffer(entry.bytes.byteLength);
-            new Uint8Array(ab).set(entry.bytes);
-            return Promise.resolve(ab);
-          },
+        if (!entry) return Promise.resolve(null);
+        const { range } = (options ?? {}) as {
+          range?: { offset: number; length: number };
         };
+        const bytes = range
+          ? entry.bytes.subarray(range.offset, range.offset + range.length)
+          : entry.bytes;
+        return Promise.resolve(asObject(key, entry, bytes));
       },
-      // eslint-disable-next-line @typescript-eslint/require-await
-      async head(key) {
+      head(key) {
         const entry = store.get(key);
-        if (!entry) return null;
-        return {
+        if (!entry) return Promise.resolve(null);
+        return Promise.resolve({
+          key,
           size: entry.bytes.byteLength,
-          etag: "fake-etag",
-          httpEtag: '"fake-etag"',
+          ...etagPair(entry.bytes),
           httpMetadata: entry.httpMetadata,
-          uploaded: new Date(0),
-        };
+          customMetadata: entry.customMetadata,
+          uploaded: entry.uploaded,
+        });
       },
-      // eslint-disable-next-line @typescript-eslint/require-await
-      async delete(key) {
+      delete(key) {
         store.delete(key);
+        return Promise.resolve();
       },
-      // eslint-disable-next-line @typescript-eslint/require-await
-      async list(options) {
-        const opts = (options ?? {}) as { prefix?: string; limit?: number };
-        const objects = [...store.entries()]
-          .filter(([k]) => !opts.prefix || k.startsWith(opts.prefix))
-          .slice(0, opts.limit ?? 1000)
-          .map(([key, entry]) => ({
-            key,
-            size: entry.bytes.byteLength,
-            etag: "fake-etag",
-            uploaded: new Date(0),
-          }));
-        return { objects, truncated: false };
+      list(options) {
+        const opts = (options ?? {}) as {
+          prefix?: string;
+          limit?: number;
+          cursor?: string;
+        };
+        const keys = [...store.keys()]
+          .filter((key) => !opts.prefix || key.startsWith(opts.prefix))
+          .sort();
+        const start = opts.cursor ? Number(opts.cursor) : 0;
+        const page = keys.slice(start, start + (opts.limit ?? 1000));
+        const next = start + page.length;
+        const truncated = next < keys.length;
+        return Promise.resolve({
+          objects: page.map((key) => {
+            const entry = store.get(key);
+            return {
+              key,
+              size: entry?.bytes.byteLength ?? 0,
+              etag: etagFor(entry?.bytes ?? new Uint8Array(0)),
+              uploaded: entry?.uploaded ?? new Date(0),
+            };
+          }),
+          cursor: truncated ? String(next) : undefined,
+          truncated,
+        });
       },
     },
   };
 }
+
+// Every `ObjectBody` the port advertises — R2's binding takes them all, so a
+// fake that took fewer would let a contract case pass for the wrong reason.
+async function toBytes(body: unknown): Promise<Uint8Array> {
+  if (body === null) return new Uint8Array(0);
+  if (typeof body === "string") return new TextEncoder().encode(body);
+  if (body instanceof Uint8Array) return body.slice();
+  if (ArrayBuffer.isView(body)) {
+    return new Uint8Array(
+      body.buffer,
+      body.byteOffset,
+      body.byteLength,
+    ).slice();
+  }
+  if (body instanceof ArrayBuffer) return new Uint8Array(body.slice(0));
+  if (body instanceof Blob || body instanceof ReadableStream) {
+    return new Uint8Array(await new Response(body).arrayBuffer());
+  }
+  throw new Error("the r2 fake was handed a body the port does not allow");
+}
+
+// R2 carries the etag twice: bare for listings and manifests, quoted for the
+// HTTP `If-None-Match` echo. Minting both here keeps that convention in one
+// place, the way the binding does.
+function etagPair(bytes: Uint8Array): { etag: string; httpEtag: string } {
+  const etag = etagFor(bytes);
+  return { etag, httpEtag: `"${etag}"` };
+}
+
+// R2 returns the object's MD5; a content hash is what matters here — the same
+// bytes must produce the same etag and different bytes a different one.
+function etagFor(bytes: Uint8Array): string {
+  let hash = 0x811c9dc5;
+  for (const byte of bytes) {
+    hash ^= byte;
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return `${bytes.byteLength.toString(16)}-${(hash >>> 0).toString(16)}`;
+}
+
+// Most tests want a bucket bound and nothing else; only the listing-shape test
+// reaches for the map behind it.
+function connectR2(
+  config: Partial<R2Config> = {},
+  env: Record<string, unknown> = {},
+): ConnectedObjectStorage {
+  return r2({ binding: "MEDIA", ...config }).connect({
+    MEDIA: fakeR2Binding().binding,
+    ...env,
+  });
+}
+
+const S3_CREDENTIALS = {
+  bucket: "plumix-media",
+  accountId: "abc123",
+  accessKeyId: "AKIAFAKE",
+  secretAccessKey: "secret",
+};
+
+describeObjectStorageContract({
+  connect: () =>
+    r2({
+      binding: "MEDIA",
+      publicUrlBase: "https://media.example.com",
+      s3: S3_CREDENTIALS,
+    }).connect({ MEDIA: fakeR2Binding().binding }),
+  publicUrls: true,
+  presign: true,
+});
 
 describe("r2 slot factory", () => {
   test("declares the binding name in requiredBindings", () => {
@@ -136,25 +237,10 @@ describe("r2 put/get/delete", () => {
   });
 
   test("get returns the quoted httpEtag when present (HTTP cache alignment)", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({ binding: "MEDIA" }).connect({ MEDIA: fake.binding });
+    const store = connectR2();
     await store.put("k", "v");
     const got = await store.get("k");
-    expect(got?.etag).toBe('"fake-etag"');
-  });
-
-  test("get on missing key returns null", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({ binding: "MEDIA" }).connect({ MEDIA: fake.binding });
-    expect(await store.get("none")).toBeNull();
-  });
-
-  test("delete removes the key", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({ binding: "MEDIA" }).connect({ MEDIA: fake.binding });
-    await store.put("k", "v");
-    await store.delete("k");
-    expect(fake.store.has("k")).toBe(false);
+    expect(got?.etag).toMatch(/^".+"$/);
   });
 });
 
@@ -164,38 +250,30 @@ describe("r2 url", () => {
     // `null` so the consumer can mint a worker-proxied URL keyed on
     // an entry id — keying on the storage key would let anyone with
     // the key fetch bytes regardless of publication status.
-    const fake = fakeR2Binding();
-    const store = r2({ binding: "MEDIA" }).connect({ MEDIA: fake.binding });
-    expect(await store.url("a.jpg")).toBeNull();
+    const store = connectR2();
     expect(await store.url("2026/04/uuid.png")).toBeNull();
   });
 
   test("returns the composed public URL when publicUrlBase is set", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({
-      binding: "MEDIA",
+    const store = connectR2({
       publicUrlBase: "https://media.example.com",
-    }).connect({ MEDIA: fake.binding });
+    });
     expect(await store.url("a/b.jpg")).toBe(
       "https://media.example.com/a/b.jpg",
     );
   });
 
   test("handles a trailing slash on publicUrlBase", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({
-      binding: "MEDIA",
+    const store = connectR2({
       publicUrlBase: "https://cdn.example.com/",
-    }).connect({ MEDIA: fake.binding });
+    });
     expect(await store.url("x.jpg")).toBe("https://cdn.example.com/x.jpg");
   });
 
   test("encodes each path segment independently so slashes survive", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({
-      binding: "MEDIA",
+    const store = connectR2({
       publicUrlBase: "https://cdn.example.com",
-    }).connect({ MEDIA: fake.binding });
+    });
     expect(await store.url("a path/b?.jpg")).toBe(
       "https://cdn.example.com/a%20path/b%3F.jpg",
     );
@@ -203,38 +281,28 @@ describe("r2 url", () => {
 });
 
 describe("r2 list", () => {
-  test("filters by prefix and projects the manifest-compatible shape", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({ binding: "MEDIA" }).connect({ MEDIA: fake.binding });
+  test("projects the binding's etag and upload time onto the listing", async () => {
+    const store = connectR2();
     await store.put("media/1", "a");
-    await store.put("media/2", "b");
-    await store.put("docs/x", "c");
-    const out = await store.list("media/");
-    expect(out.items.map((i) => i.key).sort()).toEqual(["media/1", "media/2"]);
-    expect(out.truncated).toBe(false);
+    const [item] = (await store.list("media/")).items;
+    // Unquoted here: the listing feeds manifests, not `If-None-Match`.
+    expect(item?.etag).toBe(etagFor(new TextEncoder().encode("a")));
+    expect(item?.uploaded).toEqual(new Date(0));
   });
 });
 
 describe("r2 presignPut", () => {
   test("is undefined when s3 credentials are not configured", () => {
-    const fake = fakeR2Binding();
-    const store = r2({ binding: "MEDIA" }).connect({ MEDIA: fake.binding });
+    const store = connectR2();
     // eslint-disable-next-line @typescript-eslint/unbound-method -- absence check, not invocation
     const presign = store.presignPut;
     expect(presign).toBeUndefined();
   });
 
   test("returns a SigV4 presigned PUT URL when s3 credentials are configured", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({
-      binding: "MEDIA",
-      s3: {
-        bucket: "plumix-media",
-        accountId: "abc123",
-        accessKeyId: "AKIAFAKE",
-        secretAccessKey: "secret",
-      },
-    }).connect({ MEDIA: fake.binding });
+    const store = connectR2({
+      s3: S3_CREDENTIALS,
+    });
     if (!store.presignPut) throw new Error("r2 should expose presignPut");
 
     const result = await store.presignPut("uploads/cat.jpg", {
@@ -255,20 +323,17 @@ describe("r2 presignPut", () => {
   });
 
   test("resolves an (env) => s3 credentials block from the connect env", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({
-      binding: "MEDIA",
-      s3: (env) => ({
-        bucket: "plumix-media",
-        accountId: "abc123",
-        accessKeyId: (env as { S3_KEY?: string }).S3_KEY ?? "",
-        secretAccessKey: (env as { S3_SECRET?: string }).S3_SECRET ?? "",
-      }),
-    }).connect({
-      MEDIA: fake.binding,
-      S3_KEY: "AKIA-FROM-ENV",
-      S3_SECRET: "secret-from-env",
-    });
+    const store = connectR2(
+      {
+        s3: (env) => ({
+          bucket: "plumix-media",
+          accountId: "abc123",
+          accessKeyId: (env as { S3_KEY?: string }).S3_KEY ?? "",
+          secretAccessKey: (env as { S3_SECRET?: string }).S3_SECRET ?? "",
+        }),
+      },
+      { S3_KEY: "AKIA-FROM-ENV", S3_SECRET: "secret-from-env" },
+    );
     if (!store.presignPut) throw new Error("r2 should expose presignPut");
 
     const result = await store.presignPut("uploads/cat.jpg", {
@@ -294,11 +359,7 @@ describe("r2 conventional env credentials", () => {
   };
 
   test("mints presigned PUTs from conventional env keys when s3 is omitted", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({ binding: "MEDIA" }).connect({
-      MEDIA: fake.binding,
-      ...conventionalEnv,
-    });
+    const store = connectR2({}, conventionalEnv);
     if (!store.presignPut) throw new Error("r2 should expose presignPut");
 
     const result = await store.presignPut("uploads/cat.jpg", {
@@ -314,20 +375,15 @@ describe("r2 conventional env credentials", () => {
   });
 
   test("leaves presignPut undefined when conventional creds are incomplete", () => {
-    const fake = fakeR2Binding();
     const { MEDIA_BUCKET: _omitted, ...partial } = conventionalEnv;
-    const store = r2({ binding: "MEDIA" }).connect({
-      MEDIA: fake.binding,
-      ...partial,
-    });
+    const store = connectR2({}, partial);
     // eslint-disable-next-line @typescript-eslint/unbound-method -- absence check, not invocation
     expect(store.presignPut).toBeUndefined();
   });
 
   test("derives the bucket env key from the binding name", async () => {
-    const fake = fakeR2Binding();
     const store = r2({ binding: "ASSETS" }).connect({
-      ASSETS: fake.binding,
+      ASSETS: fakeR2Binding().binding,
       CF_ACCOUNT_ID: "acct-from-env",
       R2_ACCESS_KEY_ID: "AKIA-CONVENTIONAL",
       R2_SECRET_ACCESS_KEY: "secret-conventional",
@@ -341,16 +397,17 @@ describe("r2 conventional env credentials", () => {
   });
 
   test("an explicit s3 block wins over conventional env keys", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({
-      binding: "MEDIA",
-      s3: {
-        bucket: "explicit-bucket",
-        accountId: "explicit-acct",
-        accessKeyId: "AKIA-EXPLICIT",
-        secretAccessKey: "secret-explicit",
+    const store = connectR2(
+      {
+        s3: {
+          bucket: "explicit-bucket",
+          accountId: "explicit-acct",
+          accessKeyId: "AKIA-EXPLICIT",
+          secretAccessKey: "secret-explicit",
+        },
       },
-    }).connect({ MEDIA: fake.binding, ...conventionalEnv });
+      conventionalEnv,
+    );
     if (!store.presignPut) throw new Error("r2 should expose presignPut");
     const result = await store.presignPut("x.jpg", {
       contentType: "image/jpeg",
@@ -362,23 +419,18 @@ describe("r2 conventional env credentials", () => {
   });
 
   test("reads publicUrlBase from <BINDING>_PUBLIC_URL_BASE when omitted", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({ binding: "MEDIA" }).connect({
-      MEDIA: fake.binding,
-      MEDIA_PUBLIC_URL_BASE: "https://cdn.example.com",
-    });
+    const store = connectR2(
+      {},
+      { MEDIA_PUBLIC_URL_BASE: "https://cdn.example.com" },
+    );
     expect(await store.url("a/b.jpg")).toBe("https://cdn.example.com/a/b.jpg");
   });
 
   test("an explicit publicUrlBase wins over the conventional env key", async () => {
-    const fake = fakeR2Binding();
-    const store = r2({
-      binding: "MEDIA",
-      publicUrlBase: "https://explicit.example.com",
-    }).connect({
-      MEDIA: fake.binding,
-      MEDIA_PUBLIC_URL_BASE: "https://env.example.com",
-    });
+    const store = connectR2(
+      { publicUrlBase: "https://explicit.example.com" },
+      { MEDIA_PUBLIC_URL_BASE: "https://env.example.com" },
+    );
     expect(await store.url("a.jpg")).toBe("https://explicit.example.com/a.jpg");
   });
 });

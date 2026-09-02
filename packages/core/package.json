@@ -57,6 +57,10 @@
       "types": "./dist/test/playwright/index.d.ts",
       "default": "./dist/test/playwright/index.js"
     },
+    "./test/conformance": {
+      "types": "./dist/test/conformance/index.d.ts",
+      "default": "./dist/test/conformance/index.js"
+    },
     "./validation": {
       "types": "./dist/rpc/validation.d.ts",
       "default": "./dist/rpc/validation.js"
@@ -130,13 +134,17 @@
   },
   "peerDependencies": {
     "@playwright/test": "catalog:",
-    "esbuild": "catalog:"
+    "esbuild": "catalog:",
+    "vitest": "catalog:vitest"
   },
   "peerDependenciesMeta": {
     "@playwright/test": {
       "optional": true
     },
     "esbuild": {
+      "optional": true
+    },
+    "vitest": {
       "optional": true
     }
   },

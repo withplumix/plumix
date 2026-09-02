@@ -26,6 +26,12 @@ import {
   termFactory,
   userFactory,
 } from "plumix/test";
+import {
+  describeAssetsContract,
+  describeCacheContract,
+  describeKvContract,
+  describeObjectStorageContract,
+} from "plumix/test/conformance";
 import { describe, expect, test } from "vitest";
 
 describe("plumix/test subpath", () => {
@@ -66,5 +72,20 @@ describe("plumix/test subpath", () => {
     expect(category.taxonomy).toBe("category");
     const tag = await factories.tag.create();
     expect(tag.taxonomy).toBe("tag");
+  });
+});
+
+describe("plumix/test/conformance subpath", () => {
+  // Every other caller reaches the suites through the source resolver, so this
+  // is the only place the published subpath is exercised.
+  test("re-exports one describe per slot port", () => {
+    for (const suite of [
+      describeKvContract,
+      describeObjectStorageContract,
+      describeCacheContract,
+      describeAssetsContract,
+    ]) {
+      expect(suite).toBeTypeOf("function");
+    }
   });
 });

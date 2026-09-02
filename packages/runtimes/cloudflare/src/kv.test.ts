@@ -1,35 +1,107 @@
-import { describe, expect, test } from "vitest";
+import { describeKvContract } from "plumix/test/conformance";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { KvError } from "./errors.js";
 import { kv } from "./kv.js";
 
-// Minimal in-test fake of the Workers KV namespace binding.
-function fakeNamespace() {
-  const store = new Map<string, string>();
-  const calls: { putOpts?: unknown; listOpts?: unknown } = {};
+interface FakeNamespace {
+  get(key: string): Promise<string | null>;
+  put(
+    key: string,
+    value: string,
+    options?: { expirationTtl?: number },
+  ): Promise<void>;
+  delete(key: string): Promise<void>;
+  list(options?: {
+    prefix?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<{
+    keys: { name: string }[];
+    list_complete: boolean;
+    cursor?: string;
+  }>;
+}
+
+// Workers KV rejects a write asking for less than a minute of life. The fake
+// enforces it so the conformance run proves the slot's declared floor is real
+// rather than a comment.
+const MIN_TTL_SECONDS = 60;
+
+// In-test stand-in for a Workers KV namespace binding: lazy TTL expiry against
+// the wall clock, sorted key listings, and a numeric-offset cursor — the
+// behaviours the adapter maps onto the `kv:` port.
+function fakeNamespace(): FakeNamespace {
+  const store = new Map<string, { value: string; expiresAt?: number }>();
+
+  const live = (key: string): string | undefined => {
+    const entry = store.get(key);
+    if (!entry) return undefined;
+    if (entry.expiresAt !== undefined && Date.now() >= entry.expiresAt) {
+      store.delete(key);
+      return undefined;
+    }
+    return entry.value;
+  };
+
   return {
-    store,
-    calls,
-    get: (key: string) => Promise.resolve(store.get(key) ?? null),
-    put: (key: string, value: string, opts?: unknown) => {
-      calls.putOpts = opts;
-      store.set(key, value);
+    get: (key) => Promise.resolve(live(key) ?? null),
+    put: (key, value, options) => {
+      const ttl = options?.expirationTtl;
+      if (ttl !== undefined && ttl < MIN_TTL_SECONDS) {
+        return Promise.reject(
+          new Error(
+            `Invalid expiration_ttl of ${String(ttl)}. Please specify integer greater than 60.`,
+          ),
+        );
+      }
+      store.set(key, {
+        value,
+        expiresAt: ttl === undefined ? undefined : Date.now() + ttl * 1000,
+      });
       return Promise.resolve();
     },
-    delete: (key: string) => {
+    delete: (key) => {
       store.delete(key);
       return Promise.resolve();
     },
-    list: (opts?: unknown) => {
-      calls.listOpts = opts;
+    list: (options = {}) => {
+      const names = [...store.keys()]
+        .filter((key) => live(key) !== undefined)
+        .filter((key) => !options.prefix || key.startsWith(options.prefix))
+        .sort();
+      const limit = options.limit ?? 1000;
+      const start = options.cursor ? Number(options.cursor) : 0;
+      const page = names.slice(start, start + limit);
+      const next = start + page.length;
+      const complete = next >= names.length;
       return Promise.resolve({
-        keys: [{ name: "a" }, { name: "b" }],
-        list_complete: false,
-        cursor: "next-cursor",
+        keys: page.map((name) => ({ name })),
+        list_complete: complete,
+        cursor: complete ? undefined : String(next),
       });
     },
   };
 }
+
+// The suite drives TTL through `advanceTime`, and the namespace reads the wall
+// clock, so the whole file runs on fake timers.
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describeKvContract({
+  connect: () =>
+    kv({ binding: "SESSIONS" }).connect({ SESSIONS: fakeNamespace() }),
+  minTtlSeconds: MIN_TTL_SECONDS,
+  advanceTime: (ms) => {
+    vi.advanceTimersByTime(ms);
+  },
+});
 
 describe("kv", () => {
   test("exposes kind, config, and requiredBindings", () => {
@@ -43,51 +115,40 @@ describe("kv", () => {
     expect(() => kv({ binding: "SESSIONS" }).connect({})).toThrow(KvError);
   });
 
-  test("get/put/delete round-trip through the binding", async () => {
-    const ns = fakeNamespace();
-    const store = kv({ binding: "SESSIONS" }).connect({ SESSIONS: ns });
-    expect(await store.get("k")).toBeNull();
-    await store.put("k", "v");
-    expect(await store.get("k")).toBe("v");
-    await store.delete("k");
-    expect(await store.get("k")).toBeNull();
-  });
-
   test("put forwards expirationTtl to the binding", async () => {
     const ns = fakeNamespace();
+    const put = vi.spyOn(ns, "put");
     const store = kv({ binding: "SESSIONS" }).connect({ SESSIONS: ns });
     await store.put("k", "v", { expirationTtl: 3600 });
-    expect(ns.calls.putOpts).toEqual({ expirationTtl: 3600 });
+    await store.put("k2", "v");
+    expect(put.mock.calls.map(([, , options]) => options)).toStrictEqual([
+      { expirationTtl: 3600 },
+      undefined,
+    ]);
   });
 
-  test("put omits options when no ttl is given", async () => {
+  test("list forwards prefix, limit and cursor to the binding", async () => {
     const ns = fakeNamespace();
+    const list = vi.spyOn(ns, "list");
     const store = kv({ binding: "SESSIONS" }).connect({ SESSIONS: ns });
-    await store.put("k", "v");
-    expect(ns.calls.putOpts).toBeUndefined();
+    await store.list({ prefix: "u:", limit: 10 });
+    expect(list.mock.calls).toStrictEqual([
+      [{ prefix: "u:", limit: 10, cursor: undefined }],
+    ]);
   });
 
-  test("list maps the binding shape onto the KV contract", async () => {
-    const ns = fakeNamespace();
-    const store = kv({ binding: "SESSIONS" }).connect({ SESSIONS: ns });
-    const result = await store.list({ prefix: "u:", limit: 10 });
-    expect(result.keys).toEqual(["a", "b"]);
-    expect(result.listComplete).toBe(false);
-    expect(result.cursor).toBe("next-cursor");
-    expect(ns.calls.listOpts).toEqual({
-      prefix: "u:",
-      limit: 10,
-      cursor: undefined,
+  test("list drops the cursor when the binding reports the listing complete", async () => {
+    const store = kv({ binding: "SESSIONS" }).connect({
+      SESSIONS: {
+        ...fakeNamespace(),
+        list: () =>
+          Promise.resolve({
+            keys: [{ name: "a" }],
+            list_complete: true,
+            cursor: "leftover",
+          }),
+      },
     });
-  });
-
-  test("list drops the cursor when the listing is complete", async () => {
-    const ns = {
-      ...fakeNamespace(),
-      list: () =>
-        Promise.resolve({ keys: [{ name: "a" }], list_complete: true }),
-    };
-    const store = kv({ binding: "SESSIONS" }).connect({ SESSIONS: ns });
     const result = await store.list();
     expect(result.keys).toEqual(["a"]);
     expect(result.listComplete).toBe(true);
