@@ -177,17 +177,38 @@ describe("dispatcher — routing", () => {
     expect(new URL(calls[0]?.url ?? "").pathname).toBe("/_plumix/admin/");
   });
 
-  test("bounces a signed-in subscriber off the admin shell back to the theme", async () => {
+  test("hands back a non-HTML answer to the shell fetch untouched", async () => {
+    // Under `not_found_handling: "none"` — what the scaffold ships — a deploy
+    // whose admin was never staged answers the shell URL with a plain 404. It
+    // has to come back as one: the rewrite below turns whatever it gets into a
+    // 200-shaped shell with `private, no-cache`, so without this branch a
+    // missing admin would look installed and uncacheable to every visitor.
+    const body = "Not Found";
     const assets = {
       fetch: (): Promise<Response> =>
         Promise.resolve(
-          new Response("<!doctype html><title>admin</title>", {
-            status: 200,
-            headers: { "content-type": "text/html" },
+          new Response(body, {
+            status: 404,
+            headers: { "content-type": "text/plain" },
           }),
         ),
     };
     const h = await createDispatcherHarness({ assets });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin/entries/new", { method: "GET" }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toBe("text/plain");
+    expect(response.headers.get("cache-control")).toBeNull();
+    expect(await response.text()).toBe(body);
+  });
+
+  test("bounces a signed-in subscriber off the admin shell back to the theme", async () => {
+    const h = await createDispatcherHarness({
+      assets: htmlAssets("<!doctype html><title>admin</title>"),
+    });
     const subscriber = await h.seedUser("subscriber");
     const request = await h.authenticateRequest(
       plumixRequest("/_plumix/admin", { method: "GET" }),
@@ -202,16 +223,7 @@ describe("dispatcher — routing", () => {
 
   test("serves the admin shell to a signed-in staff member", async () => {
     const indexBody = "<!doctype html><title>admin</title>";
-    const assets = {
-      fetch: (): Promise<Response> =>
-        Promise.resolve(
-          new Response(indexBody, {
-            status: 200,
-            headers: { "content-type": "text/html" },
-          }),
-        ),
-    };
-    const h = await createDispatcherHarness({ assets });
+    const h = await createDispatcherHarness({ assets: htmlAssets(indexBody) });
     const editor = await h.seedUser("editor");
     const request = await h.authenticateRequest(
       plumixRequest("/_plumix/admin", { method: "GET" }),

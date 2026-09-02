@@ -236,6 +236,17 @@ export interface KV {
  */
 export interface ConnectedCache {
   match(request: Request): Promise<Response | undefined>;
+  /**
+   * Store `response` under `request`, tagged for {@link purgeTags}.
+   *
+   * Two rules an entry is shared under, both asserted by the cache conformance
+   * suite. A non-GET request stores nothing — one entry keyed on a mutating
+   * request would answer every later visitor with the first one's result, and
+   * the Workers Cache API refuses it outright. And the stored copy must not
+   * carry the response's `Set-Cookie`: a cookie minted for whoever missed
+   * would otherwise be handed to everyone who hits. Stripping it and storing,
+   * or declining to store at all, both satisfy that.
+   */
   put(
     request: Request,
     response: Response,

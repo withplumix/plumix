@@ -15,4 +15,4 @@ export { describeCacheContract } from "./cache.js";
 export type { CacheContractOptions } from "./cache.js";
 
 export { describeAssetsContract } from "./assets.js";
-export type { AssetsContractOptions } from "./assets.js";
+export type { AssetsContractOptions, AssetsNotFound } from "./assets.js";

@@ -1,10 +1,13 @@
 import type {
+  AssetsBinding,
   DatabaseAdapter,
   Invocation,
+  PluginDescriptor,
   RequestScopedDb,
   RequestScopedDbArgs,
   TelemetrySnapshot,
 } from "plumix";
+import type { AssetsNotFound } from "plumix/test/conformance";
 import {
   auth as authConfig,
   buildApp,
@@ -14,6 +17,7 @@ import {
   requestStore,
   SESSION_COOKIE_NAME,
 } from "plumix";
+import { describeAssetsContract } from "plumix/test/conformance";
 import { describe, expect, test } from "vitest";
 
 import { cloudflare } from "./adapter.js";
@@ -34,8 +38,17 @@ const auth = authConfig({
 
 const theme = defineTheme({ templates: () => null });
 
-async function createApp(database: DatabaseAdapter = stubDatabase) {
-  const config = plumix({ runtime: cloudflare(), database, auth, theme });
+async function createApp(
+  database: DatabaseAdapter = stubDatabase,
+  plugins: PluginDescriptor[] = [],
+) {
+  const config = plumix({
+    runtime: cloudflare(),
+    database,
+    auth,
+    theme,
+    plugins,
+  });
   return buildApp(config);
 }
 
@@ -46,11 +59,43 @@ async function invoke(
   request: Request,
   env: unknown,
   database?: DatabaseAdapter,
+  plugins?: PluginDescriptor[],
 ): Promise<Response> {
-  const app = await createApp(database);
+  const app = await createApp(database, plugins);
   return cloudflare()
     .createHandler(app)
     .fetch(request, { env: env as Invocation["env"] });
+}
+
+/**
+ * The assets layer as core receives it, captured off `ctx.assets` in a plugin
+ * route. `readAssetsBinding` hands the binding through unchanged today, so the
+ * conformance run below pins the pass-through and the shape guard in front of
+ * it — not the layer's own behaviour, which no local pool can execute.
+ */
+async function assetsFromContext(
+  ASSETS: AssetsBinding,
+): Promise<AssetsBinding> {
+  let captured: AssetsBinding | undefined;
+  const capture = definePlugin("capture-assets", {
+    setup: (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/__assets-probe",
+        handler: (_request, appCtx) => {
+          captured = appCtx.assets;
+          return new Response("ok");
+        },
+      });
+    },
+  });
+  await invoke(
+    new Request("https://cms.example/__assets-probe"),
+    { ASSETS },
+    stubDatabase,
+    [capture],
+  );
+  if (!captured) throw new Error("the adapter exposed no assets binding");
+  return captured;
 }
 
 describe("cloudflare adapter — createHandler().fetch", () => {
@@ -516,5 +561,75 @@ describe("plugin schema collisions", () => {
     await expect(buildApp(config)).rejects.toThrow(
       /Plugin "b" redefines schema export "landing_pages"/,
     );
+  });
+});
+
+const ADMIN_SHELL = "<!doctype html><title>admin</title>";
+const ADMIN_SHELL_PATH = "/_plumix/admin/";
+const ADMIN_ASSET_PATH = "/_plumix/admin/assets/index-abc123.js";
+
+// Workers Assets in both configurations this repo deploys: `not_found_handling:
+// "none"` (the scaffold, so an unmatched path reaches the Worker) answers 404,
+// and `"single-page-application"` (several plugin playgrounds) answers with the
+// shell. The contract is run against both, because the adapter hands core the
+// binding either way.
+function workersAssets(notFound: AssetsNotFound): AssetsBinding {
+  const files: Readonly<Record<string, { body: string; type: string }>> = {
+    [ADMIN_SHELL_PATH]: { body: ADMIN_SHELL, type: "text/html; charset=utf-8" },
+    [ADMIN_ASSET_PATH]: {
+      body: "export const admin = 1;",
+      type: "text/javascript",
+    },
+  };
+  return {
+    fetch: (request) => {
+      const file = files[new URL(request.url).pathname];
+      if (file) {
+        return Promise.resolve(
+          new Response(file.body, {
+            status: 200,
+            headers: { "content-type": file.type },
+          }),
+        );
+      }
+      return Promise.resolve(
+        notFound === "spa"
+          ? new Response(ADMIN_SHELL, {
+              status: 200,
+              headers: { "content-type": "text/html; charset=utf-8" },
+            })
+          : new Response("Not Found", {
+              status: 404,
+              headers: { "content-type": "text/plain" },
+            }),
+      );
+    },
+  };
+}
+
+describe("cloudflare adapter — assets slot", () => {
+  // The binding is stateless, and every case would otherwise build an app and
+  // dispatch a request of its own to reach the same object.
+  const bindings = new Map<AssetsNotFound, Promise<AssetsBinding>>();
+  const connect = (notFound: AssetsNotFound) => () => {
+    const existing = bindings.get(notFound);
+    if (existing) return existing;
+    const captured = assetsFromContext(workersAssets(notFound));
+    bindings.set(notFound, captured);
+    return captured;
+  };
+
+  describeAssetsContract({
+    connect: connect("404"),
+    assetPath: ADMIN_ASSET_PATH,
+    shellPath: ADMIN_SHELL_PATH,
+    notFound: "404",
+  });
+
+  describeAssetsContract({
+    connect: connect("spa"),
+    assetPath: ADMIN_ASSET_PATH,
+    shellPath: ADMIN_SHELL_PATH,
+    notFound: "spa",
   });
 });
