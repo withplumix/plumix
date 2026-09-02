@@ -163,6 +163,7 @@ const config: KnipConfig = {
         "src/schema/index.ts",
         "src/test/index.ts",
         "src/test/playwright.ts",
+        "src/test/conformance.ts",
         "src/theme/index.ts",
         "src/vite/index.ts",
       ],

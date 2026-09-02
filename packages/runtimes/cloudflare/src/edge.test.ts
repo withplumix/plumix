@@ -1,4 +1,5 @@
 import type { ConnectedCache } from "plumix";
+import { describeCacheContract } from "plumix/test/conformance";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EdgeConfig } from "./edge.js";
@@ -191,4 +192,77 @@ describe("connected cache purgeTags", () => {
       /purge_cache responded 403/,
     );
   });
+});
+
+// The Cache API stub above records calls; the contract needs a store that
+// actually holds responses, and a purge endpoint wired back to it — purging on
+// Cloudflare is a REST call to the zone, so an isolated `caches.default` can
+// never satisfy the contract on its own.
+interface EdgeStore {
+  match(request: Request): Promise<Response | undefined>;
+  put(request: Request, response: Response): Promise<void>;
+}
+
+interface StoredEntry {
+  readonly body: string;
+  readonly status: number;
+  readonly headers: Headers;
+  readonly tags: readonly string[];
+}
+
+function purgeableEdge(): {
+  store: EdgeStore;
+  purgeEndpoint: typeof fetch;
+} {
+  const entries = new Map<string, StoredEntry>();
+  return {
+    store: {
+      match: (request) => {
+        const entry = entries.get(request.url);
+        return Promise.resolve(
+          entry
+            ? new Response(entry.body, {
+                status: entry.status,
+                headers: entry.headers,
+              })
+            : undefined,
+        );
+      },
+      put: async (request, response) => {
+        const tags = (response.headers.get("cache-tag") ?? "")
+          .split(",")
+          .filter((tag) => tag.length > 0);
+        entries.set(request.url, {
+          body: await response.text(),
+          status: response.status,
+          headers: new Headers(response.headers),
+          tags,
+        });
+      },
+    },
+    purgeEndpoint: (_url, init) => {
+      const body = typeof init?.body === "string" ? init.body : "{}";
+      const { tags } = JSON.parse(body) as { tags: string[] };
+      for (const [url, entry] of entries) {
+        if (entry.tags.some((tag) => tags.includes(tag))) entries.delete(url);
+      }
+      return Promise.resolve(new Response(null, { status: 200 }));
+    },
+  };
+}
+
+describe("edge as a cache slot", () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    const edgeStore = purgeableEdge();
+    (globalThis as { caches?: unknown }).caches = { default: edgeStore.store };
+    globalThis.fetch = edgeStore.purgeEndpoint;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  describeCacheContract({ connect });
 });

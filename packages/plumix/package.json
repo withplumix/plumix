@@ -108,6 +108,10 @@
       "types": "./dist/test/playwright.d.ts",
       "default": "./dist/test/playwright.js"
     },
+    "./test/conformance": {
+      "types": "./dist/test/conformance.d.ts",
+      "default": "./dist/test/conformance.js"
+    },
     "./blocks": {
       "types": "./dist/blocks/index.d.ts",
       "default": "./dist/blocks/index.js"
@@ -214,7 +218,8 @@
     "react-dom": "catalog:react",
     "sonner": "catalog:",
     "tailwind-merge": "catalog:",
-    "vite": "catalog:vite"
+    "vite": "catalog:vite",
+    "vitest": "catalog:vitest"
   },
   "peerDependenciesMeta": {
     "@orpc/client": {
@@ -248,6 +253,9 @@
       "optional": true
     },
     "vite": {
+      "optional": true
+    },
+    "vitest": {
       "optional": true
     }
   },

@@ -1,125 +1,58 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { describeKvContract } from "../test/conformance/kv.js";
 import { memoryKv } from "./memory-kv.js";
+
+// The suite drives TTL through `advanceTime`, and `memoryKv` reads the wall
+// clock, so the whole file runs on fake timers.
+beforeEach(() => {
+  vi.useFakeTimers();
+});
 
 afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("memoryKv", () => {
-  test("put then get returns the stored value", async () => {
-    const kv = memoryKv().connect({});
-    await kv.put("k", "v");
-    expect(await kv.get("k")).toBe("v");
+describeKvContract({
+  connect: () => memoryKv().connect({}),
+  advanceTime: (ms) => {
+    vi.advanceTimersByTime(ms);
+  },
+});
+
+describe("memoryKv list", () => {
+  // The contract sorts a page before comparing it, so the ordering the
+  // in-memory store guarantees has to be asserted here or nowhere.
+  test("returns keys in sorted order, not insertion order", async () => {
+    const kv = memoryKv({ seed: { b: "2", a: "1", c: "3" } }).connect({});
+    expect((await kv.list()).keys).toEqual(["a", "b", "c"]);
   });
 
-  test("get returns null for a missing key", async () => {
-    const kv = memoryKv().connect({});
-    expect(await kv.get("missing")).toBeNull();
+  test("fills a page to the limit exactly", async () => {
+    const kv = memoryKv({ seed: { a: "1", b: "2", c: "3" } }).connect({});
+    const first = await kv.list({ limit: 2 });
+    expect(first.keys).toEqual(["a", "b"]);
+    const second = await kv.list({ limit: 2, cursor: first.cursor });
+    expect(second.keys).toEqual(["c"]);
   });
+});
 
-  test("put overwrites an existing value", async () => {
-    const kv = memoryKv().connect({});
-    await kv.put("k", "1");
-    await kv.put("k", "2");
-    expect(await kv.get("k")).toBe("2");
-  });
-
-  test("delete removes a key", async () => {
-    const kv = memoryKv().connect({});
-    await kv.put("k", "v");
-    await kv.delete("k");
-    expect(await kv.get("k")).toBeNull();
-  });
-
-  test("seed pre-populates entries", async () => {
+describe("memoryKv seeding", () => {
+  test("seeded entries are immediately readable", async () => {
     const kv = memoryKv({ seed: { a: "1", b: "2" } }).connect({});
     expect(await kv.get("a")).toBe("1");
     expect(await kv.get("b")).toBe("2");
   });
 
-  test("expirationTtl expires the entry after its window", async () => {
-    vi.useFakeTimers();
-    const kv = memoryKv().connect({});
-    await kv.put("k", "v", { expirationTtl: 60 });
-    expect(await kv.get("k")).toBe("v");
-    vi.advanceTimersByTime(61_000);
-    expect(await kv.get("k")).toBeNull();
+  test("seeded entries never expire", async () => {
+    const kv = memoryKv({ seed: { a: "1" } }).connect({});
+    vi.advanceTimersByTime(86_400_000);
+    expect(await kv.get("a")).toBe("1");
   });
 
-  test("honors a sub-60-second expirationTtl — the generic adapter has no backend floor", async () => {
-    vi.useFakeTimers();
-    const kv = memoryKv().connect({});
-    await kv.put("k", "v", { expirationTtl: 30 });
-    expect(await kv.get("k")).toBe("v");
-    vi.advanceTimersByTime(31_000);
-    expect(await kv.get("k")).toBeNull();
-  });
-
-  test("put without a ttl clears a previously set expiry", async () => {
-    vi.useFakeTimers();
-    const kv = memoryKv().connect({});
-    await kv.put("k", "v", { expirationTtl: 60 });
-    await kv.put("k", "v2");
-    vi.advanceTimersByTime(120_000);
-    expect(await kv.get("k")).toBe("v2");
-  });
-
-  describe("list", () => {
-    test("returns all keys sorted with listComplete when exhausted", async () => {
-      const kv = memoryKv({ seed: { b: "2", a: "1", c: "3" } }).connect({});
-      const result = await kv.list();
-      expect(result.keys).toEqual(["a", "b", "c"]);
-      expect(result.listComplete).toBe(true);
-      expect(result.cursor).toBeUndefined();
-    });
-
-    test("prefix filters the keys", async () => {
-      const kv = memoryKv({
-        seed: { "u:1": "a", "u:2": "b", "x:1": "c" },
-      }).connect({});
-      const result = await kv.list({ prefix: "u:" });
-      expect(result.keys).toEqual(["u:1", "u:2"]);
-    });
-
-    test("limit paginates through an opaque cursor", async () => {
-      const kv = memoryKv({ seed: { a: "1", b: "2", c: "3" } }).connect({});
-      const first = await kv.list({ limit: 2 });
-      expect(first.keys).toEqual(["a", "b"]);
-      expect(first.listComplete).toBe(false);
-      expect(first.cursor).toBeDefined();
-
-      const second = await kv.list({ limit: 2, cursor: first.cursor });
-      expect(second.keys).toEqual(["c"]);
-      expect(second.listComplete).toBe(true);
-      expect(second.cursor).toBeUndefined();
-    });
-
-    test("prefix and cursor combine across pages", async () => {
-      const kv = memoryKv({
-        seed: { "u:1": "a", "u:2": "b", "u:3": "c", "x:1": "d" },
-      }).connect({});
-      const first = await kv.list({ prefix: "u:", limit: 2 });
-      expect(first.keys).toEqual(["u:1", "u:2"]);
-      expect(first.listComplete).toBe(false);
-
-      const second = await kv.list({
-        prefix: "u:",
-        limit: 2,
-        cursor: first.cursor,
-      });
-      expect(second.keys).toEqual(["u:3"]);
-      expect(second.listComplete).toBe(true);
-    });
-
-    test("omits expired entries", async () => {
-      vi.useFakeTimers();
-      const kv = memoryKv().connect({});
-      await kv.put("keep", "1");
-      await kv.put("gone", "2", { expirationTtl: 60 });
-      vi.advanceTimersByTime(61_000);
-      const result = await kv.list();
-      expect(result.keys).toEqual(["keep"]);
-    });
+  test("seeded entries are listable alongside written ones", async () => {
+    const kv = memoryKv({ seed: { a: "1" } }).connect({});
+    await kv.put("b", "2");
+    expect((await kv.list()).keys).toEqual(["a", "b"]);
   });
 });
