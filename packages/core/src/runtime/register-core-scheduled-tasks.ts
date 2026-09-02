@@ -2,13 +2,14 @@ import type { MutablePluginRegistry } from "../plugin/manifest.js";
 import { pruneExpiredSessions } from "../auth/sessions.js";
 import { publishDueScheduledEntries } from "../rpc/procedures/entry/publish-scheduled.js";
 
-// Daily at 03:00 UTC. Only fires if the deploy declares a matching
-// `triggers.crons` entry in wrangler config; otherwise expired sessions
-// stay filtered-at-read and simply accumulate (harmless, just rows).
+// Daily at 03:00 UTC. Only fires if the runtime is configured to fire this
+// schedule; otherwise expired sessions stay filtered-at-read and simply
+// accumulate (harmless, just rows).
 const SESSION_CLEANUP_CRON = "0 3 * * *";
 
 // Every 5 minutes — the worst-case lag between an entry's scheduled time and
-// its actual publish. Needs a matching `triggers.crons` entry to fire.
+// its actual publish. Needs the runtime to be configured to fire this
+// schedule.
 const PUBLISH_SCHEDULED_CRON = "*/5 * * * *";
 
 /**

@@ -61,6 +61,7 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@oslojs/encoding": "catalog:oslojs",
     "drizzle-orm": "catalog:drizzle",
     "valibot": "catalog:"
   },

@@ -4,11 +4,19 @@
 // Stable ordering even under concurrent writes because `id` is
 // monotonically increasing.
 //
-// On-wire form: url-safe base64 of `${occurredAt}.${id}` — readable
+// On-wire form: base64url (no padding) of `${occurredAt}.${id}` — readable
 // enough to debug from the network tab without giving away anything
 // useful for tampering. A tampered or malformed cursor lands on the
 // `CursorError` branch in the RPC layer and surfaces as a typed
 // `INVALID_CURSOR` to the caller.
+
+import {
+  decodeBase64urlIgnorePadding,
+  encodeBase64urlNoPadding,
+} from "@oslojs/encoding";
+
+const ENCODER = new TextEncoder();
+const DECODER = new TextDecoder();
 
 type CursorErrorCode = "empty" | "malformed";
 
@@ -40,14 +48,14 @@ interface CursorPosition {
 
 export function encodeCursor(position: CursorPosition): string {
   const raw = `${String(position.occurredAt)}.${String(position.id)}`;
-  return toUrlSafeBase64(raw);
+  return encodeBase64urlNoPadding(ENCODER.encode(raw));
 }
 
 export function decodeCursor(encoded: string): CursorPosition {
   if (encoded === "") throw CursorError.empty();
   let raw: string;
   try {
-    raw = fromUrlSafeBase64(encoded);
+    raw = DECODER.decode(decodeBase64urlIgnorePadding(encoded));
   } catch {
     throw CursorError.malformed();
   }
@@ -66,20 +74,4 @@ export function decodeCursor(encoded: string): CursorPosition {
     throw CursorError.malformed();
   }
   return { occurredAt, id };
-}
-
-function toUrlSafeBase64(raw: string): string {
-  // Buffer is available in Workers + Node; both runtimes the plugin
-  // targets. The url-safe alphabet (+ → -, / → _, no padding) keeps
-  // the value safe to drop into a query string without escaping.
-  return Buffer.from(raw, "utf8")
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-function fromUrlSafeBase64(encoded: string): string {
-  const restored = encoded.replace(/-/g, "+").replace(/_/g, "/");
-  return Buffer.from(restored, "base64").toString("utf8");
 }

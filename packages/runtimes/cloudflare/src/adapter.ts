@@ -8,6 +8,7 @@ import type {
 } from "plumix";
 import { createPlumixHandler } from "plumix";
 
+import { registerCloudflareErrorHints } from "./dev-hints.js";
 import { PlumixRuntimeConfigError } from "./errors.js";
 
 // Cloudflare Workers Assets exposes a Fetcher on env.ASSETS when the
@@ -61,5 +62,13 @@ function createHandler(app: PlumixApp): PlumixHandler {
   if (typeof AsyncLocalStorage !== "function") {
     throw PlumixRuntimeConfigError.asyncLocalStorageMissing();
   }
+
+  // Mirrors core's own `PLUMIX_DEV` gate around `registerCoreErrorHints` —
+  // Vite-substituted at bundle time, so this and `registerCloudflareErrorHints`
+  // tree-shake out of a production build.
+  if (process.env.PLUMIX_DEV) {
+    registerCloudflareErrorHints(app.hooks);
+  }
+
   return createPlumixHandler(app, { assets: readAssetsBinding });
 }
