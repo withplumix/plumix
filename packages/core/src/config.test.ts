@@ -10,7 +10,7 @@ import { welcomeTheme } from "./welcome-theme.js";
 
 const runtime: RuntimeAdapter = {
   name: "mock",
-  buildFetchHandler: () => () => new Response("ok"),
+  createHandler: () => ({ fetch: () => new Response("ok") }),
 };
 
 const database: DatabaseAdapter = {

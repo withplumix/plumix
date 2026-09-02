@@ -1,5 +1,6 @@
 import type {
   DatabaseAdapter,
+  Invocation,
   RequestScopedDb,
   RequestScopedDbArgs,
   TelemetrySnapshot,
@@ -33,27 +34,26 @@ const auth = authConfig({
 
 const theme = defineTheme({ templates: () => null });
 
-const emptyExecutionContext = {} as ExecutionContext;
-
 async function createApp(database: DatabaseAdapter = stubDatabase) {
   const config = plumix({ runtime: cloudflare(), database, auth, theme });
   return buildApp(config);
 }
 
+// Build app → `createHandler` → `fetch(request, invocation)`: the seam every
+// runtime adapter conforms to. `env` is `unknown` because the tests hand the
+// handler deliberately broken bags (a null binding, no object at all).
 async function invoke(
   request: Request,
-  env: Record<string, unknown> | undefined,
+  env: unknown,
   database?: DatabaseAdapter,
 ): Promise<Response> {
   const app = await createApp(database);
-  return cloudflare().buildFetchHandler(app)(
-    request,
-    env,
-    emptyExecutionContext,
-  );
+  return cloudflare()
+    .createHandler(app)
+    .fetch(request, { env: env as Invocation["env"] });
 }
 
-describe("cloudflare adapter — buildFetchHandler", () => {
+describe("cloudflare adapter — createHandler().fetch", () => {
   test("routes the public / request through the dispatcher", async () => {
     const response = await invoke(
       new Request("https://cms.example/unknown"),
@@ -71,7 +71,7 @@ describe("cloudflare adapter — buildFetchHandler", () => {
     expect(requestStore.getStore()).toBeUndefined();
   });
 
-  test("database.connect errors are caught by the adapter and surface as 500", async () => {
+  test("database.connect errors are caught by the handler and surface as 500", async () => {
     const failingDatabase: DatabaseAdapter = {
       kind: "failing",
       connect: () => {
@@ -88,7 +88,7 @@ describe("cloudflare adapter — buildFetchHandler", () => {
     expect(body).toMatchObject({ error: "internal_error" });
   });
 
-  test("tolerates a test-time executionCtx without waitUntil (after falls back to a no-op)", async () => {
+  test("tolerates an invocation without waitUntil (defer falls back to a no-op)", async () => {
     const response = await invoke(
       new Request("https://cms.example/unknown"),
       {},
@@ -111,17 +111,13 @@ describe("cloudflare adapter — buildFetchHandler", () => {
     });
     const app = await buildApp(config);
     const waited: Promise<unknown>[] = [];
-    const executionCtx = {
-      waitUntil: (promise: Promise<unknown>) => void waited.push(promise),
-      passThroughOnException: () => undefined,
-      props: {},
-    } as ExecutionContext;
 
-    const response = await cloudflare().buildFetchHandler(app)(
-      new Request("https://cms.example/unknown"),
-      {},
-      executionCtx,
-    );
+    const response = await cloudflare()
+      .createHandler(app)
+      .fetch(new Request("https://cms.example/unknown"), {
+        env: {},
+        waitUntil: (promise) => void waited.push(promise),
+      });
 
     // Delivery was routed through waitUntil — never awaited before returning.
     expect(waited.length).toBeGreaterThan(0);
@@ -159,19 +155,15 @@ describe("cloudflare adapter — buildFetchHandler", () => {
 
   test("each request receives its own context (no cross-request leakage)", async () => {
     const app = await createApp();
-    const fetchHandler = cloudflare().buildFetchHandler(app);
+    const handler = cloudflare().createHandler(app);
 
     const [a, b] = await Promise.all([
-      fetchHandler(
-        new Request("https://cms.example/unknown?seq=1"),
-        {},
-        emptyExecutionContext,
-      ),
-      fetchHandler(
-        new Request("https://cms.example/unknown?seq=2"),
-        {},
-        emptyExecutionContext,
-      ),
+      handler.fetch(new Request("https://cms.example/unknown?seq=1"), {
+        env: {},
+      }),
+      handler.fetch(new Request("https://cms.example/unknown?seq=2"), {
+        env: {},
+      }),
     ]);
 
     expect(a.status).toBe(404);
@@ -466,34 +458,25 @@ describe("cloudflare adapter — binding validation", () => {
     expect(response.status).toBe(404);
   });
 
-  test("validation is memoised — runs once per Worker isolate", async () => {
-    let connectCalls = 0;
+  test("validation is memoised per handler: the first env's verdict holds", async () => {
     const adapterWithBindings: DatabaseAdapter = {
       kind: "stub-with-bindings",
       requiredBindings: ["DB"],
-      connect: () => {
-        connectCalls += 1;
-        return { db: {} };
-      },
+      connect: () => ({ db: {} }),
     };
     const app = await createApp(adapterWithBindings);
-    const fetchHandler = cloudflare().buildFetchHandler(app);
-    const env = { DB: { fake: true } };
-    await fetchHandler(
+    const handler = cloudflare().createHandler(app);
+    const first = await handler.fetch(
       new Request("https://cms.example/unknown"),
-      env,
-      emptyExecutionContext,
+      { env: { DB: { fake: true } } },
     );
-    await fetchHandler(
+    expect(first.status).toBe(404);
+    // Without the memo this request would be the readable 500 above.
+    const second = await handler.fetch(
       new Request("https://cms.example/about"),
-      env,
-      emptyExecutionContext,
+      { env: {} },
     );
-    // If the memoised check held, connect runs twice (once per request) and
-    // no re-validation cost was paid. This indirectly confirms the gate
-    // flipped: a broken env would fail fast on request #2 as well, not
-    // bypass the check.
-    expect(connectCalls).toBeGreaterThanOrEqual(2);
+    expect(second.status).toBe(404);
   });
 });
 

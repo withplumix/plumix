@@ -34,21 +34,25 @@ describe("generateWorkerSource", () => {
     expect(source).toContain("async fetch(request, env, ctx)");
   });
 
-  test("reuses a single fetch handler across invocations", () => {
+  test("builds one handler through the runtime adapter and reuses it across invocations", () => {
     const source = generateWorkerSource({ configModule: "./config.ts" });
-    expect(source).toContain("fetchHandler ??=");
+    expect(source).toContain("handler ??= config.runtime.createHandler(app)");
   });
 
-  test("exports a scheduled handler that delegates to runtime.buildScheduledHandler", () => {
+  test("forwards the positional Worker arguments into an invocation", () => {
+    const source = generateWorkerSource({ configModule: "./config.ts" });
+    expect(source).toContain(
+      "{ env, waitUntil: (promise) => ctx.waitUntil(promise) }",
+    );
+    expect(source).toContain("handler.fetch(request, invocation(env, ctx))");
+  });
+
+  test("exports a scheduled handler that calls the runtime handler's scheduled", () => {
     const source = generateWorkerSource({ configModule: "./config.ts" });
     expect(source).toContain("async scheduled(event, env, ctx)");
-    // Optional-chain so runtimes without scheduled support are a no-op.
-    expect(source).toContain("config.runtime.buildScheduledHandler?.(app)");
-  });
-
-  test("reuses a single scheduled handler across invocations", () => {
-    const source = generateWorkerSource({ configModule: "./config.ts" });
-    expect(source).toContain("scheduledHandler ??=");
+    expect(source).toContain(
+      "await handler.scheduled(event, invocation(env, ctx))",
+    );
   });
 
   test("imports the asset manifest virtual module and threads it into buildApp", () => {
@@ -64,11 +68,9 @@ describe("generateWorkerSource", () => {
     expect(source).toContain('export * from "virtual:plumix/worker-exports";');
   });
 
-  test("no-ops cleanly when the runtime omits buildScheduledHandler", () => {
+  test("no-ops cleanly when the runtime handler omits scheduled", () => {
     const source = generateWorkerSource({ configModule: "./config.ts" });
-    // The generated code guards the call so a runtime that returns
-    // undefined here doesn't blow up the scheduled invocation.
-    expect(source).toContain("if (scheduledHandler) await scheduledHandler");
+    expect(source).toContain("if (handler.scheduled) await handler.scheduled");
   });
 
   test("guards app construction so a dev boot failure serves the dev error page", () => {

@@ -11,7 +11,7 @@ import { buildApp } from "./app.js";
 
 const stubAdapter = {
   name: "test" as const,
-  buildFetchHandler: () => () => new Response("stub"),
+  createHandler: () => ({ fetch: () => new Response("stub") }),
 };
 const stubDatabase = { kind: "test", connect: () => ({ db: {} }) } as const;
 const stubAuth = auth({

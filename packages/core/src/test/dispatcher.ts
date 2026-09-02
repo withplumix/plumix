@@ -60,7 +60,7 @@ type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
 const stubAdapter = {
   name: "test",
-  buildFetchHandler: () => () => new Response("stub", { status: 500 }),
+  createHandler: () => ({ fetch: () => new Response("stub", { status: 500 }) }),
 };
 
 const stubDatabase = {

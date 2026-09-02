@@ -23,7 +23,10 @@ import {
 function fakeApp(): PlumixApp {
   return {
     config: {
-      runtime: { name: "test", buildFetchHandler: () => () => new Response() },
+      runtime: {
+        name: "test",
+        createHandler: () => ({ fetch: () => new Response() }),
+      },
       database: { kind: "test", connect: () => ({ db: {} }) },
       plugins: [],
     },

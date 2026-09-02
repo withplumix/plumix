@@ -36,7 +36,7 @@ const VALID_CONFIG = `
 export default {
   runtime: {
     name: "test",
-    buildFetchHandler: () => () => new Response("ok"),
+    createHandler: () => ({ fetch: () => new Response("ok") }),
   },
   database: {
     kind: "test",

@@ -69,14 +69,14 @@ Add an R2 bucket to the recipe site so the [`heroImage` media field](/fields/fie
 
 ## What checks the names
 
-The adapter walks the `database`, `storage` and `kv` slots for the bindings they declared as required, then asserts every one of those names is present on `env`. The check runs once per Worker isolate and the result is memoized, so it costs nothing after the first request.
+The handler core builds for the runtime adapter walks the `database`, `storage` and `kv` slots for the bindings they declared as required, then asserts every one of those names is present on `env`. The check runs once per handler, which on Workers means once per isolate, and the result is memoized, so it costs nothing after the first request.
 
 A failure produces one 500 response naming every missing binding at once.
 
 ```json
 {
   "error": "bindings_missing",
-  "message": "@plumix/runtime-cloudflare: missing required env bindings: DB, MEDIA. Declare them in wrangler.toml and ensure the names match the adapter config.",
+  "message": "[plumix] missing required env bindings: DB, MEDIA. Declare them in the runtime's configuration and ensure the names match the slot config.",
   "missing": ["DB", "MEDIA"]
 }
 ```

@@ -13,7 +13,7 @@ import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
  * task with no `cron` runs on every invocation. When `firedCron` is omitted
  * (tests, runtimes that don't surface it), every task runs.
  *
- * Runtime adapters call this from their `buildScheduledHandler` after
+ * The default handler factory calls this from its `scheduled` path after
  * constructing a scheduled-flavor `AppContext`. Owns the run's telemetry
  * snapshot delivery, so it must not be invoked inside a dispatched request —
  * the dispatcher would deliver the same collector a second time.

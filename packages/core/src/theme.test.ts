@@ -26,7 +26,7 @@ import {
 
 const stubAdapter = {
   name: "test",
-  buildFetchHandler: () => () => new Response("stub"),
+  createHandler: () => ({ fetch: () => new Response("stub") }),
 };
 const stubDatabase = { kind: "test", connect: () => ({ db: {} }) };
 const stubAuth = auth({
