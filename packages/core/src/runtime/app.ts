@@ -250,7 +250,7 @@ export interface PlumixApp {
   readonly renderEnv: RenderEnv;
 }
 
-// Runtime-only state the worker template injects at boot — values
+// Runtime-only state the generated entry injects at boot — values
 // resolved by the Vite plugin from virtual modules (asset manifest).
 // Kept internal: consumers (tests + the generated worker) pass an
 // inline object literal that structurally satisfies the type.

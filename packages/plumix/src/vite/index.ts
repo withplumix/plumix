@@ -24,7 +24,6 @@ import type {
 import {
   collectNamedTemplates,
   generateSchemaSource,
-  generateWorkerSource,
   injectManifestIntoHtml,
   isTrustedDevHost,
 } from "@plumix/core";
@@ -502,11 +501,12 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
 }
 
 /**
- * Pre-emit `.plumix/worker.ts` and `.plumix/schema.ts` from the user's
- * config. Exposed so the runtime adapter CLI can force the files into
- * existence before handing plugins to `vite.build` / `vite.createServer` —
- * peer plugins (notably @cloudflare/vite-plugin) validate wrangler.jsonc's
- * `main` path early, and expect that file to already exist.
+ * Pre-emit `.plumix/worker.ts` (the runtime adapter's entry) and
+ * `.plumix/schema.ts` from the user's config. Exposed so the runtime adapter
+ * CLI can force the files into existence before handing plugins to
+ * `vite.build` / `vite.createServer` — peer plugins (notably
+ * @cloudflare/vite-plugin) validate wrangler.jsonc's `main` path early, and
+ * expect that file to already exist.
  */
 export async function emitPlumixSources(
   cwd: string,
@@ -535,10 +535,10 @@ async function regenerate(
   const schemaSource = generateSchemaSource(config).source;
   writeIfChanged(resolve(cwd, ".plumix/schema.ts"), schemaSource);
 
-  const workerSource = generateWorkerSource({
+  const entrySource = config.runtime.generateEntry({
     configModule: resolveConfigSpecifier(cwd, configPath),
   });
-  writeIfChanged(resolve(cwd, ".plumix/worker.ts"), workerSource);
+  writeIfChanged(resolve(cwd, ".plumix/worker.ts"), entrySource);
 
   // Always emit `.plumix/client-entry.ts`, even when empty. The plumix
   // Vite plugin's `config()` hook unconditionally lists it as a client

@@ -37,6 +37,7 @@ export default {
   runtime: {
     name: "test",
     createHandler: () => ({ fetch: () => new Response("ok") }),
+    generateEntry: () => "",
   },
   database: {
     kind: "test",

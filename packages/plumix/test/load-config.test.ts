@@ -90,7 +90,7 @@ describe("loadConfig", () => {
         'import { view } from "./view.tsx";',
         "void view;",
         "export default {",
-        "  runtime: { name: 'x', createHandler: () => undefined },",
+        "  runtime: { name: 'x', createHandler: () => undefined, generateEntry: () => '' },",
         "  database: { kind: 'd1' },",
         "  auth: { passkey: {} },",
         "};",

@@ -24,6 +24,7 @@ function fakeApp(plugins: readonly unknown[] = []): PlumixApp {
       runtime: {
         name: "test",
         createHandler: () => ({ fetch: () => new Response() }),
+        generateEntry: () => "",
       },
       database: { kind: "test", connect: () => ({ db: {} }) },
       auth: {

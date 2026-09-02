@@ -44,6 +44,11 @@ export function demoRuntime(
     name: `${inner.name}+demo`,
     commandsModule: inner.commandsModule,
     workerExports: [...(inner.workerExports ?? []), DEMO_EXPORTS_MODULE],
+    // Demo mode changes what the handler does, not the shape the platform
+    // serves, so the entry is the base runtime's.
+    generateEntry(options) {
+      return inner.generateEntry(options);
+    },
     createHandler(app) {
       const handler = inner.createHandler(app);
       // Seed the shared showcase DO once per isolate, lazily on first

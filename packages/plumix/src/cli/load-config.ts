@@ -107,6 +107,7 @@ const configShapeSchema = v.looseObject({
   runtime: v.looseObject({
     name: v.string(),
     createHandler: v.function(),
+    generateEntry: v.function(),
   }),
   database: v.looseObject({ kind: v.string() }),
   auth: v.looseObject({

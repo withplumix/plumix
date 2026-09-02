@@ -18,7 +18,11 @@ const stubAuth = auth({
   passkey: { rpName: "t", rpId: "cms.example", origin: "https://cms.example" },
 });
 const theme = defineTheme({ templates: [fallback(() => null)] });
-const runtime = { name: "test", createHandler: createPlumixHandler };
+const runtime = {
+  name: "test",
+  createHandler: createPlumixHandler,
+  generateEntry: () => "",
+};
 
 async function handlerFor(
   overrides: Partial<Parameters<typeof plumix>[0]> = {},

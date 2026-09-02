@@ -12,6 +12,7 @@ const baseConfig: PlumixConfig = {
   runtime: {
     name: "test",
     createHandler: () => ({ fetch: () => new Response() }),
+    generateEntry: () => "",
   },
   database: { kind: "test", connect: () => ({ db: {} }) },
   auth: auth({
