@@ -210,14 +210,14 @@ entry — content-editor material is out of scope for this site.
 
 ### 13. Deployment
 
-| Slug                    | Title                    | T   | Purpose                                                  | Covers                       |
-| ----------------------- | ------------------------ | --- | -------------------------------------------------------- | ---------------------------- |
-| `deployment/overview`   | Overview                 | P0  | What deploying a Plumix site involves.                   | —                            |
-| `deployment/cloudflare` | Cloudflare Workers       | P0  | The one shipped runtime: D1, R2, KV, Images, edge cache. | `@plumix/runtime-cloudflare` |
-| `deployment/bindings`   | Bindings and Environment | P0  | Wiring bindings to config slots.                         | bindings, slots              |
-| `deployment/secrets`    | Secrets                  | P0  | `EnvInput`, `.dev.vars`, production secrets.             | secret slots                 |
-| `deployment/cli`        | CLI Reference            | P1  | **Roster page.** Commands and global flags.              | 7 commands + 5 global flags  |
-| `deployment/runtimes`   | Runtime Adapters         | P2  | The adapter contract, for porting Plumix elsewhere.      | `RuntimeAdapter`             |
+| Slug                    | Title                    | T   | Purpose                                                                    | Covers                                          |
+| ----------------------- | ------------------------ | --- | -------------------------------------------------------------------------- | ----------------------------------------------- |
+| `deployment/overview`   | Overview                 | P0  | What deploying a Plumix site involves.                                     | —                                               |
+| `deployment/cloudflare` | Cloudflare Workers       | P0  | The one shipped runtime: D1, R2, KV, Images, edge cache.                   | `@plumix/runtime-cloudflare`                    |
+| `deployment/bindings`   | Bindings and Environment | P0  | Wiring bindings to config slots.                                           | bindings, slots                                 |
+| `deployment/secrets`    | Secrets                  | P0  | `EnvInput`, `.dev.vars`, production secrets.                               | secret slots                                    |
+| `deployment/cli`        | CLI Reference            | P1  | **Roster page.** Commands and global flags.                                | 7 commands + 5 global flags                     |
+| `deployment/runtimes`   | Runtime Adapters         | P2  | **Roster page.** The adapter contract, its obligations, the runtime floor. | `RuntimeAdapter`, `PlumixHandler`, `Invocation` |
 
 ### 14. Plugins
 
@@ -345,14 +345,15 @@ Each item carries, in order:
 `textarea` against `text`, `userList` against `user` — which links to the sibling's example and
 states only what differs.
 
-### The 20 rosters
+### The 21 rosters
 
 `Field Types` · `Core Blocks` · `Marks` · `Shortcodes` · `Hook Reference` · `Capabilities` · `Roles` ·
 `Hydration Strategies` · `Configuration` · `Entry Type Reference` · `Statuses and Publishing` ·
 `Templates` · `Template Data` · `CLI Reference` · `MCP` · `Caching` (tag vocabulary) ·
 `Project Structure` (façade subpaths) · `Plugins` (the shipped `@plumix/plugin-*` packages) ·
 `Custom Rule Kinds` (the target constructors a plugin-authored rule kind selects with) ·
-`Translation Catalogs` (the keys of a plugin descriptor's `i18n` slot).
+`Translation Catalogs` (the keys of a plugin descriptor's `i18n` slot) ·
+`Runtime Adapters` (the members of `RuntimeAdapter`, `PlumixHandler` and `Invocation`).
 
 **`supports` is deliberately not a roster.** The code accepts any string, so no complete list exists
 to promise. Its page presents a **conventional, not closed** list and says so visibly — otherwise

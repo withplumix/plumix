@@ -191,6 +191,16 @@ Freshness is the response's to declare. A handler that sets its own `Cache-Contr
 
 Publishing a recipe queues a purge for the tags its pages were stored under, and the runtime defers that call past the response, so a failed purge is logged rather than failing the publish. The tag vocabulary itself belongs to the caching page, which is not written yet.
 
+## Scheduled tasks and cron triggers
+
+A scheduled task declares the schedule it wants to run on, and the runtime is responsible for firing it. On Workers that responsibility is `triggers.crons` in `wrangler.jsonc`, and the two halves are matched as strings.
+
+Cloudflare passes the schedule it fired as `event.cron`, and Plumix runs only the tasks whose declared `cron` byte-matches it. Equivalent is not enough: a task declaring `0 3 * * *` never runs under a trigger written `0 3 * * ?`, and neither Cloudflare nor Plumix reports the mismatch. The trigger fires, no task claims it, and the invocation does nothing.
+
+So every distinct schedule a task declares has to appear in `triggers.crons`, spelled the same way. The scaffolded `wrangler.jsonc` already covers the two schedules core registers, which is why the quickstart's block above carries `0 3 * * *` and `*/5 * * * *`. A plugin may register more, and one whose schedule you configure yourself moves the trigger with it.
+
+A trigger with no task behind it is harmless: the invocation runs, matches nothing, and ends. A task with no trigger behind it never runs at all, which is the failure worth checking for after adding a plugin or changing a schedule.
+
 ## Passkey origins across deploys
 
 A passkey is bound to a hostname. Workers Builds gives production `recipes.your-account.workers.dev` and each branch `<branch>-recipes.your-account.workers.dev`, so a credential anchored to one of those hosts means re-enrolling on every preview. Anchoring it to the registrable domain they share is what avoids that.
@@ -278,7 +288,7 @@ Signing out takes one more piece. Clearing the Plumix session cookie leaves the 
 
 ## Related
 
-[Bindings and Environment](/deployment/bindings/) covers the naming contract these factories rest on and what happens when a name is wrong. [Secrets](/deployment/secrets/) covers the `(env) => value` resolver form, which is how R2's S3 credentials reach the adapter without being written into the config file. The passkey story here is one half of [Passkeys](/access/passkeys/), which covers enrolment and the bootstrap rail.
+[Bindings and Environment](/deployment/bindings/) covers the naming contract these factories rest on and what happens when a name is wrong. [Secrets](/deployment/secrets/) covers the `(env) => value` resolver form, which is how R2's S3 credentials reach the adapter without being written into the config file. The passkey story here is one half of [Passkeys](/access/passkeys/), which covers enrolment and the bootstrap rail. [Runtime Adapters](/deployment/runtimes/) is the contract this package implements, for anyone porting Plumix to a second platform.
 
 ## Next steps
 

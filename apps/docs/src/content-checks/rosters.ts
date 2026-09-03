@@ -48,8 +48,11 @@
 // `userList` and `userlist` share an anchor, but only one is the name the
 // source uses.
 //
-// Where the source spells a name with a parameter, the page spells that
-// parameter `*` and the binding substitutes it back — the convention the
+// Two conventions sit on top of that. Where several interfaces share a page,
+// each item is qualified by the one that declares it — `Invocation.env`, not
+// `env`, which names nothing on its own and would give a reader a worthless
+// anchor. And where the source spells a name with a parameter, the page spells
+// that parameter `*` and the binding substitutes it back — the convention the
 // capability roster already set with `entry:*:read`. The per-entry-type hooks
 // need it because their source spelling is `entry:${string}:published`, which
 // no heading can carry; the cache tags need it because MDX reads a bare
@@ -97,8 +100,11 @@ import type {
   FilterName,
   FrontPageData,
   GenericTier,
+  Invocation,
   PluginI18nSlot,
   PlumixConfigInput,
+  PlumixHandler,
+  RuntimeAdapter,
   SearchData,
   TargetMatcher,
   TaxonomyData,
@@ -922,6 +928,48 @@ const CLI_REFERENCE = [
   "--version",
 ] as const;
 
+/** Source: `Invocation`. */
+const INVOCATION_MEMBERS = ["env", "waitUntil", "clientAddress"] as const;
+
+type _InvocationMembersMatchSource = Assert<
+  Equals<(typeof INVOCATION_MEMBERS)[number], keyof Invocation>
+>;
+
+/** Source: `PlumixHandler`. */
+const HANDLER_MEMBERS = ["fetch", "scheduled", "dispose"] as const;
+
+type _HandlerMembersMatchSource = Assert<
+  Equals<(typeof HANDLER_MEMBERS)[number], keyof PlumixHandler>
+>;
+
+/** Source: `RuntimeAdapter`. */
+const ADAPTER_MEMBERS = [
+  "name",
+  "createHandler",
+  "generateEntry",
+  "workerExports",
+  "commandsModule",
+] as const;
+
+type _AdapterMembersMatchSource = Assert<
+  Equals<(typeof ADAPTER_MEMBERS)[number], keyof RuntimeAdapter>
+>;
+
+/**
+ * The three interfaces on one page, each member qualified by the interface
+ * that declares it. Nothing collides here, unlike the hydration roster — but
+ * with three interfaces in scope `name`, `fetch` and `env` name nothing on
+ * their own, and the qualifier is what the anchor a reader cites carries.
+ *
+ * `ScheduledEvent` and `EntrySourceOptions` are each one member's argument and
+ * are documented under it; a heading for either is reported as drift, rightly.
+ */
+const RUNTIME_CONTRACT_MEMBERS: readonly string[] = [
+  ...ADAPTER_MEMBERS.map((member) => `RuntimeAdapter.${member}`),
+  ...HANDLER_MEMBERS.map((member) => `PlumixHandler.${member}`),
+  ...INVOCATION_MEMBERS.map((member) => `Invocation.${member}`),
+];
+
 // --- Plugins ---------------------------------------------------------------
 
 /**
@@ -1020,6 +1068,11 @@ export const ROSTERS: readonly RegisteredRoster[] = [
   { page: "hooks/reference.mdx", items: HOOKS, binding: "type-level" },
   { page: "going-further/caching.mdx", items: CACHE_TAGS, binding: "runtime" },
   { page: "deployment/cli.mdx", items: CLI_REFERENCE, binding: "page-only" },
+  {
+    page: "deployment/runtimes.mdx",
+    items: RUNTIME_CONTRACT_MEMBERS,
+    binding: "type-level",
+  },
   { page: "plugins/overview.mdx", items: PLUGIN_PACKAGES, binding: "runtime" },
   { page: "plugins/i18n.mdx", items: PLUGIN_I18N_SLOT, binding: "type-level" },
 ];

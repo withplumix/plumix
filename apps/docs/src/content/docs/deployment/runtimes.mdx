@@ -1,0 +1,403 @@
+---
+title: Runtime Adapters
+description: The three interfaces a runtime adapter implements, the seven obligations it owes core, and the engine floor a Plumix site needs to run at all.
+tier: P2
+roster: true
+sidebar:
+  order: 60
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+A runtime adapter is the few lines that adapt one platform's serve API to a handler core builds for you. Core knows nothing about Workers, Bun or Lambda: it takes a standard `Request` and one invocation object, and everything a second runtime has to supply is on this page.
+
+## Overview
+
+Three interfaces make up the contract.
+
+`RuntimeAdapter` is what your package exports and what a site names in its `runtime` config slot. It answers two questions: what handler does this app get, and what does the generated entry module look like.
+
+`PlumixHandler` is that handler. It is one object with a `fetch`, and optionally a `scheduled` and a `dispose`. You rarely write one from scratch — `createPlumixHandler(app)` returns the whole thing, already carrying app-context assembly, binding validation, request-scoped database wiring and the scheduled-task loop.
+
+`Invocation` is what you hand `fetch` on every call: the runtime's configuration bag, an optional `waitUntil`, and an optional trusted client address. It is the seam that keeps the platform's shape out of core — a Worker's positional `(env, ctx)`, a `Bun.serve` handler's `server`, a Lambda event all collapse into it.
+
+The generated entry module is where those meet. `plumix build` asks your adapter for its source, the plumix Vite plugin bundles it, and the result is what the platform runs.
+
+<Aside type="note" title="Cloudflare is the reference implementation">
+  `@plumix/runtime-cloudflare` is the only adapter that ships today, and it is
+  short, because the default handler does the rest. Read it beside this page.
+  [Cloudflare Workers](/deployment/cloudflare/) documents it from the operator's
+  side.
+</Aside>
+
+## Quickstart
+
+The smallest adapter that runs a Plumix site: a `RuntimeAdapter` wrapping the default handler, plus the entry its platform's serve API wants.
+
+<Steps>
+
+1. **Wrap the default handler.** Everything runtime-neutral is already in `createPlumixHandler`. Supply an `assets` resolver so the admin SPA is served; nothing else is required.
+
+   ```ts
+   import type {
+     AssetsBinding,
+     EntrySourceOptions,
+     PlumixApp,
+     PlumixHandler,
+     RuntimeAdapter,
+   } from "plumix";
+   import { createPlumixHandler } from "plumix";
+
+   declare function serveStagedFile(request: Request): Promise<Response>;
+   // Step 2 writes this one.
+   declare function generateEntry(options: EntrySourceOptions): string;
+
+   const assets: AssetsBinding = { fetch: serveStagedFile };
+
+   function createHandler(app: PlumixApp): PlumixHandler {
+     return createPlumixHandler(app, { assets: () => assets });
+   }
+
+   export function bun(): RuntimeAdapter {
+     return { name: "bun", createHandler, generateEntry };
+   }
+   ```
+
+2. **Emit the entry.** The entry adapts the serve API. It builds the app once, asks the config's own runtime for the handler, and turns each call into an `Invocation`.
+
+   ```ts
+   import type { EntrySourceOptions } from "plumix";
+
+   export function generateEntry({ configModule }: EntrySourceOptions): string {
+     return [
+       'import { buildApp } from "plumix";',
+       'import assetManifest from "virtual:plumix/asset-manifest";',
+       `import config from ${JSON.stringify(configModule)};`,
+       "",
+       "const app = await buildApp(config, { assetManifest });",
+       "const handler = config.runtime.createHandler(app);",
+       "",
+       "Bun.serve({",
+       "  fetch: (request, server) =>",
+       "    handler.fetch(request, {",
+       "      env: process.env,",
+       "      clientAddress: server.requestIP(request)?.address,",
+       "    }),",
+       "});",
+       "",
+       "process.on('SIGTERM', async () => {",
+       "  await handler.dispose?.();",
+       "  process.exit(0);",
+       "});",
+     ].join("\n");
+   }
+   ```
+
+3. **Name it in the config.** An adapter is a slot like any other, so a site swaps runtimes by swapping one call.
+
+   ```ts no-typecheck
+   import { bun } from "@example/runtime-bun";
+   import { defineConfig } from "plumix";
+
+   export default defineConfig({
+     runtime: bun(),
+     // …
+   });
+   ```
+
+4. **Prove the slots.** Run the conformance suites against whatever kv, storage, cache and assets implementations you ship beside the adapter. [Proving a slot](#proving-a-slot) below has the shape.
+
+</Steps>
+
+## The adapter
+
+Three members are required; the last two exist for platforms that need them.
+
+### `RuntimeAdapter.name`
+
+A short identifier for the runtime. `plumix doctor` prints it, and `plumix --help` groups the runtime's own commands under it, so it reads best as the platform's name rather than the package's.
+
+```ts
+import type { RuntimeAdapter } from "plumix";
+
+declare const rest: Omit<RuntimeAdapter, "name">;
+
+export const adapter: RuntimeAdapter = { name: "bun", ...rest };
+```
+
+### `RuntimeAdapter.createHandler`
+
+Takes the built `PlumixApp` and returns the handler the entry calls. Call `createPlumixHandler(app, options)` and add only what your platform knows — the Cloudflare adapter adds the `ASSETS` binding read and the client address.
+
+Called once by the entry, at module scope or on the first request, whichever your entry does. Anything expensive an adapter needs — a signer, a pool, a file-system asset index — belongs here rather than inside `fetch`.
+
+```ts
+import type { PlumixApp, PlumixHandler } from "plumix";
+import { createPlumixHandler } from "plumix";
+
+export function createHandler(app: PlumixApp): PlumixHandler {
+  return createPlumixHandler(app, { disposeTimeoutMs: 10_000 });
+}
+```
+
+### `RuntimeAdapter.generateEntry`
+
+Returns the source of the entry module, as a string. The plumix Vite plugin pre-emits it at the start of every `plumix build` and every `plumix dev`, and again in dev whenever the config file changes. Because the plugin emits it, the entry may import the `virtual:plumix/*` modules the plugin resolves — `virtual:plumix/asset-manifest` for the hashed stylesheet links, `virtual:plumix/worker-exports` for anything `workerExports` contributed.
+
+Interpolate `configModule` through `JSON.stringify`: a project path can carry spaces or quotes.
+
+Build the source from literals. Unlike `commandsModule`, this is a live function on the adapter the config constructs, so it ships inside the serving bundle along with everything it imports — a `node:*` import at module scope in this file is a load-time failure on a runtime with no Node built-ins.
+
+```ts
+import type { EntrySourceOptions } from "plumix";
+
+export function generateEntry({ configModule }: EntrySourceOptions): string {
+  return `import config from ${JSON.stringify(configModule)};\n`;
+}
+```
+
+### `RuntimeAdapter.workerExports`
+
+Module specifiers whose named exports the generated entry must re-export. Cloudflare needs a Durable Object class to be a named export of the entry module, and that entry is generated — so a DO-backed feature contributes its class module here and the Vite plugin surfaces it through `virtual:plumix/worker-exports`.
+
+Omit it. Most runtimes have no concept of a platform-level export beyond the default one.
+
+```ts
+import type { RuntimeAdapter } from "plumix";
+
+declare const base: RuntimeAdapter;
+
+export const adapter: RuntimeAdapter = {
+  ...base,
+  workerExports: ["@example/plugin-rooms/durable-object"],
+};
+```
+
+### `RuntimeAdapter.commandsModule`
+
+A specifier the CLI imports to load the commands this runtime contributes to `plumix`. `dev`, `build`, `deploy` and `types` come from the runtime rather than from core, which is why swapping the runtime swaps them.
+
+A specifier rather than a live function, deliberately: it keeps build and deploy tooling out of the serving bundle. The module it names exports a `CommandRegistry`, and may export a `migrate` registry too, which `plumix migrate apply` delegates to.
+
+```ts
+import type { RuntimeAdapter } from "plumix";
+
+declare const base: RuntimeAdapter;
+
+export const adapter: RuntimeAdapter = {
+  ...base,
+  commandsModule: "@example/runtime-bun/commands",
+};
+```
+
+## The handler
+
+Its members are properties rather than methods, so an adapter cannot narrow the invocation it accepts and still conform.
+
+### `PlumixHandler.fetch`
+
+Takes a standard `Request` and one `Invocation`, and answers with a `Response`. This is the whole request path: routing, rendering, the admin, the RPC surface and every plugin route are behind it.
+
+It does not throw. A failure inside becomes a response, so an entry that calls it needs no `try`/`catch` of its own.
+
+```ts
+import type { PlumixEnv, PlumixHandler } from "plumix";
+
+declare const handler: PlumixHandler;
+declare const env: PlumixEnv;
+
+export async function serve(request: Request): Promise<Response> {
+  return handler.fetch(request, { env });
+}
+```
+
+### `PlumixHandler.scheduled`
+
+Runs the site's scheduled tasks for one fired schedule. The `ScheduledEvent` it takes is `{ scheduledTime, cron }` — the shape Workers cron produces, and the two fields an OS-cron bridge has to supply itself, as the example below does.
+
+`cron` decides which tasks run: a task whose declared `cron` differs is skipped, and a task that declared none runs on every invocation. Core registers tasks of its own and plugins register more, some on a schedule the site configures. Read `app.scheduledTasks` on the built app for the schedules a deploy needs, rather than hard-coding a list.
+
+```ts
+import type { PlumixEnv, PlumixHandler } from "plumix";
+
+declare const handler: PlumixHandler;
+declare const env: PlumixEnv;
+
+export async function runCron(cron: string): Promise<void> {
+  await handler.scheduled?.({ scheduledTime: Date.now(), cron }, { env });
+}
+```
+
+### `PlumixHandler.dispose`
+
+Drains the deferred work no `waitUntil` took, then resolves. Telemetry delivery and edge-cache purges go through `ctx.defer`, and on a runtime whose invocations carry no `waitUntil` the default handler tracks those promises in a pending set instead. `dispose()` is what empties it.
+
+The drain follows work that defers more work, against an absolute deadline — `disposeTimeoutMs` on the handler options, five seconds by default — so a chain of quick tasks cannot hold a shutdown open indefinitely. Abandoning is final: a supervisor escalating `SIGTERM` to `SIGINT` does not buy a stuck task a second timeout.
+
+A long-lived process calls it on shutdown.
+
+```ts
+import type { PlumixHandler } from "plumix";
+
+declare const handler: PlumixHandler;
+
+process.on("SIGTERM", () => {
+  void handler.dispose?.().then(() => {
+    process.exit(0);
+  });
+});
+```
+
+## The invocation
+
+Build it per call, from whatever your platform's serve API hands you.
+
+### `Invocation.env`
+
+The runtime's configuration bag: bindings, secrets and plain variables. Every slot's `connect(env)` reads it, `requiredBindings` is validated against it, and an `(env) => value` resolver is called with it.
+
+On Workers it is the Worker `env`. On a process runtime it is `process.env` plus any clients you bound alongside. Its type is `PlumixEnv`, the interface a runtime augments through `declare module "plumix"`, so a site's slots read your keys type-checked.
+
+Core assumes `env` is stable for the handler's life: object storage, kv, cache and image delivery are connected once, on the first invocation, and reused. Two things are not bound once: the database, through `connectRequest`, and the `assets` resolver, which is called per request because a binding read is cheap.
+
+```ts
+declare module "plumix" {
+  interface PlumixEnv {
+    readonly DATABASE_URL: string;
+    readonly S3_SECRET_ACCESS_KEY?: string;
+  }
+}
+
+export {};
+```
+
+### `Invocation.waitUntil`
+
+Keeps the runtime alive until a promise settles. When you supply it, `ctx.defer` routes through it; when you do not, the default handler tracks the promise for `dispose()` instead. Rejections reach the configured logger either way.
+
+Supply it on a runtime that would otherwise tear the execution context down at the response — a Worker isolate, a Lambda invocation. Omit it in a long-lived process and drain on shutdown instead.
+
+```ts
+import type { PlumixEnv, PlumixHandler } from "plumix";
+
+declare const handler: PlumixHandler;
+declare const env: PlumixEnv;
+declare const ctx: { waitUntil(promise: Promise<unknown>): void };
+
+export async function serve(request: Request): Promise<Response> {
+  return handler.fetch(request, {
+    env,
+    waitUntil: (promise) => {
+      ctx.waitUntil(promise);
+    },
+  });
+}
+```
+
+### `Invocation.clientAddress`
+
+The client address, as whatever your platform trusts reports it. It lands on the app context as `ctx.clientAddress`, where session metadata, visitor-meta hashing and any plugin rate limiter read it.
+
+Core never parses `x-forwarded-for`, `cf-connecting-ip` or any other forwarding header — a header a visitor can set is not a fact, and only the adapter knows which proxy in front of it is authoritative. Supply the value from your platform's own API where there is one, and from a header only where the terminating proxy is yours and overwrites it.
+
+A request with no resolvable address is still handled; visitor-meta falls back to a shared bucket and session rows record nothing.
+
+```ts
+import type { PlumixEnv, PlumixHandler } from "plumix";
+
+declare const handler: PlumixHandler;
+declare const env: PlumixEnv;
+declare const server: {
+  requestIP(request: Request): { address: string } | null;
+};
+
+export async function serve(request: Request): Promise<Response> {
+  return handler.fetch(request, {
+    env,
+    clientAddress: server.requestIP(request)?.address,
+  });
+}
+```
+
+## What an adapter owes core
+
+Seven obligations, none of them enforced by a type. Each is a fact core derives from something only the runtime can supply, so breaking one gives you a live site behaving subtly wrong rather than a build failure.
+
+**Build the `Request` with its public URL.** Scheme and host included, as the visitor sees them — not the address the origin process is listening on. Core derives the session cookie's `Secure` flag from `request.url`'s protocol, so a site behind a TLS-terminating proxy that hands core `http://127.0.0.1:8787` sends its session cookies in the clear.
+
+The host has a second reader, and how much rests on it depends on the site. Absolute URLs — canonical tags, magic links, OAuth callbacks — are built from `ctx.origin`, which is the operator's configured origin where there is one and the request's origin where there is not. A site that configures `origin` risks only the cookie flag; one that leaves it unset mints links to whatever host you passed, and those reach a reader's inbox.
+
+The host matters in development too. The dev-only surfaces — the debug bar, the request history, the dev error page — are gated on two factors: the `PLUMIX_DEV` bundle define, and `request.url`'s hostname being loopback. A dev server whose adapter passes through a container or tunnel host fails the second and loses them; `PLUMIX_DEV_ALLOW_REMOTE` is the deliberate opt-out. In production the first factor is absent anyway, so a wrong host there costs the cookie flag and the canonical URL rather than the dev surfaces.
+
+**Supply the client address from something you trust.** See [`Invocation.clientAddress`](#invocationclientaddress). The adapter is the only layer that knows which proxy is in front of it.
+
+**Supply `waitUntil`, or call `dispose()` on shutdown.** Without `waitUntil` the default handler still starts the work and tracks it, so in a long-lived process it finishes like any floating promise. What a runtime that does neither loses is whatever is still in flight when the process ends: a telemetry batch that never reaches its endpoint, an edge-cache purge that never fires and leaves a published entry serving a stale page. It is a silent loss — nothing rejects, the promise dies with the process.
+
+**Supply `env` as the augmented `PlumixEnv`.** See [`Invocation.env`](#invocationenv). Core binds every slot against the first `env` it sees, so building a fresh one per request silently pins the site to one request's values.
+
+**Fire `app.scheduledTasks` without overlapping runs.** The task's declared cron is the contract — core matches on it and skips the rest. Core's own tasks survive a double run by construction: `publish-scheduled` re-asserts `status = 'scheduled'` in its write, so a second run flips nothing and fires no second hook. A plugin's task carries no such guarantee, and even where one does, an overlapping run costs a duplicate pass over the same rows and a duplicate telemetry span. So the scheduler has to be the platform's, not a timer per instance — on a platform with none of its own, that means one leader rather than one timer per replica.
+
+**Serve the staged admin SPA through an `AssetsBinding`.** `plumix build` stages the admin under the public directory; an adapter that supplies no `assets` resolver answers `/_plumix/admin/*` with `admin-not-available`. The binding is one method — `fetch(request): Promise<Response>` — over whatever your platform serves static files with. Two answers matter: a file it holds comes back as itself, and the mount prefix `/_plumix/admin/` comes back as the shell HTML with a `200` rather than a redirect, because that is the URL core fetches to resolve an admin deep link. The assets conformance suite asserts both.
+
+**Build with the plumix Vite plugin.** The plugin substitutes the dev defines (`process.env.PLUMIX_DEV` above all, which is what lets every dev-only surface tree-shake out of a production build), applies the island transform, discovers island entries and pre-emits your `generateEntry` output. In an SSR build for a process runtime, externalise native server dependencies rather than bundling them: `@libsql/client` loads a native addon and does not survive a bundler.
+
+## The runtime floor
+
+Core is built on Web APIs, and five of them have to be present for a Plumix site to run at all. Node is where they arrived at widely different times, so it gets the column.
+
+| API                                         | What core does with it                                                         | In Node since |
+| ------------------------------------------- | ------------------------------------------------------------------------------ | ------------- |
+| Global `URLPattern`                         | Matches every public route a plugin or theme registers.                        | 24.0.0        |
+| `crypto.randomUUID` on the global `crypto`  | Mints the request id on every app context.                                     | 19.0.0        |
+| `AsyncLocalStorage` from `node:async_hooks` | Carries the request context. The one `node:` import on the request path.       | 12.17.0       |
+| Streaming `Response` bodies                 | Asset and object-storage reads, which are never buffered.                      | 18.0.0        |
+| `Headers` keeping every `Set-Cookie` apart  | Lets a database adapter's `commit` append its own cookie beside the session's. | 19.7.0        |
+
+Node 23.8 has `URLPattern` but exports it from `node:url` only, and core uses the global — which is what puts Node's floor at 24. On Deno, Bun and Workers the other four all predate whichever API pins the row below.
+
+| Engine             | Floor           | What pins it                                                                                                                                                           |
+| ------------------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node               | 24.0.0          | Global `URLPattern`, per the table above.                                                                                                                              |
+| Deno               | 2.0             | Conservative, not derived: `URLPattern` has been stable since 1.15 and `node:async_hooks` arrived well before 2.0, but no Plumix site has been run on an earlier Deno. |
+| Bun                | 1.3.4           | `URLPattern`, which Bun added in that release.                                                                                                                         |
+| Cloudflare Workers | `nodejs_compat` | `node:async_hooks`. Everything else is in the base runtime, so the flag is the whole requirement.                                                                      |
+
+<Aside type="caution" title="Read from release notes, not executed">
+  These floors come from each engine's own release notes. Only the Cloudflare
+  row is exercised by a shipped adapter and its test suite. Run the conformance
+  suites and the adapter's own tests on the exact version you intend to support
+  before publishing a floor of your own.
+</Aside>
+
+Plumix's own repository pins Node to `^24.15.0`, above that floor.
+
+## Proving a slot
+
+An adapter usually ships slot implementations beside it — a Redis kv, an S3 bucket, a cache in front of a CDN. Each of those has a contract core relies on and no compiler checks: that `list` honours `limit` as an upper bound, that a cursor resumes without repeating a key, that a TTL expires, that `delete` is idempotent.
+
+`plumix/test/conformance` exports one parameterised suite per slot port. Each takes a factory that returns a connected slot and runs the contract against it. Core's own in-memory slots and the Cloudflare slots are the first callers, so the suites are the same assertions the shipped implementations are held to.
+
+```ts
+import type { ConnectedKv } from "plumix";
+import { describeKvContract } from "plumix/test/conformance";
+
+declare function connectRedisKv(): Promise<ConnectedKv>;
+
+describeKvContract({
+  connect: connectRedisKv,
+  // Workers KV rejects a TTL under a minute; a store with no floor omits this.
+  minTtlSeconds: 60,
+});
+```
+
+`describeObjectStorageContract`, `describeCacheContract` and `describeAssetsContract` take the same shape, each with the options its port needs — whether the storage can presign, how the asset layer answers a path it does not hold. Pass a clock-advancing hook where your rig has one: without it the TTL cases skip rather than sleep, and expiry is the one guarantee that then goes unproven.
+
+## Related
+
+[Cloudflare Workers](/deployment/cloudflare/) is the shipped adapter, documented from the operator's side. [Bindings and Environment](/deployment/bindings/) covers what lands on `env` and how a slot names the key it reads. [Secrets](/deployment/secrets/) covers the `(env) => value` resolvers, which are how a credential reaches a slot from `env` instead of being written into the config file.
+
+[Configuration](/getting-started/configuration/) lists every slot a site config carries, `runtime` among them. [Overview](/deployment/overview/) puts the build, the entry and the staged assets in the order a deploy runs them.
+
+## Next steps
+
+Decide what your platform can answer. An adapter that supplies `env`, a public-URL `Request` and an `assets` resolver serves a site; the client address, `waitUntil` and the scheduler are what take it from serving to correct. [Cloudflare Workers](/deployment/cloudflare/) shows what each of those looks like when the platform can answer all of them.
