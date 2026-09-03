@@ -172,10 +172,11 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
     if (config.requireEmail && email.length === 0)
       return fail("email_required");
 
-    // Off Cloudflare the address behind the hash is client-spoofable, so
-    // the rate limiter is best-effort there and edge/WAF rules are the
-    // real flood defence.
-    const { ipHash, userAgent } = await readVisitorMeta(ctx, request, {
+    // On a runtime that reports no address every commenter hashes into one
+    // bucket, so the limiter stops counting one flooder and starts closing
+    // comments for everyone. Edge/WAF rules are the flood defence there; this
+    // limiter assumes an adapter that supplies `ctx.clientAddress`.
+    const { ipHash, userAgent } = await readVisitorMeta(ctx, {
       namespace: "comments",
     });
     if (await checkRateLimit(ctx, ipHash, config.rateLimit)) {

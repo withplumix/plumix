@@ -1,5 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
+import type { Session } from "../../db/schema/sessions.js";
+import type { CreateDispatcherHarnessOptions } from "../../test/dispatcher.js";
 import type { Mailer } from "../mailer/types.js";
 import { eq } from "../../db/index.js";
 import { allowedDomains } from "../../db/schema/allowed_domains.js";
@@ -39,8 +41,8 @@ function postRequest(path: string, body: unknown): Request {
   });
 }
 
-function getRequest(path: string): Request {
-  return new Request(`https://cms.example${path}`);
+function getRequest(path: string, headers?: HeadersInit): Request {
+  return new Request(`https://cms.example${path}`, { headers });
 }
 
 describe("magic-link request route", () => {
@@ -227,6 +229,31 @@ describe("magic-link request route", () => {
   });
 });
 
+/** Sign one user in through the verify link, and hand back the session row. */
+async function sessionFromVerify(
+  options: Pick<CreateDispatcherHarnessOptions, "clientAddress">,
+  headers?: HeadersInit,
+): Promise<Session | undefined> {
+  const { mailer } = captureMailer();
+  const h = await createDispatcherHarness({
+    magicLink: { siteName: "Plumix Test" },
+    mailer,
+    ...options,
+  });
+  const user = await h.factory.user.create({ email: "alice@example.com" });
+  const { token } = await h.factory.authToken.create({
+    userId: user.id,
+    email: "alice@example.com",
+  });
+
+  await h.dispatch(
+    getRequest(`/_plumix/auth/magic-link/verify?token=${token}`, headers),
+  );
+
+  const [session] = await h.db.select().from(sessions);
+  return session;
+}
+
 describe("magic-link verify route", () => {
   test("missing token redirects with magic_link_error=missing_token", async () => {
     const { mailer } = captureMailer();
@@ -270,6 +297,26 @@ describe("magic-link verify route", () => {
     const sessionRows = await h.db.select().from(sessions);
     expect(sessionRows).toHaveLength(1);
     expect(sessionRows[0]?.userId).toBe(user.id);
+  });
+
+  test("records the address the runtime supplied, clipped to the column's cap", async () => {
+    const overLong = `2001:db8:${"a".repeat(200)}`;
+
+    const session = await sessionFromVerify({ clientAddress: overLong });
+
+    expect(session?.ipAddress).toBe(overLong.slice(0, 64));
+  });
+
+  test("records no address when the runtime supplied none, whatever the request forwards", async () => {
+    const session = await sessionFromVerify(
+      {},
+      {
+        "cf-connecting-ip": "203.0.113.7",
+        "x-forwarded-for": "198.51.100.9",
+      },
+    );
+
+    expect(session?.ipAddress).toBeNull();
   });
 
   test("under a basePath the post-verify redirect and cookie are base-scoped", async () => {

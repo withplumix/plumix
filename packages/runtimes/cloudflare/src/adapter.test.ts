@@ -246,6 +246,36 @@ describe("cloudflare adapter — createHandler().fetch", () => {
     expect(await response.text()).toBe(indexBody);
   });
 
+  test("supplies cf-connecting-ip as the trusted client address", async () => {
+    const echo = definePlugin("echo", (ctx) => {
+      ctx.registerPublicRoute({
+        path: "/whoami",
+        handler: (_request, appCtx) =>
+          new Response(appCtx.clientAddress ?? "none"),
+      });
+    });
+    const app = await buildApp(
+      plumix({
+        runtime: cloudflare(),
+        database: stubDatabase,
+        auth,
+        theme,
+        plugins: [echo],
+      }),
+    );
+
+    const response = await cloudflare()
+      .createHandler(app)
+      .fetch(
+        new Request("https://cms.example/whoami", {
+          headers: { "cf-connecting-ip": "203.0.113.7" },
+        }),
+        { env: {} },
+      );
+
+    expect(await response.text()).toBe("203.0.113.7");
+  });
+
   test("/_plumix/admin/ without an ASSETS binding returns admin-not-available", async () => {
     const response = await invoke(
       new Request("https://cms.example/_plumix/admin"),

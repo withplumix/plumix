@@ -43,17 +43,24 @@ const themeWith = (blocks: readonly BlockSpec[]) =>
     ],
   });
 
+export interface FormsHarnessOptions {
+  /** What the site's own theme contributes — see `defineTheme`'s `blocks`. */
+  readonly themeBlocks?: readonly BlockSpec[];
+  /** Runtime bindings, for a config slot that resolves a secret from them. */
+  readonly env?: PlumixEnv;
+  /** The visitor's address, as a runtime adapter reports it to core. */
+  readonly clientAddress?: string;
+}
+
 export async function createFormsHarness(
   plugins: readonly AnyPluginDescriptor[],
-  /** What the site's own theme contributes — see `defineTheme`'s `blocks`. */
-  themeBlocks: readonly BlockSpec[] = [],
-  /** Runtime bindings, for a config slot that resolves a secret from them. */
-  env: PlumixEnv = {},
+  options: FormsHarnessOptions = {},
 ): Promise<FormsHarness> {
   const harness = await createDispatcherHarness({
     plugins: [blog, ...plugins],
-    theme: themeWith(themeBlocks),
-    env,
+    theme: themeWith(options.themeBlocks ?? []),
+    env: options.env,
+    clientAddress: options.clientAddress,
   });
   await applyFormsSchema(harness.db);
   return harness;

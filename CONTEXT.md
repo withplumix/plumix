@@ -224,6 +224,10 @@ What a matched URL represents — `single`, `archive`, `taxonomy`, `author`, `da
 **Public route**:
 A path a plugin owns at the site root, registered with `registerPublicRoute` and answered by its own handler ahead of core's endpoints, the redirect table and the content route map. Distinct from a plugin route, which `registerRoute` confines to `/_plumix/<pluginId>/`.
 
+**Client address**:
+The network address a request came from, as the runtime's trusted proxy reported it and the runtime adapter handed core. Advisory: it describes the network path, never the principal, so no access decision reads it.
+_Avoid_: IP, client IP, remote address
+
 **Edit mode**:
 The render mode a request resolves to — `live`, `preview`, or `edit`.
 

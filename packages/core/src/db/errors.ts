@@ -97,7 +97,7 @@ export function isUniqueConstraintErrorOn(
   return false;
 }
 
-type DbErrorCode = "no_row_count";
+type DbErrorCode = "no_row_count" | "visitor_namespace_missing";
 
 /**
  * A database driver did not answer the way `plumix/db` needs it to.
@@ -121,6 +121,22 @@ export class DbError extends Error {
       `This driver's write result carries no row count — expected ` +
         `${fields.map((field) => `"${field}"`).join(", ")}. A driver that ` +
         `reports none cannot use rowsAffected(); read the rows back instead.`,
+    );
+  }
+
+  /**
+   * `readVisitorMeta` lost its middle `request` argument, and a plugin built
+   * against the old three-argument form passes its request where the options
+   * now go. Without this the namespace reads `undefined`, every such plugin
+   * silently shares one salt group, and their hashes become comparable across
+   * plugins — the one thing the per-namespace salt exists to prevent.
+   */
+  static visitorNamespaceMissing(): DbError {
+    return new DbError(
+      "visitor_namespace_missing",
+      `readVisitorMeta needs a namespace: readVisitorMeta(ctx, { namespace }). ` +
+        `A plugin built against readVisitorMeta(ctx, request, options) must ` +
+        `drop the middle argument and be rebuilt against this version.`,
     );
   }
 }

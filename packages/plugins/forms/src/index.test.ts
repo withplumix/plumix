@@ -158,10 +158,9 @@ describe("a theme block of the same name", () => {
   });
 
   test("replaces the plugin's render", async () => {
-    const harness = await createFormsHarness(
-      [forms({ forms: [contact] })],
-      [themeForm],
-    );
+    const harness = await createFormsHarness([forms({ forms: [contact] })], {
+      themeBlocks: [themeForm],
+    });
     await seedPageWithForm(harness, "contact");
 
     const response = await harness.fetch("/posts/page-with-form");

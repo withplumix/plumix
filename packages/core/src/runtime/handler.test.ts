@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { TelemetrySnapshot } from "../context/telemetry.js";
+import type { Invocation } from "./adapter.js";
 import type { DatabaseAdapter } from "./slots.js";
 import { auth } from "../auth/config.js";
 import { plumix } from "../config.js";
@@ -42,6 +43,22 @@ async function handlerFor(
 }
 
 const request = () => new Request("https://cms.example/unknown");
+
+const echoClientAddress = definePlugin("echo", (ctx) => {
+  ctx.registerPublicRoute({
+    path: "/whoami",
+    handler: (_request, appCtx) => new Response(appCtx.clientAddress ?? "none"),
+  });
+});
+
+/** What a plugin route saw as the client address for this invocation. */
+async function whoami(
+  request: Request,
+  invocation: Invocation,
+): Promise<string> {
+  const handler = await handlerFor({ plugins: [echoClientAddress] });
+  return (await handler.fetch(request, invocation)).text();
+}
 
 describe("createPlumixHandler — fetch", () => {
   test("routes a request through the dispatcher with a bare invocation", async () => {
@@ -101,6 +118,38 @@ describe("createPlumixHandler — fetch", () => {
     });
     const response = await handler.fetch(request(), { env: {} });
     expect(response.headers.get("x-commit-ran")).toBe("1");
+  });
+
+  test("the invocation's client address reaches a handler as ctx.clientAddress", async () => {
+    const seen = await whoami(new Request("https://cms.example/whoami"), {
+      env: {},
+      clientAddress: "203.0.113.7",
+    });
+
+    expect(seen).toBe("203.0.113.7");
+  });
+
+  test("an invocation with no client address leaves ctx.clientAddress undefined, whatever the request forwards", async () => {
+    const seen = await whoami(
+      new Request("https://cms.example/whoami", {
+        headers: {
+          "cf-connecting-ip": "203.0.113.7",
+          "x-forwarded-for": "198.51.100.9",
+        },
+      }),
+      { env: {} },
+    );
+
+    expect(seen).toBe("none");
+  });
+
+  test("an empty client address is an absent one, not a bucket of its own", async () => {
+    const seen = await whoami(new Request("https://cms.example/whoami"), {
+      env: {},
+      clientAddress: "  ",
+    });
+
+    expect(seen).toBe("none");
   });
 
   test("deferred work rides waitUntil when the invocation supplies one", async () => {
