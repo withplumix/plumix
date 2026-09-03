@@ -1,5 +1,193 @@
 # @plumix/core
 
+## 0.21.0
+
+### Minor Changes
+
+- [#2180](https://github.com/withplumix/plumix/pull/2180) [`a8a0d56`](https://github.com/withplumix/plumix/commit/a8a0d5697b8b918421d8644cf9358044abb3bc88) Thanks [@nasyrov](https://github.com/nasyrov)! - Moves entry generation onto the runtime adapter. `RuntimeAdapter` gains a
+  required `generateEntry({ configModule })` returning the source of the module
+  the build serves — the few lines that adapt a platform's serve API to
+  `PlumixHandler`, which is a module-worker `export default` on Cloudflare and
+  something else everywhere else. The plumix Vite plugin's pre-emit step asks the
+  config's runtime adapter for that source when it writes `.plumix/worker.ts`.
+
+  Removes `generateWorkerSource` and `WorkerSourceOptions` from `@plumix/core`, so
+  core no longer dictates one platform's export shape for every runtime. A custom
+  runtime adapter, or a wrapper such as the demo runtime, must supply
+  `generateEntry`. The Cloudflare adapter emits byte-for-byte what core emitted
+  before — the default export with `fetch` and `scheduled`, the asset-manifest and
+  worker-exports virtual imports, the dev boot-error branch, one memoised handler,
+  and the positional Worker arguments forwarded into an invocation — so a
+  Cloudflare site builds, deploys and serves exactly as before.
+
+- [#2196](https://github.com/withplumix/plumix/pull/2196) [`a8ab8e2`](https://github.com/withplumix/plumix/commit/a8ab8e281ce356a5df43872ea33d5e062f9b40e5) Thanks [@nasyrov](https://github.com/nasyrov)! - Publish the CLI command-authoring surface on its own subpath, `plumix/cli` (and `@plumix/core/cli` behind it): `CliError`, `isCliError`, `spawnInherit` and `spawnCapturingStderr`, the pieces a runtime adapter needs to contribute a command.
+
+  The `plumix` binary previously loaded core's root barrel before parsing a flag — ~500ms of drizzle, schema and auth — for a single symbol, `buildApp`, that a command declaring `deferApp` never calls. `buildApp` is now deferred, and `plumix --version` runs in 93ms against 586ms before.
+
+  Commands that read `plumix.config.ts` are unchanged, because loading the config pulls the runtime adapter and so core with it.
+
+  `@plumix/runtime-cloudflare` now imports `plumix/cli`, so its `plumix` peer floor moves to `>=0.21.0` — the first version that publishes the subpath. Without that, the wide `0.x` peer range would let the new adapter install against a `plumix` that cannot resolve it, and `deploy`, `migrate apply` and `types` would fail at runtime.
+
+- [#2188](https://github.com/withplumix/plumix/pull/2188) [`5e90d77`](https://github.com/withplumix/plumix/commit/5e90d774122e96336526bdaa56f45655102e38ba) Thanks [@nasyrov](https://github.com/nasyrov)! - Keeps fire-and-forget work alive on a runtime that has no `waitUntil`. When an
+  invocation supplies one, `ctx.defer` routes through it exactly as before. When
+  it does not — a long-lived Node, Bun or Deno process — the default handler
+  tracks the promise in a per-handler pending set, and the handler's new optional
+  `dispose()` drains that set so an adapter can await telemetry delivery and cache
+  purges on `SIGTERM` instead of losing them.
+
+  The drain follows work that deferred work defers in turn — a telemetry
+  consumer that purges a cache tag, say — so a nested task is not dropped
+  because it arrived after the drain began. `dispose()` gives up after
+  `disposeTimeoutMs` (five seconds by default, set through
+  `createPlumixHandler(app, { disposeTimeoutMs })`) and logs how many tasks it
+  abandoned, so work that never settles cannot hold a shutdown open. The deadline
+  is absolute, so a chain of nested tasks cannot extend it either.
+
+  Rejections keep routing through `ctx.logger` in both modes, so a failing
+  deferred task is a log line and never an unhandled rejection.
+
+  On Cloudflare `dispose()` is present and resolves at once: every invocation the
+  Worker entry builds carries `waitUntil`, so nothing is ever tracked.
+
+- [#2187](https://github.com/withplumix/plumix/pull/2187) [`a75d858`](https://github.com/withplumix/plumix/commit/a75d858b7a1065719df725c38648381bcab92bad) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a per-request `clientAddress` to the dispatcher test harness, so one
+  harness can tell two visitors apart. `harness.fetch(path, { clientAddress })`
+  and `harness.dispatch(request, user, clientAddress)` override the harness-level
+  option, which stays the default for requests that name none.
+
+  The harness-level option alone could not express the property that matters for
+  a rate limiter or a spam floor: that two addresses land in different buckets.
+  Two harnesses cannot prove it either, since each mints its own per-install
+  hashing salt and their hashes are incomparable by construction.
+
+  `harness.fetch` now takes `HarnessFetchOptions`, which adds the address to the
+  `FetchOptions` that `buildRequest` reads. The split keeps `buildRequest`'s type
+  honest: it cannot honour an address, because an address is a fact the runtime
+  supplies alongside a request rather than a header on it. A type extending
+  `FetchOptions` to pass options through to `harness.fetch` should extend
+  `HarnessFetchOptions` instead.
+
+- [#2176](https://github.com/withplumix/plumix/pull/2176) [`c2dea58`](https://github.com/withplumix/plumix/commit/c2dea582d430e025f493daec2b6e3a38520d8ec4) Thanks [@nasyrov](https://github.com/nasyrov)! - Replaces the positional runtime handler contract with one handler object per
+  adapter. A runtime adapter now exposes `createHandler(app)` and returns a
+  `PlumixHandler` whose `fetch(request, invocation)` takes a standard `Request`
+  plus a single `Invocation` (`env`, optional `waitUntil`, optional
+  `clientAddress`) and whose optional `scheduled(event, invocation)` runs the
+  registered scheduled tasks. Core exports `createPlumixHandler`, the default
+  handler factory that assembles the app context, validates required bindings
+  once per handler, wires the request-scoped database and its commit step, and
+  runs the scheduled loop; the Cloudflare adapter is built on it and adds only
+  the `ASSETS` binding read. The generated Worker entry forwards its positional
+  `(request, env, ctx)` arguments into an invocation.
+
+  Removes `FetchHandler`, `ScheduledHandler`, `buildFetchHandler` and
+  `buildScheduledHandler`. A custom runtime adapter or a wrapper such as the
+  demo runtime implements `createHandler` instead. The missing-bindings 500 keeps
+  its `bindings_missing` code and `missing` list; its message no longer names
+  wrangler, since the check now lives in core, and the handler's failure log
+  lines are tagged `[plumix]` rather than `[plumix/runtime-cloudflare]`. A Cloudflare site serves, gates
+  RPC, validates bindings and runs cron exactly as before.
+
+- [#2182](https://github.com/withplumix/plumix/pull/2182) [`20c238d`](https://github.com/withplumix/plumix/commit/20c238dd0d6f6f8b1fe0bda93872461d6ab3117f) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `plumix/storage/s3`: an `s3()` object-storage slot that talks to any S3-compatible
+  bucket — AWS S3, R2 through its S3 API, MinIO, DigitalOcean Spaces, GCS interop — over
+  `fetch` with a hand-rolled SigV4 signer and no AWS SDK. Config takes `bucket`, `region`,
+  `endpoint`, `credentials` (a literal or an `(env) => …` resolver read from the handler's
+  env) and an optional `publicUrlBase`. The slot satisfies the object-storage port in full,
+  `presignPut` included, and is proven by the conformance suite against an in-memory S3 that
+  recomputes every signature the way a real bucket does.
+
+  The signer ships beside it in both forms: `presignPutUrl` for query-string presigning and
+  `signRequest` for `Authorization`-header signing, each carrying an STS session token when
+  the credentials have one. A subpath rather than the root barrel, so a bundle that binds a
+  native bucket never carries the signer — the route `plumix/db/libsql` took for its driver.
+
+  `@plumix/runtime-cloudflare`'s `r2()` keeps its native-binding path and mints presigned
+  PUTs through the core signer; the package no longer holds a signer of its own.
+
+- [#2178](https://github.com/withplumix/plumix/pull/2178) [`b6b9654`](https://github.com/withplumix/plumix/commit/b6b9654f28aabfba547fc8dfdcf4c35ed8ef75b4) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds four parameterised conformance suites at `plumix/test/conformance` — `describeKvContract`,
+  `describeObjectStorageContract`, `describeCacheContract` and `describeAssetsContract` — so an
+  implementation of a slot port can prove it satisfies the contract core relies on.
+
+  Each takes a factory that binds a fresh instance and registers one `describe` of cases. The kv suite
+  covers put/get/delete, overwrite, prefix filtering, `limit` as an upper bound, cursor resumption with
+  no key repeated, and TTL expiry. The object-storage suite covers every `ObjectBody` the port
+  advertises, `head`, range reads, list pagination by prefix and cursor, delete idempotence, `url`, and
+  `presignPut`. The cache suite covers a miss, a stored response, a tag purge that drops every tagged
+  response and nothing else, and the two rules a shared cache cannot bend: a non-GET request is not
+  stored, and a stored response never hands the next visitor the first one's `Set-Cookie`. The assets
+  suite covers the shell path a deep link resolves to, a file keeping its own content type rather than
+  the shell's HTML, and whichever not-found behaviour the layer declares.
+
+  A factory declares what its backend cannot do rather than the suite assuming: `minTtlSeconds` skips
+  the cases that would ask a store to beat its own floor — Workers KV rejects a TTL under a minute —
+  `advanceTime` is how a case reaches expiry without sleeping, and an assets layer says whether a path
+  it does not hold answers `404` — Workers Assets under the `not_found_handling: "none"` the scaffold
+  ships — or falls back to the shell, which is the `single-page-application` handling.
+
+  The in-memory `kv:` and `storage:` slots are the first callers and Cloudflare's `kv()`, `r2()` and
+  `edge()` are the second. The assets suite runs against the binding the Cloudflare adapter hands core,
+  in both of the not-found modes this repo deploys; Workers Assets is a platform binding rather than
+  code the adapter owns, so that run pins the exposure and the shape guard in front of it. Every suite
+  is also run against deliberately broken factories, so a passing run means something.
+
+  Their own subpath, not `plumix/test`: these modules import vitest, and a consumer who only uses the
+  Playwright half of the test surface must not have to install it.
+
+- [#2183](https://github.com/withplumix/plumix/pull/2183) [`27aa310`](https://github.com/withplumix/plumix/commit/27aa310171a1e44b8ebd5ae9f6b6ff42ae622efe) Thanks [@nasyrov](https://github.com/nasyrov)! - Binds every capability slot once per handler instead of once per request. The
+  `storage:`, `kv:`, `cache:` and `imageDelivery:` slots are connected against the
+  first invocation's `env` and the bound instances are reused for the handler's
+  life, which is the isolate-stability assumption binding validation and
+  `resolveEnvInput` already rely on. A slot author on a process runtime no longer
+  has to memoise a Redis client or an S3 signer by hand; the libsql adapter's
+  private client memo is gone for that reason.
+
+  The database keeps `connectRequest` as its only per-request seam. Its `connect`
+  is called once and reused when there is no hook or the hook returns `null`, so
+  D1's Sessions API still attaches a bookmark to every response.
+
+  `connect(env: unknown)` becomes `connect(env: PlumixEnv)` on every port, and
+  `RequestScopedDbArgs.env` with it, so a slot author augments one interface for
+  their runtime and reads it type-checked. `memoryKv()` and `memoryStorage()` bind
+  against nothing, so their `env` argument is now optional: a consumer whose
+  `PlumixEnv` is augmented can call `connect()` rather than synthesizing a bag to
+  stand a store up in a test. A database adapter that read the `request` argument
+  of `connect` must move that read to `connectRequest`, which is the argument that
+  is still per request. `requiredBindings` validation is unchanged.
+
+- [#2186](https://github.com/withplumix/plumix/pull/2186) [`28efa5b`](https://github.com/withplumix/plumix/commit/28efa5be00ef6e40bc0bbf1b3813677c2a597de0) Thanks [@nasyrov](https://github.com/nasyrov)! - Makes the client address a fact the runtime supplies rather than one core
+  guesses from a header. `invocation.clientAddress` lands on the app context as
+  `ctx.clientAddress`, so a plugin writing a rate limiter or a spam floor reads
+  one field whatever the site deploys on. Session-metadata capture and
+  `readVisitorMeta`'s per-visitor hashing both read it from there, and the two
+  header-parsing readers in core are gone: core never looks at
+  `cf-connecting-ip`, `x-forwarded-for` or any other proxy header again.
+
+  The Cloudflare adapter supplies `cf-connecting-ip`, the one forwarding header
+  its edge overwrites, so a Cloudflare site records exactly what it recorded
+  before. On a runtime that reports no address a session row stores none and
+  every such visitor shares one hashed bucket, rather than a visitor buying a
+  fresh bucket by setting a header of their own.
+
+  `readVisitorMeta` loses its `request` argument, since both halves of what it
+  reports now come off the context: `readVisitorMeta(ctx, { namespace })` reads
+  the address from `ctx.clientAddress` and the user-agent from `ctx.request`.
+  Drop the middle argument at each call site and rebuild — a plugin still
+  compiled against the three-argument form now throws naming the fix, rather
+  than silently hashing into a shared salt group.
+
+  `createDispatcherHarness` from `plumix/test` gains a `clientAddress` option so
+  a test sets the fact directly instead of forging a header.
+
+### Patch Changes
+
+- [#2175](https://github.com/withplumix/plumix/pull/2175) [`acbcae6`](https://github.com/withplumix/plumix/commit/acbcae699c69c1e90c281265728efc6a8d69687b) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes the last single-runtime leanings that don't depend on the new handler
+  contract. The audit-log cursor now encodes with Web APIs instead of Node's
+  `Buffer`; core's dead, unused `node:fs` catalog loader is gone; the
+  undeclared-binding dev-error hint is registered by `@plumix/runtime-cloudflare`
+  instead of core, so it no longer appears on non-Cloudflare deploys; and
+  scheduled-task cron docstrings describe the runtime as responsible for firing
+  the schedule instead of naming `wrangler` configuration.
+- Updated dependencies []:
+  - @plumix/blocks@0.21.0
+
 ## 0.20.0
 
 ### Minor Changes

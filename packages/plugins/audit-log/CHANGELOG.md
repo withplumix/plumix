@@ -1,5 +1,17 @@
 # @plumix/plugin-audit-log
 
+## 0.1.4
+
+### Patch Changes
+
+- [#2175](https://github.com/withplumix/plumix/pull/2175) [`acbcae6`](https://github.com/withplumix/plumix/commit/acbcae699c69c1e90c281265728efc6a8d69687b) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes the last single-runtime leanings that don't depend on the new handler
+  contract. The audit-log cursor now encodes with Web APIs instead of Node's
+  `Buffer`; core's dead, unused `node:fs` catalog loader is gone; the
+  undeclared-binding dev-error hint is registered by `@plumix/runtime-cloudflare`
+  instead of core, so it no longer appears on non-Cloudflare deploys; and
+  scheduled-task cron docstrings describe the runtime as responsible for firing
+  the schedule instead of naming `wrangler` configuration.
+
 ## 0.1.3
 
 ### Patch Changes

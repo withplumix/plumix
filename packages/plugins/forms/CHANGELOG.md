@@ -1,5 +1,43 @@
 # @plumix/plugin-forms
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2186](https://github.com/withplumix/plumix/pull/2186) [`28efa5b`](https://github.com/withplumix/plumix/commit/28efa5be00ef6e40bc0bbf1b3813677c2a597de0) Thanks [@nasyrov](https://github.com/nasyrov)! - Makes the client address a fact the runtime supplies rather than one core
+  guesses from a header. `invocation.clientAddress` lands on the app context as
+  `ctx.clientAddress`, so a plugin writing a rate limiter or a spam floor reads
+  one field whatever the site deploys on. Session-metadata capture and
+  `readVisitorMeta`'s per-visitor hashing both read it from there, and the two
+  header-parsing readers in core are gone: core never looks at
+  `cf-connecting-ip`, `x-forwarded-for` or any other proxy header again.
+
+  The Cloudflare adapter supplies `cf-connecting-ip`, the one forwarding header
+  its edge overwrites, so a Cloudflare site records exactly what it recorded
+  before. On a runtime that reports no address a session row stores none and
+  every such visitor shares one hashed bucket, rather than a visitor buying a
+  fresh bucket by setting a header of their own.
+
+  `readVisitorMeta` loses its `request` argument, since both halves of what it
+  reports now come off the context: `readVisitorMeta(ctx, { namespace })` reads
+  the address from `ctx.clientAddress` and the user-agent from `ctx.request`.
+  Drop the middle argument at each call site and rebuild — a plugin still
+  compiled against the three-argument form now throws naming the fix, rather
+  than silently hashing into a shared salt group.
+
+  `createDispatcherHarness` from `plumix/test` gains a `clientAddress` option so
+  a test sets the fact directly instead of forging a header.
+
+### Patch Changes
+
+- [#2175](https://github.com/withplumix/plumix/pull/2175) [`acbcae6`](https://github.com/withplumix/plumix/commit/acbcae699c69c1e90c281265728efc6a8d69687b) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes the last single-runtime leanings that don't depend on the new handler
+  contract. The audit-log cursor now encodes with Web APIs instead of Node's
+  `Buffer`; core's dead, unused `node:fs` catalog loader is gone; the
+  undeclared-binding dev-error hint is registered by `@plumix/runtime-cloudflare`
+  instead of core, so it no longer appears on non-Cloudflare deploys; and
+  scheduled-task cron docstrings describe the runtime as responsible for firing
+  the schedule instead of naming `wrangler` configuration.
+
 ## 0.1.0
 
 ### Minor Changes
