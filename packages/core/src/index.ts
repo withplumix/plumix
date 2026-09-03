@@ -61,9 +61,12 @@ export { createPlumixHandler } from "./runtime/handler.js";
 export type { PlumixHandlerOptions } from "./runtime/handler.js";
 export { forbidden, jsonResponse, methodNotAllowed } from "./runtime/http.js";
 export { memoryKv } from "./runtime/memory-kv.js";
-export type { MemoryKvConfig } from "./runtime/memory-kv.js";
+export type { MemoryKV, MemoryKvConfig } from "./runtime/memory-kv.js";
 export { memoryStorage } from "./runtime/memory-storage.js";
-export type { MemoryStorageConfig } from "./runtime/memory-storage.js";
+export type {
+  MemoryObjectStorage,
+  MemoryStorageConfig,
+} from "./runtime/memory-storage.js";
 export { runScheduledTasks } from "./runtime/scheduled.js";
 export type * from "./runtime/slots.js";
 export { slugify } from "./slugify.js";

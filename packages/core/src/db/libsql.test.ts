@@ -4,6 +4,9 @@ import { describe, expect, test } from "vitest";
 
 import { libsql } from "./libsql.js";
 
+const connect = (adapter: ReturnType<typeof libsql>): LibSQLDatabase =>
+  adapter.connect({}, new Request("https://x/"), {}).db as LibSQLDatabase;
+
 describe("libsql() adapter", () => {
   test("connect() returns a working drizzle db bound to the url", async () => {
     const adapter = libsql({ url: ":memory:" });
@@ -55,7 +58,7 @@ describe("libsql() adapter", () => {
     expect(called).toBe(false);
   });
 
-  test("memoizes the client — the resolver runs once across requests", () => {
+  test("the config resolver runs once across connects", () => {
     let calls = 0;
     const adapter = libsql(() => {
       calls += 1;
@@ -64,6 +67,21 @@ describe("libsql() adapter", () => {
     adapter.connect({}, new Request("https://x/"), {});
     adapter.connect({}, new Request("https://x/"), {});
     expect(calls).toBe(1);
+  });
+
+  // The handler is what calls connect once per its life; the adapter itself
+  // keeps no memo, so two connects are two separate databases.
+  test("each connect() builds its own client", async () => {
+    const adapter = libsql({ url: ":memory:" });
+    const first = connect(adapter);
+    await first.run(sql`create table t (id integer)`);
+    const failure = await connect(adapter)
+      .all(sql`select * from t`)
+      .catch((error: unknown) => error);
+    // Drizzle's own frame says only "Failed query"; the cause carries why.
+    expect(String((failure as { cause?: unknown }).cause)).toMatch(
+      /no such table/,
+    );
   });
 
   test("connect() applies snake_case column casing", async () => {

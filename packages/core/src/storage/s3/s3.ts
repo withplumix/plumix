@@ -1,4 +1,3 @@
-import type { PlumixEnv } from "../../runtime/bindings.js";
 import type { EnvInput } from "../../runtime/env-input.js";
 import type {
   ConnectedObjectStorage,
@@ -75,9 +74,8 @@ export function s3(config: S3Config): S3ObjectStorage {
     kind: "s3",
     config,
     connect(env): ConnectedObjectStorage {
-      // The runtime value behind the loosely typed `env` is the `PlumixEnv`.
       const credentials: SigV4Credentials = {
-        ...resolveEnvInput(config.credentials, env as PlumixEnv),
+        ...resolveEnvInput(config.credentials, env),
         region: config.region,
       };
       const doFetch = config.fetch ?? fetch;

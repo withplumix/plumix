@@ -97,7 +97,7 @@ export interface CreateDispatcherHarnessOptions {
   /**
    * Connected object storage. Stub it in tests that need `ctx.storage`
    * populated (e.g. media plugin upload route). Pass the result of
-   * `memoryStorage().connect({})` for a working in-memory backend.
+   * `memoryStorage().connect()` for a working in-memory backend.
    */
   readonly storage?: ConnectedObjectStorage;
   /**

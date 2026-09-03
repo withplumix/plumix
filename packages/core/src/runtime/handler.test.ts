@@ -9,6 +9,8 @@ import { fallback } from "../route/render/template-builders.js";
 import { defineTheme } from "../theme.js";
 import { buildApp } from "./app.js";
 import { createPlumixHandler } from "./handler.js";
+import { memoryKv } from "./memory-kv.js";
+import { memoryStorage } from "./memory-storage.js";
 
 const stubDatabase: DatabaseAdapter = {
   kind: "stub",
@@ -172,5 +174,95 @@ describe("createPlumixHandler — scheduled", () => {
       { env: {} },
     );
     expect(committed).toBe(1);
+  });
+});
+
+describe("createPlumixHandler — slot binding", () => {
+  test("storage, kv, cache and image delivery connect once across requests", async () => {
+    const calls: string[] = [];
+    const handler = await handlerFor({
+      storage: {
+        kind: "counting",
+        connect: () => {
+          calls.push("storage");
+          return memoryStorage().connect();
+        },
+      },
+      kv: {
+        kind: "counting",
+        connect: () => {
+          calls.push("kv");
+          return memoryKv().connect();
+        },
+      },
+      cache: {
+        kind: "counting",
+        connect: () => {
+          calls.push("cache");
+          return null;
+        },
+      },
+      imageDelivery: {
+        kind: "counting",
+        url: (source) => source,
+        connect() {
+          calls.push("imageDelivery");
+          return this;
+        },
+      },
+    });
+    await handler.fetch(request(), { env: {} });
+    await handler.fetch(request(), { env: {} });
+    expect(calls.sort()).toEqual(["cache", "imageDelivery", "kv", "storage"]);
+  });
+
+  test("a database without connectRequest connects once across requests", async () => {
+    let connects = 0;
+    const handler = await handlerFor({
+      database: {
+        kind: "counting",
+        connect: () => {
+          connects += 1;
+          return { db: {} };
+        },
+      },
+    });
+    await handler.fetch(request(), { env: {} });
+    await handler.fetch(request(), { env: {} });
+    expect(connects).toBe(1);
+  });
+
+  test("a database with connectRequest still runs it per request", async () => {
+    let scoped = 0;
+    const handler = await handlerFor({
+      database: {
+        kind: "counting",
+        connect: () => ({ db: {} }),
+        connectRequest: () => {
+          scoped += 1;
+          return { db: {}, commit: (response) => response };
+        },
+      },
+    });
+    await handler.fetch(request(), { env: {} });
+    await handler.fetch(request(), { env: {} });
+    expect(scoped).toBe(2);
+  });
+
+  test("connectRequest returning null falls through to a once-bound connect", async () => {
+    let connects = 0;
+    const handler = await handlerFor({
+      database: {
+        kind: "counting",
+        connect: () => {
+          connects += 1;
+          return { db: {} };
+        },
+        connectRequest: () => null,
+      },
+    });
+    await handler.fetch(request(), { env: {} });
+    await handler.fetch(request(), { env: {} });
+    expect(connects).toBe(1);
   });
 });

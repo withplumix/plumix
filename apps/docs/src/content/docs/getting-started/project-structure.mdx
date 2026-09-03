@@ -503,7 +503,7 @@ The slot conformance suites, aimed at an author implementing a runtime slot: one
 import { memoryKv } from "plumix";
 import { describeKvContract } from "plumix/test/conformance";
 
-describeKvContract({ connect: () => memoryKv().connect({}) });
+describeKvContract({ connect: () => memoryKv().connect() });
 ```
 
 ## Related

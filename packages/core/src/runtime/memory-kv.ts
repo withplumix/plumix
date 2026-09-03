@@ -1,3 +1,4 @@
+import type { PlumixEnv } from "./bindings.js";
 import type {
   ConnectedKv,
   KV,
@@ -17,11 +18,20 @@ export interface MemoryKvConfig {
 }
 
 /**
+ * Binds against nothing, so the env is optional: a caller whose
+ * {@link PlumixEnv} is augmented need not synthesize a bag to stand a store
+ * up in a test.
+ */
+export interface MemoryKV extends KV {
+  connect(env?: PlumixEnv): ConnectedKv;
+}
+
+/**
  * In-memory {@link KV} adapter — the dev/test stand-in for a real key/value
  * backend. Honors `expirationTtl` against wall-clock time so TTL behavior can
  * be exercised with fake timers.
  */
-export function memoryKv(config: MemoryKvConfig = {}): KV {
+export function memoryKv(config: MemoryKvConfig = {}): MemoryKV {
   const store = new Map<string, MemoryEntry>();
 
   if (config.seed) {

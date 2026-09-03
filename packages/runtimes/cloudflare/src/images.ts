@@ -47,7 +47,7 @@ export function images(config: ImagesConfig = {}): ImageDelivery {
     },
     // undefined (not a passthrough) when no host resolves — else presence
     // checks upstream build a same-URL srcSet across the width ladder.
-    connect(env: unknown): ImageDelivery | undefined {
+    connect(env): ImageDelivery | undefined {
       if (rawZone) return this;
       const zoneFromEnv = readEnvString(
         env,

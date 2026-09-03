@@ -1,7 +1,6 @@
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 
-import type { PlumixEnv } from "../runtime/bindings.js";
 import type { EnvInput } from "../runtime/env-input.js";
 import type { DatabaseAdapter } from "../runtime/slots.js";
 import { resolveEnvInput } from "../runtime/env-input.js";
@@ -37,28 +36,19 @@ export interface LibsqlDatabaseAdapter extends DatabaseAdapter {
  * comes from config rather than a runtime env binding.
  */
 export function libsql(config: LibsqlConfigInput): LibsqlDatabaseAdapter {
-  // Built on first connect, not in the factory, because a resolver needs the
-  // request-time `env`; reused across requests since the client owns a
-  // connection pipeline. `env` is isolate-stable, so the first value holds.
-  let client: ReturnType<typeof createClient> | undefined;
   return {
     kind: "libsql",
     config,
+    // A resolver needs the runtime `env`, so the client is built here rather
+    // than in the factory. The handler binds `connect` once per its life.
     connect: (env, _request, schema) => {
-      if (!client) {
-        const resolved = resolveEnvInput(config, env as PlumixEnv);
-        // Unconditional: spans are no-ops unless a telemetry consumer
-        // sampled the request, so production without consumers pays nothing.
-        client = traceSqlClient(
-          createClient({
-            url: resolved.url,
-            authToken: resolved.authToken,
-          }),
-        );
-      }
-      return {
-        db: drizzle(client, { schema, casing: "snake_case" }),
-      };
+      const resolved = resolveEnvInput(config, env);
+      // Unconditional: spans are no-ops unless a telemetry consumer
+      // sampled the request, so production without consumers pays nothing.
+      const client = traceSqlClient(
+        createClient({ url: resolved.url, authToken: resolved.authToken }),
+      );
+      return { db: drizzle(client, { schema, casing: "snake_case" }) };
     },
   };
 }

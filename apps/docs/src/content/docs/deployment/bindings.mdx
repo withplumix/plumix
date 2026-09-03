@@ -12,7 +12,7 @@ A binding is a name. You declare it once in `wrangler.jsonc` against a real Clou
 
 ## Overview
 
-Nothing in `plumix.config.ts` holds a database handle. `d1({ binding: "DB" })` stores the two-character string `DB`, because the config module evaluates on your machine during the build and no Worker env exists yet. The runtime adapter resolves the string against the real `env` on every request.
+Nothing in `plumix.config.ts` holds a database handle. `d1({ binding: "DB" })` stores the two-character string `DB`, because the config module evaluates on your machine during the build and no Worker env exists yet. The handler resolves the string against the real `env` on the first request of an isolate and reuses the live handle after that.
 
 That indirection is what lets one config serve every deploy. Production, a preview branch and your laptop all run the same bundle with a different `DB` bound behind the same name.
 

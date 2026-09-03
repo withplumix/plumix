@@ -1,4 +1,4 @@
-import type { ConnectedObjectStorage } from "plumix";
+import type { ConnectedObjectStorage, PlumixEnv } from "plumix";
 import { describeObjectStorageContract } from "plumix/test/conformance";
 import { describe, expect, test } from "vitest";
 
@@ -215,9 +215,13 @@ describe("r2 slot factory", () => {
     );
   });
 
+  // Safety: the port types `env` as `PlumixEnv`, but the guard exists for a
+  // malformed caller that hands in no bag at all.
   test("connect() throws when env itself is null", () => {
     const slot = r2({ binding: "MEDIA" });
-    expect(() => slot.connect(null)).toThrow(/env is not an object/);
+    expect(() => slot.connect(null as unknown as PlumixEnv)).toThrow(
+      /env is not an object/,
+    );
   });
 });
 
