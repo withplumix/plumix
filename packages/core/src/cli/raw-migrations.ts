@@ -2,7 +2,7 @@ import type { AnyPluginDescriptor } from "../config.js";
 import {
   ENTRY_CHANGE_FEED_DDL,
   ENTRY_CHANGE_FEED_RESET_DDL,
-} from "../entries/change-feed.js";
+} from "../entries/change-feed-ddl.js";
 import { CliError } from "./errors.js";
 
 // A name is spliced into a filename and into the journal tag that

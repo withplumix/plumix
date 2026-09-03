@@ -12,11 +12,8 @@ import {
 import { adminUser, entryFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { createRpcHarness } from "../test/rpc.js";
-import {
-  ackEntryChanges,
-  ENTRY_CHANGE_FEED_RESET_DDL,
-  readEntryChanges,
-} from "./change-feed.js";
+import { ENTRY_CHANGE_FEED_RESET_DDL } from "./change-feed-ddl.js";
+import { ackEntryChanges, readEntryChanges } from "./change-feed.js";
 
 let db: Db;
 let authorId: number;
