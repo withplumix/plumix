@@ -20,6 +20,10 @@ interface RawScaffoldMeta extends Contribution {
   readonly authOriginComment?: string;
   readonly deps?: Record<string, string>;
   readonly devDeps?: Record<string, string>;
+  /** Runtime only: local secrets file name. */
+  readonly secretsFile?: string;
+  /** Runtime only: paths appended to the base `.gitignore`. */
+  readonly gitignore?: readonly string[];
   /** dest path in the scaffolded project → source path in this package. */
   readonly files?: Record<string, string>;
   readonly capabilities?: Record<string, Contribution>;
@@ -38,6 +42,8 @@ interface RawPackageJson {
   readonly peerDependencies?: Record<string, string>;
   readonly plumix?: { scaffold?: RawScaffoldMeta };
 }
+
+const DEFAULT_SECRETS_FILE = ".dev.vars";
 
 export interface Registry {
   readonly runtimes: readonly RuntimeDescriptor[];
@@ -131,6 +137,8 @@ async function toRuntimeDescriptor(
     authOriginComment: meta.authOriginComment,
     deps: meta.deps ?? {},
     devDeps: meta.devDeps ?? {},
+    secretsFile: meta.secretsFile ?? DEFAULT_SECRETS_FILE,
+    gitignore: meta.gitignore,
     files,
     capabilities: meta.capabilities,
     authMethods: meta.authMethods,

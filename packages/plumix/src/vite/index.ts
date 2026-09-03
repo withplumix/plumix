@@ -969,3 +969,5 @@ function readBody(req: IncomingMessage): Promise<string> {
 
 export { assemblePluginAdminBundle } from "./admin-plugin-bundle.js";
 export { plumix as default };
+export { buildAppClientFirst } from "./build-order.js";
+export type { BuildableApp } from "./build-order.js";

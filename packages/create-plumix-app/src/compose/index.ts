@@ -20,7 +20,7 @@ interface ComposeOptions {
 }
 
 // npm renames a published `.gitignore` to `.npmignore`, so the base ships
-// it dotless and we restore the dot on write.
+// it dotless; the dot comes back when the list is written below.
 const GITIGNORE_SOURCE = "gitignore";
 
 const TSCONFIG = {
@@ -59,18 +59,24 @@ export async function compose({
   baseDir,
   ctx,
 }: ComposeOptions): Promise<ComposedFiles> {
-  const { projectName } = selection;
+  const { projectName, runtime } = selection;
   const out: ComposedFiles = {};
 
   let basePkgRaw = "{}";
   for (const [rel, content] of await readBaseFiles(baseDir)) {
-    if (rel === "package.json") {
-      basePkgRaw = content; // assembled below, not copied verbatim
-      continue;
-    }
-    const dest = rel === GITIGNORE_SOURCE ? ".gitignore" : rel;
-    out[dest] = fillProjectName(content, projectName);
+    // Both assembled below, not copied verbatim.
+    if (rel === "package.json") basePkgRaw = content;
+    else if (rel !== GITIGNORE_SOURCE)
+      out[rel] = fillProjectName(content, projectName);
   }
+  // The base list is runtime-agnostic; what a runtime's tooling writes, and
+  // where its secrets live, only the runtime knows.
+  const baseIgnores = await readFile(join(baseDir, GITIGNORE_SOURCE), "utf8");
+  out[".gitignore"] = `${[
+    baseIgnores.trimEnd(),
+    ...(runtime.gitignore ?? []),
+    runtime.secretsFile,
+  ].join("\n")}\n`;
 
   const contributions = resolveContributions(selection);
   // Runtime files first, so the core-assembled files below always win a
@@ -86,7 +92,7 @@ export async function compose({
 
   const { envVars } = contributions;
   if (envVars.length > 0) {
-    out[".dev.vars"] = `${[
+    out[runtime.secretsFile] = `${[
       "# Local secrets for `plumix dev`. Fill these in; never commit real values.",
       ...envVars.map((name) => `${name}=`),
     ].join("\n")}\n`;

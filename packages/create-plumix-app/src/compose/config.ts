@@ -1,7 +1,7 @@
 import type { ResolvedContributions } from "./contributions.js";
 import type { Selection } from "./types.js";
 import { mergeImports } from "./imports.js";
-import { fillProjectName } from "./types.js";
+import { fillProjectName, SECRETS_FILE_TOKEN } from "./types.js";
 
 /**
  * Assemble the project's `plumix.config.ts` by splicing the runtime's,
@@ -15,7 +15,11 @@ export function assembleConfig(
   { imports, configSlots, registrations, envVars }: ResolvedContributions,
 ): string {
   const { projectName, runtime, authMethods } = selection;
-  const fill = (value: string): string => fillProjectName(value, projectName);
+  const fill = (value: string): string =>
+    fillProjectName(value, projectName).replaceAll(
+      SECRETS_FILE_TOKEN,
+      runtime.secretsFile,
+    );
 
   // The core `plumix` import is merged in with everything else so an auth
   // method's `github`/`consoleMailer` folds into the one `from "plumix"` line.
@@ -42,7 +46,7 @@ export function assembleConfig(
     : [];
 
   const authMethodLines = authMethods.flatMap((method) => [
-    ...(method.comment ? [`    // ${method.comment}`] : []),
+    ...(method.comment ? [`    // ${fill(method.comment)}`] : []),
     `    ${fill(method.authEntry)},`,
   ]);
 
@@ -56,12 +60,13 @@ export function assembleConfig(
 
   // A method whose config uses an `(env) => ...` secret resolver needs those
   // bindings declared, or the config would not type-check. `envVars` is the
-  // one deduped derivation (see resolveContributions), shared with `.dev.vars`.
+  // one deduped derivation (see resolveContributions), shared with the
+  // runtime's secrets file.
   const envAugmentation = envVars.length
     ? [
         "",
-        "// Secret bindings — set them in .dev.vars locally and as wrangler",
-        "// secrets in production. Declared so the (env) => ... resolvers type.",
+        `// Secret bindings — set them in ${runtime.secretsFile} locally and as secrets on the`,
+        "// deploy in production. Declared so the (env) => ... resolvers type.",
         'declare module "plumix" {',
         "  interface PlumixEnv {",
         ...envVars.map((name) => `    readonly ${name}: string;`),

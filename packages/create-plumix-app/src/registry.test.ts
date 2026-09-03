@@ -72,6 +72,44 @@ describe("loadRegistry", () => {
     });
   });
 
+  it("defaults the local secrets file to .dev.vars when the block names none", async () => {
+    writeRuntimePackage("cloudflare", {
+      kind: "runtime",
+      id: "cloudflare",
+      label: "Cloudflare",
+    });
+
+    const registry = await loadRegistry(root);
+
+    expect(registry.runtimes[0]?.secretsFile).toBe(".dev.vars");
+  });
+
+  it("carries the runtime's extra gitignore entries", async () => {
+    writeRuntimePackage("cloudflare", {
+      kind: "runtime",
+      id: "cloudflare",
+      label: "Cloudflare",
+      gitignore: [".wrangler"],
+    });
+
+    const registry = await loadRegistry(root);
+
+    expect(registry.runtimes[0]?.gitignore).toEqual([".wrangler"]);
+  });
+
+  it("reads the local secrets file name a runtime declares", async () => {
+    writeRuntimePackage("node", {
+      kind: "runtime",
+      id: "node",
+      label: "Node",
+      secretsFile: ".env",
+    });
+
+    const registry = await loadRegistry(root);
+
+    expect(registry.runtimes[0]?.secretsFile).toBe(".env");
+  });
+
   it("reads referenced files into the descriptor as content", async () => {
     writeRuntimePackage("cloudflare", {
       kind: "runtime",
