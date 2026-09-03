@@ -4,6 +4,7 @@ import { requestStore } from "plumix";
 import { describe, expect, test } from "vitest";
 
 import { demoDatabase } from "./database.js";
+import { DEMO_SHOWCASE_NAME } from "./session.js";
 
 // Captures spans through the TelemetrySpanHandle contract — the same surface
 // the real collector implements — so assertions stay driver-level.
@@ -85,5 +86,43 @@ describe("demoDatabase() — query span tracing", () => {
       { sql: "select 2", params: [] },
     ]);
     expect(spans[0]?.attributes["db.rows"]).toBe(2);
+  });
+});
+
+describe("demoDatabase() — per-visitor routing", () => {
+  // The handler binds `connect` once, so a visitor's own DO can only be
+  // resolved through `connectRequest`. Without it every visitor would share
+  // whichever DO the handler's first request happened to name.
+  test("routes each request to the durable object its own cookie names", () => {
+    const named: string[] = [];
+    const env = {
+      DEMO: {
+        idFromName: (name: string) => {
+          named.push(name);
+          return name;
+        },
+        get: () => ({
+          query: () => Promise.resolve({ rows: [] }),
+          batch: () => Promise.resolve([]),
+        }),
+      },
+    };
+    const adapter = demoDatabase({ binding: "DEMO" });
+    const forVisitor = (token?: string) =>
+      adapter.connectRequest?.({
+        env,
+        request: new Request("https://cms.example", {
+          headers: token ? { cookie: `plumix_demo=${token}` } : {},
+        }),
+        schema: {},
+        isAuthenticated: false,
+        isWrite: false,
+      });
+
+    forVisitor("alice");
+    forVisitor("bob");
+    forVisitor();
+
+    expect(named).toEqual(["alice", "bob", DEMO_SHOWCASE_NAME]);
   });
 });
