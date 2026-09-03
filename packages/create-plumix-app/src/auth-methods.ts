@@ -14,7 +14,7 @@ export const CORE_AUTH_METHODS: readonly AuthMethodDescriptor[] = [
     label: "OAuth (GitHub)",
     description: "Sign in with a GitHub OAuth app",
     comment:
-      "Register a GitHub OAuth app, put its secrets in .dev.vars, and add google/custom providers alongside github.",
+      "Register a GitHub OAuth app, put its secrets in __SECRETS_FILE__, and add google/custom providers alongside github.",
     imports: ['import { github } from "plumix";'],
     authEntry:
       "oauth: { providers: { github: github((env) => ({ clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET })) } }",

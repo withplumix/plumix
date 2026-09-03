@@ -12,7 +12,7 @@ export interface ResolvedContributions {
   readonly registrations: string[];
   /**
    * Secret binding names the selected auth methods need, deduped. Derived
-   * once here so the `.dev.vars` file and the `PlumixEnv` augmentation that
+   * once here so the runtime's secrets file and the `PlumixEnv` augmentation that
    * declares them can never drift.
    */
   readonly envVars: string[];

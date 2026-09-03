@@ -14,6 +14,7 @@ const runtime: RuntimeDescriptor = {
   configSlots: { runtime: "cloudflare()", database: 'd1({ binding: "DB" })' },
   deps: {},
   devDeps: {},
+  secretsFile: ".dev.vars",
   files: {},
   capabilities: {
     storage: {

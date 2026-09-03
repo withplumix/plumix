@@ -201,21 +201,23 @@ try {
   const { loadRegistry } = await import(
     join(REPO, "packages/create-plumix-app/dist/registry.js")
   );
-  // From the registry, so a new plugin joins this combo on its own.
-  const plugins = (await loadRegistry(REPO)).plugins.map((p) => p.id);
+  // From the registry, so a new runtime or plugin joins the matrix on its own.
+  const registry = await loadRegistry(REPO);
+  const plugins = registry.plugins.map((p) => p.id);
 
-  // `-y` on every combo: without it the runtime stays an open prompt and the
-  // CLI drops into the wizard on a terminal. Media and og are the only plugins
-  // that declare `requires`, so all-plugins covers the capability seam too.
-  const combos = [
-    // `--plugins=` for none: a bare `-y` now takes the recommended plugins.
-    { name: "blank", args: ["-y", "--plugins="] },
+  // Every runtime times the two shapes. `-y` on every combo: without it the
+  // remaining prompts drop the CLI into the wizard on a terminal. Media and og
+  // are the only plugins that declare `requires`, so all-plugins covers the
+  // capability seam too.
+  const combos = registry.runtimes.flatMap(({ id }) => [
+    // `--plugins=` for none: a bare `-y` takes the recommended plugins.
+    { name: `${id}-blank`, args: ["-y", "--runtime", id, "--plugins="] },
     {
-      name: "all-plugins",
-      args: ["-y", "-p", plugins.join(",")],
+      name: `${id}-all-plugins`,
+      args: ["-y", "--runtime", id, "-p", plugins.join(",")],
       secondLocale: true,
     },
-  ];
+  ]);
   for (const combo of combos) smoke(combo, tarballs);
   console.log(
     `\nSmoke check passed: ${combos.length} generated projects typecheck and build.`,

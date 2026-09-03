@@ -28,6 +28,7 @@ const cloudflareRuntime: RuntimeDescriptor = {
     "Set accountSubdomain to your workers.dev subdomain before deploying.",
   deps: {},
   devDeps: {},
+  secretsFile: ".dev.vars",
   files: {},
 };
 
@@ -179,6 +180,32 @@ describe("assembleConfig — auth methods", () => {
     expect(config).toContain('declare module "plumix" {');
     expect(config).toContain("readonly GITHUB_CLIENT_ID: string;");
     expect(config).toContain("readonly GITHUB_CLIENT_SECRET: string;");
+  });
+
+  it("points the secrets comment at the runtime's own secrets file", () => {
+    const config = assemble({
+      projectName: "app",
+      runtime: { ...cloudflareRuntime, secretsFile: ".env" },
+      plugins: [],
+      authMethods: [oauth],
+    });
+    expect(config).toContain(
+      "// Secret bindings — set them in .env locally and as secrets on the",
+    );
+    expect(config).not.toContain(".dev.vars");
+    expect(config).not.toMatch(/wrangler/i);
+  });
+
+  it("fills the secrets-file token in a method's comment", () => {
+    const config = assemble({
+      projectName: "app",
+      runtime: { ...cloudflareRuntime, secretsFile: ".env" },
+      plugins: [],
+      authMethods: [
+        { ...oauth, comment: "Put its secrets in __SECRETS_FILE__." },
+      ],
+    });
+    expect(config).toContain("    // Put its secrets in .env.");
   });
 
   it("adds no augmentation when no method needs secrets", () => {

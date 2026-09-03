@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { buildAppClientFirst } from "./build.js";
+import { buildAppClientFirst } from "./build-order.js";
 
 function fakeBuilder(environmentNames: string[]) {
   const calls: string[] = [];
@@ -20,23 +20,23 @@ function fakeBuilder(environmentNames: string[]) {
 }
 
 describe("buildAppClientFirst", () => {
-  test("builds the client environment before the worker environment", async () => {
-    const { builder, calls } = fakeBuilder(["client", "worker"]);
+  test("builds the client environment before the server environment", async () => {
+    const { builder, calls } = fakeBuilder(["client", "server"]);
     await buildAppClientFirst(builder);
-    expect(calls).toEqual(["client", "worker"]);
+    expect(calls).toEqual(["client", "server"]);
   });
 
-  test("builds every worker environment once, always client first", async () => {
-    const { builder, calls } = fakeBuilder(["worker_a", "client", "worker_b"]);
+  test("builds every server environment once, always client first", async () => {
+    const { builder, calls } = fakeBuilder(["server_a", "client", "server_b"]);
     await buildAppClientFirst(builder);
     expect(calls[0]).toBe("client");
-    expect(new Set(calls)).toEqual(new Set(["client", "worker_a", "worker_b"]));
+    expect(new Set(calls)).toEqual(new Set(["client", "server_a", "server_b"]));
     expect(calls).toHaveLength(3);
   });
 
   test("skips the client step when there is no client environment", async () => {
-    const { builder, calls } = fakeBuilder(["worker"]);
+    const { builder, calls } = fakeBuilder(["server"]);
     await buildAppClientFirst(builder);
-    expect(calls).toEqual(["worker"]);
+    expect(calls).toEqual(["server"]);
   });
 });

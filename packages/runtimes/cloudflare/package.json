@@ -68,6 +68,9 @@
         "@cloudflare/workers-types": "catalog:cloudflare",
         "wrangler": "catalog:cloudflare"
       },
+      "gitignore": [
+        ".wrangler"
+      ],
       "files": {
         "wrangler.jsonc": "scaffold/wrangler.jsonc"
       },

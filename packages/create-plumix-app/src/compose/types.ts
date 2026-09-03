@@ -1,5 +1,7 @@
 /** Placeholder token in descriptor strings, replaced with the project name. */
 export const PROJECT_NAME_TOKEN = "__PROJECT_NAME__";
+/** Placeholder in config descriptor strings, replaced with the runtime's secrets file. */
+export const SECRETS_FILE_TOKEN = "__SECRETS_FILE__";
 
 /**
  * A runtime's scaffold contributions, read from its `plumix.scaffold`
@@ -23,6 +25,18 @@ export interface RuntimeDescriptor {
   /** Dependencies this runtime adds to the app. */
   readonly deps: Readonly<Record<string, string>>;
   readonly devDeps: Readonly<Record<string, string>>;
+  /**
+   * The gitignored file `plumix dev` reads local secrets from, relative to
+   * the project root — `.dev.vars` on Cloudflare, `.env` elsewhere. Written
+   * with the selected auth methods' binding names when there are any.
+   */
+  readonly secretsFile: string;
+  /**
+   * Paths appended to the base `.gitignore`, for state only this runtime's
+   * tooling writes (Cloudflare's `.wrangler`). The secrets file is ignored
+   * without being listed here.
+   */
+  readonly gitignore?: readonly string[];
   /** Whole files the runtime contributes, keyed by relative path. */
   readonly files: Readonly<Record<string, string>>;
   /**
@@ -46,7 +60,7 @@ export interface RawAuthMethod {
   readonly authEntry: string;
   /** Top-level config slots the method needs (e.g. magic link's mailer). */
   readonly configSlots?: Readonly<Record<string, string>>;
-  /** Secret binding names → `.dev.vars` + a PlumixEnv augmentation. */
+  /** Secret binding names → the runtime's secrets file + a PlumixEnv augmentation. */
   readonly envVars?: readonly string[];
 }
 
