@@ -8,7 +8,7 @@ import { drizzle } from "drizzle-orm/libsql";
 
 import * as schema from "../db/schema/index.js";
 import { traceSqlClient } from "../db/trace-libsql.js";
-import { ENTRY_CHANGE_FEED_DDL } from "../entries/change-feed.js";
+import { ENTRY_CHANGE_FEED_DDL } from "../entries/change-feed-ddl.js";
 
 type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 

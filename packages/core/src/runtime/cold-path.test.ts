@@ -192,13 +192,46 @@ const SUBPATH_ONLY = [
 ] as const;
 const BARREL = staticClosureOf([path.join(SRC, "index.ts")]);
 
+// A renamed module would pass for the wrong reason, so pin that it exists.
+function expectUnreachable(
+  closure: ReadonlyMap<string, string | undefined>,
+  file: string,
+): void {
+  expect(fs.existsSync(path.join(SRC, file))).toBe(true);
+  expect(staticImportChain(closure, path.join(SRC, file))).toBeUndefined();
+}
+
 describe("subpath-only modules stay off the root barrel", () => {
   test.each(SUBPATH_ONLY)(
     "%s is absent from the barrel's static closure",
     (file) => {
-      // A renamed module would pass for the wrong reason; pin that it exists.
-      expect(fs.existsSync(path.join(SRC, file))).toBe(true);
-      expect(staticImportChain(BARREL, path.join(SRC, file))).toBeUndefined();
+      expectUnreachable(BARREL, file);
     },
   );
+});
+
+// `cli/raw-migrations.ts` is loaded by every `plumix migrate generate`, and all
+// it wants from the change feed is a pair of `readonly string[]` constants.
+// While those lived beside the feed's drizzle-backed helpers, asking for two
+// strings cost 255ms against 1ms for the errors module sitting next to it.
+//
+// Rooted at the `cli` barrel rather than that one file: the barrel re-exports
+// it, `importsOf` counts `export … from` as static, and the 218ms this is
+// guarding was measured there.
+const CLI_GRAPH = staticClosureOf([path.join(SRC, "cli/index.ts")]);
+
+// The whole subtree, not `db/index.ts` alone. DDL naturally wants column names,
+// so a later `import { entries } from "../db/schema/entries.js"` is the likely
+// regression — and at ~240ms it is dearer than the import that prompted this.
+const DB_MODULES = fs
+  .readdirSync(path.join(SRC, "db"), { recursive: true })
+  .map(String)
+  .filter((entry) => entry.endsWith(".ts") && !entry.endsWith(".test.ts"))
+  .map((entry) => path.join("db", entry));
+
+describe("the CLI's SQL helpers stay off the query layer", () => {
+  test("the db subtree is absent from the cli closure", () => {
+    expect(DB_MODULES.length).toBeGreaterThan(0);
+    for (const file of DB_MODULES) expectUnreachable(CLI_GRAPH, file);
+  });
 });
