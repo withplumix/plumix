@@ -248,7 +248,7 @@ export interface DispatcherHarness {
  * Bind everything a harness fixes for its lifetime — the app, the slots, the
  * defer queue — so each dispatch supplies only what a request varies.
  */
-function contextFactory(args: {
+function createContextFactory(args: {
   readonly app: PlumixApp;
   readonly options: CreateDispatcherHarnessOptions;
   readonly db: TestDb;
@@ -333,7 +333,7 @@ export async function createDispatcherHarness(
   const app: PlumixApp = { ...built, ...options.coldInterfaces };
   const dispatcher = createPlumixDispatcher(app);
   const { defer, drainDeferred } = createDeferQueue();
-  const withRequest = contextFactory({ app, options, db, env, defer });
+  const withRequest = createContextFactory({ app, options, db, env, defer });
 
   const harness: DispatcherHarness = {
     db,

@@ -24,14 +24,14 @@ export const testBlog = definePlugin("test_blog", {
   },
 });
 
-export interface HarnessOptions {
+export interface CommentsHarnessOptions {
   /** The client address, as a runtime adapter reports it to core. */
   readonly clientAddress?: string;
 }
 
 export async function harnessWith(
   config: CommentsConfig,
-  options: HarnessOptions = {},
+  options: CommentsHarnessOptions = {},
 ): Promise<Harness> {
   const harness = await createHarness({
     plugins: [testBlog, comments(config)],

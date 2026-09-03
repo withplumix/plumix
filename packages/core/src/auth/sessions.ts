@@ -40,10 +40,8 @@ const MAX_UA_LENGTH = 1024;
 
 /**
  * Pull the client address + user-agent for `sessions.ipAddress` /
- * `sessions.userAgent`. The address is whatever the runtime's trusted proxy
- * reported through `ctx.clientAddress`; core parses no forwarding header, so a
- * visitor who sets one of their own is not recorded as coming from it. Both
- * values are truncated so a misconfigured upstream can't blow up the row width.
+ * `sessions.userAgent`, truncated so a misconfigured upstream can't blow up
+ * the row width.
  *
  * Used at every `createSession` call site so the per-session admin UI can
  * surface meaningful "what device / where from" context for the "is this me?"

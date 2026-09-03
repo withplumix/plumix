@@ -88,6 +88,11 @@ function createHandler(app: PlumixApp): PlumixHandler {
  * the one forwarding header a Worker may trust: the edge overwrites it, so a
  * visitor who sets their own is not believed. `x-forwarded-for` gets no such
  * treatment and is never read.
+ *
+ * This wins over an address the caller put on the invocation, absent header
+ * included. On Cloudflare the edge is the only authority on where a request
+ * came from, and honouring a caller's value would reopen the injection path
+ * reading the header here exists to close.
  */
 function readClientAddress(request: Request): string | undefined {
   return request.headers.get("cf-connecting-ip") ?? undefined;

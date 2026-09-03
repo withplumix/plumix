@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app.js";
+import type { VisitorMetaOptions } from "./visitor-meta.js";
 import { definePlugin } from "../plugin/define.js";
 import { createTestContext } from "../test/context.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
@@ -19,15 +20,23 @@ function requestWith(headers: Record<string, string> = {}): Request {
   return new Request("https://cms.example/submit", { method: "POST", headers });
 }
 
-/** One install, one visitor: the context a runtime that resolved an address builds. */
-function contextFor(db: TestDb, clientAddress?: string): AppContext {
-  return createTestContext({ db, clientAddress });
+/** One install, one visitor: the context a runtime builds for their request. */
+function contextFor(
+  db: TestDb,
+  options: {
+    readonly clientAddress?: string;
+    readonly request?: Request;
+  } = {},
+): AppContext {
+  return createTestContext({
+    db,
+    clientAddress: options.clientAddress,
+    request: options.request ?? requestWith(),
+  });
 }
 
 async function ipHashFor(ctx: AppContext): Promise<string> {
-  const meta = await readVisitorMeta(ctx, requestWith(), {
-    namespace: NAMESPACE,
-  });
+  const meta = await readVisitorMeta(ctx, { namespace: NAMESPACE });
   return meta.ipHash;
 }
 
@@ -38,10 +47,9 @@ async function ipHashFor(ctx: AppContext): Promise<string> {
 const echoVisitorHash = definePlugin("visitor_echo", (ctx) => {
   ctx.registerPublicRoute({
     path: HASH_ROUTE,
-    handler: async (request, appCtx) =>
+    handler: async (_request, appCtx) =>
       new Response(
-        (await readVisitorMeta(appCtx, request, { namespace: NAMESPACE }))
-          .ipHash,
+        (await readVisitorMeta(appCtx, { namespace: NAMESPACE })).ipHash,
       ),
   });
 });
@@ -62,7 +70,7 @@ async function hashThroughHarness(clientAddress?: string): Promise<{
 describe("readVisitorMeta", () => {
   test("hashes the address rather than carrying it", async () => {
     const hash = await ipHashFor(
-      contextFor(await createTestDb(), "203.0.113.7"),
+      contextFor(await createTestDb(), { clientAddress: "203.0.113.7" }),
     );
 
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
@@ -71,33 +79,35 @@ describe("readVisitorMeta", () => {
   test("hashes one address the same way for the life of an install", async () => {
     const db = await createTestDb();
 
-    expect(await ipHashFor(contextFor(db, "203.0.113.7"))).toBe(
-      await ipHashFor(contextFor(db, "203.0.113.7")),
-    );
+    expect(
+      await ipHashFor(contextFor(db, { clientAddress: "203.0.113.7" })),
+    ).toBe(await ipHashFor(contextFor(db, { clientAddress: "203.0.113.7" })));
   });
 
   test("hashes one address differently on another install", async () => {
     expect(
-      await ipHashFor(contextFor(await createTestDb(), "203.0.113.7")),
+      await ipHashFor(
+        contextFor(await createTestDb(), { clientAddress: "203.0.113.7" }),
+      ),
     ).not.toBe(
-      await ipHashFor(contextFor(await createTestDb(), "203.0.113.7")),
+      await ipHashFor(
+        contextFor(await createTestDb(), { clientAddress: "203.0.113.7" }),
+      ),
     );
   });
 
   test("ignores a forwarding header the visitor set on the request", async () => {
     const db = await createTestDb();
-    const forged = await readVisitorMeta(
-      contextFor(db),
-      requestWith({
+    const forged = contextFor(db, {
+      request: requestWith({
         "cf-connecting-ip": "203.0.113.7",
         "x-forwarded-for": "198.51.100.9",
       }),
-      { namespace: NAMESPACE },
-    );
+    });
 
-    expect(forged.ipHash).toBe(await ipHashFor(contextFor(db)));
-    expect(forged.ipHash).not.toBe(
-      await ipHashFor(contextFor(db, "203.0.113.7")),
+    expect(await ipHashFor(forged)).toBe(await ipHashFor(contextFor(db)));
+    expect(await ipHashFor(forged)).not.toBe(
+      await ipHashFor(contextFor(db, { clientAddress: "203.0.113.7" })),
     );
   });
 
@@ -107,47 +117,75 @@ describe("readVisitorMeta", () => {
     const unknown = await ipHashFor(contextFor(db));
 
     expect(await ipHashFor(contextFor(db))).toBe(unknown);
-    expect(await ipHashFor(contextFor(db, "203.0.113.7"))).not.toBe(unknown);
+    expect(
+      await ipHashFor(contextFor(db, { clientAddress: "203.0.113.7" })),
+    ).not.toBe(unknown);
   });
 
   test("hashes the address the runtime reported for the request", async () => {
     const { harness, hash } = await hashThroughHarness("203.0.113.7");
 
     // Same install, so the same salt: only the address can move the hash.
-    expect(hash).toBe(await ipHashFor(contextFor(harness.db, "203.0.113.7")));
+    expect(hash).toBe(
+      await ipHashFor(contextFor(harness.db, { clientAddress: "203.0.113.7" })),
+    );
     expect(hash).not.toBe(await ipHashFor(contextFor(harness.db)));
   });
 
   test("falls into the shared unknown bucket when the runtime reported none", async () => {
     const { harness, hash } = await hashThroughHarness();
 
-    expect(hash).toBe(await ipHashFor(contextFor(harness.db, "unknown")));
+    // Spelled out rather than compared to another address-less context: the
+    // bucket's name is part of the stored-hash contract, and renaming it
+    // re-buckets every existing install's no-address visitors.
+    expect(hash).toBe(
+      await ipHashFor(contextFor(harness.db, { clientAddress: "unknown" })),
+    );
   });
 
   test("truncates a hostile user-agent and reports an absent one as null", async () => {
-    const ctx = contextFor(await createTestDb(), "203.0.113.7");
+    const db = await createTestDb();
+    const options = { namespace: NAMESPACE };
 
     const long = await readVisitorMeta(
-      ctx,
-      requestWith({ "user-agent": "u".repeat(4000) }),
-      { namespace: NAMESPACE },
+      contextFor(db, {
+        clientAddress: "203.0.113.7",
+        request: requestWith({ "user-agent": "u".repeat(4000) }),
+      }),
+      options,
     );
-    const absent = await readVisitorMeta(ctx, requestWith(), {
-      namespace: NAMESPACE,
-    });
+    const absent = await readVisitorMeta(
+      contextFor(db, { clientAddress: "203.0.113.7" }),
+      options,
+    );
 
     expect(long.userAgent).toHaveLength(1024);
     expect(absent.userAgent).toBeNull();
   });
 
+  test("refuses the old three-argument call rather than pooling its salt", async () => {
+    const db = await createTestDb();
+    // Exactly what a plugin compiled against readVisitorMeta(ctx, request,
+    // options) passes: its request lands where the options now go.
+    const stalePluginCall = readVisitorMeta(
+      contextFor(db),
+      requestWith() as unknown as VisitorMetaOptions,
+    );
+
+    await expect(stalePluginCall).rejects.toThrow(/needs a namespace/);
+    const rows = await db
+      .select({ group: settings.group })
+      .from(settings)
+      .where(eq(settings.key, "ip_salt"));
+    expect(rows).toHaveLength(0);
+  });
+
   test("mints one salt per namespace, in that namespace's private group", async () => {
     const db = await createTestDb();
-    const ctx = contextFor(db, "203.0.113.7");
+    const ctx = contextFor(db, { clientAddress: "203.0.113.7" });
 
     await ipHashFor(ctx);
-    const other = await readVisitorMeta(ctx, requestWith(), {
-      namespace: "other",
-    });
+    const other = await readVisitorMeta(ctx, { namespace: "other" });
 
     const rows = await db
       .select({ group: settings.group, value: settings.value })

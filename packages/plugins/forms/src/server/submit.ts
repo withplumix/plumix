@@ -278,7 +278,7 @@ export function createSubmitHandler(registry: FormRegistry) {
 
     // Nothing here grants or refuses anything on the strength of the
     // visitor's address; it is stored, hashed, for whoever reads the inbox.
-    const { ipHash, userAgent } = await readVisitorMeta(ctx, request, {
+    const { ipHash, userAgent } = await readVisitorMeta(ctx, {
       namespace: "forms",
     });
     const candidate: FormSubmissionCandidate = {

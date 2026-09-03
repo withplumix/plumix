@@ -1,6 +1,7 @@
 import { encodeHexLowerCase } from "@oslojs/encoding";
 
 import type { AppContext } from "../context/app.js";
+import { DbError } from "./errors.js";
 import { and, eq } from "./index.js";
 import { settings } from "./schema/settings.js";
 import { privateSettingsGroup } from "./settings-groups.js";
@@ -78,10 +79,9 @@ async function hashIp(ip: string, salt: string): Promise<string> {
  * addresses are never stored, so a hash is all a rate limiter or an inbox has
  * to compare.
  *
- * The address is the one the runtime's trusted proxy reported, on
- * `ctx.clientAddress`; a forwarding header the visitor set themselves is not
- * read, so nobody buys a fresh bucket by adding one. A runtime that resolved
- * no address puts every such visitor in one shared bucket rather than
+ * Both halves come off the context, so they describe one visitor: the address
+ * on `ctx.clientAddress` and the user-agent on `ctx.request`. A runtime that
+ * resolved no address puts every such visitor in one shared bucket rather than
  * failing the submission.
  *
  * The salt defeats a precomputed table of the IPv4 space and nothing more: it
@@ -90,10 +90,12 @@ async function hashIp(ip: string, salt: string): Promise<string> {
  */
 export async function readVisitorMeta(
   ctx: AppContext,
-  request: Request,
   options: VisitorMetaOptions,
 ): Promise<VisitorMeta> {
-  const userAgent = request.headers.get("user-agent");
+  if (typeof options.namespace !== "string") {
+    throw DbError.visitorNamespaceMissing();
+  }
+  const userAgent = ctx.request.headers.get("user-agent");
   return {
     ipHash: await hashIp(
       ctx.clientAddress ?? UNKNOWN_ADDRESS,

@@ -166,11 +166,10 @@ export interface AppContextBase<
   readonly tokenScopes: readonly string[] | null;
   /**
    * The client address the runtime's trusted proxy reported, as
-   * `invocation.clientAddress` supplied it; `undefined` when the runtime could
-   * not resolve one, an empty value included — a proxy that sets its header
-   * blank has reported no address, not an address that is the empty string. Core never derives it from a forwarding header — only the
-   * adapter knows which proxy in front of it is trusted — so a plugin reads
-   * this one field for a rate limiter or a spam floor whatever it deploys on.
+   * `invocation.clientAddress` supplied it; `undefined` when the runtime
+   * resolved none. Core derives it from no forwarding header — only the
+   * adapter knows which proxy in front of it is trusted — so a plugin writing
+   * a rate limiter reads this one field whatever the site deploys on.
    *
    * Advisory, like the session row it lands in: an address is a fact about the
    * network path, not a principal. Policy still flows through the session id.
