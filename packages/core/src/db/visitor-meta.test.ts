@@ -143,6 +143,34 @@ describe("readVisitorMeta", () => {
     );
   });
 
+  test("buckets two visitors of one install apart, by the address each request carried", async () => {
+    const harness = await createDispatcherHarness({
+      plugins: [echoVisitorHash],
+      clientAddress: "203.0.113.7",
+    });
+
+    const first = await harness.fetch(HASH_ROUTE);
+    const second = await harness.fetch(HASH_ROUTE, {
+      clientAddress: "198.51.100.9",
+    });
+
+    // One install, so one salt: the addresses are the only thing that differ.
+    expect(await second.text()).not.toBe(await first.text());
+  });
+
+  test("a request that names no address falls back to the harness's own", async () => {
+    const harness = await createDispatcherHarness({
+      plugins: [echoVisitorHash],
+      clientAddress: "203.0.113.7",
+    });
+
+    const withDefault = await harness.fetch(HASH_ROUTE);
+
+    expect(await withDefault.text()).toBe(
+      await ipHashFor(contextFor(harness.db, { clientAddress: "203.0.113.7" })),
+    );
+  });
+
   test("truncates a hostile user-agent and reports an absent one as null", async () => {
     const db = await createTestDb();
     const options = { namespace: NAMESPACE };

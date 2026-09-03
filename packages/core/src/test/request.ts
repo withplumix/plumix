@@ -28,6 +28,16 @@ export interface FetchOptions {
    * header. Defaults to auto-detect based on path prefix.
    */
   readonly withCsrfHeader?: boolean;
+  /**
+   * The client address the runtime reports for this one request — what a real
+   * adapter varies between visitors. Wins over the harness's own
+   * `clientAddress`; omit it to take that default.
+   *
+   * `buildRequest` ignores it: an address is a fact the runtime supplies
+   * alongside the request, never a header on it. The harness reads it when it
+   * builds the context.
+   */
+  readonly clientAddress?: string;
 }
 
 const ORIGIN = "https://cms.example";
