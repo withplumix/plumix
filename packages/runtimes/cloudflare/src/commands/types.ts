@@ -1,5 +1,5 @@
 import type { CommandDefinition } from "plumix";
-import { spawnInherit } from "plumix";
+import { spawnInherit } from "plumix/cli";
 
 export const typesCommand: CommandDefinition = {
   describe: "Generate Worker binding types (via wrangler)",

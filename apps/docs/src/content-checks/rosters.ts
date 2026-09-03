@@ -128,6 +128,7 @@ import type { Assert, Equals } from "./type-assert";
 const FACADE_SUBPATHS = [
   "plumix",
   "plumix/plugin",
+  "plumix/cli",
   "plumix/theme",
   "plumix/vite",
   "plumix/admin",

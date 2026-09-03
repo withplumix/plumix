@@ -33,6 +33,10 @@
       "types": "./dist/auth/config.d.ts",
       "default": "./dist/auth/config.js"
     },
+    "./cli": {
+      "types": "./dist/cli/index.d.ts",
+      "default": "./dist/cli/index.js"
+    },
     "./schema": {
       "types": "./dist/db/schema/index.d.ts",
       "default": "./dist/db/schema/index.js"

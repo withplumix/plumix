@@ -5,7 +5,7 @@ import { createJiti } from "jiti";
 import * as v from "valibot";
 
 import type { PlumixConfig } from "@plumix/core";
-import { CliError } from "@plumix/core";
+import { CliError } from "@plumix/core/cli";
 
 const CONFIG_CANDIDATES = [
   "plumix.config.ts",

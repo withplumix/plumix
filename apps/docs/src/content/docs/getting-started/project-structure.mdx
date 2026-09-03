@@ -148,6 +148,22 @@ export const recipes = definePlugin("recipes", {
 });
 ```
 
+### plumix/cli
+
+What a runtime adapter needs to contribute CLI commands: `CliError`, which the command dispatcher understands, and the `spawnInherit` / `spawnCapturingStderr` helpers a command shells out through. Narrow on purpose — the root specifier carries the whole runtime, and a command author who reaches for it pays ~500ms of module evaluation before the CLI has parsed a flag.
+
+```ts
+import type { CommandDefinition } from "plumix";
+import { spawnInherit } from "plumix/cli";
+
+export const deployCommand: CommandDefinition = {
+  describe: "Deploy to Cloudflare (via wrangler)",
+  async run(ctx) {
+    await spawnInherit("wrangler", ["deploy", ...ctx.argv], { cwd: ctx.cwd });
+  },
+};
+```
+
 ### plumix/theme
 
 `defineTheme`, `defineTemplate` and the document-manifest types, narrowed to what a theme file needs. All of them are on the root specifier too. The template builders `fallback`, `entry` and `forEntryType` are only on the root, which is why the scaffolded theme imports the whole set from `plumix` rather than splitting the import in two.

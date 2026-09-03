@@ -149,6 +149,9 @@ const config: KnipConfig = {
         // "plumix/editor-runtime"`) — a runtime import knip can't see.
         "src/editor-runtime.ts",
         "src/cli/index.ts",
+        // Nothing in this package reaches `src/cli/kit.ts`; knip only sees it
+        // through the exports map this roster overrides.
+        "src/cli/kit.ts",
         // `plumix/db` groups the direct-write / ingest toolkit (drizzle
         // operators + schema + introspection + edge-cache purge) on its own
         // subpath; re-exports `@plumix/core/db`, not reachable from the root

@@ -32,6 +32,10 @@
       "types": "./dist/plugin.d.ts",
       "default": "./dist/plugin.js"
     },
+    "./cli": {
+      "types": "./dist/cli/kit.d.ts",
+      "default": "./dist/cli/kit.js"
+    },
     "./theme": {
       "types": "./dist/theme/index.d.ts",
       "default": "./dist/theme/index.js"
