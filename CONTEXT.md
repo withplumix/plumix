@@ -103,7 +103,7 @@ A named, registered content component. The registered _definition_ is the block 
 _Avoid_: Gutenberg, Builder.io (these are the reference models, not plumix terms)
 
 **Block input**:
-A single editable control declared on a block — an attribute, a style-bound property, or a child slot.
+A single editable control declared on a block — an attribute, a style-bound property, or a slot input.
 
 **Variation**:
 A preset of a block (attributes plus optional child body) surfaced in the inserter.
@@ -222,7 +222,20 @@ The membership-gating scenario a challenge implements. A scenario label, not a t
 What a matched URL represents — `single`, `archive`, `taxonomy`, `author`, `date`, `front-page`, `search`, or `custom`.
 
 **Public route**:
-A path a plugin owns at the site root, registered with `registerPublicRoute` and answered by its own handler ahead of core's endpoints, the redirect table and the content route map. Distinct from a plugin route, which `registerRoute` confines to `/_plumix/<pluginId>/`.
+A path a plugin owns at the site root, registered with `registerPublicRoute` and answered by its own route handler ahead of core's endpoints, the redirect table and the content route map. Distinct from a plugin route, which `registerRoute` confines to `/_plumix/<pluginId>/`.
+
+**Runtime adapter**:
+The code that adapts one platform's serve API to core, by building the runtime handler and generating the entry module the platform runs — a Workers default export, a `Bun.serve` call, a `node:http` bridge. The engine underneath (Workers, Node, Bun, Deno) is _the runtime_; the adapter is what bridges to it.
+_Avoid_: platform adapter, driver
+
+**Runtime handler**:
+The platform-neutral object a runtime adapter produces — a `fetch`, optionally a `scheduled` and a `dispose`. See the disambiguation note — distinct from a route handler and a hook handler.
+
+**Invocation**:
+What a runtime adapter hands core for one call into the runtime handler: the `env`, an optional `waitUntil`, an optional client address.
+
+**Config slot**:
+A named key of the `plumix()` call in `plumix.config.ts`. Slots are siblings rather than a bundle, though one may still require another's platform: a slot naming a Cloudflare binding needs the Cloudflare runtime beside it. See the disambiguation note — distinct from a descriptor slot, a slot input and a template slot.
 
 **Client address**:
 The network address a request came from, as the runtime's trusted proxy reported it and the runtime adapter handed core. Advisory: it describes the network path, never the principal, so no access decision reads it.
@@ -318,11 +331,22 @@ them distinct by **always qualifying** them; bare use is a smell.
   for the membership label.
 - **template** — the **theme render unit** (this glossary) vs the stored
   **page-template** choice an entry can pick vs the **project template** in the
-  scaffolder. Qualify when both are in play.
+  scaffolder. Qualify when more than one is in play.
 - **read-through** — the **edge cache** sense (a stored response, keyed by the
   request and purged by tag) vs the **rendered asset** sense (bytes behind a
-  content-addressed storage key, which nothing purges). Qualify when both are
-  in play.
+  content-addressed storage key, which nothing purges). Qualify when more
+  than one is in play.
+- **slot** — the **config slot** (this glossary) vs a **descriptor slot** (a
+  named key on a plugin or theme descriptor, such as `i18n` or `templates`) vs
+  a **slot input** (the block input holding child nodes) vs the **template
+  slot** a theme's generic tier is made of. Qualify when more than one is in
+  play.
+- **runtime** — the **engine** (Workers, Node, Bun, Deno) vs the **config slot**
+  named `runtime`, which holds a runtime adapter vs the `@plumix/runtime-*`
+  **package** shipping one. Qualify when more than one is in play.
+- **handler** — the **runtime handler** (this glossary) vs a **route handler**
+  (what answers one registered path) vs a **hook handler** (a filter or action
+  listener). Qualify when more than one is in play.
 - **entry vs post** — the canonical noun is **entry**. "post" is a specific
   entry type only; storage defaults and permalink helpers still say "post" but
   that is drift, not the domain word.
