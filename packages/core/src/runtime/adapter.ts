@@ -12,8 +12,9 @@ export interface Invocation {
   readonly env: PlumixEnv;
   /**
    * Keep the runtime alive until the promise settles. Deferred work (telemetry
-   * delivery, cache purges) routes through it when supplied; without it the
-   * work is fire-and-forget.
+   * delivery, cache purges) routes through it when supplied; an adapter that
+   * omits it owes its platform a {@link PlumixHandler.dispose} call at
+   * shutdown instead.
    */
   readonly waitUntil?: (promise: Promise<unknown>) => void;
   /**
@@ -48,6 +49,10 @@ export interface PlumixHandler {
    * on `SIGTERM` so telemetry delivery and cache purges finish instead of
    * dying with the process; a runtime whose invocations carry `waitUntil` has
    * nothing to drain and resolves at once.
+   *
+   * Bounded, and the bound is absolute: work still unsettled after
+   * `disposeTimeoutMs` (five seconds by default) is abandoned rather than
+   * held onto, so a stuck task cannot keep a shutdown open.
    */
   readonly dispose?: () => Promise<void>;
 }

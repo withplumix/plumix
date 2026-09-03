@@ -107,9 +107,9 @@ describe("AppContext.defer", () => {
   });
 
   test("default fallback swallows rejections so plugin code never throws on `defer`", async () => {
-    // Long-lived runtimes default to fire-and-forget. The promise
-    // hasn't been intercepted by waitUntil; we still don't want the
-    // process to crash on unhandled rejection.
+    // No `defer` wired at all — a harness, a narrow unit test. Nothing
+    // intercepts the promise, so the fallback has to log it rather than
+    // let the process crash on an unhandled rejection.
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
       // swallow — assertion checks the captured calls.
     });

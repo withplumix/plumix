@@ -58,7 +58,8 @@ export function createPlumixHandler(
     bindingsValidated = true;
   };
 
-  // Fire-and-forget work no invocation could hand to a `waitUntil`.
+  // Deferred work no invocation could hand to a `waitUntil`; `dispose()`
+  // drains this on shutdown.
   const pending = new Set<Promise<unknown>>();
   const track: DeferFn = (promise) => {
     pending.add(promise);
