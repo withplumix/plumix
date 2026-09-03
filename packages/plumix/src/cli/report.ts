@@ -1,6 +1,6 @@
 import { styleText } from "node:util";
 
-import { isCliError } from "@plumix/core";
+import { isCliError } from "@plumix/core/cli";
 
 const useColor = shouldUseColor();
 

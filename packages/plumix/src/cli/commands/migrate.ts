@@ -10,7 +10,7 @@ import {
   generateSchemaSource,
   planRawSqlMigrations,
   spawnCapturingStderr,
-} from "@plumix/core";
+} from "@plumix/core/cli";
 
 import { report } from "../report.js";
 

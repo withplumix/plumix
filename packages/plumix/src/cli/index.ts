@@ -9,7 +9,7 @@ import type {
   PlumixConfig,
   RuntimeAdapter,
 } from "@plumix/core";
-import { buildApp, CliError } from "@plumix/core";
+import { CliError } from "@plumix/core/cli";
 
 import type { CommandGroup } from "./help.js";
 import type { LoadedConfig } from "./load-config.js";
@@ -175,6 +175,11 @@ export async function resolveCommandApp(
       CliError.deferredCommandNoApp({ command: commandName }),
     );
   }
+  // Deferred so the commands that never build an app — `dev` opts out via
+  // `deferApp`, and `--version`/`--help`/`i18n` return before this — do not
+  // pay for core's root barrel: ~500ms to evaluate, against 4ms for the `cli`
+  // subpath above.
+  const { buildApp } = await import("@plumix/core");
   return buildApp(config);
 }
 

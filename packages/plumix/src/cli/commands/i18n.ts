@@ -15,7 +15,7 @@ import type {
   CommandDefinition,
   JsonObject,
 } from "@plumix/core";
-import { CliError, spawnInherit } from "@plumix/core";
+import { CliError, spawnInherit } from "@plumix/core/cli";
 
 import { report } from "../report.js";
 
