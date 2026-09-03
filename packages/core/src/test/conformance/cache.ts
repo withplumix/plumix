@@ -56,6 +56,38 @@ export const cacheContractCases: readonly Case[] = [
     },
   },
   {
+    name: "a non-GET request is not stored",
+    run: async (options) => {
+      const cache = await options.connect();
+      const path = "/submit";
+      await cache.put(
+        new Request(`${ORIGIN}${path}`, { method: "POST" }),
+        new Response("rendered"),
+        [],
+      );
+      // Probed with a GET rather than the POST itself: what a store does with
+      // a non-GET `match` is its own business, and asking it here would make
+      // the case pass or fail on that instead of on what was written.
+      expect(await storedBody(cache, pageRequest(path))).toBeUndefined();
+    },
+  },
+  {
+    name: "a stored response does not carry the response's Set-Cookie",
+    run: async (options) => {
+      const cache = await options.connect();
+      const request = pageRequest("/with-cookie");
+      const response = new Response("rendered", {
+        headers: { "set-cookie": "plumix_session=secret" },
+      });
+      await cache.put(request, response, []);
+      const hit = await cache.match(request);
+      // `?? null` so declining to store the response at all counts: it is the
+      // stricter answer to the same rule, and core's route read-through makes
+      // exactly that call before it ever reaches a provider.
+      expect(hit?.headers.get("set-cookie") ?? null).toBeNull();
+    },
+  },
+  {
     name: "purging a tag drops every response carrying it",
     run: async (options) => {
       const cache = await options.connect();
@@ -96,10 +128,6 @@ export const cacheContractCases: readonly Case[] = [
 /**
  * Assert an implementation of the `cache:` slot satisfies its port. Call it at
  * the top level of a test file with a factory that binds a fresh cache.
- *
- * GET only: core stores a GET/200 and nothing else, so what a slot does with
- * any other method is left to the slot. Cloudflare's drops it, because the
- * Workers Cache API refuses it.
  */
 export function describeCacheContract(options: CacheContractOptions): void {
   describeContract("cache contract", cacheContractCases, options);

@@ -7,6 +7,7 @@ import { failingCases } from "./case.js";
 interface CachedEntry {
   readonly body: string;
   readonly status: number;
+  readonly headers: Headers;
   readonly tags: readonly string[];
 }
 
@@ -21,13 +22,22 @@ function mapCache(
     match: (request) => {
       const entry = entries.get(request.url);
       return Promise.resolve(
-        entry ? new Response(entry.body, { status: entry.status }) : undefined,
+        entry
+          ? new Response(entry.body, {
+              status: entry.status,
+              headers: entry.headers,
+            })
+          : undefined,
       );
     },
     put: async (request, response, tags) => {
+      if (request.method !== "GET") return;
+      const headers = new Headers(response.headers);
+      headers.delete("set-cookie");
       entries.set(request.url, {
         body: await response.text(),
         status: response.status,
+        headers,
         tags: [...tags],
       });
     },
@@ -49,7 +59,50 @@ function byTag(
 
 describeCacheContract({ connect: () => mapCache(byTag) });
 
+/** A cache that stores whatever it is handed, cookie and method included. */
+function leakyCache(): ConnectedCache {
+  const entries = new Map<string, CachedEntry>();
+  return {
+    match: (request) => {
+      const entry = entries.get(request.url);
+      return Promise.resolve(
+        entry
+          ? new Response(entry.body, {
+              status: entry.status,
+              headers: entry.headers,
+            })
+          : undefined,
+      );
+    },
+    put: async (request, response, tags) => {
+      entries.set(request.url, {
+        body: await response.text(),
+        status: response.status,
+        headers: new Headers(response.headers),
+        tags: [...tags],
+      });
+    },
+    purgeTags: () => Promise.resolve(),
+  };
+}
+
 describe("cache contract cases", () => {
+  test("fail a cache that stores a non-GET request", async () => {
+    const failed = await failingCases(cacheContractCases, {
+      connect: leakyCache,
+    });
+    expect(failed).toContain("a non-GET request is not stored");
+  });
+
+  test("fail a cache that hands back the response's Set-Cookie", async () => {
+    const failed = await failingCases(cacheContractCases, {
+      connect: leakyCache,
+    });
+    expect(failed).toContain(
+      "a stored response does not carry the response's Set-Cookie",
+    );
+  });
+
   test("fail a cache whose purge does nothing", async () => {
     const failed = await failingCases(cacheContractCases, {
       connect: () => mapCache(() => undefined),
