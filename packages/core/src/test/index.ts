@@ -66,7 +66,7 @@ export type {
 } from "./rpc.js";
 
 export { buildRequest, TestResponse } from "./request.js";
-export type { FetchOptions } from "./request.js";
+export type { FetchOptions, HarnessFetchOptions } from "./request.js";
 
 export { spyAction, spyFilter, expectError } from "./spies.js";
 export type { ActionSpy, ActionCall, FilterSpy, FilterCall } from "./spies.js";

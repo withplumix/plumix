@@ -7,9 +7,11 @@ function submit(
   harness: Harness,
   entryId: number,
   body: Record<string, unknown> = {},
+  clientAddress?: string,
 ) {
   return harness.fetch("/_plumix/comments/submit", {
     method: "POST",
+    clientAddress,
     json: {
       entryId,
       name: "Ada",
@@ -19,6 +21,9 @@ function submit(
     },
   });
 }
+
+const FLOODER = "203.0.113.7";
+const BYSTANDER = "198.51.100.9";
 
 describe("POST /_plumix/comments/submit", () => {
   test("auto-approves under mode 'none' and persists the comment", async () => {
@@ -78,7 +83,7 @@ describe("POST /_plumix/comments/submit", () => {
     res.assertStatus(400);
   });
 
-  test("rate-limits a flood from one source", async () => {
+  test("rate-limits a flood from one address", async () => {
     const harness = await harnessWith({
       entryTypes: ["post"],
       mode: "none",
@@ -86,12 +91,30 @@ describe("POST /_plumix/comments/submit", () => {
     });
     const entry = await seedPost(harness);
 
-    await submit(harness, entry.id);
-    await submit(harness, entry.id);
-    const third = await submit(harness, entry.id);
+    await submit(harness, entry.id, {}, FLOODER);
+    await submit(harness, entry.id, {}, FLOODER);
+    const third = await submit(harness, entry.id, {}, FLOODER);
 
     third.assertStatus(429);
     expect(await rows(harness)).toHaveLength(2);
+  });
+
+  test("one address's flood does not refuse another address", async () => {
+    const harness = await harnessWith({
+      entryTypes: ["post"],
+      mode: "none",
+      rateLimit: { max: 2, windowMin: 10 },
+    });
+    const entry = await seedPost(harness);
+
+    await submit(harness, entry.id, {}, FLOODER);
+    await submit(harness, entry.id, {}, FLOODER);
+    (await submit(harness, entry.id, {}, FLOODER)).assertStatus(429);
+
+    const bystander = await submit(harness, entry.id, {}, BYSTANDER);
+
+    bystander.assertStatus(200);
+    expect(await rows(harness)).toHaveLength(3);
   });
 
   test("a comment:moderate filter can demote to spam", async () => {
@@ -115,13 +138,10 @@ describe("POST /_plumix/comments/submit", () => {
   });
 
   test("stores a salted ip hash, never the cleartext ip", async () => {
-    const harness = await harnessWith(
-      { entryTypes: ["post"], mode: "none" },
-      { clientAddress: "203.0.113.7" },
-    );
+    const harness = await harnessWith({ entryTypes: ["post"], mode: "none" });
     const entry = await seedPost(harness);
 
-    await submit(harness, entry.id);
+    await submit(harness, entry.id, {}, "203.0.113.7");
 
     const stored = await rows(harness);
     expect(stored[0]?.ipHash).toMatch(/^[0-9a-f]{64}$/);

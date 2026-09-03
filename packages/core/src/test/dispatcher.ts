@@ -38,7 +38,7 @@ import type {
 } from "../runtime/slots.js";
 import type { ThemeDescriptor } from "../theme.js";
 import type { Factories } from "./factories.js";
-import type { FetchOptions } from "./request.js";
+import type { HarnessFetchOptions } from "./request.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
 import { auth } from "../auth/config.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
@@ -81,7 +81,9 @@ export interface CreateDispatcherHarnessOptions {
    * The client address the runtime reports, as a real adapter hands core
    * through `invocation.clientAddress`. Set it in tests of session metadata or
    * visitor-meta hashing; leaving it unset is the runtime that could resolve
-   * none, whatever forwarding header the request carries.
+   * none, whatever forwarding header the request carries. A test with two
+   * visitors to tell apart overrides it per request — see
+   * {@link HarnessFetchOptions.clientAddress}.
    */
   readonly clientAddress?: string;
   /**
@@ -205,6 +207,8 @@ export interface DispatcherHarness {
   readonly dispatch: (
     request: Request,
     user?: User | null,
+    /** See {@link HarnessFetchOptions.clientAddress}; wins over the harness's own. */
+    clientAddress?: string,
   ) => Promise<Response>;
   /**
    * Build and dispatch a request in one call. Returns a TestResponse with
@@ -213,7 +217,7 @@ export interface DispatcherHarness {
    */
   readonly fetch: (
     path: string,
-    options?: FetchOptions,
+    options?: HarnessFetchOptions,
   ) => Promise<TestResponse>;
   readonly authenticateRequest: (
     request: Request,
@@ -254,15 +258,19 @@ function createContextFactory(args: {
   readonly db: TestDb;
   readonly env: PlumixEnv;
   readonly defer: DeferFn;
-}): (request: Request, user: User | null) => AppContext {
+}): (
+  request: Request,
+  user: User | null,
+  clientAddress?: string,
+) => AppContext {
   const { app, options, db, env, defer } = args;
-  return (request, user) =>
+  return (request, user, clientAddress) =>
     createAppContext({
       defer,
       db,
       env,
       request,
-      clientAddress: options.clientAddress,
+      clientAddress: clientAddress ?? options.clientAddress,
       hooks: app.hooks,
       plugins: app.plugins,
       appContextExtensions: app.appContextExtensions,
@@ -339,8 +347,8 @@ export async function createDispatcherHarness(
     db,
     app,
     env,
-    dispatch: async (request, user = null) => {
-      const ctx = withRequest(request, user);
+    dispatch: async (request, user = null, clientAddress) => {
+      const ctx = withRequest(request, user, clientAddress);
       // Mirror the runtime adapter, which runs dispatch inside the request
       // store so `tryGetContext()`-based features (DB logging, debug spans,
       // audit-log) see the context.
@@ -348,7 +356,11 @@ export async function createDispatcherHarness(
     },
     fetch: async (path, fetchOptions = {}) => {
       const request = await buildRequest(db, path, fetchOptions);
-      const ctx = withRequest(request, fetchOptions.as ?? null);
+      const ctx = withRequest(
+        request,
+        fetchOptions.as ?? null,
+        fetchOptions.clientAddress,
+      );
       const response = await requestStore.run(ctx, () => dispatcher(ctx));
       return new TestResponse(response);
     },
