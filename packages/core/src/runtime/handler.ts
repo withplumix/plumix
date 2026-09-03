@@ -4,6 +4,11 @@ import type { PlumixApp } from "./app.js";
 import type { PlumixEnv } from "./bindings.js";
 import type {
   AssetsBinding,
+  ConnectedCache,
+  ConnectedKv,
+  ConnectedObjectStorage,
+  DatabaseAdapter,
+  ImageDelivery,
   RequestScopedDb,
   RequestScopedDbArgs,
 } from "./slots.js";
@@ -36,7 +41,8 @@ export function createPlumixHandler(
 ): PlumixHandler {
   const dispatcher = createPlumixDispatcher(app);
   // Once per handler, not per request: an env is fixed for the handler's
-  // lifetime on every runtime this factory serves, so the first verdict holds.
+  // lifetime on every runtime this factory serves, so the first verdict — and
+  // the first bind below — holds.
   let bindingsValidated = false;
   const validateOnce = (env: PlumixEnv): void => {
     if (bindingsValidated) return;
@@ -44,23 +50,43 @@ export function createPlumixHandler(
     bindingsValidated = true;
   };
 
+  let slots: BoundSlots | undefined;
+  const bindOnce = (env: PlumixEnv): BoundSlots =>
+    (slots ??= bindSlots(app, env));
+
+  // Kept out of `bindSlots` because binding it eagerly would build a client
+  // for an adapter whose `connectRequest` answers every request.
+  let boundDb: ReturnType<DatabaseAdapter["connect"]> | undefined;
+  // `connectRequest` is the only per-request database seam; `connect` binds
+  // once and is reused when there is no hook or the hook declines.
+  const connectDatabase = (
+    args: Omit<RequestScopedDbArgs, "schema">,
+  ): RequestScopedDb => {
+    const { database } = app.config;
+    const scoped = database.connectRequest?.({ ...args, schema: app.schema });
+    if (scoped) return scoped;
+    boundDb ??= database.connect(args.env, args.request, app.schema);
+    return { db: boundDb.db, commit: (response) => response };
+  };
+
   return {
     fetch: async (request, invocation) => {
       try {
         validateOnce(invocation.env);
-        const scoped = connectDatabase(app, {
+        const scoped = connectDatabase({
           env: invocation.env,
           request,
           isAuthenticated: readSessionCookie(request) !== null,
           isWrite: !isSafeMethod(request.method),
         });
-        const ctx = buildAppContext(
+        const ctx = buildAppContext({
           app,
           options,
           invocation,
           request,
-          scoped.db,
-        );
+          db: scoped.db,
+          slots: bindOnce(invocation.env),
+        });
         const response = await requestStore.run(ctx, () => dispatcher(ctx));
         return scoped.commit(response);
       } catch (error) {
@@ -71,16 +97,23 @@ export function createPlumixHandler(
     scheduled: async (event, invocation) => {
       validateOnce(invocation.env);
       const request = syntheticScheduledRequest(app, invocation.env, event);
-      // A scheduled run always writes (purges mutate state), so deploys that
-      // route writes to a primary do so for scheduled work too.
-      const scoped = connectDatabase(app, {
-        env: invocation.env,
-        request,
-        isAuthenticated: false,
-        isWrite: true,
-      });
-      const ctx = buildAppContext(app, options, invocation, request, scoped.db);
       try {
+        // A scheduled run always writes (purges mutate state), so deploys that
+        // route writes to a primary do so for scheduled work too.
+        const scoped = connectDatabase({
+          env: invocation.env,
+          request,
+          isAuthenticated: false,
+          isWrite: true,
+        });
+        const ctx = buildAppContext({
+          app,
+          options,
+          invocation,
+          request,
+          db: scoped.db,
+          slots: bindOnce(invocation.env),
+        });
         await requestStore.run(ctx, () =>
           runScheduledTasks(app, ctx, event.cron),
         );
@@ -107,30 +140,43 @@ function syntheticScheduledRequest(
   );
 }
 
-function connectDatabase(
-  app: PlumixApp,
-  args: Omit<RequestScopedDbArgs, "schema">,
-): RequestScopedDb {
-  const { database } = app.config;
-  const scoped = database.connectRequest?.({ ...args, schema: app.schema });
-  if (scoped) return scoped;
+/** The env-derived slots, bound once for the handler's life. */
+interface BoundSlots {
+  readonly storage: ConnectedObjectStorage | undefined;
+  readonly cache: ConnectedCache | undefined;
+  readonly kv: ConnectedKv | undefined;
+  readonly imageDelivery: ImageDelivery | undefined;
+}
+
+function bindSlots(app: PlumixApp, env: PlumixEnv): BoundSlots {
   return {
-    db: database.connect(args.env, args.request, app.schema).db,
-    commit: (response) => response,
+    storage: app.config.storage?.connect(env),
+    // `cache` connects to null when the deploy cannot purge; null → undefined
+    // turns caching off and pages render live.
+    cache: app.config.cache?.connect(env) ?? undefined,
+    kv: app.config.kv?.connect(env),
+    imageDelivery: connectImageDelivery(app, env),
   };
 }
 
-function buildAppContext(
-  app: PlumixApp,
-  options: PlumixHandlerOptions,
-  invocation: Invocation,
-  request: Request,
-  db: unknown,
-): AppContext {
+interface AppContextArgs {
+  readonly app: PlumixApp;
+  readonly options: PlumixHandlerOptions;
+  readonly invocation: Invocation;
+  readonly request: Request;
+  readonly db: unknown;
+  readonly slots: BoundSlots;
+}
+
+function buildAppContext({
+  app,
+  options,
+  invocation,
+  request,
+  db,
+  slots,
+}: AppContextArgs): AppContext {
   const { env, waitUntil } = invocation;
-  // `cache` connects to null when the deploy cannot purge; null → undefined
-  // turns caching off and pages render live.
-  const cache = app.config.cache?.connect(env) ?? undefined;
   return createAppContext({
     db: db as Db,
     env,
@@ -142,10 +188,10 @@ function buildAppContext(
     shortcodes: app.shortcodes,
     defer: waitUntil,
     assets: options.assets?.(env),
-    storage: app.config.storage?.connect(env),
-    cache,
-    kv: app.config.kv?.connect(env),
-    imageDelivery: connectImageDelivery(app, env),
+    storage: slots.storage,
+    cache: slots.cache,
+    kv: slots.kv,
+    imageDelivery: slots.imageDelivery,
     imageRemotePatterns: app.config.images?.remotePatterns,
     debugBar: app.config.debugBar,
     telemetry: app.config.telemetry,

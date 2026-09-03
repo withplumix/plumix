@@ -18,8 +18,10 @@ import type { PlumixEnv } from "./bindings.js";
 export type EnvInput<T> = T | ((env: PlumixEnv) => T);
 
 // Memoize by resolver identity so a value that owns a connection (an SMTP
-// transport, a pooled client) is built once per isolate, not per request —
-// `env` is isolate-stable, the lazy-once contract `libsql()`'s client uses.
+// transport, a pooled client) is built once per isolate, not per request.
+// `env` is isolate-stable, so the first resolution holds — and this memo is
+// the only thing keeping a resolver at one call, since the slots themselves
+// are bound once by the handler rather than memoising internally.
 const cache = new WeakMap<object, unknown>();
 
 export function resolveEnvInput<T>(input: EnvInput<T>, env: PlumixEnv): T {

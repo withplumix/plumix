@@ -6,7 +6,6 @@ import type {
   ListResult,
   ObjectBody,
   ObjectStorage,
-  PlumixEnv,
   PresignedPutResult,
   PresignPutOptions,
   PutOptions,
@@ -232,10 +231,7 @@ export function r2(config: R2Config): R2ObjectStorage {
       // slot stays `undefined` when neither an explicit `s3` block nor a
       // complete set of conventional env keys is present.
       if (s3) {
-        // `connect`'s env is loosely typed (`unknown`); a resolver authored
-        // against `EnvInput` expects the typed `PlumixEnv`. The runtime value
-        // is that env — bridge it here, at the one loose boundary.
-        const resolvedS3 = resolveEnvInput(s3, env as PlumixEnv);
+        const resolvedS3 = resolveEnvInput(s3, env);
         connected.presignPut = async (
           key: string,
           opts: PresignPutOptions,

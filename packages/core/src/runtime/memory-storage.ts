@@ -1,3 +1,4 @@
+import type { PlumixEnv } from "./bindings.js";
 import type {
   ConnectedObjectStorage,
   GetResult,
@@ -25,7 +26,14 @@ export interface MemoryStorageConfig {
   readonly seed?: Readonly<Record<string, Uint8Array>>;
 }
 
-export function memoryStorage(config: MemoryStorageConfig = {}): ObjectStorage {
+/** Binds against nothing, so the env is optional, as with `memoryKv()`. */
+export interface MemoryObjectStorage extends ObjectStorage {
+  connect(env?: PlumixEnv): ConnectedObjectStorage;
+}
+
+export function memoryStorage(
+  config: MemoryStorageConfig = {},
+): MemoryObjectStorage {
   const store = new Map<string, MemoryEntry>();
   const publicUrlBase = config.publicUrlBase ?? "/_plumix/memory-storage/";
 

@@ -1,3 +1,5 @@
+import type { PlumixEnv } from "./bindings.js";
+
 /**
  * A drizzle schema module as the consumer imports it — the namespace object
  * holding every table declaration. Not JSON: the values are drizzle table
@@ -6,7 +8,7 @@
 export type SchemaModule = Record<string, unknown>;
 
 export interface RequestScopedDbArgs {
-  readonly env: unknown;
+  readonly env: PlumixEnv;
   readonly request: Request;
   readonly schema: SchemaModule;
   /**
@@ -33,18 +35,25 @@ export interface RequestScopedDb {
 
 export interface DatabaseAdapter<TSchema = Record<string, unknown>> {
   readonly kind: string;
+  /**
+   * Bind the database. Called once per handler against the first invocation's
+   * `env`, so an adapter that owns a connection pipeline does not need a memo
+   * of its own. `request` is the request that triggered the bind, not a
+   * per-request input — use {@link DatabaseAdapter.connectRequest} for that.
+   */
   connect(
-    env: unknown,
+    env: PlumixEnv,
     request: Request,
     schema: TSchema,
   ): {
     db: unknown;
   };
   /**
-   * Optional per-request database hook. When present, runtime adapters
-   * prefer this over `connect`: the returned `db` becomes `ctx.db` for the
+   * Optional per-request database hook, and the only per-request seam a slot
+   * gets: `connect` is called once per handler. When present, the handler
+   * prefers this over `connect`: the returned `db` becomes `ctx.db` for the
    * request, and `commit` runs on the response path. Returning `null` means
-   * "fall through to `connect` for this request" — useful when the adapter
+   * "fall through to the once-bound `connect`" — useful when the adapter
    * is configured but the feature (e.g. Sessions API) is disabled.
    *
    * Declared as a property (not a method) so that `this`-less bare
@@ -178,7 +187,8 @@ export interface ConnectedObjectStorage {
 export interface ObjectStorage {
   readonly kind: string;
   readonly requiredBindings?: readonly string[];
-  connect(env: unknown): ConnectedObjectStorage;
+  /** Bound once per handler — see {@link KV.connect}. */
+  connect(env: PlumixEnv): ConnectedObjectStorage;
 }
 
 export interface KvPutOptions {
@@ -216,15 +226,20 @@ export interface ConnectedKv {
 }
 
 /**
- * Key/value slot. `connect(env)` binds the store for a request. Providers
- * include `kv({ binding })` from `@plumix/runtime-cloudflare` (a Workers KV
- * namespace) and `memoryKv()` (in-memory, for dev and tests); any backend —
- * e.g. a Node runtime over Redis — implements this same port.
+ * Key/value slot. Providers include `kv({ binding })` from
+ * `@plumix/runtime-cloudflare` (a Workers KV namespace) and `memoryKv()`
+ * (in-memory, for dev and tests); any backend — e.g. a Node runtime over
+ * Redis — implements this same port.
  */
 export interface KV {
   readonly kind: string;
   readonly requiredBindings?: readonly string[];
-  connect(env: unknown): ConnectedKv;
+  /**
+   * Bind the store. Called once per handler against the first invocation's
+   * `env`, which is fixed for the handler's life, so an implementation that
+   * builds a client does not need to memoise it by hand.
+   */
+  connect(env: PlumixEnv): ConnectedKv;
 }
 
 /**
@@ -245,14 +260,16 @@ export interface ConnectedCache {
 }
 
 /**
- * Edge-cache slot. `connect(env)` returns a {@link ConnectedCache} when the
+ * Edge-cache slot. `connect` returns a {@link ConnectedCache} when the
  * runtime has everything it needs to cache safely, or `null` to disable
  * caching for this deploy (e.g. a Cloudflare deploy with no zone credentials,
- * where pages must render live). Mirrors the `storage:` slot's connect shape.
+ * where pages must render live) — a verdict that holds for the handler's life.
+ * Mirrors the `storage:` slot's connect shape.
  */
 export interface CacheProvider {
   readonly kind: string;
-  connect(env: unknown): ConnectedCache | null;
+  /** Bound once per handler — see {@link KV.connect}. */
+  connect(env: PlumixEnv): ConnectedCache | null;
 }
 
 export interface TransformOpts {
@@ -270,15 +287,15 @@ export interface TransformOpts {
  * a source URL (already publicly reachable, typically through the bucket's
  * custom domain) plus `TransformOpts` and return the transformed URL.
  *
- * Optional `connect(env)`: an implementation whose config lives in the request
- * env (e.g. a zone from a Worker secret) binds against it, returning `undefined`
- * for "no delivery" so downstream presence checks stay meaningful. The
- * dispatcher uses the bare object when `connect` is absent.
+ * Optional `connect(env)`: an implementation whose config lives in the runtime
+ * env (e.g. a zone from a Worker secret) binds against it once per handler,
+ * returning `undefined` for "no delivery" so downstream presence checks stay
+ * meaningful. The handler uses the bare object when `connect` is absent.
  */
 export interface ImageDelivery {
   readonly kind: string;
   url(sourceUrl: string, opts?: TransformOpts): string;
-  connect?(env: unknown): ImageDelivery | undefined;
+  connect?(env: PlumixEnv): ImageDelivery | undefined;
 }
 
 /**
