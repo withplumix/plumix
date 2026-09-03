@@ -44,12 +44,12 @@ function itemsOf(page: string): readonly string[] {
 }
 
 describe("the roster inventory", () => {
-  // The IA spec settles the site at twenty rosters. Pinning the count is what
-  // stops a twenty-first arriving without anyone deciding how it binds to its
-  // source — the page-side half comes free with registration, so an unbound
+  // The IA spec settles the site at twenty-one rosters. Pinning the count is
+  // what stops a twenty-second arriving without anyone deciding how it binds to
+  // its source — the page-side half comes free with registration, so an unbound
   // roster looks guarded until it drifts.
   it("covers every roster the site promises", () => {
-    expect(ROSTERS).toHaveLength(20);
+    expect(ROSTERS).toHaveLength(21);
   });
 
   // And the tally stops a roster losing the binding it already had. Deleting
@@ -71,9 +71,9 @@ describe("the roster inventory", () => {
   });
 
   // `checkRosterDrift` compares against a Set, so a roster holding one item
-  // twice is satisfied by a single heading. Four rosters are assembled from
-  // more than one source, and two of those prefix their items precisely to
-  // keep a shared name apart — this is what holds that reasoning.
+  // twice is satisfied by a single heading. Five rosters are assembled from
+  // more than one source, and three of those qualify their items rather than
+  // spelling them bare — this is what holds that reasoning.
   it("holds each item once, so no composed roster collides with itself", () => {
     for (const roster of ROSTERS) {
       expect([...new Set(roster.items)]).toEqual(roster.items);
