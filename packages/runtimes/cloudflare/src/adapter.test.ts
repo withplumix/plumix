@@ -133,7 +133,7 @@ describe("cloudflare adapter — createHandler().fetch", () => {
     expect(body).toMatchObject({ error: "internal_error" });
   });
 
-  test("tolerates an invocation without waitUntil (defer falls back to a no-op)", async () => {
+  test("serves a request whose invocation carries no waitUntil", async () => {
     const response = await invoke(
       new Request("https://cms.example/unknown"),
       {},
@@ -196,6 +196,21 @@ describe("cloudflare adapter — createHandler().fetch", () => {
 
     expect(received?.env).toBe(env);
     expect(received?.requestUrl).toBe("https://cms.example/unknown");
+  });
+
+  // Every invocation the Worker entry builds carries `waitUntil`, so the drain
+  // set is always empty here; the adapter still has to pass `dispose` through.
+  test("exposes dispose(), and it resolves at once", async () => {
+    const handler = cloudflare().createHandler(await createApp());
+
+    const outcome = await Promise.race([
+      handler.dispose?.().then(() => "disposed" as const),
+      new Promise<"waiting">((resolve) =>
+        setTimeout(() => resolve("waiting"), 50),
+      ),
+    ]);
+
+    expect(outcome).toBe("disposed");
   });
 
   test("each request receives its own context (no cross-request leakage)", async () => {

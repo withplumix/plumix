@@ -1,6 +1,7 @@
 // Test harness for `AppContext.defer`. Production runtimes route
 // fire-and-forget work through their platform primitive (CF Workers'
-// `waitUntil`, Node's event loop). Tests need a deterministic queue
+// `waitUntil`) or, without one, the handler's own pending set that
+// `dispose()` drains. Tests need a deterministic queue
 // they can flush + await before asserting on side effects, so this
 // helper builds a `defer` implementation backed by an array plus a
 // `drainDeferred()` that waits for everything queued so far.

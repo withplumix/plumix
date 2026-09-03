@@ -122,12 +122,15 @@ export interface AuthNamespace {
  * - Cloudflare Workers: `executionCtx.waitUntil(promise)` — extends
  *   the worker's lifetime past the response so background work
  *   completes before the isolate is recycled.
- * - Long-lived runtimes (Node, Bun): the default `void p.catch(...)`
- *   shim in `createAppContext` — the event loop holds the promise;
- *   rejections are caught and logged so an unhandled rejection
- *   doesn't crash the process.
+ * - Long-lived runtimes (Node, Bun): the invocation carries no
+ *   `waitUntil`, so the default handler tracks the promise in a pending
+ *   set that `handler.dispose()` drains on shutdown — the work outlives
+ *   the response without being lost at `SIGTERM`.
  * - Test runtimes: a queue + `drainDeferred()` helper for harness
  *   assertions on background work.
+ * - A context built with no `defer` at all (a harness, a narrow unit
+ *   test): `void p.catch(...)`, so the event loop holds the promise and
+ *   a rejection is logged rather than crashing the process.
  *
  * `defer` itself never throws — pass any promise, log-and-forget is
  * the contract. Rejection logging always routes through `ctx.logger`
