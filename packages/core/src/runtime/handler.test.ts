@@ -1,7 +1,9 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
+import type { AppContext } from "../context/app.js";
 import type { TelemetrySnapshot } from "../context/telemetry.js";
-import type { Invocation } from "./adapter.js";
+import type { Invocation, PlumixHandler } from "./adapter.js";
+import type { PlumixHandlerOptions } from "./handler.js";
 import type { DatabaseAdapter } from "./slots.js";
 import { auth } from "../auth/config.js";
 import { plumix } from "../config.js";
@@ -29,6 +31,7 @@ const runtime = {
 
 async function handlerFor(
   overrides: Partial<Parameters<typeof plumix>[0]> = {},
+  options: PlumixHandlerOptions = {},
 ) {
   const app = await buildApp(
     plumix({
@@ -39,7 +42,7 @@ async function handlerFor(
       ...overrides,
     }),
   );
-  return createPlumixHandler(app);
+  return createPlumixHandler(app, options);
 }
 
 const request = () => new Request("https://cms.example/unknown");
@@ -59,6 +62,38 @@ async function whoami(
   const handler = await handlerFor({ plugins: [echoClientAddress] });
   return (await handler.fetch(request, invocation)).text();
 }
+
+/** A route that defers whatever promise the test hands it. */
+const deferring = (work: (appCtx: AppContext) => Promise<unknown>) =>
+  definePlugin("deferring", (ctx) => {
+    ctx.registerPublicRoute({
+      path: "/defer",
+      handler: (_request, appCtx) => {
+        appCtx.defer(work(appCtx));
+        return new Response("deferred");
+      },
+    });
+  });
+
+/** A promise the test settles by hand, so drain timing is deterministic. */
+function manualPromise() {
+  let resolve!: (value: void) => void;
+  const promise = new Promise<void>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+const after = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** Whether `dispose()` finished draining inside `ms`. */
+const drainedWithin = (handler: PlumixHandler, ms = 50) =>
+  Promise.race([
+    handler.dispose?.().then(() => true),
+    after(ms).then(() => false),
+  ]);
+
+const deferRequest = () => new Request("https://cms.example/defer");
 
 describe("createPlumixHandler — fetch", () => {
   test("routes a request through the dispatcher with a bare invocation", async () => {
@@ -313,5 +348,116 @@ describe("createPlumixHandler — slot binding", () => {
     await handler.fetch(request(), { env: {} });
     await handler.fetch(request(), { env: {} });
     expect(connects).toBe(1);
+  });
+});
+
+describe("createPlumixHandler — deferred work", () => {
+  test("without waitUntil, dispose() resolves only after deferred work settles", async () => {
+    const gate = manualPromise();
+    const handler = await handlerFor({
+      plugins: [deferring(() => gate.promise)],
+    });
+    await handler.fetch(deferRequest(), { env: {} });
+
+    expect(await drainedWithin(handler)).toBe(false);
+    gate.resolve();
+    expect(await drainedWithin(handler)).toBe(true);
+  });
+
+  test("with waitUntil, the promise rides it and dispose() has nothing to wait for", async () => {
+    const gate = manualPromise();
+    const handler = await handlerFor({
+      plugins: [deferring(() => gate.promise)],
+    });
+    const waited: Promise<unknown>[] = [];
+    await handler.fetch(deferRequest(), {
+      env: {},
+      waitUntil: (promise) => void waited.push(promise),
+    });
+
+    expect(waited).toHaveLength(1);
+    // The gate never settles: a tracked promise would hold dispose() open.
+    expect(await drainedWithin(handler)).toBe(true);
+  });
+
+  test("dispose() follows work that deferred work defers in turn", async () => {
+    const ran: string[] = [];
+    const outer = manualPromise();
+    const handler = await handlerFor({
+      plugins: [
+        deferring((appCtx) =>
+          outer.promise.then(() => {
+            ran.push("outer");
+            // The nested task takes a timer to settle, so a drain that only
+            // awaits its opening snapshot returns with it still unfinished.
+            appCtx.defer(after(20).then(() => void ran.push("inner")));
+          }),
+        ),
+      ],
+    });
+    await handler.fetch(deferRequest(), { env: {} });
+
+    const drain = handler.dispose?.();
+    outer.resolve();
+    await drain;
+
+    expect(ran).toEqual(["outer", "inner"]);
+  });
+
+  test("dispose() gives up at its timeout and says how much work it abandoned", async () => {
+    const stuck = manualPromise();
+    const handler = await handlerFor(
+      { plugins: [deferring(() => stuck.promise)] },
+      { disposeTimeoutMs: 10 },
+    );
+    await handler.fetch(deferRequest(), { env: {} });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    try {
+      await handler.dispose?.();
+      const logged = warn.mock.calls.map((args) => args.join(" ")).join("\n");
+      expect(logged).toContain("deferred_work_abandoned");
+      expect(logged).toContain("1 deferred task(s)");
+    } finally {
+      warn.mockRestore();
+      stuck.resolve();
+    }
+  });
+
+  test("a rejected deferred task reaches the logger and never the process, in either mode", async () => {
+    // The handler leaves `ctx.logger` at its console default, so the sink the
+    // spy watches is the one an operator's logger would replace.
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const unhandled: unknown[] = [];
+    const trap = (reason: unknown): void => void unhandled.push(reason);
+    process.on("unhandledRejection", trap);
+
+    try {
+      const handler = await handlerFor({
+        plugins: [deferring(() => Promise.reject(new Error("purge-failed")))],
+      });
+      await handler.fetch(deferRequest(), { env: {} });
+      await handler.dispose?.();
+
+      const waited: Promise<unknown>[] = [];
+      await handler.fetch(deferRequest(), {
+        env: {},
+        waitUntil: (promise) => void waited.push(promise),
+      });
+      await Promise.all(waited);
+      // A macrotask turn: an unhandled rejection is reported at the end of one.
+      await after(10);
+
+      const logged = error.mock.calls.filter((args) =>
+        args.some((arg) => String(arg).includes("purge-failed")),
+      );
+      expect(logged).toHaveLength(2);
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", trap);
+      error.mockRestore();
+    }
   });
 });

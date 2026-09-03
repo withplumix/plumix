@@ -43,6 +43,13 @@ export interface PlumixHandler {
     event: ScheduledEvent,
     invocation: Invocation,
   ) => void | Promise<void>;
+  /**
+   * Drain the deferred work no `waitUntil` took. A long-lived process calls it
+   * on `SIGTERM` so telemetry delivery and cache purges finish instead of
+   * dying with the process; a runtime whose invocations carry `waitUntil` has
+   * nothing to drain and resolves at once.
+   */
+  readonly dispose?: () => Promise<void>;
 }
 
 export interface CommandContext {

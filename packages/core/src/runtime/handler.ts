@@ -1,4 +1,4 @@
-import type { AppContext, Db } from "../context/app.js";
+import type { AppContext, Db, DeferFn } from "../context/app.js";
 import type { Invocation, PlumixHandler, ScheduledEvent } from "./adapter.js";
 import type { PlumixApp } from "./app.js";
 import type { PlumixEnv } from "./bindings.js";
@@ -29,7 +29,15 @@ export interface PlumixHandlerOptions {
    * `admin-not-available`.
    */
   readonly assets?: (env: PlumixEnv) => AssetsBinding | undefined;
+  /**
+   * How long `dispose()` waits for tracked deferred work before giving up, so
+   * a shutdown cannot be held open by a task that never settles. Defaults to
+   * five seconds.
+   */
+  readonly disposeTimeoutMs?: number;
 }
+
+const DEFAULT_DISPOSE_TIMEOUT_MS = 5_000;
 
 /**
  * The default handler factory. An adapter wraps it and adds only the reads
@@ -48,6 +56,14 @@ export function createPlumixHandler(
     if (bindingsValidated) return;
     validateBindings(app, env);
     bindingsValidated = true;
+  };
+
+  // Fire-and-forget work no invocation could hand to a `waitUntil`.
+  const pending = new Set<Promise<unknown>>();
+  const track: DeferFn = (promise) => {
+    pending.add(promise);
+    const forget = (): void => void pending.delete(promise);
+    void promise.then(forget, forget);
   };
 
   let slots: BoundSlots | undefined;
@@ -85,6 +101,7 @@ export function createPlumixHandler(
           invocation,
           request,
           db: scoped.db,
+          defer: invocation.waitUntil ?? track,
           slots: bindOnce(invocation.env),
         });
         const response = await requestStore.run(ctx, () => dispatcher(ctx));
@@ -92,6 +109,21 @@ export function createPlumixHandler(
       } catch (error) {
         return handleFailure(error);
       }
+    },
+
+    dispose: async () => {
+      const timeoutMs = options.disposeTimeoutMs ?? DEFAULT_DISPOSE_TIMEOUT_MS;
+      const deadline = Date.now() + timeoutMs;
+      // Deferred work defers more work — a telemetry consumer purging a tag,
+      // say — so the drain follows what lands mid-drain. The deadline is
+      // absolute, so a chain of quick tasks cannot extend a shutdown at will.
+      while (pending.size > 0 && Date.now() < deadline) {
+        await settleWithin([...pending], deadline - Date.now());
+      }
+      if (pending.size === 0) return;
+      console.warn(
+        `[plumix] deferred_work_abandoned: ${pending.size} deferred task(s) still running after ${timeoutMs}ms`,
+      );
     },
 
     scheduled: async (event, invocation) => {
@@ -112,6 +144,7 @@ export function createPlumixHandler(
           invocation,
           request,
           db: scoped.db,
+          defer: invocation.waitUntil ?? track,
           slots: bindOnce(invocation.env),
         });
         await requestStore.run(ctx, () =>
@@ -124,6 +157,26 @@ export function createPlumixHandler(
       }
     },
   };
+}
+
+/** Waits for `work` to settle, returning early once `timeoutMs` has passed. */
+async function settleWithin(
+  work: readonly Promise<unknown>[],
+  timeoutMs: number,
+): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      Promise.allSettled(work),
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, timeoutMs);
+      }),
+    ]);
+  } finally {
+    // A live timer would keep a process runtime's event loop open past the
+    // shutdown this drain exists to serve.
+    clearTimeout(timer);
+  }
 }
 
 // Scheduled tasks reading `ctx.request.url` see an internal marker, not an
@@ -165,6 +218,7 @@ interface AppContextArgs {
   readonly invocation: Invocation;
   readonly request: Request;
   readonly db: unknown;
+  readonly defer: DeferFn;
   readonly slots: BoundSlots;
 }
 
@@ -174,9 +228,10 @@ function buildAppContext({
   invocation,
   request,
   db,
+  defer,
   slots,
 }: AppContextArgs): AppContext {
-  const { env, waitUntil, clientAddress } = invocation;
+  const { env, clientAddress } = invocation;
   return createAppContext({
     db: db as Db,
     env,
@@ -187,7 +242,7 @@ function buildAppContext({
     blocks: app.blocks,
     marks: app.marks,
     shortcodes: app.shortcodes,
-    defer: waitUntil,
+    defer,
     assets: options.assets?.(env),
     storage: slots.storage,
     cache: slots.cache,
