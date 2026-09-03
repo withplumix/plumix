@@ -95,7 +95,7 @@ catalogs:
     "@testing-library/react": ^16.3.2
     "@testing-library/user-event": ^14.6.6
   tiptap:
-    "@tiptap/core": ^3.30.3
+    "@tiptap/core": ^3.30.4
     # Explicit extension set for the rich-text rail instead of starter-kit,
     # which bundles ~16 extensions but we activate only these (the rest are
     # disabled marks we replace with @plumix/blocks marks, or nodes that are
