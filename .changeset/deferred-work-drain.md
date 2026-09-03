@@ -22,5 +22,4 @@ Rejections keep routing through `ctx.logger` in both modes, so a failing
 deferred task is a log line and never an unhandled rejection.
 
 On Cloudflare `dispose()` is present and resolves at once: every invocation the
-Worker entry builds carries `waitUntil`, so nothing is ever tracked. The test
-runtime's `createDeferQueue()` and its `drainDeferred()` are unchanged.
+Worker entry builds carries `waitUntil`, so nothing is ever tracked.

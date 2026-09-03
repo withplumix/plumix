@@ -415,9 +415,29 @@ describe("createPlumixHandler — deferred work", () => {
 
     try {
       await handler.dispose?.();
-      const logged = warn.mock.calls.map((args) => args.join(" ")).join("\n");
-      expect(logged).toContain("deferred_work_abandoned");
-      expect(logged).toContain("1 deferred task(s)");
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("deferred_work_abandoned: 1 deferred task(s)"),
+      );
+    } finally {
+      warn.mockRestore();
+      stuck.resolve();
+    }
+  });
+
+  test("what dispose() gave up on is not waited for a second time", async () => {
+    const stuck = manualPromise();
+    const handler = await handlerFor(
+      { plugins: [deferring(() => stuck.promise)] },
+      { disposeTimeoutMs: 20 },
+    );
+    await handler.fetch(deferRequest(), { env: {} });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    try {
+      await handler.dispose?.();
+      // A supervisor escalating SIGTERM to SIGINT must not buy the abandoned
+      // task another full timeout.
+      expect(await drainedWithin(handler, 10)).toBe(true);
     } finally {
       warn.mockRestore();
       stuck.resolve();

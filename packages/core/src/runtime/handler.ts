@@ -121,8 +121,12 @@ export function createPlumixHandler(
         await settleWithin([...pending], deadline - Date.now());
       }
       if (pending.size === 0) return;
+      const abandoned = pending.size;
+      // Giving up is final: a supervisor escalating SIGTERM to SIGINT would
+      // otherwise buy the same stuck task another full timeout.
+      pending.clear();
       console.warn(
-        `[plumix] deferred_work_abandoned: ${pending.size} deferred task(s) still running after ${timeoutMs}ms`,
+        `[plumix] deferred_work_abandoned: ${abandoned} deferred task(s) still running after ${timeoutMs}ms`,
       );
     },
 
