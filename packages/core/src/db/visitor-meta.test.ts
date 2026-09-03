@@ -149,25 +149,40 @@ describe("readVisitorMeta", () => {
       clientAddress: "203.0.113.7",
     });
 
-    const first = await harness.fetch(HASH_ROUTE);
-    const second = await harness.fetch(HASH_ROUTE, {
+    const overridden = await harness.fetch(HASH_ROUTE, {
       clientAddress: "198.51.100.9",
     });
+    const harnessDefault = await harness.fetch(HASH_ROUTE);
 
-    // One install, so one salt: the addresses are the only thing that differ.
-    expect(await second.text()).not.toBe(await first.text());
+    // Pinned rather than merely shown to differ: any other address would
+    // differ too, and prove nothing about which one reached the context.
+    overridden.assertStatus(200);
+    expect(await overridden.text()).toBe(
+      await ipHashFor(
+        contextFor(harness.db, { clientAddress: "198.51.100.9" }),
+      ),
+    );
+    expect(await harnessDefault.text()).toBe(
+      await ipHashFor(contextFor(harness.db, { clientAddress: "203.0.113.7" })),
+    );
   });
 
-  test("a request that names no address falls back to the harness's own", async () => {
+  test("carries the address a hand-built request was dispatched with", async () => {
     const harness = await createDispatcherHarness({
       plugins: [echoVisitorHash],
       clientAddress: "203.0.113.7",
     });
 
-    const withDefault = await harness.fetch(HASH_ROUTE);
+    const response = await harness.dispatch(
+      new Request(`https://cms.example${HASH_ROUTE}`),
+      null,
+      "198.51.100.9",
+    );
 
-    expect(await withDefault.text()).toBe(
-      await ipHashFor(contextFor(harness.db, { clientAddress: "203.0.113.7" })),
+    expect(await response.text()).toBe(
+      await ipHashFor(
+        contextFor(harness.db, { clientAddress: "198.51.100.9" }),
+      ),
     );
   });
 

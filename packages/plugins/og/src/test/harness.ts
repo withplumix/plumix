@@ -11,7 +11,7 @@ import type {
 import type { ThemeTokens } from "plumix/blocks";
 import type {
   DispatcherHarness,
-  FetchOptions,
+  HarnessFetchOptions,
   TestResponse,
 } from "plumix/test";
 import {
@@ -271,7 +271,7 @@ export async function fetchCard(
   return harness.fetch(await cardPath(harness, target, extension), init);
 }
 
-export interface FetchCardOptions extends FetchOptions {
+export interface FetchCardOptions extends HarnessFetchOptions {
   /** The format the renderer declares, which the URL names. */
   readonly extension?: string;
 }

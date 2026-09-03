@@ -28,14 +28,22 @@ export interface FetchOptions {
    * header. Defaults to auto-detect based on path prefix.
    */
   readonly withCsrfHeader?: boolean;
+}
+
+/**
+ * What `harness.fetch` takes: everything that shapes the request, plus the
+ * facts the runtime supplies alongside it.
+ */
+export interface HarnessFetchOptions extends FetchOptions {
   /**
    * The client address the runtime reports for this one request — what a real
    * adapter varies between visitors. Wins over the harness's own
-   * `clientAddress`; omit it to take that default.
+   * `clientAddress`.
    *
-   * `buildRequest` ignores it: an address is a fact the runtime supplies
-   * alongside the request, never a header on it. The harness reads it when it
-   * builds the context.
+   * It lives here rather than on {@link FetchOptions} because `buildRequest`
+   * could not honour it: an address is a fact the runtime supplies alongside a
+   * request, never a header on it. The harness reads it when it builds the
+   * context.
    */
   readonly clientAddress?: string;
 }

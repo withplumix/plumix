@@ -12,3 +12,10 @@ The harness-level option alone could not express the property that matters for
 a rate limiter or a spam floor: that two addresses land in different buckets.
 Two harnesses cannot prove it either, since each mints its own per-install
 hashing salt and their hashes are incomparable by construction.
+
+`harness.fetch` now takes `HarnessFetchOptions`, which adds the address to the
+`FetchOptions` that `buildRequest` reads. The split keeps `buildRequest`'s type
+honest: it cannot honour an address, because an address is a fact the runtime
+supplies alongside a request rather than a header on it. A type extending
+`FetchOptions` to pass options through to `harness.fetch` should extend
+`HarnessFetchOptions` instead.

@@ -7,7 +7,6 @@ function submit(
   harness: Harness,
   entryId: number,
   body: Record<string, unknown> = {},
-  /** Whose request this is, as the runtime reports it. */
   clientAddress?: string,
 ) {
   return harness.fetch("/_plumix/comments/submit", {
@@ -23,7 +22,6 @@ function submit(
   });
 }
 
-/** Two visitors of one install, told apart by the address each request carries. */
 const FLOODER = "203.0.113.7";
 const BYSTANDER = "198.51.100.9";
 
@@ -108,6 +106,7 @@ describe("POST /_plumix/comments/submit", () => {
       rateLimit: { max: 2, windowMin: 10 },
     });
     const entry = await seedPost(harness);
+
     await submit(harness, entry.id, {}, FLOODER);
     await submit(harness, entry.id, {}, FLOODER);
     (await submit(harness, entry.id, {}, FLOODER)).assertStatus(429);
@@ -139,13 +138,10 @@ describe("POST /_plumix/comments/submit", () => {
   });
 
   test("stores a salted ip hash, never the cleartext ip", async () => {
-    const harness = await harnessWith(
-      { entryTypes: ["post"], mode: "none" },
-      { clientAddress: "203.0.113.7" },
-    );
+    const harness = await harnessWith({ entryTypes: ["post"], mode: "none" });
     const entry = await seedPost(harness);
 
-    await submit(harness, entry.id);
+    await submit(harness, entry.id, {}, "203.0.113.7");
 
     const stored = await rows(harness);
     expect(stored[0]?.ipHash).toMatch(/^[0-9a-f]{64}$/);

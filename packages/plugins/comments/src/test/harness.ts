@@ -24,18 +24,9 @@ export const testBlog = definePlugin("test_blog", {
   },
 });
 
-export interface CommentsHarnessOptions {
-  /** The client address, as a runtime adapter reports it to core. */
-  readonly clientAddress?: string;
-}
-
-export async function harnessWith(
-  config: CommentsConfig,
-  options: CommentsHarnessOptions = {},
-): Promise<Harness> {
+export async function harnessWith(config: CommentsConfig): Promise<Harness> {
   const harness = await createHarness({
     plugins: [testBlog, comments(config)],
-    clientAddress: options.clientAddress,
   });
   await applyCommentsSchema(harness.db);
   return harness;

@@ -38,7 +38,7 @@ import type {
 } from "../runtime/slots.js";
 import type { ThemeDescriptor } from "../theme.js";
 import type { Factories } from "./factories.js";
-import type { FetchOptions } from "./request.js";
+import type { HarnessFetchOptions } from "./request.js";
 import type { ActionSpy, FilterSpy } from "./spies.js";
 import { auth } from "../auth/config.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
@@ -81,11 +81,9 @@ export interface CreateDispatcherHarnessOptions {
    * The client address the runtime reports, as a real adapter hands core
    * through `invocation.clientAddress`. Set it in tests of session metadata or
    * visitor-meta hashing; leaving it unset is the runtime that could resolve
-   * none, whatever forwarding header the request carries.
-   *
-   * The default for every request out of this harness. A test with two
+   * none, whatever forwarding header the request carries. A test with two
    * visitors to tell apart overrides it per request — see
-   * {@link FetchOptions.clientAddress}.
+   * {@link HarnessFetchOptions.clientAddress}.
    */
   readonly clientAddress?: string;
   /**
@@ -209,7 +207,7 @@ export interface DispatcherHarness {
   readonly dispatch: (
     request: Request,
     user?: User | null,
-    /** See {@link FetchOptions.clientAddress}; wins over the harness's own. */
+    /** See {@link HarnessFetchOptions.clientAddress}; wins over the harness's own. */
     clientAddress?: string,
   ) => Promise<Response>;
   /**
@@ -219,7 +217,7 @@ export interface DispatcherHarness {
    */
   readonly fetch: (
     path: string,
-    options?: FetchOptions,
+    options?: HarnessFetchOptions,
   ) => Promise<TestResponse>;
   readonly authenticateRequest: (
     request: Request,
