@@ -1,0 +1,69 @@
+# Throwaway: proves the two test fixes hold under the real CI shape — full
+# `test:unit` at the merged `--concurrency=2`, repeated. Never merge.
+name: Bench
+
+on:
+  pull_request:
+    branches: ["*"]
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    name: Bench (timeout headroom)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      FORCE_COLOR: 0
+      TURBO_TOKEN: ""
+      TURBO_TEAM: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+
+      - name: Repeat the real Test job
+        shell: bash
+        run: |
+          echo "runner cores: $(nproc)"
+          for i in 1 2 3 4 5; do
+            if pnpm test:unit --force > "run-$i.log" 2>&1; then
+              echo "iteration $i: pass"
+            else
+              echo "iteration $i: FAIL"
+            fi
+          done
+
+      # Worst test per package per iteration. Turbo emits GH Actions log
+      # groups in CI, so lines are not `pkg:task:`-prefixed: individual tests
+      # are bare lines indented 4+ spaces, inside `::group::pkg:task`.
+      - name: Report
+        if: always()
+        shell: bash
+        run: |
+          for i in 1 2 3 4 5; do
+            [ -f "run-$i.log" ] || continue
+            echo "== iteration $i =="
+            perl -pe 's/\e\[[0-9;]*m//g' "run-$i.log" | perl -ne '
+              if (/^::group::(\S+):test:unit/) { $pkg = $1; next }
+              if (/^::endgroup::/) { $pkg = ""; next }
+              if ($pkg && /^\s{4,}\S+\s+(.+?)\s+(\d+)ms\s*$/) {
+                if ($2 > $max{$pkg}) { $max{$pkg} = $2; $who{$pkg} = $1 }
+              }
+              END {
+                for my $p (sort { $max{$b} <=> $max{$a} } keys %max) {
+                  next if $max{$p} < 500;
+                  printf "  %6dms  %-28s %s\n", $max{$p}, $p, $who{$p};
+                }
+              }'
+            grep -cE "^\s+(Tests|Test Files).*failed" "run-$i.log" | sed 's/^/  failed-summary-lines: /'
+          done
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: bench-logs
+          path: run-*.log
+          retention-days: 3
