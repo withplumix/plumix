@@ -145,8 +145,23 @@ function isTeardownRace(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return (
     message.includes("Response has been disposed") ||
-    message.includes("Target page, context or browser has been closed")
+    message.includes("Target page, context or browser has been closed") ||
+    message.includes("Test ended.")
   );
+}
+
+/**
+ * `fallback` is the recovery every path here reaches for, and it is itself a
+ * route call — so it races teardown exactly as the call it is recovering from
+ * did. Rejecting inside a route callback kills the worker rather than failing
+ * a test, which is how #2189 lost a suite that had already passed.
+ */
+async function fallbackUnlessTornDown(route: Route): Promise<void> {
+  try {
+    await route.fallback();
+  } catch (error) {
+    if (!isTeardownRace(error)) throw error;
+  }
 }
 
 /**
@@ -167,7 +182,7 @@ export async function mockManifest(
     .replaceAll("-->", "--\\>");
   await page.route("**/*", async (route) => {
     if (route.request().resourceType() !== "document") {
-      await route.fallback();
+      await fallbackUnlessTornDown(route);
       return;
     }
     try {
@@ -188,7 +203,7 @@ export async function mockManifest(
       // silently no-op'd manifest mock resurfaces as an unrelated
       // assertion failure much later in whichever spec is running.
       if (!isTeardownRace(error)) throw error;
-      await route.fallback();
+      await fallbackUnlessTornDown(route);
     }
   });
 }

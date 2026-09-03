@@ -156,6 +156,7 @@ describe("mockManifest", () => {
       fetch?: () => Promise<unknown>;
       text?: () => Promise<string>;
       fulfill?: () => Promise<void>;
+      fallback?: () => Promise<void>;
       headers?: Record<string, string>;
     } = {},
   ) {
@@ -176,10 +177,12 @@ describe("mockManifest", () => {
           calls.fulfilled.push(opts);
           return Promise.resolve();
         }),
-      fallback: () => {
-        calls.fellBack += 1;
-        return Promise.resolve();
-      },
+      fallback:
+        overrides.fallback ??
+        (() => {
+          calls.fellBack += 1;
+          return Promise.resolve();
+        }),
     } as unknown as Route;
     return { route, calls };
   }
@@ -189,6 +192,12 @@ describe("mockManifest", () => {
   const targetClosed = () =>
     Promise.reject(
       new Error("Target page, context or browser has been closed"),
+    );
+  // The real error appends a browser-log dump after the wording, so the
+  // fixture keeps the tail the match has to survive.
+  const testEnded = () =>
+    Promise.reject(
+      new Error("route.fetch: Test ended.\nBrowser logs:\n\n<launching> ..."),
     );
 
   test("rewrites the manifest tag on the happy path", async () => {
@@ -240,6 +249,45 @@ describe("mockManifest", () => {
     const { route, calls } = routeStub({ fulfill: targetClosed });
     await expect(handler(route)).resolves.toBeUndefined();
     expect(calls.fellBack).toBe(1);
+  });
+
+  test("recovers when the fetch races the end of the test", async () => {
+    const handler = await captureHandler();
+    const { route, calls } = routeStub({ fetch: testEnded });
+    await expect(handler(route)).resolves.toBeUndefined();
+    expect(calls.fellBack).toBe(1);
+  });
+
+  test("stays quiet when the fallback also races the end of the test", async () => {
+    // Rethrowing here would fail a worker for a test that already finished.
+    const handler = await captureHandler();
+    let attempted = 0;
+    const { route } = routeStub({
+      fetch: testEnded,
+      fallback: () => {
+        attempted += 1;
+        return testEnded();
+      },
+    });
+    await expect(handler(route)).resolves.toBeUndefined();
+    expect(attempted).toBe(1);
+  });
+
+  test("stays quiet when an asset request races the end of the test", async () => {
+    // `**/*` sends every script, stylesheet and image down the early return,
+    // so that lone `fallback` meets this race far more often than the
+    // document path the rest of these tests drive.
+    const handler = await captureHandler();
+    let attempted = 0;
+    const { route } = routeStub({
+      resourceType: "script",
+      fallback: () => {
+        attempted += 1;
+        return testEnded();
+      },
+    });
+    await expect(handler(route)).resolves.toBeUndefined();
+    expect(attempted).toBe(1);
   });
 
   test("forwards only the headers that still describe the body", async () => {
