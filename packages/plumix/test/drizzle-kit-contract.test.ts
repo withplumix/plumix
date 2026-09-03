@@ -2,7 +2,15 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "vitest";
 
 import { spawnCapturingStderr } from "@plumix/core";
 
@@ -96,22 +104,24 @@ function applyMigrations(db: DatabaseSync): void {
   }
 }
 
-beforeEach(() => {
+function makeProjectDir(): void {
   dir = mkdtempSync(join(tmpdir(), "plumix-drizzle-contract-"));
   writeFileSync(join(dir, "schema.ts"), SCHEMA, "utf8");
-});
-
-afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
-});
+}
 
 // Each `generate` spawns drizzle-kit, which bundles the schema with esbuild
 // before it can diff — past vitest's 5s default on a cold runner, so every
-// test carries its own budget.
+// spawning test or hook carries its own budget.
 const ONE_SPAWN = 60_000;
 const TWO_SPAWNS = 120_000;
 
 describe("drizzle-kit's stderr contract", () => {
+  beforeEach(makeProjectDir);
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   test(
     "a generate that writes a migration says nothing on stderr",
     async () => {
@@ -132,45 +142,43 @@ describe("drizzle-kit's stderr contract", () => {
 });
 
 describe("raw SQL migrations", () => {
-  test(
-    "a later schema change is numbered past the raw migration",
-    async () => {
-      await generateOrThrow();
-      emitRawSqlMigrations(dir, SEARCH_MIGRATIONS);
+  // Both tests below ask about one generated set — the numbering it produces
+  // and the schema it applies to — and building it costs two drizzle-kit
+  // spawns. Generated once here rather than per test: neither test writes to
+  // `dir`, so there is nothing for them to leak into each other, and each
+  // still fails on its own if the other is filtered out.
+  beforeAll(async () => {
+    makeProjectDir();
+    await generateOrThrow();
+    emitRawSqlMigrations(dir, SEARCH_MIGRATIONS);
+    writeFileSync(join(dir, "schema.ts"), SCHEMA_WITH_SECOND_TABLE, "utf8");
+    await generateOrThrow();
+  }, TWO_SPAWNS);
 
-      writeFileSync(join(dir, "schema.ts"), SCHEMA_WITH_SECOND_TABLE, "utf8");
-      await generateOrThrow();
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
 
-      expect(journalTags()).toEqual([
-        expect.stringMatching(/^0000_/) as unknown as string,
-        "0001_plumix_search_widget_fts",
-        expect.stringMatching(/^0002_/) as unknown as string,
-      ]);
-    },
-    TWO_SPAWNS,
-  );
+  test("a later schema change is numbered past the raw migration", () => {
+    expect(journalTags()).toEqual([
+      expect.stringMatching(/^0000_/) as unknown as string,
+      "0001_plumix_search_widget_fts",
+      expect.stringMatching(/^0002_/) as unknown as string,
+    ]);
+  });
 
-  test(
-    "applying the generated set creates the virtual table and its trigger",
-    async () => {
-      await generateOrThrow();
-      emitRawSqlMigrations(dir, SEARCH_MIGRATIONS);
-      writeFileSync(join(dir, "schema.ts"), SCHEMA_WITH_SECOND_TABLE, "utf8");
-      await generateOrThrow();
+  test("applying the generated set creates the virtual table and its trigger", () => {
+    const db = new DatabaseSync(":memory:");
+    applyMigrations(db);
+    db.exec("INSERT INTO widgets (name) VALUES ('gizmo')");
 
-      const db = new DatabaseSync(":memory:");
-      applyMigrations(db);
-      db.exec("INSERT INTO widgets (name) VALUES ('gizmo')");
-
-      expect(
-        db
-          .prepare(
-            "SELECT rowid AS id FROM widget_fts WHERE widget_fts MATCH 'gizmo'",
-          )
-          .all(),
-      ).toEqual([{ id: 1 }]);
-      db.close();
-    },
-    TWO_SPAWNS,
-  );
+    expect(
+      db
+        .prepare(
+          "SELECT rowid AS id FROM widget_fts WHERE widget_fts MATCH 'gizmo'",
+        )
+        .all(),
+    ).toEqual([{ id: 1 }]);
+    db.close();
+  });
 });
