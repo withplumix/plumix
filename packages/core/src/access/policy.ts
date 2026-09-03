@@ -18,13 +18,7 @@ import type { AppContext, AuthenticatedUser } from "../context/app.js";
 import type { UserRole } from "../db/schema/users.js";
 import { roleLevel } from "../auth/rbac.js";
 import { USER_ROLES } from "../db/schema/users.js";
-
-/**
- * The reserved segment that is never shared-cached. A `grant("private")` gates
- * the route yet keeps its render per-visitor — the explicit escape hatch for a
- * personalized authenticated page. The edge cache never reads or writes it.
- */
-export const PRIVATE_SEGMENT = "private";
+import { PRIVATE_SEGMENT } from "./segments.js";
 
 /**
  * Audience segments derived for free from the loaded principal — no extra
@@ -33,7 +27,7 @@ export const PRIVATE_SEGMENT = "private";
  * `private` is the reserved never-cached escape hatch.
  */
 export type BuiltinSegment =
-  "anonymous" | "authenticated" | "private" | `role:${UserRole}`;
+  "anonymous" | "authenticated" | typeof PRIVATE_SEGMENT | `role:${UserRole}`;
 
 /**
  * The membership / paywall segment family — a developer-defined `<label>` (a
