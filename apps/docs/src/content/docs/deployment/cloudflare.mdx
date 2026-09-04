@@ -8,7 +8,7 @@ sidebar:
 
 import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
-Cloudflare Workers is the runtime Plumix ships today. `@plumix/runtime-cloudflare` holds the adapter that bridges the Worker to Plumix, plus one small factory per platform service, and each factory goes in the config slot named after the job it does.
+Cloudflare Workers is the default runtime, and the one the edge cache, KV and image transformations exist for. `@plumix/runtime-cloudflare` holds the adapter that bridges the Worker to Plumix, plus one small factory per platform service, and each factory goes in the config slot named after the job it does.
 
 ## Overview
 

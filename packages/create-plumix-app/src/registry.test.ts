@@ -110,6 +110,32 @@ describe("loadRegistry", () => {
     expect(registry.runtimes[0]?.secretsFile).toBe(".env");
   });
 
+  it("reads the ambient type packages and the README deploy section a runtime declares", async () => {
+    writeRuntimePackage("node", {
+      kind: "runtime",
+      id: "node",
+      label: "Node",
+      types: ["@types/bun"],
+      readme: "scaffold/README-deploy.md",
+    });
+    writeFileSync(
+      join(
+        root,
+        "packages",
+        "runtimes",
+        "node",
+        "scaffold",
+        "README-deploy.md",
+      ),
+      "Run it.\n",
+    );
+
+    const registry = await loadRegistry(root);
+
+    expect(registry.runtimes[0]?.types).toEqual(["@types/bun"]);
+    expect(registry.runtimes[0]?.readme).toBe("Run it.\n");
+  });
+
   it("reads referenced files into the descriptor as content", async () => {
     writeRuntimePackage("cloudflare", {
       kind: "runtime",

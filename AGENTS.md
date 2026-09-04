@@ -4,9 +4,9 @@ Agent-facing conventions for the Plumix repo.
 
 ## What this is
 
-CMS inspired by WordPress, with pluggable runtime adapters. Cloudflare (`@plumix/runtime-cloudflare`, using D1/KV/R2) is the only runtime shipped today; more are planned. Pre-1.0: every `0.x` minor may break.
+CMS inspired by WordPress, with pluggable runtime adapters. Two ship: Cloudflare (`@plumix/runtime-cloudflare`, using D1/KV/R2, the default) and Node.js (`@plumix/runtime-node`, `node:sqlite` and disk storage). Pre-1.0: every `0.x` minor may break.
 
-Current target is Cloudflare Workers, so runtime code must stay Worker-compatible — no Node built-ins, no `fs`, no dynamic require.
+Request-path code in core, the plugins and the shared packages runs on Cloudflare Workers, so it must stay Worker-compatible — no Node built-ins, no `fs`, no dynamic require. CLI and build-time modules, and all of `packages/runtimes/node`, may use Node built-ins.
 
 ## Working rules
 

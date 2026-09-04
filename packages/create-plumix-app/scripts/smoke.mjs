@@ -154,10 +154,12 @@ function enableSecondLocale(appDir) {
  * plugin it wrongly believes admin already bundled, and the build stays green
  * either way.
  */
-function assertCatalogsStaged(appDir) {
+function assertCatalogsStaged(appDir, excluded) {
   const adminDir = join(appDir, "dist/client/_plumix/admin/plugins");
   const missing = EXPECT_CATALOGS.filter(
-    (id) => !existsSync(join(adminDir, id, "locales", `${SECOND_LOCALE}.mjs`)),
+    (id) =>
+      !excluded.includes(id) &&
+      !existsSync(join(adminDir, id, "locales", `${SECOND_LOCALE}.mjs`)),
   );
   if (missing.length > 0) {
     throw new Error(
@@ -188,7 +190,7 @@ function smoke(combo, tarballs) {
 
     run("pnpm", ["run", "typecheck"], app);
     run("pnpm", ["run", "build"], app);
-    if (combo.secondLocale) assertCatalogsStaged(app);
+    if (combo.secondLocale) assertCatalogsStaged(app, combo.excluded);
     console.log(`=== ${combo.name}: ok ===`);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -203,21 +205,34 @@ try {
   );
   // From the registry, so a new runtime or plugin joins the matrix on its own.
   const registry = await loadRegistry(REPO);
-  const plugins = registry.plugins.map((p) => p.id);
-
   // Every runtime times the two shapes. `-y` on every combo: without it the
-  // remaining prompts drop the CLI into the wizard on a terminal. Media and og
-  // are the only plugins that declare `requires`, so all-plugins covers the
-  // capability seam too.
-  const combos = registry.runtimes.flatMap(({ id }) => [
-    // `--plugins=` for none: a bare `-y` takes the recommended plugins.
-    { name: `${id}-blank`, args: ["-y", "--runtime", id, "--plugins="] },
-    {
-      name: `${id}-all-plugins`,
-      args: ["-y", "--runtime", id, "-p", plugins.join(",")],
-      secondLocale: true,
-    },
-  ]);
+  // remaining prompts drop the CLI into the wizard on a terminal. A plugin
+  // requiring a capability the runtime lacks — media on node, until #2208
+  // fulfils `imageDelivery` there — is left out, as the scaffolder would
+  // refuse it by name; the rest of all-plugins covers the capability seam.
+  const combos = registry.runtimes.flatMap((runtime) => {
+    const { id } = runtime;
+    const supported = (plugin) =>
+      (plugin.requires ?? []).every(
+        (capability) => runtime.capabilities?.[capability],
+      );
+    const excluded = registry.plugins
+      .filter((plugin) => !supported(plugin))
+      .map((plugin) => plugin.id);
+    const selected = registry.plugins
+      .filter(supported)
+      .map((plugin) => plugin.id);
+    return [
+      // `--plugins=` for none: a bare `-y` takes the recommended plugins.
+      { name: `${id}-blank`, args: ["-y", "--runtime", id, "--plugins="] },
+      {
+        name: `${id}-all-plugins`,
+        args: ["-y", "--runtime", id, "-p", selected.join(",")],
+        secondLocale: true,
+        excluded,
+      },
+    ];
+  });
   for (const combo of combos) smoke(combo, tarballs);
   console.log(
     `\nSmoke check passed: ${combos.length} generated projects typecheck and build.`,

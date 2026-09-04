@@ -1,0 +1,155 @@
+---
+title: Node.js
+description: The Node.js runtime adapter, and the factories that fill the database and storage slots with a SQLite file and a directory on disk.
+tier: P1
+sidebar:
+  order: 25
+---
+
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
+
+Node.js is the runtime for running a Plumix site as an ordinary process: in a container, on a VM, on any host that runs Node. `@plumix/runtime-node` holds the adapter that bridges `node:http` to Plumix, plus one factory per slot it fills, and it uses what Node ships: `node:sqlite` for the database and the filesystem for uploads, so installing it compiles nothing.
+
+## Overview
+
+The runtime is a slot like any other. `runtime: node()` tells Plumix it is running as a process, and the rest of the package fills the slots beside it.
+
+| Factory                | Slot       | What it wires up                     |
+| ---------------------- | ---------- | ------------------------------------ |
+| `node()`               | `runtime`  | The `node:http` server and the entry |
+| `nodeSqlite({ path })` | `database` | A SQLite file through `node:sqlite`  |
+| `diskStorage({ dir })` | `storage`  | A directory on disk for uploads      |
+
+Nothing fills `kv`, `cache` or `imageDelivery` yet; [What Node does not do yet](#what-node-does-not-do-yet) says what that means for a site.
+
+## Install
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+
+```sh
+pnpm add @plumix/runtime-node
+```
+
+  </TabItem>
+  <TabItem label="npm">
+
+```sh
+npm install @plumix/runtime-node
+```
+
+  </TabItem>
+  <TabItem label="yarn">
+
+```sh
+yarn add @plumix/runtime-node
+```
+
+  </TabItem>
+</Tabs>
+
+Node 24.2 or newer: the runtime uses `node:sqlite` without a flag and `import.meta.main` to tell being run from being imported.
+
+## Quickstart
+
+This is the path from a scaffolded site to a running process. It assumes a site made with `pnpm create plumix-app --runtime node`.
+
+<Aside type="note" title="No dev server on Node yet">
+  `plumix dev` is not available on Node yet. Build and run the server while you
+  work, and rebuild after a change; the dev server arrives in a later release.
+</Aside>
+
+<Steps>
+
+1. **Read the config the scaffolder wrote.** Three slots and a passkey origin. The origin is a literal, because a process has no build environment to derive one from.
+
+   ```ts no-typecheck
+   import { auth, plumix } from "plumix";
+
+   import { diskStorage, node, nodeSqlite } from "@plumix/runtime-node";
+
+   import { theme } from "./theme";
+
+   export default plumix({
+     runtime: node(),
+     database: nodeSqlite({ path: "data/site.sqlite" }),
+     storage: diskStorage({ dir: "data/media" }),
+     auth: auth({
+       passkey: {
+         rpName: "recipes",
+         // Passkeys are bound to the origin: change both to the host you deploy on.
+         rpId: "localhost",
+         origin: "http://localhost:3000",
+       },
+     }),
+     plugins: [],
+     theme,
+   });
+   ```
+
+2. **Create the database.** The migrations are generated from your config and applied to the file `nodeSqlite` names, relative to the project root.
+
+   ```sh
+   plumix migrate generate
+   plumix migrate apply
+   ```
+
+3. **Build.** The build writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except native packages, which it imports at runtime.
+
+   ```sh
+   plumix build
+   ```
+
+4. **Run.** The process listens on `PORT` and `HOST`, defaulting to `3000` and `0.0.0.0`.
+
+   ```sh
+   PORT=3000 node dist/server/worker.js
+   ```
+
+5. **Point the passkey at the deployed host.** Before the first sign-in on a real host, set `rpId` to that host and `origin` to its `https://` address, rebuild, and restart.
+
+</Steps>
+
+## The process
+
+Run directly, the entry serves `dist/client` from disk ahead of the site, then hands everything else to Plumix. Imported instead, it starts nothing: the default export is the portable `{ fetch, scheduled }` handler, and `listener(req, res)` is the same site as a terminal `node:http` handler for embedding in Express, or in Fastify through `@fastify/middie`. It answers every request it receives and never calls `next`, so mount it where the site owns the path.
+
+A rolling deploy that sends `SIGTERM` and waits ten seconds loses nothing: the process stops accepting, gives in-flight responses that window, drains deferred work such as telemetry delivery in what remains, and exits `0`. If a response or a task is still open at the deadline it is cut, and the process exits `1` saying which. A second signal exits at once.
+
+## Behind a proxy
+
+Off by default, the server takes the scheme from its own socket, the host from `Host`, and the visitor's address from the socket, so a visitor reaching the process directly cannot forge any of them. Behind a TLS-terminating reverse proxy that is wrong: every request looks like plain `http` from the proxy's address, so the session cookie is not `Secure`, the passkey origin does not match, and sessions record the proxy. Turn the flag on:
+
+```ts no-typecheck
+import { node } from "@plumix/runtime-node";
+
+export default {
+  runtime: node({ trustProxy: true }),
+};
+```
+
+With it on, the forwarded scheme, host and rightmost client address are believed. There is nothing more granular: the flag says whether the hop in front of the process is yours. `node({ bodySizeLimit })` changes the 1 GiB cap on request bodies, which is enforced as a body streams rather than after it is buffered.
+
+## The database
+
+`nodeSqlite({ path })` opens the file for concurrent readers, which is what lets a backup, a test or a second process read it while the server writes. Two things to know before you move a file around. It is not portable between runtimes: Cloudflare's D1 and this runtime record applied migrations in different tables, so generate and apply migrations on the runtime that will serve them. And for a remote or shared database, `plumix/db/libsql` stays selectable: point it at Turso or a libsql server and leave `nodeSqlite` out.
+
+## Storage
+
+`diskStorage({ dir })` keeps uploads under the directory, and the media plugin serves them through its own route; there is no public URL and no presigned upload, so the site receives the bytes itself. It is single-node, like the SQLite file beside it. When a second process needs the same uploads, swap in `s3()` from `plumix/storage/s3` with a bucket's endpoint and credentials. It is one config line; nothing else changes.
+
+## What Node does not do yet
+
+Scheduled tasks do not run: there is no cron on Node yet, so the tasks core registers, such as publishing scheduled entries, and the ones plugins add wait for a later release. There is no edge cache and no `kv`, so a page renders on every request, and a plugin requiring either capability cannot be scaffolded on Node; the scaffolder says so by name. All three are single-node concerns as well: this runtime is one process on one machine.
+
+## Commands the runtime adds
+
+`plumix build` builds the client first and the server second, because the server bakes the client's asset manifest into its bundle. `plumix migrate apply` applies the generated migrations to the file `nodeSqlite` names. There is no `deploy` and no `types`: the deployment artefact is a directory and a command.
+
+## Related
+
+[Overview](/deployment/overview/) is the Cloudflare-shaped picture of a deploy; on Node there are no bindings, and `PORT`, `HOST` and the secrets arrive on `process.env`. [Secrets](/deployment/secrets/) covers the `(env) => value` resolver form, which reads the same environment here. [Runtime Adapters](/deployment/runtimes/) is the contract this package implements, and [Cloudflare Workers](/deployment/cloudflare/) is the other implementation of it.
+
+## Next steps
+
+Go to [Secrets](/deployment/secrets/) for what a secret-bearing slot looks like, then [Configuration](/getting-started/configuration/) for every slot the factories above plug into, including the ones no Node adapter fills yet.

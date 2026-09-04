@@ -21,6 +21,7 @@ describe("buildSnapshot", () => {
       (r) => r.id === "cloudflare",
     );
     expect(cloudflare?.files["wrangler.jsonc"]).toContain("d1_databases");
+    expect(cloudflare?.readme).toContain("wrangler d1 create");
   });
 });
 

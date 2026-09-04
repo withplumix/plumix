@@ -23,11 +23,11 @@ Three interfaces make up the contract.
 
 The generated entry module is where those meet. `plumix build` asks your adapter for its source, the plumix Vite plugin bundles it, and the result is what the platform runs.
 
-<Aside type="note" title="Cloudflare is the reference implementation">
-  `@plumix/runtime-cloudflare` is the only adapter that ships today, and it is
-  short, because the default handler does the rest. Read it beside this page.
-  [Cloudflare Workers](/deployment/cloudflare/) documents it from the operator's
-  side.
+<Aside type="note" title="Two adapters ship today">
+  `@plumix/runtime-cloudflare` and `@plumix/runtime-node` both wrap the default
+  handler, and both are short, because it does the rest. Read them beside this
+  page. [Cloudflare Workers](/deployment/cloudflare/) and
+  [Node.js](/deployment/node/) document them from the operator's side.
 </Aside>
 
 ## Quickstart

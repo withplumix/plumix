@@ -24,6 +24,10 @@ interface RawScaffoldMeta extends Contribution {
   readonly secretsFile?: string;
   /** Runtime only: paths appended to the base `.gitignore`. */
   readonly gitignore?: readonly string[];
+  /** Runtime only: ambient type packages the project's tsconfig lists. */
+  readonly types?: readonly string[];
+  /** Runtime only: path to the markdown that becomes the README's Deploy section. */
+  readonly readme?: string;
   /** dest path in the scaffolded project → source path in this package. */
   readonly files?: Record<string, string>;
   readonly capabilities?: Record<string, Contribution>;
@@ -111,6 +115,21 @@ function requireField(
   }
 }
 
+async function readContributed(
+  pkgDir: string,
+  src: string,
+  rel: string,
+): Promise<string> {
+  try {
+    return await readFile(join(pkgDir, src), "utf8");
+  } catch {
+    throw ScaffoldError.invalidScaffoldMeta({
+      packagePath: rel,
+      reason: `references a missing file "${src}"`,
+    });
+  }
+}
+
 async function toRuntimeDescriptor(
   meta: RawScaffoldMeta,
   pkgDir: string,
@@ -118,14 +137,7 @@ async function toRuntimeDescriptor(
 ): Promise<RuntimeDescriptor> {
   const files: Record<string, string> = {};
   for (const [dest, src] of Object.entries(meta.files ?? {})) {
-    try {
-      files[dest] = await readFile(join(pkgDir, src), "utf8");
-    } catch {
-      throw ScaffoldError.invalidScaffoldMeta({
-        packagePath: rel,
-        reason: `references a missing file "${src}"`,
-      });
-    }
+    files[dest] = await readContributed(pkgDir, src, rel);
   }
   return {
     id: meta.id ?? meta.label.toLowerCase(),
@@ -139,6 +151,10 @@ async function toRuntimeDescriptor(
     devDeps: meta.devDeps ?? {},
     secretsFile: meta.secretsFile ?? DEFAULT_SECRETS_FILE,
     gitignore: meta.gitignore,
+    types: meta.types,
+    readme: meta.readme
+      ? await readContributed(pkgDir, meta.readme, rel)
+      : undefined,
     files,
     capabilities: meta.capabilities,
     authMethods: meta.authMethods,

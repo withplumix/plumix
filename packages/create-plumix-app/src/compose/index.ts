@@ -23,30 +23,32 @@ interface ComposeOptions {
 // it dotless; the dot comes back when the list is written below.
 const GITIGNORE_SOURCE = "gitignore";
 
-const TSCONFIG = {
-  $schema: "https://json.schemastore.org/tsconfig",
-  compilerOptions: {
-    esModuleInterop: true,
-    skipLibCheck: true,
-    target: "ES2022",
-    lib: ["ES2022", "WebWorker"],
-    jsx: "react",
-    allowJs: true,
-    resolveJsonModule: true,
-    moduleDetection: "force",
-    isolatedModules: true,
-    verbatimModuleSyntax: true,
-    strict: true,
-    noUncheckedIndexedAccess: true,
-    noImplicitOverride: true,
-    module: "Preserve",
-    moduleResolution: "Bundler",
-    noEmit: true,
-    types: ["node", "@cloudflare/workers-types", "react"],
-  },
-  include: ["plumix.config.ts", "theme", ".plumix"],
-  exclude: ["node_modules", "dist"],
-};
+function tsconfig(runtimeTypes: readonly string[] = []) {
+  return {
+    $schema: "https://json.schemastore.org/tsconfig",
+    compilerOptions: {
+      esModuleInterop: true,
+      skipLibCheck: true,
+      target: "ES2022",
+      lib: ["ES2022", "WebWorker"],
+      jsx: "react",
+      allowJs: true,
+      resolveJsonModule: true,
+      moduleDetection: "force",
+      isolatedModules: true,
+      verbatimModuleSyntax: true,
+      strict: true,
+      noUncheckedIndexedAccess: true,
+      noImplicitOverride: true,
+      module: "Preserve",
+      moduleResolution: "Bundler",
+      noEmit: true,
+      types: ["node", ...runtimeTypes, "react"],
+    },
+    include: ["plumix.config.ts", "theme", ".plumix"],
+    exclude: ["node_modules", "dist"],
+  };
+}
 
 /**
  * Produce the complete set of files for a scaffolded project as a
@@ -88,7 +90,12 @@ export async function compose({
     ctx,
   );
   out["plumix.config.ts"] = assembleConfig(selection, contributions);
-  out["tsconfig.json"] = `${JSON.stringify(TSCONFIG, null, 2)}\n`;
+  out["tsconfig.json"] =
+    `${JSON.stringify(tsconfig(runtime.types), null, 2)}\n`;
+  if (runtime.readme) {
+    const deploy = fillProjectName(runtime.readme, projectName).trimEnd();
+    out["README.md"] = `${out["README.md"] ?? ""}\n## Deploy\n\n${deploy}\n`;
+  }
 
   const { envVars } = contributions;
   if (envVars.length > 0) {
