@@ -1,11 +1,7 @@
-import type { LibSQLDatabase } from "drizzle-orm/libsql";
-
-import type * as schema from "../db/schema/index.js";
+import type { Db } from "../context/app.js";
 import type { User } from "../db/schema/users.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
-
-type TestDb = LibSQLDatabase<typeof schema>;
 
 export interface FetchOptions {
   readonly method?:
@@ -14,8 +10,9 @@ export interface FetchOptions {
   readonly body?: BodyInit;
   /**
    * JSON body. Mutually exclusive with `body`. Sets content-type to
-   * application/json and serialises via JSON.stringify. Do NOT nest an oRPC
-   * envelope here — the RPC client (h.client) handles wire format itself.
+   * application/json and serialises via JSON.stringify. A call to an RPC
+   * procedure through `fetch` carries the oRPC envelope itself
+   * (`{ json: input }`); `createRpcHarness`'s client handles the wire format.
    */
   readonly json?: unknown;
   /**
@@ -51,7 +48,7 @@ export interface HarnessFetchOptions extends FetchOptions {
 const ORIGIN = "https://cms.example";
 
 export async function buildRequest(
-  db: TestDb,
+  db: Db,
   path: string,
   options: FetchOptions = {},
 ): Promise<Request> {

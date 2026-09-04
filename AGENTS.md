@@ -54,7 +54,8 @@ packages/
 ├── plugins/
 │   ├── audit-log/ blog/ comments/ media/ menu/ og/ pages/ — first-party plugins
 └── runtimes/
-    └── cloudflare/      @plumix/runtime-cloudflare — Cloudflare D1/R2/KV bindings
+    ├── cloudflare/      @plumix/runtime-cloudflare — Cloudflare D1/R2/KV bindings
+    └── node/            @plumix/runtime-node — Node.js process runtime; node:sqlite database
 apps/
 ├── demo/       @plumix-apps/demo      — anon "try the editor" sandbox; deploy + dev harness + demo e2e
 ├── marketing/  @plumix-apps/marketing — marketing site on plumix (scaffold)

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app.js";
+import type { AppContext, Db } from "../context/app.js";
 import type { VisitorMetaOptions } from "./visitor-meta.js";
 import { definePlugin } from "../plugin/define.js";
 import { createTestContext } from "../test/context.js";
@@ -14,15 +14,13 @@ import { readVisitorMeta } from "./visitor-meta.js";
 const NAMESPACE = "spam_guard";
 const HASH_ROUTE = "/visitor-hash";
 
-type TestDb = Awaited<ReturnType<typeof createTestDb>>;
-
 function requestWith(headers: Record<string, string> = {}): Request {
   return new Request("https://cms.example/submit", { method: "POST", headers });
 }
 
 /** One install, one visitor: the context a runtime builds for their request. */
 function contextFor(
-  db: TestDb,
+  db: Db,
   options: {
     readonly clientAddress?: string;
     readonly request?: Request;
