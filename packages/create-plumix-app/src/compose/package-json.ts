@@ -38,6 +38,12 @@ export function assemblePackageJson(
   const pkg: PackageJson = {
     ...base,
     name: projectName,
+    scripts: {
+      ...base.scripts,
+      // The base command names what every project has; the runtime adds what
+      // its own tooling writes.
+      clean: [base.scripts?.clean, ...(runtime.gitignore ?? [])].join(" "),
+    },
     dependencies: resolveDeps(deps, ctx),
     devDependencies: resolveDeps(devDeps, ctx),
   };

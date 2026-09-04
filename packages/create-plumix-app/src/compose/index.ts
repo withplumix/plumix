@@ -42,7 +42,6 @@ const TSCONFIG = {
     module: "Preserve",
     moduleResolution: "Bundler",
     noEmit: true,
-    types: ["node", "@cloudflare/workers-types", "react"],
   },
   include: ["plumix.config.ts", "theme", ".plumix"],
   exclude: ["node_modules", "dist"],
@@ -88,7 +87,21 @@ export async function compose({
     ctx,
   );
   out["plumix.config.ts"] = assembleConfig(selection, contributions);
-  out["tsconfig.json"] = `${JSON.stringify(TSCONFIG, null, 2)}\n`;
+  out["tsconfig.json"] = `${JSON.stringify(
+    {
+      ...TSCONFIG,
+      compilerOptions: {
+        ...TSCONFIG.compilerOptions,
+        types: ["node", ...(runtime.types ?? []), "react"],
+      },
+    },
+    null,
+    2,
+  )}\n`;
+  if (runtime.readme) {
+    out["README.md"] =
+      `${out["README.md"] ?? ""}\n## Deploy\n\n${fillProjectName(runtime.readme, projectName).trimEnd()}\n`;
+  }
 
   const { envVars } = contributions;
   if (envVars.length > 0) {

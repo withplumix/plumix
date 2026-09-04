@@ -71,6 +71,10 @@
       "gitignore": [
         ".wrangler"
       ],
+      "types": [
+        "@cloudflare/workers-types"
+      ],
+      "readme": "scaffold/README-deploy.md",
       "files": {
         "wrangler.jsonc": "scaffold/wrangler.jsonc"
       },

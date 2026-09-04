@@ -36,9 +36,48 @@
   },
   "files": [
     "dist",
+    "scaffold",
     "README.md",
     "LICENSE"
   ],
+  "plumix": {
+    "scaffold": {
+      "kind": "runtime",
+      "id": "node",
+      "label": "Node.js",
+      "description": "A Node.js process with SQLite and uploads on disk",
+      "imports": [
+        "import { node, nodeSqlite } from \"@plumix/runtime-node\";"
+      ],
+      "configSlots": {
+        "runtime": "node()",
+        "database": "nodeSqlite({ path: \"data/site.sqlite\" })"
+      },
+      "authOrigin": "rpId: \"localhost\", origin: \"http://localhost:3000\"",
+      "authOriginComment": "Passkeys are bound to the origin: change both to the host you deploy on.",
+      "deps": {
+        "@plumix/runtime-node": "workspace:*"
+      },
+      "secretsFile": ".env",
+      "gitignore": [
+        "data"
+      ],
+      "readme": "scaffold/README-deploy.md",
+      "files": {
+        ".env.example": "scaffold/env.example"
+      },
+      "capabilities": {
+        "storage": {
+          "imports": [
+            "import { diskStorage } from \"@plumix/runtime-node\";"
+          ],
+          "configSlots": {
+            "storage": "diskStorage({ dir: \"data/media\" })"
+          }
+        }
+      }
+    }
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true

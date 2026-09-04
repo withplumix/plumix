@@ -8,7 +8,7 @@ sidebar:
 
 import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
-A Plumix site deploys as one Cloudflare Worker. The build turns `plumix.config.ts` into a worker entry, stages the admin and your static files beside it, and every resource the site reads at runtime arrives as a binding on the Worker env.
+A Plumix site deploys as one Cloudflare Worker, or as one Node.js process. This page is the Worker's story: the build turns `plumix.config.ts` into a worker entry, stages the admin and your static files beside it, and every resource the site reads at runtime arrives as a binding on the Worker env. [Node.js](/deployment/node/) is the other shape, where the same build produces a directory and a command.
 
 ## What a deploy is
 

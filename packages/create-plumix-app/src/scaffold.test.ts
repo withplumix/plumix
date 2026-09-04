@@ -47,7 +47,9 @@ describe("scaffold — blank Cloudflare app", () => {
     // A non-empty database_id, so `plumix dev` runs against local D1 out of the
     // box — an empty one crashes wrangler on startup.
     expect(wrangler).toMatch(/"database_id": "[^"]+"/);
-    expect(readFileSync(join(target, "README.md"), "utf8")).toContain("Plumix");
+    const readme = readFileSync(join(target, "README.md"), "utf8");
+    expect(readme).toContain("# my-app");
+    expect(readme).toContain("wrangler d1 create my-app");
     expect(existsSync(join(target, "theme", "index.tsx"))).toBe(true);
     expect(existsSync(join(target, ".gitignore"))).toBe(true);
   });
@@ -199,5 +201,78 @@ describe("scaffold — blank Cloudflare app", () => {
     const result = await scaffold({ targetDir: target });
 
     expect(result).toEqual({ targetDir: target, name: "outcome" });
+  });
+});
+
+describe("scaffold — Node app", () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), "plumix-scaffold-node-"));
+  });
+
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("composes a plain process: node(), SQLite under data/, a localhost passkey origin", async () => {
+    const target = join(tmp, "node-app");
+
+    await scaffold({ targetDir: target, runtimeId: "node" });
+
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain('from "@plumix/runtime-node"');
+    expect(config).toContain("runtime: node(),");
+    expect(config).toContain(
+      'database: nodeSqlite({ path: "data/site.sqlite" }),',
+    );
+    expect(config).toContain(
+      'rpId: "localhost", origin: "http://localhost:3000"',
+    );
+    expect(config).toMatch(/\/\/ .*deploy/i);
+    expect(config).not.toContain("cloudflare");
+
+    expect(existsSync(join(target, ".env.example"))).toBe(true);
+    expect(existsSync(join(target, "wrangler.jsonc"))).toBe(false);
+    expect(
+      readFileSync(join(target, ".gitignore"), "utf8").split("\n"),
+    ).toEqual(expect.arrayContaining(["data", ".env"]));
+    const tsconfig = readFileSync(join(target, "tsconfig.json"), "utf8");
+    expect(tsconfig).not.toContain("@cloudflare/workers-types");
+    expect(readFileSync(join(target, "README.md"), "utf8")).toContain(
+      "node dist/server/worker.js",
+    );
+  });
+
+  test("depends on the runtime package and on nothing Cloudflare", async () => {
+    const target = join(tmp, "deps");
+
+    await scaffold({ targetDir: target, runtimeId: "node" });
+
+    const pkg = readPkg(target);
+    expect(pkg.dependencies?.["@plumix/runtime-node"]).toBe(
+      `^${packageVersion("packages/runtimes/node")}`,
+    );
+    expect(pkg.dependencies).not.toHaveProperty("@plumix/runtime-cloudflare");
+    expect(pkg.devDependencies).not.toHaveProperty("wrangler");
+    expect(pkg.devDependencies).not.toHaveProperty("@cloudflare/workers-types");
+  });
+
+  test("fulfils the storage capability with diskStorage", async () => {
+    const target = join(tmp, "storage");
+
+    await scaffold({ targetDir: target, runtimeId: "node", pluginIds: ["og"] });
+
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain('storage: diskStorage({ dir: "data/media" }),');
+  });
+
+  test("refuses a plugin that needs a capability the runtime lacks, by name", async () => {
+    const target = join(tmp, "media");
+
+    await expect(
+      scaffold({ targetDir: target, runtimeId: "node", pluginIds: ["media"] }),
+    ).rejects.toThrow(/"imageDelivery" capability.*"node" runtime/);
+    expect(existsSync(target)).toBe(false);
   });
 });

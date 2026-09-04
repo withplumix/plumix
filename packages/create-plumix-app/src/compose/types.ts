@@ -18,7 +18,7 @@ export interface RuntimeDescriptor {
   readonly imports: readonly string[];
   /** Top-level `plumix({ ... })` slots, e.g. `runtime`, `database`. */
   readonly configSlots: Readonly<Record<string, string>>;
-  /** Spread expression merged into the passkey block (deploy origin). */
+  /** Object members spliced into the passkey block: a deploy-origin spread, or a literal pair. */
   readonly authOrigin?: string;
   /** One-line comment emitted above {@link authOrigin}. */
   readonly authOriginComment?: string;
@@ -37,6 +37,13 @@ export interface RuntimeDescriptor {
    * without being listed here.
    */
   readonly gitignore?: readonly string[];
+  /**
+   * Ambient type packages the project's tsconfig lists beside `node` and
+   * `react` — Cloudflare's `@cloudflare/workers-types`, say.
+   */
+  readonly types?: readonly string[];
+  /** Markdown for the README's Deploy section: how this runtime ships and runs. */
+  readonly readme?: string;
   /** Whole files the runtime contributes, keyed by relative path. */
   readonly files: Readonly<Record<string, string>>;
   /**

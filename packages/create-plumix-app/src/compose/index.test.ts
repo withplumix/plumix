@@ -67,8 +67,11 @@ describe("compose — local secrets file", () => {
   });
 });
 
-describe("compose — .gitignore", () => {
-  it("appends the runtime's ignores and its secrets file to the base list", async () => {
+const scripts = (raw: string | undefined) =>
+  (JSON.parse(raw ?? "{}") as { scripts: Record<string, string> }).scripts;
+
+describe("compose — .gitignore and clean", () => {
+  it("appends the runtime's ignores to .gitignore and to what clean removes", async () => {
     const files = await composeWith(
       { ...runtime, gitignore: [".wrangler"] },
       [],
@@ -76,6 +79,9 @@ describe("compose — .gitignore", () => {
 
     expect(files[".gitignore"]).toBe(
       "node_modules\ndist\n.plumix\n.cache\n.wrangler\n.dev.vars\n",
+    );
+    expect(scripts(files["package.json"]).clean).toBe(
+      "git clean -xdf .plumix dist node_modules .wrangler",
     );
   });
 
@@ -85,5 +91,39 @@ describe("compose — .gitignore", () => {
     expect(files[".gitignore"]).toBe(
       "node_modules\ndist\n.plumix\n.cache\n.env\n",
     );
+    expect(scripts(files["package.json"]).clean).not.toContain(".wrangler");
+  });
+});
+
+describe("compose — what the runtime decides about the base skeleton", () => {
+  it("lists the runtime's ambient types beside node and react in the tsconfig", async () => {
+    const files = await composeWith(
+      { ...runtime, types: ["@cloudflare/workers-types"] },
+      [],
+    );
+    const bare = await composeWith(runtime, []);
+
+    expect(JSON.parse(files["tsconfig.json"] ?? "{}")).toMatchObject({
+      compilerOptions: {
+        types: ["node", "@cloudflare/workers-types", "react"],
+      },
+    });
+    expect(JSON.parse(bare["tsconfig.json"] ?? "{}")).toMatchObject({
+      compilerOptions: { types: ["node", "react"] },
+    });
+  });
+
+  it("appends the runtime's deploy notes to the README with the project name filled in, and nothing when it has none", async () => {
+    const files = await composeWith(
+      { ...runtime, readme: "Run `wrangler d1 create __PROJECT_NAME__`.\n" },
+      [],
+    );
+    const bare = await composeWith(runtime, []);
+
+    expect(files["README.md"]).toContain(
+      "## Deploy\n\nRun `wrangler d1 create my-app`.",
+    );
+    expect(bare["README.md"]).not.toContain("## Deploy");
+    expect(bare["README.md"]).not.toContain("wrangler");
   });
 });

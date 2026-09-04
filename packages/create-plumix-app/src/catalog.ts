@@ -5,6 +5,7 @@ import { ScaffoldError } from "./errors.js";
 
 export interface PackageJson {
   name?: string;
+  scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   // Not JsonObject: same reason as `WranglerPatch`. Nothing here reads a key

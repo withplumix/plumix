@@ -48,10 +48,10 @@ landing page, because a Starlight group label cannot itself be a link.
 | 10  | Hooks               | 5       | 0      |
 | 11  | Extending the Admin | 7       | 0      |
 | 12  | Going Further       | 9       | 0      |
-| 13  | Deployment          | 6       | 4      |
+| 13  | Deployment          | 7       | 4      |
 | 14  | Plugins             | 14      | 3      |
 | 15  | Releases & Upgrades | 2       | 0      |
-|     | **Total**           | **106** | **30** |
+|     | **Total**           | **107** | **30** |
 
 ---
 
@@ -213,7 +213,8 @@ entry — content-editor material is out of scope for this site.
 | Slug                    | Title                    | T   | Purpose                                                                    | Covers                                          |
 | ----------------------- | ------------------------ | --- | -------------------------------------------------------------------------- | ----------------------------------------------- |
 | `deployment/overview`   | Overview                 | P0  | What deploying a Plumix site involves.                                     | —                                               |
-| `deployment/cloudflare` | Cloudflare Workers       | P0  | The one shipped runtime: D1, R2, KV, Images, edge cache.                   | `@plumix/runtime-cloudflare`                    |
+| `deployment/cloudflare` | Cloudflare Workers       | P0  | The default runtime: D1, R2, KV, Images, edge cache.                       | `@plumix/runtime-cloudflare`                    |
+| `deployment/node`       | Node.js                  | P1  | A plain process: `node:sqlite`, disk storage, `PORT`/`HOST`, `trustProxy`. | `@plumix/runtime-node`                          |
 | `deployment/bindings`   | Bindings and Environment | P0  | Wiring bindings to config slots.                                           | bindings, slots                                 |
 | `deployment/secrets`    | Secrets                  | P0  | `EnvInput`, `.dev.vars`, production secrets.                               | secret slots                                    |
 | `deployment/cli`        | CLI Reference            | P1  | **Roster page.** Commands and global flags.                                | 7 commands + 5 global flags                     |
