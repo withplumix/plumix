@@ -64,6 +64,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@plumix/eslint-config": "workspace:*",
+    "@plumix/plugin-media": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",
