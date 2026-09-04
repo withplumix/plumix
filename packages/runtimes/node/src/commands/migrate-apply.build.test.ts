@@ -1,47 +1,23 @@
 import { execFile } from "node:child_process";
-import {
-  mkdtempSync,
-  readdirSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import type { CommandContext, PlumixApp } from "plumix";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import { nodeSqlite } from "../node-sqlite.js";
+import {
+  PLUMIX_BIN,
+  scaffoldConsumerProject,
+  STUB_CONFIG,
+} from "../test/consumer-project.js";
 import { migrateApplyCommand } from "./migrate-apply.js";
-
-const PLUMIX_BIN = fileURLToPath(
-  new URL("../../node_modules/.bin/plumix", import.meta.url),
-);
-
-// A consumer project in a temp dir, with this package's own `node_modules`
-// linked in so `plumix` resolves from there the way it does from an app root.
-const CONFIG = `import { auth, defineTheme, fallback, plumix } from "plumix";
-
-export default plumix({
-  runtime: { name: "stub", createHandler: () => ({ fetch: () => new Response("") }), generateEntry: () => "" },
-  database: { kind: "stub", connect: () => ({ db: {} }) },
-  auth: auth({ passkey: { rpName: "x", rpId: "localhost", origin: "http://localhost:3000" } }),
-  theme: defineTheme({ templates: [fallback(() => null)] }),
-});
-`;
 
 let dir: string;
 
 beforeAll(async () => {
-  dir = mkdtempSync(join(tmpdir(), "plumix-node-migrate-"));
-  symlinkSync(
-    fileURLToPath(new URL("../../node_modules", import.meta.url)),
-    join(dir, "node_modules"),
-  );
-  writeFileSync(join(dir, "plumix.config.mjs"), CONFIG, "utf8");
+  dir = scaffoldConsumerProject("plumix-node-migrate-", STUB_CONFIG);
   await promisify(execFile)(PLUMIX_BIN, ["migrate", "generate"], {
     cwd: dir,
   });

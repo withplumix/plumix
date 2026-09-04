@@ -1,3 +1,5 @@
+export { node } from "./adapter.js";
+export type { NodeConfig, NodeRuntimeAdapter } from "./adapter.js";
 export { createAssetsLayer } from "./http/assets.js";
 export type { AssetsLayer, AssetsLayerOptions } from "./http/assets.js";
 export { createRequestListener } from "./http/bridge.js";

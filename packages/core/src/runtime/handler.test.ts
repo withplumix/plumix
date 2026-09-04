@@ -414,10 +414,31 @@ describe("createPlumixHandler — deferred work", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     try {
-      await handler.dispose?.();
+      expect(await handler.dispose?.()).toEqual({ abandoned: 1 });
       expect(warn).toHaveBeenCalledWith(
         expect.stringContaining("deferred_work_abandoned: 1 deferred task(s)"),
       );
+    } finally {
+      warn.mockRestore();
+      stuck.resolve();
+    }
+  });
+
+  test("a per-call deadline overrides the handler's, so a shutdown can spend what it has left", async () => {
+    const stuck = manualPromise();
+    const handler = await handlerFor(
+      { plugins: [deferring(() => stuck.promise)] },
+      { disposeTimeoutMs: 60_000 },
+    );
+    await handler.fetch(deferRequest(), { env: {} });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    try {
+      const began = Date.now();
+      expect(await handler.dispose?.({ timeoutMs: 10 })).toEqual({
+        abandoned: 1,
+      });
+      expect(Date.now() - began).toBeLessThan(1_000);
     } finally {
       warn.mockRestore();
       stuck.resolve();
