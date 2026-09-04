@@ -25,3 +25,26 @@ export class MigrateApplyError extends Error {
     );
   }
 }
+
+export class BridgeError extends Error {
+  static {
+    BridgeError.prototype.name = "BridgeError";
+  }
+
+  readonly code: "body_too_large";
+  readonly limit: number;
+
+  private constructor(code: "body_too_large", message: string, limit: number) {
+    super(message);
+    this.code = code;
+    this.limit = limit;
+  }
+
+  static bodyTooLarge(ctx: { limit: number }): BridgeError {
+    return new BridgeError(
+      "body_too_large",
+      `@plumix/runtime-node: the request body exceeds the ${ctx.limit} byte limit`,
+      ctx.limit,
+    );
+  }
+}
