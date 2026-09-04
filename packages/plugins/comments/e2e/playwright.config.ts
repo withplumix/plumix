@@ -5,5 +5,6 @@ export default definePlumixE2EConfig({
   // each playground assigns its own HTTP + inspector port.
   port: 3060,
   inspectorPort: 9360,
+  configDir: import.meta.dirname,
   playground: "../playground",
 });

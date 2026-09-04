@@ -4,7 +4,7 @@ import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
 import { readManifest } from "@/lib/manifest.js";
 import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { registerWithPasskey } from "@/lib/passkey.js";
-import { loadSession, SESSION_QUERY_KEY } from "@/lib/session.js";
+import { loadSession, refetchSession } from "@/lib/session.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
@@ -65,9 +65,7 @@ function BootstrapRoute(): ReactNode {
     mutationFn: registerWithPasskey,
     onMutate: () => setErrorCode(null),
     onSuccess: async () => {
-      await router.options.context.queryClient.invalidateQueries({
-        queryKey: SESSION_QUERY_KEY,
-      });
+      await refetchSession(router.options.context.queryClient);
       await router.navigate({ to: "/" });
     },
     onError: (err) => {
@@ -120,6 +118,7 @@ function BootstrapRoute(): ReactNode {
                       autoComplete="username webauthn"
                       required
                       disabled={createAccount.isPending}
+                      data-testid="bootstrap-email-input"
                       {...field}
                     />
                   </FormControl>
@@ -141,6 +140,7 @@ function BootstrapRoute(): ReactNode {
                       type="text"
                       autoComplete="name"
                       disabled={createAccount.isPending}
+                      data-testid="bootstrap-name-input"
                       {...field}
                     />
                   </FormControl>
@@ -157,7 +157,11 @@ function BootstrapRoute(): ReactNode {
               </Alert>
             ) : null}
 
-            <Button type="submit" disabled={createAccount.isPending}>
+            <Button
+              type="submit"
+              disabled={createAccount.isPending}
+              data-testid="bootstrap-submit"
+            >
               {createAccount.isPending ? (
                 <Trans
                   id="auth.bootstrap.submit.pending"

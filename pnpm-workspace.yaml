@@ -8,6 +8,7 @@ packages:
   - "packages/create-plumix-app"
   - "packages/plumix"
   - "packages/runtimes/*"
+  - "packages/runtimes/*/playground"
   - "packages/plugins/*"
   - "packages/plugins/*/playground"
   - "tooling/*"

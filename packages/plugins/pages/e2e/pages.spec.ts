@@ -5,12 +5,7 @@
 // declarative registration (hierarchical `page` entry type) end-to-
 // end through core admin's CRUD against real D1.
 
-import { expect, test } from "plumix/test/playwright";
-
-// Title links carry `content-list-row-<id>`; the actions strip and
-// trash button reuse the prefix, so exclude them when counting rows.
-const CONTENT_ROWS =
-  "[data-testid^='content-list-row-']:not([data-testid*='-actions-']):not([data-testid*='-trash-'])";
+import { CONTENT_LIST_ROWS, expect, test } from "plumix/test/playwright";
 
 test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => {
   test("pages list mounts against the real worker", async ({ page }) => {
@@ -19,7 +14,7 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     // Soft empty-state assertion: only enforce when the list actually
     // has no rows. See `packages/plugins/blog/e2e/blog.spec.ts` for
     // the cascade-failure rationale.
-    const rows = page.locator(CONTENT_ROWS);
+    const rows = page.locator(CONTENT_LIST_ROWS);
     if ((await rows.count()) === 0) {
       await expect(page.getByTestId("content-list-empty-state")).toBeVisible();
     }
@@ -49,7 +44,7 @@ test.describe.serial("@plumix/plugin-pages — worker-driven happy path", () => 
     // retry sees rows the prior attempt created. Existence survives
     // that; `toHaveCount(1)` cascade-fails with "Received: 2".
     await expect(
-      page.locator(CONTENT_ROWS).filter({ hasText: "About" }).first(),
+      page.locator(CONTENT_LIST_ROWS).filter({ hasText: "About" }).first(),
     ).toBeVisible();
   });
 

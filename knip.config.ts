@@ -105,6 +105,9 @@ const config: KnipConfig = {
     "packages/plugins/forms/playground": {
       entry: ["plumix.config.ts"],
     },
+    "packages/runtimes/cloudflare/playground": {
+      entry: ["plumix.config.ts"],
+    },
     // drizzle-kit is invoked by consumers as a CLI hint, not imported.
     "packages/plumix": {
       entry: [
@@ -190,6 +193,16 @@ const config: KnipConfig = {
       // to the bare name `cloudflare`; ignore it (this package never depends
       // on the real `cloudflare` SDK).
       ignoreDependencies: ["cloudflare"],
+      // The e2e rig follows the plugin suites: with knip's playwright plugin
+      // off, the export-map entries and the spec are listed by hand.
+      entry: [
+        "src/index.ts",
+        "src/commands/index.ts",
+        "src/demo/index.ts",
+        "src/demo/durable-object.ts",
+        "e2e/*.spec.ts",
+      ],
+      playwright: false,
     },
     // The runtime-proof fixture plugin is loaded by playwright's
     // webServer command at e2e time — not via a static import knip

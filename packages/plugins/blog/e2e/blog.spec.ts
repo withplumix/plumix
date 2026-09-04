@@ -5,12 +5,7 @@
 // declarative registration (post entry type + category/tag taxonomies)
 // end-to-end through core admin's CRUD against real D1.
 
-import { expect, test } from "plumix/test/playwright";
-
-// Title links carry `content-list-row-<id>`; the actions strip and
-// trash button reuse the prefix, so exclude them when counting rows.
-const CONTENT_ROWS =
-  "[data-testid^='content-list-row-']:not([data-testid*='-actions-']):not([data-testid*='-trash-'])";
+import { CONTENT_LIST_ROWS, expect, test } from "plumix/test/playwright";
 
 test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
   test("posts list mounts against the real worker", async ({ page }) => {
@@ -22,7 +17,7 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     // cascade-fail once a later test had created a post — turning one
     // real failure into three reported ones. Admin's mock-based
     // entries.spec.ts covers the empty-state UI exhaustively.
-    const rows = page.locator(CONTENT_ROWS);
+    const rows = page.locator(CONTENT_LIST_ROWS);
     if ((await rows.count()) === 0) {
       await expect(page.getByTestId("content-list-empty-state")).toBeVisible();
     }
@@ -51,7 +46,10 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     // webServer start, not per attempt), so a retry sees rows the prior
     // attempt created. `toHaveCount(1)` cascade-fails with "Received: 2".
     await expect(
-      page.locator(CONTENT_ROWS).filter({ hasText: "Hello world" }).first(),
+      page
+        .locator(CONTENT_LIST_ROWS)
+        .filter({ hasText: "Hello world" })
+        .first(),
     ).toBeVisible();
   });
 
@@ -69,7 +67,7 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     // Target the post this suite created by title — `.first()` alone
     // could grab a row a retry left behind (see the create test).
     const row = page
-      .locator(CONTENT_ROWS)
+      .locator(CONTENT_LIST_ROWS)
       .filter({ hasText: "Hello world" })
       .first();
     const rowTestid = await row.getAttribute("data-testid");
@@ -95,7 +93,10 @@ test.describe.serial("@plumix/plugin-blog — worker-driven happy path", () => {
     // rather than count — a retry may have published its own copy.
     await page.goto("entries/posts?status=published");
     await expect(
-      page.locator(CONTENT_ROWS).filter({ hasText: "Hello world" }).first(),
+      page
+        .locator(CONTENT_LIST_ROWS)
+        .filter({ hasText: "Hello world" })
+        .first(),
     ).toBeVisible();
   });
 

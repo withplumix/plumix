@@ -2498,6 +2498,9 @@ importers:
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.17.4
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.62.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -2534,6 +2537,43 @@ importers:
       vitest:
         specifier: catalog:vitest
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+      wrangler:
+        specifier: catalog:cloudflare
+        version: 4.125.0(@cloudflare/workers-types@5.20260823.1)
+
+  packages/runtimes/cloudflare/playground:
+    dependencies:
+      '@plumix/plugin-blog':
+        specifier: workspace:*
+        version: link:../../../plugins/blog
+      '@plumix/plugin-media':
+        specifier: workspace:*
+        version: link:../../../plugins/media
+      '@plumix/runtime-cloudflare':
+        specifier: workspace:*
+        version: link:..
+      plumix:
+        specifier: workspace:*
+        version: link:../../../plumix
+      react:
+        specifier: catalog:react
+        version: 19.2.8
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: catalog:cloudflare
+        version: 5.20260823.1
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../../../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
+      '@types/react':
+        specifier: catalog:react
+        version: 19.2.18
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
         version: 4.125.0(@cloudflare/workers-types@5.20260823.1)
@@ -14563,7 +14603,7 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
     optionalDependencies:
-      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
 
   '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:

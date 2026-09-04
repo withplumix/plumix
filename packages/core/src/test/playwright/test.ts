@@ -10,10 +10,11 @@ import {
   serializeDbBaseline,
 } from "./db-baseline.js";
 import { openPlaygroundDb } from "./open-playground-db.js";
+import { resolvePlaygroundDbPath } from "./runtime-e2e.js";
 
-// Lives inside the state directory the webServer wipes, so a stale
-// baseline can never outlive the database it describes.
-const BASELINE_SUBPATH = ".wrangler/state/plumix-e2e-baseline.json";
+// Lives beside the database, inside the state the webServer wipes, so a
+// stale baseline can never outlive the database it describes.
+const BASELINE_FILENAME = "plumix-e2e-baseline.json";
 
 export interface PlumixWorkerOptions {
   /**
@@ -33,8 +34,8 @@ interface PlumixWorkerFixtures {
  * `@playwright/test` in a worker-driven suite and a retry starts from
  * the same database its first attempt did.
  *
- * The whole problem is that `rm -rf .wrangler/state` belongs to the
- * webServer command, which Playwright runs once per suite run — so the
+ * The whole problem is that the state wipe belongs to the webServer
+ * command, which Playwright runs once per suite run — so the
  * second attempt inherits whatever the first left behind. A worker-scoped
  * fixture is the one hook that matches that cadence: Playwright discards
  * the worker after a failure and starts a fresh one, so this runs once
@@ -49,8 +50,8 @@ interface PlumixWorkerFixtures {
  * each other — two tests mutating the same row still need to be ordered
  * or disjoint.
  *
- * D1 only: R2, KV and Durable Object state under `.wrangler/state` are
- * still wiped once per suite run.
+ * The database only: whatever else the runtime wipes before a run (object
+ * storage, KV, Durable Object state) is still wiped once per suite run.
  */
 export const test = base.extend<
   object,
@@ -71,7 +72,10 @@ export const test = base.extend<
         configFile ? dirname(configFile) : rootDir,
         plumixPlayground,
       );
-      const file = join(cwd, BASELINE_SUBPATH);
+      const file = join(
+        dirname(resolvePlaygroundDbPath(cwd)),
+        BASELINE_FILENAME,
+      );
       const db = await openPlaygroundDb({ cwd });
       try {
         if (existsSync(file)) {

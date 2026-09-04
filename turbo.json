@@ -179,6 +179,21 @@
       "dependsOn": ["build", "^build"],
       "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
     },
+    "@plumix/runtime-cloudflare#test:e2e": {
+      // The runtime's playground wires the blog and media plugins, which
+      // depend on this package — so `^build` cannot reach them without a
+      // cycle in the package graph. Name their builds here instead: an
+      // ordering edge in the task graph only (#1883 is what a missing one
+      // looks like). A `pkg#task` entry replaces the base definition, so the
+      // rest is repeated.
+      "dependsOn": [
+        "build",
+        "^build",
+        "@plumix/plugin-blog#build",
+        "@plumix/plugin-media#build"
+      ],
+      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
+    },
     "docs:screenshots": {
       // Same graph as `test:e2e`: the capture drives the built admin through
       // `vite preview`.
