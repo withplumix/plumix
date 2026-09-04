@@ -1,6 +1,10 @@
 import type { AppContext } from "plumix/plugin";
 import type { TracedContext } from "plumix/test";
-import { createTestContext, createTracedContext } from "plumix/test";
+import {
+  createTestContext,
+  createTestDb,
+  createTracedContext,
+} from "plumix/test";
 import { describe, expect, test } from "vitest";
 
 import type { FormSubmission } from "../db/schema.js";
@@ -323,6 +327,7 @@ describe("the inbox writes", () => {
  */
 async function planFor(
   traced: TracedContext,
+  client: Awaited<ReturnType<typeof createTestDb>>["$client"],
   read: () => Promise<unknown>,
 ): Promise<string> {
   const before = traced.ctx.telemetry.getSpans().length;
@@ -333,7 +338,7 @@ async function planFor(
   const sql = span?.attributes["db.sql"];
   if (typeof sql !== "string") return "";
   const params = span?.attributes["db.params"];
-  const explained = await traced.harness.db.$client.execute({
+  const explained = await client.execute({
     sql: `explain query plan ${sql}`,
     args: Array.isArray(params) ? params.map(String) : [],
   });
@@ -345,26 +350,30 @@ async function planFor(
 
 describe("what the inbox's paging costs", () => {
   test("walks an index already in page order, whichever facets are set", async () => {
-    const traced = await createTracedContext();
-    await applyFormsSchema(traced.harness.db);
+    // The harness takes the libsql db explicitly so its client stays in
+    // reach: the plan is read through libsql's own `execute`, which binds
+    // the traced values the way drizzle's raw `sql` cannot.
+    const db = await createTestDb();
+    const traced = await createTracedContext({ db });
+    await applyFormsSchema(db);
     const page = { limit: 25 } as const;
+    const plan = (read: () => Promise<unknown>) =>
+      planFor(traced, db.$client, read);
 
-    const everything = await planFor(traced, () =>
-      listSubmissions(traced.ctx, page),
-    );
-    const byForm = await planFor(traced, () =>
+    const everything = await plan(() => listSubmissions(traced.ctx, page));
+    const byForm = await plan(() =>
       listSubmissions(traced.ctx, { ...page, form: "contact" }),
     );
-    const byStatus = await planFor(traced, () =>
+    const byStatus = await plan(() =>
       listSubmissions(traced.ctx, { ...page, status: "new" }),
     );
-    const byBoth = await planFor(traced, () =>
+    const byBoth = await plan(() =>
       listSubmissions(traced.ctx, { ...page, form: "contact", status: "new" }),
     );
     // The read every page after the first one issues, and the reason the
     // cursor is the `id`: it narrows the same index walk rather than
     // asking for a second column to break a tie.
-    const cursored = await planFor(traced, () =>
+    const cursored = await plan(() =>
       listSubmissions(traced.ctx, { ...page, form: "contact", cursor: "500" }),
     );
 

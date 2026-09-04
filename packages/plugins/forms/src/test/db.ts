@@ -1,8 +1,9 @@
+import type { DispatcherHarness } from "plumix/test";
 import { applyTestSchema, createTestDb } from "plumix/test";
 
 import * as schema from "../db/schema.js";
 
-export type FormsTestDb = Awaited<ReturnType<typeof createTestDb>>;
+export type FormsTestDb = DispatcherHarness["db"];
 
 /**
  * Layer the plugin's `form_submissions` table onto an existing core test
