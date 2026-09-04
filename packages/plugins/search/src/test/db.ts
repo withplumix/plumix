@@ -26,7 +26,7 @@ import {
 import { ensureSearchIndex, SEARCH_INDEX_TRIGGER_DROP_DDL } from "../db/ddl.js";
 import * as schema from "../db/schema.js";
 
-export type SearchTestDb = Awaited<ReturnType<typeof createTestDb>>;
+export type SearchTestDb = DispatcherHarness["db"];
 
 /**
  * Layer the plugin's projection and its FTS5 index onto an existing core

@@ -6,6 +6,7 @@ import {
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
+import type { Db } from "../context/app.js";
 import * as schema from "../db/schema/index.js";
 import { traceSqlClient } from "../db/trace-libsql.js";
 import { ENTRY_CHANGE_FEED_DDL } from "../entries/change-feed-ddl.js";
@@ -14,8 +15,8 @@ type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 
 type SchemaModule = Record<string, unknown>;
 
-/** Narrow enough that any drizzle db — core's or a plugin's — satisfies it. */
-type SqlRunner = Pick<TestDb, "run">;
+/** Narrow enough that any drizzle db — core's, a plugin's, a runtime's — satisfies it. */
+type SqlRunner = Pick<Db, "run">;
 
 // Compiling a schema costs ~100ms, and every test in a file re-creates its
 // db; keyed by the module object so core and each plugin cache separately.

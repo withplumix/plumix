@@ -1,0 +1,77 @@
+{
+  "name": "@plumix/runtime-node",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Node.js runtime adapter for Plumix",
+  "license": "MIT",
+  "author": "Plumix Contributors",
+  "homepage": "https://github.com/withplumix/plumix#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/withplumix/plumix.git",
+    "directory": "packages/runtimes/node"
+  },
+  "bugs": {
+    "url": "https://github.com/withplumix/plumix/issues"
+  },
+  "keywords": [
+    "plumix",
+    "node",
+    "runtime",
+    "sqlite"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24.2.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./commands": {
+      "types": "./dist/commands/index.d.ts",
+      "default": "./dist/commands/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "attw": "attw --pack . --profile esm-only",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path ../../../.prettierignore",
+    "lint": "eslint",
+    "publint": "publint",
+    "test:unit": "vitest run",
+    "test:build": "vitest run --config vitest.build.config.ts",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "catalog:drizzle",
+    "plumix": "workspace:>=0.21.0 <1.0.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "catalog:",
+    "@plumix/eslint-config": "workspace:*",
+    "@plumix/prettier-config": "workspace:*",
+    "@plumix/typescript-config": "workspace:*",
+    "@plumix/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:vitest",
+    "eslint": "catalog:",
+    "plumix": "workspace:*",
+    "prettier": "catalog:",
+    "publint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:vitest"
+  },
+  "prettier": "@plumix/prettier-config"
+}

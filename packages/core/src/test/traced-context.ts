@@ -1,10 +1,14 @@
 import type { AppContext } from "../context/app.js";
+import type {
+  CreateDispatcherHarnessOptions,
+  DispatcherHarness,
+} from "./dispatcher.js";
 import { requestStore } from "../context/stores.js";
 import { createTestContext } from "./context.js";
 import { createDispatcherHarness } from "./dispatcher.js";
 
 export interface TracedContext {
-  readonly harness: Awaited<ReturnType<typeof createDispatcherHarness>>;
+  readonly harness: DispatcherHarness;
   readonly ctx: AppContext;
   /** Run `fn` with `ctx` in the ambient request store so DB spans attribute to it. */
   readonly run: <T>(fn: () => Promise<T>) => Promise<T>;
@@ -18,7 +22,7 @@ export interface TracedContext {
  * function issues (request-memo coverage, N+1 guards).
  */
 export async function createTracedContext(
-  options: Parameters<typeof createDispatcherHarness>[0] = {},
+  options: CreateDispatcherHarnessOptions = {},
 ): Promise<TracedContext> {
   const harness = await createDispatcherHarness(options);
   const ctx = createTestContext({

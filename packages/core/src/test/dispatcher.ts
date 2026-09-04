@@ -14,7 +14,7 @@ import type {
   InterfaceToggle,
   PlumixConfigInput,
 } from "../config.js";
-import type { AppContext, DeferFn, Logger } from "../context/app.js";
+import type { AppContext, Db, DeferFn, Logger } from "../context/app.js";
 import type { TelemetryConfig } from "../context/telemetry.js";
 import type { User, UserRole } from "../db/schema/users.js";
 import type { DebugBarInput } from "../dev/debug-bar/config.js";
@@ -56,8 +56,6 @@ import { createTestDb } from "./harness.js";
 import { buildRequest, TestResponse } from "./request.js";
 import { spyAction, spyFilter } from "./spies.js";
 
-type TestDb = Awaited<ReturnType<typeof createTestDb>>;
-
 const stubAdapter = {
   name: "test",
   createHandler: () => ({ fetch: () => new Response("stub", { status: 500 }) }),
@@ -70,6 +68,8 @@ const stubDatabase = {
 };
 
 export interface CreateDispatcherHarnessOptions {
+  /** A supplied db arrives with its schema already applied; the default gets core's. */
+  readonly db?: Db;
   readonly devCsrfLocalhost?: boolean;
   /**
    * Runtime environment bindings (KV, R2, Durable Objects, etc.). Exposed
@@ -200,7 +200,7 @@ export interface CreateDispatcherHarnessOptions {
 }
 
 export interface DispatcherHarness {
-  readonly db: TestDb;
+  readonly db: Db;
   readonly app: PlumixApp;
   /** Pass-through env bindings. Empty by default; override via harness options. */
   readonly env: PlumixEnv;
@@ -255,7 +255,7 @@ export interface DispatcherHarness {
 function createContextFactory(args: {
   readonly app: PlumixApp;
   readonly options: CreateDispatcherHarnessOptions;
-  readonly db: TestDb;
+  readonly db: Db;
   readonly env: PlumixEnv;
   readonly defer: DeferFn;
 }): (
@@ -303,7 +303,7 @@ function createContextFactory(args: {
 export async function createDispatcherHarness(
   options: CreateDispatcherHarnessOptions = {},
 ): Promise<DispatcherHarness> {
-  const db = await createTestDb();
+  const db = options.db ?? (await createTestDb());
   const env = options.env ?? {};
   const config = plumix({
     runtime: stubAdapter,

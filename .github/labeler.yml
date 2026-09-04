@@ -22,6 +22,10 @@
   - changed-files:
       - any-glob-to-any-file: "packages/runtimes/cloudflare/**"
 
+"pkg: runtime-node":
+  - changed-files:
+      - any-glob-to-any-file: "packages/runtimes/node/**"
+
 "pkg: plugin-blog":
   - changed-files:
       - any-glob-to-any-file: "packages/plugins/blog/**"

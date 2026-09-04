@@ -1,5 +1,6 @@
 import type { AppContext } from "plumix/plugin";
 import type { Entry, NewEntry } from "plumix/schema";
+import type { DispatcherHarness } from "plumix/test";
 import {
   applyTestSchema,
   createTestContext,
@@ -9,7 +10,7 @@ import {
 
 import * as schema from "../db/schema.js";
 
-export type CommentsTestDb = Awaited<ReturnType<typeof createTestDb>>;
+export type CommentsTestDb = DispatcherHarness["db"];
 
 export function ctxFor(db: CommentsTestDb): AppContext {
   return createTestContext({ db });
