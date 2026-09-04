@@ -36,6 +36,11 @@ describe("node generateEntry", () => {
       'import { createAssetsLayer, createRequestListener } from "@plumix/runtime-node";',
     );
     expect(source).toContain("assets.serve(req, res, () => bridge(req, res))");
+    // The trust and body-limit options only reach the bridge through here.
+    expect(source).toContain(
+      "const { trustProxy, bodySizeLimit } = config.runtime.config;",
+    );
+    expect(source).toContain("{ trustProxy, bodySizeLimit },");
     expect(source).toContain("if (import.meta.main) {");
     expect(source).toContain(`${ASSETS_DIR_ENV}: resolve(`);
   });

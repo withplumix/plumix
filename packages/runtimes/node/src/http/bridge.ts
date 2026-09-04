@@ -5,7 +5,7 @@ import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 
 import { BridgeError } from "../errors.js";
 
-const DEFAULT_BODY_SIZE_LIMIT = 1024 * 1024 * 1024;
+export const DEFAULT_BODY_SIZE_LIMIT = 1024 * 1024 * 1024;
 
 export type RequestHandler = (
   request: Request,
