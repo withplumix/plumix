@@ -1,7 +1,9 @@
+import { resolve } from "node:path";
 import type { PlaywrightTestConfig } from "@playwright/test";
 import { defineConfig, devices } from "@playwright/test";
 
 import type { PlumixWorkerOptions } from "./test.js";
+import { readRuntimeE2E } from "./runtime-e2e.js";
 
 export interface PlumixE2EConfigOptions {
   /**
@@ -28,20 +30,27 @@ export interface PlumixE2EConfigOptions {
    */
   readonly inspectorPort?: number;
   /**
-   * Optional path to a playground workspace (relative to the playwright
-   * config file). When set, `definePlumixE2EConfig` bakes the standard
-   * worker-driven webServer setup: wipe `.wrangler/state` → generate
+   * Directory of the playwright config file — pass `import.meta.dirname`.
+   * `playground` is resolved against it to read the runtime's `plumix.e2e`
+   * block at config time. Required with `playground`.
+   */
+  readonly configDir?: string;
+  /**
+   * Optional path to a playground workspace (relative to `configDir`).
+   * When set, `definePlumixE2EConfig` bakes the standard worker-driven
+   * webServer setup: wipe the state the runtime declares → generate
    * migrations → apply them (unless `applyMigrations: false`) → run
-   * `plumix dev`.
+   * `plumix dev`. What to wipe comes from the `plumix.e2e` block of the
+   * runtime package the playground depends on.
    * Also auto-wires `globalSetup.ts` and `storageState.json` by convention.
    * Mutually exclusive with an explicit `webServerCommand`.
    *
-   * The `rm -rf .wrangler/state` step belongs to the webServer, so it runs
-   * once per suite run and never per retry. Import `test` from
-   * `plumix/test/playwright` and the `plumixDbBaseline` fixture closes that
-   * gap, restoring the post-`globalSetup` database once per attempt; a
-   * suite importing `@playwright/test` directly still meets whatever its
-   * failed attempt left behind (#1923).
+   * The state wipe belongs to the webServer, so it runs once per suite run
+   * and never per retry. Import `test` from `plumix/test/playwright` and
+   * the `plumixDbBaseline` fixture closes that gap, restoring the
+   * post-`globalSetup` database once per attempt; a suite importing
+   * `@playwright/test` directly still meets whatever its failed attempt
+   * left behind (#1923).
    */
   readonly playground?: string;
   /**
@@ -78,8 +87,7 @@ export interface PlumixE2EConfigOptions {
    * Optional shell step to run inside the baked playground command, after
    * migrations are generated and applied, and before `plumix dev` starts.
    * Use for fixture seeds that need to live in the database before the
-   * worker comes up (e.g. `wrangler d1 execute <db> --local
-   * --file=seed.sql`). Only meaningful when `playground` is set.
+   * server comes up. Only meaningful when `playground` is set.
    */
   readonly extraSetup?: string;
   /**
@@ -94,7 +102,6 @@ export interface PlumixE2EConfigOptions {
 
 const ADMIN_BASE = "/_plumix/admin";
 const PORT_OFFSET_ENV = "PLUMIX_E2E_PORT_OFFSET";
-const DEFAULT_BINDING = "DB";
 const DEFAULT_PORT = 5173;
 
 /**
@@ -123,36 +130,50 @@ export function resolveE2EPort(base: number): number {
   return base + offset;
 }
 
-function bakePlaygroundCommand(
-  playground: string,
-  port: number,
-  inspectorPort: number | undefined,
-  extraSetup: string | undefined,
-  applyMigrations: boolean,
-): string {
+interface PlaygroundCommand {
+  readonly playground: string;
+  /** Paths the runtime's `plumix.e2e` block says to wipe before a run. */
+  readonly wipe: readonly string[];
+  readonly port: number;
+  readonly inspectorPort: number | undefined;
+  readonly extraSetup: string | undefined;
+  readonly applyMigrations: boolean;
+}
+
+function bakePlaygroundCommand(input: PlaygroundCommand): string {
   const steps = [
-    `cd ${playground}`,
+    `cd ${input.playground}`,
     // `drizzle/` is gitignored and regenerated each run; one left from an
     // older schema makes drizzle-kit ask how to resolve a rename — a
     // prompt it cannot issue on a pipe — and keep the stale migrations.
     // Safe only because the generate below refills it: apps/demo globs
     // `./drizzle/*.sql` for its per-session schema, so these two steps
     // cannot be separated.
-    "rm -rf .wrangler/state drizzle",
+    `rm -rf ${[...input.wipe, "drizzle"].join(" ")}`,
     "pnpm exec plumix migrate generate",
   ];
-  if (applyMigrations) {
-    steps.push(
-      `pnpm exec wrangler d1 migrations apply ${DEFAULT_BINDING} --local`,
-    );
-  }
-  if (extraSetup) steps.push(extraSetup);
-  const devFlags = [`--port ${String(port)}`];
-  if (inspectorPort !== undefined) {
-    devFlags.push(`--inspector-port ${String(inspectorPort)}`);
+  // Already delegated to the runtime by the CLI, so the command stays the
+  // same whichever runtime the playground depends on.
+  if (input.applyMigrations) steps.push("pnpm exec plumix migrate apply");
+  if (input.extraSetup) steps.push(input.extraSetup);
+  const devFlags = [`--port ${String(input.port)}`];
+  if (input.inspectorPort !== undefined) {
+    devFlags.push(`--inspector-port ${String(input.inspectorPort)}`);
   }
   steps.push(`pnpm exec plumix dev ${devFlags.join(" ")}`);
   return steps.join(" && ");
+}
+
+function runtimeWipe(
+  configDir: string | undefined,
+  playground: string,
+): readonly string[] {
+  if (configDir === undefined) {
+    throw new Error(
+      "definePlumixE2EConfig: `playground` is resolved against `configDir` — pass `configDir: import.meta.dirname`.",
+    );
+  }
+  return readRuntimeE2E(resolve(configDir, playground)).wipe;
 }
 
 /**
@@ -163,13 +184,14 @@ function bakePlaygroundCommand(
  * the build/preview command — as parameters.
  *
  * When `playground` is set, the helper bakes a worker-driven webServer
- * (wipe state → generate migrations → apply them unless
- * `applyMigrations: false` → `plumix dev`) and wires the `globalSetup.ts` / `storageState.json`
- * convention used by the worker-driven plugin e2e pattern. Otherwise the
- * caller supplies `webServerCommand` directly.
+ * (wipe the runtime's declared state → generate migrations → apply them
+ * unless `applyMigrations: false` → `plumix dev`) and wires the
+ * `globalSetup.ts` / `storageState.json` convention used by the
+ * worker-driven plugin e2e pattern. Otherwise the caller supplies
+ * `webServerCommand` directly.
  *
- * Used by `packages/admin/playwright.config.ts` and each
- * `packages/plugins/<plugin>/e2e/playwright.config.ts`.
+ * Used by the admin suites, each plugin and runtime playground suite, and
+ * `apps/demo`.
  */
 export function definePlumixE2EConfig(
   options: PlumixE2EConfigOptions,
@@ -212,15 +234,17 @@ export function definePlumixE2EConfig(
   const webServerCommand =
     options.webServerCommand ??
     (options.playground !== undefined
-      ? bakePlaygroundCommand(
-          options.playground,
+      ? bakePlaygroundCommand({
+          playground: options.playground,
+          wipe: runtimeWipe(options.configDir, options.playground),
           port,
-          options.inspectorPort === undefined
-            ? undefined
-            : resolveE2EPort(options.inspectorPort),
-          options.extraSetup,
-          options.applyMigrations !== false,
-        )
+          inspectorPort:
+            options.inspectorPort === undefined
+              ? undefined
+              : resolveE2EPort(options.inspectorPort),
+          extraSetup: options.extraSetup,
+          applyMigrations: options.applyMigrations !== false,
+        })
       : "");
 
   return defineConfig<object, PlumixWorkerOptions>({
@@ -259,9 +283,9 @@ export function definePlumixE2EConfig(
         : { url: baseURL }),
       // Never adopt whatever already answers on the port. Playwright
       // does not check that the responder is this suite's build, and
-      // reuse skips the whole command above — the `.wrangler/state`
-      // wipe, the migrations, the rebuild — so even a legitimately-ours
-      // server means running against stale data and a stale build.
+      // reuse skips the whole command above — the state wipe, the
+      // migrations, the rebuild — so even a legitimately-ours server
+      // means running against stale data and a stale build.
       reuseExistingServer: false,
       stdout: "pipe",
       stderr: "pipe",

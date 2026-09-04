@@ -1,6 +1,29 @@
-import { describe, expect, test } from "vitest";
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import { beforeEach, describe, expect, test } from "vitest";
 
+import {
+  CLOUDFLARE_E2E,
+  runtimePackage,
+  usePlaygrounds,
+} from "./playground-fixture.js";
 import { definePlumixE2EConfig, resolveE2EPort } from "./playwright-config.js";
+
+const playground = usePlaygrounds();
+
+// The helper reads the runtime's `plumix.e2e` block off the playground the
+// config names, so every test gets one on disk, with an `e2e` directory
+// inside it standing in for the config file's directory.
+let configDir = "";
+
+beforeEach(async () => {
+  const dir = await playground([
+    { name: "plumix" },
+    runtimePackage("@plumix/runtime-cloudflare", CLOUDFLARE_E2E),
+  ]);
+  configDir = join(dir, "e2e");
+  await mkdir(configDir);
+});
 
 function withPortOffset<T>(value: string | undefined, fn: () => T): T {
   const original = process.env.PLUMIX_E2E_PORT_OFFSET;
@@ -43,7 +66,7 @@ describe("definePlumixE2EConfig", () => {
   });
 
   test("port defaults to 5173 (vite's default) when omitted", () => {
-    const config = definePlumixE2EConfig({ playground: "../playground" });
+    const config = definePlumixE2EConfig({ configDir, playground: ".." });
 
     expect(config.use?.baseURL).toBe("http://localhost:5173/_plumix/admin/");
   });
@@ -58,56 +81,69 @@ describe("definePlumixE2EConfig", () => {
     expect(config.use?.baseURL).toBe("http://localhost:3040/custom/");
   });
 
-  test("playground option bakes the worker-driven webServerCommand", () => {
+  test("playground option bakes the runtime-driven webServerCommand", () => {
     const config = definePlumixE2EConfig({
       port: 3040,
-      playground: "../playground",
+      configDir,
+      playground: "..",
     });
 
-    const cmd =
-      config.webServer && "command" in config.webServer
-        ? config.webServer.command
-        : undefined;
-    expect(cmd).toContain("cd ../playground");
-    expect(cmd).toContain("rm -rf .wrangler/state drizzle");
-    expect(cmd).toContain("plumix migrate generate");
-    expect(cmd).toContain("wrangler d1 migrations apply DB --local");
-    expect(cmd).toContain("plumix dev --port 3040");
+    const cmd = webServerCommandOf(config);
+    expect(cmd).toBe(
+      "cd .. && rm -rf .wrangler/state drizzle && pnpm exec plumix migrate generate && pnpm exec plumix migrate apply && pnpm exec plumix dev --port 3040",
+    );
+    // The runtime's paths may name its tooling; no step may invoke it.
+    expect(
+      cmd.split(" && ").filter((step) => step.includes("wrangler")),
+    ).toEqual(["rm -rf .wrangler/state drizzle"]);
+  });
+
+  test("the wipe list is the runtime's, not the helper's", async () => {
+    const nodePlayground = await playground([
+      runtimePackage("@plumix/runtime-node", {
+        wipe: ["data", ".plumix"],
+        database: { glob: "data/plumix.sqlite" },
+      }),
+    ]);
+
+    const config = definePlumixE2EConfig({
+      configDir: nodePlayground,
+      playground: ".",
+    });
+
+    expect(webServerCommandOf(config)).toContain(
+      "cd . && rm -rf data .plumix drizzle && ",
+    );
   });
 
   test("applyMigrations=false drops the apply step but keeps migrate generate", () => {
     const config = definePlumixE2EConfig({
       port: 3070,
-      playground: "../playground",
+      configDir,
+      playground: "..",
       applyMigrations: false,
     });
 
-    const cmd =
-      config.webServer && "command" in config.webServer
-        ? config.webServer.command
-        : undefined;
+    const cmd = webServerCommandOf(config);
     expect(cmd).toContain("plumix migrate generate");
-    expect(cmd).not.toContain("wrangler d1 migrations apply");
+    expect(cmd).not.toContain("plumix migrate apply");
   });
 
   test("extraSetup injects an additional step between migrations apply and plumix dev", () => {
     const config = definePlumixE2EConfig({
+      configDir,
       playground: "..",
-      extraSetup:
-        "pnpm exec wrangler d1 execute plumix_blog --local --file=e2e/seed.sql",
+      extraSetup: "pnpm exec plumix seed --file=e2e/seed.sql",
     });
 
-    const cmd =
-      config.webServer && "command" in config.webServer
-        ? config.webServer.command
-        : "";
-    expect(cmd).toMatch(
-      /wrangler d1 migrations apply DB --local && pnpm exec wrangler d1 execute plumix_blog --local --file=e2e\/seed\.sql && pnpm exec plumix dev --port \d+/,
+    expect(webServerCommandOf(config)).toMatch(
+      /plumix migrate apply && pnpm exec plumix seed --file=e2e\/seed\.sql && pnpm exec plumix dev --port \d+/,
     );
   });
 
   test("seedAdminSession=false skips globalSetup + storageState auto-wiring", () => {
     const config = definePlumixE2EConfig({
+      configDir,
       playground: "..",
       seedAdminSession: false,
     });
@@ -119,7 +155,8 @@ describe("definePlumixE2EConfig", () => {
   test("playground also auto-wires globalSetup + storageState by convention", () => {
     const config = definePlumixE2EConfig({
       port: 3040,
-      playground: "../playground",
+      configDir,
+      playground: "..",
     });
 
     expect(config.globalSetup).toBe("./globalSetup.ts");
@@ -130,7 +167,8 @@ describe("definePlumixE2EConfig", () => {
     expect(() =>
       definePlumixE2EConfig({
         port: 3040,
-        playground: "../playground",
+        configDir,
+        playground: "..",
         webServerCommand: "custom",
       }),
     ).toThrow(/playground.*webServerCommand.*mutually exclusive/i);
@@ -140,6 +178,12 @@ describe("definePlumixE2EConfig", () => {
     expect(() => definePlumixE2EConfig({ port: 3040 })).toThrow(
       /playground.*or.*webServerCommand/i,
     );
+  });
+
+  test("rejects a playground without the configDir it is relative to", () => {
+    expect(() =>
+      definePlumixE2EConfig({ playground: "../playground" }),
+    ).toThrow(/configDir.*import\.meta\.dirname/);
   });
 
   test("rejects inspectorPort paired with a custom webServerCommand", () => {
@@ -154,7 +198,7 @@ describe("definePlumixE2EConfig", () => {
 
   test("CI reporter writes the html report with open: never", () => {
     withCI("true", () => {
-      const config = definePlumixE2EConfig({ playground: "../playground" });
+      const config = definePlumixE2EConfig({ configDir, playground: ".." });
       const reporters = Array.isArray(config.reporter) ? config.reporter : [];
       const htmlReporter = reporters.find(
         (entry): entry is ["html", { open?: string }] =>
@@ -167,7 +211,8 @@ describe("definePlumixE2EConfig", () => {
   test("webServer readiness defaults to URL-based polling against baseURL", () => {
     const config = definePlumixE2EConfig({
       port: 3040,
-      playground: "../playground",
+      configDir,
+      playground: "..",
     });
 
     const url =
@@ -180,7 +225,8 @@ describe("definePlumixE2EConfig", () => {
   test("webServerPort override switches readiness to TCP port", () => {
     const config = definePlumixE2EConfig({
       port: 3040,
-      playground: "../playground",
+      configDir,
+      playground: "..",
       webServerPort: 3040,
     });
 
@@ -195,32 +241,28 @@ describe("definePlumixE2EConfig", () => {
     const config = definePlumixE2EConfig({
       port: 3020,
       inspectorPort: 9320,
-      playground: "../playground",
+      configDir,
+      playground: "..",
     });
 
-    const cmd =
-      config.webServer && "command" in config.webServer
-        ? config.webServer.command
-        : "";
-    expect(cmd).toContain("plumix dev --port 3020 --inspector-port 9320");
+    expect(webServerCommandOf(config)).toContain(
+      "plumix dev --port 3020 --inspector-port 9320",
+    );
   });
 
   test("inspectorPort omitted leaves the dev command flag-free (auto-allocation default)", () => {
     const config = definePlumixE2EConfig({
       port: 3020,
-      playground: "../playground",
+      configDir,
+      playground: "..",
     });
 
-    const cmd =
-      config.webServer && "command" in config.webServer
-        ? config.webServer.command
-        : "";
-    expect(cmd).not.toContain("--inspector-port");
+    expect(webServerCommandOf(config)).not.toContain("--inspector-port");
   });
 
   test("reuses no existing server, on CI and locally alike", () => {
     withCI(undefined, () => {
-      const config = definePlumixE2EConfig({ playground: "../playground" });
+      const config = definePlumixE2EConfig({ configDir, playground: ".." });
       const reuse =
         config.webServer && "reuseExistingServer" in config.webServer
           ? config.webServer.reuseExistingServer
@@ -242,7 +284,7 @@ describe("definePlumixE2EConfig", () => {
 
   test("a playground pins to one worker — its D1 is shared mutable state", () => {
     withCI("true", () => {
-      const config = definePlumixE2EConfig({ playground: "../playground" });
+      const config = definePlumixE2EConfig({ configDir, playground: ".." });
 
       expect(config.workers).toBe(1);
     });
@@ -251,7 +293,8 @@ describe("definePlumixE2EConfig", () => {
   test("applyMigrations: false means no shared D1, so workers stay parallel", () => {
     withCI("true", () => {
       const config = definePlumixE2EConfig({
-        playground: "../playground",
+        configDir,
+        playground: "..",
         applyMigrations: false,
       });
 
@@ -302,7 +345,8 @@ describe("PLUMIX_E2E_PORT_OFFSET", () => {
     withPortOffset("100", () => {
       const config = definePlumixE2EConfig({
         port: 3010,
-        playground: "../playground",
+        configDir,
+        playground: "..",
       });
 
       expect(config.use?.baseURL).toBe("http://localhost:3110/_plumix/admin/");
@@ -314,7 +358,8 @@ describe("PLUMIX_E2E_PORT_OFFSET", () => {
     withPortOffset("100", () => {
       const config = definePlumixE2EConfig({
         port: 3010,
-        playground: "../playground",
+        configDir,
+        playground: "..",
       });
 
       const url =
@@ -330,12 +375,14 @@ describe("PLUMIX_E2E_PORT_OFFSET", () => {
       const audit = definePlumixE2EConfig({
         port: 3010,
         inspectorPort: 9310,
-        playground: "../playground",
+        configDir,
+        playground: "..",
       });
       const blog = definePlumixE2EConfig({
         port: 3020,
         inspectorPort: 9320,
-        playground: "../playground",
+        configDir,
+        playground: "..",
       });
 
       expect(webServerCommandOf(audit)).toContain(
@@ -351,7 +398,8 @@ describe("PLUMIX_E2E_PORT_OFFSET", () => {
     withPortOffset("100", () => {
       const config = definePlumixE2EConfig({
         port: 3010,
-        playground: "../playground",
+        configDir,
+        playground: "..",
         webServerPort: 3010,
       });
 
@@ -365,7 +413,7 @@ describe("PLUMIX_E2E_PORT_OFFSET", () => {
 
   test("shifts the default port when the suite declares none", () => {
     withPortOffset("100", () => {
-      const config = definePlumixE2EConfig({ playground: "../playground" });
+      const config = definePlumixE2EConfig({ configDir, playground: ".." });
 
       expect(config.use?.baseURL).toBe("http://localhost:5273/_plumix/admin/");
     });
@@ -376,7 +424,8 @@ describe("PLUMIX_E2E_PORT_OFFSET", () => {
       const config = definePlumixE2EConfig({
         port: 3010,
         inspectorPort: 9310,
-        playground: "../playground",
+        configDir,
+        playground: "..",
       });
 
       expect(config.use?.baseURL).toBe("http://localhost:3010/_plumix/admin/");

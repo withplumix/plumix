@@ -5,11 +5,7 @@
 // public showcase → CTA → provision → admin → create → persist → blocked.
 
 import { expect, test } from "@playwright/test";
-
-// Title links carry `content-list-row-<id>`; the actions strip and trash
-// button reuse the prefix, so exclude them when matching real rows.
-const CONTENT_ROWS =
-  "[data-testid^='content-list-row-']:not([data-testid*='-actions-']):not([data-testid*='-trash-'])";
+import { CONTENT_LIST_ROWS } from "plumix/test/playwright";
 
 const POST_TITLE = "A post I made in the demo";
 
@@ -52,7 +48,7 @@ test("visitor enters the demo, creates a post, and it persists", async ({
   // Persistence proof: reload the list and the row comes back from the DO.
   await page.goto("entries/posts");
   await expect(
-    page.locator(CONTENT_ROWS).filter({ hasText: POST_TITLE }).first(),
+    page.locator(CONTENT_LIST_ROWS).filter({ hasText: POST_TITLE }).first(),
   ).toBeVisible();
 
   // With a live session, the pill swaps to the session controls — the "Try the

@@ -6,6 +6,7 @@ export default definePlumixE2EConfig({
   port: 3070,
   inspectorPort: 9370,
   // The demo app itself is the fixture — no separate playground.
+  configDir: import.meta.dirname,
   playground: "..",
   // The demo's database is a Durable Object created per session, which applies
   // its own schema at runtime — there is nothing to migrate before boot.

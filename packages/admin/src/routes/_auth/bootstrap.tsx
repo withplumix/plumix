@@ -118,6 +118,7 @@ function BootstrapRoute(): ReactNode {
                       autoComplete="username webauthn"
                       required
                       disabled={createAccount.isPending}
+                      data-testid="bootstrap-email-input"
                       {...field}
                     />
                   </FormControl>
@@ -139,6 +140,7 @@ function BootstrapRoute(): ReactNode {
                       type="text"
                       autoComplete="name"
                       disabled={createAccount.isPending}
+                      data-testid="bootstrap-name-input"
                       {...field}
                     />
                   </FormControl>
@@ -155,7 +157,11 @@ function BootstrapRoute(): ReactNode {
               </Alert>
             ) : null}
 
-            <Button type="submit" disabled={createAccount.isPending}>
+            <Button
+              type="submit"
+              disabled={createAccount.isPending}
+              data-testid="bootstrap-submit"
+            >
               {createAccount.isPending ? (
                 <Trans
                   id="auth.bootstrap.submit.pending"

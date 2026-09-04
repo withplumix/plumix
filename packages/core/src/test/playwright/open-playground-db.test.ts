@@ -1,18 +1,16 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { createClient } from "@libsql/client";
-import { afterEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import { openPlaygroundDb } from "./open-playground-db.js";
+import {
+  CLOUDFLARE_E2E,
+  runtimePackage,
+  usePlaygrounds,
+} from "./playground-fixture.js";
 
-const tempDirs: string[] = [];
-
-async function makePlaygroundTemp(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "plumix-playground-"));
-  tempDirs.push(dir);
-  return dir;
-}
+const playground = usePlaygrounds();
 
 async function seedSqlite(
   path: string,
@@ -23,23 +21,18 @@ async function seedSqlite(
   client.close();
 }
 
-afterEach(async () => {
-  while (tempDirs.length > 0) {
-    const dir = tempDirs.pop();
-    if (dir) await rm(dir, { recursive: true, force: true });
-  }
-});
-
 describe("openPlaygroundDb", () => {
-  test("opens the user-db sqlite under .wrangler/state and returns a queryable Db", async () => {
-    const cwd = await makePlaygroundTemp();
+  test("opens the sqlite the runtime's e2e block points at and returns a queryable Db", async () => {
+    const cwd = await playground([
+      runtimePackage("@plumix/runtime-cloudflare", CLOUDFLARE_E2E),
+    ]);
     const stateDir = join(
       cwd,
       ".wrangler/state/v3/d1/miniflare-D1DatabaseObject",
     );
     await mkdir(stateDir, { recursive: true });
-    const dbPath = join(stateDir, "abc123.sqlite");
-    await seedSqlite(dbPath, [
+    await seedSqlite(join(stateDir, "metadata.sqlite"), []);
+    await seedSqlite(join(stateDir, "abc123.sqlite"), [
       "CREATE TABLE probe (id INTEGER PRIMARY KEY, value TEXT NOT NULL)",
       "INSERT INTO probe (value) VALUES ('hello')",
     ]);
@@ -50,27 +43,21 @@ describe("openPlaygroundDb", () => {
     expect(result.rows[0]?.value).toBe("hello");
   });
 
-  test("throws a clear error when the wrangler state dir is missing", async () => {
-    const cwd = await makePlaygroundTemp();
+  test("fails readably when the runtime declares no e2e block", async () => {
+    const cwd = await playground([runtimePackage("@plumix/runtime-node")]);
 
     await expect(openPlaygroundDb({ cwd })).rejects.toThrow(
-      /no D1 state at .*\.wrangler\/state.*plumix dev/,
+      /@plumix\/runtime-node declares no "plumix\.e2e" block/,
     );
   });
 
-  test("throws when multiple user sqlite files are present (binding lookup not yet supported)", async () => {
-    const cwd = await makePlaygroundTemp();
-    const stateDir = join(
-      cwd,
-      ".wrangler/state/v3/d1/miniflare-D1DatabaseObject",
-    );
-    await mkdir(stateDir, { recursive: true });
-    await writeFile(join(stateDir, "one.sqlite"), "");
-    await writeFile(join(stateDir, "two.sqlite"), "");
-    await writeFile(join(stateDir, "metadata.sqlite"), "");
+  test("fails readably before the database has been created", async () => {
+    const cwd = await playground([
+      runtimePackage("@plumix/runtime-cloudflare", CLOUDFLARE_E2E),
+    ]);
 
     await expect(openPlaygroundDb({ cwd })).rejects.toThrow(
-      /multiple D1 sqlite files.*binding-based lookup/i,
+      /no database matches .*miniflare-D1DatabaseObject.*plumix migrate apply/,
     );
   });
 });

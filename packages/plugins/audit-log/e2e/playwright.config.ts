@@ -9,5 +9,6 @@ export default definePlumixE2EConfig({
   // `@plumix/e2e-ports` fails the unit suite if two configs claim one port.
   port: 3010,
   inspectorPort: 9310,
+  configDir: import.meta.dirname,
   playground: "../playground",
 });

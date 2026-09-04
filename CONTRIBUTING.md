@@ -59,16 +59,25 @@ what the test needs:
 
 End-to-end tests (Playwright) are not part of this taxonomy. They live behind
 a `test:e2e` script in the packages that have them (`packages/admin`,
-`packages/admin-editor`, each `packages/plugins/*`, and `apps/demo`), and share
-one config helper, `definePlumixE2EConfig`.
+`packages/admin-editor`, each `packages/plugins/*`, each `packages/runtimes/*`,
+and `apps/demo`), and share one config helper, `definePlumixE2EConfig`.
+
+The helper knows no runtime. What a playground run wipes first and where its
+database ends up come from the `plumix.e2e` block in the package.json of the
+runtime package the playground depends on, beside its `plumix.scaffold` block;
+the baked command applies migrations through `plumix migrate apply`, which the
+CLI already hands to the runtime. A runtime package proves itself with a
+playground of its own that runs the one shared runtime spec, `runtimeSpec`
+from `plumix/test/playwright`, rather than a copy of it.
 
 Each suite binds a distinct port so a parallel `turbo run test:e2e` doesn't
-collide: the plugin playgrounds and `apps/demo` take HTTP `30N0` with the
-matching workerd inspector port `93N0`, and the two admin suites preview on
-`5180`/`5181`. Those are base values: set `PLUMIX_E2E_PORT_OFFSET` to shift
-every port a suite owns — HTTP, workerd inspector, and readiness — by the same
-amount, which is how you run the suites from a second checkout or alongside
-another project holding one of the default ports.
+collide: the plugin playgrounds, `apps/demo` and the runtime playgrounds take
+HTTP `30N0` with the matching workerd inspector port `93N0`, and the two admin
+suites preview on `5180`/`5181`. Those are base values: set
+`PLUMIX_E2E_PORT_OFFSET` to shift every port a suite owns — HTTP, workerd
+inspector, and readiness — by the same amount, which is how you run the suites
+from a second checkout or alongside another project holding one of the default
+ports.
 
 ```bash
 PLUMIX_E2E_PORT_OFFSET=100 pnpm test:e2e
@@ -81,7 +90,7 @@ fails `pnpm test:unit` on a duplicate, naming both packages.
 
 The suites never reuse a server that is already listening. Playwright does not
 check that the responder is this suite's build, and reuse would skip the setup
-each `webServer` command does first — the `.wrangler/state` wipe, the
+each `webServer` command does first — the runtime's state wipe, the
 migrations, the rebuild — so a reused server means testing stale data against a
 stale build. A busy port fails loudly instead; move the block with the offset.
 

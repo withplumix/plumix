@@ -7,6 +7,7 @@
   "exclude": [
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
-    "src/storage/s3/fake-s3.ts"
+    "src/storage/s3/fake-s3.ts",
+    "src/test/playwright/playground-fixture.ts"
   ]
 }
