@@ -71,6 +71,7 @@
     "prettier": "catalog:",
     "publint": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:vite",
     "vitest": "catalog:vitest"
   },
   "prettier": "@plumix/prettier-config"
