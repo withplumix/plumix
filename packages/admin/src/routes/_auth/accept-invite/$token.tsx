@@ -4,7 +4,7 @@ import { LoginLocaleSwitcher } from "@/components/login-locale-switcher.js";
 import { readManifest } from "@/lib/manifest.js";
 import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { acceptInviteWithPasskey } from "@/lib/passkey.js";
-import { loadSession, SESSION_QUERY_KEY } from "@/lib/session.js";
+import { loadSession, refetchSession } from "@/lib/session.js";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
@@ -73,12 +73,7 @@ function AcceptInviteRoute(): ReactNode {
       setErrorCode(null);
     },
     onSuccess: async () => {
-      // Session cookie is set by the verify endpoint. Invalidate the
-      // session query so the router's `_authenticated` guard sees the
-      // new identity on the next navigation, then land on the dashboard.
-      await router.options.context.queryClient.invalidateQueries({
-        queryKey: SESSION_QUERY_KEY,
-      });
+      await refetchSession(router.options.context.queryClient);
       await router.navigate({ to: "/" });
     },
     onError: (err) => {

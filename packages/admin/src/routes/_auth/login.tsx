@@ -12,7 +12,7 @@ import { useOAuthErrorMessage } from "@/lib/oauth-errors.js";
 import { orpc } from "@/lib/orpc.js";
 import { PasskeyError, usePasskeyErrorMessage } from "@/lib/passkey-errors.js";
 import { signInWithPasskey } from "@/lib/passkey.js";
-import { loadSession, SESSION_QUERY_KEY } from "@/lib/session.js";
+import { loadSession, refetchSession } from "@/lib/session.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Trans, useLingui } from "@lingui/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -91,9 +91,7 @@ function LoginRoute(): ReactNode {
     mutationFn: (input: { email?: string }) => signInWithPasskey(input.email),
     onMutate: () => setPasskeyError(null),
     onSuccess: async () => {
-      await router.options.context.queryClient.invalidateQueries({
-        queryKey: SESSION_QUERY_KEY,
-      });
+      await refetchSession(router.options.context.queryClient);
       await router.navigate({ to: "/" });
     },
     onError: (err) => {

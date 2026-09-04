@@ -22,6 +22,16 @@ export function loadSession(queryClient: QueryClient) {
 }
 
 /**
+ * After a sign-in the guards must see the new identity, and invalidating is
+ * not enough: `static` serves the cached signed-out session even once it is
+ * invalidated, so the next guard would bounce straight back to the auth
+ * screen.
+ */
+export function refetchSession(queryClient: QueryClient) {
+  return queryClient.refetchQueries({ queryKey: SESSION_QUERY_KEY });
+}
+
+/**
  * Shared auth guard for layouts that require a signed-in user. Used by
  * `_authenticated` (shell + sidebar) and `_editor` (full-screen canvas).
  * Returns the user so the caller can spread it into route context.
