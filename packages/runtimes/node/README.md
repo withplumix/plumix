@@ -15,13 +15,26 @@ pnpm add @plumix/runtime-node
 ```ts
 import { auth, plumix } from "plumix";
 
-import { nodeSqlite } from "@plumix/runtime-node";
+import { node, nodeSqlite } from "@plumix/runtime-node";
 
 export default plumix({
+  runtime: node(),
   database: nodeSqlite({ path: "data/site.sqlite" }),
   // …
 });
 ```
+
+### `node({ trustProxy, bodySizeLimit, build })`
+
+The runtime adapter. `trustProxy` (off by default) makes the server read the scheme, host and client address a TLS-terminating proxy forwards; `bodySizeLimit` caps request bodies (1 GiB). `build.external` names packages the server bundle imports at runtime instead of inlining; `sharp`, `better-sqlite3` and the libsql client family are external without being listed.
+
+`plumix build` writes `dist/client` for the browser and `dist/server/worker.js` to run:
+
+```bash
+PORT=3000 HOST=0.0.0.0 node dist/server/worker.js
+```
+
+The entry serves `dist/client` from disk ahead of the site, listens on `PORT` (3000) and `HOST` (`0.0.0.0`), and prints the bound address once. On `SIGTERM` or `SIGINT` it stops accepting, lets in-flight responses finish while deferred work drains, and exits 0; work still running after 10 seconds is abandoned and the process exits 1 saying how much. A second signal exits at once. Importing the module instead of running it starts no server: the default export is the portable `{ fetch, scheduled }` handler, and `listener(req, res)` is the same site as Connect-style middleware for embedding; it answers every request it receives, so mount it where the site should own the path.
 
 ### `nodeSqlite({ path })`
 
@@ -39,6 +52,7 @@ The disk layer over `dist/client`. `serve(req, res, next)` answers a held GET or
 
 The `./commands` subpath registers the runtime's CLI commands with `plumix`:
 
+- `plumix build` — the client and server bundles described above.
 - `plumix migrate apply` — applies the migrations `plumix migrate generate` wrote to `drizzle/` to the file `nodeSqlite()` names. Drizzle records what it applied in `__drizzle_migrations`; a database is not portable between runtimes by copying the file.
 
 ## License

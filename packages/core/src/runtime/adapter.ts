@@ -25,6 +25,16 @@ export interface Invocation {
   readonly clientAddress?: string;
 }
 
+export interface DisposeOptions {
+  /** Milliseconds to wait for this call, overriding the handler's own bound. */
+  readonly timeoutMs?: number;
+}
+
+/** What `dispose()` gave up on once its deadline passed; zero when the drain completed. */
+export interface DisposeResult {
+  readonly abandoned: number;
+}
+
 export interface ScheduledEvent {
   readonly scheduledTime: number;
   readonly cron: string;
@@ -52,9 +62,12 @@ export interface PlumixHandler {
    *
    * Bounded, and the bound is absolute: work still unsettled after
    * `disposeTimeoutMs` (five seconds by default) is abandoned rather than
-   * held onto, so a stuck task cannot keep a shutdown open.
+   * held onto, so a stuck task cannot keep a shutdown open. A call may pass
+   * the time it has left instead, so a shutdown that first waited for in-flight
+   * responses spends one deadline, not two. Resolves how many tasks were
+   * abandoned, so a process runtime can exit non-zero over them.
    */
-  readonly dispose?: () => Promise<void>;
+  readonly dispose?: (options?: DisposeOptions) => Promise<DisposeResult>;
 }
 
 export interface CommandContext {

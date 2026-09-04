@@ -54,6 +54,9 @@
     "test:build": "vitest run --config vitest.build.config.ts",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
+  "dependencies": {
+    "vite": "catalog:vite"
+  },
   "peerDependencies": {
     "drizzle-orm": "catalog:drizzle",
     "plumix": "workspace:>=0.21.0 <1.0.0"
@@ -71,7 +74,6 @@
     "prettier": "catalog:",
     "publint": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:vite",
     "vitest": "catalog:vitest"
   },
   "prettier": "@plumix/prettier-config"

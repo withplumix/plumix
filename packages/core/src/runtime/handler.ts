@@ -112,8 +112,11 @@ export function createPlumixHandler(
       }
     },
 
-    dispose: async () => {
-      const timeoutMs = options.disposeTimeoutMs ?? DEFAULT_DISPOSE_TIMEOUT_MS;
+    dispose: async (call) => {
+      const timeoutMs =
+        call?.timeoutMs ??
+        options.disposeTimeoutMs ??
+        DEFAULT_DISPOSE_TIMEOUT_MS;
       const deadline = Date.now() + timeoutMs;
       // Deferred work defers more work — a telemetry consumer purging a tag,
       // say — so the drain follows what lands mid-drain. The deadline is
@@ -121,7 +124,7 @@ export function createPlumixHandler(
       while (pending.size > 0 && Date.now() < deadline) {
         await settleWithin([...pending], deadline - Date.now());
       }
-      if (pending.size === 0) return;
+      if (pending.size === 0) return { abandoned: 0 };
       const abandoned = pending.size;
       // Giving up is final: a supervisor escalating SIGTERM to SIGINT would
       // otherwise buy the same stuck task another full timeout.
@@ -129,6 +132,7 @@ export function createPlumixHandler(
       console.warn(
         `[plumix] deferred_work_abandoned: ${abandoned} deferred task(s) still running after ${timeoutMs}ms`,
       );
+      return { abandoned };
     },
 
     scheduled: async (event, invocation) => {

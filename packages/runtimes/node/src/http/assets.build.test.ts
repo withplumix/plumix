@@ -1,44 +1,24 @@
-import {
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describeAssetsContract } from "plumix/test/conformance";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
+import {
+  scaffoldConsumerProject,
+  STUB_CONFIG,
+} from "../test/consumer-project.js";
 import { createAssetsLayer } from "./assets.js";
 
-// A consumer project in a temp dir with this package's `node_modules` linked
-// in, built the way `plumix build` builds the client: the plumix plugin and
-// Vite's builder, client environment only. The server half is a runtime
-// command this package does not have yet.
-const CONFIG = `import { auth, defineTheme, fallback, plumix } from "plumix";
-
-export default plumix({
-  runtime: { name: "stub", createHandler: () => ({ fetch: () => new Response("") }), generateEntry: () => "" },
-  database: { kind: "stub", connect: () => ({ db: {} }) },
-  auth: auth({ passkey: { rpName: "x", rpId: "localhost", origin: "http://localhost:3000" } }),
-  theme: defineTheme({ templates: [fallback(() => null)] }),
-});
-`;
-
+// Built the way `plumix build` builds the client: the plumix plugin and
+// Vite's builder, client environment only, into the outDir the Node build
+// command uses.
 type ViteManifest = Record<string, { readonly file: string }>;
 
 let dir: string;
 let assetPath = "";
 const built = (async () => {
-  dir = mkdtempSync(join(tmpdir(), "plumix-node-client-"));
-  symlinkSync(
-    fileURLToPath(new URL("../../node_modules", import.meta.url)),
-    join(dir, "node_modules"),
-  );
+  dir = scaffoldConsumerProject("plumix-node-client-", STUB_CONFIG);
   const configFile = join(dir, "plumix.config.mjs");
-  writeFileSync(configFile, CONFIG, "utf8");
   const { createBuilder } = await import("vite");
   const { emitPlumixSources, plumix } = await import("plumix/vite");
   await emitPlumixSources(dir, configFile);
