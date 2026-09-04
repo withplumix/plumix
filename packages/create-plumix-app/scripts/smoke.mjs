@@ -212,16 +212,16 @@ try {
   // refuse it by name; the rest of all-plugins covers the capability seam.
   const combos = registry.runtimes.flatMap((runtime) => {
     const { id } = runtime;
+    const supported = (plugin) =>
+      (plugin.requires ?? []).every(
+        (capability) => runtime.capabilities?.[capability],
+      );
     const excluded = registry.plugins
-      .filter((plugin) =>
-        (plugin.requires ?? []).some(
-          (capability) => !runtime.capabilities?.[capability],
-        ),
-      )
+      .filter((plugin) => !supported(plugin))
       .map((plugin) => plugin.id);
     const selected = registry.plugins
-      .map((plugin) => plugin.id)
-      .filter((pluginId) => !excluded.includes(pluginId));
+      .filter(supported)
+      .map((plugin) => plugin.id);
     return [
       // `--plugins=` for none: a bare `-y` takes the recommended plugins.
       { name: `${id}-blank`, args: ["-y", "--runtime", id, "--plugins="] },

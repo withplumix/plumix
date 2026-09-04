@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import type { CatalogContext } from "../catalog.js";
+import type { CatalogContext, PackageJson } from "../catalog.js";
 import type { AuthMethodDescriptor, RuntimeDescriptor } from "./types.js";
 import { loadCatalogContext } from "../catalog.js";
 import { REPO_ROOT } from "../test-support.js";
@@ -68,7 +68,7 @@ describe("compose — local secrets file", () => {
 });
 
 const scripts = (raw: string | undefined) =>
-  (JSON.parse(raw ?? "{}") as { scripts: Record<string, string> }).scripts;
+  (JSON.parse(raw ?? "{}") as PackageJson).scripts ?? {};
 
 describe("compose — .gitignore and clean", () => {
   it("appends the runtime's ignores to .gitignore and to what clean removes", async () => {
@@ -91,7 +91,9 @@ describe("compose — .gitignore and clean", () => {
     expect(files[".gitignore"]).toBe(
       "node_modules\ndist\n.plumix\n.cache\n.env\n",
     );
-    expect(scripts(files["package.json"]).clean).not.toContain(".wrangler");
+    expect(scripts(files["package.json"]).clean).toBe(
+      "git clean -xdf .plumix dist node_modules",
+    );
   });
 });
 
