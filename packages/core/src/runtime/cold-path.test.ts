@@ -235,3 +235,22 @@ describe("the CLI's SQL helpers stay off the query layer", () => {
     for (const file of DB_MODULES) expectUnreachable(CLI_GRAPH, file);
   });
 });
+
+// `cache/decision.ts` answers one question per response — may this go into
+// shared storage — and all it wants from the access layer is one routing
+// string. While that string lived beside `access/policy.ts`'s role resolution,
+// asking for it cost 273ms; it is now 1ms.
+//
+// Not yet load-bearing for a runtime adapter: cloudflare's `edge.ts` still
+// reaches `responseAllowsSharedStorage` through the bare `plumix` barrel and
+// pays for it regardless. This pins the precondition for the subpath that would
+// fix that. Rooting a closure at `edge.ts` instead would pass vacuously —
+// `resolveWithinCore` treats a bare specifier as a leaf.
+const CACHE_DECISION = staticClosureOf([path.join(SRC, "cache/decision.ts")]);
+
+describe("the cache decision stays off the query layer", () => {
+  test("the db subtree is absent from the decision closure", () => {
+    expect(DB_MODULES.length).toBeGreaterThan(0);
+    for (const file of DB_MODULES) expectUnreachable(CACHE_DECISION, file);
+  });
+});

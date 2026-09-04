@@ -13,7 +13,8 @@ import {
   policyForMatch,
   resolveLoginPath,
 } from "../access/gate.js";
-import { PRIVATE_SEGMENT, resolveAccess } from "../access/policy.js";
+import { resolveAccess } from "../access/policy.js";
+import { PRIVATE_SEGMENT } from "../access/segments.js";
 import { authenticateTraced } from "../auth/authenticator.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import {
