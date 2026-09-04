@@ -48,6 +48,19 @@ The `node:http` bridge the production entry and the dev server share. Each reque
 
 The disk layer over `dist/client`. `serve(req, res, next)` answers a held GET or HEAD before the handler runs; `fetch(request)` is the assets binding core reads for admin deep links, answering 404 for a path it does not hold. Paths that escape the root, name a directory without a trailing slash, or touch a dotfile other than `.well-known` are never held. Files under `/assets/` carry an immutable cache header, set only once the file has opened.
 
+### `diskStorage({ dir })`
+
+The object-storage slot on the filesystem: each key is a file under `dir/objects/`, its content type and custom metadata a JSON file under `dir/meta/`. `url()` returns null, so the media plugin serves uploads through its own route, and there is no presigned upload; the browser sends the bytes to the site, which writes them. One directory, one process: for several processes sharing a bucket, `s3()` from `plumix/storage/s3` is the swap, one config line.
+
+```ts
+import { diskStorage } from "@plumix/runtime-node";
+
+export default plumix({
+  storage: diskStorage({ dir: "data/media" }),
+  // …
+});
+```
+
 ## Commands
 
 The `./commands` subpath registers the runtime's CLI commands with `plumix`:

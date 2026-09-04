@@ -8,6 +8,8 @@ export type {
   RequestHandler,
   RequestListener,
 } from "./http/bridge.js";
+export { diskStorage } from "./disk-storage.js";
+export type { DiskObjectStorage, DiskStorageConfig } from "./disk-storage.js";
 export { nodeSqlite } from "./node-sqlite.js";
 export type {
   NodeSqliteConfig,

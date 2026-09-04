@@ -2593,6 +2593,9 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
+      '@plumix/plugin-media':
+        specifier: workspace:*
+        version: link:../../plugins/media
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
