@@ -11,7 +11,7 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import type { ChildProcess } from "node:child_process";
 import type { AddressInfo } from "node:net";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import {
   CLI_ENV,
@@ -164,6 +164,11 @@ beforeAll(async () => {
   dev = await startDev(dir, await freePort());
 }, 240_000);
 
+// What the server printed is the only trace of what an edit triggered.
+afterEach(({ task }) => {
+  if (task.result?.state === "fail") console.log(dev.stdout());
+});
+
 afterAll(async () => {
   dev.child.kill("SIGKILL");
   await dev.exited;
@@ -213,11 +218,11 @@ describe("plumix dev on the node runtime", () => {
   });
 
   test("a request from a non-loopback host is refused before vite serves anything", async () => {
-    const path = "/_plumix/admin/index.html";
-    expect(await getWithHost(dev.port, path, "127.0.0.1")).toMatchObject({
-      status: 200,
-    });
-    const refused = await getWithHost(dev.port, path, "10.0.0.5");
+    const path = "/_plumix/admin/";
+    expect(
+      await getWithHost(dev.port, path, `127.0.0.1:${dev.port}`),
+    ).toMatchObject({ status: 200 });
+    const refused = await getWithHost(dev.port, path, `10.0.0.5:${dev.port}`);
     expect(refused.status).toBe(403);
     expect(refused.body).not.toContain("<html");
   });
