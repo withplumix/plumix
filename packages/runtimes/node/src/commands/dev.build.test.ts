@@ -55,6 +55,9 @@ const greeting = (value: string) => `export const greeting = ${value};\n`;
 const CONFIG_FILE = "plumix.config.ts";
 
 const POLL = { timeout: 30_000, interval: 250 };
+// Vite's watcher throttles change events per path in a 50 ms window and drops
+// the later one, so a second write to a file just edited needs a beat.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
 const BOOT_TIMEOUT_MS = 120_000;
 // eslint-disable-next-line no-control-regex -- escape sequences are the point
 const ANSI = /\x1b\[[0-9;]*m/g;
@@ -236,6 +239,7 @@ describe("plumix dev on the node runtime", () => {
   }, 60_000);
 
   test("a dependency first imported after start is pre-bundled and served", async () => {
+    await settle();
     writeFileSync(
       join(dir, "message.mjs"),
       'import { tag } from "my-dep";\n' + greeting('"v3:" + tag'),
@@ -263,6 +267,7 @@ describe("plumix dev on the node runtime", () => {
     expect(page.headers.get("content-type")).toContain("text/html");
     expect(await page.text()).toContain("appears more than once");
 
+    await settle();
     writeFileSync(join(dir, CONFIG_FILE), config());
     await expect.poll(() => text("/greeting"), POLL).toBe("v3:dep");
     expect(dev.child.exitCode).toBeNull();
