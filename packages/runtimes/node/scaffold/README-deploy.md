@@ -10,10 +10,10 @@ pnpm build
 PORT=3000 node dist/server/worker.js
 ```
 
-`plumix dev` is not available on Node yet, so `pnpm dev` above does not work
-until a later release. For a local run, copy `.env.example` to `.env` and
-start the built server with `node --env-file=.env dist/server/worker.js`,
-rebuilding after a change.
+`pnpm dev` starts one Vite server with the site behind it: an edit to the
+config, the theme or a plugin is served on the next request. Copy
+`.env.example` to `.env` for local secrets; the dev server applies it and
+picks up edits, while the built server reads only the process environment.
 
 Behind a TLS-terminating proxy, pass `node({ trustProxy: true })` in
 `plumix.config.ts` and change the passkey `rpId` and `origin` to the host you

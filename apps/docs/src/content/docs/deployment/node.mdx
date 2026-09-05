@@ -54,11 +54,6 @@ Node 24.2 or newer: the runtime uses `node:sqlite` without a flag and `import.me
 
 This is the path from a scaffolded site to a running process. It assumes a site made with `pnpm create plumix-app --runtime node`.
 
-<Aside type="note" title="No dev server on Node yet">
-  `plumix dev` is not available on Node yet. Build and run the server while you
-  work, and rebuild after a change; the dev server arrives in a later release.
-</Aside>
-
 <Steps>
 
 1. **Read the config the scaffolder wrote.** Three slots and a passkey origin. The origin is a literal, because a process has no build environment to derive one from.
@@ -94,19 +89,25 @@ This is the path from a scaffolded site to a running process. It assumes a site 
    plumix migrate apply
    ```
 
-3. **Build.** The build writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except native packages, which it imports at runtime.
+3. **Develop.** One Vite server, with the site behind Vite's own middlewares: module serving, hot module replacement and the admin shell answer first, and everything else reaches the app through the same `node:http` bridge the built server uses. An edit to the config, the theme or a plugin is served on the next request, and a failing boot renders the dev error page instead of stopping the process. A `.env` in the project root is applied to the process environment, with a variable the shell already set winning, and re-applied when it changes; the built server reads only the process environment. The server answers loopback hosts only; set `PLUMIX_DEV_ALLOW_REMOTE=1` to review from another device, and add a named host to Vite's `server.allowedHosts` if you tunnel.
+
+   ```sh
+   plumix dev --port 3000
+   ```
+
+4. **Build.** The build writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except native packages, which it imports at runtime.
 
    ```sh
    plumix build
    ```
 
-4. **Run.** The process listens on `PORT` and `HOST`, defaulting to `3000` and `0.0.0.0`.
+5. **Run.** The process listens on `PORT` and `HOST`, defaulting to `3000` and `0.0.0.0`.
 
    ```sh
    PORT=3000 node dist/server/worker.js
    ```
 
-5. **Point the passkey at the deployed host.** Before the first sign-in on a real host, set `rpId` to that host and `origin` to its `https://` address, rebuild, and restart.
+6. **Point the passkey at the deployed host.** Before the first sign-in on a real host, set `rpId` to that host and `origin` to its `https://` address, rebuild, and restart.
 
 </Steps>
 
