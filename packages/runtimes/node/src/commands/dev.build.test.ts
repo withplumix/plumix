@@ -55,6 +55,7 @@ const greeting = (value: string) => `export const greeting = ${value};\n`;
 const CONFIG_FILE = "plumix.config.ts";
 
 const POLL = { timeout: 30_000, interval: 250 };
+const BOOT_TIMEOUT_MS = 120_000;
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -89,14 +90,26 @@ function startDev(dir: string, port: number): Promise<DevServer> {
       child.on("exit", (code) => done(code)),
     );
     const origin = `http://127.0.0.1:${port}`;
+    // Bounded, and the failure carries the child's output: a hook timeout
+    // would say nothing about what the server was doing.
+    const deadline = setTimeout(() => {
+      child.kill("SIGKILL");
+      reject(
+        new Error(
+          `dev server did not listen within ${BOOT_TIMEOUT_MS}ms:\n${stdout}\n${stderr}`,
+        ),
+      );
+    }, BOOT_TIMEOUT_MS);
     child.stdout.on("data", (chunk: Buffer) => {
       stdout += chunk.toString();
       if (stdout.includes(`${origin}/`)) {
+        clearTimeout(deadline);
         resolve({ child, origin, port, stdout: () => stdout, exited });
       }
     });
     child.on("error", reject);
     void exited.then((code) => {
+      clearTimeout(deadline);
       reject(
         new Error(
           `dev server exited with ${code} before listening:\n${stdout}\n${stderr}`,
