@@ -56,6 +56,8 @@ const CONFIG_FILE = "plumix.config.ts";
 
 const POLL = { timeout: 30_000, interval: 250 };
 const BOOT_TIMEOUT_MS = 120_000;
+// eslint-disable-next-line no-control-regex -- escape sequences are the point
+const ANSI = /\x1b\[[0-9;]*m/g;
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -102,7 +104,8 @@ function startDev(dir: string, port: number): Promise<DevServer> {
     }, BOOT_TIMEOUT_MS);
     child.stdout.on("data", (chunk: Buffer) => {
       stdout += chunk.toString();
-      if (stdout.includes(`${origin}/`)) {
+      // CI keeps colors on, and vite prints the port in bold.
+      if (stdout.replace(ANSI, "").includes(`${origin}/`)) {
         clearTimeout(deadline);
         resolve({ child, origin, port, stdout: () => stdout, exited });
       }
