@@ -1,5 +1,26 @@
 # @plumix/runtime-cloudflare
 
+## 0.10.1
+
+### Patch Changes
+
+- [#2222](https://github.com/withplumix/plumix/pull/2222) [`301429d`](https://github.com/withplumix/plumix/commit/301429dabe61f705785b9ba394a4ed1f075a9cd7) Thanks [@nasyrov](https://github.com/nasyrov)! - `create-plumix-app --runtime node` scaffolds a site that runs as a plain Node.js process: `node()` as the runtime, `nodeSqlite` on a file under `data/`, `diskStorage` when a plugin needs the storage capability, `.env` as the secrets file with an `.env.example`, `data` ignored, and a literal localhost passkey origin with a comment to change it for production. A plugin needing a capability Node does not provide, such as media's image delivery, is refused by name. The default runtime stays `cloudflare`.
+
+  The base skeleton now leaves three things to the runtime: the ambient type packages the tsconfig lists, the README's Deploy section, and what the `clean` script removes. The Cloudflare block declares all three, so its projects are unchanged.
+
+- [#2209](https://github.com/withplumix/plumix/pull/2209) [`c8bede7`](https://github.com/withplumix/plumix/commit/c8bede7407bf77c464e92f0b5f60a0a68bf74d59) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `buildAppClientFirst` to `plumix/vite`, the client-before-server build
+  ordering a runtime's build command installs as Vite's `builder.buildApp`; the
+  Cloudflare build command now imports it from there. Lets a runtime's
+  `plumix.scaffold` block name its local secrets file (`secretsFile`, default
+  `.dev.vars`) and the paths its tooling writes into `.gitignore` (`gitignore`),
+  so the scaffolder's base `.gitignore` and generated config comment stop naming
+  wrangler. A scaffolded Cloudflare project is unchanged apart from the order of
+  two `.gitignore` lines and the wording of the secrets comment. The scaffold
+  smoke job runs every registered runtime against the `blank` and `all-plugins`
+  shapes.
+
+- [#2212](https://github.com/withplumix/plumix/pull/2212) [`ae47e39`](https://github.com/withplumix/plumix/commit/ae47e397b7c0b4ce56f334c47514a215e4eb9da3) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a runtime-neutral e2e harness to `plumix/test/playwright`. `definePlumixE2EConfig` takes `configDir` (pass `import.meta.dirname`) beside `playground`, reads the `plumix.e2e` block of the runtime package the playground depends on for the state to wipe and where the database lives, and applies migrations through `plumix migrate apply` instead of naming wrangler; `openPlaygroundDb` resolves the database through the same block and drops its unused `binding` option. Adds `runtimeSpec`, the one spec every runtime playground runs (bootstrap the first admin with a passkey, publish an entry, read it publicly, upload media, sign out), plus the `CONTENT_LIST_ROWS` and `PNG_1X1` fixtures the plugin suites share. The Cloudflare runtime declares its block and ships a playground that runs the spec.
+
 ## 0.10.0
 
 ### Minor Changes

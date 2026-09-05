@@ -1,5 +1,38 @@
 # plumix
 
+## 0.22.0
+
+### Minor Changes
+
+- [#2213](https://github.com/withplumix/plumix/pull/2213) [`4dbbce2`](https://github.com/withplumix/plumix/commit/4dbbce2004222de9ec7e86c96bc3087629c1f5e7) Thanks [@nasyrov](https://github.com/nasyrov)! - `createDispatcherHarness` takes a `db` option so a caller can supply its own drizzle database — the seam a runtime package uses to run core's request-level tests over its driver. Without it the harness creates its in-memory libsql database as before. `applyTestSchema` accepts any drizzle SQLite db, sync or async.
+
+- [#2219](https://github.com/withplumix/plumix/pull/2219) [`7921de6`](https://github.com/withplumix/plumix/commit/7921de6cb20512e9674395adda14f3e2aab16854) Thanks [@nasyrov](https://github.com/nasyrov)! - Breaking (pre-1.0): `PlumixHandler.dispose()` resolves `{ abandoned }`, the number of deferred tasks still running when its deadline passed, and takes an optional `{ timeoutMs }` for the time a shutdown has left. An adapter implementing its own `dispose` must resolve that shape; callers that awaited `void` are unaffected. A process runtime uses it to exit non-zero over abandoned work instead of only logging.
+
+- [#2209](https://github.com/withplumix/plumix/pull/2209) [`c8bede7`](https://github.com/withplumix/plumix/commit/c8bede7407bf77c464e92f0b5f60a0a68bf74d59) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `buildAppClientFirst` to `plumix/vite`, the client-before-server build
+  ordering a runtime's build command installs as Vite's `builder.buildApp`; the
+  Cloudflare build command now imports it from there. Lets a runtime's
+  `plumix.scaffold` block name its local secrets file (`secretsFile`, default
+  `.dev.vars`) and the paths its tooling writes into `.gitignore` (`gitignore`),
+  so the scaffolder's base `.gitignore` and generated config comment stop naming
+  wrangler. A scaffolded Cloudflare project is unchanged apart from the order of
+  two `.gitignore` lines and the wording of the secrets comment. The scaffold
+  smoke job runs every registered runtime against the `blank` and `all-plugins`
+  shapes.
+
+- [#2212](https://github.com/withplumix/plumix/pull/2212) [`ae47e39`](https://github.com/withplumix/plumix/commit/ae47e397b7c0b4ce56f334c47514a215e4eb9da3) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a runtime-neutral e2e harness to `plumix/test/playwright`. `definePlumixE2EConfig` takes `configDir` (pass `import.meta.dirname`) beside `playground`, reads the `plumix.e2e` block of the runtime package the playground depends on for the state to wipe and where the database lives, and applies migrations through `plumix migrate apply` instead of naming wrangler; `openPlaygroundDb` resolves the database through the same block and drops its unused `binding` option. Adds `runtimeSpec`, the one spec every runtime playground runs (bootstrap the first admin with a passkey, publish an entry, read it publicly, upload media, sign out), plus the `CONTENT_LIST_ROWS` and `PNG_1X1` fixtures the plugin suites share. The Cloudflare runtime declares its block and ships a playground that runs the spec.
+
+### Patch Changes
+
+- [#2223](https://github.com/withplumix/plumix/pull/2223) [`fe4f7a4`](https://github.com/withplumix/plumix/commit/fe4f7a4daf4cd483e101000a214cadb56e341adb) Thanks [@nasyrov](https://github.com/nasyrov)! - `emitPlumixSources` now also returns the config's `runtime` adapter, so a runtime's `dev` command that defers building the app can still read its own options.
+
+- [#2212](https://github.com/withplumix/plumix/pull/2212) [`ae47e39`](https://github.com/withplumix/plumix/commit/ae47e397b7c0b4ce56f334c47514a215e4eb9da3) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the bootstrap, login and accept-invite screens staying put after a successful passkey ceremony: the session is now refetched before navigating, so the route guard, which reads it with `staleTime: "static"`, sees the signed-in user.
+- Updated dependencies []:
+  - @plumix/admin@0.22.0
+  - @plumix/admin-editor@0.22.0
+  - @plumix/admin-ui@0.22.0
+  - @plumix/blocks@0.22.0
+  - @plumix/core@0.22.0
+
 ## 0.21.0
 
 ### Minor Changes
