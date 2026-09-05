@@ -13,7 +13,10 @@ import type { ChildProcess } from "node:child_process";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import {
+  CLI_ENV,
   PLUMIX_BIN,
+  prepareDatabase,
+  rpc,
   scaffoldConsumerProject,
 } from "./test/consumer-project.js";
 
@@ -28,6 +31,10 @@ import { tag } from "my-native";
 
 const probes = definePlugin("probes", (ctx) => {
   ctx.registerPublicRoute({ path: "/native", handler: () => new Response(tag) });
+  ctx.registerPublicRoute({
+    path: "/secret",
+    handler: (_request, app) => new Response(String(app.env.PROBE_SECRET ?? "")),
+  });
   ctx.registerPublicRoute({
     path: "/slow-response",
     handler: () => new Promise((resolve) => setTimeout(() => resolve(new Response("slow response")), 1000)),
@@ -113,13 +120,6 @@ async function withServer(
   }
 }
 
-const rpc = (origin: string, path: string) =>
-  fetch(`${origin}/_plumix/rpc/${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-plumix-request": "1" },
-    body: JSON.stringify({ json: {} }),
-  });
-
 let dir: string;
 let marker: string;
 
@@ -127,6 +127,8 @@ beforeAll(async () => {
   dir = scaffoldConsumerProject("plumix-node-entry-", "");
   marker = join(dir, "drained.marker");
   writeFileSync(join(dir, "plumix.config.mjs"), config(marker));
+  // Only `plumix dev` reads this; the built entry must not.
+  writeFileSync(join(dir, ".env"), "PROBE_SECRET=from-dotenv\n");
   const native = join(dir, "node_modules/my-native");
   mkdirSync(native);
   writeFileSync(
@@ -138,16 +140,8 @@ beforeAll(async () => {
     }),
   );
   writeFileSync(join(native, "index.js"), 'export const tag = "native";\n');
-  // Failure is read off the CLI's stderr, so an inherited debugger banner or
-  // debug log must not reach it.
-  const env = {
-    ...process.env,
-    NODE_OPTIONS: undefined,
-    NODE_DEBUG: undefined,
-  };
-  await run(PLUMIX_BIN, ["migrate", "generate"], { cwd: dir, env });
-  await run(PLUMIX_BIN, ["migrate", "apply"], { cwd: dir, env });
-  await run(PLUMIX_BIN, ["build"], { cwd: dir, env });
+  await prepareDatabase(dir);
+  await run(PLUMIX_BIN, ["build"], { cwd: dir, env: CLI_ENV });
 }, 240_000);
 
 afterAll(() => {
@@ -188,6 +182,15 @@ describe("the built site served by node", () => {
         });
         expect((await rpc(origin, "entry/list")).status).toBe(401);
         expect(await (await fetch(`${origin}/native`)).text()).toBe("native");
+      }),
+    60_000,
+  );
+
+  test(
+    "production loads no .env file: a value only that file carries is absent",
+    () =>
+      withServer(dir, async ({ origin }) => {
+        expect(await (await fetch(`${origin}/secret`)).text()).toBe("");
       }),
     60_000,
   );
