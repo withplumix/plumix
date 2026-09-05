@@ -65,6 +65,7 @@ export default plumix({
 
 The `./commands` subpath registers the runtime's CLI commands with `plumix`:
 
+- `plumix dev` — one Vite server: module serving, HMR and the staged admin shell answer first; everything else goes through the `node:http` bridge into the entry. An edit to the config, a theme or a plugin rebuilds the app on the next request, and a failing boot renders the dev error page. A `.env` in the project root is applied to the process environment (a variable the shell set wins) and re-applied when it changes; production loads no file. A change to `build.external` needs a restart. Accepts `--port` and `--host`; answers loopback hosts only unless `PLUMIX_DEV_ALLOW_REMOTE=1`, and a named remote host also needs Vite's `server.allowedHosts`.
 - `plumix build` — the client and server bundles described above.
 - `plumix migrate apply` — applies the migrations `plumix migrate generate` wrote to `drizzle/` to the file `nodeSqlite()` names. Drizzle records what it applied in `__drizzle_migrations`; a database is not portable between runtimes by copying the file.
 

@@ -14,6 +14,16 @@ const NATIVE_EXTERNALS: readonly string[] = [
   "libsql",
 ];
 
+/** The entry the plumix Vite plugin emits, relative to the project root. */
+export const ENTRY_FILE = ".plumix/worker.ts";
+
+/** What the server bundle imports at runtime instead of inlining. */
+export function serverExternals(
+  build: NonNullable<NodeConfig["build"]>,
+): string[] {
+  return [...NATIVE_EXTERNALS, ...(build.external ?? [])];
+}
+
 /**
  * The environment `plumix build` bundles the entry in, beside the client's
  * `dist/client`. Everything is inlined: the SSR island transform only wraps
@@ -27,7 +37,7 @@ export function serverEnvironment(
     consumer: "server",
     resolve: {
       noExternal: true,
-      external: [...NATIVE_EXTERNALS, ...(build.external ?? [])],
+      external: serverExternals(build),
     },
     build: {
       outDir: "dist/server",
@@ -35,7 +45,7 @@ export function serverEnvironment(
       // environment's output by default; the server bundle has no use for it.
       copyPublicDir: false,
       rolldownOptions: {
-        input: ".plumix/worker.ts",
+        input: ENTRY_FILE,
         output: { entryFileNames: "worker.js" },
       },
     },

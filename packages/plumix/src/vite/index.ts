@@ -20,6 +20,7 @@ import type {
   AnyPluginDescriptor,
   PluginRegistry,
   PlumixManifest,
+  RuntimeAdapter,
 } from "@plumix/core";
 import {
   collectNamedTemplates,
@@ -511,9 +512,14 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
 export async function emitPlumixSources(
   cwd: string,
   explicitConfig?: string,
-): Promise<{ configPath: string }> {
-  const { configPath } = await regenerate(cwd, explicitConfig);
-  return { configPath };
+  options?: LoadConfigOptions,
+): Promise<{ configPath: string; runtime: RuntimeAdapter }> {
+  const { configPath, runtime } = await regenerate(
+    cwd,
+    explicitConfig,
+    options,
+  );
+  return { configPath, runtime };
 }
 
 async function regenerate(
@@ -524,6 +530,7 @@ async function regenerate(
   options?: LoadConfigOptions,
 ): Promise<{
   configPath: string;
+  runtime: RuntimeAdapter;
   manifest: PlumixManifest;
   registry: PluginRegistry;
   plugins: readonly AnyPluginDescriptor[];
@@ -603,6 +610,7 @@ async function regenerate(
 
   return {
     configPath,
+    runtime: config.runtime,
     manifest,
     registry,
     plugins: config.plugins,
