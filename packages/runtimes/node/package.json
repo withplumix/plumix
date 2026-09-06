@@ -118,7 +118,7 @@
   },
   "peerDependencies": {
     "drizzle-orm": "catalog:drizzle",
-    "plumix": "workspace:>=0.21.0 <1.0.0",
+    "plumix": "workspace:>=0.22.0 <1.0.0",
     "sharp": "catalog:"
   },
   "peerDependenciesMeta": {

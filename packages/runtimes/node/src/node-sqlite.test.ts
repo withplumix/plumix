@@ -1,17 +1,22 @@
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Db } from "plumix";
+import type { TracedContext } from "plumix/test";
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable } from "drizzle-orm/sqlite-core";
 import { count, eq, rowsAffected } from "plumix/db";
+import { libsql } from "plumix/db/libsql";
 import * as schema from "plumix/schema";
 import { credentials, sessions, users } from "plumix/schema";
 import {
   applyTestSchema,
   createDispatcherHarness,
+  createTracedContext,
+  DEV_ORIGIN,
   generatePasskeyKeyPair,
 } from "plumix/test";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { nodeSqlite } from "./node-sqlite.js";
 
@@ -166,5 +171,142 @@ describe("core requests over nodeSqlite", () => {
       h.db.select().from(credentials).where(eq(credentials.userId, target.id)),
     ]);
     expect(orphans).toEqual([[], []]);
+  });
+});
+
+describe("query spans", () => {
+  async function traced(): Promise<TracedContext> {
+    const db = open(join(dir, "site.sqlite"));
+    await applyTestSchema(db, schema);
+    return createTracedContext({ db });
+  }
+
+  test("a read records one kind-named span with sql, params and row count", async () => {
+    const t = await traced();
+    await t.harness.factory.user.create({ email: "ada@example.test" });
+
+    await t.run(async () => {
+      await t.harness.db
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.email, "ada@example.test"));
+    });
+
+    const spans = t.dbSpans();
+    expect(spans.map((s) => s.name)).toEqual(["db: select"]);
+    expect(spans[0]?.attributes).toEqual({
+      "db.sql": 'select "email" from "users" where "users"."email" = ?',
+      "db.params": ["ada@example.test"],
+      "db.rows": 1,
+    });
+  });
+
+  test("a write reports the rows it affected", async () => {
+    const t = await traced();
+    const user = await t.harness.factory.user.create({});
+
+    await t.run(async () => {
+      await t.harness.db.delete(users).where(eq(users.id, user.id));
+    });
+
+    const spans = t.dbSpans();
+    expect(spans.map((s) => s.name)).toEqual(["db: delete"]);
+    expect(spans[0]?.attributes["db.rows"]).toBe(1);
+  });
+
+  // drizzle reads `.values()` through the statement's array mode — a different
+  // pair of shim members from the object-mode reads above.
+  test("an array-mode read is traced like any other", async () => {
+    const t = await traced();
+    await t.harness.factory.user.create({});
+    await t.harness.factory.user.create({});
+
+    await t.run(async () => {
+      await t.harness.db.select({ id: users.id }).from(users).values();
+    });
+
+    const spans = t.dbSpans();
+    expect(spans.map((s) => s.name)).toEqual(["db: select"]);
+    expect(spans[0]?.attributes["db.rows"]).toBe(2);
+  });
+
+  test("each query gets its own span, never one per statement member", async () => {
+    const t = await traced();
+
+    await t.run(async () => {
+      await t.harness.db.select().from(users);
+      await t.harness.db.select().from(sessions);
+    });
+
+    expect(t.dbQueryCount()).toBe(2);
+  });
+});
+
+// The debug bar's Database panel reads `db.sql` off the span tree, so the shim
+// reaching the panel is the proof that a Node playground lists its queries.
+describe("the debug bar over nodeSqlite", () => {
+  afterEach(() => void vi.unstubAllEnvs());
+
+  test("lists the request's queries in the Database panel", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await harness();
+
+    const html = await (await h.dispatch(new Request(`${DEV_ORIGIN}/`))).text();
+
+    const testid = 'data-testid="plumix-debug-panel-database"';
+    const start = html.indexOf(testid);
+    expect(start).toBeGreaterThan(-1);
+    // The panel highlights SQL keyword by keyword, so the statement is split
+    // across spans; what survives as text is the quoted table name and the
+    // bound param — `db.sql` and `db.params` off the shim's span.
+    const panel = html
+      .slice(start, html.indexOf("plumix-debug-panel-", start + testid.length))
+      .replaceAll("&quot;", '"');
+    expect(panel).toContain('"settings"');
+    expect(panel).toContain('"site"');
+  });
+});
+
+// Statement-level parity only: a relational read is one batched round-trip on
+// libsql (a single `db: <kind> (n)` span carrying `db.batch`) and N statements
+// on the shim, so the two slots agree per query, not per round-trip.
+describe("span parity with the libsql adapter", () => {
+  async function spansFor(db: Db) {
+    const t = await createTracedContext({ db });
+    await t.run(async () => {
+      const [user] = await t.harness.db
+        .insert(users)
+        .values({ email: "ada@example.test", slug: "ada", role: "admin" })
+        .returning();
+      const id = user?.id ?? 0;
+      await t.harness.db.select().from(users);
+      // A hit and a miss: a single-row read is the one place the two drivers
+      // count differently if the shim gets `db.rows` wrong.
+      await t.harness.db.select().from(users).where(eq(users.id, id)).get();
+      await t.harness.db.select().from(users).where(eq(users.id, 0)).get();
+      await t.harness.db.delete(users).where(eq(users.id, id));
+    });
+    return t.dbSpans().map((span) => ({ name: span.name, ...span.attributes }));
+  }
+
+  test("the same queries record the same spans on both slots", async () => {
+    const node = open(join(dir, "node.sqlite"));
+    await applyTestSchema(node, schema);
+    // `DatabaseAdapter.connect` declares `db: unknown`; only nodeSqlite
+    // narrows it.
+    const remote = libsql({
+      url: `file:${join(dir, "libsql.sqlite")}`,
+    }).connect({}, new Request("https://cms.example/"), schema).db as Db;
+    await applyTestSchema(remote, schema);
+
+    const recorded = await spansFor(node);
+    expect(recorded.map((span) => span.name)).toEqual([
+      "db: insert",
+      "db: select",
+      "db: select",
+      "db: select",
+      "db: delete",
+    ]);
+    expect(recorded).toEqual(await spansFor(remote));
   });
 });
