@@ -11,7 +11,7 @@ import { ImagesError } from "./errors.js";
 export const IMAGE_ROUTE = "/_plumix/image";
 
 export type ImageFormat = Exclude<NonNullable<TransformOpts["format"]>, "auto">;
-export type ImageFit = NonNullable<TransformOpts["fit"]>;
+type ImageFit = NonNullable<TransformOpts["fit"]>;
 
 export interface ImagesConfig {
   /**
