@@ -11,7 +11,7 @@ import {
   plumix,
 } from "plumix";
 import * as schema from "plumix/schema";
-import { applyTestSchema } from "plumix/test";
+import { applyCoreTestSchema } from "plumix/test";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { node } from "./adapter.js";
@@ -46,9 +46,8 @@ afterEach(() => {
 // `connect` opens a second time.
 async function handlerFor(plugins: PluginDescriptor[] = []) {
   const database = nodeSqlite({ path: join(dir, "site.sqlite") });
-  await applyTestSchema(
+  await applyCoreTestSchema(
     database.connect({}, new Request("https://cms.example/"), schema).db,
-    schema,
   );
   const app = await buildApp(
     plumix({ runtime: node(), database, auth, theme, plugins }),

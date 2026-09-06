@@ -12,7 +12,7 @@ import {
 } from "plumix";
 import * as schema from "plumix/schema";
 import { sessions } from "plumix/schema";
-import { applyTestSchema, factoriesFor } from "plumix/test";
+import { applyCoreTestSchema, factoriesFor } from "plumix/test";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { NodeConfig } from "./adapter.js";
@@ -72,7 +72,7 @@ afterEach(() => {
 async function serveSite(config: NodeConfig) {
   const database = nodeSqlite({ path: join(dir, "site.sqlite") });
   const db = database.connect({}, new Request(SITE_ORIGIN), schema).db;
-  await applyTestSchema(db, schema);
+  await applyCoreTestSchema(db);
   const factory = factoriesFor(db);
   const user = await factory.user.create({ email: EMAIL, role: "editor" });
   const { token } = await factory.authToken.create({

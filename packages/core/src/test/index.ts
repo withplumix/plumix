@@ -30,7 +30,11 @@ export {
 } from "./factories.js";
 export type { Factories } from "./factories.js";
 
-export { applyTestSchema, createTestDb } from "./harness.js";
+export {
+  applyCoreTestSchema,
+  applyTestSchema,
+  createTestDb,
+} from "./harness.js";
 
 export {
   createDispatcherHarness,

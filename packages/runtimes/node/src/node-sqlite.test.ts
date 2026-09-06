@@ -8,9 +8,9 @@ import { integer, sqliteTable } from "drizzle-orm/sqlite-core";
 import { count, eq, rowsAffected } from "plumix/db";
 import { libsql } from "plumix/db/libsql";
 import * as schema from "plumix/schema";
-import { credentials, sessions, users } from "plumix/schema";
+import { credentials, entryChanges, sessions, users } from "plumix/schema";
 import {
-  applyTestSchema,
+  applyCoreTestSchema,
   createDispatcherHarness,
   createTracedContext,
   DEV_ORIGIN,
@@ -56,7 +56,7 @@ describe("nodeSqlite", () => {
 describe("queries through the shim", () => {
   test("insert-returning, join, count and rowsAffected", async () => {
     const db = open(join(dir, "site.sqlite"));
-    await applyTestSchema(db, schema);
+    await applyCoreTestSchema(db);
 
     const [user] = await db
       .insert(users)
@@ -120,7 +120,7 @@ describe("raw sql template parameters", () => {
 // below is one core already proves, replayed through the shim.
 async function harness() {
   const db = open(join(dir, "site.sqlite"));
-  await applyTestSchema(db, schema);
+  await applyCoreTestSchema(db);
   return createDispatcherHarness({ db });
 }
 
@@ -171,6 +171,24 @@ describe("core requests over nodeSqlite", () => {
       h.db.select().from(credentials).where(eq(credentials.userId, target.id)),
     ]);
     expect(orphans).toEqual([[], []]);
+  });
+
+  test("creating an entry writes a change-feed row from inside the trigger", async () => {
+    const h = await harness();
+    const admin = await h.seedUser("admin");
+
+    const response = await h.fetch("/_plumix/rpc/entry/create", {
+      method: "POST",
+      json: { json: { title: "Hello", slug: "hello" } },
+      as: admin,
+    });
+    response.assertStatus(200);
+    const created = await response.json<{ json: { id: number } }>();
+
+    const changes = await h.db
+      .select({ entryId: entryChanges.entryId, kind: entryChanges.kind })
+      .from(entryChanges);
+    expect(changes).toEqual([{ entryId: created.json.id, kind: "upsert" }]);
   });
 });
 
