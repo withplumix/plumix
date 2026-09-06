@@ -194,6 +194,16 @@
       ],
       "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
     },
+    "@plumix/runtime-node#test:e2e": {
+      // Same reason as the Cloudflare entry above.
+      "dependsOn": [
+        "build",
+        "^build",
+        "@plumix/plugin-blog#build",
+        "@plumix/plugin-media#build"
+      ],
+      "passThroughEnv": ["PLUMIX_E2E_PORT_OFFSET"]
+    },
     "docs:screenshots": {
       // Same graph as `test:e2e`: the capture drives the built admin through
       // `vite preview`.

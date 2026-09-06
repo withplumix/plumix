@@ -2590,6 +2590,12 @@ importers:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
         version: 0.18.5
+      '@libsql/client':
+        specifier: 'catalog:'
+        version: 0.17.4
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.62.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -2629,6 +2635,37 @@ importers:
       vitest:
         specifier: catalog:vitest
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+
+  packages/runtimes/node/playground:
+    dependencies:
+      '@plumix/plugin-blog':
+        specifier: workspace:*
+        version: link:../../../plugins/blog
+      '@plumix/plugin-media':
+        specifier: workspace:*
+        version: link:../../../plugins/media
+      '@plumix/runtime-node':
+        specifier: workspace:*
+        version: link:..
+      plumix:
+        specifier: workspace:*
+        version: link:../../../plumix
+      react:
+        specifier: catalog:react
+        version: 19.2.8
+    devDependencies:
+      '@plumix/typescript-config':
+        specifier: workspace:*
+        version: link:../../../../tooling/typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
+      '@types/react':
+        specifier: catalog:react
+        version: 19.2.18
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
 
   tooling/e2e-ports:
     devDependencies:
