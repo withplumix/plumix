@@ -1,16 +1,20 @@
-import { createHash, randomUUID } from "node:crypto";
-import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { availableParallelism } from "node:os";
 import { Readable } from "node:stream";
-import type { ReadStream } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AssetsBinding, ImageDelivery } from "plumix";
 import { matchesRemotePattern } from "plumix/blocks/renderer";
 
+import type { CachedVariant } from "../image-cache.js";
 import type { ImageFormat, ImageParams, NodeImageDelivery } from "../images.js";
 import type { BridgeOptions } from "./bridge.js";
 import { ImagesError } from "../errors.js";
-import { IMAGE_ROUTE, isNodeImages, parseImageParams } from "../images.js";
+import {
+  IMAGE_ROUTE,
+  isNodeImages,
+  parseImageParams,
+  sourceKey,
+} from "../images.js";
 import { clientAddress, requestUrl, writeResponse } from "./bridge.js";
 
 export interface ImageLayerOptions extends Pick<BridgeOptions, "trustProxy"> {
@@ -67,6 +71,8 @@ type FormatClass = ImageFormat | "source";
 interface VariantRequest {
   readonly params: ImageParams;
   readonly format: FormatClass;
+  /** What a purge names: the source without its query, a same-host one by path. */
+  readonly source: string;
   readonly key: string;
   /** The request as the bridge would see it; a same-origin source resolves against it. */
   readonly url: URL;
@@ -76,11 +82,35 @@ interface VariantRequest {
 interface Variant {
   readonly format: OutputFormat;
   /** Fresh bytes, or the cache file already open. */
-  readonly body:
-    Buffer | { readonly size: number; readonly stream: ReadStream };
+  readonly body: Buffer | CachedVariant;
 }
 
 const refused = (): ImagesError => ImagesError.upstream({ status: 400 });
+
+type Render = (request: VariantRequest) => Promise<Variant>;
+
+/**
+ * At most `max` renders run at once; the rest wait in order. A render holds
+ * a source of up to {@link MAX_SOURCE_BYTES} and its decoded pixels, so how
+ * many run together is what bounds the process's memory.
+ */
+function limited(max: number, render: Render): Render {
+  let active = 0;
+  const waiting: (() => void)[] = [];
+  return async (request) => {
+    if (active >= max) await new Promise<void>((next) => waiting.push(next));
+    active += 1;
+    try {
+      return await render(request);
+    } finally {
+      active -= 1;
+      waiting.shift()?.();
+    }
+  };
+}
+
+const candidates = (format: FormatClass): readonly OutputFormat[] =>
+  format === "source" ? OUTPUT_FORMATS : [format];
 
 function negotiate(
   explicit: ImageFormat | undefined,
@@ -123,19 +153,6 @@ function isSameHost(src: string, host: string): boolean {
   return URL.parse(src)?.host === host;
 }
 
-// The file is opened before any header is decided, as the assets layer does:
-// a cache emptied between the lookup and the read is a miss, not a 200 with
-// no body.
-async function openCached(file: string): Promise<Variant["body"] | null> {
-  try {
-    const handle = await open(file, "r");
-    const { size } = await handle.stat();
-    return { size, stream: handle.createReadStream() };
-  } catch {
-    return null;
-  }
-}
-
 /** The body, bounded: a source past the cap is refused before it is held. */
 async function readBounded(response: Response): Promise<Buffer> {
   if (Number(response.headers.get("content-length")) > MAX_SOURCE_BYTES) {
@@ -158,7 +175,8 @@ async function readBounded(response: Response): Promise<Buffer> {
 /**
  * The route served in front of the handler. A variant is named by a hash of
  * the request, so a hit is answered from disk with no source fetch, and the
- * `ETag` is that hash: `If-None-Match` is decided before anything is read.
+ * `ETag` is that hash: `If-None-Match` is decided from the cache's index
+ * before anything is read.
  */
 export function createImageLayer(
   slot: ImageDelivery | undefined,
@@ -172,9 +190,9 @@ function serveWith(
   slot: NodeImageDelivery,
   options: ImageLayerOptions,
 ): ImageLayer["serve"] {
-  const { cacheDir, remotePatterns } = slot.config;
+  const { remotePatterns } = slot.config;
+  const { cache } = slot;
   const pending = new Map<string, Promise<Variant>>();
-  let ready: Promise<unknown> | undefined;
 
   async function resolveSameOrigin({
     params,
@@ -241,8 +259,11 @@ function serveWith(
     throw refused();
   }
 
-  async function render(request: VariantRequest): Promise<Variant> {
-    const { params, format, key, url } = request;
+  const render = limited(availableParallelism(), renderVariant);
+
+  async function renderVariant(request: VariantRequest): Promise<Variant> {
+    const { params, format, source, key, url } = request;
+    const epoch = cache.epoch(source);
     const bytes = isSameHost(params.src, url.host)
       ? await resolveSameOrigin(request)
       : await resolveRemote(params.src);
@@ -275,38 +296,22 @@ function serveWith(
       throw ImagesError.upstream({ status: 415 });
     }
 
-    // A failed mkdir is retried by the next render rather than remembered.
-    ready ??= mkdir(cacheDir, { recursive: true }).catch((error: unknown) => {
-      ready = undefined;
-      throw error;
-    });
-    await ready;
-    const file = join(cacheDir, `${key}.${output}`);
-    const staging = `${file}.${randomUUID()}.tmp`;
-    try {
-      await writeFile(staging, rendered);
-      await rename(staging, file);
-    } catch (error) {
-      await rm(staging, { force: true });
-      throw error;
-    }
+    await cache.put(source, key, output, rendered, epoch);
     return { format: output, body: rendered };
   }
 
-  async function cached(
-    key: string,
-    format: FormatClass,
-  ): Promise<Variant | null> {
-    for (const candidate of format === "source" ? OUTPUT_FORMATS : [format]) {
-      const body = await openCached(join(cacheDir, `${key}.${candidate}`));
-      if (body !== null) return { format: candidate, body };
-    }
-    return null;
+  async function cached({
+    source,
+    key,
+    format,
+  }: VariantRequest): Promise<Variant | null> {
+    const hit = await cache.open(source, key, candidates(format));
+    return hit && { format: hit.extension, body: hit.body };
   }
 
   async function variant(request: VariantRequest): Promise<Variant> {
-    const { key, format } = request;
-    const hit = await cached(key, format);
+    const { key } = request;
+    const hit = await cached(request);
     if (hit) return hit;
     let inflight = pending.get(key);
     if (!inflight) {
@@ -353,20 +358,33 @@ function serveWith(
     ) {
       return new Response("Bad Request", { status: 400 });
     }
+    const sameHost = isSameHost(params.src, url.host);
     const format = negotiate(params.format, req.headers.accept);
+    // However the host is spelled, a same-host source is one source, and the
+    // one the media plugin purges by path.
+    const source = sameHost
+      ? new URL(params.src, url).pathname
+      : sourceKey(params.src);
     const key = variantKey(params, format);
     const etag = `"${key}"`;
     const ifNoneMatch = req.headers["if-none-match"];
-    if (ifNoneMatch !== undefined && etagMatches(ifNoneMatch, etag)) {
-      return new Response(null, {
-        status: 304,
-        headers: { ...CACHED_HEADERS, etag },
-      });
-    }
     try {
+      // A revalidation is answered from the index alone, so a purged variant
+      // meets its source again rather than being confirmed from its hash.
+      if (
+        ifNoneMatch !== undefined &&
+        etagMatches(ifNoneMatch, etag) &&
+        (await cache.touch(source, key, candidates(format)))
+      ) {
+        return new Response(null, {
+          status: 304,
+          headers: { ...CACHED_HEADERS, etag },
+        });
+      }
       const rendered = await variant({
         params,
         format,
+        source,
         key,
         url,
         clientAddress: clientAddress(req, options),

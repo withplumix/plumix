@@ -157,7 +157,9 @@ export default {
 };
 ```
 
-The cache is one directory on one machine, like the uploads beside it; a fresh container starts cold and fills as pages are viewed.
+The cache is one directory on one machine, like the uploads beside it; a fresh container starts cold and fills as pages are viewed. It holds at most `cacheSize` bytes (1 GiB by default): past that, the variant served longest ago is dropped; a restart only knows when each file was written, so it starts from that order. As many renders run at once as the machine has cores; the rest wait their turn, so a burst of first views cannot hold every source in memory together.
+
+A variant does not outlive its source. When a media item is trashed or deleted, the media plugin asks the slot to forget that item's variants, so the next request, a revalidation included, meets the serve route's gating again instead of the cache. A browser that already holds a variant keeps it until its own cache expires, as with any immutable response.
 
 ## What Node does not do yet
 

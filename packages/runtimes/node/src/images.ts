@@ -5,7 +5,9 @@ import type { RemotePattern } from "plumix/blocks/renderer";
 import type SharpModule from "sharp";
 import { matchesRemotePattern } from "plumix/blocks/renderer";
 
+import type { VariantCache } from "./image-cache.js";
 import { ImagesError } from "./errors.js";
+import { createVariantCache } from "./image-cache.js";
 
 /** Where the entry's pre-handler layer answers transforms. */
 export const IMAGE_ROUTE = "/_plumix/image";
@@ -28,6 +30,11 @@ export interface ImagesConfig {
   readonly remotePatterns?: readonly RemotePattern[];
   /** Where rendered variants are kept; `.cache/plumix/images` by default. */
   readonly cacheDir?: string;
+  /**
+   * How many bytes of variants `cacheDir` may hold; 1 GiB by default. Past
+   * it, the least recently served variant is dropped.
+   */
+  readonly cacheSize?: number;
 }
 
 export interface ResolvedImagesConfig {
@@ -36,6 +43,7 @@ export interface ResolvedImagesConfig {
   readonly remotePatterns: readonly RemotePattern[];
   /** Absolute. */
   readonly cacheDir: string;
+  readonly cacheSize: number;
 }
 
 export interface NodeImageDelivery extends ImageDelivery {
@@ -44,6 +52,9 @@ export interface NodeImageDelivery extends ImageDelivery {
   readonly config: ResolvedImagesConfig;
   /** `sharp`, loaded on first use; `connect` is the first user. */
   sharp(): typeof SharpModule;
+  /** The variants under `cacheDir`, shared with the route. */
+  readonly cache: VariantCache;
+  purge(sourceUrl: string): Promise<void>;
 }
 
 /** What the route transforms: the source and its snapped, clamped options. */
@@ -58,6 +69,7 @@ export interface ImageParams {
 
 const DEFAULT_WIDTHS = [320, 640, 768, 1024, 1280, 1536, 1920];
 const DEFAULT_CACHE_DIR = ".cache/plumix/images";
+const DEFAULT_CACHE_SIZE = 1024 * 1024 * 1024;
 const FORMATS: readonly ImageFormat[] = ["jpeg", "webp", "avif"];
 const FITS: readonly ImageFit[] = ["cover", "contain", "scale-down"];
 
@@ -71,10 +83,15 @@ function resolveConfig(config: ImagesConfig): ResolvedImagesConfig {
   ) {
     throw ImagesError.invalidWidths({ widths: config.widths ?? [] });
   }
+  const cacheSize = config.cacheSize ?? DEFAULT_CACHE_SIZE;
+  if (!Number.isInteger(cacheSize) || cacheSize <= 0) {
+    throw ImagesError.invalidCacheSize({ cacheSize });
+  }
   return {
     widths,
     remotePatterns: config.remotePatterns ?? [],
     cacheDir: resolve(config.cacheDir ?? DEFAULT_CACHE_DIR),
+    cacheSize,
   };
 }
 
@@ -89,6 +106,22 @@ export function clampQuality(quality: number): number {
 
 function isRemote(src: string): boolean {
   return /^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith("//");
+}
+
+// A base for parsing a relative source, on a host no real source can have.
+const RELATIVE_BASE = "http://plumix.invalid";
+
+/**
+ * What a purge names: a source without its query, so every variant of a
+ * media item goes however its URL was decorated. A relative source is its
+ * path alone, an absolute one its origin and path.
+ */
+export function sourceKey(src: string): string {
+  const url = URL.parse(src, RELATIVE_BASE);
+  if (url === null) return src;
+  return url.origin === RELATIVE_BASE
+    ? url.pathname
+    : `${url.origin}${url.pathname}`;
 }
 
 /**
@@ -218,6 +251,8 @@ export function images(config: ImagesConfig = {}): NodeImageDelivery {
     acceptsRelativeSources: true,
     config: resolved,
     sharp: () => (sharp ??= loadSharp()),
+    cache: createVariantCache(resolved.cacheDir, resolved.cacheSize),
+    purge: (sourceUrl) => slot.cache.purge(sourceKey(sourceUrl)),
     url(sourceUrl: string, opts?: TransformOpts): string {
       if (
         isRemote(sourceUrl) &&

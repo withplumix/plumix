@@ -16,6 +16,7 @@ import {
   MEDIA_ENTRY_TYPE,
   mediaListInputSchema,
   MediaReadError,
+  purgeVariants,
   resolveMediaUrl,
   thumbnailFor,
 } from "./read-service.js";
@@ -409,6 +410,7 @@ export function createMediaRouter(options: MediaRpcOptions): PluginRpcRouter {
         .returning();
       if (!deleted) throw notFound();
 
+      await purgeVariants(context, row);
       const meta = parseMediaMeta(row.meta);
       if (meta && context.storage) {
         try {

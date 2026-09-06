@@ -1,5 +1,6 @@
 import type { SQL } from "plumix/db";
 import type { AppContext } from "plumix/plugin";
+import type { Entry } from "plumix/schema";
 import { and, desc, eq, inArray, like, sql } from "plumix/db";
 import { escapeLikePattern, withBasePath } from "plumix/plugin";
 import { entries } from "plumix/schema";
@@ -213,6 +214,26 @@ export async function resolveMediaUrl(
   return (
     direct ?? withBasePath(`/_plumix/media/serve/${String(entryId)}`, basePath)
   );
+}
+
+/** Purged under the URL a page shows, which is what a variant is keyed on. */
+export async function purgeVariants(
+  ctx: AppContext,
+  row: Pick<Entry, "id" | "meta">,
+): Promise<void> {
+  const meta = parseMediaMeta(row.meta);
+  if (!ctx.imageDelivery?.purge || !ctx.storage || !meta) return;
+  const url = await resolveMediaUrl(
+    ctx.storage,
+    meta.storageKey,
+    row.id,
+    ctx.basePath,
+  );
+  try {
+    await ctx.imageDelivery.purge(url);
+  } catch (error) {
+    ctx.logger.warn("media_variants_purge_failed", { error, id: row.id });
+  }
 }
 
 // Translate `accept` into a SQL predicate against the JSON `mime` field. Real

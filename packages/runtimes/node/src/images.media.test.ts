@@ -24,7 +24,12 @@ afterEach(() => {
 
 test("a disk-stored upload is transformed through the media route, gated exactly as that route gates it", async () => {
   const storage = diskStorage({ dir: join(dir, "media") }).connect({});
-  const h = await createDispatcherHarness({ plugins: [media()], storage });
+  const slot = images({ cacheDir: join(dir, "cache") });
+  const h = await createDispatcherHarness({
+    plugins: [media()],
+    storage,
+    imageDelivery: slot,
+  });
   const user = await h.seedUser("contributor");
   const png = await sharp({
     create: { width: 900, height: 600, channels: 3, background: "#3c3" },
@@ -66,7 +71,7 @@ test("a disk-stored upload is transformed through the media route, gated exactly
 
   // The layer reaches the site the way the entry wires it: the handler's own
   // fetch, anonymously.
-  const layer = createImageLayer(images({ cacheDir: join(dir, "cache") }), {
+  const layer = createImageLayer(slot, {
     fetch: (request) => h.dispatch(request),
   });
   const { origin } = await listen((req, res) =>
@@ -89,4 +94,10 @@ test("a disk-stored upload is transformed through the media route, gated exactly
     Buffer.from(await transformed.arrayBuffer()),
   ).metadata();
   expect([meta.format, meta.width, meta.height]).toEqual(["webp", 320, 213]);
+
+  // Deleted, the item is hidden again, and so is the variant already rendered.
+  await rpc("media/delete", { id: created.mediaId });
+  expect(
+    (await fetch(variant, { headers: { accept: "image/webp,*/*" } })).status,
+  ).toBe(404);
 });

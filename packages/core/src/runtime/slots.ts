@@ -313,6 +313,12 @@ export interface ImageDelivery {
    */
   readonly acceptsRelativeSources?: boolean;
   url(sourceUrl: string, opts?: TransformOpts): string;
+  /**
+   * Forget every variant rendered from `sourceUrl`, so the next request for
+   * one resolves the source again and meets its gating. A slot that
+   * transforms at the edge has nothing to forget and leaves this out.
+   */
+  purge?(sourceUrl: string): Promise<void>;
   connect?(env: PlumixEnv): ImageDelivery | undefined;
 }
 

@@ -1,6 +1,6 @@
 import { HookRegistry, installPlugins, memoryStorage } from "plumix/plugin";
 import { createDispatcherHarness, plumixRequest } from "plumix/test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { DEFAULT_ACCEPTED_TYPES, media } from "./index.js";
 
@@ -677,6 +677,45 @@ describe("@plumix/plugin-media — media.list", () => {
       );
     }
   });
+
+  test.each([
+    { procedure: "media/delete", first: undefined },
+    { procedure: "entry/trash", first: undefined },
+    { procedure: "entry/deletePermanent", first: "entry/trash" },
+  ])(
+    "asks the delivery slot to purge an item's variants on $procedure",
+    async ({ procedure, first }) => {
+      const purge = vi.fn((_source: string) => Promise.resolve());
+      const storage = memoryStorage().connect({});
+      const h = await createDispatcherHarness({
+        plugins: [media()],
+        storage,
+        imageDelivery: {
+          kind: "in-process",
+          acceptsRelativeSources: true,
+          url: (source) => source,
+          purge,
+        },
+      });
+      const owner = await h.seedUser("editor");
+      const { id } = await seedPublishedMedia(h, storage, owner.id, "a.png");
+      const listed = await rpcDispatch<MediaListOutput>(
+        h,
+        "media/list",
+        { limit: 1, offset: 0 },
+        owner.id,
+      );
+      const source = listed.output?.items[0]?.url;
+      expect(source).toBeTruthy();
+      if (first !== undefined) {
+        await rpcDispatch(h, first, { id }, owner.id);
+        purge.mockClear();
+      }
+      const { status } = await rpcDispatch(h, procedure, { id }, owner.id);
+      expect(status).toBe(200);
+      expect(purge.mock.calls).toEqual([[source]]);
+    },
+  );
 
   test("rejects readers without entry:media:read", async () => {
     const storage = memoryStorage().connect({});
