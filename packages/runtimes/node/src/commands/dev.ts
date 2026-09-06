@@ -7,6 +7,7 @@ import { isTrustedDevHost, renderDevBootErrorResponse } from "plumix";
 import type { RequestListener } from "../http/bridge.js";
 import { isNodeRuntime } from "../adapter.js";
 import { ASSETS_DIR_ENV } from "../entry-constants.js";
+import { createAssetsLayer } from "../http/assets.js";
 import { createRequestListener } from "../http/bridge.js";
 import { createDotenvLoader } from "./dotenv.js";
 import { ENTRY_FILE, serverEnvironment, serverExternals } from "./vite.js";
@@ -230,6 +231,17 @@ export const devCommand: CommandDefinition = {
             "plumix dev answers loopback requests only; set PLUMIX_DEV_ALLOW_REMOTE=1 to open it up.\n",
           );
         });
+
+        // The staged tree, served from disk rather than through vite. Vite
+        // answers publicDir from a listing taken once at `createServer` and
+        // repaired by watcher events, and the admin shell is staged after that
+        // listing — so under load a chunk can be missing from the set for the
+        // life of the server. Vite then calls `next()`, and the dispatcher,
+        // seeing an asset-shaped path at the root base, 404s it without ever
+        // reading the disk (#2225).
+        server.middlewares.use(
+          createAssetsLayer({ root: server.config.publicDir }).serve,
+        );
 
         // Returned, so it lands after Vite's own middlewares: module serving,
         // HMR and the staged admin shell answer first.
