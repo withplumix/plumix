@@ -1,5 +1,6 @@
 // Drizzle 0.45 ships no `node:sqlite` driver. Its 1.0 line does —
-// `drizzle-orm/node-sqlite` — and replaces this file on that upgrade. Until
+// `drizzle-orm/node-sqlite` — and replaces this file on that upgrade, which
+// will need the `traceDbQuerySync` wrap below re-homed onto it. Until
 // then, a client shaped like better-sqlite3's carries `node:sqlite` into
 // drizzle's public better-sqlite3 session: `prepare` and the four statement
 // members the session calls, nothing more. No `transaction`: core never calls
@@ -29,6 +30,7 @@ import {
 } from "drizzle-orm";
 import { BetterSQLiteSession } from "drizzle-orm/better-sqlite3/session";
 import { BaseSQLiteDatabase, SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
+import { traceDbQuerySync } from "plumix";
 
 const BUSY_TIMEOUT_MS = 5_000;
 
@@ -68,27 +70,56 @@ const bind = (params: BindValue[]): SQLInputValue[] =>
     return value;
   });
 
-function statement(stmt: StatementSync): NodeSqliteStatement {
+// Row counts as the libsql wrap reports them: rows returned for a read, rows
+// affected for a write. The two diverge on a `db.run` of a select — SQLite
+// leaves `changes` at 0 where libsql falls back to the row count — which no
+// call site does today, every `db.run` in the repo being DDL or a write.
+const rowsReturned = (rows: readonly unknown[]): number => rows.length;
+const rowOrNone = (row: unknown): number => (row === undefined ? 0 : 1);
+const rowsChanged = (result: StatementResultingChanges): number =>
+  Number(result.changes);
+
+// Every statement drizzle's session issues lands on one of the members below,
+// so this is where the shim earns its query spans. `database.exec` — the boot
+// PRAGMAs and the migrator's raw BEGIN/COMMIT — stays outside, as it does for
+// every other adapter's request-scoped bar. Spans carry the params as the
+// caller bound them, not as `bind` coerced them: that is what the libsql wrap
+// records, and a Date reads better than its epoch value in the debug bar.
+function statement(stmt: StatementSync, sql: string): NodeSqliteStatement {
+  // Array mode is sticky on the shared statement, so each read sets it before
+  // running. That flip belongs to the read rather than the query, hence its
+  // place outside the timed closure.
+  const allRows = (asArrays: boolean) => (params: BindValue[]) => {
+    stmt.setReturnArrays(asArrays);
+    return traceDbQuerySync(
+      { sql, params },
+      () => stmt.all(...bind(params)),
+      rowsReturned,
+    );
+  };
+  const oneRow = (asArrays: boolean) => (params: BindValue[]) => {
+    stmt.setReturnArrays(asArrays);
+    return traceDbQuerySync(
+      { sql, params },
+      () => stmt.get(...bind(params)),
+      rowOrNone,
+    );
+  };
+  const objects = { all: allRows(false), get: oneRow(false) };
+  const lists = { all: allRows(true), get: oneRow(true) };
   const rows: RawStatement = {
-    all: (...params) => {
-      stmt.setReturnArrays(true);
-      return arrays(stmt.all(...bind(params)));
-    },
-    get: (...params) => {
-      stmt.setReturnArrays(true);
-      return arrays([stmt.get(...bind(params))])[0];
-    },
+    all: (...params) => arrays(lists.all(params)),
+    get: (...params) => arrays([lists.get(params)])[0],
   };
   return {
-    run: (...params) => stmt.run(...bind(params)),
-    all: (...params) => {
-      stmt.setReturnArrays(false);
-      return stmt.all(...bind(params));
-    },
-    get: (...params) => {
-      stmt.setReturnArrays(false);
-      return stmt.get(...bind(params));
-    },
+    run: (...params) =>
+      traceDbQuerySync(
+        { sql, params },
+        () => stmt.run(...bind(params)),
+        rowsChanged,
+      ),
+    all: (...params) => objects.all(params),
+    get: (...params) => objects.get(params),
     raw: () => rows,
   };
 }
@@ -102,7 +133,7 @@ export function openNodeSqlite(path: string): NodeSqliteClient {
   database.exec("PRAGMA journal_mode = WAL");
   database.exec("PRAGMA synchronous = NORMAL");
   return {
-    prepare: (sql) => statement(database.prepare(sql)),
+    prepare: (sql) => statement(database.prepare(sql), sql),
     close: () => database.close(),
   };
 }

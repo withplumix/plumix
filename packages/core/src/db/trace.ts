@@ -45,13 +45,24 @@ function dbSpan<T>(
   });
 }
 
+const dbQueryName = (query: TracedQuery): string =>
+  `db: ${queryKind(query.sql)}`;
+
+function setQueryAttributes(s: TelemetrySpanHandle, query: TracedQuery): void {
+  s.set("db.sql", query.sql);
+  if (query.params.length > 0) {
+    s.set("db.params", () => query.params.map(jsonParam));
+  }
+}
+
 /**
  * Times one driver-level query as a `db: <kind>` span with the SQL, bound
- * params, and row count as attributes — the single mechanism behind every
- * `ctx.db` driver wrap (libsql, D1, demo proxy). A no-op outside a request;
- * with an inactive collector the span passes through and the lazy params are
- * never serialized. `countRows` reads the driver's result shape: rows
- * returned, or rows affected for a write.
+ * params, and row count as attributes — the mechanism behind every async
+ * `ctx.db` driver wrap (libsql, D1, demo proxy); {@link traceDbQuerySync} is
+ * its synchronous twin. A no-op outside a request; with an inactive collector
+ * the span passes through and the lazy params are never serialized.
+ * `countRows` reads the driver's result shape: rows returned, or rows affected
+ * for a write.
  */
 export function traceDbQuery<T>(
   query: TracedQuery,
@@ -59,16 +70,30 @@ export function traceDbQuery<T>(
   countRows: (result: T) => number,
 ): Promise<T> {
   return dbSpan(
-    `db: ${queryKind(query.sql)}`,
-    (s) => {
-      s.set("db.sql", query.sql);
-      if (query.params.length > 0) {
-        s.set("db.params", () => query.params.map(jsonParam));
-      }
-    },
+    dbQueryName(query),
+    (s) => setQueryAttributes(s, query),
     run,
     countRows,
   );
+}
+
+/**
+ * The synchronous sibling of {@link traceDbQuery}, for a driver whose
+ * statement API returns its rows rather than a promise (`node:sqlite`).
+ */
+export function traceDbQuerySync<T>(
+  query: TracedQuery,
+  run: () => T,
+  countRows: (result: T) => number,
+): T {
+  const ctx = tryGetContext();
+  if (!ctx) return run();
+  return ctx.telemetry.span(dbQueryName(query), (s) => {
+    setQueryAttributes(s, query);
+    const result = run();
+    s.set("db.rows", countRows(result));
+    return result;
+  });
 }
 
 /**
