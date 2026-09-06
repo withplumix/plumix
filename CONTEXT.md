@@ -280,11 +280,14 @@ The shared-document cache for anonymous public renders, served read-through: a h
 A coarse label a stored response carries for invalidation — a type tag (`t:<type>`) or an entry tag (`e:<id>`). A page is tagged from its resolved intent; a plugin route that opted into the edge cache names its own with `tagCacheEntry`, in the same vocabulary or in a namespace of its own that nothing purges.
 
 **Purge**:
-Invalidation of stored responses by tag.
+Invalidation of stored responses by tag, or of a source's variants by its URL.
 _Avoid_: bust, invalidate
 
 **Rendered asset**:
 Bytes a route produces once and then serves from object storage — a generated social card, a derived image. Read-through like the edge cache, but keyed by a content-addressed storage key rather than by the request, so a changed input lands on a new key and there is nothing to purge.
+
+**Variant**:
+One transform of an image source — a width, a crop, a format — that the Node runtime's image route renders once and keeps on disk under a hash of the request, bounded in size and purged by source when the media item behind it is trashed or deleted, since a variant carries its source's gating.
 
 ## SEO
 

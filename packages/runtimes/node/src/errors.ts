@@ -81,7 +81,8 @@ export class ImagesError extends Error {
     ImagesError.prototype.name = "ImagesError";
   }
 
-  readonly code: "sharp_missing" | "invalid_widths" | "upstream";
+  readonly code:
+    "sharp_missing" | "invalid_widths" | "invalid_cache_size" | "upstream";
   /** For `upstream`: the status the route answers with. */
   readonly status: number | undefined;
 
@@ -110,6 +111,13 @@ export class ImagesError extends Error {
       "upstream",
       `@plumix/runtime-node: the image source answered ${String(ctx.status)}`,
       { status: ctx.status },
+    );
+  }
+
+  static invalidCacheSize(ctx: { cacheSize: number }): ImagesError {
+    return new ImagesError(
+      "invalid_cache_size",
+      `@plumix/runtime-node: images() needs \`cacheSize\` to be a positive number of bytes, got ${String(ctx.cacheSize)}`,
     );
   }
 

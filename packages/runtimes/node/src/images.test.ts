@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import { ImagesError } from "./errors.js";
 import { images, parseImageParams } from "./images.js";
 
 const params = (url: string) => new URL(url, "http://localhost").searchParams;
@@ -14,6 +15,14 @@ describe("images() — URL math onto /_plumix/image", () => {
     expect(slot.url("/_plumix/media/serve/1", { format: "auto" })).toBe(
       "/_plumix/media/serve/1",
     );
+  });
+
+  test("refuses a cacheSize that is not a positive integer", () => {
+    for (const cacheSize of [0, -1, 1.5, Number.NaN]) {
+      expect(() => images({ cacheSize })).toThrow(ImagesError);
+    }
+    expect(images({ cacheSize: 1 }).config.cacheSize).toBe(1);
+    expect(images().config.cacheSize).toBe(1024 ** 3);
   });
 
   test("declares that it resolves same-origin relative sources itself", () => {

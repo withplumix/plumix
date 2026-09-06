@@ -1,5 +1,5 @@
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdtempSync, readdirSync, rmSync, utimesSync } from "node:fs";
+import { availableParallelism, tmpdir } from "node:os";
 import { join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import sharp from "sharp";
@@ -10,6 +10,7 @@ import {
   describe,
   expect,
   test,
+  vi,
 } from "vitest";
 
 import { images } from "../images.js";
@@ -40,6 +41,8 @@ const answer = (body: Buffer, type: string) =>
 function originResponse(pathname: string): Response {
   switch (pathname) {
     case "/pic.png":
+    case "/pic2.png":
+    case "/pic3.png":
       return answer(png, "image/png");
     case "/photo.jpg":
       return answer(jpeg, "image/jpeg");
@@ -236,6 +239,172 @@ describe("the /_plumix/image layer — same-origin sources", () => {
     expect(await (await fetch(`${origin}/_plumix/other`)).text()).toBe(
       "fallthrough",
     );
+  });
+});
+
+describe("the /_plumix/image layer — the cache", () => {
+  const sourceHits = (path: string) =>
+    originRequests.filter((u) => new URL(u).pathname === path).length;
+
+  test("keeps the directory under cacheSize by dropping the least recently served variant", async () => {
+    // One variant's size, learned from the route itself.
+    const probe = await get(
+      await site(images({ cacheDir: mkdtempSync(join(cacheDir, "probe-")) })),
+      "src=/pic.png&w=320&f=webp",
+    );
+    const size = Number(probe.headers.get("content-length"));
+    expect(size).toBeGreaterThan(0);
+
+    const dir = mkdtempSync(join(cacheDir, "cap-"));
+    const origin = await site(
+      images({ cacheDir: dir, cacheSize: Math.floor(size * 2.5) }),
+    );
+    for (const src of ["/pic.png", "/pic2.png", "/pic3.png"]) {
+      expect((await get(origin, `src=${src}&w=320&f=webp`)).status).toBe(200);
+    }
+    expect(readdirSync(dir)).toHaveLength(2);
+
+    // The first one rendered is gone; the other two are hits.
+    originRequests = [];
+    await get(origin, "src=/pic2.png&w=320&f=webp");
+    await get(origin, "src=/pic3.png&w=320&f=webp");
+    expect(originRequests).toEqual([]);
+    await get(origin, "src=/pic.png&w=320&f=webp");
+    expect(sourceHits("/pic.png")).toBe(1);
+    expect(readdirSync(dir)).toHaveLength(2);
+
+    // Serving refreshes recency: pic3 was served after pic2, so pic2 went,
+    // and pic3 outlives pic, which was rendered later but served earlier.
+    originRequests = [];
+    await get(origin, "src=/pic3.png&w=320&f=webp");
+    await get(origin, "src=/pic2.png&w=320&f=webp");
+    await get(origin, "src=/pic.png&w=320&f=webp");
+    expect(
+      ["/pic3.png", "/pic2.png", "/pic.png"].map((p) => sourceHits(p)),
+    ).toEqual([0, 1, 1]);
+  });
+
+  test("a layer started over an existing directory counts it, least recently modified first", async () => {
+    const dir = mkdtempSync(join(cacheDir, "restart-"));
+    const files = () => readdirSync(dir).map((name) => join(dir, name));
+    const before = await site(images({ cacheDir: dir }));
+    const probe = await get(before, "src=/pic.png&w=320&f=webp");
+    const size = Number(probe.headers.get("content-length"));
+    const pic = files()[0] ?? "";
+    await get(before, "src=/pic2.png&w=320&f=webp");
+    const pic2 = files().find((f) => f !== pic) ?? "";
+    // Rendered second, but on disk the older of the two.
+    utimesSync(pic2, 1_000_000, 1_000_000);
+    utimesSync(pic, 2_000_000, 2_000_000);
+
+    const restarted = await site(
+      images({ cacheDir: dir, cacheSize: Math.floor(size * 2.5) }),
+    );
+    await get(restarted, "src=/pic3.png&w=320&f=webp");
+    expect(files()).toHaveLength(2);
+    expect(files()).toContain(pic);
+    originRequests = [];
+    await get(restarted, "src=/pic.png&w=320&f=webp");
+    expect(originRequests).toEqual([]);
+  });
+
+  test("purge(source) forgets that source's variants, with any query, and no other's", async () => {
+    const dir = mkdtempSync(join(cacheDir, "purge-"));
+    const slot = images({ cacheDir: dir });
+    const origin = await site(slot);
+    const variants = [
+      "src=/pic.png&w=320",
+      `src=${encodeURIComponent("/pic.png?v=2")}&w=320`,
+      "src=/pic.png&w=640",
+      `src=${encodeURIComponent(`${origin}/pic.png`)}&w=320`,
+      "src=/pic2.png&w=320",
+    ];
+    for (const query of variants) {
+      expect((await get(origin, query)).status).toBe(200);
+    }
+    expect(readdirSync(dir)).toHaveLength(5);
+
+    const etag = (await get(origin, "src=/pic.png&w=320")).headers.get("etag");
+
+    await slot.purge("/pic.png");
+    expect(readdirSync(dir)).toHaveLength(1);
+    // A revalidation is no longer answered from the hash alone: the source
+    // is resolved again, and it is that answer the browser gets.
+    const revalidated = await get(origin, "src=/pic.png&w=320", {
+      "if-none-match": etag ?? "",
+    });
+    expect(revalidated.status).toBe(200);
+    originRequests = [];
+    for (const query of variants) {
+      expect((await get(origin, query)).status).toBe(200);
+    }
+    expect(originRequests.map((u) => new URL(u).pathname)).toEqual([
+      "/pic.png",
+      "/pic.png",
+      "/pic.png",
+    ]);
+  });
+
+  test("a purge during a render wins: the variant that render made is not kept", async () => {
+    const slot = images({ cacheDir: mkdtempSync(join(cacheDir, "race-")) });
+    let open = (): void => undefined;
+    const opened = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    let sourceReads = 0;
+    const layer = createImageLayer(slot, {
+      fetch: async () => {
+        sourceReads += 1;
+        await opened;
+        return answer(png, "image/png");
+      },
+    });
+    const { origin } = await listen((req, res) =>
+      layer.serve(req, res, () => fallthrough(req, res)),
+    );
+    const first = get(origin, "src=/pic.png&w=320");
+    await vi.waitFor(() => expect(sourceReads).toBe(1));
+    await slot.purge("/pic.png");
+    open();
+    expect((await first).status).toBe(200);
+    expect((await get(origin, "src=/pic.png&w=320")).status).toBe(200);
+    expect(sourceReads).toBe(2);
+  });
+});
+
+describe("the /_plumix/image layer — renders in flight", () => {
+  test("renders as many variants at once as there are cores; the rest wait their turn", async () => {
+    const limit = availableParallelism();
+    let inflight = 0;
+    let peak = 0;
+    let open = (): void => undefined;
+    const opened = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    const layer = createImageLayer(
+      images({ cacheDir: mkdtempSync(join(cacheDir, "inflight-")) }),
+      {
+        fetch: async () => {
+          inflight += 1;
+          peak = Math.max(peak, inflight);
+          await opened;
+          inflight -= 1;
+          return answer(png, "image/png");
+        },
+      },
+    );
+    const { origin } = await listen((req, res) =>
+      layer.serve(req, res, () => fallthrough(req, res)),
+    );
+    const responses = Array.from({ length: limit + 2 }, (_, i) =>
+      get(origin, `src=/slow/${String(i)}.png&w=320`),
+    );
+    await vi.waitFor(() => expect(inflight).toBe(limit));
+    open();
+    for (const response of await Promise.all(responses)) {
+      expect(response.status).toBe(200);
+    }
+    expect(peak).toBe(limit);
   });
 });
 
