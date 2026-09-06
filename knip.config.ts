@@ -108,6 +108,9 @@ const config: KnipConfig = {
     "packages/runtimes/cloudflare/playground": {
       entry: ["plumix.config.ts"],
     },
+    "packages/runtimes/node/playground": {
+      entry: ["plumix.config.ts"],
+    },
     // drizzle-kit is invoked by consumers as a CLI hint, not imported.
     "packages/plumix": {
       entry: [
@@ -202,6 +205,12 @@ const config: KnipConfig = {
         "src/demo/durable-object.ts",
         "e2e/*.spec.ts",
       ],
+      playwright: false,
+    },
+    "packages/runtimes/node": {
+      // With knip's playwright plugin off, the export-map entries and the
+      // specs are listed by hand.
+      entry: ["src/index.ts", "src/commands/index.ts", "e2e/*.spec.ts"],
       playwright: false,
     },
     // The runtime-proof fixture plugin is loaded by playwright's

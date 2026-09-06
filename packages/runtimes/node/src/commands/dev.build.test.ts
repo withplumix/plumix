@@ -8,7 +8,7 @@ import {
 } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { createServer } from "node:net";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { ChildProcess } from "node:child_process";
 import type { AddressInfo } from "node:net";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
@@ -204,6 +204,25 @@ describe("plumix dev on the node runtime", () => {
     expect(
       readFileSync(join(dir, ".plumix/client-entry.ts"), "utf8"),
     ).toContain("probe.css");
+  });
+
+  test("a staged admin asset vite's public middleware declines is still served", async () => {
+    const asset = "/_plumix/admin/assets/probe-staged.js";
+    const staged = join(dir, ".plumix/public", asset);
+    mkdirSync(dirname(staged), { recursive: true });
+    writeFileSync(staged, "export const probe = 1;\n");
+
+    // Vite answers publicDir from a listing taken once at createServer and
+    // repaired by watcher events, so a file staged afterwards can be absent
+    // from the set for the server's life — it then calls next(), the
+    // dispatcher sees an asset-shaped path at the root base and 404s without
+    // reading the disk (#2225). `?url` makes vite decline by construction,
+    // which is that same fall-through without waiting on a race that only
+    // loses under CI load.
+    const response = await fetch(`${dev.origin}${asset}?url`);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("export const probe");
   });
 
   test("importing the entry through the runner starts no second server", () => {
