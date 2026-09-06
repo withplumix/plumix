@@ -74,6 +74,17 @@
           "configSlots": {
             "storage": "diskStorage({ dir: \"data/media\" })"
           }
+        },
+        "imageDelivery": {
+          "imports": [
+            "import { images } from \"@plumix/runtime-node\";"
+          ],
+          "configSlots": {
+            "imageDelivery": "images()"
+          },
+          "deps": {
+            "sharp": "catalog:"
+          }
         }
       }
     }
@@ -98,7 +109,13 @@
   },
   "peerDependencies": {
     "drizzle-orm": "catalog:drizzle",
-    "plumix": "workspace:>=0.21.0 <1.0.0"
+    "plumix": "workspace:>=0.21.0 <1.0.0",
+    "sharp": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "sharp": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
@@ -113,6 +130,7 @@
     "plumix": "workspace:*",
     "prettier": "catalog:",
     "publint": "catalog:",
+    "sharp": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:vitest"
   },

@@ -34,11 +34,27 @@ The runtime adapter. `trustProxy` (off by default) makes the server read the sch
 PORT=3000 HOST=0.0.0.0 node dist/server/worker.js
 ```
 
-The entry serves `dist/client` from disk ahead of the site, listens on `PORT` (3000) and `HOST` (`0.0.0.0`), and prints the bound address once. On `SIGTERM` or `SIGINT` it stops accepting, lets in-flight responses finish while deferred work drains, and exits 0; work still running after 10 seconds is abandoned and the process exits 1 saying how much. A second signal exits at once. Importing the module instead of running it starts no server: the default export is the portable `{ fetch, scheduled }` handler, and `listener(req, res)` is the same site as Connect-style middleware for embedding; it answers every request it receives, so mount it where the site should own the path.
+The entry serves `dist/client` from disk, then image transforms, ahead of the site; it listens on `PORT` (3000) and `HOST` (`0.0.0.0`), and prints the bound address once. On `SIGTERM` or `SIGINT` it stops accepting, lets in-flight responses finish while deferred work drains, and exits 0; work still running after 10 seconds is abandoned and the process exits 1 saying how much. A second signal exits at once. Importing the module instead of running it starts no server: the default export is the portable `{ fetch, scheduled }` handler, and `listener(req, res)` is the same site as Connect-style middleware for embedding; it answers every request it receives, so mount it where the site should own the path.
 
 ### `nodeSqlite({ path })`
 
 Opens the SQLite file at `path` (parent directories are created) with WAL journaling, a 5 second busy timeout, `synchronous = NORMAL`, and foreign keys on. A relative `path` resolves against the process working directory; `plumix migrate apply` resolves it against the project root (`--cwd`), so run the server from the same directory. One file, one process: for a remote or shared database use `plumix/db/libsql` instead.
+
+### `images({ widths, remotePatterns, cacheDir })`
+
+The image-delivery slot, backed by [`sharp`](https://sharp.pixelplumbing.com): install it beside the runtime (`pnpm add sharp`), and a site that leaves the slot out installs nothing native. `url()` is URL math onto `/_plumix/image`, which the entry serves ahead of the site. A same-origin source (`/_plumix/media/serve/1`, a file in `public/`) is resolved through the process itself, as an anonymous GET, so what the media plugin gates stays gated and nothing crosses the network; a remote source must match `remotePatterns` (the shape `images.remotePatterns` takes for `<Image>`), is fetched with each redirect re-checked and ten hops at most, and anything else is 400. A source over 32 MiB is refused, a remote that does not answer within 15 seconds is 502, and bytes `sharp` cannot decode are 415. A width snaps up to the next entry of `widths` (`320` to `1920` by default), quality is clamped, and the format comes from `Accept`: AVIF, WebP or the source's own. Each variant is rendered once and kept under `cacheDir` (`.cache/plumix/images`) under a hash of the request, served with an immutable cache header and an `ETag` that answers `If-None-Match` with 304.
+
+```ts
+import { diskStorage, images } from "@plumix/runtime-node";
+
+export default plumix({
+  storage: diskStorage({ dir: "data/media" }),
+  imageDelivery: images({
+    remotePatterns: [{ hostname: "images.example.com" }],
+  }),
+  // …
+});
+```
 
 ### `createRequestListener(handle, { trustProxy, bodySizeLimit })`
 
@@ -47,6 +63,10 @@ The `node:http` bridge the production entry and the dev server share. Each reque
 ### `createAssetsLayer({ root })`
 
 The disk layer over `dist/client`. `serve(req, res, next)` answers a held GET or HEAD before the handler runs; `fetch(request)` is the assets binding core reads for admin deep links, answering 404 for a path it does not hold. Paths that escape the root, name a directory without a trailing slash, or touch a dotfile other than `.well-known` are never held. Files under `/assets/` carry an immutable cache header, set only once the file has opened.
+
+### `createImageLayer(imageDelivery, { fetch })`
+
+The `/_plumix/image` route as Connect-style middleware, which the entry mounts between the assets layer and the bridge. Given the config's `imageDelivery`, it serves when that is `images()` and passes every request through otherwise, so a Cloudflare slot or none at all changes nothing. A same-origin source is read from `assets` first and then through `fetch`, which the entry points at the site's own handler with the visitor's address; `trustProxy` reads the host and address the way the bridge does.
 
 ### `diskStorage({ dir })`
 

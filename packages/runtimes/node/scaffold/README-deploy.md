@@ -1,7 +1,9 @@
 This project runs as a plain Node.js process. The build writes `dist/client`
 for the browser and `dist/server/worker.js` to run; the SQLite database and
 uploads live under `data/`, so keep that directory on a persistent disk.
-`pnpm clean` removes it along with the build output.
+`pnpm clean` removes it along with the build output. Image variants are
+rendered with `sharp` and cached under `.cache/plumix/images`; that directory
+can be emptied at any time.
 
 ```sh
 plumix migrate generate

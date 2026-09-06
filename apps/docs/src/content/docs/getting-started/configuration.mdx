@@ -167,7 +167,7 @@ export const storage = r2({ binding: "MEDIA" });
 
 ### imageDelivery
 
-On-the-fly image transforms behind the `<Image>` component: width, height, fit, quality, format and DPR. It pairs with `storage`, which holds the original.
+On-the-fly image transforms behind the `<Image>` component: width, height, fit, quality, format and DPR. It pairs with `storage`, which holds the original. Cloudflare's `images()` is URL math onto a zone's Image Transformations; the Node runtime's `images()` of the same name renders through `sharp` in the process and, unlike a CDN, can take the relative URL a disk-stored upload has.
 
 ```ts no-typecheck
 import { images } from "@plumix/runtime-cloudflare";

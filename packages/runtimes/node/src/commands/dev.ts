@@ -7,7 +7,9 @@ import { isTrustedDevHost, renderDevBootErrorResponse } from "plumix";
 import type { RequestListener } from "../http/bridge.js";
 import { isNodeRuntime } from "../adapter.js";
 import { ASSETS_DIR_ENV } from "../entry-constants.js";
+import { createAssetsLayer } from "../http/assets.js";
 import { createRequestListener } from "../http/bridge.js";
+import { createImageLayer } from "../http/images.js";
 import { createDotenvLoader } from "./dotenv.js";
 import { ENTRY_FILE, serverEnvironment, serverExternals } from "./vite.js";
 
@@ -137,7 +139,7 @@ export const devCommand: CommandDefinition = {
         // Points at the staged public dir so admin deep links resolve to the
         // shell Vite also serves.
         const env = { ...process.env, [ASSETS_DIR_ENV]: publicDir };
-        return createRequestListener(
+        const bridge = createRequestListener(
           async (request, meta) =>
             entry.default.fetch(request, {
               env,
@@ -145,6 +147,18 @@ export const devCommand: CommandDefinition = {
             }),
           { trustProxy, bodySizeLimit },
         );
+        // As in the built entry: a same-origin image source is a public file
+        // Vite would serve, else the site, as an anonymous GET.
+        const images = createImageLayer(config.imageDelivery, {
+          assets: createAssetsLayer({ root: publicDir }),
+          trustProxy,
+          fetch: (request, meta) =>
+            entry.default.fetch(request, {
+              env,
+              clientAddress: meta.clientAddress,
+            }),
+        });
+        return (req, res) => images.serve(req, res, () => bridge(req, res));
       } catch (error) {
         // The entry could not even be imported — a config that fails to parse
         // or throws on load. This request gets the page a failed `buildApp`

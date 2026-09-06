@@ -188,12 +188,14 @@ export function thumbnailFor(
   url: string,
   mime: string,
 ): string {
-  // imageDelivery transforms need an absolute, publicly-reachable source — the
-  // transform CDN fetches it itself. The worker-proxied serve fallback is
-  // relative, so skip transforms there.
-  if (!mime.startsWith("image/") || !ctx.imageDelivery) return url;
-  if (!url.startsWith("http://") && !url.startsWith("https://")) return url;
-  return ctx.imageDelivery.url(url, THUMBNAIL_OPTS);
+  const delivery = ctx.imageDelivery;
+  if (!mime.startsWith("image/") || !delivery) return url;
+  // A transform CDN fetches the source itself, so it needs an absolute URL;
+  // the worker-proxied serve fallback is relative and only a slot that
+  // resolves same-origin sources in-process can take it.
+  const absolute = url.startsWith("http://") || url.startsWith("https://");
+  if (!absolute && !delivery.acceptsRelativeSources) return url;
+  return delivery.url(url, THUMBNAIL_OPTS);
 }
 
 /**

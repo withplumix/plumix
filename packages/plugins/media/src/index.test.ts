@@ -638,6 +638,46 @@ describe("@plumix/plugin-media — media.list", () => {
     );
   });
 
+  test("hands a relative source to a delivery slot that accepts them, and skips one that does not", async () => {
+    const url = (source: string, opts?: { readonly width?: number }) =>
+      `/_plumix/image?src=${source}&w=${String(opts?.width)}`;
+    const cases = [
+      {
+        imageDelivery: {
+          kind: "in-process",
+          acceptsRelativeSources: true,
+          url,
+        },
+        transformed: true,
+      },
+      { imageDelivery: { kind: "cdn", url }, transformed: false },
+    ] as const;
+    for (const { imageDelivery, transformed } of cases) {
+      const storage = memoryStorage().connect({});
+      const h = await createDispatcherHarness({
+        plugins: [media()],
+        storage,
+        imageDelivery,
+      });
+      const owner = await h.seedUser("contributor");
+      await seedPublishedMedia(h, storage, owner.id, "alpha.png");
+
+      const result = await rpcDispatch<MediaListOutput>(
+        h,
+        "media/list",
+        { limit: 10, offset: 0 },
+        owner.id,
+      );
+      const item = result.output?.items[0];
+      // Memory storage answers a relative URL — the shape a disk-stored
+      // upload has, which no transform CDN can fetch.
+      expect(item?.url.startsWith("/")).toBe(true);
+      expect(item?.thumbnailUrl).toBe(
+        transformed ? url(item?.url ?? "", { width: 320 }) : item?.url,
+      );
+    }
+  });
+
   test("rejects readers without entry:media:read", async () => {
     const storage = memoryStorage().connect({});
     const h = await createDispatcherHarness({ plugins: [media()], storage });

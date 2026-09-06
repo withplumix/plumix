@@ -88,6 +88,7 @@ export async function compose({
     selection,
     JSON.parse(basePkgRaw) as PackageJson,
     ctx,
+    contributions.deps,
   );
   out["plumix.config.ts"] = assembleConfig(selection, contributions);
   out["tsconfig.json"] =

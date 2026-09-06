@@ -75,3 +75,48 @@ export class StorageError extends Error {
     );
   }
 }
+
+export class ImagesError extends Error {
+  static {
+    ImagesError.prototype.name = "ImagesError";
+  }
+
+  readonly code: "sharp_missing" | "invalid_widths" | "upstream";
+  /** For `upstream`: the status the route answers with. */
+  readonly status: number | undefined;
+
+  private constructor(
+    code: ImagesError["code"],
+    message: string,
+    options?: ErrorOptions & { status?: number },
+  ) {
+    super(message, options);
+    this.code = code;
+    this.status = options?.status;
+  }
+
+  static sharpMissing(ctx: { cause: unknown }): ImagesError {
+    return new ImagesError(
+      "sharp_missing",
+      "@plumix/runtime-node: images() transforms with `sharp`, which is not installed. " +
+        "Add it to the project: `pnpm add sharp`.",
+      { cause: ctx.cause },
+    );
+  }
+
+  /** The source could not be turned into bytes; `status` is what the route answers. */
+  static upstream(ctx: { status: number }): ImagesError {
+    return new ImagesError(
+      "upstream",
+      `@plumix/runtime-node: the image source answered ${String(ctx.status)}`,
+      { status: ctx.status },
+    );
+  }
+
+  static invalidWidths(ctx: { widths: readonly number[] }): ImagesError {
+    return new ImagesError(
+      "invalid_widths",
+      `@plumix/runtime-node: images() needs \`widths\` to be a non-empty list of positive integers, got ${JSON.stringify(ctx.widths)}`,
+    );
+  }
+}

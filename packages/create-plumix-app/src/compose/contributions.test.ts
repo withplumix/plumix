@@ -25,6 +25,7 @@ const runtime: RuntimeDescriptor = {
     imageDelivery: {
       imports: ['import { images } from "@plumix/runtime-cloudflare";'],
       configSlots: { imageDelivery: "images()" },
+      deps: { sharp: "catalog:" },
     },
   },
 };
@@ -97,6 +98,13 @@ describe("resolveContributions", () => {
       ],
     };
     expect(resolveContributions(withAuth).envVars).toEqual(["X", "Y", "Z"]);
+  });
+
+  it("gathers the dependencies a fulfilled capability adds, and none for one no plugin asked for", () => {
+    expect(resolveContributions(select([media])).deps).toEqual({
+      sharp: "catalog:",
+    });
+    expect(resolveContributions(select([blog])).deps).toEqual({});
   });
 
   it("derives no env vars when no auth method needs secrets", () => {

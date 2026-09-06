@@ -27,8 +27,8 @@ pnpm add @plumix/plugin-media
 
 Wire it into `plumix.config.ts`. The plugin reads two slots from the
 host config: `storage` (where bytes live) and `imageDelivery` (how
-thumbnails are derived). The Cloudflare runtime ships compatible
-implementations.
+thumbnails are derived). The Cloudflare and Node runtimes both ship
+compatible implementations.
 
 ```ts
 import { auth, plumix } from "plumix";
@@ -93,6 +93,12 @@ Add every origin you serve the admin from (production, preview deploys,
 Image Transformations URLs (`/cdn-cgi/image/<opts>/<src>`). The zone
 must be a Cloudflare zone with Image Transformations enabled in the
 dashboard, fronting the same bucket.
+
+On Node, `imageDelivery: images()` from `@plumix/runtime-node` renders
+through `sharp` in the process; because it resolves same-origin sources
+itself, uploads served through the plugin's own route get thumbnails
+too, which a CDN that fetches the source over the network cannot give
+them.
 
 Without `imageDelivery`, the plugin falls back to serving full-size
 images directly — fine for low-traffic sites, but every grid card

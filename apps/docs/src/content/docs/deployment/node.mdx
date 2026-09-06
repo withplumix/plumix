@@ -1,6 +1,6 @@
 ---
 title: Node.js
-description: The Node.js runtime adapter, and the factories that fill the database and storage slots with a SQLite file and a directory on disk.
+description: The Node.js runtime adapter, and the factories that fill the database, storage and image-delivery slots with a SQLite file, a directory on disk and sharp.
 tier: P1
 sidebar:
   order: 25
@@ -14,13 +14,14 @@ Node.js is the runtime for running a Plumix site as an ordinary process: in a co
 
 The runtime is a slot like any other. `runtime: node()` tells Plumix it is running as a process, and the rest of the package fills the slots beside it.
 
-| Factory                | Slot       | What it wires up                     |
-| ---------------------- | ---------- | ------------------------------------ |
-| `node()`               | `runtime`  | The `node:http` server and the entry |
-| `nodeSqlite({ path })` | `database` | A SQLite file through `node:sqlite`  |
-| `diskStorage({ dir })` | `storage`  | A directory on disk for uploads      |
+| Factory                | Slot            | What it wires up                                |
+| ---------------------- | --------------- | ----------------------------------------------- |
+| `node()`               | `runtime`       | The `node:http` server and the entry            |
+| `nodeSqlite({ path })` | `database`      | A SQLite file through `node:sqlite`             |
+| `diskStorage({ dir })` | `storage`       | A directory on disk for uploads                 |
+| `images({ widths })`   | `imageDelivery` | Resizing through `sharp`, served by the process |
 
-Nothing fills `kv`, `cache` or `imageDelivery` yet; [What Node does not do yet](#what-node-does-not-do-yet) says what that means for a site.
+Nothing fills `kv` or `cache` yet; [What Node does not do yet](#what-node-does-not-do-yet) says what that means for a site.
 
 ## Install
 
@@ -139,9 +140,28 @@ With it on, the forwarded scheme, host and rightmost client address are believed
 
 `diskStorage({ dir })` keeps uploads under the directory, and the media plugin serves them through its own route; there is no public URL and no presigned upload, so the site receives the bytes itself. It is single-node, like the SQLite file beside it. When a second process needs the same uploads, swap in `s3()` from `plumix/storage/s3` with a bucket's endpoint and credentials. It is one config line; nothing else changes.
 
+## Images
+
+`images()` fills `imageDelivery` with the process itself: `url()` points at `/_plumix/image`, which the entry serves ahead of the site through [`sharp`](https://sharp.pixelplumbing.com). The package is an optional peer, so add it beside the runtime; the scaffolder does when a plugin needs the slot, and a site without the slot installs nothing native. If it is missing, the first request fails naming the package.
+
+A same-origin source, which is what a disk-stored upload has, is read through the site itself as an anonymous GET: what the media plugin gates stays gated, and nothing crosses the network. A remote source must match `remotePatterns`, the same shape `images.remotePatterns` takes for `<Image>`, and every redirect it takes is checked again, ten at most; anything else is 400. A source over 32 MiB, one that does not answer within fifteen seconds, or bytes that are not an image are refused with 413, 502 and 415. The width snaps up to the next entry in `widths` (`320` to `1920` by default), quality is clamped, and the format follows `Accept`: AVIF, then WebP, then the source's own. A variant is rendered once and kept under `cacheDir` (`.cache/plumix/images`) under a hash of the request; it goes out with an immutable cache header and an `ETag` that turns a revalidation into a 304.
+
+```ts no-typecheck
+import { images } from "@plumix/runtime-node";
+
+export default {
+  imageDelivery: images({
+    widths: [320, 640, 1280, 1920],
+    remotePatterns: [{ hostname: "images.example.com" }],
+  }),
+};
+```
+
+The cache is one directory on one machine, like the uploads beside it; a fresh container starts cold and fills as pages are viewed.
+
 ## What Node does not do yet
 
-Scheduled tasks do not run: there is no cron on Node yet, so the tasks core registers, such as publishing scheduled entries, and the ones plugins add wait for a later release. There is no edge cache and no `kv`, so a page renders on every request, and a plugin requiring either capability cannot be scaffolded on Node; the scaffolder says so by name. All three are single-node concerns as well: this runtime is one process on one machine.
+Scheduled tasks do not run: there is no cron on Node yet, so the tasks core registers, such as publishing scheduled entries, and the ones plugins add wait for a later release. There is no edge cache and no `kv`, so a page renders on every request, and a plugin requiring either capability cannot be scaffolded on Node; the scaffolder says so by name. All three are single-node concerns as well, as are the uploads and the image cache: this runtime is one process on one machine.
 
 ## Commands the runtime adds
 
