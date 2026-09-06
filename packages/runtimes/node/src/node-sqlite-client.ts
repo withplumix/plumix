@@ -8,9 +8,11 @@
 // Nothing here is checked against drizzle's types — its session imports them
 // from `better-sqlite3`, which is not installed, so they collapse to `any`.
 // The contract is pinned by this package's tests, which reach every branch
-// of drizzle's prepared query. Values arrive as drizzle's column mappers
-// produce them (booleans as 0/1, timestamps as numbers); a boolean or Date
-// interpolated into a raw `sql` template throws here where libsql coerces.
+// of drizzle's prepared query. Column-mapped values arrive as 0/1 and
+// numbers; a boolean or Date interpolated into a raw `sql` template arrives
+// untouched, and `node:sqlite` binds neither: a boolean throws, and a
+// leading Date is taken for the named-parameter object, so the positional
+// values shift left and the last `?` binds NULL.
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -30,15 +32,17 @@ import { BaseSQLiteDatabase, SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 
 const BUSY_TIMEOUT_MS = 5_000;
 
+type BindValue = SQLInputValue | boolean | Date;
+
 interface RawStatement {
-  all(...params: SQLInputValue[]): SQLOutputValue[][];
-  get(...params: SQLInputValue[]): SQLOutputValue[] | undefined;
+  all(...params: BindValue[]): SQLOutputValue[][];
+  get(...params: BindValue[]): SQLOutputValue[] | undefined;
 }
 
 interface NodeSqliteStatement {
-  run(...params: SQLInputValue[]): StatementResultingChanges;
-  all(...params: SQLInputValue[]): Record<string, SQLOutputValue>[];
-  get(...params: SQLInputValue[]): Record<string, SQLOutputValue> | undefined;
+  run(...params: BindValue[]): StatementResultingChanges;
+  all(...params: BindValue[]): Record<string, SQLOutputValue>[];
+  get(...params: BindValue[]): Record<string, SQLOutputValue> | undefined;
   raw(): RawStatement;
 }
 
@@ -56,26 +60,34 @@ export type NodeSqliteDatabase<
 const arrays = (rows: unknown): SQLOutputValue[][] =>
   rows as SQLOutputValue[][];
 
+// Mirrors libsql's `valueToSql`.
+const bind = (params: BindValue[]): SQLInputValue[] =>
+  params.map((value) => {
+    if (typeof value === "boolean") return value ? 1 : 0;
+    if (value instanceof Date) return value.valueOf();
+    return value;
+  });
+
 function statement(stmt: StatementSync): NodeSqliteStatement {
   const rows: RawStatement = {
     all: (...params) => {
       stmt.setReturnArrays(true);
-      return arrays(stmt.all(...params));
+      return arrays(stmt.all(...bind(params)));
     },
     get: (...params) => {
       stmt.setReturnArrays(true);
-      return arrays([stmt.get(...params)])[0];
+      return arrays([stmt.get(...bind(params))])[0];
     },
   };
   return {
-    run: (...params) => stmt.run(...params),
+    run: (...params) => stmt.run(...bind(params)),
     all: (...params) => {
       stmt.setReturnArrays(false);
-      return stmt.all(...params);
+      return stmt.all(...bind(params));
     },
     get: (...params) => {
       stmt.setReturnArrays(false);
-      return stmt.get(...params);
+      return stmt.get(...bind(params));
     },
     raw: () => rows,
   };
