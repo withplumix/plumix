@@ -267,12 +267,25 @@ describe("scaffold — Node app", () => {
     expect(config).toContain('storage: diskStorage({ dir: "data/media" }),');
   });
 
-  test("refuses a plugin that needs a capability the runtime lacks, by name", async () => {
+  test("fulfils media's imageDelivery with images(), and installs sharp for it", async () => {
     const target = join(tmp, "media");
 
-    await expect(
-      scaffold({ targetDir: target, runtimeId: "node", pluginIds: ["media"] }),
-    ).rejects.toThrow(/"imageDelivery" capability.*"node" runtime/);
-    expect(existsSync(target)).toBe(false);
+    await scaffold({
+      targetDir: target,
+      runtimeId: "node",
+      pluginIds: ["media"],
+    });
+
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain(
+      'import { diskStorage, images, node, nodeSqlite } from "@plumix/runtime-node";',
+    );
+    expect(config).toContain("imageDelivery: images(),");
+    const pkg = readPkg(target);
+    expect(pkg.dependencies?.sharp).toMatch(/^\^0\./);
+    // The transformer is media's to need: a site without it installs nothing native.
+    const blank = join(tmp, "no-media");
+    await scaffold({ targetDir: blank, runtimeId: "node", pluginIds: ["og"] });
+    expect(readPkg(blank).dependencies).not.toHaveProperty("sharp");
   });
 });

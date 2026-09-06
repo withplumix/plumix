@@ -94,6 +94,11 @@ export interface Contribution {
   readonly configSlots?: Readonly<Record<string, string>>;
   /** Top-level wrangler.jsonc keys to merge (arrays append). */
   readonly wrangler?: Readonly<WranglerPatch>;
+  /**
+   * App dependencies the contribution needs, added only when it is taken —
+   * `sharp` behind the Node runtime's `imageDelivery`, say.
+   */
+  readonly deps?: Readonly<Record<string, string>>;
 }
 
 /** A plugin's scaffold contributions, from its `plumix.scaffold` block. */

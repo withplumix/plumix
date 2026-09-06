@@ -55,7 +55,8 @@ function splitTarget(target: string): [pathname: string, search: string] {
     : [target.slice(0, query), target.slice(query)];
 }
 
-function requestUrl(req: IncomingMessage, options: BridgeOptions): URL {
+/** The URL the handler sees: forwarded values only when the proxy is trusted. */
+export function requestUrl(req: IncomingMessage, options: BridgeOptions): URL {
   const scheme =
     forwarded(req, options, "x-forwarded-proto") ??
     ("encrypted" in req.socket ? "https" : "http");
@@ -74,7 +75,7 @@ function requestUrl(req: IncomingMessage, options: BridgeOptions): URL {
   return url;
 }
 
-function clientAddress(
+export function clientAddress(
   req: IncomingMessage,
   options: BridgeOptions,
 ): string | undefined {

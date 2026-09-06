@@ -3,7 +3,9 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -14,6 +16,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import {
   CLI_ENV,
+  PACKAGE_ROOT,
   PLUMIX_BIN,
   prepareDatabase,
   rpc,
@@ -22,15 +25,23 @@ import {
 
 const run = promisify(execFile);
 
+// A 1×1 red PNG: enough for the image route to decode and re-encode.
+const PIXEL =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
 // `my-native` stands in for a compiled addon the site declares external; the
 // probe routes give the shutdown cases in-flight and deferred work to observe.
 const config = (marker: string) => `import { writeFileSync } from "node:fs";
 import { auth, definePlugin, defineTheme, fallback, plumix } from "plumix";
-import { node, nodeSqlite } from "@plumix/runtime-node";
+import { images, node, nodeSqlite } from "@plumix/runtime-node";
 import { tag } from "my-native";
 
 const probes = definePlugin("probes", (ctx) => {
   ctx.registerPublicRoute({ path: "/native", handler: () => new Response(tag) });
+  ctx.registerPublicRoute({
+    path: "/pixel.png",
+    handler: () => new Response(Buffer.from(${JSON.stringify(PIXEL)}, "base64"), { headers: { "content-type": "image/png" } }),
+  });
   ctx.registerPublicRoute({
     path: "/secret",
     handler: (_request, app) => new Response(String(app.env.PROBE_SECRET ?? "")),
@@ -61,6 +72,7 @@ const probes = definePlugin("probes", (ctx) => {
 export default plumix({
   runtime: node({ build: { external: ["my-native"] } }),
   database: nodeSqlite({ path: "data/site.sqlite" }),
+  imageDelivery: images({ cacheDir: "data/images" }),
   auth: auth({ passkey: { rpName: "x", rpId: "localhost", origin: "http://localhost:3000" } }),
   theme: defineTheme({ templates: [fallback(() => null)] }),
   plugins: [probes],
@@ -140,6 +152,12 @@ beforeAll(async () => {
     }),
   );
   writeFileSync(join(native, "index.js"), 'export const tag = "native";\n');
+  // The optional peer, installed the way an app installs it: beside the
+  // runtime, where the bundle's `require("sharp")` resolves from.
+  symlinkSync(
+    realpathSync(join(PACKAGE_ROOT, "node_modules/sharp")),
+    join(dir, "node_modules/sharp"),
+  );
   await prepareDatabase(dir);
   await run(PLUMIX_BIN, ["build"], { cwd: dir, env: CLI_ENV });
 }, 240_000);
@@ -182,6 +200,35 @@ describe("the built site served by node", () => {
         });
         expect((await rpc(origin, "entry/list")).status).toBe(401);
         expect(await (await fetch(`${origin}/native`)).text()).toBe("native");
+      }),
+    60_000,
+  );
+
+  test(
+    "serves an image transform ahead of the site, resolving the source through it, and answers 304 on revalidation",
+    () =>
+      withServer(dir, async ({ origin }) => {
+        const query = "/_plumix/image?src=/pixel.png&w=320";
+        const first = await fetch(`${origin}${query}`, {
+          headers: { accept: "image/webp,*/*" },
+        });
+        expect(first.status).toBe(200);
+        expect(first.headers.get("content-type")).toBe("image/webp");
+        expect(first.headers.get("cache-control")).toContain("immutable");
+        expect(existsSync(join(dir, "data/images"))).toBe(true);
+
+        const again = await fetch(`${origin}${query}`, {
+          headers: {
+            accept: "image/webp,*/*",
+            "if-none-match": first.headers.get("etag") ?? "",
+          },
+        });
+        expect(again.status).toBe(304);
+        // Gating travels with the source: a path the site does not hold.
+        const missing = await fetch(
+          `${origin}/_plumix/image?src=/nope.png&w=320`,
+        );
+        expect(missing.status).toBe(404);
       }),
     60_000,
   );

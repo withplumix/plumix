@@ -33,7 +33,7 @@ const cloudflareRuntime: RuntimeDescriptor = {
 };
 
 const ctx: CatalogContext = {
-  catalog: { "@types/node": "^22.0.0", typescript: "^5.6.0" },
+  catalog: { "@types/node": "^22.0.0", sharp: "^0.35.3", typescript: "^5.6.0" },
   catalogs: {
     react: { react: "^19.2.7", "@types/react": "^19.0.0" },
     cloudflare: { "@cloudflare/workers-types": "^4.0.0", wrangler: "^4.111.0" },
@@ -106,6 +106,18 @@ describe("assemblePackageJson — blank Cloudflare app", () => {
       "@tanstack/react-query": "^5.101.2",
       react: "^19.2.7",
     });
+  });
+
+  it("adds the dependencies a fulfilled capability contributes, below the app's own", () => {
+    const pkg = parse(
+      assemblePackageJson(selection, BASE_PACKAGE_JSON, ctx, {
+        sharp: "catalog:",
+        react: "catalog:tanstack",
+      }),
+    );
+    expect(pkg.dependencies).toMatchObject({ sharp: "^0.35.3" });
+    // A capability must not re-pin what the base curates.
+    expect(pkg.dependencies?.react).toBe("^19.2.7");
   });
 
   it("emits 2-space JSON with a trailing newline", () => {

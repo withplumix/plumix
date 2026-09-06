@@ -18,12 +18,15 @@ export const PLUMIX_BIN = join(OWN_MODULES, ".bin/plumix");
 /**
  * What the CLI is spawned with. Failure is read off its stderr, so an
  * inherited debugger banner or debug log must not reach it; the dev trust
- * gate must be able to go red on this machine.
+ * gate must be able to go red on this machine. `pnpm exec` sets `NODE_PATH`
+ * to the hoisted store, through which a fixture would resolve packages it
+ * never installed — an app root has no such path.
  */
 export const CLI_ENV: NodeJS.ProcessEnv = {
   ...process.env,
   NODE_OPTIONS: undefined,
   NODE_DEBUG: undefined,
+  NODE_PATH: undefined,
   PLUMIX_DEV_ALLOW_REMOTE: undefined,
 };
 

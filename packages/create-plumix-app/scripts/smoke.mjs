@@ -207,9 +207,9 @@ try {
   const registry = await loadRegistry(REPO);
   // Every runtime times the two shapes. `-y` on every combo: without it the
   // remaining prompts drop the CLI into the wizard on a terminal. A plugin
-  // requiring a capability the runtime lacks — media on node, until #2208
-  // fulfils `imageDelivery` there — is left out, as the scaffolder would
-  // refuse it by name; the rest of all-plugins covers the capability seam.
+  // requiring a capability the runtime lacks is left out, as the scaffolder
+  // would refuse it by name; today every first-party plugin is offered on
+  // every runtime, and `excluded` is what says so.
   const combos = registry.runtimes.flatMap((runtime) => {
     const { id } = runtime;
     const supported = (plugin) =>

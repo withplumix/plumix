@@ -305,6 +305,13 @@ export interface TransformOpts {
  */
 export interface ImageDelivery {
   readonly kind: string;
+  /**
+   * The slot resolves a same-origin relative source (`/_plumix/media/serve/1`)
+   * itself — an in-process transformer, such as the Node runtime's. Absent,
+   * the transform service fetches the source over the network, so a caller
+   * holding a relative URL hands it back untransformed.
+   */
+  readonly acceptsRelativeSources?: boolean;
   url(sourceUrl: string, opts?: TransformOpts): string;
   connect?(env: PlumixEnv): ImageDelivery | undefined;
 }

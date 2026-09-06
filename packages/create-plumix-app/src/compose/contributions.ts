@@ -10,6 +10,8 @@ export interface ResolvedContributions {
   readonly wrangler: WranglerPatch;
   /** `plugins: [...]` array entries, in selection order. */
   readonly registrations: string[];
+  /** Dependencies the fulfilled capabilities add to the app. */
+  readonly deps: Record<string, string>;
   /**
    * Secret binding names the selected auth methods need, deduped. Derived
    * once here so the runtime's secrets file and the `PlumixEnv` augmentation that
@@ -33,6 +35,7 @@ export function resolveContributions(
     configSlots: { ...runtime.configSlots },
     wrangler: {},
     registrations: [],
+    deps: {},
     envVars: [...new Set(authMethods.flatMap((m) => m.envVars ?? []))],
   };
 
@@ -67,6 +70,7 @@ function apply(acc: ResolvedContributions, contribution: Contribution): void {
   if (contribution.imports) acc.imports.push(...contribution.imports);
   if (contribution.configSlots)
     Object.assign(acc.configSlots, contribution.configSlots);
+  if (contribution.deps) Object.assign(acc.deps, contribution.deps);
   for (const [key, value] of Object.entries(contribution.wrangler ?? {})) {
     const current = acc.wrangler[key];
     acc.wrangler[key] =

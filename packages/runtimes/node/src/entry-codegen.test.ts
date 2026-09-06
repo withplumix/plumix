@@ -29,13 +29,21 @@ describe("node generateEntry", () => {
     );
   });
 
-  test("exports a Connect-style listener that serves assets before the bridge, and serves only under import.meta.main", () => {
+  test("exports a Connect-style listener that serves assets, then image transforms, before the bridge, and serves only under import.meta.main", () => {
     const source = entry("./config.ts");
     expect(source).toContain("export function listener(req, res");
     expect(source).toContain(
-      'import { createAssetsLayer, createRequestListener } from "@plumix/runtime-node";',
+      'import { createAssetsLayer, createImageLayer, createRequestListener } from "@plumix/runtime-node";',
     );
-    expect(source).toContain("assets.serve(req, res, () => bridge(req, res))");
+    expect(source).toContain(
+      "assets.serve(req, res, () => images.serve(req, res, () => bridge(req, res)))",
+    );
+    expect(source).toContain("createImageLayer(config.imageDelivery, {");
+    expect(source).toContain("  assets,");
+    expect(source).toContain("  trustProxy,");
+    expect(source).toContain(
+      "fetch: (request, meta) => site.fetch(request, { env, clientAddress: meta.clientAddress }),",
+    );
     // The trust and body-limit options only reach the bridge through here.
     expect(source).toContain(
       "const { trustProxy, bodySizeLimit } = config.runtime.config;",

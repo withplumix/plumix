@@ -4,8 +4,8 @@ import { ASSETS_DIR_ENV, DRAIN_DEADLINE_MS } from "./entry-constants.js";
 
 /**
  * The Node entry: the portable `{ fetch, scheduled }` default export, a
- * Connect-style `listener` for embedding, and — only when run directly — an
- * `http` server in front of it.
+ * Connect-style `listener` for embedding — the assets and image layers ahead
+ * of the bridge — and, only when run directly, an `http` server in front of it.
  */
 export function generateEntry({ configModule }: EntrySourceOptions): string {
   const lines = [
@@ -17,7 +17,7 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     'import { setTimeout as sleep } from "node:timers/promises";',
     'import { fileURLToPath } from "node:url";',
     'import { buildApp, renderDevBootErrorResponse } from "plumix";',
-    'import { createAssetsLayer, createRequestListener } from "@plumix/runtime-node";',
+    'import { createAssetsLayer, createImageLayer, createRequestListener } from "@plumix/runtime-node";',
     // The plumix Vite plugin resolves this: `{}` in dev, the client's
     // `.vite/manifest.json` in a build, so SSR can inject the hashed
     // stylesheet links.
@@ -71,9 +71,17 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "  { trustProxy, bodySizeLimit },",
     ");",
     "",
-    "/** Connect-style listener for embedding: the built assets first, then the site, which answers every request. */",
+    // A same-origin image source is whatever the process would serve at that
+    // path: a built asset, else the site as an anonymous GET.
+    "const images = createImageLayer(config.imageDelivery, {",
+    "  assets,",
+    "  trustProxy,",
+    "  fetch: (request, meta) => site.fetch(request, { env, clientAddress: meta.clientAddress }),",
+    "});",
+    "",
+    "/** Connect-style listener for embedding: the built assets first, then image transforms, then the site, which answers every request. */",
     "export function listener(req, res) {",
-    "  assets.serve(req, res, () => bridge(req, res));",
+    "  assets.serve(req, res, () => images.serve(req, res, () => bridge(req, res)));",
     "}",
     "",
     "if (import.meta.main) {",

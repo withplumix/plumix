@@ -14,22 +14,25 @@ function sortedByKey(deps: Record<string, string>): Record<string, string> {
 
 /**
  * Assemble the project's `package.json` from the base shell plus the
- * selected runtime's (and, later, plugins') dependency contributions.
- * Names are unioned and sorted, protocols resolved to concrete versions
- * via the catalog, and the package renamed to the project.
+ * selected runtime's, the fulfilled capabilities' and the plugins'
+ * dependency contributions. Names are unioned and sorted, protocols resolved
+ * to concrete versions via the catalog, and the package renamed to the project.
  */
 export function assemblePackageJson(
   selection: Selection,
   base: PackageJson,
   ctx: CatalogContext,
+  capabilityDeps: Readonly<Record<string, string>> = {},
 ): string {
   const { projectName, runtime, plugins } = selection;
   const pluginDeps: Record<string, string> = {};
   for (const plugin of plugins) Object.assign(pluginDeps, plugin.deps);
-  // Plugin peers first, so the app's own curated base/runtime versions win
-  // a collision (a plugin peer must not silently re-pin plumix or react).
+  // Plugin peers and capability deps first, so the app's own curated
+  // base/runtime versions win a collision (neither may silently re-pin
+  // plumix or react).
   const deps = sortedByKey({
     ...pluginDeps,
+    ...capabilityDeps,
     ...base.dependencies,
     ...runtime.deps,
   });
