@@ -62,8 +62,7 @@ export async function applyTestSchema(
 
 /**
  * Without the change-feed triggers a test would see an entry save behave
- * differently from production. A runtime driving its own database takes this
- * rather than `applyTestSchema(db, schema)`, so the two cannot drift.
+ * differently from production.
  */
 export async function applyCoreTestSchema(db: SqlRunner): Promise<void> {
   await applyTestSchema(db, schema, ENTRY_CHANGE_FEED_DDL);

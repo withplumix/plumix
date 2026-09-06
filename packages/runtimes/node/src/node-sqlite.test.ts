@@ -5,7 +5,7 @@ import type { Db } from "plumix";
 import type { TracedContext } from "plumix/test";
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable } from "drizzle-orm/sqlite-core";
-import { count, eq, rowsAffected } from "plumix/db";
+import { asc, count, eq, rowsAffected } from "plumix/db";
 import { libsql } from "plumix/db/libsql";
 import * as schema from "plumix/schema";
 import { credentials, entryChanges, sessions, users } from "plumix/schema";
@@ -173,29 +173,43 @@ describe("core requests over nodeSqlite", () => {
     expect(orphans).toEqual([[], []]);
   });
 
-  test("creating an entry writes a change-feed row from inside the trigger", async () => {
+  // The update trigger's WHEN is a chain of `old.col IS NOT new.col` over
+  // eight columns — the comparison a driver binding values its own way would
+  // get wrong, and the only core write that runs a trigger inside `run`.
+  test("saving an entry writes a change-feed row per save", async () => {
     const h = await harness();
     const admin = await h.seedUser("admin");
 
-    const response = await h.fetch("/_plumix/rpc/entry/create", {
+    const created = await h.fetch("/_plumix/rpc/entry/create", {
       method: "POST",
       json: { json: { title: "Hello", slug: "hello" } },
       as: admin,
     });
-    response.assertStatus(200);
-    const created = await response.json<{ json: { id: number } }>();
+    created.assertStatus(200);
+    const { json: entry } = await created.json<{ json: { id: number } }>();
+
+    const updated = await h.fetch("/_plumix/rpc/entry/update", {
+      method: "POST",
+      json: { json: { id: entry.id, title: "Hello again" } },
+      as: admin,
+    });
+    updated.assertStatus(200);
 
     const changes = await h.db
       .select({ entryId: entryChanges.entryId, kind: entryChanges.kind })
-      .from(entryChanges);
-    expect(changes).toEqual([{ entryId: created.json.id, kind: "upsert" }]);
+      .from(entryChanges)
+      .orderBy(asc(entryChanges.id));
+    expect(changes).toEqual([
+      { entryId: entry.id, kind: "upsert" },
+      { entryId: entry.id, kind: "upsert" },
+    ]);
   });
 });
 
 describe("query spans", () => {
   async function traced(): Promise<TracedContext> {
     const db = open(join(dir, "site.sqlite"));
-    await applyTestSchema(db, schema);
+    await applyCoreTestSchema(db);
     return createTracedContext({ db });
   }
 
@@ -309,13 +323,13 @@ describe("span parity with the libsql adapter", () => {
 
   test("the same queries record the same spans on both slots", async () => {
     const node = open(join(dir, "node.sqlite"));
-    await applyTestSchema(node, schema);
+    await applyCoreTestSchema(node);
     // `DatabaseAdapter.connect` declares `db: unknown`; only nodeSqlite
     // narrows it.
     const remote = libsql({
       url: `file:${join(dir, "libsql.sqlite")}`,
     }).connect({}, new Request("https://cms.example/"), schema).db as Db;
-    await applyTestSchema(remote, schema);
+    await applyCoreTestSchema(remote);
 
     const recorded = await spansFor(node);
     expect(recorded.map((span) => span.name)).toEqual([
