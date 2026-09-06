@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
+import { integer, sqliteTable } from "drizzle-orm/sqlite-core";
 import { count, eq, rowsAffected } from "plumix/db";
 import * as schema from "plumix/schema";
 import { credentials, sessions, users } from "plumix/schema";
@@ -13,6 +14,8 @@ import {
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { nodeSqlite } from "./node-sqlite.js";
+
+const flags = sqliteTable("flags", { id: integer().primaryKey() });
 
 let dir: string;
 
@@ -73,6 +76,38 @@ describe("queries through the shim", () => {
     expect(counted?.value).toBe(1);
 
     expect(rowsAffected(await db.delete(sessions))).toBe(1);
+  });
+});
+
+describe("raw sql template parameters", () => {
+  test("a boolean binds as 0/1 and a Date as epoch milliseconds", () => {
+    const db = open(join(dir, "site.sqlite"));
+    const at = new Date(Date.UTC(2030, 0, 1));
+    const ms = 1_893_456_000_000;
+    db.run(
+      sql`CREATE TABLE flags (id INTEGER PRIMARY KEY, on_ INTEGER, at INTEGER)`,
+    );
+
+    db.run(sql`INSERT INTO flags (on_, at) VALUES (${true}, ${at})`);
+    db.run(sql`INSERT INTO flags (on_, at) VALUES (${false}, ${at})`);
+
+    expect(db.all(sql`SELECT on_, at FROM flags WHERE on_ = ${true}`)).toEqual([
+      { on_: 1, at: ms },
+    ]);
+    expect(db.get(sql`SELECT on_ FROM flags WHERE on_ = ${false}`)).toEqual({
+      on_: 0,
+    });
+    expect(db.values(sql`SELECT at FROM flags WHERE at = ${at}`)).toEqual([
+      [ms],
+      [ms],
+    ]);
+    expect(
+      db
+        .select({ id: flags.id })
+        .from(flags)
+        .where(sql`on_ = ${false} AND at = ${at}`)
+        .get(),
+    ).toEqual({ id: 2 });
   });
 });
 
