@@ -245,3 +245,38 @@ describe("runScheduledTasks", () => {
     expect(calls).toEqual(["daily", "always"]);
   });
 });
+
+describe("runScheduledTasks — reporting what happened", () => {
+  test("reports which tasks ran and which failed", async () => {
+    // A caller firing cron from outside — `plumix cron run`, driven by a
+    // CronJob — has no other way to tell a run where everything worked from one
+    // where nothing did.
+    const { ctx } = fakeCtx();
+    const app = fakeApp([
+      { id: "ok", registeredBy: "core", handler: () => undefined },
+      {
+        id: "boom",
+        registeredBy: "reports",
+        handler: () => {
+          throw new Error("nope");
+        },
+      },
+    ]);
+
+    const report = await runScheduledTasks(app, ctx);
+
+    expect(report.ran).toBe(1);
+    expect(report.failed).toEqual(["reports:boom"]);
+  });
+
+  test("reports an empty failure list when every task worked", async () => {
+    const { ctx } = fakeCtx();
+    const app = fakeApp([
+      { id: "ok", registeredBy: "core", handler: () => undefined },
+    ]);
+
+    const report = await runScheduledTasks(app, ctx);
+
+    expect(report).toEqual({ ran: 1, failed: [] });
+  });
+});

@@ -243,3 +243,48 @@ describe("createScheduler with a run guard", () => {
     expect(seen[1]).toBe(Date.parse("2026-09-07T03:05:00Z") / 60_000);
   });
 });
+
+describe("createScheduler — surfacing what a firing did", () => {
+  test("logs the tasks that failed, which core caught so siblings could run", async () => {
+    const clock = virtualClock("2026-09-07T02:58:00Z");
+    const error = vi.fn();
+    const scheduler = createScheduler({
+      app: appWith([
+        { id: "publish", cron: "*/5 * * * *", registeredBy: "core" },
+      ]),
+      clock,
+      logger: { info: vi.fn(), warn: vi.fn(), error },
+      fire: () => Promise.resolve({ ran: 1, failed: ["forms:retention"] }),
+    });
+
+    void scheduler.start();
+    await clock.advanceTo("2026-09-07T03:00:30Z");
+    await scheduler.stop();
+
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("forms:retention"),
+    );
+  });
+
+  test("says so when a firing never reached its tasks", async () => {
+    const clock = virtualClock("2026-09-07T02:58:00Z");
+    const error = vi.fn();
+    const scheduler = createScheduler({
+      app: appWith([
+        { id: "publish", cron: "*/5 * * * *", registeredBy: "core" },
+      ]),
+      clock,
+      logger: { info: vi.fn(), warn: vi.fn(), error },
+      fire: () =>
+        Promise.resolve({ ran: 0, failed: [], aborted: "database is locked" }),
+    });
+
+    void scheduler.start();
+    await clock.advanceTo("2026-09-07T03:00:30Z");
+    await scheduler.stop();
+
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("never started"),
+    );
+  });
+});

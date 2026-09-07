@@ -502,3 +502,30 @@ describe("createPlumixHandler — deferred work", () => {
     }
   });
 });
+
+describe("createPlumixHandler — scheduled reporting", () => {
+  test("returns what the run did, so a caller outside can act on it", async () => {
+    // Task failures are caught so siblings still run, which leaves an external
+    // caller — `plumix cron run` under a CronJob — unable to tell a good run
+    // from one where everything failed.
+    const plugin = definePlugin("reports", (ctx) => {
+      ctx.registerScheduledTask({ id: "ok", handler: () => undefined });
+      ctx.registerScheduledTask({
+        id: "boom",
+        handler: () => {
+          throw new Error("nope");
+        },
+      });
+    });
+    const handler = await handlerFor({ plugins: [plugin] });
+
+    // A schedule none of core's own tasks declare, so only the two untagged
+    // ones above run — they run on every firing.
+    const report = await handler.scheduled?.(
+      { scheduledTime: 0, cron: "0 9 * * MON" },
+      { env: {} },
+    );
+
+    expect(report).toEqual({ ran: 1, failed: ["reports:boom"] });
+  });
+});

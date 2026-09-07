@@ -136,9 +136,12 @@ export function createPlumixHandler(
     },
 
     scheduled: async (event, invocation) => {
-      validateOnce(invocation.env);
-      const request = syntheticScheduledRequest(app, invocation.env, event);
       try {
+        // Inside the try, not above it: a missing binding is exactly the
+        // "the run never started" case the report below exists to name, and
+        // outside it the throw escaped `scheduled` altogether.
+        validateOnce(invocation.env);
+        const request = syntheticScheduledRequest(app, invocation.env, event);
         // A scheduled run always writes (purges mutate state), so deploys that
         // route writes to a primary do so for scheduled work too.
         const scoped = connectDatabase({
@@ -156,13 +159,21 @@ export function createPlumixHandler(
           defer: invocation.waitUntil ?? track,
           slots: bindOnce(invocation.env),
         });
-        await requestStore.run(ctx, () =>
+        const report = await requestStore.run(ctx, () =>
           runScheduledTasks(app, ctx, event.cron),
         );
         // The response `commit` decorates has no reader on the cron path.
         scoped.commit(new Response(null));
+        return report;
       } catch (error) {
         console.error("[plumix] scheduled_failure", error);
+        // `aborted`, not `failed`: no task ran, so naming one would send an
+        // operator looking for a task that never started.
+        return {
+          ran: 0,
+          failed: [],
+          aborted: error instanceof Error ? error.message : String(error),
+        };
       }
     },
   };

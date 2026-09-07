@@ -1,4 +1,9 @@
-import type { CronSchedule, PlumixApp, ScheduledRunGuard } from "plumix";
+import type {
+  CronSchedule,
+  PlumixApp,
+  ScheduledRunGuard,
+  ScheduledRunReport,
+} from "plumix";
 import { declaredSchedules, parseCron } from "plumix";
 
 const MINUTE_MS = 60_000;
@@ -19,8 +24,14 @@ export interface SchedulerLogger {
 
 export interface SchedulerOptions {
   readonly app: PlumixApp;
-  /** Fires one schedule — the entry hands this `handler.scheduled`. */
-  readonly fire: (cron: string, scheduledTime: number) => Promise<void>;
+  /**
+   * Fires one schedule — the entry hands this `handler.scheduled`, whose report
+   * says which tasks failed. A caught task failure is otherwise invisible here.
+   */
+  readonly fire: (
+    cron: string,
+    scheduledTime: number,
+  ) => Promise<void | ScheduledRunReport>;
   readonly clock?: SchedulerClock;
   readonly logger?: SchedulerLogger;
   /**
@@ -88,7 +99,18 @@ export function createScheduler({
       if (isStopped()) return;
       if (!schedule.matches(at)) continue;
       try {
-        const run = (): Promise<void> => fire(schedule.expression, minuteStart);
+        const run = async (): Promise<void> => {
+          const report = await fire(schedule.expression, minuteStart);
+          // Each failure is already logged with its error by core; this is the
+          // line that says the firing as a whole did not do its job.
+          if (report && (report.failed.length > 0 || report.aborted)) {
+            logger.error(
+              report.aborted === undefined
+                ? `[plumix] cron "${schedule.expression}": ${String(report.failed.length)} task(s) failed: ${report.failed.join(", ")}`
+                : `[plumix] cron "${schedule.expression}" never started: ${report.aborted}`,
+            );
+          }
+        };
         if (!guard) {
           await run();
           continue;
