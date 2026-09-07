@@ -25,14 +25,14 @@ catalog:
   "@types/node": ^24.13.3
   cmdk: ^1.1.1
   esbuild: ^0.28.2
-  eslint: ^10.9.0
+  eslint: ^10.9.1
   fishery: ^2.4.0
   jsdom: ^29.1.1
   jsonc-parser: ^3.3.1
   prettier: ^3.9.6
   publint: ^0.3.24
   radix-ui: ^1.6.7
-  react-hook-form: ^7.86.0
+  react-hook-form: ^7.87.0
   sharp: ^0.35.3
   sonner: ^2.0.8
   tailwind-merge: ^3.6.0
@@ -44,9 +44,9 @@ catalog:
 # `catalog:<name>` from consumer package.json files.
 catalogs:
   cloudflare:
-    "@cloudflare/vite-plugin": ^1.53.1
-    "@cloudflare/workers-types": ^5.20260823.1
-    wrangler: ^4.125.0
+    "@cloudflare/vite-plugin": ^1.54.2
+    "@cloudflare/workers-types": ^5.20260831.1
+    wrangler: ^4.127.1
   dnd-kit:
     "@dnd-kit/core": ^6.3.1
     "@dnd-kit/modifiers": ^9.0.0
@@ -86,18 +86,18 @@ catalogs:
     "@tailwindcss/vite": ^4.3.3
     tailwindcss: ^4.3.3
   tanstack:
-    "@tanstack/react-query": ^5.102.2
-    "@tanstack/react-query-devtools": ^5.102.2
+    "@tanstack/react-query": ^5.102.8
+    "@tanstack/react-query-devtools": ^5.102.8
     "@tanstack/react-router": ^1.170.32
     "@tanstack/react-router-devtools": ^1.167.1
-    "@tanstack/react-table": ^9.1.2
+    "@tanstack/react-table": ^9.2.4
     "@tanstack/router-plugin": ^1.168.35
   testing-library:
     "@testing-library/jest-dom": ^7.0.1
-    "@testing-library/react": ^16.3.2
+    "@testing-library/react": ^16.3.3
     "@testing-library/user-event": ^14.6.6
   tiptap:
-    "@tiptap/core": ^3.30.4
+    "@tiptap/core": ^3.31.3
     # Explicit extension set for the rich-text rail instead of starter-kit,
     # which bundles ~16 extensions but we activate only these (the rest are
     # disabled marks we replace with @plumix/blocks marks, or nodes that are
@@ -106,17 +106,17 @@ catalogs:
     # every package here and rides along on that lockstep -- never pin it in
     # pnpm.overrides, which silently rewrites the peer range and forks it away
     # from the version tiptap expects.
-    "@tiptap/extension-blockquote": ^3.30.3
-    "@tiptap/extension-document": ^3.30.3
-    "@tiptap/extension-hard-break": ^3.30.3
-    "@tiptap/extension-heading": ^3.30.3
-    "@tiptap/extension-list": ^3.30.3
-    "@tiptap/extension-paragraph": ^3.30.3
-    "@tiptap/extension-text": ^3.30.3
-    "@tiptap/extensions": ^3.30.3
-    "@tiptap/react": ^3.30.3
+    "@tiptap/extension-blockquote": ^3.31.3
+    "@tiptap/extension-document": ^3.31.3
+    "@tiptap/extension-hard-break": ^3.31.3
+    "@tiptap/extension-heading": ^3.31.3
+    "@tiptap/extension-list": ^3.31.3
+    "@tiptap/extension-paragraph": ^3.31.3
+    "@tiptap/extension-text": ^3.31.3
+    "@tiptap/extensions": ^3.31.3
+    "@tiptap/react": ^3.31.3
   vite:
-    "@vitejs/plugin-react": ^6.1.0
+    "@vitejs/plugin-react": ^6.1.1
     vite: ^8.2.2
   vitest:
     "@vitest/coverage-v8": ^4.1.11
