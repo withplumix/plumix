@@ -185,6 +185,12 @@ export function createScheduledRunGuard({
   };
 }
 
+export interface ConnectedScheduledDb {
+  readonly db: Db;
+  /** Release it — the adapter's own `close`, absent when it has none. */
+  readonly close?: () => void;
+}
+
 /**
  * Connect the database a scheduled run writes through, outside any request.
  *
@@ -193,9 +199,13 @@ export function createScheduledRunGuard({
  * inbound one — the same URL core's scheduled handler builds, so an adapter
  * that routes on it sees one shape however the run was triggered.
  */
-export function connectScheduledDb(app: PlumixApp, env: PlumixEnv): Db {
+export function connectScheduledDb(
+  app: PlumixApp,
+  env: PlumixEnv,
+): ConnectedScheduledDb {
   const request = new Request("http://localhost/_plumix/internal/scheduled", {
     method: "POST",
   });
-  return app.config.database.connect(env, request, app.schema).db as Db;
+  const { db, close } = app.config.database.connect(env, request, app.schema);
+  return { db: db as Db, close };
 }

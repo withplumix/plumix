@@ -48,7 +48,17 @@ export function libsql(config: LibsqlConfigInput): LibsqlDatabaseAdapter {
       const client = traceSqlClient(
         createClient({ url: resolved.url, authToken: resolved.authToken }),
       );
-      return { db: drizzle(client, { schema, casing: "snake_case" }) };
+      try {
+        return {
+          db: drizzle(client, { schema, casing: "snake_case" }),
+          close: () => client.close(),
+        };
+      } catch (error) {
+        // A malformed schema throws while drizzle reads it, and the client is
+        // already open with nothing left holding a reference to close it.
+        client.close();
+        throw error;
+      }
     },
   };
 }

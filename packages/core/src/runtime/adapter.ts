@@ -93,6 +93,10 @@ export interface PlumixHandler {
    * the time it has left instead, so a shutdown that first waited for in-flight
    * responses spends one deadline, not two. Resolves how many tasks were
    * abandoned, so a process runtime can exit non-zero over them.
+   *
+   * Also releases the database connection the handler bound, after the drain.
+   * Not terminal: a request arriving afterwards reconnects, so calling this on
+   * a handler still in service costs a reconnect rather than breaking it.
    */
   readonly dispose?: (options?: DisposeOptions) => Promise<DisposeResult>;
 }

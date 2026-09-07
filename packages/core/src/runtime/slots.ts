@@ -33,6 +33,20 @@ export interface RequestScopedDb {
   commit(response: Response): Response;
 }
 
+export interface ConnectedDb {
+  readonly db: unknown;
+  /**
+   * Release the connection. Provided only by an adapter that owns one — a
+   * binding (D1) has nothing to release — and called by whoever asked for it,
+   * once nothing will query it again.
+   *
+   * A one-shot process needs this: it exits when its event loop drains, and a
+   * remote libsql client holds a live socket until it is closed, so a CronJob
+   * pod would otherwise outlive the work it was started for.
+   */
+  readonly close?: () => void;
+}
+
 export interface DatabaseAdapter<TSchema = Record<string, unknown>> {
   readonly kind: string;
   /**
@@ -41,13 +55,7 @@ export interface DatabaseAdapter<TSchema = Record<string, unknown>> {
    * of its own. `request` is the request that triggered the bind, not a
    * per-request input — use {@link DatabaseAdapter.connectRequest} for that.
    */
-  connect(
-    env: PlumixEnv,
-    request: Request,
-    schema: TSchema,
-  ): {
-    db: unknown;
-  };
+  connect(env: PlumixEnv, request: Request, schema: TSchema): ConnectedDb;
   /**
    * Optional per-request database hook, and the only per-request seam a slot
    * gets: `connect` is called once per handler. When present, the handler

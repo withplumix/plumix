@@ -529,3 +529,31 @@ describe("createPlumixHandler — scheduled reporting", () => {
     expect(report).toEqual({ ran: 1, failed: ["reports:boom"] });
   });
 });
+
+describe("createPlumixHandler — releasing the database", () => {
+  test("closes the connection it bound, once dispose has drained", async () => {
+    const close = vi.fn();
+    const handler = await handlerFor({
+      database: {
+        kind: "closable",
+        connect: () => ({ db: {}, close }),
+      },
+    });
+
+    await handler.fetch(request(), { env: {} });
+    expect(close).not.toHaveBeenCalled();
+
+    await handler.dispose?.();
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  test("says nothing when the adapter has no connection to release", async () => {
+    // D1 is a binding; there is nothing to close, and dispose must not care.
+    const handler = await handlerFor({
+      database: { kind: "binding", connect: () => ({ db: {} }) },
+    });
+
+    await handler.fetch(request(), { env: {} });
+    await expect(handler.dispose?.()).resolves.toEqual({ abandoned: 0 });
+  });
+});
