@@ -20,6 +20,7 @@ import { listen } from "./test-support.js";
 let cacheDir: string;
 let png: Buffer;
 let jpeg: Buffer;
+let gif: Buffer;
 
 beforeAll(async () => {
   cacheDir = mkdtempSync(join(tmpdir(), "plumix-node-images-"));
@@ -28,6 +29,15 @@ beforeAll(async () => {
   });
   png = await source.clone().png().toBuffer();
   jpeg = await source.clone().jpeg().toBuffer();
+  const frame = (background: string) =>
+    sharp({ create: { width: 800, height: 600, channels: 3, background } })
+      .png()
+      .toBuffer();
+  gif = await sharp([await frame("#f00"), await frame("#0f0")], {
+    join: { animated: true },
+  })
+    .gif()
+    .toBuffer();
 });
 
 afterAll(() => {
@@ -46,6 +56,8 @@ function originResponse(pathname: string): Response {
       return answer(png, "image/png");
     case "/photo.jpg":
       return answer(jpeg, "image/jpeg");
+    case "/anim.gif":
+      return answer(gif, "image/gif");
     case "/gated.png":
       return new Response(null, { status: 401 });
     case "/truncated.jpg":
@@ -69,8 +81,11 @@ const fallthrough = (_req: IncomingMessage, res: ServerResponse): void => {
   res.end("fallthrough");
 };
 
-async function site(slot: ReturnType<typeof images>): Promise<string> {
-  const layer = createImageLayer(slot, { fetch: originFetch });
+async function site(
+  slot: ReturnType<typeof images>,
+  basePath?: string,
+): Promise<string> {
+  const layer = createImageLayer(slot, { fetch: originFetch, basePath });
   const { origin } = await listen((req, res) =>
     layer.serve(req, res, () => fallthrough(req, res)),
   );
@@ -85,6 +100,12 @@ const get = (
 
 async function decoded(response: Response) {
   return sharp(Buffer.from(await response.arrayBuffer())).metadata();
+}
+
+async function decodedAnimated(response: Response) {
+  return sharp(Buffer.from(await response.arrayBuffer()), {
+    animated: true,
+  }).metadata();
 }
 
 beforeEach(() => {
@@ -117,6 +138,40 @@ describe("the /_plumix/image layer — same-origin sources", () => {
     });
     expect(webp.headers.get("content-type")).toBe("image/webp");
     expect((await decoded(webp)).format).toBe("webp");
+  });
+
+  test("q=0 refuses a format even though it is named", async () => {
+    const origin = await site(images({ cacheDir }));
+
+    // Named alone but refused outright: falls back to the source type.
+    const refused = await get(origin, "src=/pic.png&w=320", {
+      accept: "image/avif;q=0",
+    });
+    expect(refused.headers.get("content-type")).toBe("image/png");
+
+    // AVIF refused specifically; the generic subtype wildcard still admits
+    // WEBP, which is not itself named or refused.
+    const outranked = await get(origin, "src=/pic.png&w=320", {
+      accept: "image/avif;q=0, image/*;q=0.5",
+    });
+    expect(outranked.headers.get("content-type")).toBe("image/webp");
+
+    // AVIF refused, but WEBP still named further down the same header.
+    const fallsBack = await get(origin, "src=/pic.png&w=320", {
+      accept: "image/avif;q=0,image/webp",
+    });
+    expect(fallsBack.headers.get("content-type")).toBe("image/webp");
+  });
+
+  test("keeps every frame of an animated GIF source through a resize", async () => {
+    const origin = await site(images({ cacheDir, widths: [320] }));
+
+    const same = await get(origin, "src=/anim.gif&w=320", { accept: "*/*" });
+    expect(same.headers.get("content-type")).toBe("image/gif");
+    const meta = await decodedAnimated(same);
+    expect(meta.format).toBe("gif");
+    expect(meta.pages).toBe(2);
+    expect(meta.width).toBe(320);
   });
 
   test("keeps the source type when Accept offers neither avif nor webp, and honours an explicit format", async () => {
@@ -572,6 +627,40 @@ describe("the /_plumix/image layer — the assets binding", () => {
     expect(originRequests).toEqual([]);
     expect((await get(origin, "src=/pic.png&w=320")).status).toBe(200);
     expect(originRequests).toEqual([`${origin}/pic.png`]);
+  });
+});
+
+describe("the /_plumix/image layer — basePath", () => {
+  test("moves under basePath, matching wherever url() points a same-site source", async () => {
+    const origin = await site(images({ cacheDir }), "/cms");
+
+    const prefixed = await fetch(
+      `${origin}/cms/_plumix/image?src=/pic.png&w=320`,
+    );
+    expect(prefixed.status).toBe(200);
+
+    // The unprefixed route is no longer this site's: falls through, as an
+    // unrelated path would.
+    expect(await (await get(origin, "src=/pic.png&w=320")).text()).toBe(
+      "fallthrough",
+    );
+  });
+
+  test("normalizes a messy basePath the way core does", async () => {
+    const origin = await site(images({ cacheDir }), "cms/");
+    expect(
+      (await fetch(`${origin}/cms/_plumix/image?src=/pic.png&w=320`)).status,
+    ).toBe(200);
+  });
+
+  test("refuses the prefixed route as a source, not the bare one", async () => {
+    const origin = await site(images({ cacheDir }), "/cms");
+    const recursive = await fetch(
+      `${origin}/cms/_plumix/image?src=${encodeURIComponent(
+        "/cms/_plumix/image?src=/pic.png&w=320",
+      )}&w=320`,
+    );
+    expect(recursive.status).toBe(400);
   });
 });
 

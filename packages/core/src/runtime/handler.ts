@@ -281,7 +281,7 @@ function connectImageDelivery(
 ): PlumixApp["config"]["imageDelivery"] {
   const slot = app.config.imageDelivery;
   if (!slot) return undefined;
-  return slot.connect ? slot.connect(env) : slot;
+  return slot.connect ? slot.connect(env, { basePath: app.basePath }) : slot;
 }
 
 // One error lists every missing binding, which beats a 500 surfacing from the

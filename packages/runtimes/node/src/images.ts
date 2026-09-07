@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import type { ImageDelivery, TransformOpts } from "plumix";
 import type { RemotePattern } from "plumix/blocks/renderer";
 import type SharpModule from "sharp";
+import { withBasePath } from "plumix";
 import { matchesRemotePattern } from "plumix/blocks/renderer";
 
 import type { VariantCache } from "./image-cache.js";
@@ -243,6 +244,34 @@ function loadSharp(): typeof SharpModule {
  * });
  * ```
  */
+function buildUrl(
+  resolved: ResolvedImagesConfig,
+  basePath: string,
+  sourceUrl: string,
+  opts?: TransformOpts,
+): string {
+  if (
+    isRemote(sourceUrl) &&
+    !matchesRemotePattern(sourceUrl, resolved.remotePatterns)
+  ) {
+    return sourceUrl;
+  }
+  const transform = normalize(resolved, {
+    ...opts,
+    format: opts?.format === "auto" ? undefined : opts?.format,
+  });
+  const query = new URLSearchParams({ src: sourceUrl });
+  if (transform.width !== undefined) query.set("w", String(transform.width));
+  if (transform.height !== undefined) query.set("h", String(transform.height));
+  if (transform.fit !== undefined) query.set("fit", transform.fit);
+  if (transform.quality !== undefined)
+    query.set("q", String(transform.quality));
+  if (transform.format !== undefined) query.set("f", transform.format);
+  return query.size === 1
+    ? sourceUrl
+    : `${withBasePath(IMAGE_ROUTE, basePath)}?${query.toString()}`;
+}
+
 export function images(config: ImagesConfig = {}): NodeImageDelivery {
   const resolved = resolveConfig(config);
   let sharp: typeof SharpModule | undefined;
@@ -253,33 +282,19 @@ export function images(config: ImagesConfig = {}): NodeImageDelivery {
     sharp: () => (sharp ??= loadSharp()),
     cache: createVariantCache(resolved.cacheDir, resolved.cacheSize),
     purge: (sourceUrl) => slot.cache.purge(sourceKey(sourceUrl)),
-    url(sourceUrl: string, opts?: TransformOpts): string {
-      if (
-        isRemote(sourceUrl) &&
-        !matchesRemotePattern(sourceUrl, resolved.remotePatterns)
-      ) {
-        return sourceUrl;
-      }
-      const transform = normalize(resolved, {
-        ...opts,
-        format: opts?.format === "auto" ? undefined : opts?.format,
-      });
-      const query = new URLSearchParams({ src: sourceUrl });
-      if (transform.width !== undefined)
-        query.set("w", String(transform.width));
-      if (transform.height !== undefined)
-        query.set("h", String(transform.height));
-      if (transform.fit !== undefined) query.set("fit", transform.fit);
-      if (transform.quality !== undefined)
-        query.set("q", String(transform.quality));
-      if (transform.format !== undefined) query.set("f", transform.format);
-      return query.size === 1
-        ? sourceUrl
-        : `${IMAGE_ROUTE}?${query.toString()}`;
-    },
-    connect() {
+    url: (sourceUrl, opts) => buildUrl(resolved, "", sourceUrl, opts),
+    // Returns a distinct object per basePath rather than mutating `slot`, so
+    // one `images()` instance connected more than once — a test constructing
+    // several sites, a dev-server reconnect — never has one connection's
+    // basePath leak into another's.
+    connect(_env, ctx) {
       slot.sharp();
-      return slot;
+      const basePath = ctx?.basePath ?? "";
+      if (basePath === "") return slot;
+      return {
+        ...slot,
+        url: (sourceUrl, opts) => buildUrl(resolved, basePath, sourceUrl, opts),
+      };
     },
   };
   return slot;
