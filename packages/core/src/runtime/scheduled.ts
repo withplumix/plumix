@@ -1,6 +1,7 @@
 import type { AppContext } from "../context/app.js";
 import type { PlumixApp } from "./app.js";
 import { flushPurgeTags } from "../cache/purge.js";
+import { scheduledTasksFor } from "./schedules.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
 
 /**
@@ -24,14 +25,7 @@ export async function runScheduledTasks(
   firedCron?: string,
 ): Promise<void> {
   const startedAt = Date.now();
-  for (const task of app.scheduledTasks) {
-    if (
-      firedCron !== undefined &&
-      task.cron !== undefined &&
-      task.cron !== firedCron
-    ) {
-      continue;
-    }
+  for (const task of scheduledTasksFor(app, firedCron)) {
     try {
       // One span per task run, so cron work traces through the same collector
       // as request work — a failing task is an error span, not just a log line.

@@ -13,6 +13,7 @@ import { CliError } from "@plumix/core/cli";
 
 import type { CommandGroup } from "./help.js";
 import type { LoadedConfig } from "./load-config.js";
+import { cronCommand } from "./commands/cron.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { i18nCommand } from "./commands/i18n.js";
 import { migrateCommand } from "./commands/migrate.js";
@@ -22,6 +23,7 @@ import { badge, exitWithError, report } from "./report.js";
 
 const BUILT_IN_COMMANDS: ReadonlyMap<string, CommandDefinition> = new Map([
   ["migrate", migrateCommand],
+  ["cron", cronCommand],
   ["doctor", doctorCommand],
   ["i18n", i18nCommand],
 ]);

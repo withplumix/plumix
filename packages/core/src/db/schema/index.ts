@@ -8,6 +8,7 @@ export * from "./settings.js";
 export * from "./entry_term.js";
 export * from "./entries.js";
 export * from "./entry_changes.js";
+export * from "./scheduled_runs.js";
 export * from "./sessions.js";
 export * from "./terms.js";
 export * from "./users.js";

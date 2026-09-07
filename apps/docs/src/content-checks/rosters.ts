@@ -902,7 +902,7 @@ const CACHE_TAGS = ["t:*", "e:*"] as const;
 
 /**
  * Every command, then the global flags that precede any of them. Sources: the
- * CLI's `BUILT_IN_COMMANDS` map (`migrate`, `doctor`, `i18n`), the runtime
+ * CLI's `BUILT_IN_COMMANDS` map (`migrate`, `cron`, `doctor`, `i18n`), the runtime
  * adapter's `commands` registry (`dev`, `build`, `deploy`, `types`), and the
  * usage block `formatHelp` prints.
  *
@@ -920,6 +920,7 @@ const CLI_REFERENCE = [
   "deploy",
   "types",
   "migrate",
+  "cron",
   "doctor",
   "i18n",
   "--config",

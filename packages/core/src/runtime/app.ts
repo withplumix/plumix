@@ -65,6 +65,7 @@ import { registerCoreSettings } from "../settings-core.js";
 import { registerCoreTemplateDeps } from "../template-deps-core.js";
 import { ThemeRegistrationError } from "../theme-errors.js";
 import { validateDocumentManifest } from "../theme.js";
+import { parseCron } from "./cron.js";
 import { AppBootError } from "./errors.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { assembleShortcodeRegistry } from "./shortcode-registry.js";
@@ -368,6 +369,24 @@ export async function buildApp(
       });
     }
     seenRestRoutes.push({ pluginId: resource.pluginId, route });
+  }
+
+  // A task's cron arrives as a free-form string — `auditLog({ retention: {
+  // purgeAt } })` hands one straight through — and nothing downstream can tell
+  // an unfireable schedule from one that simply has not come round yet. Parse
+  // every one at boot, on every runtime, so the failure is an error at deploy
+  // rather than a task that quietly never runs.
+  for (const task of registry.scheduledTasks) {
+    if (task.cron === undefined) continue;
+    try {
+      parseCron(task.cron);
+    } catch (error) {
+      throw AppBootError.invalidScheduledTaskCron({
+        pluginId: task.registeredBy,
+        taskId: task.id,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   const passkey = resolvePasskeyConfig(config.auth.passkey);

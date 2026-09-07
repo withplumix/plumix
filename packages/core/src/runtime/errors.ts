@@ -5,7 +5,8 @@ type AppBootErrorCode =
   | "rest_resource_shadows_core"
   | "public_route_path_conflict"
   | "public_route_shadows_core"
-  | "public_route_pattern_invalid";
+  | "public_route_pattern_invalid"
+  | "invalid_scheduled_task_cron";
 
 export class AppBootError extends Error {
   static {
@@ -119,6 +120,21 @@ export class AppBootError extends Error {
         `inside the /_plumix/ prefix, which core owns; register it with ` +
         `registerRoute instead.`,
       { pluginId: ctx.pluginId, previousOwner: "core" },
+    );
+  }
+
+  // Boot is the last place to catch a bad schedule. Past here the task simply
+  // never fires, on every runtime, with nothing to see in a log.
+  static invalidScheduledTaskCron(ctx: {
+    pluginId: string;
+    taskId: string;
+    detail: string;
+  }): AppBootError {
+    return new AppBootError(
+      "invalid_scheduled_task_cron",
+      `Scheduled task "${ctx.pluginId}:${ctx.taskId}" declares a schedule ` +
+        `this deploy cannot fire. ${ctx.detail}`,
+      ctx,
     );
   }
 }

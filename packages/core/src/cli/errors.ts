@@ -22,7 +22,10 @@ type CliErrorCode =
   | "i18n_init_no_package_json"
   | "i18n_init_invalid_package_json"
   | "tooling_command_no_app"
-  | "deferred_command_no_app";
+  | "deferred_command_no_app"
+  | "cron_run_missing_expression"
+  | "cron_run_unknown_schedule"
+  | "cron_run_invalid_expression";
 
 export class CliError extends Error {
   static {
@@ -73,6 +76,45 @@ export class CliError extends Error {
       "unknown_command",
       `Unknown command: ${ctx.command}`,
       "Run `plumix help` to see available commands.",
+      undefined,
+    );
+  }
+
+  // A typo is user error. Without this it reaches the CLI as an unexpected
+  // internal failure, which reads like a crash rather than a fixable mistake.
+  static cronRunInvalidExpression(ctx: { detail: string }): CliError {
+    return new CliError(
+      "cron_run_invalid_expression",
+      ctx.detail,
+      "Run `plumix cron list` for the schedules this site declares.",
+      // No `cause`: the parser's message is already the whole explanation, and
+      // the CLI prints a cause underneath, which would just repeat it.
+      undefined,
+    );
+  }
+
+  static cronRunMissingExpression(): CliError {
+    return new CliError(
+      "cron_run_missing_expression",
+      "plumix cron run needs the schedule expression to fire",
+      'Run `plumix cron list` for the schedules this site declares, then pass one, e.g. `plumix cron run "*/5 * * * *"`.',
+      undefined,
+    );
+  }
+
+  // Firing a schedule nothing declares would exit green having done nothing —
+  // the silent failure an external scheduler is most likely to hit, since the
+  // schedules come from the plugins a site installs.
+  static cronRunUnknownSchedule(ctx: {
+    expression: string;
+    declared: readonly string[];
+  }): CliError {
+    return new CliError(
+      "cron_run_unknown_schedule",
+      `No scheduled task declares "${ctx.expression}", so firing it would run nothing`,
+      ctx.declared.length > 0
+        ? `This site declares: ${ctx.declared.map((c) => `"${c}"`).join(", ")}.`
+        : "This site declares no scheduled tasks at all.",
       undefined,
     );
   }

@@ -69,6 +69,15 @@ export type {
   MemoryStorageConfig,
 } from "./runtime/memory-storage.js";
 export { runScheduledTasks } from "./runtime/scheduled.js";
+export { declaredSchedules, scheduledTasksFor } from "./runtime/schedules.js";
+export type { CronSchedule } from "./runtime/cron.js";
+export { CronSyntaxError, parseCron } from "./runtime/cron.js";
+export type {
+  ScheduledRunGuard,
+  ScheduledRunGuardOptions,
+  ScheduledRunOutcome,
+} from "./runtime/scheduled-guard.js";
+export { createScheduledRunGuard } from "./runtime/scheduled-guard.js";
 export type * from "./runtime/slots.js";
 export { slugify } from "./slugify.js";
 export { buildResolvedEntries } from "./route/render/build-resolved-entries.js";

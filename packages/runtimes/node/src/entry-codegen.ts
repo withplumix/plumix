@@ -17,7 +17,7 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     'import { setTimeout as sleep } from "node:timers/promises";',
     'import { fileURLToPath } from "node:url";',
     'import { buildApp, renderDevBootErrorResponse } from "plumix";',
-    'import { createAssetsLayer, createImageLayer, createRequestListener } from "@plumix/runtime-node";',
+    'import { createAssetsLayer, createImageLayer, createRequestListener, startScheduledRunner } from "@plumix/runtime-node";',
     // The plumix Vite plugin resolves this: `{}` in dev, the client's
     // `.vite/manifest.json` in a build, so SSR can inject the hashed
     // stylesheet links.
@@ -80,6 +80,23 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "  fetch: (request, meta) => site.fetch(request, { env, clientAddress: meta.clientAddress }),",
     "});",
     "",
+    "/**",
+    " * Start firing this site's scheduled tasks, returning a handle whose",
+    " * `stop()` waits for the run in flight. Called for you when this module is",
+    " * run directly; an embedder calls it when it wants cron, so importing the",
+    " * module starts no background work on its own.",
+    " */",
+    "export async function startCron(overrides = {}) {",
+    "  const app = await appPromise;",
+    "  handler ??= config.runtime.createHandler(app);",
+    "  return startScheduledRunner({",
+    "    app,",
+    "    env,",
+    "    fire: (cron, scheduledTime) => site.scheduled({ scheduledTime, cron }, { env }),",
+    "    ...overrides,",
+    "  });",
+    "}",
+    "",
     "/** Connect-style listener for embedding: the built assets first, then image transforms, then the site, which answers every request. */",
     "export function listener(req, res) {",
     "  assets.serve(req, res, () => images.serve(req, res, () => bridge(req, res)));",
@@ -93,6 +110,22 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "    console.log(`plumix: listening on http://${host}:${server.address().port}`);",
     "  });",
     "",
+    // Scheduled tasks are the site's own work, so they run wherever the site
+    // runs; `cron: false` hands them to an external scheduler instead. Started
+    // after `listen` and never awaited by it: building the app must not delay
+    // serving, and a scheduler that cannot start must not take down a process
+    // that is already answering requests.
+    "  let cron;",
+    "  let stopping = false;",
+    "  if (config.runtime.config.cron !== false) {",
+    "    startCron().then(",
+    // A signal can land while `buildApp` is still running. Without this the
+    // scheduler would start behind the shutdown and fire into its drain.
+    "      (started) => { cron = started; if (stopping) void started.stop({ timeoutMs: 0 }); },",
+    '      (error) => { console.error("plumix: cron failed to start", error); },',
+    "    );",
+    "  }",
+    "",
     // Stop accepting; in-flight responses get the deadline first, then the
     // deferred work they leave behind gets what remains; whatever is still
     // open is cut. Both listeners come off, so a second signal of either
@@ -105,6 +138,12 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "    const closed = new Promise((resolve) => server.close(() => resolve(true)));",
     "    server.closeIdleConnections();",
     "    void (async () => {",
+    // Before the drain, not during it: `dispose()` waits for deferred work,
+    // and a firing that started behind it would hand it more. Bounded by the
+    // same budget the drain then spends, so a long task cannot hold the whole
+    // shutdown open and leave `dispose()` nothing.
+    "      stopping = true;",
+    "      await cron?.stop({ timeoutMs: Math.max(0, deadline - Date.now()) });",
     `      const finished = await Promise.race([closed, sleep(${DRAIN_DEADLINE_MS}, false)]);`,
     "      const { abandoned } = handler",
     "        ? await handler.dispose({ timeoutMs: Math.max(0, deadline - Date.now()) })",

@@ -1,4 +1,9 @@
 export { CliError, isCliError } from "./errors.js";
+// Re-exported here so a CLI command can validate a schedule without reaching
+// through core's root barrel, which the cold-start guard keeps off this path.
+export type { CronSchedule } from "../runtime/cron.js";
+export { CronSyntaxError, parseCron } from "../runtime/cron.js";
+export { declaredSchedules, scheduledTasksFor } from "../runtime/schedules.js";
 export {
   collectRawSqlMigrations,
   planRawSqlMigrations,

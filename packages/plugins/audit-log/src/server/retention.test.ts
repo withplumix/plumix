@@ -226,10 +226,10 @@ describe("auditLog() factory registers the retention scheduled task", () => {
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),
       plugins: [
-        auditLog({ retention: { maxAgeDays: 30, purgeAt: "0 0 * * 0" } }),
+        auditLog({ retention: { maxAgeDays: 30, purgeAt: "0 0 * * SUN" } }),
       ],
     });
-    expect(registry.scheduledTasks[0]?.cron).toBe("0 0 * * 0");
+    expect(registry.scheduledTasks[0]?.cron).toBe("0 0 * * SUN");
   });
 
   test("retention: false skips registration entirely", async () => {

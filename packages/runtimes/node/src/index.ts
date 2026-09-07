@@ -24,3 +24,12 @@ export type {
   NodeSqliteDatabase,
   NodeSqliteDatabaseAdapter,
 } from "./node-sqlite.js";
+export { createScheduler } from "./scheduler.js";
+export type {
+  Scheduler,
+  SchedulerClock,
+  SchedulerLogger,
+  SchedulerOptions,
+} from "./scheduler.js";
+export { startScheduledRunner } from "./scheduled-runner.js";
+export type { ScheduledRunnerOptions } from "./scheduled-runner.js";
