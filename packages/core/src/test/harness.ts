@@ -7,9 +7,9 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 import type { Db } from "../context/app.js";
+import { CORE_SQL_MIGRATIONS } from "../cli/raw-migrations.js";
 import * as schema from "../db/schema/index.js";
 import { traceSqlClient } from "../db/trace-libsql.js";
-import { ENTRY_CHANGE_FEED_DDL } from "../entries/change-feed-ddl.js";
 
 type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 
@@ -61,11 +61,16 @@ export async function applyTestSchema(
 }
 
 /**
- * Without the change-feed triggers a test would see an entry save behave
- * differently from production.
+ * Replays `CORE_SQL_MIGRATIONS` in journal order — the closest a test db
+ * gets to what a real install ran, and the reason a second core raw
+ * migration reaches every test the moment it is declared, with nothing here
+ * to edit.
  */
 export async function applyCoreTestSchema(db: SqlRunner): Promise<void> {
-  await applyTestSchema(db, schema, ENTRY_CHANGE_FEED_DDL);
+  const rawStatements = CORE_SQL_MIGRATIONS.flatMap(
+    (migration) => migration.statements,
+  );
+  await applyTestSchema(db, schema, rawStatements);
 }
 
 /**

@@ -21,8 +21,12 @@ export interface PluginRawSqlMigration {
  * objects it creates sit on core's tables. `core` is not a plugin id, and a
  * plugin claiming it collides on identity rather than silently displacing
  * this.
+ *
+ * Exported so `test/harness.ts` replays exactly these statements instead of
+ * restating them — a second entry here reaches every test db the moment it
+ * lands, with nothing in `test/` to edit.
  */
-const CORE_SQL_MIGRATIONS: readonly PluginRawSqlMigration[] = [
+export const CORE_SQL_MIGRATIONS: readonly PluginRawSqlMigration[] = [
   {
     pluginId: "core",
     name: "entry_change_feed",

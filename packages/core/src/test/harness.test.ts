@@ -1,7 +1,9 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
+import type { PluginRawSqlMigration } from "../cli/raw-migrations.js";
+import { CORE_SQL_MIGRATIONS } from "../cli/raw-migrations.js";
 import { applyTestSchema, createTestDb } from "./harness.js";
 
 // Stands in for a plugin's `schema.ts` namespace object — one module-level
@@ -73,5 +75,28 @@ describe("applyTestSchema", () => {
         .from(gadgetChanges)
         .orderBy(gadgetChanges.id),
     ).toEqual([{ op: "insert" }, { op: "update" }, { op: "delete" }]);
+  });
+});
+
+describe("applyCoreTestSchema", () => {
+  const mutableCoreMigrations = CORE_SQL_MIGRATIONS as PluginRawSqlMigration[];
+
+  afterEach(() => {
+    mutableCoreMigrations.pop();
+  });
+
+  test("picks up a core raw migration declared after this test was written", async () => {
+    mutableCoreMigrations.push({
+      pluginId: "core",
+      name: "harness_test_marker",
+      statements: ["CREATE TABLE harness_test_marker (id INTEGER PRIMARY KEY)"],
+    });
+
+    const db = await createTestDb();
+
+    await db.run(sql`INSERT INTO harness_test_marker (id) VALUES (1)`);
+    expect(
+      await db.get<{ id: number }>(sql`SELECT id FROM harness_test_marker`),
+    ).toEqual({ id: 1 });
   });
 });
