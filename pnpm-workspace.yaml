@@ -116,7 +116,7 @@ catalogs:
     "@tiptap/extensions": ^3.30.3
     "@tiptap/react": ^3.30.3
   vite:
-    "@vitejs/plugin-react": ^6.1.0
+    "@vitejs/plugin-react": ^6.1.1
     vite: ^8.2.2
   vitest:
     "@vitest/coverage-v8": ^4.1.11
