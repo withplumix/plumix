@@ -73,6 +73,7 @@ export { declaredSchedules, scheduledTasksFor } from "./runtime/schedules.js";
 export type { CronSchedule } from "./runtime/cron.js";
 export { CronSyntaxError, parseCron } from "./runtime/cron.js";
 export type {
+  ConnectedScheduledDb,
   ScheduledRunGuard,
   ScheduledRunGuardOptions,
   ScheduledRunOutcome,

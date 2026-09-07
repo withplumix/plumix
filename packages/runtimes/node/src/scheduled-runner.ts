@@ -49,7 +49,9 @@ export function startScheduledRunner({
     (task) => task.cron === undefined,
   );
   const guard = createScheduledRunGuard({
-    db: db ?? connectScheduledDb(app, env),
+    // The scheduler's connection is long-lived on purpose: the next firing
+    // queries through it, so it is never released here.
+    db: db ?? connectScheduledDb(app, env).db,
     holder: `${hostname()}:${String(process.pid)}`,
     lease,
     leaseScope: runsOnEveryFiring ? "shared" : "schedule",

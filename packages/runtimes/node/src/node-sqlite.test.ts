@@ -32,12 +32,16 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function open(path: string) {
+function connect(path: string) {
   return nodeSqlite({ path }).connect(
     {},
     new Request("https://cms.example/"),
     schema,
-  ).db;
+  );
+}
+
+function open(path: string) {
+  return connect(path).db;
 }
 
 describe("nodeSqlite", () => {
@@ -340,5 +344,28 @@ describe("span parity with the libsql adapter", () => {
       "db: delete",
     ]);
     expect(recorded).toEqual(await spansFor(remote));
+  });
+});
+
+describe("nodeSqlite — releasing the connection", () => {
+  test("hands back a close that actually closes the database", () => {
+    // A real handle, not a spy: `drizzleNodeSqlite` exposes no `$client` to
+    // stub, so only the handle itself can say whether it closed.
+    const connection = connect(join(dir, "site.sqlite"));
+    // `node:sqlite` is synchronous, so these statements do not await.
+    connection.db.run(sql`SELECT 1`);
+
+    connection.close();
+
+    // Asserting the reason, not just that something threw: drizzle wraps it as
+    // "Failed to run the query", and only the cause says the handle is closed.
+    let thrown: unknown;
+    try {
+      connection.db.run(sql`SELECT 1`);
+    } catch (error) {
+      thrown = error;
+    }
+    const cause = thrown instanceof Error ? thrown.cause : undefined;
+    expect(String(cause ?? thrown)).toMatch(/not open/i);
   });
 });

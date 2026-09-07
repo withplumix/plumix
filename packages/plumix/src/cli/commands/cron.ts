@@ -132,7 +132,7 @@ async function runSchedule(ctx: CommandContext): Promise<void> {
   // beside wherever the command was invoked from.
   if (ctx.cwd !== process.cwd()) process.chdir(ctx.cwd);
 
-  const db = connectScheduledDb(ctx.app, process.env);
+  const { db, close } = connectScheduledDb(ctx.app, process.env);
   const guard = createScheduledRunGuard({
     db,
     // Names this invocation in the lease row; every pod of a CronJob would
@@ -148,7 +148,24 @@ async function runSchedule(ctx: CommandContext): Promise<void> {
       : "schedule",
   });
 
-  await fireSchedule(ctx, guard, fired, handler);
+  try {
+    await fireSchedule(ctx, guard, fired, handler);
+  } finally {
+    // Drain first: deferred work — telemetry delivery, cache purges — is still
+    // querying through both connections until `dispose()` returns. Each release
+    // is independent: one that throws must not strand the other connection, nor
+    // replace the command's own result with a driver message.
+    try {
+      await handler.dispose?.();
+    } catch (error) {
+      report.detail(`Could not drain the handler: ${detailOf(error)}`);
+    }
+    try {
+      close?.();
+    } catch (error) {
+      report.detail(`Could not release the database: ${detailOf(error)}`);
+    }
+  }
 }
 
 async function fireSchedule(
@@ -229,4 +246,9 @@ async function runGuarded(
       cause,
     });
   }
+}
+
+/** The message an error carries, for a line that is context rather than the failure itself. */
+function detailOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
 import { describe, expect, test, vi } from "vitest";
 
-import type { CommandContext, PlumixApp } from "@plumix/core";
+import type { CommandContext, PlumixApp, PlumixHandler } from "@plumix/core";
+import { createPlumixHandler } from "@plumix/core";
 import { isCliError } from "@plumix/core/cli";
 import { createTestDb } from "@plumix/core/test";
 
@@ -20,7 +21,12 @@ const TASKS = [
 async function context(
   argv: readonly string[],
   scheduled = vi.fn(),
-  options: { db?: TestDb; tasks?: readonly unknown[] } = {},
+  options: {
+    db?: TestDb;
+    tasks?: readonly unknown[];
+    close?: () => void;
+    dispose?: PlumixHandler["dispose"];
+  } = {},
 ): Promise<CommandContext> {
   // `cron run` takes the same run guard the in-process scheduler does, so it
   // needs a real database to take it in.
@@ -29,8 +35,10 @@ async function context(
     scheduledTasks: options.tasks ?? TASKS,
     schema: {},
     config: {
-      runtime: { createHandler: () => ({ scheduled }) },
-      database: { connect: () => ({ db }) },
+      runtime: {
+        createHandler: () => ({ scheduled, dispose: options.dispose }),
+      },
+      database: { connect: () => ({ db, close: options.close }) },
     },
   } as unknown as PlumixApp;
   return {
@@ -328,5 +336,98 @@ describe("plumix cron run — a run that never started", () => {
     expect(String(error)).toContain("before any task started");
     expect(String(error)).toContain("no such binding: DB");
     expect(isCliError(error) ? error.hint : "").toContain("Nothing ran");
+  });
+});
+
+describe("plumix cron run — releasing the database", () => {
+  test("closes the connection it opened, through the adapter seam", async () => {
+    const close = vi.fn();
+
+    await cronCommand.run(
+      await context(["run", "*/5 * * * *"], vi.fn(), { close }),
+    );
+
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  test("drains the handler before closing, so deferred work still has its db", async () => {
+    const order: string[] = [];
+    const dispose = vi.fn(() => {
+      order.push("dispose");
+      return Promise.resolve({ abandoned: 0 });
+    });
+
+    await cronCommand.run(
+      await context(["run", "*/5 * * * *"], vi.fn(), {
+        dispose,
+        close: () => void order.push("close"),
+      }),
+    );
+
+    expect(order).toEqual(["dispose", "close"]);
+  });
+
+  test("releases it even when a task failed", async () => {
+    const close = vi.fn();
+    const scheduled = vi.fn(() =>
+      Promise.resolve({ ran: 0, failed: ["reports:purge"] }),
+    );
+
+    await expect(
+      cronCommand.run(
+        await context(["run", "*/5 * * * *"], scheduled, { close }),
+      ),
+    ).rejects.toThrow();
+
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("plumix cron run — both connections, composed", () => {
+  test("releases the guard's connection and the handler's own", async () => {
+    // The seam-level tests above each cover one half with the other stubbed,
+    // which is how the reverted attempt in #2255 passed while releasing only
+    // one connection. This drives a real `createPlumixHandler`, so the count
+    // is of connections the command actually caused.
+    const db = await createTestDb();
+    const opened: number[] = [];
+    const closed: number[] = [];
+    const database = {
+      kind: "counting",
+      connect: () => {
+        const id = opened.length;
+        opened.push(id);
+        return { db, close: () => void closed.push(id) };
+      },
+    };
+    const app = {
+      scheduledTasks: TASKS,
+      schema: {},
+      // The handler builds a marker request from it before connecting.
+      origin: "https://cms.example",
+      config: {
+        database,
+        runtime: { createHandler: () => createPlumixHandler(app) },
+      },
+    } as unknown as PlumixApp;
+
+    try {
+      await cronCommand.run({
+        app,
+        cwd: process.cwd(),
+        configPath: `${process.cwd()}/plumix.config.ts`,
+        argv: ["run", "*/5 * * * *"],
+        runtimeMigrate: {},
+      });
+    } catch {
+      // The stub app is too thin for the tasks themselves to run; what matters
+      // here is which connections were opened and whether both were released.
+    }
+
+    // Two: the guard's, then the one the handler binds for the tasks.
+    expect(opened).toEqual([0, 1]);
+    // Both released, the handler's first — `dispose()` drains deferred work
+    // that is still querying through it, and only then is the guard's dropped.
+    expect(closed).toEqual([1, 0]);
   });
 });

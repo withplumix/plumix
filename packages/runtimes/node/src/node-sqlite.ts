@@ -16,7 +16,7 @@ export interface NodeSqliteDatabaseAdapter extends DatabaseAdapter {
     env: PlumixEnv,
     request: Request,
     schema: TSchema,
-  ): { db: NodeSqliteDatabase<TSchema> };
+  ): { db: NodeSqliteDatabase<TSchema>; close: () => void };
 }
 
 /** Database slot over `node:sqlite`. One file, one process — `plumix/db/libsql` is the slot for a remote or shared database. */
@@ -26,9 +26,23 @@ export function nodeSqlite(
   return {
     kind: "node-sqlite",
     config,
-    connect: (_env, _request, schema) => ({
-      db: drizzleNodeSqlite(openNodeSqlite(config.path), schema),
-    }),
+    connect: (_env, _request, schema) => {
+      // Held so it can be released: `drizzleNodeSqlite` builds the drizzle
+      // instance directly rather than through a driver factory, so it exposes
+      // no `$client` for a caller to reach for.
+      const client = openNodeSqlite(config.path);
+      try {
+        return {
+          db: drizzleNodeSqlite(client, schema),
+          close: () => client.close(),
+        };
+      } catch (error) {
+        // A malformed schema throws while drizzle reads it, and the handle is
+        // already open with nothing left holding a reference to close it.
+        client.close();
+        throw error;
+      }
+    },
   };
 }
 

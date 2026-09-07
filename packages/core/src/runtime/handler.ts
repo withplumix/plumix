@@ -5,9 +5,9 @@ import type { PlumixEnv } from "./bindings.js";
 import type {
   AssetsBinding,
   ConnectedCache,
+  ConnectedDb,
   ConnectedKv,
   ConnectedObjectStorage,
-  DatabaseAdapter,
   ImageDelivery,
   RequestScopedDb,
   RequestScopedDbArgs,
@@ -73,7 +73,7 @@ export function createPlumixHandler(
 
   // Kept out of `bindSlots` because binding it eagerly would build a client
   // for an adapter whose `connectRequest` answers every request.
-  let boundDb: ReturnType<DatabaseAdapter["connect"]> | undefined;
+  let boundDb: ConnectedDb | undefined;
   // `connectRequest` is the only per-request database seam; `connect` binds
   // once and is reused when there is no hook or the hook declines.
   const connectDatabase = (
@@ -84,6 +84,20 @@ export function createPlumixHandler(
     if (scoped) return scoped;
     boundDb ??= database.connect(args.env, args.request, app.schema);
     return { db: boundDb.db, commit: (response) => response };
+  };
+
+  // After the drain, not before it: deferred work is still querying through
+  // this connection until `dispose` returns. Best effort — a driver that
+  // throws on close (a handle already closed, a socket already gone) must not
+  // become an unhandled rejection on the one path whose job is a clean
+  // shutdown.
+  const releaseDatabase = (): void => {
+    try {
+      boundDb?.close?.();
+    } catch (error) {
+      console.warn("[plumix] database_close_failed", error);
+    }
+    boundDb = undefined;
   };
 
   return {
@@ -124,14 +138,16 @@ export function createPlumixHandler(
       while (pending.size > 0 && Date.now() < deadline) {
         await settleWithin([...pending], deadline - Date.now());
       }
-      if (pending.size === 0) return { abandoned: 0 };
       const abandoned = pending.size;
       // Giving up is final: a supervisor escalating SIGTERM to SIGINT would
       // otherwise buy the same stuck task another full timeout.
       pending.clear();
-      console.warn(
-        `[plumix] deferred_work_abandoned: ${abandoned} deferred task(s) still running after ${timeoutMs}ms`,
-      );
+      releaseDatabase();
+      if (abandoned > 0) {
+        console.warn(
+          `[plumix] deferred_work_abandoned: ${abandoned} deferred task(s) still running after ${timeoutMs}ms`,
+        );
+      }
       return { abandoned };
     },
 
