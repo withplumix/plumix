@@ -37,7 +37,7 @@ describe("scaffold — blank Cloudflare app", () => {
   test("composes a runnable project from the base skeleton", async () => {
     const target = join(tmp, "my-app");
 
-    await scaffold({ targetDir: target });
+    await scaffold({ targetDir: target, runtimeId: "cloudflare" });
 
     expect(readFileSync(join(target, "plumix.config.ts"), "utf8")).toContain(
       "cloudflareDeployOrigin",
@@ -57,7 +57,7 @@ describe("scaffold — blank Cloudflare app", () => {
   test("registers no plugins for a blank app", async () => {
     const target = join(tmp, "blank");
 
-    await scaffold({ targetDir: target });
+    await scaffold({ targetDir: target, runtimeId: "cloudflare" });
 
     const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
     expect(config).toContain("plugins: []");
@@ -70,7 +70,7 @@ describe("scaffold — blank Cloudflare app", () => {
   test("resolves workspace:* and catalog: deps to concrete ranges", async () => {
     const target = join(tmp, "deps");
 
-    await scaffold({ targetDir: target });
+    await scaffold({ targetDir: target, runtimeId: "cloudflare" });
 
     const pkg = readPkg(target);
     const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
@@ -88,7 +88,7 @@ describe("scaffold — blank Cloudflare app", () => {
   test("names the package after the target basename", async () => {
     const target = join(tmp, "my-cool-site");
 
-    await scaffold({ targetDir: target });
+    await scaffold({ targetDir: target, runtimeId: "cloudflare" });
 
     expect(readPkg(target).name).toBe("my-cool-site");
   });
@@ -96,7 +96,7 @@ describe("scaffold — blank Cloudflare app", () => {
   test("writes a self-contained tsconfig with JSX enabled", async () => {
     const target = join(tmp, "ts");
 
-    await scaffold({ targetDir: target });
+    await scaffold({ targetDir: target, runtimeId: "cloudflare" });
 
     const tsconfig = readFileSync(join(target, "tsconfig.json"), "utf8");
     expect(tsconfig).not.toContain("@plumix/typescript-config");
@@ -109,7 +109,9 @@ describe("scaffold — blank Cloudflare app", () => {
     const target = join(tmp, "empty");
     mkdirSync(target);
 
-    await expect(scaffold({ targetDir: target })).resolves.toBeDefined();
+    await expect(
+      scaffold({ targetDir: target, runtimeId: "cloudflare" }),
+    ).resolves.toBeDefined();
     expect(existsSync(join(target, "package.json"))).toBe(true);
   });
 
@@ -141,7 +143,11 @@ describe("scaffold — blank Cloudflare app", () => {
   test("composes selected plugins into config, deps, and wrangler bindings", async () => {
     const target = join(tmp, "with-plugins");
 
-    await scaffold({ targetDir: target, pluginIds: ["blog", "media"] });
+    await scaffold({
+      targetDir: target,
+      runtimeId: "cloudflare",
+      pluginIds: ["blog", "media"],
+    });
 
     const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
     expect(config).toContain("blog(),");
@@ -213,6 +219,16 @@ describe("scaffold — Node app", () => {
 
   afterEach(() => {
     rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("is the default when runtimeId is omitted", async () => {
+    const target = join(tmp, "default-runtime");
+
+    await scaffold({ targetDir: target });
+
+    const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+    expect(config).toContain('from "@plumix/runtime-node"');
+    expect(existsSync(join(target, "wrangler.jsonc"))).toBe(false);
   });
 
   test("composes a plain process: node(), SQLite under data/, a localhost passkey origin", async () => {

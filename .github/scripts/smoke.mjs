@@ -310,10 +310,20 @@ async function scaffoldAndInstall(workDir, npmEnv) {
   const appDir = path.join(scaffoldParent, "my-plumix-app");
 
   log(`scaffolding with create-plumix-app@${version} (from Verdaccio)…`);
-  await run("npx", ["--yes", `create-plumix-app@${version}`, appDir], {
-    cwd: scaffoldParent,
-    env: npmEnv,
-  });
+  // This rehearsal is Cloudflare-specific end to end (D1, miniflare, wrangler
+  // below) — pin the runtime explicitly rather than ride the scaffolder's
+  // default, which is free to change independently of this script.
+  await run(
+    "npx",
+    [
+      "--yes",
+      `create-plumix-app@${version}`,
+      appDir,
+      "--runtime",
+      "cloudflare",
+    ],
+    { cwd: scaffoldParent, env: npmEnv },
+  );
 
   // `npm install` (not pnpm) so package build scripts — notably workerd's
   // binary download that miniflare needs — run without an interactive

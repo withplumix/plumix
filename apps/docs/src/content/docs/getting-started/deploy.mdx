@@ -1,28 +1,96 @@
 ---
 title: Deploy Your Site
-description: Five minutes from a local Plumix project to a live Cloudflare Worker, with a real D1 database and a passkey that verifies against the deployed origin.
+description: Five minutes from a local Plumix project to a live site — a Node.js process by default, or a Cloudflare Worker with one flag, with a real database and a passkey that verifies against the deployed origin.
 tier: P0
 sidebar:
   order: 50
 ---
 
-import { Aside, Steps } from "@astrojs/starlight/components";
+import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
-A scaffolded project runs locally against a placeholder database and a localhost passkey origin. Deploying means replacing both with real values, applying the migrations remotely, and running two commands.
+A scaffolded project runs locally against a placeholder database and a localhost passkey origin. Deploying means replacing both with real values and building the site for wherever it runs next. What that looks like depends on the runtime: `pnpm create plumix-app` scaffolds Node by default, which builds to a directory and a command you run on any host that runs Node, while `--runtime cloudflare` scaffolds a Worker, which `plumix deploy` hands to `wrangler deploy`.
 
 ## Overview
 
-`plumix deploy` hands off to `wrangler deploy`, so what ships is whatever `wrangler.jsonc` describes plus the bundle `plumix build` produced. Three things in a scaffolded project point at localhost and need real values first.
+On the Node runtime, `plumix build` writes `dist/client` and `dist/server/worker.js`, and deploying is running that file with `node` wherever you host it — a VM, a container, anywhere Node runs. There is no separate `deploy` command, because there is no platform API to call: you own the process.
 
-The D1 `database_id` is the literal string `local-development-only`. That works for the local database in `.wrangler`, and it is not a real database id, so a remote deploy needs the one Cloudflare hands you.
+On the Cloudflare runtime, `plumix deploy` hands off to `wrangler deploy`, so what ships is whatever `wrangler.jsonc` describes plus the bundle `plumix build` produced.
 
-The passkey origin resolves to `http://localhost:5173`. The scaffolded `cloudflareDeployOrigin` spread reads the build environment Cloudflare Workers Builds injects, so it resolves the deployed host on a build that runs there and takes its `localOrigin` fallback on one that does not. The quickstart below builds on your own machine, which is the second case, so step 2 writes `rpId` and `origin` out literally. [Deploying from git](#deploying-from-git) covers the first.
-
-Any secret you have been reading out of `.dev.vars` has to be set on the deploy. `.dev.vars` is gitignored and local by design; it never travels.
-
-Two things need no work. The cron triggers are already in `wrangler.jsonc`, so session cleanup and scheduled publishing fire as soon as the worker is live. The admin is part of the bundle, so there is nothing separate to host.
+Either way, three things in a scaffolded project point at localhost and need real values before the site is live: the passkey origin, the database, and any secret you have been reading out of `.env` or `.dev.vars`. The sections below cover each runtime's version of that swap.
 
 ## Quickstart
+
+<Tabs syncKey="runtime">
+<TabItem label="Node">
+
+This is the path from a scaffolded site (`pnpm create plumix-app`, the default runtime) to a running process. [Node.js](/deployment/node/) covers the runtime in full; this is the shortened version.
+
+<Aside type="caution" title="A literal passkey origin, not a derived one">
+  Node has no build-environment helper like Cloudflare's
+  `cloudflareDeployOrigin` — a process has no per-build host to derive one from.
+  Step 1 writes `rpId` and `origin` out literally, and they have to change again
+  if the deployed host ever changes.
+</Aside>
+
+<Steps>
+
+1. **Point the passkey at the deployed host.** In `plumix.config.ts`, set `rpId` to the host you are deploying to and `origin` to its `https://` address (or `http://` only if you genuinely serve plaintext, which a passkey ceremony run over the open internet should not).
+
+   ```ts no-typecheck
+   import { auth } from "plumix";
+
+   export const recipeAuth = auth({
+     passkey: {
+       rpName: "Recipes",
+       rpId: "recipes.example",
+       origin: "https://recipes.example",
+     },
+   });
+   ```
+
+2. **Set every secret and environment variable the config resolves.** There is no `.dev.vars` upload step: `process.env` on the host is the whole story, so set `RESEND_API_KEY`, `GITHUB_CLIENT_SECRET` and the rest through whatever your host uses — a `.env` file the process manager loads, its own secrets UI, or the shell that starts the process. `PORT` and `HOST` control what the server listens on, defaulting to `3000` and `0.0.0.0`.
+
+3. **Generate and apply the migrations.**
+
+   ```sh
+   pnpm exec plumix migrate generate
+   pnpm exec plumix migrate apply
+   ```
+
+   `generate` writes the resolved schema and emits SQL into `drizzle/`; `apply` runs the pending files against the SQLite file `nodeSqlite` names. Run it again after adding a plugin that carries its own tables. Point it at the production database path, not the one you have been developing against.
+
+4. **Build.**
+
+   ```sh
+   pnpm build
+   ```
+
+   `plumix build` writes `dist/client` for the browser and `dist/server/worker.js` to run. Everything the server needs is inlined into that one file, except native packages, which it imports at runtime.
+
+5. **Run it.**
+
+   ```sh
+   PORT=3000 node dist/server/worker.js
+   ```
+
+   Run this under whatever keeps a process alive on your host — systemd, a container orchestrator, `pm2`. A `SIGTERM` stops the process cleanly: it stops accepting new requests, gives in-flight ones ten seconds, drains deferred work such as telemetry delivery, and exits `0`.
+
+6. **Claim the admin account.** Open `https://recipes.example/_plumix/admin` and create your passkey before anyone else does. The database is empty, so the first registration wins the admin account and every later one is refused.
+
+</Steps>
+
+<Aside type="danger" title="Deploy and claim in the same sitting">
+  A deployed site with an empty users table hands the admin account to whoever
+  reaches `/_plumix/admin` first. There is no invite step in front of it. Claim
+  the account immediately, or keep the deploy unreachable until you can.
+</Aside>
+
+Node ships no edge cache and no `kv` — every page renders on every request, and uploads and the image cache live on the one machine the process runs on. [Node.js](/deployment/node/) covers what that means and when `plumix/storage/s3` or `plumix/db/libsql` are worth swapping in instead of the disk-backed defaults.
+
+</TabItem>
+<TabItem label="Cloudflare">
+
+Deploying to Cloudflare instead? This is the path from a scaffolded site (`pnpm create plumix-app --runtime cloudflare`) to a live Worker. It assumes a signed-in `wrangler`. [Cloudflare Workers](/deployment/cloudflare/) covers the adapter in full; this is the shortened version.
 
 <Aside
   type="caution"
@@ -103,7 +171,7 @@ Two things need no work. The cron triggers are already in `wrangler.jsonc`, so s
   the account immediately, or keep the deploy unreachable until you can.
 </Aside>
 
-## Resources the config expects to exist
+### Resources the config expects to exist
 
 Adding a plugin or a slot can add a binding, and `wrangler deploy` will not create the resource behind it.
 
@@ -125,7 +193,7 @@ wrangler kv namespace create KV
 
 The edge cache needs no resource, but it does check for two values before it stores anything. `edge()` reads `CF_ZONE_ID` and `CF_CACHE_PURGE_TOKEN` from the environment and returns an inactive cache when either is missing, because a cache with no way to purge would serve a stale page forever. A `workers.dev` host has no zone, so caching stays off there and switches on when you attach a domain and set both secrets.
 
-## Deploying from git
+### Deploying from git
 
 Connecting the repository to Cloudflare's build service is the one case where step 2 can be skipped. The build service sets `WORKERS_CI` and `WORKERS_CI_BRANCH`, the Vite plugin freezes both into the bundle, and `cloudflareDeployOrigin` reads them, so the scaffolded spread resolves the deployed host on its own. Replace the scaffolded `your-account` placeholder with your real subdomain and leave the spread in place — a passkey anchored to the placeholder matches no browser.
 
@@ -135,15 +203,20 @@ The helper anchors the passkey relying-party id to `your-account.workers.dev` an
 
 A custom production domain breaks that span, and no configuration can restore it. Workers Builds does not expose the custom domain either, so the helper needs `productionOrigin: "https://recipes.example"` to anchor the default branch to it, and previews stay on `workers.dev`. Pass `defaultBranch` alongside it if yours is not `main` — production would otherwise resolve as a preview and never reach the custom domain at all. A custom domain and `workers.dev` are different registrable domains, so a credential anchored to one cannot verify against the other. Sign in to previews with magic links or Cloudflare Access when production runs on your own domain.
 
-## Checking the deploy
-
-`plumix doctor` prints what the CLI resolved from your config, which is the runtime name, the database kind, the plugins with their versions, and a `schema tables` count. That count sums the tables the plugins declare and nothing else, so a project with no schema-carrying plugin reports 0 even though core's `entries`, `terms`, `users`, `sessions` and `credentials` are all in the generated schema. Run it before a deploy after adding a plugin, to confirm its tables arrived.
+### Checking the Cloudflare deploy
 
 `plumix types` runs `wrangler types` to regenerate the binding types, which is worth doing after any change to `wrangler.jsonc`.
 
+</TabItem>
+</Tabs>
+
+## Checking the deploy
+
+`plumix doctor` prints what the CLI resolved from your config, which is the runtime name, the database kind, the plugins with their versions, and a `schema tables` count. That count sums the tables the plugins declare and nothing else, so a project with no schema-carrying plugin reports 0 even though core's `entries`, `terms`, `users`, `sessions` and `credentials` are all in the generated schema. Run it before a deploy after adding a plugin, to confirm its tables arrived. This works the same way on both runtimes.
+
 ## Related
 
-[Deployment](/deployment/overview/) is the section this page compresses, and it covers what each step here glosses over. [Cloudflare Workers](/deployment/cloudflare/) covers D1, R2, KV, Images and the edge cache one at a time. [Bindings and Environment](/deployment/bindings/) covers how a binding in `wrangler.jsonc` reaches a config slot. [Secrets](/deployment/secrets/) covers `.dev.vars`, `EnvInput` and production secrets in full. [Configuration](/getting-started/configuration/) is the reference for the slots you edited above. [Passkeys](/access/passkeys/) covers the relying-party id, allowed origins and adding a second device.
+[Deployment](/deployment/overview/) is the section this page compresses, and it covers what each step here glosses over. [Node.js](/deployment/node/) and [Cloudflare Workers](/deployment/cloudflare/) cover each runtime's slots one at a time. [Bindings and Environment](/deployment/bindings/) covers how a Cloudflare binding in `wrangler.jsonc` reaches a config slot. [Secrets](/deployment/secrets/) covers `.dev.vars`, `EnvInput` and production secrets in full. [Configuration](/getting-started/configuration/) is the reference for the slots you edited above. [Passkeys](/access/passkeys/) covers the relying-party id, allowed origins and adding a second device.
 
 ## Next steps
 

@@ -12,7 +12,7 @@ import { loadSources } from "./sources.js";
 
 interface ScaffoldOptions {
   readonly targetDir: string;
-  /** Runtime to scaffold; defaults to the sole runtime today. */
+  /** Runtime to scaffold; defaults to {@link DEFAULT_RUNTIME}. */
   readonly runtimeId?: string;
   /** Plugin ids to include; defaults to none. The CLI defaults to the recommended set. */
   readonly pluginIds?: readonly string[];
@@ -27,7 +27,7 @@ interface ScaffoldResult {
   readonly name: string;
 }
 
-export const DEFAULT_RUNTIME = "cloudflare";
+export const DEFAULT_RUNTIME = "node";
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // The runtime-agnostic base skeleton, shipped in the package tarball.

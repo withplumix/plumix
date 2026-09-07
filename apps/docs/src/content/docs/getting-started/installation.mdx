@@ -59,24 +59,24 @@ Then work through the rest:
 
 <Steps>
 
-1. **Answer the wizard.** It asks only for what the command line did not already supply, so the command above, which names the directory, gets three questions rather than four. Those are which runtime to target, which plugins to include, and which sign-in methods to add. Run `pnpm create plumix-app` with no directory and it asks where to create the project first. Cloudflare is the only runtime today. Passkeys are always on, so the sign-in question is about what to layer beside them. The plugin question opens with SEO and Feeds ticked, so a new site serves head meta, `robots.txt`, a sitemap and feeds from the first request; nothing else is preselected. Untick either and the generated project has no import and no registration for it. One pairing is worth knowing before you do: `og` declares SEO as a peer and needs it registered to reach `og:image`, so unticking SEO while keeping OG installs the package without wiring it up.
+1. **Answer the wizard.** It asks only for what the command line did not already supply, so the command above, which names the directory, gets three questions rather than four. Those are which runtime to target, which plugins to include, and which sign-in methods to add. Run `pnpm create plumix-app` with no directory and it asks where to create the project first. Node is the default runtime, running as a plain process against a local SQLite file; pass `--runtime cloudflare` for a Worker against D1 instead. Passkeys are always on, so the sign-in question is about what to layer beside them. The plugin question opens with SEO and Feeds ticked, so a new site serves head meta, `robots.txt`, a sitemap and feeds from the first request; nothing else is preselected. Untick either and the generated project has no import and no registration for it. One pairing is worth knowing before you do: `og` declares SEO as a peer and needs it registered to reach `og:image`, so unticking SEO while keeping OG installs the package without wiring it up.
 
 2. **Let the post-scaffold steps run.** The scaffolder installs dependencies, runs `plumix migrate generate` and `plumix migrate apply --local`, then initializes a git repository and makes one commit. Each step is skippable with a flag, and none of them throws, so a failure never leaves you without a project.
 
    The three do not report failure equally. A failed install and a failed database setup are both named in the output, and the printed next steps then carry the commands to finish by hand. The migration steps run the installed `plumix` binary, so they are skipped whenever the install did not succeed, with no message saying they were skipped. Git reports nothing either way. A failed `git init`, or a commit rejected for want of a configured git identity, prints no warning and no recovery step, and `git init` is skipped outright when the target directory is already inside a repository.
 
-3. **Start the dev server.**
+3. **Start the dev server.** On the default Node runtime, the scaffolded config pins the passkey origin to port 3000:
 
    ```sh
    cd my-site
-   pnpm dev
+   pnpm dev -- --port 3000
    ```
 
-   Vite serves the worker at `http://localhost:5173`, against a local D1 database in `.wrangler`.
+   Vite serves the site at `http://localhost:3000`, against a local SQLite file. On `--runtime cloudflare`, run plain `pnpm dev` instead — it serves at `http://localhost:5173`, against a local D1 database in `.wrangler`.
 
-4. **Claim the admin account.** Open `http://localhost:5173/_plumix/admin`. With no users in the database, the admin sends you to "Create admin account". Enter an email and an optional name, submit, and the browser runs the WebAuthn ceremony. The account you create this way is an admin. The role is decided inside the insert statement itself, so two people submitting the form at the same moment cannot both be elected.
+4. **Claim the admin account.** Open `http://localhost:3000/_plumix/admin` (`:5173` on Cloudflare). With no users in the database, the admin sends you to "Create admin account". Enter an email and an optional name, submit, and the browser runs the WebAuthn ceremony. The account you create this way is an admin. The role is decided inside the insert statement itself, so two people submitting the form at the same moment cannot both be elected.
 
-5. **Confirm the public site renders.** Open `http://localhost:5173`. The scaffolded theme greets you and links back to the admin.
+5. **Confirm the public site renders.** Open `http://localhost:3000` (`:5173` on Cloudflare). The scaffolded theme greets you and links back to the admin.
 
 </Steps>
 
@@ -84,10 +84,11 @@ Then work through the rest:
   type="caution"
   title="Change the dev port and the passkey stops verifying"
 >
-  The generated config pins the passkey origin to `http://localhost:5173`.
-  WebAuthn compares that string against the origin the browser reports, so
-  `plumix dev --port 3000` fails the ceremony with an origin mismatch. Change
-  `localOrigin` in `plumix.config.ts` to match whichever port you run.
+  The generated config pins the passkey origin to the port above. WebAuthn
+  compares that string against the origin the browser reports, so running on a
+  different port fails the ceremony with an origin mismatch. Change `origin`
+  (Node) or `localOrigin` (Cloudflare) in `plumix.config.ts` to match whichever
+  port you run.
 </Aside>
 
 ## Registration closes after the first account
@@ -108,7 +109,7 @@ pnpm create plumix-app my-site --plugins blog,pages,media,seo,feeds --pm pnpm --
 
 The flags are:
 
-- `--runtime <id>` picks the runtime. Defaults to `cloudflare`.
+- `--runtime <id>` picks the runtime, `node` or `cloudflare`. Defaults to `node`.
 - `-p, --plugins <ids>` takes a comma-separated list. The ids are `blog`, `pages`, `menu`, `comments`, `media`, `audit-log`, `og`, `seo` and `feeds`. Leave the flag off and you get `seo` and `feeds`. The flag replaces that pair rather than adding to it, so `--plugins blog` scaffolds blog alone, and `--plugins=` scaffolds none.
 - `--pm <name>` picks `npm`, `pnpm`, `yarn` or `bun`. Without it you get `npm`. An unrecognised name exits with an error rather than falling back.
 - `--no-install` skips the dependency install.

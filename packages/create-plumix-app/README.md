@@ -15,9 +15,10 @@ The target directory must not exist (or must be empty); its parent
 directory must exist. On a terminal the scaffolder runs an interactive
 wizard; pass flags (or `-y`) to skip it.
 
-See the comments in the generated `plumix.config.ts` and
-`wrangler.jsonc` for the few placeholders you'll want to edit before
-deploying (Cloudflare account subdomain, D1 database id).
+See the comments in the generated `plumix.config.ts` for the few
+placeholders you'll want to edit before deploying (the passkey origin,
+and — on Cloudflare — the `wrangler.jsonc` account subdomain and D1
+database id).
 
 ## Composition
 
@@ -29,7 +30,8 @@ non-interactively with flags:
 pnpm create plumix-app my-blog --plugins blog,pages,media
 ```
 
-- `--runtime <id>` — runtime to target (default: `cloudflare`).
+- `--runtime <id>` — runtime to target (default: `node`; pass `cloudflare`
+  to scaffold for Cloudflare Workers + D1 instead).
 - `-p, --plugins <ids>` — comma-separated plugins to include; replaces the
   default `seo,feeds` rather than adding to it.
 - `--pm <name>` — package manager (npm, pnpm, yarn, bun); auto-detected.
@@ -38,7 +40,7 @@ pnpm create plumix-app my-blog --plugins blog,pages,media
 
 The wizard opens with `seo` and `feeds` ticked, and a run with no `--plugins`
 takes them. Untick them, or pass `--plugins=`, and you get a blank app:
-`@plumix/runtime-cloudflare` on D1 with passkey auth and a `consoleMailer()`
+`@plumix/runtime-node` on SQLite with passkey auth and a `consoleMailer()`
 default for development. Each plugin adds its config, dependencies, and any
 runtime bindings it needs.
 
