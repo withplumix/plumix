@@ -25,7 +25,7 @@ catalog:
   "@types/node": ^24.13.3
   cmdk: ^1.1.1
   esbuild: ^0.28.2
-  eslint: ^10.9.0
+  eslint: ^10.9.1
   fishery: ^2.4.0
   jsdom: ^29.1.1
   jsonc-parser: ^3.3.1
