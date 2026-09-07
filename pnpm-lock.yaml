@@ -59,8 +59,8 @@ catalogs:
       specifier: ^1.6.7
       version: 1.6.7
     react-hook-form:
-      specifier: ^7.86.0
-      version: 7.86.0
+      specifier: ^7.87.0
+      version: 7.87.0
     sharp:
       specifier: ^0.35.3
       version: 0.35.3
@@ -208,7 +208,7 @@ catalogs:
   tiptap:
     '@tiptap/core':
       specifier: ^3.30.4
-      version: 3.31.0
+      version: 3.30.5
     '@tiptap/extension-blockquote':
       specifier: ^3.30.3
       version: 3.30.3
@@ -545,7 +545,7 @@ importers:
         version: 5.3.0
       '@hookform/resolvers':
         specifier: ^5.9.1
-        version: 5.9.1(@sinclair/typebox@0.27.12)(@standard-schema/spec@1.1.0)(ajv@8.20.0)(react-hook-form@7.86.0(react@19.2.8))(valibot@1.4.2(typescript@6.0.3))(zod@4.4.3)
+        version: 5.9.1(@sinclair/typebox@0.27.12)(@standard-schema/spec@1.1.0)(ajv@8.20.0)(react-hook-form@7.87.0(react@19.2.8))(valibot@1.4.2(typescript@6.0.3))(zod@4.4.3)
       '@lingui/babel-plugin-lingui-macro':
         specifier: catalog:lingui
         version: 6.6.0(@babel/core@8.0.1)(@babel/types@7.29.8)
@@ -632,7 +632,7 @@ importers:
         version: 14.6.6(@testing-library/dom@10.4.1)
       '@tiptap/core':
         specifier: catalog:tiptap
-        version: 3.31.0(@tiptap/pm@3.31.0)
+        version: 3.30.5(@tiptap/pm@3.30.5)
       '@types/react':
         specifier: catalog:react
         version: 19.2.18
@@ -674,7 +674,7 @@ importers:
         version: 19.2.8(react@19.2.8)
       react-hook-form:
         specifier: 'catalog:'
-        version: 7.86.0(react@19.2.8)
+        version: 7.87.0(react@19.2.8)
       rollup-plugin-license:
         specifier: ^3.7.1
         version: 3.7.1(picomatch@4.0.7)(rollup@4.63.1)
@@ -731,34 +731,34 @@ importers:
         version: link:../core
       '@tiptap/core':
         specifier: catalog:tiptap
-        version: 3.31.0(@tiptap/pm@3.31.0)
+        version: 3.30.5(@tiptap/pm@3.30.5)
       '@tiptap/extension-blockquote':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-document':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-hard-break':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-heading':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-list':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-paragraph':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-text':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extensions':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/react':
         specifier: catalog:tiptap
-        version: 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       zustand:
         specifier: ^5.0.15
         version: 5.0.15(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
@@ -882,7 +882,7 @@ importers:
         version: 5.8.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react-hook-form:
         specifier: 'catalog:'
-        version: 7.86.0(react@19.2.8)
+        version: 7.87.0(react@19.2.8)
       sonner:
         specifier: 'catalog:'
         version: 2.0.8(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -931,7 +931,7 @@ importers:
     dependencies:
       '@tiptap/core':
         specifier: catalog:tiptap
-        version: 3.31.0(@tiptap/pm@3.31.0)
+        version: 3.30.5(@tiptap/pm@3.30.5)
       dompurify:
         specifier: ^3.4.14
         version: 3.4.14
@@ -6504,10 +6504,10 @@ packages:
     peerDependencies:
       '@testing-library/dom': '>=7.21.4'
 
-  '@tiptap/core@3.31.0':
-    resolution: {integrity: sha512-SY3yE2ACharFvk0BKgotV6SbwV8R4tN5fGtWOM6deY4JNF3v6CXOD78RFwjs2HSohGWBRyJVPDvrX9nfi8Nsxg==}
+  '@tiptap/core@3.30.5':
+    resolution: {integrity: sha512-3O7N0FyKIfuLV+xrdWyDM3V5eUY/q2CgLjhhMwOAbM1Pu7VPp9VP+TpEYOdH8aRyB+h1vj5hX5A747D8ZrPfHA==}
     peerDependencies:
-      '@tiptap/pm': 3.31.0
+      '@tiptap/pm': 3.30.5
 
   '@tiptap/extension-blockquote@3.30.3':
     resolution: {integrity: sha512-Dh8yfEqBKTqEdBKZ4Ta3DkTecP0VJxvRNA5b1LCF7gBbe54Lm3A28UuVvK/Sdhh9FJDrIVCQTDS0yHGbi6G9ew==}
@@ -6565,8 +6565,8 @@ packages:
       '@tiptap/core': 3.30.3
       '@tiptap/pm': 3.30.3
 
-  '@tiptap/pm@3.31.0':
-    resolution: {integrity: sha512-JGPUSPLDFPjgFZHcNSghVJmEfvYp2SRPZQ1K8AZOuviEsUNvkYmJsBdudeYwUYNzYO38L4Yy0G6UMSuniBDIMg==}
+  '@tiptap/pm@3.30.5':
+    resolution: {integrity: sha512-gufkLkW2tA6PZPjivYxDiGzTIIftwqhmYI6lvvKu2S4FbhcysJgMAe/GXVSywzCRVVex9SrvCe6RFYrqnwRitQ==}
 
   '@tiptap/react@3.30.3':
     resolution: {integrity: sha512-gyK8UXFQlm2XgXEynNz5SzsxnTKtdBUp/PKeTeqFrk/m7L8p1eV+gcdAK+arTX+slubXRwLUm1lXrAQXRuiaTw==}
@@ -9732,8 +9732,8 @@ packages:
     peerDependencies:
       react: ^19.2.8
 
-  react-hook-form@7.86.0:
-    resolution: {integrity: sha512-4kbWJrh5jPZt1+YqVcXcGKffGcXV/XVbozknLh0Yjh0KhpoAkus21TAQhzRYqNwFkkObmnSvRlZZ3GT+ehoIrA==}
+  react-hook-form@7.87.0:
+    resolution: {integrity: sha512-zhFzWvLxNHH+8839OnZcUxgMZw88ah2jZWDWvKWgF3Tpbnd0vKL+dlcuU3nZVWESZQjd81EW8K+wU+cYfYAc0w==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
@@ -12505,10 +12505,10 @@ snapshots:
     dependencies:
       hono: 4.13.4
 
-  '@hookform/resolvers@5.9.1(@sinclair/typebox@0.27.12)(@standard-schema/spec@1.1.0)(ajv@8.20.0)(react-hook-form@7.86.0(react@19.2.8))(valibot@1.4.2(typescript@6.0.3))(zod@4.4.3)':
+  '@hookform/resolvers@5.9.1(@sinclair/typebox@0.27.12)(@standard-schema/spec@1.1.0)(ajv@8.20.0)(react-hook-form@7.87.0(react@19.2.8))(valibot@1.4.2(typescript@6.0.3))(zod@4.4.3)':
     dependencies:
       '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.86.0(react@19.2.8)
+      react-hook-form: 7.87.0(react@19.2.8)
     optionalDependencies:
       '@sinclair/typebox': 0.27.12
       '@standard-schema/spec': 1.1.0
@@ -14714,55 +14714,55 @@ snapshots:
     dependencies:
       '@testing-library/dom': 10.4.1
 
-  '@tiptap/core@3.31.0(@tiptap/pm@3.31.0)':
+  '@tiptap/core@3.30.5(@tiptap/pm@3.30.5)':
     dependencies:
-      '@tiptap/pm': 3.31.0
+      '@tiptap/pm': 3.30.5
 
-  '@tiptap/extension-blockquote@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-blockquote@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-bubble-menu@3.30.3(@tiptap/core@3.31.0)':
-    dependencies:
-      '@floating-ui/dom': 1.8.0
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
-    optional: true
-
-  '@tiptap/extension-document@3.30.3(@tiptap/core@3.31.0)':
-    dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
-
-  '@tiptap/extension-floating-menu@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)':
+  '@tiptap/extension-bubble-menu@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
       '@floating-ui/dom': 1.8.0
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
     optional: true
 
-  '@tiptap/extension-hard-break@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-document@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-heading@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-floating-menu@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@floating-ui/dom': 1.8.0
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
+    optional: true
 
-  '@tiptap/extension-list@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-hard-break@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-paragraph@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-heading@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-text@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-list@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extensions@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-paragraph@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/pm@3.31.0':
+  '@tiptap/extension-text@3.30.3(@tiptap/core@3.30.5)':
+    dependencies:
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
+
+  '@tiptap/extensions@3.30.3(@tiptap/core@3.30.5)':
+    dependencies:
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
+
+  '@tiptap/pm@3.30.5':
     dependencies:
       prosemirror-changeset: 2.4.2
       prosemirror-commands: 1.7.2
@@ -14778,9 +14778,9 @@ snapshots:
       prosemirror-transform: 1.12.0
       prosemirror-view: 1.42.3
 
-  '@tiptap/react@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@tiptap/react@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
       '@types/react': 19.2.18
       '@types/react-dom': 19.2.5(@types/react@19.2.18)
       '@types/use-sync-external-store': 0.0.6
@@ -14789,8 +14789,8 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
       use-sync-external-store: 1.6.0(react@19.2.8)
     optionalDependencies:
-      '@tiptap/extension-bubble-menu': 3.30.3(@tiptap/core@3.31.0)
-      '@tiptap/extension-floating-menu': 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)
+      '@tiptap/extension-bubble-menu': 3.30.3(@tiptap/core@3.30.5)
+      '@tiptap/extension-floating-menu': 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)
     transitivePeerDependencies:
       - '@floating-ui/dom'
 
@@ -15162,7 +15162,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
 
   '@vitest/expect@4.1.11':
     dependencies:
@@ -18599,7 +18599,7 @@ snapshots:
       react: 19.2.8
       scheduler: 0.27.0
 
-  react-hook-form@7.86.0(react@19.2.8):
+  react-hook-form@7.87.0(react@19.2.8):
     dependencies:
       react: 19.2.8
 

@@ -32,7 +32,7 @@ catalog:
   prettier: ^3.9.6
   publint: ^0.3.24
   radix-ui: ^1.6.7
-  react-hook-form: ^7.86.0
+  react-hook-form: ^7.87.0
   sharp: ^0.35.3
   sonner: ^2.0.8
   tailwind-merge: ^3.6.0
