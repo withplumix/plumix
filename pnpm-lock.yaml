@@ -178,11 +178,11 @@ catalogs:
       version: 4.3.3
   tanstack:
     '@tanstack/react-query':
-      specifier: ^5.102.2
-      version: 5.102.2
+      specifier: ^5.102.8
+      version: 5.102.8
     '@tanstack/react-query-devtools':
-      specifier: ^5.102.2
-      version: 5.102.2
+      specifier: ^5.102.8
+      version: 5.102.8
     '@tanstack/react-router':
       specifier: ^1.170.32
       version: 1.170.32
@@ -190,8 +190,8 @@ catalogs:
       specifier: ^1.167.1
       version: 1.167.1
     '@tanstack/react-table':
-      specifier: ^9.1.2
-      version: 9.1.2
+      specifier: ^9.2.4
+      version: 9.2.4
     '@tanstack/router-plugin':
       specifier: ^1.168.35
       version: 1.168.35
@@ -208,7 +208,7 @@ catalogs:
   tiptap:
     '@tiptap/core':
       specifier: ^3.30.4
-      version: 3.31.0
+      version: 3.30.5
     '@tiptap/extension-blockquote':
       specifier: ^3.30.3
       version: 3.30.3
@@ -566,7 +566,7 @@ importers:
         version: 1.15.0
       '@orpc/tanstack-query':
         specifier: catalog:orpc
-        version: 1.15.0(@orpc/client@1.15.0)(@tanstack/query-core@5.102.2)
+        version: 1.15.0(@orpc/client@1.15.0)(@tanstack/query-core@5.102.8)
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.62.1
@@ -605,10 +605,10 @@ importers:
         version: 4.3.3(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.102.2(react@19.2.8)
+        version: 5.102.8(react@19.2.8)
       '@tanstack/react-query-devtools':
         specifier: catalog:tanstack
-        version: 5.102.2(@tanstack/react-query@5.102.2(react@19.2.8))(react@19.2.8)
+        version: 5.102.8(@tanstack/react-query@5.102.8(react@19.2.8))(react@19.2.8)
       '@tanstack/react-router':
         specifier: catalog:tanstack
         version: 1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -617,7 +617,7 @@ importers:
         version: 1.167.1(@tanstack/react-router@1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@tanstack/router-core@1.171.27)(csstype@3.2.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@tanstack/react-table':
         specifier: catalog:tanstack
-        version: 9.1.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 9.2.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@tanstack/router-plugin':
         specifier: catalog:tanstack
         version: 1.168.35(@tanstack/react-router@1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(esbuild@0.28.2)(rolldown@1.2.5)(rollup@4.63.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
@@ -632,7 +632,7 @@ importers:
         version: 14.6.6(@testing-library/dom@10.4.1)
       '@tiptap/core':
         specifier: catalog:tiptap
-        version: 3.31.0(@tiptap/pm@3.31.0)
+        version: 3.30.5(@tiptap/pm@3.30.5)
       '@types/react':
         specifier: catalog:react
         version: 19.2.18
@@ -731,34 +731,34 @@ importers:
         version: link:../core
       '@tiptap/core':
         specifier: catalog:tiptap
-        version: 3.31.0(@tiptap/pm@3.31.0)
+        version: 3.30.5(@tiptap/pm@3.30.5)
       '@tiptap/extension-blockquote':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-document':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-hard-break':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-heading':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-list':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-paragraph':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-text':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extensions':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/react':
         specifier: catalog:tiptap
-        version: 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       zustand:
         specifier: ^5.0.15
         version: 5.0.15(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
@@ -931,7 +931,7 @@ importers:
     dependencies:
       '@tiptap/core':
         specifier: catalog:tiptap
-        version: 3.31.0(@tiptap/pm@3.31.0)
+        version: 3.30.5(@tiptap/pm@3.30.5)
       dompurify:
         specifier: ^3.4.14
         version: 3.4.14
@@ -1205,7 +1205,7 @@ importers:
         version: link:../../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.102.2(react@19.2.8)
+        version: 5.102.8(react@19.2.8)
       '@testing-library/jest-dom':
         specifier: catalog:testing-library
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
@@ -1422,7 +1422,7 @@ importers:
         version: link:../../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.102.2(react@19.2.8)
+        version: 5.102.8(react@19.2.8)
       '@testing-library/jest-dom':
         specifier: catalog:testing-library
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
@@ -1635,7 +1635,7 @@ importers:
         version: link:../../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.102.2(react@19.2.8)
+        version: 5.102.8(react@19.2.8)
       '@testing-library/jest-dom':
         specifier: catalog:testing-library
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
@@ -1760,7 +1760,7 @@ importers:
         version: link:../../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.102.2(react@19.2.8)
+        version: 5.102.8(react@19.2.8)
       '@testing-library/jest-dom':
         specifier: catalog:testing-library
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
@@ -1879,7 +1879,7 @@ importers:
         version: link:../../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.102.2(react@19.2.8)
+        version: 5.102.8(react@19.2.8)
       '@testing-library/jest-dom':
         specifier: catalog:testing-library
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
@@ -2001,7 +2001,7 @@ importers:
         version: link:../../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.102.2(react@19.2.8)
+        version: 5.102.8(react@19.2.8)
       '@tanstack/react-router':
         specifier: catalog:tanstack
         version: 1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -2263,7 +2263,7 @@ importers:
         version: link:../../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.102.2(react@19.2.8)
+        version: 5.102.8(react@19.2.8)
       '@tanstack/react-router':
         specifier: catalog:tanstack
         version: 1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -2403,7 +2403,7 @@ importers:
         version: 1.15.0
       '@orpc/tanstack-query':
         specifier: catalog:orpc
-        version: 1.15.0(@orpc/client@1.15.0)(@tanstack/query-core@5.102.2)
+        version: 1.15.0(@orpc/client@1.15.0)(@tanstack/query-core@5.102.8)
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.62.1
@@ -2421,7 +2421,7 @@ importers:
         version: link:../../tooling/vitest
       '@tanstack/react-query':
         specifier: catalog:tanstack
-        version: 5.102.2(react@19.2.8)
+        version: 5.102.8(react@19.2.8)
       '@tanstack/react-router':
         specifier: catalog:tanstack
         version: 1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -6358,20 +6358,20 @@ packages:
     resolution: {integrity: sha512-DR9t6lfLVdrjgCwpglrR9DR7Ok8/HlXjcOE+goWXF3zyuLUO/ug7vMbSFxTqrQTtbRghJfyhmIZ0S6LhPIy44w==}
     engines: {node: '>=20.19'}
 
-  '@tanstack/query-core@5.102.2':
-    resolution: {integrity: sha512-zQ5794PXBlV5Wl7N23SR1/Ss+wPE/h2Ye4XlKpm3omN8i8b/Fd4DAdqpLS2AXj5M/RMObt3k5qy3E7kzt/AvBA==}
+  '@tanstack/query-core@5.102.8':
+    resolution: {integrity: sha512-ZNjkJ33CqvPNec/6lZBnHqLc3EVGPZ9ySLhYahU9TcuRFdmwXewuj0c4hwSWcGHqEUwcSrKeZ+oGcvPBqXcQcg==}
 
-  '@tanstack/query-devtools@5.102.2':
-    resolution: {integrity: sha512-sbRVlyRWfhKm2z4cnTdHydHiaMYMcH1mCYVNwreE9oR08VmyCsSz97fhy1253gKB4ycMcaRjbfUxQLO0SSLFYw==}
+  '@tanstack/query-devtools@5.102.8':
+    resolution: {integrity: sha512-ZgeMKuF5d/zOE+tgWm3cSbD6Zcbr6IugVsnbHzUcSismqLZDSUPBKM6ILUxExgwe6rPAOox2x5bA5T+PSOQG0Q==}
 
-  '@tanstack/react-query-devtools@5.102.2':
-    resolution: {integrity: sha512-5KzH1NAdess98Jgbo8R0sraP0yto49+eGgSGu6umvrLbXPNdsNJ7iOgAiXegBOoWJrHygp6hW01L2U6MvSIT5Q==}
+  '@tanstack/react-query-devtools@5.102.8':
+    resolution: {integrity: sha512-QKb7A44BZOU7nxsGA4gFN1fofjYovar5O0T83Ff4Y+2eRq09RGFrAzzutVdF/6/emfSaMDohp6e759BjB3fxEw==}
     peerDependencies:
-      '@tanstack/react-query': ^5.102.2
+      '@tanstack/react-query': ^5.102.8
       react: ^18 || ^19
 
-  '@tanstack/react-query@5.102.2':
-    resolution: {integrity: sha512-KxU8ZyOEuJ81eTSgXa8GQbk/jO/rz0elYtNKt3VMtM2pRjeO8ADIu7sqqmEjFKJKqco9h2N1ojIDuHs6VfDItQ==}
+  '@tanstack/react-query@5.102.8':
+    resolution: {integrity: sha512-TYBea4OuXWD7MhaSHq069TWbFe7rcwWN6kzT7JF0OKi1K6c1gTv2IzD6A6ExJsCMozdkqBWeuIUZmu4KQg0O5A==}
     peerDependencies:
       react: ^18 || ^19
 
@@ -6406,8 +6406,8 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  '@tanstack/react-table@9.1.2':
-    resolution: {integrity: sha512-YQPZFJ1nIi/bjjwsPZVouABgahDcl7Gdm33CdTStUJBn0DjEVJ2uhSTVmIoWt9MVKdQziXGAsXipSzy949Hygg==}
+  '@tanstack/react-table@9.2.4':
+    resolution: {integrity: sha512-Rzp1Q4e0/nIgEjmISYR5HeEgLTNtrG+C7NFZf/AbCxPO5hg+zC3yNGwcoECigUk8SFzzvhXbd2rFdtP2ZiGrfA==}
     engines: {node: '>=20'}
     peerDependencies:
       react: '>=18'
@@ -6461,8 +6461,8 @@ packages:
   '@tanstack/store@0.9.3':
     resolution: {integrity: sha512-8reSzl/qGWGGVKhBoxXPMWzATSbZLZFWhwBAFO9NAyp0TxzfBP0mIrGb8CP8KrQTmvzXlR/vFPPUrHTLBGyFyw==}
 
-  '@tanstack/table-core@9.1.2':
-    resolution: {integrity: sha512-ONpWQeass1sfg80CWF1NSwQ8r3GiqxA2lT/EdqIcrDEPZ0Z+0mM94eQoFYLPN0Kztzj8TQVb2+PrSZSItqA61g==}
+  '@tanstack/table-core@9.2.4':
+    resolution: {integrity: sha512-GwdDyGGr6UXAtubF14yAwcXvdaogqfsQgIk89Suebjxob/Rjq2xvfmXsjDF1rQmKmhHsJm9TOY7myxv3i6geJw==}
     engines: {node: '>=20'}
 
   '@tanstack/virtual-file-routes@1.162.0':
@@ -6504,10 +6504,10 @@ packages:
     peerDependencies:
       '@testing-library/dom': '>=7.21.4'
 
-  '@tiptap/core@3.31.0':
-    resolution: {integrity: sha512-SY3yE2ACharFvk0BKgotV6SbwV8R4tN5fGtWOM6deY4JNF3v6CXOD78RFwjs2HSohGWBRyJVPDvrX9nfi8Nsxg==}
+  '@tiptap/core@3.30.5':
+    resolution: {integrity: sha512-3O7N0FyKIfuLV+xrdWyDM3V5eUY/q2CgLjhhMwOAbM1Pu7VPp9VP+TpEYOdH8aRyB+h1vj5hX5A747D8ZrPfHA==}
     peerDependencies:
-      '@tiptap/pm': 3.31.0
+      '@tiptap/pm': 3.30.5
 
   '@tiptap/extension-blockquote@3.30.3':
     resolution: {integrity: sha512-Dh8yfEqBKTqEdBKZ4Ta3DkTecP0VJxvRNA5b1LCF7gBbe54Lm3A28UuVvK/Sdhh9FJDrIVCQTDS0yHGbi6G9ew==}
@@ -6565,8 +6565,8 @@ packages:
       '@tiptap/core': 3.30.3
       '@tiptap/pm': 3.30.3
 
-  '@tiptap/pm@3.31.0':
-    resolution: {integrity: sha512-JGPUSPLDFPjgFZHcNSghVJmEfvYp2SRPZQ1K8AZOuviEsUNvkYmJsBdudeYwUYNzYO38L4Yy0G6UMSuniBDIMg==}
+  '@tiptap/pm@3.30.5':
+    resolution: {integrity: sha512-gufkLkW2tA6PZPjivYxDiGzTIIftwqhmYI6lvvKu2S4FbhcysJgMAe/GXVSywzCRVVex9SrvCe6RFYrqnwRitQ==}
 
   '@tiptap/react@3.30.3':
     resolution: {integrity: sha512-gyK8UXFQlm2XgXEynNz5SzsxnTKtdBUp/PKeTeqFrk/m7L8p1eV+gcdAK+arTX+slubXRwLUm1lXrAQXRuiaTw==}
@@ -13228,11 +13228,11 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@orpc/tanstack-query@1.15.0(@orpc/client@1.15.0)(@tanstack/query-core@5.102.2)':
+  '@orpc/tanstack-query@1.15.0(@orpc/client@1.15.0)(@tanstack/query-core@5.102.8)':
     dependencies:
       '@orpc/client': 1.15.0
       '@orpc/shared': 1.15.0
-      '@tanstack/query-core': 5.102.2
+      '@tanstack/query-core': 5.102.8
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
@@ -14545,19 +14545,19 @@ snapshots:
 
   '@tanstack/history@1.162.1': {}
 
-  '@tanstack/query-core@5.102.2': {}
+  '@tanstack/query-core@5.102.8': {}
 
-  '@tanstack/query-devtools@5.102.2': {}
+  '@tanstack/query-devtools@5.102.8': {}
 
-  '@tanstack/react-query-devtools@5.102.2(@tanstack/react-query@5.102.2(react@19.2.8))(react@19.2.8)':
+  '@tanstack/react-query-devtools@5.102.8(@tanstack/react-query@5.102.8(react@19.2.8))(react@19.2.8)':
     dependencies:
-      '@tanstack/query-devtools': 5.102.2
-      '@tanstack/react-query': 5.102.2(react@19.2.8)
+      '@tanstack/query-devtools': 5.102.8
+      '@tanstack/react-query': 5.102.8(react@19.2.8)
       react: 19.2.8
 
-  '@tanstack/react-query@5.102.2(react@19.2.8)':
+  '@tanstack/react-query@5.102.8(react@19.2.8)':
     dependencies:
-      '@tanstack/query-core': 5.102.2
+      '@tanstack/query-core': 5.102.8
       react: 19.2.8
 
   '@tanstack/react-router-devtools@1.167.1(@tanstack/react-router@1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@tanstack/router-core@1.171.27)(csstype@3.2.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
@@ -14594,10 +14594,10 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
       use-sync-external-store: 1.6.0(react@19.2.8)
 
-  '@tanstack/react-table@9.1.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@tanstack/react-table@9.2.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@tanstack/react-store': 0.11.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@tanstack/table-core': 9.1.2
+      '@tanstack/table-core': 9.2.4
       react: 19.2.8
     transitivePeerDependencies:
       - react-dom
@@ -14671,7 +14671,7 @@ snapshots:
 
   '@tanstack/store@0.9.3': {}
 
-  '@tanstack/table-core@9.1.2':
+  '@tanstack/table-core@9.2.4':
     dependencies:
       '@tanstack/store': 0.11.1
 
@@ -14714,55 +14714,55 @@ snapshots:
     dependencies:
       '@testing-library/dom': 10.4.1
 
-  '@tiptap/core@3.31.0(@tiptap/pm@3.31.0)':
+  '@tiptap/core@3.30.5(@tiptap/pm@3.30.5)':
     dependencies:
-      '@tiptap/pm': 3.31.0
+      '@tiptap/pm': 3.30.5
 
-  '@tiptap/extension-blockquote@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-blockquote@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-bubble-menu@3.30.3(@tiptap/core@3.31.0)':
-    dependencies:
-      '@floating-ui/dom': 1.8.0
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
-    optional: true
-
-  '@tiptap/extension-document@3.30.3(@tiptap/core@3.31.0)':
-    dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
-
-  '@tiptap/extension-floating-menu@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)':
+  '@tiptap/extension-bubble-menu@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
       '@floating-ui/dom': 1.8.0
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
     optional: true
 
-  '@tiptap/extension-hard-break@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-document@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-heading@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-floating-menu@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@floating-ui/dom': 1.8.0
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
+    optional: true
 
-  '@tiptap/extension-list@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-hard-break@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-paragraph@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-heading@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-text@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-list@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extensions@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-paragraph@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/pm@3.31.0':
+  '@tiptap/extension-text@3.30.3(@tiptap/core@3.30.5)':
+    dependencies:
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
+
+  '@tiptap/extensions@3.30.3(@tiptap/core@3.30.5)':
+    dependencies:
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
+
+  '@tiptap/pm@3.30.5':
     dependencies:
       prosemirror-changeset: 2.4.2
       prosemirror-commands: 1.7.2
@@ -14778,9 +14778,9 @@ snapshots:
       prosemirror-transform: 1.12.0
       prosemirror-view: 1.42.3
 
-  '@tiptap/react@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@tiptap/react@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
       '@types/react': 19.2.18
       '@types/react-dom': 19.2.5(@types/react@19.2.18)
       '@types/use-sync-external-store': 0.0.6
@@ -14789,8 +14789,8 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
       use-sync-external-store: 1.6.0(react@19.2.8)
     optionalDependencies:
-      '@tiptap/extension-bubble-menu': 3.30.3(@tiptap/core@3.31.0)
-      '@tiptap/extension-floating-menu': 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)
+      '@tiptap/extension-bubble-menu': 3.30.3(@tiptap/core@3.30.5)
+      '@tiptap/extension-floating-menu': 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)
     transitivePeerDependencies:
       - '@floating-ui/dom'
 
@@ -15162,7 +15162,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
 
   '@vitest/expect@4.1.11':
     dependencies:
