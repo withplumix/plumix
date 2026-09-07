@@ -161,9 +161,28 @@ The cache is one directory on one machine, like the uploads beside it; a fresh c
 
 A variant does not outlive its source. When a media item is trashed or deleted, the media plugin asks the slot to forget that item's variants, so the next request, a revalidation included, meets the serve route's gating again instead of the cache. A browser that already holds a variant keeps it until its own cache expires, as with any immutable response.
 
+## Scheduled tasks
+
+The process fires its own schedules. It reads them from `app.scheduledTasks` — the tasks core registers, such as publishing scheduled entries, plus whatever the site's plugins add — and wakes on each UTC minute to fire the ones due. Nothing to configure: `plumix build` wires it, and the process starts it once it is listening.
+
+Runs never overlap. Firings are serialised inside the process, so a task that runs longer than its own schedule delays the next firing rather than doubling up; the minutes it costs are logged and not replayed, so a container that was paused wakes up and carries on instead of stampeding through the backlog it missed. Across processes the guarantee holds too, because the guard lives in two rows of the site's own database rather than in memory: replicas sharing one database — what `plumix/db/libsql` pointed at Turso gives you — contend there, and exactly one of them runs each firing. A replica killed mid-run releases its lease by expiry, so the schedule pauses for at most five minutes and then carries on somewhere else.
+
+To hand the schedules to something else — a system cron, a Kubernetes CronJob — set `cron: false` and drive them from outside:
+
+```bash
+plumix cron list                 # the schedules this deploy declares
+plumix cron run "*/5 * * * *"    # fire one of them now
+```
+
+Read the list rather than writing one: the schedules come from the plugins a site installs, so a hand-written crontab goes stale the moment one is added. `plumix cron run` refuses an expression no task declares instead of exiting green having done nothing. It is also the quickest way to see a scheduled task run while developing, rather than waiting for its next minute to come round.
+
+One invocation of `plumix cron run` is one run, and it takes no lease — so an external scheduler owns not overlapping its own invocations. A Kubernetes CronJob wants `concurrencyPolicy: Forbid`; a system crontab wants `flock`. The no-overlap guarantee above is the in-process scheduler's, and you traded it away with `cron: false`.
+
+`SIGTERM` stops the scheduler before the drain begins, so a firing already in flight finishes and no new one starts behind it.
+
 ## What Node does not do yet
 
-Scheduled tasks do not run: there is no cron on Node yet, so the tasks core registers, such as publishing scheduled entries, and the ones plugins add wait for a later release. There is no edge cache and no `kv`, so a page renders on every request, and a plugin requiring either capability cannot be scaffolded on Node; the scaffolder says so by name. All three are single-node concerns as well, as are the uploads and the image cache: this runtime is one process on one machine.
+There is no edge cache and no `kv`, so a page renders on every request, and a plugin requiring either capability cannot be scaffolded on Node; the scaffolder says so by name. Both are single-node concerns, as are the uploads and the image cache: this runtime is one process on one machine.
 
 ## Commands the runtime adds
 

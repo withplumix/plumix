@@ -120,19 +120,30 @@ export const devCommand: CommandDefinition = {
     // The bridge into the entry, imported through the runner on the first
     // request after start, a restart, or an edit that invalidated it.
     let listener: Promise<RequestListener> | undefined;
+    // Torn down and restarted with the entry, since a reload replaces the app
+    // its firings would run against.
+    let cron: { stop(): Promise<void> } | undefined;
 
     async function load(
       runner: ModuleRunner,
       publicDir: string,
       logger: { error(message: string, options: { error?: Error }): void },
     ): Promise<RequestListener> {
+      // Before the import, not after it: a config that fails to parse takes the
+      // catch below, and a scheduler left running there would keep firing
+      // against the app this reload replaced.
+      await cron?.stop();
+      cron = undefined;
       try {
         const config = (
           await runner.import<{ default: PlumixConfig }>(ctx.configPath)
         ).default;
-        const entry = await runner.import<{ default: PlumixHandler }>(
-          entryPath,
-        );
+        const entry = await runner.import<{
+          default: PlumixHandler;
+          startCron?: (overrides?: {
+            lease?: boolean;
+          }) => Promise<{ stop(): Promise<void> }>;
+        }>(entryPath);
         const { trustProxy, bodySizeLimit } = isNodeRuntime(config.runtime)
           ? config.runtime.config
           : {};
@@ -159,6 +170,17 @@ export const devCommand: CommandDefinition = {
               clientAddress: meta.clientAddress,
             }),
         });
+        // Dev is one process, so serialising the loop is guard enough; the
+        // lease is sized in minutes and would outlive a process that restarts
+        // every few seconds, leaving cron looking dead for the session. The
+        // claim row still stops a reload replaying a minute.
+        if (
+          isNodeRuntime(config.runtime) &&
+          config.runtime.config.cron !== false
+        ) {
+          cron = await entry.startCron?.({ lease: false });
+        }
+
         return (req, res) => images.serve(req, res, () => bridge(req, res));
       } catch (error) {
         // The entry could not even be imported — a config that fails to parse

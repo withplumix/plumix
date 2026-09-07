@@ -21,6 +21,17 @@ export interface NodeConfig {
   readonly trustProxy?: boolean;
   /** Bytes a request body may carry; 1 GiB by default. */
   readonly bodySizeLimit?: number;
+  /**
+   * Fire the site's scheduled tasks from inside the process. On by default:
+   * runs are guarded in the database, so every replica may keep a timer and
+   * only one of them does each firing.
+   *
+   * Turn it off to drive the schedules from outside instead — a system cron or
+   * a Kubernetes CronJob calling `plumix cron run <expression>`. Read the
+   * schedules a deploy needs from `plumix cron list`; they come from the
+   * plugins a site installs, so a hand-written list goes stale.
+   */
+  readonly cron?: boolean;
   readonly build?: {
     /**
      * Packages the server bundle imports at runtime instead of inlining —
