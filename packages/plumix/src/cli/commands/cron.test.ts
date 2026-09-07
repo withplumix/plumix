@@ -8,6 +8,8 @@ import { createTestDb } from "@plumix/core/test";
 import { report } from "../report.js";
 import { cronCommand } from "./cron.js";
 
+type TestDb = Awaited<ReturnType<typeof createTestDb>>;
+
 const TASKS = [
   { id: "session-cleanup", cron: "0 3 * * *", registeredBy: "core" },
   { id: "publish-scheduled", cron: "*/5 * * * *", registeredBy: "core" },
@@ -18,7 +20,7 @@ const TASKS = [
 async function context(
   argv: readonly string[],
   scheduled = vi.fn(),
-  options: { db?: unknown; tasks?: readonly unknown[] } = {},
+  options: { db?: TestDb; tasks?: readonly unknown[] } = {},
 ): Promise<CommandContext> {
   // `cron run` takes the same run guard the in-process scheduler does, so it
   // needs a real database to take it in.
@@ -262,5 +264,69 @@ describe("plumix cron run — parity with the in-process scheduler", () => {
 
     expect(isCliError(error)).toBe(true);
     expect(isCliError(error) ? error.hint : "").toContain("migrate apply");
+  });
+});
+
+describe("plumix cron run — reporting task failures", () => {
+  test("fails the command when a task threw, naming it", async () => {
+    // A CronJob wires alerting to the exit code. Reporting success for a run
+    // where every task failed is the failure mode this exists to prevent.
+    const scheduled = vi.fn(() =>
+      Promise.resolve({ ran: 0, failed: ["reports:purge"] }),
+    );
+
+    let error: unknown;
+    try {
+      await cronCommand.run(await context(["run", "*/5 * * * *"], scheduled));
+    } catch (thrown) {
+      error = thrown;
+    }
+
+    expect(isCliError(error)).toBe(true);
+    expect(String(error)).toContain("reports:purge");
+  });
+
+  test("succeeds when the tasks did, reporting what ran", async () => {
+    const scheduled = vi.fn(() => Promise.resolve({ ran: 2, failed: [] }));
+    const { lines, restore } = captureInfo();
+    try {
+      await cronCommand.run(await context(["run", "*/5 * * * *"], scheduled));
+    } finally {
+      restore();
+    }
+
+    expect(lines.join("\n")).toContain("Fired");
+  });
+
+  test("still succeeds against an adapter that reports nothing", async () => {
+    // `scheduled` may resolve to nothing; the caller then knows only that the
+    // run was attempted, which must not read as a failure.
+    const scheduled = vi.fn(() => Promise.resolve(undefined));
+    await expect(
+      cronCommand.run(await context(["run", "*/5 * * * *"], scheduled)),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe("plumix cron run — a run that never started", () => {
+  test("says nothing ran, rather than naming a task that never did", async () => {
+    // A missing binding or an unreachable database aborts before any task. The
+    // old shape reported a synthetic `plumix:Error` in `failed`, which sent an
+    // operator looking for a task by that name.
+    const scheduled = vi.fn(() =>
+      Promise.resolve({ ran: 0, failed: [], aborted: "no such binding: DB" }),
+    );
+
+    let error: unknown;
+    try {
+      await cronCommand.run(await context(["run", "*/5 * * * *"], scheduled));
+    } catch (thrown) {
+      error = thrown;
+    }
+
+    expect(isCliError(error)).toBe(true);
+    expect(String(error)).toContain("before any task started");
+    expect(String(error)).toContain("no such binding: DB");
+    expect(isCliError(error) ? error.hint : "").toContain("Nothing ran");
   });
 });

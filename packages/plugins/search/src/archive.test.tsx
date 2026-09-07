@@ -46,7 +46,7 @@ const theme = defineTheme({
 
 let h: DispatcherHarness;
 let admin: User;
-let index: () => Promise<void>;
+let index: SearchHarness["runSchedule"];
 let rpc: SearchHarness["rpc"];
 
 async function harness(withPlugin: boolean): Promise<void> {

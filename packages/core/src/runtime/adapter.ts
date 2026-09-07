@@ -45,15 +45,42 @@ export interface ScheduledEvent {
  * Property functions rather than methods, so an adapter cannot narrow the
  * invocation it accepts and still conform.
  */
+/**
+ * What one firing did.
+ *
+ * A failing task is caught so its siblings still run, so without this a caller
+ * outside the process — `plumix cron run` under a CronJob — cannot tell a run
+ * where everything worked from one where nothing did, and would report success
+ * either way.
+ */
+export interface ScheduledRunReport {
+  /** How many tasks completed without throwing. */
+  readonly ran: number;
+  /** `plugin:task` for each that threw, in the order they ran. */
+  readonly failed: readonly string[];
+  /**
+   * Why the run never reached its tasks — a database that will not connect, a
+   * binding that is missing. Distinct from `failed` because nothing ran: a
+   * caller that conflated the two would send an operator looking for a task
+   * that never started.
+   */
+  readonly aborted?: string;
+}
+
 export interface PlumixHandler {
   readonly fetch: (
     request: Request,
     invocation: Invocation,
   ) => Response | Promise<Response>;
+  /**
+   * Fire the site's scheduled tasks for one schedule. An adapter that answers
+   * nothing still conforms; its caller then knows only that the run was
+   * attempted. See {@link ScheduledRunReport}.
+   */
   readonly scheduled?: (
     event: ScheduledEvent,
     invocation: Invocation,
-  ) => void | Promise<void>;
+  ) => void | Promise<void | ScheduledRunReport>;
   /**
    * Drain the deferred work no `waitUntil` took. A long-lived process calls it
    * on `SIGTERM` so telemetry delivery and cache purges finish instead of

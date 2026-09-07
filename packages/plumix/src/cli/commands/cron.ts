@@ -4,8 +4,10 @@ import type {
   CommandContext,
   CommandDefinition,
   PlumixApp,
+  PlumixHandler,
   ScheduledRunGuard,
   ScheduledRunOutcome,
+  ScheduledRunReport,
 } from "@plumix/core";
 import {
   CliError,
@@ -130,8 +132,9 @@ async function runSchedule(ctx: CommandContext): Promise<void> {
   // beside wherever the command was invoked from.
   if (ctx.cwd !== process.cwd()) process.chdir(ctx.cwd);
 
+  const db = connectScheduledDb(ctx.app, process.env);
   const guard = createScheduledRunGuard({
-    db: connectScheduledDb(ctx.app, process.env),
+    db,
     // Names this invocation in the lease row; every pod of a CronJob would
     // otherwise write the same string.
     holder: `cli:${hostname()}:${String(process.pid)}`,
@@ -145,14 +148,26 @@ async function runSchedule(ctx: CommandContext): Promise<void> {
       : "schedule",
   });
 
+  await fireSchedule(ctx, guard, fired, handler);
+}
+
+async function fireSchedule(
+  ctx: CommandContext,
+  guard: ScheduledRunGuard,
+  fired: string,
+  handler: PlumixHandler,
+): Promise<void> {
   // One reading, so the minute claimed and the time the task is told cannot
   // straddle a boundary.
   const scheduledTime = Date.now();
+  // `scheduled` may answer nothing — an adapter that does not report.
+  let runReport: ScheduledRunReport | undefined;
   const outcome = await runGuarded(guard, fired, scheduledTime, async () => {
-    await handler.scheduled?.(
-      { scheduledTime, cron: fired },
-      { env: process.env },
-    );
+    runReport =
+      (await handler.scheduled?.(
+        { scheduledTime, cron: fired },
+        { env: process.env },
+      )) ?? undefined;
   });
   if (outcome !== "ran") {
     // Never a silent green exit: an operator has to be able to tell "nothing
@@ -163,6 +178,18 @@ async function runSchedule(ctx: CommandContext): Promise<void> {
         : `Skipped "${fired}": it already ran this minute.`,
     );
     return;
+  }
+
+  if (runReport?.aborted !== undefined) {
+    throw CliError.cronRunNeverStarted({
+      expression: fired,
+      reason: runReport.aborted,
+    });
+  }
+  // An adapter that reported nothing failed nothing.
+  const failed = runReport?.failed ?? [];
+  if (failed.length > 0) {
+    throw CliError.cronRunTasksFailed({ expression: fired, failed });
   }
 
   const ran = scheduledTasksFor(ctx.app, fired)

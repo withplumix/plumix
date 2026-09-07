@@ -178,7 +178,9 @@ Read the list rather than writing one: the schedules come from the plugins a sit
 
 `plumix cron run` takes the same claim and lease the in-process scheduler does, so an invocation that overruns its schedule is not overlapped by the next one, and it says which it did — `Skipped "…": another run holds the lease` — rather than exiting green in silence. Two pods are only guarded against each other when they share a database, as they do on `plumix/db/libsql`; on the default `nodeSqlite` each pod has its own file and its own view of what has run.
 
-You still want `concurrencyPolicy: Forbid` on a CronJob or `flock` on a crontab: those stop the second process before it opens a database at all, and the lease is what makes the run safe if they do not. One thing the exit code cannot tell you is whether the tasks themselves succeeded — a failing task is caught, logged and stepped over so its siblings still run, so watch the logs rather than the status.
+You still want `concurrencyPolicy: Forbid` on a CronJob or `flock` on a crontab: those stop the second process before it opens a database at all, and the lease is what makes the run safe if they do not.
+
+`plumix cron run` exits non-zero when a task failed, naming it, so a CronJob's own alerting sees it — a failing task is caught and logged so its siblings still run, and the command reports them at the end. A run that never reached its tasks at all says so separately. A skipped run exits zero: another process had the minute, which is the guard working rather than a failure. The in-process scheduler has no exit code to carry this, so it logs the same summary instead.
 
 `SIGTERM` stops the scheduler before the drain begins, so a firing already in flight finishes and no new one starts behind it.
 

@@ -26,6 +26,8 @@ type CliErrorCode =
   | "cron_run_missing_expression"
   | "cron_run_unknown_schedule"
   | "cron_run_database_unavailable"
+  | "cron_run_tasks_failed"
+  | "cron_run_never_started"
   | "cron_run_invalid_expression";
 
 export class CliError extends Error {
@@ -103,6 +105,34 @@ export class CliError extends Error {
       `Could not reach the database a scheduled run writes through: ${ctx.detail}`,
       "Run `plumix migrate apply` if this deploy has not applied its migrations since upgrading, and check the database path resolves from this directory.",
       ctx.cause,
+    );
+  }
+
+  // A caught task failure would otherwise leave the command exiting 0, so a
+  // CronJob whose work all failed looks exactly like one that worked.
+  static cronRunTasksFailed(ctx: {
+    expression: string;
+    failed: readonly string[];
+  }): CliError {
+    return new CliError(
+      "cron_run_tasks_failed",
+      `${String(ctx.failed.length)} scheduled task(s) failed on "${ctx.expression}": ${ctx.failed.join(", ")}`,
+      "Each failure is logged above with its error. Siblings still ran.",
+      undefined,
+    );
+  }
+
+  // Distinct from a task failing: nothing ran, so the hint about siblings and
+  // per-task logs would send the operator looking for the wrong thing.
+  static cronRunNeverStarted(ctx: {
+    expression: string;
+    reason: string;
+  }): CliError {
+    return new CliError(
+      "cron_run_never_started",
+      `The run for "${ctx.expression}" failed before any task started: ${ctx.reason}`,
+      "Nothing ran. Check the database and the bindings this deploy needs.",
+      undefined,
     );
   }
 

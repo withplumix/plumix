@@ -1,6 +1,7 @@
 import type {
   AppContext,
   MutablePluginRegistry,
+  ScheduledRunReport,
   SearchGroup,
 } from "plumix/plugin";
 import type { User } from "plumix/schema";
@@ -164,8 +165,11 @@ export const contentPlugin = definePlugin("content", {
 export interface SearchHarness {
   readonly h: DispatcherHarness;
   readonly admin: User;
-  /** Run the scheduled trigger, so the index catches up with the feed. */
-  readonly runSchedule: () => Promise<void>;
+  /**
+   * Run the scheduled trigger, so the index catches up with the feed —
+   * resolving to what the firing did.
+   */
+  readonly runSchedule: () => Promise<ScheduledRunReport>;
   /** Call an oRPC procedure as the admin, the way the editor's client does. */
   readonly rpc: (
     procedure: string,

@@ -1,4 +1,5 @@
 import type { AppContext } from "../context/app.js";
+import type { ScheduledRunReport } from "./adapter.js";
 import type { PlumixApp } from "./app.js";
 import { flushPurgeTags } from "../cache/purge.js";
 import { scheduledTasksFor } from "./schedules.js";
@@ -23,8 +24,10 @@ export async function runScheduledTasks(
   app: PlumixApp,
   ctx: AppContext,
   firedCron?: string,
-): Promise<void> {
+): Promise<ScheduledRunReport> {
   const startedAt = Date.now();
+  const failed: string[] = [];
+  let ran = 0;
   for (const task of scheduledTasksFor(app, firedCron)) {
     try {
       // One span per task run, so cron work traces through the same collector
@@ -34,19 +37,35 @@ export async function runScheduledTasks(
         if (task.cron !== undefined) s.set("cron.schedule", task.cron);
         return task.handler(ctx);
       });
+      ran++;
     } catch (error) {
+      const label = `${task.registeredBy}:${task.id}`;
+      failed.push(label);
       ctx.logger.error(
-        `[plumix] scheduled task "${task.registeredBy}:${task.id}" failed: ${
+        `[plumix] scheduled task "${label}" failed: ${
           error instanceof Error ? error.message : String(error)
         }`,
         { error, taskId: task.id, plugin: task.registeredBy, cron: task.cron },
       );
     }
   }
-  // A scheduled publish fires `entry:published`; flush the batched edge-cache
-  // purge it accumulated, the same request-end seam the dispatcher uses.
-  flushPurgeTags(ctx);
-  // No response exists on this path — the envelope carries a synthetic 200;
-  // task failures are error spans, caught above so siblings still run.
-  deliverTelemetrySnapshot(ctx, 200, startedAt);
+  try {
+    // A scheduled publish fires `entry:published`; flush the batched edge-cache
+    // purge it accumulated, the same request-end seam the dispatcher uses.
+    flushPurgeTags(ctx);
+    // No response exists on this path — the envelope carries a synthetic 200;
+    // task failures are error spans, caught above so siblings still run.
+    deliverTelemetrySnapshot(ctx, 200, startedAt);
+  } catch (error) {
+    // A cache adapter that throws synchronously must not discard the accounting
+    // the loop just did: the tasks ran, and the caller is about to be told
+    // whether they worked.
+    ctx.logger.error(
+      `[plumix] scheduled run epilogue failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      { error },
+    );
+  }
+  return { ran, failed };
 }

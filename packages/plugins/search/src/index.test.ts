@@ -17,7 +17,7 @@ import {
 
 let h: DispatcherHarness;
 let admin: User;
-let runSchedule: () => Promise<void>;
+let runSchedule: SearchHarness["runSchedule"];
 let rpc: SearchHarness["rpc"];
 
 beforeEach(async () => {
