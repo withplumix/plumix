@@ -319,7 +319,17 @@ export interface ImageDelivery {
    * transforms at the edge has nothing to forget and leaves this out.
    */
   purge?(sourceUrl: string): Promise<void>;
-  connect?(env: PlumixEnv): ImageDelivery | undefined;
+  /**
+   * `ctx.basePath` is the site's resolved base path, so an implementation
+   * whose `url()` points back at its own route (Node's `/_plumix/image`) can
+   * prefix it the way every other outbound URL does. Off-origin delivery
+   * (Cloudflare's) has no use for it. Optional so a slot constructed and
+   * connected by hand, outside a handler bind, still type-checks.
+   */
+  connect?(
+    env: PlumixEnv,
+    ctx?: { readonly basePath: string },
+  ): ImageDelivery | undefined;
 }
 
 /**

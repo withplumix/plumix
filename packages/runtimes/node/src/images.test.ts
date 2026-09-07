@@ -98,6 +98,31 @@ describe("images() — URL math onto /_plumix/image", () => {
     expect(() => images({ widths: [100.5] })).toThrow(/widths/);
     expect(() => images({ widths: [0] })).toThrow(/widths/);
   });
+
+  test("connect() prefixes the route with the resolved basePath", () => {
+    const slot = images();
+    const connected = slot.connect?.({}, { basePath: "/cms" });
+    expect(connected?.url("/a.png", { width: 320 })).toMatch(
+      /^\/cms\/_plumix\/image\?/,
+    );
+    // A root deployment, or connecting without a ctx at all, is unchanged.
+    expect(
+      slot.connect?.({}, { basePath: "" })?.url("/a.png", { width: 320 }),
+    ).toMatch(/^\/_plumix\/image\?/);
+    expect(slot.connect?.({})?.url("/a.png", { width: 320 })).toMatch(
+      /^\/_plumix\/image\?/,
+    );
+  });
+
+  test("connecting the same slot twice with different basePaths keeps each independent", () => {
+    const slot = images();
+    const cms = slot.connect?.({}, { basePath: "/cms" });
+    const blog = slot.connect?.({}, { basePath: "/blog" });
+    // Neither connection mutated the shared slot or leaked into the other.
+    expect(cms?.url("/a.png", { width: 320 })).toMatch(/^\/cms\/_plumix\//);
+    expect(blog?.url("/a.png", { width: 320 })).toMatch(/^\/blog\/_plumix\//);
+    expect(slot.url("/a.png", { width: 320 })).toMatch(/^\/_plumix\//);
+  });
 });
 
 describe("parseImageParams — what the route accepts", () => {

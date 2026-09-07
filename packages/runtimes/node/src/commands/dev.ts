@@ -152,6 +152,7 @@ export const devCommand: CommandDefinition = {
         const images = createImageLayer(config.imageDelivery, {
           assets: createAssetsLayer({ root: publicDir }),
           trustProxy,
+          basePath: config.basePath,
           fetch: (request, meta) =>
             entry.default.fetch(request, {
               env,

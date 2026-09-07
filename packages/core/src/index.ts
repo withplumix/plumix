@@ -7,7 +7,7 @@ import "./hooks/public-hooks.js";
 export * from "./access/index.js";
 export * from "./admin/index.js";
 export * from "./auth/index.js";
-export { withBasePath } from "./base-path.js";
+export { normalizeBasePath, withBasePath } from "./base-path.js";
 export * from "./cli/index.js";
 export * from "./config.js";
 export * from "./context/index.js";

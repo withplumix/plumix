@@ -3,6 +3,7 @@ import { availableParallelism } from "node:os";
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AssetsBinding, ImageDelivery } from "plumix";
+import { normalizeBasePath, withBasePath } from "plumix";
 import { matchesRemotePattern } from "plumix/blocks/renderer";
 
 import type { CachedVariant } from "../image-cache.js";
@@ -29,6 +30,13 @@ export interface ImageLayerOptions extends Pick<BridgeOptions, "trustProxy"> {
   ) => Response | Promise<Response>;
   /** Consulted first, so a file the process serves from disk is a source too. */
   readonly assets?: AssetsBinding;
+  /**
+   * Raw, as the user wrote it in `plumix.config.ts` — normalized here the
+   * same way core normalizes it, so the route matches wherever `url()`
+   * points a same-site source (`/cms/_plumix/image` behind a proxy that
+   * forwards only `/cms/*`).
+   */
+  readonly basePath?: string;
 }
 
 export interface ImageLayer {
@@ -117,9 +125,45 @@ function negotiate(
   accept: string | undefined,
 ): FormatClass {
   if (explicit) return explicit;
-  if (accept?.includes("image/avif")) return "avif";
-  if (accept?.includes("image/webp")) return "webp";
-  return "source";
+  return negotiatedFormat(accept) ?? "source";
+}
+
+/**
+ * The next-gen format an `Accept` header opts into, or `undefined` if none.
+ * A format counts as accepted when its exact range or the `image/*` subtype
+ * wildcard names it with `q` above zero — the bare full-wildcard range does
+ * not, since an inert fetch or a browser's default `Accept` mustn't be read
+ * as "send me a next-gen format". The exact range always wins over the
+ * subtype wildcard regardless of header order, so an explicit `q=0` still
+ * refuses a format even alongside a wildcard that would otherwise allow it.
+ * Parses the header once and checks avif before webp, matching the
+ * preference order the two separate lookups used to apply.
+ */
+function negotiatedFormat(
+  accept: string | undefined,
+): "avif" | "webp" | undefined {
+  if (!accept) return undefined;
+  let wildcardQ: number | undefined;
+  let avifQ: number | undefined;
+  let webpQ: number | undefined;
+  for (const range of accept.split(",")) {
+    const [rawToken, ...params] = range.split(";");
+    const token = rawToken?.trim().toLowerCase();
+    if (token !== "image/avif" && token !== "image/webp" && token !== "image/*")
+      continue;
+    const rawQ = params
+      .map((p) => p.trim())
+      .find((p) => p.startsWith("q="))
+      ?.slice(2);
+    const parsed = rawQ === undefined ? 1 : Number(rawQ);
+    const q = Number.isFinite(parsed) ? parsed : 1;
+    if (token === "image/avif") avifQ = q;
+    else if (token === "image/webp") webpQ = q;
+    else wildcardQ = q;
+  }
+  if ((avifQ ?? wildcardQ ?? 0) > 0) return "avif";
+  if ((webpQ ?? wildcardQ ?? 0) > 0) return "webp";
+  return undefined;
 }
 
 // What sharp names a decoded input, onto what it can encode. Vector and
@@ -193,6 +237,9 @@ function serveWith(
   const { remotePatterns } = slot.config;
   const { cache } = slot;
   const pending = new Map<string, Promise<Variant>>();
+  // Matches wherever `url()` points a same-site source: both sides prefix
+  // the same normalized base.
+  const route = withBasePath(IMAGE_ROUTE, normalizeBasePath(options.basePath));
 
   async function resolveSameOrigin({
     params,
@@ -200,7 +247,7 @@ function serveWith(
     clientAddress: address,
   }: VariantRequest): Promise<Buffer> {
     const target = new URL(params.src, url);
-    if (target.pathname === IMAGE_ROUTE) throw refused();
+    if (target.pathname === route) throw refused();
     const request = new Request(target, { headers: SOURCE_HEADERS });
     let response = await options.assets?.fetch(request);
     if (response === undefined || response.status === 404) {
@@ -221,7 +268,7 @@ function serveWith(
   function isPermittedUrl(url: URL): boolean {
     return (
       (url.protocol === "http:" || url.protocol === "https:") &&
-      url.pathname !== IMAGE_ROUTE &&
+      url.pathname !== route &&
       matchesRemotePattern(url.href, remotePatterns)
     );
   }
@@ -271,9 +318,12 @@ function serveWith(
     let output: OutputFormat;
     let rendered: Buffer;
     try {
-      const decoded = (await sharp(bytes).metadata()).format;
+      // Animated by default: a GIF or WebP source keeps its frames through
+      // the resize/re-encode instead of decoding to its first one.
+      const decoded = (await sharp(bytes, { animated: true }).metadata())
+        .format;
       output = format === "source" ? ownFormat(decoded) : format;
-      let pipeline = sharp(bytes).rotate();
+      let pipeline = sharp(bytes, { animated: true }).rotate();
       if (params.width !== undefined || params.height !== undefined) {
         pipeline = pipeline.resize({
           width: params.width,
@@ -414,7 +464,7 @@ function serveWith(
       next();
       return;
     }
-    if (url.pathname !== IMAGE_ROUTE) {
+    if (url.pathname !== route) {
       next();
       return;
     }

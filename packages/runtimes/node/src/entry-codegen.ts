@@ -76,6 +76,7 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "const images = createImageLayer(config.imageDelivery, {",
     "  assets,",
     "  trustProxy,",
+    "  basePath: config.basePath,",
     "  fetch: (request, meta) => site.fetch(request, { env, clientAddress: meta.clientAddress }),",
     "});",
     "",
