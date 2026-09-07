@@ -208,7 +208,7 @@ catalogs:
   tiptap:
     '@tiptap/core':
       specifier: ^3.30.4
-      version: 3.31.0
+      version: 3.30.5
     '@tiptap/extension-blockquote':
       specifier: ^3.30.3
       version: 3.30.3
@@ -312,8 +312,8 @@ importers:
         specifier: ^1.13.0
         version: 1.13.0
       turbo:
-        specifier: ^2.10.11
-        version: 2.10.11
+        specifier: ^2.10.12
+        version: 2.10.12
 
   apps/demo:
     dependencies:
@@ -632,7 +632,7 @@ importers:
         version: 14.6.6(@testing-library/dom@10.4.1)
       '@tiptap/core':
         specifier: catalog:tiptap
-        version: 3.31.0(@tiptap/pm@3.31.0)
+        version: 3.30.5(@tiptap/pm@3.30.5)
       '@types/react':
         specifier: catalog:react
         version: 19.2.18
@@ -731,34 +731,34 @@ importers:
         version: link:../core
       '@tiptap/core':
         specifier: catalog:tiptap
-        version: 3.31.0(@tiptap/pm@3.31.0)
+        version: 3.30.5(@tiptap/pm@3.30.5)
       '@tiptap/extension-blockquote':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-document':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-hard-break':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-heading':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-list':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-paragraph':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extension-text':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/extensions':
         specifier: catalog:tiptap
-        version: 3.30.3(@tiptap/core@3.31.0)
+        version: 3.30.3(@tiptap/core@3.30.5)
       '@tiptap/react':
         specifier: catalog:tiptap
-        version: 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       zustand:
         specifier: ^5.0.15
         version: 5.0.15(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
@@ -931,7 +931,7 @@ importers:
     dependencies:
       '@tiptap/core':
         specifier: catalog:tiptap
-        version: 3.31.0(@tiptap/pm@3.31.0)
+        version: 3.30.5(@tiptap/pm@3.30.5)
       dompurify:
         specifier: ^3.4.14
         version: 3.4.14
@@ -2721,8 +2721,8 @@ importers:
         specifier: ^7.1.1
         version: 7.1.1(eslint@10.9.0(jiti@2.7.0))
       eslint-plugin-turbo:
-        specifier: ^2.10.11
-        version: 2.10.11(eslint@10.9.0(jiti@2.7.0))(turbo@2.10.12)
+        specifier: ^2.10.12
+        version: 2.10.12(eslint@10.9.0(jiti@2.7.0))(turbo@2.10.12)
       typescript-eslint:
         specifier: ^8
         version: 8.67.0(eslint@10.9.0(jiti@2.7.0))(typescript@6.0.3)
@@ -6504,10 +6504,10 @@ packages:
     peerDependencies:
       '@testing-library/dom': '>=7.21.4'
 
-  '@tiptap/core@3.31.0':
-    resolution: {integrity: sha512-SY3yE2ACharFvk0BKgotV6SbwV8R4tN5fGtWOM6deY4JNF3v6CXOD78RFwjs2HSohGWBRyJVPDvrX9nfi8Nsxg==}
+  '@tiptap/core@3.30.5':
+    resolution: {integrity: sha512-3O7N0FyKIfuLV+xrdWyDM3V5eUY/q2CgLjhhMwOAbM1Pu7VPp9VP+TpEYOdH8aRyB+h1vj5hX5A747D8ZrPfHA==}
     peerDependencies:
-      '@tiptap/pm': 3.31.0
+      '@tiptap/pm': 3.30.5
 
   '@tiptap/extension-blockquote@3.30.3':
     resolution: {integrity: sha512-Dh8yfEqBKTqEdBKZ4Ta3DkTecP0VJxvRNA5b1LCF7gBbe54Lm3A28UuVvK/Sdhh9FJDrIVCQTDS0yHGbi6G9ew==}
@@ -6565,8 +6565,8 @@ packages:
       '@tiptap/core': 3.30.3
       '@tiptap/pm': 3.30.3
 
-  '@tiptap/pm@3.31.0':
-    resolution: {integrity: sha512-JGPUSPLDFPjgFZHcNSghVJmEfvYp2SRPZQ1K8AZOuviEsUNvkYmJsBdudeYwUYNzYO38L4Yy0G6UMSuniBDIMg==}
+  '@tiptap/pm@3.30.5':
+    resolution: {integrity: sha512-gufkLkW2tA6PZPjivYxDiGzTIIftwqhmYI6lvvKu2S4FbhcysJgMAe/GXVSywzCRVVex9SrvCe6RFYrqnwRitQ==}
 
   '@tiptap/react@3.30.3':
     resolution: {integrity: sha512-gyK8UXFQlm2XgXEynNz5SzsxnTKtdBUp/PKeTeqFrk/m7L8p1eV+gcdAK+arTX+slubXRwLUm1lXrAQXRuiaTw==}
@@ -6578,19 +6578,9 @@ packages:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  '@turbo/darwin-64@2.10.11':
-    resolution: {integrity: sha512-v3R+1R/Ysozyo+p7Ri8MCIbndOvYt3DgPFrGLhrhQHfvyvbxyH3WyJj+A/2JTNmNleuAlh3JUyCV0iSVHIONTA==}
-    cpu: [x64]
-    os: [darwin]
-
   '@turbo/darwin-64@2.10.12':
     resolution: {integrity: sha512-9nKgKoF6ZOUsM+or0OtNf+TTJSfGvDNP7ZFv/ZGWVwOSCkumyctQiTeHwB4UNljHTnC41AqylgbunLDHoccNrA==}
     cpu: [x64]
-    os: [darwin]
-
-  '@turbo/darwin-arm64@2.10.11':
-    resolution: {integrity: sha512-R0a0CvGAeYYsBgPIgFNB3agGXh6qukjduNhFlwVVX1Ss2IdBJLXmgjytNGmo084bLKS0B6UdLRwKhXMHKKaObQ==}
-    cpu: [arm64]
     os: [darwin]
 
   '@turbo/darwin-arm64@2.10.12':
@@ -6598,19 +6588,9 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
-  '@turbo/linux-64@2.10.11':
-    resolution: {integrity: sha512-dGlY2vg7jpsLjGS1bf9sD/cw1sGMAYbeHGQKGRFxd5Zaj+Ufbj8cNXl/vIit8ueCU97zhL/znn60ZV5iSfZAxw==}
-    cpu: [x64]
-    os: [android, linux]
-
   '@turbo/linux-64@2.10.12':
     resolution: {integrity: sha512-lr7KIotukvjZwEXiFSYAeOH3BWzjFVBbSzTbv0fuGFsNukYyH0+g1hB5ecqnJkgkYU+KHEMG1edOhnjiKON1wQ==}
     cpu: [x64]
-    os: [android, linux]
-
-  '@turbo/linux-arm64@2.10.11':
-    resolution: {integrity: sha512-eSP9+jjsSCBs2x0QpJZlp49dSD1EIMwXH7PsMIhdWk7w6IThhuKJ+jL95JQ2IW7tRjRmdh8gKcKQtrHLD5R5lA==}
-    cpu: [arm64]
     os: [android, linux]
 
   '@turbo/linux-arm64@2.10.12':
@@ -6618,19 +6598,9 @@ packages:
     cpu: [arm64]
     os: [android, linux]
 
-  '@turbo/windows-64@2.10.11':
-    resolution: {integrity: sha512-4aD7edogJ8arK8DOyvjTI2KKwmchD5M/WM4BZgidrtFf7aSgn8Ce2rJnDwmriw980c2cKlHnhXtlGy38VtKB8g==}
-    cpu: [x64]
-    os: [win32]
-
   '@turbo/windows-64@2.10.12':
     resolution: {integrity: sha512-SDOueJRjS/QcykWf2KCRtTLmIl5YMKsLbXkXQGhDwcTXvKXZiS5ih5lBl/gkwZIpYFjqA/rAlfMzlAFcVHNe0g==}
     cpu: [x64]
-    os: [win32]
-
-  '@turbo/windows-arm64@2.10.11':
-    resolution: {integrity: sha512-m8tJkIrTrbQ9O1uHxV0GUq623Zg1678xGna8eMsy4KbygUX/wVFgdZDYV/AxyoyaW/U7nyKoBvaDVwm22p9xqA==}
-    cpu: [arm64]
     os: [win32]
 
   '@turbo/windows-arm64@2.10.12':
@@ -7973,8 +7943,8 @@ packages:
     peerDependencies:
       eslint: ^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9.7
 
-  eslint-plugin-turbo@2.10.11:
-    resolution: {integrity: sha512-O8EyyiHpP6sMYVweD1Ix+l9ub21rW3NYE+/VPSuhm2WhPW3AF6mOdlkuJofHA2RMHt6zR3zoiUA4AF15dQPHNA==}
+  eslint-plugin-turbo@2.10.12:
+    resolution: {integrity: sha512-QZ9u3sV3ky4bl3XUpsVG8Ehk11I0omsGV2K7dCDut6sGvaVErFvWbgd46oh5tsnLt/5i+KvuOWgKJneleMqk2Q==}
     peerDependencies:
       eslint: '>6.6.0'
       turbo: '>2.0.0'
@@ -10452,10 +10422,6 @@ packages:
   tsx@4.23.12:
     resolution: {integrity: sha512-FDf4L4sYzKtzWYhU/Xm0AQFdTjdIxNo9ElTf2mxXM6k8YMHXzYUe4yODVaXP4V9uMFbVg8c0qyBccK2OOxb45Q==}
     engines: {node: '>=18.0.0'}
-    hasBin: true
-
-  turbo@2.10.11:
-    resolution: {integrity: sha512-yQfwQVoRXwOuyX1LxiJFBFNg6VfuYh+/RyZLd82+isgyLkBXw3S5XRRzvcck1FAjSCG5sVyLd+O1eDMvYa3J7g==}
     hasBin: true
 
   turbo@2.10.12:
@@ -14714,55 +14680,55 @@ snapshots:
     dependencies:
       '@testing-library/dom': 10.4.1
 
-  '@tiptap/core@3.31.0(@tiptap/pm@3.31.0)':
+  '@tiptap/core@3.30.5(@tiptap/pm@3.30.5)':
     dependencies:
-      '@tiptap/pm': 3.31.0
+      '@tiptap/pm': 3.30.5
 
-  '@tiptap/extension-blockquote@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-blockquote@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-bubble-menu@3.30.3(@tiptap/core@3.31.0)':
-    dependencies:
-      '@floating-ui/dom': 1.8.0
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
-    optional: true
-
-  '@tiptap/extension-document@3.30.3(@tiptap/core@3.31.0)':
-    dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
-
-  '@tiptap/extension-floating-menu@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)':
+  '@tiptap/extension-bubble-menu@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
       '@floating-ui/dom': 1.8.0
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
     optional: true
 
-  '@tiptap/extension-hard-break@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-document@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-heading@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-floating-menu@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@floating-ui/dom': 1.8.0
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
+    optional: true
 
-  '@tiptap/extension-list@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-hard-break@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-paragraph@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-heading@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extension-text@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-list@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/extensions@3.30.3(@tiptap/core@3.31.0)':
+  '@tiptap/extension-paragraph@3.30.3(@tiptap/core@3.30.5)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
 
-  '@tiptap/pm@3.31.0':
+  '@tiptap/extension-text@3.30.3(@tiptap/core@3.30.5)':
+    dependencies:
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
+
+  '@tiptap/extensions@3.30.3(@tiptap/core@3.30.5)':
+    dependencies:
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
+
+  '@tiptap/pm@3.30.5':
     dependencies:
       prosemirror-changeset: 2.4.2
       prosemirror-commands: 1.7.2
@@ -14778,9 +14744,9 @@ snapshots:
       prosemirror-transform: 1.12.0
       prosemirror-view: 1.42.3
 
-  '@tiptap/react@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@tiptap/react@3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
-      '@tiptap/core': 3.31.0(@tiptap/pm@3.31.0)
+      '@tiptap/core': 3.30.5(@tiptap/pm@3.30.5)
       '@types/react': 19.2.18
       '@types/react-dom': 19.2.5(@types/react@19.2.18)
       '@types/use-sync-external-store': 0.0.6
@@ -14789,42 +14755,24 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
       use-sync-external-store: 1.6.0(react@19.2.8)
     optionalDependencies:
-      '@tiptap/extension-bubble-menu': 3.30.3(@tiptap/core@3.31.0)
-      '@tiptap/extension-floating-menu': 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.0)
+      '@tiptap/extension-bubble-menu': 3.30.3(@tiptap/core@3.30.5)
+      '@tiptap/extension-floating-menu': 3.30.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.5)
     transitivePeerDependencies:
       - '@floating-ui/dom'
 
-  '@turbo/darwin-64@2.10.11':
-    optional: true
-
   '@turbo/darwin-64@2.10.12':
-    optional: true
-
-  '@turbo/darwin-arm64@2.10.11':
     optional: true
 
   '@turbo/darwin-arm64@2.10.12':
     optional: true
 
-  '@turbo/linux-64@2.10.11':
-    optional: true
-
   '@turbo/linux-64@2.10.12':
-    optional: true
-
-  '@turbo/linux-arm64@2.10.11':
     optional: true
 
   '@turbo/linux-arm64@2.10.12':
     optional: true
 
-  '@turbo/windows-64@2.10.11':
-    optional: true
-
   '@turbo/windows-64@2.10.12':
-    optional: true
-
-  '@turbo/windows-arm64@2.10.11':
     optional: true
 
   '@turbo/windows-arm64@2.10.12':
@@ -15162,7 +15110,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+      vitest: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(happy-dom@20.9.0)(jsdom@29.1.1)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
 
   '@vitest/expect@4.1.11':
     dependencies:
@@ -16324,7 +16272,7 @@ snapshots:
       string.prototype.matchall: 4.0.12
       string.prototype.repeat: 1.0.0
 
-  eslint-plugin-turbo@2.10.11(eslint@10.9.0(jiti@2.7.0))(turbo@2.10.12):
+  eslint-plugin-turbo@2.10.12(eslint@10.9.0(jiti@2.7.0))(turbo@2.10.12):
     dependencies:
       dotenv: 16.0.3
       eslint: 10.9.0(jiti@2.7.0)
@@ -19577,15 +19525,6 @@ snapshots:
       esbuild: 0.28.2
     optionalDependencies:
       fsevents: 2.3.3
-
-  turbo@2.10.11:
-    optionalDependencies:
-      '@turbo/darwin-64': 2.10.11
-      '@turbo/darwin-arm64': 2.10.11
-      '@turbo/linux-64': 2.10.11
-      '@turbo/linux-arm64': 2.10.11
-      '@turbo/windows-64': 2.10.11
-      '@turbo/windows-arm64': 2.10.11
 
   turbo@2.10.12:
     optionalDependencies:
