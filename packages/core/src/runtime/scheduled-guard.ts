@@ -1,6 +1,8 @@
 import { and, eq, lte, sql } from "drizzle-orm";
 
 import type { Db } from "../context/app.js";
+import type { PlumixApp } from "./app.js";
+import type { PlumixEnv } from "./bindings.js";
 import {
   scheduledTaskClaims,
   scheduledTaskLeases,
@@ -181,4 +183,19 @@ export function createScheduledRunGuard({
       }
     },
   };
+}
+
+/**
+ * Connect the database a scheduled run writes through, outside any request.
+ *
+ * A scheduled run always writes, so a deploy that routes writes to a primary
+ * does so for the guard's own rows too. The request is a marker rather than an
+ * inbound one — the same URL core's scheduled handler builds, so an adapter
+ * that routes on it sees one shape however the run was triggered.
+ */
+export function connectScheduledDb(app: PlumixApp, env: PlumixEnv): Db {
+  const request = new Request("http://localhost/_plumix/internal/scheduled", {
+    method: "POST",
+  });
+  return app.config.database.connect(env, request, app.schema).db as Db;
 }

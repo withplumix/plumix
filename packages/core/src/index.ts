@@ -77,7 +77,10 @@ export type {
   ScheduledRunGuardOptions,
   ScheduledRunOutcome,
 } from "./runtime/scheduled-guard.js";
-export { createScheduledRunGuard } from "./runtime/scheduled-guard.js";
+export {
+  connectScheduledDb,
+  createScheduledRunGuard,
+} from "./runtime/scheduled-guard.js";
 export type * from "./runtime/slots.js";
 export { slugify } from "./slugify.js";
 export { buildResolvedEntries } from "./route/render/build-resolved-entries.js";

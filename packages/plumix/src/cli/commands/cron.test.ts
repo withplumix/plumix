@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { describe, expect, test, vi } from "vitest";
 
 import type { CommandContext, PlumixApp } from "@plumix/core";
@@ -32,8 +33,10 @@ async function context(
   } as unknown as PlumixApp;
   return {
     app,
-    cwd: "/site",
-    configPath: "/site/plumix.config.ts",
+    // A real directory: `runSchedule` chdirs to it so a database path resolves
+    // from where the config was loaded, not from where the shell happened to be.
+    cwd: process.cwd(),
+    configPath: `${process.cwd()}/plumix.config.ts`,
     argv,
     runtimeMigrate: {},
   };
@@ -143,11 +146,11 @@ describe("plumix cron run", () => {
   });
 });
 
-describe("plumix cron run", () => {
-  test("fires on every invocation, leaving overlap to the caller", async () => {
-    // Core's run guard sits on the query layer, which the CLI's cold path is
-    // held off. One invocation is one run; the external scheduler owns not
-    // overlapping its own, and the docs say so.
+describe("plumix cron run — overlap protection", () => {
+  test("takes the same run guard the in-process scheduler does", async () => {
+    // This is the `cron: false` path — a system cron or a Kubernetes CronJob —
+    // which is exactly where an invocation that overruns its schedule meets the
+    // next one starting.
     const db = await createTestDb();
     const first = vi.fn();
     const second = vi.fn();
@@ -158,7 +161,24 @@ describe("plumix cron run", () => {
     );
 
     expect(first).toHaveBeenCalledTimes(1);
-    expect(second).toHaveBeenCalledTimes(1);
+    expect(second).not.toHaveBeenCalled();
+  });
+
+  test("says why it did nothing, rather than exiting green in silence", async () => {
+    const db = await createTestDb();
+    await cronCommand.run(
+      await context(["run", "*/5 * * * *"], vi.fn(), { db }),
+    );
+
+    const { lines, restore } = captureInfo();
+    try {
+      await cronCommand.run(
+        await context(["run", "*/5 * * * *"], vi.fn(), { db }),
+      );
+    } finally {
+      restore();
+    }
+    expect(lines.join("\n")).toMatch(/already ran this minute/i);
   });
 
   test("fires the declared spelling when the typed one only differs by spacing", async () => {
@@ -188,5 +208,59 @@ describe("plumix cron list — a site whose tasks all run on every firing", () =
     expect(output).not.toContain("no scheduled tasks");
     expect(output).toContain("search:index-drain");
     expect(output).toContain("* * * * *");
+  });
+});
+
+describe("plumix cron run — parity with the in-process scheduler", () => {
+  test("gives each schedule its own lease when no task runs on every firing", async () => {
+    // Otherwise two CronJobs firing the same minute contend for one lease and
+    // the daily one is skipped until tomorrow — separate pods, so
+    // `concurrencyPolicy: Forbid` cannot help.
+    const db = await createTestDb();
+    const daily = vi.fn();
+
+    await cronCommand.run(
+      await context(["run", "*/5 * * * *"], vi.fn(), { db }),
+    );
+    await cronCommand.run(await context(["run", "0 4 * * *"], daily, { db }));
+
+    expect(daily).toHaveBeenCalledTimes(1);
+  });
+
+  test("claims the schedule's own key when no task declares a cron", async () => {
+    // The scheduler claims `* * * * *` for an untagged-only site. A CronJob
+    // claiming the literal it was invoked with would be a second row for the
+    // same work, and both would fire.
+    const db = await createTestDb();
+    const tasks = [{ id: "index-drain", registeredBy: "search" }];
+    const first = vi.fn();
+    const second = vi.fn();
+
+    await cronCommand.run(
+      await context(["run", "* * * * *"], first, { db, tasks }),
+    );
+    await cronCommand.run(
+      await context(["run", "*/5 * * * *"], second, { db, tasks }),
+    );
+
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).not.toHaveBeenCalled();
+  });
+
+  test("names the fix when the database has not been migrated", async () => {
+    const unmigrated = await createTestDb();
+    await unmigrated.run(sql`DROP TABLE scheduled_task_claims`);
+
+    let error: unknown;
+    try {
+      await cronCommand.run(
+        await context(["run", "*/5 * * * *"], vi.fn(), { db: unmigrated }),
+      );
+    } catch (thrown) {
+      error = thrown;
+    }
+
+    expect(isCliError(error)).toBe(true);
+    expect(isCliError(error) ? error.hint : "").toContain("migrate apply");
   });
 });

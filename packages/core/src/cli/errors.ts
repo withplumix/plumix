@@ -25,6 +25,7 @@ type CliErrorCode =
   | "deferred_command_no_app"
   | "cron_run_missing_expression"
   | "cron_run_unknown_schedule"
+  | "cron_run_database_unavailable"
   | "cron_run_invalid_expression";
 
 export class CliError extends Error {
@@ -90,6 +91,18 @@ export class CliError extends Error {
       // No `cause`: the parser's message is already the whole explanation, and
       // the CLI prints a cause underneath, which would just repeat it.
       undefined,
+    );
+  }
+
+  static cronRunDatabaseUnavailable(ctx: {
+    detail: string;
+    cause: unknown;
+  }): CliError {
+    return new CliError(
+      "cron_run_database_unavailable",
+      `Could not reach the database a scheduled run writes through: ${ctx.detail}`,
+      "Run `plumix migrate apply` if this deploy has not applied its migrations since upgrading, and check the database path resolves from this directory.",
+      ctx.cause,
     );
   }
 
