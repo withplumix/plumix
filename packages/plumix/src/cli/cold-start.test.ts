@@ -112,3 +112,18 @@ describe("the CLI entry stays off core's root barrel", () => {
     expect(importsOf(ENTRY).dynamic).toContain(BARREL);
   });
 });
+
+describe("the run guard stays off the CLI's cold path", () => {
+  test("cron reaches the barrel dynamically, not statically", () => {
+    // `src/cli/index.ts` imports this module statically, so a static barrel
+    // import here would put core's ~500ms evaluation on every `plumix`
+    // invocation — including `dev`, which builds no app and needs none of it.
+    // The entry walk above catches that too; this names the file so a failure
+    // points at the line rather than a chain.
+    const { runtime, dynamic } = importsOf(
+      path.join(CLI, "commands", "cron.ts"),
+    );
+    expect(runtime).not.toContain(BARREL);
+    expect(dynamic).toContain(BARREL);
+  });
+});

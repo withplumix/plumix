@@ -1,6 +1,6 @@
 import { hostname } from "node:os";
 import type { Db, PlumixApp, PlumixEnv } from "plumix";
-import { createScheduledRunGuard } from "plumix";
+import { connectScheduledDb, createScheduledRunGuard } from "plumix";
 
 import type {
   Scheduler,
@@ -49,7 +49,7 @@ export function startScheduledRunner({
     (task) => task.cron === undefined,
   );
   const guard = createScheduledRunGuard({
-    db: db ?? connectDatabase(app, env),
+    db: db ?? connectScheduledDb(app, env),
     holder: `${hostname()}:${String(process.pid)}`,
     lease,
     leaseScope: runsOnEveryFiring ? "shared" : "schedule",
@@ -65,15 +65,4 @@ export function startScheduledRunner({
   });
   void scheduler.start();
   return scheduler;
-}
-
-// A scheduled run always writes, so a deploy routing writes to a primary does
-// so for the guard's rows too. The request is a marker: no invocation exists on
-// this path, and an adapter that reads one is looking at the same URL core's
-// scheduled handler builds.
-function connectDatabase(app: PlumixApp, env: PlumixEnv): Db {
-  const request = new Request("http://localhost/_plumix/internal/scheduler", {
-    method: "POST",
-  });
-  return app.config.database.connect(env, request, app.schema).db as Db;
 }
