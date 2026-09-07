@@ -50,7 +50,7 @@ describe("reconcile", () => {
 
   it("defaults the runtime and leaves plugins unset, flagging both as prompts", () => {
     const r = reconcile(["my-app"]);
-    expect(r.runtimeId).toBe("cloudflare");
+    expect(r.runtimeId).toBe("node");
     expect(r.pluginIds).toBeUndefined();
     expect(r.yes).toBe(false);
     expect(r.prompts).toEqual(["runtime", "plugins"]);

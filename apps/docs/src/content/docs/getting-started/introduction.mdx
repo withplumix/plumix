@@ -1,6 +1,6 @@
 ---
 title: Introduction
-description: Plumix is a CMS you declare in TypeScript. It deploys as one Cloudflare Worker that renders the public site from a theme you own and builds its admin screens from your content model.
+description: Plumix is a CMS you declare in TypeScript. It deploys as one process — a Node.js server by default, or a Cloudflare Worker — that renders the public site from a theme you own and builds its admin screens from your content model.
 tier: P0
 sidebar:
   order: 10
@@ -14,7 +14,7 @@ Plumix is a CMS you write rather than click together. You declare the content mo
 
 ## Overview
 
-A Plumix site deploys as one Cloudflare Worker. Content lives in D1, uploads live in R2, and the public pages render server-side from a theme you own. There is no origin server behind the worker and no second process to keep alive.
+A Plumix site deploys as one process — either a Node.js server or a Cloudflare Worker. By default `pnpm create plumix-app` scaffolds Node, with content in a SQLite file and uploads on disk; pass `--runtime cloudflare` and it scaffolds a Worker instead, with content in D1 and uploads in R2. Either way the public pages render server-side from a theme you own, and there is no separate origin server or second process to keep alive.
 
 The site is made of four things, and you write three of them.
 
