@@ -7,7 +7,7 @@ import { media } from "@plumix/plugin-media";
 import { menu } from "@plumix/plugin-menu";
 import { pages } from "@plumix/plugin-pages";
 import { seo } from "@plumix/plugin-seo";
-import { edge, images, r2 } from "@plumix/runtime-cloudflare";
+import { images, r2 } from "@plumix/runtime-cloudflare";
 import { demoPreset } from "@plumix/runtime-cloudflare/demo";
 
 import { blogTheme } from "./theme";
@@ -16,12 +16,15 @@ const readEnv = (env: unknown, name: string): string =>
   (env as Record<string, string | undefined>)[name] ?? "";
 
 export default plumix({
-  // Presigned uploads, image transforms and edge cache stay dormant until
-  // their env keys are attached (see each primitive's docs); until then media
-  // routes through the worker and public pages render live.
+  // Presigned uploads and image transforms stay dormant until their env keys
+  // are attached (see each primitive's docs); until then media routes through
+  // the worker and public pages render live.
+  // Edge cache is intentionally not declared: per-session sandboxes are
+  // unshareable at the edge. Each visitor has their own database keyed on a
+  // session cookie, so a cached render would serve one visitor's sandbox to
+  // all others.
   storage: r2({ binding: "MEDIA" }),
   imageDelivery: images(),
-  cache: edge({ ttl: 3600, staleWhileRevalidate: 86400 }),
   mailer: consoleMailer(),
   plugins: [
     blog(),
